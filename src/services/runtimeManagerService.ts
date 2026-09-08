@@ -9,6 +9,13 @@ export const TOOL_NAMES = [
   'invokeai',
   'whisper',
   'audiocraft',
+  'openwebui',
+  'voice-os',
+  'n8n',
+  'mcp-server',
+  'alphonso-bridge',
+  'chromadb',
+  'openHands',
 ] as const;
 
 export type ToolName = typeof TOOL_NAMES[number];

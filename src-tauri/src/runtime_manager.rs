@@ -683,6 +683,186 @@ pub fn find_node() -> Option<String> {
   None
 }
 
+/// RAM detection via sysinfo, rounded down to whole GB.
+fn detect_ram_gb() -> u64 {
+  let mut sys = sysinfo::System::new_all();
+  sys.refresh_memory();
+  sys.total_memory() / 1024 / 1024 / 1024
+}
+
+/// Picks the free-space (bytes) of whichever disk's mount point is the
+/// longest matching prefix of `path` — i.e. the most specific match. Pure
+/// and independently testable: takes plain (mount_point, available_bytes)
+/// pairs rather than sysinfo's own types, so no real disk I/O is needed to
+/// test the matching logic itself.
+fn pick_disk_for_path(path: &str, disks: &[(String, u64)]) -> Option<u64> {
+  let target = Path::new(path);
+  disks
+    .iter()
+    // Path::starts_with compares whole path components, so "/home2/app"
+    // does NOT match mount point "/home" (a raw str::starts_with would
+    // match, and would then report free space from the wrong volume).
+    .filter(|(mount, _)| target.starts_with(Path::new(mount)))
+    .max_by_key(|(mount, _)| Path::new(mount).components().count())
+    .map(|(_, available)| *available)
+}
+
+/// Free disk space (GB) for the drive Runtime Hub tool installs actually
+/// land on.
+///
+/// Measures `runtimes_dir()` (`%APPDATA%\Alphonso\runtimes` on Windows),
+/// not `current_exe()`'s directory — an earlier version of this function
+/// used the exe's own directory as a proxy, which is wrong whenever the app
+/// is installed on a different drive than `%APPDATA%` lives on (a real,
+/// plausible split: a user tight enough on space to install the app itself
+/// to a secondary drive is exactly the user this check exists for).
+/// `runtimes_dir()` is a single fixed location regardless of which tool is
+/// being installed (`tool_dir(name)` is always `runtimes_dir().join(name)`),
+/// so it's the correct one target for fooocus/voice-os/chromadb.
+///
+/// This still does NOT cover the starter model's own volume: Ollama stores
+/// pulled models under its own data directory (`%USERPROFILE%\.ollama` by
+/// default, or wherever `OLLAMA_MODELS` points), which is a third location
+/// independent of both `runtimes_dir()` and the exe's directory. Resolving
+/// that reliably before Ollama is even installed is a separate, harder
+/// problem (env var may be unset, Ollama may not exist yet to ask) —
+/// tracked in docs/governance/DEFERRED_WORK.md rather than guessed at here,
+/// since a wrong guess would introduce new incorrect blocking behavior,
+/// which is worse than the pre-existing "close enough" gap.
+fn detect_disk_free_gb() -> Option<u64> {
+  let disks = sysinfo::Disks::new_with_refreshed_list();
+  let disk_list: Vec<(String, u64)> = disks
+    .list()
+    .iter()
+    .map(|d| {
+      (
+        d.mount_point().to_string_lossy().to_string(),
+        d.available_space(),
+      )
+    })
+    .collect();
+
+  let target_dir = runtimes_dir().to_string_lossy().to_string();
+
+  // None (not 0) when nothing resolves — 0 would read as "disk is full"
+  // downstream and block every install on a machine we simply failed to
+  // measure. Deliberately no fallback to "the largest mounted disk" here
+  // (a real bug in an earlier version of this function, caught in review):
+  // guessing an unrelated volume's free space is worse than reporting
+  // unknown.
+  pick_disk_for_path(&target_dir, &disk_list).map(|bytes| bytes / 1024 / 1024 / 1024)
+}
+
+/// Free disk space (GB) for the volume the starter model is actually pulled
+/// onto, but ONLY when that volume is known with certainty — i.e. only when
+/// `OLLAMA_MODELS` is explicitly set. Returns None (not a guessed default
+/// path) when it isn't set, which is the common case: Ollama's own default
+/// location varies by OS and install method (service vs. manual) and can
+/// change between Ollama versions, so a guessed default risks being wrong
+/// in a way `runtimes_dir()` (a location this app fully controls) never
+/// could be. A wrong guess here would actively block a valid install on a
+/// disk-space check that measured the wrong drive — worse than the
+/// pre-existing gap of simply not checking this volume at all.
+fn detect_ollama_models_dir_free_gb() -> Option<u64> {
+  let ollama_models_dir = std::env::var("OLLAMA_MODELS").ok()?;
+
+  let disks = sysinfo::Disks::new_with_refreshed_list();
+  let disk_list: Vec<(String, u64)> = disks
+    .list()
+    .iter()
+    .map(|d| {
+      (
+        d.mount_point().to_string_lossy().to_string(),
+        d.available_space(),
+      )
+    })
+    .collect();
+
+  pick_disk_for_path(&ollama_models_dir, &disk_list).map(|bytes| bytes / 1024 / 1024 / 1024)
+}
+
+/// How long `detect_gpu` will wait for `nvidia-smi` before killing it and
+/// reporting "no GPU" — see that function for why a bound is required.
+const GPU_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Pure parser for `nvidia-smi --query-gpu=name --format=csv,noheader`
+/// output — separated from the actual process spawn so it's testable
+/// without needing a real GPU. Returns (vendor, model) for the first GPU
+/// line, or None if the output is empty/unparseable.
+fn parse_nvidia_smi_output(output: &str) -> Option<(String, String)> {
+  let first_line = output.lines().find(|l| !l.trim().is_empty())?.trim();
+  if first_line.is_empty() {
+    return None;
+  }
+  if let Some(rest) = first_line.strip_prefix("NVIDIA ") {
+    Some(("NVIDIA".to_string(), rest.to_string()))
+  } else {
+    Some(("Unknown".to_string(), first_line.to_string()))
+  }
+}
+
+/// Detects an NVIDIA GPU via `nvidia-smi`. Returns (present, vendor, model).
+/// A missing binary or failed command is "no GPU detected," never an error
+/// — most machines don't have an NVIDIA GPU and Setup must not hang or
+/// crash because of that.
+fn detect_gpu() -> (bool, Option<String>, Option<String>) {
+  let mut cmd = Command::new("nvidia-smi");
+  cmd.args(["--query-gpu=name", "--format=csv,noheader"]);
+  cmd.stdin(std::process::Stdio::null());
+  cmd.stdout(std::process::Stdio::piped());
+  cmd.stderr(std::process::Stdio::null());
+  no_window(&mut cmd);
+
+  // Bounded wait: nvidia-smi can hang indefinitely against a wedged driver
+  // or a GPU in a bad power state, and Command::output() would block the
+  // whole scan forever with no way out. Spawn + poll + kill on timeout
+  // instead, so a broken driver degrades to "no GPU detected" (the same
+  // outcome as a machine that genuinely has no NVIDIA card) rather than
+  // stalling Setup's first screen.
+  let mut child = match cmd.spawn() {
+    Ok(c) => c,
+    Err(_) => return (false, None, None),
+  };
+
+  let deadline = std::time::Instant::now() + GPU_PROBE_TIMEOUT;
+  loop {
+    match child.try_wait() {
+      Ok(Some(status)) => {
+        if !status.success() {
+          return (false, None, None);
+        }
+        break;
+      }
+      Ok(None) => {
+        if std::time::Instant::now() >= deadline {
+          let _ = child.kill();
+          let _ = child.wait();
+          return (false, None, None);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+      }
+      Err(_) => {
+        let _ = child.kill();
+        let _ = child.wait();
+        return (false, None, None);
+      }
+    }
+  }
+
+  let mut stdout = String::new();
+  if let Some(mut pipe) = child.stdout.take() {
+    use std::io::Read;
+    if pipe.read_to_string(&mut stdout).is_err() {
+      return (false, None, None);
+    }
+  }
+
+  match parse_nvidia_smi_output(&stdout) {
+    Some((vendor, model)) => (true, Some(vendor), Some(model)),
+    None => (false, None, None),
+  }
+}
+
 // ─────────────────────────────────────────────────────────
 // Public data types
 // ─────────────────────────────────────────────────────────
@@ -972,6 +1152,54 @@ async fn ensure_venv(app: &AppHandle, tool: &str, py: &str, dir: &Path) -> Resul
 // ─────────────────────────────────────────────────────────
 // Tauri commands
 // ─────────────────────────────────────────────────────────
+
+// camelCase to match every other Tauri-command-returned struct in this
+// file (PrereqStatus, etc.) and the frontend's HardwareProfile TypeScript
+// interface — without this, Tauri would serialize ram_gb/disk_free_gb as
+// snake_case and every frontend field access would be silently undefined
+// instead of erroring, since TS doesn't check JSON shapes at runtime.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HardwareProfile {
+  pub ram_gb: u64,
+  /// None when no disk could be resolved — serialized as JSON null, which
+  /// the frontend treats as "unknown" (does not block installs), distinct
+  /// from 0 meaning "genuinely full". Measures `runtimes_dir()`'s volume,
+  /// which governs Runtime Hub tools (fooocus/voice-os/chromadb) but NOT
+  /// the starter model — see `ollama_models_dir_free_gb` below for that.
+  pub disk_free_gb: Option<u64>,
+  /// Free space (GB) on the volume the starter model will actually be
+  /// pulled onto by Ollama — resolved ONLY when the `OLLAMA_MODELS`
+  /// environment variable is explicitly set, since that is the one case
+  /// where the real target directory is known with certainty rather than
+  /// guessed. None whenever the env var is unset (the common case): this
+  /// is NOT "unknown, assume default" — it deliberately means "not
+  /// checked", so a wrong default-path guess can never introduce new
+  /// incorrect blocking behavior. See docs/governance/DEFERRED_WORK.md's
+  /// 2026-09-08 entry for the full reasoning trail this followed from.
+  pub ollama_models_dir_free_gb: Option<u64>,
+  pub gpu_present: bool,
+  pub gpu_vendor: Option<String>,
+  pub gpu_model: Option<String>,
+}
+
+/// Aggregates RAM/disk/GPU detection into one result for Setup's System
+/// Scan screen. Deliberately separate from `runtime_check_prerequisites`
+/// (Python/Git/Ollama/Docker/Node) rather than merged into it — that
+/// command already has its own established callers and shape; Setup's
+/// frontend calls both in parallel instead.
+#[tauri::command]
+pub fn setup_scan_hardware() -> HardwareProfile {
+  let (gpu_present, gpu_vendor, gpu_model) = detect_gpu();
+  HardwareProfile {
+    ram_gb: detect_ram_gb(),
+    disk_free_gb: detect_disk_free_gb(),
+    ollama_models_dir_free_gb: detect_ollama_models_dir_free_gb(),
+    gpu_present,
+    gpu_vendor,
+    gpu_model,
+  }
+}
 
 #[tauri::command]
 pub fn runtime_check_prerequisites() -> PrereqStatus {
@@ -1783,6 +2011,106 @@ mod tests {
     assert_eq!(mgr.spawned_pid("ollama"), Some(1234));
     mgr.remove_pid("ollama");
     assert_eq!(mgr.spawned_pid("ollama"), None);
+  }
+
+  #[test]
+  fn detect_ram_gb_returns_plausible_value() {
+    // Any real machine running this test has at least 1GB and less than
+    // 4TB of RAM. This is a sanity bound, not a mock — sysinfo reads the
+    // real host, so the test environment's own RAM is the input.
+    let ram = detect_ram_gb();
+    assert!(ram >= 1, "expected at least 1GB RAM, got {}", ram);
+    assert!(ram < 4096, "expected less than 4TB RAM, got {}", ram);
+  }
+
+  #[test]
+  fn pick_disk_for_path_matches_longest_mount_point_prefix() {
+    let disks = vec![
+      ("/".to_string(), 50_000_000_000u64),
+      ("/home".to_string(), 200_000_000_000u64),
+    ];
+    // A path under /home should match the /home entry, not the root entry,
+    // because /home is the longer (more specific) matching prefix.
+    let picked = pick_disk_for_path("/home/user/AppData", &disks);
+    assert_eq!(picked, Some(200_000_000_000u64));
+  }
+
+  #[test]
+  fn pick_disk_for_path_falls_back_to_root_when_no_specific_match() {
+    let disks = vec![
+      ("/".to_string(), 50_000_000_000u64),
+      ("/home".to_string(), 200_000_000_000u64),
+    ];
+    let picked = pick_disk_for_path("/var/lib/alphonso", &disks);
+    assert_eq!(picked, Some(50_000_000_000u64));
+  }
+
+  #[test]
+  fn pick_disk_for_path_returns_none_for_empty_list() {
+    let disks: Vec<(String, u64)> = vec![];
+    assert_eq!(pick_disk_for_path("/anything", &disks), None);
+  }
+
+  #[test]
+  fn pick_disk_for_path_does_not_treat_home2_as_child_of_home() {
+    // Regression: a raw str::starts_with matched "/home2/app" against the
+    // "/home" mount point and reported the wrong volume's free space.
+    let disks = vec![
+      ("/".to_string(), 50_000_000_000u64),
+      ("/home".to_string(), 200_000_000_000u64),
+    ];
+    let picked = pick_disk_for_path("/home2/app", &disks);
+    assert_eq!(
+      picked,
+      Some(50_000_000_000u64),
+      "/home2 must fall back to the root mount, not match /home"
+    );
+  }
+
+  #[test]
+  fn parse_nvidia_smi_output_extracts_vendor_and_model() {
+    let output = "NVIDIA GeForce RTX 4060\n";
+    let (vendor, model) = parse_nvidia_smi_output(output).expect("should parse");
+    assert_eq!(vendor, "NVIDIA");
+    assert_eq!(model, "GeForce RTX 4060");
+  }
+
+  #[test]
+  fn parse_nvidia_smi_output_handles_trailing_whitespace_and_crlf() {
+    let output = "NVIDIA GeForce RTX 3080\r\n\r\n";
+    let (vendor, model) = parse_nvidia_smi_output(output).expect("should parse");
+    assert_eq!(vendor, "NVIDIA");
+    assert_eq!(model, "GeForce RTX 3080");
+  }
+
+  #[test]
+  fn parse_nvidia_smi_output_returns_none_for_empty_output() {
+    assert_eq!(parse_nvidia_smi_output(""), None);
+    assert_eq!(parse_nvidia_smi_output("\n"), None);
+  }
+
+  #[test]
+  fn parse_nvidia_smi_output_handles_non_nvidia_prefixed_name() {
+    // Defensive: if nvidia-smi ever reports a name that doesn't start with
+    // "NVIDIA" (unlikely, but the parser shouldn't crash on it), treat the
+    // whole string as the model with an "Unknown" vendor rather than
+    // panicking or silently dropping data.
+    let (vendor, model) = parse_nvidia_smi_output("Some GPU Name\n").expect("should parse");
+    assert_eq!(vendor, "Unknown");
+    assert_eq!(model, "Some GPU Name");
+  }
+
+  #[test]
+  fn setup_scan_hardware_returns_populated_profile() {
+    let profile = setup_scan_hardware();
+    // Same real-machine sanity bounds as detect_ram_gb_returns_plausible_value —
+    // this exercises the full command, not just the RAM function in isolation.
+    assert!(profile.ram_gb >= 1);
+    // disk_free_gb is Option: None is a legitimate "couldn't measure" result,
+    // so only bound it when a value was actually produced.
+    if let Some(free) = profile.disk_free_gb {
+      assert!(free < 1_000_000); // sanity upper bound, not a real limit
+    }
   }
 
   #[test]

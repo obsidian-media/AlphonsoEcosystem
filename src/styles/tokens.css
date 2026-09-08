@@ -15,6 +15,15 @@
   --accent-glow: oklch(78% 0.18 200 / 0.08);
   --accent-muted: oklch(78% 0.18 200 / 0.15);
 
+  /* Emblem — real brand green/orange, sampled from the shipped app icon.
+     Scoped to the Activation Sequence's emblem-reveal moment only — the
+     rest of the app's UI correctly uses --accent (cyan) above; see
+     docs/superpowers/specs/2026-09-07-smart-installer-design.md §5 step 1
+     for why these are deliberately different tokens, not a replacement. */
+  --emblem-green: #8EDB64;
+  --emblem-green-shadow: #1D5818;
+  --emblem-orange: #F87C02;
+
   /* Semantic */
   --success: oklch(72% 0.19 145);
   --success-dim: oklch(72% 0.19 145 / 0.12);

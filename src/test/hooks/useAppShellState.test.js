@@ -412,16 +412,16 @@ describe('useAppShellState', () => {
   });
 
   describe('Command palette state', () => {
-    it('initializes showOnboarding based on localStorage', () => {
+    it('initializes showSetup based on localStorage', () => {
       getStorage.mockReturnValueOnce(false);
       const { result } = renderHook(() => useAppShellState(defaultProps));
-      expect(result.current.showOnboarding).toBe(true);
+      expect(result.current.showSetup).toBe(true);
     });
 
-    it('initializes showOnboarding as false when onboarding complete', () => {
-      getStorage.mockImplementation((key, fallback) => (key === 'alphonso_onboarding_complete_v1' ? true : fallback));
+    it('initializes showSetup as false when setup complete', () => {
+      getStorage.mockImplementation((key, fallback) => (key === 'alphonso_setup_complete_v1' ? true : fallback));
       const { result } = renderHook(() => useAppShellState(defaultProps));
-      expect(result.current.showOnboarding).toBe(false);
+      expect(result.current.showSetup).toBe(false);
     });
   });
 
