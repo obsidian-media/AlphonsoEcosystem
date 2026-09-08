@@ -66,6 +66,58 @@ describe('InstallQueue', () => {
     );
   });
 
+  it('surfaces a background failure via alphonso:toast after early exit, since the screen is gone by then', async () => {
+    // Regression (CodeRabbit finding, PR #233): onStarterReady unmounts
+    // SetupFlow entirely, but a slower background component (e.g. Fooocus)
+    // can still fail afterwards. Its promise keeps running -- unmounting
+    // doesn't cancel it -- but with no toast, that failure vanished with
+    // zero indication anywhere that the component the user asked for never
+    // actually installed.
+    let resolveFooocus, rejectFooocus;
+    installComponent.mockImplementation((name) => {
+      if (name === 'starter-model') return Promise.resolve({ tool: name, ok: true, message: 'done' });
+      return new Promise((resolve, reject) => { resolveFooocus = resolve; rejectFooocus = reject; });
+    });
+    const onStarterReady = vi.fn();
+    const toastListener = vi.fn();
+    window.addEventListener('alphonso:toast', toastListener);
+
+    render(<InstallQueue components={components} onStarterReady={onStarterReady} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => expect(onStarterReady).toHaveBeenCalled());
+    expect(toastListener).not.toHaveBeenCalled(); // no toast yet -- fooocus hasn't failed
+
+    rejectFooocus(new Error('network error'));
+    await waitFor(() => expect(toastListener).toHaveBeenCalledTimes(1));
+    expect(toastListener.mock.calls[0][0].detail).toMatchObject({
+      type: 'error',
+      message: expect.stringContaining('Fooocus'),
+    });
+
+    window.removeEventListener('alphonso:toast', toastListener);
+    resolveFooocus?.({ tool: 'fooocus', ok: true, message: 'done' });
+  });
+
+  it('does not toast a failure that happens before early exit -- the queue screen is still visible for it', async () => {
+    // The starter model itself failing, or a component failing before the
+    // starter model becomes ready, is already shown on the still-mounted
+    // InstallQueue screen (via the error status + onFailed path) -- an
+    // extra toast here would be redundant, not a safety net.
+    installComponent.mockImplementation((name) => {
+      if (name === 'fooocus') return Promise.reject(new Error('network error'));
+      return Promise.resolve({ tool: name, ok: true, message: 'done' });
+    });
+    const toastListener = vi.fn();
+    window.addEventListener('alphonso:toast', toastListener);
+
+    render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getAllByRole('listitem').some((li) => /error/i.test(li.textContent))).toBe(true)
+    );
+    expect(toastListener).not.toHaveBeenCalled();
+
+    window.removeEventListener('alphonso:toast', toastListener);
+  });
+
   it('calls onFailed, NOT onAllComplete, when any component fails', async () => {
     // Treating a failed queue as completion would play "Alphonso is online."
     // and persist the setup-complete flag, permanently hiding the flow that

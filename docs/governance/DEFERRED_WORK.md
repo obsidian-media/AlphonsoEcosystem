@@ -7,6 +7,55 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-09-08] **Smart Installer: disk-space check still doesn't cover
+  Ollama's own model-storage volume.** Found via CodeRabbit review on PR
+  #233, verified against real code. `detect_disk_free_gb()` in
+  `runtime_manager.rs` measured `current_exe()`'s parent directory as a
+  proxy for "where installs land" — wrong whenever the app itself is
+  installed on a different drive than `runtimes_dir()`
+  (`%APPDATA%\Alphonso\runtimes`) lives on, a real and plausible split
+  (a user tight enough on space to install the app to a secondary drive is
+  exactly the user this check exists for). Fixed same-day: `detect_disk_free_gb()`
+  now measures `runtimes_dir()` directly, which is correct for the 3 of 4
+  Setup components that go through Runtime Hub (fooocus/voice-os/chromadb —
+  `tool_dir(name)` is always `runtimes_dir().join(name)`, one fixed target
+  regardless of which tool). **Still not covered:** the starter model
+  itself. Ollama stores pulled models under its own data directory
+  (`%USERPROFILE%\.ollama` by default, or wherever `OLLAMA_MODELS` points),
+  a third location independent of both `runtimes_dir()` and the exe's
+  directory. Resolving that reliably before Ollama is even installed is a
+  separate, harder problem (the env var may be unset, and Ollama may not
+  exist yet to ask) — deliberately not guessed at, since a wrong guess
+  would introduce new *incorrect* blocking behavior, which is worse than
+  the pre-existing "close enough" gap it would replace. Resume hint: if
+  this becomes worth closing, the safest approach is probably reading
+  `OLLAMA_MODELS` when set and falling back to the documented default path
+  per-OS, treated the same "unknown, don't block" way a failed measurement
+  already is elsewhere in this file — not a guess that actively blocks
+  installs. Status: partially fixed, remaining gap deferred.
+- [2026-09-08] **Smart Installer: background-install *success* after
+  early-exit is still silent (failure is now fixed).** `SetupFlow.tsx`'s
+  `handleStarterReady()` unmounts the whole Setup flow the moment the
+  starter model is ready, while other selected components (Fooocus, Voice
+  OS, ChromaDB) may still be installing in the background — their promises
+  keep running after unmount, but nothing was capturing the outcome.
+  CodeRabbit flagged this on PR #233; the *failure* half was a real,
+  fixable gap and is now fixed same-day (`InstallQueue.tsx` dispatches a
+  global `alphonso:toast` error notification — the same cross-component
+  mechanism `CoachContext.jsx` already uses for "still-mounted parent,
+  unmounted child" — pointing the user at Runtime Hub to retry). The
+  *success* half remains deliberately deferred, as already noted in
+  `SetupFlow.tsx`'s own `handleAllComplete` comment before this pass: a
+  real toast-variant Activation for "your last background install
+  finished" needs the main app shell to still be mounted to show a
+  non-blocking toast over it, which SetupFlow's own lifecycle can't do
+  once it has unmounted itself. Resume hint: this needs the app shell
+  (`App.tsx`) to own a small piece of "is a Setup-originated background
+  install still running" state that survives SetupFlow unmounting, not
+  something SetupFlow itself can solve alone — genuine cross-component
+  wiring, not a quick fix. Status: deferred (failure half closed, success
+  half remains open, now tracked here for the first time rather than only
+  in a code comment).
 - [2026-09-07] **CALL-E (J3): three live-verification steps deferred to the
   owner — everything else is done.** The connector's code layer is complete
   and CI-green (143 tests across the CALL-E suite), and as of PR #234 the

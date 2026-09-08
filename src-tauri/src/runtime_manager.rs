@@ -707,8 +707,28 @@ fn pick_disk_for_path(path: &str, disks: &[(String, u64)]) -> Option<u64> {
     .map(|(_, available)| *available)
 }
 
-/// Free disk space (GB) for the drive containing the app's own install
-/// directory — the drive Setup's downloads will actually land on.
+/// Free disk space (GB) for the drive Runtime Hub tool installs actually
+/// land on.
+///
+/// Measures `runtimes_dir()` (`%APPDATA%\Alphonso\runtimes` on Windows),
+/// not `current_exe()`'s directory — an earlier version of this function
+/// used the exe's own directory as a proxy, which is wrong whenever the app
+/// is installed on a different drive than `%APPDATA%` lives on (a real,
+/// plausible split: a user tight enough on space to install the app itself
+/// to a secondary drive is exactly the user this check exists for).
+/// `runtimes_dir()` is a single fixed location regardless of which tool is
+/// being installed (`tool_dir(name)` is always `runtimes_dir().join(name)`),
+/// so it's the correct one target for fooocus/voice-os/chromadb.
+///
+/// This still does NOT cover the starter model's own volume: Ollama stores
+/// pulled models under its own data directory (`%USERPROFILE%\.ollama` by
+/// default, or wherever `OLLAMA_MODELS` points), which is a third location
+/// independent of both `runtimes_dir()` and the exe's directory. Resolving
+/// that reliably before Ollama is even installed is a separate, harder
+/// problem (env var may be unset, Ollama may not exist yet to ask) —
+/// tracked in docs/governance/DEFERRED_WORK.md rather than guessed at here,
+/// since a wrong guess would introduce new incorrect blocking behavior,
+/// which is worse than the pre-existing "close enough" gap.
 fn detect_disk_free_gb() -> Option<u64> {
   let disks = sysinfo::Disks::new_with_refreshed_list();
   let disk_list: Vec<(String, u64)> = disks
@@ -722,19 +742,15 @@ fn detect_disk_free_gb() -> Option<u64> {
     })
     .collect();
 
-  let exe_dir = std::env::current_exe()
-    .ok()
-    .and_then(|p| p.parent().map(|p| p.to_string_lossy().to_string()))
-    .unwrap_or_default();
+  let target_dir = runtimes_dir().to_string_lossy().to_string();
 
   // None (not 0) when nothing resolves — 0 would read as "disk is full"
   // downstream and block every install on a machine we simply failed to
   // measure. Deliberately no fallback to "the largest mounted disk" here
   // (a real bug in an earlier version of this function, caught in review):
   // guessing an unrelated volume's free space is worse than reporting
-  // unknown — Setup's downloads land on the exe's actual drive, not
-  // whichever drive happens to be biggest.
-  pick_disk_for_path(&exe_dir, &disk_list).map(|bytes| bytes / 1024 / 1024 / 1024)
+  // unknown.
+  pick_disk_for_path(&target_dir, &disk_list).map(|bytes| bytes / 1024 / 1024 / 1024)
 }
 
 /// How long `detect_gpu` will wait for `nvidia-smi` before killing it and

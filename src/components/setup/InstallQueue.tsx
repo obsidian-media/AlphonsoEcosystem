@@ -43,6 +43,29 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
                 : t
             )
           );
+          // onStarterReady unmounts this whole screen while other selected
+          // components may still be installing in the background -- their
+          // promises keep running (unmounting doesn't cancel them) and this
+          // catch still fires, but the setTasks call above is now invisible:
+          // nothing is reading `tasks` any more. Without this, a background
+          // failure after early exit vanished completely -- no error
+          // anywhere, no way to know a component the user asked for never
+          // actually installed. Reuses the same cross-component
+          // `alphonso:toast` mechanism CoachContext already relies on for
+          // exactly this "still-mounted parent, unmounted child" case,
+          // rather than inventing a second notification path. Deliberately
+          // scoped to failures only -- a matching *success* toast for
+          // background completion is a different, already-deferred item
+          // (see SetupFlow.tsx's handleAllComplete comment).
+          if (starterReadyFired.current) {
+            window.dispatchEvent(new CustomEvent('alphonso:toast', {
+              detail: {
+                type: 'error',
+                title: 'Install failed',
+                message: `${component.label} couldn't be installed. You can retry it from Runtime Hub.`,
+              },
+            }));
+          }
         });
     });
     // components is expected to be stable for the lifetime of this screen
