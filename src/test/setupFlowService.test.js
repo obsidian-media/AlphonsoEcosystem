@@ -79,6 +79,22 @@ describe('checkDiskSpace', () => {
     expect(result.ok).toBe(false);
     expect(result.unknown).toBe(false);
   });
+
+  it('reports the buffered requirement, not just the raw component total', () => {
+    // Regression: the UI's "make sure you have at least Xgb free" warning
+    // for unknown disk space showed neededGb (raw component sizes only),
+    // understating the real requirement by the 10GB safety buffer — a 15GB
+    // component actually needs 25GB, but the message said 15GB.
+    const result = checkDiskSpace([{ id: 'fooocus', sizeGb: 15 }], 100);
+    expect(result.neededGb).toBe(15);
+    expect(result.requiredGb).toBe(25);
+  });
+
+  it('includes the buffer in requiredGb even when disk space is unknown', () => {
+    const result = checkDiskSpace([{ id: 'fooocus', sizeGb: 15 }], null);
+    expect(result.unknown).toBe(true);
+    expect(result.requiredGb).toBe(25);
+  });
 });
 
 describe('isSetupComplete / markSetupComplete', () => {

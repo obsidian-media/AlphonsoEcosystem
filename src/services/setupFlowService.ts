@@ -125,7 +125,17 @@ export async function isComponentAlreadyInstalled(
 
 export interface DiskSpaceCheck {
   ok: boolean;
+  /** Raw sum of selected components' sizes, with no safety buffer added. */
   neededGb: number;
+  /**
+   * What the UI should actually tell the user to have free — neededGb plus
+   * the safety buffer. Always use this for "make sure you have at least
+   * N GB free" copy; neededGb alone understates the real requirement (a
+   * real bug in an earlier version of this file, caught in review — the
+   * unknown-disk-space warning quoted neededGb, telling a user "15GB" when
+   * the real requirement was 25GB).
+   */
+  requiredGb: number;
   shortfallGb: number;
   /** True when free space is unknown, so `ok` is a pass-through, not a measurement. */
   unknown: boolean;
@@ -144,12 +154,12 @@ export interface DiskSpaceCheck {
  */
 export function checkDiskSpace(selected: SelectableComponent[], freeGb: number | null): DiskSpaceCheck {
   const neededGb = selected.reduce((sum, c) => sum + c.sizeGb, 0);
+  const requiredGb = neededGb + DISK_SAFETY_BUFFER_GB;
   if (freeGb === null) {
-    return { ok: true, neededGb, shortfallGb: 0, unknown: true };
+    return { ok: true, neededGb, requiredGb, shortfallGb: 0, unknown: true };
   }
-  const requiredWithBuffer = neededGb + DISK_SAFETY_BUFFER_GB;
-  const shortfallGb = Math.max(0, requiredWithBuffer - freeGb);
-  return { ok: shortfallGb === 0, neededGb, shortfallGb, unknown: false };
+  const shortfallGb = Math.max(0, requiredGb - freeGb);
+  return { ok: shortfallGb === 0, neededGb, requiredGb, shortfallGb, unknown: false };
 }
 
 /**

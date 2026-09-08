@@ -237,7 +237,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
         {diskCheck.unknown && (
           <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
             Couldn&apos;t measure free disk space — install will proceed, but make sure you have
-            at least {diskCheck.neededGb}GB free.
+            at least {diskCheck.requiredGb}GB free.
           </div>
         )}
         {!diskCheck.ok && (

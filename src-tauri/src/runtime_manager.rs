@@ -729,10 +729,12 @@ fn detect_disk_free_gb() -> Option<u64> {
 
   // None (not 0) when nothing resolves — 0 would read as "disk is full"
   // downstream and block every install on a machine we simply failed to
-  // measure.
-  pick_disk_for_path(&exe_dir, &disk_list)
-    .or_else(|| disk_list.iter().map(|(_, avail)| *avail).max())
-    .map(|bytes| bytes / 1024 / 1024 / 1024)
+  // measure. Deliberately no fallback to "the largest mounted disk" here
+  // (a real bug in an earlier version of this function, caught in review):
+  // guessing an unrelated volume's free space is worse than reporting
+  // unknown — Setup's downloads land on the exe's actual drive, not
+  // whichever drive happens to be biggest.
+  pick_disk_for_path(&exe_dir, &disk_list).map(|bytes| bytes / 1024 / 1024 / 1024)
 }
 
 /// How long `detect_gpu` will wait for `nvidia-smi` before killing it and
