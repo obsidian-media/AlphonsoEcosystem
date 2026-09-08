@@ -11,11 +11,21 @@ import {
   type SelectableComponent,
 } from '../../services/setupFlowService';
 import type { HardwareProfile } from '../../services/setupFlowService';
+import alphonsoPortrait from '../../assets/agents/setup/alphonso.webp';
+import joePortrait from '../../assets/agents/setup/jose.webp';
+import miyaPortrait from '../../assets/agents/setup/miya.webp';
+import hectorPortrait from '../../assets/agents/setup/hector.webp';
+import mariaPortrait from '../../assets/agents/setup/maria.webp';
+import marcusPortrait from '../../assets/agents/setup/marcus.webp';
+import echoPortrait from '../../assets/agents/setup/echo.webp';
+import sentinelPortrait from '../../assets/agents/setup/sentinel.webp';
+import novaPortrait from '../../assets/agents/setup/nova.webp';
 
 interface AgentEntry {
   agentId: string;
   name: string;
   color: string;
+  portrait: string;
   // Real component this agent's optional capability installs — undefined
   // means the agent is software-only (local-Ollama-powered or cloud-only,
   // per CLAUDE.md), with nothing to install at all.
@@ -28,38 +38,45 @@ interface AgentEntry {
 // draft's 8-tile roster, which included "Boardroom" (a feature, not an
 // agent) and omitted Sentinel and Nova entirely. Colors match the palette
 // already established for per-agent tiles elsewhere in this design (Miya
-// pink, Marcus red, Maria teal, etc.).
+// pink, Marcus red, Maria teal, etc.). Portraits are cropped/compressed
+// (~5-16KB each WebP, down from 5-6.6MB source PNGs — see the comment in
+// docs/superpowers/specs/2026-09-07-smart-installer-design.md §7) so 9 of
+// them don't meaningfully affect installer size.
 const AGENTS: AgentEntry[] = [
   {
     agentId: 'alphonso',
     name: 'Alphonso',
     color: 'var(--accent)',
+    portrait: alphonsoPortrait,
     alwaysOn: true,
     component: { id: STARTER_MODEL_ID, label: `Starter model (${STARTER_MODEL_TAG})`, sizeGb: 2 },
   },
-  { agentId: 'jose', name: 'Jose', color: '#9D4EDD' },
+  { agentId: 'jose', name: 'Jose', color: '#9D4EDD', portrait: joePortrait },
   {
     agentId: 'miya',
     name: 'Miya',
     color: '#FF2D95',
+    portrait: miyaPortrait,
     component: { id: 'fooocus', label: 'Fooocus (image generation)', sizeGb: 15 },
   },
-  { agentId: 'hector', name: 'Hector', color: '#FF9800' },
+  { agentId: 'hector', name: 'Hector', color: '#FF9800', portrait: hectorPortrait },
   {
     agentId: 'maria',
     name: 'Maria',
     color: '#00ACC1',
+    portrait: mariaPortrait,
     component: { id: 'chromadb', label: 'ChromaDB (memory)', sizeGb: 1 },
   },
   {
     agentId: 'marcus',
     name: 'Marcus',
     color: '#FF1744',
+    portrait: marcusPortrait,
     component: { id: 'voice-os', label: 'Voice OS', sizeGb: 1 },
   },
-  { agentId: 'echo', name: 'Echo', color: '#5E35B1' },
-  { agentId: 'sentinel', name: 'Sentinel', color: '#616161' },
-  { agentId: 'nova', name: 'Nova', color: '#76FF03' },
+  { agentId: 'echo', name: 'Echo', color: '#5E35B1', portrait: echoPortrait },
+  { agentId: 'sentinel', name: 'Sentinel', color: '#616161', portrait: sentinelPortrait },
+  { agentId: 'nova', name: 'Nova', color: '#76FF03', portrait: novaPortrait },
 ];
 
 export interface AgentGridProps {
@@ -161,8 +178,19 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
               style={{ borderColor: agent.color }}
               className="flex flex-col gap-1 rounded-lg border p-3 bg-[var(--surface-2)]"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-semibold" style={{ color: agent.color }}>{agent.name}</span>
+              <div className="flex items-center gap-2">
+                <img
+                  src={agent.portrait}
+                  alt=""
+                  // Decorative — the agent's name is already the accessible
+                  // label for this tile via the visible <span> below and the
+                  // checkbox's own aria-label; an image alt here would just
+                  // repeat it.
+                  aria-hidden="true"
+                  className="h-10 w-10 shrink-0 rounded-full object-cover"
+                  style={{ boxShadow: `0 0 0 2px ${agent.color}` }}
+                />
+                <span className="font-semibold flex-1" style={{ color: agent.color }}>{agent.name}</span>
                 {agent.component ? (
                   <input
                     type="checkbox"

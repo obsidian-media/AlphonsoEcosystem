@@ -105,6 +105,26 @@ describe('ActivationSequence — reduced motion', () => {
   });
 });
 
+describe('ActivationSequence — emblem', () => {
+  it('shows the real Alphonso emblem in the full variant', () => {
+    render(<ActivationSequence variant="full" onFinish={() => {}} />);
+    expect(screen.getByRole('img', { name: /alphonso/i })).toBeInTheDocument();
+  });
+
+  it('does not show the emblem in the compact toast variant', () => {
+    // The toast is a small non-blocking corner notice — the full ignite
+    // moment belongs to the one-time full-screen variant only.
+    render(<ActivationSequence variant="toast" onFinish={() => {}} />);
+    expect(screen.queryByRole('img', { name: /alphonso/i })).not.toBeInTheDocument();
+  });
+
+  it('still shows the emblem when reduced motion is set — less animation, not less content', () => {
+    setReducedMotion(true);
+    render(<ActivationSequence variant="full" onFinish={() => {}} />);
+    expect(screen.getByRole('img', { name: /alphonso/i })).toBeInTheDocument();
+  });
+});
+
 describe('ActivationSequence — screen reader announcement', () => {
   it('announces completion politely without stealing focus', () => {
     render(<ActivationSequence variant="full" onFinish={() => {}} />);
