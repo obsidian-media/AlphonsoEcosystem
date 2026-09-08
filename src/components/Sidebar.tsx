@@ -35,6 +35,33 @@ import { ConnectorStatusStrip, ConnectorStatusDot } from './ConnectorStatusIndic
 import { AgentStatusStrip } from './AgentStatusStrip';
 import { useTheme } from '../hooks/useTheme';
 
+const SIDEBAR_WIDTH_KEY = 'alphonso_sidebar_width_v1';
+const RECENT_CHATS_HEIGHT_KEY = 'alphonso_recent_chats_height_v1';
+const DEFAULT_SIDEBAR_WIDTH = 208; // matches the old fixed w-52
+const MIN_SIDEBAR_WIDTH = 180;
+const MAX_SIDEBAR_WIDTH = 340;
+const DEFAULT_RECENT_CHATS_HEIGHT = 220;
+const MIN_RECENT_CHATS_HEIGHT = 100;
+const MAX_RECENT_CHATS_HEIGHT = 480;
+
+function loadStoredNumber(key: string, fallback: number): number {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? Number(raw) : NaN;
+    return Number.isFinite(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveStoredNumber(key: string, value: number) {
+  try {
+    localStorage.setItem(key, String(Math.round(value)));
+  } catch {
+    // best-effort only
+  }
+}
+
 interface NavItem {
   id: string;
   icon: React.ElementType;
@@ -93,7 +120,6 @@ const SPACES: Space[] = [
     label: 'Home',
     items: [
       { id: 'mission', icon: LayoutDashboard, label: 'Dashboard' },
-      { id: 'chat', icon: MessageSquare, label: 'Chat' },
       { id: 'session_history', icon: History, label: 'Session History' },
     ]
   },
@@ -156,6 +182,56 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeSpace, setActiveSpace] = useState<SpaceId>('home');
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => loadStoredNumber(SIDEBAR_WIDTH_KEY, DEFAULT_SIDEBAR_WIDTH));
+  const [recentChatsHeight, setRecentChatsHeight] = useState<number>(() => loadStoredNumber(RECENT_CHATS_HEIGHT_KEY, DEFAULT_RECENT_CHATS_HEIGHT));
+  const [resizingWidth, setResizingWidth] = useState(false);
+  const [resizingHeight, setResizingHeight] = useState(false);
+
+  // Drag-to-resize for the sidebar's own width. Pointer-based (not a library)
+  // to match the existing drag convention used elsewhere in the app
+  // (AgentDock.tsx's position dragging) rather than introducing a new one.
+  React.useEffect(() => {
+    if (!resizingWidth) return;
+    const onMove = (e: PointerEvent) => {
+      const next = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, e.clientX));
+      setSidebarWidth(next);
+    };
+    const onUp = () => {
+      setResizingWidth(false);
+      setSidebarWidth((w) => { saveStoredNumber(SIDEBAR_WIDTH_KEY, w); return w; });
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [resizingWidth]);
+
+  // Drag-to-resize for the Recent Chats list's height, independent of the
+  // sidebar's own width drag above.
+  const recentChatsStartRef = React.useRef<{ startY: number; startHeight: number } | null>(null);
+  React.useEffect(() => {
+    if (!resizingHeight) return;
+    const onMove = (e: PointerEvent) => {
+      const start = recentChatsStartRef.current;
+      if (!start) return;
+      const delta = e.clientY - start.startY;
+      const next = Math.min(MAX_RECENT_CHATS_HEIGHT, Math.max(MIN_RECENT_CHATS_HEIGHT, start.startHeight + delta));
+      setRecentChatsHeight(next);
+    };
+    const onUp = () => {
+      setResizingHeight(false);
+      recentChatsStartRef.current = null;
+      setRecentChatsHeight((h) => { saveStoredNumber(RECENT_CHATS_HEIGHT_KEY, h); return h; });
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [resizingHeight]);
 
   const currentSpace = SPACES.find((s) => s.id === activeSpace) ?? SPACES[0];
   const visibleItems = mode === 'simple'
@@ -176,7 +252,20 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
   }
 
   return (
-    <aside className={`${isOpen ? 'w-52' : 'w-14'} flex flex-col transition-all duration-300 ease-in-out bg-[var(--surface-1)] shrink-0 border-r border-[var(--border)]`}>
+    <aside
+      className={`relative ${isOpen ? '' : 'w-14'} flex flex-col ${resizingWidth ? '' : 'transition-all duration-300 ease-in-out'} bg-[var(--surface-1)] shrink-0 border-r border-[var(--border)]`}
+      style={isOpen ? { width: sidebarWidth } : undefined}
+    >
+      {isOpen && (
+        <div
+          onPointerDown={(e) => { e.preventDefault(); setResizingWidth(true); }}
+          className="absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize z-10 hover:bg-[var(--accent-border)]"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          data-testid="sidebar-resize-handle"
+        />
+      )}
       {/* Logo */}
       <div className="h-14 flex items-center px-4 py-3 border-b border-[var(--border)] shrink-0">
         <div className="flex items-center gap-2.5 w-full">
@@ -216,6 +305,37 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
             title={ollamaConnected ? 'Local AI online' : 'Local AI offline'}
             className={`h-1.5 w-1.5 rounded-full shrink-0 ${ollamaConnected ? 'bg-[var(--success)]' : 'bg-[var(--text-4)]'}`}
           />
+        </button>
+      )}
+
+      {/* Persistent Chat shortcut — always reachable in one click regardless
+          of which Space is active, since Chat is the single most common
+          action and previously required switching to the Home space first. */}
+      {isOpen && (
+        <button
+          onClick={() => { setActiveSpace('home'); setActiveTab('chat'); }}
+          data-testid="sidebar-chat-shortcut"
+          className={`flex items-center gap-2 mx-3 mt-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
+            activeTab === 'chat' ? 'bg-[var(--accent-muted)] text-[var(--text-1)]' : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)]'
+          }`}
+          aria-label="Open Chat"
+          aria-current={activeTab === 'chat' ? 'page' : undefined}
+        >
+          <MessageSquare className={`w-4 h-4 shrink-0 ${activeTab === 'chat' ? 'text-[var(--accent)]' : ''}`} />
+          <span>Chat</span>
+        </button>
+      )}
+      {!isOpen && (
+        <button
+          onClick={() => { setActiveSpace('home'); setActiveTab('chat'); }}
+          data-testid="sidebar-chat-shortcut"
+          title="Chat"
+          className={`flex items-center justify-center mx-auto mt-2 p-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
+            activeTab === 'chat' ? 'bg-[var(--accent-muted)] text-[var(--accent)]' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]'
+          }`}
+          aria-label="Open Chat"
+        >
+          <MessageSquare className="w-4 h-4" />
         </button>
       )}
 
@@ -286,9 +406,24 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           ))}
         </div>
 
-        {/* Chat list — unchanged, only shown in the Home space (chat itself lives there) */}
-        {isOpen && activeSpace === 'home' && (
-          <div className="flex flex-col flex-1 px-2 mt-2 overflow-hidden">
+        {/* Recent Chats — user-resizable height (drag the handle above the
+            list), independent of the sidebar's own width drag. Persisted
+            separately so a user who prefers to see more/fewer chats at a
+            glance doesn't have to keep re-dragging it every session. */}
+        {isOpen && (
+          <div className="flex flex-col px-2 mt-2 shrink-0" style={{ height: recentChatsHeight }}>
+            <div
+              onPointerDown={(e) => {
+                e.preventDefault();
+                recentChatsStartRef.current = { startY: e.clientY, startHeight: recentChatsHeight };
+                setResizingHeight(true);
+              }}
+              className="mx-auto mb-1 h-1 w-8 shrink-0 cursor-row-resize rounded-full bg-[var(--border)] hover:bg-[var(--accent-border)]"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize recent chats"
+              data-testid="recent-chats-resize-handle"
+            />
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="section-label">Recent Chats</span>
               <button onClick={onCreateChat} className="p-1 hover:bg-[var(--surface-3)] rounded-lg transition-colors text-[var(--text-3)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]" aria-label="Create new chat">

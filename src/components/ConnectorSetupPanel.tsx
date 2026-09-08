@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   RadioTower, CheckCircle2, AlertCircle, Circle, ChevronDown, ChevronUp,
   GitBranch, MessageSquare, Bot, Zap, Database, ListTodo, Phone, Video,
-  Cpu, Search, Smartphone, Settings2, MessageCircle, Hash, AtSign, Webhook
+  Cpu, Search, Smartphone, Settings2, MessageCircle, Hash, AtSign, Webhook,
+  FileText
 } from 'lucide-react';
 import { ToolConnectionsPanel } from './ToolConnectionsPanel';
 import {
@@ -304,6 +305,63 @@ function HermesAgentsSection(): React.JSX.Element {
         );
       })}
     </>
+  );
+}
+
+const CONNECTOR_CATEGORY_STATE_KEY = 'alphonso_connector_category_state_v1';
+
+function loadCategoryState(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(CONNECTOR_CATEGORY_STATE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCategoryState(state: Record<string, boolean>) {
+  try {
+    localStorage.setItem(CONNECTOR_CATEGORY_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // best-effort only
+  }
+}
+
+// Restructures the ~20-connector flat list (previously one long space-y-4
+// scroll) into collapsible categories so the page no longer requires
+// endless scrolling to find one connector. First category open by default,
+// the rest collapsed; each category's open/closed state persists per-user.
+function CollapsibleCategory({ id, label, icon: Icon, defaultOpen, children }: { id: string; label: string; icon: LucideIcon; defaultOpen: boolean; children: React.ReactNode }): React.JSX.Element {
+  const [open, setOpen] = useState<boolean>(() => {
+    const stored = loadCategoryState();
+    return id in stored ? stored[id] : defaultOpen;
+  });
+
+  const toggle = () => {
+    setOpen((prev) => {
+      const next = !prev;
+      const stored = loadCategoryState();
+      stored[id] = next;
+      saveCategoryState(stored);
+      return next;
+    });
+  };
+
+  return (
+    <div className="border-t border-[var(--border)] first:border-t-0 first:pt-0 pt-2">
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full items-center gap-2.5 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded-lg"
+        aria-expanded={open}
+        data-testid={`connector-category-${id}`}
+      >
+        <Icon className="h-4 w-4 text-[var(--text-3)] shrink-0" />
+        <span className="text-[13px] font-semibold text-[var(--text-1)]">{label}</span>
+        {open ? <ChevronUp className="ml-auto h-3.5 w-3.5 text-[var(--text-3)]" /> : <ChevronDown className="ml-auto h-3.5 w-3.5 text-[var(--text-3)]" />}
+      </button>
+      {open && <div className="space-y-4 pb-4 pl-[26px]">{children}</div>}
+    </div>
   );
 }
 
@@ -749,7 +807,9 @@ export function ConnectorSetupPanel(): React.JSX.Element {
 
       <div>
         <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Configure Integrations</h3>
-        <div className="space-y-4">
+        <div className="space-y-1">
+
+        <CollapsibleCategory id="messaging" label="Messaging" icon={MessageSquare} defaultOpen>
 
           {/* Telegram — sky brand color kept intentionally, matches the per-connector palette */}
           <div className="rounded-2xl bg-sky-500/8 p-5">
@@ -792,11 +852,17 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             </div>
           </div>
 
-          <CredentialSection title="GitHub" icon={GitBranch} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
-            fields={[{ label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }]}
-            onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken })}
-            hint="Create a token at github.com/settings/tokens with repo and workflow scopes. Used by Marcus for releases and issue management."
-            savedLabel="GitHub token saved" />
+          <CredentialSection title="WhatsApp Cloud" icon={Phone} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"
+            fields={[
+              { label: 'Access Token', placeholder: 'EAA...', value: whatsappAccessToken, onChange: setWhatsappAccessToken, key: 'WHATSAPP_ACCESS_TOKEN' },
+              { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
+              { label: 'Webhook Verify Token', placeholder: 'Your custom verify string', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false },
+              { label: 'Cloud Gateway Drain URL', placeholder: 'https://your-gateway.up.railway.app/queue/drain', value: whatsappGatewayDrainUrl, onChange: setWhatsappGatewayDrainUrl, key: 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL', secret: false },
+              { label: 'Allowed Numbers (owner pairing)', placeholder: 'e.g. 15551234567 (digits only, no +)', value: whatsappAllowedNumbers, onChange: setWhatsappAllowedNumbers, key: 'WHATSAPP_ALLOWED_NUMBERS', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken, WHATSAPP_CLOUD_GATEWAY_DRAIN_URL: whatsappGatewayDrainUrl, WHATSAPP_ALLOWED_NUMBERS: whatsappAllowedNumbers })}
+            hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The Verify Token is a string you choose when setting up your webhook. Cloud Gateway Drain URL is required for inbound messages/commands to work — deploy gateway/whatsapp-cloud/ and paste its drain endpoint here. Allowed Numbers gates who can pair as the companion owner via /start (same protection as Telegram's allowlist)."
+            savedLabel="WhatsApp credentials saved" />
 
           <CredentialSection title="Slack" icon={Hash} borderColor="border-green-300/20" bgColor="bg-green-500/8" accentColor="text-green-400"
             fields={[{ label: 'Bot Token', placeholder: 'xoxb-...', value: slackBotToken, onChange: setSlackBotToken, key: 'SLACK_BOT_TOKEN' }]}
@@ -819,6 +885,10 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             hint="Deploy gateway/generic-webhook/ (Railway config included), point any external service at https://<gateway>/webhook/<sourceId> with the shared secret, then set the drain URL and token here so Alphonso can poll for events."
             savedLabel="Generic webhook config saved" />
 
+        </CollapsibleCategory>
+
+        <CollapsibleCategory id="ai_models" label="AI Models" icon={Bot} defaultOpen={false}>
+
           <PlaceholderConnectorBanner>
             <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
               fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
@@ -835,82 +905,11 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               savedLabel="OpenAI key saved" />
           </PlaceholderConnectorBanner>
 
-          <CredentialSection title="Notion" icon={Database} borderColor="border-pink-300/20" bgColor="bg-pink-500/8" accentColor="text-pink-400"
-            fields={[
-              { label: 'Integration Secret', placeholder: 'secret_...', value: notionApiKey, onChange: setNotionApiKey, key: 'NOTION_API_KEY' },
-              { label: 'Default Page ID', placeholder: 'Page UUID (optional)', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
-            ]}
-            onSave={() => saveConnectorApiKey('notion', { NOTION_API_KEY: notionApiKey, NOTION_PARENT_PAGE_ID: notionParentPageId })}
-            hint="Create an integration at notion.so/my-integrations, then share the pages you want Alphonso to write to with your integration."
-            savedLabel="Notion credentials saved" />
-
-          <CredentialSection title="ClickUp" icon={ListTodo} borderColor="border-purple-300/20" bgColor="bg-purple-500/8" accentColor="text-purple-400"
-            fields={[
-              { label: 'API Key', placeholder: 'pk_...', value: clickupApiKey, onChange: setClickupApiKey, key: 'CLICKUP_API_KEY' },
-              { label: 'Default List ID', placeholder: 'Found in the list URL (optional)', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
-            ]}
-            onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
-            hint="Find your API key under ClickUp Settings → Apps. The Default List ID is optional — Alphonso can target any list per task."
-            savedLabel="ClickUp credentials saved" />
-
-          <CredentialSection title="WhatsApp Cloud" icon={Phone} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"
-            fields={[
-              { label: 'Access Token', placeholder: 'EAA...', value: whatsappAccessToken, onChange: setWhatsappAccessToken, key: 'WHATSAPP_ACCESS_TOKEN' },
-              { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
-              { label: 'Webhook Verify Token', placeholder: 'Your custom verify string', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false },
-              { label: 'Cloud Gateway Drain URL', placeholder: 'https://your-gateway.up.railway.app/queue/drain', value: whatsappGatewayDrainUrl, onChange: setWhatsappGatewayDrainUrl, key: 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL', secret: false },
-              { label: 'Allowed Numbers (owner pairing)', placeholder: 'e.g. 15551234567 (digits only, no +)', value: whatsappAllowedNumbers, onChange: setWhatsappAllowedNumbers, key: 'WHATSAPP_ALLOWED_NUMBERS', secret: false }
-            ]}
-            onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken, WHATSAPP_CLOUD_GATEWAY_DRAIN_URL: whatsappGatewayDrainUrl, WHATSAPP_ALLOWED_NUMBERS: whatsappAllowedNumbers })}
-            hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The Verify Token is a string you choose when setting up your webhook. Cloud Gateway Drain URL is required for inbound messages/commands to work — deploy gateway/whatsapp-cloud/ and paste its drain endpoint here. Allowed Numbers gates who can pair as the companion owner via /start (same protection as Telegram's allowlist)."
-            savedLabel="WhatsApp credentials saved" />
-
-          <CredentialSection title="YouTube" icon={Video} borderColor="border-red-300/20" bgColor="bg-red-500/8" accentColor="text-red-400"
-            fields={[
-              { label: 'Client ID', placeholder: 'From Google Cloud Console', value: youtubeClientId, onChange: setYoutubeClientId, key: 'YOUTUBE_CLIENT_ID', secret: false },
-              { label: 'Client Secret', placeholder: 'From Google Cloud Console', value: youtubeClientSecret, onChange: setYoutubeClientSecret, key: 'YOUTUBE_CLIENT_SECRET' },
-              { label: 'Refresh Token', placeholder: 'Run: npm run auth:youtube', value: youtubeRefreshToken, onChange: setYoutubeRefreshToken, key: 'YOUTUBE_REFRESH_TOKEN' },
-              { label: 'Channel ID', placeholder: 'UC...', value: youtubeChannelId, onChange: setYoutubeChannelId, key: 'YOUTUBE_CHANNEL_ID', secret: false }
-            ]}
-            onSave={() => saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId })}
-            hint="Create OAuth 2.0 credentials in Google Cloud Console with the YouTube Data API v3 enabled. Then run npm run auth:youtube in a terminal to generate your Refresh Token."
-            savedLabel="YouTube credentials saved" />
-
           <CredentialSection title="Qwen / DashScope" icon={Cpu} borderColor="border-yellow-300/20" bgColor="bg-yellow-500/8" accentColor="text-yellow-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: qwenApiKey, onChange: setQwenApiKey, key: 'DASHSCOPE_API_KEY' }]}
             onSave={() => saveConnectorApiKey('qwen', { DASHSCOPE_API_KEY: qwenApiKey })}
             hint="Get your key at dashscope.aliyuncs.com. Alphonso uses the international endpoint automatically."
             savedLabel="Qwen key saved" />
-
-          <CredentialSection title="Brave Search" icon={Search} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
-            fields={[{ label: 'API Key', placeholder: 'BSA...', value: braveApiKey, onChange: setBraveApiKey, key: 'BRAVE_SEARCH_API_KEY' }]}
-            onSave={() => saveConnectorApiKey('brave_search', { BRAVE_SEARCH_API_KEY: braveApiKey })}
-            hint="Free tier: 2,000 queries/month. Sign up at search.brave.com/register. Used by Hector for real-time web research. Without this key Hector falls back to DuckDuckGo HTML scraping."
-            savedLabel="Brave Search key saved" />
-
-          <CredentialSection title="Tavily Search (Hector Fallback)" icon={Search} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
-            fields={[{ label: 'API Key', placeholder: 'tvly-...', value: tavilyApiKey, onChange: setTavilyApiKey, key: 'TAVILY_API_KEY' }]}
-            onSave={() => saveConnectorApiKey('tavily', { TAVILY_API_KEY: tavilyApiKey })}
-            hint="Free tier: 1,000 searches/month. Sign up at app.tavily.com. Hector uses this when Brave Search is unavailable. Designed for AI agents — returns clean summaries + sources."
-            savedLabel="Tavily key saved" />
-
-          <CredentialSection title="Perplexity" icon={Search} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
-            fields={[{ label: 'API Key', placeholder: 'pplx-...', value: perplexityApiKey, onChange: setPerplexityApiKey, key: 'PERPLEXITY_API_KEY' }]}
-            onSave={() => saveConnectorApiKey('perplexity', { PERPLEXITY_API_KEY: perplexityApiKey })}
-            hint="Get your key at perplexity.ai/settings/api. This saves the key so it stays configured — it is not currently called by Hector's own search fallback chain (Brave → Tavily → DeepSeek); wiring it in is a separate follow-up."
-            savedLabel="Perplexity key saved" />
-
-          <CredentialSection title="Runway ML (Video Generation)" icon={Video} borderColor="border-fuchsia-300/20" bgColor="bg-fuchsia-500/8" accentColor="text-fuchsia-400"
-            fields={[{ label: 'API Secret', placeholder: 'key_...', value: runwayApiKey, onChange: setRunwayApiKey, key: 'RUNWAYML_API_SECRET' }]}
-            onSave={() => saveConnectorApiKey('runway', { RUNWAYML_API_SECRET: runwayApiKey })}
-            hint="Get your key at app.runwayml.com/account/api-keys. Used by Miya Studio for AI video generation (Gen-4.5). Free trial credits included."
-            savedLabel="Runway key saved" />
-
-          <CredentialSection title="n8n Automation (Docker)" icon={Zap} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
-            fields={[{ label: 'n8n Base URL', placeholder: 'http://localhost:5678', value: n8nBaseUrl, onChange: setN8nBaseUrl, key: 'N8N_BASE_URL', secret: false }]}
-            onSave={() => saveConnectorApiKey('n8n', { N8N_BASE_URL: n8nBaseUrl })}
-            hint="n8n must be running in Docker. Default: http://localhost:5678. Used by Marcus for workflow automation triggers."
-            savedLabel="n8n URL saved" />
 
           <CredentialSection title="DeepSeek AI" icon={Cpu} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: deepseekApiKey, onChange: setDeepseekApiKey, key: 'DEEPSEEK_API_KEY' }]}
@@ -931,6 +930,86 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             savedLabel="Gemini key saved" />
 
           <HermesAgentsSection />
+
+        </CollapsibleCategory>
+
+        <CollapsibleCategory id="search" label="Search & Research" icon={Search} defaultOpen={false}>
+
+          <CredentialSection title="Brave Search" icon={Search} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
+            fields={[{ label: 'API Key', placeholder: 'BSA...', value: braveApiKey, onChange: setBraveApiKey, key: 'BRAVE_SEARCH_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('brave_search', { BRAVE_SEARCH_API_KEY: braveApiKey })}
+            hint="Free tier: 2,000 queries/month. Sign up at search.brave.com/register. Used by Hector for real-time web research. Without this key Hector falls back to DuckDuckGo HTML scraping."
+            savedLabel="Brave Search key saved" />
+
+          <CredentialSection title="Tavily Search (Hector Fallback)" icon={Search} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
+            fields={[{ label: 'API Key', placeholder: 'tvly-...', value: tavilyApiKey, onChange: setTavilyApiKey, key: 'TAVILY_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('tavily', { TAVILY_API_KEY: tavilyApiKey })}
+            hint="Free tier: 1,000 searches/month. Sign up at app.tavily.com. Hector uses this when Brave Search is unavailable. Designed for AI agents — returns clean summaries + sources."
+            savedLabel="Tavily key saved" />
+
+          <CredentialSection title="Perplexity" icon={Search} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
+            fields={[{ label: 'API Key', placeholder: 'pplx-...', value: perplexityApiKey, onChange: setPerplexityApiKey, key: 'PERPLEXITY_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('perplexity', { PERPLEXITY_API_KEY: perplexityApiKey })}
+            hint="Get your key at perplexity.ai/settings/api. This saves the key so it stays configured — it is not currently called by Hector's own search fallback chain (Brave → Tavily → DeepSeek); wiring it in is a separate follow-up."
+            savedLabel="Perplexity key saved" />
+
+        </CollapsibleCategory>
+
+        <CollapsibleCategory id="content" label="Content & Productivity" icon={FileText} defaultOpen={false}>
+
+          <CredentialSection title="GitHub" icon={GitBranch} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
+            fields={[{ label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }]}
+            onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken })}
+            hint="Create a token at github.com/settings/tokens with repo and workflow scopes. Used by Marcus for releases and issue management."
+            savedLabel="GitHub token saved" />
+
+          <CredentialSection title="Notion" icon={Database} borderColor="border-pink-300/20" bgColor="bg-pink-500/8" accentColor="text-pink-400"
+            fields={[
+              { label: 'Integration Secret', placeholder: 'secret_...', value: notionApiKey, onChange: setNotionApiKey, key: 'NOTION_API_KEY' },
+              { label: 'Default Page ID', placeholder: 'Page UUID (optional)', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('notion', { NOTION_API_KEY: notionApiKey, NOTION_PARENT_PAGE_ID: notionParentPageId })}
+            hint="Create an integration at notion.so/my-integrations, then share the pages you want Alphonso to write to with your integration."
+            savedLabel="Notion credentials saved" />
+
+          <CredentialSection title="ClickUp" icon={ListTodo} borderColor="border-purple-300/20" bgColor="bg-purple-500/8" accentColor="text-purple-400"
+            fields={[
+              { label: 'API Key', placeholder: 'pk_...', value: clickupApiKey, onChange: setClickupApiKey, key: 'CLICKUP_API_KEY' },
+              { label: 'Default List ID', placeholder: 'Found in the list URL (optional)', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
+            hint="Find your API key under ClickUp Settings → Apps. The Default List ID is optional — Alphonso can target any list per task."
+            savedLabel="ClickUp credentials saved" />
+
+          <CredentialSection title="YouTube" icon={Video} borderColor="border-red-300/20" bgColor="bg-red-500/8" accentColor="text-red-400"
+            fields={[
+              { label: 'Client ID', placeholder: 'From Google Cloud Console', value: youtubeClientId, onChange: setYoutubeClientId, key: 'YOUTUBE_CLIENT_ID', secret: false },
+              { label: 'Client Secret', placeholder: 'From Google Cloud Console', value: youtubeClientSecret, onChange: setYoutubeClientSecret, key: 'YOUTUBE_CLIENT_SECRET' },
+              { label: 'Refresh Token', placeholder: 'Run: npm run auth:youtube', value: youtubeRefreshToken, onChange: setYoutubeRefreshToken, key: 'YOUTUBE_REFRESH_TOKEN' },
+              { label: 'Channel ID', placeholder: 'UC...', value: youtubeChannelId, onChange: setYoutubeChannelId, key: 'YOUTUBE_CHANNEL_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId })}
+            hint="Create OAuth 2.0 credentials in Google Cloud Console with the YouTube Data API v3 enabled. Then run npm run auth:youtube in a terminal to generate your Refresh Token."
+            savedLabel="YouTube credentials saved" />
+
+          <CredentialSection title="Runway ML (Video Generation)" icon={Video} borderColor="border-fuchsia-300/20" bgColor="bg-fuchsia-500/8" accentColor="text-fuchsia-400"
+            fields={[{ label: 'API Secret', placeholder: 'key_...', value: runwayApiKey, onChange: setRunwayApiKey, key: 'RUNWAYML_API_SECRET' }]}
+            onSave={() => saveConnectorApiKey('runway', { RUNWAYML_API_SECRET: runwayApiKey })}
+            hint="Get your key at app.runwayml.com/account/api-keys. Used by Miya Studio for AI video generation (Gen-4.5). Free trial credits included."
+            savedLabel="Runway key saved" />
+
+        </CollapsibleCategory>
+
+        <CollapsibleCategory id="automation" label="Automation" icon={Zap} defaultOpen={false}>
+
+          <CredentialSection title="n8n Automation (Docker)" icon={Zap} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
+            fields={[{ label: 'n8n Base URL', placeholder: 'http://localhost:5678', value: n8nBaseUrl, onChange: setN8nBaseUrl, key: 'N8N_BASE_URL', secret: false }]}
+            onSave={() => saveConnectorApiKey('n8n', { N8N_BASE_URL: n8nBaseUrl })}
+            hint="n8n must be running in Docker. Default: http://localhost:5678. Used by Marcus for workflow automation triggers."
+            savedLabel="n8n URL saved" />
+
+        </CollapsibleCategory>
+
         </div>
       </div>
 

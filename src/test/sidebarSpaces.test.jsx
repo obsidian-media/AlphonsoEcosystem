@@ -39,11 +39,25 @@ describe('Sidebar — 5 Space pills', () => {
     expect(screen.getByTestId('space-pill-system')).toBeTruthy();
   });
 
-  it('defaults to the Home space, showing Dashboard/Chat/Session History', () => {
+  it('defaults to the Home space, showing Dashboard/Session History', () => {
     render(<Sidebar {...baseProps} />);
     expect(screen.getByTestId('sidebar-nav-mission')).toBeTruthy();
-    expect(screen.getByTestId('sidebar-nav-chat')).toBeTruthy();
     expect(screen.getByTestId('sidebar-nav-session_history')).toBeTruthy();
+  });
+
+  it('shows a persistent Chat shortcut regardless of the active space', () => {
+    render(<Sidebar {...baseProps} />);
+    expect(screen.getByTestId('sidebar-chat-shortcut')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('space-pill-system'));
+    expect(screen.getByTestId('sidebar-chat-shortcut')).toBeTruthy();
+  });
+
+  it('clicking the Chat shortcut switches to the Home space and opens Chat', () => {
+    render(<Sidebar {...baseProps} />);
+    fireEvent.click(screen.getByTestId('space-pill-system'));
+    fireEvent.click(screen.getByTestId('sidebar-chat-shortcut'));
+    expect(baseProps.setActiveTab).toHaveBeenCalledWith('chat');
+    expect(screen.getByTestId('sidebar-nav-mission')).toBeTruthy();
   });
 
   it('clicking the Work space pill shows Projects/Content/Automation/Creative, hides Home items', () => {

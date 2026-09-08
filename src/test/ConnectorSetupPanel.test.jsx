@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 // ── Tauri mock ────────────────────────────────────────────────────────────────
 vi.mock('@tauri-apps/api/core', () => ({
@@ -118,6 +118,9 @@ describe('ConnectorSetupPanel', () => {
 
   it('shows GitHub credential section', () => {
     render(<ConnectorSetupPanel />);
+    // GitHub lives in the "Content & Productivity" collapsible category,
+    // collapsed by default — expand it before asserting on its contents.
+    fireEvent.click(screen.getByTestId('connector-category-content'));
     expect(screen.getByText('GitHub')).toBeTruthy();
     // The GitHub CredentialSection renders a "Personal Access Token" label
     expect(screen.getByText('Personal Access Token')).toBeTruthy();
@@ -137,6 +140,9 @@ describe('ConnectorSetupPanel', () => {
   // could still leak into a component even with a clean service.
   it('renders exactly one Hermes credential row per agent in agentRegistry.js, dynamically', () => {
     render(<ConnectorSetupPanel />);
+    // Hermes Agents lives in the "AI Models" collapsible category, collapsed
+    // by default — expand it before asserting on its contents.
+    fireEvent.click(screen.getByTestId('connector-category-ai_models'));
     const agents = listAgentProfiles();
     expect(agents.length).toBeGreaterThan(0);
     for (const agent of agents) {
