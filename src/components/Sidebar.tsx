@@ -318,7 +318,6 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           className={`flex items-center gap-2 mx-3 mt-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
             activeTab === 'chat' ? 'bg-[var(--accent-muted)] text-[var(--text-1)]' : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)]'
           }`}
-          aria-label="Open Chat"
           aria-current={activeTab === 'chat' ? 'page' : undefined}
         >
           <MessageSquare className={`w-4 h-4 shrink-0 ${activeTab === 'chat' ? 'text-[var(--accent)]' : ''}`} />
