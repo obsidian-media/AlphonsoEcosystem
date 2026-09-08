@@ -54,8 +54,8 @@ export function WorkflowPanel({ onClose, onRunWorkflow }: Props) {
             return (
               <div
                 key={workflow.id}
-                className={`rounded-xl border p-3 ${
-                  isActive ? 'border-[var(--border-strong)] bg-[var(--surface-3)]' : 'border-[var(--border)] bg-[var(--surface-2)]'
+                className={`rounded-xl p-3 ${
+                  isActive ? 'bg-[var(--surface-3)] ring-1 ring-[var(--border-strong)]' : 'bg-[var(--surface-2)]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">

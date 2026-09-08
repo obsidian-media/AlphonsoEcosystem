@@ -58,7 +58,7 @@ function PacketCard({ packet, onApprove, onReject, onReplay }: PacketCardProps) 
   const stage = statusStage(packet.status);
   const Icon = stage.icon;
   return (
-    <div className={`rounded-xl border p-3 space-y-2 ${stage.ring}`}>
+    <div className={`rounded-xl p-3 space-y-2 ${stage.ring}`}>
       <div className="flex items-start gap-2">
         <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${stage.color}`} />
         <div className="min-w-0 flex-1">
@@ -134,13 +134,13 @@ export function JoseTaskQueue({ onRefresh }: JoseTaskQueueProps) {
   const totalActive = (counts.pending_approval || 0) + (counts.queued || 0) + (counts.executing || 0);
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4 space-y-4">
+    <div className="rounded-2xl bg-[var(--surface-1)] p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">Jose Task Pipeline</span>
           {totalActive > 0 && (
-            <span className="rounded-full bg-[var(--info-dim)] border border-[var(--info-border)] px-2 py-0.5 text-[9px] font-bold text-[var(--info)]">{totalActive} active</span>
+            <span className="rounded-full border border-[var(--info-border)] bg-[var(--info-dim)] px-2 py-0.5 text-[9px] font-bold text-[var(--info)]">{totalActive} active</span>
           )}
         </div>
         <div className="flex items-center gap-2 text-[10px] text-[var(--text-4)]">

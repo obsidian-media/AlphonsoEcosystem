@@ -105,8 +105,8 @@ export function TrustLayerPanel({ verificationLogs = [], ollamaStatus }: { verif
           <button
             key={type}
             onClick={() => setFilter(type)}
-            className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
-              filter === type ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)]'
+            className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
+              filter === type ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'
             }`}
           >
             {type.replace(/_/g, ' ')}
@@ -167,14 +167,14 @@ export function ApprovalCenterPanel({ onRefresh }: { onRefresh?: () => void }) {
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
-              statusFilter === status ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)]'
+            className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
+              statusFilter === status ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'
             }`}
           >
             {status.replace(/_/g, ' ')}
           </button>
         ))}
-        <button onClick={refresh} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">
+        <button onClick={refresh} className="rounded-lg bg-[var(--surface-2)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">
           <RefreshCw className="inline h-3 w-3" /> Refresh
         </button>
       </div>
@@ -246,28 +246,28 @@ export function MemoryConfidencePanel() {
   return (
     <Panel icon={Brain} title="Memory Confidence System" tone="indigo">
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
-        <select aria-label="Filter by confidence" value={confidenceFilter} onChange={(event) => setConfidenceFilter(event.target.value)} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+        <select aria-label="Filter by confidence" value={confidenceFilter} onChange={(event) => setConfidenceFilter(event.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
           {['all', 'verified', 'inferred', 'temporary', 'expired', 'unverified', 'user_confirmed'].map((value) => <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>)}
         </select>
-        <select aria-label="Filter by category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+        <select aria-label="Filter by category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
           {categories.map((value) => <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>)}
         </select>
-        <select aria-label="Filter by agent" value={agentFilter} onChange={(event) => setAgentFilter(event.target.value)} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+        <select aria-label="Filter by agent" value={agentFilter} onChange={(event) => setAgentFilter(event.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
           {['all', 'jose', 'alphonso', 'miya', 'hector', 'maria', 'marcus', 'echo', 'sentinel', 'nova', 'shared'].map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
-        <select aria-label="Filter by date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+        <select aria-label="Filter by date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
           <option value="all">all dates</option>
           <option value="today">today</option>
           <option value="7d">last 7 days</option>
           <option value="30d">last 30 days</option>
         </select>
-        <input value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} placeholder="Filter by project/source text" className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" />
+        <input value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} placeholder="Filter by project/source text" className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" />
       </div>
-      <div className="mt-3 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
+      <div className="mt-3 rounded-xl bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
         SQLite durable memory is now the preferred store in the Tauri app. If SQLite is unavailable in browser preview, this panel falls back to localStorage. Semantic/vector memory remains setup_required.
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">
+        <div className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">
             <Database className="h-3.5 w-3.5" />
             Durable Memory Store
@@ -282,7 +282,7 @@ export function MemoryConfidencePanel() {
           {migrationError && <div className="mt-2 text-[var(--error)]">{migrationError}</div>}
         </div>
         <div className="flex flex-col gap-2">
-          <button onClick={refreshDurableMemory} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">
+          <button onClick={refreshDurableMemory} className="rounded-xl bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">
             Refresh SQLite
           </button>
           <button onClick={migrateMemory} disabled={isMigrating} className="rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)]">
@@ -307,7 +307,7 @@ export function EcosystemMapPanel({ ollamaStatus }: { ollamaStatus?: { label?: s
 
   return (
     <Panel icon={Route} title="Live Ecosystem Map Foundation" tone="amber">
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+      <div className="rounded-xl bg-[var(--surface-2)] p-4">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.2fr_1fr]">
           <div className="space-y-3">
             <AgentNode agent="miya" title="Miya" subtitle="Creator" stat={`${packets.filter((p) => p.fromAgent === 'miya').length} handoffs`} />
@@ -343,7 +343,7 @@ export function EcosystemMapPanel({ ollamaStatus }: { ollamaStatus?: { label?: s
           <Relationship text="Memory connects to all agents through local ledgers." />
         </div>
       </div>
-      <div className="mt-3 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]">
+      <div className="mt-3 rounded-xl bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]">
         Visual foundation - live graph routing remains setup_required. Counts come from current local packets, workflow records, memory records, and runtime status.
       </div>
     </Panel>
@@ -375,7 +375,7 @@ export function SessionIntelligencePanel() {
           <div className="mt-2 space-y-2 max-h-60 overflow-y-auto pr-1">
             {timeline.length === 0 && <EmptyState label="No session events recorded yet." />}
             {timeline.map((event) => (
-              <div key={event.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+              <div key={event.id} className="rounded-xl bg-[var(--surface-2)] p-3">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm font-semibold text-[var(--text-1)]">{event.title}</span>
                   <TrustBadge state={event.verificationState || event.confidence || TRUST_STATES.UNVERIFIED} />
@@ -390,11 +390,11 @@ export function SessionIntelligencePanel() {
             <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Recommended Next Actions</div>
             <div className="mt-2 space-y-2">
               {(summary.recommendations || []).map((item) => (
-                <div key={item} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">{item}</div>
+                <div key={item} className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">{item}</div>
               ))}
             </div>
           </div>
-          <div className="rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
+          <div className="rounded-xl bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
             Export report remains a local reporting flow until file export is added end-to-end. This panel uses real local session events when available.
           </div>
           <button onClick={() => setEvents(listSessionEvents())} className="rounded-lg bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)]">Refresh Session</button>
@@ -423,8 +423,8 @@ export function WorkflowOperationsPanel() {
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
-              statusFilter === status ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)]'
+            className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
+              statusFilter === status ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'
             }`}
           >
             {status.replace(/_/g, ' ')}
@@ -433,7 +433,7 @@ export function WorkflowOperationsPanel() {
       </div>
       <div className="mt-3 space-y-2 max-h-96 overflow-y-auto pr-1">
         {filtered.map((workflow) => (
-          <div key={workflow.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+          <div key={workflow.id} className="rounded-xl bg-[var(--surface-2)] p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-[var(--text-1)]">{workflow.name}</div>
@@ -477,7 +477,7 @@ export function WorkflowOperationsPanel() {
                 </React.Fragment>
               ))}
             </div>
-            <div className="mt-2 rounded-lg border border-[var(--warning-border)] bg-[var(--warning-dim)] px-2 py-1 text-[10px] text-[var(--warning)]">
+            <div className="mt-2 rounded-lg bg-[var(--warning-dim)] px-2 py-1 text-[10px] text-[var(--warning)]">
               Needs setup: {(workflow.setupRequired || []).join(' ')}
             </div>
             <div className="mt-2 flex gap-2">
@@ -502,10 +502,10 @@ export function PrivacyShieldPanel({ settings, voiceStatus, workspaceFoundation 
         <PrivacyItem icon={UploadCloud} label="Upload / Network" value="No cloud upload path enabled" state="verified" />
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
+        <div className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
           Sensitive-window protection is supervised-only. No screen capture runs silently; screen/OCR foundations must stay visible and supervised.
         </div>
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
+        <div className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
           Permission audit log remains read-only until backend permission events are persisted. Current microphone state is read from the real voice foundation.
         </div>
       </div>
@@ -531,8 +531,8 @@ export function OperatorModesPanel({ settings, setSettings }: { settings: Record
           <button
             key={mode.id}
             onClick={() => setSettings({ ...settings, focusMode: mode.id })}
-            className={`rounded-xl border p-3 text-left transition ${
-              active === mode.id ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-2)]'
+            className={`rounded-xl p-3 text-left transition ${
+              active === mode.id ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)]'
             }`}
           >
             <div className="flex items-center justify-between gap-3">
@@ -560,7 +560,7 @@ function ActionReceipt({ log }: { log: any }) {
   const path = (payload as any).path || (payload as any).manifest_path || (payload as any).cwd || (Array.isArray((payload as any).paths) ? (payload as any).paths.join(', ') : '');
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <div className="rounded-xl bg-[var(--surface-2)] p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold text-[var(--text-1)]">{command}</div>
@@ -586,7 +586,7 @@ function ActionReceipt({ log }: { log: any }) {
 function ApprovalCard({ packet, onApprove, onReject }: { packet: any; onApprove: (id: string) => void; onReject: (id: string) => void }) {
   const risk = (packet.riskLevel as string) || inferRisk(packet);
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <div className="rounded-xl bg-[var(--surface-2)] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-[var(--text-1)]">{packet.title}</div>
@@ -622,7 +622,7 @@ function ApprovalCard({ packet, onApprove, onReject }: { packet: any; onApprove:
 
 function MemoryCard({ item }: { item: any }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <div className="rounded-xl bg-[var(--surface-2)] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-[var(--text-1)]">{item.title || item.category}</div>
@@ -638,7 +638,7 @@ function MemoryCard({ item }: { item: any }) {
 
 function AgentNode({ agent, title, subtitle, stat, large = false }: { agent: string; title: string; subtitle: string; stat: string; large?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-4 text-center ${large ? 'min-h-36' : 'min-h-28'} ${nodeClass(agent)}`}>
+    <div className={`rounded-2xl p-4 text-center ${large ? 'min-h-36' : 'min-h-28'} ${nodeClass(agent)}`}>
       <div className="mb-2 flex justify-center">
         <AgentAvatar agentId={agent} name={title} sizeClass={large ? 'h-12 w-12' : 'h-10 w-10'} className="border-[var(--border-strong)]" />
       </div>
@@ -667,7 +667,7 @@ function Relationship({ text }: { text: string }) {
 
 function ProofTile({ icon: Icon, label, value, trust }: { icon: typeof Brain; label: string; value: React.ReactNode; trust: string }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <div className="rounded-xl bg-[var(--surface-2)] p-3">
       <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
         <Icon className="h-3.5 w-3.5" />
         {label}
@@ -682,7 +682,7 @@ function ProofTile({ icon: Icon, label, value, trust }: { icon: typeof Brain; la
 
 function PrivacyItem({ icon: Icon, label, value, state }: { icon: typeof Database; label: string; value: string; state: string }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <div className="rounded-xl bg-[var(--surface-2)] p-3">
       <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
         <Icon className="h-3.5 w-3.5" />
         {label}
@@ -705,7 +705,7 @@ function PreviewBlock({ label, value, placeholder }: { label: string; value: str
 
 function Metric({ label, value, tone = 'zinc' }: { label: string; value: React.ReactNode; tone?: string }) {
   return (
-    <div className={`rounded-xl border p-3 ${metricClass(tone)}`}>
+    <div className={`rounded-xl p-3 ${metricClass(tone)}`}>
       <div className="text-[10px] uppercase tracking-widest opacity-65">{label}</div>
       <div className="mt-1 truncate text-lg font-bold">{value}</div>
     </div>
@@ -714,7 +714,7 @@ function Metric({ label, value, tone = 'zinc' }: { label: string; value: React.R
 
 function Panel({ icon: Icon, title, children, tone = 'indigo' }: { icon: typeof Brain; title: string; children: React.ReactNode; tone?: string }) {
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4 shadow-[0_0_50px_rgba(0,0,0,0.2)]">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-4 shadow-[0_0_50px_rgba(0,0,0,0.2)]">
       <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
         <Icon className={`h-4 w-4 ${iconClass(tone)}`} />
         {title}
@@ -734,7 +734,7 @@ function Badge({ children, color = 'zinc' }: { children: React.ReactNode; color?
 }
 
 function EmptyState({ label }: { label: string }) {
-  return <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm text-[var(--text-3)]">{label}</div>;
+  return <div className="rounded-xl bg-[var(--surface-2)] p-4 text-sm text-[var(--text-3)]">{label}</div>;
 }
 
 function countType(logs: unknown[], type: string) {

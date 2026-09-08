@@ -19,10 +19,10 @@ interface Props {
 export function CoachInterventionCard({ intervention, onAction, onDemo, pauseUntilMs }: Props) {
   const level = intervention?.level || 'quiet';
   const tone = level === 'hard'
-    ? 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)] shadow-[0_0_40px_rgba(239,68,68,0.18)]'
+    ? 'bg-[var(--error-dim)] text-[var(--error)] shadow-[0_0_40px_rgba(239,68,68,0.18)]'
     : level === 'firm'
-      ? 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)] shadow-[0_0_34px_rgba(245,158,11,0.14)]'
-      : 'border-[var(--info-border)] bg-[var(--info-dim)] text-[var(--info)]';
+      ? 'bg-[var(--warning-dim)] text-[var(--warning)] shadow-[0_0_34px_rgba(245,158,11,0.14)]'
+      : 'bg-[var(--info-dim)] text-[var(--info)]';
   const toneBorder = level === 'hard'
     ? 'border-[var(--error-border)]'
     : level === 'firm'
@@ -31,7 +31,7 @@ export function CoachInterventionCard({ intervention, onAction, onDemo, pauseUnt
 
   if (!intervention) {
     return (
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-0)] p-3">
+      <div className="rounded-2xl bg-[var(--surface-2)] p-3">
         <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-3)]">Session guard</div>
         <div className="mt-2 text-sm font-semibold text-[var(--text-2)]">No active intervention.</div>
         <div className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">Local bridge is ready for protective session events.</div>
@@ -49,7 +49,7 @@ export function CoachInterventionCard({ intervention, onAction, onDemo, pauseUnt
   }
 
   return (
-    <div className={`rounded-2xl border p-4 ${tone}`} role="alert">
+    <div className={`rounded-2xl p-4 ${tone}`} role="alert">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Local Coach Intervention</div>

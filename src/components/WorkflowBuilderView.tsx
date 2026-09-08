@@ -228,7 +228,7 @@ export function WorkflowBuilderView() {
                       <button
                         key={n.type}
                         onClick={() => handleAddNode(n.type)}
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all hover:opacity-80 ${s.bg} ${s.border} ${s.text}`}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:opacity-80 ${s.bg} ${s.text}`}
                       >
                         {s.badge} {n.label}
                       </button>

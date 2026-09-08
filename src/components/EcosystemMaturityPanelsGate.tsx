@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 function LoadingState() {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-0)] p-4 text-sm text-[var(--text-3)]">
+    <div className="rounded-2xl bg-[var(--surface-0)] p-4 text-sm text-[var(--text-3)]">
       Loading maturity panels...
     </div>
   );

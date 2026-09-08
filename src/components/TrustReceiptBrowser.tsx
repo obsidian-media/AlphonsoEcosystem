@@ -63,7 +63,7 @@ function Selector({ label, value, onChange, options }: SelectorProps) {
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[11px] text-[var(--text-2)]"
+        className="rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[11px] text-[var(--text-2)]"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -131,14 +131,14 @@ export function TrustReceiptBrowser() {
         <Selector label="Status" value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
         <button
           onClick={loadReceipts}
-          className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-2)]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-2)]"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           Refresh
         </button>
       </div>
 
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
+      <div className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
         <div className="flex items-center gap-2 text-[var(--text-2)]">
           <ShieldCheck className="h-3.5 w-3.5 text-[var(--success)]" />
           {loading ? 'Loading durable audit receipts...' : `${filteredRows.length} receipt${filteredRows.length === 1 ? '' : 's'} shown (reload re-reads persisted audit log)`}
@@ -146,7 +146,7 @@ export function TrustReceiptBrowser() {
         {error && <div className="mt-1 text-[var(--error)]">{error}</div>}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface-2)]">
+      <div className="overflow-x-auto rounded-xl bg-[var(--surface-2)]">
         <table className="min-w-full divide-y divide-[var(--border)] text-left text-[11px]">
           <thead className="bg-[var(--surface-1)] text-[var(--text-3)] uppercase tracking-widest">
             <tr>

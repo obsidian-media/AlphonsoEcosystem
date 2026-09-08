@@ -88,20 +88,20 @@ function JoseSchedulerPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+      <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
         <div className="section-label">New Schedule</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <input
             value={newName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
             placeholder="Schedule name..."
-            className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+            className="bg-[var(--surface-3)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
           />
           <select
             aria-label="Schedule preset"
             value={newPreset}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewPreset(e.target.value)}
-            className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] focus:outline-none focus:border-[var(--accent-border)]"
+            className="bg-[var(--surface-3)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] focus:outline-none focus:border-[var(--accent-border)]"
           >
             {SCHEDULE_PRESETS.map((p: { id: string; label: string }) => (
               <option key={p.id} value={p.id}>{p.label}</option>
@@ -113,7 +113,7 @@ function JoseSchedulerPanel() {
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewCommand(e.target.value)}
           placeholder="Command text to execute on schedule..."
           rows={2}
-          className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+          className="w-full bg-[var(--surface-3)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         <button
           onClick={handleCreate}
@@ -127,17 +127,17 @@ function JoseSchedulerPanel() {
         <div className="text-xs text-[var(--error)] px-1">{createError}</div>
       )}
 
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+      <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
         <div className="section-label">Schedules ({schedules.length})</div>
         {schedules.length === 0 && (
           <div className="text-xs text-[var(--text-4)] py-2">No schedules yet. Create one above.</div>
         )}
         {schedules.map((sched) => (
-          <div key={sched.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
+          <div key={sched.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--surface-3)]">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-[var(--text-1)]">{sched.name}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded border border-[var(--border)] text-[var(--text-3)]">
+                <span className="text-[10px] px-2 py-0.5 rounded text-[var(--text-3)]">
                   {SCHEDULE_PRESETS.find((p: { id: string; label: string }) => p.id === sched.presetId)?.label || sched.presetId}
                 </span>
               </div>
@@ -151,7 +151,7 @@ function JoseSchedulerPanel() {
             <div className="flex items-center gap-2 shrink-0 ml-3">
               <button
                 onClick={() => handleRunNow(sched)}
-                className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--success)] hover:border-[var(--success-border)] transition-colors"
+                className="p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--success)] hover:border-[var(--success-border)] transition-colors"
                 title="Run now"
               >
                 <Play className="w-3 h-3" />
@@ -168,7 +168,7 @@ function JoseSchedulerPanel() {
               </button>
               <button
                 onClick={() => handleDelete(sched.id)}
-                className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--error)] hover:border-[var(--error-border)] transition-colors"
+                className="p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--error)] hover:border-[var(--error-border)] transition-colors"
                 title="Delete"
               >
                 <Trash2 className="w-3 h-3" />
@@ -242,12 +242,12 @@ export function AutomationView() {
           <h2 className="text-base font-bold text-[var(--text-1)]">Automation</h2>
           <p className="text-xs text-[var(--text-3)] mt-0.5">Build and run multi-agent workflows</p>
         </div>
-        <button onClick={refresh} aria-label="Refresh schedules" className="p-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors">
+        <button onClick={refresh} aria-label="Refresh schedules" className="p-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors">
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+      <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
         <div className="section-label">New Workflow</div>
         <div className="flex gap-2">
           <input
@@ -255,7 +255,7 @@ export function AutomationView() {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
             onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleCreate()}
             placeholder="Workflow name..."
-            className="flex-1 bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+            className="flex-1 bg-[var(--surface-3)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
           />
           <button
             onClick={handleCreate}
@@ -267,30 +267,30 @@ export function AutomationView() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+      <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
         <div className="section-label">Workflows ({workflows.length})</div>
         {workflows.length === 0 && <div className="text-xs text-[var(--text-4)] py-2">No workflows yet. Create one above.</div>}
         {workflows.map((wf) => (
-          <div key={wf.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
+          <div key={wf.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--surface-3)]">
             <div>
               <div className="text-sm font-medium text-[var(--text-1)]">{wf.name}</div>
               <div className="text-[10px] text-[var(--text-4)] font-mono">{wf.id}</div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-[var(--text-3)]">{wf.nodes?.length || 0} nodes</span>
-              <span className="text-[10px] px-2 py-0.5 rounded border border-[var(--border)] text-[var(--text-3)]">{wf.agentScope || 'shared'}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded text-[var(--text-3)]">{wf.agentScope || 'shared'}</span>
             </div>
           </div>
         ))}
       </div>
 
       {ops.length > 0 && (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+        <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
           <div className="section-label">Registered Operations ({ops.length})</div>
           {ops.slice(0, 20).map((op) => {
             const isActive = op.status === 'active' || op.enabled;
             return (
-              <div key={op.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
+              <div key={op.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--surface-3)]">
                 <div>
                   <div className="text-sm font-medium text-[var(--text-2)]">{op.name || op.id}</div>
                   {op.description && <div className="text-[10px] text-[var(--text-4)] mt-0.5">{op.description}</div>}
@@ -316,10 +316,10 @@ export function AutomationView() {
       )}
 
       {runs.length > 0 && (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+        <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
           <div className="section-label">Recent Runs ({runs.length})</div>
           {runs.slice(0, 15).map((run) => (
-            <div key={run.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
+            <div key={run.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--surface-3)]">
               <div>
                 <div className="text-xs font-medium text-[var(--text-2)]">{run.workflowId}</div>
                 <div className="text-[10px] text-[var(--text-4)]">{new Date(run.createdAtMs || 0).toLocaleString()}</div>

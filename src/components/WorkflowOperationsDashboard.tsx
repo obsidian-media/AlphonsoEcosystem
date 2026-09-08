@@ -122,22 +122,22 @@ function mapRunTone(status: string, run: WorkflowRun | null = null) {
 function runRowShellClass(run: WorkflowRun, isSelected: boolean) {
   const truth = displayWorkflowTruthState(run.status, run);
   if (!isSelected) {
-    return 'border-[var(--border)] bg-[var(--surface-2)]';
+    return 'bg-[var(--surface-2)]';
   }
-  if (truth === 'confirmed') return 'border-[var(--success-border)] bg-[var(--success-dim)]';
-  if (truth === 'setup_required') return 'border-[var(--accent-border)] bg-[var(--accent-dim)]';
-  if (truth === 'partial') return 'border-[var(--warning-border)] bg-[var(--warning-dim)]';
-  if (truth === 'blocked' || truth === 'failed') return 'border-[var(--error-border)] bg-[var(--error-dim)]';
-  return 'border-[var(--border)] bg-[var(--surface-2)]';
+  if (truth === 'confirmed') return 'bg-[var(--success-dim)] ring-1 ring-[var(--success-border)]';
+  if (truth === 'setup_required') return 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]';
+  if (truth === 'partial') return 'bg-[var(--warning-dim)] ring-1 ring-[var(--warning-border)]';
+  if (truth === 'blocked' || truth === 'failed') return 'bg-[var(--error-dim)] ring-1 ring-[var(--error-border)]';
+  return 'bg-[var(--surface-2)]';
 }
 
 function receiptRowShellClass(status: string, run: WorkflowRun | null = null) {
   const truth = displayWorkflowTruthState(status, run);
-  if (truth === 'setup_required') return 'border-[var(--accent-border)] bg-[var(--accent-dim)]';
-  if (truth === 'partial') return 'border-[var(--warning-border)] bg-[var(--warning-dim)]';
-  if (truth === 'blocked' || truth === 'failed') return 'border-[var(--error-border)] bg-[var(--error-dim)]';
-  if (truth === 'confirmed') return 'border-[var(--success-border)] bg-[var(--success-dim)]';
-  return 'border-[var(--border)] bg-[var(--surface-2)]';
+  if (truth === 'setup_required') return 'bg-[var(--accent-dim)]';
+  if (truth === 'partial') return 'bg-[var(--warning-dim)]';
+  if (truth === 'blocked' || truth === 'failed') return 'bg-[var(--error-dim)]';
+  if (truth === 'confirmed') return 'bg-[var(--success-dim)]';
+  return 'bg-[var(--surface-2)]';
 }
 
 interface CardProps {
@@ -148,7 +148,7 @@ interface CardProps {
 
 function Card({ title, icon: Icon, children }: CardProps) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <div className="rounded-xl bg-[var(--surface-2)] p-3">
       <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">
         <Icon className="h-3.5 w-3.5 text-[var(--accent)]" />
         {title}
@@ -185,7 +185,7 @@ interface MetricProps {
 
 function Metric({ label, value }: MetricProps) {
   return (
-    <div className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1">
+    <div className="rounded bg-[var(--surface-2)] px-2 py-1">
       <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">{label}</div>
       <div className="text-[11px] font-semibold text-[var(--text-2)]">{String(value)}</div>
     </div>
@@ -264,7 +264,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
   };
 
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-4">
       <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
         <GitBranch className="h-4 w-4 text-[var(--accent)]" />
         Workflow Operations Dashboard
@@ -281,17 +281,17 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr]">
         <div className="space-y-3">
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+          <div className="rounded-xl bg-[var(--surface-2)] p-3">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Workflow Registry</div>
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
               {workflows.map((workflow) => (
                 <button
                   key={workflow.id}
                   onClick={() => setSelectedWorkflowId(workflow.id)}
-                  className={`w-full rounded-lg border px-3 py-2 text-left ${
+                  className={`w-full rounded-lg px-3 py-2 text-left ${
                     selectedWorkflowId === workflow.id
-                      ? 'border-[var(--accent-border)] bg-[var(--accent-dim)]'
-                      : 'border-[var(--border)] bg-[var(--surface-2)]'
+                      ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
+                      : 'bg-[var(--surface-2)]'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -308,20 +308,20 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
           </div>
 
           {selectedWorkflow && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <div className="rounded-xl bg-[var(--surface-2)] p-3">
               <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Start Workflow Run</div>
               <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
                 <input
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
+                  className="rounded-lg bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
                   placeholder="Workflow input"
                 />
                 <select
                   aria-label="Trigger type"
                   value={triggerType}
                   onChange={(event) => setTriggerType(event.target.value)}
-                  className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
+                  className="rounded-lg bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
                 >
                   {(selectedWorkflow.triggerTypes || ['manual_command']).map((value) => (
                     <option key={value} value={value}>{value}</option>
@@ -343,7 +343,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
             </div>
           )}
 
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+          <div className="rounded-xl bg-[var(--surface-2)] p-3">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Workflow Runs</div>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {runs.length === 0 && <div className="text-[11px] text-[var(--text-3)]">No workflow runs yet.</div>}
@@ -351,7 +351,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
                 <button
                   key={run.id}
                   onClick={() => setSelectedRunId(run.id)}
-                  className={`w-full rounded-lg border px-3 py-2 text-left ${runRowShellClass(run, selectedRunId === run.id)}`}
+                  className={`w-full rounded-lg px-3 py-2 text-left ${runRowShellClass(run, selectedRunId === run.id)}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-sm font-semibold text-[var(--text-1)]">{run.workflowName}</div>
@@ -370,11 +370,11 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
 
         <div className="space-y-3">
           {selectedWorkflow && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <div className="rounded-xl bg-[var(--surface-2)] p-3">
               <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Agent Participation</div>
               <div className="space-y-2">
                 {getAgentWorkflowParticipation(selectedWorkflow).map((item: ParticipationItem) => (
-                  <div key={`${selectedWorkflow.id}-${item.agent}-${item.order}`} className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-[11px]">
+                  <div key={`${selectedWorkflow.id}-${item.agent}-${item.order}`} className="flex items-center justify-between rounded-lg bg-[var(--surface-2)] px-2 py-1.5 text-[11px]">
                     <div className="flex items-center gap-2">
                       <span className="text-[var(--text-3)]">#{item.order}</span>
                       <AgentAvatar agentId={item.agent} name={item.agent} sizeClass="h-5 w-5" />
@@ -389,7 +389,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
                   const contract = AGENT_EXECUTION_CONTRACTS[item.agent] as ContractInfo | undefined;
                   if (!contract) return null;
                   return (
-                    <div key={`contract-${selectedWorkflow.id}-${item.agent}`} className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--text-3)]">
+                    <div key={`contract-${selectedWorkflow.id}-${item.agent}`} className="rounded bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--text-3)]">
                       <span className="font-semibold capitalize text-[var(--text-2)]">{item.agent}</span>
                       <span> allow: {(contract.allowedActionPrefixes || []).slice(0, 2).join(', ')}</span>
                       <span> | block: {(contract.blockedActionPrefixes || []).slice(0, 2).join(', ')}</span>
@@ -400,7 +400,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
             </div>
           )}
 
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+          <div className="rounded-xl bg-[var(--surface-2)] p-3">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Run Controls</div>
               {selectedRun && <Badge tone={mapRunTone(selectedRun.status, selectedRun)}>{selectedRunTruth}</Badge>}
@@ -425,7 +425,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
             )}
           </div>
 
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+          <div className="rounded-xl bg-[var(--surface-2)] p-3">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Workflow Telemetry</div>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <Metric label="Events" value={telemetrySummary.totalEvents} />
@@ -435,7 +435,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
             </div>
             <div className="mt-2 max-h-28 space-y-1 overflow-y-auto pr-1">
               {telemetryRows.map((row) => (
-                <div key={row.id} className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--text-3)]">
+                <div key={row.id} className="rounded bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--text-3)]">
                   {row.eventType} | {row.status} | {new Date(row.timestampMs).toLocaleTimeString()}
                 </div>
               ))}
@@ -449,7 +449,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
           <Card title="Workflow Timeline" icon={Clock3}>
             <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
               {timelineRows.map((row) => (
-                <div key={row.id} className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--text-2)]">
+                <div key={row.id} className="rounded bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--text-2)]">
                   {row.label}
                   <div className="text-[var(--text-3)]">{new Date(row.timestampMs).toLocaleTimeString()} | {row.type}</div>
                 </div>
@@ -462,7 +462,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
                 <div className="text-[11px] text-[var(--text-3)]">No receipts for this run yet. Receipts persist in local storage after execution.</div>
               )}
               {receiptRows.map((row) => (
-                <div key={row.id} className={`rounded border px-2 py-1 text-[10px] text-[var(--text-2)] ${receiptRowShellClass(row.status, selectedRun)}`}>
+                <div key={row.id} className={`rounded px-2 py-1 text-[10px] text-[var(--text-2)] ${receiptRowShellClass(row.status, selectedRun)}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span>{row.actionType}</span>
                     <Badge tone={mapRunTone(row.status, selectedRun)}>{displayWorkflowTruthState(row.status, selectedRun)}</Badge>
@@ -476,7 +476,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
             <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
               {workflowMemory.length === 0 && <div className="text-[11px] text-[var(--text-3)]">No workflow-linked memory yet.</div>}
               {workflowMemory.map((row) => (
-                <div key={row.id} className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--text-2)]">
+                <div key={row.id} className="rounded bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--text-2)]">
                   <div>{row.title}</div>
                   <div className="text-[var(--text-3)]">{new Date(row.timestampMs).toLocaleTimeString()}</div>
                 </div>

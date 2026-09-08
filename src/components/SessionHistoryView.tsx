@@ -119,7 +119,7 @@ function SessionRow({ session }: { session: Session }) {
   const [expanded, setExpanded] = useState<boolean>(false);
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden">
+    <div className="rounded-xl bg-[var(--surface-2)] overflow-hidden">
       <button
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface-2)] transition-colors text-left"

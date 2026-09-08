@@ -100,7 +100,7 @@ function EchoTimeline() {
         const createdAt = m.timestampMs || m.createdAtMs || 0;
         const expiresIn = expiryMs ? Math.max(0, Math.round((createdAt + expiryMs - Date.now()) / (24 * 3600 * 1000))) : null;
         return (
-          <div key={m.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+          <div key={m.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-2)]">
             <span className="text-base shrink-0">{tc.icon}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
@@ -176,12 +176,12 @@ function AgentProvidersSection() {
   return (
     <div className="space-y-3">
       {error && (
-        <div className="p-3 rounded-lg bg-[var(--error-dim)] border border-[var(--error-border)] text-xs text-[var(--error)]">{error}</div>
+        <div className="p-3 rounded-lg bg-[var(--error-dim)] text-xs text-[var(--error)]">{error}</div>
       )}
       {agents.map((agent) => {
         const config = configs[agent.id] || { provider: 'ollama' as ModelProviderId };
         return (
-          <div key={agent.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+          <div key={agent.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[var(--surface-2)]">
             <div className="text-sm font-semibold text-[var(--text-1)] shrink-0">{agent.name}</div>
             <ModelProviderPicker
               agentId={agent.id}
@@ -208,7 +208,7 @@ function CoachSettingsSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)]">
         <div>
           <div className="text-sm font-semibold text-[var(--text-1)]">Session Coach detection engine</div>
           <div className="text-xs text-[var(--text-4)] mt-0.5">
@@ -223,7 +223,7 @@ function CoachSettingsSection() {
         </button>
       </div>
 
-      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)]">
         <div>
           <div className="text-sm font-semibold text-[var(--text-1)]">Ollama-narrative rewriting</div>
           <div className="text-xs text-[var(--text-4)] mt-0.5">
@@ -239,7 +239,7 @@ function CoachSettingsSection() {
         </button>
       </div>
 
-      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] space-y-3">
+      <div className="p-4 rounded-xl bg-[var(--surface-2)] space-y-3">
         <div>
           <div className="text-sm font-semibold text-[var(--text-1)]">Snooze</div>
           <div className="text-xs text-[var(--text-4)] mt-0.5">
@@ -253,7 +253,7 @@ function CoachSettingsSection() {
             </span>
             <button
               onClick={() => { clearCoachSnooze(); setSnoozeUntil(0); }}
-              className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface-3)]"
+              className="text-xs px-3 py-1.5 rounded-lg hover:bg-[var(--surface-3)]"
             >
               Clear snooze
             </button>
@@ -264,7 +264,7 @@ function CoachSettingsSection() {
               <button
                 key={hours}
                 onClick={() => { setCoachSnoozeHours(hours); setSnoozeUntil(Date.now() + hours * 3600 * 1000); }}
-                className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface-3)]"
+                className="text-xs px-3 py-1.5 rounded-lg hover:bg-[var(--surface-3)]"
               >
                 {hours}h
               </button>
@@ -273,7 +273,7 @@ function CoachSettingsSection() {
         )}
       </div>
 
-      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] space-y-2">
+      <div className="p-4 rounded-xl bg-[var(--surface-2)] space-y-2">
         <div className="text-sm font-semibold text-[var(--text-1)] mb-2">Per-trigger toggles</div>
         {ALL_COACH_TRIGGER_IDS.map((id) => (
           <div key={id} className="flex items-center justify-between py-1.5">
@@ -315,7 +315,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
         <span className="text-[11px] text-[var(--text-3)]">{models.length} installed model{models.length === 1 ? '' : 's'}</span>
       </div>
       {models.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-4 text-sm text-[var(--warning)]">
+        <div className="rounded-2xl bg-[var(--warning-dim)] p-4 text-sm text-[var(--warning)]">
           No installed models were returned by Ollama. Pull a model in Ollama, then run Check Ollama again.
         </div>
       ) : (
@@ -324,7 +324,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
             aria-label="Select model"
             value={models.some((model) => model.name === selectedModel) ? selectedModel : ''}
             onChange={(event) => onSelectModel(event.target.value)}
-            className="w-full appearance-none bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 pr-10 text-sm text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+            className="w-full appearance-none bg-[var(--surface-2)] rounded-xl px-4 py-3 pr-10 text-sm text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
           >
             {selectedModelMissing && <option value="">Model not found: {selectedModel}</option>}
             {models.map((model) => (
@@ -337,7 +337,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
         </div>
       )}
       {selectedModelMissing && (
-        <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-xs text-[var(--warning)]">
+        <div className="rounded-xl bg-[var(--warning-dim)] p-3 text-xs text-[var(--warning)]">
           Model not found: <span className="font-mono">{selectedModel}</span>. Suggested installed models: {models.map((model) => model.name).join(', ')}.
         </div>
       )}
@@ -360,7 +360,7 @@ function ModelPullHelper({ onRefresh }: { onRefresh: () => void }) {
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+    <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
       <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Pull a New Model</div>
       <div className="flex flex-wrap gap-1.5">
         {SUGGESTED_MODELS.map((m) => (
@@ -375,7 +375,7 @@ function ModelPullHelper({ onRefresh }: { onRefresh: () => void }) {
           value={modelName}
           onChange={(e) => setModelName(e.target.value)}
           placeholder="or type a model name..."
-          className="flex-1 bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+          className="flex-1 bg-[var(--surface-3)] rounded-xl px-3 py-2 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         <button
           onClick={copy}
@@ -386,7 +386,7 @@ function ModelPullHelper({ onRefresh }: { onRefresh: () => void }) {
         </button>
       </div>
       {modelName.trim() && (
-        <div className="font-mono text-[11px] bg-[var(--surface-1)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--success)] select-all">{cmd}</div>
+        <div className="font-mono text-[11px] bg-[var(--surface-1)] rounded-lg px-3 py-2 text-[var(--success)] select-all">{cmd}</div>
       )}
       <p className="text-[11px] text-[var(--text-4)]">Paste this in a terminal. When the download finishes, click <button onClick={onRefresh} className="text-[var(--accent)] hover:text-[var(--accent-hover)] underline">Refresh Models</button> to load it.</p>
     </div>
@@ -442,7 +442,7 @@ function AgentAvatarCard({ agentId, label }: AgentAvatarCardProps) {
   }, [agentId]);
 
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+    <div className="flex flex-col items-center gap-2 rounded-xl bg-[var(--surface-2)] p-3">
       <button
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
@@ -849,7 +849,7 @@ export function SettingsView({
               type="text"
               value={settings.endpoint}
               onChange={(event) => setSettings({ ...settings, endpoint: event.target.value })}
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
 
@@ -860,12 +860,12 @@ export function SettingsView({
                 type="text"
                 value={settings.workspaceRoot || ''}
                 onChange={(event) => setSettings({ ...settings, workspaceRoot: event.target.value })}
-                className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+                className="flex-1 bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <input ref={folderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleFolderPick} className="hidden" />
               <button
                 onClick={handlePickWorkspaceRoot}
-                className="px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"
+                className="px-3 py-2 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"
                 aria-label="Browse for folder"
                 title="Browse for folder"
               >
@@ -881,7 +881,7 @@ export function SettingsView({
               type="text"
               value={settings.ocrEnginePath || ''}
               onChange={(event) => setSettings({ ...settings, ocrEnginePath: event.target.value })}
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
             <div className="text-[11px] text-[var(--text-3)]">Leave blank until an OCR engine is actually configured and verified.</div>
           </div>
@@ -895,19 +895,19 @@ export function SettingsView({
             </button>
             <button
               onClick={onCheckOllama}
-              className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-2)] border border-[var(--border)] hover:bg-[var(--surface-3)]"
+              className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               <RefreshCw className="h-3.5 w-3.5" /> Retry Ollama Connection
             </button>
             <button
               onClick={onCopyTroubleshootingCommand}
-              className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-2)] border border-[var(--border)] hover:bg-[var(--surface-3)]"
+              className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               <Terminal className="h-3.5 w-3.5" /> {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy Failed' : 'Copy Command'}
             </button>
           </div>
 
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+          <div className="rounded-2xl bg-[var(--surface-2)] p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <StatusDot state={ollamaStatus.state} />
@@ -917,7 +917,7 @@ export function SettingsView({
               <span className="text-[11px] text-[var(--text-3)]">{resolvedNormalizeEndpoint(settings.endpoint || '')}/api/tags</span>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-[var(--text-3)]">{ollamaStatus.message}</p>
-            <div className="mt-4 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)] whitespace-pre-wrap">
+            <div className="mt-4 rounded-xl bg-[var(--surface-1)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)] whitespace-pre-wrap">
               {ollamaTroubleshootingCommand}
             </div>
           </div>
@@ -935,7 +935,7 @@ export function SettingsView({
 
       <section className="space-y-4">
         <SectionHeader icon={Compass} label="Hector Web Search" />
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+        <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
           <div className="flex items-start gap-3">
             <div className={`mt-1 h-2 w-2 shrink-0 rounded-full ${braveSearchConfigured ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]'}`} />
             <div className="flex-1 space-y-1">
@@ -948,14 +948,14 @@ export function SettingsView({
                   : 'Set BRAVE_SEARCH_API_KEY in your environment to enable Brave Search. Hector falls back to DuckDuckGo HTML scraping when the key is absent.'}
               </div>
               {!braveSearchConfigured && (
-                <div className="mt-2 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)]">
+                <div className="mt-2 rounded-xl bg-[var(--surface-1)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)]">
                   {'# Free tier: 2,000 queries/month — signup at search.brave.com/register\nBRAVE_SEARCH_API_KEY=your_key_here'}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div>
               <div className="text-sm font-semibold text-[var(--text-1)]">Voice OS WebSocket Port</div>
               <div className="text-xs text-[var(--text-3)] mt-0.5">WebSocket URL for Voice OS (STT+TTS) pipeline. Default: ws://127.0.0.1:8766/ws</div>
@@ -968,7 +968,7 @@ export function SettingsView({
                 try { localStorage.setItem('alphonso_voice_ws_url', val || 'ws://127.0.0.1:8766/ws'); } catch { /* ignore */ }
               }}
               placeholder="ws://127.0.0.1:8766/ws"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
         </div>
@@ -977,7 +977,7 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Monitor} label="Desktop & UI" />
         <div className="space-y-4">
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+          <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-[var(--text-1)]">Auto Update Checks</div>
@@ -999,7 +999,7 @@ export function SettingsView({
                 type="text"
                 value={settings.updaterEndpoint || ''}
                 onChange={(event) => setSettings({ ...settings, updaterEndpoint: event.target.value })}
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+                className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <div className="text-[11px] text-[var(--text-3)]">Enter the hosted updater endpoint only when the release manifest is actually published.</div>
             </div>
@@ -1009,7 +1009,7 @@ export function SettingsView({
                 value={settings.updaterPubkey || ''}
                 onChange={(event) => setSettings({ ...settings, updaterPubkey: event.target.value })}
                 rows={3}
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+                className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-xs font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <div className="text-[11px] text-[var(--text-3)]">Paste the public key only after the signing setup is complete.</div>
             </div>
@@ -1019,7 +1019,7 @@ export function SettingsView({
                 type="text"
                 value={settings.updaterTarget || ''}
                 onChange={(event) => setSettings({ ...settings, updaterTarget: event.target.value })}
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+                className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <div className="text-[11px] text-[var(--text-3)]">Use the actual target only when the updater release path is configured.</div>
             </div>
@@ -1034,12 +1034,12 @@ export function SettingsView({
               {updateCheckState?.configured && !updateCheckState?.available && <Badge variant="info">up to date / no update</Badge>}
               {!updateCheckState?.configured && <Badge variant="warning">not configured</Badge>}
             </div>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">
+            <div className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">
               <div>Current: {updateCheckState?.currentVersion || 'n/a'} | Latest: {updateCheckState?.latestVersion || 'none'}</div>
               <div className="mt-1">Status: {updateCheckState?.error ? updateCheckState.error : (updateCheckState?.available ? 'New version detected.' : 'No update available.')}</div>
             </div>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-[var(--text-1)]">Native Desktop Mode</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Tauri v2 desktop runtime is the intended target.</div>
@@ -1055,7 +1055,7 @@ export function SettingsView({
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.desktopMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-[var(--text-1)]">Local-Only Runtime</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show explicit local-only identity and disable cloud assumptions.</div>
@@ -1070,7 +1070,7 @@ export function SettingsView({
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.localOnlyMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-[var(--text-1)]">Zero-Cost Mode (Default)</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Prefer local/free connectors first. Paid or metered connector routes are held for explicit approval.</div>
@@ -1085,7 +1085,7 @@ export function SettingsView({
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.zeroCostMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-[var(--text-1)]">Approval Mode</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Require explicit confirmation for supervised actions.</div>
@@ -1100,7 +1100,7 @@ export function SettingsView({
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.approvalMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-[var(--text-1)]">Safe Mode</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Conservative runtime behavior with repair-first posture.</div>
@@ -1115,7 +1115,7 @@ export function SettingsView({
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.safeMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-[var(--text-1)]">Privacy Shield Indicator</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show Alphonso in privacy-shield mode for local-only work.</div>
@@ -1130,7 +1130,7 @@ export function SettingsView({
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.privacyShieldActive ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-[var(--text-1)]">Miya Creative Companion</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show Miya pinned creative assistant widget.</div>
@@ -1145,7 +1145,7 @@ export function SettingsView({
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.miyaCompanionPinned ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-[var(--text-1)]">Jose Orchestrator Companion</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show Jose pinned governance and routing assistant widget.</div>
@@ -1182,7 +1182,7 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Plug} label="External Tools (Composio)" />
         <div className="space-y-4">
-          <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="text-sm font-semibold text-[var(--text-1)]">Composio API Key</div>
             <div className="text-xs text-[var(--text-3)]">Connect agents to 1000+ external services (GitHub, Slack, Notion, Jira, etc.). Get your key at <a href="https://app.composio.dev" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">app.composio.dev</a>.</div>
             <div className="flex gap-2">
@@ -1191,7 +1191,7 @@ export function SettingsView({
                 value={composioApiKey}
                 onChange={(e) => setComposioApiKey(e.target.value)}
                 placeholder="Enter Composio API key"
-                className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+                className="flex-1 bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <button
                 onClick={handleComposioSave}
@@ -1203,7 +1203,7 @@ export function SettingsView({
             </div>
           </div>
 
-          <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="text-sm font-semibold text-[var(--text-1)]">User ID</div>
             <div className="text-xs text-[var(--text-3)]">Identifies your agent sessions in Composio.</div>
             <input
@@ -1211,12 +1211,12 @@ export function SettingsView({
               value={composioUserId}
               onChange={(e) => setComposioUserId(e.target.value)}
               placeholder="alphonso-user"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
 
           {composioHealth && (
-            <div className={`flex items-center gap-2 p-3 rounded-xl border ${composioHealth.status === 'healthy' ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]' : 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]'}`}>
+            <div className={`flex items-center gap-2 p-3 rounded-xl ${composioHealth.status === 'healthy' ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--error-dim)] text-[var(--error)]'}`}>
               {composioHealth.status === 'healthy' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
               <span className="text-xs">{composioHealth.message}</span>
             </div>
@@ -1236,10 +1236,10 @@ export function SettingsView({
                     <button
                       key={key}
                       onClick={() => toggleComposioToolkit(key)}
-                      className={`text-left px-3 py-2 rounded-xl border text-[10px] transition-all ${
+                      className={`text-left px-3 py-2 rounded-xl text-[10px] transition-all ${
                         enabled
-                          ? 'bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--accent)]'
-                          : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-3)] hover:border-[var(--border)]'
+                          ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]'
+                          : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-4)]'
                       }`}
                     >
                       <div className="font-semibold truncate">{tk.name || key}</div>
@@ -1288,7 +1288,7 @@ export function SettingsView({
         <SectionHeader icon={Zap} label="Local Services" />
         <div className="space-y-4">
 
-          <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-[var(--text-1)]">Auto-Launch on Startup</div>
@@ -1307,7 +1307,7 @@ export function SettingsView({
             </div>
           </div>
 
-          <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-[var(--text-1)]">Output Folder</div>
@@ -1316,7 +1316,7 @@ export function SettingsView({
               <input ref={outputFolderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleOutputFolderPick} className="hidden" />
               <button
                 onClick={handlePickOutputFolder}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-medium border border-[var(--border)] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-medium transition-colors"
               >
                 <Folder className="w-3.5 h-3.5" />
                 Browse
@@ -1327,11 +1327,11 @@ export function SettingsView({
               value={settings.outputFolder || ''}
               onChange={(e) => setSettings({ ...settings, outputFolder: e.target.value })}
               placeholder="C:\Users\You\Pictures\Alphonso"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
 
-          <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-[var(--text-1)]">Ollama</div>
@@ -1340,7 +1340,7 @@ export function SettingsView({
               <button
                 onClick={handleLaunchOllama}
                 disabled={launchStatus?.service === 'ollama' && launchStatus?.state === 'launching'}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-xs font-medium border border-[var(--border)] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-xs font-medium transition-colors"
               >
                 <Zap className="w-3.5 h-3.5" />
                 {launchStatus?.service === 'ollama' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
@@ -1354,7 +1354,7 @@ export function SettingsView({
             )}
           </div>
 
-          <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-[var(--text-1)]">ComfyUI</div>
@@ -1363,7 +1363,7 @@ export function SettingsView({
               <button
                 onClick={handleLaunchComfyUI}
                 disabled={launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching'}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-xs font-medium border border-[var(--border)] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-xs font-medium transition-colors"
               >
                 <Zap className="w-3.5 h-3.5" />
                 {launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
@@ -1376,12 +1376,12 @@ export function SettingsView({
                   value={settings.comfyuiDir || ''}
                   onChange={(e) => setSettings({ ...settings, comfyuiDir: e.target.value })}
                   placeholder="C:\ComfyUI"
-                  className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+                  className="flex-1 bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
                 />
                 <input ref={comfyuiDirPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleComfyUIDirPick} className="hidden" />
                 <button
                   onClick={handlePickComfyUIDir}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-medium border border-[var(--border)] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-medium transition-colors"
                 >
                   <Folder className="w-3.5 h-3.5" />
                   Browse
@@ -1392,7 +1392,7 @@ export function SettingsView({
                 value={settings.comfyuiPython || ''}
                 onChange={(e) => setSettings({ ...settings, comfyuiPython: e.target.value })}
                 placeholder="python  (or full path to python.exe)"
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+                className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <div className="text-[11px] text-[var(--text-4)]">Python executable used to run <span className="font-mono">main.py</span>. Leave blank to use <span className="font-mono">python</span>.</div>
             </div>
@@ -1417,7 +1417,7 @@ export function SettingsView({
       </section>
       <section className="space-y-4">
         <SectionHeader icon={TrendingUp} label="Nova Insight Threshold" />
-        <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+        <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
           <div>
             <div className="text-sm font-semibold text-[var(--text-1)]">Insight Score Threshold</div>
             <div className="text-xs text-[var(--text-3)] mt-0.5">Minimum Nova score (0–100) to show an insight card after pipeline completion. Default: 65.</div>
@@ -1431,7 +1431,7 @@ export function SettingsView({
               const val = Math.min(100, Math.max(0, Number(e.target.value) || 65));
               try { localStorage.setItem('alphonso_nova_threshold', String(val)); } catch { /* ignore */ }
             }}
-            className="w-24 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
+            className="w-24 bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
           />
         </div>
       </section>
@@ -1481,13 +1481,13 @@ export function SettingsView({
             <button
               key={theme.id}
               onClick={() => setSettings({ ...settings, environmentTheme: theme.id })}
-              className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+              className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
                 settings.environmentTheme === theme.id
-                  ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
-                  : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border)]'
+                  ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
+                  : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
               }`}
             >
-              <div className={`w-full h-10 rounded-lg ${theme.preview} border border-[var(--border)]`} />
+              <div className={`w-full h-10 rounded-lg ${theme.preview}`} />
               <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">{theme.label}</span>
               {settings.environmentTheme === theme.id && (
                 <span className="text-[9px] text-[var(--accent)] font-bold">Active</span>
@@ -1529,7 +1529,7 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Database} label="Backup & Restore" />
         <div className="space-y-4">
-          <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-[var(--text-1)]">Export Backup</div>
@@ -1546,7 +1546,7 @@ export function SettingsView({
             </div>
           </div>
 
-          <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-[var(--text-1)]">Import Backup</div>
@@ -1573,7 +1573,7 @@ export function SettingsView({
           </div>
 
           {backupResult && (
-            <div className={`flex items-center gap-2 p-3 rounded-xl border ${backupResult.type === 'success' ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]' : 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]'}`}>
+            <div className={`flex items-center gap-2 p-3 rounded-xl ${backupResult.type === 'success' ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--error-dim)] text-[var(--error)]'}`}>
               {backupResult.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
               <span className="text-xs">{backupResult.message}</span>
             </div>
@@ -1624,10 +1624,10 @@ function PluginMarketplacePanel() {
           placeholder="Search plugins…"
           value={filter}
           onChange={e => setFilter(e.target.value)}
-          className="w-full text-sm bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
+          className="w-full text-sm bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         {filtered.length === 0 ? (
-          <div className="p-8 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-center space-y-2">
+          <div className="p-8 rounded-2xl bg-[var(--surface-2)] text-center space-y-2">
             <Package className="w-8 h-8 text-[var(--text-4)] mx-auto" />
             <p className="text-sm text-[var(--text-3)]">{filter ? 'No plugins match your search.' : 'No plugins installed yet.'}</p>
             <p className="text-xs text-[var(--text-4)]">Drop a signed plugin manifest (.json) into Settings → Backup → Import, or install via the Alphonso CLI.</p>
@@ -1635,12 +1635,12 @@ function PluginMarketplacePanel() {
         ) : (
           <div className="space-y-3">
             {filtered.map(p => (
-              <div key={p.id} className="flex items-center gap-4 p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+              <div key={p.id} className="flex items-center gap-4 p-4 bg-[var(--surface-2)] rounded-2xl">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-[var(--text-1)] truncate">{p.name}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-3)] border border-[var(--border)] shrink-0">v{p.version}</span>
-                    {p.trust === 'verified' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success-border)] shrink-0">✓ signed</span>}
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-3)] shrink-0">v{p.version}</span>
+                    {p.trust === 'verified' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--success-dim)] text-[var(--success)] shrink-0">✓ signed</span>}
                   </div>
                   <p className="text-xs text-[var(--text-3)] mt-0.5 truncate">{p.description}</p>
                   {p.author && <p className="text-[10px] text-[var(--text-4)] mt-0.5">by {p.author}</p>}
@@ -1656,7 +1656,7 @@ function PluginMarketplacePanel() {
             ))}
           </div>
         )}
-        <div className="p-3 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent-border)] text-xs text-[var(--text-3)]">
+        <div className="p-3 rounded-xl bg-[var(--accent-dim)] text-xs text-[var(--text-3)]">
           <span className="text-[var(--accent)] font-medium">How to install:</span> Obtain a signed plugin manifest from a trusted source, then use <span className="font-mono text-[var(--text-2)]">verifyAndAddPlugin(manifest)</span> from <span className="font-mono text-[var(--text-2)]">pluginSigningService</span>. Only ECDSA-signed plugins from trusted keys are accepted.
         </div>
       </section>
@@ -1676,7 +1676,7 @@ function ChromaDbStatus() {
   if (healthy === null) return null;
 
   return (
-    <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${healthy ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)]'}`}>
+    <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${healthy ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'}`}>
       <span className={`w-2 h-2 rounded-full ${healthy ? 'bg-[var(--success)] animate-pulse' : 'bg-[var(--surface-3)]'}`} />
       {healthy
         ? 'Vector search active — Echo uses ChromaDB for semantic memory retrieval'
@@ -1724,9 +1724,9 @@ function MeetingTranscriptionPanel() {
   const label = busy ? `${status}…` : 'Choose Audio File';
 
   return (
-    <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+    <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
       {whisperInstalled === false && (
-        <div className="flex items-center gap-2 p-3 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)] text-xs">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--warning-dim)] text-[var(--warning)] text-xs">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Whisper not installed. Install it in Runtimes → Whisper to enable transcription.
         </div>
@@ -1765,7 +1765,7 @@ function McpServerInfo() {
       <p className="text-xs text-[var(--text-3)] mb-3">
         Expose Alphonso's 9 agents as tools in Claude Desktop, Cursor, Windsurf, and any MCP-compatible AI editor.
       </p>
-      <div className="bg-[var(--surface-2)] rounded-xl border border-[var(--accent-border)] p-4 space-y-2 font-mono text-xs">
+      <div className="bg-[var(--surface-2)] rounded-xl p-4 space-y-2 font-mono text-xs">
         <p className="text-[var(--accent)]">1. Start "Alphonso Bridge" + "MCP Server" in Runtime Hub</p>
         <p className="text-[var(--accent)]">2. Add to your AI editor's MCP config:</p>
         <pre className="text-[var(--text-3)] bg-[var(--surface-0)] rounded p-2 overflow-x-auto">{`{
@@ -1804,18 +1804,18 @@ function AccBridgeSettings() {
           value={cfg.baseUrl}
           onChange={e => setCfg(c => ({ ...c, baseUrl: e.target.value }))}
           placeholder="http://localhost:PORT  (ACC bridge base URL)"
-          className="w-full text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
+          className="w-full text-xs bg-[var(--surface-2)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         <input
           type="password"
           value={cfg.token}
           onChange={e => setCfg(c => ({ ...c, token: e.target.value }))}
           placeholder="Auth token (optional)"
-          className="w-full text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
+          className="w-full text-xs bg-[var(--surface-2)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         <button
           onClick={save}
-          className="px-3 py-1.5 text-xs rounded bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--text-1)] transition-colors"
+          className="px-3 py-1.5 text-xs rounded bg-[var(--accent-dim)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--text-1)] transition-colors"
         >
           {saved ? 'Saved ✓' : 'Save Bridge Config'}
         </button>
@@ -1851,7 +1851,7 @@ function InboxFolderConfig() {
   }
 
   return (
-    <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-4">
+    <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-4">
       <div className="space-y-1">
         <div className="text-sm font-semibold text-[var(--text-1)]">Inbox Folder Path</div>
         <div className="text-xs text-[var(--text-3)]">Directory to watch for new files. New files are auto-ingested into Echo memory by Jose.</div>
@@ -1861,15 +1861,15 @@ function InboxFolderConfig() {
         value={inboxPath}
         onChange={(e) => setInboxPath(e.target.value)}
         placeholder="C:\Users\You\Documents\Inbox"
-        className="w-full px-3 py-2 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-border)]"
+        className="w-full px-3 py-2 bg-[var(--surface-3)] rounded-lg text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-border)]"
       />
       <div className="flex items-center gap-3">
         <button
           onClick={() => setEnabled(!enabled)}
-          className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
             enabled
-              ? 'bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--accent)]'
-              : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-3)] hover:border-[var(--border-strong)]'
+              ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]'
+              : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-4)]'
           }`}
         >
           {enabled ? 'Enabled' : 'Disabled'}
@@ -1913,7 +1913,7 @@ function PerformanceDiagnosticsPanel() {
   React.useEffect(() => { run(); }, []);
 
   return (
-    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-4 space-y-3">
+    <div className="bg-[var(--surface-2)] rounded-lg p-4 space-y-3">
       {stats ? (
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="flex flex-col gap-1">
@@ -1932,7 +1932,7 @@ function PerformanceDiagnosticsPanel() {
       ) : (
         <p className="text-[var(--text-3)] text-sm">Loading diagnostics…</p>
       )}
-      <button onClick={run} className="text-xs text-[var(--text-3)] hover:text-[var(--text-1)] border border-[var(--border)] hover:border-[var(--border-strong)] px-3 py-1.5 rounded transition-colors">
+      <button onClick={run} className="text-xs text-[var(--text-3)] hover:text-[var(--text-1)] hover:border-[var(--border-strong)] px-3 py-1.5 rounded transition-colors">
         Run diagnostics
       </button>
     </div>

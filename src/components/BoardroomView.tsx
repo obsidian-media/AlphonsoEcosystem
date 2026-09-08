@@ -266,7 +266,7 @@ export function BoardroomView() {
         </div>
 
         {/* New session form */}
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+        <div className="rounded-xl bg-[var(--surface-2)] p-4 space-y-3">
           <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">New Session</div>
           <input
             value={topic}
@@ -307,10 +307,10 @@ export function BoardroomView() {
               <button
                 key={s.sessionId}
                 onClick={() => setActiveSessionId(s.sessionId === activeSessionId ? null : s.sessionId)}
-                className={`w-full text-left rounded-lg border px-3 py-2 text-xs transition-colors ${
+                className={`w-full text-left rounded-lg px-3 py-2 text-xs transition-colors ${
                   activeSessionId === s.sessionId
-                    ? 'border-[var(--accent-border)] bg-[var(--accent-dim)]'
-                    : 'border-[var(--border)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
+                    ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
+                    : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -329,7 +329,7 @@ export function BoardroomView() {
 
         {/* Active session detail */}
         {activeSession && (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4 space-y-3">
+          <div className="rounded-xl bg-[var(--surface-1)] p-4 space-y-3">
             <div className="flex items-start justify-between">
               <div>
                 <div className="font-semibold text-[var(--text-1)]">{activeSession.topic}</div>

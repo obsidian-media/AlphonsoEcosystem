@@ -26,7 +26,7 @@ interface Props {
 
 export function HectorResearchPanel({ researchBrief, loading = false }: Props): React.JSX.Element {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+    <div className="rounded-xl bg-[var(--surface-2)] p-4">
       <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold mb-2">Hector Research Panel</div>
       {loading && (
         <div className="flex items-center gap-2 text-xs text-[var(--text-3)]">

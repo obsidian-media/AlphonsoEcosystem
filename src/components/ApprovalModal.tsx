@@ -184,7 +184,7 @@ export function ApprovalModal({
         {/* Meta row: connector + risk badge + score ring */}
         <div className="flex items-center gap-2 flex-wrap">
           {resolvedConnector && (
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)]">
+            <div className="rounded-lg bg-[var(--surface-3)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)]">
               {resolvedConnector}
             </div>
           )}
@@ -197,7 +197,7 @@ export function ApprovalModal({
 
         {/* Destructive warning */}
         {destructive && (
-          <div className="flex items-start gap-2 rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-2.5">
+          <div className="flex items-start gap-2 rounded-xl bg-[var(--error-dim)] px-3 py-2.5">
             <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[var(--error)]" />
             <div className="text-[11px] text-[var(--error)] leading-relaxed font-semibold">
               This action is irreversible. Proceed only if you are certain.

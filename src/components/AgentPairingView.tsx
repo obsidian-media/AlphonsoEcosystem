@@ -62,10 +62,10 @@ function AgentCard({ agent, selected, onSelect }: AgentCardProps) {
   return (
     <button
       onClick={() => onSelect(agent.id)}
-      className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all text-center cursor-pointer ${
+      className={`flex flex-col items-center gap-1.5 rounded-xl p-3 transition-all text-center cursor-pointer ${
         selected
-          ? 'border-[var(--accent-border)] bg-[var(--accent-dim)]'
-          : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]'
+          ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
+          : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
       }`}
     >
       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${selected ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'bg-[var(--surface-3)] text-[var(--text-3)]'}`}>

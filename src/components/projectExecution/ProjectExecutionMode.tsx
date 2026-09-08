@@ -234,7 +234,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
               <p className="mt-1 text-[13px] text-[var(--text-3)]">Plan, assign, and package agent work for any project.</p>
             </div>
             {result && (
-              <div className="shrink-0 rounded-full border border-[var(--success-border)] bg-[var(--success-dim)] px-3 py-1 text-[10px] font-semibold tracking-widest text-[var(--success)]">Packet ready</div>
+              <div className="shrink-0 rounded-full bg-[var(--success-dim)] px-3 py-1 text-[10px] font-semibold tracking-widest text-[var(--success)]">Packet ready</div>
             )}
           </div>
         </header>
@@ -263,7 +263,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
                   {intake.projectName ? 'Ready — generate the execution packet on the Execution tab.' : 'Enter a project name to continue.'}
                 </p>
                 <button type="button" onClick={() => setActiveTab('execution')} disabled={!intake.projectName}
-                  className="shrink-0 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                  className="shrink-0 rounded-xl bg-[var(--accent-dim)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                   Continue to Execution →
                 </button>
               </div>
@@ -306,13 +306,13 @@ export function ProjectExecutionMode(): React.JSX.Element {
 
         {activeTab === 'execution' && (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-5 flex items-center justify-between gap-4">
+            <div className="rounded-2xl bg-[var(--accent-dim)] p-5 flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-semibold text-[var(--text-1)]">Generate Execution Packet</div>
                 <p className="mt-0.5 text-[12px] text-[var(--text-3)]">Jose decomposes your project and routes tasks to active agents with supervised approvals.</p>
               </div>
               <button type="button" onClick={runWorkshop} disabled={!intake.projectName}
-                className="shrink-0 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                className="shrink-0 rounded-xl bg-[var(--accent-dim)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                 Generate
               </button>
             </div>
@@ -332,7 +332,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
                 {proposals.length === 0 ? <EmptyState text="No proposals yet." /> : (
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {proposals.map((p) => (
-                      <div key={p.id as string} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
+                      <div key={p.id as string} className="rounded-lg bg-[var(--surface-2)] p-2.5">
                         <div className="text-[12px] font-medium text-[var(--text-2)]">{p.title as string}</div>
                         <div className="mt-0.5 text-[var(--text-3)]">{p.agentId as string} · {p.status as string} · {(p.proposedDiffs as unknown[]).length} diffs</div>
                       </div>
@@ -346,7 +346,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
                 {contracts.length === 0 ? <EmptyState text="No contracts yet. Generate packet first." /> : (
                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {contracts.map((c) => (
-                      <div key={c.id as string} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
+                      <div key={c.id as string} className="rounded-lg bg-[var(--surface-2)] p-2.5">
                         <div className="text-[12px] font-medium text-[var(--text-2)]">{c.objective as string}</div>
                         <div className="mt-0.5 text-[var(--text-3)]">{c.state as string} · risk: {c.riskLevel as string}</div>
                         <div className="mt-1.5 flex gap-1.5">
@@ -362,7 +362,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
                 {chains.length === 0 ? <EmptyState text="No chain yet. Generate packet first." /> : (
                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {chains.map((ch) => (
-                      <div key={ch.id as string} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
+                      <div key={ch.id as string} className="rounded-lg bg-[var(--surface-2)] p-2.5">
                         <div className="text-[12px] font-medium text-[var(--text-2)]">{ch.name as string}</div>
                         <div className="mt-0.5 text-[var(--text-3)]">{(ch.stages as { agentId: string; state: string }[]).map((s) => `${s.agentId}:${s.state}`).join(' → ')}</div>
                       </div>
@@ -401,14 +401,14 @@ export function ProjectExecutionMode(): React.JSX.Element {
         {activeTab === 'results' && (
           <div className="space-y-4">
             {!result ? (
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-10 text-center">
+              <div className="rounded-2xl bg-[var(--surface-1)] p-10 text-center">
                 <div className="text-sm text-[var(--text-3)]">No execution packet yet.</div>
                 <button type="button" onClick={() => setActiveTab('execution')} className="mt-3 text-[11px] font-semibold text-[var(--accent)] hover:text-[var(--accent-hover)]">Go to Execution →</button>
               </div>
             ) : (
               <>
                 {hasDeniedGate && (
-                  <div className="rounded-2xl border border-[var(--error-border)] bg-[var(--error-dim)] p-4">
+                  <div className="rounded-2xl bg-[var(--error-dim)] p-4">
                     <div className="text-sm font-semibold text-[var(--error)]">BLOCKED — one or more approval gates were denied</div>
                     <p className="mt-1 text-[12px] text-[var(--error)]">Review the denied gate(s) on the Approval tab before proceeding with this packet.</p>
                   </div>

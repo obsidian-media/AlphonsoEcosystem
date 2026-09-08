@@ -79,7 +79,7 @@ interface FieldSelectProps {
 }
 
 function FieldInput({ label, value, onChange, placeholder = '', multiline = false }: FieldInputProps): React.JSX.Element {
-  const cls = 'w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--warning-border)]';
+  const cls = 'w-full rounded-lg bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--warning-border)]';
   return (
     <div>
       <label className="block text-[10px] uppercase tracking-widest text-[var(--text-3)] mb-1">{label}</label>
@@ -95,7 +95,7 @@ function FieldSelect({ label, value, onChange, options }: FieldSelectProps): Rea
     <div>
       <label className="block text-[10px] uppercase tracking-widest text-[var(--text-3)] mb-1">{label}</label>
       <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)] focus:outline-none focus:border-[var(--warning-border)]">
+        className="w-full rounded-lg bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)] focus:outline-none focus:border-[var(--warning-border)]">
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
@@ -168,7 +168,7 @@ export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
   return (
     <div className="space-y-4">
       {auditReport && (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+        <div className="rounded-xl bg-[var(--surface-2)] p-4">
           <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold mb-2">Marcus Audit</div>
           <div className="text-sm font-semibold text-[var(--text-2)]">{auditReport.title}</div>
           <div className="mt-1 text-xs text-[var(--text-3)]">{auditReport.summary}</div>
@@ -179,7 +179,7 @@ export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
         </div>
       )}
 
-      <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--surface-0)] p-4">
+      <div className="rounded-xl bg-[var(--surface-2)] p-4">
         <div className="flex items-center gap-2 mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--warning)]">
           <Zap className="h-4 w-4" />
           Marcus Publish — Approval-Gated Distribution
@@ -242,7 +242,7 @@ export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
           </>)}
         </div>
 
-        <div className="flex items-start gap-2 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 mb-4">
+        <div className="flex items-start gap-2 rounded-xl bg-[var(--warning-dim)] p-3 mb-4">
           <input id="marcus-approval" type="checkbox" checked={approved} onChange={(e) => handleApprovalToggle(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-[var(--warning)]" />
           <label htmlFor="marcus-approval" className="cursor-pointer text-[11px] text-[var(--warning)] leading-relaxed">
             <span className="font-bold">I explicitly approve this external publish action.</span>
@@ -252,7 +252,7 @@ export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
 
         <div className="flex items-center gap-3 flex-wrap">
           <button onClick={handlePublish} disabled={busy || !approved}
-            className="flex items-center gap-2 rounded-xl bg-[var(--warning-dim)] border border-[var(--warning-border)] px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-[var(--warning)] hover:bg-[var(--warning-dim)] disabled:opacity-40 transition-colors">
+            className="flex items-center gap-2 rounded-xl bg-[var(--warning-dim)] px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-[var(--warning)] hover:bg-[var(--warning-dim)] disabled:opacity-40 transition-colors">
             <Send className="h-3.5 w-3.5" />
             {busy ? 'Publishing…' : `Publish to ${platformDef?.label}`}
           </button>
@@ -263,14 +263,14 @@ export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
         </div>
 
         {error && (
-          <div className="mt-3 flex items-start gap-2 rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] p-3 text-[11px] text-[var(--error)]">
+          <div className="mt-3 flex items-start gap-2 rounded-xl bg-[var(--error-dim)] p-3 text-[11px] text-[var(--error)]">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             {error}
           </div>
         )}
 
         {receipt && (
-          <div className={`mt-3 rounded-xl border p-3 text-[11px] ${receipt.ok ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]' : 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]'}`}>
+          <div className={`mt-3 rounded-xl p-3 text-[11px] ${receipt.ok ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--error-dim)] text-[var(--error)]'}`}>
             <div className="flex items-center gap-2 font-bold mb-1">
               {receipt.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
               {receipt.ok

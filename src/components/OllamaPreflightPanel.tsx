@@ -121,15 +121,15 @@ export function OllamaPreflightPanel({ endpoint = getConfiguredOllamaEndpoint() 
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
           <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Total (7d)</div>
           <div className="text-sm text-[var(--text-1)] font-bold mt-0.5">{stats.total7d}</div>
         </div>
-        <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
           <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Success</div>
           <div className="text-sm text-[var(--success)] font-bold mt-0.5">{stats.success}</div>
         </div>
-        <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
           <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Failure</div>
           <div className={`text-sm font-bold mt-0.5 ${stats.failure > 0 ? 'text-[var(--error)]' : 'text-[var(--text-2)]'}`}>
             {stats.failure}
@@ -138,13 +138,13 @@ export function OllamaPreflightPanel({ endpoint = getConfiguredOllamaEndpoint() 
       </div>
 
       {lastError ? (
-        <div className="flex items-center gap-2 rounded-lg bg-[var(--error-dim)] border border-[var(--error-border)] px-2.5 py-2 text-[11px] text-[var(--error)]">
+        <div className="flex items-center gap-2 rounded-lg bg-[var(--error-dim)] px-2.5 py-2 text-[11px] text-[var(--error)]">
           <AlertTriangle className="w-3.5 h-3.5" /> {lastError}
         </div>
       ) : null}
 
       {lastResult ? (
-        <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2 text-[11px] text-[var(--text-2)]">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2 text-[11px] text-[var(--text-2)]">
           <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)] mb-1">Last preflight</div>
           <div className="flex items-center gap-2">
             <span
@@ -173,7 +173,7 @@ export function OllamaPreflightPanel({ endpoint = getConfiguredOllamaEndpoint() 
         ) : (
           <ul className="space-y-1">
             {recent.map((e) => (
-              <li key={e.id} className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-1.5 flex items-center justify-between gap-2">
+              <li key={e.id} className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-[11px] text-[var(--text-2)] truncate flex items-center gap-1.5">
                     <Activity className="w-3 h-3 text-[var(--text-3)]" />

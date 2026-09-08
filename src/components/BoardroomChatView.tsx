@@ -67,12 +67,12 @@ function MessageBubble({
   const isFailure = message.kind === 'failure';
   const isGated = message.approvalRequired && !message.confirmed;
   const toneClass = isEscalation
-    ? 'border-[var(--warning-border)] bg-[var(--warning-dim)]'
+    ? 'bg-[var(--warning-dim)]'
     : isFailure
-      ? 'border-[var(--error-border)] bg-[var(--error-dim)]'
-      : 'border-[var(--border)] bg-[var(--surface-2)]';
+      ? 'bg-[var(--error-dim)]'
+      : 'bg-[var(--surface-2)]';
   return (
-    <div data-message-kind={message.kind} className={`rounded-lg border p-2.5 text-xs ${toneClass}`}>
+    <div data-message-kind={message.kind} className={`rounded-lg p-2.5 text-xs ${toneClass}`}>
       <div className="flex items-center justify-between gap-2">
         <span className={`font-semibold ${isEscalation ? 'text-[var(--warning)]' : isFailure ? 'text-[var(--error)]' : 'text-[var(--text-1)]'}`}>
           {isEscalation ? 'Needs your decision' : isFailure ? `${agentLabel(message.speaker)} — failed` : agentLabel(message.speaker)}
@@ -84,7 +84,7 @@ function MessageBubble({
         )}
       </div>
       {isGated ? (
-        <div className="mt-1.5 rounded-md border border-[var(--warning-border)] bg-[var(--warning-dim)] p-2">
+        <div className="mt-1.5 rounded-md bg-[var(--warning-dim)] p-2">
           <p className="text-[var(--warning)]">This message proposes a high-risk action — content hidden until confirmed.</p>
           <button
             onClick={() => onConfirm(message)}

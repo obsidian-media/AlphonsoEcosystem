@@ -103,7 +103,7 @@ function ConnectorDegradationBanner({ onDismiss }) {
 
   if (!show) return null;
   return (
-    <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-amber-400/20 bg-amber-500/8 px-3 py-2 text-[11px] text-amber-200/80">
+    <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg bg-amber-500/8 px-3 py-2 text-[11px] text-amber-200/80">
       <span className="shrink-0">⚠</span>
       <span className="flex-1">Some connectors are unavailable — results may be limited.</span>
       <button
@@ -1088,7 +1088,7 @@ export function ChatView({
       )}
 
       {compactChat && ollamaStatus.state !== 'connected' && !ollamaBannerDismissed && (
-        <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-amber-400/20 bg-amber-500/8 px-3 py-2 text-[11px] text-amber-200/80">
+        <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg bg-amber-500/8 px-3 py-2 text-[11px] text-amber-200/80">
           <span className="shrink-0">⚠</span>
           <span className="flex-1">
             {ollamaStatus.state === 'not_running' || ollamaStatus.state === 'disconnected'
@@ -1122,7 +1122,7 @@ export function ChatView({
             {pinnedMessages.length} Pinned {showPinned ? '▲' : '▼'}
           </button>
           {showPinned && (
-            <div className="space-y-1 max-h-40 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-2">
+            <div className="space-y-1 max-h-40 overflow-y-auto rounded-xl bg-[var(--surface-2)] p-2">
               {pinnedMessages.map((pm) => (
                 <div key={pm.id} className="flex items-start gap-2 group">
                   <div className="flex-1 text-[11px] text-[var(--text-2)] line-clamp-2 leading-relaxed">{pm.content}</div>
@@ -1229,7 +1229,7 @@ export function ChatView({
                       )}
                     </div>
                   ) : (
-                    <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border bg-[var(--surface-1)] border-[var(--border)] rounded-tl-sm ${message.isNew ? 'border-l-2 border-[var(--success)] animate-border-fade' : ''} text-[var(--text-1)]`}>
+                    <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl bg-[var(--surface-1)] rounded-tl-sm ${message.isNew ? 'border-l-2 border-[var(--success)] animate-border-fade' : ''} text-[var(--text-1)]`}>
                       <MarkdownMessage content={message.content} />
                     </div>
                   )}
@@ -1396,7 +1396,7 @@ export function ChatView({
               </div>
             )}
             {isLastAssistantMessage && novaInsight && !isGenerating && (
-              <div className="w-full mt-2 rounded-2xl border border-[var(--agent-nova-glow)] bg-[var(--surface-2)] p-4 space-y-2" style={{ boxShadow: '0 0 20px var(--agent-nova-glow)' }}>
+              <div className="w-full mt-2 rounded-2xl bg-[var(--surface-2)] p-4 space-y-2" style={{ boxShadow: '0 0 20px var(--agent-nova-glow)' }}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Lightbulb className="w-4 h-4 text-[var(--accent)] shrink-0" />
@@ -1485,7 +1485,7 @@ export function ChatView({
           />
           <div className="px-4 pb-2">
             <div
-              className="flex items-start gap-2 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-2 text-[11px] leading-relaxed text-[var(--text-2)]"
+              className="flex items-start gap-2 rounded-xl bg-[var(--accent-dim)] px-3 py-2 text-[11px] leading-relaxed text-[var(--text-2)]"
               data-testid="jose-routing-explainer"
             >
               <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />

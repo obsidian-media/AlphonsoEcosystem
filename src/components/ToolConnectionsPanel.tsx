@@ -186,14 +186,14 @@ export function ToolConnectionsPanel() {
   };
 
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-4">
       <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
         <Plug className="h-4 w-4 text-[var(--accent)]" />
         Tool Connections: Slack, Discord, Custom Webhooks
       </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.2fr_1fr]">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+        <div className="rounded-xl bg-[var(--surface-2)] p-3">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <select
               aria-label="Connection type"
@@ -206,7 +206,7 @@ export function ToolConnectionsPanel() {
                   setConnectionLabel(type.label);
                 }
               }}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
             >
               {types.map((type) => (
                 <option key={type.id} value={type.id}>{type.label}</option>
@@ -215,25 +215,25 @@ export function ToolConnectionsPanel() {
             <input
               value={connectionLabel}
               onChange={(event) => setConnectionLabel(event.target.value)}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
               placeholder="Connection label"
             />
             <input
               value={webhookUrl}
               onChange={(event) => setWebhookUrl(event.target.value)}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)] lg:col-span-2"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)] lg:col-span-2"
               placeholder="Webhook URL"
             />
             <input
               value={messagePrefix}
               onChange={(event) => setMessagePrefix(event.target.value)}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
               placeholder="Message prefix"
             />
             <input
               value={connectionNote}
               onChange={(event) => setConnectionNote(event.target.value)}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
               placeholder="Operator note"
             />
           </div>
@@ -243,7 +243,7 @@ export function ToolConnectionsPanel() {
               value={payloadTemplate}
               onChange={(event) => setPayloadTemplate(event.target.value)}
               rows={5}
-              className="mt-3 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 font-mono text-[11px] text-[var(--text-1)]"
+              className="mt-3 w-full rounded-xl bg-[var(--surface-3)] px-3 py-2 font-mono text-[11px] text-[var(--text-1)]"
               placeholder="Custom JSON payload template"
             />
           )}
@@ -251,11 +251,11 @@ export function ToolConnectionsPanel() {
           <input
             value={notifyOn}
             onChange={(event) => setNotifyOn(event.target.value)}
-            className="mt-3 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
+            className="mt-3 w-full rounded-xl bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
             placeholder="Notify on categories: approval, blocked, executed, failed, policy, connector, dead_letter"
           />
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]">
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]">
             <input
               id="tool-connection-approval"
               type="checkbox"
@@ -272,7 +272,7 @@ export function ToolConnectionsPanel() {
             <input
               value={testMessage}
               onChange={(event) => setTestMessage(event.target.value)}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
               placeholder="Test message"
             />
             <button
@@ -291,7 +291,7 @@ export function ToolConnectionsPanel() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+        <div className="rounded-xl bg-[var(--surface-2)] p-3">
           <div className="flex items-center justify-between gap-2">
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
               Saved Connections
@@ -306,14 +306,14 @@ export function ToolConnectionsPanel() {
           </div>
           <div className="mt-3 space-y-2 max-h-[22rem] overflow-y-auto pr-1">
             {connections.length === 0 && (
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-3)]">
+              <div className="rounded-xl bg-[var(--surface-2)] p-3 text-sm text-[var(--text-3)]">
                 No tool connections saved yet.
               </div>
             )}
             {connections.map((connection) => (
               <div
                 key={connection.id}
-                className={`rounded-xl border p-3 ${connection.id === connectionId ? 'border-[var(--accent-border)] bg-[var(--accent-dim)]' : 'border-[var(--border)] bg-[var(--surface-2)]'}`}
+                className={`rounded-xl p-3 ${connection.id === connectionId ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)]'}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -377,23 +377,23 @@ export function ToolConnectionsPanel() {
       </div>
 
       {notice && (
-        <div className="mt-3 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
+        <div className="mt-3 rounded-xl bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
           {notice}
         </div>
       )}
 
-      <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
+      <div className="mt-3 rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
         Saved webhook connections stay local to this workstation. The live send path goes through Tauri and requires explicit approval before external delivery.
       </div>
 
       <div className="mt-3 space-y-2 max-h-32 overflow-y-auto pr-1">
         {audit.length === 0 && (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-3)]">
+          <div className="rounded-xl bg-[var(--surface-2)] p-3 text-sm text-[var(--text-3)]">
             No tool connection audit entries yet.
           </div>
         )}
         {audit.slice().reverse().slice(0, 6).map((entry) => (
-          <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
+          <div key={entry.id} className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
             {entry.action} | {new Date(entry.timestampMs).toLocaleString()}
           </div>
         ))}

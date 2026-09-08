@@ -96,7 +96,7 @@ function SkipOllamaCloudGuide({ onSkip }: { onSkip: (provider: CloudSkipProvider
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-3 space-y-3">
+    <div className="mt-3 rounded-xl bg-[var(--accent-dim)] px-4 py-3 space-y-3">
       <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">Skip Ollama — Free Cloud Model</div>
       <p className="text-xs text-[var(--text-3)]">
         Both are genuinely free-tier (rate-limited, not billed), but requests leave your machine and go to{' '}
@@ -426,13 +426,13 @@ function PickModelStep({ onNext }: { onNext: (model: string) => void }) {
       )}
 
       {error && !loading && (
-        <div className="rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] px-4 py-3 text-xs text-[var(--error)] mb-4">
+        <div className="rounded-xl bg-[var(--error-dim)] px-4 py-3 text-xs text-[var(--error)] mb-4">
           Could not load models: {error}
         </div>
       )}
 
       {!loading && !error && models.length === 0 && (
-        <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-4 py-3 mb-4">
+        <div className="rounded-xl bg-[var(--warning-dim)] px-4 py-3 mb-4">
           <div className="text-xs font-semibold text-[var(--warning)] mb-1">No models installed</div>
           <div className="text-[11px] text-[var(--text-3)] mb-3">
             Download the recommended model or run{' '}

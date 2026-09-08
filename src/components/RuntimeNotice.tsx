@@ -49,7 +49,7 @@ export function RuntimeNotice({ ollamaStatus, selectedModelMissing, installedMod
   const runtimeDown = ['not_running', 'disconnected', 'timeout', 'cors'].includes(ollamaStatus.state);
 
   return (
-    <div className="mx-6 mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
+    <div className="mx-6 mt-4 rounded-xl bg-[var(--surface-1)] p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -62,7 +62,7 @@ export function RuntimeNotice({ ollamaStatus, selectedModelMissing, installedMod
             <p className="text-[11px] text-[var(--text-3)]">Installed models: {installedModels.map((model) => model.name).join(', ')}</p>
           )}
           {runtimeDown && (
-            <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]">
+            <div className="rounded-xl bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]">
               <div className="font-bold uppercase tracking-widest">System Recovery</div>
               <div className="mt-1">Runtime is degraded. Use Retry first. If it stays down, open Settings, verify endpoint, and run the Ollama troubleshooting command.</div>
             </div>
@@ -77,7 +77,7 @@ export function RuntimeNotice({ ollamaStatus, selectedModelMissing, installedMod
           </button>
           <button
             onClick={onOpenSettings}
-            className="flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-xs font-bold text-[var(--text-2)] hover:bg-[var(--surface-2)]"
+            className="flex items-center justify-center gap-2 rounded-lg bg-[var(--surface-1)] px-3 py-2 text-xs font-bold text-[var(--text-2)] hover:bg-[var(--surface-2)]"
           >
             Open Settings
           </button>

@@ -222,15 +222,15 @@ export function NotionSyncPanel() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
           <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Total records</div>
           <div className="text-sm text-[var(--text-2)] font-bold mt-0.5">{status?.total ?? records.length}</div>
         </div>
-        <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
           <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Last sync</div>
           <div className="text-sm text-[var(--text-2)] font-bold mt-0.5">{formatRelative(lastSyncedAt)}</div>
         </div>
-        <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
           <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">By source</div>
           <div className="text-[11px] text-[var(--text-2)] mt-1 flex flex-wrap gap-1">
             {Object.keys(report.counts.bySource).length === 0
@@ -240,7 +240,7 @@ export function NotionSyncPanel() {
                 ))}
           </div>
         </div>
-        <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
           <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Conflicts / pending</div>
           <div className="text-[11px] text-[var(--text-2)] mt-1 flex flex-wrap gap-1">
             <Badge color={report.counts.conflicts > 0 ? 'amber' : 'zinc'}>conflicts: {report.counts.conflicts}</Badge>
@@ -251,13 +251,13 @@ export function NotionSyncPanel() {
       </div>
 
       {lastError ? (
-        <div className="flex items-center gap-2 rounded-lg bg-[var(--error-dim)] border border-[var(--error-border)] px-2.5 py-2 text-[11px] text-[var(--error)]">
+        <div className="flex items-center gap-2 rounded-lg bg-[var(--error-dim)] px-2.5 py-2 text-[11px] text-[var(--error)]">
           <ShieldAlert className="w-3.5 h-3.5" /> {lastError}
         </div>
       ) : null}
 
       {lastResult ? (
-        <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2 text-[11px] text-[var(--text-2)]">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2 text-[11px] text-[var(--text-2)]">
           <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)] mb-1">
             {lastResult.kind} result
           </div>
@@ -279,7 +279,7 @@ export function NotionSyncPanel() {
               const corr = r.correlation || {};
               const id = r.id || corr.task_id || corr.project_id || 'record';
               return (
-                <li key={r.id || id} className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-1.5 flex items-center justify-between gap-2">
+                <li key={r.id || id} className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-[11px] text-[var(--text-2)] truncate">
                       {corr.task_id || corr.project_id || '—'}
@@ -312,7 +312,7 @@ export function NotionSyncPanel() {
           <span className="text-[var(--text-3)]">window {Math.round((report.windowEndMs - report.windowStartMs) / (24 * 60 * 60 * 1000))}d</span>
         </button>
         {showReport ? (
-          <pre className="mt-2 text-[10px] whitespace-pre-wrap break-words rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-2 text-[var(--text-2)] max-h-72 overflow-auto">
+          <pre className="mt-2 text-[10px] whitespace-pre-wrap break-words rounded-lg bg-[var(--surface-2)] px-2.5 py-2 text-[var(--text-2)] max-h-72 overflow-auto">
             {report.markdown}
           </pre>
         ) : null}

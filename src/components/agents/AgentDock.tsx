@@ -16,7 +16,7 @@ interface Props {
 
 export function AgentDock({ agents, activeAgents, onToggleAgent }: Props): React.JSX.Element {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-0)] p-4 space-y-3">
+    <div className="rounded-2xl bg-[var(--surface-0)] p-4 space-y-3">
       <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold">Agent Dock</div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {agents.map((agent) => (

@@ -47,7 +47,7 @@ interface PanelProps {
 
 function Panel({ icon: Icon, title, children }: PanelProps) {
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-3">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-3">
       <div className="flex items-center gap-2 section-label mb-2">
         <Icon className="w-4 h-4 text-[var(--accent)]" /> {title}
       </div>
@@ -71,7 +71,7 @@ function StatCard({ label, value, icon: Icon, color = 'indigo' }: StatCardProps)
     red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]'
   };
   return (
-    <div className={`rounded-xl border ${colorMap[color]} p-3`}>
+    <div className={`rounded-xl ${colorMap[color]} p-3`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-2xs text-[var(--text-3)] uppercase tracking-widest font-mono">{label}</p>
@@ -155,7 +155,7 @@ function TaskRow({ task }: TaskRowProps) {
   };
 
   return (
-    <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors">
+    <div className="rounded-lg bg-[var(--surface-2)] hover:border-[var(--border-strong)] transition-colors">
       <div
         className="flex items-center gap-3 py-2 px-3 cursor-pointer"
         onClick={() => hasArtifacts && setExpanded(!expanded)}
@@ -187,7 +187,7 @@ function TaskRow({ task }: TaskRowProps) {
           {task.artifacts?.map((artifact, i) => {
             const IconComponent = artifactIcons[artifact.type] || artifactIcons.default;
             return (
-              <div key={i} className="rounded-md bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-1.5">
+              <div key={i} className="rounded-md bg-[var(--surface-2)] px-2.5 py-1.5">
                 <div className="flex items-center gap-1.5 mb-1">
                   <IconComponent className="w-3 h-3 text-[var(--accent)]" />
                   <span className="text-2xs font-bold text-[var(--text-2)] uppercase tracking-wider">
@@ -399,19 +399,19 @@ export default function ProjectBatchPanel() {
               onChange={(e) => setGoalInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreateGoal()}
               placeholder="e.g. Build a SaaS analytics dashboard"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--text-2)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+              className="w-full bg-[var(--surface-2)] rounded-lg px-3 py-2 text-xs text-[var(--text-2)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
             />
             <input
               type="text"
               value={directoryInput}
               onChange={(e) => setDirectoryInput(e.target.value)}
               placeholder="Project folder (optional) e.g. /path/to/project"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--text-2)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+              className="w-full bg-[var(--surface-2)] rounded-lg px-3 py-2 text-xs text-[var(--text-2)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
             />
             <button
               onClick={handleCreateGoal}
               disabled={isGenerating || !goalInput.trim()}
-              className="w-full rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-2 text-2xs font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-[var(--accent-dim)] px-4 py-2 text-2xs font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
             >
               {isGenerating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
               {isGenerating ? 'GENERATING...' : 'SET GOAL & GENERATE BATCH'}
@@ -425,7 +425,7 @@ export default function ProjectBatchPanel() {
   return (
     <Panel icon={Brain} title="Boardroom Orchestrator">
       <div className="space-y-4">
-        <div className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-3">
+        <div className="rounded-xl bg-[var(--surface-2)] p-3">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-2xs text-[var(--text-3)] uppercase tracking-widest font-mono">Project Objective</p>
@@ -462,12 +462,12 @@ export default function ProjectBatchPanel() {
               value={directoryInput}
               onChange={(e) => setDirectoryInput(e.target.value)}
               placeholder="Set project folder path"
-              className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-2)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+              className="flex-1 bg-[var(--surface-2)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-2)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
             />
             <button
               onClick={handleSetDirectory}
               disabled={!directoryInput.trim()}
-              className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-2xs font-bold uppercase tracking-widest text-[var(--text-3)] hover:bg-[var(--surface-2)] disabled:opacity-40 transition-colors"
+              className="rounded-lg bg-[var(--surface-2)] px-3 py-1.5 text-2xs font-bold uppercase tracking-widest text-[var(--text-3)] hover:bg-[var(--surface-2)] disabled:opacity-40 transition-colors"
             >
               SET
             </button>
@@ -492,7 +492,7 @@ export default function ProjectBatchPanel() {
               <button
                 onClick={handleExecuteBatch}
                 disabled={isExecuting || !activeBatch || activeBatch.status === 'completed'}
-                className="flex-1 rounded-lg border border-[var(--success-border)] bg-[var(--success-dim)] px-3 py-2 text-2xs font-bold uppercase tracking-widest text-[var(--success)] hover:bg-[var(--success-dim)] disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 rounded-lg bg-[var(--success-dim)] px-3 py-2 text-2xs font-bold uppercase tracking-widest text-[var(--success)] hover:bg-[var(--success-dim)] disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
               >
                 {isExecuting ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlayCircle className="w-3 h-3" />}
                 {isExecuting ? 'EXECUTING...' : 'EXECUTE BATCH'}
@@ -500,7 +500,7 @@ export default function ProjectBatchPanel() {
               <button
                 onClick={handleGenerateNext}
                 disabled={isGenerating || (activeBatch && batchProgress.percent < 100)}
-                className="rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-2 text-2xs font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-2xs font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
               >
                 {isGenerating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
                 NEXT
@@ -510,7 +510,7 @@ export default function ProjectBatchPanel() {
         )}
 
         {executionProgress && executionProgress.stage !== 'complete' && executionProgress.stage !== 'error' && (
-          <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 space-y-1">
+          <div className="rounded-xl bg-[var(--warning-dim)] p-3 space-y-1">
             <div className="flex items-center gap-2 text-2xs text-[var(--warning)] font-bold uppercase tracking-widest">
               <Loader2 className="w-3 h-3 animate-spin" />
               {executionProgress.stage === 'task_start' && `Running: ${executionProgress.task?.title || '...'}`}
@@ -524,7 +524,7 @@ export default function ProjectBatchPanel() {
         )}
 
         {executionProgress?.stage === 'error' && (
-          <div className="rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] p-3 text-xs text-[var(--error)]">
+          <div className="rounded-xl bg-[var(--error-dim)] p-3 text-xs text-[var(--error)]">
             Execution error: {executionProgress.error}
           </div>
         )}

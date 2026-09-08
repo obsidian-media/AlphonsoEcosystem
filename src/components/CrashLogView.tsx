@@ -46,7 +46,7 @@ export function CrashLogView() {
           {entries.map((entry, i) => (
             <div
               key={i}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 space-y-1"
+              className="rounded-xl bg-[var(--surface-2)] px-4 py-3 space-y-1"
             >
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono text-[var(--text-3)]">

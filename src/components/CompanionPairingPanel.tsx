@@ -66,7 +66,7 @@ export function CompanionPairingPanel() {
 
   if (!status?.running) {
     return (
-      <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+      <div className="p-4 bg-[var(--surface-2)] rounded-2xl">
         <div className="flex items-center gap-2 text-[var(--text-3)]">
           <Shield className="w-4 h-4" />
           <span className="text-xs">Companion server not running</span>
@@ -77,7 +77,7 @@ export function CompanionPairingPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
+      <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm font-semibold text-[var(--text-1)]">Remote Access PIN</div>
@@ -142,7 +142,7 @@ export function CompanionPairingPanel() {
         </div>
       </div>
 
-      <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
+      <div className="p-4 bg-[var(--surface-2)] rounded-2xl">
         <div className="flex items-center gap-2 text-xs">
           <Wifi className="w-3.5 h-3.5" />
           <span className="text-[var(--text-3)]">

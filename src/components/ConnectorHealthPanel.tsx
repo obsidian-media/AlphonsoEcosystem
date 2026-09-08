@@ -252,14 +252,14 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
   const zeroCostBlocking = zeroCostMode && ['qwen', 'runway', 'youtube'].includes(connector.id);
 
   return (
-    <div className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${
+    <div className={`flex flex-col gap-3 rounded-xl p-4 transition-colors ${
       status === 'live'
-        ? 'border-[var(--success-border)] bg-[var(--success-dim)]'
+        ? 'bg-[var(--success-dim)]'
         : status === 'missing_config'
-          ? 'border-[var(--warning-dim)] bg-[var(--warning-dim)]'
+          ? 'bg-[var(--warning-dim)]'
           : status === 'foundation_only'
-            ? 'border-[var(--border)] bg-[var(--surface-2)]'
-            : 'border-[var(--border)] bg-[var(--surface-1)]'
+            ? 'bg-[var(--surface-2)]'
+            : 'bg-[var(--surface-1)]'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
@@ -287,7 +287,7 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
 
       {/* Zero-cost mode warning */}
       {zeroCostBlocking && (
-        <div className="flex items-center gap-1.5 rounded-lg border border-[var(--warning-dim)] bg-[var(--warning-dim)] px-2 py-1.5 text-[10px] text-[var(--warning)]">
+        <div className="flex items-center gap-1.5 rounded-lg bg-[var(--warning-dim)] px-2 py-1.5 text-[10px] text-[var(--warning)]">
           <ZapOff className="w-3 h-3 shrink-0" />
           Blocked by zero-cost mode
         </div>
@@ -342,14 +342,14 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
             onClick={handleTest}
             disabled={testState === 'loading'}
             title="Test connector connectivity"
-            className={`flex-1 rounded-lg border px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
+            className={`flex-1 rounded-lg px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
               testState === 'loading'
-                ? 'border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
+                ? 'bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
                 : testState === 'ok'
-                  ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)] cursor-default'
+                  ? 'bg-[var(--success-dim)] text-[var(--success)] cursor-default'
                   : testState === 'fail'
-                    ? 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)] cursor-default'
-                    : 'border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
+                    ? 'bg-[var(--error-dim)] text-[var(--error)] cursor-default'
+                    : 'bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
             }`}
           >
             {testState === 'loading' ? '…testing' : testState === 'ok' ? 'OK' : testState === 'fail' ? 'FAIL' : 'Test'}
@@ -358,14 +358,14 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
             onClick={handleValidate}
             disabled={validateState === 'loading'}
             title="Validate credentials via Tauri env check"
-            className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
+            className={`flex items-center gap-1 rounded-lg px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
               validateState === 'loading'
-                ? 'border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
+                ? 'bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
                 : validateResult
                   ? validateResult.ok
-                    ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)] cursor-default'
-                    : 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)] cursor-default'
-                  : 'border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
+                    ? 'bg-[var(--success-dim)] text-[var(--success)] cursor-default'
+                    : 'bg-[var(--error-dim)] text-[var(--error)] cursor-default'
+                  : 'bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
             }`}
           >
             <Key className="w-2.5 h-2.5" />
@@ -398,7 +398,7 @@ function StatusSummaryBar({ connectors, zeroCostMode }: { connectors: Connector[
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-2.5 text-[10px] font-semibold">
+    <div className="flex flex-wrap items-center gap-3 rounded-xl bg-[var(--surface-1)] px-4 py-2.5 text-[10px] font-semibold">
       <div className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
         <span className="text-[var(--success)]">{counts.live || 0} live</span>
@@ -474,7 +474,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
       {/* Setup tab — credential entry for all connectors */}
       {activeTab === 'setup' && (
         <div>
-          <div className="mb-3 rounded-xl border border-[var(--accent-dim)] bg-[var(--accent-dim)] px-4 py-2.5 text-[11px] text-[var(--accent)] leading-relaxed">
+          <div className="mb-3 rounded-xl bg-[var(--accent-dim)] px-4 py-2.5 text-[11px] text-[var(--accent)] leading-relaxed">
             Enter API credentials here. Credentials are stored locally in encrypted storage and never sent to any server except the connector's own API.
           </div>
           <ConnectorSetupPanel />
@@ -506,17 +506,17 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
           onClick={() => {
             setConnectors(listConnectors());
           }}
-          className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-4)] transition-colors"
+          className="shrink-0 rounded-lg bg-[var(--surface-3)] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-4)] transition-colors"
         >
           Refresh
         </button>
       </div>
 
-      <div className="rounded-xl border border-[var(--info-border)] bg-[var(--info-dim)] px-4 py-3 text-[11px] leading-relaxed text-[var(--info)]">
+      <div className="rounded-xl bg-[var(--info-dim)] px-4 py-3 text-[11px] leading-relaxed text-[var(--info)]">
         <span className="font-semibold">How connectors work:</span> Connectors store your API credentials locally and are called by Alphonso's agents (Jose, Marcus, Hector…) running on your local Ollama instance. A "Connected" status means your credentials are saved — the agents will use them automatically when you ask them to take action (e.g. "open a GitHub issue", "post to Slack"). You do not call connectors directly.
       </div>
 
-      <div className="rounded-xl border border-[var(--warning-dim)] bg-[var(--warning-dim)] px-4 py-2 text-[11px] leading-relaxed text-[var(--warning)]">
+      <div className="rounded-xl bg-[var(--warning-dim)] px-4 py-2 text-[11px] leading-relaxed text-[var(--warning)]">
         Public deploy note: this app auto-deploys from GitHub main to Railway. Do not add real connector secrets to browser-exposed env vars unless that connector is meant to be public/cloud-facing.
       </div>
 
@@ -535,7 +535,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
       </div>
 
       {/* Composio callout */}
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3 flex items-start gap-3">
+      <div className="rounded-xl bg-[var(--surface-1)] px-4 py-3 flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-[var(--text-1)]">Composio (External Tools)</p>
           <p className="text-[11px] text-[var(--text-3)] mt-0.5">Composio gives agents access to 250+ external tools (GitHub Actions, Notion, Linear, Jira…). Configure your API key in <span className="font-semibold text-[var(--accent)]">Settings → Connectors → External Tools</span>.</p>

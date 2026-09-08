@@ -45,13 +45,13 @@ export function WorkspaceExportImportView() {
       <div className="flex gap-2">
         <button
           onClick={handleExport}
-          className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-xs text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-3)] px-3 py-2 text-xs text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
         >
           <Download className="h-3.5 w-3.5" /> Export
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-xs text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-3)] px-3 py-2 text-xs text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
         >
           <Upload className="h-3.5 w-3.5" /> Import
         </button>

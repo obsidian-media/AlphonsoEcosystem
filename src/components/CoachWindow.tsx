@@ -101,7 +101,7 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
             <Suspense fallback={<ViewLoadingState activeTab="Skills" />}>
               <CoachSkillGrid skills={coachSkills.slice(0, 4)} compact />
             </Suspense>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-2">
+            <div className="rounded-xl bg-[var(--surface-2)] p-2">
               <Suspense fallback={null}>
                 <MicrophoneStatus voiceStatus={voice.voiceStatus} />
               </Suspense>
@@ -113,7 +113,7 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
               <Suspense fallback={<ViewLoadingState activeTab="Coach interventions" />}>
                 <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
               </Suspense>
-              <div className="rounded-2xl border border-[var(--agent-alphonso-glow)] bg-[var(--agent-alphonso-glow)] p-4">
+              <div className="rounded-2xl bg-[var(--agent-alphonso-glow)] p-4">
                 <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--agent-alphonso)]">Coach skills</div>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--text-2)]">
                   Coach Mode is for guidance, focus, handoffs, rehearsal, and safety checks — not just agent status.
@@ -123,7 +123,7 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
                 <CoachSkillGrid skills={coachSkills} />
               </Suspense>
             </div>
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-0)] p-3">
+            <div className="rounded-2xl bg-[var(--surface-2)] p-3">
               <div className="mb-2 text-2xs font-bold uppercase tracking-[0.16em] text-[var(--text-3)]">Agent status</div>
               <div className="space-y-2">
                 <Suspense fallback={<ViewLoadingState activeTab="Alphonso" />}>

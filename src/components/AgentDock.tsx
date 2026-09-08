@@ -149,7 +149,7 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
 
   if (embedded) {
     return (
-      <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-2)] w-full">
+      <div className="overflow-hidden rounded-xl bg-[var(--surface-2)] w-full">
         <div className="flex items-center gap-1.5 px-3 py-2.5">
           <div className="flex-1 select-none text-[10px] font-semibold tracking-widest text-[var(--text-3)] uppercase">
             Agent Deck

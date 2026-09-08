@@ -86,7 +86,7 @@ interface StatCardProps {
 
 function StatCard({ label, value, state, detail, workspaceOk = true }: StatCardProps) {
   return (
-    <div className={`rounded-2xl border p-4 ${readinessRowShellClass(state, workspaceOk)}`}>
+    <div className={`rounded-2xl p-4 ${readinessRowShellClass(state, workspaceOk)}`}>
       <div className="flex items-center justify-between gap-2">
         <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{label}</div>
         <StateBadge state={state} workspaceOk={workspaceOk} />
@@ -105,7 +105,7 @@ interface SectionPanelProps {
 
 function SectionPanel({ icon: Icon, title, children }: SectionPanelProps) {
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-4">
       <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
         <Icon className="h-4 w-4 text-[var(--accent)]" />
         {title}
@@ -370,7 +370,7 @@ export function ProductionReadinessPanel({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface-1)] p-5">
+      <section className="rounded-3xl bg-[var(--surface-1)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-3)]">
@@ -386,7 +386,7 @@ export function ProductionReadinessPanel({
             <button
               onClick={refresh}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] transition hover:bg-[var(--surface-3)] disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] transition hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
               {loading ? 'Refreshing' : 'Refresh audit'}
@@ -395,11 +395,11 @@ export function ProductionReadinessPanel({
           </div>
         </div>
         {error && (
-          <div className="mt-4 rounded-2xl border border-[var(--error-border)] bg-[var(--error-dim)] p-3 text-sm text-[var(--error)]">
+          <div className="mt-4 rounded-2xl bg-[var(--error-dim)] p-3 text-sm text-[var(--error)]">
             {error}
           </div>
         )}
-        <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-2)]">
+        <div className="mt-4 rounded-2xl bg-[var(--surface-2)] p-3 text-sm text-[var(--text-2)]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <FolderOpen className="h-4 w-4 text-[var(--accent)]" />
@@ -415,14 +415,14 @@ export function ProductionReadinessPanel({
             <button
               onClick={setCurrentWorkspace}
               disabled={!setSettings}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-50"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               Set Current Workspace
             </button>
             <button
               onClick={validateWorkspace}
               disabled={validatingWorkspace}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-50"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               {validatingWorkspace ? 'Validating' : 'Validate Workspace'}
             </button>
@@ -431,7 +431,7 @@ export function ProductionReadinessPanel({
             {(workspaceValidation?.requiredEntries || ['package.json', 'src', 'src-tauri', 'docs']).map((entry: WorkspaceEntry | string) => {
               const row: RequiredEntryRow = typeof entry === 'string' ? { path: entry, exists: false } : entry;
               return (
-                <div key={row.path} className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-[10px] font-mono text-[var(--text-3)]">
+                <div key={row.path} className="rounded-xl bg-[var(--surface-1)] px-3 py-2 text-[10px] font-mono text-[var(--text-3)]">
                   {row.path} <span className={row.exists ? 'text-[var(--success)]' : 'text-[var(--warning)]'}>{row.exists ? 'present' : 'missing'}</span>
                 </div>
               );
@@ -439,7 +439,7 @@ export function ProductionReadinessPanel({
           </div>
         </div>
         {!workspaceRoot && (
-          <div className="mt-4 rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-sm text-[var(--warning)]">
+          <div className="mt-4 rounded-2xl bg-[var(--warning-dim)] p-3 text-sm text-[var(--warning)]">
             Workspace root is not configured yet. Production readiness and self-development scans are setup-required until Alphonso knows the repo path.
           </div>
         )}
@@ -476,17 +476,17 @@ export function ProductionReadinessPanel({
           {Array.isArray(report?.liveBlockers) && report.liveBlockers.length > 0 ? (
             <div className="space-y-2">
               {report.liveBlockers.map((blocker: string) => (
-                <div key={blocker} className="rounded-2xl border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-2 text-sm text-[var(--error)]">
+                <div key={blocker} className="rounded-2xl bg-[var(--error-dim)] px-3 py-2 text-sm text-[var(--error)]">
                   {blocker}
                 </div>
               ))}
             </div>
           ) : blockersLookClear ? (
-            <div className="rounded-2xl border border-[var(--success-border)] bg-[var(--success-dim)] px-3 py-2 text-sm text-[var(--success)]">
+            <div className="rounded-2xl bg-[var(--success-dim)] px-3 py-2 text-sm text-[var(--success)]">
               No live blockers in the latest audit snapshot (workspace validated).
             </div>
           ) : (
-            <div className="rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-2 text-sm text-[var(--accent)]">
+            <div className="rounded-2xl bg-[var(--accent-dim)] px-3 py-2 text-sm text-[var(--accent)]">
               Blocker list is empty but overall readiness is not confirmed. Validate workspace, native proof artifacts, and updater evidence before treating this as clear.
             </div>
           )}
@@ -500,7 +500,7 @@ export function ProductionReadinessPanel({
             <StatCard workspaceOk={workspaceOk} label="Updater Config" value={report?.updateCheckState?.configured ? 'configured' : 'setup_required'} state={report?.updateCheckState?.configured && report?.releaseProof?.manifestValid ? 'partial' : 'setup_required'} detail={report?.updateCheckState?.available ? `Feed reachable (${report.updateCheckState.latestVersion || 'version unknown'}). Signing proof still required.` : 'Endpoint and pubkey must both be set.'} />
           </div>
           <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-[var(--text-3)] md:grid-cols-2">
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <div className="rounded-2xl bg-[var(--surface-2)] p-3">
               <div className="font-semibold text-[var(--text-2)]">Signing env</div>
               <div className="mt-1">TAURI_SIGNING_PRIVATE_KEY: {boolLabel(report?.signingEnv?.TAURI_SIGNING_PRIVATE_KEY)}</div>
               <div>TAURI_SIGNING_PRIVATE_KEY_PASSWORD: {boolLabel(report?.signingEnv?.TAURI_SIGNING_PRIVATE_KEY_PASSWORD)}</div>
@@ -508,7 +508,7 @@ export function ProductionReadinessPanel({
               <div>GITHUB_REPOSITORY: {boolLabel(report?.signingEnv?.GITHUB_REPOSITORY)}</div>
               <div>GITHUB_TOKEN: {boolLabel(report?.signingEnv?.GITHUB_TOKEN)}</div>
             </div>
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <div className="rounded-2xl bg-[var(--surface-2)] p-3">
               <div className="font-semibold text-[var(--text-2)]">Updater evidence</div>
               <div className="mt-1 text-[var(--text-3)]">{report?.releaseState?.evidence || 'No release scan evidence yet.'}</div>
               {Array.isArray(missingUpdaterEnv?.updater) && missingUpdaterEnv.updater.length > 0 && (
@@ -521,7 +521,7 @@ export function ProductionReadinessPanel({
                   Signing missing: {missingUpdaterEnv.signing.join(', ')}
                 </div>
               )}
-              <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3 text-[var(--text-2)]">
+              <div className="mt-3 rounded-xl bg-[var(--surface-1)] p-3 text-[var(--text-2)]">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Setup command</div>
                 <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-[11px] text-[var(--text-2)]">
 {`$env:TAURI_SIGNING_PRIVATE_KEY="..."
@@ -541,7 +541,7 @@ npm.cmd run release:updater`}
         </p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {matrixRows.map((row: ReadinessRow) => (
-            <div key={row.id} className={`rounded-2xl border p-3 ${readinessRowShellClass(row.state, workspaceOk)}`}>
+            <div key={row.id} className={`rounded-2xl p-3 ${readinessRowShellClass(row.state, workspaceOk)}`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="text-sm font-semibold text-[var(--text-1)]">{row.label}</div>
@@ -563,7 +563,7 @@ npm.cmd run release:updater`}
           {connectorRows.map((row: ReadinessRow) => {
             const connectorTruth: string = displayConnectorRowState(row as any);
             return (
-            <div key={row.id} className={`rounded-2xl border p-3 ${readinessRowShellClass(connectorTruth, workspaceOk)}`}>
+            <div key={row.id} className={`rounded-2xl p-3 ${readinessRowShellClass(connectorTruth, workspaceOk)}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-[var(--text-1)]">{row.name}</div>

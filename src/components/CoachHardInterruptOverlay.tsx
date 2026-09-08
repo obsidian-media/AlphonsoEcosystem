@@ -27,12 +27,12 @@ export function CoachHardInterruptOverlay({ intervention, pauseUntilMs, onAction
         <div className="space-y-4 p-6">
           <p className="text-sm leading-relaxed text-[var(--text-2)]">{intervention.message}</p>
           <div className="grid grid-cols-3 gap-2 text-center text-xs text-[var(--text-2)]">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-0)] p-3">Spins<br /><b className="text-[var(--text-1)]">{intervention.metrics?.spinCount || 0}</b></div>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-0)] p-3">Net<br /><b className="text-[var(--text-1)]">{intervention.metrics?.netResult || 0}</b></div>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-0)] p-3">Stretch<br /><b className="text-[var(--text-1)]">{intervention.metrics?.longestLosingStretch || 0}</b></div>
+            <div className="rounded-xl bg-[var(--surface-2)] p-3">Spins<br /><b className="text-[var(--text-1)]">{intervention.metrics?.spinCount || 0}</b></div>
+            <div className="rounded-xl bg-[var(--surface-2)] p-3">Net<br /><b className="text-[var(--text-1)]">{intervention.metrics?.netResult || 0}</b></div>
+            <div className="rounded-xl bg-[var(--surface-2)] p-3">Stretch<br /><b className="text-[var(--text-1)]">{intervention.metrics?.longestLosingStretch || 0}</b></div>
           </div>
           {pauseUntilMs > Date.now() && (
-            <div className="rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] px-4 py-3 text-sm font-semibold text-[var(--error)]">
+            <div className="rounded-xl bg-[var(--error-dim)] px-4 py-3 text-sm font-semibold text-[var(--error)]">
               Pause active until {new Date(pauseUntilMs).toLocaleTimeString()}.
             </div>
           )}

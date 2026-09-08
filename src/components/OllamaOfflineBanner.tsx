@@ -66,13 +66,13 @@ export function OllamaOfflineBanner({ ollamaStatus, onRetry, onOpenRuntimes }: O
         )}
         <button
           onClick={onRetry}
-          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-[var(--warning-border)] text-[var(--warning)] hover:bg-[var(--warning-dim)] transition-colors"
+          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-[var(--warning)] hover:bg-[var(--warning-dim)] transition-colors"
         >
           <RefreshCw size={10} /> Retry
         </button>
         <button
           onClick={onOpenRuntimes}
-          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-[var(--warning-border)] text-[var(--warning)] hover:bg-[var(--warning-dim)] transition-colors"
+          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-[var(--warning)] hover:bg-[var(--warning-dim)] transition-colors"
         >
           <ExternalLink size={10} /> Runtime Hub
         </button>

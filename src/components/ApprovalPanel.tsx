@@ -131,12 +131,12 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
           return (
             <div
               key={item.itemId}
-              className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
                 status === 'approved'
-                  ? 'border-[var(--success-border)] bg-[var(--success-dim)]'
+                  ? 'bg-[var(--success-dim)]'
                   : status === 'rejected'
-                    ? 'border-[var(--error-border)] bg-[var(--error-dim)] opacity-60'
-                    : 'border-[var(--border)] bg-[var(--surface-3)]'
+                    ? 'bg-[var(--error-dim)] opacity-60'
+                    : 'bg-[var(--surface-3)]'
               }`}
             >
               <RiskIcon className={`w-3.5 h-3.5 shrink-0 ${item.riskLevel === 'high' ? 'text-[var(--error)]' : 'text-[var(--warning)]'}`} />

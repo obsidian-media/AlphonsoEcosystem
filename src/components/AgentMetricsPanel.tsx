@@ -72,7 +72,7 @@ export function AgentMetricsPanel({ filters = {} }: Props) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {statCards.map((stat) => (
-          <div key={stat.label} className="p-3 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
+          <div key={stat.label} className="p-3 bg-[var(--surface-2)] rounded-xl">
             <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-3)] mb-1">
               <stat.icon className="w-3 h-3" />
               {stat.label}
@@ -83,7 +83,7 @@ export function AgentMetricsPanel({ filters = {} }: Props) {
       </div>
 
       {metrics.topCommands.length > 0 && (
-        <div className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
+        <div className="p-4 bg-[var(--surface-2)] rounded-xl">
           <div className="text-xs font-semibold text-[var(--text-3)] mb-2">Top Commands</div>
           <div className="space-y-1">
             {metrics.topCommands.slice(0, 5).map((cmd, i) => (
@@ -97,7 +97,7 @@ export function AgentMetricsPanel({ filters = {} }: Props) {
       )}
 
       {metrics.errorPatterns.length > 0 && (
-        <div className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
+        <div className="p-4 bg-[var(--surface-2)] rounded-xl">
           <div className="text-xs font-semibold text-[var(--text-3)] mb-2">Common Errors</div>
           <div className="space-y-1">
             {metrics.errorPatterns.map((err, i) => (
@@ -111,7 +111,7 @@ export function AgentMetricsPanel({ filters = {} }: Props) {
       )}
 
       {metrics.trend.length > 0 && (
-        <div className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
+        <div className="p-4 bg-[var(--surface-2)] rounded-xl">
           <div className="text-xs font-semibold text-[var(--text-3)] mb-2">7-Day Trend</div>
           <div className="flex items-end gap-1 h-16">
             {metrics.trend.map((day, i) => {
@@ -134,7 +134,7 @@ export function AgentMetricsPanel({ filters = {} }: Props) {
       )}
 
       {Object.keys(metrics.byAgent).length > 0 && (
-        <div className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
+        <div className="p-4 bg-[var(--surface-2)] rounded-xl">
           <div className="text-xs font-semibold text-[var(--text-3)] mb-2">By Agent</div>
           <div className="space-y-2">
             {Object.entries(metrics.byAgent).map(([agent, data]) => (

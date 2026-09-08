@@ -18,12 +18,12 @@ interface Props {
 export function AgentCapabilityMatrix({ agentPermissions = {}, agentProfiles = {} }: Props): React.JSX.Element {
   const rows = Object.entries(agentPermissions);
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+    <div className="rounded-xl bg-[var(--surface-2)] p-4">
       <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold mb-3">Capability Matrix</div>
       <div className="space-y-2 text-xs">
         {rows.length === 0 && <div className="text-[var(--text-3)]">No permission profile selected.</div>}
         {rows.map(([agentId, permission]) => (
-          <div key={agentId} className="rounded-lg border border-[var(--border)] p-2">
+          <div key={agentId} className="rounded-lg p-2">
             <div className="font-semibold text-[var(--text-2)]">{agentId}</div>
             <div className="text-[var(--text-3)]">allowed: {permission.allowed.length} | blocked: {permission.blocked.length} | approval: {permission.approvalRequired.length}</div>
             <div className="mt-1 text-[var(--text-3)]">can do: {permission.allowed.slice(0, 3).join(', ')}</div>

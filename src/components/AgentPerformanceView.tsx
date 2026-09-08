@@ -78,13 +78,13 @@ export function AgentPerformanceView({ receipts = [] }: AgentPerformanceViewProp
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleExportCSV}
-              className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)] transition-colors"
+              className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-2)] transition-colors"
             >
               Export CSV
             </button>
             <button
               onClick={handleExportJSON}
-              className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)] transition-colors"
+              className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-2)] transition-colors"
             >
               Export JSON
             </button>
@@ -101,7 +101,7 @@ export function AgentPerformanceView({ receipts = [] }: AgentPerformanceViewProp
               ? Math.round(s.latencies.reduce((a, b) => a + b, 0) / s.latencies.length)
               : null;
             return (
-              <div key={name} className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
+              <div key={name} className="flex items-center gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
                 <span className="text-xs font-semibold text-[var(--text-2)] w-20 shrink-0">{name}</span>
                 <span className="text-[11px] text-[var(--success)]">{s.success} ok</span>
                 <span className="text-[11px] text-[var(--error)]">{s.error} err</span>
@@ -113,7 +113,7 @@ export function AgentPerformanceView({ receipts = [] }: AgentPerformanceViewProp
       )}
 
       {/* Dead Letter Queue */}
-      <div className="mt-3 rounded-lg border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3">
+      <div className="mt-3 rounded-lg bg-[var(--warning-dim)] p-3">
         <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--warning)] mb-2">Dead Letter Queue</div>
         <div className="flex items-center justify-between">
           <div>

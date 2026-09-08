@@ -226,7 +226,7 @@ function GeneratedImageCard({ img, index, outputFolder }: GeneratedImageCardProp
   };
 
   return (
-    <div className={`p-2 rounded-lg border ${img.status === 'generated' ? 'bg-[var(--success-dim)] border-[var(--success-border)]' : 'bg-[var(--error-dim)] border-[var(--error-border)]'}`}>
+    <div className={`p-2 rounded-lg ${img.status === 'generated' ? 'bg-[var(--success-dim)]' : 'bg-[var(--error-dim)]'}`}>
       {img.status === 'generated' ? (
         <>
           {img.previewBase64 && (
@@ -342,7 +342,7 @@ function ArtifactDisplay({ artifacts }: ArtifactDisplayProps) {
           return null;
         }
         return (
-          <div key={idx} className="p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+          <div key={idx} className="p-2 rounded-lg bg-[var(--surface-2)]">
             <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-3)]">{artifact.type || 'Artifact'}</div>
             <div className="text-[11px] text-[var(--text-3)] mt-0.5">{artifact.status || ''}</div>
           </div>
@@ -422,7 +422,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
 
   return (
     <div
-      className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] shadow-[0_24px_80px_-36px_rgba(15,23,42,0.95)] backdrop-blur-xl"
+      className="overflow-hidden rounded-[28px] bg-[var(--surface-1)] shadow-[0_24px_80px_-36px_rgba(15,23,42,0.95)] backdrop-blur-xl"
       data-testid="jose-pipeline-result-card"
     >
       <div className="border-b border-[var(--border)] bg-[var(--accent-dim)] px-4 py-3.5">
@@ -440,7 +440,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
             <button
               type="button"
               onClick={copySummary}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-2)] transition-all hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--surface-3)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-2)] transition-all hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
               aria-label="Copy summary"
               data-testid="jose-copy-summary-button"
             >
@@ -451,7 +451,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
               type="button"
               onClick={() => { if (commandText) onRerunCommand?.(commandText); }}
               disabled={!commandText || !onRerunCommand}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)] transition-all hover:-translate-y-0.5 hover:border-[var(--accent-border)] hover:bg-[var(--accent-muted)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent-dim)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)] transition-all hover:-translate-y-0.5 hover:border-[var(--accent-border)] hover:bg-[var(--accent-muted)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
               aria-label="Rerun command"
               data-testid="jose-rerun-command-button"
             >
@@ -461,7 +461,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
           </div>
         </div>
         {commandText && (
-          <div className="mt-2 inline-flex max-w-full items-start rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[12px] leading-relaxed text-[var(--text-2)]">
+          <div className="mt-2 inline-flex max-w-full items-start rounded-2xl bg-[var(--surface-2)] px-3 py-2 text-[12px] leading-relaxed text-[var(--text-2)]">
             <span className="line-clamp-2">{commandText}</span>
           </div>
         )}
@@ -471,7 +471,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
         <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)]">Summary</div>
         <div className="mt-1.5 text-[12px] leading-relaxed text-[var(--text-2)]">{summary}</div>
         {url && (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-2.5 py-1 text-[11px] font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent-dim)] hover:text-[var(--accent-hover)]">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent-dim)] px-2.5 py-1 text-[11px] font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent-dim)] hover:text-[var(--accent-hover)]">
             <ExternalLink className="w-3 h-3" />
             View Result
           </a>
@@ -479,21 +479,21 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
       </div>
 
       <div className="grid grid-cols-1 gap-2 border-b border-[var(--border)] px-4 py-3 sm:grid-cols-3">
-        <div className="flex items-center gap-2 rounded-2xl border border-[var(--success-border)] bg-[var(--success-dim)] px-3 py-2">
+        <div className="flex items-center gap-2 rounded-2xl bg-[var(--success-dim)] px-3 py-2">
           <CheckCircle2 className="w-4 h-4 text-[var(--success)] shrink-0" />
           <div className="min-w-0">
             <div className="text-[12px] font-semibold text-[var(--text-1)]">{executedCount}</div>
             <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-3)]">Executed</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-2">
+        <div className="flex items-center gap-2 rounded-2xl bg-[var(--warning-dim)] px-3 py-2">
           <Clock className="w-4 h-4 text-[var(--warning)] shrink-0" />
           <div className="min-w-0">
             <div className="text-[12px] font-semibold text-[var(--text-1)]">{pendingCount}</div>
             <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-3)]">Pending</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-2xl border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-2">
+        <div className="flex items-center gap-2 rounded-2xl bg-[var(--error-dim)] px-3 py-2">
           <XCircle className="w-4 h-4 text-[var(--error)] shrink-0" />
           <div className="min-w-0">
             <div className="text-[12px] font-semibold text-[var(--text-1)]">{failedCount}</div>
@@ -538,7 +538,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
           <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Agent Reports</div>
           <div className="space-y-2">
             {agentReports.map((a, idx) => (
-              <div key={idx} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+              <div key={idx} className="rounded-2xl bg-[var(--surface-2)] p-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className="text-[10px]">{AGENT_ICONS[a.agent] || '🤖'}</span>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-3)]">{a.agent}</span>
