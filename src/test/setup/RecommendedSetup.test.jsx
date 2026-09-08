@@ -4,10 +4,17 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 vi.mock('../../services/runtimeManagerService', () => ({
   getAllStatus: vi.fn(),
 }));
-// Real withTimeout preserved — RecommendedSetup wraps getAllStatus in it.
-vi.mock('../../services/setupFlowService', async (importOriginal) => ({
-  ...(await importOriginal()),
-}));
+// Real withTimeout/checkDiskSpace preserved; isComponentAlreadyInstalled is
+// stubbed to the Runtime-Hub-set behaviour so these tests stay focused on the
+// recommendation screen. Its real model-vs-tool routing (which hits ollama's
+// /api/tags for the starter model) is covered in installComponent.test.js.
+vi.mock('../../services/setupFlowService', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    isComponentAlreadyInstalled: vi.fn(async (id, installedToolNames) => installedToolNames.has(id)),
+  };
+});
 
 import { getAllStatus } from '../../services/runtimeManagerService';
 import { RecommendedSetup } from '../../components/setup/RecommendedSetup';

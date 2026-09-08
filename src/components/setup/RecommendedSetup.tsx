@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { getAllStatus } from '../../services/runtimeManagerService';
-import { checkDiskSpace, withTimeout, type SelectableComponent } from '../../services/setupFlowService';
+import {
+  checkDiskSpace,
+  withTimeout,
+  isComponentAlreadyInstalled,
+  STARTER_MODEL_ID,
+  STARTER_MODEL_TAG,
+  type SelectableComponent,
+} from '../../services/setupFlowService';
 import type { HardwareProfile } from '../../services/setupFlowService';
 import type { IntentId } from './IntentSelection';
 
@@ -9,22 +16,29 @@ interface RecommendedComponent extends SelectableComponent {
   warning?: string;
 }
 
-// Sizes per the design doc's §6 verified component table. "starter-model"
-// maps to whatever DEPENDENCY_BUNDLING_PLAN.md's O2 lands on (llama3.2:3b,
-// 2GB, at the time of writing) — see that doc for the authoritative current
-// choice if this drifts.
+// Sizes per the design doc's §6 verified component table. The starter model's
+// id and ollama tag live in setupFlowService (STARTER_MODEL_ID/TAG) so the
+// queued id, the pulled tag, and the already-installed check can't drift
+// apart; see DEPENDENCY_BUNDLING_PLAN.md's O2 for the authoritative model
+// choice if it changes.
+const STARTER_MODEL_ENTRY: RecommendedComponent = {
+  id: STARTER_MODEL_ID,
+  label: `Ollama + starter model (${STARTER_MODEL_TAG})`,
+  sizeGb: 2,
+};
+
 const INTENT_RECOMMENDATIONS: Record<IntentId, RecommendedComponent[]> = {
-  'chat-only': [{ id: 'starter-model', label: 'Ollama + starter model', sizeGb: 2 }],
+  'chat-only': [STARTER_MODEL_ENTRY],
   'chat-images': [
-    { id: 'starter-model', label: 'Ollama + starter model', sizeGb: 2 },
+    STARTER_MODEL_ENTRY,
     { id: 'fooocus', label: 'Fooocus (image generation)', sizeGb: 15 },
   ],
   'chat-voice': [
-    { id: 'starter-model', label: 'Ollama + starter model', sizeGb: 2 },
+    STARTER_MODEL_ENTRY,
     { id: 'voice-os', label: 'Voice OS', sizeGb: 1 },
   ],
   'full-power': [
-    { id: 'starter-model', label: 'Ollama + starter model', sizeGb: 2 },
+    STARTER_MODEL_ENTRY,
     { id: 'fooocus', label: 'Fooocus (image generation)', sizeGb: 15 },
     { id: 'voice-os', label: 'Voice OS', sizeGb: 1 },
     { id: 'chromadb', label: 'ChromaDB (memory)', sizeGb: 1 },
@@ -45,11 +59,19 @@ export function RecommendedSetup({ intent, hardware, onProceed, onCustomize }: R
 
   useEffect(() => {
     let cancelled = false;
+    const recommendedIds = INTENT_RECOMMENDATIONS[intent].map((c) => c.id);
+
     withTimeout(getAllStatus())
-      .then((statuses) => {
+      .then(async (statuses) => {
+        const toolNames = new Set(statuses.filter((s) => s.installed).map((s) => s.name));
+        // Ask each component the right question for its kind — Runtime Hub's
+        // status list can't answer for the starter model, which lives in
+        // ollama's own store (see isComponentAlreadyInstalled).
+        const checks = await Promise.all(
+          recommendedIds.map(async (id) => [id, await isComponentAlreadyInstalled(id, toolNames)] as const)
+        );
         if (cancelled) return;
-        const installed = new Set(statuses.filter((s) => s.installed).map((s) => s.name));
-        setInstalledNames(installed);
+        setInstalledNames(new Set(checks.filter(([, present]) => present).map(([id]) => id)));
         setLoaded(true);
       })
       .catch(() => {
@@ -62,7 +84,7 @@ export function RecommendedSetup({ intent, hardware, onProceed, onCustomize }: R
         setLoaded(true);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [intent]);
 
   if (!loaded) {
     return (

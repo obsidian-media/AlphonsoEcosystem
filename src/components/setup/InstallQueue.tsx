@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { installTool } from '../../services/runtimeManagerService';
-import type { SelectableComponent } from '../../services/setupFlowService';
+import { installComponent, STARTER_MODEL_ID, type SelectableComponent } from '../../services/setupFlowService';
 
 type TaskStatus = 'pending' | 'installing' | 'ready' | 'error';
 
@@ -29,7 +28,10 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
     setTasks((prev) => prev.map((t) => ({ ...t, status: 'installing' })));
 
     components.forEach((component) => {
-      installTool(component.id)
+      // installComponent, not installTool: the starter model is pulled via
+      // ollama, everything else goes through Runtime Hub. Passing a model id
+      // to installTool() fails with "Unknown tool".
+      installComponent(component.id)
         .then(() => {
           setTasks((prev) => prev.map((t) => (t.id === component.id ? { ...t, status: 'ready' } : t)));
         })
@@ -53,7 +55,7 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
   }, []);
 
   useEffect(() => {
-    const starter = tasks.find((t) => t.id === 'starter-model');
+    const starter = tasks.find((t) => t.id === STARTER_MODEL_ID);
     if (starter?.status === 'ready' && !starterReadyFired.current) {
       starterReadyFired.current = true;
       onStarterReady();

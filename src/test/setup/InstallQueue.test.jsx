@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
-vi.mock('../../services/runtimeManagerService', () => ({
-  installTool: vi.fn(),
+// Mock installComponent (the model-vs-tool router) rather than installTool —
+// the queue no longer calls installTool directly. installComponent's own
+// routing logic is covered separately in installComponent.test.js.
+vi.mock('../../services/setupFlowService', async (importOriginal) => ({
+  ...(await importOriginal()),
+  installComponent: vi.fn(),
 }));
 
-import { installTool } from '../../services/runtimeManagerService';
+import { installComponent } from '../../services/setupFlowService';
 import { InstallQueue } from '../../components/setup/InstallQueue';
 
 const components = [
@@ -21,18 +25,18 @@ describe('InstallQueue', () => {
     // could still satisfy a plain call-count assertion, so hold both open
     // and prove both calls happened while neither had settled.
     const resolvers = [];
-    installTool.mockImplementation(() => new Promise((resolve) => { resolvers.push(resolve); }));
+    installComponent.mockImplementation(() => new Promise((resolve) => { resolvers.push(resolve); }));
 
     render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
 
-    await waitFor(() => expect(installTool).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(installComponent).toHaveBeenCalledTimes(2));
     expect(resolvers).toHaveLength(2); // both in flight simultaneously
     resolvers.forEach((r) => r({ tool: 'x', ok: true, message: 'done' }));
   });
 
   it('calls onStarterReady as soon as the starter-model component succeeds, without waiting for the rest', async () => {
     let resolveFooocus;
-    installTool.mockImplementation((name) => {
+    installComponent.mockImplementation((name) => {
       if (name === 'starter-model') return Promise.resolve({ tool: name, ok: true, message: 'done' });
       return new Promise((resolve) => { resolveFooocus = resolve; });
     });
@@ -43,14 +47,14 @@ describe('InstallQueue', () => {
   });
 
   it('calls onAllComplete exactly once when every component succeeds', async () => {
-    installTool.mockResolvedValue({ tool: 'x', ok: true, message: 'done' });
+    installComponent.mockResolvedValue({ tool: 'x', ok: true, message: 'done' });
     const onAllComplete = vi.fn();
     render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={onAllComplete} onFailed={() => {}} />);
     await waitFor(() => expect(onAllComplete).toHaveBeenCalledTimes(1));
   });
 
   it('shows an error status for a component whose install rejects, without blocking the others', async () => {
-    installTool.mockImplementation((name) => {
+    installComponent.mockImplementation((name) => {
       if (name === 'fooocus') return Promise.reject(new Error('network error'));
       return Promise.resolve({ tool: name, ok: true, message: 'done' });
     });
@@ -62,7 +66,7 @@ describe('InstallQueue', () => {
     // Treating a failed queue as completion would play "Alphonso is online."
     // and persist the setup-complete flag, permanently hiding the flow that
     // would let the user retry.
-    installTool.mockImplementation((name) => {
+    installComponent.mockImplementation((name) => {
       if (name === 'fooocus') return Promise.reject(new Error('network error'));
       return Promise.resolve({ tool: name, ok: true, message: 'done' });
     });
