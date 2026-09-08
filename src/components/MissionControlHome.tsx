@@ -168,7 +168,7 @@ export function MissionControlHome({
         <div className="mb-6">
           <AgentStatusStrip variant="portraits" useAutoFeed onAgentsChange={setActiveAgents} />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--text-1)] md:text-5xl">
+        <h1 className="font-serif text-3xl font-bold tracking-tight text-[var(--text-1)] md:text-5xl">
           {getGreeting()}
         </h1>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[var(--text-2)]">

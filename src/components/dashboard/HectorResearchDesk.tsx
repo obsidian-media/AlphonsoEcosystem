@@ -173,7 +173,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
               <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--agent-hector)]">
                 <Compass className="h-3.5 w-3.5" />Research
               </div>
-              <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-1)]">Hector Research Desk</h1>
+              <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-[var(--text-1)]">Hector Research Desk</h1>
               <p className="mt-1 text-[13px] text-[var(--text-3)]">Discover and fetch public sources, attach citations, hand off to Jose.</p>
             </div>
             <div className="flex items-center gap-2 shrink-0 text-[11px] text-[var(--text-3)]">

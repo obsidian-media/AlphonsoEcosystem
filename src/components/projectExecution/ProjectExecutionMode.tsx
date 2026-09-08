@@ -230,7 +230,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-3)]">Projects</div>
-              <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-1)]">Project Execution</h1>
+              <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-[var(--text-1)]">Project Execution</h1>
               <p className="mt-1 text-[13px] text-[var(--text-3)]">Plan, assign, and package agent work for any project.</p>
             </div>
             {result && (

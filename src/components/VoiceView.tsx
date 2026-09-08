@@ -103,7 +103,7 @@ export function VoiceView() {
         <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl bg-[var(--surface-1)] px-5 py-5">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent)]">Voice console</div>
-            <h2 className="mt-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-[var(--text-1)]">
+            <h2 className="mt-1 flex items-center gap-2 font-serif text-2xl font-bold tracking-tight text-[var(--text-1)]">
               {isRunning ? <Mic className="h-6 w-6 text-[var(--success)]" /> : <MicOff className="h-6 w-6 text-[var(--text-4)]" />}
               Voice OS
             </h2>

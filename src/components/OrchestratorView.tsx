@@ -626,7 +626,7 @@ export function OrchestratorView({
               <Crown className="h-3.5 w-3.5" />
               Orchestrator
             </div>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-1)]">Jose — Governance &amp; Routing</h1>
+            <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-[var(--text-1)]">Jose — Governance &amp; Routing</h1>
             <p className="mt-1 text-[13px] text-[var(--text-3)]">Supervise agent handoffs, review approvals, route tasks. No automatic execution.</p>
           </div>
           <div className="flex items-center gap-4 shrink-0">

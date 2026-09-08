@@ -836,7 +836,7 @@ export function SettingsView({
         {activeSection === 'general' && (
           <div className="max-w-4xl mx-auto space-y-10">
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight text-[var(--text-1)]">System Settings</h1>
+              <h1 className="font-serif text-2xl font-bold tracking-tight text-[var(--text-1)]">System Settings</h1>
               <p className="text-sm text-[var(--text-3)]">Configure local Ollama inference and native runtime behavior.</p>
             </div>
 

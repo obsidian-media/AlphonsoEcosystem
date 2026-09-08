@@ -332,7 +332,7 @@ export function OperatorDashboard({
         <section className="rounded-2xl bg-[var(--surface-1)] p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl font-bold text-[var(--text-1)]">Operator Mode is Off</h1>
+              <h1 className="font-serif text-xl font-bold text-[var(--text-1)]">Operator Mode is Off</h1>
               <p className="text-sm text-[var(--text-3)] mt-1">Enable Operator Mode to access telemetry, proofs, memory dashboards, and supervised runtime tools.</p>
             </div>
             <button
@@ -351,7 +351,7 @@ export function OperatorDashboard({
     <div className="max-w-4xl mx-auto py-5 px-4 space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-xl font-bold text-[var(--text-1)]">Operator Mode</h1>
+          <h1 className="font-serif text-xl font-bold text-[var(--text-1)]">Operator Mode</h1>
           <p className="text-sm text-[var(--text-3)]">Supervised runtime control, verification logs, memory state, plugin registry, and recovery foundations.</p>
         </div>
         <div className="flex items-center gap-2">

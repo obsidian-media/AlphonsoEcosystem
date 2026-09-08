@@ -239,7 +239,7 @@ export function AutomationView() {
     <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-[var(--text-1)]">Automation</h2>
+          <h2 className="font-serif text-base font-bold text-[var(--text-1)]">Automation</h2>
           <p className="text-xs text-[var(--text-3)] mt-0.5">Build and run multi-agent workflows</p>
         </div>
         <button onClick={refresh} aria-label="Refresh schedules" className="p-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors">

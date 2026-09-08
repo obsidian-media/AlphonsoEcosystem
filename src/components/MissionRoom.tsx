@@ -344,7 +344,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[var(--accent)]">
               <RadioTower className="h-3.5 w-3.5" /> Shared command table
             </div>
-            <h1 className="mt-4 text-4xl font-black tracking-[-0.055em] text-[var(--text-1)] md:text-6xl">Mission Room</h1>
+            <h1 className="mt-4 font-serif text-4xl font-black tracking-[-0.055em] text-[var(--text-1)] md:text-6xl">Mission Room</h1>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--text-2)]">
               A local-first meeting board for Shayan, Kite, and Hermes. Use it to capture decisions, assign execution work, paste Hermes outputs, and keep approvals explicit.
             </p>

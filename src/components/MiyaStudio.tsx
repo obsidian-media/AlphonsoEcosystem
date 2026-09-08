@@ -938,7 +938,7 @@ export function MiyaStudio({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--agent-miya)]">Creative Studio</div>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-1)]">Miya — Creator Agent</h1>
+            <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-[var(--text-1)]">Miya — Creator Agent</h1>
             <p className="mt-1 text-[13px] text-[var(--text-3)]">{companionMessage || 'Storytelling, prompts, thumbnails, and creative handoffs.'}</p>
           </div>
           <div className="h-14 w-14 rounded-xl overflow-hidden border border-[var(--agent-miya-glow)] bg-[var(--surface-1)] shrink-0">

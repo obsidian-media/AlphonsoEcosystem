@@ -169,7 +169,7 @@ export function AgentPairingView() {
     <div className="flex flex-col gap-5 p-4 h-full">
       <div className="flex items-center gap-2">
         <Link2 className="w-4 h-4 text-[var(--accent)]" />
-        <h2 className="text-base font-semibold text-[var(--text-1)]">Agent Pairing</h2>
+        <h2 className="font-serif text-base font-semibold text-[var(--text-1)]">Agent Pairing</h2>
         <span className="text-xs text-[var(--text-3)]">({pairs.length} pair{pairs.length !== 1 ? 's' : ''})</span>
       </div>
 

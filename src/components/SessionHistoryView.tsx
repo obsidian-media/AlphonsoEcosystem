@@ -205,7 +205,7 @@ export function SessionHistoryView() {
   return (
     <div className="flex flex-col h-full gap-4 p-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="text-base font-semibold text-[var(--text-1)]">Session History</h2>
+        <h2 className="font-serif text-base font-semibold text-[var(--text-1)]">Session History</h2>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-3)]" />

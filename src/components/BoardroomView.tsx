@@ -261,7 +261,7 @@ export function BoardroomView() {
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         <div>
-          <h2 className="text-lg font-bold text-[var(--text-1)]">Boardroom</h2>
+          <h2 className="font-serif text-lg font-bold text-[var(--text-1)]">Boardroom</h2>
           <p className="text-[var(--text-3)] text-sm mt-0.5">Multi-agent sessions for complex decisions</p>
         </div>
 

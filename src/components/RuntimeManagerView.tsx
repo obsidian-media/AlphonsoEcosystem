@@ -692,7 +692,7 @@ export default function RuntimeManagerView() {
     <div className="flex flex-col gap-5 p-5 max-w-4xl mx-auto">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-bold text-[var(--text-1)]">AI Runtime Manager</h2>
+          <h2 className="font-serif text-lg font-bold text-[var(--text-1)]">AI Runtime Manager</h2>
           <p className="text-[var(--text-3)] text-sm mt-0.5">
             All tools auto-start with Alphonso. Install once, run forever.
           </p>

@@ -239,7 +239,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
     <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
       <header className="pb-4 border-b border-[var(--border)]">
         <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-3)]">All Agents</div>
-        <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-1)]">Agent Ecosystem</h1>
+        <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-[var(--text-1)]">Agent Ecosystem</h1>
       </header>
 
       <Tabs tabs={TABS} activeId={showAdvancedSections} onChange={setShowAdvancedSections} />
