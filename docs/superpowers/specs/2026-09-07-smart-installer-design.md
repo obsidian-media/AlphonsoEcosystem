@@ -356,12 +356,22 @@ heart, one color per theme) distinct from the hexagonal app-icon emblem —
 worth being aware of as an alternate official mark if a second, non-app-icon
 badge is ever needed, but not something this project needs to resolve now.
 A further group composition, supplied directly by the user (2026-09-07,
-newer than the banner above), is saved at
-`docs/superpowers/specs/assets/alphonso_ecosystem_group.png` — 8 agent
-characters in a library setting around a glowing crystal-globe, titled
-"Alphonso Ecosystem." Useful additional reference for the boot/ritual-intro
-screen's mood (library/knowledge motif, glowing central orb) alongside the
-portrait set above.
+newer than the banner above), showed 8 agent characters in a library
+setting around a glowing crystal-globe, titled "Alphonso Ecosystem" —
+useful additional reference for the boot/ritual-intro screen's mood
+(library/knowledge motif, glowing central orb) alongside the portrait set
+above.
+
+**Post-derivation cleanup (2026-09-08, self-critique):** the raw source
+files this section describes (`docs/superpowers/specs/assets/`, ~58MB of
+uncompressed PNGs) were removed from the repo after this pass — they were
+one-time intermediate input to the crop/compress step below, never
+referenced by the running app, and committing 58MB of throwaway derivation
+input to permanent git history for a ~78KB final output was a real mistake,
+caught late rather than avoided. The actual shipped assets
+(`src/assets/agents/setup/*.webp`, `src/assets/branding/alphonso-emblem.webp`)
+remain in the repo as normal; this paragraph's file paths are historical
+record of the process, not live references.
 
 Everything else in the Ritual UI (scanline grids, glow rings, portal
 expansion, particle fields) is built procedurally in CSS/SVG/Framer Motion —

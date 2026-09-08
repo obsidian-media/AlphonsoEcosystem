@@ -1,3 +1,16 @@
+> **Background research input, not authoritative (2026-09-08).** This was
+> the initial dependency/bundling research that prompted the Smart
+> Installer work — useful as historical context for *why* the project
+> started, but it predates the real design/brainstorm pass and was never
+> verified section-by-section against the shipped implementation. For the
+> real, verified design: see
+> `docs/superpowers/specs/2026-09-07-smart-installer-design.md` (design)
+> and `docs/superpowers/plans/2026-09-07-smart-installer.md` (implementation
+> plan). Any specific claim here about counts, architecture, or install
+> mechanics should be re-verified against current code before being relied
+> on, the same caution CLAUDE.md already applies to every dated audit entry
+> in this repo.
+
 # Alphonso Ecosystem - Comprehensive Dependency & Bundling Analysis
 **Date:** 2026-09-05 | **Version:** v2.7.1 | **Branch:** analysis/dependency-bundling-strategy
 

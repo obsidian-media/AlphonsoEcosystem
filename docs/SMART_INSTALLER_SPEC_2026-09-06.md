@@ -1,3 +1,19 @@
+> **SUPERSEDED (2026-09-08).** This is an early Copilot draft written before
+> the real design/brainstorm pass for the Smart Installer. It describes
+> designs that were considered and explicitly rejected — most notably a
+> separate NSIS bootstrap webview (`installer_scan` Tauri command, a
+> standalone pre-launch installer app) — neither of which exists in the
+> shipped implementation. The Smart Installer that actually shipped is a
+> same-binary, same-app-shell flow (`SetupFlow.tsx` + the `setup/` screen
+> family), gated exactly where `OnboardingWizard.tsx` used to be, not a
+> second binary or window. **Do not treat anything in this file as
+> authoritative.** For the real, verified design: see
+> `docs/superpowers/specs/2026-09-07-smart-installer-design.md` (design)
+> and `docs/superpowers/plans/2026-09-07-smart-installer.md` (implementation
+> plan). Kept here only for historical context on the initial analysis that
+> prompted the redesign — same treatment as this repo's superseded
+> `BOARDROOM_ROLES.md`/`BOARDROOM_MODEL_REGISTRY.md`.
+
 # Alphonso Ritual Installer — SMART_INSTALLER_SPEC
 Date: 2026-09-06T17:12:00-04:00
 Branch: analysis/dependency-bundling-strategy
