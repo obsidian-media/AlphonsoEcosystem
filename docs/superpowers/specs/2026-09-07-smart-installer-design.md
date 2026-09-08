@@ -204,6 +204,12 @@ steps added (Recommended Setup, Early Exit), agent roster corrected.
    `--emblem-green`, `--emblem-orange`) to `src/styles/tokens.css` for that
    specific use, not replace `--accent` globally. Per-agent tile colors
    (Miya pink, Marcus red, etc.) are unaffected either way.
+   **Implemented 2026-09-08** as `src/components/setup/BootRitualIntro.tsx`
+   — a real, late gap: the original implementation pass shipped step 7
+   (Activation Sequence) but skipped this step entirely, so Setup opened
+   straight into a plain "Scanning your system…" text with none of the
+   ritual visual direction described above. Caught only when directly
+   asked whether the "whole visual ritual" had actually been built.
 2. **System Scan** — GPU (presence/vendor/VRAM if detectable), RAM, disk free,
    Python, Ollama, **and Docker** (new — required because n8n/ChromaDB/
    OpenHands in Runtime Hub's tool catalogue all launch via `docker run`, not

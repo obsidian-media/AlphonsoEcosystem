@@ -7,6 +7,33 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-09-08] **Smart Installer shipped only half the "ritual" -- the
+  opening beat was silently dropped, resolved.** The design doc's §5 step 1
+  ("Boot / Ritual Intro": emblem forms, scanline sweep, skippable, 2-3s,
+  Cyberpunk Ritual visual direction — neon grid lines, glow rings,
+  monospace HUD readouts) was never implemented. PR #233 shipped step 7
+  (the closing Activation Sequence — pulse/portal/emblem-ignite, real
+  Framer Motion) but Setup actually opened straight into a plain
+  `SystemScan.tsx` with a bare "Scanning your system…" text and none of
+  the ritual visual language. Not caught by any review pass (CodeRabbit,
+  Codacy, self-critique, or the manual smoke test) — every one of those
+  checked correctness and coverage of what was built, not completeness
+  against the original design doc's full 8-step flow. Only surfaced when
+  directly asked "do you remember the whole visual ritual?" Fixed same-day:
+  `src/components/setup/BootRitualIntro.tsx`, reusing
+  `ActivationSequence.tsx`'s exact Framer Motion variants
+  (`activationPulse`/`activationPortal`/`emblemIgnite`) recolored to
+  `--accent` cyan per the design doc's own resolved color split (only the
+  closing reveal gets the real green/orange), wired as a new `'boot'` step
+  ahead of `'scan'` in `SetupFlow.tsx`. 12 new tests, including one
+  specifically guarding against a real double-invocation risk (`onFinish`
+  reachable twice in one tick via the native `<button>`'s own Enter
+  activation plus a document-level keydown listener — fixed with a `useRef`
+  guard, since React state reads stale within one synchronous batch).
+  Lesson worth remembering: a design doc's full flow should be checked off
+  screen-by-screen against the actual shipped step list before calling a
+  multi-screen feature "done," not just verified for bugs in whatever
+  screens happen to exist. Status: closed.
 - [2026-09-08] **Color-contrast re-verification against a real browser --
   resolved.** Closes the gap this file's own 2026-09-07 "Accessibility work
   beyond the Setup-flow pass" entry named explicitly: the ui-redesign

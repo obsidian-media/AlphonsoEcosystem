@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BootRitualIntro } from './setup/BootRitualIntro';
 import { SystemScan } from './setup/SystemScan';
 import { IntentSelection, type IntentId } from './setup/IntentSelection';
 import { RecommendedSetup } from './setup/RecommendedSetup';
@@ -13,11 +14,11 @@ export interface SetupFlowProps {
   onComplete: (chosenModel?: string, chosenProvider?: string) => void;
 }
 
-type SetupStep = 'scan' | 'intent' | 'recommend' | 'agent-grid' | 'queue' | 'activation' | 'failed';
+type SetupStep = 'boot' | 'scan' | 'intent' | 'recommend' | 'agent-grid' | 'queue' | 'activation' | 'failed';
 type LabeledComponent = SelectableComponent & { label: string };
 
 export function SetupFlow({ onComplete }: SetupFlowProps) {
-  const [step, setStep] = useState<SetupStep>('scan');
+  const [step, setStep] = useState<SetupStep>('boot');
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
   const [prereqs, setPrereqs] = useState<PrereqStatus | null>(null);
   const [intent, setIntent] = useState<IntentId | null>(null);
@@ -30,6 +31,10 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
   const finishSetup = () => {
     markSetupComplete();
     onComplete();
+  };
+
+  const handleBootFinish = () => {
+    setStep('scan');
   };
 
   const handleScanContinue = (hw: HardwareProfile, prereq: PrereqStatus) => {
@@ -97,6 +102,7 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
 
   return (
     <div data-testid="setup-flow-root" className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-1)]">
+      {step === 'boot' && <BootRitualIntro onFinish={handleBootFinish} />}
       {step === 'scan' && <SystemScan onContinue={handleScanContinue} />}
       {step === 'intent' && <IntentSelection onSelect={handleIntentSelect} />}
       {step === 'recommend' && hardware && prereqs && intent && intent !== 'custom' && (
