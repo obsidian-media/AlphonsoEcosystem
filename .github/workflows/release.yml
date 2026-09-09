@@ -84,9 +84,19 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs windows-amd64
 
-      - name: Fetch bundled starter model
-        run: node scripts/fetch-starter-model.mjs
-
+      # Deliberately NOT fetching the starter model here, unlike Linux/macOS.
+      # This is the same class of bug already hit and fixed once before
+      # (DEPENDENCY_BUNDLING_PLAN.md's O5 entry, 2026-08-21) - makensis has a
+      # hard data-block mmap size limit ("error mmapping file ... is out of
+      # range"), previously worked around by dropping the cuda_v13 Ollama
+      # runtime variant. Adding the ~1.9GB starter model (O2) back on top
+      # pushed Windows over that same limit again (v2.8.0 release run
+      # 34323883519 failed here; Linux's AppImage/squashfs has no equivalent
+      # block-size ceiling, so it built fine with the model bundled).
+      # `installComponent()` already has a real network-pull fallback for a
+      # missing bundled model, so Windows users get it on first launch
+      # instead of at install time - a real, already-built fallback path,
+      # not a stub.
       - name: Build signed Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -122,6 +132,143 @@ jobs:
           path: |
             ${{ steps.collect.outputs.installer_name }}
             ${{ steps.collect.outputs.sig_name }}
+          retention-days: 1
+
+  build-macos:
+    name: Build & Sign (macOS)
+    needs: determine-tag
+    runs-on: macos-latest
+    outputs:
+      installer_name: ${{ steps.collect.outputs.installer_name }}
+      updater_name: ${{ steps.collect.outputs.updater_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # stable
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch bundled Ollama runtime
+        run: node scripts/fetch-ollama-runtime.mjs darwin-universal
+
+      - name: Fetch bundled starter model
+        run: node scripts/fetch-starter-model.mjs
+
+      - name: Build signed Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build -- --target aarch64-apple-darwin --verbose
+
+      # Tauri produces two distinct macOS artifacts, not one: the DMG (manual
+      # installer, what a user downloads and drags to Applications) and a
+      # separate bundle/macos/*.app.tar.gz + .sig (the actual auto-updater
+      # payload Tauri's updater checks against latest.json - NOT the DMG).
+      # Collect both; the updater manifest below must reference the
+      # .app.tar.gz, not the DMG, or the auto-update mechanism silently
+      # can't verify/apply updates on macOS.
+      - name: Collect artifacts
+        id: collect
+        shell: bash
+        run: |
+          dmgDir="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg"
+          installer=$(find "$dmgDir" -maxdepth 1 -name "*.dmg" | head -n 1)
+          if [ -z "$installer" ]; then
+            echo "DMG not found in $dmgDir" >&2
+            exit 1
+          fi
+          sig="${installer}.sig"
+          if [ ! -f "$sig" ]; then
+            echo "Signature file not found: $sig" >&2
+            exit 1
+          fi
+
+          updaterDir="src-tauri/target/aarch64-apple-darwin/release/bundle/macos"
+          updater=$(find "$updaterDir" -maxdepth 1 -name "*.app.tar.gz" | head -n 1)
+          if [ -z "$updater" ]; then
+            echo "Updater .app.tar.gz not found in $updaterDir" >&2
+            exit 1
+          fi
+          updaterSig="${updater}.sig"
+          if [ ! -f "$updaterSig" ]; then
+            echo "Updater signature file not found: $updaterSig" >&2
+            exit 1
+          fi
+
+          echo "Installer: $(basename "$installer")"
+          echo "Signature: $(basename "$sig")"
+          echo "Updater archive: $(basename "$updater")"
+          echo "Updater signature: $(basename "$updaterSig")"
+          cp "$installer" "./$(basename "$installer")"
+          cp "$sig" "./$(basename "$sig")"
+          cp "$updater" "./$(basename "$updater")"
+          cp "$updaterSig" "./$(basename "$updaterSig")"
+          echo "installer_name=$(basename "$installer")" >> "$GITHUB_OUTPUT"
+          echo "sig_name=$(basename "$sig")" >> "$GITHUB_OUTPUT"
+          echo "updater_name=$(basename "$updater")" >> "$GITHUB_OUTPUT"
+          echo "updater_sig_name=$(basename "$updaterSig")" >> "$GITHUB_OUTPUT"
+
+      # Real release assets get published from this job -- verifying the
+      # bundled Ollama runtime actually made it into the .app bundle here
+      # matters even more than in ci.yml's advisory build, since this is
+      # what a real user downloads. Same check, same rationale as
+      # build-linux's AppImage verification below. Note: this does NOT
+      # verify Gatekeeper/notarization status -- no Apple notarization
+      # credentials exist in this repo's secrets as of this job's addition,
+      # so a downloaded DMG will likely show a Gatekeeper warning on other
+      # users' Macs until that's set up separately (tracked in Boardroom
+      # ledger/tasks/071-alphonso-macos-release-artifact.md).
+      - name: Verify bundled Ollama runtime is inside the app bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          dmg="./${{ steps.collect.outputs.installer_name }}"
+          mountpoint=$(mktemp -d)
+          hdiutil attach "$dmg" -mountpoint "$mountpoint" -nobrowse -quiet
+          app=$(find "$mountpoint" -maxdepth 1 -name "*.app" | head -n 1)
+          if [ -z "$app" ]; then
+            echo "No .app bundle found inside the DMG" >&2
+            hdiutil detach "$mountpoint" -quiet || true
+            exit 1
+          fi
+          binary=$(find "$app" -type f -path "*/ollama/ollama" | head -n 1)
+          if [ -z "$binary" ]; then
+            echo "Bundled ollama binary not found inside the release app bundle -- the runtime was not packaged" >&2
+            find "$app" -iname "*ollama*" >&2 || true
+            hdiutil detach "$mountpoint" -quiet || true
+            exit 1
+          fi
+          size=$(stat -f%z "$binary")
+          echo "Found bundled ollama binary: $binary ($size bytes)"
+          hdiutil detach "$mountpoint" -quiet
+          if [ "$size" -lt 10000000 ]; then
+            echo "Bundled ollama binary is suspiciously small ($size bytes) -- likely not the real executable" >&2
+            exit 1
+          fi
+
+      - name: Upload macOS release assets
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: macos-release-assets
+          path: |
+            ${{ steps.collect.outputs.installer_name }}
+            ${{ steps.collect.outputs.sig_name }}
+            ${{ steps.collect.outputs.updater_name }}
+            ${{ steps.collect.outputs.updater_sig_name }}
           retention-days: 1
 
   build-linux:
@@ -242,7 +389,7 @@ jobs:
 
   publish:
     name: Publish GitHub Release
-    needs: [determine-tag, build-windows, build-linux]
+    needs: [determine-tag, build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     steps:
       - name: Download Windows release assets
@@ -250,6 +397,12 @@ jobs:
         with:
           name: windows-release-assets
           path: dist/windows
+
+      - name: Download macOS release assets
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: macos-release-assets
+          path: dist/macos
 
       - name: Download Linux release assets
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
@@ -268,12 +421,18 @@ jobs:
           WIN_INSTALLER="${{ needs.build-windows.outputs.installer_name }}"
           WIN_SIG=$(cat "dist/windows/${WIN_INSTALLER}.sig")
 
+          # The updater manifest must reference the .app.tar.gz updater
+          # archive, not the DMG -- Tauri's updater downloads and verifies
+          # this file, never the DMG (that's the manual-install path only).
+          MACOS_UPDATER="${{ needs.build-macos.outputs.updater_name }}"
+          MACOS_SIG=$(cat "dist/macos/${MACOS_UPDATER}.sig")
+
           LINUX_INSTALLER="${{ needs.build-linux.outputs.installer_name }}"
           LINUX_SIG=$(cat "dist/linux/${LINUX_INSTALLER}.sig")
 
-          python3 - "$VERSION" "$WIN_SIG" "$WIN_INSTALLER" "$LINUX_SIG" "$LINUX_INSTALLER" "$BASE_URL" <<'PYEOF'
+          python3 - "$VERSION" "$WIN_SIG" "$WIN_INSTALLER" "$MACOS_SIG" "$MACOS_UPDATER" "$LINUX_SIG" "$LINUX_INSTALLER" "$BASE_URL" <<'PYEOF'
           import json, sys, datetime
-          version, win_sig, win_installer, linux_sig, linux_installer, base_url = sys.argv[1:7]
+          version, win_sig, win_installer, macos_sig, macos_updater, linux_sig, linux_installer, base_url = sys.argv[1:9]
           manifest = {
               "version": version,
               "notes": f"Alphonso {version} release",
@@ -282,6 +441,10 @@ jobs:
                   "windows-x86_64": {
                       "signature": win_sig.strip(),
                       "url": f"{base_url}/{win_installer}"
+                  },
+                  "darwin-aarch64": {
+                      "signature": macos_sig.strip(),
+                      "url": f"{base_url}/{macos_updater}"
                   },
                   "linux-x86_64": {
                       "signature": linux_sig.strip(),
@@ -297,7 +460,7 @@ jobs:
 
       - name: Validate updater manifest
         run: |
-          python3 -c "import json,sys; d=json.load(open('latest.json')); required=['version','platforms']; missing=[k for k in required if k not in d]; assert not missing, missing; assert 'windows-x86_64' in d['platforms']; assert 'linux-x86_64' in d['platforms']; print('Manifest OK:', d['version'])"
+          python3 -c "import json,sys; d=json.load(open('latest.json')); required=['version','platforms']; missing=[k for k in required if k not in d]; assert not missing, missing; assert 'windows-x86_64' in d['platforms']; assert 'darwin-aarch64' in d['platforms']; assert 'linux-x86_64' in d['platforms']; print('Manifest OK:', d['version'])"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
@@ -310,6 +473,8 @@ jobs:
             ### Installation
             **Windows:** Download `${{ needs.build-windows.outputs.installer_name }}`, run the installer, launch Alphonso.
 
+            **macOS (Apple Silicon):** Download `${{ needs.build-macos.outputs.installer_name }}`, open it, and drag Alphonso to Applications. **Known issue:** this build is not yet Apple-notarized, so Gatekeeper will likely block it outright on current macOS versions (the old right-click-to-bypass workaround no longer works on macOS Sequoia and later) — see [ledger/tasks/071](https://github.com/Thatisshayan/OBSIDIAN-TEAM-BOARDROOM/blob/master/ledger/tasks/071-alphonso-macos-release-artifact.md) for the notarization tracking. Building from source or waiting for a notarized release is recommended until that's resolved.
+
             **Linux:** Download `${{ needs.build-linux.outputs.installer_name }}`, mark it executable (`chmod +x`), and run it.
 
             ### Auto-Update
@@ -319,6 +484,10 @@ jobs:
           files: |
             dist/windows/${{ needs.build-windows.outputs.installer_name }}
             dist/windows/${{ needs.build-windows.outputs.installer_name }}.sig
+            dist/macos/${{ needs.build-macos.outputs.installer_name }}
+            dist/macos/${{ needs.build-macos.outputs.installer_name }}.sig
+            dist/macos/${{ needs.build-macos.outputs.updater_name }}
+            dist/macos/${{ needs.build-macos.outputs.updater_name }}.sig
             dist/linux/${{ needs.build-linux.outputs.installer_name }}
             dist/linux/${{ needs.build-linux.outputs.installer_name }}.sig
             latest.json
@@ -328,5 +497,7 @@ jobs:
           echo "Release published: Alphonso ${{ needs.determine-tag.outputs.version }}"
           echo "Tag: ${{ needs.determine-tag.outputs.tag }}"
           echo "Windows installer: ${{ needs.build-windows.outputs.installer_name }}"
+          echo "macOS installer: ${{ needs.build-macos.outputs.installer_name }}"
+          echo "macOS updater archive: ${{ needs.build-macos.outputs.updater_name }}"
           echo "Linux installer: ${{ needs.build-linux.outputs.installer_name }}"
           echo "Updater endpoint: https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest/download/latest.json"
