@@ -87,6 +87,31 @@ describe('AgentGrid', () => {
     expect(screen.getByText(/already installed/i)).toBeInTheDocument();
   });
 
+  it('shows an already-installed component checked and disabled, not an actionable unchecked toggle', async () => {
+    // Live UX finding (2026-09-09, real npm run tauri dev walkthrough):
+    // Miya/Maria/Marcus showed "Already installed" next to an unchecked,
+    // still-clickable checkbox -- toggling it has no effect either way
+    // (an already-installed component is filtered out of the install queue
+    // regardless of selection), so the unchecked state misleadingly looked
+    // like an action the user still needed to take. Should match Alphonso's
+    // own checked+disabled "nothing to do here" treatment instead.
+    getAllStatus.mockResolvedValue([{ name: 'fooocus', installed: true, running: false }]);
+    const onProceed = vi.fn();
+    render(<AgentGrid hardware={hardware} prereqs={allPrereqsOk} onProceed={onProceed} onBack={() => {}} />);
+
+    const miyaToggle = await waitFor(() => screen.getByRole('checkbox', { name: /miya/i }));
+    expect(miyaToggle).toBeChecked();
+    expect(miyaToggle).toBeDisabled();
+
+    // Rendering it checked doesn't cause a redundant re-install -- the real
+    // queue (toInstall) still filters by installedNames regardless of the
+    // checkbox's visual state, matching the existing "already installed
+    // rather than re-queuing it" test above.
+    fireEvent.click(screen.getByText('Install Selected'));
+    const queued = onProceed.mock.calls[0][0];
+    expect(queued.some((c) => c.id === 'fooocus')).toBe(false);
+  });
+
   it('excludes a toggled component from the queue when its prerequisite is unmet', async () => {
     getAllStatus.mockResolvedValue([]);
     const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true };

@@ -156,7 +156,9 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
   }
 
   const selectedComponents = AGENTS.filter(
-    (a) => a.component && (a.alwaysOn || toggled.has(a.component.id))
+    (a) =>
+      a.component &&
+      (a.alwaysOn || installedNames.has(a.component.id) || toggled.has(a.component.id))
   ).map((a) => a.component!);
   const notInstalled = selectedComponents.filter((c) => !installedNames.has(c.id));
   const toInstall = notInstalled.filter((c) => getUnmetPrereq(c.id, prereqs) === null);
@@ -172,8 +174,20 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
         {AGENTS.map((agent) => {
-          const isChecked = agent.alwaysOn || (agent.component ? toggled.has(agent.component.id) : false);
           const alreadyInstalled = agent.component ? installedNames.has(agent.component.id) : false;
+          // Live UX finding (2026-09-09, real npm run tauri dev walkthrough):
+          // an already-installed optional component previously rendered an
+          // unchecked, still-clickable checkbox next to an "Already
+          // installed" label -- toggling it does nothing either way (a
+          // component in installedNames is filtered out of `toInstall`
+          // regardless of selection), so the unchecked state looked like an
+          // action the user still needed to take. Forcing checked+disabled
+          // here matches Alphonso's own already-installed/always-on
+          // treatment instead of a second, inconsistent pattern.
+          const isChecked =
+            agent.alwaysOn ||
+            alreadyInstalled ||
+            (agent.component ? toggled.has(agent.component.id) : false);
           const unmetPrereq =
             agent.component && isChecked && !alreadyInstalled
               ? getUnmetPrereq(agent.component.id, prereqs)
@@ -203,7 +217,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
                     type="checkbox"
                     aria-label={agent.name}
                     checked={isChecked}
-                    disabled={agent.alwaysOn}
+                    disabled={agent.alwaysOn || alreadyInstalled}
                     onChange={() => agent.component && toggle(agent.component.id)}
                   />
                 ) : null}
