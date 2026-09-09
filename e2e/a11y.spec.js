@@ -137,7 +137,11 @@ test.describe('Alphonso accessibility (axe-core) — full WCAG sweep, non-Setup 
     // that matches both.
     await page.getByTestId('space-pill-boardroom').click();
     await page.getByTestId('sidebar-nav-mission_room').click();
-    await expect(page.getByText('Mission Room', { exact: true })).toBeVisible({ timeout: 10000 });
+    // getByText('Mission Room') is a strict-mode violation here -- the page
+    // renders that exact string 3 times (a compact header h1, the active
+    // sub-tab button, and the page's own large display h1). Scope to the
+    // heading role and take the first match to disambiguate.
+    await expect(page.getByRole('heading', { name: 'Mission Room' }).first()).toBeVisible({ timeout: 10000 });
 
     const results = await scan(page);
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);

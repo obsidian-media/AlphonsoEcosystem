@@ -156,7 +156,18 @@ function MessageBubble({ message }: { message: Message }) {
             <div className="text-[10px] uppercase tracking-widest opacity-60">{agent.role}</div>
           </div>
         </div>
-        <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest opacity-45">
+        {/* Real WCAG finding (2026-09-09, CI-caught): opacity-45 on inherited
+            currentColor cut contrast to ~4.1:1 against this card's themed
+            background, short of the 4.5:1 required for 10px text. --text-4
+            (the app's usual de-emphasis token) still only reached 4.43:1
+            here specifically -- Mission Room layers a decorative
+            --accent-glow blur under its --surface-0 background, shifting
+            the real composite just enough to matter. Using --text-3 (one
+            step less dim) instead of nudging --text-4 globally, since
+            --text-4 is already verified clean against every other surface
+            this session's WCAG sweep covered and a global bump risks
+            regressing those. */}
+        <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
           {message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
         </span>
       </div>
