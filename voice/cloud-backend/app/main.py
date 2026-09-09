@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import logging
 import time
 from uuid import uuid4
 
@@ -27,6 +28,8 @@ from app.nvidia import NvidiaClient, NvidiaError
 from app.piper_tts import PiperTTSClient
 from app.voice_policy import VoicePolicyError, build_system_message
 from app.supabase_auth import SupabaseDeviceRegistry
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Alphonso Cloud Voice")
 atlas_demo_control_plane = AtlasDemoControlPlane()
@@ -221,6 +224,7 @@ async def enroll_device(payload: DeviceEnrollmentRequest, authorization: str | N
 async def respond(payload: VoiceRequest, authorization: str | None = Header(default=None), x_alphonso_device_id: str | None = Header(default=None)) -> VoiceResponse:
     settings = Settings.from_env()
     if not settings.is_ready:
+        logger.error("Cloud voice service not configured: %s", settings.public_status())
         raise HTTPException(status_code=503, detail="Cloud voice service is not configured")
     await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
     client = NvidiaClient(settings)
