@@ -181,6 +181,13 @@ jobs:
       # Collect both; the updater manifest below must reference the
       # .app.tar.gz, not the DMG, or the auto-update mechanism silently
       # can't verify/apply updates on macOS.
+      # Confirmed via a real failed run (34404597598): Tauri does NOT sign
+      # the DMG - "Finished 1 updater signature at: .../Alphonso.app.tar.gz.sig"
+      # is the ONLY .sig produced. Windows/Linux each have one artifact that
+      # serves as both the manual installer and the signed updater payload,
+      # so it was wrong to assume macOS's DMG would also get a .sig - it
+      # never does, by Tauri's own design (the DMG and the updater archive
+      # are two genuinely separate bundle outputs here).
       - name: Collect artifacts
         id: collect
         shell: bash
@@ -189,11 +196,6 @@ jobs:
           installer=$(find "$dmgDir" -maxdepth 1 -name "*.dmg" | head -n 1)
           if [ -z "$installer" ]; then
             echo "DMG not found in $dmgDir" >&2
-            exit 1
-          fi
-          sig="${installer}.sig"
-          if [ ! -f "$sig" ]; then
-            echo "Signature file not found: $sig" >&2
             exit 1
           fi
 
@@ -209,16 +211,13 @@ jobs:
             exit 1
           fi
 
-          echo "Installer: $(basename "$installer")"
-          echo "Signature: $(basename "$sig")"
+          echo "Installer (unsigned DMG, manual install only): $(basename "$installer")"
           echo "Updater archive: $(basename "$updater")"
           echo "Updater signature: $(basename "$updaterSig")"
           cp "$installer" "./$(basename "$installer")"
-          cp "$sig" "./$(basename "$sig")"
           cp "$updater" "./$(basename "$updater")"
           cp "$updaterSig" "./$(basename "$updaterSig")"
           echo "installer_name=$(basename "$installer")" >> "$GITHUB_OUTPUT"
-          echo "sig_name=$(basename "$sig")" >> "$GITHUB_OUTPUT"
           echo "updater_name=$(basename "$updater")" >> "$GITHUB_OUTPUT"
           echo "updater_sig_name=$(basename "$updaterSig")" >> "$GITHUB_OUTPUT"
 
@@ -266,7 +265,6 @@ jobs:
           name: macos-release-assets
           path: |
             ${{ steps.collect.outputs.installer_name }}
-            ${{ steps.collect.outputs.sig_name }}
             ${{ steps.collect.outputs.updater_name }}
             ${{ steps.collect.outputs.updater_sig_name }}
           retention-days: 1
@@ -485,7 +483,6 @@ jobs:
             dist/windows/${{ needs.build-windows.outputs.installer_name }}
             dist/windows/${{ needs.build-windows.outputs.installer_name }}.sig
             dist/macos/${{ needs.build-macos.outputs.installer_name }}
-            dist/macos/${{ needs.build-macos.outputs.installer_name }}.sig
             dist/macos/${{ needs.build-macos.outputs.updater_name }}
             dist/macos/${{ needs.build-macos.outputs.updater_name }}.sig
             dist/linux/${{ needs.build-linux.outputs.installer_name }}
