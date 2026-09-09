@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { openExternalUrl } from '../../services/browserAutomationService';
+import { Zone } from '../ui/Zone';
 import { exportHectorReportAsMarkdown, exportHectorReportAsPdf, exportHectorReportAsPowerPoint } from '../../services/hectorExportService';
 import { resynthesizeHectorReport } from '../../services/hectorResearchService';
 
@@ -41,12 +42,12 @@ type DepthView = 'brief' | 'medium' | 'structured';
 function ReportList({ title, rows = [], empty }: { title: string; rows?: string[]; empty: string }): React.JSX.Element {
   return (
     <div>
-      <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{title}</div>
+      <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">{title}</div>
       <div className="mt-2 space-y-1">
         {rows.length === 0 ? (
-          <div className="rounded-lg border border-white/10 bg-zinc-900/45 px-3 py-2 text-[11px] text-zinc-500">{empty}</div>
+          <div className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">{empty}</div>
         ) : rows.map((row) => (
-          <div key={row} className="rounded-lg border border-white/10 bg-zinc-900/45 px-3 py-2 text-[11px] text-zinc-300">{row}</div>
+          <div key={row} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-2)]">{row}</div>
         ))}
       </div>
     </div>
@@ -92,24 +93,24 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
 
   if (!report) {
     return (
-      <section className="rounded-2xl border border-teal-300/15 bg-zinc-950/72 p-4">
-        <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-teal-200/75">Research Report</div>
-        <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-4 text-sm text-zinc-500">
+      <Zone mood="hector">
+        <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--agent-hector)]">Research Report</div>
+        <div className="rounded-xl bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">
           No Hector report selected.
         </div>
-      </section>
+      </Zone>
     );
   }
 
   const sourceProofs = report.sourceProofs ?? [];
 
   return (
-    <section className="rounded-2xl border border-teal-300/15 bg-zinc-950/72 p-4">
-      <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-teal-200/75">Research Report</div>
+    <Zone mood="hector">
+      <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--agent-hector)]">Research Report</div>
       <div className="space-y-3">
         <div>
-          <div className="text-sm font-semibold text-teal-50">{report.researchQuestion}</div>
-          <div className="mt-1 text-[11px] text-zinc-500">Checked: {report.dateChecked ?? 'not checked'} | confidence: {report.confidenceLevel}</div>
+          <div className="text-sm font-semibold text-[var(--text-1)]">{report.researchQuestion}</div>
+          <div className="mt-1 text-[11px] text-[var(--text-3)]">Checked: {report.dateChecked ?? 'not checked'} | confidence: {report.confidenceLevel}</div>
         </div>
 
         {synthesis ? (
@@ -120,17 +121,17 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
                   key={d}
                   type="button"
                   onClick={() => setDepth(d)}
-                  className={`rounded-lg border px-3 py-1 text-[11px] font-medium capitalize transition-colors ${depth === d ? 'border-teal-400/25 bg-teal-500/10 text-teal-200' : 'border-white/[0.07] text-zinc-500 hover:text-zinc-300'}`}
+                  className={`rounded-lg border px-3 py-1 text-[11px] font-medium capitalize transition-colors ${depth === d ? 'border-[var(--agent-hector)]/25 bg-[var(--agent-hector)]/10 text-[var(--agent-hector)]' : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-2)]'}`}
                 >
                   {d === 'brief' ? 'Brief' : d === 'medium' ? 'Medium' : 'Structured'}
                 </button>
               ))}
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-3 space-y-2">
+            <div className="rounded-xl bg-[var(--surface-1)] p-3 space-y-2">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Overview</div>
-                <p className="mt-1 text-[12px] text-zinc-200">{synthesis.overview}</p>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Overview</div>
+                <p className="mt-1 text-[12px] text-[var(--text-2)]">{synthesis.overview}</p>
               </div>
               {depth !== 'brief' && synthesis.keyFindings.length > 0 && (
                 <ReportList title="Key Findings" rows={synthesis.keyFindings} empty="No key findings." />
@@ -144,26 +145,26 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Export:</span>
-              <button type="button" onClick={() => exportHectorReportAsMarkdown(report)} className="rounded border border-white/10 bg-zinc-800 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 hover:bg-zinc-700">Markdown</button>
-              <button type="button" onClick={() => exportHectorReportAsPdf(report)} className="rounded border border-white/10 bg-zinc-800 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 hover:bg-zinc-700">PDF</button>
-              <button type="button" onClick={() => exportHectorReportAsPowerPoint(report)} className="rounded border border-white/10 bg-zinc-800 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 hover:bg-zinc-700">PowerPoint</button>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Export:</span>
+              <button type="button" onClick={() => exportHectorReportAsMarkdown(report)} className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)] hover:bg-[var(--surface-3)]">Markdown</button>
+              <button type="button" onClick={() => exportHectorReportAsPdf(report)} className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)] hover:bg-[var(--surface-3)]">PDF</button>
+              <button type="button" onClick={() => exportHectorReportAsPowerPoint(report)} className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)] hover:bg-[var(--surface-3)]">PowerPoint</button>
             </div>
           </>
         ) : (
-          <div className="rounded-xl border border-amber-300/15 bg-amber-500/10 p-3 text-[11px] text-amber-100/80 space-y-2">
+          <div className="rounded-xl bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--text-2)] space-y-2">
             <div>
               {report.status === 'source_discovery_failed'
                 ? 'Live source discovery failed. Check connectivity and retry.'
                 : `${report.status}. Sources and citations are generated from real live discovery/fetch runs.`}
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => exportHectorReportAsMarkdown(report)} disabled className="rounded border border-white/10 bg-zinc-800 px-2.5 py-1 text-[10px] font-semibold text-zinc-500 opacity-40 cursor-not-allowed">Markdown</button>
-              <button type="button" onClick={() => exportHectorReportAsPdf(report)} disabled className="rounded border border-white/10 bg-zinc-800 px-2.5 py-1 text-[10px] font-semibold text-zinc-500 opacity-40 cursor-not-allowed">PDF</button>
-              <button type="button" onClick={() => exportHectorReportAsPowerPoint(report)} disabled className="rounded border border-white/10 bg-zinc-800 px-2.5 py-1 text-[10px] font-semibold text-zinc-500 opacity-40 cursor-not-allowed">PowerPoint</button>
+              <button type="button" onClick={() => exportHectorReportAsMarkdown(report)} disabled className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-3)] opacity-40 cursor-not-allowed">Markdown</button>
+              <button type="button" onClick={() => exportHectorReportAsPdf(report)} disabled className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-3)] opacity-40 cursor-not-allowed">PDF</button>
+              <button type="button" onClick={() => exportHectorReportAsPowerPoint(report)} disabled className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-3)] opacity-40 cursor-not-allowed">PowerPoint</button>
             </div>
             {showRetry && (
-              <button type="button" onClick={handleRetry} disabled={retrying} className="rounded-lg border border-teal-400/25 bg-teal-500/10 px-3 py-1.5 text-[11px] font-semibold text-teal-200 hover:bg-teal-500/15 disabled:opacity-40">
+              <button type="button" onClick={handleRetry} disabled={retrying} className="rounded-lg bg-[var(--agent-hector)]/10 px-3 py-1.5 text-[11px] font-semibold text-[var(--agent-hector)] hover:opacity-80 disabled:opacity-40">
                 {retrying ? 'Re-synthesizing...' : 'Re-synthesize'}
               </button>
             )}
@@ -171,18 +172,18 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
         )}
 
         <div>
-          <button type="button" onClick={() => setSourcesOpen((v) => !v)} className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-300">
+          <button type="button" onClick={() => setSourcesOpen((v) => !v)} className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)] hover:text-[var(--text-2)]">
             {sourcesOpen ? '▾' : '▸'} Sources ({sourceProofs.length})
           </button>
           {sourcesOpen && sourceProofs.length > 0 && (
             <div className="mt-2 space-y-1">
               {sourceProofs.map((proof) => (
-                <div key={proof.url} className="rounded-lg border border-white/10 bg-zinc-900/45 px-3 py-2 text-[11px] text-zinc-300">
-                  <span className={proof.ok ? 'text-emerald-400' : 'text-red-400'}>{proof.ok ? 'Verified' : 'Failed'}</span>{' '}
+                <div key={proof.url} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-2)]">
+                  <span className={proof.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}>{proof.ok ? 'Verified' : 'Failed'}</span>{' '}
                   <button
                     type="button"
                     onClick={() => openExternalUrl(proof.url)}
-                    className="text-teal-300 underline decoration-teal-700 hover:text-teal-200 hover:decoration-teal-400 transition-colors break-all text-left"
+                    className="text-[var(--agent-hector)] underline decoration-[var(--agent-hector)] hover:decoration-[var(--agent-hector)] transition-colors break-all text-left"
                     title={proof.url}
                   >
                     {proof.url}
@@ -196,10 +197,10 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
         </div>
 
         <ReportList title="Jose Approval Needed" rows={report.joseApprovalNeeded} empty="No approval blockers listed." />
-        <div className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-300">
+        <div className="rounded-xl bg-[var(--surface-1)] p-3 text-[11px] text-[var(--text-2)]">
           Recommended next step: {report.recommendedNextStep ?? 'Not available.'}
         </div>
       </div>
-    </section>
+    </Zone>
   );
 }

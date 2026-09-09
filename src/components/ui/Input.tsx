@@ -13,7 +13,7 @@ export function Input({ label, hint, error, icon, className = '', ...props }: In
         {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[--text-3]">{icon}</span>}
         <input
           {...props}
-          className={`w-full bg-[--surface-3] border ${error ? 'border-red-500/50' : 'border-[--border]'} rounded-[--radius-md] px-3 py-2 text-sm text-[--text-1] placeholder:text-[--text-3] focus:outline-none focus:border-[--accent-border] focus:ring-1 focus:ring-accent/30 transition-colors duration-[--duration-fast] ${icon ? 'pl-9' : ''} ${className}`}
+          className={`w-full bg-[--surface-3] border ${error ? 'border-[--error-border]' : 'border-[--border]'} rounded-[--radius-md] px-3 py-2 text-sm text-[--text-1] placeholder:text-[--text-3] focus:outline-none focus:border-[--accent-border] focus:ring-1 focus:ring-accent/30 transition-colors duration-[--duration-fast] ${icon ? 'pl-9' : ''} ${className}`}
         />
       </div>
       {error && <p className="text-xs text-[--error]">{error}</p>}

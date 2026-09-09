@@ -19,6 +19,9 @@ license-signing-key.private.json
 .env.*
 !.env.example
 
+# Screenshots from scripts/smoke-test-setup.mjs (manual Setup-flow verification)
+.smoke-shots/
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

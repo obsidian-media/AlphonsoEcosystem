@@ -3,7 +3,8 @@ import { invoke } from '@tauri-apps/api/core';
 import {
   RadioTower, CheckCircle2, AlertCircle, Circle, ChevronDown, ChevronUp,
   GitBranch, MessageSquare, Bot, Zap, Database, ListTodo, Phone, Video,
-  Cpu, Search, Smartphone, Settings2, MessageCircle, Hash, AtSign, Webhook
+  Cpu, Search, Smartphone, Settings2, MessageCircle, Hash, AtSign, Webhook,
+  FileText
 } from 'lucide-react';
 import { ToolConnectionsPanel } from './ToolConnectionsPanel';
 import {
@@ -142,30 +143,30 @@ function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColo
   };
 
   return (
-    <div className={`rounded-2xl border ${borderColor} ${bgColor} p-5`}>
+    <div className={`rounded-2xl ${bgColor} p-5`}>
       <div className="mb-4 flex items-center gap-2">
         {Icon && <Icon className={`h-4 w-4 ${accentColor}`} />}
-        <span className="text-sm font-semibold text-zinc-100">{title}</span>
+        <span className="text-sm font-semibold text-[var(--text-1)]">{title}</span>
       </div>
       <div className="space-y-3">
         {fields.map((f) => (
           <div key={f.key}>
-            <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">{f.label}</label>
+            <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-3)]">{f.label}</label>
             <input
               type={f.secret === false ? 'text' : 'password'}
               value={f.value || ''}
               onChange={(e) => f.onChange(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-white/20 focus:outline-none"
+              className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none"
               placeholder={f.placeholder}
               autoComplete="off"
             />
           </div>
         ))}
       </div>
-      {hint && <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">{hint}</p>}
+      {hint && <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-3)]">{hint}</p>}
       <div className="mt-4 flex items-center justify-between">
         {saved ? (
-          <div className="flex items-center gap-1.5 text-[12px] font-medium text-emerald-400">
+          <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--success)]">
             <CheckCircle2 className="h-3.5 w-3.5" />
             {savedLabel || 'Saved successfully'}
           </div>
@@ -174,7 +175,7 @@ function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColo
         )}
         <button
           onClick={handleSave}
-          className={`rounded-xl border ${borderColor} px-4 py-2 text-[11px] font-semibold text-zinc-100 transition-opacity hover:opacity-80`}
+          className={`rounded-xl ${bgColor} px-4 py-2 text-[11px] font-semibold text-[var(--text-1)] transition-opacity hover:opacity-80`}
         >
           Save & Enable
         </button>
@@ -194,31 +195,31 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
   const live = isConnectorLive(connector);
 
   const statusConfig: Record<DisplayStatus, { label: string; dot: string; text: string; border: string }> = {
-    configured: { label: 'Active', dot: 'bg-emerald-400', text: 'text-emerald-400', border: 'border-emerald-300/20 bg-emerald-500/5' },
-    local_only: { label: 'Local', dot: 'bg-slate-400', text: 'text-slate-400', border: 'border-slate-300/20 bg-slate-500/5' },
-    not_configured: { label: 'Not set up', dot: 'bg-zinc-600', text: 'text-zinc-500', border: 'border-white/10 bg-zinc-900/40' },
-    error: { label: 'Error', dot: 'bg-amber-400', text: 'text-amber-400', border: 'border-amber-300/20 bg-amber-500/5' },
+    configured: { label: 'Active', dot: 'bg-[var(--success)]', text: 'text-[var(--success)]', border: 'bg-[var(--success-dim)]' },
+    local_only: { label: 'Local', dot: 'bg-[var(--accent)]', text: 'text-[var(--accent)]', border: 'bg-[var(--accent-dim)]' },
+    not_configured: { label: 'Not set up', dot: 'bg-[var(--text-4)]', text: 'text-[var(--text-3)]', border: 'bg-[var(--surface-1)]' },
+    error: { label: 'Error', dot: 'bg-[var(--warning)]', text: 'text-[var(--warning)]', border: 'bg-[var(--warning-dim)]' },
   };
 
   const cfg = statusConfig[displayStatus] ?? statusConfig.not_configured;
 
   return (
-    <div className={`rounded-xl border p-3.5 ${cfg.border}`}>
+    <div className={`rounded-xl p-3.5 ${cfg.border}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <Icon className={`h-4 w-4 shrink-0 ${cfg.text}`} />
-          <span className="text-sm font-medium text-zinc-100">{connector.name}</span>
+          <span className="text-sm font-medium text-[var(--text-1)]">{connector.name}</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
           <span className={`text-[10px] font-medium ${cfg.text}`}>{cfg.label}</span>
         </div>
       </div>
-      {live && <div className="mt-2 text-[10px] text-emerald-400/70">Verified & ready</div>}
-      {displayStatus === 'not_configured' && <div className="mt-2 text-[10px] text-zinc-600">Enter credentials below to enable</div>}
+      {live && <div className="mt-2 text-[10px] text-[var(--success)]">Verified & ready</div>}
+      {displayStatus === 'not_configured' && <div className="mt-2 text-[10px] text-[var(--text-4)]">Enter credentials below to enable</div>}
       <button
         onClick={onVerifyEnv}
-        className="mt-3 w-full rounded-lg bg-white/5 px-3 py-1.5 text-[10px] font-medium text-zinc-400 hover:bg-white/10 hover:text-zinc-200 transition-colors"
+        className="mt-3 w-full rounded-lg bg-[var(--surface-2)] px-3 py-1.5 text-[10px] font-medium text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-colors"
       >
         Test Connection
       </button>
@@ -230,10 +231,10 @@ function PlaceholderConnectorBanner({ children }: { children: React.ReactNode })
   return (
     <div className="relative">
       {/* Overlay covers the children area and catches pointer events — no pointer-events-none. */}
-      <div className="absolute inset-0 z-10 rounded-2xl border border-zinc-600/40 bg-zinc-900/60 backdrop-blur-[1px]" />
-      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-        <span className="text-[10px] font-semibold tracking-wide text-amber-300">Coming Soon</span>
+      <div className="absolute inset-0 z-10 rounded-2xl bg-[var(--surface-1)] backdrop-blur-[1px]" />
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-2.5 py-1">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--warning)]" />
+        <span className="text-[10px] font-semibold tracking-wide text-[var(--warning)]">Coming Soon</span>
       </div>
       {/* pointer-events-none + aria-hidden ensure neither mouse events nor assistive
           technology can reach or activate the disabled credential form. */}
@@ -392,6 +393,63 @@ function HermesAgentsSection(): React.JSX.Element {
   );
 }
 
+const CONNECTOR_CATEGORY_STATE_KEY = 'alphonso_connector_category_state_v1';
+
+function loadCategoryState(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(CONNECTOR_CATEGORY_STATE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCategoryState(state: Record<string, boolean>) {
+  try {
+    localStorage.setItem(CONNECTOR_CATEGORY_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // best-effort only
+  }
+}
+
+// Restructures the ~20-connector flat list (previously one long space-y-4
+// scroll) into collapsible categories so the page no longer requires
+// endless scrolling to find one connector. First category open by default,
+// the rest collapsed; each category's open/closed state persists per-user.
+function CollapsibleCategory({ id, label, icon: Icon, defaultOpen, children }: { id: string; label: string; icon: LucideIcon; defaultOpen: boolean; children: React.ReactNode }): React.JSX.Element {
+  const [open, setOpen] = useState<boolean>(() => {
+    const stored = loadCategoryState();
+    return id in stored ? stored[id] : defaultOpen;
+  });
+
+  const toggle = () => {
+    setOpen((prev) => {
+      const next = !prev;
+      const stored = loadCategoryState();
+      stored[id] = next;
+      saveCategoryState(stored);
+      return next;
+    });
+  };
+
+  return (
+    <div className="border-t border-[var(--border)] first:border-t-0 first:pt-0 pt-2">
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full items-center gap-2.5 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded-lg"
+        aria-expanded={open}
+        data-testid={`connector-category-${id}`}
+      >
+        <Icon className="h-4 w-4 text-[var(--text-3)] shrink-0" />
+        <span className="text-[13px] font-semibold text-[var(--text-1)]">{label}</span>
+        {open ? <ChevronUp className="ml-auto h-3.5 w-3.5 text-[var(--text-3)]" /> : <ChevronDown className="ml-auto h-3.5 w-3.5 text-[var(--text-3)]" />}
+      </button>
+      {open && <div className="space-y-4 pb-4 pl-[26px]">{children}</div>}
+    </div>
+  );
+}
+
 type NoticeType = 'info' | 'error' | 'success';
 
 export function ConnectorSetupPanel(): React.JSX.Element {
@@ -450,6 +508,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
   const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
+  const [perplexityApiKey, setPerplexityApiKey] = useState(() => getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY') || '');
   const [runwayApiKey, setRunwayApiKey] = useState(() => getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
   const [n8nBaseUrl, setN8nBaseUrl] = useState(() => getConnectorCredential('n8n', 'N8N_BASE_URL') || 'http://localhost:5678');
   const [deepseekApiKey, setDeepseekApiKey] = useState(() => getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
@@ -492,6 +551,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setQwenApiKey((prev) => prev || getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
       setBraveApiKey((prev) => prev || getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
       setTavilyApiKey((prev) => prev || getConnectorCredential('tavily', 'TAVILY_API_KEY'));
+      setPerplexityApiKey((prev) => prev || getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY'));
       setRunwayApiKey((prev) => prev || getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
       setDeepseekApiKey((prev) => prev || getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
       setNvidiaApiKey((prev) => prev || getConnectorCredential('nvidia_nim', 'NVIDIA_API_KEY'));
@@ -790,21 +850,21 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const outboundAllowed = Boolean(selectedConnector && isConnectorOutboundAllowed(selectedConnector, explicitApproval));
 
   const noticeColors: Record<NoticeType, string> = {
-    success: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
-    error: 'border-red-300/20 bg-red-500/10 text-red-300',
-    info: 'border-teal-300/15 bg-teal-500/10 text-teal-100/80',
+    success: 'bg-[var(--success-dim)] text-[var(--success)]',
+    error: 'bg-[var(--error-dim)] text-[var(--error)]',
+    info: 'bg-[var(--accent-dim)] text-[var(--text-2)]',
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-5 space-y-6">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-5 space-y-6">
 
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-            <RadioTower className="h-4 w-4 text-teal-300" />
+          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-1)]">
+            <RadioTower className="h-4 w-4 text-[var(--accent)]" />
             Connectors
           </div>
-          <p className="mt-1 text-[12px] text-zinc-500">
+          <p className="mt-1 text-[12px] text-[var(--text-3)]">
             {activeCount > 0
               ? `${activeCount} of ${connectors.length} connectors active. Your credentials are stored locally.`
               : `Connect your tools below. All credentials are stored locally on your device.`}
@@ -813,7 +873,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       </div>
 
       {notice && (
-        <div className={`rounded-xl border px-4 py-3 text-[12px] flex items-center gap-2 ${noticeColors[noticeType]}`}>
+        <div className={`rounded-xl px-4 py-3 text-[12px] flex items-center gap-2 ${noticeColors[noticeType]}`}>
           {noticeType === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
           {noticeType === 'error' && <AlertCircle className="h-3.5 w-3.5 shrink-0" />}
           {noticeType === 'info' && <Circle className="h-3.5 w-3.5 shrink-0 opacity-50" />}
@@ -833,55 +893,63 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       </div>
 
       <div>
-        <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-zinc-500">Configure Integrations</h3>
-        <div className="space-y-4">
+        <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Configure Integrations</h3>
+        <div className="space-y-1">
 
-          {/* Telegram */}
-          <div className="rounded-2xl border border-sky-300/20 bg-sky-500/8 p-5">
+        <CollapsibleCategory id="messaging" label="Messaging" icon={MessageSquare} defaultOpen>
+
+          {/* Telegram — sky brand color kept intentionally, matches the per-connector palette */}
+          <div className="rounded-2xl bg-sky-500/8 p-5">
             <div className="mb-4 flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-sky-400" />
-              <span className="text-sm font-semibold text-zinc-100">Telegram</span>
+              <span className="text-sm font-semibold text-[var(--text-1)]">Telegram</span>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">Bot Token</label>
+                <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-3)]">Bot Token</label>
                 <input type="password" value={telegramBotToken} onChange={(e) => setTelegramBotToken(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-white/20 focus:outline-none"
+                  className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none"
                   placeholder="Paste your bot token from @BotFather" autoComplete="off" />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">Allowed Chat IDs <span className="text-amber-500 font-normal">(required to pair)</span></label>
+                <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-3)]">Allowed Chat IDs <span className="text-[var(--warning)] font-normal">(required to pair)</span></label>
                 <input type="text" value={telegramChatIds} onChange={(e) => setTelegramChatIds(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-white/20 focus:outline-none"
+                  className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none"
                   placeholder="e.g. 123456789, 987654321" />
               </div>
             </div>
-            <p className="mt-3 text-[11px] text-zinc-500">
-              Create a bot with <span className="text-zinc-400">@BotFather</span> on Telegram to get your bot token, then message <span className="text-zinc-400">@userinfobot</span> to get your own numeric chat ID. Set it here <span className="text-zinc-400">before</span> sending <span className="text-zinc-400">/start</span> to your bot — Alphonso will only let a chat ID on this list claim ownership, closing the window where anyone who finds your bot first could take control.
+            <p className="mt-3 text-[11px] text-[var(--text-3)]">
+              Create a bot with <span className="text-[var(--text-3)]">@BotFather</span> on Telegram to get your bot token, then message <span className="text-[var(--text-3)]">@userinfobot</span> to get your own numeric chat ID. Set it here <span className="text-[var(--text-3)]">before</span> sending <span className="text-[var(--text-3)]">/start</span> to your bot — Alphonso will only let a chat ID on this list claim ownership, closing the window where anyone who finds your bot first could take control.
             </p>
             {telegramBotVerified !== null && (
-              <div className={`mt-3 flex items-center gap-1.5 text-[12px] font-medium ${telegramBotVerified.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+              <div className={`mt-3 flex items-center gap-1.5 text-[12px] font-medium ${telegramBotVerified.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
                 {telegramBotVerified.ok
                   ? <><CheckCircle2 className="h-3.5 w-3.5" /> Connected as @{telegramBotVerified.botUsername}</>
                   : <><AlertCircle className="h-3.5 w-3.5" /> {telegramBotVerified.error}</>}
               </div>
             )}
             <div className="mt-4 flex items-center gap-2">
-              <button onClick={saveTelegramCredentials} className="rounded-xl border border-sky-300/20 px-4 py-2 text-[11px] font-semibold text-zinc-100 hover:opacity-80 transition-opacity">
+              <button onClick={saveTelegramCredentials} className="rounded-xl bg-sky-500/8 px-4 py-2 text-[11px] font-semibold text-[var(--text-1)] hover:opacity-80 transition-opacity">
                 Save & Enable
               </button>
               <button onClick={verifyTelegramBot} disabled={transportBusy}
-                className="rounded-xl border border-white/10 px-4 py-2 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 hover:border-white/20 disabled:opacity-40 transition-colors">
+                className="rounded-xl px-4 py-2 text-[11px] font-medium text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-40 transition-colors">
                 Verify Bot
               </button>
             </div>
           </div>
 
-          <CredentialSection title="GitHub" icon={GitBranch} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
-            fields={[{ label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }]}
-            onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken })}
-            hint="Create a token at github.com/settings/tokens with repo and workflow scopes. Used by Marcus for releases and issue management."
-            savedLabel="GitHub token saved" />
+          <CredentialSection title="WhatsApp Cloud" icon={Phone} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"
+            fields={[
+              { label: 'Access Token', placeholder: 'EAA...', value: whatsappAccessToken, onChange: setWhatsappAccessToken, key: 'WHATSAPP_ACCESS_TOKEN' },
+              { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
+              { label: 'Webhook Verify Token', placeholder: 'Your custom verify string', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false },
+              { label: 'Cloud Gateway Drain URL', placeholder: 'https://your-gateway.up.railway.app/queue/drain', value: whatsappGatewayDrainUrl, onChange: setWhatsappGatewayDrainUrl, key: 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL', secret: false },
+              { label: 'Allowed Numbers (owner pairing)', placeholder: 'e.g. 15551234567 (digits only, no +)', value: whatsappAllowedNumbers, onChange: setWhatsappAllowedNumbers, key: 'WHATSAPP_ALLOWED_NUMBERS', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken, WHATSAPP_CLOUD_GATEWAY_DRAIN_URL: whatsappGatewayDrainUrl, WHATSAPP_ALLOWED_NUMBERS: whatsappAllowedNumbers })}
+            hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The Verify Token is a string you choose when setting up your webhook. Cloud Gateway Drain URL is required for inbound messages/commands to work — deploy gateway/whatsapp-cloud/ and paste its drain endpoint here. Allowed Numbers gates who can pair as the companion owner via /start (same protection as Telegram's allowlist)."
+            savedLabel="WhatsApp credentials saved" />
 
           <CredentialSection title="Slack" icon={Hash} borderColor="border-green-300/20" bgColor="bg-green-500/8" accentColor="text-green-400"
             fields={[{ label: 'Bot Token', placeholder: 'xoxb-...', value: slackBotToken, onChange: setSlackBotToken, key: 'SLACK_BOT_TOKEN' }]}
@@ -911,6 +979,10 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             hint="Deploy gateway/generic-webhook/ (Railway config included), point any external service at https://<gateway>/webhook/<sourceId> with the shared secret, then set the drain URL and token here so Alphonso can poll for events."
             savedLabel="Generic webhook config saved" />
 
+        </CollapsibleCategory>
+
+        <CollapsibleCategory id="ai_models" label="AI Models" icon={Bot} defaultOpen={false}>
+
           <PlaceholderConnectorBanner>
             <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
               fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
@@ -927,76 +999,11 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               savedLabel="OpenAI key saved" />
           </PlaceholderConnectorBanner>
 
-          <CredentialSection title="Notion" icon={Database} borderColor="border-pink-300/20" bgColor="bg-pink-500/8" accentColor="text-pink-400"
-            fields={[
-              { label: 'Integration Secret', placeholder: 'secret_...', value: notionApiKey, onChange: setNotionApiKey, key: 'NOTION_API_KEY' },
-              { label: 'Default Page ID', placeholder: 'Page UUID (optional)', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
-            ]}
-            onSave={() => saveConnectorApiKey('notion', { NOTION_API_KEY: notionApiKey, NOTION_PARENT_PAGE_ID: notionParentPageId })}
-            hint="Create an integration at notion.so/my-integrations, then share the pages you want Alphonso to write to with your integration."
-            savedLabel="Notion credentials saved" />
-
-          <CredentialSection title="ClickUp" icon={ListTodo} borderColor="border-purple-300/20" bgColor="bg-purple-500/8" accentColor="text-purple-400"
-            fields={[
-              { label: 'API Key', placeholder: 'pk_...', value: clickupApiKey, onChange: setClickupApiKey, key: 'CLICKUP_API_KEY' },
-              { label: 'Default List ID', placeholder: 'Found in the list URL (optional)', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
-            ]}
-            onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
-            hint="Find your API key under ClickUp Settings → Apps. The Default List ID is optional — Alphonso can target any list per task."
-            savedLabel="ClickUp credentials saved" />
-
-          <CredentialSection title="WhatsApp Cloud" icon={Phone} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"
-            fields={[
-              { label: 'Access Token', placeholder: 'EAA...', value: whatsappAccessToken, onChange: setWhatsappAccessToken, key: 'WHATSAPP_ACCESS_TOKEN' },
-              { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
-              { label: 'Webhook Verify Token', placeholder: 'Your custom verify string', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false },
-              { label: 'Cloud Gateway Drain URL', placeholder: 'https://your-gateway.up.railway.app/queue/drain', value: whatsappGatewayDrainUrl, onChange: setWhatsappGatewayDrainUrl, key: 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL', secret: false },
-              { label: 'Allowed Numbers (owner pairing)', placeholder: 'e.g. 15551234567 (digits only, no +)', value: whatsappAllowedNumbers, onChange: setWhatsappAllowedNumbers, key: 'WHATSAPP_ALLOWED_NUMBERS', secret: false }
-            ]}
-            onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken, WHATSAPP_CLOUD_GATEWAY_DRAIN_URL: whatsappGatewayDrainUrl, WHATSAPP_ALLOWED_NUMBERS: whatsappAllowedNumbers })}
-            hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The Verify Token is a string you choose when setting up your webhook. Cloud Gateway Drain URL is required for inbound messages/commands to work — deploy gateway/whatsapp-cloud/ and paste its drain endpoint here. Allowed Numbers gates who can pair as the companion owner via /start (same protection as Telegram's allowlist)."
-            savedLabel="WhatsApp credentials saved" />
-
-          <CredentialSection title="YouTube" icon={Video} borderColor="border-red-300/20" bgColor="bg-red-500/8" accentColor="text-red-400"
-            fields={[
-              { label: 'Client ID', placeholder: 'From Google Cloud Console', value: youtubeClientId, onChange: setYoutubeClientId, key: 'YOUTUBE_CLIENT_ID', secret: false },
-              { label: 'Client Secret', placeholder: 'From Google Cloud Console', value: youtubeClientSecret, onChange: setYoutubeClientSecret, key: 'YOUTUBE_CLIENT_SECRET' },
-              { label: 'Refresh Token', placeholder: 'Run: npm run auth:youtube', value: youtubeRefreshToken, onChange: setYoutubeRefreshToken, key: 'YOUTUBE_REFRESH_TOKEN' },
-              { label: 'Channel ID', placeholder: 'UC...', value: youtubeChannelId, onChange: setYoutubeChannelId, key: 'YOUTUBE_CHANNEL_ID', secret: false }
-            ]}
-            onSave={() => saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId })}
-            hint="Create OAuth 2.0 credentials in Google Cloud Console with the YouTube Data API v3 enabled. Then run npm run auth:youtube in a terminal to generate your Refresh Token."
-            savedLabel="YouTube credentials saved" />
-
           <CredentialSection title="Qwen / DashScope" icon={Cpu} borderColor="border-yellow-300/20" bgColor="bg-yellow-500/8" accentColor="text-yellow-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: qwenApiKey, onChange: setQwenApiKey, key: 'DASHSCOPE_API_KEY' }]}
             onSave={() => saveConnectorApiKey('qwen', { DASHSCOPE_API_KEY: qwenApiKey })}
             hint="Get your key at dashscope.aliyuncs.com. Alphonso uses the international endpoint automatically."
             savedLabel="Qwen key saved" />
-
-          <CredentialSection title="Brave Search" icon={Search} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
-            fields={[{ label: 'API Key', placeholder: 'BSA...', value: braveApiKey, onChange: setBraveApiKey, key: 'BRAVE_SEARCH_API_KEY' }]}
-            onSave={() => saveConnectorApiKey('brave_search', { BRAVE_SEARCH_API_KEY: braveApiKey })}
-            hint="Free tier: 2,000 queries/month. Sign up at search.brave.com/register. Used by Hector for real-time web research. Without this key Hector falls back to DuckDuckGo HTML scraping."
-            savedLabel="Brave Search key saved" />
-
-          <CredentialSection title="Tavily Search (Hector Fallback)" icon={Search} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
-            fields={[{ label: 'API Key', placeholder: 'tvly-...', value: tavilyApiKey, onChange: setTavilyApiKey, key: 'TAVILY_API_KEY' }]}
-            onSave={() => saveConnectorApiKey('tavily', { TAVILY_API_KEY: tavilyApiKey })}
-            hint="Free tier: 1,000 searches/month. Sign up at app.tavily.com. Hector uses this when Brave Search is unavailable. Designed for AI agents — returns clean summaries + sources."
-            savedLabel="Tavily key saved" />
-
-          <CredentialSection title="Runway ML (Video Generation)" icon={Video} borderColor="border-fuchsia-300/20" bgColor="bg-fuchsia-500/8" accentColor="text-fuchsia-400"
-            fields={[{ label: 'API Secret', placeholder: 'key_...', value: runwayApiKey, onChange: setRunwayApiKey, key: 'RUNWAYML_API_SECRET' }]}
-            onSave={() => saveConnectorApiKey('runway', { RUNWAYML_API_SECRET: runwayApiKey })}
-            hint="Get your key at app.runwayml.com/account/api-keys. Used by Miya Studio for AI video generation (Gen-4.5). Free trial credits included."
-            savedLabel="Runway key saved" />
-
-          <CredentialSection title="n8n Automation (Docker)" icon={Zap} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
-            fields={[{ label: 'n8n Base URL', placeholder: 'http://localhost:5678', value: n8nBaseUrl, onChange: setN8nBaseUrl, key: 'N8N_BASE_URL', secret: false }]}
-            onSave={() => saveConnectorApiKey('n8n', { N8N_BASE_URL: n8nBaseUrl })}
-            hint="n8n must be running in Docker. Default: http://localhost:5678. Used by Marcus for workflow automation triggers."
-            savedLabel="n8n URL saved" />
 
           <CredentialSection title="DeepSeek AI" icon={Cpu} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: deepseekApiKey, onChange: setDeepseekApiKey, key: 'DEEPSEEK_API_KEY' }]}
@@ -1017,6 +1024,86 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             savedLabel="Gemini key saved" />
 
           <HermesAgentsSection />
+
+        </CollapsibleCategory>
+
+        <CollapsibleCategory id="search" label="Search & Research" icon={Search} defaultOpen={false}>
+
+          <CredentialSection title="Brave Search" icon={Search} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
+            fields={[{ label: 'API Key', placeholder: 'BSA...', value: braveApiKey, onChange: setBraveApiKey, key: 'BRAVE_SEARCH_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('brave_search', { BRAVE_SEARCH_API_KEY: braveApiKey })}
+            hint="Free tier: 2,000 queries/month. Sign up at search.brave.com/register. Used by Hector for real-time web research. Without this key Hector falls back to DuckDuckGo HTML scraping."
+            savedLabel="Brave Search key saved" />
+
+          <CredentialSection title="Tavily Search (Hector Fallback)" icon={Search} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
+            fields={[{ label: 'API Key', placeholder: 'tvly-...', value: tavilyApiKey, onChange: setTavilyApiKey, key: 'TAVILY_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('tavily', { TAVILY_API_KEY: tavilyApiKey })}
+            hint="Free tier: 1,000 searches/month. Sign up at app.tavily.com. Hector uses this when Brave Search is unavailable. Designed for AI agents — returns clean summaries + sources."
+            savedLabel="Tavily key saved" />
+
+          <CredentialSection title="Perplexity" icon={Search} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
+            fields={[{ label: 'API Key', placeholder: 'pplx-...', value: perplexityApiKey, onChange: setPerplexityApiKey, key: 'PERPLEXITY_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('perplexity', { PERPLEXITY_API_KEY: perplexityApiKey })}
+            hint="Get your key at perplexity.ai/settings/api. This saves the key so it stays configured — it is not currently called by Hector's own search fallback chain (Brave → Tavily → DeepSeek); wiring it in is a separate follow-up."
+            savedLabel="Perplexity key saved" />
+
+        </CollapsibleCategory>
+
+        <CollapsibleCategory id="content" label="Content & Productivity" icon={FileText} defaultOpen={false}>
+
+          <CredentialSection title="GitHub" icon={GitBranch} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
+            fields={[{ label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }]}
+            onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken })}
+            hint="Create a token at github.com/settings/tokens with repo and workflow scopes. Used by Marcus for releases and issue management."
+            savedLabel="GitHub token saved" />
+
+          <CredentialSection title="Notion" icon={Database} borderColor="border-pink-300/20" bgColor="bg-pink-500/8" accentColor="text-pink-400"
+            fields={[
+              { label: 'Integration Secret', placeholder: 'secret_...', value: notionApiKey, onChange: setNotionApiKey, key: 'NOTION_API_KEY' },
+              { label: 'Default Page ID', placeholder: 'Page UUID (optional)', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('notion', { NOTION_API_KEY: notionApiKey, NOTION_PARENT_PAGE_ID: notionParentPageId })}
+            hint="Create an integration at notion.so/my-integrations, then share the pages you want Alphonso to write to with your integration."
+            savedLabel="Notion credentials saved" />
+
+          <CredentialSection title="ClickUp" icon={ListTodo} borderColor="border-purple-300/20" bgColor="bg-purple-500/8" accentColor="text-purple-400"
+            fields={[
+              { label: 'API Key', placeholder: 'pk_...', value: clickupApiKey, onChange: setClickupApiKey, key: 'CLICKUP_API_KEY' },
+              { label: 'Default List ID', placeholder: 'Found in the list URL (optional)', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
+            hint="Find your API key under ClickUp Settings → Apps. The Default List ID is optional — Alphonso can target any list per task."
+            savedLabel="ClickUp credentials saved" />
+
+          <CredentialSection title="YouTube" icon={Video} borderColor="border-red-300/20" bgColor="bg-red-500/8" accentColor="text-red-400"
+            fields={[
+              { label: 'Client ID', placeholder: 'From Google Cloud Console', value: youtubeClientId, onChange: setYoutubeClientId, key: 'YOUTUBE_CLIENT_ID', secret: false },
+              { label: 'Client Secret', placeholder: 'From Google Cloud Console', value: youtubeClientSecret, onChange: setYoutubeClientSecret, key: 'YOUTUBE_CLIENT_SECRET' },
+              { label: 'Refresh Token', placeholder: 'Run: npm run auth:youtube', value: youtubeRefreshToken, onChange: setYoutubeRefreshToken, key: 'YOUTUBE_REFRESH_TOKEN' },
+              { label: 'Channel ID', placeholder: 'UC...', value: youtubeChannelId, onChange: setYoutubeChannelId, key: 'YOUTUBE_CHANNEL_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId })}
+            hint="Create OAuth 2.0 credentials in Google Cloud Console with the YouTube Data API v3 enabled. Then run npm run auth:youtube in a terminal to generate your Refresh Token."
+            savedLabel="YouTube credentials saved" />
+
+          <CredentialSection title="Runway ML (Video Generation)" icon={Video} borderColor="border-fuchsia-300/20" bgColor="bg-fuchsia-500/8" accentColor="text-fuchsia-400"
+            fields={[{ label: 'API Secret', placeholder: 'key_...', value: runwayApiKey, onChange: setRunwayApiKey, key: 'RUNWAYML_API_SECRET' }]}
+            onSave={() => saveConnectorApiKey('runway', { RUNWAYML_API_SECRET: runwayApiKey })}
+            hint="Get your key at app.runwayml.com/account/api-keys. Used by Miya Studio for AI video generation (Gen-4.5). Free trial credits included."
+            savedLabel="Runway key saved" />
+
+        </CollapsibleCategory>
+
+        <CollapsibleCategory id="automation" label="Automation" icon={Zap} defaultOpen={false}>
+
+          <CredentialSection title="n8n Automation (Docker)" icon={Zap} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
+            fields={[{ label: 'n8n Base URL', placeholder: 'http://localhost:5678', value: n8nBaseUrl, onChange: setN8nBaseUrl, key: 'N8N_BASE_URL', secret: false }]}
+            onSave={() => saveConnectorApiKey('n8n', { N8N_BASE_URL: n8nBaseUrl })}
+            hint="n8n must be running in Docker. Default: http://localhost:5678. Used by Marcus for workflow automation triggers."
+            savedLabel="n8n URL saved" />
+
+        </CollapsibleCategory>
+
         </div>
       </div>
 
@@ -1024,61 +1111,61 @@ export function ConnectorSetupPanel(): React.JSX.Element {
         <ToolConnectionsPanel />
       </div>
 
-      <div className="rounded-xl border border-white/10">
+      <div className="rounded-xl">
         <button
           onClick={() => setAdvancedOpen((v) => !v)}
-          className="flex w-full items-center justify-between px-4 py-3 text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="flex w-full items-center justify-between px-4 py-3 text-[11px] font-medium text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
         >
           <span>Developer &amp; Testing Tools</span>
           {advancedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
 
         {advancedOpen && (
-          <div className="border-t border-white/10 p-4 space-y-4">
+          <div className="border-t border-[var(--border)] p-4 space-y-4">
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[11rem_1fr_12rem]">
-              <select aria-label="Connector to route" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+              <select aria-label="Connector to route" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
                 {connectors.map((c) => <option key={`route-${c.id}`} value={c.id}>{c.name}</option>)}
               </select>
-              <input value={simulatedText} onChange={(e) => setSimulatedText(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Simulated command text" />
-              <button onClick={createRoute} className="rounded-xl bg-teal-300 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-teal-200">
+              <input value={simulatedText} onChange={(e) => setSimulatedText(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Simulated command text" />
+              <button onClick={createRoute} className="rounded-xl bg-[var(--accent)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--surface-0)] hover:bg-[var(--accent-hover)]">
                 Route To Jose
               </button>
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_2fr_auto_auto]">
-              <input value={senderId} onChange={(e) => setSenderId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Simulated sender id" />
-              <input value={authInput} onChange={(e) => setAuthInput(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Allowlist ids (comma or newline)" />
-              <button onClick={applyAllowlist} className="rounded-xl bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">Save Allowlist</button>
-              <button onClick={disableAuthProfile} className="rounded-xl bg-amber-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-amber-100 hover:bg-amber-500/20">Disable Auth</button>
+              <input value={senderId} onChange={(e) => setSenderId(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Simulated sender id" />
+              <input value={authInput} onChange={(e) => setAuthInput(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Allowlist ids (comma or newline)" />
+              <button onClick={applyAllowlist} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]">Save Allowlist</button>
+              <button onClick={disableAuthProfile} className="rounded-xl bg-[var(--warning-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)] hover:opacity-90">Disable Auth</button>
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[10rem_1fr_1fr_auto_auto]">
-              <select aria-label="Connector for outbound message" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+              <select aria-label="Connector for outbound message" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
                 {connectors.map((c) => <option key={`outbound-${c.id}`} value={c.id}>{c.name}</option>)}
               </select>
               {connectorId === 'youtube' ? (
                 <>
-                  <input value={youtubeFilePath} onChange={(e) => setYoutubeFilePath(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Local video file path" />
-                  <input value={youtubeTitle} onChange={(e) => setYoutubeTitle(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="YouTube title" />
+                  <input value={youtubeFilePath} onChange={(e) => setYoutubeFilePath(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Local video file path" />
+                  <input value={youtubeTitle} onChange={(e) => setYoutubeTitle(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="YouTube title" />
                 </>
               ) : (
                 <>
-                  <input value={outboundTarget} onChange={(e) => setOutboundTarget(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder={connectorId === 'telegram' ? 'Chat ID' : connectorId === 'whatsapp' ? 'Phone (E.164)' : 'Target'} />
-                  <input value={outboundText} onChange={(e) => setOutboundText(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Outbound message" />
+                  <input value={outboundTarget} onChange={(e) => setOutboundTarget(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder={connectorId === 'telegram' ? 'Chat ID' : connectorId === 'whatsapp' ? 'Phone (E.164)' : 'Target'} />
+                  <input value={outboundText} onChange={(e) => setOutboundText(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Outbound message" />
                 </>
               )}
-              <button onClick={pollConnector} disabled={transportBusy || !pollAvailable} className="rounded-xl bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700 disabled:opacity-40">
+              <button onClick={pollConnector} disabled={transportBusy || !pollAvailable} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-40">
                 {pollAvailable ? 'Poll' : 'Poll N/A'}
               </button>
-              <button onClick={sendOutbound} disabled={transportBusy || !outboundAllowed} className="rounded-xl bg-indigo-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100 hover:bg-indigo-500/30 disabled:opacity-40">
+              <button onClick={sendOutbound} disabled={transportBusy || !outboundAllowed} className="rounded-xl bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-muted)] disabled:opacity-40">
                 {connectorId === 'youtube' ? 'Upload' : 'Send'}
               </button>
               {connectorId === 'telegram' && (
-                <button onClick={runTelegramLiveProof} disabled={transportBusy} className="rounded-xl bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-100 hover:bg-emerald-500/30 disabled:opacity-40">Live Proof</button>
+                <button onClick={runTelegramLiveProof} disabled={transportBusy} className="rounded-xl bg-[var(--success-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--success)] hover:opacity-90 disabled:opacity-40">Live Proof</button>
               )}
               {connectorId === 'telegram' && (
-                <button onClick={runAutoPoll} disabled={transportBusy} className="rounded-xl bg-cyan-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-40">
+                <button onClick={runAutoPoll} disabled={transportBusy} className="rounded-xl bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-muted)] disabled:opacity-40">
                   Auto-Poll {(autoPollState as { errors?: number }).errors ? `(${(autoPollState as { errors?: number }).errors} err)` : ''}
                 </button>
               )}
@@ -1086,9 +1173,9 @@ export function ConnectorSetupPanel(): React.JSX.Element {
 
             {connectorId === 'youtube' && (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_10rem]">
-                <input value={youtubeDescription} onChange={(e) => setYoutubeDescription(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Description (optional)" />
-                <input value={youtubeTags} onChange={(e) => setYoutubeTags(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Tags, comma-separated" />
-                <select aria-label="YouTube privacy" value={youtubePrivacy} onChange={(e) => setYoutubePrivacy(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+                <input value={youtubeDescription} onChange={(e) => setYoutubeDescription(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Description (optional)" />
+                <input value={youtubeTags} onChange={(e) => setYoutubeTags(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Tags, comma-separated" />
+                <select aria-label="YouTube privacy" value={youtubePrivacy} onChange={(e) => setYoutubePrivacy(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
                   <option value="private">private</option>
                   <option value="unlisted">unlisted</option>
                   <option value="public">public</option>
@@ -1096,35 +1183,35 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               </div>
             )}
 
-            <div className="flex items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-500/10 p-3 text-[11px] text-amber-100/85">
-              <input id="dev-approval" type="checkbox" checked={explicitApproval} onChange={(e) => setExplicitApproval(e.target.checked)} className="h-3.5 w-3.5 accent-amber-300" />
+            <div className="flex items-center gap-2 rounded-xl bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--text-2)]">
+              <input id="dev-approval" type="checkbox" checked={explicitApproval} onChange={(e) => setExplicitApproval(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--warning)]" />
               <label htmlFor="dev-approval" className="cursor-pointer">Approve this outbound action (required for sends and uploads)</label>
             </div>
 
-            <div className="rounded-xl border border-teal-300/15 bg-zinc-900/55 p-4">
-              <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-teal-200/75">WhatsApp Cloud Webhook Simulation</div>
+            <div className="rounded-xl bg-[var(--surface-1)] p-4">
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">WhatsApp Cloud Webhook Simulation</div>
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                <input value={cloudWebhookMode} onChange={(e) => setCloudWebhookMode(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="hub.mode" />
-                <input value={cloudWebhookVerifyToken} onChange={(e) => setCloudWebhookVerifyToken(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="hub.verify_token" />
-                <input value={cloudWebhookChallenge} onChange={(e) => setCloudWebhookChallenge(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="hub.challenge" />
+                <input value={cloudWebhookMode} onChange={(e) => setCloudWebhookMode(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="hub.mode" />
+                <input value={cloudWebhookVerifyToken} onChange={(e) => setCloudWebhookVerifyToken(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="hub.verify_token" />
+                <input value={cloudWebhookChallenge} onChange={(e) => setCloudWebhookChallenge(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="hub.challenge" />
               </div>
               <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_20rem_auto]">
-                <textarea value={cloudWebhookPayload} onChange={(e) => setCloudWebhookPayload(e.target.value)} rows={4} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Webhook JSON payload" />
-                <input value={cloudWebhookSignature} onChange={(e) => setCloudWebhookSignature(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="X-Hub-Signature-256 header" />
-                <button onClick={runWhatsAppCloudWebhookSimulation} disabled={transportBusy} className="rounded-xl bg-teal-400/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-teal-100 hover:bg-teal-400/30 disabled:opacity-40">Simulate</button>
+                <textarea value={cloudWebhookPayload} onChange={(e) => setCloudWebhookPayload(e.target.value)} rows={4} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Webhook JSON payload" />
+                <input value={cloudWebhookSignature} onChange={(e) => setCloudWebhookSignature(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="X-Hub-Signature-256 header" />
+                <button onClick={runWhatsAppCloudWebhookSimulation} disabled={transportBusy} className="rounded-xl bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-muted)] disabled:opacity-40">Simulate</button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[10px] text-zinc-500 font-mono space-y-1">
-              <div>connector: <span className="text-zinc-300">{connectorId}</span> | status: <span className="text-zinc-300">{selectedConnector ? getDisplayStatus(selectedConnector) : 'n/a'}</span> | live: <span className="text-zinc-300">{selectedConnector ? String(isConnectorLive(selectedConnector)) : 'n/a'}</span></div>
-              <div>outbound_allowed: <span className="text-zinc-300">{String(outboundAllowed)}</span> | poll_available: <span className="text-zinc-300">{String(pollAvailable)}</span></div>
+            <div className="rounded-xl bg-[var(--surface-1)] p-3 text-[10px] text-[var(--text-3)] font-mono space-y-1">
+              <div>connector: <span className="text-[var(--text-2)]">{connectorId}</span> | status: <span className="text-[var(--text-2)]">{selectedConnector ? getDisplayStatus(selectedConnector) : 'n/a'}</span> | live: <span className="text-[var(--text-2)]">{selectedConnector ? String(isConnectorLive(selectedConnector)) : 'n/a'}</span></div>
+              <div>outbound_allowed: <span className="text-[var(--text-2)]">{String(outboundAllowed)}</span> | poll_available: <span className="text-[var(--text-2)]">{String(pollAvailable)}</span></div>
             </div>
 
             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-2">Connector Audit</div>
-              {audit.length === 0 && <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-3 text-sm text-zinc-600">No activity yet.</div>}
+              <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-4)] mb-2">Connector Audit</div>
+              {audit.length === 0 && <div className="rounded-xl bg-[var(--surface-1)] p-3 text-sm text-[var(--text-4)]">No activity yet.</div>}
               {(audit as Array<{ id: string; connectorId: string; action: string; timestampMs: number }>).slice().reverse().slice(0, 10).map((entry) => (
-                <div key={entry.id} className="rounded-xl border border-white/10 bg-zinc-900/55 px-3 py-2 text-[10px] text-zinc-500 font-mono">
+                <div key={entry.id} className="rounded-xl bg-[var(--surface-1)] px-3 py-2 text-[10px] text-[var(--text-3)] font-mono">
                   {entry.connectorId} · {entry.action} · {new Date(entry.timestampMs).toLocaleTimeString()}
                 </div>
               ))}

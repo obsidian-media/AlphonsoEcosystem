@@ -36,12 +36,22 @@ const mockStatuses = [
 beforeEach(() => vi.clearAllMocks());
 
 describe('TOOL_NAMES', () => {
-  it('exports all 7 tool names', () => {
-    expect(TOOL_NAMES).toHaveLength(7);
+  it('exports all 14 tool names, matching runtime_manager.rs\'s TOOLS catalogue', () => {
+    expect(TOOL_NAMES).toHaveLength(14);
     expect(TOOL_NAMES).toContain('ollama');
     expect(TOOL_NAMES).toContain('comfyui');
+    expect(TOOL_NAMES).toContain('automatic1111');
+    expect(TOOL_NAMES).toContain('fooocus');
+    expect(TOOL_NAMES).toContain('invokeai');
     expect(TOOL_NAMES).toContain('whisper');
     expect(TOOL_NAMES).toContain('audiocraft');
+    expect(TOOL_NAMES).toContain('openwebui');
+    expect(TOOL_NAMES).toContain('voice-os');
+    expect(TOOL_NAMES).toContain('n8n');
+    expect(TOOL_NAMES).toContain('mcp-server');
+    expect(TOOL_NAMES).toContain('alphonso-bridge');
+    expect(TOOL_NAMES).toContain('chromadb');
+    expect(TOOL_NAMES).toContain('openHands');
   });
 });
 

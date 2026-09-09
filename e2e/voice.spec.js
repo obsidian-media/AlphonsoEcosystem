@@ -45,6 +45,10 @@ test.describe('Alphonso E2E - Policy Gate', () => {
   });
 
   test('approvals panel accessible from sidebar', async ({ page }) => {
+    // Orchestrator lives under the "System" Space since the sidebar
+    // redesign -- click the Space pill first before its nav items are
+    // reachable/visible.
+    await page.locator('aside').getByTestId('space-pill-system').click();
     const approvalBtn = page.locator('aside').getByRole('button', { name: /^Orchestrator$/ });
     await expect(approvalBtn).toBeVisible({ timeout: 10000 });
     await approvalBtn.click();
@@ -60,11 +64,15 @@ test.describe('Alphonso E2E - Additional Smoke Tests', () => {
   });
 
   test('runtime manager view renders', async ({ page }) => {
+    // Runtimes lives under the "System" Space since the sidebar redesign.
+    await page.getByTestId('space-pill-system').click();
     await page.getByRole('button', { name: /Runtimes/i }).click();
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('voice sidebar nav clickable', async ({ page }) => {
+    // Voice lives under the "System" Space since the sidebar redesign.
+    await page.getByTestId('space-pill-system').click();
     const voiceNav = page.getByRole('button', { name: /Voice/i });
     await expect(voiceNav).toBeVisible({ timeout: 10000 });
     await voiceNav.click();

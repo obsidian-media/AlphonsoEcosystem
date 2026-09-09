@@ -30,29 +30,29 @@ export function CommandRib({ activeTab, settings, setSettings, ollamaStatus }: P
   const isLight = settings.colorScheme === 'light';
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06] bg-surface-0/80 backdrop-blur-sm">
+    <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-surface-0/80 backdrop-blur-sm">
       {/* Left: Current agent */}
       <div className="flex items-center gap-2">
         <AgentAvatar agentId={agent.id} name={agent.label} sizeClass="h-5 w-5" />
-        <span className="text-xs font-semibold text-zinc-300">{agent.label}</span>
-        <span className="text-2xs text-zinc-500">/</span>
-        <span className="text-2xs text-zinc-500 capitalize">{activeTab?.replace(/_/g, ' ')}</span>
+        <span className="text-xs font-semibold text-[var(--text-2)]">{agent.label}</span>
+        <span className="text-2xs text-[var(--text-3)]">/</span>
+        <span className="text-2xs text-[var(--text-3)] capitalize">{activeTab?.replace(/_/g, ' ')}</span>
       </div>
 
       {/* Right: Theme toggle + Ollama status */}
       <div className="flex items-center gap-2">
         <button
           onClick={() => setSettings({ ...settings, colorScheme: isLight ? 'dark' : 'light' })}
-          className="flex items-center gap-1.5 rounded-lg bg-surface-2 border border-white/[0.06] px-2 py-1 text-2xs text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-surface-2 border border-[var(--border)] px-2 py-1 text-2xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
           title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
         >
           {isLight ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
           {isLight ? 'Light' : 'Dark'}
         </button>
 
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-2 border border-white/[0.06]">
-          <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-success' : 'bg-danger'}`} />
-          <span className="text-2xs text-zinc-400">{ollamaStatus.state === 'connected' ? 'Online' : 'Offline'}</span>
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-2 border border-[var(--border)]">
+          <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-[var(--success)]' : 'bg-[var(--error)]'}`} />
+          <span className="text-2xs text-[var(--text-3)]">{ollamaStatus.state === 'connected' ? 'Online' : 'Offline'}</span>
         </div>
       </div>
     </div>

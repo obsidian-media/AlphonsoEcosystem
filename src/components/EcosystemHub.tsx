@@ -48,6 +48,7 @@ import { AgentOutputPanel } from './agentWorkshop/AgentOutputPanel';
 import { ExecutionTimeline } from './agentWorkshop/ExecutionTimeline';
 import { FinalExecutionPacket } from './agentWorkshop/FinalExecutionPacket';
 import { SystemHealthPanel } from './agentWorkshop/SystemHealthPanel';
+import { Tabs } from './ui/Tabs';
 
 const WorkflowOperationsDashboard = lazy(() =>
   import('./WorkflowOperationsDashboard').then((module) => ({
@@ -80,7 +81,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   const [snapshots, setSnapshots] = useState<{ id: string; timestampMs: number; payload?: Record<string, unknown> }[]>(() => listSnapshots());
   const [showAdvancedSections, setShowAdvancedSections] = useState<string>('overview');
   const [manifestInput, setManifestInput] = useState('{\n  "id": "pack.youtube-studio",\n  "name": "YouTube Pack",\n  "version": "1.0.0",\n  "permissions": ["memory.read", "workflows.write"],\n  "category": "creator"\n}');
-  const [newWorkflowName, setNewWorkflowName] = useState('Shayan -> Jose -> Agents -> Jose Confirmation Flow');
+  const [newWorkflowName, setNewWorkflowName] = useState('You -> Jose -> Agents -> Jose Confirmation Flow');
   const [handoffNote, setHandoffNote] = useState('Creative packet validated and queued for supervised execution.');
 
   const approvalQueue = useMemo(() => listApprovalQueue() as { id: string; title: string; fromAgent: string; toAgent: string; packetType: string }[], [packets]);
@@ -192,7 +193,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
 
   const runCreateWorkflow = () => {
     const flow = createWorkflow(newWorkflowName, 'shared');
-    let updated = addWorkflowNode(flow.id, 'trigger', { x: 0, y: 0 }, { label: 'Shayan command received' });
+    let updated = addWorkflowNode(flow.id, 'trigger', { x: 0, y: 0 }, { label: 'User command received' });
     updated = addWorkflowNode(flow.id, 'approval', { x: 220, y: 0 }, { label: 'Jose routes and gates approvals' });
     updated = addWorkflowNode(flow.id, 'action', { x: 440, y: 0 }, { label: 'Agents report back to Jose' });
     if (updated?.nodes?.length >= 3) {
@@ -236,27 +237,12 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   return (
     <div className="h-full overflow-y-auto">
     <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
-      <header className="pb-4 border-b border-white/[0.06]">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">All Agents</div>
-        <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Agent Ecosystem</h1>
+      <header className="pb-4 border-b border-[var(--border)]">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-3)]">All Agents</div>
+        <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-[var(--text-1)]">Agent Ecosystem</h1>
       </header>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 border-b border-white/[0.06] pb-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setShowAdvancedSections(tab.id)}
-            className={`rounded-lg px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
-              showAdvancedSections === tab.id
-                ? 'bg-indigo-500/10 text-indigo-200 border border-indigo-400/20'
-                : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} activeId={showAdvancedSections} onChange={setShowAdvancedSections} />
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -286,34 +272,34 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
             <div className="space-y-4">
               <Panel icon={Network} title="Handoff Queue">
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {approvalQueue.length === 0 && <p className="text-sm text-zinc-500">No pending approvals.</p>}
+                  {approvalQueue.length === 0 && <p className="text-sm text-[var(--text-3)]">No pending approvals.</p>}
                   {approvalQueue.map((packet) => (
-                    <div key={packet.id} className="rounded-lg border border-white/10 bg-zinc-900/55 p-3 space-y-2">
-                      <div className="text-xs font-semibold text-zinc-200">{packet.title}</div>
-                      <div className="text-[11px] text-zinc-500">{packet.fromAgent} {'→'} {packet.toAgent} | {packet.packetType}</div>
+                    <div key={packet.id} className="rounded-lg bg-[var(--surface-1)] p-3 space-y-2">
+                      <div className="text-xs font-semibold text-[var(--text-2)]">{packet.title}</div>
+                      <div className="text-[11px] text-[var(--text-3)]">{packet.fromAgent} {'→'} {packet.toAgent} | {packet.packetType}</div>
                       <div className="flex gap-1.5">
-                        <button onClick={() => runApprove(packet.id)} className="rounded border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/15 transition-colors">Approve</button>
-                        <button onClick={() => runReject(packet.id)} className="rounded border border-red-400/20 bg-red-500/10 px-2.5 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/15 transition-colors">Reject</button>
-                        <button onClick={() => runExecutePacket(packet.id)} className="rounded border border-white/[0.08] bg-zinc-800/60 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 hover:bg-zinc-700/60 transition-colors">Execute</button>
+                        <button onClick={() => runApprove(packet.id)} className="rounded bg-[var(--success-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--success)] hover:opacity-90 transition-colors">Approve</button>
+                        <button onClick={() => runReject(packet.id)} className="rounded bg-[var(--error-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--error)] hover:opacity-90 transition-colors">Reject</button>
+                        <button onClick={() => runExecutePacket(packet.id)} className="rounded bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors">Execute</button>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="mt-3">
-                  <label className="text-[10px] uppercase tracking-widest text-zinc-500">Execution Note</label>
-                  <input value={handoffNote} onChange={(e) => setHandoffNote(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-[11px]" />
+                  <label className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Execution Note</label>
+                  <input value={handoffNote} onChange={(e) => setHandoffNote(e.target.value)} className="mt-1 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[11px]" />
                 </div>
               </Panel>
               <Panel icon={ShieldAlert} title="Human Override">
-                <div className="space-y-2 text-[11px] text-zinc-400">
-                  <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2">Safe mode and approval gates remain active.</div>
-                  <div className="rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-2">Emergency stop: reject all pending packets.</div>
+                <div className="space-y-2 text-[11px] text-[var(--text-3)]">
+                  <div className="rounded-lg bg-[var(--warning-dim)] px-3 py-2">Safe mode and approval gates remain active.</div>
+                  <div className="rounded-lg bg-[var(--error-dim)] px-3 py-2">Emergency stop: reject all pending packets.</div>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <button onClick={() => approvalQueue.forEach((p) => runReject(p.id))} className="rounded bg-red-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-red-200 flex items-center gap-1">
+                  <button onClick={() => approvalQueue.forEach((p) => runReject(p.id))} className="rounded bg-[var(--error-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--error)] flex items-center gap-1">
                     <PauseCircle className="h-3.5 w-3.5" /> Emergency Stop
                   </button>
-                  <button onClick={() => approvalQueue.forEach((p) => runApprove(p.id))} className="rounded bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-200 flex items-center gap-1">
+                  <button onClick={() => approvalQueue.forEach((p) => runApprove(p.id))} className="rounded bg-[var(--success-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--success)] flex items-center gap-1">
                     <PlayCircle className="h-3.5 w-3.5" /> Resume Queue
                   </button>
                 </div>
@@ -325,20 +311,20 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
           {showAdvancedSections === 'skills' && (
             <Panel icon={Layers3} title="Skill Pack System">
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                {skills.length === 0 && <p className="text-sm text-zinc-500">No skill packs installed.</p>}
+                {skills.length === 0 && <p className="text-sm text-[var(--text-3)]">No skill packs installed.</p>}
                 {skillGroups.map(([groupLabel, groupSkills]) => (
                   <div key={groupLabel}>
-                    <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-zinc-500">{groupLabel} <span className="text-zinc-600">({groupSkills.length})</span></div>
+                    <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">{groupLabel} <span className="text-[var(--text-4)]">({groupSkills.length})</span></div>
                     <div className="space-y-2">
                       {groupSkills.map((skill) => (
-                        <div key={skill.id} className="rounded-lg border border-white/10 bg-zinc-900/55 px-3 py-2 flex items-center justify-between">
+                        <div key={skill.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 flex items-center justify-between">
                           <div>
-                            <div className="text-xs font-semibold text-zinc-200">{skill.name}</div>
-                            <div className="text-[11px] text-zinc-500">{skill.id} | v{skill.version}</div>
+                            <div className="text-xs font-semibold text-[var(--text-2)]">{skill.name}</div>
+                            <div className="text-[11px] text-[var(--text-3)]">{skill.id} | v{skill.version}</div>
                           </div>
                           <div className="flex gap-1">
-                            <button onClick={() => { setSkillPackEnabled(skill.id, !skill.enabled); refreshAll(); }} className="rounded bg-zinc-800 px-2 py-1 text-[10px] text-zinc-200">{skill.enabled ? 'Disable' : 'Enable'}</button>
-                            <button onClick={() => { uninstallSkillPack(skill.id); refreshAll(); }} className="rounded bg-red-500/20 px-2 py-1 text-[10px] text-red-200">Remove</button>
+                            <button onClick={() => { setSkillPackEnabled(skill.id, !skill.enabled); refreshAll(); }} className="rounded bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--text-2)]">{skill.enabled ? 'Disable' : 'Enable'}</button>
+                            <button onClick={() => { uninstallSkillPack(skill.id); refreshAll(); }} className="rounded bg-[var(--error-dim)] px-2 py-1 text-[10px] text-[var(--error)]">Remove</button>
                           </div>
                         </div>
                       ))}
@@ -347,11 +333,11 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
                 ))}
               </div>
               <div className="mt-4">
-                <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1 block">Install from manifest JSON</label>
-                <textarea value={manifestInput} onChange={(e) => setManifestInput(e.target.value)} rows={6} className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 font-mono text-[11px] text-zinc-200" />
+                <label className="text-[10px] uppercase tracking-widest text-[var(--text-3)] mb-1 block">Install from manifest JSON</label>
+                <textarea value={manifestInput} onChange={(e) => setManifestInput(e.target.value)} rows={6} className="w-full rounded-lg bg-[var(--surface-2)] px-3 py-2 font-mono text-[11px] text-[var(--text-2)]" />
                 <div className="mt-2 flex gap-2">
-                  <button onClick={runValidateManifest} className="rounded bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200">Validate</button>
-                  <button onClick={runInstallSkillPack} className="rounded bg-indigo-500/25 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Install</button>
+                  <button onClick={runValidateManifest} className="rounded bg-[var(--surface-2)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">Validate</button>
+                  <button onClick={runInstallSkillPack} className="rounded bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">Install</button>
                 </div>
               </div>
             </Panel>
@@ -362,26 +348,26 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
             <div className="space-y-4">
               <Panel icon={Workflow} title="Workflows">
                 <div className="flex gap-2">
-                  <input value={newWorkflowName} onChange={(e) => setNewWorkflowName(e.target.value)} className="flex-1 rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm" />
-                  <button onClick={runCreateWorkflow} className="rounded bg-indigo-500/25 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Create</button>
+                  <input value={newWorkflowName} onChange={(e) => setNewWorkflowName(e.target.value)} className="flex-1 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-sm" />
+                  <button onClick={runCreateWorkflow} className="rounded bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">Create</button>
                 </div>
                 <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {workflows.length === 0 && <p className="text-sm text-zinc-500">No workflows yet.</p>}
+                  {workflows.length === 0 && <p className="text-sm text-[var(--text-3)]">No workflows yet.</p>}
                   {workflows.map((flow) => (
-                    <div key={flow.id} className="rounded-lg border border-white/10 bg-zinc-900/50 px-3 py-2 text-[11px] text-zinc-300">
+                    <div key={flow.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-2)]">
                       {flow.name} — {flow.nodes.length} nodes, {flow.edges.length} edges
                     </div>
                   ))}
                 </div>
               </Panel>
               <Panel icon={Activity} title="Session Timeline (24h)">
-                <div className="text-[11px] text-zinc-400 mb-2">Events: {sessionSummary.totalEvents} | Warnings: {sessionSummary.warnings?.length || 0}</div>
+                <div className="text-[11px] text-[var(--text-3)] mb-2">Events: {sessionSummary.totalEvents} | Warnings: {sessionSummary.warnings?.length || 0}</div>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                  {timeline.length === 0 && <p className="text-sm text-zinc-500">No events yet.</p>}
+                  {timeline.length === 0 && <p className="text-sm text-[var(--text-3)]">No events yet.</p>}
                   {timeline.map((event) => (
-                    <div key={event.id} className="rounded-lg border border-white/10 bg-zinc-900/50 px-3 py-2">
-                      <div className="text-[11px] text-zinc-200">{event.title}</div>
-                      <div className="text-[10px] text-zinc-500">{event.category} · {new Date(event.timestampMs).toLocaleTimeString()}</div>
+                    <div key={event.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2">
+                      <div className="text-[11px] text-[var(--text-2)]">{event.title}</div>
+                      <div className="text-[10px] text-[var(--text-3)]">{event.category} · {new Date(event.timestampMs).toLocaleTimeString()}</div>
                     </div>
                   ))}
                 </div>
@@ -424,7 +410,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
                 workspaceFoundation={workspaceFoundation}
                 onRefresh={refreshAll}
               />
-              <Suspense fallback={<div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3 text-sm text-zinc-400">Loading…</div>}>
+              <Suspense fallback={<div className="rounded-2xl bg-[var(--surface-1)] p-3 text-sm text-[var(--text-3)]">Loading…</div>}>
                 <WorkflowOperationsDashboard settings={settings} />
               </Suspense>
               <ProductionReadinessPanel
@@ -448,10 +434,10 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
               />
               <Panel icon={CheckCircle2} title="Resource Awareness">
                 <div className="flex gap-2">
-                  <button onClick={runResourceSnapshot} className="rounded bg-indigo-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Collect Snapshot</button>
-                  <button onClick={refreshAll} className="rounded bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200">Refresh</button>
+                  <button onClick={runResourceSnapshot} className="rounded bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">Collect Snapshot</button>
+                  <button onClick={refreshAll} className="rounded bg-[var(--surface-2)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">Refresh</button>
                 </div>
-                <div className="mt-2 text-[11px] text-zinc-400">Points: {resourceSummary.points} | Avg tokens: {resourceSummary.avgTokenEstimate}</div>
+                <div className="mt-2 text-[11px] text-[var(--text-3)]">Points: {resourceSummary.points} | Avg tokens: {resourceSummary.avgTokenEstimate}</div>
               </Panel>
               <MarketplacePanel marketItems={marketItems} onRefresh={refreshAll} />
               <SnapshotDiffPanel snapshots={snapshots} />
@@ -489,25 +475,25 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
   const changedCount = rows.filter((r) => r.changed).length;
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3.5 space-y-3">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-zinc-400 font-bold">
-        <Activity className="w-4 h-4 text-indigo-300" /> Snapshot Diff
-        {changedCount > 0 && <span className="rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[9px] text-amber-300">{changedCount} changed</span>}
+    <section className="rounded-2xl bg-[var(--surface-1)] p-3.5 space-y-3">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold">
+        <Activity className="w-4 h-4 text-[var(--accent)]" /> Snapshot Diff
+        {changedCount > 0 && <span className="rounded-full bg-[var(--warning-dim)] border border-[var(--warning-border)] px-2 py-0.5 text-[9px] text-[var(--warning)]">{changedCount} changed</span>}
       </div>
 
       {sorted.length < 2 ? (
-        <div className="text-[11px] text-zinc-600">Need at least 2 snapshots to compare. Create snapshots from the Ecosystem sidebar.</div>
+        <div className="text-[11px] text-[var(--text-4)]">Need at least 2 snapshots to compare. Create snapshots from the Ecosystem sidebar.</div>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2">
                 {([['Left (A)', leftId, setLeftId], ['Right (B)', rightId, setRightId]] as any[][]).map(([label, val, setter]) => (
               <div key={label}>
-                <div className="text-[9px] font-bold uppercase text-zinc-600 mb-1">{label}</div>
+                <div className="text-[9px] font-bold uppercase text-[var(--text-4)] mb-1">{label}</div>
                 <select
                   aria-label={`Snapshot ${label}`}
                   value={val}
                   onChange={(e) => setter(e.target.value)}
-                  className="w-full rounded-lg bg-zinc-900 border border-white/10 px-2 py-1.5 text-[10px] text-zinc-200 outline-none"
+                  className="w-full rounded-lg bg-[var(--surface-2)] px-2 py-1.5 text-[10px] text-[var(--text-2)] outline-none"
                 >
                   {sorted.map((s) => (
                     <option key={s.id as string} value={s.id as string}>
@@ -520,17 +506,17 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
           </div>
 
           <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
-            {rows.length === 0 && <div className="text-[11px] text-zinc-600">Both snapshots are empty.</div>}
+            {rows.length === 0 && <div className="text-[11px] text-[var(--text-4)]">Both snapshots are empty.</div>}
             {rows.map((row) => (
-              <div key={row.key} className={`rounded-lg px-2 py-1.5 text-[10px] ${row.changed ? 'bg-amber-950/30 border border-amber-500/20' : 'bg-zinc-900/30 border border-white/[0.04]'}`}>
-                <div className={`font-mono font-bold mb-0.5 ${row.changed ? 'text-amber-200' : 'text-zinc-500'}`}>{row.key}</div>
+              <div key={row.key} className={`rounded-lg px-2 py-1.5 text-[10px] ${row.changed ? 'bg-[var(--warning-dim)]' : 'bg-[var(--surface-1)]'}`}>
+                <div className={`font-mono font-bold mb-0.5 ${row.changed ? 'text-[var(--warning)]' : 'text-[var(--text-3)]'}`}>{row.key}</div>
                 {row.changed ? (
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="text-zinc-400 truncate">A: {row.left.slice(0, 60)}</div>
-                    <div className="text-zinc-200 truncate">B: {row.right.slice(0, 60)}</div>
+                    <div className="text-[var(--text-3)] truncate">A: {row.left.slice(0, 60)}</div>
+                    <div className="text-[var(--text-2)] truncate">B: {row.right.slice(0, 60)}</div>
                   </div>
                 ) : (
-                  <div className="text-zinc-600 truncate">{row.left.slice(0, 80)}</div>
+                  <div className="text-[var(--text-4)] truncate">{row.left.slice(0, 80)}</div>
                 )}
               </div>
             ))}
@@ -542,7 +528,7 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
 }
 
 const TYPE_FILTERS = ['all', 'agent', 'skill_pack', 'connector', 'workflow', 'theme'];
-const STATUS_COLOR: Record<string, string> = { installed: 'text-emerald-300 border-emerald-500/30 bg-emerald-950/30', available: 'text-zinc-400 border-zinc-600/30 bg-zinc-900/30', installing: 'text-blue-300 border-blue-500/30 bg-blue-950/30' };
+const STATUS_COLOR: Record<string, string> = { installed: 'text-[var(--success)] border-[var(--success-border)] bg-[var(--success-dim)]', available: 'text-[var(--text-3)] border-[var(--border)] bg-[var(--surface-1)]', installing: 'text-[var(--accent)] border-[var(--accent-border)] bg-[var(--accent-dim)]' };
 
 function MarketplacePanel({ marketItems, onRefresh }: { marketItems: Record<string, unknown>[]; onRefresh: () => void }) {
   const [typeFilter, setTypeFilter] = useState('all');
@@ -577,9 +563,9 @@ function MarketplacePanel({ marketItems, onRefresh }: { marketItems: Record<stri
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3.5 space-y-3">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-zinc-400 font-bold">
-        <Layers3 className="w-4 h-4 text-indigo-300" /> Plugin Marketplace
+    <section className="rounded-2xl bg-[var(--surface-1)] p-3.5 space-y-3">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold">
+        <Layers3 className="w-4 h-4 text-[var(--accent)]" /> Plugin Marketplace
       </div>
 
       {/* Remote registry fetch */}
@@ -588,17 +574,17 @@ function MarketplacePanel({ marketItems, onRefresh }: { marketItems: Record<stri
           value={registryUrl}
           onChange={(e) => setRegistryUrl(e.target.value)}
           placeholder="Registry URL (optional)"
-          className="flex-1 rounded-lg bg-zinc-900 border border-white/10 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder-zinc-600 outline-none focus:border-indigo-500/40"
+          className="flex-1 rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 text-[11px] text-[var(--text-2)] placeholder-[var(--text-4)] outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
         />
         <button
           onClick={fetchRemote}
           disabled={fetching || !registryUrl.trim()}
-          className="rounded-lg bg-indigo-500/20 border border-indigo-500/30 px-3 py-1.5 text-[10px] font-bold text-indigo-200 hover:bg-indigo-500/35 disabled:opacity-50"
+          className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-[10px] font-bold text-[var(--accent)] hover:bg-[var(--accent-muted)] disabled:opacity-50"
         >
           {fetching ? '…' : 'Fetch'}
         </button>
       </div>
-      {fetchMsg && <div className="text-[10px] text-zinc-500">{fetchMsg}</div>}
+      {fetchMsg && <div className="text-[10px] text-[var(--text-3)]">{fetchMsg}</div>}
 
       {/* Type filters */}
       <div className="flex flex-wrap gap-1">
@@ -606,7 +592,7 @@ function MarketplacePanel({ marketItems, onRefresh }: { marketItems: Record<stri
           <button
             key={t}
             onClick={() => setTypeFilter(t)}
-            className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${typeFilter === t ? 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-200' : 'text-zinc-500 hover:text-zinc-300'}`}
+            className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${typeFilter === t ? 'bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--accent)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}
           >
             {t} {t === 'all' ? `(${marketItems.length})` : `(${marketItems.filter((i) => i.type === t).length})`}
           </button>
@@ -616,23 +602,23 @@ function MarketplacePanel({ marketItems, onRefresh }: { marketItems: Record<stri
       {/* Item grid */}
       <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
         {visible.map((item: any) => (
-          <div key={item.id} className="rounded-lg border border-white/[0.06] bg-zinc-900/40 px-3 py-2 flex items-center justify-between gap-3">
+          <div key={item.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[12px] font-semibold text-zinc-200 truncate">{item.name}</div>
-              <div className="text-[10px] text-zinc-600">{item.type} · {item.id}</div>
+              <div className="text-[12px] font-semibold text-[var(--text-2)] truncate">{item.name}</div>
+              <div className="text-[10px] text-[var(--text-4)]">{item.type} · {item.id}</div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${STATUS_COLOR[item.status] || STATUS_COLOR.available}`}>
                 {item.status}
               </span>
               {item.status === 'installed'
-                ? <button onClick={() => { setMarketplaceItemStatus(item.id, 'available'); onRefresh(); }} className="text-[9px] text-zinc-500 hover:text-red-400 font-bold uppercase">Remove</button>
-                : <button onClick={() => { setMarketplaceItemStatus(item.id, 'installed'); onRefresh(); }} className="text-[9px] text-emerald-400 hover:text-emerald-300 font-bold uppercase">Install</button>
+                ? <button onClick={() => { setMarketplaceItemStatus(item.id, 'available'); onRefresh(); }} className="text-[9px] text-[var(--text-3)] hover:text-[var(--error)] font-bold uppercase">Remove</button>
+                : <button onClick={() => { setMarketplaceItemStatus(item.id, 'installed'); onRefresh(); }} className="text-[9px] text-[var(--success)] hover:opacity-90 font-bold uppercase">Install</button>
               }
             </div>
           </div>
         ))}
-        {visible.length === 0 && <div className="text-[11px] text-zinc-600 py-3 text-center">No items in this category.</div>}
+        {visible.length === 0 && <div className="text-[11px] text-[var(--text-4)] py-3 text-center">No items in this category.</div>}
       </div>
     </section>
   );

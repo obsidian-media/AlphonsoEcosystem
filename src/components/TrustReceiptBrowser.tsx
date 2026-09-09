@@ -58,12 +58,12 @@ interface SelectorProps {
 
 function Selector({ label, value, onChange, options }: SelectorProps) {
   return (
-    <label className="flex min-w-0 flex-1 flex-col gap-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+    <label className="flex min-w-0 flex-1 flex-col gap-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-3)]">
       <span>{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-lg border border-white/10 bg-zinc-900/80 px-3 py-2 text-[11px] text-zinc-200"
+        className="rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[11px] text-[var(--text-2)]"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -131,24 +131,24 @@ export function TrustReceiptBrowser() {
         <Selector label="Status" value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
         <button
           onClick={loadReceipts}
-          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-zinc-900/80 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-2)]"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           Refresh
         </button>
       </div>
 
-      <div className="rounded-lg border border-white/10 bg-zinc-950/50 px-3 py-2 text-[11px] text-zinc-400">
-        <div className="flex items-center gap-2 text-zinc-300">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
+      <div className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
+        <div className="flex items-center gap-2 text-[var(--text-2)]">
+          <ShieldCheck className="h-3.5 w-3.5 text-[var(--success)]" />
           {loading ? 'Loading durable audit receipts...' : `${filteredRows.length} receipt${filteredRows.length === 1 ? '' : 's'} shown (reload re-reads persisted audit log)`}
         </div>
-        {error && <div className="mt-1 text-red-300">{error}</div>}
+        {error && <div className="mt-1 text-[var(--error)]">{error}</div>}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10 bg-zinc-900/60">
-        <table className="min-w-full divide-y divide-white/10 text-left text-[11px]">
-          <thead className="bg-zinc-950/50 text-zinc-400 uppercase tracking-widest">
+      <div className="overflow-x-auto rounded-xl bg-[var(--surface-2)]">
+        <table className="min-w-full divide-y divide-[var(--border)] text-left text-[11px]">
+          <thead className="bg-[var(--surface-1)] text-[var(--text-3)] uppercase tracking-widest">
             <tr>
               <th className="px-3 py-2 font-semibold">Timestamp</th>
               <th className="px-3 py-2 font-semibold">Agent</th>
@@ -157,23 +157,23 @@ export function TrustReceiptBrowser() {
               <th className="px-3 py-2 font-semibold">Proof Hash</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-[var(--border)]">
             {!loading && filteredRows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-4 text-zinc-500">
+                <td colSpan={5} className="px-3 py-4 text-[var(--text-3)]">
                   No receipts match the current filters.
                 </td>
               </tr>
             )}
             {filteredRows.map((row) => (
-              <tr key={row.id} className="align-top text-zinc-200">
-                <td className="px-3 py-2 whitespace-nowrap text-zinc-400">
+              <tr key={row.id} className="align-top text-[var(--text-2)]">
+                <td className="px-3 py-2 whitespace-nowrap text-[var(--text-3)]">
                   {row.timestampMs ? new Date(row.timestampMs).toLocaleString() : 'unknown'}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">{row.agent}</td>
                 <td className="px-3 py-2">{row.action}</td>
-                <td className="px-3 py-2 whitespace-nowrap text-zinc-300">{displayReceiptTruthState(row.status)}</td>
-                <td className="px-3 py-2 font-mono text-zinc-400">
+                <td className="px-3 py-2 whitespace-nowrap text-[var(--text-2)]">{displayReceiptTruthState(row.status)}</td>
+                <td className="px-3 py-2 font-mono text-[var(--text-3)]">
                   <span className="block max-w-[18rem] truncate" title={row.proofHash}>
                     {row.proofHash}
                   </span>
