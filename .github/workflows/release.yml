@@ -84,9 +84,19 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs windows-amd64
 
-      - name: Fetch bundled starter model
-        run: node scripts/fetch-starter-model.mjs
-
+      # Deliberately NOT fetching the starter model here, unlike Linux/macOS.
+      # This is the same class of bug already hit and fixed once before
+      # (DEPENDENCY_BUNDLING_PLAN.md's O5 entry, 2026-08-21) - makensis has a
+      # hard data-block mmap size limit ("error mmapping file ... is out of
+      # range"), previously worked around by dropping the cuda_v13 Ollama
+      # runtime variant. Adding the ~1.9GB starter model (O2) back on top
+      # pushed Windows over that same limit again (v2.8.0 release run
+      # 34323883519 failed here; Linux's AppImage/squashfs has no equivalent
+      # block-size ceiling, so it built fine with the model bundled).
+      # `installComponent()` already has a real network-pull fallback for a
+      # missing bundled model, so Windows users get it on first launch
+      # instead of at install time - a real, already-built fallback path,
+      # not a stub.
       - name: Build signed Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
