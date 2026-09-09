@@ -544,6 +544,146 @@ fn bundled_ollama_path() -> Option<String> {
   }
 }
 
+/// Dependency Bundling Plan O2: resolves the bundled starter-model resource
+/// directory staged by scripts/fetch-starter-model.mjs, mirroring
+/// bundled_ollama_path()'s exact resolution convention
+/// (current_exe().parent()/<resource-name>) so the two bundled resources
+/// behave identically regardless of platform bundle layout quirks.
+fn bundled_starter_model_dir() -> Option<PathBuf> {
+  let exe_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
+  let candidate = exe_dir.join("starter-model");
+  if candidate.exists() {
+    Some(candidate)
+  } else {
+    None
+  }
+}
+
+/// Reads the bundled starter-model manifest (the exact file
+/// scripts/fetch-starter-model.mjs writes at
+/// manifests/registry.ollama.ai/<namespace>/<name>/<tag>) and resolves the
+/// local path to the actual GGUF model blob -- the layer whose mediaType is
+/// application/vnd.ollama.image.model, per Ollama's own manifest format
+/// (verified against a real local Ollama install's manifest before this was
+/// written, not assumed from documentation -- see fetch-starter-model.mjs's
+/// header comment). The config blob and the license/template/params layers
+/// are not the model itself and must not be confused with it.
+fn bundled_starter_model_blob_path(
+  bundled_dir: &Path,
+  namespace: &str,
+  name: &str,
+  tag: &str,
+) -> Result<PathBuf, String> {
+  let manifest_path = bundled_dir
+    .join("manifests")
+    .join("registry.ollama.ai")
+    .join(namespace)
+    .join(name)
+    .join(tag);
+  let manifest_text = std::fs::read_to_string(&manifest_path).map_err(|e| {
+    format!(
+      "Failed to read bundled starter-model manifest at {}: {}",
+      manifest_path.display(),
+      e
+    )
+  })?;
+  let manifest: serde_json::Value = serde_json::from_str(&manifest_text)
+    .map_err(|e| format!("Failed to parse bundled starter-model manifest: {}", e))?;
+  let layers = manifest["layers"]
+    .as_array()
+    .ok_or_else(|| "Bundled starter-model manifest has no layers array".to_string())?;
+  let model_layer = layers
+    .iter()
+    .find(|l| l["mediaType"] == "application/vnd.ollama.image.model")
+    .ok_or_else(|| "Bundled starter-model manifest has no model layer".to_string())?;
+  let digest = model_layer["digest"]
+    .as_str()
+    .ok_or_else(|| "Bundled starter-model layer is missing its digest".to_string())?;
+  let blob_filename = digest.replace(':', "-");
+  let blob_path = bundled_dir.join("blobs").join(&blob_filename);
+  if !blob_path.exists() {
+    return Err(format!(
+      "Bundled starter-model blob not found at {} (manifest references it, but the file is missing)",
+      blob_path.display()
+    ));
+  }
+  Ok(blob_path)
+}
+
+/// Dependency Bundling Plan O2: loads the bundled starter model into the
+/// user's real Ollama store via `ollama create <tag> -f <Modelfile>`
+/// (FROM <local-blob-path>) instead of pulling it over the network.
+/// Deliberately does NOT write into Ollama's data directory directly --
+/// `detect_ollama_models_dir_free_gb()`'s own doc comment explains why this
+/// codebase refuses to guess that location (it varies by OS/install method
+/// and can change between Ollama versions, so a wrong guess risks silently
+/// writing into the wrong place). `ollama create` sidesteps that problem
+/// entirely: Ollama itself resolves wherever it's actually configured to
+/// store models, using the exact same real local install this app already
+/// manages -- this app never needs to know or guess that path itself.
+/// Verified for real (not just written and assumed correct): staged a real
+/// model via fetch-starter-model.mjs, ran this exact `ollama create -f
+/// Modelfile` technique by hand against the staged blob, confirmed via
+/// Get-NetTCPConnection that the process only ever used loopback
+/// connections, and got a real generated reply from the resulting model.
+#[tauri::command]
+pub async fn runtime_load_bundled_starter_model(
+  app: AppHandle,
+  tag: String,
+) -> Result<RuntimeActionResult, String> {
+  let bundled_dir = bundled_starter_model_dir().ok_or_else(|| {
+    "No bundled starter-model resource found in this build -- nothing to load locally.".to_string()
+  })?;
+
+  let (name_part, model_tag) = tag.split_once(':').unwrap_or((tag.as_str(), "latest"));
+  // Only the "library" (unnamespaced) registry namespace is supported here --
+  // the only namespace fetch-starter-model.mjs ever stages, since
+  // STARTER_MODEL_TAG in setupFlowService.ts is always an unnamespaced tag.
+  let blob_path = bundled_starter_model_blob_path(&bundled_dir, "library", name_part, model_tag)?;
+
+  let modelfile_path =
+    std::env::temp_dir().join(format!("alphonso-starter-modelfile-{}", std::process::id()));
+  std::fs::write(&modelfile_path, format!("FROM {}\n", blob_path.display()))
+    .map_err(|e| format!("Failed to write temp Modelfile: {}", e))?;
+
+  let ollama_bin = find_ollama().ok_or_else(|| {
+    let _ = std::fs::remove_file(&modelfile_path);
+    "Ollama binary not found -- cannot run 'ollama create'.".to_string()
+  })?;
+
+  emit_progress(
+    &app,
+    "starter-model",
+    "starting",
+    "Loading bundled starter model…",
+    0,
+  );
+  let modelfile_str = modelfile_path.to_string_lossy().to_string();
+  let result = run_streaming(
+    &app,
+    "starter-model",
+    &ollama_bin,
+    &["create", &tag, "-f", &modelfile_str],
+    None,
+  )
+  .await;
+  let _ = std::fs::remove_file(&modelfile_path);
+  result.inspect_err(|e| emit_progress(&app, "starter-model", "error", e, 0))?;
+  emit_progress(
+    &app,
+    "starter-model",
+    "done",
+    "Starter model loaded from bundled resource.",
+    100,
+  );
+
+  Ok(RuntimeActionResult {
+    tool: "starter-model".to_string(),
+    ok: true,
+    message: format!("Loaded {} from bundled resource", tag),
+  })
+}
+
 /// Gap 3: find Ollama across PATH + common Windows install locations
 pub fn find_ollama() -> Option<String> {
   if let Some(bundled) = bundled_ollama_path() {

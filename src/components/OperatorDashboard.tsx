@@ -949,7 +949,7 @@ function UnifiedWeeklyReportPanel() {
         <button
           onClick={generateReport}
           disabled={loading}
-          className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
         >
           {loading ? 'Generating...' : 'Generate Report'}
         </button>

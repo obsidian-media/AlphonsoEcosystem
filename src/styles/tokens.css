@@ -14,6 +14,21 @@
   --accent-border: oklch(78% 0.18 200 / 0.28);
   --accent-glow: oklch(78% 0.18 200 / 0.08);
   --accent-muted: oklch(78% 0.18 200 / 0.15);
+  /* Real WCAG fix (2026-09-08 a11y pass, axe-core-verified): text meant to
+     sit directly on --accent needs a color that stays legible regardless of
+     theme. --surface-0 was being used for this across ~20 call sites
+     (including ui/Button.tsx's shared "primary" variant) and is WRONG for
+     it -- --surface-0 itself deliberately inverts between themes (near-black
+     dark / near-white light), so light mode ended up with near-white text on
+     a medium-brightness cyan button (2.89:1, needs 4.5:1). Every --accent
+     variant (default cyan + [data-accent="green"/"purple"] overrides, both
+     themes) stays in the 52-83% OKLCH lightness range -- always on the
+     light-to-bright half -- so a single theme-invariant near-black value
+     here is correct everywhere, matching the pattern ModelSwitcher.tsx
+     already proved out with a literal `text-black` before this token
+     existed. Not redefined in the [data-theme="light"] block below on
+     purpose: it must NOT flip with the theme the way --surface-0 does. */
+  --accent-contrast: oklch(15% 0.01 255);
 
   /* Emblem — real brand green/orange, sampled from the shipped app icon.
      Scoped to the Activation Sequence's emblem-reveal moment only — the
@@ -39,19 +54,24 @@
   --info-border: oklch(75% 0.16 220 / 0.3);
 
   /* Text
-     text-3/text-4 lightness bumped (45%->62%, 32%->48%) — a real QA finding
-     from an axe-core WCAG AA sweep (635 contrast violations app-wide, driven
-     overwhelmingly by these two tokens since they're used for nearly every
-     secondary/tertiary label, timestamp, and placeholder). This is a
-     token-level fix at the source rather than a per-node patch, matching
-     axe-core's own recommended remediation; full re-audit against a real
-     browser wasn't run as part of this fix (no browser tooling available
-     here), so treat this as a material improvement, not a proven 0-violation
-     result. */
+     text-3/text-4 lightness bumped once already (45%->62%, 32%->48%) for a
+     real QA finding from an axe-core WCAG AA sweep (635 contrast violations
+     app-wide, driven overwhelmingly by these two tokens). That fix was
+     never re-verified against a real browser at the time (no browser
+     tooling available in that session) -- this pass (2026-09-08) added
+     @axe-core/playwright and ran a real scan: --text-4 still failed 4.5:1
+     at the small font sizes (9-11px) it's actually used at -- 3.11:1 dark,
+     3.6:1 light, both short. Bumped further here (48%->58% dark, 60%->44%
+     light) -- re-verified with a real axe-core scan after this change:
+     0 color-contrast violations on the main shell in both themes (was 16
+     dark / 18 light before). See e2e/a11y.spec.js, now a permanent CI
+     check. --text-3 was not touched -- it wasn't flagged at
+     its own real usage sites, so bumping it too would only reduce the
+     4-tier hierarchy's visual distinctness for no accessibility gain. */
   --text-1: oklch(96% 0.01 255);
   --text-2: oklch(72% 0.025 255);
   --text-3: oklch(62% 0.025 255);
-  --text-4: oklch(48% 0.02 255);
+  --text-4: oklch(58% 0.02 255);
 
   /* Border */
   --border: oklch(100% 0 0 / 0.07);
@@ -147,13 +167,24 @@
 
   --text-1: oklch(15% 0.01 255);
   --text-2: oklch(38% 0.02 255);
-  --text-3: oklch(48% 0.018 255);
-  --text-4: oklch(60% 0.012 255);
+  /* Nudged 48%->46%: axe-core found Sidebar.tsx's theme-toggle button
+     ("Dark"/"Light" label, text-[var(--text-3)]) at 4.44:1 against its
+     actual rendered background -- short of 4.5:1 by a hair, not caught by
+     a manual scan that happened not to render this exact element/state. */
+  --text-3: oklch(46% 0.018 255);
+  /* Same real axe-core-driven fix as the dark :root block above (see that
+     comment) -- 60% still failed 4.5:1 at 9-11px (3.6:1). */
+  --text-4: oklch(44% 0.012 255);
 
   --border: oklch(0% 0 0 / 0.08);
   --border-strong: oklch(0% 0 0 / 0.16);
 
-  --success: oklch(52% 0.19 145);
+  /* Darkened from 52% -- axe-core found the "Free" license badge
+     (text-[var(--success)] on --success-dim, 11px bold) at 3.91:1,
+     short of the 4.5:1 normal-text requirement (bold text only gets the
+     3:1 large-text allowance at 14pt+/18.66px+, this is 11px). Dark mode's
+     --success wasn't flagged against the same pattern, left unchanged. */
+  --success: oklch(45% 0.19 145);
   --success-dim: oklch(52% 0.19 145 / 0.12);
   --success-border: oklch(52% 0.19 145 / 0.3);
   --warning: oklch(60% 0.17 75);

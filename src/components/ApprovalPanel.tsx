@@ -193,7 +193,7 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
         <div className="flex justify-end pt-1">
           <button
             onClick={handleContinue}
-            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-colors"
+            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-[var(--accent-contrast)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-colors"
           >
             Continue
           </button>

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface SentinelFinding {
   severity?: string;
@@ -21,6 +22,18 @@ const SEVERITY_STYLES: Record<string, string> = {
 };
 
 export function SentinelFindingModal({ finding, onClose }: Props) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, finding !== null);
+
+  useEffect(() => {
+    if (!finding) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [finding, onClose]);
+
   if (!finding) return null;
 
   const severity = String(finding.severity || 'low').toLowerCase();
@@ -35,6 +48,7 @@ export function SentinelFindingModal({ finding, onClose }: Props) {
       aria-label="Sentinel finding details"
     >
       <div
+        ref={dialogRef}
         className="bg-surface-2 rounded-2xl p-6 max-w-md w-full mx-4 space-y-4"
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >

@@ -372,7 +372,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
             {!tool.installed && !installing && (
               <button
                 onClick={handleInstall}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--surface-0)] transition-colors"
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)] transition-colors"
               >
                 <Download size={12} /> Install
               </button>
@@ -706,7 +706,7 @@ export default function RuntimeManagerView() {
           </button>
           <button
             onClick={installAll}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--surface-0)] transition-colors"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)] transition-colors"
           >
             <Download size={12} /> Install all
           </button>
@@ -758,7 +758,7 @@ export default function RuntimeManagerView() {
             onClick={() => setFilter(cat)}
             className={`text-xs px-3 py-1 rounded-full border transition-colors ${
               filter === cat
-                ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--surface-0)]'
+                ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-contrast)]'
                 : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
             }`}
           >

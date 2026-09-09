@@ -87,7 +87,7 @@ export function GeneratorForm({ form, setForm, brandProfile, injectedIdea, onIde
         type="button"
         disabled={isLoading || !form.idea.trim()}
         onClick={onGenerate}
-        className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--surface-0)] text-xs font-bold uppercase tracking-widest px-4 py-2.5 transition-colors"
+        className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--accent-contrast)] text-xs font-bold uppercase tracking-widest px-4 py-2.5 transition-colors"
       >
         <Sparkles className="h-3.5 w-3.5" />
         {isLoading ? 'Generating…' : 'Create Content Job'}

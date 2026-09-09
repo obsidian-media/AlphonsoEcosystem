@@ -84,6 +84,9 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs windows-amd64
 
+      - name: Fetch bundled starter model
+        run: node scripts/fetch-starter-model.mjs
+
       - name: Build signed Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -165,6 +168,9 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs linux-amd64
 
+      - name: Fetch bundled starter model
+        run: node scripts/fetch-starter-model.mjs
+
       - name: Build signed Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -197,6 +203,33 @@ jobs:
           cp "$sig" "./$(basename "$sig")"
           echo "installer_name=$(basename "$installer")" >> "$GITHUB_OUTPUT"
           echo "sig_name=$(basename "$sig")" >> "$GITHUB_OUTPUT"
+
+      # Real release assets get published from this job -- verifying the
+      # bundled Ollama runtime actually made it into the AppImage here
+      # matters even more than in ci.yml's advisory build, since this is
+      # what a real user downloads. Same check, same rationale as
+      # ci.yml's "Verify bundled Ollama runtime is inside the AppImage" step.
+      - name: Verify bundled Ollama runtime is inside the AppImage
+        shell: bash
+        run: |
+          set -euo pipefail
+          appimage="./${{ steps.collect.outputs.installer_name }}"
+          chmod +x "$appimage"
+          workdir=$(mktemp -d)
+          (cd "$workdir" && APPIMAGE_EXTRACT_AND_RUN=1 "$OLDPWD/$appimage" --appimage-extract >/dev/null)
+          binary=$(find "$workdir/squashfs-root" -type f -path "*/ollama/ollama" | head -n 1)
+          if [ -z "$binary" ]; then
+            echo "Bundled ollama binary not found inside the release AppImage -- the runtime was not packaged" >&2
+            find "$workdir/squashfs-root" -iname "*ollama*" >&2 || true
+            exit 1
+          fi
+          size=$(stat -c%s "$binary")
+          echo "Found bundled ollama binary: $binary ($size bytes)"
+          if [ "$size" -lt 10000000 ]; then
+            echo "Bundled ollama binary is suspiciously small ($size bytes) -- likely not the real executable" >&2
+            exit 1
+          fi
+          rm -rf "$workdir"
 
       - name: Upload Linux release assets
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

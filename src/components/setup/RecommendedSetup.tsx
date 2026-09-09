@@ -212,7 +212,7 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
         <button
           disabled={!diskCheck.ok}
           onClick={() => diskCheck.ok && onProceed(toInstall)}
-          className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--surface-0)] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-contrast)] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Looks Good → Install
         </button>

@@ -845,8 +845,9 @@ export function SettingsView({
               <SectionHeader icon={Cpu} label="Ollama Runtime" />
         <div className="grid grid-cols-1 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-[var(--text-2)]">Ollama API Endpoint</label>
+            <label htmlFor="settings-ollama-endpoint" className="text-xs font-semibold text-[var(--text-2)]">Ollama API Endpoint</label>
             <input
+              id="settings-ollama-endpoint"
               type="text"
               value={settings.endpoint}
               onChange={(event) => setSettings({ ...settings, endpoint: event.target.value })}
@@ -855,9 +856,10 @@ export function SettingsView({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-[var(--text-2)]">Workspace Root (for supervised proofs)</label>
+            <label htmlFor="settings-workspace-root" className="text-xs font-semibold text-[var(--text-2)]">Workspace Root (for supervised proofs)</label>
             <div className="flex gap-2">
               <input
+                id="settings-workspace-root"
                 type="text"
                 value={settings.workspaceRoot || ''}
                 onChange={(event) => setSettings({ ...settings, workspaceRoot: event.target.value })}
@@ -877,8 +879,9 @@ export function SettingsView({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-[var(--text-2)]">OCR Engine Path (optional)</label>
+            <label htmlFor="settings-ocr-engine-path" className="text-xs font-semibold text-[var(--text-2)]">OCR Engine Path (optional)</label>
             <input
+              id="settings-ocr-engine-path"
               type="text"
               value={settings.ocrEnginePath || ''}
               onChange={(event) => setSettings({ ...settings, ocrEnginePath: event.target.value })}
@@ -995,8 +998,9 @@ export function SettingsView({
               </button>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-[var(--text-2)]">Updater Endpoint</label>
+              <label htmlFor="settings-updater-endpoint" className="text-xs font-semibold text-[var(--text-2)]">Updater Endpoint</label>
               <input
+                id="settings-updater-endpoint"
                 type="text"
                 value={settings.updaterEndpoint || ''}
                 onChange={(event) => setSettings({ ...settings, updaterEndpoint: event.target.value })}
@@ -1005,8 +1009,9 @@ export function SettingsView({
               <div className="text-[11px] text-[var(--text-3)]">Enter the hosted updater endpoint only when the release manifest is actually published.</div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-[var(--text-2)]">Updater Public Key</label>
+              <label htmlFor="settings-updater-pubkey" className="text-xs font-semibold text-[var(--text-2)]">Updater Public Key</label>
               <textarea
+                id="settings-updater-pubkey"
                 value={settings.updaterPubkey || ''}
                 onChange={(event) => setSettings({ ...settings, updaterPubkey: event.target.value })}
                 rows={3}
@@ -1015,8 +1020,9 @@ export function SettingsView({
               <div className="text-[11px] text-[var(--text-3)]">Paste the public key only after the signing setup is complete.</div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-[var(--text-2)]">Custom Target (optional)</label>
+              <label htmlFor="settings-updater-target" className="text-xs font-semibold text-[var(--text-2)]">Custom Target (optional)</label>
               <input
+                id="settings-updater-target"
                 type="text"
                 value={settings.updaterTarget || ''}
                 onChange={(event) => setSettings({ ...settings, updaterTarget: event.target.value })}
@@ -1048,7 +1054,7 @@ export function SettingsView({
             </div>
             <button
               role="switch"
-              aria-checked={settings.desktopMode}
+              aria-checked={!!settings.desktopMode}
               aria-label="Toggle native desktop mode"
               onClick={() => setSettings({ ...settings, desktopMode: !settings.desktopMode })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.desktopMode ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'}`}
@@ -1063,7 +1069,7 @@ export function SettingsView({
             </div>
             <button
               role="switch"
-              aria-checked={settings.localOnlyMode}
+              aria-checked={!!settings.localOnlyMode}
               aria-label="Toggle local-only runtime"
               onClick={() => setSettings({ ...settings, localOnlyMode: !settings.localOnlyMode })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.localOnlyMode ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'}`}
@@ -1093,7 +1099,7 @@ export function SettingsView({
             </div>
             <button
               role="switch"
-              aria-checked={settings.approvalMode}
+              aria-checked={!!settings.approvalMode}
               aria-label="Toggle approval mode"
               onClick={() => setSettings({ ...settings, approvalMode: !settings.approvalMode })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.approvalMode ? 'bg-[var(--warning)]' : 'bg-[var(--surface-3)]'}`}
@@ -1108,7 +1114,7 @@ export function SettingsView({
             </div>
             <button
               role="switch"
-              aria-checked={settings.safeMode}
+              aria-checked={!!settings.safeMode}
               aria-label="Toggle safe mode"
               onClick={() => setSettings({ ...settings, safeMode: !settings.safeMode })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.safeMode ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]'}`}
@@ -1123,7 +1129,7 @@ export function SettingsView({
             </div>
             <button
               role="switch"
-              aria-checked={settings.privacyShieldActive}
+              aria-checked={!!settings.privacyShieldActive}
               aria-label="Toggle privacy shield indicator"
               onClick={() => setSettings({ ...settings, privacyShieldActive: !settings.privacyShieldActive })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.privacyShieldActive ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]'}`}
@@ -1138,7 +1144,7 @@ export function SettingsView({
             </div>
             <button
               role="switch"
-              aria-checked={settings.miyaCompanionPinned}
+              aria-checked={!!settings.miyaCompanionPinned}
               aria-label="Toggle Miya creative companion"
               onClick={() => setSettings({ ...settings, miyaCompanionPinned: !settings.miyaCompanionPinned })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.miyaCompanionPinned ? 'bg-[var(--agent-miya)]' : 'bg-[var(--surface-3)]'}`}
@@ -1153,7 +1159,7 @@ export function SettingsView({
             </div>
             <button
               role="switch"
-              aria-checked={settings.joseCompanionPinned}
+              aria-checked={!!settings.joseCompanionPinned}
               aria-label="Toggle Jose orchestrator companion"
               onClick={() => setSettings({ ...settings, joseCompanionPinned: !settings.joseCompanionPinned })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.joseCompanionPinned ? 'bg-[var(--agent-jose)]' : 'bg-[var(--surface-3)]'}`}
@@ -1201,7 +1207,7 @@ export function SettingsView({
               <button
                 onClick={handleComposioSave}
                 disabled={composioChecking || !composioApiKey}
-                className="px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-sm font-medium rounded-xl transition-colors"
+                className="px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-[var(--accent-contrast)] text-sm font-medium rounded-xl transition-colors"
               >
                 {composioChecking ? 'Checking...' : 'Save'}
               </button>
@@ -1345,7 +1351,7 @@ export function SettingsView({
               <button
                 onClick={handleLaunchOllama}
                 disabled={launchStatus?.service === 'ollama' && launchStatus?.state === 'launching'}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-xs font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-[var(--accent-contrast)] text-xs font-medium transition-colors"
               >
                 <Zap className="w-3.5 h-3.5" />
                 {launchStatus?.service === 'ollama' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
@@ -1368,7 +1374,7 @@ export function SettingsView({
               <button
                 onClick={handleLaunchComfyUI}
                 disabled={launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching'}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-xs font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-[var(--accent-contrast)] text-xs font-medium transition-colors"
               >
                 <Zap className="w-3.5 h-3.5" />
                 {launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
@@ -1543,7 +1549,7 @@ export function SettingsView({
               <button
                 onClick={handleCreateBackup}
                 disabled={backupCreating}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-sm font-medium rounded-xl transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-[var(--accent-contrast)] text-sm font-medium rounded-xl transition-colors"
               >
                 <Download className="w-4 h-4" />
                 {backupCreating ? 'Creating...' : `Export (${backupSize.kb} KB)`}
@@ -1743,7 +1749,7 @@ function MeetingTranscriptionPanel() {
       <button
         onClick={pickAndTranscribe}
         disabled={busy}
-        className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] text-white text-xs rounded-xl transition-colors"
+        className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] text-[var(--accent-contrast)] disabled:text-[var(--text-3)] text-xs rounded-xl transition-colors"
       >
         {label}
       </button>
@@ -1892,7 +1898,7 @@ function InboxFolderConfig() {
       </div>
       <button
         onClick={handleSave}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-xl transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)] text-sm font-medium rounded-xl transition-colors"
       >
         <Save className="w-4 h-4" />
         {saved ? 'Saved' : 'Save Config'}

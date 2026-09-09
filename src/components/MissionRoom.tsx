@@ -156,7 +156,18 @@ function MessageBubble({ message }: { message: Message }) {
             <div className="text-[10px] uppercase tracking-widest opacity-60">{agent.role}</div>
           </div>
         </div>
-        <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest opacity-45">
+        {/* Real WCAG finding (2026-09-09, CI-caught): opacity-45 on inherited
+            currentColor cut contrast to ~4.1:1 against this card's themed
+            background, short of the 4.5:1 required for 10px text. --text-4
+            (the app's usual de-emphasis token) still only reached 4.43:1
+            here specifically -- Mission Room layers a decorative
+            --accent-glow blur under its --surface-0 background, shifting
+            the real composite just enough to matter. Using --text-3 (one
+            step less dim) instead of nudging --text-4 globally, since
+            --text-4 is already verified clean against every other surface
+            this session's WCAG sweep covered and a global bump risks
+            regressing those. */}
+        <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
           {message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
         </span>
       </div>
@@ -466,8 +477,8 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
               </div>
               <Clipboard className="h-5 w-5 text-[var(--text-3)]" />
             </div>
-            <input value={handoffProject} onChange={(event) => setHandoffProject(event.target.value)} className="mt-4 w-full rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm text-[var(--text-1)] outline-none" />
-            <textarea value={handoffObjective} onChange={(event) => setHandoffObjective(event.target.value)} className="mt-2 min-h-20 w-full resize-none rounded-lg bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none" />
+            <input aria-label="Handoff project name" value={handoffProject} onChange={(event) => setHandoffProject(event.target.value)} className="mt-4 w-full rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm text-[var(--text-1)] outline-none" />
+            <textarea aria-label="Handoff objective" value={handoffObjective} onChange={(event) => setHandoffObjective(event.target.value)} className="mt-2 min-h-20 w-full resize-none rounded-lg bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none" />
             <button type="button" onClick={generateHandoff} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--text-1)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--surface-0)] hover:opacity-90">
               <Sparkles className="h-4 w-4" /> Generate + copy handoff
             </button>

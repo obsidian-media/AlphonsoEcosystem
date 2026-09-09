@@ -134,7 +134,7 @@ export function VoiceView() {
 
             {error && <p role="alert" className="mt-3 rounded-lg bg-[var(--error-dim)] px-3 py-2 text-xs text-[var(--error)]">{error}</p>}
 
-            <button onClick={isRunning ? handleStop : handleStart} disabled={busy || (!isRunning && !canStart)} className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition disabled:opacity-40 ${isRunning ? 'bg-[var(--error-dim)] text-[var(--error)] hover:opacity-90' : 'bg-[var(--accent)] text-[var(--surface-0)]'}`}>
+            <button onClick={isRunning ? handleStop : handleStart} disabled={busy || (!isRunning && !canStart)} className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition disabled:opacity-40 ${isRunning ? 'bg-[var(--error-dim)] text-[var(--error)] hover:opacity-90' : 'bg-[var(--accent)] text-[var(--accent-contrast)]'}`}>
               {isRunning ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               {busy ? 'Updating voice service…' : isRunning ? 'Stop local voice' : 'Start local voice'}
             </button>

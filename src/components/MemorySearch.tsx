@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Calendar, Tag, User, ArrowRight } from 'lucide-react';
 import { searchMemory, getSearchSuggestions } from '../services/searchService';
 import { MarkdownMessage } from './MarkdownMessage';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface MemoryItem {
   id: string;
@@ -25,10 +26,27 @@ export function MemorySearch({ onClose, onSelect }: Props) {
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Declared after the input-focus effect above so it observes the input
+  // already focused (contains() check) rather than racing it -- see
+  // useFocusTrap's own doc comment on not stealing an already-set focus.
+  useFocusTrap(panelRef, true);
+
+  useEffect(() => {
+    // The footer below has always said "Press Esc to close" -- there was no
+    // listener actually implementing it, a real bug found while adding the
+    // focus trap here, not something the trap itself changes.
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -61,6 +79,7 @@ export function MemorySearch({ onClose, onSelect }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/60 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true" aria-label="Memory search">
       <div
+        ref={panelRef}
         className="w-full max-w-2xl bg-[var(--surface-1)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >

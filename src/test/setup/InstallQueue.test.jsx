@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 // Mock installComponent (the model-vs-tool router) rather than installTool —
 // the queue no longer calls installTool directly. installComponent's own
@@ -34,16 +34,29 @@ describe('InstallQueue', () => {
     resolvers.forEach((r) => r({ tool: 'x', ok: true, message: 'done' }));
   });
 
-  it('calls onStarterReady as soon as the starter-model component succeeds, without waiting for the rest', async () => {
+  it('shows a "Start Chatting Now" control as soon as the starter-model component succeeds, without waiting for the rest', async () => {
     let resolveFooocus;
     installComponent.mockImplementation((name) => {
       if (name === 'starter-model') return Promise.resolve({ tool: name, ok: true, message: 'done' });
       return new Promise((resolve) => { resolveFooocus = resolve; });
     });
+    render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: /start chatting now/i })).toBeInTheDocument());
+    resolveFooocus({ tool: 'fooocus', ok: true, message: 'done' });
+  });
+
+  it('calls onStarterReady only once the user clicks "Start Chatting Now"', async () => {
+    installComponent.mockImplementation((name) => {
+      if (name === 'starter-model') return Promise.resolve({ tool: name, ok: true, message: 'done' });
+      return new Promise(() => {}); // fooocus never settles in this test
+    });
     const onStarterReady = vi.fn();
     render(<InstallQueue components={components} onStarterReady={onStarterReady} onAllComplete={() => {}} onFailed={() => {}} />);
-    await waitFor(() => expect(onStarterReady).toHaveBeenCalled());
-    resolveFooocus({ tool: 'fooocus', ok: true, message: 'done' });
+    const button = await screen.findByRole('button', { name: /start chatting now/i });
+    expect(onStarterReady).not.toHaveBeenCalled();
+
+    fireEvent.click(button);
+    expect(onStarterReady).toHaveBeenCalledTimes(1);
   });
 
   it('calls onAllComplete exactly once when every component succeeds', async () => {
@@ -83,7 +96,9 @@ describe('InstallQueue', () => {
     window.addEventListener('alphonso:toast', toastListener);
 
     render(<InstallQueue components={components} onStarterReady={onStarterReady} onAllComplete={() => {}} onFailed={() => {}} />);
-    await waitFor(() => expect(onStarterReady).toHaveBeenCalled());
+    const button = await screen.findByRole('button', { name: /start chatting now/i });
+    fireEvent.click(button);
+    expect(onStarterReady).toHaveBeenCalled();
     expect(toastListener).not.toHaveBeenCalled(); // no toast yet -- fooocus hasn't failed
 
     rejectFooocus(new Error('network error'));
@@ -111,7 +126,9 @@ describe('InstallQueue', () => {
     window.addEventListener('alphonso:toast', toastListener);
 
     render(<InstallQueue components={components} onStarterReady={onStarterReady} onAllComplete={() => {}} onFailed={() => {}} />);
-    await waitFor(() => expect(onStarterReady).toHaveBeenCalled());
+    const button = await screen.findByRole('button', { name: /start chatting now/i });
+    fireEvent.click(button);
+    expect(onStarterReady).toHaveBeenCalled();
     expect(toastListener).not.toHaveBeenCalled(); // no toast yet -- fooocus hasn't finished
 
     resolveFooocus({ tool: 'fooocus', ok: true, message: 'done' });
@@ -134,7 +151,9 @@ describe('InstallQueue', () => {
     window.addEventListener('alphonso:toast', toastListener);
 
     render(<InstallQueue components={[components[0]]} onStarterReady={onStarterReady} onAllComplete={() => {}} onFailed={() => {}} />);
-    await waitFor(() => expect(onStarterReady).toHaveBeenCalled());
+    const button = await screen.findByRole('button', { name: /start chatting now/i });
+    fireEvent.click(button);
+    expect(onStarterReady).toHaveBeenCalled();
     expect(toastListener).not.toHaveBeenCalled();
 
     window.removeEventListener('alphonso:toast', toastListener);
@@ -175,6 +194,45 @@ describe('InstallQueue', () => {
     await waitFor(() => expect(onFailed).toHaveBeenCalledTimes(1));
     expect(onFailed).toHaveBeenCalledWith([{ id: 'fooocus', label: 'Fooocus (image generation)' }]);
     expect(onAllComplete).not.toHaveBeenCalled();
+  });
+});
+
+describe('InstallQueue — real progress display', () => {
+  // Design doc §5 step 5 calls for "real bytes/ETA" and real status states
+  // instead of a flat Pending/Downloading/Ready sequence. installComponent's
+  // own progress-normalization is covered by installComponent.test.js; these
+  // tests confirm InstallQueue actually renders what it's handed.
+
+  it('renders the real progress message and a percentage-width bar while installing', async () => {
+    let onProgressCallback;
+    installComponent.mockImplementation((name, onProgress) => {
+      onProgressCallback = onProgress;
+      return new Promise(() => {}); // stay installing
+    });
+    render(<InstallQueue components={[components[0]]} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => expect(onProgressCallback).toBeInstanceOf(Function));
+
+    onProgressCallback({ message: 'pulling manifest (1.4GB / 1.9GB)', pct: 75 });
+
+    await waitFor(() => expect(screen.getByText('pulling manifest (1.4GB / 1.9GB)')).toBeInTheDocument());
+    const bar = screen.getByRole('progressbar', { name: /ollama \+ starter model progress/i });
+    expect(bar).toHaveAttribute('aria-valuenow', '75');
+  });
+
+  it('renders an indeterminate bar (no aria-valuenow) when the mechanism has not reported a percentage yet', async () => {
+    let onProgressCallback;
+    installComponent.mockImplementation((name, onProgress) => {
+      onProgressCallback = onProgress;
+      return new Promise(() => {});
+    });
+    render(<InstallQueue components={[components[0]]} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => expect(onProgressCallback).toBeInstanceOf(Function));
+
+    onProgressCallback({ message: 'verifying sha256 digest', pct: null });
+
+    await waitFor(() => expect(screen.getByText('verifying sha256 digest')).toBeInTheDocument());
+    const bar = screen.getByRole('progressbar', { name: /ollama \+ starter model progress/i });
+    expect(bar).not.toHaveAttribute('aria-valuenow');
   });
 });
 

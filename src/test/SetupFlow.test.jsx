@@ -5,6 +5,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 // as buttons -- SetupFlow's own step-transition logic and 'failed' step
 // rendering is what's under test here, not any child screen's own behavior
 // (each has its own dedicated test file already).
+vi.mock('../components/setup/BootRitualIntro', () => ({
+  BootRitualIntro: ({ onFinish }) => <button onClick={onFinish}>boot-finish</button>,
+}));
 vi.mock('../components/setup/SystemScan', () => ({
   SystemScan: ({ onContinue }) => (
     <button onClick={() => onContinue(
@@ -53,10 +56,26 @@ import { SetupFlow } from '../components/SetupFlow';
 import { markSetupComplete } from '../services/setupFlowService';
 
 function driveToFailedStep() {
+  fireEvent.click(screen.getByText('boot-finish'));
   fireEvent.click(screen.getByText('scan-continue'));
   fireEvent.click(screen.getByText('select-chat-only'));
   fireEvent.click(screen.getByText('recommend-proceed'));
 }
+
+describe('SetupFlow — boot step', () => {
+  it('starts on the boot ritual intro, before System Scan', () => {
+    render(<SetupFlow onComplete={() => {}} />);
+    expect(screen.getByText('boot-finish')).toBeInTheDocument();
+    expect(screen.queryByText('scan-continue')).not.toBeInTheDocument();
+  });
+
+  it('advances to System Scan once the boot intro finishes', () => {
+    render(<SetupFlow onComplete={() => {}} />);
+    fireEvent.click(screen.getByText('boot-finish'));
+    expect(screen.getByText('scan-continue')).toBeInTheDocument();
+    expect(screen.queryByText('boot-finish')).not.toBeInTheDocument();
+  });
+});
 
 describe('SetupFlow — failed step', () => {
   it('does not offer Continue Anyway when the starter model itself failed', () => {

@@ -10,7 +10,12 @@ describe('Button', () => {
       render(<Button variant="primary">Primary</Button>);
       const btn = screen.getByText('Primary').closest('button');
       expect(btn.className).toContain('bg-[var(--accent)]');
-      expect(btn.className).toContain('text-[var(--surface-0)]');
+      // text-[var(--surface-0)] on --accent was a real contrast bug (2026-09-08
+      // a11y pass): --surface-0 inverts between themes, giving near-white text
+      // on a medium-brightness cyan button in light mode (2.89:1, axe-core
+      // flagged). --accent-contrast stays theme-invariant, matching every
+      // other --accent-background text color across the app after this fix.
+      expect(btn.className).toContain('text-[var(--accent-contrast)]');
     });
 
     it('renders secondary variant with correct classes', () => {

@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AlertTriangle, Shield, ShieldAlert } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 type RiskLevel = 'high' | 'medium' | 'low';
 
@@ -159,9 +160,13 @@ export function ApprovalModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onCancel]);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, true);
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--surface-0)] backdrop-blur-sm">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="approval-modal-title"

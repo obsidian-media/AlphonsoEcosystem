@@ -292,7 +292,7 @@ export function BoardroomView() {
           <button
             onClick={handleConvene}
             disabled={loading || !topic.trim() || selectedAgents.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 text-[var(--surface-0)] text-xs font-semibold transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 text-[var(--accent-contrast)] text-xs font-semibold transition-colors"
           >
             <Play className="w-3 h-3" />
             {loading ? 'Convening...' : 'Convene Session'}

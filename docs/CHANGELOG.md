@@ -6,6 +6,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-09-09 (Smart Installer v1.1 follow-up — Dependency Bundling O2, WCAG sweep, live-verified)
+
+- **Dependency Bundling Plan O2 (bundle the starter model) closed.** The app now ships the default `llama3.2:3b` starter model directly in the installer instead of pulling it over the network on first launch. `scripts/fetch-starter-model.mjs` (new) stages the model from Ollama's own registry API into `src-tauri/vendor/starter-model/` in Ollama's real on-disk store layout; a new `runtime_load_bundled_starter_model` Rust command loads it via `ollama create` against the bundled local file at first launch, falling back to the existing network pull if no bundled resource is present. The underlying technique was hand-verified for real (confirmed network-free via `Get-NetTCPConnection`, got a real generated chat reply) before any Rust was written. Adds ~1.9GB to every CI build across 5 job sites — an explicit, flagged, approved tradeoff, not an oversight.
+- **Full WCAG accessibility sweep**, extending the existing Setup-only pass to Chat/Settings/Automation/Boardroom (all clean, permanently enforced by `e2e/a11y.spec.js`) and AI Runtime Manager (one real remaining finding on alpha-overlay color tokens, tracked openly as `test.fixme` rather than silently skipped or blind-patched). Found and fixed ~16 more `text-white`-on-accent call sites an earlier contrast fix had missed, 7 Settings toggle switches with a real `aria-checked` boolean-attribute bug, and 8 unlabeled form fields.
+- **Linux CI now verifies the shipped AppImage actually contains the bundled Ollama binary**, not just that the build succeeded.
+- **First real end-to-end `npm run tauri dev` walkthrough of the whole Smart Installer flow** — Boot Ritual Intro, Intent Selection, Recommended Setup, and the custom Agent Grid all visually confirmed working. Found and fixed one real live bug along the way: already-installed optional agents showed a misleadingly unchecked, still-clickable checkbox next to "Already installed" — now matches Alphonso's own checked+disabled treatment.
+- Full detail, exact commits, and what's still genuinely unverified (a real packaged installer running fully offline, as opposed to this session's dev-machine testing) in `docs/DEPENDENCY_BUNDLING_PLAN.md` and `docs/governance/DEFERRED_WORK.md`'s 2026-09-08/09-09 entries.
+
+---
+
+## [Unreleased] — 2026-09-08 (UI/UX redesign — PR #237)
+
+- **Merged the isolated UI/UX redesign effort** (`ui-redesign/phase0-discovery`, ~128 numbered fix entries in `docs/ui-redesign/bug-log.md`) into `main`: a "no cards" visual language across every page, unified underline-style tabs, Fraunces display typography on headlines, a resizable/collapsible sidebar with Space-based navigation (Home/Work/Research/Boardroom/System), collapsible connector categories in Settings, and Chat promoted to an always-visible top-level shortcut. Brought in the CALL-E connector and Hector research-synthesis rewrite via a `main`→branch merge partway through.
+- Full narrative in `docs/ui-redesign/bug-log.md` and that branch's own `CLAUDE.md` history.
+
+---
+
+## [Unreleased] — 2026-09-08 (Smart Installer — PR #233)
+
+- **Replaced `OnboardingWizard.tsx` with a new first-run Setup flow** ("Smart Installer" / "Ritual Installer"): Boot Ritual Intro → System Scan (RAM/disk/GPU/Python/Ollama/Docker) → Intent Selection (Chat Only / Chat + Images / Chat + Voice / Full Power Mode / Custom) → Recommended Setup or a full 9-agent Agent Grid → Install Queue (parallel installs, real per-task status) → Activation Sequence → Launch. Gated on `alphonso_setup_complete_v1` (migrates the legacy onboarding-complete flag forward). Old `OnboardingWizard.tsx` archived to `archive/MIGHTBEUSEDLATER/`, not deleted.
+- Went through two full review cycles (self-found bugs, two CodeRabbit passes, a self-critique pass removing 58MB of dead assets) before merging. See `docs/superpowers/specs/2026-09-07-smart-installer-design.md` and `docs/superpowers/plans/2026-09-07-smart-installer.md` for the full design and implementation record.
+
+---
+
 ## [Unreleased] — 2026-09-07 (CALL-E outreach connector — REST + conversational MCP)
 
 - **Added a CALL-E voice-calling connector**, connector #26, for the CALL-E

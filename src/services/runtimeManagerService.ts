@@ -85,6 +85,36 @@ export async function installTool(name: string, onProgress?: (progress: Progress
   }
 }
 
+/**
+ * Dependency Bundling Plan O2: loads a bundled starter model (staged by
+ * scripts/fetch-starter-model.mjs) via `ollama create -f Modelfile` against
+ * the local blob, instead of pulling it over the network. Throws when this
+ * build has no bundled resource (dev mode, browser mode, or an older
+ * installer built before O2 landed) -- `installComponent()` in
+ * setupFlowService.ts catches that and falls back to the existing
+ * `pullOllamaModel()` network path, matching this codebase's established
+ * "a redundant fallback is fine, a hard failure isn't" resilience posture.
+ * Progress events use the same `runtime://progress` channel as
+ * `installTool()`, filtered on `tool === 'starter-model'` (matching the
+ * Rust command's own hardcoded tool name for progress emission).
+ */
+export async function loadBundledStarterModel(
+  tag: string,
+  onProgress?: (progress: ProgressEvent) => void
+): Promise<ToolResult> {
+  let unlisten: UnlistenFn | null = null;
+  if (typeof onProgress === 'function') {
+    unlisten = await listen<ProgressEvent>('runtime://progress', ({ payload }) => {
+      if (payload.tool === 'starter-model') onProgress(payload);
+    });
+  }
+  try {
+    return await invoke('runtime_load_bundled_starter_model', { tag });
+  } finally {
+    if (unlisten) unlisten();
+  }
+}
+
 export async function startTool(name: string): Promise<ToolResult> {
   return invoke('runtime_start_tool', { name });
 }

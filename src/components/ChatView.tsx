@@ -1358,7 +1358,7 @@ export function ChatView({
                 </div>
               ) : (
                 <div className="relative group">
-                  <div className={`px-3 py-2 text-xs rounded-2xl rounded-tr-sm bg-[var(--accent)] text-[var(--surface-0)] ${compactChat ? '' : 'px-4 py-3'}`}>{message.content as string}</div>
+                  <div className={`px-3 py-2 text-xs rounded-2xl rounded-tr-sm bg-[var(--accent)] text-[var(--accent-contrast)] ${compactChat ? '' : 'px-4 py-3'}`}>{message.content as string}</div>
                   <button
                     onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
                     className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[var(--surface-0)] hover:text-[var(--surface-0)]"
@@ -1608,7 +1608,7 @@ export function ChatView({
               className={`h-7 px-4 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
                 isGenerating || !inputValue.trim()
                   ? 'bg-[var(--surface-3)] text-[var(--text-4)] cursor-not-allowed opacity-50'
-                  : 'bg-[var(--accent)] text-[var(--surface-0)] hover:bg-[var(--accent-hover)]'
+                  : 'bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)]'
               }`}
               aria-label="Send message"
               data-testid="chat-send-button"

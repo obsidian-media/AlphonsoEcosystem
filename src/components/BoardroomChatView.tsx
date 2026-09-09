@@ -372,7 +372,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
           <button
             onClick={handleCreateThread}
             disabled={!newTopic.trim()}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--accent)] px-2.5 py-1.5 text-xs font-semibold text-[var(--surface-0)] disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--accent)] px-2.5 py-1.5 text-xs font-semibold text-[var(--accent-contrast)] disabled:opacity-40"
           >
             <Plus className="h-3 w-3" /> New Thread
           </button>
@@ -458,7 +458,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
               <button
                 onClick={handleSend}
                 disabled={!composerText.trim()}
-                className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--surface-0)] disabled:opacity-40"
+                className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-contrast)] disabled:opacity-40"
               >
                 <Send className="h-3 w-3" /> Send
               </button>

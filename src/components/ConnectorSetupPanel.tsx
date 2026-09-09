@@ -1128,7 +1128,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
                 {connectors.map((c) => <option key={`route-${c.id}`} value={c.id}>{c.name}</option>)}
               </select>
               <input value={simulatedText} onChange={(e) => setSimulatedText(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Simulated command text" />
-              <button onClick={createRoute} className="rounded-xl bg-[var(--accent)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--surface-0)] hover:bg-[var(--accent-hover)]">
+              <button onClick={createRoute} className="rounded-xl bg-[var(--accent)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)]">
                 Route To Jose
               </button>
             </div>

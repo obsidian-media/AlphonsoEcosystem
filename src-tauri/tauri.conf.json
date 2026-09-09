@@ -50,7 +50,8 @@
     "shortDescription": "Local-first multi-agent AI companion",
     "resources": {
       "../voice/backend": "voice/backend",
-      "vendor/ollama": "ollama"
+      "vendor/ollama": "ollama",
+      "vendor/starter-model": "starter-model"
     },
     "icon": [
       "icons/32x32.png",

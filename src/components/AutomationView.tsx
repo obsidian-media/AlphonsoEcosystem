@@ -118,7 +118,7 @@ function JoseSchedulerPanel() {
         <button
           onClick={handleCreate}
           disabled={!newName.trim() || !newCommand.trim()}
-          className="px-4 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--surface-0)] text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-colors"
+          className="px-4 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)] text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-colors"
         >
           Create Schedule
         </button>
@@ -260,7 +260,7 @@ export function AutomationView() {
           <button
             onClick={handleCreate}
             disabled={!newName.trim()}
-            className="px-4 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--surface-0)] text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-colors"
+            className="px-4 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)] text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-colors"
           >
             Create
           </button>

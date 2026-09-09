@@ -8,7 +8,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
 }
 const variantClasses: Record<Variant, string> = {
-  primary:   'bg-[var(--accent)] text-[var(--surface-0)] hover:bg-[var(--accent-hover)] border-transparent',
+  primary:   'bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] border-transparent',
   secondary: 'bg-[var(--surface-3)] text-[var(--text-1)] hover:bg-[var(--surface-4)] border-[var(--border)]',
   ghost:     'bg-transparent text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)] border-transparent',
   danger:    'bg-[var(--error-dim)] text-[var(--error)] hover:bg-[var(--error-dim)] border-[var(--error-border)]',

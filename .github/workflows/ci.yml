@@ -199,6 +199,9 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs windows-amd64
 
+      - name: Fetch bundled starter model
+        run: node scripts/fetch-starter-model.mjs
+
       - name: Build Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -240,6 +243,9 @@ jobs:
 
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs darwin-universal
+
+      - name: Fetch bundled starter model
+        run: node scripts/fetch-starter-model.mjs
 
       - name: Build Tauri app
         env:
@@ -297,6 +303,9 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs linux-amd64
 
+      - name: Fetch bundled starter model
+        run: node scripts/fetch-starter-model.mjs
+
       - name: Build Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -311,6 +320,42 @@ jobs:
         # a generic "failed to run linuxdeploy" for months. Kept for future
         # diagnosability.
         run: npm run tauri build -- --verbose
+
+      # Every prior check here only asserted "linuxdeploy exited 0" -- nothing
+      # verified the produced AppImage actually contains the bundled Ollama
+      # runtime that scripts/fetch-ollama-runtime.mjs staged into
+      # bundle.resources. A regression in that staging, a fetch-script
+      # change, or a linuxdeploy behaviour change could silently ship an
+      # AppImage with no runtime inside it and this job would still stay
+      # green. --appimage-extract needs no special tooling on GitHub's
+      # ubuntu runners and takes seconds.
+      - name: Verify bundled Ollama runtime is inside the AppImage
+        shell: bash
+        run: |
+          set -euo pipefail
+          appimage=$(find src-tauri/target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" | head -n 1)
+          if [ -z "$appimage" ]; then
+            echo "No AppImage found to verify" >&2
+            exit 1
+          fi
+          chmod +x "$appimage"
+          workdir=$(mktemp -d)
+          (cd "$workdir" && APPIMAGE_EXTRACT_AND_RUN=1 "$OLDPWD/$appimage" --appimage-extract >/dev/null)
+          binary=$(find "$workdir/squashfs-root" -type f -path "*/ollama/ollama" | head -n 1)
+          if [ -z "$binary" ]; then
+            echo "Bundled ollama binary not found inside the AppImage -- the runtime was not packaged" >&2
+            find "$workdir/squashfs-root" -iname "*ollama*" >&2 || true
+            exit 1
+          fi
+          size=$(stat -c%s "$binary")
+          echo "Found bundled ollama binary: $binary ($size bytes)"
+          # The real ollama executable is tens of MB; anything drastically
+          # smaller would mean a stub/empty file got bundled instead.
+          if [ "$size" -lt 10000000 ]; then
+            echo "Bundled ollama binary is suspiciously small ($size bytes) -- likely not the real executable" >&2
+            exit 1
+          fi
+          rm -rf "$workdir"
 
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

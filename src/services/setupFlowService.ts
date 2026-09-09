@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getStorage, setStorage } from '../lib/appStorage';
-import { installTool } from './runtimeManagerService';
+import { installTool, loadBundledStarterModel } from './runtimeManagerService';
 import type { PrereqStatus } from './runtimeManagerService';
 import { pullOllamaModel, fetchOllamaModels, getConfiguredOllamaEndpoint } from '../lib/ollama';
 
@@ -93,19 +93,87 @@ export const STARTER_MODEL_ID = 'starter-model';
  */
 export const STARTER_MODEL_TAG = 'llama3.2:3b';
 
+export interface ComponentProgress {
+  /** Human-readable status, already including a formatted byte count when
+   * the underlying mechanism reports real bytes (Ollama's model pull does;
+   * Runtime Hub's tool installs generally don't, and just send a stage
+   * description instead — both flow through this one shape). */
+  message: string;
+  /** 0-100, or null when the underlying mechanism can't report a percent
+   * for this event (e.g. Ollama's "verifying sha256 digest" phase has no
+   * byte total to divide by). Distinct from 0 -- a null percent should
+   * leave a progress bar wherever it last was, not snap it back to empty. */
+  pct: number | null;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unitIndex = -1;
+  do {
+    value /= 1024;
+    unitIndex += 1;
+  } while (value >= 1024 && unitIndex < units.length - 1);
+  return `${value.toFixed(1)}${units[unitIndex]}`;
+}
+
 /**
  * Installs one Setup component, routing models and tools to their real,
  * separate install mechanisms rather than assuming everything is a tool.
+ *
+ * Both `pullOllamaModel` (the starter model) and `installTool` (everything
+ * else) already had real progress-reporting support -- Ollama's pull API
+ * streams real completed/total byte counts, and Runtime Hub emits real
+ * `runtime://progress` events with a stage + percent -- but neither was
+ * ever wired to a caller here. `onProgress` normalizes both into one shape
+ * so `InstallQueue.tsx` doesn't need to know which mechanism a given
+ * component uses.
  */
-export async function installComponent(componentId: string): Promise<void> {
+export async function installComponent(
+  componentId: string,
+  onProgress?: (progress: ComponentProgress) => void
+): Promise<void> {
   if (componentId === STARTER_MODEL_ID) {
+    // Dependency Bundling Plan O2: try the bundled local blob first (real,
+    // network-free, verified against a real build -- see
+    // docs/DEPENDENCY_BUNDLING_PLAN.md's O2 entry) before falling back to
+    // the network pull. The bundled path throws when this build has no
+    // staged resource (dev mode, browser mode, or an older installer built
+    // before O2 landed) -- that's the expected, common case today, not an
+    // error to surface. A genuine `ollama create` failure against a real
+    // bundled resource also falls through to the network pull rather than
+    // failing Setup outright, matching this file's own established
+    // resilience posture elsewhere (isComponentAlreadyInstalled: "worst
+    // case we re-pull a model that already exists, which ollama itself
+    // no-ops").
+    try {
+      await loadBundledStarterModel(
+        STARTER_MODEL_TAG,
+        onProgress ? (p) => onProgress({ message: p.message, pct: p.pct }) : undefined
+      );
+      return;
+    } catch {
+      // Fall through to the network pull below.
+    }
     await pullOllamaModel({
       endpoint: getConfiguredOllamaEndpoint(),
       model: STARTER_MODEL_TAG,
+      onProgress: onProgress
+        ? (p) => onProgress({
+            message: p.completed != null && p.total != null
+              ? `${p.status} (${formatBytes(p.completed)} / ${formatBytes(p.total)})`
+              : p.status,
+            pct: p.percent,
+          })
+        : undefined,
     });
     return;
   }
-  await installTool(componentId);
+  await installTool(
+    componentId,
+    onProgress ? (p) => onProgress({ message: p.message, pct: p.pct }) : undefined
+  );
 }
 
 /**
