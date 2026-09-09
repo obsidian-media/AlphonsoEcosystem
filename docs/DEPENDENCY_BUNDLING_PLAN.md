@@ -323,16 +323,24 @@ Video generation stays fully out per the acceptance criterion.
   entirely: Ollama itself resolves wherever it's actually configured to
   store models, so this app never needs to know or guess that path.
   Verification: `cargo check`/`cargo clippy -- -D warnings`/`cargo fmt --
-  check` all clean; 5 new/updated Vitest tests in
-  `installComponent.test.js` covering the bundled-first path, the two
-  distinct fallback triggers, propagated-failure, and progress forwarding
-  (18/18 passing in that file, 125/125 across `src/test/setup/`); `tsc
-  --noEmit` and targeted ESLint clean. **Not yet verified: a real end-to-end
-  run of `runtime_load_bundled_starter_model` itself** (as opposed to the
+  check` all clean; `cargo test` (full run, not just check/clippy) also
+  clean — **154 passed, 0 failed, 1 ignored**, including
+  `runtime_manager::tests::*` (took long enough on this dev machine's
+  constrained resources that an early check mistook it for hung and
+  stopped it once before letting a second run go to completion — see
+  `docs/governance/DEFERRED_WORK.md`'s 2026-07-28 entry for the same
+  machine's documented 45-55 minute precedent on this exact test suite;
+  don't re-assume a hang from a short observation window here again). 5
+  new/updated Vitest tests in `installComponent.test.js` covering the
+  bundled-first path, the two distinct fallback triggers,
+  propagated-failure, and progress forwarding (18/18 passing in that file,
+  125/125 across `src/test/setup/`); `tsc --noEmit` and targeted ESLint
+  clean. **Still not verified: a real end-to-end run of
+  `runtime_load_bundled_starter_model` itself** (as opposed to the
   hand-verified underlying `ollama create -f Modelfile` technique it
-  encodes) — that needs a real Tauri window, which this dev machine's
-  Application Control policy blocks (see the smoke-test entry in
-  `docs/governance/DEFERRED_WORK.md`).
+  encodes, and now the passing unit-test suite) — that needs a real Tauri
+  window, which this dev machine's Application Control policy blocks (see
+  the smoke-test entry in `docs/governance/DEFERRED_WORK.md`).
 - [x] **O3** — Done 2026-08-16. Added `bundled_ollama_path()` to
   `runtime_manager.rs`, checked first in `find_ollama()` before system-PATH
   detection. Resolved via `current_exe()`'s parent directory rather than
