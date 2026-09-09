@@ -106,3 +106,13 @@ Q&A E2E Test.md
 # Implementation log) — do not re-ignore the directory itself again.
 src-tauri/vendor/ollama/*
 !src-tauri/vendor/ollama/.gitkeep
+
+# Same pattern for scripts/fetch-starter-model.mjs (Dependency Bundling Plan
+# O2). NOT yet referenced by tauri.conf.json's bundle.resources -- wiring
+# that in is a deliberate follow-up decision (adds a real ~1.9GB download to
+# every CI build that runs `tauri build`/`cargo check`, not a small change),
+# tracked in docs/DEPENDENCY_BUNDLING_PLAN.md's O2 entry. The directory
+# itself stays tracked via .gitkeep now anyway, matching vendor/ollama/'s
+# convention, so wiring it in later doesn't also require a .gitignore change.
+src-tauri/vendor/starter-model/*
+!src-tauri/vendor/starter-model/.gitkeep

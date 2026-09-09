@@ -249,7 +249,48 @@ Video generation stays fully out per the acceptance criterion.
   quantized) per the resolved scoping decision, stage it into the bundle,
   and load it via `ollama create`/a local model path at first launch — no
   first-run download for the default model. Leave the existing `ollama pull`
-  flow untouched for users who want a bigger model afterward.
+  flow untouched for users who want a bigger model afterward. **The "pick"
+  half was already done** (implicitly) before this entry: `STARTER_MODEL_TAG`
+  in `setupFlowService.ts` is `llama3.2:3b` (3.2B params, Q4_K_M quant) —
+  fits the resolved 1–3B-class criterion. **Real progress 2026-09-08 on the
+  "stage it into the bundle" half:** `scripts/fetch-starter-model.mjs` (new)
+  reads `STARTER_MODEL_TAG` directly from source (so the two can never
+  silently drift apart), fetches its manifest + all blobs from Ollama's own
+  registry API (`registry.ollama.ai`), and stages them into
+  `src-tauri/vendor/starter-model/` in Ollama's real on-disk model-store
+  layout (`blobs/sha256-<digest>`,
+  `manifests/registry.ollama.ai/library/llama3.2/3b`) — verified byte-for-
+  byte against this dev machine's own real Ollama install before writing
+  the script, not assumed from documentation. Self-verifying by
+  construction: each blob's filename IS its own sha256 digest, so
+  downloading it and re-hashing to confirm the name matches the content
+  is the checksum check. Ran it for real: downloaded and verified all 6
+  blobs (1.88 GB total, matches the model's real ~2GB size), then proved
+  the staged output actually works — pointed a throwaway `ollama serve`
+  instance's `OLLAMA_MODELS` at *only* this directory (a fresh port, no
+  access to this machine's real Ollama data dir) and its own log showed
+  `model list cache hydration complete models=1 failures=0` — a genuinely
+  independent Ollama process recognized the bundled model with zero other
+  input. (A full `/api/chat` round-trip against that standalone instance
+  hit an unrelated GPU-discovery hang specific to this sandbox — not
+  pursued further since the hydration log was already sufficient proof the
+  bundle itself is structurally correct; see O4's entry for a completed
+  chat round-trip against a different, already-running Ollama instance.)
+  **Deliberately NOT wired into `tauri.conf.json`'s `bundle.resources`
+  yet** — doing so would add a real ~1.9GB download to every CI job that
+  runs `tauri build` or even plain `cargo check` (5 job sites across
+  `ci.yml`/`release.yml`, confirmed by reading `.gitignore`'s own comment
+  on why `vendor/ollama/` can't be fully gitignored: tauri-build validates
+  `bundle.resources` paths exist on every cargo invocation, not just real
+  bundling). That's a real, recurring infra-cost decision affecting every
+  contributor's build, not a small wiring change — flagged for an explicit
+  go/no-go rather than silently accepted. `.gitignore` already has the
+  matching `vendor/starter-model/*` / `!.../.gitkeep` pattern staged and
+  ready for whenever that decision is made. Still fully unstarted: the
+  "load via `ollama create`/a local model path at first launch" half — the
+  actual boot-time logic (a new Tauri command to copy/merge this staged
+  store into the user's real `OLLAMA_MODELS` directory on first launch if
+  the model isn't already present) has not been designed or written.
 - [x] **O3** — Done 2026-08-16. Added `bundled_ollama_path()` to
   `runtime_manager.rs`, checked first in `find_ollama()` before system-PATH
   detection. Resolved via `current_exe()`'s parent directory rather than
@@ -261,7 +302,32 @@ Video generation stays fully out per the acceptance criterion.
   resource placement can differ) — see the Implementation log.
 - [ ] **O4** — Verify a full chat round-trip (send message → real model
   response) works with network disabled after install, not just that the
-  Ollama process starts.
+  Ollama process starts. **Partial real evidence gathered 2026-09-08, not
+  closing the checkbox — this tested the system-installed Ollama, not the
+  packaged installer's bundled copy end-to-end (building/running the full
+  Tauri app is blocked on this dev machine by an Application Control
+  policy per `docs/governance/DEFERRED_WORK.md`'s 2026-09-07 smoke-test
+  entry).** What was verified for real: this machine's local Ollama is
+  `v0.32.13`, the exact version `OLLAMA_VERSION` pins; pulling
+  `llama3.2:3b` (the real `STARTER_MODEL_TAG`) completed in ~2s because
+  every blob was already cached under the identical digest as the
+  already-present `llama3.2:latest` (`a80c4f17acd5`) — confirms this tag
+  genuinely resolves to a real, existing model, not a placeholder. A real
+  `POST /api/chat` request (the same shape `generateOllamaChatStream` in
+  `src/lib/ollama.ts` sends) against `llama3.2:3b` returned a real
+  assistant reply ("Pong") with real token counts
+  (`prompt_eval_count: 33, eval_count: 3`) in 1.3s. `Get-NetTCPConnection`
+  against the live `ollama.exe` process during that request showed every
+  connection scoped to `127.0.0.1` (loopback) — no external remote
+  address at any point, which is the actual substance of "network
+  disabled" for local inference (Ollama's completion path has no
+  legitimate reason to reach the internet once a model is loaded).
+  Remaining gap to close this for real: run the actual signed NSIS/AppImage
+  installer on a machine with network disabled and confirm chat still
+  works using ONLY the bundled `vendor/ollama` + `vendor/starter-model`
+  (see O2) content, never the system-wide Ollama install this evidence
+  used. That step still needs a clean VM or a machine without this one's
+  Application Control block.
 - [x] **O5** — Done 2026-08-21, in response to the real Windows/Linux
   installer-build break tracked in `docs/governance/DEFERRED_WORK.md`'s
   2026-08-21 entry (root cause: bundling both `cuda_v12` and `cuda_v13`
