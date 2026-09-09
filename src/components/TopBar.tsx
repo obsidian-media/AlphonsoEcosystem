@@ -142,7 +142,7 @@ export function TopBar({
           </span>
         )}
         {settings.zeroCostMode && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-widest bg-[var(--success-dim)] border border-[var(--success)]/20 text-[var(--success)]">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-widest bg-[var(--success-dim)] border border-[var(--success-border)] text-[var(--success)]">
             Free
           </span>
         )}
@@ -150,7 +150,7 @@ export function TopBar({
         {onToggleNotifications && (
           <button
             onClick={onToggleNotifications}
-            className="relative p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
+            className="relative p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
             aria-label="Notifications"
           >
             <Bell className="w-4 h-4" />
@@ -162,7 +162,7 @@ export function TopBar({
           </button>
         )}
 
-        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface-2)] border ${selectedModelMissing ? 'border-[var(--warning)]/30' : 'border-[var(--border)]'}`}>
+        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface-2)] border ${selectedModelMissing ? 'border-[var(--warning-border)]' : 'border-[var(--border)]'}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-[var(--success)]' : 'bg-[var(--error)]'}`} />
           <span className={`text-xs ${selectedModelMissing ? 'text-[var(--warning)]' : 'text-[var(--text-3)]'}`}>
             {selectedModelMissing ? 'No model' : settings.selectedModel || 'No model'}

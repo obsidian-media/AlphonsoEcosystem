@@ -11,32 +11,35 @@ describe('Tabs', () => {
   ];
 
   it('renders all tabs', () => {
-    render(<Tabs tabs={tabs}>{(active) => <div>{active}</div>}</Tabs>);
+    render(<Tabs tabs={tabs} activeId="tab1" onChange={() => {}} />);
     expect(screen.getByText('First')).toBeTruthy();
     expect(screen.getByText('Second')).toBeTruthy();
     expect(screen.getByText('Third')).toBeTruthy();
   });
 
-  it('calls children function with active tab', () => {
-    render(<Tabs tabs={tabs}>{(active) => <div data-testid="active">{active}</div>}</Tabs>);
-    expect(screen.getByTestId('active').textContent).toBe('tab1');
+  it('marks the active tab via aria-pressed', () => {
+    render(<Tabs tabs={tabs} activeId="tab2" onChange={() => {}} />);
+    expect(screen.getByText('First').getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByText('Second').getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('switches tabs on click', () => {
-    render(<Tabs tabs={tabs}>{(active) => <div data-testid="active">{active}</div>}</Tabs>);
-    fireEvent.click(screen.getByText('Second'));
-    expect(screen.getByTestId('active').textContent).toBe('tab2');
-  });
-
-  it('calls onChange when tab changes', () => {
+  it('calls onChange with the clicked tab id', () => {
     const onChange = vi.fn();
-    render(<Tabs tabs={tabs} onChange={onChange}>{(active) => <div>{active}</div>}</Tabs>);
+    render(<Tabs tabs={tabs} activeId="tab1" onChange={onChange} />);
     fireEvent.click(screen.getByText('Third'));
     expect(onChange).toHaveBeenCalledWith('tab3');
   });
 
-  it('uses defaultTab when provided', () => {
-    render(<Tabs tabs={tabs} defaultTab="tab3">{(active) => <div data-testid="active">{active}</div>}</Tabs>);
-    expect(screen.getByTestId('active').textContent).toBe('tab3');
+  it('does not call onChange for a disabled tab', () => {
+    const onChange = vi.fn();
+    const withDisabled = [...tabs.slice(0, 2), { id: 'tab3', label: 'Third', disabled: true }];
+    render(<Tabs tabs={withDisabled} activeId="tab1" onChange={onChange} />);
+    fireEvent.click(screen.getByText('Third'));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('renders in compact mode without throwing', () => {
+    render(<Tabs tabs={tabs} activeId="tab1" onChange={() => {}} compact />);
+    expect(screen.getByText('First')).toBeTruthy();
   });
 });

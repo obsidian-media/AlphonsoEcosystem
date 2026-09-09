@@ -65,6 +65,6 @@ export const MIYA_PROFILE = {
     'Generate landing page structure and design system notes.'
   ],
   hierarchyRank: 4,
-  mascotPath: 'src/assets/miya-mascot-main.webp',
+  mascotPath: 'src/assets/agents/miya/portrait.jpg',
   memoryCategories: ['creative_memory', 'brand_memory', 'project_memory']
 };

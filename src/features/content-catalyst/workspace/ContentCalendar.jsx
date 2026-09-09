@@ -87,7 +87,7 @@ export function ContentCalendar({ drafts = [], onAssignDay, onSelectDraft, onPub
                   {dots.length > 0 && (
                     <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
                       {dots.slice(0, 3).map((_, di) => (
-                        <span key={di} className="h-1 w-1 rounded-full bg-cyan-400" />
+                        <span key={di} className="h-1 w-1 rounded-full bg-[var(--accent)]" />
                       ))}
                     </span>
                   )}
@@ -106,7 +106,7 @@ export function ContentCalendar({ drafts = [], onAssignDay, onSelectDraft, onPub
                   <div className="flex gap-1 shrink-0">
                     <button onClick={() => onPublish?.(d, 'image')} className="text-[9px] border border-[var(--border)] rounded px-1.5 py-0.5 text-[var(--text-3)] hover:text-[var(--text-1)]">Img</button>
                     <button onClick={() => onPublish?.(d, 'video')} className="text-[9px] border border-[var(--border)] rounded px-1.5 py-0.5 text-[var(--text-3)] hover:text-[var(--text-1)]">Vid</button>
-                    <button onClick={() => onAssignDay?.(d.id, selectedDate)} className="text-[9px] border border-cyan-400/30 rounded px-1.5 py-0.5 text-cyan-400">Assign</button>
+                    <button onClick={() => onAssignDay?.(d.id, selectedDate)} className="text-[9px] border border-[var(--accent-border)] rounded px-1.5 py-0.5 text-[var(--accent)]">Assign</button>
                   </div>
                 </div>
               ))}

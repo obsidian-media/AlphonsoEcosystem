@@ -11,6 +11,7 @@ import { sendNativeNotification } from '../services/notificationService';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { needsHighRiskApproval } from '../lib/chatUtils';
 import { TRUST_STATES } from '../services/trustModel';
+import { isSetupComplete } from '../services/setupFlowService';
 
 export function useAppShellState({
   settings, setSettings, operatorMode, setOperatorMode,
@@ -51,7 +52,10 @@ export function useAppShellState({
   const [showWorkflowPanel, setShowWorkflowPanel] = useState(false);
   const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
   const [approvalPending, setApprovalPending] = useState(null); // { actionLabel, packetId, agent, riskLevel, mariaScore }
-  const [showOnboarding, setShowOnboarding] = useState(() => !getStorage('alphonso_onboarding_complete_v1', false));
+  // isSetupComplete() (not a raw getStorage) so an existing install that
+  // completed the legacy OnboardingWizard flow isn't forced back through
+  // first-run Setup after upgrading — see that function's migration note.
+  const [showSetup, setShowSetup] = useState(() => !isSetupComplete());
   const [nativeSelfDevProof, setNativeSelfDevProof] = useState(() => {
     const stored = getStorage('alphonso_native_selfdev_proof', null);
     return stored && typeof stored === 'object' ? stored : null;
@@ -282,7 +286,7 @@ export function useAppShellState({
     showWorkflowPanel, setShowWorkflowPanel,
     approvalRequiredNotice, setApprovalRequiredNotice,
     approvalPending, setApprovalPending,
-    showOnboarding, setShowOnboarding,
+    showSetup, setShowSetup,
     nativeSelfDevProof, setNativeSelfDevProof,
     updateCheckState, setUpdateCheckState,
     braveSearchConfigured, setBraveSearchConfigured,

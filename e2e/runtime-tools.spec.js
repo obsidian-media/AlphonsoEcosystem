@@ -17,6 +17,9 @@ test.describe('Runtime tools — supported local-service controls', () => {
   });
 
   test('Runtime Hub opens the managed runtime view', async ({ page }) => {
+    // Runtimes lives under the "System" Space since the sidebar redesign --
+    // click the Space pill first before its nav items are reachable.
+    await page.getByTestId('space-pill-system').click();
     await page.getByRole('button', { name: 'Runtimes' }).click();
     await expect(page.getByRole('heading', { name: 'AI Runtime Manager' })).toBeVisible({ timeout: 10000 });
   });
