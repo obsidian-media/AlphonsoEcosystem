@@ -210,6 +210,11 @@ steps added (Recommended Setup, Early Exit), agent roster corrected.
    straight into a plain "Scanning your system…" text with none of the
    ritual visual direction described above. Caught only when directly
    asked whether the "whole visual ritual" had actually been built.
+   **Visually confirmed working 2026-09-09** in a real `npm run tauri dev`
+   run — clean emblem render, animated cyan glow/pulse/scanline sweep (not
+   a static flash), readable HUD text, and a correct auto-advance into
+   System Scan with no click needed. See
+   `docs/governance/DEFERRED_WORK.md`'s 2026-09-09 entry.
 2. **System Scan** — GPU (presence/vendor/VRAM if detectable), RAM, disk free,
    Python, Ollama, **and Docker** (new — required because n8n/ChromaDB/
    OpenHands in Runtime Hub's tool catalogue all launch via `docker run`, not
