@@ -17,6 +17,7 @@ on:
     branches: [main]
     paths:
       - 'voice/cloud-backend/**'
+      - 'voice/shared/**'
       - '.github/workflows/deploy-cloud-voice.yml'
 
 permissions:
@@ -53,13 +54,16 @@ jobs:
 
       - name: Build and push image
         id: build
-        working-directory: voice/cloud-backend
+        # Build context is voice/ (not voice/cloud-backend/) so the image can
+        # also pick up voice/shared/voice_policy.json - see the Dockerfile's
+        # own comment and app/voice_policy.py for the matching runtime path.
+        working-directory: voice
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
         run: |
           set -euo pipefail
           IMAGE_TAG="gha-${GITHUB_SHA::8}-${GITHUB_RUN_ID}"
-          docker build -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
+          docker build -f cloud-backend/Dockerfile -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
