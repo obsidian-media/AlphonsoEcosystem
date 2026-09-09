@@ -1,0 +1,94 @@
+name: Deploy Cloud Voice to AWS ECS
+
+# Builds voice/cloud-backend, pushes to ECR, and deploys a new ECS task
+# revision to the alphonso-cloud-voice service. Uses GitHub OIDC to assume
+# a narrowly-scoped IAM role (ECR push to one repo, ECS deploy to one
+# service, PassRole to only the two voice task roles) - no stored AWS
+# credentials in this repo at all.
+#
+# This replaces the previous manual-only deployment process. The service
+# had been running task definition revision 2 (registered 2026-08-01)
+# unchanged for 5+ weeks despite real fixes landing on main since then -
+# this workflow exists so that never happens silently again.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - 'voice/cloud-backend/**'
+      - '.github/workflows/deploy-cloud-voice.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ca-central-1
+  ECR_REPOSITORY: alphonso-cloud-voice
+  ECS_CLUSTER: alphonso-cloud-voice
+  ECS_SERVICE: cloud-voice-staging
+  ECS_TASK_FAMILY: alphonso-cloud-voice
+  CONTAINER_NAME: cloud-voice
+
+jobs:
+  deploy:
+    name: Build, push, and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Configure AWS credentials (OIDC, no stored secrets)
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          role-to-assume: arn:aws:iam::892748149559:role/AlphonsoCloudVoiceDeployRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2
+
+      - name: Build and push image
+        id: build
+        working-directory: voice/cloud-backend
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="gha-${GITHUB_SHA::8}"
+          docker build -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_FAMILY" \
+            --query 'taskDefinition' > task-definition.json
+
+      - name: Render new task definition with the new image
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@138c24f321fdbdf7edee4a685519d253cae2cdea # v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build.outputs.image }}
+
+      - name: Deploy to ECS and wait for stability
+        uses: aws-actions/amazon-ecs-deploy-task-definition@c465972ecbd160473f22e683363b422a5412a3de # v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Verify health endpoint
+        run: |
+          set -euo pipefail
+          sleep 10
+          curl -sf https://voice.obsidianmedia.online/health
+          echo ""
+          curl -sf https://voice.obsidianmedia.online/ready
