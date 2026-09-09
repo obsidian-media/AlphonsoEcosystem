@@ -113,7 +113,7 @@ export function OllamaPreflightPanel({ endpoint = getConfiguredOllamaEndpoint() 
           type="button"
           onClick={handleRerun}
           disabled={busy}
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed px-2.5 py-1.5 text-[10px] uppercase tracking-widest font-bold text-white"
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed px-2.5 py-1.5 text-[10px] uppercase tracking-widest font-bold text-[var(--accent-contrast)]"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
           {busy ? 'Running…' : 'Re-run preflight'}

@@ -95,7 +95,7 @@ export function CompanionPairingPanel() {
             <button
               onClick={generatePin}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] text-white text-xs font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] text-[var(--accent-contrast)] disabled:text-[var(--text-3)] text-xs font-medium transition-colors"
             >
               <Key className="w-3.5 h-3.5" />
               {loading ? 'Generating...' : 'Generate PIN'}

@@ -466,8 +466,8 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
               </div>
               <Clipboard className="h-5 w-5 text-[var(--text-3)]" />
             </div>
-            <input value={handoffProject} onChange={(event) => setHandoffProject(event.target.value)} className="mt-4 w-full rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm text-[var(--text-1)] outline-none" />
-            <textarea value={handoffObjective} onChange={(event) => setHandoffObjective(event.target.value)} className="mt-2 min-h-20 w-full resize-none rounded-lg bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none" />
+            <input aria-label="Handoff project name" value={handoffProject} onChange={(event) => setHandoffProject(event.target.value)} className="mt-4 w-full rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm text-[var(--text-1)] outline-none" />
+            <textarea aria-label="Handoff objective" value={handoffObjective} onChange={(event) => setHandoffObjective(event.target.value)} className="mt-2 min-h-20 w-full resize-none rounded-lg bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none" />
             <button type="button" onClick={generateHandoff} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--text-1)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--surface-0)] hover:opacity-90">
               <Sparkles className="h-4 w-4" /> Generate + copy handoff
             </button>

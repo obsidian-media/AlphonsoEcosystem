@@ -62,7 +62,7 @@ export function FilesView({ memoryItems = [] }: Props) {
               onClick={() => setActiveCategory(cat)}
               className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-colors ${
                 activeCategory === cat
-                  ? 'bg-[var(--accent)] text-white border-[var(--accent-hover)]'
+                  ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-[var(--accent-hover)]'
                   : 'bg-[var(--surface-2)] text-[var(--text-3)] border-[var(--border)] hover:text-[var(--text-2)]'
               }`}
             >

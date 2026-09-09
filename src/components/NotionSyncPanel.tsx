@@ -76,7 +76,7 @@ interface MiniButtonProps {
 function MiniButton({ onClick, label, icon: Icon, disabled = false, kind = 'default' }: MiniButtonProps) {
   const base = 'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] uppercase tracking-widest font-bold disabled:opacity-40 disabled:cursor-not-allowed';
   const styles = kind === 'primary'
-    ? 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white'
+    ? 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)]'
     : 'bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-2)]';
   return (
     <button type="button" onClick={onClick} disabled={disabled} className={`${base} ${styles}`}>

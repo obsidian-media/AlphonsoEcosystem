@@ -133,7 +133,7 @@ export function WorkflowBuilderView() {
               onClick={handleCreate}
               disabled={!newName.trim()}
               aria-label="Create workflow"
-              className="px-2 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-bold hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
+              className="px-2 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] text-xs font-bold hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>

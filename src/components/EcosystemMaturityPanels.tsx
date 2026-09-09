@@ -285,7 +285,7 @@ export function MemoryConfidencePanel() {
           <button onClick={refreshDurableMemory} className="rounded-xl bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">
             Refresh SQLite
           </button>
-          <button onClick={migrateMemory} disabled={isMigrating} className="rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)]">
+          <button onClick={migrateMemory} disabled={isMigrating} className="rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--accent-contrast)] disabled:cursor-not-allowed disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)]">
             {isMigrating ? 'Migrating...' : 'Migrate Local Memory'}
           </button>
         </div>

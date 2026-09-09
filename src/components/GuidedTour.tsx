@@ -118,7 +118,7 @@ export function GuidedTour({ mode, onComplete, onDismiss }: GuidedTourProps) {
             )}
             <button
               onClick={handleNext}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent-dim)] transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-dim)] transition-colors"
             >
               {currentStep >= steps.length - 1 ? 'Get started' : 'Next'}
               {currentStep < steps.length - 1 && <ChevronRight className="w-3 h-3 inline ml-1" />}
