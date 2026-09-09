@@ -245,7 +245,7 @@ Video generation stays fully out per the acceptance criterion.
   is in the Implementation log near the end of this document — do not treat
   this checkbox as "VM-tested and shipped," only as "code + CI wiring done
   and the fetch mechanism proven for real against all three platforms."
-- [ ] **O2** — Pick the specific lightweight default model (1–3B-class,
+- [x] **O2** — Pick the specific lightweight default model (1–3B-class,
   quantized) per the resolved scoping decision, stage it into the bundle,
   and load it via `ollama create`/a local model path at first launch — no
   first-run download for the default model. Leave the existing `ollama pull`
@@ -276,21 +276,63 @@ Video generation stays fully out per the acceptance criterion.
   pursued further since the hydration log was already sufficient proof the
   bundle itself is structurally correct; see O4's entry for a completed
   chat round-trip against a different, already-running Ollama instance.)
-  **Deliberately NOT wired into `tauri.conf.json`'s `bundle.resources`
-  yet** — doing so would add a real ~1.9GB download to every CI job that
-  runs `tauri build` or even plain `cargo check` (5 job sites across
-  `ci.yml`/`release.yml`, confirmed by reading `.gitignore`'s own comment
-  on why `vendor/ollama/` can't be fully gitignored: tauri-build validates
-  `bundle.resources` paths exist on every cargo invocation, not just real
-  bundling). That's a real, recurring infra-cost decision affecting every
-  contributor's build, not a small wiring change — flagged for an explicit
-  go/no-go rather than silently accepted. `.gitignore` already has the
-  matching `vendor/starter-model/*` / `!.../.gitkeep` pattern staged and
-  ready for whenever that decision is made. Still fully unstarted: the
-  "load via `ollama create`/a local model path at first launch" half — the
-  actual boot-time logic (a new Tauri command to copy/merge this staged
-  store into the user's real `OLLAMA_MODELS` directory on first launch if
-  the model isn't already present) has not been designed or written.
+  **Wired into `tauri.conf.json`'s `bundle.resources` 2026-09-09**, after
+  flagging the recurring ~1.9GB-per-CI-build cost above and getting an
+  explicit go-ahead: `"vendor/starter-model": "starter-model"` added
+  alongside the existing `vendor/ollama` entry; `node
+  scripts/fetch-starter-model.mjs` added as a new step immediately after
+  each existing "Fetch bundled Ollama runtime" step across all 5 job sites
+  (`ci.yml`'s Windows/macOS/Linux desktop builds, `release.yml`'s
+  Windows/Linux release builds).
+
+  **"Load via a local model path at first launch" half — done 2026-09-09,
+  design validated for real before writing any Rust:** before committing to
+  an implementation, manually ran the exact technique by hand against the
+  real staged bundle — wrote a `Modelfile` with `FROM
+  <path-to-the-staged-blob>`, ran `ollama create alphonso-bundle-test -f
+  Modelfile` against it, confirmed via `Get-NetTCPConnection` that every
+  connection the process made was loopback-only, then got a real generated
+  reply from a `/api/chat` call against the resulting model — proving the
+  technique works and needs zero network before encoding it into Rust.
+  Implementation: `bundled_starter_model_dir()` (mirrors
+  `bundled_ollama_path()`'s exact `current_exe().parent()/<name>`
+  resolution convention) + `bundled_starter_model_blob_path()` (parses the
+  bundled manifest for the layer whose `mediaType` is
+  `application/vnd.ollama.image.model`, since the config/license/template/
+  params layers are not the model itself) + the new
+  `runtime_load_bundled_starter_model` Tauri command, all in
+  `runtime_manager.rs`, reusing the existing `run_streaming()` helper (real
+  `CREATE_NO_WINDOW`-guarded tokio process spawn + `runtime://progress`/
+  `runtime://log` event streaming) rather than a bespoke subprocess call.
+  Registered in `lib.rs`'s `invoke_handler`. Frontend:
+  `loadBundledStarterModel()` in `runtimeManagerService.ts` (mirrors
+  `installTool()`'s exact progress-listener pattern, filtered on
+  `tool === 'starter-model'`); `installComponent()` in `setupFlowService.ts`
+  tries this first for the starter model and falls through to the existing
+  `pullOllamaModel()` network path on any failure — both "no bundled
+  resource in this build" (dev/browser mode, or an older installer) and a
+  genuine `ollama create` failure take the same fallback, matching this
+  file's own established "a redundant pull is fine, a hard Setup failure
+  isn't" resilience posture (see `isComponentAlreadyInstalled`'s doc
+  comment). **Deliberate design choice, not an oversight:** this does NOT
+  write into the user's `OLLAMA_MODELS` directory directly —
+  `detect_ollama_models_dir_free_gb()`'s own doc comment already explains
+  why this codebase refuses to guess that location (varies by OS/install
+  method, can change between Ollama versions, a wrong guess risks silently
+  writing into the wrong place). `ollama create` sidesteps that problem
+  entirely: Ollama itself resolves wherever it's actually configured to
+  store models, so this app never needs to know or guess that path.
+  Verification: `cargo check`/`cargo clippy -- -D warnings`/`cargo fmt --
+  check` all clean; 5 new/updated Vitest tests in
+  `installComponent.test.js` covering the bundled-first path, the two
+  distinct fallback triggers, propagated-failure, and progress forwarding
+  (18/18 passing in that file, 125/125 across `src/test/setup/`); `tsc
+  --noEmit` and targeted ESLint clean. **Not yet verified: a real end-to-end
+  run of `runtime_load_bundled_starter_model` itself** (as opposed to the
+  hand-verified underlying `ollama create -f Modelfile` technique it
+  encodes) — that needs a real Tauri window, which this dev machine's
+  Application Control policy blocks (see the smoke-test entry in
+  `docs/governance/DEFERRED_WORK.md`).
 - [x] **O3** — Done 2026-08-16. Added `bundled_ollama_path()` to
   `runtime_manager.rs`, checked first in `find_ollama()` before system-PATH
   detection. Resolved via `current_exe()`'s parent directory rather than

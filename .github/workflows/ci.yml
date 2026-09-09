@@ -199,6 +199,9 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs windows-amd64
 
+      - name: Fetch bundled starter model
+        run: node scripts/fetch-starter-model.mjs
+
       - name: Build Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -240,6 +243,9 @@ jobs:
 
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs darwin-universal
+
+      - name: Fetch bundled starter model
+        run: node scripts/fetch-starter-model.mjs
 
       - name: Build Tauri app
         env:
@@ -296,6 +302,9 @@ jobs:
 
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs linux-amd64
+
+      - name: Fetch bundled starter model
+        run: node scripts/fetch-starter-model.mjs
 
       - name: Build Tauri app
         env:

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getStorage, setStorage } from '../lib/appStorage';
-import { installTool } from './runtimeManagerService';
+import { installTool, loadBundledStarterModel } from './runtimeManagerService';
 import type { PrereqStatus } from './runtimeManagerService';
 import { pullOllamaModel, fetchOllamaModels, getConfiguredOllamaEndpoint } from '../lib/ollama';
 
@@ -135,6 +135,27 @@ export async function installComponent(
   onProgress?: (progress: ComponentProgress) => void
 ): Promise<void> {
   if (componentId === STARTER_MODEL_ID) {
+    // Dependency Bundling Plan O2: try the bundled local blob first (real,
+    // network-free, verified against a real build -- see
+    // docs/DEPENDENCY_BUNDLING_PLAN.md's O2 entry) before falling back to
+    // the network pull. The bundled path throws when this build has no
+    // staged resource (dev mode, browser mode, or an older installer built
+    // before O2 landed) -- that's the expected, common case today, not an
+    // error to surface. A genuine `ollama create` failure against a real
+    // bundled resource also falls through to the network pull rather than
+    // failing Setup outright, matching this file's own established
+    // resilience posture elsewhere (isComponentAlreadyInstalled: "worst
+    // case we re-pull a model that already exists, which ollama itself
+    // no-ops").
+    try {
+      await loadBundledStarterModel(
+        STARTER_MODEL_TAG,
+        onProgress ? (p) => onProgress({ message: p.message, pct: p.pct }) : undefined
+      );
+      return;
+    } catch {
+      // Fall through to the network pull below.
+    }
     await pullOllamaModel({
       endpoint: getConfiguredOllamaEndpoint(),
       model: STARTER_MODEL_TAG,

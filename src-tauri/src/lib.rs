@@ -826,6 +826,7 @@ pub fn run() {
       launch_comfyui,
       runtime_manager::runtime_get_all_status,
       runtime_manager::runtime_install_tool,
+      runtime_manager::runtime_load_bundled_starter_model,
       runtime_manager::runtime_start_tool,
       runtime_manager::runtime_stop_tool,
       runtime_manager::runtime_list_tools,

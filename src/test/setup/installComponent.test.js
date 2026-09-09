@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/runtimeManagerService', () => ({
   installTool: vi.fn(),
+  loadBundledStarterModel: vi.fn(),
 }));
 vi.mock('../../lib/ollama', () => ({
   pullOllamaModel: vi.fn(),
@@ -9,7 +10,7 @@ vi.mock('../../lib/ollama', () => ({
   getConfiguredOllamaEndpoint: vi.fn(() => 'http://localhost:11434'),
 }));
 
-import { installTool } from '../../services/runtimeManagerService';
+import { installTool, loadBundledStarterModel } from '../../services/runtimeManagerService';
 import { pullOllamaModel, fetchOllamaModels } from '../../lib/ollama';
 import {
   STARTER_MODEL_ID,
@@ -18,7 +19,15 @@ import {
   isComponentAlreadyInstalled,
 } from '../../services/setupFlowService';
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Default: no bundled resource in this build (dev/browser mode, or an
+  // older installer built before O2) -- the common case pre-dating O2's
+  // bundled-first path. Falls through to pullOllamaModel, matching every
+  // existing test's expectations below. Tests that want to exercise the
+  // bundled-first path override this per-test.
+  loadBundledStarterModel.mockRejectedValue(new Error('No bundled starter-model resource found in this build.'));
+});
 
 describe('installComponent — model vs tool routing', () => {
   it('pulls the starter model via ollama, NOT via installTool', async () => {
@@ -49,6 +58,58 @@ describe('installComponent — model vs tool routing', () => {
   it('propagates a model-pull failure rather than reporting success', async () => {
     pullOllamaModel.mockRejectedValue(new Error('ollama not reachable'));
     await expect(installComponent(STARTER_MODEL_ID)).rejects.toThrow('ollama not reachable');
+  });
+
+  describe('bundled-first starter model loading (Dependency Bundling Plan O2)', () => {
+    it('loads the bundled resource via loadBundledStarterModel when available, without ever calling pullOllamaModel', async () => {
+      loadBundledStarterModel.mockResolvedValue({ tool: 'starter-model', ok: true, message: 'done' });
+
+      await installComponent(STARTER_MODEL_ID);
+
+      expect(loadBundledStarterModel).toHaveBeenCalledWith(STARTER_MODEL_TAG, undefined);
+      expect(pullOllamaModel).not.toHaveBeenCalled();
+    });
+
+    it('falls back to pullOllamaModel when no bundled resource exists in this build', async () => {
+      loadBundledStarterModel.mockRejectedValue(new Error('No bundled starter-model resource found in this build.'));
+      pullOllamaModel.mockResolvedValue({ ok: true, model: STARTER_MODEL_TAG });
+
+      await installComponent(STARTER_MODEL_ID);
+
+      expect(loadBundledStarterModel).toHaveBeenCalledTimes(1);
+      expect(pullOllamaModel).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to pullOllamaModel when a bundled resource exists but ollama create genuinely fails', async () => {
+      // Resilience posture matches isComponentAlreadyInstalled elsewhere in
+      // this file: a redundant network pull is fine, a hard Setup failure
+      // over a fixable local error is not.
+      loadBundledStarterModel.mockRejectedValue(new Error('ollama create exited with code 1'));
+      pullOllamaModel.mockResolvedValue({ ok: true, model: STARTER_MODEL_TAG });
+
+      await installComponent(STARTER_MODEL_ID);
+
+      expect(pullOllamaModel).toHaveBeenCalledTimes(1);
+    });
+
+    it('propagates a pullOllamaModel failure that happens after a bundled-load failure', async () => {
+      loadBundledStarterModel.mockRejectedValue(new Error('no bundled resource'));
+      pullOllamaModel.mockRejectedValue(new Error('ollama not reachable'));
+
+      await expect(installComponent(STARTER_MODEL_ID)).rejects.toThrow('ollama not reachable');
+    });
+
+    it('forwards normalized progress from the bundled path the same way as the network path', async () => {
+      loadBundledStarterModel.mockImplementation(async (tag, onProgress) => {
+        onProgress({ tool: 'starter-model', stage: 'cloning', message: 'Loading bundled starter model…', pct: 0 });
+        return { tool: 'starter-model', ok: true, message: 'done' };
+      });
+      const onProgress = vi.fn();
+
+      await installComponent(STARTER_MODEL_ID, onProgress);
+
+      expect(onProgress).toHaveBeenCalledWith({ message: 'Loading bundled starter model…', pct: 0 });
+    });
   });
 
   it('propagates a tool-install failure', async () => {
