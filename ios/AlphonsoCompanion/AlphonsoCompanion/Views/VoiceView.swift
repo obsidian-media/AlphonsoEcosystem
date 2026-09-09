@@ -7,7 +7,7 @@ struct VoiceView: View {
     @StateObject private var viewModel = VoiceSessionViewModel()
     @State private var cloudEmail = ""
     @State private var cloudOTP = ""
-    private let cloudVoicePaused = true
+    private let cloudVoicePaused = false
 
     var body: some View {
         NavigationStack {
