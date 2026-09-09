@@ -165,9 +165,17 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs darwin-universal
 
-      - name: Fetch bundled starter model
-        run: node scripts/fetch-starter-model.mjs
-
+      # Deliberately NOT fetching the starter model here, same reasoning as
+      # build-windows above but a different real constraint: the first real
+      # v2.8.0 publish attempt (run 34407729115) built successfully but
+      # failed at upload - the DMG came out to 2,185,285,094 bytes (~2.03GiB)
+      # with the model bundled, and GitHub Releases hard-caps a single asset
+      # at 2147483648 bytes (2GiB): "Validation Failed: size must be less
+      # than 2147483648". Windows/Linux were unaffected (Windows already
+      # skips the model for the unrelated NSIS block-size bug; Linux's
+      # AppImage came in under the limit even with the model bundled).
+      # Same fallback applies: installComponent() pulls it over the network
+      # on first launch if not bundled.
       - name: Build signed Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
