@@ -28,6 +28,7 @@ import { CrashLogView } from './CrashLogView';
 import { CompanionPairingPanel } from './CompanionPairingPanel';
 import { ConnectorSetupPanel } from './ConnectorSetupPanel';
 import { CalleOutreachPanel } from './calle/CalleOutreachPanel';
+import { EscalationCallPanel } from './calle/EscalationCallPanel';
 import { SessionHistoryView } from './SessionHistoryView';
 import { FilesView } from './FilesView';
 import { getWatcherConfig, saveWatcherConfig } from '../services/echoFileWatcherService';
@@ -1189,6 +1190,10 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={PhoneCall} label="CALL-E Outreach" />
         <CalleOutreachPanel />
+      </section>
+      <section className="space-y-4">
+        <SectionHeader icon={PhoneCall} label="Escalation Calls" />
+        <EscalationCallPanel />
       </section>
       <section className="space-y-4">
         <SectionHeader icon={Plug} label="External Tools (Composio)" />
