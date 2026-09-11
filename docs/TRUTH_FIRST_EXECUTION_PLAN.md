@@ -1371,6 +1371,18 @@ dropped.
     surviving reload via the OS keychain, and an actual placed call end to
     end (`run_call`) — deliberately not attempted without a real recipient
     and explicit go-ahead, since it places a real phone call and costs money.
+  - **2026-09-10 — root cause of why the above was never verifiable found and
+    fixed:** the native app's CSP `connect-src` never included
+    `api.heycall-e.com` or `seleven-mcp-sg.airudder.com`, so every real
+    request from either integration path was silently blocked with no
+    visible error — this, not a credential/account issue, is almost
+    certainly why "Connect via Browser Login" and REST outreach calls
+    appeared to do nothing in the packaged app. Fixed on branch
+    `fix/calle-csp-allowlist` (also fixed the same gap for 9 other
+    connectors). A new `escalationCallService.ts` was also built on the same
+    branch (see CLAUDE.md's Do Not Duplicate table). Neither the CSP fix nor
+    the new service has completed the still-not-verified steps above yet —
+    full details in `docs/governance/DEFERRED_WORK.md`'s 2026-09-10 entry.
   - **Billing question (`plan_call` vs. `run_call`) — best-effort answer, not
     fully confirmed:** CALL-E's pricing page states "$0.05 per billable
     call" with no mention of a planning charge; nothing in the live

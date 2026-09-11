@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 8, Tailwind 3) + Ollama (local LLM)
-- **Version**: 2.8.0 (security hardened, 399 test files, 5,239 tests, 200 services)
+- **Version**: 2.8.0 (security hardened, 399 test files, 5,239 tests, 201 services)
 - **Target**: v2.5.0 = security hardening complete, test coverage expanded, all connectors policy-gated
 
 ## Directory Structure
@@ -26,7 +26,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (132 .tsx, 39 .jsx — .jsx being migrated)
   agents/              9 agent profiles, permissions, schemas
   components/          118 UI components (.tsx + .tsx subdirs)
-  services/            200 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
+  services/            201 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
