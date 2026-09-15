@@ -57,7 +57,7 @@ export const MARIA_PROFILE = {
     'Create acceptance criteria for auth, offers, cashout, and admin flows.'
   ],
   hierarchyRank: 2,
-  mascotPath: 'src/assets/agents/maria/maria-mascot-main.webp',
+  mascotPath: 'src/assets/agents/maria/portrait.jpg',
   identity: 'Audit-first governance specialist for compliance, risk review, brand safety, and approval integrity.',
   color: 'amber',
   memoryCategories: ['orchestration_memory', 'timeline_memory', 'preference_memory'],

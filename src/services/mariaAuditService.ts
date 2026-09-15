@@ -3,6 +3,7 @@ import { generateAgentLlmResponse, PREFERRED_MODEL } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { generateRiskScore } from './audit/marcusAuditService';
+import { addNode, addEdge } from './memoryGraphService';
 
 export interface MariaAuditResult {
   riskLevel: string;
@@ -205,7 +206,7 @@ export async function runMariaGovernanceAudit(commandText: string, assignment: M
     auditedAtMs: startMs
   } as unknown as MariaAuditResult;
 
-  pushMemoryItem({
+  const memoryItem = pushMemoryItem({
     title: `Maria audit: ${String(commandText || '').slice(0, 80)}`,
     category: 'governance_memory',
     content: schema,
@@ -214,6 +215,21 @@ export async function runMariaGovernanceAudit(commandText: string, assignment: M
     confidence: schema.confidenceLevel,
     verificationState: (schema as unknown as { verificationState: string }).verificationState
   });
+
+  const packetRefId = assignment?.packetId ?? assignment?.commandId;
+  if (memoryItem?.id) {
+    addNode('memory_item', memoryItem.id).then((memoryItemNodeId) => {
+      if (!memoryItemNodeId || !packetRefId) return;
+      addNode('packet', packetRefId).then((packetNodeId) => {
+        if (!packetNodeId) return;
+        addEdge(memoryItemNodeId, packetNodeId, 'audits', {
+          confidence: TRUST_STATES.VERIFIED,
+          createdBy: 'maria',
+          createdEvent: memoryItem.id
+        });
+      }).catch(() => {});
+    }).catch(() => {});
+  }
 
   appendSessionEvent({
     category: 'governance',

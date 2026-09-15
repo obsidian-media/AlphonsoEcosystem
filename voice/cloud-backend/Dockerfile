@@ -1,5 +1,10 @@
 # Cloud Voice is intentionally stateless: Supabase owns device state and
 # NVIDIA/Piper remain external providers during the first AWS migration phase.
+#
+# Build context for this Dockerfile is `voice/` (the parent of cloud-backend/),
+# not cloud-backend/ itself -- it needs to reach voice/shared/voice_policy.json,
+# which lives outside cloud-backend/. See app/voice_policy.py for the matching
+# runtime path resolution.
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -13,10 +18,11 @@ WORKDIR /app
 RUN getent group voice >/dev/null || groupadd --system voice; \
     id -u voice >/dev/null 2>&1 || useradd --system --gid voice --home-dir /app voice
 
-COPY requirements.txt ./
+COPY cloud-backend/requirements.txt ./
 RUN pip install --no-cache-dir --requirement requirements.txt
 
-COPY app ./app
+COPY cloud-backend/app ./app
+COPY shared ./shared
 
 USER voice
 EXPOSE 8080

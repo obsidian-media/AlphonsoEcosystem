@@ -172,6 +172,15 @@ export const DEFAULT_CONNECTORS = [
     disabledReason: 'Discord bot token is not configured.'
   },
   {
+    id: 'calle',
+    name: 'CALL-E',
+    status: 'not_configured',
+    transport: 'calle_api',
+    requiredEnv: ['CALLE_API_KEY'],
+    permissions: ['place_outbound_call'],
+    disabledReason: 'CALLE_API_KEY not configured.'
+  },
+  {
     id: 'generic_webhook',
     name: 'Generic Webhook',
     status: 'not_configured',

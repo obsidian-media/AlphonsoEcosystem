@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { appendAgentActivity } from './agentActivityService';
 import { persistScopeRows } from './runtimeLedgerService';
+import { addNode, addEdge } from './memoryGraphService';
 
 // Unified categories from all 4 systems
 export const MEMORY_CATEGORIES = [
@@ -335,6 +336,16 @@ export function pushMemory(partial) {
   if (namespace === 'shared' || namespace === 'workflow') {
     queueDurableWrite(tagged);
   }
+
+  addNode('memory_item', tagged.id).then((nodeId) => {
+    if (nodeId && partial.relatedMemoryId) {
+      addEdge(nodeId, `memory_item:${partial.relatedMemoryId}`, 'mentions', {
+        confidence: TRUST_STATES.USER_CONFIRMED,
+        createdBy: tagged.sourceAgent,
+        createdEvent: tagged.id
+      });
+    }
+  }).catch(() => {});
 
   return tagged;
 }

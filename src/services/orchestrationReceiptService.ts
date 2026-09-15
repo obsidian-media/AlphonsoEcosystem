@@ -1,6 +1,7 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 import { durableGet, durableSet } from '../lib/durableStore';
+import { addNode, addEdge } from './memoryGraphService';
 
 const RECEIPT_KEY = 'alphonso_orchestration_receipts_v1';
 export const ORCHESTRATION_RECEIPT_SCOPE = 'orchestration_receipts_v1';
@@ -126,5 +127,19 @@ export function appendOrchestrationReceipt({
   rows.push(receipt);
   writeReceipts(rows);
   void import('./toolNotificationDispatcher').then(({ dispatchReceiptNotifications }) => dispatchReceiptNotifications(receipt as unknown as Record<string, unknown>)).catch(() => null);
+
+  const packetRefId = receipt.packetId ?? receipt.commandId;
+  addNode('receipt', receipt.id).then((receiptNodeId) => {
+    if (!receiptNodeId || !packetRefId) return;
+    addNode('packet', packetRefId).then((packetNodeId) => {
+      if (!packetNodeId) return;
+      addEdge(receiptNodeId, packetNodeId, 'belongs_to', {
+        confidence: TRUST_STATES.VERIFIED,
+        createdBy: receipt.agent,
+        createdEvent: receipt.id
+      });
+    }).catch(() => {});
+  }).catch(() => {});
+
   return receipt;
 }

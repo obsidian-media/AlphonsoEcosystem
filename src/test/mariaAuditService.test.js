@@ -8,12 +8,16 @@ import {
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-vi.mock('../services/memoryService', () => ({ pushMemoryItem: vi.fn() }));
+vi.mock('../services/memoryService', () => ({ pushMemoryItem: vi.fn(() => ({ id: 'mem-mock-1' })) }));
 vi.mock('../services/sessionIntelligenceService', () => ({ appendSessionEvent: vi.fn() }));
 vi.mock('../services/orchestrationReceiptService', () => ({ appendOrchestrationReceipt: vi.fn() }));
 vi.mock('../services/audit/marcusAuditService', () => ({
   generateRiskScore: vi.fn(() => ({ level: 'low', score: 1, factors: [] })),
   auditProjectPlan: vi.fn(() => ({ status: 'pass', items: [] }))
+}));
+vi.mock('../services/memoryGraphService', () => ({
+  addNode: vi.fn((nodeType, refId) => Promise.resolve(`${nodeType}:${refId}`)),
+  addEdge: vi.fn().mockResolvedValue('mock-edge-id')
 }));
 
 const mockOllamaResponse = { response: JSON.stringify({ riskLevel: 'low', approvalRequired: false, policyFindings: ['No issues'], complianceNotes: ['Compliant'], summary: 'Looks good' }), done: true };
@@ -203,5 +207,48 @@ describe('runMariaGovernanceAudit', () => {
     const result = await runMariaGovernanceAudit('review', {}, {});
     const schemaArtifact = result.artifacts.find((a) => a.type === 'maria_audit_schema');
     expect(schemaArtifact?.schema).toHaveProperty('approvalRequired');
+  });
+});
+
+describe('runMariaGovernanceAudit graph integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('writes an audits edge to a packet node when packetId is present', async () => {
+    const graph = await import('../services/memoryGraphService');
+    await runMariaGovernanceAudit('do the thing', { packetId: 'packet-1' }, {});
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(graph.addNode).toHaveBeenCalledWith('memory_item', 'mem-mock-1');
+    expect(graph.addNode).toHaveBeenCalledWith('packet', 'packet-1');
+    expect(graph.addEdge).toHaveBeenCalledWith(
+      'memory_item:mem-mock-1',
+      'packet:packet-1',
+      'audits',
+      expect.objectContaining({ createdBy: 'maria' })
+    );
+  });
+
+  it('falls back to commandId when packetId is absent', async () => {
+    const graph = await import('../services/memoryGraphService');
+    await runMariaGovernanceAudit('do the thing', { commandId: 'cmd-1' }, {});
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(graph.addNode).toHaveBeenCalledWith('packet', 'cmd-1');
+  });
+
+  it('writes no edge when neither packetId nor commandId is present', async () => {
+    const graph = await import('../services/memoryGraphService');
+    await runMariaGovernanceAudit('do the thing', {}, {});
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(graph.addEdge).not.toHaveBeenCalled();
   });
 });

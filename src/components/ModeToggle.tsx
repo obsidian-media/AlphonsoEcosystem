@@ -9,7 +9,7 @@ interface ModeToggleProps {
 export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
   return (
     <div
-      className="flex items-center gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-0.5"
+      className="flex items-center gap-0.5 rounded-lg bg-[var(--surface-1)] p-0.5"
       role="radiogroup"
       aria-label="Display mode"
     >
@@ -20,7 +20,7 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
         onClick={() => onModeChange('simple')}
         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
           mode === 'simple'
-            ? 'bg-[var(--accent)] text-white'
+            ? 'bg-[var(--accent)] text-[var(--accent-contrast)]'
             : 'text-[var(--text-2)] hover:text-[var(--text-1)]'
         }`}
       >
@@ -33,7 +33,7 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
         onClick={() => onModeChange('advanced')}
         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
           mode === 'advanced'
-            ? 'bg-[var(--accent)] text-white'
+            ? 'bg-[var(--accent)] text-[var(--accent-contrast)]'
             : 'text-[var(--text-2)] hover:text-[var(--text-1)]'
         }`}
       >

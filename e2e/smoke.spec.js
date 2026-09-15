@@ -48,7 +48,9 @@ test.describe('Alphonso E2E smoke tests', () => {
 
   // Epic 1 Task 2: Workflow builder
   test('workflow builder — navigate and render', async ({ page }) => {
-    // Automation is the current workflow surface in the sidebar.
+    // Automation is the current workflow surface in the sidebar, now under
+    // the "Work" Space since the sidebar redesign.
+    await page.getByTestId('space-pill-work').click();
     await page.getByRole('button', { name: /^Automation$/ }).click();
 
     // AutomationView / WorkflowBuilderView should load
@@ -58,8 +60,10 @@ test.describe('Alphonso E2E smoke tests', () => {
 
   // Epic 1 Task 3: Connector health panel
   test('connector health — navigate and render panel', async ({ page }) => {
-    // Click Connectors in sidebar
-    await page.getByRole('button', { name: /^Connectors \d+ disabled$/ }).click();
+    // Connectors now lives under the "System" Space since the sidebar
+    // redesign -- click the Space pill first.
+    await page.getByTestId('space-pill-system').click();
+    await page.getByRole('button', { name: /^Connectors \d+ disabled/ }).click();
 
     // ConnectorHealthPanel should render with tabs
     await expect(page.getByRole('heading', { name: 'Connector Health' })).toBeVisible({ timeout: 15000 });

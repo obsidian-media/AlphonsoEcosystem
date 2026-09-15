@@ -1,36 +1,30 @@
 import React from 'react';
 import { useState } from 'react';
 import { Shield, ShieldAlert, Check, X } from 'lucide-react';
-import { approvePacket, rejectPacket, getPacketById } from '../services/agentBusService';
 
 const RISK_STYLES: Record<string, { badge: string; dot: string; label: string }> = {
-  high: { badge: 'border-red-500/40 bg-red-500/10 text-red-300', dot: 'bg-red-400', label: 'High' },
-  medium: { badge: 'border-amber-500/40 bg-amber-500/10 text-amber-300', dot: 'bg-amber-400', label: 'Medium' },
-  low: { badge: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300', dot: 'bg-emerald-400', label: 'Low' }
+  high: { badge: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]', dot: 'bg-[var(--error)]', label: 'High' },
+  medium: { badge: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]', dot: 'bg-[var(--warning)]', label: 'Medium' },
+  low: { badge: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]', dot: 'bg-[var(--success)]', label: 'Low' }
 };
 
-interface Assignment {
-  riskLevel?: string;
-  actionType?: string;
-  agent?: string;
-}
-
-interface Packet {
-  payload?: {
-    assignment?: Assignment;
-  };
-}
-
-interface PendingApproval {
-  packetId: string;
-  agent?: string;
+export interface PendingApprovalItem {
+  itemId: string;
   actionType?: string;
   reason?: string;
   previewContent?: string | null;
+  agent?: string;
+  riskLevel?: string;
 }
 
-interface ResolvedItem {
-  packetId: string;
+export interface ApprovalItemDetail {
+  agent?: string;
+  actionType?: string;
+  riskLevel?: string;
+}
+
+interface ResolvedApprovalItem {
+  itemId: string;
   agent: string;
   actionType: string;
   riskLevel: string;
@@ -38,56 +32,69 @@ interface ResolvedItem {
   previewContent: string | null;
 }
 
-function inferRisk(assignment: Assignment) {
-  const risk = String(assignment?.riskLevel || '').toLowerCase();
+function inferRisk(detail: ApprovalItemDetail) {
+  const risk = String(detail?.riskLevel || '').toLowerCase();
   if (risk === 'high' || risk === 'critical') return 'high';
   if (risk === 'low') return 'low';
-  const action = String(assignment?.actionType || '').toLowerCase();
+  const action = String(detail?.actionType || '').toLowerCase();
   if (/external_publish|upload|post|delete|destroy/.test(action)) return 'high';
   if (/read|list|check|verify/.test(action)) return 'low';
   return 'medium';
 }
 
-function resolveAssignment(item: PendingApproval): ResolvedItem {
-  const packet = getPacketById(item.packetId) as Packet | null;
-  const assignment = packet?.payload?.assignment || {};
+function resolveItem(
+  item: PendingApprovalItem,
+  getItemDetail?: (itemId: string) => ApprovalItemDetail | null
+): ResolvedApprovalItem {
+  // Project Execution's ApprovalRequest items already carry riskLevel directly --
+  // no indirection needed. ChatView's items don't, so fall back to getItemDetail
+  // (which resolves a real AgentPacket's assignment) + risk inference.
+  const detail = item.riskLevel ? null : (getItemDetail?.(item.itemId) ?? null);
+  const merged: ApprovalItemDetail = {
+    agent: item.agent ?? detail?.agent,
+    actionType: item.actionType ?? detail?.actionType,
+    riskLevel: item.riskLevel ?? detail?.riskLevel
+  };
   return {
-    packetId: item.packetId,
-    agent: item.agent || assignment?.agent || 'unknown',
-    actionType: item.actionType || assignment?.actionType || 'unknown',
-    riskLevel: inferRisk(assignment),
+    itemId: item.itemId,
+    agent: merged.agent || 'unknown',
+    actionType: merged.actionType || 'unknown',
+    riskLevel: item.riskLevel || inferRisk(merged),
     reason: item.reason || '',
     previewContent: item.previewContent || null
   };
 }
 
 interface Props {
-  pendingApprovals?: PendingApproval[];
+  pendingApprovals?: PendingApprovalItem[];
   commandId?: string;
+  onApprove: (itemId: string) => void;
+  onReject: (itemId: string, reason?: string) => void;
+  getItemDetail?: (itemId: string) => ApprovalItemDetail | null;
   onAllResolved?: (commandId: string | undefined, resolved: Record<string, string>) => void;
 }
 
-export function ApprovalPanel({ pendingApprovals = [], commandId, onAllResolved }: Props) {
+export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onReject, getItemDetail, onAllResolved }: Props) {
   const [resolved, setResolved] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const items = pendingApprovals.map(resolveAssignment);
-  const allResolved = items.length > 0 && items.every((item) => resolved[item.packetId]);
+  const items = pendingApprovals.map((item) => resolveItem(item, getItemDetail));
+  const allResolved = items.length > 0 && items.every((item) => resolved[item.itemId]);
 
-  const handleApprove = (packetId: string) => {
+  const handleApprove = (itemId: string) => {
     try {
-      approvePacket(packetId, 'chatview-inline');
-      setResolved((prev) => ({ ...prev, [packetId]: 'approved' }));
+      onApprove(itemId);
+      setResolved((prev) => ({ ...prev, [itemId]: 'approved' }));
       setError(null);
     } catch (err) {
       setError(`Approve failed: ${String((err as Error)?.message || err)}`);
     }
   };
 
-  const handleReject = (packetId: string) => {
+  const handleReject = (itemId: string) => {
     try {
-      rejectPacket(packetId, 'Rejected from chat inline approval');
-      setResolved((prev) => ({ ...prev, [packetId]: 'rejected' }));
+      onReject(itemId);
+      setResolved((prev) => ({ ...prev, [itemId]: 'rejected' }));
       setError(null);
     } catch (err) {
       setError(`Reject failed: ${String((err as Error)?.message || err)}`);
@@ -101,50 +108,50 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onAllResolved 
   if (items.length === 0) return null;
 
   return (
-    <div className="border border-amber-500/20 bg-amber-500/5 rounded-xl p-4 space-y-3">
+    <div className="border border-[var(--warning-border)] bg-[var(--warning-dim)] rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Shield className="w-4 h-4 text-amber-400" />
-        <span className="text-xs font-bold uppercase tracking-widest text-amber-400">
+        <Shield className="w-4 h-4 text-[var(--warning)]" />
+        <span className="text-xs font-bold uppercase tracking-widest text-[var(--warning)]">
           {items.length} item{items.length !== 1 ? 's' : ''} awaiting approval
         </span>
       </div>
 
       {error && (
-        <div className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] border border-[var(--error-border)] rounded-lg px-3 py-2">
           {error}
         </div>
       )}
 
       <div className="space-y-2">
         {items.map((item) => {
-          const status = resolved[item.packetId];
+          const status = resolved[item.itemId];
           const risk = RISK_STYLES[item.riskLevel] || RISK_STYLES.medium;
           const RiskIcon = item.riskLevel === 'high' ? ShieldAlert : Shield;
 
           return (
             <div
-              key={item.packetId}
-              className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
+              key={item.itemId}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
                 status === 'approved'
-                  ? 'border-emerald-500/30 bg-emerald-500/5'
+                  ? 'bg-[var(--success-dim)]'
                   : status === 'rejected'
-                    ? 'border-red-500/30 bg-red-500/5 opacity-60'
-                    : 'border-white/10 bg-zinc-800/40'
+                    ? 'bg-[var(--error-dim)] opacity-60'
+                    : 'bg-[var(--surface-3)]'
               }`}
             >
-              <RiskIcon className={`w-3.5 h-3.5 shrink-0 ${item.riskLevel === 'high' ? 'text-red-400' : 'text-amber-400'}`} />
+              <RiskIcon className={`w-3.5 h-3.5 shrink-0 ${item.riskLevel === 'high' ? 'text-[var(--error)]' : 'text-[var(--warning)]'}`} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-zinc-200 truncate">{item.agent}</span>
-                  <span className="text-[10px] text-zinc-500 truncate">{item.actionType}</span>
+                  <span className="text-[11px] font-semibold text-[var(--text-2)] truncate">{item.agent}</span>
+                  <span className="text-[10px] text-[var(--text-3)] truncate">{item.actionType}</span>
                 </div>
                 {item.reason && (
-                  <div className="text-[10px] text-zinc-500 truncate mt-0.5">{item.reason}</div>
+                  <div className="text-[10px] text-[var(--text-3)] truncate mt-0.5">{item.reason}</div>
                 )}
                 {item.previewContent && (
-                  <div className="mt-2 p-2 rounded-lg bg-zinc-900/60 border border-white/[0.06]">
-                    <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mb-1">Preview</div>
-                    <div className="text-[10px] text-zinc-400 whitespace-pre-wrap leading-relaxed">{item.previewContent}</div>
+                  <div className="mt-2 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-4)] mb-1">Preview</div>
+                    <div className="text-[10px] text-[var(--text-3)] whitespace-pre-wrap leading-relaxed">{item.previewContent}</div>
                   </div>
                 )}
               </div>
@@ -153,24 +160,24 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onAllResolved 
                 {risk.label}
               </div>
               {status ? (
-                <div className={`flex items-center gap-1 text-[10px] font-bold ${status === 'approved' ? 'text-emerald-400' : 'text-red-400'}`}>
+                <div className={`flex items-center gap-1 text-[10px] font-bold ${status === 'approved' ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
                   {status === 'approved' ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
                   {status === 'approved' ? 'Approved' : 'Denied'}
                 </div>
               ) : (
                 <div className="flex gap-1.5">
                   <button
-                    onClick={() => handleReject(item.packetId)}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest text-zinc-400 bg-zinc-800 border border-white/10 hover:bg-zinc-700 transition-colors"
+                    onClick={() => handleReject(item.itemId)}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)] bg-[var(--surface-3)] border border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors"
                   >
                     Deny
                   </button>
                   <button
-                    onClick={() => handleApprove(item.packetId)}
+                    onClick={() => handleApprove(item.itemId)}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white transition-colors ${
                       item.riskLevel === 'high'
-                        ? 'bg-red-700 hover:bg-red-600'
-                        : 'bg-amber-600 hover:bg-amber-500'
+                        ? 'bg-[var(--error)] hover:bg-[var(--error-dim)]'
+                        : 'bg-[var(--warning)] hover:bg-[var(--warning-dim)]'
                     }`}
                   >
                     Approve
@@ -186,7 +193,7 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onAllResolved 
         <div className="flex justify-end pt-1">
           <button
             onClick={handleContinue}
-            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 transition-colors shadow-lg"
+            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-[var(--accent-contrast)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-colors"
           >
             Continue
           </button>

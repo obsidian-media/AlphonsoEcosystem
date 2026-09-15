@@ -30,15 +30,15 @@ export const ConnectorStatusDot = memo(function ConnectorStatusDot({ connectorId
   }, [connectorId]);
 
   const colorMap: Record<string, string> = {
-    live: 'text-emerald-400',
-    missing_config: 'text-amber-400',
-    foundation_only: 'text-slate-400',
-    disabled: 'text-zinc-700'
+    live: 'text-[var(--success)]',
+    missing_config: 'text-[var(--warning)]',
+    foundation_only: 'text-[var(--text-3)]',
+    disabled: 'text-[var(--text-4)]'
   };
 
   return (
     <span
-      className={`text-[8px] leading-none select-none ${colorMap[status] || 'text-zinc-700'}`}
+      className={`text-[8px] leading-none select-none ${colorMap[status] || 'text-[var(--text-4)]'}`}
       title={`${connectorId}: ${status}`}
       aria-label={`${connectorId} status: ${status}`}
     >
@@ -74,25 +74,25 @@ export const ConnectorStatusStrip = memo(function ConnectorStatusStrip({ zeroCos
   return (
     <div className="flex items-center gap-3 text-[9px] font-semibold">
       {(counts.live || 0) > 0 && (
-        <span className="flex items-center gap-1 text-emerald-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+        <span className="flex items-center gap-1 text-[var(--success)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
           {counts.live} live
         </span>
       )}
       {(counts.missing_config || 0) > 0 && (
-        <span className="flex items-center gap-1 text-amber-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        <span className="flex items-center gap-1 text-[var(--warning)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--warning)]" />
           {counts.missing_config} missing config
         </span>
       )}
       {(counts.disabled || 0) > 0 && (
-        <span className="flex items-center gap-1 text-zinc-600">
-          <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+        <span className="flex items-center gap-1 text-[var(--text-3)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-3)]" />
           {counts.disabled} disabled
         </span>
       )}
       {zeroCostMode && (
-        <span className="flex items-center gap-1 text-amber-500/70">
+        <span className="flex items-center gap-1 text-[var(--warning)]">
           <ZapOff className="w-2.5 h-2.5" />
           zero-cost
         </span>

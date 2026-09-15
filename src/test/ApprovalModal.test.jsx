@@ -22,6 +22,19 @@ describe('ApprovalModal', () => {
     expect(dialog.getAttribute('aria-modal')).toBe('true');
   });
 
+  it('traps focus: Tab from the last focusable element wraps to the first, never escaping to the page behind it', () => {
+    // Confirms useFocusTrap is really wired into this dialog, not just that
+    // the hook itself works in isolation -- an approval prompt is exactly
+    // the kind of surface where a keyboard user accidentally tabbing past
+    // it into background content (and confirming/denying the wrong thing)
+    // would be a real, high-stakes accessibility failure.
+    render(<ApprovalModal {...defaultProps} />);
+    const buttons = screen.getAllByRole('button');
+    buttons[buttons.length - 1].focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(buttons[0]);
+  });
+
   it('shows "Approval Required" heading', () => {
     render(<ApprovalModal {...defaultProps} />);
     expect(screen.getByText('Approval Required')).toBeTruthy();

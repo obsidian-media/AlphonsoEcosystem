@@ -1,4 +1,6 @@
 import { redactMissionRoomSecrets, classifyMissionRoomRisk } from './missionRoomService';
+import { addNode, addEdge } from './memoryGraphService';
+import { TRUST_STATES } from './trustModel';
 
 export const THREADS_KEY = 'alphonso_boardroom_threads_v2';
 export const MESSAGES_KEY = 'alphonso_boardroom_thread_messages_v2';
@@ -191,7 +193,8 @@ export function addThreadMessage({
   kind = 'message',
   retryContext,
   model,
-  latencyMs
+  latencyMs,
+  informedByMessageId
 }: {
   threadId: string;
   speaker: string;
@@ -200,11 +203,12 @@ export function addThreadMessage({
   retryContext?: string;
   model?: string;
   latencyMs?: number;
+  informedByMessageId?: string;
 }): BoardroomThreadMessage | null {
   const originalText = String(content || '').trim();
   if (!originalText) return null;
-  const text = redactMissionRoomSecrets(originalText).trim();
   const risk = classifyMissionRoomRisk(originalText);
+  const text = (risk.secretDetected ? '[REDACTED_SECRET]' : redactMissionRoomSecrets(originalText)).trim();
   const mentionedAgents = parseMentions(originalText, KNOWN_AGENT_IDS);
   const message: BoardroomThreadMessage = {
     id: makeId('boardroom_msg'),
@@ -233,6 +237,16 @@ export function addThreadMessage({
     THREADS_KEY,
     threads.map((t) => (t.id === threadId ? { ...t, updatedAt: nowIso(), updatedAtMs: nowMs() } : t))
   );
+
+  addNode('boardroom_message', message.id).then((nodeId) => {
+    if (nodeId && informedByMessageId) {
+      addEdge(nodeId, `boardroom_message:${informedByMessageId}`, 'informed_by', {
+        confidence: TRUST_STATES.VERIFIED,
+        createdBy: speaker,
+        createdEvent: message.id
+      });
+    }
+  }).catch(() => {});
 
   return message;
 }

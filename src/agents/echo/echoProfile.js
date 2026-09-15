@@ -57,7 +57,7 @@ export const ECHO_PROFILE = {
     'Generate retention report for memory categories.'
   ],
   hierarchyRank: 3,
-  mascotPath: 'src/assets/agents/echo/echo-mascot-main.webp',
+  mascotPath: 'src/assets/agents/echo/portrait.jpg',
   identity: 'Institutional memory steward for decisions, workflow outputs, and context continuity.',
   color: 'indigo',
   memoryCategories: ['project_memory', 'timeline_memory', 'preference_memory', 'orchestration_memory'],

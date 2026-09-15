@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { getAllStatus, stopTool } from '../services/runtimeManagerService';
 
 interface UpdaterNotificationProps {
   version: string | null | undefined;
@@ -27,6 +28,19 @@ export function UpdaterNotification({ version, onDismiss }: UpdaterNotificationP
       }
       setUpdate(u);
 
+      // Real bug found via live testing against v2.7.0: the NSIS installer
+      // aborted mid-extraction ("error writing to file ...cublasLt64_12.dll")
+      // because Alphonso's own Runtime-Hub-managed Ollama process was still
+      // running and holding a lock on its bundled CUDA DLLs -- the installer
+      // overwrites those exact files in place. Stop every tool Alphonso
+      // itself started (tracked by PID, so this can't touch a process the
+      // user runs independently) before the installer ever runs.
+      try {
+        const statuses = await getAllStatus();
+        const running = statuses.filter((s) => s.running);
+        await Promise.all(running.map((s) => stopTool(s.name).catch(() => {})));
+      } catch { /* best-effort -- do not block the update on this */ }
+
       await u.downloadAndInstall((event) => {
         if (event.event === 'Progress' && event.data) {
           setProgress((p) => (p ?? 0) + 10);
@@ -47,17 +61,17 @@ export function UpdaterNotification({ version, onDismiss }: UpdaterNotificationP
 
   if (status === 'idle') {
     return (
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-amber-500/10 border border-amber-500/40 text-amber-300 px-4 py-2 rounded-b-lg shadow-lg">
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[var(--warning-dim)] border border-[var(--warning-border)] text-[var(--warning)] px-4 py-2 rounded-b-lg shadow-lg">
         <span className="text-sm font-medium">Version {version} available</span>
         <button
           onClick={handleUpdate}
-          className="bg-amber-500 text-black text-xs font-bold px-3 py-1 rounded hover:bg-amber-400 transition-colors"
+          className="bg-[var(--warning)] text-black text-xs font-bold px-3 py-1 rounded hover:bg-[var(--warning-dim)] transition-colors"
         >
           Download Update
         </button>
         <button
           onClick={onDismiss}
-          className="text-amber-400 hover:text-amber-200 text-xs px-2 py-1 rounded transition-colors"
+          className="text-[var(--warning)] hover:text-[var(--warning)] text-xs px-2 py-1 rounded transition-colors"
         >
           Later
         </button>
@@ -67,12 +81,12 @@ export function UpdaterNotification({ version, onDismiss }: UpdaterNotificationP
 
   if (status === 'downloading') {
     return (
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-amber-500/10 border border-amber-500/40 text-amber-300 px-4 py-2 rounded-b-lg shadow-lg">
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[var(--warning-dim)] border border-[var(--warning-border)] text-[var(--warning)] px-4 py-2 rounded-b-lg shadow-lg">
         <div className="flex items-center gap-3 w-80">
           <span className="text-sm font-medium flex-1">Downloading v{version}...</span>
-          <div className="h-2 w-40 bg-amber-500/20 rounded-full overflow-hidden">
+          <div className="h-2 w-40 bg-[var(--warning-dim)] rounded-full overflow-hidden">
             <div
-              className="h-full bg-amber-500 transition-all duration-300"
+              className="h-full bg-[var(--warning)] transition-all duration-300"
               style={{ width: `${Math.min(100, progress ?? 0)}%` }}
             />
           </div>
@@ -80,7 +94,7 @@ export function UpdaterNotification({ version, onDismiss }: UpdaterNotificationP
         </div>
         <button
           onClick={onDismiss}
-          className="text-amber-400 hover:text-amber-200 text-xs px-2 py-1 rounded transition-colors"
+          className="text-[var(--warning)] hover:text-[var(--warning)] text-xs px-2 py-1 rounded transition-colors"
         >
           Later
         </button>
@@ -90,31 +104,31 @@ export function UpdaterNotification({ version, onDismiss }: UpdaterNotificationP
 
   if (status === 'installing' || status === 'relaunching') {
     return (
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-amber-500/10 border border-amber-500/40 text-amber-300 px-4 py-2 rounded-b-lg shadow-lg">
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[var(--warning-dim)] border border-[var(--warning-border)] text-[var(--warning)] px-4 py-2 rounded-b-lg shadow-lg">
         <span className="text-sm font-medium">
           {status === 'installing' ? 'Installing update...' : 'Relaunching...'}
         </span>
-        <div className="w-5 h-5 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-[var(--warning-border)] border-t-[var(--warning)] rounded-full animate-spin" />
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-red-500/10 border border-red-500/40 text-red-300 px-4 py-2 rounded-b-lg shadow-lg">
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[var(--error-dim)] border border-[var(--error-border)] text-[var(--error)] px-4 py-2 rounded-b-lg shadow-lg">
         <span className="text-sm font-medium flex-1">Update failed: {error}</span>
         <button
           onClick={() => {
             setStatus('idle');
             setError(null);
           }}
-          className="bg-red-500 text-black text-xs font-bold px-3 py-1 rounded hover:bg-red-400 transition-colors"
+          className="bg-[var(--error)] text-black text-xs font-bold px-3 py-1 rounded hover:bg-[var(--error-dim)] transition-colors"
         >
           Retry
         </button>
         <button
           onClick={onDismiss}
-          className="text-red-400 hover:text-red-200 text-xs px-2 py-1 rounded transition-colors"
+          className="text-[var(--error)] hover:text-[var(--error)] text-xs px-2 py-1 rounded transition-colors"
         >
           Dismiss
         </button>

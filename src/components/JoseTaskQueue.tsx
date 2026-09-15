@@ -6,12 +6,12 @@ import { getOrchestrationQueueSnapshot, replayPacketFromDeadLetter } from '../se
 import { AgentAvatar } from './AgentAvatar';
 
 const STAGES = [
-  { key: 'pending_approval', label: 'Pending',   icon: Clock,        color: 'text-amber-300',  ring: 'border-amber-500/30  bg-amber-950/30'  },
-  { key: 'queued',           label: 'Queued',    icon: Inbox,        color: 'text-blue-300',   ring: 'border-blue-500/30   bg-blue-950/30'   },
-  { key: 'executing',        label: 'Running',   icon: Loader,       color: 'text-indigo-300', ring: 'border-indigo-500/30 bg-indigo-950/30' },
-  { key: 'approved',         label: 'Approved',  icon: CheckCircle2, color: 'text-emerald-300',ring: 'border-emerald-500/30 bg-emerald-950/30'},
-  { key: 'failed',           label: 'Failed',    icon: AlertTriangle,color: 'text-red-300',    ring: 'border-red-500/30    bg-red-950/30'    },
-  { key: 'dead_letter',      label: 'Dead',      icon: XCircle,      color: 'text-zinc-400',   ring: 'border-zinc-500/30   bg-zinc-900/40'   },
+  { key: 'pending_approval', label: 'Pending',   icon: Clock,        color: 'text-[var(--warning)]',  ring: 'border-[var(--warning-border)] bg-[var(--warning-dim)]'  },
+  { key: 'queued',           label: 'Queued',    icon: Inbox,        color: 'text-[var(--info)]',   ring: 'border-[var(--info-border)] bg-[var(--info-dim)]'   },
+  { key: 'executing',        label: 'Running',   icon: Loader,       color: 'text-[var(--accent)]', ring: 'border-[var(--accent-border)] bg-[var(--accent-dim)]' },
+  { key: 'approved',         label: 'Approved',  icon: CheckCircle2, color: 'text-[var(--success)]',ring: 'border-[var(--success-border)] bg-[var(--success-dim)]'},
+  { key: 'failed',           label: 'Failed',    icon: AlertTriangle,color: 'text-[var(--error)]',    ring: 'border-[var(--error-border)] bg-[var(--error-dim)]'    },
+  { key: 'dead_letter',      label: 'Dead',      icon: XCircle,      color: 'text-[var(--text-3)]',   ring: 'border-[var(--border)] bg-[var(--surface-2)]'   },
 ];
 
 const ALL_KEY = 'all';
@@ -25,7 +25,7 @@ interface Stage {
 }
 
 function statusStage(status: string): Stage {
-  return STAGES.find((s) => s.key === status) || { label: status, icon: Clock, color: 'text-zinc-400', ring: 'border-zinc-700 bg-zinc-900/40', key: status };
+  return STAGES.find((s) => s.key === status) || { label: status, icon: Clock, color: 'text-[var(--text-3)]', ring: 'border-[var(--border)] bg-[var(--surface-2)]', key: status };
 }
 
 function relTime(ts: number) {
@@ -58,12 +58,12 @@ function PacketCard({ packet, onApprove, onReject, onReplay }: PacketCardProps) 
   const stage = statusStage(packet.status);
   const Icon = stage.icon;
   return (
-    <div className={`rounded-xl border p-3 space-y-2 ${stage.ring}`}>
+    <div className={`rounded-xl p-3 space-y-2 ${stage.ring}`}>
       <div className="flex items-start gap-2">
         <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${stage.color}`} />
         <div className="min-w-0 flex-1">
-          <div className="text-[12px] font-semibold text-zinc-100 leading-snug truncate">{packet.title || packet.packetType || packet.id}</div>
-          <div className="flex flex-wrap items-center gap-1 mt-0.5 text-[10px] text-zinc-500">
+          <div className="text-[12px] font-semibold text-[var(--text-1)] leading-snug truncate">{packet.title || packet.packetType || packet.id}</div>
+          <div className="flex flex-wrap items-center gap-1 mt-0.5 text-[10px] text-[var(--text-3)]">
             <AgentAvatar agentId={packet.fromAgent} name={packet.fromAgent} sizeClass="h-3.5 w-3.5" />
             <span>{packet.fromAgent}</span>
             <span>→</span>
@@ -71,25 +71,25 @@ function PacketCard({ packet, onApprove, onReject, onReplay }: PacketCardProps) 
             <span>{packet.toAgent}</span>
             <span className="ml-1 opacity-50">·</span>
             <span>{relTime(packet.createdAt || 0)}</span>
-            {packet.riskLevel && <span className={`rounded px-1 font-bold uppercase tracking-widest ${packet.riskLevel === 'high' ? 'text-red-400' : 'text-zinc-500'}`}>{packet.riskLevel}</span>}
+            {packet.riskLevel && <span className={`rounded px-1 font-bold uppercase tracking-widest ${packet.riskLevel === 'high' ? 'text-[var(--error)]' : 'text-[var(--text-3)]'}`}>{packet.riskLevel}</span>}
           </div>
         </div>
         <span className={`shrink-0 text-[9px] font-bold uppercase tracking-widest ${stage.color}`}>{stage.label}</span>
       </div>
       {(packet.commandPreview || packet.actionType) && (
-        <div className="rounded-lg bg-black/20 px-2 py-1 text-[10px] font-mono text-zinc-400 truncate">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2 py-1 text-[10px] font-mono text-[var(--text-3)] truncate">
           {packet.commandPreview || packet.actionType}
         </div>
       )}
       <div className="flex gap-2">
         {packet.status === 'pending_approval' && (
           <>
-            <button onClick={() => onApprove(packet.id)} className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-emerald-200 hover:bg-emerald-500/35 transition-colors">Approve</button>
-            <button onClick={() => onReject(packet.id)}  className="rounded-lg bg-red-500/20    px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-red-200    hover:bg-red-500/35    transition-colors">Reject</button>
+            <button onClick={() => onApprove(packet.id)} className="rounded-lg bg-[var(--success-dim)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[var(--success)] hover:bg-[var(--success-dim)] transition-colors">Approve</button>
+            <button onClick={() => onReject(packet.id)}  className="rounded-lg bg-[var(--error-dim)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[var(--error)] hover:bg-[var(--error-dim)] transition-colors">Reject</button>
           </>
         )}
         {packet.status === 'dead_letter' && (
-          <button onClick={() => onReplay(packet.id)} className="flex items-center gap-1 rounded-lg bg-amber-500/20 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-amber-200 hover:bg-amber-500/35 transition-colors">
+          <button onClick={() => onReplay(packet.id)} className="flex items-center gap-1 rounded-lg bg-[var(--warning-dim)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[var(--warning)] hover:bg-[var(--warning-dim)] transition-colors">
             <RotateCcw className="w-2.5 h-2.5" /> Replay
           </button>
         )}
@@ -134,18 +134,18 @@ export function JoseTaskQueue({ onRefresh }: JoseTaskQueueProps) {
   const totalActive = (counts.pending_approval || 0) + (counts.queued || 0) + (counts.executing || 0);
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-zinc-950/60 p-4 space-y-4">
+    <div className="rounded-2xl bg-[var(--surface-1)] p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-zinc-300">Jose Task Pipeline</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">Jose Task Pipeline</span>
           {totalActive > 0 && (
-            <span className="rounded-full bg-blue-500/20 border border-blue-500/30 px-2 py-0.5 text-[9px] font-bold text-blue-300">{totalActive} active</span>
+            <span className="rounded-full border border-[var(--info-border)] bg-[var(--info-dim)] px-2 py-0.5 text-[9px] font-bold text-[var(--info)]">{totalActive} active</span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-zinc-600">
+        <div className="flex items-center gap-2 text-[10px] text-[var(--text-4)]">
           <span>cmds: {commands.length}</span>
-          <button onClick={refresh} aria-label="Refresh task queue" className="hover:text-zinc-300 transition-colors"><RefreshCw className="w-3 h-3" /></button>
+          <button onClick={refresh} aria-label="Refresh task queue" className="hover:text-[var(--text-2)] transition-colors"><RefreshCw className="w-3 h-3" /></button>
         </div>
       </div>
 
@@ -153,7 +153,7 @@ export function JoseTaskQueue({ onRefresh }: JoseTaskQueueProps) {
       <div className="flex flex-wrap gap-1.5">
         <button
           onClick={() => setFilter(ALL_KEY)}
-          className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest transition-colors ${filter === ALL_KEY ? 'bg-white/10 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}`}
+          className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest transition-colors ${filter === ALL_KEY ? 'bg-[var(--surface-3)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}
         >
           All ({packets.length})
         </button>
@@ -165,7 +165,7 @@ export function JoseTaskQueue({ onRefresh }: JoseTaskQueueProps) {
               key={s.key}
               onClick={() => setFilter(s.key)}
               className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest transition-colors border ${
-                filter === s.key ? `${s.ring} ${s.color}` : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                filter === s.key ? `${s.ring} ${s.color}` : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)]'
               }`}
             >
               <Icon className="w-2.5 h-2.5" />
@@ -181,10 +181,10 @@ export function JoseTaskQueue({ onRefresh }: JoseTaskQueueProps) {
           const count = counts[s.key] || 0;
           return (
             <React.Fragment key={s.key}>
-              <div className={`flex-1 rounded py-1 text-center font-bold transition-colors ${count > 0 ? `${s.ring} ${s.color}` : 'bg-zinc-900/40 text-zinc-700'}`}>
+              <div className={`flex-1 rounded py-1 text-center font-bold transition-colors ${count > 0 ? `${s.ring} ${s.color}` : 'bg-[var(--surface-2)] text-[var(--text-4)]'}`}>
                 {s.label}{count > 0 ? ` ${count}` : ''}
               </div>
-              {i < 3 && <SkipForward className="w-2.5 h-2.5 text-zinc-700 shrink-0" />}
+              {i < 3 && <SkipForward className="w-2.5 h-2.5 text-[var(--text-4)] shrink-0" />}
             </React.Fragment>
           );
         })}
@@ -193,7 +193,7 @@ export function JoseTaskQueue({ onRefresh }: JoseTaskQueueProps) {
       {/* Cards */}
       <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
         {visible.length === 0 ? (
-          <p className="text-[11px] text-zinc-600 py-4 text-center">No tasks in this stage.</p>
+          <p className="text-[11px] text-[var(--text-4)] py-4 text-center">No tasks in this stage.</p>
         ) : (
           visible.map((p: PacketCardProps['packet']) => (
             <PacketCard key={p.id} packet={p} onApprove={handleApprove} onReject={handleReject} onReplay={handleReplay} />
@@ -203,12 +203,12 @@ export function JoseTaskQueue({ onRefresh }: JoseTaskQueueProps) {
 
       {/* Jose command summary */}
       {commands.length > 0 && (
-        <div className="border-t border-white/[0.04] pt-3 space-y-1">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">Jose Commands ({commands.length})</div>
+        <div className="border-t border-[var(--border)] pt-3 space-y-1">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-4)]">Jose Commands ({commands.length})</div>
           {commands.slice(-5).reverse().map((cmd: { id: string; commandText?: string; status: string }) => (
-            <div key={cmd.id} className="flex items-center justify-between gap-2 rounded-lg bg-zinc-900/40 px-2 py-1">
-              <span className="text-[10px] text-zinc-400 truncate flex-1">{cmd.commandText?.slice(0, 80) || cmd.id}</span>
-              <span className={`text-[9px] font-bold uppercase shrink-0 ${cmd.status === 'reported_to_user' ? 'text-emerald-400' : cmd.status === 'failed' ? 'text-red-400' : 'text-zinc-500'}`}>{cmd.status}</span>
+            <div key={cmd.id} className="flex items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-2 py-1">
+              <span className="text-[10px] text-[var(--text-3)] truncate flex-1">{cmd.commandText?.slice(0, 80) || cmd.id}</span>
+              <span className={`text-[9px] font-bold uppercase shrink-0 ${cmd.status === 'reported_to_user' ? 'text-[var(--success)]' : cmd.status === 'failed' ? 'text-[var(--error)]' : 'text-[var(--text-3)]'}`}>{cmd.status}</span>
             </div>
           ))}
         </div>

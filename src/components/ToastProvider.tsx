@@ -22,17 +22,17 @@ const ICONS: Record<ToastType, typeof CheckCircle> = {
 };
 
 const COLORS: Record<ToastType, string> = {
-  success: 'border-emerald-500/30 bg-emerald-900/30 text-emerald-300',
-  error: 'border-red-500/30 bg-red-900/30 text-red-300',
-  info: 'border-indigo-500/30 bg-indigo-900/30 text-indigo-300',
-  warning: 'border-amber-500/30 bg-amber-900/30 text-amber-300'
+  success: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+  error: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
+  info: 'border-[var(--info-border)] bg-[var(--info-dim)] text-[var(--info)]',
+  warning: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]'
 };
 
 const ICON_COLORS: Record<ToastType, string> = {
-  success: 'text-emerald-400',
-  error: 'text-red-400',
-  info: 'text-indigo-400',
-  warning: 'text-amber-400'
+  success: 'text-[var(--success)]',
+  error: 'text-[var(--error)]',
+  info: 'text-[var(--info)]',
+  warning: 'text-[var(--warning)]'
 };
 
 interface ToastProps extends ToastItem {

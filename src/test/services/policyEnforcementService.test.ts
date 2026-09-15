@@ -77,6 +77,11 @@ describe('policyEnforcementService', () => {
       expect(classifyConnectorRisk('whatsapp')).toBe('high');
     });
 
+    it('returns high for calle unconditionally (every call is the real-world action)', () => {
+      expect(classifyConnectorRisk('calle')).toBe('high');
+      expect(classifyConnectorRisk('calle', 'anything')).toBe('high');
+    });
+
     it('returns medium for chatgpt', () => {
       expect(classifyConnectorRisk('chatgpt')).toBe('medium');
     });

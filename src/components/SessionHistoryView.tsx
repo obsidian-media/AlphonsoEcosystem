@@ -92,13 +92,13 @@ function formatDuration(ms: number): string {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  completed: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
-  reported_to_jose: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
-  failed: 'bg-red-500/15 text-red-400 border-red-500/20',
-  dead_letter: 'bg-red-500/15 text-red-400 border-red-500/20',
-  queued: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/20',
-  executing: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
-  recorded: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/20',
+  completed: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
+  reported_to_jose: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
+  failed: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
+  dead_letter: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
+  queued: 'bg-[var(--surface-3)] text-[var(--text-3)] border-[var(--border)]',
+  executing: 'bg-[var(--info-dim)] text-[var(--info)] border-[var(--info-border)]',
+  recorded: 'bg-[var(--surface-3)] text-[var(--text-3)] border-[var(--border)]',
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -119,23 +119,23 @@ function SessionRow({ session }: { session: Session }) {
   const [expanded, setExpanded] = useState<boolean>(false);
 
   return (
-    <div className="rounded-xl border border-white/[0.05] bg-zinc-900/40 overflow-hidden">
+    <div className="rounded-xl bg-[var(--surface-2)] overflow-hidden">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface-2)] transition-colors text-left"
       >
-        <span className="shrink-0 text-zinc-500">
+        <span className="shrink-0 text-[var(--text-3)]">
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-zinc-200 truncate">{session.command}</p>
-          <p className="text-[11px] text-zinc-500 mt-0.5">{formatTs(session.startMs)}</p>
+          <p className="text-sm text-[var(--text-2)] truncate">{session.command}</p>
+          <p className="text-[11px] text-[var(--text-3)] mt-0.5">{formatTs(session.startMs)}</p>
         </div>
         <div className="shrink-0 flex items-center gap-3">
-          <span className="text-[11px] text-zinc-500 hidden sm:block">
+          <span className="text-[11px] text-[var(--text-3)] hidden sm:block">
             {session.agents.join(', ')}
           </span>
-          <span className="text-[11px] text-zinc-500 flex items-center gap-1">
+          <span className="text-[11px] text-[var(--text-3)] flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {formatDuration(session.durationMs)}
           </span>
@@ -144,20 +144,20 @@ function SessionRow({ session }: { session: Session }) {
       </button>
 
       {expanded && (
-        <div className="border-t border-white/[0.05] px-4 py-3 space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
+        <div className="border-t border-[var(--border)] px-4 py-3 space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)] mb-2">
             Receipt Events ({session.receipts.length})
           </p>
           <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
             {session.receipts.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center gap-2 text-xs text-zinc-400 rounded-lg bg-zinc-900/60 border border-white/[0.04] px-3 py-1.5"
+                className="flex items-center gap-2 text-xs text-[var(--text-3)] rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-1.5"
               >
-                <span className="text-zinc-500 shrink-0 w-20 truncate">{r.agent}</span>
+                <span className="text-[var(--text-3)] shrink-0 w-20 truncate">{r.agent}</span>
                 <span className="flex-1 truncate">{r.eventType || r.actionType || 'event'}</span>
                 <StatusBadge status={r.status} />
-                <span className="text-zinc-600 shrink-0 text-[10px]">{formatTs(r.timestampMs)}</span>
+                <span className="text-[var(--text-4)] shrink-0 text-[10px]">{formatTs(r.timestampMs)}</span>
               </div>
             ))}
           </div>
@@ -205,23 +205,23 @@ export function SessionHistoryView() {
   return (
     <div className="flex flex-col h-full gap-4 p-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="text-base font-semibold text-zinc-100">Session History</h2>
+        <h2 className="font-serif text-base font-semibold text-[var(--text-1)]">Session History</h2>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-3)]" />
             <input
               type="text"
               placeholder="Search sessions…"
               value={query}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs rounded-lg bg-zinc-800 border border-white/[0.08] text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-500 w-48"
+              className="pl-8 pr-3 py-1.5 text-xs rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-2)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--border-strong)] w-48"
             />
           </div>
           <select
             aria-label="Filter by status"
             value={filterStatus}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value)}
-            className="px-2.5 py-1.5 text-xs rounded-lg bg-zinc-800 border border-white/[0.08] text-zinc-200 focus:outline-none"
+            className="px-2.5 py-1.5 text-xs rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-2)] focus:outline-none"
           >
             <option value="all">All statuses</option>
             <option value="completed">Completed</option>
@@ -231,27 +231,27 @@ export function SessionHistoryView() {
           </select>
           <button
             onClick={exportJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-zinc-800 border border-white/[0.08] text-zinc-300 hover:bg-zinc-700 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
             Export
           </button>
           <button
             onClick={load}
-            className="px-3 py-1.5 text-xs rounded-lg bg-zinc-800 border border-white/[0.08] text-zinc-300 hover:bg-zinc-700 transition-colors"
+            className="px-3 py-1.5 text-xs rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
           >
             Refresh
           </button>
         </div>
       </div>
 
-      <div className="text-[11px] text-zinc-500">
+      <div className="text-[11px] text-[var(--text-3)]">
         {filtered.length} session{filtered.length !== 1 ? 's' : ''}
         {query || filterStatus !== 'all' ? ' (filtered)' : ''}
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm">
+        <div className="flex-1 flex items-center justify-center text-[var(--text-3)] text-sm">
           No session history found.
         </div>
       ) : (

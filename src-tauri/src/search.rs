@@ -166,6 +166,14 @@ pub(crate) fn strip_html_tags(input: &str) -> String {
   clean_ws(&output)
 }
 
+fn build_snippet(text: &str) -> Option<String> {
+  if text.is_empty() {
+    None
+  } else {
+    Some(text.to_string())
+  }
+}
+
 pub(crate) fn decode_html_entities(input: &str) -> String {
   input
     .replace("&amp;", "&")
@@ -421,11 +429,7 @@ pub(crate) async fn fetch_research_sources(
             let body = String::from_utf8_lossy(&bytes[..max_len]).to_string();
             let title = extract_title(&body);
             let text = strip_html_tags(&body);
-            let snippet = if text.is_empty() {
-              None
-            } else {
-              Some(text.chars().take(420).collect::<String>())
-            };
+            let snippet = build_snippet(&text);
             proofs.push(ResearchSourceProof {
               url: url.to_string(),
               source_type,
@@ -678,6 +682,22 @@ mod tests {
   #[test]
   fn strip_html_removes_tags() {
     assert_eq!(strip_html_tags("<p>Hello <b>world</b></p>"), "Hello world");
+  }
+
+  #[test]
+  fn build_snippet_keeps_long_text_in_full() {
+    let long_text = "a".repeat(5000);
+    let snippet = build_snippet(&long_text).unwrap();
+    assert_eq!(
+      snippet.len(),
+      5000,
+      "snippet should no longer be capped at 420 chars"
+    );
+  }
+
+  #[test]
+  fn build_snippet_returns_none_for_empty_text() {
+    assert!(build_snippet("").is_none());
   }
 
   #[test]

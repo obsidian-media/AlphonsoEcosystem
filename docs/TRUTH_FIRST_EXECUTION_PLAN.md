@@ -694,7 +694,7 @@ not confirmed or policy-level. The three items below were independently
 re-verified against the live files in this session (not merely copied from
 either report) and are real, unfixed as of 2026-07-26.
 
-- [ ] **F1 — Fix timing-unsafe token comparison in Cloud Voice auth**
+- [x] **F1 — Fix timing-unsafe token comparison in Cloud Voice auth**
   - **Owner:** Sentinel; **execution:** Alphonso
   - `voice/cloud-backend/app/auth.py:9` compares the bearer token with `!=`
     instead of a constant-time comparison
@@ -703,10 +703,32 @@ either report) and are real, unfixed as of 2026-07-26.
     Notably, the equivalent Rust companion-auth path already received this
     exact class of fix (`cf2d9ef`); this Python service did not.
   - **Code change closed 2026-07-26 by PR #124:** replaced with
-    `secrets.compare_digest()`. Pending: regression test asserting
-    equal-length near-miss tokens are still rejected, and `pytest` for
-    `voice/cloud-backend` passes (evidence unavailable in this session;
-    pytest runs OOM on this machine).
+    `secrets.compare_digest()`.
+  - **Closed 2026-09-06:** the missing regression test/pytest evidence is no
+    longer blocked — this machine's prior `pytest` OOM was a Python 3.14
+    incompatibility (`pydantic-core` has no prebuilt wheel for 3.14 and
+    PyO3 0.22 can't build one from source on it), not a real memory limit.
+    Created a Python 3.11 venv (`voice/cloud-backend/.venv`, gitignored),
+    installed `requirements-dev.txt` clean, and added
+    `tests/test_auth.py` (7 tests) directly exercising
+    `require_bearer_token()`, including the near-miss-token regression the
+    "Done when" criteria asked for. Full suite: **36/36 passed**.
+  - **Real-world impact finding (2026-09-06):** `require_bearer_token()` —
+    the function this whole item is about — has **zero call sites**
+    anywhere in `voice/cloud-backend` (confirmed via repo-wide grep). The
+    service's actual live auth path (`app/supabase_auth.py`'s
+    `SupabaseDeviceRegistry`) validates the user's bearer token by round-
+    tripping it to Supabase's `/auth/v1/user` endpoint for real signature
+    verification — there is no local string comparison against a static
+    secret anywhere in the reachable code. `auth.py` is dead code (likely a
+    leftover from an earlier shared-secret design later replaced by
+    Supabase JWT auth). The `compare_digest()` fix and this regression test
+    are still correct and worth keeping, but the timing-attack surface this
+    item describes was never actually reachable in production. Not
+    proposing removal of `auth.py` unprompted since it may be intended for
+    a future machine-to-machine endpoint — flagging for a human decision
+    (remove as dead code, or wire it up somewhere) rather than deleting or
+    inventing a call site.
   - **Done when:** the comparison uses `hmac.compare_digest()` (or
     equivalent constant-time check), with a regression test asserting equal-
     length near-miss tokens are still rejected, and `pytest` for
@@ -793,22 +815,24 @@ dropped.
     categories) confirms fail-closed behavior, or a genuine gap is found and
     fixed.
 
-- [ ] **G-T14 — Split `lib.rs` + lint-enforce `CREATE_NO_WINDOW`**
+- [x] **G-T14 — Split `lib.rs` + lint-enforce `CREATE_NO_WINDOW`** — CLOSED 2026-09-02, PR #206
   - **Owner:** Alphonso
-  - **Status note (updated 2026-09-02):** PRs #194–#197 extracted
+  - **Status note (closed 2026-09-02):** PRs #194–#197 extracted
     filesystem/picker, runtime-launcher, restore/handoff, OCR,
     jose-decompose, update-check, system, bridge, and clipboard/url/
     notification commands into their own modules. `lib.rs` is now **837
-    lines** (measured 2026-09-02, verified via `wc -l`) — down from the
-    2,206-line figure this task was last tracked against, and now well
-    under the original 2,024-line baseline. The split half of this task is
-    substantially done. The lint half is not: no CI check currently enforces
-    `CREATE_NO_WINDOW` on new `Command::new()`/`TokioCommand::new()` call
-    sites (see CLAUDE.md's "CREATE_NO_WINDOW on all Windows process spawns"
-    note) — it still depends on a human remembering.
+    lines** — down from the 2,206-line figure this task was last tracked
+    against, and now well under the original 2,024-line baseline. PR #206
+    then closed the lint half: `scripts/verify-no-window-coverage.mjs`
+    scans every `Command::new()`/`TokioCommand::new()` spawn site in
+    `src-tauri/src`, wired as a **blocking** `Rust Tests & Clippy` CI step
+    (not advisory). Added `no_window_async()` for tokio spawns and migrated
+    `workspace.rs`'s whisper-transcription spawn off a raw inline
+    `creation_flags(0x0800_0000)` onto the shared helper, so the lint has
+    one consistent pattern to check for.
   - **Done when:** a CI check (clippy lint, grep-based check, or custom
     script) fails a new Windows process spawn that skips the shared
-    `no_window()` helper.
+    `no_window()` helper. — met.
 
 - [ ] **G-T17 — Add observability to cloud sidecars (gateways, MCP server,
   bridge)**
@@ -826,42 +850,61 @@ dropped.
     and error paths (done), with a documented way to inspect them without
     shell access to the host (not done).
 
-- [ ] **G-T19 — Auto-generate the "Do Not Duplicate" map**
+- [x] **G-T19a — Close the 124-file "Do Not Duplicate" documentation backlog + flip checker to blocking** — CLOSED 2026-09-02, PR #206
   - **Owner:** Echo
-  - CLAUDE.md's "Do Not Duplicate" table is hand-maintained and already
-    large; it drifts from source the same way doc counts did before
-    `verify:docs`/`verify:skill-matrix` existed.
-  - **Status note (updated 2026-09-02):** PR #201 wired a checker
-    (`scripts/verify-dnd-coverage.mjs`) into `ci.yml` as an **advisory**
-    step (`continue-on-error: true`) — it doesn't generate the table, it
-    only flags gaps. Running it live (2026-09-02) found **124 files**
-    missing from the table. That number is the real, current size of this
-    task, not the auto-generator itself — the generator half described
-    below has not been built.
+  - **Status note (closed 2026-09-02):** All 124 files `verify:dnd-coverage`
+    (PR #201) flagged are now documented in CLAUDE.md's table — roughly a
+    third were stale `.jsx`/`.js` extension references left over from the
+    earlier 100%-`.tsx` component migration, the rest were genuinely
+    undocumented subsystems (Agent Workshop / Project Execution Mode,
+    Hector Research Desk, the `ui/` primitive kit, the `useAppEffects` hook
+    split, the skill-pack content split, and more). `verify:dnd-coverage`
+    flipped from advisory (`continue-on-error: true`) to **blocking** in
+    `ci.yml` — a new undocumented file now fails CI immediately instead of
+    accumulating again.
+  - **Done when:** `npm run verify:dnd-coverage` passes clean and the job
+    blocks merges. — met, verified live 2026-09-03.
+
+- [ ] **G-T19b — Auto-generate the "Do Not Duplicate" map (the actual generator)**
+  - **Owner:** Echo
+  - **Still genuinely open, not closed by PR #206.** `scripts/verify-dnd-coverage.mjs`
+    is a **checker**: it confirms every file is *mentioned* somewhere in
+    CLAUDE.md (a backticked filename match), it does not derive or write
+    table rows from source. The 124-file backlog it flagged was closed by
+    a human writing the entries by hand (G-T19a), not by a generator. Do
+    not conflate the two — closing G-T19a does not close this item.
   - **Done when:** a generator (similar in spirit to
     `scripts/generate-skill-permission-matrix.mjs`) derives at least the
     service-existence half of the table from `src/services/` + component
-    exports, with a `--check` mode wired into CI doc-freshness (the current
-    advisory grep-and-list checker is a step toward this, not the finished
-    task).
+    exports, with a `--check` mode wired into CI doc-freshness.
 
 - [ ] **G-T20 — Add a token/cost budget to multi-agent fan-out; surface
   hidden features**
   - **Owner:** Jose (budget), Echo (discoverability)
   - No cost/token ceiling exists for Boardroom `@mention` chains or other
     multi-agent fan-out paths beyond the existing `MAX_CHAIN_DEPTH=3` hop
-    cap (confirmed still the only limiter, 2026-09-02); and several real,
+    cap (confirmed still the only limiter, 2026-09-03); and several real,
     working features (Operator Dashboard, Agent Pairing, Ecosystem Maturity
     panels) remain sunk 2+ clicks deep behind generic tab labels per the
     2026-07-02 discoverability audit.
-  - **Status note (updated 2026-09-02):** PR #202 added an Operator Dashboard
-    nav-sidebar entry, closing that one item of the discoverability half.
-    Agent Pairing and Ecosystem Maturity panels are still undiscoverable by
-    the same standard. The budget/ceiling half has not been started at all.
+  - **Status note (corrected 2026-09-03):** PR #202 added an Operator
+    Dashboard nav-sidebar entry, closing that one item of the discoverability
+    half. Re-checked the "still undiscoverable" claim for Agent Pairing and
+    Ecosystem Maturity directly against `App.tsx`/`Sidebar.tsx`/`EcosystemHub.tsx`
+    rather than trusting the prior note: both live inside `EcosystemHub.tsx`
+    (reached via the sidebar's "All Agents" item), under its own `TABS` array
+    with clearly labeled entries — `Pairings` and (maturity/readiness content
+    under) `Advanced`/`Overview` — not generic tab labels. This is 2 clicks
+    deep (nav → tab), same as most subviews in this app, not orphaned or
+    hidden. The prior "undiscoverable" framing overstated the gap; downgraded
+    to a minor UX nice-to-have (the sidebar's "All Agents" label doesn't hint
+    at what its tabs contain), not a functional discoverability defect. The
+    budget/ceiling half has not been started at all and is the real remaining
+    scope of this item.
   - **Done when:** a measurable budget/ceiling exists for agent fan-out
-    costs, and the remaining flagged low-discoverability surfaces (Agent
-    Pairing, Ecosystem Maturity) have a nav entry or equivalent promotion —
-    or each is explicitly re-scoped with reasoning.
+    costs. The discoverability half is downgraded to optional polish, not a
+    blocking condition for closing this item — re-scope to a pure budget/
+    ceiling task if the discoverability half is dropped.
 
 - [ ] **G-OTHER1 — iOS companion Rust↔Swift end-to-end pairing test**
   - Full backend + React pairing UI exist and were live-device-confirmed
@@ -1271,6 +1314,136 @@ dropped.
     before starting any of the 5 items — don't re-derive the gap analysis
     from scratch, it was checked against real source (`resourceCostService.ts`,
     `pluginSandboxService.ts`, `codingAgentService.ts`) before being written.
+
+- [~] **J3 — CALL-E hackathon integration (in progress — REST + MCP connectors built and live-verified at every layer except an actual placed call)**
+  - **Owner:** unassigned
+  - **Status update (2026-09-06, `feat/calle-outreach-connector`, PR #230):** built in two phases:
+    (1) a REST outreach connector (`calleConnector.ts`/`calleOutreachService.ts`/
+    `CalleOutreachPanel.tsx`) and (2) a conversational MCP outreach flow
+    (`calleMcpAuthService.ts`/`calleMcpConnector.ts`/`calleMcpOutreachService.ts`,
+    wired into `ChatView.tsx`). Both registered as a policy-gated, high-risk
+    connector per the fit assessment below. See
+    `docs/superpowers/specs/2026-09-06-calle-outreach-connector-design.md`
+    and `docs/superpowers/specs/2026-09-06-calle-mcp-conversational-outreach-design.md`
+    for full design + self-critique history.
+  - **Account unblocked, schema corrected, live-verified (2026-09-07):** the
+    owner obtained a real `CALLE_API_KEY` and completed a real MCP browser
+    login via the official `calle` CLI (skills.sh skill). This closed the two
+    biggest open risks from the entry above:
+    - **Field-name verification (REST):** a safe read-only `GET /v1/calls/{id}`
+      against the real API confirmed `CALLE_API_KEY` is valid (404 "not
+      found", not 401) and confirmed `calleConnector.ts`'s snake_case/camelCase
+      field mapping (`result_schema`/`structured_result`/`task_completed`/
+      `transcript_turns`) is correct — no code changes needed there.
+    - **Field-name verification (MCP):** an authenticated `tools/list` plus a
+      real planning-only `plan_call` round trip (fictitious number, no call
+      placed) surfaced two real design bugs vs. what was built from docs
+      prose alone — `plan_call` has no `conversation_history` param (it uses
+      an opaque `plan_id` + raw `user_input` instead; the server tracks
+      conversation state itself) and the response never echoes a phone
+      number (the cross-chat duplicate-call guard that read `phone_number`
+      was silently dead code from day one). Both fixed; see this file's
+      "Real Gaps" history and `CLAUDE.md`'s Phase 2 row for the full
+      before/after. 19+9 rewritten tests passing, `tsc`/`eslint` clean.
+  - **Full live UI walkthrough (2026-09-07, `npm run dev` + Playwright, browser-only — not the native Tauri app):**
+    confirmed the CALL-E REST credential field, the "CALL-E key saved" save
+    flow, and the MCP "Connect via Browser Login" button all render correctly
+    in Settings → Connectors → Setup & Credentials. Sent a real chat message
+    ("call Joe's Pizza and ask if they'd like a free website audit") in
+    ChatView and confirmed the **entire Phase 2 pipeline fires correctly
+    end-to-end**: `shouldRouteThroughCalleMcp` → `handleMcpOutreachMessage` →
+    `planCall` → `calleMcpConnector.ts`'s `callTool` → `getCalleMcpToken()`
+    correctly returned `null` (no MCP session was established in this
+    browser-only run) → threw `"CALL-E MCP not connected. Connect via
+    Settings first."` → caught and displayed in chat exactly as coded, with
+    **zero requests** reaching `seleven-mcp-sg.airudder.com` (confirming the
+    auth gate blocks before any network call). One real, unrelated
+    environment finding along the way: connector credentials (`connectorAuth.ts`)
+    are Tauri-native only (OS keychain via `invoke()`) with no browser
+    fallback — already documented in that file's own comments — so a save in
+    this browser-only dev mode shows a success toast but does not survive a
+    reload; this is expected, not a CALL-E-specific bug, and doesn't affect
+    the real desktop app.
+  - **Still not verified — needs the native Tauri app, not `npm run dev`:**
+    an actual MCP OAuth token exchange from inside Alphonso's own
+    `calleMcpAuthService.ts` (the CLI's login was a separate, independent
+    session — our own code has never completed one), a real credential
+    surviving reload via the OS keychain, and an actual placed call end to
+    end (`run_call`) — deliberately not attempted without a real recipient
+    and explicit go-ahead, since it places a real phone call and costs money.
+  - **Billing question (`plan_call` vs. `run_call`) — best-effort answer, not
+    fully confirmed:** CALL-E's pricing page states "$0.05 per billable
+    call" with no mention of a planning charge; nothing in the live
+    `plan_call` test suggested otherwise. `plan_call` is not currently routed
+    through the Zero-Cost-Mode gate (only `run_call` is) — consistent with
+    this conclusion, but flagged as a judgment call pending official
+    confirmation from CALL-E.
+  - The owner is considering integrating the CALL-E voice-calling platform
+    (`heycall-e.com` — an AI phone-call agent service offering SDK/API/MCP/
+    Skills integration) into AlphonsoEcosystem for the "CALL-E: Your Code
+    Is Calling" Devpost hackathon (`call-e.devpost.com`), submission deadline
+    **2026-09-14** — an unusually tight ~8-day window from when this was
+    logged (2026-09-06).
+  - **Fit assessment (2026-09-06, from the two public pages only — no SDK/
+    API docs pulled yet):** genuinely stronger fit than an average entrant
+    would have, because Alphonso already has the exact shape this needs —
+    a policy-gated connector registry (`connectorRegistry.js`, 25 existing
+    connectors), an approval-gate system (`ApprovalPanel.tsx` +
+    `policyEnforcementService.ts` + `agentAuditService.ts`), and a 9-agent
+    delegation model. A CALL-E connector would slot in the same way GitHub/
+    Slack/Discord already do, rather than requiring new architecture. The
+    differentiating pitch for judging (Real World Impact, Quality of Idea):
+    an outbound-calling agent that is policy-gated, approval-gated for
+    risky actions, and leaves a full audit trail — not just "an agent that
+    calls people," which is what most entries will likely be.
+  - **Real risk, stated plainly:** the deadline is tight for this codebase's
+    actual verification overhead (this session's own PRs each took 10-20+
+    minutes of CI per push, and this dev machine has documented resource
+    contention). Any attempt needs a narrow, single-scenario slice (e.g.
+    one agent placing one kind of approved call), not a broad integration
+    across all 9 agents, or it will not finish in time.
+  - **Not yet done:** pulling CALL-E's actual SDK/API reference (the two
+    pages fetched so far had no code samples) to size real implementation
+    effort; a go/no-go decision from the owner on whether to actually
+    attempt this given the timeline.
+  - **UI placement resolved (2026-09-07):** `CalleOutreachPanel.tsx` (Phase 1,
+    REST) was built but imported nowhere — unreachable in the running app.
+    Now rendered in **Settings -> Connectors**, as its own "CALL-E Outreach"
+    section directly under "Agent Providers" (`SettingsView.tsx`), alongside
+    the Phase 2 `CalleMcpConnectionBlock` that already lives in
+    `ConnectorSetupPanel.tsx` in that same section. The original deferral
+    ("wait for the in-progress UI redesign") is withdrawn: an unreachable
+    panel cannot be verified, and Settings -> Connectors is where every other
+    connector's surface already lives, so this placement survives a redesign
+    regardless.
+  - **Billing, confirmed (2026-09-07):** heycall-e.com/pricing states "All new
+    CALL-E users gain 20 free calls after sign-up" and "CALL-E uses a flat
+    rate of $0.05 per billable call" (self-described as early-stage and not
+    final). The live verification call below therefore costs nothing against
+    the free-trial allowance. This supersedes the "best-effort, not fully
+    confirmed" billing note above for the free-tier half; whether `plan_call`
+    itself is billable is still not officially confirmed, and `plan_call`
+    remains outside the Zero-Cost-Mode gate.
+  - **Done when** all four hold, each with recorded evidence:
+    1. `CalleOutreachPanel` is reachable from the running app's navigation.
+       (**DONE 2026-09-07** — Settings -> Connectors, see above.)
+    2. A real MCP browser login completes through Alphonso's own
+       `calleMcpAuthService.ts` (`startBrokerLogin`/`pollBrokerLogin`) in the
+       **native Tauri build** — not the CLI, not `npm run dev`. Evidence: a
+       non-null `getCalleMcpToken()` and an authenticated `tools/list`
+       originating from Alphonso's process.
+    3. That credential survives an app restart via the real OS keychain
+       (`secureStorageService.ts`), verified by relaunching the app and
+       confirming the Connectors panel still reads connected without a
+       second login.
+    4. One real outbound call is placed end to end via `run_call` to a
+       consenting recipient (the owner's own number is sufficient), reaching
+       a terminal status through `pollCallUntilTerminal`, with the resulting
+       `OutreachCallRecord` and an `appendConnectorAudit` entry both
+       persisted. Evidence: the record's terminal status and the audit row.
+  - **Explicitly out of scope for closing J3:** wiring CALL-E into all 9
+    agents, an inbound-call path, and any Devpost submission work — those are
+    separate tasks, not preconditions for calling this integration verified.
 
 ## Operating procedure for every task
 

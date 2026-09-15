@@ -174,7 +174,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
   WF_PERSONAL_COS: {
     id: 'WF_PERSONAL_COS',
     name: 'Personal Chief of Staff',
-    purpose: "Run Shayan's life.",
+    purpose: "Run your life.",
     chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.ECHO],
     tasks: [
       'Priorities',

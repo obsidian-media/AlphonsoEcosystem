@@ -13,7 +13,13 @@ vi.mock('../services/runtimeLedgerService', () => ({
   persistScopeRows: vi.fn()
 }));
 
+vi.mock('../services/memoryGraphService', () => ({
+  addNode: vi.fn().mockResolvedValue('memory_item:mock-node'),
+  addEdge: vi.fn().mockResolvedValue('mock-edge-id')
+}));
+
 import '../lib/durableStore';
+import { addNode, addEdge } from '../services/memoryGraphService';
 
 const {
   pushMemory,
@@ -241,6 +247,42 @@ describe('unifiedMemoryService', () => {
       pushMemory({ title: 'Data', content: 'test content', namespace: 'shared' });
       const size = getMemorySize('shared');
       expect(size).toBeGreaterThan(0);
+    });
+  });
+
+  describe('pushMemory graph integration', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('writes a memory_item node for every pushed memory', async () => {
+      const item = pushMemory({ title: 'Test memory', sourceAgent: 'echo' });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(addNode).toHaveBeenCalledWith('memory_item', item.id);
+    });
+
+    it('writes an edge when relatedMemoryId is provided', async () => {
+      const item = pushMemory({
+        title: 'Follow-up memory',
+        sourceAgent: 'echo',
+        relatedMemoryId: 'mem-earlier'
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(addEdge).toHaveBeenCalledWith(
+        'memory_item:mock-node',
+        'memory_item:mem-earlier',
+        'mentions',
+        expect.objectContaining({ createdBy: 'echo', createdEvent: item.id })
+      );
+    });
+
+    it('does not write an edge when relatedMemoryId is not provided', async () => {
+      pushMemory({ title: 'Standalone memory', sourceAgent: 'echo' });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(addEdge).not.toHaveBeenCalled();
     });
   });
 });

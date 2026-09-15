@@ -77,7 +77,7 @@ export const HECTOR_PROFILE = {
     'Find GitHub issues discussing similar bugs or feature requests.'
   ],
   hierarchyRank: 5,
-  mascotPath: 'src/assets/hector-mascot.webp',
+  mascotPath: 'src/assets/agents/hector/portrait.jpg',
   identity: 'Source-backed online research, official documentation lookup, and citation gathering.',
   color: 'teal',
   memoryCategories: ['research_memory', 'source_memory', 'citation_memory'],

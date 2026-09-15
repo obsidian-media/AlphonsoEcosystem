@@ -55,7 +55,7 @@ export const SENTINEL_PROFILE = {
     'Flag potential threat vectors in current context.'
   ],
   hierarchyRank: 7,
-  mascotPath: 'src/assets/agents/sentinel/sentinel-mascot-main.webp',
+  mascotPath: 'src/assets/agents/sentinel/portrait.jpg',
   identity: 'Safety watchdog for permissions, connector risk, plugin risk, and secret hygiene drift.',
   color: 'red',
   memoryCategories: ['runtime_memory', 'orchestration_memory', 'timeline_memory'],

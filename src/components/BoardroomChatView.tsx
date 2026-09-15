@@ -67,34 +67,34 @@ function MessageBubble({
   const isFailure = message.kind === 'failure';
   const isGated = message.approvalRequired && !message.confirmed;
   const toneClass = isEscalation
-    ? 'border-amber-400/40 bg-amber-500/10'
+    ? 'bg-[var(--warning-dim)]'
     : isFailure
-      ? 'border-rose-400/40 bg-rose-500/10'
-      : 'border-[var(--border)] bg-[var(--surface-2)]';
+      ? 'bg-[var(--error-dim)]'
+      : 'bg-[var(--surface-2)]';
   return (
-    <div data-message-kind={message.kind} className={`rounded-lg border p-2.5 text-xs ${toneClass}`}>
+    <div data-message-kind={message.kind} className={`rounded-lg p-2.5 text-xs ${toneClass}`}>
       <div className="flex items-center justify-between gap-2">
-        <span className={`font-semibold ${isEscalation ? 'text-amber-300' : isFailure ? 'text-rose-300' : 'text-[var(--text-1)]'}`}>
+        <span className={`font-semibold ${isEscalation ? 'text-[var(--warning)]' : isFailure ? 'text-[var(--error)]' : 'text-[var(--text-1)]'}`}>
           {isEscalation ? 'Needs your decision' : isFailure ? `${agentLabel(message.speaker)} — failed` : agentLabel(message.speaker)}
         </span>
         {message.approvalRequired && (
-          <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-300">
+          <span className="rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[var(--warning)]">
             {message.confirmed ? 'confirmed' : 'approval required'}
           </span>
         )}
       </div>
       {isGated ? (
-        <div className="mt-1.5 rounded-md border border-amber-400/30 bg-amber-500/5 p-2">
-          <p className="text-amber-300">This message proposes a high-risk action — content hidden until confirmed.</p>
+        <div className="mt-1.5 rounded-md bg-[var(--warning-dim)] p-2">
+          <p className="text-[var(--warning)]">This message proposes a high-risk action — content hidden until confirmed.</p>
           <button
             onClick={() => onConfirm(message)}
-            className="mt-1.5 rounded-md border border-amber-400/40 px-2 py-0.5 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/10"
+            className="mt-1.5 rounded-md border border-[var(--warning-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)] hover:bg-[var(--warning-dim)]"
           >
             Confirm to reveal
           </button>
         </div>
       ) : (
-        <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-amber-200' : isFailure ? 'text-rose-200' : 'text-[var(--text-2)]'}`}>{message.content}</div>
+        <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-[var(--warning)]' : isFailure ? 'text-[var(--error)]' : 'text-[var(--text-2)]'}`}>{message.content}</div>
       )}
       {!isEscalation && !isFailure && message.model && (
         <div className="mt-1 text-[9px] text-[var(--text-3)]">
@@ -104,18 +104,18 @@ function MessageBubble({
       {isFailure && message.retryContext && (
         <button
           onClick={() => onRetry(message)}
-          className="mt-1.5 rounded-md border border-rose-400/30 px-2 py-0.5 text-[10px] font-semibold text-rose-300 hover:bg-rose-500/10"
+          className="mt-1.5 rounded-md border border-[var(--error-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--error)] hover:bg-[var(--error-dim)]"
         >
           Retry
         </button>
       )}
       {isEscalation && (
         message.acknowledged ? (
-          <span className="mt-1.5 inline-block text-[10px] font-semibold text-amber-400/70">✓ Acknowledged</span>
+          <span className="mt-1.5 inline-block text-[10px] font-semibold text-[var(--warning)]">✓ Acknowledged</span>
         ) : (
           <button
             onClick={() => onAcknowledge(message)}
-            className="mt-1.5 rounded-md border border-amber-400/30 px-2 py-0.5 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/10"
+            className="mt-1.5 rounded-md border border-[var(--warning-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)] hover:bg-[var(--warning-dim)]"
           >
             Acknowledge
           </button>
@@ -180,7 +180,8 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
   async function handleSend() {
     if (!activeThreadId || !activeThread || !composerText.trim() || generationAbortControllerRef.current) return;
     const text = composerText.trim();
-    addThreadMessage({ threadId: activeThreadId, speaker: composerSpeaker, content: text });
+    const userMessage = addThreadMessage({ threadId: activeThreadId, speaker: composerSpeaker, content: text });
+    let previousMessageId: string | undefined = userMessage?.id;
     setMessages(listThreadMessages(activeThreadId));
     setComposerText('');
 
@@ -254,18 +255,20 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
       }
 
       const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
-      addThreadMessage({
+      const replyMessage = addThreadMessage({
         threadId: activeThreadId,
         speaker: agentId,
         content: replyText,
         kind: result.ok ? 'message' : 'failure',
         retryContext: result.ok ? undefined : text,
         model: result.ok ? result.model : undefined,
-        latencyMs: result.ok ? result.latencyMs : undefined
+        latencyMs: result.ok ? result.latencyMs : undefined,
+        informedByMessageId: previousMessageId
       });
       setMessages(listThreadMessages(activeThreadId));
 
       if (result.ok) {
+        previousMessageId = replyMessage?.id;
         if (detectLowConfidence(replyText)) {
           addThreadMessage({
             threadId: activeThreadId,
@@ -369,7 +372,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
           <button
             onClick={handleCreateThread}
             disabled={!newTopic.trim()}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--accent)] px-2.5 py-1.5 text-xs font-semibold text-[var(--surface-0)] disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--accent)] px-2.5 py-1.5 text-xs font-semibold text-[var(--accent-contrast)] disabled:opacity-40"
           >
             <Plus className="h-3 w-3" /> New Thread
           </button>
@@ -455,7 +458,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
               <button
                 onClick={handleSend}
                 disabled={!composerText.trim()}
-                className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--surface-0)] disabled:opacity-40"
+                className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-contrast)] disabled:opacity-40"
               >
                 <Send className="h-3 w-3" /> Send
               </button>

@@ -73,7 +73,7 @@ export const JOSE_PROFILE = {
     'Create approval gates for payout, posting, and deployment actions.'
   ],
   hierarchyRank: 1,
-  mascotPath: 'src/assets/jose-mascot.webp',
+  mascotPath: 'src/assets/agents/jose/portrait.jpg',
   identity: 'Hermes runtime operating as Jose: orchestration, planning, approval enforcement, and response synthesis.',
   color: 'amber',
   memoryCategories: ['orchestration_memory', 'approval_memory', 'timeline_memory']

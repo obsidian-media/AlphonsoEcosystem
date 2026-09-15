@@ -15,6 +15,9 @@ const RISK_CACHE_TTL = 300000;
 // hermes_agents is also intentionally NOT in this set — every profile is a
 // local/self-hosted process the user runs on their own machine (same posture
 // as Ollama), not a metered cloud API this app pays for per call.
+// calle: real $0.05/call cost per CALL-E's pricing page (their own page
+// notes this is "early-stage... subject to change" -- re-verify before
+// relying on the exact figure).
 const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'chatgpt',
   'claude',
@@ -24,7 +27,8 @@ const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'clickup',
   'gmail',
   'google_drive',
-  'airtable'
+  'airtable',
+  'calle'
 ]);
 
 // Only match genuinely outbound/destructive actions — not user-initiated commands
@@ -33,6 +37,7 @@ const HIGH_RISK_ACTION_PATTERNS: RegExp[] = [
   /external_send/i,
   /external_post/i,
   /external_upload/i,
+  /external_call/i,
   /^publish$/i,
   /^upload$/i,
   /delete_files/i,
@@ -151,7 +156,7 @@ export function classifyConnectorRisk(connectorId: string, actionType: string = 
   // config this app cannot see client-side. Classified high unconditionally
   // (like telegram/whatsapp), not by actionType pattern, since any call can
   // trigger tool use regardless of what actionType string is passed.
-  else if (id === 'telegram' || id === 'whatsapp' || id === 'hermes_agents') risk = 'high';
+  else if (id === 'telegram' || id === 'whatsapp' || id === 'hermes_agents' || id === 'calle') risk = 'high';
   else if (id === 'chatgpt' || id === 'claude' || id === 'qwen' || id === 'notion' || id === 'clickup' || id === 'github' || id === 'slack' || id === 'discord') risk = 'medium';
 
   policyCache.set(cacheKey, risk, RISK_CACHE_TTL);

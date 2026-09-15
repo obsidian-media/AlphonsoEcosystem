@@ -2,15 +2,14 @@ import { getConnectorCredential } from './connectorAuth';
 import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-// gemini-2.5-flash-lite, confirmed live and free-tier-eligible as of
-// 2026-07-25 (the entire Gemini 1.5 line, including the previous default
-// gemini-1.5-flash, and Gemini 2.0 Flash/Flash-Lite are retired — Pro tier
-// models are paid-only since 2026-04-01). gemini-2.5-flash itself is
-// already scheduled for deprecation 2026-10-16, so flash-lite was chosen
-// for longer runway over flash. Reconfirm at ai.google.dev/gemini-api/docs
-// before assuming this stays current — Google's free-tier lineup shifts
-// often. See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §2.2.
-export const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+// gemini-3.5-flash-lite, confirmed live against the real API on 2026-09-04
+// with a real key -- gemini-2.5-flash-lite (the previous default) and
+// gemini-2.5-flash both now 404 with "no longer available to new users",
+// pointing callers to gemini-3.5-flash-lite / gemini-3.6-flash respectively.
+// Reconfirm at ai.google.dev/gemini-api/docs before assuming this stays
+// current -- Google has now retired this connector's default model twice
+// in under two months. See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §2.2.
+export const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 
 export interface GeminiMessage {
   role: string;

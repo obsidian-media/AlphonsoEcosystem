@@ -20,63 +20,63 @@ const stateStyles: Record<string, StateStyle> = {
     ring: 'ring-white/10',
     glow: 'shadow-none',
     badge: Sparkles,
-    badgeClass: 'bg-zinc-800/70 text-zinc-200 border-zinc-600/30',
+    badgeClass: 'bg-[var(--surface-3)] text-[var(--text-2)] border-[var(--border)]',
     animation: 'miya-breathe'
   },
   creating: {
     ring: 'ring-rose-400/20',
     glow: 'shadow-none',
     badge: Palette,
-    badgeClass: 'bg-zinc-800/70 text-zinc-200 border-zinc-600/30',
+    badgeClass: 'bg-[var(--surface-3)] text-[var(--text-2)] border-[var(--border)]',
     animation: 'miya-creating'
   },
   thinking: {
     ring: 'ring-violet-400/20',
     glow: 'shadow-none',
     badge: Lightbulb,
-    badgeClass: 'bg-zinc-800/70 text-zinc-200 border-zinc-600/30',
+    badgeClass: 'bg-[var(--surface-3)] text-[var(--text-2)] border-[var(--border)]',
     animation: 'miya-breathe'
   },
   rendering: {
     ring: 'ring-pink-400/20',
     glow: 'shadow-none',
     badge: Sparkles,
-    badgeClass: 'bg-zinc-800/70 text-zinc-200 border-zinc-600/30',
+    badgeClass: 'bg-[var(--surface-3)] text-[var(--text-2)] border-[var(--border)]',
     animation: 'miya-rendering'
   },
   brainstorming: {
     ring: 'ring-indigo-300/20',
     glow: 'shadow-none',
     badge: Lightbulb,
-    badgeClass: 'bg-zinc-800/70 text-zinc-200 border-zinc-600/30',
+    badgeClass: 'bg-[var(--surface-3)] text-[var(--text-2)] border-[var(--border)]',
     animation: 'miya-breathe'
   },
   exporting: {
     ring: 'ring-cyan-300/20',
     glow: 'shadow-none',
     badge: Palette,
-    badgeClass: 'bg-zinc-800/70 text-zinc-200 border-zinc-600/30',
+    badgeClass: 'bg-[var(--surface-3)] text-[var(--text-2)] border-[var(--border)]',
     animation: 'miya-rendering'
   },
   warning: {
     ring: 'ring-amber-400/20',
     glow: 'shadow-none',
     badge: AlertTriangle,
-    badgeClass: 'bg-zinc-800/70 text-zinc-200 border-zinc-600/30',
+    badgeClass: 'bg-[var(--surface-3)] text-[var(--text-2)] border-[var(--border)]',
     animation: 'miya-warning'
   },
   waiting: {
     ring: 'ring-zinc-500/35',
     glow: 'shadow-none',
     badge: Sparkles,
-    badgeClass: 'bg-zinc-800/70 text-zinc-200 border-zinc-600/30',
+    badgeClass: 'bg-[var(--surface-3)] text-[var(--text-2)] border-[var(--border)]',
     animation: 'opacity-70'
   },
   task_complete: {
     ring: 'ring-emerald-300/20',
     glow: 'shadow-none',
     badge: CheckCircle2,
-    badgeClass: 'bg-zinc-800/70 text-zinc-200 border-zinc-600/30',
+    badgeClass: 'bg-[var(--surface-3)] text-[var(--text-2)] border-[var(--border)]',
     animation: 'miya-breathe'
   }
 };
@@ -97,14 +97,14 @@ export function MiyaCompanionWidget({
 
   return (
     <div className={`${pinned ? 'fixed bottom-4 right-4 z-30' : 'relative'} pointer-events-none`}>
-      <div className="pointer-events-auto w-56 rounded-xl border border-white/10 bg-zinc-950/95 shadow-xl backdrop-blur-xl overflow-hidden px-3 py-2">
+      <div className="pointer-events-auto w-56 rounded-xl border border-[var(--border)] bg-[var(--surface-0)] shadow-xl backdrop-blur-xl overflow-hidden px-3 py-2">
         <div className="flex items-center gap-2">
           <div className={`flex h-8 w-8 items-center justify-center rounded-full border ${style.badgeClass}`}>
             <BadgeIcon className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-fuchsia-200">Miya</div>
-            <div className="text-[11px] text-fuchsia-50 truncate">{message}</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--agent-miya)]">Miya</div>
+            <div className="text-[11px] text-[var(--agent-miya)] truncate">{message}</div>
           </div>
         </div>
       </div>

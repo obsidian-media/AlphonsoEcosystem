@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, CheckCircle, AlertCircle, Shield, Info, Plug, Clock, ChevronDown } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export interface DigestItem {
   id: string;
@@ -66,13 +67,17 @@ export function DigestPanel({ isOpen, onClose, items, onMarkAllRead, onItemClick
     }
   }, [isOpen, handleKeyDown]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, isOpen);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[900] flex justify-end" role="dialog" aria-modal="true" aria-label="Digest panel">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      
+
       <div
+        ref={panelRef}
         className="relative w-[400px] h-full bg-[var(--surface-1)] border-l border-[var(--border)] shadow-2xl flex flex-col"
         style={{ animation: 'slideInRight 250ms ease-out' }}
       >

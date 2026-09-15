@@ -34,10 +34,23 @@ LANGUAGE_LABELS = {
 }
 
 
+# Two layouts need to resolve to the real voice_policy.json:
+#   - local dev / CI checkout: voice/cloud-backend/app/voice_policy.py -> voice/shared/voice_policy.json
+#   - container image (Dockerfile copies shared/ to /app/shared): /app/app/voice_policy.py -> /app/shared/voice_policy.json
+_POLICY_PATH_CANDIDATES = (
+    Path(__file__).resolve().parents[1] / "shared" / "voice_policy.json",
+    Path(__file__).resolve().parents[2] / "shared" / "voice_policy.json",
+)
+
+
 @lru_cache(maxsize=1)
 def _policy() -> dict[str, object]:
-    policy_path = Path(__file__).resolve().parents[2] / "shared" / "voice_policy.json"
-    return json.loads(policy_path.read_text(encoding="utf-8"))
+    for policy_path in _POLICY_PATH_CANDIDATES:
+        if policy_path.exists():
+            return json.loads(policy_path.read_text(encoding="utf-8"))
+    raise FileNotFoundError(
+        f"voice_policy.json not found in any of: {[str(p) for p in _POLICY_PATH_CANDIDATES]}"
+    )
 
 
 def get_voice_agent(agent_id: str) -> VoiceAgent | None:

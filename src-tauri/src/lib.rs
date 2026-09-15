@@ -30,6 +30,7 @@ mod companion_server;
 mod companion_types;
 mod connector_commands;
 mod kv_store;
+mod memory_graph;
 mod memory_store;
 mod meta_publish;
 mod native_proof;
@@ -89,6 +90,10 @@ pub(crate) use commands::updates::*;
 pub(crate) use commands::url::*;
 pub(crate) use connector_commands::*;
 pub(crate) use kv_store::{kv_delete, kv_get, kv_set, load_settings, save_settings};
+pub(crate) use memory_graph::{
+  memory_graph_add_edge, memory_graph_add_node, memory_graph_infer_edges, memory_graph_list_edges,
+  memory_graph_list_nodes, memory_graph_query_related, memory_graph_query_related_deep,
+};
 pub(crate) use memory_store::*;
 pub(crate) use meta_publish::*;
 pub(crate) use native_proof::{
@@ -732,6 +737,13 @@ pub fn run() {
       kv_set,
       kv_get,
       kv_delete,
+      memory_graph_add_node,
+      memory_graph_add_edge,
+      memory_graph_query_related,
+      memory_graph_query_related_deep,
+      memory_graph_list_nodes,
+      memory_graph_list_edges,
+      memory_graph_infer_edges,
       secure_credential_set,
       secure_credential_get,
       secure_credential_delete,
@@ -814,10 +826,12 @@ pub fn run() {
       launch_comfyui,
       runtime_manager::runtime_get_all_status,
       runtime_manager::runtime_install_tool,
+      runtime_manager::runtime_load_bundled_starter_model,
       runtime_manager::runtime_start_tool,
       runtime_manager::runtime_stop_tool,
       runtime_manager::runtime_list_tools,
       runtime_manager::runtime_check_prerequisites,
+      runtime_manager::setup_scan_hardware,
       runtime_manager::runtime_install_prerequisite,
       runtime_manager::runtime_get_autostart_prefs,
       runtime_manager::runtime_save_autostart_pref,

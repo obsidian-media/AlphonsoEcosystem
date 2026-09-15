@@ -55,7 +55,7 @@ export const NOVA_PROFILE = {
     'Evaluate risk-to-reward ratios for initiatives.'
   ],
   hierarchyRank: 4,
-  mascotPath: 'src/assets/agents/nova/nova-mascot-main.webp',
+  mascotPath: 'src/assets/agents/nova/portrait.jpg',
   identity: 'Opportunity scoring specialist for value, timing, effort, and risk prioritization.',
   color: 'violet',
   memoryCategories: ['research_memory', 'orchestration_memory', 'timeline_memory'],

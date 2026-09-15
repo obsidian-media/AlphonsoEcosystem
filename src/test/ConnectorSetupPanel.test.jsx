@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 
 // ── Tauri mock ────────────────────────────────────────────────────────────────
 vi.mock('@tauri-apps/api/core', () => ({
@@ -77,6 +77,14 @@ vi.mock('../components/ToolConnectionsPanel', () => ({
   ToolConnectionsPanel: () => <div data-testid="tool-connections-panel" />
 }));
 
+// ── CALL-E MCP auth service mock ──────────────────────────────────────────────
+vi.mock('../services/calleMcpAuthService', () => ({
+  isCalleMcpConfigured: vi.fn().mockResolvedValue(false),
+  startBrokerLogin: vi.fn(),
+  pollBrokerLogin: vi.fn(),
+  disconnectCalleMcp: vi.fn()
+}));
+
 // ── Component under test ──────────────────────────────────────────────────────
 import { ConnectorSetupPanel } from '../components/ConnectorSetupPanel';
 import { listAgentProfiles } from '../agents/agentRegistry';
@@ -118,6 +126,9 @@ describe('ConnectorSetupPanel', () => {
 
   it('shows GitHub credential section', () => {
     render(<ConnectorSetupPanel />);
+    // GitHub lives in the "Content & Productivity" collapsible category,
+    // collapsed by default — expand it before asserting on its contents.
+    fireEvent.click(screen.getByTestId('connector-category-content'));
     expect(screen.getByText('GitHub')).toBeTruthy();
     // The GitHub CredentialSection renders a "Personal Access Token" label
     expect(screen.getByText('Personal Access Token')).toBeTruthy();
@@ -137,6 +148,9 @@ describe('ConnectorSetupPanel', () => {
   // could still leak into a component even with a clean service.
   it('renders exactly one Hermes credential row per agent in agentRegistry.js, dynamically', () => {
     render(<ConnectorSetupPanel />);
+    // Hermes Agents lives in the "AI Models" collapsible category, collapsed
+    // by default — expand it before asserting on its contents.
+    fireEvent.click(screen.getByTestId('connector-category-ai_models'));
     const agents = listAgentProfiles();
     expect(agents.length).toBeGreaterThan(0);
     for (const agent of agents) {
@@ -154,5 +168,33 @@ describe('ConnectorSetupPanel', () => {
     // There's no amber/error/info notice box visible on first render
     expect(screen.queryByText(/Bot token is required/i)).toBeNull();
     expect(screen.queryByText(/credentials saved/i)).toBeNull();
+  });
+
+  it('shows an MCP Connection status row with a Connect button under the CALL-E section', () => {
+    render(<ConnectorSetupPanel />);
+    expect(screen.getByText(/MCP Connection/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /connect via browser login/i })).toBeTruthy();
+  });
+
+  it('re-enables the Connect button after the 2-minute login-poll timeout instead of getting stuck on "Waiting for browser login..."', async () => {
+    const { startBrokerLogin, pollBrokerLogin } = await import('../services/calleMcpAuthService');
+    startBrokerLogin.mockResolvedValue({ sessionId: 's1', sessionSecret: 'secret', loginUrl: 'https://x', status: 'PENDING', pollAfterMs: 2000 });
+    pollBrokerLogin.mockResolvedValue('pending');
+
+    vi.useFakeTimers();
+    render(<ConnectorSetupPanel />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /connect via browser login/i }));
+      await Promise.resolve();
+    });
+    expect(screen.getByRole('button', { name: /waiting for browser login/i })).toBeDisabled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
+    });
+
+    expect(screen.getByRole('button', { name: /connect via browser login/i })).not.toBeDisabled();
+    vi.useRealTimers();
   });
 });

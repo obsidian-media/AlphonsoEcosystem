@@ -25,15 +25,15 @@ export function MicrophoneStatus({ voiceStatus, compact = false }: Props) {
   const Icon = blocked ? ShieldAlert : listening ? Mic : MicOff;
 
   return (
-    <div className={`flex items-center gap-2 ${compact ? 'text-[11px]' : 'text-xs'} text-zinc-400`}>
+    <div className={`flex items-center gap-2 ${compact ? 'text-[11px]' : 'text-xs'} text-[var(--text-3)]`}>
       <span className={`relative flex h-2.5 w-2.5 shrink-0 rounded-full ${
-        listening ? 'bg-red-400' : blocked ? 'bg-amber-400' : 'bg-zinc-600'
+        listening ? 'bg-[var(--error)]' : blocked ? 'bg-[var(--warning)]' : 'bg-[var(--text-4)]'
       }`}>
-        {listening && <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-60" />}
+        {listening && <span className="absolute inset-0 rounded-full bg-[var(--error)] animate-ping opacity-60" />}
       </span>
       <Icon className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
-      <span className="font-medium text-zinc-300">{voiceStatus.privacyLabel}</span>
-      {!compact && <span className="text-zinc-500">{voiceStatus.message}</span>}
+      <span className="font-medium text-[var(--text-2)]">{voiceStatus.privacyLabel}</span>
+      {!compact && <span className="text-[var(--text-3)]">{voiceStatus.message}</span>}
     </div>
   );
 }

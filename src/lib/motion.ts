@@ -71,3 +71,36 @@ export const agentPulse: Variants = {
     transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
   },
 };
+
+// Setup's activation "ritual" — a one-shot pulse -> portal -> emblem-ignite
+// sequence, not a loop like agentPulse above. Timed to land inside
+// ActivationSequence's own DURATIONS_MS.full window (3.5s) so the
+// component's onFinish timer and the animation finish together rather than
+// the screen visibly finishing early or being cut off.
+export const activationPulse: Variants = {
+  hidden:  { opacity: 0, scale: 0.8 },
+  visible: {
+    opacity: [0, 1, 0],
+    scale: [0.8, 1.6, 2.2],
+    transition: { duration: 1.1, ease: 'easeOut' },
+  },
+};
+
+export const activationPortal: Variants = {
+  hidden:  { opacity: 0, scale: 0 },
+  visible: {
+    opacity: [0, 0.9, 0.9, 0],
+    scale: [0, 1, 1.3, 1.6],
+    transition: { duration: 1.4, delay: 0.6, ease: 'easeInOut' },
+  },
+};
+
+export const emblemIgnite: Variants = {
+  hidden:  { opacity: 0, scale: 0.6, filter: 'drop-shadow(0 0 0px currentColor)' },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    filter: 'drop-shadow(0 0 24px currentColor)',
+    transition: { duration: 0.8, delay: 1.6, ease: 'easeOut' },
+  },
+};

@@ -46,7 +46,7 @@ describe('MicrophoneStatus', () => {
     const { container } = render(
       <MicrophoneStatus voiceStatus={makeStatus(VOICE_STATES.PERMISSION_DENIED)} />
     );
-    const indicator = container.querySelector('.bg-amber-400');
+    const indicator = container.querySelector('[class*="bg-[var(--warning)]"]');
     expect(indicator).toBeTruthy();
   });
 
@@ -54,7 +54,7 @@ describe('MicrophoneStatus', () => {
     const { container } = render(
       <MicrophoneStatus voiceStatus={makeStatus(VOICE_STATES.LISTENING)} />
     );
-    const indicator = container.querySelector('.bg-red-400');
+    const indicator = container.querySelector('[class*="bg-[var(--error)]"]');
     expect(indicator).toBeTruthy();
   });
 });

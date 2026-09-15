@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { setAgentProvider } from '../services/modelSelectionService';
 
 // ── Core Tauri mock ───────────────────────────────────────────────────────────
 vi.mock('@tauri-apps/api/core', () => ({
@@ -25,7 +26,18 @@ vi.mock('../lib/appStorage', () => ({
 vi.mock('../lib/chatUtils', () => ({
   nextMsgId: vi.fn().mockReturnValue('msg-1'),
   CHAT_ASSISTANT_PROMPT: 'You are a helpful assistant.',
-  shouldRouteThroughJose: vi.fn().mockReturnValue(false)
+  shouldRouteThroughJose: vi.fn().mockReturnValue(false),
+  shouldRouteThroughCalleMcp: vi.fn().mockReturnValue(false)
+}));
+
+// ── CALL-E MCP outreach service mock ─────────────────────────────────────────
+vi.mock('../services/calleMcpOutreachService', () => ({
+  getMcpOutreachRecord: vi.fn().mockResolvedValue(null),
+  isAwaitingMcpOutreachInput: vi.fn().mockReturnValue(false),
+  handleMcpOutreachMessage: vi.fn().mockResolvedValue(''),
+  confirmMcpOutreachCall: vi.fn().mockResolvedValue(''),
+  cancelMcpOutreachCall: vi.fn().mockResolvedValue(''),
+  markMcpOutreachDelivered: vi.fn().mockResolvedValue(undefined)
 }));
 
 // ── Policy enforcement service mock ──────────────────────────────────────────
@@ -45,6 +57,13 @@ vi.mock('../services/chatPersistenceService', () => ({
 vi.mock('../services/joseExecutionEngineService', () => ({
   isJoseIntakeCommand: vi.fn().mockReturnValue(false),
   runJoseCommandExecutionPipeline: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [] })
+}));
+
+// ── Agent bus service mock ───────────────────────────────────────────────────
+vi.mock('../services/agentBusService', () => ({
+  approvePacket: vi.fn(),
+  rejectPacket: vi.fn(),
+  getPacketById: vi.fn()
 }));
 
 // ── Orchestration receipt service mock ────────────────────────────────────────
@@ -71,8 +90,27 @@ vi.mock('../services/connectors/nvidiaNimConnector', () => ({
 
 vi.mock('../services/connectors/geminiConnector', () => ({
   isGeminiConfigured: vi.fn().mockReturnValue(true),
-  sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-2.5-flash-lite', provider: 'gemini' })
+  sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-3.5-flash-lite', provider: 'gemini' })
 }));
+
+vi.mock('../services/connectors/hermesAgentConnector', () => ({
+  isHermesAgentConfigured: vi.fn().mockReturnValue(true),
+  sendHermesAgentMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Hermes', model: 'hermes-agent', usage: null, provider: 'hermes' })
+}));
+
+// Stateful, not a fixed return -- ChatView's syncLegacyProviderIntoAgentStore
+// writes settings.selectedProvider into this store via setAgentProvider, and
+// its own selectedProvider derivation reads it back via getAgentProvider.
+// A fixed-return mock would break every existing test that sets
+// settings.selectedProvider to something other than 'ollama', since that
+// value would never reach the derived selectedProvider.
+vi.mock('../services/modelSelectionService', () => {
+  const store = {};
+  return {
+    getAgentProvider: vi.fn((agentId) => store[agentId] || { provider: 'ollama' }),
+    setAgentProvider: vi.fn((agentId, config) => { store[agentId] = config; })
+  };
+});
 
 // ── Lazy / heavy sub-component mocks ─────────────────────────────────────────
 vi.mock('../components/MarkdownMessage', () => ({
@@ -85,8 +123,13 @@ vi.mock('../components/ModelSwitcher', () => ({
   ModelProviderPicker: ({ ollamaPicker }) => <div data-testid="model-provider-picker">{ollamaPicker}</div>
 }));
 
+const approvalPanelCalls = vi.hoisted(() => ({ props: null }));
+
 vi.mock('../components/ApprovalPanel', () => ({
-  ApprovalPanel: () => <div data-testid="approval-panel" />
+  ApprovalPanel: (props) => {
+    approvalPanelCalls.props = props;
+    return <div data-testid="approval-panel" />;
+  }
 }));
 
 vi.mock('../components/PipelineResultCard', () => ({
@@ -117,11 +160,15 @@ vi.mock('../components/ConnectorStatusIndicators', () => ({
 // ── Component under test ──────────────────────────────────────────────────────
 import { ChatView } from '../components/ChatView';
 import { generateOllamaChatStream } from '../lib/ollama';
+import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
+import { approvePacket, rejectPacket, getPacketById } from '../services/agentBusService';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { sendNvidiaMessage } from '../services/connectors/nvidiaNimConnector';
 import { isGeminiConfigured } from '../services/connectors/geminiConnector';
-import { nextMsgId } from '../lib/chatUtils';
+import { isHermesAgentConfigured, sendHermesAgentMessage } from '../services/connectors/hermesAgentConnector';
+import { nextMsgId, shouldRouteThroughCalleMcp } from '../lib/chatUtils';
 import { invoke } from '@tauri-apps/api/core';
+import { getMcpOutreachRecord, isAwaitingMcpOutreachInput, handleMcpOutreachMessage } from '../services/calleMcpOutreachService';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -149,6 +196,11 @@ function makeProps(overrides = {}) {
 describe('ChatView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // vi.clearAllMocks() clears call history but not the stateful mock's
+    // internal store closure -- reset it explicitly so a test that sets
+    // settings.selectedProvider can't leak its choice into a later test
+    // that uses makeProps()'s default (undefined) selectedProvider.
+    setAgentProvider('alphonso', { provider: 'ollama' });
   });
 
   it('renders without crashing', () => {
@@ -276,6 +328,71 @@ describe('ChatView', () => {
     });
   });
 
+  it('routes generation through sendHermesAgentMessage for the alphonso agent when hermes is selected', async () => {
+    nextMsgId.mockReturnValueOnce('msg-hermes-user').mockReturnValueOnce('msg-hermes-assistant');
+    setAgentProvider('alphonso', { provider: 'hermes' });
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedModel: 'hermes-agent', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(sendHermesAgentMessage).toHaveBeenCalledWith('alphonso', expect.anything(), expect.objectContaining({ model: 'hermes-agent' }));
+      expect(generateOllamaChatStream).not.toHaveBeenCalled();
+      expect(screen.getByText('Hello from Hermes')).toBeTruthy();
+    });
+  });
+
+  it('blocks send with a clear message when Hermes is selected but not configured', async () => {
+    nextMsgId.mockReturnValueOnce('msg-hermes-unconf');
+    isHermesAgentConfigured.mockReturnValue(false);
+    setAgentProvider('alphonso', { provider: 'hermes' });
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedModel: 'hermes-agent', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Hermes is not configured/i)).toBeTruthy();
+    });
+    isHermesAgentConfigured.mockReturnValue(true);
+  });
+
+  it('shows a policy-blocked message distinct from a generic error when Hermes reports blocked:true', async () => {
+    nextMsgId.mockReturnValueOnce('msg-hermes-blocked-user').mockReturnValueOnce('msg-hermes-blocked-assistant');
+    sendHermesAgentMessage.mockResolvedValueOnce({ ok: false, blocked: true, message: 'Approval Mode requires confirmation', provider: 'hermes' });
+    setAgentProvider('alphonso', { provider: 'hermes' });
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedModel: 'hermes-agent', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/blocked by policy/i)).toBeTruthy();
+    });
+  });
+
   it('does not apply a cloud provider result after Stop was clicked mid-request', async () => {
     nextMsgId.mockReturnValueOnce('msg-user-abort').mockReturnValueOnce('msg-assistant-abort');
     let resolveCloud;
@@ -364,5 +481,103 @@ describe('ChatView', () => {
       expect(screen.getByText(/Gemini is not configured/i)).toBeTruthy();
     });
     isGeminiConfigured.mockReturnValue(true);
+  });
+
+  it('maps pendingApprovals to itemId and wires approve/reject/detail callbacks for ApprovalPanel', async () => {
+    isJoseIntakeCommand.mockReturnValueOnce(true);
+    runJoseCommandExecutionPipeline.mockResolvedValueOnce({
+      commandId: 'cmd-1',
+      pendingApprovalCount: 1,
+      executionReceipts: [
+        { packetId: 'pkt-1', agent: 'marcus', status: 'approval_required', reason: 'External publish requires approval' }
+      ]
+    });
+    getPacketById.mockReturnValue({
+      id: 'pkt-1',
+      payload: { assignment: { agent: 'marcus', actionType: 'external_publish', riskLevel: 'high' } }
+    });
+
+    render(<ChatView {...makeProps()} />);
+    // Wait for the async chat-history hydration effect to settle before sending --
+    // otherwise its setMessages([]) can land after our send and wipe the messages
+    // this test is about to add.
+    await screen.findByText('What can I help you build?');
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'do the risky thing' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await screen.findByTestId('approval-panel');
+
+    const props = approvalPanelCalls.props;
+    expect(props.pendingApprovals).toEqual([
+      expect.objectContaining({ itemId: 'pkt-1', packetId: 'pkt-1', agent: 'marcus' })
+    ]);
+
+    props.onApprove('pkt-1');
+    expect(approvePacket).toHaveBeenCalledWith('pkt-1', 'chatview-inline');
+
+    props.onReject('pkt-1');
+    expect(rejectPacket).toHaveBeenCalledWith('pkt-1', 'Rejected from chat inline approval');
+
+    expect(props.getItemDetail('pkt-1')).toEqual({ agent: 'marcus', actionType: 'external_publish', riskLevel: 'high' });
+  });
+
+  describe('CALL-E MCP conversational routing', () => {
+    beforeEach(() => {
+      getMcpOutreachRecord.mockResolvedValue(null);
+      isAwaitingMcpOutreachInput.mockReturnValue(false);
+      shouldRouteThroughCalleMcp.mockReturnValue(false);
+      handleMcpOutreachMessage.mockResolvedValue('What phone number should I call?');
+    });
+
+    it('routes a call-like message to handleMcpOutreachMessage instead of the normal Ollama path', async () => {
+      shouldRouteThroughCalleMcp.mockReturnValue(true);
+      render(<ChatView {...makeProps()} />);
+      await screen.findByText('What can I help you build?');
+
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: "call Joe's Pizza and ask about their website" } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+      await waitFor(() => {
+        expect(handleMcpOutreachMessage).toHaveBeenCalledWith('test-chat-id', "call Joe's Pizza and ask about their website");
+      });
+      await screen.findByText('What phone number should I call?');
+      expect(generateOllamaChatStream).not.toHaveBeenCalled();
+    });
+
+    it('routes the next message through handleMcpOutreachMessage while a record is awaiting input, even if the text itself would not match shouldRouteThroughCalleMcp', async () => {
+      getMcpOutreachRecord.mockResolvedValue({ chatId: 'test-chat-id', stage: 'clarifying' });
+      isAwaitingMcpOutreachInput.mockReturnValue(true);
+      shouldRouteThroughCalleMcp.mockReturnValue(false);
+      handleMcpOutreachMessage.mockResolvedValue('Got it, checking availability.');
+
+      render(<ChatView {...makeProps()} />);
+      await screen.findByText('What can I help you build?');
+
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: '+15550123456' } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+      await waitFor(() => {
+        expect(handleMcpOutreachMessage).toHaveBeenCalledWith('test-chat-id', '+15550123456');
+      });
+      expect(generateOllamaChatStream).not.toHaveBeenCalled();
+    });
+
+    it('does not intercept an unrelated message once the record has moved to in_progress', async () => {
+      getMcpOutreachRecord.mockResolvedValue({ chatId: 'test-chat-id', stage: 'in_progress' });
+      isAwaitingMcpOutreachInput.mockReturnValue(false);
+      shouldRouteThroughCalleMcp.mockReturnValue(false);
+
+      render(<ChatView {...makeProps()} />);
+      await screen.findByText('What can I help you build?');
+
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: "what's the weather" } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+      await waitFor(() => {
+        expect(generateOllamaChatStream).toHaveBeenCalled();
+      });
+      expect(handleMcpOutreachMessage).not.toHaveBeenCalled();
+    });
   });
 });

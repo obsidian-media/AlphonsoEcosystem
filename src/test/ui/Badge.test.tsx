@@ -20,25 +20,25 @@ describe('Badge', () => {
     it('renders success variant', () => {
       render(<Badge variant="success">Success</Badge>);
       const badge = screen.getByText('Success').closest('span');
-      expect(badge.className).toContain('text-[--success]');
+      expect(badge.className).toContain('text-[var(--success)]');
     });
 
     it('renders warning variant', () => {
       render(<Badge variant="warning">Warning</Badge>);
       const badge = screen.getByText('Warning').closest('span');
-      expect(badge.className).toContain('text-[--warning]');
+      expect(badge.className).toContain('text-[var(--warning)]');
     });
 
     it('renders error variant', () => {
       render(<Badge variant="error">Error</Badge>);
       const badge = screen.getByText('Error').closest('span');
-      expect(badge.className).toContain('text-[--error]');
+      expect(badge.className).toContain('text-[var(--error)]');
     });
 
     it('renders info variant', () => {
       render(<Badge variant="info">Info</Badge>);
       const badge = screen.getByText('Info').closest('span');
-      expect(badge.className).toContain('text-[--info]');
+      expect(badge.className).toContain('text-[var(--info)]');
     });
 
     it('renders accent variant', () => {

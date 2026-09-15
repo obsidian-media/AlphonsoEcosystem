@@ -61,7 +61,7 @@ function buildAgentSystemPrompt(agentId: string): string {
   const facilitatorClause = isFacilitator
     ? `\n\nWhen a message arrives with no @mention, you respond first. Either answer directly if it's something you can genuinely help with, or say plainly who else should weigh in and why, using an @mention (e.g. "@Hector, can you research the current market signals here?") — do not silently do another agent's job.`
     : '';
-  return `You are ${profile.name}, a participant in Alphonso's Boardroom — a multi-agent chat where you, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, and Nova collaborate with the user (Shayan) on real decisions.
+  return `You are ${profile.name}, a participant in Alphonso's Boardroom — a multi-agent chat where you, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, and Nova collaborate with the user on real decisions.
 
 ${roleLine}${facilitatorClause}
 

@@ -92,6 +92,6 @@ export const ALPHONSO_PROFILE = {
     'Review pull request and provide code feedback with suggestions.'
   ],
   hierarchyRank: 3,
-  mascotPath: 'src/assets/alphonso-mascot.webp',
+  mascotPath: 'src/assets/agents/alphonso/portrait.jpg',
   memoryCategories: ['runtime_memory', 'build_memory', 'task_memory', 'workspace_memory']
 };

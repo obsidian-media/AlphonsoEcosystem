@@ -23,7 +23,9 @@ const {
   approveRequest,
   rejectRequest,
   listPendingApprovals,
-  listAllApprovals
+  listAllApprovals,
+  listPendingApprovalsByTrace,
+  listApprovalsByTrace
 } = await import('../../services/approval/approvalService');
 
 describe('approvalService', () => {
@@ -136,6 +138,50 @@ describe('approvalService', () => {
       const pending = listPendingApprovals();
       expect(pending).toHaveLength(1);
       expect(pending[0].id).toBe('a');
+    });
+  });
+
+  describe('listPendingApprovalsByTrace', () => {
+    it('returns only pending items matching the given traceId', () => {
+      localStorageMock.getItem.mockReturnValue(JSON.stringify([
+        { id: 'a', status: 'pending', actionType: 'file_write', metadata: { traceId: 'trace-a' } },
+        { id: 'b', status: 'pending', actionType: 'deployment', metadata: { traceId: 'trace-b' } }
+      ]));
+      const rows = listPendingApprovalsByTrace('trace-a');
+      expect(rows).toHaveLength(1);
+      expect(rows[0].actionType).toBe('file_write');
+    });
+
+    it('excludes approved/rejected items even if the trace matches', () => {
+      localStorageMock.getItem.mockReturnValue(JSON.stringify([
+        { id: 'c', status: 'approved', actionType: 'file_write', metadata: { traceId: 'trace-c' } }
+      ]));
+      expect(listPendingApprovalsByTrace('trace-c')).toHaveLength(0);
+    });
+
+    it('returns an empty array for an unknown traceId', () => {
+      localStorageMock.getItem.mockReturnValue(JSON.stringify([
+        { id: 'd', status: 'pending', actionType: 'file_write', metadata: { traceId: 'trace-d' } }
+      ]));
+      expect(listPendingApprovalsByTrace('does-not-exist')).toEqual([]);
+    });
+  });
+
+  describe('listApprovalsByTrace', () => {
+    it('returns matching-trace items regardless of status', () => {
+      localStorageMock.getItem.mockReturnValue(JSON.stringify([
+        { id: 'e', status: 'rejected', actionType: 'deployment', metadata: { traceId: 'trace-e' } }
+      ]));
+      const rows = listApprovalsByTrace('trace-e');
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe('rejected');
+    });
+
+    it('returns an empty array for an unknown traceId', () => {
+      localStorageMock.getItem.mockReturnValue(JSON.stringify([
+        { id: 'f', status: 'pending', actionType: 'file_write', metadata: { traceId: 'trace-f' } }
+      ]));
+      expect(listApprovalsByTrace('does-not-exist')).toEqual([]);
     });
   });
 });

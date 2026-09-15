@@ -27,14 +27,14 @@ export function AgentAvatar({
         src={src}
         alt={`${name || agentId || 'Agent'} mascot`}
         onError={() => setImageFailed(true)}
-        className={`${sizeClass} ${roundedClass} border border-white/10 object-cover object-center ${className}`.trim()}
+        className={`${sizeClass} ${roundedClass} border border-[var(--border)] object-cover object-center ${className}`.trim()}
       />
     );
   }
 
   return (
-    <div className={`${sizeClass} ${roundedClass} flex items-center justify-center border border-white/10 bg-zinc-900/70 text-[10px] font-bold uppercase tracking-widest text-zinc-200 ${className}`.trim()}>
-      {initials === '?' ? <UserRound className="h-3.5 w-3.5 text-zinc-400" /> : initials}
+    <div className={`${sizeClass} ${roundedClass} flex items-center justify-center border border-[var(--border)] bg-[var(--surface-2)] text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] ${className}`.trim()}>
+      {initials === '?' ? <UserRound className="h-3.5 w-3.5 text-[var(--text-3)]" /> : initials}
     </div>
   );
 }
