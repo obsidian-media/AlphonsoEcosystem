@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getConnectorCredential, saveConnectorCredential } from './connectorAuth';
-import { evaluatePolicyGate } from '../policyEnforcementService';
+import { evaluatePolicyGate, getRuntimePolicySettings } from '../policyEnforcementService';
 import { appendConnectorAudit } from '../connectorRegistryService';
 import * as rateLimiter from '../connectorRateLimiterService';
 import * as circuitBreaker from '../connectorCircuitBreakerService';
@@ -236,6 +236,25 @@ export function setHermesSessionMode(agentId: string, mode: HermesSessionMode): 
   saveConnectorCredential('hermes_agents', sessionModeKey(agentId), mode);
 }
 
+/**
+ * `hermes_agents` is deliberately excluded from `PAID_OR_METERED_CONNECTORS` on the assumption
+ * every profile is local/self-hosted (same posture as Ollama) — but nothing previously verified
+ * the saved endpoint actually *is* local, so a user (or a misconfigured/malicious credential
+ * entry) pointing "Hermes" at a real remote paid API bypassed Zero-Cost Mode entirely. This is
+ * deliberately conservative: only bare loopback counts as local. A LAN address, a Tailscale IP,
+ * or any public host is treated as non-local until a future pass decides otherwise (see
+ * docs/HERMES_AGENT_DELEGATION_PLAN.md Phase 2's discussion of Tailscale as a legitimate future
+ * case) — narrowing this later is a deliberate policy change, not a bug fix.
+ */
+function isLoopbackHermesUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]';
+  } catch {
+    return false;
+  }
+}
+
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, '');
 }
@@ -285,6 +304,20 @@ export async function sendHermesAgentMessage(
   if (circuitBreaker.isOpen(CONNECTOR_ID)) {
     appendConnectorAudit(CONNECTOR_ID, 'send_blocked_circuit_open', { agentId });
     return { ok: false, circuitOpen: true, message: `Hermes connector circuit is open (agent "${agentId}") — too many recent failures, cooling down.`, provider: 'hermes' };
+  }
+
+  // Zero-Cost Mode assumes hermes_agents is always local/self-hosted (it's excluded from
+  // PAID_OR_METERED_CONNECTORS on that basis) -- but the saved endpoint could point anywhere.
+  // Enforce the assumption here rather than trusting it, so a non-loopback endpoint gets the
+  // same "blocked without explicit override" treatment every real paid connector already gets.
+  if (getRuntimePolicySettings().zeroCostMode && !approved && !isLoopbackHermesUrl(url)) {
+    appendConnectorAudit(CONNECTOR_ID, 'send_blocked_non_loopback_endpoint', { agentId });
+    return {
+      ok: false,
+      blocked: true,
+      message: `Zero-Cost Mode blocked hermes_agents (agent "${agentId}") — its configured endpoint is not a loopback address, so it can't be assumed local/free.`,
+      provider: 'hermes'
+    };
   }
 
   const gate = evaluatePolicyGate({

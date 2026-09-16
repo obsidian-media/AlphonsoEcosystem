@@ -464,23 +464,36 @@ export function ChatView({
   useEffect(() => {
     let cancelled = false;
     setMessages([]);
+    // Merge-safe: if the user sends a message while this load is still in flight (same
+    // activeChatId, so the `cancelled` guard above doesn't apply), a plain `setMessages(loaded)`
+    // here would silently overwrite -- and lose -- that just-sent message once this resolves.
+    // Anything already in `current` by the time we resolve was appended after the `setMessages([])`
+    // above, so it's genuinely new and must be kept, not clobbered by the persisted snapshot.
+    function applyLoadedMessages(loaded: unknown[]) {
+      setMessages((current) => {
+        if (current.length === 0) return loaded as typeof current;
+        const loadedIds = new Set((loaded as { id?: unknown }[]).map((m) => m.id));
+        const appendedSinceClear = current.filter((m) => !loadedIds.has(m.id));
+        return [...(loaded as typeof current), ...appendedSinceClear];
+      });
+    }
     async function load() {
       const durable = await loadChatMessages(activeChatId);
       if (cancelled) return;
       if (durable && durable.length > 0) {
-        setMessages(durable);
+        applyLoadedMessages(durable);
       } else {
         try {
           const sqliteData = await invoke<string | null>('kv_get', { key: `alphonso_messages_${activeChatId}` });
           if (sqliteData) {
             const parsed = JSON.parse(sqliteData);
             if (Array.isArray(parsed)) {
-              setMessages(parsed);
+              applyLoadedMessages(parsed);
               return;
             }
           }
         } catch { /* SQLite read failed — fall through to localStorage */ }
-        setMessages(getStorage(`alphonso_messages_${activeChatId}`, []));
+        applyLoadedMessages(getStorage(`alphonso_messages_${activeChatId}`, []));
       }
     }
     void load();
