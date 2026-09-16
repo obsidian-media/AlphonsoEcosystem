@@ -10,7 +10,8 @@ vi.mock('../services/connectors/connectorAuth.js', () => ({
 }));
 
 vi.mock('../services/policyEnforcementService.js', () => ({
-  evaluatePolicyGate: vi.fn(() => ({ ok: true, blocked: false }))
+  evaluatePolicyGate: vi.fn(() => ({ ok: true, blocked: false })),
+  getRuntimePolicySettings: vi.fn(() => ({ zeroCostMode: true, approvalMode: false }))
 }));
 
 vi.mock('../services/connectorRegistryService', () => ({
@@ -27,7 +28,7 @@ const {
   listHermesAgentModels,
   sendHermesAgentMessage
 } = await import('../services/connectors/hermesAgentConnector.js');
-const { evaluatePolicyGate } = await import('../services/policyEnforcementService.js');
+const { evaluatePolicyGate, getRuntimePolicySettings } = await import('../services/policyEnforcementService.js');
 const { appendConnectorAudit } = await import('../services/connectorRegistryService');
 const rateLimiter = await import('../services/connectorRateLimiterService');
 const circuitBreaker = await import('../services/connectorCircuitBreakerService');
@@ -150,6 +151,43 @@ describe('hermesAgentConnector', () => {
     expect(evaluatePolicyGate).toHaveBeenCalledWith(expect.objectContaining({ connectorId: 'hermes_agents', actionType: 'hermesAgentDelegation', approved: false }));
     expect(fetch).not.toHaveBeenCalled();
     expect(appendConnectorAudit).toHaveBeenCalledWith('hermes_agents', 'send_blocked_policy_gate', expect.objectContaining({ agentId: 'jose' }));
+  });
+
+  it('sendHermesAgentMessage blocks a non-loopback endpoint under Zero-Cost Mode instead of assuming it is local/free', async () => {
+    saveHermesAgentEndpoint('jose', 'http://203.0.113.5:8645', 'jose-key');
+    getRuntimePolicySettings.mockReturnValueOnce({ zeroCostMode: true, approvalMode: false });
+    const result = await sendHermesAgentMessage('jose', [{ role: 'user', content: 'Hi' }]);
+    expect(result.ok).toBe(false);
+    expect(result.blocked).toBe(true);
+    expect(result.message).toMatch(/not a loopback address/i);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(evaluatePolicyGate).not.toHaveBeenCalled();
+    expect(appendConnectorAudit).toHaveBeenCalledWith('hermes_agents', 'send_blocked_non_loopback_endpoint', expect.objectContaining({ agentId: 'jose' }));
+  });
+
+  it('sendHermesAgentMessage allows a non-loopback endpoint when the caller has already resolved approval', async () => {
+    saveHermesAgentEndpoint('jose', 'http://203.0.113.5:8645', 'jose-key');
+    getRuntimePolicySettings.mockReturnValueOnce({ zeroCostMode: true, approvalMode: false });
+    fetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'ok' } }], model: 'hermes-agent', usage: null }) });
+    const result = await sendHermesAgentMessage('jose', [{ role: 'user', content: 'Hi' }], { approved: true });
+    expect(result.ok).toBe(true);
+    expect(fetch).toHaveBeenCalled();
+  });
+
+  it('sendHermesAgentMessage allows a non-loopback endpoint when Zero-Cost Mode is off', async () => {
+    saveHermesAgentEndpoint('jose', 'http://203.0.113.5:8645', 'jose-key');
+    getRuntimePolicySettings.mockReturnValueOnce({ zeroCostMode: false, approvalMode: false });
+    fetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'ok' } }], model: 'hermes-agent', usage: null }) });
+    const result = await sendHermesAgentMessage('jose', [{ role: 'user', content: 'Hi' }]);
+    expect(result.ok).toBe(true);
+  });
+
+  it('sendHermesAgentMessage still allows a loopback endpoint under Zero-Cost Mode (no regression on the common case)', async () => {
+    saveHermesAgentEndpoint('jose', 'http://127.0.0.1:8645', 'jose-key');
+    getRuntimePolicySettings.mockReturnValueOnce({ zeroCostMode: true, approvalMode: false });
+    fetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'ok' } }], model: 'hermes-agent', usage: null }) });
+    const result = await sendHermesAgentMessage('jose', [{ role: 'user', content: 'Hi' }]);
+    expect(result.ok).toBe(true);
   });
 
   it('sendHermesAgentMessage passes approved:true through to evaluatePolicyGate when the caller has already resolved approval', async () => {

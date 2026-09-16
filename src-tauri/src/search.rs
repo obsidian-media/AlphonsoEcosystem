@@ -133,6 +133,54 @@ pub(crate) async fn is_private_host(host: &str) -> bool {
   }
 }
 
+/// Manually follows redirects (the client itself uses `Policy::none()`), re-validating the
+/// target host of *every* hop against `is_private_host` before continuing. reqwest's built-in
+/// redirect policy has no async hook, so a request could otherwise be redirected straight past
+/// the initial SSRF check (e.g. a source URL that 302s to `169.254.169.254`) with no re-check on
+/// each hop.
+async fn fetch_with_ssrf_guard(
+  client: &reqwest::Client,
+  start_url: reqwest::Url,
+) -> Result<reqwest::Response, String> {
+  const MAX_REDIRECTS: usize = 5;
+  let mut current = start_url;
+  let mut redirects_followed = 0usize;
+  loop {
+    let response = client
+      .get(current.clone())
+      .send()
+      .await
+      .map_err(|error| error.to_string())?;
+    if !response.status().is_redirection() {
+      return Ok(response);
+    }
+    if redirects_followed >= MAX_REDIRECTS {
+      return Err("Too many redirects.".to_string());
+    }
+    let location = response
+      .headers()
+      .get(reqwest::header::LOCATION)
+      .and_then(|value| value.to_str().ok())
+      .map(|value| value.to_string())
+      .ok_or_else(|| "Redirect response missing a Location header.".to_string())?;
+    let next = current
+      .join(&location)
+      .map_err(|error| format!("Invalid redirect location: {error}"))?;
+    if next.scheme() != "http" && next.scheme() != "https" {
+      return Err("SSRF blocked: redirect target uses a non-http(s) scheme.".to_string());
+    }
+    if let Some(host) = next.host_str() {
+      if is_private_host(host).await {
+        return Err(
+          "SSRF blocked: redirect target is a private/internal IP address.".to_string(),
+        );
+      }
+    }
+    current = next;
+    redirects_followed += 1;
+  }
+}
+
 fn extract_title(html: &str) -> Option<String> {
   let lower = html.to_ascii_lowercase();
   let start = lower.find("<title")?;
@@ -338,7 +386,9 @@ pub(crate) async fn fetch_research_sources(
 ) -> Vec<ResearchSourceProof> {
   let client = match reqwest::Client::builder()
     .timeout(std::time::Duration::from_secs(12))
-    .redirect(reqwest::redirect::Policy::limited(5))
+    // Redirects are followed manually via `fetch_with_ssrf_guard` so each hop's host can be
+    // re-validated -- reqwest's built-in `Policy` has no async hook to call `is_private_host`.
+    .redirect(reqwest::redirect::Policy::none())
     .user_agent("Alphonso-Hector/0.1 local-first research verifier")
     .build()
   {
@@ -420,7 +470,7 @@ pub(crate) async fn fetch_research_sources(
         continue;
       }
     }
-    match client.get(url.clone()).send().await {
+    match fetch_with_ssrf_guard(&client, url.clone()).await {
       Ok(response) => {
         let status = response.status();
         match response.bytes().await {
@@ -488,7 +538,7 @@ pub(crate) async fn fetch_research_sources(
         confidence: "failed".to_string(),
         risk_level,
         verification_state: "failed".to_string(),
-        error: Some(error.to_string()),
+        error: Some(error),
       }),
     }
   }
@@ -703,5 +753,86 @@ mod tests {
   #[test]
   fn decode_html_entities_basic() {
     assert_eq!(decode_html_entities("& < >"), "& < >");
+  }
+
+  /// Minimal single-shot HTTP/1.1 server for redirect tests: binds an ephemeral loopback
+  /// port, accepts exactly one connection, ignores the request, and writes back a raw
+  /// `302 Found` pointing at `location`. Returns the port so the test can build the request URL.
+  async fn spawn_redirect_server(location: &str) -> u16 {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let response = format!(
+      "HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    );
+    tokio::spawn(async move {
+      let (mut socket, _) = listener.accept().await.unwrap();
+      let mut buf = [0u8; 1024];
+      let _ = socket.read(&mut buf).await;
+      let _ = socket.write_all(response.as_bytes()).await;
+      let _ = socket.shutdown().await;
+    });
+    port
+  }
+
+  #[tokio::test]
+  async fn fetch_with_ssrf_guard_blocks_redirect_to_private_address() {
+    let port = spawn_redirect_server("http://169.254.169.254/latest/meta-data/").await;
+    let client = reqwest::Client::builder()
+      .redirect(reqwest::redirect::Policy::none())
+      .build()
+      .unwrap();
+    let start_url = reqwest::Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    let result = fetch_with_ssrf_guard(&client, start_url).await;
+    let error = result.expect_err("redirect to a private/link-local address must be blocked");
+    assert!(
+      error.contains("SSRF blocked"),
+      "expected an SSRF-blocked error, got: {error}"
+    );
+  }
+
+  #[tokio::test]
+  async fn fetch_with_ssrf_guard_blocks_redirect_to_non_http_scheme() {
+    let port = spawn_redirect_server("file:///etc/passwd").await;
+    let client = reqwest::Client::builder()
+      .redirect(reqwest::redirect::Policy::none())
+      .build()
+      .unwrap();
+    let start_url = reqwest::Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    let result = fetch_with_ssrf_guard(&client, start_url).await;
+    let error = result.expect_err("redirect to a non-http(s) scheme must be blocked");
+    assert!(
+      error.contains("non-http(s) scheme"),
+      "expected a scheme-blocked error, got: {error}"
+    );
+  }
+
+  #[tokio::test]
+  async fn fetch_with_ssrf_guard_blocks_redirect_after_missing_location_header() {
+    // A 3xx with no Location header at all must fail closed (an error), not silently return
+    // the redirect response itself as if it were a normal 200.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+      use tokio::io::{AsyncReadExt, AsyncWriteExt};
+      let (mut socket, _) = listener.accept().await.unwrap();
+      let mut buf = [0u8; 1024];
+      let _ = socket.read(&mut buf).await;
+      let _ = socket
+        .write_all(b"HTTP/1.1 302 Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+        .await;
+      let _ = socket.shutdown().await;
+    });
+    let client = reqwest::Client::builder()
+      .redirect(reqwest::redirect::Policy::none())
+      .build()
+      .unwrap();
+    let start_url = reqwest::Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    let result = fetch_with_ssrf_guard(&client, start_url).await;
+    let error = result.expect_err("a redirect with no Location header must fail, not pass through");
+    assert!(
+      error.contains("Location header"),
+      "expected a missing-Location error, got: {error}"
+    );
   }
 }

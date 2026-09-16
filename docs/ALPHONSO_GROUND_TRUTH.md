@@ -569,7 +569,7 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **C-6: OAuth state + token redaction** — verified all 3 scripts already have proper state validation and safe error logging.
 - [x] **H-1: Shell interpreters in policy_gate.rs** — verified `cmd.exe`, `powershell.exe`, `pwsh.exe` already removed.
 - [x] **H-2: sanitize() in execute_command_verified was a no-op** — `String::replace()` does literal matching; pattern was never applied. Replaced with real line-by-line redaction scanning for api_key/token/secret/password/bearer patterns.
-- [x] **H-3/H-4: SSRF — fetch_url_content had no IP blocklist** — `crate::search::is_private_ip()` now called before every fetch. `fetch_research_sources` was already protected.
+- [x] **H-3/H-4: SSRF — fetch_url_content had no IP blocklist** — `crate::search::is_private_ip()` now called before every fetch. `fetch_research_sources` was already protected against the *initial* URL's host — see §12's table for the redirect-hop gap this claim didn't cover, closed 2026-09-16.
 - [x] **H-5/H-6: Symlink escape + watch_inbox_poll** — verified already protected via `canonicalize` + `starts_with`.
 - [x] **H-7: Gateway /health leak** — verified already returns `{ ok: true, status: "ok" }` only.
 - [x] **M-1: policyDslService dead code** — wired into `gateConnectorAction` as a DSL pre-check layer (deny rules block before main gate evaluation).
