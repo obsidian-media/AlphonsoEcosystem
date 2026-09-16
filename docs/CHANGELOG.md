@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-09-15/16 (repo hygiene pass + top-3 deferred-work security/correctness fixes)
+
+- **Repo hygiene pass**: audited and dropped 3 stale stashes (all confirmed already superseded on `main`); confirmed `wip/opencode-test-coverage-2026-09-05` had never merged, was 235 commits stale, and was safe to delete after every commit's content was independently verified already present via later merged work; merged 9 safe dependabot PRs; caught dependabot PR #160 (`react-dom` 18→19 bump with no matching `react` bump) as genuinely broken via a live CI failure (119 test files) and left it open with auto-merge disabled and an explanation rather than merging it blind.
+- **Fixed a live CI-blocking security advisory found mid-session**: RUSTSEC-2026-0285 (rustls 0.23.42, published one day prior) was silently failing `cargo audit` on every PR touching `src-tauri/Cargo.lock` — bumped to 0.23.45.
+- **Fixed a real, unrelated test bug blocking PR #250** (CALL-E CSP allowlist fix + escalation-call service): `useBootEffects.test.js` never mocked the new `escalationCallService`, so its real 5-minute polling interval ran under fake timers and tripped Vitest's infinite-timer abort guard.
+- **SSRF via redirect in `fetch_research_sources` (`src-tauri/src/search.rs`)** — the initial URL's host was checked, but reqwest's built-in redirect policy followed up to 5 hops with no re-validation, so a research source URL could 302 to a private/internal address (e.g. cloud metadata `169.254.169.254`) past the guard. Fixed with a manual redirect-following guard (`fetch_with_ssrf_guard`) that re-checks every hop, rejects non-http(s) redirect targets, and fails closed on a missing `Location` header.
+- **`ChatView.tsx` chat-history hydration race** — a message sent while chat history was still loading for a freshly-opened chat could be silently overwritten once the load resolved (a plain array overwrite, not a merge). Fixed with a merge-safe functional update across all 3 load-path call sites (durable store, SQLite fallback, localStorage fallback).
+- **Hermes Zero-Cost Mode bypass via a non-loopback endpoint** — `hermes_agents` is excluded from `PAID_OR_METERED_CONNECTORS` on the assumption every profile is local/self-hosted, but the saved endpoint was never actually checked. Fixed with a conservative loopback-only locality check enforced before the policy gate; a LAN/Tailscale/public endpoint is now blocked under Zero-Cost Mode like any other paid connector unless explicitly approved.
+- Corrected 2 stale entries in `docs/governance/DEFERRED_WORK.md` found while reading it for this pass (Hector research-synthesis was already fixed by earlier work; iOS `xcodebuild test` already runs in CI via PR #146) rather than leaving the drift for a future session to rediscover.
+- Full detail, reasoning for why these 3 were prioritized over the other 7 identified, and verification status (what ran locally vs. what CI confirms) in `docs/governance/DEFERRED_WORK.md` and `CLAUDE.md`'s 2026-09-16 entries. No version bump — this is fix/hygiene work, not a release cut.
+
+---
+
 ## [2.8.0] — 2026-09-09 (Smart Installer, UI/UX redesign, CALL-E outreach connector, Dependency Bundling O2)
 
 The four sections below shipped together in this release, tagged as one version after all four were merged to `main` and verified through CI. Kept as separate dated sub-entries (their original `[Unreleased]` sessions) rather than merged into one paragraph, since each was a distinct, independently-reviewed body of work.
