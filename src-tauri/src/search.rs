@@ -171,9 +171,7 @@ async fn fetch_with_ssrf_guard(
     }
     if let Some(host) = next.host_str() {
       if is_private_host(host).await {
-        return Err(
-          "SSRF blocked: redirect target is a private/internal IP address.".to_string(),
-        );
+        return Err("SSRF blocked: redirect target is a private/internal IP address.".to_string());
       }
     }
     current = next;
