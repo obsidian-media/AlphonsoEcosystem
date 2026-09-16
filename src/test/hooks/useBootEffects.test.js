@@ -31,6 +31,10 @@ vi.mock('../../services/whatsappCompanionService', () => ({
   startWhatsAppCompanion: vi.fn(),
 }));
 
+vi.mock('../../services/escalationCallService', () => ({
+  startEscalationPolling: vi.fn(() => vi.fn()),
+}));
+
 vi.mock('../../constants/appConstants', () => ({
   INITIAL_CONVERSATION_ID: 'default-session',
 }));
@@ -41,6 +45,7 @@ import { getDefaultWorkspaceRoot } from '../../services/workspaceRootService';
 import { getConnectorCredential } from '../../services/connectors/connectorAuth';
 import { startTelegramCompanion } from '../../services/telegramCompanionService';
 import { startWhatsAppCompanion } from '../../services/whatsappCompanionService';
+import { startEscalationPolling } from '../../services/escalationCallService';
 
 describe('useBootEffects', () => {
   const mockSetSettings = vi.fn();
@@ -81,6 +86,8 @@ describe('useBootEffects', () => {
     });
     startTelegramCompanion.mockReset();
     startWhatsAppCompanion.mockReset();
+    startEscalationPolling.mockReset();
+    startEscalationPolling.mockReturnValue(vi.fn());
     window.__ALPHONSO_BOOT_READY__ = vi.fn();
     document.body.innerHTML = '<div data-alphonso-shell-ready="true"></div>';
   });
