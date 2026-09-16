@@ -507,7 +507,9 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ## 18. CALL-E
 
-**Status:** Two integration paths — a REST connector (form-driven, single call) and a conversational MCP flow (chat-driven, clarifying-question loop). Both real outbound phone calls, unconditionally high-risk/paid.
+**Status:** Three integration paths — a REST connector (form-driven, single call), a conversational MCP flow (chat-driven, clarifying-question loop), and an automated escalation-call service (system-triggered, no chat/form involved). All real outbound phone calls, unconditionally high-risk/paid. REST is wired into Settings → Connectors → Connectors → "CALL-E Outreach" (PR #234 — not "pending a UI redesign" as an earlier version of this doc said).
+
+**2026-09-10 fix — CSP was silently blocking every real request from the native app:** `tauri.conf.json`'s CSP `connect-src` allowlist never included `api.heycall-e.com` (REST) or `seleven-mcp-sg.airudder.com` (MCP broker + server) — both call out via plain `fetch()` from the frontend, and the webview silently blocked every request with zero visible error. This is very likely why "no real call has been placed by either path" persisted for so long: nobody could get past this point in the packaged/native app. Fixed on branch `fix/calle-csp-allowlist`. The same CSP gap also affected 9 other connectors (DeepSeek, Perplexity, Tavily, NVIDIA NIM, Discord, Slack, GitHub, Composio, plugin marketplace) — all fixed in the same change.
 
 **Required env vars (REST):**
 | Variable | Description |
@@ -521,13 +523,15 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 2. Go to the dashboard → API Keys → copy your key → `CALLE_API_KEY`
 
 **How to test:**
-- REST: `CalleOutreachPanel.tsx` (not yet wired into app navigation, pending the in-progress UI redesign) — draft a call, approve, `createCall`/`pollCallUntilTerminal` places and tracks it
+- REST: `CalleOutreachPanel.tsx` (Settings → Connectors → "CALL-E Outreach") — draft a call, approve, `createCall`/`pollCallUntilTerminal` places and tracks it
 - MCP: type a message starting with "call"/"phone"/"ring"/"dial" in ChatView; `plan_call` asks clarifying questions until ready, then a real button click (not typed text) approves `run_call`
+- Escalation: Settings → Connectors → "Escalation Calls" — enable, set a phone number, "Check now" to trigger immediately against any packet currently `pending_approval`
 
 **Known limitations:**
-- Real cost (~$0.05/call per CALL-E's pricing) and a real phone rings — both paths are unconditionally high-risk in `policyEnforcementService.ts`
+- Real cost (~$0.05/call per CALL-E's pricing) and a real phone rings — all paths are unconditionally high-risk in `policyEnforcementService.ts`
 - `run_call` (MCP) has **no idempotency key** — a durable `submitting` stage in `calleMcpOutreachService.ts` blocks resubmission after any failure, but cannot itself guarantee exactly-once delivery
-- No real call has been placed by either path as of this writing (live-verified via safe read-only/planning-only calls only — see `docs/TRUTH_FIRST_EXECUTION_PLAN.md`'s J3 entry)
+- The 2026-09-07 ground-truth entry stating "no real call has been placed by either path" is superseded by the CSP fix above but the live-verification steps themselves (MCP login through Alphonso's own code, keychain survival, one real terminal-status call) were still in progress as of this doc's last edit — check `docs/governance/DEFERRED_WORK.md`'s CALL-E entry for current status before assuming they're done
+- Escalation service is new (2026-09-10) and not yet live-verified end-to-end (a real packet reaching `pending_approval`, sitting past threshold, a real call placed, and the packet actually resolving from the spoken answer)
 
 **Setup doc:** `docs/superpowers/specs/2026-09-06-calle-outreach-connector-design.md`, `docs/superpowers/specs/2026-09-06-calle-mcp-conversational-outreach-design.md`
 
