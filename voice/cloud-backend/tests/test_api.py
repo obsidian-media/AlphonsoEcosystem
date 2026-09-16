@@ -185,9 +185,9 @@ def test_tutor_persona_degrades_gracefully_when_lesson_context_fetch_fails():
 
 
 def test_analyze_session_stores_weaknesses_and_reports_count():
-    weakness = Weakness(mistake_type="verb_tense", example="I go", corrected_form="I went")
+    extraction_output = '[{"mistake_type": "verb_tense", "example": "I go", "corrected_form": "I went"}]'
     with patch.dict(os.environ, ENV, clear=False), \
-         patch("app.main.NvidiaClient.complete", new=AsyncMock(return_value='[{"mistake_type": "verb_tense", "example": "I go", "corrected_form": "I went"}]')), \
+         patch("app.main.NvidiaClient.complete", new=AsyncMock(return_value=extraction_output)), \
          patch("app.main.SupabaseDeviceRegistry.require_active_device", new=AsyncMock(return_value=SupabaseUser(id="u1", access_token="tok"))), \
          patch("app.lesson_pipeline.store_weaknesses", new=AsyncMock()) as store:
         response = TestClient(app).post(
@@ -264,8 +264,9 @@ def test_analyze_session_evicts_cached_lesson_context():
     analyzed -- new weaknesses may have just been recorded for it, so the
     next Tutor turn (a new session using the same id would be unusual but
     not impossible) must re-fetch rather than serve a stale hit."""
+    extraction_output = '[{"mistake_type": "verb_tense", "example": "I go", "corrected_form": "I went"}]'
     with patch.dict(os.environ, ENV, clear=False), \
-         patch("app.main.NvidiaClient.complete", new=AsyncMock(return_value='[{"mistake_type": "verb_tense", "example": "I go", "corrected_form": "I went"}]')), \
+         patch("app.main.NvidiaClient.complete", new=AsyncMock(return_value=extraction_output)), \
          patch("app.main.NvidiaClient.synthesize", new=AsyncMock(return_value=b"RIFFfake-wav")), \
          patch("app.main.SupabaseDeviceRegistry.require_active_device", new=AsyncMock(return_value=SupabaseUser(id="u1", access_token="tok"))), \
          patch("app.main.fetch_recent_weaknesses", new=AsyncMock(return_value=[])) as fetch, \
