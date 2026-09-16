@@ -246,4 +246,32 @@ export function useBootEffects({
       if (idleId) cancelIdle(idleId);
     };
   }, []);
+
+  // Escalation-call polling: checks every 5 minutes for orchestration
+  // packets stuck in pending_approval past their threshold with no
+  // response through the app or messaging channels, and places one
+  // approval-gated CALL-E call each. No-ops immediately inside
+  // runEscalationCheck if the feature is disabled or unconfigured, same
+  // gating pattern as the Telegram/WhatsApp companions above.
+  useEffect(() => {
+    let cancelled = false;
+    let idleId;
+    let stopPolling;
+
+    async function startEscalation() {
+      if (cancelled) return;
+      try {
+        const { startEscalationPolling } = await import('../services/escalationCallService');
+        if (cancelled) return;
+        stopPolling = startEscalationPolling();
+      } catch { /* ignore */ }
+    }
+
+    idleId = onIdle(startEscalation);
+    return () => {
+      cancelled = true;
+      if (idleId) cancelIdle(idleId);
+      if (stopPolling) stopPolling();
+    };
+  }, []);
 }
