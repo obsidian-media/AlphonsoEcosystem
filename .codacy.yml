@@ -1,0 +1,15 @@
+---
+# Codacy repo-level configuration.
+#
+# Excludes generated/vendored content and file types Codacy's default
+# analysis doesn't meaningfully apply to from static-analysis findings.
+exclude_paths:
+  # Codacy's SQL analysis defaults to T-SQL/SQL-Server-flavored rules
+  # (e.g. "Expected SET ANSI_NULLS ON near top of file", "All queries
+  # must target RAC_* tables") which are meaningless for Postgres --
+  # these migrations run against Supabase Postgres, not SQL Server.
+  # Applying that ruleset here produces only false positives, not real
+  # findings. See AlphonsoEcosystem PR #255 for the concrete case that
+  # surfaced this (voice_learner_weaknesses migration flagged with ~50
+  # T-SQL-only issues on a 24-line, valid Postgres file).
+  - "supabase/migrations/**"
