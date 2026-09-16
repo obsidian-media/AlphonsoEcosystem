@@ -36,6 +36,18 @@ struct VoiceCloudResponse: Decodable {
     }
 }
 
+struct VoiceAnalyzeSessionResponse: Decodable {
+    let sessionID: String
+    let weaknessesFound: Int
+    let weaknessesStored: Int
+
+    enum CodingKeys: String, CodingKey {
+        case sessionID = "session_id"
+        case weaknessesFound = "weaknesses_found"
+        case weaknessesStored = "weaknesses_stored"
+    }
+}
+
 private struct SupabaseSession: Codable {
     let accessToken: String
     let refreshToken: String
@@ -203,6 +215,50 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         }
 
         return decoded
+    }
+
+    /// Feeds a completed session's transcript into the offline weakness-detection
+    /// pipeline (POST /v1/voice/sessions/analyze). Not latency-critical -- callers
+    /// should fire this on session end and not block UI on its result; a failure
+    /// here must never be shown as a session-ending error, since the actual
+    /// conversation already completed successfully. See
+    /// docs/HANDOFF-alphonso-language-companion.md's weakness-detection scope
+    /// decision in the Boardroom repo.
+    func analyzeSession(
+        language: String,
+        transcript: [VoiceCloudHistoryMessage]
+    ) async throws -> VoiceAnalyzeSessionResponse {
+        guard !endpoint.isEmpty,
+              let url = URL(string: endpoint.replacingOccurrences(of: "/v1/voice/respond", with: "/v1/voice/sessions/analyze")) else {
+            throw VoiceCloudError.notConfigured
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(try await validAccessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(try deviceID(), forHTTPHeaderField: "X-Alphonso-Device-Id")
+
+        let payload: [String: Any] = [
+            "session_id": sessionID,
+            "language": language,
+            "transcript": transcript.map { ["role": $0.role, "content": $0.content] }
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw VoiceCloudError.badResponse
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw VoiceCloudError.server(status: httpResponse.statusCode, message: Self.serverMessage(from: data))
+        }
+        do {
+            return try JSONDecoder().decode(VoiceAnalyzeSessionResponse.self, from: data)
+        } catch {
+            throw VoiceCloudError.invalidPayload
+        }
     }
 
     func requestEmailOTP(email: String) async throws {

@@ -35,6 +35,15 @@ def test_request_rejects_unknown_agent_and_language():
         VoiceRequest(session_id="s", text="hello", language="it-IT", agent_id="unknown")
 
 
+def test_request_accepts_tutor_and_translator_agents():
+    """Regression test: these two personas exist in voice_policy.json but were
+    previously unreachable because this Literal never included them -- a real
+    client request for either would have failed Pydantic validation before
+    ever reaching the agent registry."""
+    assert VoiceRequest(session_id="s", text="hi", agent_id="tutor").agent_id == "tutor"
+    assert VoiceRequest(session_id="s", text="hi", agent_id="translator").agent_id == "translator"
+
+
 def test_missing_required_provider_configuration_is_not_ready(monkeypatch):
     monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
     assert Settings.from_env().is_ready is False

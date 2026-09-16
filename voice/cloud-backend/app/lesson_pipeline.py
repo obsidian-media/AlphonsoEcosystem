@@ -13,12 +13,13 @@ from app.supabase_auth import SupabaseUser
 
 logger = logging.getLogger(__name__)
 
-# Offline pipeline only: this module analyzes a *completed* conversation
-# transcript after a session ends and writes findings for the next session's
-# Tutor persona to reuse. Nothing here is called from the real-time
-# /v1/voice/respond path -- transcript analysis is not latency-critical, per
-# the Live Tutor scope decision (see docs/HANDOFF-alphonso-language-companion.md
-# in the OBSIDIAN-TEAM-BOARDROOM repo).
+# Offline pipeline: this module analyzes a *completed* conversation transcript
+# and writes findings for a later Tutor session to reuse -- not latency-critical,
+# per the Live Tutor scope decision (see
+# docs/HANDOFF-alphonso-language-companion.md in the OBSIDIAN-TEAM-BOARDROOM
+# repo). It is triggered by POST /v1/voice/sessions/analyze (app/main.py),
+# called by the client once a session ends -- not from the real-time
+# /v1/voice/respond turn-by-turn path.
 
 _MAX_WEAKNESSES_PER_ANALYSIS = 8
 _DEFAULT_LESSON_CONTEXT_LIMIT = 5
@@ -39,6 +40,9 @@ _EXTRACTION_SYSTEM_PROMPT = (
 
 class LessonPipelineError(Exception):
     """Raised when transcript analysis or weakness storage/retrieval fails."""
+
+    status_code = 503
+    safe_message = "Could not analyze this session"
 
 
 @dataclass(frozen=True)
@@ -102,6 +106,27 @@ async def analyze_transcript(
     ]
     raw = await nvidia.complete(messages)
     return _parse_weaknesses(raw)
+
+
+async def analyze_and_store(
+    settings: Settings,
+    user: SupabaseUser,
+    transcript: list[ChatMessage],
+    language: str,
+    client: NvidiaClient | None = None,
+) -> list[Weakness]:
+    """
+    Run the full offline pipeline for one completed session: analyze, then persist.
+
+    The single entry point POST /v1/voice/sessions/analyze calls. Returns the
+    weaknesses that were found (and stored) so the caller can report a count;
+    an empty transcript or a transcript with no real mistakes both return [],
+    which is a normal, non-error outcome -- not every session teaches something
+    new.
+    """
+    weaknesses = await analyze_transcript(settings, transcript, language, client)
+    await store_weaknesses(settings, user, language, weaknesses)
+    return weaknesses
 
 
 def _user_headers(anon_key: str, access_token: str) -> dict[str, str]:

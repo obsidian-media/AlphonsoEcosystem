@@ -13,14 +13,35 @@ class ChatMessage(BaseModel):
     content: Text
 
 
+AgentId = Literal[
+    "alphonso", "jose", "hector", "miya", "maria", "marcus", "echo", "sentinel", "nova",
+    "tutor", "translator",
+]
+Language = Literal["en-US", "es-US", "fr-FR", "de-DE", "ja-JP", "zh-CN", "fa-IR"]
+
+
 class VoiceRequest(BaseModel):
     session_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
     text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4_000)]
     history: list[ChatMessage] = Field(default_factory=list, max_length=12)
-    agent_id: Literal["alphonso", "jose", "hector", "miya", "maria", "marcus", "echo", "sentinel", "nova"] = "alphonso"
-    language: Literal["en-US", "es-US", "fr-FR", "de-DE", "ja-JP", "zh-CN", "fa-IR"] = "en-US"
+    agent_id: AgentId = "alphonso"
+    language: Language = "en-US"
     tts_model: Literal["magpie", "chatterbox"] = "magpie"
     piper_voice: Literal["mana", "manta"] = "mana"
+
+
+class AnalyzeTranscriptRequest(BaseModel):
+    """Submitted once a session ends, to feed the offline weakness-detection pipeline."""
+
+    session_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
+    language: Language = "en-US"
+    transcript: list[ChatMessage] = Field(default_factory=list, max_length=64)
+
+
+class AnalyzeTranscriptResponse(BaseModel):
+    session_id: str
+    weaknesses_found: int
+    weaknesses_stored: int
 
 
 class DeviceEnrollmentRequest(BaseModel):
