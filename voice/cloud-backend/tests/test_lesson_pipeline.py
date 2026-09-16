@@ -12,6 +12,7 @@ from app.config import Settings
 from app.contracts import ChatMessage
 from app.lesson_pipeline import (
     LessonPipelineError,
+    LessonPipelineExtractionError,
     Weakness,
     analyze_transcript,
     build_lesson_context,
@@ -87,9 +88,14 @@ def test_analyze_transcript_skips_llm_call_for_empty_transcript():
 
 
 def test_analyze_transcript_rejects_unparseable_output():
+    """A 502, not the base class's 503: the NVIDIA call succeeded (no
+    availability failure), it just returned unusable output -- see
+    LessonPipelineExtractionError's docstring for why this distinction
+    matters."""
     with patch("app.lesson_pipeline.NvidiaClient.complete", new=AsyncMock(return_value="not json")):
-        with pytest.raises(LessonPipelineError):
+        with pytest.raises(LessonPipelineExtractionError) as excinfo:
             _run(analyze_transcript(SETTINGS, TRANSCRIPT, "en-US"))
+    assert excinfo.value.status_code == 502
 
 
 def test_analyze_transcript_drops_incomplete_items():
@@ -100,28 +106,37 @@ def test_analyze_transcript_drops_incomplete_items():
     assert weaknesses[0].mistake_type == "x"
 
 
+SESSION_ID = "session-123"
+
+
 def test_store_weaknesses_skips_request_when_nothing_to_store():
     with patch("httpx.AsyncClient.post", new=AsyncMock()) as post:
-        _run(store_weaknesses(SETTINGS, USER, "en-US", []))
+        _run(store_weaknesses(SETTINGS, USER, SESSION_ID, "en-US", []))
     post.assert_not_awaited()
 
 
-def test_store_weaknesses_posts_rows_and_succeeds():
+def test_store_weaknesses_upserts_rows_with_session_id():
     weakness = Weakness(mistake_type="verb_tense", example="I go", corrected_form="I went")
     response = httpx.Response(201, request=httpx.Request("POST", "https://example.supabase.co"))
     with patch("httpx.AsyncClient.post", new=AsyncMock(return_value=response)) as post:
-        _run(store_weaknesses(SETTINGS, USER, "en-US", [weakness]))
+        _run(store_weaknesses(SETTINGS, USER, SESSION_ID, "en-US", [weakness]))
     post.assert_awaited_once()
     _, kwargs = post.call_args
     assert kwargs["json"] == [
         {
             "user_id": USER.id,
+            "session_id": SESSION_ID,
             "language": "en-US",
             "mistake_type": "verb_tense",
             "example": "I go",
             "corrected_form": "I went",
         }
     ]
+    # The whole point of storing this way: idempotent under a client retry,
+    # and collapses the same mistake across sessions into one row, via
+    # PostgREST's upsert-on-conflict, not a plain insert.
+    assert kwargs["params"] == {"on_conflict": "user_id,language,mistake_type"}
+    assert kwargs["headers"]["Prefer"] == "resolution=merge-duplicates,return=minimal"
 
 
 def test_store_weaknesses_raises_on_failure():
@@ -129,7 +144,7 @@ def test_store_weaknesses_raises_on_failure():
     response = httpx.Response(500, request=httpx.Request("POST", "https://example.supabase.co"), text="boom")
     with patch("httpx.AsyncClient.post", new=AsyncMock(return_value=response)):
         with pytest.raises(LessonPipelineError):
-            _run(store_weaknesses(SETTINGS, USER, "en-US", [weakness]))
+            _run(store_weaknesses(SETTINGS, USER, SESSION_ID, "en-US", [weakness]))
 
 
 def test_fetch_recent_weaknesses_parses_rows():
@@ -138,6 +153,16 @@ def test_fetch_recent_weaknesses_parses_rows():
     with patch("httpx.AsyncClient.get", new=AsyncMock(return_value=response)):
         weaknesses = _run(fetch_recent_weaknesses(SETTINGS, USER, "en-US"))
     assert weaknesses == [Weakness(mistake_type="verb_tense", example="I go", corrected_form="I went")]
+
+
+def test_fetch_recent_weaknesses_excludes_stale_entries_via_created_at_filter():
+    """The staleness/"resolution" mechanism: a mistake not seen recently is
+    excluded via a created_at recency window, not a separate resolved flag."""
+    response = httpx.Response(200, request=httpx.Request("GET", "https://example.supabase.co"), json=[])
+    with patch("httpx.AsyncClient.get", new=AsyncMock(return_value=response)) as get:
+        _run(fetch_recent_weaknesses(SETTINGS, USER, "en-US"))
+    _, kwargs = get.call_args
+    assert kwargs["params"]["created_at"].startswith("gte.")
 
 
 def test_fetch_recent_weaknesses_raises_on_failure():

@@ -3,14 +3,30 @@ import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.main import app
+from app.main import _lesson_context_cache, app
 from app.lesson_pipeline import LessonPipelineError, Weakness
 from app.nvidia import NvidiaError, NvidiaRateLimitError
 from app.supabase_auth import SupabaseUser
+
+
+@pytest.fixture(autouse=True)
+def _clear_lesson_context_cache():
+    """
+    The lesson-context cache in app.main is process-global, module-level state.
+
+    Without clearing it, a session_id reused across tests (or even a fresh
+    UUID colliding by bad luck) could leak a cache hit from one test into
+    another, making test outcomes depend on run order -- clear it before
+    every test in this file for isolation.
+    """
+    _lesson_context_cache.clear()
+    yield
+    _lesson_context_cache.clear()
 
 
 ENV = {
@@ -211,3 +227,57 @@ def test_analyze_session_surfaces_nvidia_failure_as_503():
             json={"session_id": "s", "transcript": [{"role": "user", "content": "hi"}]},
         )
     assert response.status_code == 503
+
+
+def test_tutor_persona_reuses_cached_lesson_context_within_same_session():
+    """Regression test for the real latency cost this closes: without the
+    cache, a multi-turn Tutor conversation would fetch lesson context from
+    Supabase on every single turn, adding a synchronous round trip to the
+    highest-latency-risk path in the whole product."""
+    with patch.dict(os.environ, ENV, clear=False), \
+         patch("app.main.NvidiaClient.complete", new=AsyncMock(return_value="ok")), \
+         patch("app.main.NvidiaClient.synthesize", new=AsyncMock(return_value=b"RIFFfake-wav")), \
+         patch("app.main.SupabaseDeviceRegistry.require_active_device", new=AsyncMock(return_value=SupabaseUser(id="u1", access_token="tok"))), \
+         patch("app.main.fetch_recent_weaknesses", new=AsyncMock(return_value=[])) as fetch:
+        first = _tutor_request(session_id="same-session")
+        second = _tutor_request(session_id="same-session")
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    fetch.assert_awaited_once()
+
+
+def test_tutor_persona_fetches_fresh_lesson_context_for_a_different_session():
+    with patch.dict(os.environ, ENV, clear=False), \
+         patch("app.main.NvidiaClient.complete", new=AsyncMock(return_value="ok")), \
+         patch("app.main.NvidiaClient.synthesize", new=AsyncMock(return_value=b"RIFFfake-wav")), \
+         patch("app.main.SupabaseDeviceRegistry.require_active_device", new=AsyncMock(return_value=SupabaseUser(id="u1", access_token="tok"))), \
+         patch("app.main.fetch_recent_weaknesses", new=AsyncMock(return_value=[])) as fetch:
+        _tutor_request(session_id="session-a")
+        _tutor_request(session_id="session-b")
+
+    assert fetch.await_count == 2
+
+
+def test_analyze_session_evicts_cached_lesson_context():
+    """A session's cached lesson context must not survive that session being
+    analyzed -- new weaknesses may have just been recorded for it, so the
+    next Tutor turn (a new session using the same id would be unusual but
+    not impossible) must re-fetch rather than serve a stale hit."""
+    with patch.dict(os.environ, ENV, clear=False), \
+         patch("app.main.NvidiaClient.complete", new=AsyncMock(return_value='[{"mistake_type": "verb_tense", "example": "I go", "corrected_form": "I went"}]')), \
+         patch("app.main.NvidiaClient.synthesize", new=AsyncMock(return_value=b"RIFFfake-wav")), \
+         patch("app.main.SupabaseDeviceRegistry.require_active_device", new=AsyncMock(return_value=SupabaseUser(id="u1", access_token="tok"))), \
+         patch("app.main.fetch_recent_weaknesses", new=AsyncMock(return_value=[])) as fetch, \
+         patch("app.lesson_pipeline.store_weaknesses", new=AsyncMock()):
+        _tutor_request(session_id="s-evict")
+        assert fetch.await_count == 1
+
+        TestClient(app).post(
+            "/v1/voice/sessions/analyze",
+            headers={"Authorization": "Bearer user-access-token", "X-Alphonso-Device-Id": "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"},
+            json={"session_id": "s-evict", "transcript": [{"role": "user", "content": "I go to store yesterday"}]},
+        )
+
+        _tutor_request(session_id="s-evict")
+        assert fetch.await_count == 2

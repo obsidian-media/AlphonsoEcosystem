@@ -49,6 +49,41 @@ logger = logging.getLogger(__name__)
 # correctness bug, not a harmless no-op.
 _LESSON_CONTEXT_AGENTS = frozenset({"tutor"})
 
+# Per-session cache for lesson context, so a multi-turn Tutor conversation
+# fetches it from Supabase once, not on every single turn. Latency is the
+# single biggest measured risk for this whole voice product (see
+# docs/HANDOFF-alphonso-language-companion.md) -- adding an extra
+# synchronous round trip to every turn would work against that directly.
+# Process-local and best-effort: a cache miss (different worker, TTL expiry,
+# process restart) just re-fetches, it never breaks correctness, only saves
+# a round trip when it hits. `analyze_session` evicts a session's entry
+# immediately once that session ends, since the cached context is stale the
+# moment new weaknesses might have been recorded for it.
+_LESSON_CONTEXT_CACHE_TTL_SECONDS = 900.0  # ~15 min: comfortably longer than a typical Tutor turn gap
+_LESSON_CONTEXT_CACHE_MAX_ENTRIES = 2_000  # bounds memory on a long-lived process with many short sessions
+_lesson_context_cache: dict[str, tuple[str | None, float]] = {}
+
+
+def _lesson_context_cache_get(session_id: str) -> tuple[bool, str | None]:
+    entry = _lesson_context_cache.get(session_id)
+    if entry is None:
+        return False, None
+    context, cached_at = entry
+    if time.time() - cached_at > _LESSON_CONTEXT_CACHE_TTL_SECONDS:
+        _lesson_context_cache.pop(session_id, None)
+        return False, None
+    return True, context
+
+
+def _lesson_context_cache_set(session_id: str, context: str | None) -> None:
+    if len(_lesson_context_cache) >= _LESSON_CONTEXT_CACHE_MAX_ENTRIES and session_id not in _lesson_context_cache:
+        # Simple bound, not true LRU: evict one arbitrary (oldest-inserted,
+        # since dicts preserve insertion order) entry rather than let this
+        # grow unboundedly. Good enough for a best-effort cache where a wrong
+        # eviction just costs one extra fetch, never a correctness bug.
+        _lesson_context_cache.pop(next(iter(_lesson_context_cache)), None)
+    _lesson_context_cache[session_id] = (context, time.time())
+
 app = FastAPI(title="Alphonso Cloud Voice")
 atlas_demo_control_plane = AtlasDemoControlPlane()
 
@@ -268,7 +303,12 @@ async def respond(payload: VoiceRequest, authorization: str | None = Header(defa
     try:
         lesson_context = None
         if payload.agent_id in _LESSON_CONTEXT_AGENTS:
-            lesson_context = await _tutor_lesson_context(settings, user, payload.language)
+            cache_hit, cached_context = _lesson_context_cache_get(payload.session_id)
+            if cache_hit:
+                lesson_context = cached_context
+            else:
+                lesson_context = await _tutor_lesson_context(settings, user, payload.language)
+                _lesson_context_cache_set(payload.session_id, lesson_context)
         messages = [
             {"role": "system", "content": build_system_message(payload.agent_id, payload.language, lesson_context)},
             *[message.model_dump() for message in payload.history],
@@ -308,8 +348,13 @@ async def analyze_session(
         logger.error("Cloud voice service not configured: %s", settings.public_status())
         raise HTTPException(status_code=503, detail="Cloud voice service is not configured")
     user = await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
+    # This session's cached lesson context (if any) is stale the moment new
+    # weaknesses might be recorded for it -- evict unconditionally, before
+    # the analysis even runs, so a failure below can't leave a stale hit
+    # behind.
+    _lesson_context_cache.pop(payload.session_id, None)
     try:
-        weaknesses = await analyze_and_store(settings, user, payload.transcript, payload.language)
+        weaknesses = await analyze_and_store(settings, user, payload.session_id, payload.transcript, payload.language)
     except (NvidiaError, LessonPipelineError) as error:
         raise HTTPException(status_code=error.status_code, detail=error.safe_message) from error
     return AnalyzeTranscriptResponse(

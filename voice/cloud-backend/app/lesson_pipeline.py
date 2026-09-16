@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -23,6 +24,12 @@ logger = logging.getLogger(__name__)
 
 _MAX_WEAKNESSES_PER_ANALYSIS = 8
 _DEFAULT_LESSON_CONTEXT_LIMIT = 5
+# A weakness not seen again within this window is treated as stale and drops
+# out of fetch_recent_weaknesses -- the "resolution" signal is implicit
+# (created_at stops advancing once the learner stops making that mistake),
+# not a separate resolved flag. See the migration's comment on the unique
+# constraint for the full reasoning.
+_WEAKNESS_STALE_AFTER = timedelta(days=30)
 
 _EXTRACTION_SYSTEM_PROMPT = (
     "You analyze a language learner's conversation transcript and extract recurring "
@@ -39,10 +46,30 @@ _EXTRACTION_SYSTEM_PROMPT = (
 
 
 class LessonPipelineError(Exception):
-    """Raised when transcript analysis or weakness storage/retrieval fails."""
+    """
+    Raised when weakness storage/retrieval fails.
+
+    503: the failure is in a downstream service (Supabase) being unavailable,
+    not in anything the request itself did wrong -- mirrors NvidiaError's
+    default in app/nvidia.py.
+    """
 
     status_code = 503
     safe_message = "Could not analyze this session"
+
+
+class LessonPipelineExtractionError(LessonPipelineError):
+    """
+    Raised when the NVIDIA NIM extraction call itself returns unusable output.
+
+    502, not 503: the upstream call succeeded (no network/availability
+    failure), it just returned something this service can't parse as the
+    structured mistakes format it asked for -- mirrors nvidia.py's own
+    502 case for "provider returned invalid output," not its 503 default.
+    """
+
+    status_code = 502
+    safe_message = "Session analysis returned invalid output"
 
 
 @dataclass(frozen=True)
@@ -70,9 +97,9 @@ def _parse_weaknesses(raw: str) -> list[Weakness]:
         data = json.loads(_strip_code_fence(raw))
     except (json.JSONDecodeError, ValueError) as error:
         logger.error("Lesson pipeline could not parse NVIDIA extraction output: %s", error)
-        raise LessonPipelineError("Weakness extraction returned unparseable output") from error
+        raise LessonPipelineExtractionError("Weakness extraction returned unparseable output") from error
     if not isinstance(data, list):
-        raise LessonPipelineError("Weakness extraction did not return a JSON array")
+        raise LessonPipelineExtractionError("Weakness extraction did not return a JSON array")
     weaknesses: list[Weakness] = []
     for item in data[:_MAX_WEAKNESSES_PER_ANALYSIS]:
         if not isinstance(item, dict):
@@ -111,6 +138,7 @@ async def analyze_transcript(
 async def analyze_and_store(
     settings: Settings,
     user: SupabaseUser,
+    session_id: str,
     transcript: list[ChatMessage],
     language: str,
     client: NvidiaClient | None = None,
@@ -125,7 +153,7 @@ async def analyze_and_store(
     new.
     """
     weaknesses = await analyze_transcript(settings, transcript, language, client)
-    await store_weaknesses(settings, user, language, weaknesses)
+    await store_weaknesses(settings, user, session_id, language, weaknesses)
     return weaknesses
 
 
@@ -137,15 +165,27 @@ def _user_headers(anon_key: str, access_token: str) -> dict[str, str]:
 async def store_weaknesses(
     settings: Settings,
     user: SupabaseUser,
+    session_id: str,
     language: str,
     weaknesses: list[Weakness],
 ) -> None:
-    """Persist extracted weaknesses to Supabase. Offline/async only."""
+    """
+    Upsert extracted weaknesses to Supabase, keyed by (user, language, mistake_type).
+
+    Offline/async only. An upsert, not a plain insert: PostgREST's
+    `Prefer: resolution=merge-duplicates` + `on_conflict` make this
+    `INSERT ... ON CONFLICT (user_id, language, mistake_type) DO UPDATE` --
+    idempotent under client retries, and naturally collapses the same
+    recurring mistake across sessions into one row instead of piling up
+    duplicates. See the migration's unique-constraint comment for the full
+    reasoning.
+    """
     if not weaknesses:
         return
     rows = [
         {
             "user_id": user.id,
+            "session_id": session_id,
             "language": language,
             "mistake_type": weakness.mistake_type,
             "example": weakness.example,
@@ -156,10 +196,11 @@ async def store_weaknesses(
     async with httpx.AsyncClient(timeout=settings.request_timeout_seconds) as client:
         response = await client.post(
             f"{settings.supabase_url}/rest/v1/voice_learner_weaknesses",
+            params={"on_conflict": "user_id,language,mistake_type"},
             headers={
                 **_user_headers(settings.supabase_anon_key, user.access_token),
                 "Content-Type": "application/json",
-                "Prefer": "return=minimal",
+                "Prefer": "resolution=merge-duplicates,return=minimal",
             },
             json=rows,
         )
@@ -178,7 +219,17 @@ async def fetch_recent_weaknesses(
     language: str,
     limit: int = _DEFAULT_LESSON_CONTEXT_LIMIT,
 ) -> list[Weakness]:
-    """Read a user's most recent weaknesses for a language. Offline/async only."""
+    """
+    Read a user's recently-seen weaknesses for a language. Offline/async only.
+
+    "Recently-seen" is the staleness/resolution mechanism: a mistake whose
+    created_at hasn't advanced in _WEAKNESS_STALE_AFTER (i.e. the learner
+    hasn't made it again in any session since) is excluded -- it's aged out
+    rather than kept surfacing indefinitely. See the migration's
+    unique-constraint comment for why this works without a separate resolved
+    flag.
+    """
+    cutoff = (datetime.now(timezone.utc) - _WEAKNESS_STALE_AFTER).isoformat()
     async with httpx.AsyncClient(timeout=settings.request_timeout_seconds) as client:
         response = await client.get(
             f"{settings.supabase_url}/rest/v1/voice_learner_weaknesses",
@@ -186,6 +237,7 @@ async def fetch_recent_weaknesses(
                 "select": "mistake_type,example,corrected_form",
                 "user_id": f"eq.{user.id}",
                 "language": f"eq.{language}",
+                "created_at": f"gte.{cutoff}",
                 "order": "created_at.desc",
                 "limit": str(limit),
             },

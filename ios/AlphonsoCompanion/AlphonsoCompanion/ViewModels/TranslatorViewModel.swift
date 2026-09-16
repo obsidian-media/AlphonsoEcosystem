@@ -51,6 +51,18 @@ struct TranslatorTranscriptEntry: Identifiable, Codable {
 /// `voice/shared/voice_policy.json`.
 private let translatorAgentID = "translator"
 
+/// Which speaker is treated as the device owner (the authenticated learner
+/// whose speech feeds the weakness-detection pipeline) -- Speaker A, by
+/// explicit product decision, not an inferred default. The UI has no "which
+/// one is me" concept (Speaker A/B are symmetric labels), so this is a real,
+/// stated convention: Speaker A's language is always the tracked practice
+/// language. Speaker B's speech is never analyzed or stored -- they're not a
+/// user of this app and there's no consent basis to profile their speech.
+/// If Speaker A doesn't reliably end up as the device owner in practice
+/// (e.g. `swapTurn` is used to let the other person start), the real fix is
+/// a proper "I speak" picker in the UI, not changing this constant.
+private let ownSpeaker: TranslatorTurn = .speakerA
+
 @MainActor
 final class TranslatorViewModel: ObservableObject {
     @Published var languageA: VoiceLanguage = .englishUS
@@ -177,6 +189,7 @@ final class TranslatorViewModel: ObservableObject {
         submissionTask = nil
         audioService.stopRecording()
         cloudService.stopPlayback()
+        analyzeOwnUtterancesForLessonContextIfNeeded()
         transcript.removeAll()
         draftTranscript = ""
         phase = .idle
@@ -184,6 +197,33 @@ final class TranslatorViewModel: ObservableObject {
         statusMessage = "Conversation cleared"
         lastCloudResponse = nil
         pendingEntryID = nil
+    }
+
+    /// Feeds the device owner's own utterances from this Translator session
+    /// into the offline weakness-detection pipeline -- the same "your real
+    /// conversations become your curriculum" loop as
+    /// `VoiceSessionViewModel`'s Tutor-side wiring (see that file's own
+    /// comment for the fuller rationale), extended to Translator sessions:
+    /// a Translator conversation is real language production too, not just
+    /// the Tutor chat.
+    ///
+    /// Deliberately filters to `ownSpeaker`'s turns only -- see that
+    /// constant's comment for why Speaker B's speech is excluded entirely,
+    /// not just deprioritized. `originalText` (what Speaker A actually said,
+    /// mistakes included), not `translatedText`, is what gets analyzed --
+    /// the translation is a faithful rendering into the OTHER language and
+    /// carries no signal about Speaker A's own production.
+    private func analyzeOwnUtterancesForLessonContextIfNeeded() {
+        guard cloudReady else { return }
+        let ownUtterances = transcript.filter { $0.turn == ownSpeaker }
+        guard ownUtterances.count > 1 else { return }
+        let language = languageA.rawValue
+        let sessionTranscript = ownUtterances.map { entry in
+            VoiceCloudHistoryMessage(role: "user", content: entry.originalText)
+        }
+        Task { [cloudService] in
+            _ = try? await cloudService.analyzeSession(language: language, transcript: sessionTranscript)
+        }
     }
 
     private func ingestFinalTranscript(_ text: String) {
