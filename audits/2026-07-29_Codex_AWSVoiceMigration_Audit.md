@@ -176,3 +176,113 @@ still required before endpoint cutover.
 - The source/build delivery is complete. Cloud Voice remains **PARTIAL** until
   the paired iPhone completes real-device enrollment and English plus Farsi
   voice acceptance against the AWS endpoint.
+
+## Real-device acceptance session (2026-09-08/09, Claude Code)
+
+Real-device testing finally happened this session and found the endpoint had
+never actually completed a real voice round trip end-to-end — five
+independent, real bugs, each confirmed with direct evidence (CloudWatch logs,
+`pg_policy`, `aws ecs describe-services`, live curl) before being fixed, not
+assumed. Boardroom `ledger/tasks/068-alphonsocompanion-cloud-voice-fixes.md`
+has the fuller narrative for the first four; this log is the technical
+record for all five plus what's still open.
+
+1. **Stale deployment.** ECS had been running a task definition from
+   2026-08-01 unchanged for 5+ weeks. Fixed by adding a permanent OIDC-based
+   GitHub Actions deploy pipeline (`.github/workflows/deploy-cloud-voice.yml`,
+   PR #240) so this can't recur silently.
+2. **Cloud Voice hidden in the iOS UI.** Hardcoded `cloudVoicePaused = true`
+   in `VoiceView.swift` since a July 22 unrelated fix. Fixed, PR #239.
+3. **Device enrollment silently broken.** Supabase's `voice_devices` table
+   had RLS enabled with read/revoke policies but no insert policy at all.
+   Fixed via migration `add_voice_devices_insert_policy`.
+4. **Email delivery rate-limited.** Supabase's default shared email service
+   hit its hourly quota. Fixed via custom SMTP (Resend) + added `{{ .Token }}`
+   to the confirm-signup template for the app's typed-code fallback.
+5. **`voice_policy.json` never actually shipped in the container image**
+   (found *after* fixing 1-4, when a real request still 500'd). The
+   Dockerfile's build context was `voice/cloud-backend/`, which never
+   included `voice/shared/` — so every real `/v1/voice/respond` call has
+   crashed with `FileNotFoundError: /shared/voice_policy.json` since the
+   original AWS migration. All prior "confirmed working" evidence for this
+   endpoint (including the 5 pytest files referenced elsewhere) was against
+   mocked responses; nothing had ever proven a real image could serve this
+   endpoint at all. Fixed by moving the Docker build context to `voice/` so
+   `shared/` can be copied alongside `app/`, with `voice_policy.py` resolving
+   the policy path against both the container layout and the local/CI
+   checkout layout (PR #243, merged + redeployed).
+
+### A sixth issue found immediately after: opaque 503s with no diagnosable cause
+
+Once bug 5 was fixed, real requests started reaching `NvidiaClient`, but
+started failing with a bare `503 Service Unavailable` and nothing in
+CloudWatch to explain why — `main.py`'s `settings.is_ready` config-check
+branch and every HTTP-error/timeout/network-error path inside
+`nvidia.py`'s `NvidiaClient.complete()`/`synthesize()`/`_raise_for_status()`
+all silently discarded the real cause and raised an identical generic
+`NvidiaError` (503). Fixed by adding `logging.error()` at each of those
+points, logging the real upstream status code + response body (or the
+exception), no secrets touched (PR #244, merged + redeployed).
+
+### What that logging immediately revealed: the configured chat model is retired
+
+With real error detail now visible, the actual cause was:
+
+```
+NVIDIA chat/completions returned 410: {"type":"about:blank","title":"Gone",
+"status":410,"detail":"The model 'meta/llama-3.1-8b-instruct' has reached its
+end of life on 2026-08-26T09:00:00Z and is no longer available."}
+```
+
+`NVIDIA_NIM_MODEL` was still set to `meta/llama-3.1-8b-instruct`, retired by
+NVIDIA on 2026-08-26 - **over two weeks before this session**, and entirely
+independent of bugs 1-5 above (it would have failed identically even on a
+freshly-fixed image). This had been masked the whole time by bug 5 (the
+container never even got far enough to make the NVIDIA call before tonight).
+
+**Attempted fix, not yet confirmed working:** registered ECS task definition
+revision 7 with `NVIDIA_NIM_MODEL` changed to `meta/llama-3.3-70b-instruct`
+(run manually via `aws ecs register-task-definition` +
+`aws ecs update-service --force-new-deployment` - the auto-mode classifier
+blocked Claude Code from running these directly, consistent with earlier
+IAM-policy edits this session, so Shayan ran them). **The very next real
+request against revision 7 got the exact same 410, with the exact same
+`2026-08-26T09:00:00Z` end-of-life timestamp, just substituting the new
+model's name into the identical message.** That specific timestamp match
+across two different model IDs strongly suggests NVIDIA sunset an entire
+tier/generation of models on that one date (or the `integrate.api.nvidia.com`
+API surface itself changed) rather than retiring these two models
+individually - a live web check of NVIDIA's own docs (`docs.api.nvidia.com`)
+still lists `integrate.api.nvidia.com` as current with no deprecation notice,
+which doesn't fully square with what's actually happening live. This needs
+either a real model list pulled directly from NVIDIA (e.g. `GET
+{NVIDIA_NIM_BASE_URL}/models` with the real API key, which nobody has done
+yet this session) or a support ticket with NVIDIA, not more guessing at model
+names one at a time.
+
+### Deferred / open work (real, unresolved, next session should start here)
+
+- **Blocking:** find and confirm a real, currently-live NVIDIA NIM chat model
+  ID against this account's actual API key (ideally via `GET /v1/models` on
+  `NVIDIA_NIM_BASE_URL`, not guessing) and update `NVIDIA_NIM_MODEL` again.
+  Until this is done, `/v1/voice/respond` will 410 on every single call
+  regardless of any other fix.
+- Once a working model is confirmed: the original acceptance goal (English +
+  Farsi voice turns from the paired iPhone against the AWS endpoint) is still
+  unmet, and the real end-to-end latency (`timings_ms` in the response) has
+  still never been measured on a genuine successful call.
+- Tonight's two ECS infra edits (Secrets Manager-referencing task definition
+  revisions 6 and 7) were done ad hoc via direct AWS CLI, not through the
+  GitHub Actions deploy pipeline (which only touches the container image, not
+  task-definition environment variables) and not through IaC. `NVIDIA_NIM_MODEL`
+  living only in a manually-registered task definition, invisible to the repo,
+  is itself worth fixing once a stable model is found - e.g. move it into the
+  deploy workflow's render-task-definition step, or into CDK/CloudFormation
+  per this repo's general AWS guidance.
+- A separate, unrelated, pre-existing issue was flagged the same night:
+  Voice OS (the local desktop pipeline in `voice/backend/`, port 8766 - a
+  completely different subsystem from this AWS Cloud Voice backend) has been
+  seen repeatedly failing to bind port 8766 in a retry loop, something else
+  already holding the port. Tracked separately in Boardroom
+  `ledger/tasks/069-voiceos-port-8766-bind-conflict.md` - not investigated
+  as part of this session, do not conflate the two.
