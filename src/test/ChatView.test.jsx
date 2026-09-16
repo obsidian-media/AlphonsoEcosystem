@@ -169,6 +169,7 @@ import { isHermesAgentConfigured, sendHermesAgentMessage } from '../services/con
 import { nextMsgId, shouldRouteThroughCalleMcp } from '../lib/chatUtils';
 import { invoke } from '@tauri-apps/api/core';
 import { getMcpOutreachRecord, isAwaitingMcpOutreachInput, handleMcpOutreachMessage } from '../services/calleMcpOutreachService';
+import { loadChatMessages } from '../services/chatPersistenceService';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -520,6 +521,29 @@ describe('ChatView', () => {
     expect(rejectPacket).toHaveBeenCalledWith('pkt-1', 'Rejected from chat inline approval');
 
     expect(props.getItemDetail('pkt-1')).toEqual({ agent: 'marcus', actionType: 'external_publish', riskLevel: 'high' });
+  });
+
+  it('keeps a message sent while chat-history hydration is still in flight (does not get clobbered once it resolves)', async () => {
+    nextMsgId.mockReturnValueOnce('msg-race');
+    let resolveLoad;
+    loadChatMessages.mockImplementationOnce(() => new Promise((resolve) => { resolveLoad = resolve; }));
+
+    render(<ChatView {...makeProps()} />);
+
+    // Send a message while loadChatMessages() for this activeChatId is still pending --
+    // this is exactly the race the fix in ChatView.tsx's hydration effect guards against.
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'sent during load' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    await screen.findByText('sent during load');
+
+    // Now let the persisted-history load resolve with unrelated prior history. Before the fix,
+    // this plain `setMessages(durable)` would silently wipe out the message just sent above.
+    await act(async () => {
+      resolveLoad([{ id: 'old-1', role: 'assistant', content: 'earlier persisted reply' }]);
+    });
+
+    await screen.findByText('earlier persisted reply');
+    expect(screen.getByText('sent during load')).toBeTruthy();
   });
 
   describe('CALL-E MCP conversational routing', () => {
