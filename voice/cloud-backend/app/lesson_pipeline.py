@@ -87,7 +87,8 @@ async def analyze_transcript(
     language: str,
     client: NvidiaClient | None = None,
 ) -> list[Weakness]:
-    """Extract recurring learner mistakes from a completed conversation transcript.
+    """
+    Extract recurring learner mistakes from a completed conversation transcript.
 
     Offline/async only. Reuses the same NvidiaClient used for real-time replies,
     but this call is expected to run after a session ends, not during one.
@@ -183,9 +184,12 @@ async def fetch_recent_weaknesses(
 
 
 def build_lesson_context(weaknesses: list[Weakness]) -> str | None:
-    """Turn stored weaknesses into a short context string for a Tutor persona's
-    system prompt (see voice_policy.build_system_message's lesson_context param).
-    Returns None when there is nothing to add, so callers can skip it cleanly.
+    """
+    Turn stored weaknesses into a short lesson-context string.
+
+    For a Tutor persona's system prompt (see
+    voice_policy.build_system_message's lesson_context param). Returns None
+    when there is nothing to add, so callers can skip it cleanly.
     """
     if not weaknesses:
         return None
