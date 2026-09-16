@@ -67,21 +67,25 @@ def get_voice_agent(agent_id: str) -> VoiceAgent | None:
     return None
 
 
-def build_system_message(agent_id: str, language: str) -> str:
+def build_system_message(agent_id: str, language: str, lesson_context: str | None = None) -> str:
     agent = get_voice_agent(agent_id)
     if agent is None:
         raise VoicePolicyError("Unknown voice agent")
     language_label = LANGUAGE_LABELS.get(language)
     if language_label is None:
         raise VoicePolicyError("Unsupported voice language")
-    return "\n".join(
-        [
-            f"You are {agent.display_name}.",
-            f"Role: {agent.role_summary}",
-            f"Key constraint: {agent.key_constraint}",
-            f"Capabilities: {agent.capabilities}",
-            f"Voice persona: {agent.voice_persona}",
-            f"Reply language: {language_label}.",
-            *[str(rule) for rule in _policy()["rules"]],
-        ]
-    )
+    lines = [
+        f"You are {agent.display_name}.",
+        f"Role: {agent.role_summary}",
+        f"Key constraint: {agent.key_constraint}",
+        f"Capabilities: {agent.capabilities}",
+        f"Voice persona: {agent.voice_persona}",
+        f"Reply language: {language_label}.",
+    ]
+    # Optional per-user context from the offline weakness-detection pipeline
+    # (see lesson_pipeline.build_lesson_context) -- most relevant for the
+    # Tutor persona, but left generic so any agent can use it.
+    if lesson_context:
+        lines.append(f"Learner context: {lesson_context}")
+    lines.extend(str(rule) for rule in _policy()["rules"])
+    return "\n".join(lines)

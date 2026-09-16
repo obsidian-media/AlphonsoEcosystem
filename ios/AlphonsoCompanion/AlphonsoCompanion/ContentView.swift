@@ -95,6 +95,12 @@ private struct LegacyCompanionContent: View {
                 }
                 .tag(3)
 
+            TranslatorView()
+                .tabItem {
+                    Label("Translator", systemImage: "person.2.wave.2.fill")
+                }
+                .tag(7)
+
             AgentDockView(selectedTab: $selectedTab)
                 .tabItem {
                     Label("Agents", systemImage: "person.2")

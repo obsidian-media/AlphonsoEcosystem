@@ -28,3 +28,17 @@ def test_unknown_agent_and_language_are_rejected():
         build_system_message(agent_id="unknown", language="en-US")
     with pytest.raises(VoicePolicyError):
         build_system_message(agent_id="alphonso", language="it-IT")
+
+
+def test_lesson_context_is_omitted_by_default():
+    message = build_system_message(agent_id="alphonso", language="en-US")
+
+    assert "Learner context:" not in message
+
+
+def test_lesson_context_is_appended_when_provided():
+    message = build_system_message(
+        agent_id="alphonso", language="en-US", lesson_context="struggles with verb tense"
+    )
+
+    assert "Learner context: struggles with verb tense" in message

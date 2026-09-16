@@ -25,6 +25,8 @@
 		A100000F /* OperationsSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* OperationsSnapshot.swift */; };
 		A1000011 /* CompanionDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000013 /* CompanionDesignSystem.swift */; };
 		A1000012 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* OperationsView.swift */; };
+		F1000001 /* TranslatorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000001 /* TranslatorViewModel.swift */; };
+		F1000002 /* TranslatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000002 /* TranslatorView.swift */; };
 		B1000000 /* CompanionConnectionStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000001 /* CompanionConnectionStateMachine.swift */; };
 		E1000101 /* AtlasDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000101 /* AtlasDesignSystem.swift */; };
 		E1000102 /* AtlasMobileRoot.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000102 /* AtlasMobileRoot.swift */; };
@@ -66,6 +68,8 @@
 		A2000012 /* OperationsSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsSnapshot.swift; sourceTree = "<group>"; };
 		A2000013 /* CompanionDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionDesignSystem.swift; sourceTree = "<group>"; };
 		A2000014 /* OperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsView.swift; sourceTree = "<group>"; };
+		F2000001 /* TranslatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslatorViewModel.swift; sourceTree = "<group>"; };
+		F2000002 /* TranslatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslatorView.swift; sourceTree = "<group>"; };
 		B2000001 /* CompanionConnectionStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionConnectionStateMachine.swift; sourceTree = "<group>"; };
 		B2000002 /* CompanionConnectionStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionConnectionStateMachineTests.swift; sourceTree = "<group>"; };
 		B2000005 /* VoiceSessionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionViewModelTests.swift; sourceTree = "<group>"; };
@@ -135,6 +139,7 @@
 					A4000003 /* Models */,
 
 				A4000004 /* Services */,
+				F4000001 /* ViewModels */,
 				A4000006 /* Views */,
 				A200000D /* Assets.xcassets */,
 				A200000B /* Info.plist */,
@@ -181,6 +186,7 @@
 				A2000013 /* CompanionDesignSystem.swift */,
 				A2000014 /* OperationsView.swift */,
 				A200000F /* VoiceView.swift */,
+				F2000002 /* TranslatorView.swift */,
 				A2000007 /* AgentDockView.swift */,
 				A2000008 /* BoardroomView.swift */,
 				A2000009 /* PairingView.swift */,
@@ -231,6 +237,14 @@
 				C2000001 /* AlphonsoCompanionUITests.swift */,
 			);
 			path = AlphonsoCompanionUITests;
+			sourceTree = "<group>";
+		};
+		F4000001 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				F2000001 /* TranslatorViewModel.swift */,
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -380,6 +394,8 @@
 				A100000F /* OperationsSnapshot.swift in Sources */,
 				A1000011 /* CompanionDesignSystem.swift in Sources */,
 				A1000012 /* OperationsView.swift in Sources */,
+				F1000001 /* TranslatorViewModel.swift in Sources */,
+				F1000002 /* TranslatorView.swift in Sources */,
 									B1000000 /* CompanionConnectionStateMachine.swift in Sources */,
 					E1000101 /* AtlasDesignSystem.swift in Sources */,
 					E1000102 /* AtlasMobileRoot.swift in Sources */,
