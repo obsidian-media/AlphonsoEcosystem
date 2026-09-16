@@ -46,6 +46,14 @@ arboard = "3"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 sysinfo = "0.37"
 
+[profile.dev]
+# Reduced from Cargo's default full debug info (level 2) to line-tables-only.
+# On this machine's constrained RAM, MSVC link.exe was crashing (0xC0000142)
+# trying to hold the full PDB for this binary's ~260-object-file link in
+# memory. Line-tables-only debug info is still enough for stack traces and
+# breakpoints on most lines, just not full variable/type inspection.
+debug = 1
+
 [profile.release]
 lto = true
 codegen-units = 1
