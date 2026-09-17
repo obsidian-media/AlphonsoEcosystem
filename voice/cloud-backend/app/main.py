@@ -23,13 +23,66 @@ from app.atlas_control_plane import (
     AtlasDraftRunRequest,
     AtlasRunResponse,
 )
-from app.contracts import ChatMessage, DeviceEnrollmentRequest, Timings, VoiceRequest, VoiceResponse
+from app.contracts import (
+    AnalyzeTranscriptRequest,
+    AnalyzeTranscriptResponse,
+    ChatMessage,
+    DeviceEnrollmentRequest,
+    Timings,
+    VoiceRequest,
+    VoiceResponse,
+)
+from app.lesson_pipeline import LessonPipelineError, analyze_and_store, build_lesson_context, fetch_recent_weaknesses
 from app.nvidia import NvidiaClient, NvidiaError
 from app.piper_tts import PiperTTSClient
 from app.voice_policy import VoicePolicyError, build_system_message
 from app.supabase_auth import SupabaseDeviceRegistry
 
 logger = logging.getLogger(__name__)
+
+# Personas that consult the weakness-detection pipeline for per-user lesson
+# context. Deliberately NOT every persona: Translator must stay literal
+# translation-only (see the Live Translator scope decision in
+# docs/HANDOFF-alphonso-language-companion.md), and the business personas
+# (alphonso, jose, ...) have nothing to do with language learning -- injecting
+# a stranger's learner-weakness data into their prompt would be a real
+# correctness bug, not a harmless no-op.
+_LESSON_CONTEXT_AGENTS = frozenset({"tutor"})
+
+# Per-session cache for lesson context, so a multi-turn Tutor conversation
+# fetches it from Supabase once, not on every single turn. Latency is the
+# single biggest measured risk for this whole voice product (see
+# docs/HANDOFF-alphonso-language-companion.md) -- adding an extra
+# synchronous round trip to every turn would work against that directly.
+# Process-local and best-effort: a cache miss (different worker, TTL expiry,
+# process restart) just re-fetches, it never breaks correctness, only saves
+# a round trip when it hits. `analyze_session` evicts a session's entry
+# immediately once that session ends, since the cached context is stale the
+# moment new weaknesses might have been recorded for it.
+_LESSON_CONTEXT_CACHE_TTL_SECONDS = 900.0  # ~15 min: comfortably longer than a typical Tutor turn gap
+_LESSON_CONTEXT_CACHE_MAX_ENTRIES = 2_000  # bounds memory on a long-lived process with many short sessions
+_lesson_context_cache: dict[str, tuple[str | None, float]] = {}
+
+
+def _lesson_context_cache_get(session_id: str) -> tuple[bool, str | None]:
+    entry = _lesson_context_cache.get(session_id)
+    if entry is None:
+        return False, None
+    context, cached_at = entry
+    if time.time() - cached_at > _LESSON_CONTEXT_CACHE_TTL_SECONDS:
+        _lesson_context_cache.pop(session_id, None)
+        return False, None
+    return True, context
+
+
+def _lesson_context_cache_set(session_id: str, context: str | None) -> None:
+    if len(_lesson_context_cache) >= _LESSON_CONTEXT_CACHE_MAX_ENTRIES and session_id not in _lesson_context_cache:
+        # Simple bound, not true LRU: evict one arbitrary (oldest-inserted,
+        # since dicts preserve insertion order) entry rather than let this
+        # grow unboundedly. Good enough for a best-effort cache where a wrong
+        # eviction just costs one extra fetch, never a correctness bug.
+        _lesson_context_cache.pop(next(iter(_lesson_context_cache)), None)
+    _lesson_context_cache[session_id] = (context, time.time())
 
 app = FastAPI(title="Alphonso Cloud Voice")
 atlas_demo_control_plane = AtlasDemoControlPlane()
@@ -220,18 +273,44 @@ async def enroll_device(payload: DeviceEnrollmentRequest, authorization: str | N
     return {"status": "enrolled", "device_id": payload.device_id}
 
 
+async def _tutor_lesson_context(settings: Settings, user, language: str) -> str | None:
+    """
+    Fetch this learner's recent weaknesses and fold them into lesson context.
+
+    Best-effort only: a Supabase hiccup here must never break an otherwise-
+    healthy voice reply, so failures are logged and treated as "no context"
+    rather than propagated. The Tutor persona works fine without lesson
+    context (it just won't reference past mistakes yet) -- it should never be
+    the reason a real conversation turn fails.
+    """
+    try:
+        weaknesses = await fetch_recent_weaknesses(settings, user, language)
+    except LessonPipelineError as error:
+        logger.error("Could not fetch lesson context for Tutor persona: %s", error)
+        return None
+    return build_lesson_context(weaknesses)
+
+
 @app.post("/v1/voice/respond", response_model=VoiceResponse)
 async def respond(payload: VoiceRequest, authorization: str | None = Header(default=None), x_alphonso_device_id: str | None = Header(default=None)) -> VoiceResponse:
     settings = Settings.from_env()
     if not settings.is_ready:
         logger.error("Cloud voice service not configured: %s", settings.public_status())
         raise HTTPException(status_code=503, detail="Cloud voice service is not configured")
-    await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
+    user = await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
     client = NvidiaClient(settings)
     started = time.perf_counter()
     try:
+        lesson_context = None
+        if payload.agent_id in _LESSON_CONTEXT_AGENTS:
+            cache_hit, cached_context = _lesson_context_cache_get(payload.session_id)
+            if cache_hit:
+                lesson_context = cached_context
+            else:
+                lesson_context = await _tutor_lesson_context(settings, user, payload.language)
+                _lesson_context_cache_set(payload.session_id, lesson_context)
         messages = [
-            {"role": "system", "content": build_system_message(payload.agent_id, payload.language)},
+            {"role": "system", "content": build_system_message(payload.agent_id, payload.language, lesson_context)},
             *[message.model_dump() for message in payload.history],
             ChatMessage(role="user", content=payload.text).model_dump(),
         ]
@@ -247,3 +326,39 @@ async def respond(payload: VoiceRequest, authorization: str | None = Header(defa
         raise HTTPException(status_code=error.status_code, detail=error.safe_message) from error
     total_ms = int((time.perf_counter() - started) * 1000)
     return VoiceResponse(request_id=str(uuid4()), session_id=payload.session_id, agent=payload.agent_id, reply=reply, audio_base64=base64.b64encode(audio).decode("ascii"), tts_model=payload.tts_model, tts_provider=tts_provider, language=payload.language, timings_ms=Timings(llm=llm_ms, tts=total_ms - llm_ms, total=total_ms))
+
+
+@app.post("/v1/voice/sessions/analyze", response_model=AnalyzeTranscriptResponse)
+async def analyze_session(
+    payload: AnalyzeTranscriptRequest,
+    authorization: str | None = Header(default=None),
+    x_alphonso_device_id: str | None = Header(default=None),
+) -> AnalyzeTranscriptResponse:
+    """
+    Run the offline weakness-detection pipeline for one completed session.
+
+    The client calls this once, when a Live Tutor (or Translator, for the
+    learner's own side of a translated exchange) session ends -- not from the
+    real-time /v1/voice/respond path. Not latency-critical: this may take
+    several seconds (a real NVIDIA NIM call over the whole transcript), which
+    is fine because nothing is waiting on it synchronously.
+    """
+    settings = Settings.from_env()
+    if not settings.is_ready:
+        logger.error("Cloud voice service not configured: %s", settings.public_status())
+        raise HTTPException(status_code=503, detail="Cloud voice service is not configured")
+    user = await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
+    # This session's cached lesson context (if any) is stale the moment new
+    # weaknesses might be recorded for it -- evict unconditionally, before
+    # the analysis even runs, so a failure below can't leave a stale hit
+    # behind.
+    _lesson_context_cache.pop(payload.session_id, None)
+    try:
+        weaknesses = await analyze_and_store(settings, user, payload.session_id, payload.transcript, payload.language)
+    except (NvidiaError, LessonPipelineError) as error:
+        raise HTTPException(status_code=error.status_code, detail=error.safe_message) from error
+    return AnalyzeTranscriptResponse(
+        session_id=payload.session_id,
+        weaknesses_found=len(weaknesses),
+        weaknesses_stored=len(weaknesses),
+    )

@@ -93,8 +93,21 @@ enum VoiceLanguage: String, CaseIterable, Codable, Identifiable {
 
 enum VoiceAgent: String, CaseIterable, Codable, Identifiable {
     case alphonso, jose, hector, miya, maria, marcus, echo, sentinel, nova
+    /// The Live Tutor persona. Deliberately a DIFFERENT case and raw value from
+    /// `.hector` above -- `.hector` is the pre-existing internal-fleet Researcher
+    /// persona (`id: "hector"` in voice_policy.json), unrelated to language
+    /// learning. This case's raw value ("tutor") matches the separate `id: "tutor"`
+    /// entry added for the Tutor persona, whose displayName happens to also be
+    /// "Hector" for cross-product branding -- see that entry's comment for why the
+    /// two are kept distinct rather than merged into one persona.
+    case tutor
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .tutor: return "Hector (Tutor)"
+        default: return rawValue.capitalized
+        }
+    }
 }
 
 enum PiperFarsiVoice: String, CaseIterable, Codable, Identifiable {
@@ -501,6 +514,7 @@ final class VoiceSessionViewModel: ObservableObject {
         cloudSubmissionTask = nil
         audioService.stopRecording()
         cloudService.stopPlayback()
+        analyzeSessionForLessonContextIfNeeded()
         transcript.removeAll()
         draftTranscript = ""
         phase = .idle
@@ -510,6 +524,34 @@ final class VoiceSessionViewModel: ObservableObject {
         pendingLocalDraftText = nil
         lastCloudResponse = nil
         pendingCloudMessageID = nil
+    }
+
+    /// Feeds the just-finished conversation into the offline weakness-detection
+    /// pipeline, so a future Tutor session can reference it -- the actual
+    /// "your real conversations become your curriculum" loop the whole product
+    /// is built around (see docs/HANDOFF-alphonso-language-companion.md in the
+    /// Boardroom repo). Only for Tutor conversations, mirroring the backend's own
+    /// gating in main.py's _LESSON_CONTEXT_AGENTS: this data means nothing for
+    /// the business personas, and Translator transcripts are a different shape
+    /// (two languages, not one learner's own production) that this pipeline's
+    /// extraction prompt isn't built for -- wiring Translator in here without
+    /// first adapting that prompt would risk generating nonsense "weaknesses"
+    /// rather than real ones. Fire-and-forget: this must never block clearing
+    /// the conversation, and a failure here is silent by design (logged nowhere
+    /// yet -- acceptable for now since it never blocks or surfaces to the user,
+    /// but worth real logging once this sees production traffic).
+    private func analyzeSessionForLessonContextIfNeeded() {
+        guard selectedAgent == .tutor, mode == .cloud, cloudReady, transcript.count > 1 else { return }
+        let sessionTranscript = transcript.map { entry in
+            VoiceCloudHistoryMessage(
+                role: entry.speaker == .user ? "user" : "assistant",
+                content: entry.text
+            )
+        }
+        let language = cloudLanguage.rawValue
+        Task { [cloudService] in
+            _ = try? await cloudService.analyzeSession(language: language, transcript: sessionTranscript)
+        }
     }
 
     private func sendCloudTranscript(_ transcript: String) async {
