@@ -196,6 +196,7 @@ Before writing any new service, component, or feature, check this list:
 | Plugin Marketplace UI | `src/components/SettingsView.tsx` — `PluginMarketplacePanel` component; Settings → Plugins nav section |
 | PWA service worker | `public/sw.js` — cache-first static, network-first nav, network-only API/invoke |
 | Offline chat service | `src/services/offlineChatService.js` — IndexedDB store (`alphonso-offline` DB) with `saveMessageOffline`/`getOfflineMessages`/`markMessageSynced` |
+| Brave Search connector | `src/services/connectors/braveSearchConnector.ts` — `searchBrave`, `isBraveSearchConfigured`; extracted from `hectorResearchService.js` on 2026-09-20/21 (closing a G-T12 finding — it previously called Brave's API with zero policy gate, unlike its tavily/perplexity/deepseek siblings which each already had one). `hectorResearchService.js` re-exports both for its two existing external importers (`usePollingEffects.js`, `workflowExecutionService.js`) rather than requiring them to change their import path. |
 | Tavily search connector | `src/services/connectors/tavilyConnector.js` — `searchTavily`, `isTavilyConfigured`; wired as tier-2 Hector fallback |
 | Perplexity search connector | `src/services/connectors/perplexityConnector.js` — `searchPerplexity`, `isPerplexityConfigured` |
 | DeepSeek AI connector | `src/services/connectors/deepseekConnector.js` — `sendDeepSeekMessage`, `searchWithDeepSeek`, `isDeepSeekConfigured`; wired as tier-3 Hector fallback; credential UI in ConnectorSetupPanel |
