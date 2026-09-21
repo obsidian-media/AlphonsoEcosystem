@@ -1,0 +1,34 @@
+# Bandit configuration, honored directly by Codacy Cloud's Bandit
+# integration (Codacy docs: "Codacy uses that configuration file even if
+# you exclude it from Codacy analysis"). This is a Bandit-native config
+# file, not a Codacy one - .codacy.yml's exclude_paths excludes a path
+# from every analyzer at once, which is broader than what's needed here.
+#
+# Root cause this fixes: Bandit's B101 (assert_used) and B106
+# (hardcoded_password_funcarg) fire on every pytest test file, since
+# `assert` is pytest's normal assertion mechanism and test fixtures
+# routinely define fake tokens/passwords as literal strings. Neither is a
+# real security finding in test code - both only mean anything in
+# application source. Confirmed real: PR merging b3637e0 needed an admin
+# override past ~109 Codacy findings, most traced to exactly this
+# (Bandit on test files, see docs/governance/DEFERRED_WORK.md's
+# 2026-09-20 entry for the full triage). Every PR that adds or touches a
+# Python test file has failed this gate ever since, independent of code
+# quality.
+#
+# Scoped to test directories only, not skips (which would disable these
+# checks repo-wide, including real application code where they matter).
+#
+# Bandit's exclude_dirs matches by path *component* (basename), not full
+# relative path - "voice/backend/tests" as an entry silently matches
+# nothing; verified locally (199 baseline findings unchanged) before
+# landing on the form below (0 findings, confirmed against a real bandit
+# run). The only two Python test directories in this repo are
+# voice/backend/tests and voice/cloud-backend/tests (confirmed via
+# `git ls-files "*.py"` - every .py file in the repo lives under voice/);
+# a bare "tests" basename entry catches both without needing to enumerate
+# them, and Bandit only ever looks at .py files, so the repo's several
+# other non-Python "tests" directories (bridge/, supabase/, modules/) are
+# never in Bandit's scan surface regardless of this entry.
+exclude_dirs:
+  - "tests"

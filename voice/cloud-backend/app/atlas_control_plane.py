@@ -1,4 +1,6 @@
-"""Non-production Atlas control-plane state and v1 response contracts.
+"""
+
+Non-production Atlas control-plane state and v1 response contracts.
 
 This module deliberately contains no desktop command execution, connector secrets, or
 worker dispatch. It is an ephemeral, user-scoped contract server for mobile integration
