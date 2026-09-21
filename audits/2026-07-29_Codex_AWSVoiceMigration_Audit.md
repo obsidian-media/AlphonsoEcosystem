@@ -262,23 +262,56 @@ names one at a time.
 
 ### Deferred / open work (real, unresolved, next session should start here)
 
-- **Blocking:** find and confirm a real, currently-live NVIDIA NIM chat model
+- ~~**Blocking:** find and confirm a real, currently-live NVIDIA NIM chat model
   ID against this account's actual API key (ideally via `GET /v1/models` on
   `NVIDIA_NIM_BASE_URL`, not guessing) and update `NVIDIA_NIM_MODEL` again.
   Until this is done, `/v1/voice/respond` will 410 on every single call
-  regardless of any other fix.
+  regardless of any other fix.~~ **RESOLVED, found stale 2026-09-20.**
+  Re-checked this exact item during an unrelated deferred-work triage
+  session and found `NVIDIA_NIM_MODEL` was already `meta/llama-3.2-11b-vision-instruct`
+  on the live task definition (revision 12) — someone fixed it during the
+  Sept 9-16 voice feature work (Tutor persona / Live Translator / weakness
+  pipeline) without ever recording the fix here or in
+  `docs/governance/DEFERRED_WORK.md`, so this item sat marked "Blocking" for
+  11 days after it was actually closed. Verified for real, not assumed: (1)
+  pulled the live model list via `GET {NVIDIA_NIM_BASE_URL}/models` with the
+  real key (owner ran it, key never entered the assistant's context — see
+  the safe pattern used) and confirmed `meta/llama-3.2-11b-vision-instruct`
+  is present; (2) sent a real `chat/completions` request against it — first
+  attempt hit a transient `500 Inference connection error`, immediate retry
+  returned a genuine `200` with real content (`"pong"`); (3) checked
+  `https://voice.obsidianmedia.online/ready` directly:
+  `{"ready":true,"nvidia_nim":true,"device_enrollment":true,"tts":{"magpie":true,"piper_farsi":true}}`.
+  Production Cloud Voice is genuinely healthy right now. Lesson for future
+  sessions: an ad hoc `aws ecs register-task-definition` fix that isn't
+  written back to this file or the register is functionally the same as an
+  unfixed bug from the next reader's perspective — always close the loop
+  here, not just in ECS.
 - Once a working model is confirmed: the original acceptance goal (English +
   Farsi voice turns from the paired iPhone against the AWS endpoint) is still
   unmet, and the real end-to-end latency (`timings_ms` in the response) has
   still never been measured on a genuine successful call.
-- Tonight's two ECS infra edits (Secrets Manager-referencing task definition
+- ~~Tonight's two ECS infra edits (Secrets Manager-referencing task definition
   revisions 6 and 7) were done ad hoc via direct AWS CLI, not through the
   GitHub Actions deploy pipeline (which only touches the container image, not
   task-definition environment variables) and not through IaC. `NVIDIA_NIM_MODEL`
   living only in a manually-registered task definition, invisible to the repo,
   is itself worth fixing once a stable model is found - e.g. move it into the
   deploy workflow's render-task-definition step, or into CDK/CloudFormation
-  per this repo's general AWS guidance.
+  per this repo's general AWS guidance.~~ **RESOLVED 2026-09-20.**
+  `.github/workflows/deploy-cloud-voice.yml` now declares `NVIDIA_NIM_MODEL`
+  as a top-level, git-tracked `env:` value and adds a "Pin known-good runtime
+  configuration" step (`jq`-patches the fetched task definition before
+  rendering the new image) so every future deploy re-asserts this value
+  instead of silently carrying forward whatever the last manual CLI edit
+  left behind. The same patch was also applied live (task definition
+  revision 13, `VOICE_ALLOW_OWNER_TESTING_BYPASS` — a leftover env var from
+  a bypass mechanism removed from application source entirely on 2026-08-10
+  as a security fix — also stripped from the running config while in
+  there); service reached steady state and `/ready`/`/health` both stayed
+  green. Still not full CDK/CloudFormation (that remains a larger,
+  not-yet-started undertaking per this repo's general AWS guidance), but the
+  one concrete drift risk this item named is closed.
 - A separate, unrelated, pre-existing issue was flagged the same night:
   Voice OS (the local desktop pipeline in `voice/backend/`, port 8766 - a
   completely different subsystem from this AWS Cloud Voice backend) has been
