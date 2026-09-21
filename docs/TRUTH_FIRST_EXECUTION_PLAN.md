@@ -899,6 +899,26 @@ dropped.
     not a regression from this change. CI is the first real execution of
     these tests — do not treat "code compiles and typechecks" as "confirmed
     passing" until CI reports back.
+  - **CI caught a real bug in the new tests themselves (2026-09-21), exactly
+    the reason the note above says not to trust an unrun test:** PR #258's
+    `Test & Build` job failed — the "blocks and never calls the API when the
+    DSL/policy gate denies (Zero-Cost Mode)" test received `'not
+    authenticated'` instead of the expected `'Zero-Cost Mode'` reason. Root
+    cause was in the test file, not `runwayService.ts`: the "not
+    authenticated" test set `isConnectorAuthenticated.mockReturnValue({ok:
+    false})` (persistent override), and `vi.clearAllMocks()` in `beforeEach`
+    clears call history but not a mock's return-value implementation — so
+    that override silently leaked into every later test in the file. 3 of
+    the 4 later tests happened to still pass (they only assert
+    `mockInvoke).not.toHaveBeenCalled()` and `result.ok===false`, both still
+    true when blocked by the leaked "not authenticated" state instead of the
+    condition each test nominally exercises); only the Zero-Cost Mode test
+    asserted the specific error text and caught it. Fixed by switching all 5
+    per-test mock overrides to `mockReturnValueOnce`/`mockResolvedValueOnce`
+    (auto-reverts after one call), matching the established pattern already
+    used in `connectorOutbound.test.js`. Re-verified `tsc --noEmit`/`eslint`
+    clean; still could not run locally (same harness issue) — pushed for CI
+    to confirm.
   - **Done when:** a full-coverage pass (all connectors × all DSL rule
     categories) confirms fail-closed behavior, or a genuine gap is found and
     fixed. — met: full pass done, one real gap (runway) found and fixed with

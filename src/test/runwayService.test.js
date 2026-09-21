@@ -70,7 +70,7 @@ describe('generateRunwayVideo policy gating', () => {
 
   it('calls the real Runway API when authenticated, approved, and gate allows', async () => {
     const { isConnectorAuthenticated } = await import('../services/connectors/connectorAuth.js');
-    isConnectorAuthenticated.mockReturnValue({ ok: true });
+    isConnectorAuthenticated.mockReturnValueOnce({ ok: true });
 
     const result = await generateRunwayVideo({ promptText: 'a teaser' }, { approved: true });
 
@@ -82,7 +82,7 @@ describe('generateRunwayVideo policy gating', () => {
 
   it('blocks and never calls the API when not authenticated', async () => {
     const { isConnectorAuthenticated } = await import('../services/connectors/connectorAuth.js');
-    isConnectorAuthenticated.mockReturnValue({ ok: false });
+    isConnectorAuthenticated.mockReturnValueOnce({ ok: false });
 
     const result = await generateRunwayVideo({ promptText: 'a teaser' });
 
@@ -92,7 +92,7 @@ describe('generateRunwayVideo policy gating', () => {
 
   it('blocks and never calls the API when the circuit breaker is open', async () => {
     const { getConnectorCircuitState } = await import('../services/connectors/connectorRegistry.js');
-    getConnectorCircuitState.mockReturnValue({ ok: false, failures: 5, remainingMs: 15000 });
+    getConnectorCircuitState.mockReturnValueOnce({ ok: false, failures: 5, remainingMs: 15000 });
 
     const result = await generateRunwayVideo({ promptText: 'a teaser' });
 
@@ -102,7 +102,7 @@ describe('generateRunwayVideo policy gating', () => {
 
   it('blocks and never calls the API when approval is required and not given (Approval Mode)', async () => {
     const { requireConnectorApproval } = await import('../services/connectors/connectorRegistry.js');
-    requireConnectorApproval.mockResolvedValue({ ok: false, blocked: true, error: 'Approval Mode requires explicit approval for this action.' });
+    requireConnectorApproval.mockResolvedValueOnce({ ok: false, blocked: true, error: 'Approval Mode requires explicit approval for this action.' });
 
     const result = await generateRunwayVideo({ promptText: 'a teaser' });
 
@@ -112,7 +112,7 @@ describe('generateRunwayVideo policy gating', () => {
 
   it('blocks and never calls the API when the DSL/policy gate denies (Zero-Cost Mode)', async () => {
     const { gateConnectorAction } = await import('../services/connectors/connectorRegistry.js');
-    gateConnectorAction.mockReturnValue({ ok: false, reason: 'Zero-Cost Mode blocked runway without explicit override.' });
+    gateConnectorAction.mockReturnValueOnce({ ok: false, reason: 'Zero-Cost Mode blocked runway without explicit override.' });
 
     const result = await generateRunwayVideo({ promptText: 'a teaser' });
 
@@ -123,7 +123,7 @@ describe('generateRunwayVideo policy gating', () => {
 
   it('blocks and never calls the API when the connector is not yet configured', async () => {
     const { requireConnectorReady } = await import('../services/connectors/connectorRegistry.js');
-    requireConnectorReady.mockResolvedValue({ ok: false, blocked: true, setupRequired: true, error: 'Connector runway is not configured in runtime env.' });
+    requireConnectorReady.mockResolvedValueOnce({ ok: false, blocked: true, setupRequired: true, error: 'Connector runway is not configured in runtime env.' });
 
     const result = await generateRunwayVideo({ promptText: 'a teaser' });
 
