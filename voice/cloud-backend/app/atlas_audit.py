@@ -1,4 +1,6 @@
-"""Atlas audit persistence boundary.
+"""
+
+Atlas audit persistence boundary.
 
 The default adapter is intentionally in-memory and is only suitable for the explicitly
 non-production demo mode. The protocol and Supabase migration establish the contract for

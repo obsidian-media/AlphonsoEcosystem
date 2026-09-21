@@ -31,6 +31,17 @@ env:
   ECS_SERVICE: cloud-voice-staging
   ECS_TASK_FAMILY: alphonso-cloud-voice
   CONTAINER_NAME: cloud-voice
+  # Live-verified 2026-09-20 against a real chat/completions call (HTTP 200,
+  # real content back) after NVIDIA retired the two models this was
+  # previously set to (meta/llama-3.1-8b-instruct, then
+  # meta/llama-3.3-70b-instruct - both 410 "reached its end of life", see
+  # audits/2026-07-29_Codex_AWSVoiceMigration_Audit.md). Whoever changed it
+  # to this value did so directly against the running ECS task definition,
+  # never in git, so the fix was invisible here and could have silently
+  # reverted or drifted on the next manual edit. Pinning it here makes the
+  # model a real, git-tracked, code-reviewed change instead of tribal
+  # knowledge living only in an ECS console/CLI action.
+  NVIDIA_NIM_MODEL: meta/llama-3.2-11b-vision-instruct
 
 jobs:
   deploy:
@@ -72,6 +83,27 @@ jobs:
           aws ecs describe-task-definition \
             --task-definition "$ECS_TASK_FAMILY" \
             --query 'taskDefinition' > task-definition.json
+
+      # Pins NVIDIA_NIM_MODEL to the git-tracked value above on every deploy
+      # (so it can never again silently drift from what's actually running),
+      # and drops VOICE_ALLOW_OWNER_TESTING_BYPASS - a leftover env var from
+      # a bypass mechanism that was deliberately removed from application
+      # source entirely on 2026-08-10 as a security fix (it's inert today,
+      # not a live hole, but a "true"-valued flag for removed code is
+      # actively misleading to read in the running config).
+      - name: Pin known-good runtime configuration
+        env:
+          NVIDIA_NIM_MODEL: ${{ env.NVIDIA_NIM_MODEL }}
+        run: |
+          set -euo pipefail
+          jq --arg model "$NVIDIA_NIM_MODEL" '
+            .containerDefinitions[0].environment = (
+              [.containerDefinitions[0].environment[]
+                | select(.name != "VOICE_ALLOW_OWNER_TESTING_BYPASS" and .name != "NVIDIA_NIM_MODEL")]
+              + [{"name": "NVIDIA_NIM_MODEL", "value": $model}]
+            )
+          ' task-definition.json > task-definition.patched.json
+          mv task-definition.patched.json task-definition.json
 
       - name: Render new task definition with the new image
         id: render

@@ -7,6 +7,23 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   build: {
+    // Real production crash on macOS: a user hit a boot-time
+    // "SyntaxError: Unexpected token '{'" inside a dynamically-imported
+    // chunk before React ever mounted (stack trace: parseModule ->
+    // asyncFunctionResume -> promiseReactionJob - a lazy-loaded module
+    // failing to parse in the OS's own WebKit). Root cause: this project
+    // never set build.target, so it fell back to Vite's default
+    // 'baseline-widely-available', which resolves to safari16.4+
+    // (requires macOS Ventura 13.3, released 2023-03) - but
+    // src-tauri/tauri.conf.json's bundle.macOS.minimumSystemVersion
+    // promises support down to "10.15" (Catalina, whose last Safari was
+    // 13.1.x). Any user on macOS 10.15 through 13.2 was shipped syntax
+    // (likely ES2022 class static blocks or similar, probably from a
+    // vendor dependency, not app code) their WebKit can't parse - a
+    // build-target/declared-OS-support mismatch, not a code bug in any
+    // one file. Pinning target to the OS version this app already
+    // promises to support, rather than silently narrowing that promise.
+    target: 'safari13.1',
     // Regression fix for a real QA finding: 'hidden' still WRITES .map files
     // to dist/ (it only omits the //# sourceMappingURL comment referencing
     // them) — Tauri packages everything under dist/ into the installer
