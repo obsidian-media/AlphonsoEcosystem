@@ -18,6 +18,17 @@ const RISK_CACHE_TTL = 300000;
 // calle: real $0.05/call cost per CALL-E's pricing page (their own page
 // notes this is "early-stage... subject to change" -- re-verify before
 // relying on the exact figure).
+// runway: real paid RunwayML cloud video-generation API (RUNWAYML_API_SECRET)
+// -- found unclassified during the 2026-09-20 G-T12 DSL fail-closed audit.
+// generateRunwayVideo() had zero policy gate anywhere in its call chain, so
+// Zero-Cost Mode and Approval Mode (both on by default) silently did not
+// apply to it; see runwayService.ts for the matching gate fix.
+//
+// 'gmail', 'google_drive', and 'airtable' below are NOT real registered
+// connectors (confirmed against connectorRegistry.js's 26 DEFAULT_CONNECTORS
+// during the same audit) -- dead entries that can never be triggered. Left
+// in place rather than removed blind, in case they name a near-future
+// connector; flagged in docs/governance/DEFERRED_WORK.md instead.
 const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'chatgpt',
   'claude',
@@ -28,7 +39,8 @@ const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'gmail',
   'google_drive',
   'airtable',
-  'calle'
+  'calle',
+  'runway'
 ]);
 
 // Only match genuinely outbound/destructive actions — not user-initiated commands
@@ -148,7 +160,9 @@ export function classifyConnectorRisk(connectorId: string, actionType: string = 
   if (cachedRisk !== null) return cachedRisk as ConnectorRiskLevel;
 
   let risk: ConnectorRiskLevel = 'low';
-  if (id === 'youtube' || action.includes('publish') || action.includes('upload')) risk = 'high';
+  // runway: real paid cloud video generation, unconditionally high risk (not
+  // by actionType pattern) -- see the PAID_OR_METERED_CONNECTORS comment above.
+  if (id === 'youtube' || id === 'runway' || action.includes('publish') || action.includes('upload')) risk = 'high';
   // hermes_agents: unlike a bare chat-completion connector, a Hermes profile
   // is a full standing agent (terminal, code_execution, delegation, cronjob,
   // memory — see docs/HERMES_AGENT_DELEGATION_PLAN.md §1b.2) that can run real

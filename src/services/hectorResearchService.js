@@ -1,7 +1,7 @@
 import { appendAgentActivity } from './agentActivityService';
-import { getConnectorCredential } from './connectors/connectorAuth';
 import { isTavilyConfigured, searchTavily } from './connectors/tavilyConnector.js';
 import { isDeepSeekConfigured, searchWithDeepSeek } from './connectors/deepseekConnector.js';
+import { isBraveSearchConfigured, searchBrave } from './connectors/braveSearchConnector';
 import { invoke } from '@tauri-apps/api/core';
 import { HECTOR_RESEARCH_SCHEMA } from '../agents/hector/hectorResearchSchema';
 import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../agents/hector/hectorPermissions';
@@ -414,61 +414,14 @@ export async function synthesizeHectorResearch(researchQuestion, sources, option
   }
 }
 
-export async function isBraveSearchConfigured() {
-  // Check UI credential store first (set via Settings → Connectors)
-  if (getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY')) return true;
-  if (import.meta.env.VITE_BRAVE_SEARCH_API_KEY) return true;
-  try {
-    const presence = await invoke('check_env_vars_presence', { names: ['BRAVE_SEARCH_API_KEY'] });
-    return Boolean(presence?.['BRAVE_SEARCH_API_KEY']);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Frontend-only Brave Search — uses VITE_BRAVE_SEARCH_API_KEY from the Vite env.
- * Returns a structured result the UI can display directly, or an error object.
- * Use this when the Rust backend path is unavailable or for direct UI calls.
- */
-export async function searchBrave(query, count = 10) {
-  const apiKey = getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY')
-    || import.meta.env.VITE_BRAVE_SEARCH_API_KEY
-    || '';
-  if (!apiKey) {
-    return { success: false, error: 'BRAVE_SEARCH_API_KEY not configured — add it in Settings → Connectors', results: [] };
-  }
-  try {
-    const resp = await retryWithBackoff(() => fetch(
-      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${count}`,
-      {
-        headers: {
-          Accept: 'application/json',
-          'X-Subscription-Token': apiKey
-        }
-      }
-    ));
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => '');
-      return {
-        success: false,
-        error: `Brave Search HTTP ${resp.status}${errText ? `: ${errText.slice(0, 120)}` : ''}`,
-        httpStatus: resp.status,
-        results: []
-      };
-    }
-    const data = await resp.json();
-    const results = (data.web?.results || []).map((r) => ({
-      title: r.title || '',
-      url: r.url || '',
-      snippet: r.description || '',
-      source: 'brave'
-    }));
-    return { success: true, results };
-  } catch (error) {
-    return { success: false, error: `Brave Search fetch failed: ${String(error)}`, results: [] };
-  }
-}
+// Re-exported for backward compatibility with existing importers
+// (src/hooks/usePollingEffects.js, src/services/workflowExecutionService.js)
+// -- the real implementation now lives in ./connectors/braveSearchConnector,
+// matching the one-file-per-connector convention every other search
+// connector (tavily/perplexity/deepseek) already follows, and gains the
+// same evaluatePolicyGate check they already had that this one previously
+// lacked. See docs/governance/DEFERRED_WORK.md's 2026-09-20/21 entry.
+export { isBraveSearchConfigured, searchBrave };
 
 // Curated topic-matched RSS feed list
 export const RSS_FEED_CATALOG = [

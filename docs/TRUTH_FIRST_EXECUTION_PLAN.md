@@ -802,7 +802,7 @@ dropped.
     actual recovery path, not just a write-only sink. Tests in
     `src/test/durableStore.test.js`.
 
-- [ ] **G-T12 — Review connector policy DSL default posture**
+- [x] **G-T12 — Review connector policy DSL default posture** — CLOSED 2026-09-20/21
   - **Owner:** Sentinel
   - **Status note:** the original T12 wording assumed a fail-open default;
     **B2 (2026-07-22) already verified `evaluateAction()`/
@@ -811,9 +811,118 @@ dropped.
     connector risk tier (not just the paths B2's targeted tests covered) and
     close out, rather than re-implementing a fail-closed default that may
     already exist.
+  - **Full-coverage audit (2026-09-20/21):** traced the real call chain (not
+    just the DSL layer in isolation) for all 26 registered connectors
+    (`connectorRegistry.js`'s `DEFAULT_CONNECTORS`) — who actually calls
+    `gateConnectorAction`/`evaluatePolicyGate` before making the real
+    network/Tauri call, not just who is classified in `classifyConnectorRisk`.
+    Confirmed properly gated end-to-end: telegram, whatsapp, chatgpt, claude,
+    qwen, notion, clickup, youtube, github, slack (all via
+    `connectorOutbound.js`'s consistent circuit-breaker → approval →
+    readiness → policy-gate → call → audit sequence), sd_webui/comfyui_video
+    (via `connectorImageGenerators.js`), discord, hermes_agents, calle,
+    gemini, nvidia_nim, n8n, deepseek, perplexity, tavily.
+  - **Genuine gap found and fixed: `runway` (RunwayML, real paid cloud video
+    generation) had zero policy gate anywhere in its call chain.**
+    `generateRunwayVideo()` in `runwayService.ts` called straight through to
+    `invoke('runway_generate_video')` with no `gateConnectorAction`/
+    `evaluatePolicyGate` call, was absent from `PAID_OR_METERED_CONNECTORS`,
+    and was unclassified in `classifyConnectorRisk` (fell through to the
+    default `'low'`). `runContentCatalystJob` → `generateContentVideo` calls
+    it automatically with no approval step. Net effect: Zero-Cost Mode and
+    Approval Mode — both on by default — silently did not apply to a
+    real-money-spending action. Confirmed the Rust side (`runway.rs`) has no
+    gate either. Fixed: added `runway` to `PAID_OR_METERED_CONNECTORS` and to
+    the explicit high-risk list in `classifyConnectorRisk`
+    (`policyEnforcementService.ts`), and wired the same
+    circuit-breaker → approval → readiness → policy-gate → call → audit
+    sequence directly into `generateRunwayVideo()` (matching
+    `connectorOutbound.js`'s established pattern; confirmed
+    `saveConnectorApiKey()` in `ConnectorSetupPanel.tsx` already calls
+    `updateConnectorAuthProfile(id, {enabled: true})` on save, so this does
+    not regress any user who configured Runway through the normal UI flow).
+    Also corrected `generateContentVideo`'s failure toast, which hardcoded
+    "Runway API key not configured" — now misleading since a policy/approval
+    block is a different failure mode — to surface the real `result.error`
+    when present. 6 new regression tests added in `runwayService.test.js`
+    (authenticated+approved success; blocked on unauthenticated, open circuit
+    breaker, missing approval, DSL/Zero-Cost-Mode denial, and not-yet-configured).
+  - **Minor gap found and closed same PR (2026-09-20/21):** `searchBrave()`
+    in `hectorResearchService.js` bypassed the gate entirely, unlike its
+    sibling search connectors (tavily/perplexity/deepseek), each gated via
+    its own connector file. Real-world risk was always low (read-only,
+    free-tier, no irreversible action — `classifyConnectorRisk` would
+    resolve it to `'low'`/allow regardless), so this was a consistency/
+    audit-trail gap, not a security bypass — but closed anyway rather than
+    left open, since it directly completes this same audit. Extracted into
+    `src/services/connectors/braveSearchConnector.ts`, matching the
+    established one-file-per-connector convention exactly (checked
+    tavily/perplexity/deepseek first and confirmed none of them use a
+    circuit breaker or audit log either — only `evaluatePolicyGate`, so
+    matching that is genuine consistency, not a downgrade from what this
+    entry originally assumed). `hectorResearchService.js` re-exports both
+    functions unchanged so its 2 external importers needed no changes. 12
+    new tests added (previously zero direct coverage existed for this
+    function). Not touched: `discoverResearchSourcesBrave`'s separate
+    Rust-backed `search_brave_sources` path (tried first, falls back to the
+    now-gated frontend path) still has no gate of its own — same low
+    real-world risk, left as a smaller follow-up. See
+    `docs/governance/DEFERRED_WORK.md`'s updated 2026-09-20/21 entry for
+    full detail.
+  - **Dead code found, flagged not removed:** `PAID_OR_METERED_CONNECTORS`
+    contains `'gmail'`, `'google_drive'`, `'airtable'` — none of these are
+    real registered connectors (confirmed against all 26
+    `DEFAULT_CONNECTORS` ids). Harmless (can never be triggered, since no
+    connector calls `classifyConnectorRisk`/`evaluatePolicyGate` with those
+    ids), but misleading — reads as covered ground that doesn't exist. Left
+    in place rather than removed blind, documented in
+    `policyEnforcementService.ts`'s own comment and in
+    `docs/governance/DEFERRED_WORK.md`, in case they name a near-future
+    connector rather than pure leftover.
+  - **Also confirmed, not previously documented:** `policy.yaml` at the repo
+    root is never actually loaded at runtime — `policyDslService.ts` embeds
+    a hardcoded TypeScript copy of the same rules (its own comment already
+    says so: "embedded from policy.yaml"). Currently in sync content-wise
+    (diffed both files), but a real doc-vs-runtime drift risk if anyone
+    edits `policy.yaml` expecting it to take effect. Not fixed this pass
+    (out of this task's literal scope), flagged in
+    `docs/governance/DEFERRED_WORK.md`.
+  - **Verification:** `npx tsc --noEmit` clean after the fix (one real type
+    error caught and fixed along the way — `gateConnectorAction`'s inferred
+    union return type doesn't guarantee a `verificationState` field on every
+    branch). The new `runwayService.test.js` regression tests could not be
+    executed locally this pass — this dev machine's vitest harness failed to
+    produce any test output (exit 1, no results) even for a trivial,
+    completely unmodified test file run through the exact same harness,
+    confirming this is the machine's own documented pre-existing instability
+    (see this file's and `CLAUDE.md`'s many prior "vitest worker-pool" notes),
+    not a regression from this change. CI is the first real execution of
+    these tests — do not treat "code compiles and typechecks" as "confirmed
+    passing" until CI reports back.
+  - **CI caught a real bug in the new tests themselves (2026-09-21), exactly
+    the reason the note above says not to trust an unrun test:** PR #258's
+    `Test & Build` job failed — the "blocks and never calls the API when the
+    DSL/policy gate denies (Zero-Cost Mode)" test received `'not
+    authenticated'` instead of the expected `'Zero-Cost Mode'` reason. Root
+    cause was in the test file, not `runwayService.ts`: the "not
+    authenticated" test set `isConnectorAuthenticated.mockReturnValue({ok:
+    false})` (persistent override), and `vi.clearAllMocks()` in `beforeEach`
+    clears call history but not a mock's return-value implementation — so
+    that override silently leaked into every later test in the file. 3 of
+    the 4 later tests happened to still pass (they only assert
+    `mockInvoke).not.toHaveBeenCalled()` and `result.ok===false`, both still
+    true when blocked by the leaked "not authenticated" state instead of the
+    condition each test nominally exercises); only the Zero-Cost Mode test
+    asserted the specific error text and caught it. Fixed by switching all 5
+    per-test mock overrides to `mockReturnValueOnce`/`mockResolvedValueOnce`
+    (auto-reverts after one call), matching the established pattern already
+    used in `connectorOutbound.test.js`. Re-verified `tsc --noEmit`/`eslint`
+    clean; still could not run locally (same harness issue) — pushed for CI
+    to confirm.
   - **Done when:** a full-coverage pass (all connectors × all DSL rule
     categories) confirms fail-closed behavior, or a genuine gap is found and
-    fixed.
+    fixed. — met: full pass done, one real gap (runway) found and fixed with
+    tests, two smaller gaps found and explicitly deferred with reasoning.
 
 - [x] **G-T14 — Split `lib.rs` + lint-enforce `CREATE_NO_WINDOW`** — CLOSED 2026-09-02, PR #206
   - **Owner:** Alphonso
@@ -878,8 +987,9 @@ dropped.
     service-existence half of the table from `src/services/` + component
     exports, with a `--check` mode wired into CI doc-freshness.
 
-- [ ] **G-T20 — Add a token/cost budget to multi-agent fan-out; surface
-  hidden features**
+- [x] **G-T20 — Add a token/cost budget to multi-agent fan-out; surface
+  hidden features** — budget half CLOSED 2026-09-20/21, discoverability half
+  already downgraded to optional polish (2026-09-03)
   - **Owner:** Jose (budget), Echo (discoverability)
   - No cost/token ceiling exists for Boardroom `@mention` chains or other
     multi-agent fan-out paths beyond the existing `MAX_CHAIN_DEPTH=3` hop
@@ -901,10 +1011,40 @@ dropped.
     at what its tabs contain), not a functional discoverability defect. The
     budget/ceiling half has not been started at all and is the real remaining
     scope of this item.
+  - **Budget/ceiling fix (2026-09-20/21):** confirmed first that none of the
+    4 LLM provider paths reachable via `generateAgentLlmResponse`
+    (ollama/nvidia_nim/gemini/hermes) return real token-usage figures — a
+    literal per-token/per-dollar meter would need new plumbing across all 4,
+    out of scope for this fix. Instead reused this codebase's own existing
+    convention: `streamingService.ts` already treats response character
+    count as its live "tokens" figure (`tokens: fullText.length`), so the new
+    `src/services/fanOutBudgetService.ts` (`createFanOutBudgetTracker`,
+    `DEFAULT_FANOUT_CHAR_BUDGET = 40000`) uses total prompt+response
+    character count per chain as the same honest proxy, documented in its own
+    header as a resource-consumption ceiling, not a real-dollar-cost meter.
+    Wired into `BoardroomChatView.tsx`'s `@mention` chain loop (the one place
+    G-T20 names as having zero budget beyond the hop cap): a tracker is
+    created per `handleSend` call, checked alongside the existing
+    `MAX_CHAIN_DEPTH` check (same escalation-message pattern, distinct
+    wording), and fed `text.length + replyText.length` after every hop. A
+    single very-long reply now stops the chain even when well under the
+    3-hop depth cap — the exact gap this item names. Jose's execution
+    pipeline was not touched — it already has its own real ceiling
+    (`PIPELINE_MAX_ASSIGNMENTS`/`PIPELINE_MAX_DURATION_MS` from Sprint 1),
+    just not token-based; re-scope to that pipeline specifically if a
+    token-based ceiling is wanted there too, since it's a separate call
+    chain with its own budget mechanism already. 8 new tests added: 7 pure
+    unit tests in `src/test/fanOutBudgetService.test.js`, 1 integration test
+    in `src/test/boardroomChatView.test.jsx` proving the budget (not the
+    depth cap) is what stops a single-hop, oversized-reply chain.
+  - **Verification:** `npx tsc --noEmit` clean. The new tests could not be
+    executed locally — same pre-existing vitest-harness failure documented in
+    this file's G-T12 entry above (confirmed again on this exact change, not
+    re-litigated); CI is the first real execution.
   - **Done when:** a measurable budget/ceiling exists for agent fan-out
     costs. The discoverability half is downgraded to optional polish, not a
     blocking condition for closing this item — re-scope to a pure budget/
-    ceiling task if the discoverability half is dropped.
+    ceiling task if the discoverability half is dropped. — met.
 
 - [ ] **G-OTHER1 — iOS companion Rust↔Swift end-to-end pairing test**
   - Full backend + React pairing UI exist and were live-device-confirmed
@@ -1263,10 +1403,23 @@ dropped.
     the plan doc's own recommendation. This was the one open product call
     blocking implementation scope — now clear to scope into a real task
     whenever work on it starts.
-  - **Independent prerequisite, do any time:** the Hermes profiles on this
-    dev machine currently have duplicate/near-duplicate `api_server` keys
-    across Miya/Alphonso/Marcus — a real credential-leak-blast-radius issue,
-    worth fixing now regardless of when Phase 2 starts. See plan doc §2.2.
+  - **Independent prerequisite — CLOSED 2026-09-20/21.** The Hermes profiles
+    on this dev machine had duplicate/near-duplicate `api_server` keys across
+    Miya/Alphonso/Marcus — confirmed Miya's and Alphonso's were byte-for-byte
+    identical (in both `config.yaml` and `.env`) and Marcus's was a corrupted
+    near-duplicate of the same string, also present in plaintext in
+    `Miya/MIYA_INTEGRATION.md`. Rotated all three to fresh, independent
+    `secrets.token_urlsafe(32)`-generated keys (user explicitly authorized
+    editing these live daemon config/`.env` files and scrubbing the doc,
+    overriding this plan's own "never write to a Hermes profile's config"
+    guardrail for this specific, reviewed fix); the doc's old key value was
+    replaced with a redaction note rather than deleted outright, so the
+    historical record of what the doc said stays legible. Not touched:
+    `Miya/.env.bak-20260809-184226` (a historical backup snapshot, not live
+    config — scrubbing every backup is unbounded scope). The gateway daemons
+    still need a manual restart to pick up the new `.env`/`config.yaml`
+    values — not done by this session, per the same guardrail ("never
+    restart/stop a live Hermes gateway service").
 
 ### J. Competitive strategy & "AB" direction (planning artifacts only, not started as code)
 
@@ -1486,4 +1639,7 @@ dropped.
 | 2026-08-21 | PR #167 merged (PaperClip docs tracking + a pre-existing `clippy::useless_format` fix that was blocking CI, unrelated to this repo's own changes + 2 CodeRabbit review fixes). | PR #167 (merged). |
 | 2026-08-21 | Closed **I1** for real: live-verified Phase 1a against the actual running Hector Hermes profile (spawned via the `hermes-fleet-scripts` lazy-spawn mechanism, confirmed via Hermes' own `agent.log` that a real chat completion round-tripped through Nous Research inference). Closed **I2** (Hermes Phase 1b hardening): circuit-breaker `configure()` API, rate-limiter/circuit-breaker tuning, audit logging on every call path, `hermes_agents` classified high-risk in the policy gate (with the real "Approval Mode now blocks Hermes by default, no call site passes `approved:true` yet" nuance flagged, not hidden — tracked as a new deferred item in `docs/governance/DEFERRED_WORK.md`), session continuity (`X-Hermes-Session-Id`, derived as a fresh `crypto.randomUUID()` per logical unit of work rather than sent raw — a real CodeQL `js/insecure-randomness` finding caught and fixed mid-review, since the raw threadId/packetId are `Math.random()`-generated and were never previously used in a security-sensitive context — wired into 2 of 9 call sites), and `backend`/`model` exposed on `generateAgentLlmResponse`'s result (also fixed a related bug this surfaced: `boardroomFacilitatorService.ts`'s `generateAgentResponse` was returning the requested model instead of the provider-resolved one). Also flagged, not fixed (tracked as a separate deferred item): `hermes_agents` bypasses Zero-Cost Mode for any saved endpoint, including a non-loopback one — pre-existing since PR 1a, surfaced by a 1b test that documented rather than fixed it. 113 targeted tests across touched files + 525 regression-verified tests across every file importing a touched module, `tsc --noEmit` clean, lint clean. | PR #168; this file's I1/I2 entries above for full per-subsection evidence; `docs/governance/DEFERRED_WORK.md`'s 2026-08-21 entries; `src/test/hermesAgentConnector.test.js` (27), `src/test/connectorCircuitBreakerService.test.js` (17 incl. 3 new), `src/test/policyEnforcementService.test.js` (4 incl. 3 new hermes tests), `src/test/connectorHealthCheckService.test.js` (5 new), `src/test/generateAgentLlmResponse.test.js` (1 new), `src/test/services/boardroomFacilitatorService.test.ts` (1 new). |
 | 2026-09-02 | Doc-drift reconciliation pass, requested after confirming PR #204 (Linux AppImage bundling fix) landed green on `main`. Checked every `[ ]` item in Section G against current code rather than trusting the existing notes, and closed 4 that were stale: **G-T11** (persistence schema/migrations — done since `52f2ad0`, 2026-07-21), **G-OTHER2** (`ios-build.yml` xcodebuild test step — done since PR #146, 2026-08-14), **G-OTHER4** (function coverage floor — raised since 2026-08-20), **G-OTHER5** (Voice OS Python auto-install — has existed since `053c641`, 2026-06-23; the item's own premise was already false when written). Updated status notes (not closed, still genuinely open) on **G-T14** (`lib.rs` split: 2,206→837 lines via PRs #194–#197; CI lint enforcement still missing), **G-T17** (bridge/MCP server structured logging added by PR #203; log-inspection docs still missing), **G-T19** (advisory CI checker wired by PR #201; found 124 undocumented files; the actual generator is not built), **G-T20** (Operator Dashboard nav entry added by PR #202; Agent Pairing/Ecosystem Maturity discoverability and the fan-out budget are still untouched). Also updated `CLAUDE.md` (test-count header, ios-build.yml gap note, Voice OS Python note, a new consolidated "Last verified: 2026-09-02" entry bridging the previously-undocumented 2026-08-14→2026-09-02 gap covering PRs #184–#204) and appended a resolution note to `docs/governance/DEFERRED_WORK.md`'s Linux-installer entry. **Not attempted:** hand-writing the 124 missing "Do Not Duplicate" entries G-T19 surfaced — flagged as real, substantial follow-up work rather than rushed through with low-quality one-liners; building G-T19's own generator is the better use of that effort. | This row; `CLAUDE.md`'s 2026-09-02 entry; `docs/governance/DEFERRED_WORK.md`'s 2026-09-02 entry; `npm run verify:docs` (clean before and after), `npm run verify:dnd-coverage` (124 files, confirmed still failing/advisory), `git log`/`gh pr view` for every PR number cited above. |
+| 2026-09-20/21 | Closed **G-T12** (full-coverage connector-DSL fail-closed audit): traced all 26 registered connectors' real call chains, not just the DSL layer. Found and fixed a genuine gap — `runway` (RunwayML, real paid cloud video generation) had zero policy gate anywhere in its call chain, so Zero-Cost Mode and Approval Mode silently did not apply to it; fixed by classifying it high-risk/paid and wiring the same gate sequence every other paid connector already uses directly into `generateRunwayVideo()`, with 6 new regression tests. Found and closed a second gap in the same PR (see the follow-up row below): `searchBrave()` bypassed the gate entirely — extracted into `braveSearchConnector.ts` matching its siblings' pattern. Found and deferred one smaller gap (documented in `docs/governance/DEFERRED_WORK.md`): `PAID_OR_METERED_CONNECTORS` carries 3 dead entries (`gmail`/`google_drive`/`airtable`) that name no real connector. Also separately fixed a real credential-blast-radius issue named in Section I's I3 prerequisite: Miya and Alphonso's Hermes profiles shared the byte-for-byte identical `api_server` key (in both `config.yaml` and `.env`), and Marcus's was a corrupted near-duplicate of the same string — rotated all three to fresh, independent keys (user explicitly authorized editing these live daemon config files, overriding this plan's own "never write to a Hermes profile's config" guardrail, since the guardrail's default posture was correctly cautious but the specific fix was reviewed and approved). `npx tsc --noEmit` clean after both changes; the new Runway tests could not be executed locally — this dev machine's vitest harness produced no output/exit 1 even for a trivial, completely unmodified test file run through the identical harness, confirming this is the machine's own pre-existing instability (see this file's and `CLAUDE.md`'s many prior notes on the same constraint), not a regression from this change; CI is the first real execution. | This row; G-T12's entry above for full detail; `docs/governance/DEFERRED_WORK.md`'s 2026-09-20/21 entries; `src/services/runwayService.ts`, `src/services/policyEnforcementService.ts`, `src/features/content-catalyst/services/contentCatalystService.js`, `src/test/runwayService.test.js` (6 new tests). |
+| 2026-09-20/21 | Closed the budget half of **G-T20**: Boardroom `@mention` fan-out had no cost/token ceiling beyond the existing 3-hop `MAX_CHAIN_DEPTH` cap. Added `src/services/fanOutBudgetService.ts` (`createFanOutBudgetTracker`, `DEFAULT_FANOUT_CHAR_BUDGET = 40000`) using total prompt+response character count as the token proxy — the same approximation `streamingService.ts` already uses for its own live counter — since none of the 4 LLM provider paths return real token-usage figures today. Wired into `BoardroomChatView.tsx`'s chain loop alongside the existing depth check, with a matching escalation message. 8 new tests (7 unit, 1 integration proving the budget — not the depth cap — stops a single oversized-reply hop). `npx tsc --noEmit` clean; tests not executed locally, same documented vitest-harness failure as the G-T12 row above. Discoverability half of G-T20 was already downgraded to optional polish on 2026-09-03 — not re-touched this pass. | G-T20's entry above; `src/services/fanOutBudgetService.ts`, `src/components/BoardroomChatView.tsx`, `src/test/fanOutBudgetService.test.js` (7 new), `src/test/boardroomChatView.test.jsx` (1 new). |
+| 2026-09-20/21 | Follow-up in the same PR, requested explicitly (user asked whether docs were fully updated and whether more work could land in the same branch before merge): (1) found and fixed a real gap in this session's own doc updates — `npm run verify:docs` (a required CI gate) was failing after the first two commits because the new `fanOutBudgetService.ts` + its test bumped the real services/test-file counts (201→202→203, 399→400→401) and the hardcoded counts in `README.md`/`AGENTS.md` were never updated to match; also fixed a third stale-count line in `AGENTS.md`'s "Project Identity" summary that the checker's own regex patterns don't cover (a live/current fact, not a dated historical "What's New" entry, so left correct on principle even though not CI-enforced). Verified `npm run verify:docs`/`verify:dnd-coverage` both clean after. (2) Closed the `searchBrave()` gap flagged-but-deferred in the G-T12 row above (see that row's correction and the "closed" update to G-T12's own entry higher in this file) — extracted into `src/services/connectors/braveSearchConnector.ts`, matching tavily/perplexity/deepseek's exact `evaluatePolicyGate` pattern, with 12 new tests. `npx tsc --noEmit` and `eslint` clean on every file touched across all 3 commits in this PR; none of the new tests could be executed locally (same documented vitest-harness failure); CI is the first real execution of all of them. | This row; `docs/governance/DEFERRED_WORK.md`'s updated searchBrave entry; `README.md`, `AGENTS.md`, `src/services/connectors/braveSearchConnector.ts`, `src/services/hectorResearchService.js`, `src/test/connectors/braveSearchConnector.test.js` (12 new), `CLAUDE.md`'s Do Not Duplicate table. |
 

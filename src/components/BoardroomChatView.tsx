@@ -17,6 +17,7 @@ import {
 import { generateAgentResponse, detectLowConfidence } from '../services/boardroomFacilitatorService';
 import { getAgentProvider } from '../services/modelSelectionService';
 import { getRuntimePolicySettings } from '../services/policyEnforcementService';
+import { createFanOutBudgetTracker, DEFAULT_FANOUT_CHAR_BUDGET } from '../services/fanOutBudgetService';
 
 const AGENT_PROFILES = listAgentProfiles();
 
@@ -198,6 +199,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
     setFacilitatorPending(true);
     stopRequestedRef.current = false;
     let hopsUsed = 0;
+    const budget = createFanOutBudgetTracker(DEFAULT_FANOUT_CHAR_BUDGET);
 
     try {
     while (respondingAgents.length > 0) {
@@ -219,6 +221,17 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
           threadId: activeThreadId,
           speaker: 'alphonso',
           content: `The conversation reached ${MAX_CHAIN_DEPTH} chained replies without stopping — further @mentions won't auto-trigger. Reply directly to keep it going, or make a call on where this should land.`,
+          kind: 'escalation'
+        });
+        setMessages(listThreadMessages(activeThreadId));
+        break;
+      }
+
+      if (budget.isExceeded()) {
+        addThreadMessage({
+          threadId: activeThreadId,
+          speaker: 'alphonso',
+          content: `This cascade generated more content than the ${DEFAULT_FANOUT_CHAR_BUDGET.toLocaleString()}-character budget for one chain — further @mentions won't auto-trigger. Reply directly to keep it going, or make a call on where this should land.`,
           kind: 'escalation'
         });
         setMessages(listThreadMessages(activeThreadId));
@@ -255,6 +268,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
       }
 
       const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
+      budget.recordUsage(text.length + replyText.length);
       const replyMessage = addThreadMessage({
         threadId: activeThreadId,
         speaker: agentId,
