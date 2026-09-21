@@ -326,6 +326,34 @@ describe('BoardroomChatView', () => {
     expect(facilitator.generateAgentResponse.mock.calls.length).toBeLessThanOrEqual(3);
   });
 
+  it('stops chaining and posts an escalation message once the character budget is exceeded, even under the round cap (G-T20)', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    // A single hop's reply alone exceeds DEFAULT_FANOUT_CHAR_BUDGET (40,000
+    // chars) and itself @mentions the next agent, so if only the 3-hop
+    // MAX_CHAIN_DEPTH cap existed, this would try to keep chaining.
+    const hugeReply = '@Jose '.padEnd(45000, 'x');
+    facilitator.generateAgentResponse.mockImplementation(({ agentId }) => {
+      if (agentId === 'hector') return Promise.resolve({ ok: true, text: hugeReply });
+      return Promise.resolve({ ok: true, text: `${agentId} final reply` });
+    });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Budget Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Budget Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector start the chain' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    const escalation = await screen.findByText(/character budget/i);
+    expect(escalation).toBeInTheDocument();
+    // Only the one huge hop ran — the budget cap fired before a 2nd hop,
+    // proving this stopped it, not the 3-hop MAX_CHAIN_DEPTH cap.
+    expect(facilitator.generateAgentResponse.mock.calls.length).toBe(1);
+  });
+
   it('passes cross-thread context to generateAgentResponse when relevant history exists in another thread', async () => {
     const threadService = await import('../services/boardroomThreadService');
     const facilitator = await import('../services/boardroomFacilitatorService');

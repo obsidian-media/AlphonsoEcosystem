@@ -429,7 +429,12 @@ export async function generateContentVideo(job) {
   });
   if (!result?.ok) {
     window.dispatchEvent(new CustomEvent('alphonso:toast', {
-      detail: { type: 'warning', message: 'Video generation skipped — Runway API key not configured. Add it in Settings.' }
+      detail: {
+        type: 'warning',
+        message: result?.error
+          ? `Video generation skipped — ${result.error}`
+          : 'Video generation skipped — Runway API key not configured. Add it in Settings.'
+      }
     }));
     return {
       ...job,

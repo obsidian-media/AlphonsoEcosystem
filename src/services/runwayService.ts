@@ -1,5 +1,15 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getConnectorCredential } from './connectors/connectorAuth.js';
+import {
+  gateConnectorAction,
+  requireConnectorReady,
+  requireConnectorApproval,
+  appendConnectorAudit,
+  getConnectorCircuitState,
+  recordConnectorFailure,
+  recordConnectorSuccess
+} from './connectors/connectorRegistry.js';
+import { isConnectorAuthenticated, logUnauthenticatedConnectorRequest } from './connectors/connectorAuth.js';
 
 interface RunwayVideoRequest {
   promptText: string;
@@ -67,10 +77,92 @@ export function buildRunwayVideoRequest({
   };
 }
 
-export async function generateRunwayVideo(options: RunwayVideoOptions = {}): Promise<RunwayResult> {
+interface RunwayGateOptions {
+  approved?: boolean;
+  requestedBy?: string;
+  reason?: string;
+  workflowId?: string;
+  commandId?: string | null;
+  packetId?: string | null;
+}
+
+// Gated the same way every other paid connector send is (connectorOutbound.js's
+// established pattern): auth -> circuit breaker -> approval -> readiness ->
+// policy gate -> the real call -> audit. Runway generates real video via a
+// real paid cloud API (RunwayML) on every call; before this fix it had zero
+// policy gate anywhere in its chain, so Zero-Cost Mode / Approval Mode
+// (both on by default) never applied to it. Found during the 2026-09-20
+// G-T12 connector-DSL fail-closed audit.
+export async function generateRunwayVideo(
+  options: RunwayVideoOptions = {},
+  gateOptions: RunwayGateOptions = {}
+): Promise<RunwayResult> {
+  const actionType = 'paid_connector_send';
+  const promptPreview = String(options.promptText || '').slice(0, 200);
+
+  const auth = isConnectorAuthenticated('runway');
+  if (!auth.ok) {
+    return logUnauthenticatedConnectorRequest('runway', actionType, promptPreview, gateOptions) as unknown as RunwayResult;
+  }
+
+  const circuit = getConnectorCircuitState('runway', actionType);
+  if (!circuit.ok) {
+    appendConnectorAudit('runway', 'send_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false,
+      setupRequired: false,
+      trust: 'failed',
+      message: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`
+    } as unknown as RunwayResult;
+  }
+
+  const approval = await requireConnectorApproval('runway', actionType, promptPreview, gateOptions);
+  if (!approval.ok) return approval as unknown as RunwayResult;
+
+  const readiness = await requireConnectorReady('runway', actionType, promptPreview, gateOptions);
+  if (!readiness.ok) return readiness as unknown as RunwayResult;
+
+  const gate = gateConnectorAction('runway', actionType, promptPreview, gateOptions) as {
+    ok: boolean;
+    reason?: string;
+    verificationState?: string;
+  };
+  if (!gate.ok) {
+    return {
+      ok: false,
+      setupRequired: false,
+      trust: gate.verificationState || 'pending',
+      message: gate.reason || 'Runway connector policy gate blocked the action.',
+      error: gate.reason || 'Runway connector policy gate blocked the action.'
+    } as unknown as RunwayResult;
+  }
+
   const request = buildRunwayVideoRequest(options);
   request.apiSecret = getConnectorCredential('runway', 'RUNWAYML_API_SECRET') || null;
-  return invoke('runway_generate_video', { request }) as Promise<RunwayResult>;
+
+  try {
+    const result = await (invoke('runway_generate_video', { request }) as Promise<RunwayResult>);
+    if (result?.ok) {
+      recordConnectorSuccess('runway', actionType);
+    } else {
+      recordConnectorFailure('runway', actionType);
+    }
+    appendConnectorAudit('runway', result?.ok ? 'generate_success' : 'generate_failed', {
+      promptPreview,
+      taskId: result?.taskId || null,
+      error: result?.error || null
+    });
+    return result;
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('runway', actionType);
+    appendConnectorAudit('runway', 'generate_failed', { promptPreview, error: errMsg });
+    throw error;
+  }
 }
 
 export async function listPendingRunwayJobs(outputDir?: string | null) {
