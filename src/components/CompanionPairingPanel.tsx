@@ -129,6 +129,11 @@ export function CompanionPairingPanel() {
           {toggling ? 'Stopping...' : 'Turn off'}
         </button>
       </div>
+      {toggleError && (
+        <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] border border-[var(--error-border)] rounded-lg px-3 py-2">
+          {toggleError}
+        </div>
+      )}
       <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
         <div className="flex items-center justify-between">
           <div>

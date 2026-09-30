@@ -89,7 +89,15 @@ struct VoiceView: View {
                                     viewModel.signOutCloudVoice()
                                 }
                                 .buttonStyle(.bordered)
+                            } else {
+                                Text("Cloud Voice stays unavailable until this iPhone is enrolled. Local Voice remains available.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
 
+                            // Reachable whenever a session exists, even if the device
+                            // isn't enrolled or the endpoint isn't set (App Store 5.1.1(v)).
+                            if viewModel.hasCloudSession {
                                 Button("Delete Cloud Voice account", role: .destructive) {
                                     confirmingAccountDeletion = true
                                 }
@@ -106,10 +114,12 @@ struct VoiceView: View {
                                 } message: {
                                     Text("This permanently deletes your account, enrolled devices, and saved learning history. It can't be undone.")
                                 }
-                            } else {
-                                Text("Cloud Voice stays unavailable until this iPhone is enrolled. Local Voice remains available.")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+
+                                if let error = viewModel.cloudAccountError {
+                                    Text(error)
+                                        .font(.caption2)
+                                        .foregroundStyle(.red)
+                                }
                             }
 
                             Picker("Cloud TTS model", selection: Binding(

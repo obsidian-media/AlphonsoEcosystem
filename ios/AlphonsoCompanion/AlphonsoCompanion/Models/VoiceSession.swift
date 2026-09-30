@@ -184,6 +184,9 @@ final class VoiceSessionViewModel: ObservableObject {
     @Published var selectedAgent: VoiceAgent = .alphonso
     @Published var cloudStatus = "Cloud backend not configured"
     @Published var cloudAuthStatus = "Sign in to enable Cloud Voice"
+    /// Shown separately from `cloudAuthStatus` so a failed deletion never
+    /// changes the auth state that `cloudReady` is derived from.
+    @Published var cloudAccountError: String?
     @Published var isCloudAuthInFlight = false
 
     private let audioService = VoiceAudioService()
@@ -336,9 +339,14 @@ final class VoiceSessionViewModel: ObservableObject {
         }
     }
 
+    var hasCloudSession: Bool {
+        cloudService.hasSession
+    }
+
     func deleteCloudAccount() {
         guard !isCloudAuthInFlight else { return }
         isCloudAuthInFlight = true
+        cloudAccountError = nil
         Task {
             defer { isCloudAuthInFlight = false }
             do {
@@ -346,7 +354,8 @@ final class VoiceSessionViewModel: ObservableObject {
                 signOutCloudVoice()
                 cloudAuthStatus = cloudService.authenticationStatus
             } catch {
-                cloudAuthStatus = error.localizedDescription
+                // Keep the session and auth status intact so the user can retry.
+                cloudAccountError = "Couldn't delete your account: \(error.localizedDescription)"
             }
         }
     }

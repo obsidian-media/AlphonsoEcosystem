@@ -18,6 +18,8 @@ the WhatsApp Cloud gateway (`gateway/whatsapp-cloud/`) works.
   event comes back with a `deliveryId` and stays hidden for `QUEUE_LEASE_MS`
   (default 60s). If it isn't acknowledged in that window, it is delivered
   again. Current Alphonso clients use lease mode.
+  The queue lives in memory, so a gateway restart drops events that have not
+  been acknowledged yet.
 - `POST /queue/ack` — body `{"deliveryIds": [...]}`, same auth as drain.
   Permanently removes acknowledged events.
 - `GET /health` — liveness check, no auth required.

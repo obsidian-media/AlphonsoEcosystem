@@ -39,6 +39,18 @@ The audit report itself is private (`audits/private/`, gitignored) because it co
   - macOS `minimumSystemVersion` is now 11.0 (releases are Apple Silicon only).
   - Release notes no longer link a private repository.
 - **Docs.** Fixed a long-standing Voice OS port error in the manual-start docs (8765 → 8766) and added the now-required `VOICE_OS_TOKEN`. Updated PRICING, USER_MANUAL, IOS_SETUP, TROUBLESHOOTING, GETTING_STARTED, both gateway READMEs, the Cloud Voice deploy doc, CLAUDE.md and the deferred-work register.
+- **CodeRabbit review round (PR #269), same day:**
+  - Companion "Turn off" now uses a persistent watch signal. It can't be missed by a listener that isn't waiting yet, it closes every open socket (including idle paired phones), and it waits for the listener to stop before returning.
+  - The git policy also rejects abbreviated long options (`--upl=`) and attached or bundled short `-u`/`-c` options.
+  - pip rejects URL/VCS requirements and `--find-links`/`-f`.
+  - ffmpeg is limited to `-version` through the command runner.
+  - Account deletion no longer fails for users with Atlas audit receipts: receipt `actor_user_id`/`challenge_id` became `ON DELETE SET NULL`, so receipts survive anonymized.
+  - An invalid `VOICE_ACCESS_MODE` now marks Cloud Voice not-ready instead of silently meaning invite-only, and the deploy guard rejects it.
+  - iOS keeps auth state intact when a deletion fails and shows the delete option whenever a session exists.
+  - The privacy manifest no longer declares audio collection (only text leaves the app).
+  - The companion toggle shows errors in both states.
+  - Docs: `--no-access-log` in manual Voice OS commands, the USER_MANUAL heading numbers now match its table of contents, and gateway restart-loss is stated.
+  - **Deferred:** requiring explicit approval before AI-planned commands that execute workspace code (`npm run`, `cargo test`, `pytest`). That needs an approval step inside Jose's pipeline and is tracked in DEFERRED_WORK.
 - **Dependencies:** the npm audit CI gate had started failing on advisories published after `main`'s last CI run (brace-expansion, undici via jsdom, re-numbered image-size). Fixed by raising the overrides to `brace-expansion ^5.0.12`, `image-size ^2.0.4` (now patched upstream) and `undici ^7.29.1`, and bumping `vitest`/`@vitest/coverage-v8` to `^4.1.11`. `npm audit` now reports **0 vulnerabilities**, and the gate's accepted-advisory list is empty.
 - **Verification:** `tsc --noEmit` clean, ESLint clean on touched files, `cargo clippy -- -D warnings` clean, `cargo fmt --check` clean, Cloud Voice backend 71/71, gateway queue tests 8/8. The frontend vitest files and the new Rust unit tests could not run on the dev machine (0.6 GB free RAM; vitest worker-pool timeouts), so CI on the PR is their first run. No version bump.
 

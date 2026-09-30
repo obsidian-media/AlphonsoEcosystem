@@ -1,4 +1,4 @@
-// Run with: node --test gateway/generic-webhook/src/leaseQueue.test.mjs
+// Run with: node --test gateway/whatsapp-cloud/src/leaseQueue.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createLeaseQueue, clientKeyFromRequest } from './leaseQueue.js';

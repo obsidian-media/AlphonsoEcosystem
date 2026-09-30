@@ -330,6 +330,13 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         statusMessage = authenticationStatus
     }
 
+    /// True when a Supabase session is stored, even if the device isn't
+    /// enrolled or the endpoint isn't configured. Account deletion must stay
+    /// reachable in those states too.
+    var hasSession: Bool {
+        Self.loadSession(account: sessionAccount) != nil
+    }
+
     /// Permanently deletes the signed-in Supabase account and its Cloud Voice
     /// data (devices, learner history) via the `delete_own_account` RPC, then
     /// clears the local session. App Store Guideline 5.1.1(v).

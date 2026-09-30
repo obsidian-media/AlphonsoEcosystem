@@ -61,6 +61,13 @@ def test_invite_mode_accepts_listed_emails_case_insensitively():
     assert settings.is_email_allowed("other@example.com") is False
 
 
+def test_invalid_access_mode_fails_closed_and_reports_not_ready():
+    settings = _settings(VOICE_ACCESS_MODE="opne", VOICE_ALLOWED_EMAILS="owner@example.com")
+    assert settings.is_email_allowed("owner@example.com") is False
+    assert settings.is_ready is False
+    assert settings.public_status()["access_mode_valid"] is False
+
+
 def test_open_mode_accepts_any_signed_in_account():
     assert _settings(VOICE_ACCESS_MODE="open").is_email_allowed("anyone@example.com") is True
 

@@ -4,6 +4,16 @@ import os
 from dataclasses import dataclass
 
 
+VALID_ACCESS_MODES = frozenset({"invite", "open"})
+
+
+def _access_mode(raw: str) -> str:
+    """Normalize VOICE_ACCESS_MODE. A typo is kept as-is (not silently mapped to
+    invite): it makes the service report not-ready and deny everyone, so the
+    misconfiguration shows up on /ready instead of as unexplained 403s."""
+    return (raw or "invite").strip().lower() or "invite"
+
+
 @dataclass(frozen=True)
 class Settings:
     nvidia_api_key: str
@@ -44,7 +54,7 @@ class Settings:
             supabase_url=os.environ.get("SUPABASE_URL", "").rstrip("/"),
             supabase_anon_key=os.environ.get("SUPABASE_ANON_KEY", "").strip(),
             atlas_control_plane_demo_mode=os.environ.get("ATLAS_CONTROL_PLANE_DEMO_MODE", "false").strip().lower() == "true",
-            voice_access_mode="open" if os.environ.get("VOICE_ACCESS_MODE", "invite").strip().lower() == "open" else "invite",
+            voice_access_mode=_access_mode(os.environ.get("VOICE_ACCESS_MODE", "invite")),
             voice_allowed_emails=frozenset(
                 email.strip().lower()
                 for email in os.environ.get("VOICE_ALLOWED_EMAILS", "").split(",")
@@ -55,17 +65,27 @@ class Settings:
     def is_email_allowed(self, email: str | None) -> bool:
         if self.voice_access_mode == "open":
             return True
+        if self.voice_access_mode != "invite":
+            return False
         return bool(email) and email.strip().lower() in self.voice_allowed_emails
 
     @property
     def is_ready(self) -> bool:
-        return bool(self.supabase_url and self.supabase_anon_key and self.nvidia_api_key and self.nim_model and self.magpie_url)
+        return bool(
+            self.supabase_url
+            and self.supabase_anon_key
+            and self.nvidia_api_key
+            and self.nim_model
+            and self.magpie_url
+            and self.voice_access_mode in VALID_ACCESS_MODES
+        )
 
     def public_status(self) -> dict[str, object]:
         return {
             "ready": self.is_ready,
             "nvidia_nim": bool(self.nvidia_api_key and self.nim_model),
             "device_enrollment": bool(self.supabase_url and self.supabase_anon_key),
+            "access_mode_valid": self.voice_access_mode in VALID_ACCESS_MODES,
             "atlas_control_plane_demo": self.atlas_control_plane_demo_mode,
             "tts": {
                 "magpie": bool(self.magpie_url),

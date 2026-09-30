@@ -2265,6 +2265,18 @@ Private audit: `audits/private/2026-09-30_Claude_PreLaunchAllAngle_Audit.md`. It
   - Release notes no longer link a private repository.
 - **Docs.** Fixed a long-standing Voice OS port error in the manual-start docs (8765 → 8766) and added the now-required `VOICE_OS_TOKEN`. Updated PRICING, USER_MANUAL, IOS_SETUP, TROUBLESHOOTING, GETTING_STARTED, both gateway READMEs, the Cloud Voice deploy doc, CLAUDE.md and the deferred-work register.
 
+- **CodeRabbit review round (PR #269), same day:**
+  - Companion "Turn off" now uses a persistent watch signal. It can't be missed by a listener that isn't waiting yet, it closes every open socket (including idle paired phones), and it waits for the listener to stop before returning.
+  - The git policy also rejects abbreviated long options (`--upl=`) and attached or bundled short `-u`/`-c` options.
+  - pip rejects URL/VCS requirements and `--find-links`/`-f`.
+  - ffmpeg is limited to `-version` through the command runner.
+  - Account deletion no longer fails for users with Atlas audit receipts: receipt `actor_user_id`/`challenge_id` became `ON DELETE SET NULL`, so receipts survive anonymized.
+  - An invalid `VOICE_ACCESS_MODE` now marks Cloud Voice not-ready instead of silently meaning invite-only, and the deploy guard rejects it.
+  - iOS keeps auth state intact when a deletion fails and shows the delete option whenever a session exists.
+  - The privacy manifest no longer declares audio collection (only text leaves the app).
+  - The companion toggle shows errors in both states.
+  - Docs: `--no-access-log` in manual Voice OS commands, the USER_MANUAL heading numbers now match its table of contents, and gateway restart-loss is stated.
+  - **Deferred:** requiring explicit approval before AI-planned commands that execute workspace code (`npm run`, `cargo test`, `pytest`). That needs an approval step inside Jose's pipeline and is tracked in DEFERRED_WORK.
 **Still open and owner-dependent:**
 - Legal review of the EULA and privacy policy drafts.
 - Applying the new Supabase migration and disabling public sign-ups.

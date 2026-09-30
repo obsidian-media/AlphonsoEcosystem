@@ -6,10 +6,26 @@
 --
 -- voice_devices, voice_learner_weaknesses, atlas_workspace_members and
 -- atlas_action_challenges all reference auth.users ON DELETE CASCADE, so
--- deleting the auth row removes them. atlas_audit_receipts.actor_user_id is
--- ON DELETE RESTRICT by design (receipts are an immutable audit trail): an
--- account with Atlas receipts is refused with a clear, catchable error rather
--- than silently rewriting audit history.
+-- deleting the auth row removes them.
+--
+-- Atlas audit receipts are an audit trail and are kept, but retention must not
+-- block deletion (Apple's account-deletion guidance). Previously
+-- actor_user_id and challenge_id were ON DELETE RESTRICT, which made
+-- deleting any user with receipts fail. They now become NULL: the receipt
+-- survives, anonymized, and no longer points at the deleted account.
+
+alter table public.atlas_audit_receipts
+  alter column actor_user_id drop not null;
+
+alter table public.atlas_audit_receipts
+  drop constraint if exists atlas_audit_receipts_actor_user_id_fkey,
+  add constraint atlas_audit_receipts_actor_user_id_fkey
+    foreign key (actor_user_id) references auth.users(id) on delete set null;
+
+alter table public.atlas_audit_receipts
+  drop constraint if exists atlas_audit_receipts_challenge_id_fkey,
+  add constraint atlas_audit_receipts_challenge_id_fkey
+    foreign key (challenge_id) references public.atlas_action_challenges(id) on delete set null;
 
 create or replace function public.delete_own_account()
 returns void
@@ -25,10 +41,6 @@ begin
   end if;
 
   delete from auth.users where id = caller;
-exception
-  when foreign_key_violation then
-    raise exception 'account has retained Atlas audit receipts; contact support to delete it'
-      using errcode = 'P0001';
 end;
 $$;
 

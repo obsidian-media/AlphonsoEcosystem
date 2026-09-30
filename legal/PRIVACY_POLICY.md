@@ -35,7 +35,7 @@ Your speech is converted to text on your iPhone by Apple's speech recognition, w
 
 **Retention:** device enrollments and learning notes are kept until you delete your account. [STATE LOG RETENTION FOR AWS/NVIDIA REQUEST LOGS.]
 
-**Deleting your account:** open Voice → **Delete Cloud Voice account**. This permanently removes your account, enrolled devices and learning history.
+**Deleting your account:** open Voice → **Delete Cloud Voice account**. This permanently removes your account, enrolled devices and learning history. If you used the Atlas preview, its audit receipts are kept as an anonymized audit trail: the link to your deleted account is removed.
 
 ## 4. Mobile companion pairing
 

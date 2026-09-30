@@ -125,6 +125,10 @@ jobs:
           set -euo pipefail
           mode=$(jq -r '[.containerDefinitions[0].environment[] | select(.name=="VOICE_ACCESS_MODE") | .value][0] // "invite"' task-definition.json)
           emails=$(jq -r '[.containerDefinitions[0].environment[] | select(.name=="VOICE_ALLOWED_EMAILS") | .value][0] // ""' task-definition.json)
+          if [ "$mode" != "open" ] && [ "$mode" != "invite" ]; then
+            echo "::error::VOICE_ACCESS_MODE must be 'invite' or 'open' (got '$mode')."
+            exit 1
+          fi
           if [ "$mode" != "open" ] && [ -z "$emails" ]; then
             echo "::error::Task definition has no VOICE_ALLOWED_EMAILS and VOICE_ACCESS_MODE is not 'open'. Add invited emails (or set VOICE_ACCESS_MODE=open) to the ECS task definition before deploying."
             exit 1

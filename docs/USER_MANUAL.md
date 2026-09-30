@@ -221,7 +221,7 @@ If enabled, Jose blocks any task that would use paid external services (Telegram
 
 ---
 
-## 5. 9 Agents — Who Does What
+## 6. 9 Agents — Who Does What
 
 | Agent | Role | Triggers | Can Do | Cannot Do |
 |-------|------|----------|--------|-----------|
@@ -246,7 +246,7 @@ Wave 3: Echo (needs all)
 
 ---
 
-## 6. Boardroom Orchestrator
+## 7. Boardroom Orchestrator
 
 The Boardroom is Alphonso's **autonomous project execution system**. It breaks high-level goals into concrete tasks, assigns them to specialized agents, and executes them in iterative batches — with Maria governance reviewing each batch.
 
@@ -329,7 +329,7 @@ Each project can have its own working directory:
 
 ---
 
-## 7. Content Catalyst
+## 8. Content Catalyst
 
 Content Catalyst is Miya's **content creation studio** for social media. Start
 with a creative brief, choose the asset types you need, then review each output
@@ -371,7 +371,7 @@ Make a YouTube video script for product launch
 
 ---
 
-## 8. Connector System
+## 9. Connector System
 
 Alphonso has 13 built-in connectors, all policy-gated:
 
@@ -426,7 +426,7 @@ See [GETTING_STARTED.md](./GETTING_STARTED.md) for the full Railway deployment s
 
 ---
 
-## 9. Approval & Governance
+## 10. Approval & Governance
 
 ### When Approval Is Required
 
@@ -458,7 +458,7 @@ When approval is required, an **Approval Panel** appears **directly in the chat 
 
 ---
 
-## 10. Memory & Knowledge
+## 11. Memory & Knowledge
 
 Alphonso maintains several memory systems:
 
@@ -488,7 +488,7 @@ Alphonso maintains several memory systems:
 
 ---
 
-## 11. Operator Dashboard
+## 12. Operator Dashboard
 
 The operator dashboard shows system health and controls.
 
@@ -509,7 +509,7 @@ Toggle between **Focus** (compact) and **Full** (detailed) views. Focus mode col
 
 ---
 
-## 12. Project Execution Mode
+## 13. Project Execution Mode
 
 A structured workflow for complex projects.
 
@@ -531,7 +531,7 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 ---
 
-## 13. All Chat Commands
+## 14. All Chat Commands
 
 ### Jose Commands
 
@@ -610,7 +610,7 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 ---
 
-## 14. Keyboard Shortcuts
+## 15. Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
@@ -620,7 +620,7 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 ---
 
-## 15. License Tiers
+## 16. License Tiers
 
 **Alphonso is free at launch.** Every agent and connector is available without a license key.
 
@@ -630,7 +630,7 @@ Connecting a third-party service (Claude, ChatGPT, Runway and so on) uses your o
 
 ---
 
-## 16. Performance Features
+## 17. Performance Features
 
 Alphonso v2.0.0 includes significant performance optimizations:
 
@@ -678,7 +678,7 @@ Policy enforcement now uses:
 
 ---
 
-## 17. Troubleshooting
+## 18. Troubleshooting
 
 ### Ollama Not Connecting
 
