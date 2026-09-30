@@ -469,7 +469,7 @@ jobs:
           python3 -c "import json,sys; d=json.load(open('latest.json')); required=['version','platforms']; missing=[k for k in required if k not in d]; assert not missing, missing; assert 'windows-x86_64' in d['platforms']; assert 'darwin-aarch64' in d['platforms']; assert 'linux-x86_64' in d['platforms']; print('Manifest OK:', d['version'])"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ needs.determine-tag.outputs.tag }}
           name: Alphonso ${{ needs.determine-tag.outputs.version }}
