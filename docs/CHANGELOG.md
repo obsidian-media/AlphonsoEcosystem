@@ -39,6 +39,7 @@ The audit report itself is private (`audits/private/`, gitignored) because it co
   - macOS `minimumSystemVersion` is now 11.0 (releases are Apple Silicon only).
   - Release notes no longer link a private repository.
 - **Docs.** Fixed a long-standing Voice OS port error in the manual-start docs (8765 → 8766) and added the now-required `VOICE_OS_TOKEN`. Updated PRICING, USER_MANUAL, IOS_SETUP, TROUBLESHOOTING, GETTING_STARTED, both gateway READMEs, the Cloud Voice deploy doc, CLAUDE.md and the deferred-work register.
+- **Dependencies:** the npm audit CI gate had started failing on advisories published after `main`'s last CI run (brace-expansion, undici via jsdom, re-numbered image-size). Fixed by raising the overrides to `brace-expansion ^5.0.12`, `image-size ^2.0.4` (now patched upstream) and `undici ^7.29.1`, and bumping `vitest`/`@vitest/coverage-v8` to `^4.1.11`. `npm audit` now reports **0 vulnerabilities**, and the gate's accepted-advisory list is empty.
 - **Verification:** `tsc --noEmit` clean, ESLint clean on touched files, `cargo clippy -- -D warnings` clean, `cargo fmt --check` clean, Cloud Voice backend 71/71, gateway queue tests 8/8. The frontend vitest files and the new Rust unit tests could not run on the dev machine (0.6 GB free RAM; vitest worker-pool timeouts), so CI on the PR is their first run. No version bump.
 
 ---

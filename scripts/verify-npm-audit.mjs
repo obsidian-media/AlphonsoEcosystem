@@ -3,18 +3,13 @@
 // the explicitly accepted advisories below. Each accepted advisory must have
 // a reason and a tracking reference -- do not add one without both.
 //
-// Accepted 2026-09-05 (Hector research-synthesis PDF/PPTX export, PR TBD):
-// image-size (transitive dep of pptxgenjs) has two unpatched DoS advisories.
-// GitHub's advisory API confirms first_patched_version: null for both --
-// no fixed release exists upstream. Hector's export code
-// (src/services/hectorExportService.ts) only calls pptx.addText()/addSlide()/
-// writeFile(), never addImage(), so the vulnerable image-parsing code paths
-// (ICNS/JXL/HEIF parsers) are never reached. Tracked in
-// docs/governance/DEFERRED_WORK.md.
-const ACCEPTED_ADVISORY_IDS = new Set([
-  1138808, // GHSA-w3rx-r6r6-pgpr -- image-size ICNS parser infinite loop DoS
-  1138809 // GHSA-5p2g-fcmc-qvqq -- image-size JXL/HEIF parsers infinite loop DoS
-]);
+// History: 2026-09-05 accepted two image-size DoS advisories (transitive via
+// pptxgenjs; no upstream fix existed then). image-size 2.0.4 patched both, and
+// on 2026-09-30 the package.json override was raised to ^2.0.4 and the
+// exceptions were removed. The list is empty: any new high/critical advisory
+// fails CI until it is fixed or explicitly accepted here with a reason and a
+// tracking reference.
+const ACCEPTED_ADVISORY_IDS = new Set([]);
 
 import { execSync } from 'node:child_process';
 
