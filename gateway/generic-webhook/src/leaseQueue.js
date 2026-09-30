@@ -13,6 +13,13 @@ import { randomUUID } from 'node:crypto';
 export function createLeaseQueue({ maxSize = 500, leaseMs = 60_000 } = {}) {
   const items = [];
 
+  // Callers never see the internal lease bookkeeping field.
+  function publicView(item) {
+    const copy = { ...item };
+    delete copy.leasedUntilMs;
+    return copy;
+  }
+
   function enqueue(item) {
     if (items.length >= maxSize) items.shift();
     items.push({ deliveryId: randomUUID(), queuedAtMs: Date.now(), leasedUntilMs: 0, ...item });
@@ -21,15 +28,14 @@ export function createLeaseQueue({ maxSize = 500, leaseMs = 60_000 } = {}) {
   function drain(limit = 100, { lease = false, now = Date.now() } = {}) {
     const max = Math.max(0, Math.min(Number(limit) || 0, items.length));
     if (!lease) {
-      return items.splice(0, max).map(({ leasedUntilMs: _lease, ...rest }) => rest);
+      return items.splice(0, max).map(publicView);
     }
     const out = [];
     for (const item of items) {
       if (out.length >= max) break;
       if (item.leasedUntilMs > now) continue;
       item.leasedUntilMs = now + leaseMs;
-      const { leasedUntilMs: _lease, ...rest } = item;
-      out.push(rest);
+      out.push(publicView(item));
     }
     return out;
   }
