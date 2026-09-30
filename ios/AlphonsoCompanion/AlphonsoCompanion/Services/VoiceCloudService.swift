@@ -271,12 +271,19 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         request.setValue(supabasePublishableKey, forHTTPHeaderField: "apikey")
         request.httpBody = try JSONSerialization.data(withJSONObject: [
             "email": email,
-            "create_user": true,
+            // Invite-only launch (2026-09-30 pre-launch audit, H-1): never
+            // auto-create an account from the sign-in screen. Invited users
+            // already exist in Supabase; everyone else gets a clear error.
+            "create_user": false,
             "email_redirect_to": "alphonso://auth/callback"
         ])
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw VoiceCloudError.authFailed }
         guard (200...299).contains(http.statusCode) else {
+            if http.statusCode == 422 || http.statusCode == 400 {
+                // Supabase rejects OTP for an unknown email when create_user is false.
+                throw VoiceCloudError.server(status: http.statusCode, message: "Cloud Voice is invite-only right now. This email hasn't been invited yet.")
+            }
             throw VoiceCloudError.server(status: http.statusCode, message: Self.serverMessage(from: data))
         }
         authenticationStatus = "Check your email for the sign-in code"
@@ -320,6 +327,37 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         try Self.saveSession(session, account: sessionAccount)
         try await enrollCurrentDevice(accessToken: session.accessToken)
         authenticationStatus = "Cloud Voice account connected"
+        statusMessage = authenticationStatus
+    }
+
+    /// True when a Supabase session is stored, even if the device isn't
+    /// enrolled or the endpoint isn't configured. Account deletion must stay
+    /// reachable in those states too.
+    var hasSession: Bool {
+        Self.loadSession(account: sessionAccount) != nil
+    }
+
+    /// Permanently deletes the signed-in Supabase account and its Cloud Voice
+    /// data (devices, learner history) via the `delete_own_account` RPC, then
+    /// clears the local session. App Store Guideline 5.1.1(v).
+    func deleteAccount() async throws {
+        let accessToken = try await validAccessToken()
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/delete_own_account"), !supabasePublishableKey.isEmpty else {
+            throw VoiceCloudError.authNotConfigured
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabasePublishableKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = Data("{}".utf8)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw VoiceCloudError.authFailed }
+        guard (200...299).contains(http.statusCode) else {
+            throw VoiceCloudError.server(status: http.statusCode, message: Self.serverMessage(from: data))
+        }
+        signOut()
+        authenticationStatus = "Your Cloud Voice account was deleted"
         statusMessage = authenticationStatus
     }
 

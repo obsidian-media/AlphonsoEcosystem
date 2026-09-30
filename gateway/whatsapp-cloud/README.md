@@ -15,6 +15,14 @@ It is intentionally setup-required until it is actually hosted, verified by Meta
 - exposes a health endpoint
 - enforces a per-client webhook rate limit
 - caps inbound webhook bodies before JSON parsing
+- queues accepted messages for Alphonso to pull from `GET /queue/drain`
+  (Bearer `ALPHONSO_DRAIN_TOKEN` header only; `?token=` is refused). With
+  `&lease=1`, messages are redelivered unless acknowledged through
+  `POST /queue/ack` (`{"deliveryIds": [...]}`) within `QUEUE_LEASE_MS`
+  (default 60s), so a failed poll no longer loses messages. The queue is still
+  in memory: a restart drops anything not yet drained.
+- rate-limits by the proxy-appended (last) `X-Forwarded-For` hop, so a spoofed
+  leftmost hop can't dodge it
 
 ## Run locally
 

@@ -1,127 +1,35 @@
 # Alphonso Pricing
 
-Alphonso is free for local-first use. Upgrade to Pro or Enterprise for premium connectors, cloud fallback, and team features.
+**Alphonso is free at launch.** Every agent, connector and local feature is available to every user, with no license key and no trial clock.
+
+_Last updated: 2026-09-30. This replaces an earlier draft that described a Pro/Enterprise price list, a 14-day trial, a Lemon Squeezy checkout and a "BSL 1.1" license. None of those were ever implemented, and the license is not BSL (see [License](#license) below)._
 
 ---
 
-## Compare Plans
+## What "free" covers today
 
-| Feature | Free | Pro | Enterprise |
-|---------|------|-----|------------|
-| **Price** | $0 | $12/mo ($99/yr) | $49/mo ($499/yr) |
-| **One-Time License** | — | $199 (1yr updates) | Contact |
-| | | | |
-| **Agents** | | | |
-| All 9 specialized agents | ✓ | ✓ | ✓ |
-| Priority routing | — | ✓ | ✓ |
-| | | | |
-| **Connectors** | | | |
-| Ollama (local) | ✓ | ✓ | ✓ |
-| Brave Search | ✓ | ✓ | ✓ |
-| Telegram | ✓ | ✓ | ✓ |
-| WhatsApp Cloud | ✓ | ✓ | ✓ |
-| YouTube | ✓ | ✓ | ✓ |
-| GitHub | — | ✓ | ✓ |
-| Slack | — | ✓ | ✓ |
-| Claude API | — | ✓ | ✓ |
-| ChatGPT | — | ✓ | ✓ |
-| Notion | — | ✓ | ✓ |
-| ClickUp | — | ✓ | ✓ |
-| SD WebUI | — | ✓ | ✓ |
-| ComfyUI | — | ✓ | ✓ |
-| | | | |
-| **Execution** | | | |
-| Parallel execution | ✓ | Unlimited | Unlimited |
-| Durable queue | ✓ | ✓ | ✓ |
-| Dead-letter replay | ✓ | ✓ | ✓ |
-| Batch orchestration | ✓ | ✓ | ✓ |
-| Approval workflows | ✓ | ✓ | ✓ |
-| | | | |
-| **Cloud & Storage** | | | |
-| Local-only | ✓ | ✓ | ✓ |
-| Cloud model fallback (BYOK) | — | ✓ | ✓ |
-| SQLite memory (on-device) | ✓ | ✓ | ✓ |
-| Audit export | — | — | ✓ |
-| Compliance reports | — | — | ✓ |
-| | | | |
-| **Deployment** | | | |
-| Single desktop | ✓ | ✓ | ✓ |
-| Multi-desktop agent teams | — | — | ✓ |
-| Self-hosted cloud gateway | — | — | ✓ |
-| SLA | — | — | ✓ |
-| Priority support | — | — | ✓ |
+- All 9 agents (Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova)
+- All 26 connectors, including the ones the code classifies as "premium" (Claude, ChatGPT, YouTube, Notion, ClickUp, WhatsApp, SD WebUI, ComfyUI)
+- Local Ollama inference, memory, workflows, Boardroom, voice, and the auto-updater
 
----
+Connecting to a third-party service still means you bring your own account and API key. Any usage that provider bills is between you and them. Alphonso's Zero-Cost Mode and Approval Mode (both on by default) block paid or metered calls until you approve them.
 
-## One-Time License
+## How paid tiers would come back later
 
-For users who prefer a perpetual license over a subscription:
+The licensing code is still in the app, in `src/services/licenseService.ts`. It is inert while no vendor signing key is configured. `LICENSE_TRUST_KEY` in `src/config/licenseTrustKey.ts` is `null`, so `isPremiumGatingEnabled()` returns `false`.
 
-- **$199** — Same features as Pro
-- Includes 1 year of updates
-- After 1 year, app continues working but updates require renewal or subscription
-- Paid via [Lemon Squeezy](https://lemonsqueezy.com)
+Turning paid tiers on later needs three things:
 
----
+1. A vendor key pair (`node scripts/issue-license.mjs --generate-keys`), with the public JWK pasted into `licenseTrustKey.ts`.
+2. A purchase and license-issuance flow. None exists yet.
+3. An updated version of this page with real prices.
 
-## Feature Breakdown
+Once gating is on, approving an action does **not** bypass it. The license check is independent of Approval Mode.
 
-### All plans include:
-- 9 specialized agents with enforced role contracts
-- Policy-gated security (fail-closed on every outbound call)
-- Local Ollama inference — your data never leaves your machine
-- Durable orchestration queue with dead-letter replay
-- SQLite memory with governance metadata
-- 10 structured workflows
-- Plugin system
-- Screen intelligence
-- Voice service
-- Auto-updater
+## Cloud Voice (iOS)
 
-### Pro adds:
-- All 13 connectors (Claude, ChatGPT, GitHub, Slack, Notion, ClickUp, SD WebUI, ComfyUI)
-- Priority task routing
-- Cloud LLM fallback (BYOK — bring your own API key)
-- Unlimited parallel execution concurrency
-
-### Enterprise adds:
-- Multi-desktop agent coordination (pair 2+ desktops)
-- Audit log export (CSV, JSON)
-- Compliance reports
-- Self-hosted cloud gateway option
-- Priority support with SLA
-- Dedicated onboarding
-
----
-
-## Frequently Asked Questions
-
-**Is Alphonso really free?**
-Yes. The Free tier includes all 9 agents, 6 connectors, and full local execution — no time limits, no feature gating on core agent capabilities.
-
-**Can I use Pro features without paying?**
-No. Premium connectors (GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI) require a Pro or Enterprise license. The license tier is enforced by `licenseService.ts` — it does not gate local-only operations.
-
-**What happens to my data when I upgrade?**
-Nothing. All memory, conversations, and settings are stored locally in SQLite. Upgrading merely unlocks connector capabilities — your data stays on your machine.
-
-**Is there a trial period?**
-Pro features are available for a 14-day trial period after installation. After the trial, you must purchase a license or the connectors revert to free-tier.
-
-**Can I downgrade?**
-Yes. If you cancel your subscription, your account reverts to Free tier at the end of the billing period. Premium connectors will stop working, but your local data is unaffected.
-
-**Is the One-Time License really perpetual?**
-The app continues to function after the 1-year update window. You simply won't receive new features or security patches unless you renew or switch to a subscription.
-
-**Do you offer team/volume pricing?**
-Contact [pricing@obsidianmedia.online](mailto:pricing@obsidianmedia.online) for team discounts, educational licenses, and volume pricing.
-
-**How do I pay?**
-Payments are processed through Lemon Squeezy (credit card, PayPal). Enterprise invoices are available on request.
-
----
+The optional Cloud Voice service is **invite-only** during launch. Each account has a request rate limit and a daily quota. There is no paid plan for it yet.
 
 ## License
 
-Alphonso is licensed under **BSL 1.1** (Business Source License). Personal use is free. Commercial use of connectors beyond the Free tier requires a paid license. See [LICENSE](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/LICENSE) for details.
+The source code in this repository is published under the **SHALAUDE License v1.0** (all rights reserved, source-visible; see [LICENSE](../LICENSE)). The installable app is used under the end-user license shown in the installer ([legal/EULA.txt](../legal/EULA.txt)). Both are drafts pending legal review.

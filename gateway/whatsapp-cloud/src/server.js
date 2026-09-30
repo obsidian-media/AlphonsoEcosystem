@@ -3,6 +3,7 @@ import { normalizeInboundPayload } from './normalize.js';
 import { forwardNormalizedPacket } from './forward.js';
 import { constantTimeEqual, createRateLimiter, readBodyWithLimit, redactGatewayDetails } from './security.js';
 import { verifyChallenge, verifySignature } from './verify.js';
+import { clientKeyFromRequest, createLeaseQueue } from './leaseQueue.js';
 
 const PORT = Number(process.env.PORT || 8080);
 const VERIFY_TOKEN = String(process.env.WHATSAPP_VERIFY_TOKEN || '').trim();
@@ -27,26 +28,22 @@ const gatewayRateLimiter = createRateLimiter({
 });
 
 // In-memory message queue — stores inbound packets until Alphonso drains them.
-const messageQueue = [];
-const MAX_QUEUE_SIZE = 500;
+// Lease + ack delivery is available so a failed poll can't lose messages.
+const messageQueue = createLeaseQueue({ maxSize: 500, leaseMs: Number(process.env.QUEUE_LEASE_MS || 60_000) });
 
 function enqueue(packet) {
-  if (messageQueue.length >= MAX_QUEUE_SIZE) messageQueue.shift();
-  messageQueue.push({ ...packet, queuedAtMs: Date.now() });
+  messageQueue.enqueue(packet);
 }
 
-function drainQueue(limit = 100) {
-  return messageQueue.splice(0, Math.min(limit, messageQueue.length));
-}
-
-function isQueueAuthorized(request, url) {
+function isQueueAuthorized(request) {
   // Use dedicated ALPHONSO_DRAIN_TOKEN; fall back to VERIFY_TOKEN only if drain token not configured
   const expectedToken = DRAIN_TOKEN || VERIFY_TOKEN;
   if (!expectedToken) return false;
+  // Header only: a `?token=` query parameter ends up in proxy/access logs
+  // (pre-launch audit M-3). Both Alphonso clients already send a Bearer header.
   const auth = String(request.headers['authorization'] || '');
   const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-  const query = url.searchParams.get('token') || '';
-  return constantTimeEqual(bearer, expectedToken) || constantTimeEqual(query, expectedToken);
+  return constantTimeEqual(bearer, expectedToken);
 }
 
 function safeLog(message, details = {}) {
@@ -58,10 +55,6 @@ function sendJson(response, statusCode, payload) {
   response.end(JSON.stringify(payload));
 }
 
-function clientKeyFromRequest(request) {
-  const forwarded = String(request.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return forwarded || request.socket?.remoteAddress || 'unknown';
-}
 
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
@@ -92,12 +85,29 @@ const server = http.createServer(async (request, response) => {
 
   // Alphonso polls this endpoint to drain queued inbound messages.
   if (request.method === 'GET' && url.pathname === '/queue/drain') {
-    if (!isQueueAuthorized(request, url)) {
+    if (!isQueueAuthorized(request)) {
       return sendJson(response, 401, { ok: false, status: 'unauthorized' });
     }
     const limit = Math.min(Number(url.searchParams.get('limit') || 100), 500);
-    const messages = drainQueue(limit);
-    return sendJson(response, 200, { ok: true, messages, count: messages.length });
+    const lease = url.searchParams.get('lease') === '1';
+    const messages = messageQueue.drain(limit, { lease });
+    return sendJson(response, 200, { ok: true, messages, count: messages.length, leased: lease });
+  }
+
+  // Alphonso acknowledges leased deliveries once it has processed them.
+  if (request.method === 'POST' && url.pathname === '/queue/ack') {
+    if (!isQueueAuthorized(request)) {
+      return sendJson(response, 401, { ok: false, status: 'unauthorized' });
+    }
+    let ids = [];
+    try {
+      const body = await readBodyWithLimit(request, { maxBytes: 64 * 1024 });
+      ids = JSON.parse(body.toString('utf8') || '{}')?.deliveryIds || [];
+    } catch {
+      return sendJson(response, 400, { ok: false, status: 'failed', reason: 'invalid_json' });
+    }
+    const removed = messageQueue.ack(ids);
+    return sendJson(response, 200, { ok: true, acked: removed, queueLength: messageQueue.size() });
   }
 
   if (request.method === 'POST' && url.pathname === '/webhook') {
@@ -153,11 +163,11 @@ const server = http.createServer(async (request, response) => {
     }
 
     const accepted = results.length > 0 && results.some((result) => result.ok);
-    safeLog('Inbound normalized', { messages: messages.length, accepted, queueLength: messageQueue.length });
+    safeLog('Inbound normalized', { messages: messages.length, accepted, queueLength: messageQueue.size() });
     return sendJson(response, accepted ? 200 : 202, {
       ok: accepted,
       normalizedCount: messages.length,
-      queueLength: messageQueue.length,
+      queueLength: messageQueue.size(),
       results: results.map((result) => ({
         ok: result.ok,
         status: result.status,

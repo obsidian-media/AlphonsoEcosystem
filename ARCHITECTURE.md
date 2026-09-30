@@ -120,7 +120,7 @@ Tauri integration: `src-tauri/src/voice_sidecar.rs` manages a `Child` process vi
 
 ### Policy & Approval (fail-closed)
 - `policyEnforcementService.ts` — centralized policy gate: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks, license tier validation
-- `licenseService.ts` — license tier system (Free/Pro/Enterprise) with premium connector gates
+- `licenseService.ts` — license tier system (Free/Pro/Enterprise) with premium connector gates. Inert at launch (2026-09-30) until a vendor signing key is configured (`isPremiumGatingEnabled()`)
 - `connectorRegistryService.js` — all **26 connector** send paths run through policy gate before any external call
 
 ### Performance & Execution
@@ -189,7 +189,9 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 
 - **CSP** — enforced via `tauri.conf.json` `security.csp` with a production policy string
 - **policyEnforcementService.ts** — centralized fail-closed gate for all connector sends; blocks with an explicit blocked result object when uncertain or unauthorized
-- **licenseService.ts** — license tier validation (Free/Pro/Enterprise) gates premium connectors
+- **licenseService.ts** — license tier validation (Free/Pro/Enterprise) for premium connectors. Dormant while `LICENSE_TRUST_KEY` is `null` (launching free), and an approval never bypasses it once enabled
+- **Command policy (`policy_gate.rs`)** — every program allowed through `execute_command_verified` has an explicit, fail-closed argument rule (no inline interpreter code, no arbitrary `npx` packages, no git exec/write flags). It is the real boundary for AI-planned commands
+- **Mobile companion server** — PIN-authenticated WebSocket on port 8765. Opt-in since 2026-09-30: it only listens after the user enables mobile pairing
 - **Zero-cost mode** — blocks paid connectors (Claude API, OpenAI, YouTube, etc.) by default unless explicitly overridden
 - **Approval gates** — risky actions (external sends, uploads, publishes) require explicit user confirmation in the `ApprovalModal` UI before execution proceeds
 - **Connector allowlists** — `TELEGRAM_ALLOWED_CHAT_IDS` (`telegramCompanionService.js`) and `WHATSAPP_ALLOWED_NUMBERS` (`whatsappCompanionService.ts`, added 2026-07-10) gate first-time owner pairing before any command executes. Enforced in the JS companion service layer, not the Rust command layer — corrected 2026-07-10, this line previously overstated where the check lives
@@ -211,7 +213,7 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 
 ## Known Technical Debt
 
-- `src-tauri/src/lib.rs` is **~808 lines** with **119 `#[tauri::command]` functions** across **38 modules in src-tauri/src/** (incl. `companion_server.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_types.rs`, `voice_sidecar.rs`, `os_keychain_store.rs`, and the modules listed below). Module list: `audit_log.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_server.rs`, `companion_types.rs`, `connector_commands.rs`, `kv_store.rs`, `main.rs`, `memory_graph.rs`, `memory_store.rs`, `meta_publish.rs`, `native_proof.rs`, `ollama.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `runway.rs`, `runtime_manager.rs`, `search.rs`, `os_keychain_store.rs`, `telegram.rs`, `utils.rs`, `voice_sidecar.rs`, `whatsapp_webhook.rs`, `workspace.rs`, `youtube.rs`, and `lib.rs` itself. `memory_graph.rs` (added 2026-09-04) implements the memory knowledge graph — `memory_nodes`/`memory_edges` SQLite tables, one-hop and cycle-safe multi-hop traversal via `WITH RECURSIVE`, and automated structural edge inference (`memory_graph_infer_edges`).
+- `src-tauri/src/lib.rs` is **~809 lines** with **121 `#[tauri::command]` functions** across **38 modules in src-tauri/src/** (incl. `companion_server.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_types.rs`, `voice_sidecar.rs`, `os_keychain_store.rs`, and the modules listed below). Module list: `audit_log.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_server.rs`, `companion_types.rs`, `connector_commands.rs`, `kv_store.rs`, `main.rs`, `memory_graph.rs`, `memory_store.rs`, `meta_publish.rs`, `native_proof.rs`, `ollama.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `runway.rs`, `runtime_manager.rs`, `search.rs`, `os_keychain_store.rs`, `telegram.rs`, `utils.rs`, `voice_sidecar.rs`, `whatsapp_webhook.rs`, `workspace.rs`, `youtube.rs`, and `lib.rs` itself. `memory_graph.rs` (added 2026-09-04) implements the memory knowledge graph — `memory_nodes`/`memory_edges` SQLite tables, one-hop and cycle-safe multi-hop traversal via `WITH RECURSIVE`, and automated structural edge inference (`memory_graph_infer_edges`).
 - Frontend uses `.tsx` for new UI work, with legacy production `.jsx` contexts and Content Catalyst files still present. The service layer remains mixed JavaScript/TypeScript; current exact counts are verified by `npm run verify:docs`.
 - Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.

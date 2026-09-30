@@ -3,11 +3,12 @@ use crate::companion_router::route;
 use crate::companion_types::{ClientState, CompanionConfig, JsonRpcRequest};
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::net::TcpListener;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{broadcast, watch, Mutex};
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 use uuid::Uuid;
@@ -30,6 +31,16 @@ pub struct CompanionServer {
   /// the same IP so a script cannot bypass the per-connection budget by opening
   /// many parallel connections.
   ip_failures: IpFailureMap,
+  /// True while the listener is bound. The server is opt-in (2026-09-30
+  /// pre-launch audit, H-3): it only listens on the LAN after the user turns
+  /// on mobile pairing, instead of on every launch.
+  running: Arc<AtomicBool>,
+  /// Persistent stop signal (`true` = stop). Unlike a one-shot notify it can't
+  /// be missed by a listener or connection that isn't waiting yet: every
+  /// receiver sees the latest value.
+  stop_tx: watch::Sender<bool>,
+  /// Serializes enable/disable so a quick off→on can't race the old listener.
+  toggle_lock: Mutex<()>,
 }
 
 #[allow(dead_code)]
@@ -40,6 +51,9 @@ impl CompanionServer {
       pin_manager: Arc::new(PinManager::new(config.pin_ttl_secs)),
       clients: Arc::new(Mutex::new(HashMap::new())),
       ip_failures: Arc::new(Mutex::new(HashMap::new())),
+      running: Arc::new(AtomicBool::new(false)),
+      stop_tx: watch::channel(false).0,
+      toggle_lock: Mutex::new(()),
       event_tx,
       config,
     };
@@ -79,11 +93,23 @@ impl CompanionServer {
       });
     }
 
+    let mut stop_rx = self.stop_tx.subscribe();
     loop {
-      let (stream, peer_addr) = listener.accept().await?;
+      if *stop_rx.borrow() {
+        log::info!("Companion server stopped (mobile pairing disabled)");
+        return Ok(());
+      }
+      let accepted = tokio::select! {
+        accepted = listener.accept() => Some(accepted?),
+        _ = stop_rx.changed() => None,
+      };
+      let Some((stream, peer_addr)) = accepted else {
+        continue;
+      };
       let clients = Arc::clone(&self.clients);
       let pin_manager = Arc::clone(&self.pin_manager);
       let event_rx = self.event_tx.subscribe();
+      let conn_stop_rx = self.stop_tx.subscribe();
       let app = app_handle.clone();
 
       let ip_failures = Arc::clone(&self.ip_failures);
@@ -125,6 +151,7 @@ impl CompanionServer {
           Arc::clone(&pin_manager),
           Arc::clone(&ip_failures),
           event_rx,
+          conn_stop_rx,
           app,
           max_pin_attempts,
         )
@@ -140,6 +167,53 @@ impl CompanionServer {
   }
 }
 
+const COMPANION_ENABLED_FILE: &str = "companion_enabled.json";
+
+fn companion_enabled_path(app: &AppHandle) -> Option<std::path::PathBuf> {
+  app
+    .path()
+    .app_config_dir()
+    .ok()
+    .map(|dir| dir.join(COMPANION_ENABLED_FILE))
+}
+
+/// Whether the user has turned on mobile pairing. Defaults to `false`: a fresh
+/// install never listens on the network until the user opts in.
+pub fn companion_enabled_pref(app: &AppHandle) -> bool {
+  companion_enabled_path(app)
+    .and_then(|path| std::fs::read_to_string(path).ok())
+    .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+    .and_then(|value| value.get("enabled").and_then(|v| v.as_bool()))
+    .unwrap_or(false)
+}
+
+fn save_companion_enabled_pref(app: &AppHandle, enabled: bool) -> Result<(), String> {
+  let path = companion_enabled_path(app).ok_or("App config directory unavailable")?;
+  if let Some(parent) = path.parent() {
+    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+  }
+  std::fs::write(&path, serde_json::json!({ "enabled": enabled }).to_string())
+    .map_err(|e| e.to_string())
+}
+
+/// Start the listener if it isn't already running. Safe to call repeatedly.
+pub fn start_companion_server(server: Arc<CompanionServer>, app: AppHandle) {
+  server.stop_tx.send_replace(false);
+  if server
+    .running
+    .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+    .is_err()
+  {
+    return;
+  }
+  tauri::async_runtime::spawn(async move {
+    if let Err(e) = server.run(app).await {
+      log::error!("Companion server error: {}", e);
+    }
+    server.running.store(false, Ordering::SeqCst);
+  });
+}
+
 // Internal per-connection handler; the parameters are all distinct pieces of
 // connection state (socket, identity, shared registries, config) that don't
 // naturally group into a struct worth introducing here.
@@ -152,6 +226,7 @@ async fn handle_connection(
   pin_manager: Arc<PinManager>,
   ip_failures: IpFailureMap,
   mut event_rx: broadcast::Receiver<String>,
+  mut stop_rx: watch::Receiver<bool>,
   app: AppHandle,
   max_pin_attempts: u8,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -159,7 +234,14 @@ async fn handle_connection(
   let (mut ws_tx, mut ws_rx) = ws.split();
 
   loop {
+    // Turning mobile pairing off closes every open socket, including idle
+    // paired phones that would otherwise stay connected.
+    if *stop_rx.borrow() {
+      let _ = ws_tx.send(Message::Close(None)).await;
+      break;
+    }
     tokio::select! {
+        _ = stop_rx.changed() => {}
         msg = ws_rx.next() => {
             match msg {
                 Some(Ok(Message::Text(text))) => {
@@ -317,10 +399,48 @@ pub async fn companion_get_status(
     .filter(|s| matches!(s, ClientState::Authenticated { .. }))
     .count();
   Ok(serde_json::json!({
-      "running": true,
+      "running": state.running.load(Ordering::SeqCst),
       "port": state.config.port,
       "connected_clients": connected,
   }))
+}
+
+/// Turn mobile pairing on or off. Persists the choice so the listener only
+/// comes back at launch when the user left it enabled. Disabling stops
+/// accepting new connections immediately and drops already-paired sessions.
+#[tauri::command]
+pub async fn companion_set_enabled(
+  enabled: bool,
+  app: AppHandle,
+  state: tauri::State<'_, Arc<CompanionServer>>,
+) -> Result<serde_json::Value, String> {
+  let server = Arc::clone(state.inner());
+  let _guard = server.toggle_lock.lock().await;
+  save_companion_enabled_pref(&app, enabled)?;
+  if enabled {
+    start_companion_server(Arc::clone(&server), app);
+  } else {
+    server.stop_tx.send_replace(true);
+    server.pin_manager.invalidate().await;
+    server.clients.lock().await.clear();
+    // Wait (bounded) for the listener to release the port before reporting
+    // success, so an immediate re-enable starts a fresh listener.
+    for _ in 0..100 {
+      if !server.running.load(Ordering::SeqCst) {
+        break;
+      }
+      tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+  }
+  Ok(serde_json::json!({
+    "enabled": enabled,
+    "running": server.running.load(Ordering::SeqCst),
+  }))
+}
+
+#[tauri::command]
+pub fn companion_get_enabled(app: AppHandle) -> bool {
+  companion_enabled_pref(&app)
 }
 
 #[tauri::command]

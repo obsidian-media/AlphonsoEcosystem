@@ -315,11 +315,15 @@ export async function verifyCommandExecution(program: string, args: string[], cw
   const startedAt = timestampMs();
 
   try {
-    const payload = await invoke('execute_command_verified', {
+    const raw = await invoke('execute_command_verified', {
       program,
       args,
       cwd
-    }) as { success?: boolean };
+    }) as { success?: boolean; exit_code?: number | null; exitCode?: number | null };
+    // The Rust CommandProof serializes `exit_code` (snake_case); every caller
+    // reads `payload.exitCode`. Normalize once here so exit codes stop being
+    // silently `undefined` (pre-launch audit M-1).
+    const payload = { ...raw, exitCode: raw?.exitCode ?? raw?.exit_code ?? null };
     return appendVerificationLog({
       type: 'command_execution',
       source: 'tauri-command',

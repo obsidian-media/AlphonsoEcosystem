@@ -17,6 +17,35 @@ interface PollResult {
 
 let _pollInterval: ReturnType<typeof setInterval> | null = null;
 
+
+// Lease + ack delivery (pre-launch audit M-3): drain with `lease=1` so the
+// gateway only forgets a message after we confirm receipt; if the response is
+// lost in transit, the lease expires and the gateway redelivers. Recently seen
+// deliveryIds are skipped so a failed ack can't produce duplicates. Older
+// gateways ignore `lease` and return no deliveryIds -- nothing to ack then.
+const RECENT_DELIVERY_LIMIT = 500;
+const recentDeliveryIdsGw: string[] = [];
+
+function isDuplicateDeliveryGw(deliveryId: unknown): boolean {
+  if (typeof deliveryId !== 'string' || !deliveryId) return false;
+  if (recentDeliveryIdsGw.includes(deliveryId)) return true;
+  recentDeliveryIdsGw.push(deliveryId);
+  if (recentDeliveryIdsGw.length > RECENT_DELIVERY_LIMIT) recentDeliveryIdsGw.shift();
+  return false;
+}
+
+async function ackGatewayDeliveriesGw(drainUrl: string, headers: Record<string, string>, deliveryIds: string[]): Promise<void> {
+  if (deliveryIds.length === 0) return;
+  try {
+    const ackUrl = new URL(drainUrl);
+    ackUrl.pathname = ackUrl.pathname.replace(/\/queue\/drain\/?$/, '/queue/ack');
+    ackUrl.search = '';
+    await fetch(ackUrl.toString(), { method: 'POST', headers, body: JSON.stringify({ deliveryIds }) });
+  } catch {
+    // Unacked deliveries are redelivered after the lease and de-duplicated above.
+  }
+}
+
 export async function pollGenericWebhookGateway({ limit = 50 } = {}): Promise<PollResult> {
   const drainUrl = getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_DRAIN_URL');
   const token = getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_TOKEN');
@@ -27,6 +56,7 @@ export async function pollGenericWebhookGateway({ limit = 50 } = {}): Promise<Po
 
   const url = new URL(drainUrl);
   url.searchParams.set('limit', String(limit));
+  url.searchParams.set('lease', '1');
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -37,7 +67,12 @@ export async function pollGenericWebhookGateway({ limit = 50 } = {}): Promise<Po
   }
 
   const data = await response.json().catch(() => ({}));
-  const events: WebhookEvent[] = Array.isArray(data?.events) ? data.events : [];
+  const drained: WebhookEvent[] = Array.isArray(data?.events) ? data.events : [];
+  const deliveryIds = drained
+    .map((event) => (event as { deliveryId?: unknown })?.deliveryId)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  const events = drained.filter((event) => !isDuplicateDeliveryGw((event as { deliveryId?: unknown })?.deliveryId));
+  await ackGatewayDeliveriesGw(drainUrl, headers, deliveryIds);
 
   for (const event of events) {
     appendOrchestrationReceipt({

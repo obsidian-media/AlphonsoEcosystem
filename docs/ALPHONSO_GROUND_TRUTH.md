@@ -1,5 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-09-09 — **v2.8.0 tagged and released.** See §11.27 for the actual release cut (PR #238 merged into `main` as `f3cdb03`, version bumped across all 4 locations, tag `v2.8.0` pushed to trigger `release.yml`'s real signed Windows/Linux builds) and §11.26 for the branch work that shipped in it (Dependency Bundling Plan O2, full WCAG sweep, first real live `npm run tauri dev` verification pass). `main` also carries the UI/UX redesign (PR #237) and Smart Installer (PR #233) from just before this. §11.1 onward below (dated 2026-09-07 and earlier) describes CALL-E and prior work and is still accurate as history, just no longer the most recent entry.
+**Last verified:** 2026-09-30 — pre-launch all-angle audit and fix pass on branch `fix/prelaunch-audit-2026-09-30` (see §11.28). Version is still 2.8.0; nothing has been released since. Work between 2026-09-09 and 2026-09-21 (SSRF redirect fix, ChatView hydration race, Hermes loopback check, Cloud Voice model pin, macOS boot-crash build target, Runway gate, fan-out budget) is recorded in `CLAUDE.md`'s dated entries and `docs/CHANGELOG.md`.
+
+**Last verified before that:** 2026-09-09 — **v2.8.0 tagged and released.** See §11.27 for the actual release cut (PR #238 merged into `main` as `f3cdb03`, version bumped across all 4 locations, tag `v2.8.0` pushed to trigger `release.yml`'s real signed Windows/Linux builds) and §11.26 for the branch work that shipped in it (Dependency Bundling Plan O2, full WCAG sweep, first real live `npm run tauri dev` verification pass). `main` also carries the UI/UX redesign (PR #237) and Smart Installer (PR #233) from just before this. §11.1 onward below (dated 2026-09-07 and earlier) describes CALL-E and prior work and is still accurate as history, just no longer the most recent entry.
 
 **Last verified before that:** 2026-09-07 — v2.7.1 (unchanged — no release cut), PR #230 merged (`095f7c4`),
 CALL-E outreach connector (Phase 1 REST + Phase 2 conversational MCP). Two sessions: build,
@@ -894,7 +896,7 @@ Before writing any new service or feature, verify it does not already exist:
 - **Playwright config** → `playwright.config.js` at project root; tests in `e2e/`. Do not create another E2E config.
 - **`.npmrc`** — `legacy-peer-deps=true` already set at project root. Do not remove.
 - **Companion WebSocket server** → Phase 1 implemented in `src-tauri/src/companion_*.rs` (5 Rust modules: `companion_types`, `companion_auth`, `companion_discovery`, `companion_router`, `companion_server`). Provides PIN auth, JSON-RPC routing, and mDNS discovery. Do not recreate.
-- **CompanionPairingPanel** → `src/components/CompanionPairingPanel.jsx` — Remote Access PIN display, copy-to-clipboard, QR code, connected clients count, Start Discovery button for mDNS. Integrated in SettingsView. Do NOT create another pairing UI.
+- **CompanionPairingPanel** → `src/components/CompanionPairingPanel.tsx` — mobile-pairing Enable/Turn off control (the LAN server is opt-in and off by default as of 2026-09-30), Remote Access PIN display, copy-to-clipboard, QR code, connected clients count, Start Discovery button for mDNS. Integrated in SettingsView. Do NOT create another pairing UI.
 - **NotificationCenter** → `src/components/NotificationCenter.jsx` — fixed top-right panel, max 5 visible, colored left borders by type (emerald/amber/red/zinc), relative timestamps, dismiss X, "Clear all". Do NOT create another notification system.
 - **AgentStatusStrip** → `src/components/AgentStatusStrip.jsx` — horizontal flex strip of agent badges with pulsing emerald dot for running agents, compact mode, returns null when empty. Do NOT duplicate.
 - **UpdaterNotification** → `src/components/UpdaterNotification.jsx` — amber fixed banner, "Update & Restart" + "Later" buttons, wired into App.jsx via `updaterVersion` state. Do NOT recreate updater UI.
@@ -2228,4 +2230,60 @@ User's explicit reasoning for cutting a real release rather than continuing to t
 6. **Tag `v2.8.0` pushed against the resulting `main` commit**, triggering `release.yml`'s real signed Windows/Linux build-and-publish pipeline.
 
 **Not yet confirmed at the time of this entry:** whether the real build succeeds, whether the published installers actually contain the bundled `vendor/starter-model`/`vendor/ollama` content, and — the actual point of this whole release — whether a fresh install genuinely works fully offline using only bundled content, exercising the O2 `runtime_load_bundled_starter_model` code path for the first time ever outside a hand-verification of its underlying technique. Update this entry (or add a new one) once the release build completes and the user has installed and tested it.
+
+## 11.28 Pre-launch all-angle audit + fix pass (2026-09-30)
+
+Private audit: `audits/private/2026-09-30_Claude_PreLaunchAllAngle_Audit.md`. Its verdict was **not launch-ready**: six launch blockers and four high-severity issues. Fixes landed on branch `fix/prelaunch-audit-2026-09-30`:
+
+- **Windows desktop CI was red on every `main` push since 2026-09-16.** `ci.yml` still bundled the ~1.9GB starter model into the Windows NSIS build, which overran makensis's ~2GB mmap ceiling. `release.yml` already skipped the model on Windows and macOS, so shipped releases were never affected; `ci.yml` now matches it.
+- **Launching free.** Premium connector gating is inert while `LICENSE_TRUST_KEY` is `null` (`isPremiumGatingEnabled()`), and approving an action no longer bypasses the license check. `docs/PRICING.md` was rewritten: it had described prices, a 14-day trial, a Lemon Squeezy checkout and a "BSL 1.1" license, none of which existed.
+- **Cloud Voice hardening.**
+  - Invite-only access (`VOICE_ACCESS_MODE`, `VOICE_ALLOWED_EMAILS`).
+  - Per-user burst and daily quotas (`voice/cloud-backend/app/quota.py`) on the NVIDIA-billed endpoints.
+  - The Tutor lesson-context cache is keyed per user, so one user can no longer read another's learner history by reusing a session id.
+  - iOS no longer auto-creates accounts (`create_user: false`).
+  - The deploy workflow now runs the backend tests first and refuses a task definition without an access policy.
+  - A new `Cloud Voice & Gateway Tests` CI job runs tests that had never run in CI.
+- **App Store readiness.** In-app account deletion (`delete_own_account` Supabase function + a confirm dialog on the iOS Voice screen) and `PrivacyInfo.xcprivacy`.
+- **The mobile-companion LAN server is opt-in.** It is off by default, with an Enable/Turn off control in Settings → Remote Access, persisted in `companion_enabled.json`. Turning it off stops the listener and drops paired sessions.
+- **Command-execution policy.**
+  - `policy_gate.rs` now fails closed per program. `node -e`, `python -c`, `npx <pkg>`, `npm publish`, git `--upload-pack`/`-c`/`ext::`, and curl/wget/docker/URL openers are refused. AI-planned commands in Jose's code-generation path reach this check, so it is the real boundary.
+  - Removed the unused, ungated `executeWithTools` loop.
+  - Project context is read through `read_workspace_file` instead of `node -e`.
+- **Silently broken features fixed.**
+  - `verifyCommandExecution` now maps Rust's `exit_code` to the `exitCode` every caller read. It had always been `undefined`.
+  - git `add`, `commit` and `revert` are allowed, so agent auto-commit and `gitService` revert work for the first time.
+  - Hector now honors the configured Ollama endpoint.
+- **Smaller fixes.**
+  - `save_image_to_folder` rejects absolute filenames.
+  - The gateways use lease + ack drain (a failed poll no longer loses messages), accept the drain token only in a header, and rate-limit on the proxy-appended `X-Forwarded-For` hop.
+  - A new `policyYamlSync.test.js` fails if `policy.yaml` and the embedded DSL rules drift.
+- **Legal and release.**
+  - NOTICE credits Ollama and Llama 3.2 ("Built with Llama"), and `fetch-starter-model.mjs` ships the model's own license layers as `MODEL_LICENSE.txt`.
+  - Installers show `legal/EULA.txt`. Drafts were added for `legal/EULA.txt` and `legal/PRIVACY_POLICY.md`; both have placeholders that need legal review.
+  - macOS `minimumSystemVersion` is now 11.0 (releases are Apple Silicon only).
+  - Release notes no longer link a private repository.
+- **Docs.** Fixed a long-standing Voice OS port error in the manual-start docs (8765 → 8766) and added the now-required `VOICE_OS_TOKEN`. Updated PRICING, USER_MANUAL, IOS_SETUP, TROUBLESHOOTING, GETTING_STARTED, both gateway READMEs, the Cloud Voice deploy doc, CLAUDE.md and the deferred-work register.
+
+- **CodeRabbit review round (PR #269), same day:**
+  - Companion "Turn off" now uses a persistent watch signal. It can't be missed by a listener that isn't waiting yet, it closes every open socket (including idle paired phones), and it waits for the listener to stop before returning.
+  - The git policy also rejects abbreviated long options (`--upl=`) and attached or bundled short `-u`/`-c` options.
+  - pip rejects URL/VCS requirements and `--find-links`/`-f`.
+  - ffmpeg is limited to `-version` through the command runner.
+  - Account deletion no longer fails for users with Atlas audit receipts: receipt `actor_user_id`/`challenge_id` became `ON DELETE SET NULL`, so receipts survive anonymized.
+  - An invalid `VOICE_ACCESS_MODE` now marks Cloud Voice not-ready instead of silently meaning invite-only, and the deploy guard rejects it.
+  - iOS keeps auth state intact when a deletion fails and shows the delete option whenever a session exists.
+  - The privacy manifest no longer declares audio collection (only text leaves the app).
+  - The companion toggle shows errors in both states.
+  - Docs: `--no-access-log` in manual Voice OS commands, the USER_MANUAL heading numbers now match its table of contents, and gateway restart-loss is stated.
+  - **Deferred:** requiring explicit approval before AI-planned commands that execute workspace code (`npm run`, `cargo test`, `pytest`). That needs an approval step inside Jose's pipeline and is tracked in DEFERRED_WORK.
+**Still open and owner-dependent:**
+- Legal review of the EULA and privacy policy drafts.
+- Applying the new Supabase migration and disabling public sign-ups.
+- Setting `VOICE_ALLOWED_EMAILS` on the ECS task definition.
+- Restoring Cloud Voice infrastructure. On 2026-09-30 the load balancer behind `voice.obsidianmedia.online` did not resolve, and the iOS app's Supabase project was paused.
+- Windows and Apple code signing.
+- Intel macOS builds.
+- Crash-reporting provider.
+- Making the Windows desktop CI job a required check.
 

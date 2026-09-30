@@ -17,6 +17,8 @@ export function CompanionPairingPanel() {
   const [copied, setCopied] = useState(false);
   const [discoveryStarted, setDiscoveryStarted] = useState(false);
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+  const [toggling, setToggling] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
   const refreshStatus = async () => {
     try {
@@ -50,6 +52,26 @@ export function CompanionPairingPanel() {
     }
   };
 
+  // Mobile pairing is opt-in: the LAN listener only runs while this is on
+  // (pre-launch audit H-3). Turning it off also drops paired sessions.
+  const setPairingEnabled = async (enabled: boolean) => {
+    setToggling(true);
+    setToggleError(null);
+    try {
+      await invoke('companion_set_enabled', { enabled });
+      if (!enabled) {
+        setPin('');
+        setDiscoveryStarted(false);
+      }
+      // The listener binds asynchronously; give it a moment before re-reading.
+      setTimeout(refreshStatus, 400);
+    } catch (err) {
+      setToggleError(String((err as Error)?.message || err || 'Could not change mobile pairing.'));
+    } finally {
+      setToggling(false);
+    }
+  };
+
   const copyPin = async () => {
     if (!pin) return;
     await navigator.clipboard.writeText(pin);
@@ -66,17 +88,52 @@ export function CompanionPairingPanel() {
 
   if (!status?.running) {
     return (
-      <div className="p-4 bg-[var(--surface-2)] rounded-2xl">
-        <div className="flex items-center gap-2 text-[var(--text-3)]">
-          <Shield className="w-4 h-4" />
-          <span className="text-xs">Companion server not running</span>
+      <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2 text-[var(--text-3)]">
+            <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+            <div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Mobile pairing is off</div>
+              <div className="text-xs mt-0.5">
+                Turn it on to let the iOS companion connect over your local network. It stays off until you enable it.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setPairingEnabled(true)}
+            disabled={toggling || status === null}
+            className="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] text-[var(--accent-contrast)] disabled:text-[var(--text-3)] text-xs font-medium transition-colors"
+          >
+            <Wifi className="w-3.5 h-3.5" />
+            {toggling ? 'Starting...' : 'Enable mobile pairing'}
+          </button>
         </div>
+        {toggleError && (
+          <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] border border-[var(--error-border)] rounded-lg px-3 py-2">
+            {toggleError}
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between p-3 bg-[var(--surface-2)] rounded-2xl">
+        <span className="text-xs text-[var(--text-2)]">Mobile pairing is on and listening on your local network.</span>
+        <button
+          onClick={() => setPairingEnabled(false)}
+          disabled={toggling}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-medium transition-colors disabled:opacity-50"
+        >
+          {toggling ? 'Stopping...' : 'Turn off'}
+        </button>
+      </div>
+      {toggleError && (
+        <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] border border-[var(--error-border)] rounded-lg px-3 py-2">
+          {toggleError}
+        </div>
+      )}
       <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
         <div className="flex items-center justify-between">
           <div>

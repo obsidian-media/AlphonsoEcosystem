@@ -228,12 +228,16 @@ export function evaluatePolicyGate({
     };
   }
 
-  if (!canUseConnector(id) && !approved) {
+  // No `&& !approved` escape hatch: approving an action is a safety
+  // confirmation, not a license. (Pre-launch audit P0-3 -- the old bypass made
+  // the paywall a confirmation dialog.) Gating is inert until a vendor license
+  // key is configured -- see licenseService.isPremiumGatingEnabled().
+  if (!canUseConnector(id)) {
     return {
       ok: false,
       blocked: true,
       setupRequired: false,
-      reason: `Connector '${id}' requires a Pro license. Upgrade at alphonso.dev/pro`,
+      reason: `Connector '${id}' requires a Pro license. Activate one in Settings.`,
       riskLevel,
       confidence: TRUST_STATES.VERIFIED,
       verificationState: TRUST_STATES.PENDING

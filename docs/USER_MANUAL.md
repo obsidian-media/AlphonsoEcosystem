@@ -221,7 +221,7 @@ If enabled, Jose blocks any task that would use paid external services (Telegram
 
 ---
 
-## 5. 9 Agents — Who Does What
+## 6. 9 Agents — Who Does What
 
 | Agent | Role | Triggers | Can Do | Cannot Do |
 |-------|------|----------|--------|-----------|
@@ -246,7 +246,7 @@ Wave 3: Echo (needs all)
 
 ---
 
-## 6. Boardroom Orchestrator
+## 7. Boardroom Orchestrator
 
 The Boardroom is Alphonso's **autonomous project execution system**. It breaks high-level goals into concrete tasks, assigns them to specialized agents, and executes them in iterative batches — with Maria governance reviewing each batch.
 
@@ -329,7 +329,7 @@ Each project can have its own working directory:
 
 ---
 
-## 7. Content Catalyst
+## 8. Content Catalyst
 
 Content Catalyst is Miya's **content creation studio** for social media. Start
 with a creative brief, choose the asset types you need, then review each output
@@ -371,7 +371,7 @@ Make a YouTube video script for product launch
 
 ---
 
-## 8. Connector System
+## 9. Connector System
 
 Alphonso has 13 built-in connectors, all policy-gated:
 
@@ -380,16 +380,16 @@ Alphonso has 13 built-in connectors, all policy-gated:
 | Telegram | Messaging | Free (self-hosted bot) | Free |
 | WhatsApp | Messaging | Free (Meta Cloud API + Railway gateway) | Free |
 | Brave Search | Search | Free | Free |
-| YouTube | Publishing | Free | Pro |
-| Claude | LLM | Paid | Pro |
-| ChatGPT | LLM | Paid | Pro |
-| GitHub | Development | Free tier | Pro |
-| Slack | Communication | Free tier | Pro |
-| Notion | Workspace | Free tier | Pro |
-| ClickUp | Project Mgmt | Free tier | Pro |
-| SD WebUI | Image Gen | Free (local) | Pro |
-| ComfyUI | Image Gen | Free (local) | Pro |
-| Runway | Video Gen | Paid | Pro |
+| YouTube | Publishing | Free | Free |
+| Claude | LLM | Paid | Free |
+| ChatGPT | LLM | Paid | Free |
+| GitHub | Development | Free tier | Free |
+| Slack | Communication | Free tier | Free |
+| Notion | Workspace | Free tier | Free |
+| ClickUp | Project Mgmt | Free tier | Free |
+| SD WebUI | Image Gen | Free (local) | Free |
+| ComfyUI | Image Gen | Free (local) | Free |
+| Runway | Video Gen | Paid | Free |
 | Ollama | LLM | Free (local) | Free |
 
 ### WhatsApp Cloud Setup
@@ -426,7 +426,7 @@ See [GETTING_STARTED.md](./GETTING_STARTED.md) for the full Railway deployment s
 
 ---
 
-## 9. Approval & Governance
+## 10. Approval & Governance
 
 ### When Approval Is Required
 
@@ -458,7 +458,7 @@ When approval is required, an **Approval Panel** appears **directly in the chat 
 
 ---
 
-## 10. Memory & Knowledge
+## 11. Memory & Knowledge
 
 Alphonso maintains several memory systems:
 
@@ -488,7 +488,7 @@ Alphonso maintains several memory systems:
 
 ---
 
-## 11. Operator Dashboard
+## 12. Operator Dashboard
 
 The operator dashboard shows system health and controls.
 
@@ -509,7 +509,7 @@ Toggle between **Focus** (compact) and **Full** (detailed) views. Focus mode col
 
 ---
 
-## 12. Project Execution Mode
+## 13. Project Execution Mode
 
 A structured workflow for complex projects.
 
@@ -531,7 +531,7 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 ---
 
-## 13. All Chat Commands
+## 14. All Chat Commands
 
 ### Jose Commands
 
@@ -610,7 +610,7 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 ---
 
-## 14. Keyboard Shortcuts
+## 15. Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
@@ -620,65 +620,17 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 ---
 
-## 15. License Tiers
+## 16. License Tiers
 
-Alphonso offers three license tiers to match different needs:
+**Alphonso is free at launch.** Every agent and connector is available without a license key.
 
-### Free Tier
+The licensing system still ships in the app (`licenseService.ts`), but it stays inactive until a vendor signing key is configured. There is currently nothing to buy and no key to enter. When paid tiers are introduced, this section and [docs/PRICING.md](PRICING.md) will describe them. Approving an action will never stand in for a license.
 
-**Included features:**
-- All 9 agents (Jose, Hector, Miya, Alphonso, Maria, Marcus, Echo, Sentinel, Nova)
-- Ollama local LLM integration
-- Telegram and WhatsApp connectors
-- Brave Search connector
-- Local memory and knowledge base
-- Boardroom orchestrator
-- Content Catalyst
-- Community support
-
-**Limitations:**
-- No cloud LLM connectors (Claude, ChatGPT)
-- No premium connectors (GitHub, Slack, Notion, ClickUp)
-- No image/video generation connectors
-
-### Pro Tier ($19/month)
-
-**Everything in Free, plus:**
-- Claude API connector
-- ChatGPT API connector
-- GitHub connector (issues, PRs, releases, code search)
-- Slack connector (messaging, channels, webhooks)
-- Notion connector
-- ClickUp connector
-- SD WebUI image generation
-- ComfyUI image generation
-- Runway video generation
-- Priority email support
-- Early access to new features
-
-### Enterprise Tier ($99/month)
-
-**Everything in Pro, plus:**
-- Multi-user support
-- Admin dashboard with team management
-- SSO integration
-- Advanced audit logs
-- Custom agent development
-- Dedicated support
-- SLA guarantees
-
-### Activating a License
-
-1. Open **Settings** → **License**
-2. Enter your license key
-3. Click **Activate**
-4. Restart Alphonso
-
-Your license key is stored locally and validated against the policy enforcement system. Premium connectors are automatically enabled based on your tier.
+Connecting a third-party service (Claude, ChatGPT, Runway and so on) uses your own account and API key, and that provider bills you directly for usage. Zero-Cost Mode and Approval Mode, both on by default in **Settings**, block paid or metered calls until you approve them.
 
 ---
 
-## 16. Performance Features
+## 17. Performance Features
 
 Alphonso v2.0.0 includes significant performance optimizations:
 
@@ -726,7 +678,7 @@ Policy enforcement now uses:
 
 ---
 
-## 17. Troubleshooting
+## 18. Troubleshooting
 
 ### Ollama Not Connecting
 

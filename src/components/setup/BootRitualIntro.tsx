@@ -53,7 +53,6 @@ export function BootRitualIntro({ onFinish }: BootRitualIntroProps) {
     const duration = prefersReducedMotion ? REDUCED_MOTION_MS : DURATION_MS;
     const timer = setTimeout(skip, duration);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- skip is stable in behavior (only reads/writes the ref and calls the onFinish prop); re-arming the timer on every onFinish identity change would restart the countdown unnecessarily
   }, [prefersReducedMotion]);
 
   useEffect(() => {
@@ -62,7 +61,6 @@ export function BootRitualIntro({ onFinish }: BootRitualIntroProps) {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- skip is stable in behavior (only reads/writes the ref); re-subscribing on every render would be wasteful, not incorrect
   }, []);
 
   return (

@@ -1,0 +1,81 @@
+ALPHONSO — END USER LICENSE AGREEMENT
+DRAFT FOR LEGAL REVIEW — fill in every [BRACKETED] field and have counsel
+review this document before any public release.
+
+Last updated: [DATE]
+
+This End User License Agreement ("Agreement") is between you and [LEGAL ENTITY
+NAME] ("we", "us"), the publisher of the Alphonso desktop application and the
+Alphonso Companion mobile application (together, the "Software"). By
+installing or using the Software you agree to this Agreement. If you do not
+agree, do not install or use the Software.
+
+1. LICENSE GRANT
+We grant you a personal, non-exclusive, non-transferable, revocable license to
+install and use the Software, in object-code form as distributed by us, on
+devices you own or control, for your personal or internal business purposes,
+subject to this Agreement. This Agreement governs your use of the distributed
+Software; the source code published in our repository remains governed by the
+separate SHALAUDE License (LICENSE file), which does not grant rights to
+redistribute or modify the source.
+
+2. RESTRICTIONS
+You may not: (a) redistribute, sell, rent, lease, or sublicense the Software;
+(b) modify, reverse engineer, decompile, or disassemble the Software, except
+to the extent applicable law expressly permits it despite this restriction;
+(c) remove or alter any proprietary or third-party notices; or (d) use the
+Software in violation of applicable law or of the Acceptable Use Policy of any
+bundled or connected AI model.
+
+3. THIRD-PARTY COMPONENTS AND MODELS
+The Software includes open-source components and may include or download
+third-party AI models (including Meta's Llama 3.2 under the Llama 3.2
+Community License, and the Ollama runtime under the MIT License). Those
+components are licensed to you under their own terms, listed in the NOTICE
+file and the MODEL_LICENSE.txt file shipped with the Software. Nothing in this
+Agreement limits your rights under those licenses.
+
+4. CONNECTED SERVICES
+The Software can connect to services you choose to configure (for example AI
+providers, messaging platforms, or our optional Cloud Voice service). Your use
+of each third-party service is governed by that provider's terms. You are
+responsible for the credentials you enter and for the actions you approve the
+Software to take on your behalf, including outbound messages, calls, and paid
+API usage.
+
+5. AI OUTPUT
+The Software generates content using AI models. Output may be inaccurate,
+incomplete, or inappropriate. You are responsible for reviewing output and
+any action before approving it. Do not rely on the Software for medical,
+legal, financial, or safety-critical decisions.
+
+6. UPDATES
+The Software may check for and install updates signed by us. Updates are
+governed by this Agreement unless accompanied by different terms.
+
+7. PRIVACY
+Our Privacy Policy ([PRIVACY POLICY URL]) explains what data the Software and
+our services process.
+
+8. TERMINATION
+This license ends automatically if you breach this Agreement. On termination
+you must stop using and uninstall the Software.
+
+9. DISCLAIMER OF WARRANTIES
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, AND NON-INFRINGEMENT, TO THE MAXIMUM EXTENT PERMITTED BY LAW.
+
+10. LIMITATION OF LIABILITY
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE WILL NOT BE LIABLE FOR ANY
+INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS
+OF DATA, PROFITS, OR REVENUE, ARISING FROM YOUR USE OF THE SOFTWARE. OUR TOTAL
+LIABILITY WILL NOT EXCEED THE GREATER OF THE AMOUNT YOU PAID FOR THE SOFTWARE
+IN THE PRECEDING TWELVE MONTHS OR [AMOUNT].
+
+11. GOVERNING LAW
+This Agreement is governed by the laws of [JURISDICTION], without regard to
+conflict-of-laws rules.
+
+12. CONTACT
+[LEGAL ENTITY NAME] — [CONTACT EMAIL]

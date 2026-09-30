@@ -1,4 +1,5 @@
 import { startVitest } from 'vitest/node';
+import { configDefaults } from 'vitest/config';
 
 function sanitizeNodeOptions(raw) {
   if (!raw) return '';
@@ -37,6 +38,11 @@ const ctx = await startVitest(
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setupTests.js'],
+    // configFile is false, so vitest's default include pattern applies and the
+    // `src` filter would also match gateway/*/src/*.test.mjs. Those are Node
+    // built-in test-runner files, run separately by CI's "Cloud Voice &
+    // Gateway Tests" job, so keep them (and the Python voice tree) out of here.
+    exclude: [...configDefaults.exclude, 'gateway/**', 'voice/**'],
     pool: 'forks',
     fileParallelism: false,
     configFile: false

@@ -9,7 +9,6 @@ import { getModelForTask } from './modelSelectionService';
 import { autoRunDevServer, getAutoRunEnabled } from './autoRunService';
 import { isComposioEnabled, executeViaComposio } from './composioService';
 import { recordAgentExecution } from './agentMetricsService';
-import { getToolDefinitions, formatToolsForPrompt, executeTool } from './toolRegistryService';
 
 const PATTERN_MEMORY_KEY = 'alphonso_brain_patterns_v1';
 const MAX_PATTERNS = 200;
@@ -55,27 +54,28 @@ async function readProjectContext(projectDir) {
     let readme = null;
     const existingCode = {};
 
-    try {
-      const pkgResult = await invoke('execute_command_verified', {
-        program: 'node',
-        args: ['-e', 'console.log(JSON.stringify(require("./package.json"), null, 2))'],
-        cwd: projectDir
-      });
-      if (pkgResult?.success && pkgResult?.stdout) {
-        packageJson = JSON.parse(pkgResult.stdout);
-      }
-    } catch { /* no package.json */ }
+    // Reads go through the workspace-sandboxed read_workspace_file command,
+    // not `node -e` via execute_command_verified -- arbitrary interpreter
+    // flags are no longer allowed by the command policy (pre-launch audit H-2).
+    const readText = async (relativePath) => {
+      const proof = await invoke('read_workspace_file', { workspaceRoot: projectDir, relativePath });
+      return typeof proof?.content === 'string' ? proof.content : null;
+    };
 
     try {
-      const readmeResult = await invoke('execute_command_verified', {
-        program: 'node',
-        args: ['-e', 'const fs=require("fs");const p=["README.md","readme.md","Readme.md"].find(f=>fs.existsSync(f));console.log(p?fs.readFileSync(p,"utf8"):"")'],
-        cwd: projectDir
-      });
-      if (readmeResult?.success && readmeResult?.stdout?.trim()) {
-        readme = readmeResult.stdout.trim().slice(0, 2000);
-      }
-    } catch { /* no readme */ }
+      const raw = await readText('package.json');
+      if (raw) packageJson = JSON.parse(raw);
+    } catch { /* no package.json */ }
+
+    for (const name of ['README.md', 'readme.md', 'Readme.md']) {
+      try {
+        const raw = await readText(name);
+        if (raw && raw.trim()) {
+          readme = raw.trim().slice(0, 2000);
+          break;
+        }
+      } catch { /* try next candidate */ }
+    }
 
     const sourceExtensions = /\.(js|jsx|ts|tsx|py|rs|go)$/;
     const importantFiles = files
@@ -84,14 +84,10 @@ async function readProjectContext(projectDir) {
 
     for (const filePath of importantFiles) {
       try {
-        const relativePath = filePath.replace(projectDir, '').replace(/^[/\\]+/, '');
-        const readResult = await invoke('execute_command_verified', {
-          program: 'node',
-          args: ['-e', 'const fs=require("fs");const p=process.argv[1];const c=fs.readFileSync(p,"utf8");console.log(c.split("\\n").slice(0,500).join("\\n"))', relativePath.replace(/\\/g, '/')],
-          cwd: projectDir
-        });
-        if (readResult?.success && readResult?.stdout) {
-          existingCode[relativePath] = readResult.stdout.slice(0, 3000);
+        const relativePath = filePath.replace(projectDir, '').replace(/^[/\\]+/, '').replace(/\\/g, '/');
+        const raw = await readText(relativePath);
+        if (raw) {
+          existingCode[relativePath] = raw.split('\n').slice(0, 500).join('\n').slice(0, 3000);
         }
       } catch { /* skip unreadable files */ }
     }
@@ -426,7 +422,7 @@ async function gitAutoCommit(projectDir, message) {
     await verifyCommandExecution('git', ['add', '-A'], projectDir);
     const result = await verifyCommandExecution('git', ['commit', '-m', message], projectDir);
     const payload = result?.payload || {};
-    return { success: payload.success || payload.exitCode === 0, output: payload.stdout || payload.stderr || '' };
+    return { success: payload.success === true || payload.exitCode === 0, output: payload.stdout || payload.stderr || '' };
   } catch {
     return null;
   }
@@ -436,12 +432,10 @@ async function gitAutoCommit(projectDir, message) {
 
 const VALIDATION_COMMANDS = {
   'react-vite': [
-    { program: 'node', args: ['-e', 'try{require("./package.json")}catch(e){process.exit(1)}'], label: 'package.json check' },
     { program: 'npm', args: ['run', 'build'], label: 'Vite build' },
     { program: 'npm', args: ['run', 'lint'], label: 'ESLint' }
   ],
   'node-express': [
-    { program: 'node', args: ['-e', 'try{require("./package.json")}catch(e){process.exit(1)}'], label: 'package.json check' },
     { program: 'node', args: ['-c', 'src/index.js'], label: 'Syntax check' }
   ],
   'nextjs': [
@@ -915,147 +909,11 @@ export async function executeWithBrain(commandText, options = {}) {
   };
 }
 
-// ─── Brain 9: Structured Tool Use ───────────────────────────────────────────
-
-const MAX_TOOL_ITERATIONS = 10;
-
-function buildToolPrompt(taskText, toolHistory, projectContext, conversationHistory) {
-  const tools = formatToolsForPrompt();
-  const contextLines = [];
-
-  if (projectContext.structure) contextLines.push(`Project structure:\n${projectContext.structure.slice(0, 1500)}`);
-  if (projectContext.packageJson) {
-    const deps = Object.keys(projectContext.packageJson.dependencies || {});
-    if (deps.length) contextLines.push(`Dependencies: ${deps.join(', ')}`);
-  }
-  if (conversationHistory?.length > 0) {
-    const recent = conversationHistory.slice(-6);
-    contextLines.push(`Recent conversation:\n${recent.map((m) => `${m.role}: ${String(m.content || '').slice(0, 200)}`).join('\n')}`);
-  }
-  if (toolHistory.length > 0) {
-    const history = toolHistory.map((h) => `Tool call: ${h.tool}(${JSON.stringify(h.args)})\nResult: ${JSON.stringify(h.result).slice(0, 500)}`).join('\n\n');
-    contextLines.push(`Tool execution history:\n${history}`);
-  }
-
-  return [
-    'You are Alphonso, an agent with access to tools.',
-    '',
-    'AVAILABLE TOOLS:',
-    tools,
-    '',
-    contextLines.length > 0 ? contextLines.join('\n\n') + '\n\n' : '',
-    'TASK: ' + taskText,
-    '',
-    'RULES:',
-    '1. Use tools to accomplish the task',
-    '2. Return ONE tool call at a time',
-    '3. When done, return: { "done": true, "summary": "what you accomplished" }',
-    '4. Otherwise return: { "tool": "tool_name", "args": { ... } }',
-    '',
-    'Return ONLY valid JSON.'
-  ].filter(Boolean).join('\n');
-}
-
-export async function executeWithTools(commandText, options = {}) {
-  const { endpoint, projectDirectory, onProgress, onToken, conversationHistory } = options;
-  const toolHistory = [];
-  const results = [];
-  const filesWritten = [];
-  const artifacts = [];
-  let lastError = null;
-  const startTimeMs = timestampMs();
-
-  onProgress?.({ stage: 'tool_mode', agent: 'alphonso', detail: 'Using structured tool execution' });
-
-  for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-    const projectContext = await readProjectContext(projectDirectory);
-    const prompt = buildToolPrompt(commandText, toolHistory, projectContext, conversationHistory);
-
-    onProgress?.({ stage: 'tool_thinking', agent: 'alphonso', detail: `Iteration ${iteration + 1}/${MAX_TOOL_ITERATIONS}` });
-
-    try {
-      const response = await generateAgentLlmResponse('alphonso', { endpoint, prompt, model: getModelForTask('code') });
-      const parsed = parseJsonResponse(response?.response);
-
-      if (!parsed) {
-        results.push(`Iteration ${iteration + 1}: Invalid JSON response`);
-        lastError = 'Invalid JSON';
-        continue;
-      }
-
-      if (parsed.done) {
-        onProgress?.({ stage: 'tool_complete', agent: 'alphonso', detail: parsed.summary || 'Done' });
-        results.push(`Completed: ${parsed.summary || 'Task done'}`);
-        artifacts.push({ type: 'tool_execution_complete', summary: parsed.summary, iterations: iteration + 1, toolCalls: toolHistory.length });
-        break;
-      }
-
-      if (parsed.tool && parsed.args) {
-        onProgress?.({ stage: 'tool_executing', agent: 'alphonso', detail: `${parsed.tool}(${JSON.stringify(parsed.args).slice(0, 100)})` });
-
-        const toolResult = await executeTool(parsed.tool, parsed.args, {
-          workspaceRoot: projectDirectory || '',
-          endpoint,
-          agent: 'alphonso'
-        });
-
-        toolHistory.push({ tool: parsed.tool, args: parsed.args, result: toolResult, iteration });
-        results.push(`${parsed.tool}: ${JSON.stringify(toolResult).slice(0, 200)}`);
-
-        // Track file writes
-        if (parsed.tool === 'write_file' && toolResult?.success) {
-          filesWritten.push(parsed.args.path);
-        }
-
-        if (onToken) {
-          onToken({ step: iteration + 1, tool: parsed.tool, result: toolResult });
-        }
-      } else {
-        results.push(`Iteration ${iteration + 1}: No tool call or done flag`);
-      }
-    } catch (err) {
-      lastError = String(err?.message || err);
-      results.push(`Iteration ${iteration + 1} failed: ${lastError}`);
-      toolHistory.push({ tool: 'error', args: {}, result: { error: lastError }, iteration });
-    }
-  }
-
-  // Final validation if files were written
-  if (filesWritten.length > 0 && projectDirectory) {
-    onProgress?.({ stage: 'validating', agent: 'alphonso', detail: 'Running final validation' });
-    const projectContext = await readProjectContext(projectDirectory);
-    results.push(`Files written: ${filesWritten.join(', ')}`);
-  }
-
-  // Record metrics
-  const durationMs = timestampMs() - startTimeMs;
-  recordAgentExecution({
-    agent: 'alphonso',
-    command: commandText,
-    success: toolHistory.some((t) => t.result?.success),
-    confidence: 75,
-    filesWritten: filesWritten.length,
-    validationPassed: false,
-    iterations: toolHistory.length,
-    durationMs,
-    error: lastError
-  });
-
-  return {
-    results,
-    filesWritten,
-    artifacts,
-    steps: toolHistory.length,
-    success: toolHistory.some((t) => t.result?.success),
-    error: lastError,
-    toolHistory,
-    selfEvaluation: {
-      confidence: 75,
-      filesGenerated: filesWritten.length,
-      toolCalls: toolHistory.length,
-      notes: toolHistory.filter((t) => t.result?.error).map((t) => `${t.tool}: ${t.result.error}`)
-    }
-  };
-}
+// ─── Brain 9: Structured Tool Use (removed) ─────────────────────────────────
+// `executeWithTools` -- an LLM loop that executed model-chosen run_command /
+// delete_file / git / Composio calls with no approval gate, while feeding
+// project README/source text into the prompt -- was removed in the 2026-09-30
+// pre-launch audit (H-2). It had no callers. Any future tool-use loop must
+// route every call through policyEnforcementService approval first.
 
 export { readProjectContext, getRelevantPatterns, decomposeTask, needsClarification, gitAutoCommit, generatePlanPreview, buildThinkingPrompt };

@@ -100,7 +100,11 @@ cd voice/backend
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 pip install -r requirements.txt
-python -m uvicorn main:app --host 127.0.0.1 --port 8765
+# Voice OS refuses every connection unless VOICE_OS_TOKEN is set (fail-closed).
+# When launched from Alphonso, the app generates and passes this token for you.
+# --no-access-log keeps the token (sent as ?token=) out of uvicorn's access log.
+set VOICE_OS_TOKEN=<any-long-random-string>   # Windows (bash: export VOICE_OS_TOKEN=...)
+python -m uvicorn main:app --host 127.0.0.1 --port 8766 --no-access-log
 ```
 
 Or launch it from within Alphonso: open **Runtime Manager → Voice OS → Start**.

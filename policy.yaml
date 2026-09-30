@@ -1,5 +1,9 @@
 # Alphonso Module Policy DSL
 # Rules are evaluated top-to-bottom; first match wins.
+#
+# NOTE: the runtime does not read this file. src/services/policyDslService.ts
+# embeds the same rules, and src/test/policyYamlSync.test.js fails CI if the
+# two drift. Edit both together.
 
 version: "1.0"
 

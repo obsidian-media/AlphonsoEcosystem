@@ -35,6 +35,7 @@ from app.contracts import (
 from app.lesson_pipeline import LessonPipelineError, analyze_and_store, build_lesson_context, fetch_recent_weaknesses
 from app.nvidia import NvidiaClient, NvidiaError
 from app.piper_tts import PiperTTSClient
+from app.quota import voice_quota
 from app.voice_policy import VoicePolicyError, build_system_message
 from app.supabase_auth import SupabaseDeviceRegistry
 
@@ -61,28 +62,36 @@ _LESSON_CONTEXT_AGENTS = frozenset({"tutor"})
 # moment new weaknesses might have been recorded for it.
 _LESSON_CONTEXT_CACHE_TTL_SECONDS = 900.0  # ~15 min: comfortably longer than a typical Tutor turn gap
 _LESSON_CONTEXT_CACHE_MAX_ENTRIES = 2_000  # bounds memory on a long-lived process with many short sessions
-_lesson_context_cache: dict[str, tuple[str | None, float]] = {}
+# Keyed by (user id, session id), never by the client-supplied session id
+# alone: otherwise one user could replay another user's session id and get
+# that user's learner weaknesses injected into their own prompt, or evict
+# someone else's entry (2026-09-30 pre-launch audit, H-4).
+_lesson_context_cache: dict[tuple[str, str], tuple[str | None, float]] = {}
 
 
-def _lesson_context_cache_get(session_id: str) -> tuple[bool, str | None]:
-    entry = _lesson_context_cache.get(session_id)
+def _lesson_cache_key(user_id: object, session_id: str) -> tuple[str, str]:
+    return (str(user_id), session_id)
+
+
+def _lesson_context_cache_get(key: tuple[str, str]) -> tuple[bool, str | None]:
+    entry = _lesson_context_cache.get(key)
     if entry is None:
         return False, None
     context, cached_at = entry
     if time.time() - cached_at > _LESSON_CONTEXT_CACHE_TTL_SECONDS:
-        _lesson_context_cache.pop(session_id, None)
+        _lesson_context_cache.pop(key, None)
         return False, None
     return True, context
 
 
-def _lesson_context_cache_set(session_id: str, context: str | None) -> None:
-    if len(_lesson_context_cache) >= _LESSON_CONTEXT_CACHE_MAX_ENTRIES and session_id not in _lesson_context_cache:
+def _lesson_context_cache_set(key: tuple[str, str], context: str | None) -> None:
+    if len(_lesson_context_cache) >= _LESSON_CONTEXT_CACHE_MAX_ENTRIES and key not in _lesson_context_cache:
         # Simple bound, not true LRU: evict one arbitrary (oldest-inserted,
         # since dicts preserve insertion order) entry rather than let this
         # grow unboundedly. Good enough for a best-effort cache where a wrong
         # eviction just costs one extra fetch, never a correctness bug.
         _lesson_context_cache.pop(next(iter(_lesson_context_cache)), None)
-    _lesson_context_cache[session_id] = (context, time.time())
+    _lesson_context_cache[key] = (context, time.time())
 
 app = FastAPI(title="Alphonso Cloud Voice")
 atlas_demo_control_plane = AtlasDemoControlPlane()
@@ -298,17 +307,19 @@ async def respond(payload: VoiceRequest, authorization: str | None = Header(defa
         logger.error("Cloud voice service not configured: %s", settings.public_status())
         raise HTTPException(status_code=503, detail="Cloud voice service is not configured")
     user = await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
+    voice_quota.check_and_record(user.id)
+    cache_key = _lesson_cache_key(user.id, payload.session_id)
     client = NvidiaClient(settings)
     started = time.perf_counter()
     try:
         lesson_context = None
         if payload.agent_id in _LESSON_CONTEXT_AGENTS:
-            cache_hit, cached_context = _lesson_context_cache_get(payload.session_id)
+            cache_hit, cached_context = _lesson_context_cache_get(cache_key)
             if cache_hit:
                 lesson_context = cached_context
             else:
                 lesson_context = await _tutor_lesson_context(settings, user, payload.language)
-                _lesson_context_cache_set(payload.session_id, lesson_context)
+                _lesson_context_cache_set(cache_key, lesson_context)
         messages = [
             {"role": "system", "content": build_system_message(payload.agent_id, payload.language, lesson_context)},
             *[message.model_dump() for message in payload.history],
@@ -348,11 +359,12 @@ async def analyze_session(
         logger.error("Cloud voice service not configured: %s", settings.public_status())
         raise HTTPException(status_code=503, detail="Cloud voice service is not configured")
     user = await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
+    voice_quota.check_and_record(user.id)
     # This session's cached lesson context (if any) is stale the moment new
     # weaknesses might be recorded for it -- evict unconditionally, before
     # the analysis even runs, so a failure below can't leave a stale hit
     # behind.
-    _lesson_context_cache.pop(payload.session_id, None)
+    _lesson_context_cache.pop(_lesson_cache_key(user.id, payload.session_id), None)
     try:
         weaknesses = await analyze_and_store(settings, user, payload.session_id, payload.transcript, payload.language)
     except (NvidiaError, LessonPipelineError) as error:

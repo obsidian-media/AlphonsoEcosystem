@@ -11,6 +11,7 @@ import {
   activateLicense,
   deactivateLicense,
   initLicense,
+  isPremiumGatingEnabled,
   __setTrustedPublicKeyForTests
 } from '../../services/licenseService';
 import { generateLicenseKeypair, mintLicenseToken, type LicenseKeypair } from '../helpers/mintLicense';
@@ -161,6 +162,21 @@ describe('licenseService (signed-token)', () => {
     it('allows premium connectors after a valid activation', async () => {
       await activateLicense(await proToken());
       expect(canUseConnector('claude')).toBe(true);
+    });
+  });
+
+  describe('free launch posture (no vendor trust key)', () => {
+    it('disables premium gating entirely when no trusted key is configured', () => {
+      __setTrustedPublicKeyForTests(null);
+      expect(isPremiumGatingEnabled()).toBe(false);
+      expect(canUseConnector('claude')).toBe(true);
+      expect(canUseConnector('comfyui')).toBe(true);
+    });
+
+    it('re-enables gating as soon as a trusted key is configured', () => {
+      __setTrustedPublicKeyForTests(kp.publicJwk);
+      expect(isPremiumGatingEnabled()).toBe(true);
+      expect(canUseConnector('claude')).toBe(false);
     });
   });
 

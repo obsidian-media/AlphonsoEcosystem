@@ -7,6 +7,7 @@ struct VoiceView: View {
     @StateObject private var viewModel = VoiceSessionViewModel()
     @State private var cloudEmail = ""
     @State private var cloudOTP = ""
+    @State private var confirmingAccountDeletion = false
     private let cloudVoicePaused = false
 
     var body: some View {
@@ -92,6 +93,33 @@ struct VoiceView: View {
                                 Text("Cloud Voice stays unavailable until this iPhone is enrolled. Local Voice remains available.")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
+                            }
+
+                            // Reachable whenever a session exists, even if the device
+                            // isn't enrolled or the endpoint isn't set (App Store 5.1.1(v)).
+                            if viewModel.hasCloudSession {
+                                Button("Delete Cloud Voice account", role: .destructive) {
+                                    confirmingAccountDeletion = true
+                                }
+                                .font(.caption)
+                                .confirmationDialog(
+                                    "Delete your Cloud Voice account?",
+                                    isPresented: $confirmingAccountDeletion,
+                                    titleVisibility: .visible
+                                ) {
+                                    Button("Delete account permanently", role: .destructive) {
+                                        viewModel.deleteCloudAccount()
+                                    }
+                                    Button("Cancel", role: .cancel) {}
+                                } message: {
+                                    Text("This permanently deletes your account, enrolled devices, and saved learning history. It can't be undone.")
+                                }
+
+                                if let error = viewModel.cloudAccountError {
+                                    Text(error)
+                                        .font(.caption2)
+                                        .foregroundStyle(.red)
+                                }
                             }
 
                             Picker("Cloud TTS model", selection: Binding(

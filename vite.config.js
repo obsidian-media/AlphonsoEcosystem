@@ -23,6 +23,9 @@ export default defineConfig({
     // build-target/declared-OS-support mismatch, not a code bug in any
     // one file. Pinning target to the OS version this app already
     // promises to support, rather than silently narrowing that promise.
+    // (2026-09-30: minimumSystemVersion is now "11.0" because releases are
+    // Apple Silicon only, which needs macOS 11+. safari13.1 is kept as a
+    // conservative floor; it is strictly more compatible than needed.)
     target: 'safari13.1',
     // Regression fix for a real QA finding: 'hidden' still WRITES .map files
     // to dist/ (it only omits the //# sourceMappingURL comment referencing
