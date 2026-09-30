@@ -53,6 +53,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      # Never ship an untested backend to production (pre-launch audit).
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Run backend tests
+        working-directory: voice/cloud-backend
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pytest -q
+
       - name: Configure AWS credentials (OIDC, no stored secrets)
         uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
@@ -104,6 +116,19 @@ jobs:
             )
           ' task-definition.json > task-definition.patched.json
           mv task-definition.patched.json task-definition.json
+
+      # The backend defaults to invite-only (VOICE_ACCESS_MODE=invite). Deploying
+      # it without an allowlist would lock every user out, so refuse instead of
+      # silently shipping an unusable service.
+      - name: Require an access policy in the task definition
+        run: |
+          set -euo pipefail
+          mode=$(jq -r '[.containerDefinitions[0].environment[] | select(.name=="VOICE_ACCESS_MODE") | .value][0] // "invite"' task-definition.json)
+          emails=$(jq -r '[.containerDefinitions[0].environment[] | select(.name=="VOICE_ALLOWED_EMAILS") | .value][0] // ""' task-definition.json)
+          if [ "$mode" != "open" ] && [ -z "$emails" ]; then
+            echo "::error::Task definition has no VOICE_ALLOWED_EMAILS and VOICE_ACCESS_MODE is not 'open'. Add invited emails (or set VOICE_ACCESS_MODE=open) to the ECS task definition before deploying."
+            exit 1
+          fi
 
       - name: Render new task definition with the new image
         id: render

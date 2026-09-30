@@ -121,6 +121,35 @@ interface PollResult {
   trust: string;
 }
 
+
+// Lease + ack delivery (pre-launch audit M-3): drain with `lease=1` so the
+// gateway only forgets a message after we confirm receipt; if the response is
+// lost in transit, the lease expires and the gateway redelivers. Recently seen
+// deliveryIds are skipped so a failed ack can't produce duplicates. Older
+// gateways ignore `lease` and return no deliveryIds -- nothing to ack then.
+const RECENT_DELIVERY_LIMIT = 500;
+const recentDeliveryIdsWa: string[] = [];
+
+function isDuplicateDeliveryWa(deliveryId: unknown): boolean {
+  if (typeof deliveryId !== 'string' || !deliveryId) return false;
+  if (recentDeliveryIdsWa.includes(deliveryId)) return true;
+  recentDeliveryIdsWa.push(deliveryId);
+  if (recentDeliveryIdsWa.length > RECENT_DELIVERY_LIMIT) recentDeliveryIdsWa.shift();
+  return false;
+}
+
+async function ackGatewayDeliveriesWa(drainUrl: string, headers: Record<string, string>, deliveryIds: string[]): Promise<void> {
+  if (deliveryIds.length === 0) return;
+  try {
+    const ackUrl = new URL(drainUrl);
+    ackUrl.pathname = ackUrl.pathname.replace(/\/queue\/drain\/?$/, '/queue/ack');
+    ackUrl.search = '';
+    await fetch(ackUrl.toString(), { method: 'POST', headers, body: JSON.stringify({ deliveryIds }) });
+  } catch {
+    // Unacked deliveries are redelivered after the lease and de-duplicated above.
+  }
+}
+
 export async function browserPollWhatsAppGateway({ limit = 12 } = {}): Promise<PollResult> {
   const drainUrl = getConnectorCredential('whatsapp', 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL');
   const token = getConnectorCredential('whatsapp', 'WHATSAPP_VERIFY_TOKEN');
@@ -131,6 +160,7 @@ export async function browserPollWhatsAppGateway({ limit = 12 } = {}): Promise<P
 
   const url = new URL(drainUrl);
   url.searchParams.set('limit', String(limit));
+  url.searchParams.set('lease', '1');
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -141,11 +171,16 @@ export async function browserPollWhatsAppGateway({ limit = 12 } = {}): Promise<P
   }
 
   const data = await response.json().catch(() => ({}));
-  const messages: GatewayMessage[] = Array.isArray(data?.messages)
+  const drained: GatewayMessage[] = Array.isArray(data?.messages)
     ? data.messages
     : Array.isArray(data)
       ? data
       : [];
+  const deliveryIds = drained
+    .map((msg) => (msg as { deliveryId?: unknown })?.deliveryId)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  const messages = drained.filter((msg) => !isDuplicateDeliveryWa((msg as { deliveryId?: unknown })?.deliveryId));
+  await ackGatewayDeliveriesWa(drainUrl, headers, deliveryIds);
 
   return {
     ok: true,

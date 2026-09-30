@@ -199,8 +199,12 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs windows-amd64
 
-      - name: Fetch bundled starter model
-        run: node scripts/fetch-starter-model.mjs
+      # Deliberately NOT fetching the starter model here -- matches release.yml's
+      # Windows job. Ollama's CUDA runtime plus the ~1.9GB model pushes the NSIS
+      # payload past makensis's ~2GB mmap ceiling ("error mmapping file ... out of
+      # range"), which broke this job on every main push from 2026-09-16 on.
+      # Windows installs pull the model on first run via setupFlowService's
+      # network fallback instead.
 
       - name: Build Tauri app
         env:
@@ -244,8 +248,8 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs darwin-universal
 
-      - name: Fetch bundled starter model
-        run: node scripts/fetch-starter-model.mjs
+      # Deliberately NOT fetching the starter model here -- matches release.yml's
+      # macOS job (PR #249), so CI builds the same artifact shape that ships.
 
       - name: Build Tauri app
         env:
@@ -480,6 +484,29 @@ jobs:
           fi
           curl -s -o /dev/null -w "%{http_code}" "$GATEWAY_HEALTH_URL" || echo "Gateway health endpoint not reachable"
         continue-on-error: true
+
+  service-tests:
+    name: Cloud Voice & Gateway Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Gateway queue tests
+        run: node --test gateway/generic-webhook/src/leaseQueue.test.mjs gateway/whatsapp-cloud/src/leaseQueue.test.mjs
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Cloud Voice backend tests
+        working-directory: voice/cloud-backend
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pytest -q
 
   ios-build:
     name: iOS Companion Build Check

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A1000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A200000D /* Assets.xcassets */; };
+		A1000099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A2000099 /* PrivacyInfo.xcprivacy */; };
 		A1000001 /* AlphonsoCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001 /* AlphonsoCompanionApp.swift */; };
 		A1000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002 /* ContentView.swift */; };
 		A1000003 /* WebSocketService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003 /* WebSocketService.swift */; };
@@ -61,6 +62,7 @@
 		A200000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A200000C /* AlphonsoCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AlphonsoCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A200000D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A2000099 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A200000E /* VoiceSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSession.swift; sourceTree = "<group>"; };
 		A200000F /* VoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceView.swift; sourceTree = "<group>"; };
 		A2000010 /* VoiceAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioService.swift; sourceTree = "<group>"; };
@@ -142,6 +144,7 @@
 				F4000001 /* ViewModels */,
 				A4000006 /* Views */,
 				A200000D /* Assets.xcassets */,
+				A2000099 /* PrivacyInfo.xcprivacy */,
 				A200000B /* Info.plist */,
 			);
 			path = AlphonsoCompanion;
@@ -367,6 +370,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000010 /* Assets.xcassets in Resources */,
+				A1000099 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

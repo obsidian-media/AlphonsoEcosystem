@@ -311,8 +311,12 @@ export async function executeTool(name: string, args: ToolArgs, context: ToolCon
     }
 
     case 'run_command': {
-      const { invoke } = await import('@tauri-apps/api/core');
-      return invoke('execute_command_verified', { program: args.program, args: (args.args as string[]) || [] }) as unknown as ToolExecutionResult;
+      // Goes through verifyCommandExecution so the Rust per-program argument
+      // policy applies and the result carries a normalized exitCode.
+      const { verifyCommandExecution } = await import('./verificationService');
+      const proof = await verifyCommandExecution(args.program as string, (args.args as string[]) || [], context.workspaceRoot || null);
+      const payload = (proof.payload || {}) as { success?: boolean };
+      return { ...payload, success: payload.success === true } as unknown as ToolExecutionResult;
     }
 
     case 'fetch_url': {
@@ -361,16 +365,19 @@ export async function executeTool(name: string, args: ToolArgs, context: ToolCon
     }
 
     case 'git_commit': {
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('execute_command_verified', { program: 'git', args: ['add', '-A'] });
-      const result = await invoke('execute_command_verified', { program: 'git', args: ['commit', '-m', args.message] }) as { payload?: { exitCode?: number; stdout?: string } };
-      return { success: result?.payload?.exitCode === 0, output: result?.payload?.stdout || '' } as ToolExecutionResult;
+      const { verifyCommandExecution } = await import('./verificationService');
+      const cwd = context.workspaceRoot || null;
+      await verifyCommandExecution('git', ['add', '-A'], cwd);
+      const proof = await verifyCommandExecution('git', ['commit', '-m', String(args.message || '')], cwd);
+      const payload = (proof.payload || {}) as { exitCode?: number | null; stdout?: string };
+      return { success: payload.exitCode === 0, output: payload.stdout || '' } as ToolExecutionResult;
     }
 
     case 'git_status': {
-      const { invoke } = await import('@tauri-apps/api/core');
-      const result = await invoke('execute_command_verified', { program: 'git', args: ['status', '--short'] }) as { payload?: { stdout?: string; exitCode?: number } };
-      return { output: result?.payload?.stdout || '', exitCode: result?.payload?.exitCode } as ToolExecutionResult;
+      const { verifyCommandExecution } = await import('./verificationService');
+      const proof = await verifyCommandExecution('git', ['status', '--short'], context.workspaceRoot || null);
+      const payload = (proof.payload || {}) as { exitCode?: number | null; stdout?: string };
+      return { output: payload.stdout || '', exitCode: payload.exitCode } as ToolExecutionResult;
     }
 
     default:

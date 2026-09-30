@@ -62,6 +62,7 @@ base64 -i profile.mobileprovision | pbcopy
 3. Drag .ipa into Sideloadly, click Start
 
 ## First Launch on iPhone
+0. On the desktop, open Settings → Remote Access and click **Enable mobile pairing**. It is off by default: the desktop doesn't listen on your network until you turn it on. Use **Turn off** to stop it later, which also disconnects paired phones.
 1. Open Settings → Privacy & Security → Local Network
 2. Find "Alphonso" and enable it
 3. Open Alphonso app

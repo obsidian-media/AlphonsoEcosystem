@@ -479,7 +479,7 @@ jobs:
             ### Installation
             **Windows:** Download `${{ needs.build-windows.outputs.installer_name }}`, run the installer, launch Alphonso.
 
-            **macOS (Apple Silicon):** Download `${{ needs.build-macos.outputs.installer_name }}`, open it, and drag Alphonso to Applications. **Known issue:** this build is not yet Apple-notarized, so Gatekeeper will likely block it outright on current macOS versions (the old right-click-to-bypass workaround no longer works on macOS Sequoia and later) — see [ledger/tasks/071](https://github.com/Thatisshayan/OBSIDIAN-TEAM-BOARDROOM/blob/master/ledger/tasks/071-alphonso-macos-release-artifact.md) for the notarization tracking. Building from source or waiting for a notarized release is recommended until that's resolved.
+            **macOS (Apple Silicon):** Download `${{ needs.build-macos.outputs.installer_name }}`, open it, and drag Alphonso to Applications. **Known issue:** this build is not yet Apple-notarized, so Gatekeeper will likely block it outright on current macOS versions (the old right-click-to-bypass workaround no longer works on macOS Sequoia and later). Building from source or waiting for a notarized release is recommended until that's resolved. Apple Silicon only; Intel Macs are not supported by this build.
 
             **Linux:** Download `${{ needs.build-linux.outputs.installer_name }}`, mark it executable (`chmod +x`), and run it.
 

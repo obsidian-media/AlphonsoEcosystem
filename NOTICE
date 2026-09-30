@@ -7,7 +7,7 @@ their own licenses (primarily MIT and Apache-2.0). Those components remain
 governed by their original licenses; nothing in LICENSE restricts the
 rights granted by these upstream licenses to their respective works.
 
-This file lists the major direct runtime/build dependencies as of v2.6.1.
+This file lists the major direct runtime/build dependencies as of v2.8.0.
 It is not an exhaustive transitive dependency list — the full, authoritative
 manifests are:
   - package.json / package-lock.json  (JavaScript/TypeScript, npm)
@@ -22,7 +22,12 @@ JavaScript / TypeScript (npm) — primary runtime dependencies
   Framer Motion                            MIT   Framer
   Lucide React                             ISC   Lucide Contributors
   qrcode.react                             MIT   Contributors
-  Fontsource (Inter, Plus Jakarta Sans)    OFL-1.1  Fontsource / respective font authors
+  jsPDF                                    MIT   yWorks GmbH and contributors
+  PptxGenJS                                MIT   Brent Ely and contributors
+  react-force-graph-3d, 3d-force-graph,
+    three                                  MIT   Vasco Asturiano / three.js authors
+  Fontsource (Inter, Plus Jakarta Sans,
+    Fraunces)                              OFL-1.1  Fontsource / respective font authors
   @tauri-apps/api, plugin-process,
     plugin-updater, plugin-dialog,
     plugin-opener, plugin-notification,
@@ -52,11 +57,35 @@ Python (pip) — voice pipeline
     related voice-pipeline libraries        MIT/Apache-2.0/BSD  respective authors — see
     voice/backend/requirements.txt for the current pinned list
 
+Bundled AI runtime and model (shipped inside the desktop installers)
+--------------------------------------------------------------
+  Ollama runtime                           MIT   Ollama contributors
+                                           (https://github.com/ollama/ollama/blob/main/LICENSE)
+
+  Llama 3.2 (llama3.2:3b starter model — bundled in the Linux AppImage;
+  downloaded on first run on Windows and macOS)
+    Llama 3.2 is licensed under the Llama 3.2 Community License,
+    Copyright © Meta Platforms, Inc. All Rights Reserved.
+    Built with Llama.
+    The full license text and Acceptable Use Policy ship next to the model
+    as starter-model/MODEL_LICENSE.txt (copied verbatim from the model's own
+    registry manifest at build time by scripts/fetch-starter-model.mjs) and
+    are available at https://www.llama.com/llama3_2/license/ .
+
+Hosted models used by the optional Cloud Voice service (not redistributed)
+--------------------------------------------------------------
+  meta/llama-3.2-11b-vision-instruct via NVIDIA NIM — Llama 3.2 Community
+    License, Copyright © Meta Platforms, Inc. Built with Llama.
+  NVIDIA speech models via NVIDIA NIM — used under NVIDIA's API terms.
+  Piper voices for speech output are downloaded at runtime under their own
+    model-card licenses.
+
 Fonts
 --------------------------------------------------------------
   Inter                                    OFL-1.1  The Inter Project Authors
   Plus Jakarta Sans                        OFL-1.1  Tokotype
   JetBrains Mono                           OFL-1.1  JetBrains s.r.o.
+  Fraunces                                 OFL-1.1  Undercase Type
 
 --------------------------------------------------------------
 This NOTICE file is maintained on a best-effort basis. If you believe an

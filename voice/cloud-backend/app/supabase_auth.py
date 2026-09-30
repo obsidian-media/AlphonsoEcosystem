@@ -41,9 +41,12 @@ class SupabaseDeviceRegistry:
             )
         if response.status_code != 200:
             raise HTTPException(status_code=401, detail="Invalid or expired user access token")
-        user_id = response.json().get("id")
+        body = response.json()
+        user_id = body.get("id")
         if not user_id:
             raise HTTPException(status_code=401, detail="User identity is missing")
+        if not self.settings.is_email_allowed(body.get("email")):
+            raise HTTPException(status_code=403, detail="This account has not been invited to Cloud Voice yet")
         return SupabaseUser(id=str(user_id), access_token=token)
 
     async def enroll(self, user: SupabaseUser, device_id: str, display_name: str) -> None:

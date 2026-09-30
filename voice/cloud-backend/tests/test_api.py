@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.main import _lesson_context_cache, app
+from app.quota import voice_quota
 from app.lesson_pipeline import LessonPipelineError, Weakness
 from app.nvidia import NvidiaError, NvidiaRateLimitError
 from app.supabase_auth import SupabaseUser
@@ -25,8 +26,10 @@ def _clear_lesson_context_cache():
     every test in this file for isolation.
     """
     _lesson_context_cache.clear()
+    voice_quota.reset()
     yield
     _lesson_context_cache.clear()
+    voice_quota.reset()
 
 
 ENV = {

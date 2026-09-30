@@ -12,7 +12,18 @@
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
-[**Download v2.6.0**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/tag/v2.6.0) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download the latest release**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+
+## Pre-launch hardening — 2026-09-30 (unreleased)
+
+Came out of a full pre-launch audit. Highlights:
+
+- **Alphonso is free at launch.** Every agent and connector works without a license key. See [docs/PRICING.md](docs/PRICING.md).
+- **Mobile pairing is opt-in.** The desktop no longer listens on your local network until you turn on mobile pairing in Settings → Remote Access.
+- **Cloud Voice (iOS) is invite-only** and has per-account usage limits. You can delete your Cloud Voice account from inside the app.
+- **Stricter command sandbox.** Agents can no longer run inline interpreter code (`node -e`, `python -c`), arbitrary `npx` packages, or network and container tools through the command runner.
+- **Installers show an end-user license** ([legal/EULA.txt](legal/EULA.txt), draft pending legal review). [NOTICE](NOTICE) now credits the bundled Ollama runtime and Llama 3.2 ("Built with Llama").
+- Full list: [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 ## Voice + Mobile pass — 2026-07-14 (unreleased work on `main`)
 
@@ -121,8 +132,8 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 
 ## What's New in v2.4.4
 
-- **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **150 Rust unit tests across 38 modules** — 119 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery and a PIN-authenticated local WebSocket (off until you enable mobile pairing on the desktop). Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
+- **155 Rust unit tests across 38 modules** — 121 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -305,7 +316,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~808 lines · 119 Tauri commands · 38 modules   │    │
+│  │  lib.rs ~809 lines · 121 Tauri commands · 38 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -334,7 +345,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 
 - **Fail-closed**: Every outbound connector call runs through `policyEnforcementService.ts` — if credentials are missing or the action is ambiguous, it is blocked, never allowed
 - **Agent contracts**: `agentContractService.ts` enforces per-agent allowed/blocked action prefixes on every packet before execution
-- **License gates**: `licenseService.ts` validates Free/Pro/Enterprise tier before any premium connector fires
+- **License gates**: `licenseService.ts` can gate premium connectors by tier. It is inert at launch (no vendor key configured), and an approval never substitutes for a license once it is enabled
 - **Durable queue**: `orchestrationQueueService.js` manages state transitions, dead-letter replay, and approval workflows
 - **Parallel execution**: `parallelExecutionService.ts` handles concurrency control and retry logic
 - **Memory caching**: `cacheService.ts` provides TTL and LRU eviction for global, connector, and agent caches
@@ -385,14 +396,9 @@ All connectors are policy-gated through `connectorRegistryService.js`. See [docs
 
 ## License Tiers
 
-| Tier | Connectors | Price |
-|--------------|--------------------------------------------------|------------|
-| **Free** | Ollama (local), Brave Search, Telegram, WhatsApp Cloud, YouTube | Free forever |
-| **Pro** | + Claude, ChatGPT, GitHub, Slack, Notion, ClickUp, SD WebUI, ComfyUI | $12/mo ($99/yr) |
-| **Enterprise** | All 14 connectors + multi-desktop, audit export, priority support | $49/mo ($499/yr) |
-| **One-Time** | Same as Pro — perpetual license, 1 year updates | $199 |
+**Free at launch: every agent and all 26 connectors, no license key.** Paid tiers are not on sale. The licensing code (`licenseService.ts`) stays dormant until a vendor signing key is configured. Third-party services you connect bill you directly through your own API keys, and Zero-Cost Mode blocks paid calls until you approve them.
 
-See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
+See [docs/PRICING.md](docs/PRICING.md) for details.
 
 ---
 
@@ -401,7 +407,7 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 5,239 tests across 401 files
+npm run test           # 5,239 tests across 402 files
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -446,7 +452,7 @@ blocker.
 | [AGENTS.md](AGENTS.md) | Agent context and directory structure |
 | [SECURITY.md](SECURITY.md) | Vulnerability reporting policy |
 | [COMPARISON.md](docs/COMPARISON.md) | Feature comparison vs 8 competitors |
-| [PRICING.md](docs/PRICING.md) | Free/Pro/Enterprise/One-Time pricing tiers |
+| [PRICING.md](docs/PRICING.md) | Launch pricing (free) and how paid tiers would be enabled later |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, workflow, code style, and PR guidelines |
 
 ---
@@ -492,7 +498,7 @@ Security contact: [security@obsidianmedia.online](mailto:security@obsidianmedia.
 ## License
 
 SHALAUDE License v1.0 — All Rights Reserved, source-visible. See [LICENSE](LICENSE) for details.  
-No use, copy, modification, or distribution is permitted without prior written permission from the copyright holder. This is not an OSI-approved open-source license.
+No use, copy, modification, or distribution of the source is permitted without prior written permission from the copyright holder. This is not an OSI-approved open-source license. Use of the installable app is governed by the end-user license shown in the installer ([legal/EULA.txt](legal/EULA.txt)). The privacy policy draft is [legal/PRIVACY_POLICY.md](legal/PRIVACY_POLICY.md).
 
 ---
 

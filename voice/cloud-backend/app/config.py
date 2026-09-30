@@ -20,6 +20,12 @@ class Settings:
     supabase_url: str
     supabase_anon_key: str
     atlas_control_plane_demo_mode: bool
+    # Launch posture is invite-only (2026-09-30 pre-launch audit, H-1): only
+    # emails in VOICE_ALLOWED_EMAILS may use Cloud Voice. Set
+    # VOICE_ACCESS_MODE=open to let any signed-in account through (quotas in
+    # app/quota.py still apply either way).
+    voice_access_mode: str = "invite"
+    voice_allowed_emails: frozenset[str] = frozenset()
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -38,7 +44,18 @@ class Settings:
             supabase_url=os.environ.get("SUPABASE_URL", "").rstrip("/"),
             supabase_anon_key=os.environ.get("SUPABASE_ANON_KEY", "").strip(),
             atlas_control_plane_demo_mode=os.environ.get("ATLAS_CONTROL_PLANE_DEMO_MODE", "false").strip().lower() == "true",
+            voice_access_mode="open" if os.environ.get("VOICE_ACCESS_MODE", "invite").strip().lower() == "open" else "invite",
+            voice_allowed_emails=frozenset(
+                email.strip().lower()
+                for email in os.environ.get("VOICE_ALLOWED_EMAILS", "").split(",")
+                if email.strip()
+            ),
         )
+
+    def is_email_allowed(self, email: str | None) -> bool:
+        if self.voice_access_mode == "open":
+            return True
+        return bool(email) and email.strip().lower() in self.voice_allowed_emails
 
     @property
     def is_ready(self) -> bool:

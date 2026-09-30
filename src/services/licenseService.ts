@@ -227,9 +227,21 @@ export function isPremiumConnector(connectorId: string): boolean {
   return PREMIUM_CONNECTORS.has(String(connectorId || '').toLowerCase());
 }
 
+/**
+ * Premium gating is only enforced once a real vendor trust key is configured.
+ * Launch posture (2026-09-30 pre-launch audit, P0-3): Alphonso ships free, so
+ * with `LICENSE_TRUST_KEY === null` every connector is usable and no user is
+ * ever blocked behind a license that nothing can issue. Pasting a real public
+ * JWK into `licenseTrustKey.ts` turns paid tiers back on with no other change.
+ */
+export function isPremiumGatingEnabled(): boolean {
+  return trustedKeyJwk !== null;
+}
+
 export function canUseConnector(connectorId: string): boolean {
   const id = String(connectorId || '').toLowerCase();
   if (!isPremiumConnector(id)) return true;
+  if (!isPremiumGatingEnabled()) return true;
   const allowed = verified.features.includes(id);
   if (!allowed) {
     const log = getLicenseDenialLog();

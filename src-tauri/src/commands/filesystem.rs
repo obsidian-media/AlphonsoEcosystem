@@ -142,9 +142,17 @@ pub(crate) fn save_image_to_folder(
   {
     return Err("Unsafe folder path rejected".to_string());
   }
-  if std::path::Path::new(&filename)
-    .components()
-    .any(|c| matches!(c, std::path::Component::ParentDir))
+  // An absolute filename (or one with a drive prefix / root) would replace
+  // `folder` entirely in Path::join, so it must be rejected along with `..`.
+  if std::path::Path::new(&filename).is_absolute()
+    || std::path::Path::new(&filename).components().any(|c| {
+      matches!(
+        c,
+        std::path::Component::ParentDir
+          | std::path::Component::Prefix(_)
+          | std::path::Component::RootDir
+      )
+    })
   {
     return Err("Unsafe filename rejected".to_string());
   }

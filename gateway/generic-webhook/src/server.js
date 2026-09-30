@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { constantTimeEqual, createRateLimiter, readBodyWithLimit, redactGatewayDetails } from './security.js';
+import { clientKeyFromRequest, createLeaseQueue } from './leaseQueue.js';
 
 const PORT = Number(process.env.PORT || 8081);
 // Shared secret every inbound POST /webhook/:sourceId must present.
@@ -17,15 +18,10 @@ const gatewayRateLimiter = createRateLimiter({
 // Same shape as the WhatsApp Cloud gateway's queue, generalized: any external
 // service can POST to /webhook/:sourceId with a shared secret and Alphonso
 // picks the event up on its next poll without a bespoke connector.
-const eventQueue = [];
+const eventQueue = createLeaseQueue({ maxSize: MAX_QUEUE_SIZE, leaseMs: Number(process.env.QUEUE_LEASE_MS || 60_000) });
 
 function enqueue(event) {
-  if (eventQueue.length >= MAX_QUEUE_SIZE) eventQueue.shift();
-  eventQueue.push({ ...event, queuedAtMs: Date.now() });
-}
-
-function drainQueue(limit = 100) {
-  return eventQueue.splice(0, Math.min(limit, eventQueue.length));
+  eventQueue.enqueue(event);
 }
 
 function isRequestAuthorized(request, url, expectedToken) {
@@ -45,16 +41,12 @@ function sendJson(response, statusCode, payload) {
   response.end(JSON.stringify(payload));
 }
 
-function clientKeyFromRequest(request) {
-  const forwarded = String(request.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return forwarded || request.socket?.remoteAddress || 'unknown';
-}
 
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
 
   if (request.method === 'GET' && url.pathname === '/health') {
-    return sendJson(response, 200, { ok: true, status: 'ok', queueLength: eventQueue.length });
+    return sendJson(response, 200, { ok: true, status: 'ok', queueLength: eventQueue.size() });
   }
 
   // Alphonso polls this endpoint to drain queued inbound events.
@@ -64,8 +56,25 @@ const server = http.createServer(async (request, response) => {
       return sendJson(response, 401, { ok: false, status: 'unauthorized' });
     }
     const limit = Math.min(Number(url.searchParams.get('limit') || 100), 500);
-    const events = drainQueue(limit);
-    return sendJson(response, 200, { ok: true, events, count: events.length });
+    const lease = url.searchParams.get('lease') === '1';
+    const events = eventQueue.drain(limit, { lease });
+    return sendJson(response, 200, { ok: true, events, count: events.length, leased: lease });
+  }
+
+  // Alphonso acknowledges leased deliveries once it has processed them.
+  if (request.method === 'POST' && url.pathname === '/queue/ack') {
+    if (!isRequestAuthorized(request, url, DRAIN_TOKEN || WEBHOOK_TOKEN)) {
+      return sendJson(response, 401, { ok: false, status: 'unauthorized' });
+    }
+    let ids = [];
+    try {
+      const body = await readBodyWithLimit(request, { maxBytes: 64 * 1024 });
+      ids = JSON.parse(body.toString('utf8') || '{}')?.deliveryIds || [];
+    } catch {
+      return sendJson(response, 400, { ok: false, status: 'failed', reason: 'invalid_json' });
+    }
+    const removed = eventQueue.ack(ids);
+    return sendJson(response, 200, { ok: true, acked: removed, queueLength: eventQueue.size() });
   }
 
   const webhookMatch = request.method === 'POST' && url.pathname.match(/^\/webhook\/([a-zA-Z0-9_-]+)$/);
@@ -106,8 +115,8 @@ const server = http.createServer(async (request, response) => {
     }
 
     enqueue({ sourceId, payload });
-    safeLog('Inbound event queued', { sourceId, queueLength: eventQueue.length });
-    return sendJson(response, 200, { ok: true, status: 'queued', queueLength: eventQueue.length });
+    safeLog('Inbound event queued', { sourceId, queueLength: eventQueue.size() });
+    return sendJson(response, 200, { ok: true, status: 'queued', queueLength: eventQueue.size() });
   }
 
   return sendJson(response, 404, { ok: false, status: 'not_found' });

@@ -336,6 +336,21 @@ final class VoiceSessionViewModel: ObservableObject {
         }
     }
 
+    func deleteCloudAccount() {
+        guard !isCloudAuthInFlight else { return }
+        isCloudAuthInFlight = true
+        Task {
+            defer { isCloudAuthInFlight = false }
+            do {
+                try await cloudService.deleteAccount()
+                signOutCloudVoice()
+                cloudAuthStatus = cloudService.authenticationStatus
+            } catch {
+                cloudAuthStatus = error.localizedDescription
+            }
+        }
+    }
+
     func signOutCloudVoice() {
         cloudSubmissionTask?.cancel()
         cloudSubmissionTask = nil

@@ -22,6 +22,19 @@ Set these Railway variables in the Cloud Voice service only:
   with the authenticated user's JWT, so the existing `voice_devices` RLS
   policies enforce enrollment and lookup ownership. Do not configure a
   service-role key for this service.
+- `VOICE_ACCESS_MODE`: `invite` (default) or `open`. In `invite` mode only
+  the emails in `VOICE_ALLOWED_EMAILS` (comma-separated, case-insensitive) can
+  use Cloud Voice. Everyone else gets 403. The AWS deploy workflow
+  (`.github/workflows/deploy-cloud-voice.yml`) refuses to deploy a task
+  definition that has neither an allowlist nor `VOICE_ACCESS_MODE=open`. Also
+  turn off "Allow new users to sign up" in Supabase Auth. The iOS app sends
+  `create_user: false`, but the public anon key could otherwise still be used
+  to sign up directly.
+- `VOICE_RATE_PER_MINUTE` (default 20) and `VOICE_DAILY_QUOTA` (default 300):
+  per-user limits on the NVIDIA-billed `/v1/voice/respond` and
+  `/v1/voice/sessions/analyze` endpoints. `0` disables a limit. The counters
+  live in process memory, so they are exact for the current single-task
+  deployment and must move to a shared store before scaling out.
 
 Do not commit these values. The iOS app must not ask a user for a Cloud Voice
 URL, NVIDIA key, or Piper token. Cloud Voice authorizes each request through
@@ -40,8 +53,9 @@ replacement flag that skips device enforcement even temporarily.
 
 ## Supabase device enrollment
 
-Apply `supabase/migrations/20260713214554_cloud_voice_devices.sql` before
-deploying Cloud Voice. The iPhone uses the public Supabase URL and publishable
+Apply every migration in `supabase/migrations/` before deploying Cloud Voice,
+including `20260930120000_delete_own_account.sql` (in-app account deletion,
+which the iOS Voice screen calls through the `delete_own_account` RPC). The iPhone uses the public Supabase URL and publishable
 key to sign in with an email one-time code, stores its session in Keychain, and
 enrolls its generated device UUID at `POST /v1/voice/devices/enroll`. Each
 voice request then requires the Supabase user access token and

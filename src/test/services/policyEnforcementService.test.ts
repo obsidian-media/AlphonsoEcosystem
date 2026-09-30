@@ -4,8 +4,12 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue(null)
 }));
 
+// Premium gating is inert at launch (no vendor key -> licenseService lets every
+// connector through). Tests that exercise the license gate flip `gated` on.
+const licenseState = vi.hoisted(() => ({ gated: false }));
 vi.mock('../../services/licenseService', () => ({
   canUseConnector: vi.fn((id: string) => {
+    if (!licenseState.gated) return true;
     const free = ['ollama', 'telegram', 'brave_search'];
     return free.includes(id);
   })
@@ -171,12 +175,35 @@ describe('policyEnforcementService', () => {
     });
 
     it('blocks premium connector when zero-cost mode disabled but no license', () => {
-      // Disable zero-cost mode so the zero-cost gate doesn't fire
-      storage['alphonso_settings'] = JSON.stringify({ zeroCostMode: false });
+      licenseState.gated = true;
+      try {
+        // Disable zero-cost mode so the zero-cost gate doesn't fire
+        storage['alphonso_settings'] = JSON.stringify({ zeroCostMode: false });
+        const result = evaluatePolicyGate({ connectorId: 'chatgpt' });
+        expect(result.ok).toBe(false);
+        expect(result.blocked).toBe(true);
+        expect(result.reason).toContain('Pro license');
+      } finally {
+        licenseState.gated = false;
+      }
+    });
+
+    it('does not let an approval bypass the license gate', () => {
+      licenseState.gated = true;
+      try {
+        storage['alphonso_settings'] = JSON.stringify({ zeroCostMode: false });
+        const result = evaluatePolicyGate({ connectorId: 'chatgpt', approved: true });
+        expect(result.ok).toBe(false);
+        expect(result.reason).toContain('Pro license');
+      } finally {
+        licenseState.gated = false;
+      }
+    });
+
+    it('allows premium connectors when license gating is inert (free launch)', () => {
+      storage['alphonso_settings'] = JSON.stringify({ zeroCostMode: false, approvalMode: false });
       const result = evaluatePolicyGate({ connectorId: 'chatgpt' });
-      expect(result.ok).toBe(false);
-      expect(result.blocked).toBe(true);
-      expect(result.reason).toContain('Pro license');
+      expect(result.ok).toBe(true);
     });
 
     it('returns correct risk level', () => {

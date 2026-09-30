@@ -641,12 +641,11 @@ pub fn run() {
       let companion_server = std::sync::Arc::new(server);
       let companion_server_clone = std::sync::Arc::clone(&companion_server);
       app.manage(companion_server_clone);
-      let app_handle_for_companion = app.handle().clone();
-      tauri::async_runtime::spawn(async move {
-        if let Err(e) = companion_server.run(app_handle_for_companion).await {
-          log::error!("Companion server error: {}", e);
-        }
-      });
+      // Opt-in: only listen on the LAN when the user has turned on mobile
+      // pairing (Settings -> Companion). Fresh installs never open port 8765.
+      if crate::companion_server::companion_enabled_pref(app.handle()) {
+        crate::companion_server::start_companion_server(companion_server, app.handle().clone());
+      }
 
       use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
       let shortcut: Shortcut = "Ctrl+Shift+Space".parse().unwrap_or_else(|_| {
@@ -841,6 +840,8 @@ pub fn run() {
       companion_server::companion_start_discovery,
       companion_server::companion_broadcast,
       companion_server::companion_get_local_ip,
+      companion_server::companion_set_enabled,
+      companion_server::companion_get_enabled,
       voice_sidecar::voice_start,
       voice_sidecar::voice_stop,
       voice_sidecar::voice_status,

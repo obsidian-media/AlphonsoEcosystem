@@ -164,14 +164,15 @@ WhatsApp sends numbers without a `+` prefix (e.g. `16474842752`). Your `WHATSAPP
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| "Connection failed" in voice UI | Voice server not running | Start from Runtime Manager → Voice OS → Start, or `python -m uvicorn main:app --host 127.0.0.1 --port 8765` in `voice/backend/` |
+| "Connection failed" in voice UI | Voice server not running | Start from Runtime Manager → Voice OS → Start, or set `VOICE_OS_TOKEN` and run `python -m uvicorn main:app --host 127.0.0.1 --port 8766` in `voice/backend/` |
 | No transcription produced | Ollama not running or no model pulled | Ensure `ollama serve` is running and `ollama pull llama3.2:3b` completed |
 | `ModuleNotFoundError: faster_whisper` | Python deps not installed | Run `pip install -r voice/backend/requirements.txt` in the voice venv |
 | `ModuleNotFoundError: piper` | piper-tts not installed | Run `pip install piper-tts` |
 | `webrtcvad` import error on Windows | MSVC build tools missing | Install [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) |
 | Microphone permission denied | Browser security | Allow microphone in system settings; Tauri WebView requires explicit permission |
 | High voice latency (>3s) | Model too large or slow hardware | Use `llama3.2:1b` in Ollama; set `beam_size=1` in `voice/backend/stt.py` (already default) |
-| Voice server exits immediately | Port 8765 already in use | Kill existing process: `netstat -ano | findstr 8765`, then `taskkill /PID <pid> /F` |
+| Voice server exits immediately | Port 8766 already in use | Kill existing process: `netstat -ano | findstr 8766`, then `taskkill /PID <pid> /F` |
+| Voice client connects then is rejected immediately | `VOICE_OS_TOKEN` not set for a manually started server | Launch Voice OS from Alphonso (it sets the token), or set the same `VOICE_OS_TOKEN` for the server and client |
 | No audio playback | TTS model file missing | piper downloads the model on first use — ensure internet access for first run |
 | `/health` returns 500 | Model preload failed | Check terminal output for STT/TTS errors; ensure Python 3.10+ and all deps installed |
 

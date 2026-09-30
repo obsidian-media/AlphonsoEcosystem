@@ -47,9 +47,12 @@
       "deb"
     ],
     "category": "Productivity",
+    "licenseFile": "../legal/EULA.txt",
     "shortDescription": "Local-first multi-agent AI companion",
     "resources": {
       "../voice/backend": "voice/backend",
+      "../NOTICE": "NOTICE",
+      "../legal/EULA.txt": "EULA.txt",
       "vendor/ollama": "ollama",
       "vendor/starter-model": "starter-model"
     },
@@ -61,7 +64,7 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "minimumSystemVersion": "10.15",
+      "minimumSystemVersion": "11.0",
       "exceptionDomain": "",
       "signingIdentity": null,
       "providerShortName": null,

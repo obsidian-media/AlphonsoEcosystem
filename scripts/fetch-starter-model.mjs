@@ -129,6 +129,20 @@ async function main() {
   // this script (see the file header).
   await writeFile(join(manifestDir, tag), manifestText, 'utf8');
 
+  // Redistributing the model requires shipping its license alongside it
+  // (Llama 3.2 Community License, section 1.b.i). The registry manifest
+  // carries the license as its own layer; copy it out as a readable file so
+  // the installer contains the exact upstream text (pre-launch audit P0-4).
+  const { readFile } = await import('node:fs/promises');
+  const licenseLayers = manifest.layers.filter((l) => l.mediaType === 'application/vnd.ollama.image.license');
+  if (licenseLayers.length === 0) {
+    throw new Error('Model manifest has no license layer -- refusing to bundle a model without its license text.');
+  }
+  const licenseTexts = await Promise.all(
+    licenseLayers.map((l) => readFile(join(blobsDir, l.digest.replace(':', '-')), 'utf8'))
+  );
+  await writeFile(join(VENDOR_DIR, 'MODEL_LICENSE.txt'), licenseTexts.join('\n\n'), 'utf8');
+
   await writeFile(
     join(VENDOR_DIR, '.gitkeep'),
     'Re-created by scripts/fetch-starter-model.mjs after fetching -- vendor/ ' +

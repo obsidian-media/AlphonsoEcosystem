@@ -45,11 +45,30 @@ describe('CompanionPairingPanel', () => {
     vi.useRealTimers();
   });
 
-  it('shows server not running when status call fails', async () => {
+  it('shows pairing off when status call fails', async () => {
     invoke.mockRejectedValue(new Error('Server not running'));
     render(<CompanionPairingPanel />);
     await waitFor(() => {
-      expect(screen.getByText('Companion server not running')).toBeTruthy();
+      expect(screen.getByText('Mobile pairing is off')).toBeTruthy();
+    });
+  });
+
+  it('enables mobile pairing on request when the listener is off', async () => {
+    mockInvokeByCommand({ companion_get_status: { running: false, port: 8765, connected_clients: 0 } });
+    render(<CompanionPairingPanel />);
+    const button = await screen.findByText('Enable mobile pairing');
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('companion_set_enabled', { enabled: true });
+    });
+  });
+
+  it('turns mobile pairing off from the running state', async () => {
+    mockInvokeByCommand();
+    render(<CompanionPairingPanel />);
+    fireEvent.click(await screen.findByText('Turn off'));
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('companion_set_enabled', { enabled: false });
     });
   });
 

@@ -53,8 +53,32 @@ describe('pollGenericWebhookGateway', () => {
     await pollGenericWebhookGateway({ limit: 25 });
 
     const [calledUrl, calledOptions] = mockFetch.mock.calls[0];
-    expect(calledUrl).toBe('https://gw.example.com/queue/drain?limit=25');
+    expect(calledUrl).toBe('https://gw.example.com/queue/drain?limit=25&lease=1');
     expect(calledOptions.headers.Authorization).toBe('Bearer secret-token');
+  });
+
+  it('acks leased deliveries and drops redelivered duplicates', async () => {
+    mockGetConnectorCredential.mockImplementation((_id, key) => {
+      if (key === 'GENERIC_WEBHOOK_DRAIN_URL') return 'https://gw.example.com/queue/drain';
+      if (key === 'GENERIC_WEBHOOK_TOKEN') return 'secret-token';
+      return '';
+    });
+    const leased = { events: [{ deliveryId: 'dup-test-1', sourceId: 'stripe', payload: {} }] };
+    mockFetch.mockImplementation(async (url) => (
+      String(url).includes('/queue/ack')
+        ? { ok: true, json: async () => ({ ok: true }) }
+        : { ok: true, json: async () => leased }
+    ));
+
+    const first = await pollGenericWebhookGateway({ limit: 5 });
+    expect(first.events).toHaveLength(1);
+    const ackCall = mockFetch.mock.calls.find(([url]) => String(url).includes('/queue/ack'));
+    expect(ackCall[0]).toBe('https://gw.example.com/queue/ack');
+    expect(JSON.parse(ackCall[1].body)).toEqual({ deliveryIds: ['dup-test-1'] });
+
+    // Same delivery again (e.g. the ack was lost) must not be processed twice.
+    const second = await pollGenericWebhookGateway({ limit: 5 });
+    expect(second.events).toHaveLength(0);
   });
 
   it('omits Authorization header when no token configured', async () => {

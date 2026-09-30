@@ -7,6 +7,7 @@ struct VoiceView: View {
     @StateObject private var viewModel = VoiceSessionViewModel()
     @State private var cloudEmail = ""
     @State private var cloudOTP = ""
+    @State private var confirmingAccountDeletion = false
     private let cloudVoicePaused = false
 
     var body: some View {
@@ -88,6 +89,23 @@ struct VoiceView: View {
                                     viewModel.signOutCloudVoice()
                                 }
                                 .buttonStyle(.bordered)
+
+                                Button("Delete Cloud Voice account", role: .destructive) {
+                                    confirmingAccountDeletion = true
+                                }
+                                .font(.caption)
+                                .confirmationDialog(
+                                    "Delete your Cloud Voice account?",
+                                    isPresented: $confirmingAccountDeletion,
+                                    titleVisibility: .visible
+                                ) {
+                                    Button("Delete account permanently", role: .destructive) {
+                                        viewModel.deleteCloudAccount()
+                                    }
+                                    Button("Cancel", role: .cancel) {}
+                                } message: {
+                                    Text("This permanently deletes your account, enrolled devices, and saved learning history. It can't be undone.")
+                                }
                             } else {
                                 Text("Cloud Voice stays unavailable until this iPhone is enrolled. Local Voice remains available.")
                                     .font(.caption2)

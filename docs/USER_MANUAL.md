@@ -380,16 +380,16 @@ Alphonso has 13 built-in connectors, all policy-gated:
 | Telegram | Messaging | Free (self-hosted bot) | Free |
 | WhatsApp | Messaging | Free (Meta Cloud API + Railway gateway) | Free |
 | Brave Search | Search | Free | Free |
-| YouTube | Publishing | Free | Pro |
-| Claude | LLM | Paid | Pro |
-| ChatGPT | LLM | Paid | Pro |
-| GitHub | Development | Free tier | Pro |
-| Slack | Communication | Free tier | Pro |
-| Notion | Workspace | Free tier | Pro |
-| ClickUp | Project Mgmt | Free tier | Pro |
-| SD WebUI | Image Gen | Free (local) | Pro |
-| ComfyUI | Image Gen | Free (local) | Pro |
-| Runway | Video Gen | Paid | Pro |
+| YouTube | Publishing | Free | Free |
+| Claude | LLM | Paid | Free |
+| ChatGPT | LLM | Paid | Free |
+| GitHub | Development | Free tier | Free |
+| Slack | Communication | Free tier | Free |
+| Notion | Workspace | Free tier | Free |
+| ClickUp | Project Mgmt | Free tier | Free |
+| SD WebUI | Image Gen | Free (local) | Free |
+| ComfyUI | Image Gen | Free (local) | Free |
+| Runway | Video Gen | Paid | Free |
 | Ollama | LLM | Free (local) | Free |
 
 ### WhatsApp Cloud Setup
@@ -622,59 +622,11 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 ## 15. License Tiers
 
-Alphonso offers three license tiers to match different needs:
+**Alphonso is free at launch.** Every agent and connector is available without a license key.
 
-### Free Tier
+The licensing system still ships in the app (`licenseService.ts`), but it stays inactive until a vendor signing key is configured. There is currently nothing to buy and no key to enter. When paid tiers are introduced, this section and [docs/PRICING.md](PRICING.md) will describe them. Approving an action will never stand in for a license.
 
-**Included features:**
-- All 9 agents (Jose, Hector, Miya, Alphonso, Maria, Marcus, Echo, Sentinel, Nova)
-- Ollama local LLM integration
-- Telegram and WhatsApp connectors
-- Brave Search connector
-- Local memory and knowledge base
-- Boardroom orchestrator
-- Content Catalyst
-- Community support
-
-**Limitations:**
-- No cloud LLM connectors (Claude, ChatGPT)
-- No premium connectors (GitHub, Slack, Notion, ClickUp)
-- No image/video generation connectors
-
-### Pro Tier ($19/month)
-
-**Everything in Free, plus:**
-- Claude API connector
-- ChatGPT API connector
-- GitHub connector (issues, PRs, releases, code search)
-- Slack connector (messaging, channels, webhooks)
-- Notion connector
-- ClickUp connector
-- SD WebUI image generation
-- ComfyUI image generation
-- Runway video generation
-- Priority email support
-- Early access to new features
-
-### Enterprise Tier ($99/month)
-
-**Everything in Pro, plus:**
-- Multi-user support
-- Admin dashboard with team management
-- SSO integration
-- Advanced audit logs
-- Custom agent development
-- Dedicated support
-- SLA guarantees
-
-### Activating a License
-
-1. Open **Settings** → **License**
-2. Enter your license key
-3. Click **Activate**
-4. Restart Alphonso
-
-Your license key is stored locally and validated against the policy enforcement system. Premium connectors are automatically enabled based on your tier.
+Connecting a third-party service (Claude, ChatGPT, Runway and so on) uses your own account and API key, and that provider bills you directly for usage. Zero-Cost Mode and Approval Mode, both on by default in **Settings**, block paid or metered calls until you approve them.
 
 ---
 

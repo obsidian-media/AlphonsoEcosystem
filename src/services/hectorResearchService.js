@@ -11,7 +11,7 @@ import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceService';
 import { addNode, addEdge } from './memoryGraphService';
-import { generateAgentLlmResponse, PREFERRED_MODEL } from '../lib/ollama';
+import { generateAgentLlmResponse, PREFERRED_MODEL, getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
@@ -190,7 +190,7 @@ function extractJsonArray(text) {
 
 async function chooseHectorOllamaModel() {
   try {
-    const proof = await invoke('ollama_list_models', { endpoint: null });
+    const proof = await invoke('ollama_list_models', { endpoint: getConfiguredOllamaEndpoint() });
     const installed = Array.isArray(proof?.models) ? proof.models : [];
     // Regression fix: this used to always take proof.models[0] — whichever
     // model Ollama happened to list first — completely ignoring the user's
@@ -242,11 +242,11 @@ async function buildResearchQueryRefinements(researchQuestion, sourceType, exist
   ].join('\n');
 
   const proof = await invoke('ollama_generate', {
-    endpoint: null,
+    endpoint: getConfiguredOllamaEndpoint(),
     model: modelChoice.model,
     prompt
   }).catch((error) => ({
-    endpoint: 'http://localhost:11434',
+    endpoint: getConfiguredOllamaEndpoint(),
     httpStatus: null,
     model: modelChoice.model,
     response: '',
@@ -298,11 +298,11 @@ async function synthesizeHectorFallbackReport(researchQuestion, sourceType, prov
   ].join('\n');
 
   const proof = await invoke('ollama_generate', {
-    endpoint: null,
+    endpoint: getConfiguredOllamaEndpoint(),
     model: modelChoice.model,
     prompt
   }).catch((error) => ({
-    endpoint: 'http://localhost:11434',
+    endpoint: getConfiguredOllamaEndpoint(),
     httpStatus: null,
     model: modelChoice.model,
     response: '',

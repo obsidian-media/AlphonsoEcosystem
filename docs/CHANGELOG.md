@@ -6,6 +6,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-09-30 (pre-launch all-angle audit + fix pass)
+
+The audit report itself is private (`audits/private/`, gitignored) because it contains exploit detail. This entry lists what changed.
+
+- **Windows desktop CI was red on every `main` push since 2026-09-16.** `ci.yml` still bundled the ~1.9GB starter model into the Windows NSIS build, which overran makensis's ~2GB mmap ceiling. `release.yml` already skipped the model on Windows and macOS, so shipped releases were never affected; `ci.yml` now matches it.
+- **Launching free.** Premium connector gating is inert while `LICENSE_TRUST_KEY` is `null` (`isPremiumGatingEnabled()`), and approving an action no longer bypasses the license check. `docs/PRICING.md` was rewritten: it had described prices, a 14-day trial, a Lemon Squeezy checkout and a "BSL 1.1" license, none of which existed.
+- **Cloud Voice hardening.**
+  - Invite-only access (`VOICE_ACCESS_MODE`, `VOICE_ALLOWED_EMAILS`).
+  - Per-user burst and daily quotas (`voice/cloud-backend/app/quota.py`) on the NVIDIA-billed endpoints.
+  - The Tutor lesson-context cache is keyed per user, so one user can no longer read another's learner history by reusing a session id.
+  - iOS no longer auto-creates accounts (`create_user: false`).
+  - The deploy workflow now runs the backend tests first and refuses a task definition without an access policy.
+  - A new `Cloud Voice & Gateway Tests` CI job runs tests that had never run in CI.
+- **App Store readiness.** In-app account deletion (`delete_own_account` Supabase function + a confirm dialog on the iOS Voice screen) and `PrivacyInfo.xcprivacy`.
+- **The mobile-companion LAN server is opt-in.** It is off by default, with an Enable/Turn off control in Settings → Remote Access, persisted in `companion_enabled.json`. Turning it off stops the listener and drops paired sessions.
+- **Command-execution policy.**
+  - `policy_gate.rs` now fails closed per program. `node -e`, `python -c`, `npx <pkg>`, `npm publish`, git `--upload-pack`/`-c`/`ext::`, and curl/wget/docker/URL openers are refused. AI-planned commands in Jose's code-generation path reach this check, so it is the real boundary.
+  - Removed the unused, ungated `executeWithTools` loop.
+  - Project context is read through `read_workspace_file` instead of `node -e`.
+- **Silently broken features fixed.**
+  - `verifyCommandExecution` now maps Rust's `exit_code` to the `exitCode` every caller read. It had always been `undefined`.
+  - git `add`, `commit` and `revert` are allowed, so agent auto-commit and `gitService` revert work for the first time.
+  - Hector now honors the configured Ollama endpoint.
+- **Smaller fixes.**
+  - `save_image_to_folder` rejects absolute filenames.
+  - The gateways use lease + ack drain (a failed poll no longer loses messages), accept the drain token only in a header, and rate-limit on the proxy-appended `X-Forwarded-For` hop.
+  - A new `policyYamlSync.test.js` fails if `policy.yaml` and the embedded DSL rules drift.
+- **Legal and release.**
+  - NOTICE credits Ollama and Llama 3.2 ("Built with Llama"), and `fetch-starter-model.mjs` ships the model's own license layers as `MODEL_LICENSE.txt`.
+  - Installers show `legal/EULA.txt`. Drafts were added for `legal/EULA.txt` and `legal/PRIVACY_POLICY.md`; both have placeholders that need legal review.
+  - macOS `minimumSystemVersion` is now 11.0 (releases are Apple Silicon only).
+  - Release notes no longer link a private repository.
+- **Docs.** Fixed a long-standing Voice OS port error in the manual-start docs (8765 → 8766) and added the now-required `VOICE_OS_TOKEN`. Updated PRICING, USER_MANUAL, IOS_SETUP, TROUBLESHOOTING, GETTING_STARTED, both gateway READMEs, the Cloud Voice deploy doc, CLAUDE.md and the deferred-work register.
+- **Verification:** `tsc --noEmit` clean, ESLint clean on touched files, `cargo clippy -- -D warnings` clean, `cargo fmt --check` clean, Cloud Voice backend 71/71, gateway queue tests 8/8. The frontend vitest files and the new Rust unit tests could not run on the dev machine (0.6 GB free RAM; vitest worker-pool timeouts), so CI on the PR is their first run. No version bump.
+
+---
+
 ## [Unreleased] — 2026-09-15/16 (repo hygiene pass + top-3 deferred-work security/correctness fixes)
 
 - **Repo hygiene pass**: audited and dropped 3 stale stashes (all confirmed already superseded on `main`); confirmed `wip/opencode-test-coverage-2026-09-05` had never merged, was 235 commits stale, and was safe to delete after every commit's content was independently verified already present via later merged work; merged 9 safe dependabot PRs; caught dependabot PR #160 (`react-dom` 18→19 bump with no matching `react` bump) as genuinely broken via a live CI failure (119 test files) and left it open with auto-merge disabled and an explanation rather than merging it blind.
