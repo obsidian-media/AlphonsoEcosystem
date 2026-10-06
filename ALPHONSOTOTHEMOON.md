@@ -1075,8 +1075,9 @@ match. 99/99 targeted tests passing, `npx tsc --noEmit` clean.
 **Explicitly still deferred** (per this section's own original "peak scope"
 guidance — 3-5 packs for 2-3 highest-traffic agents was the v1 target, not
 a full rebuild):
-- Taxonomy depth for the remaining 6 agents (Alphonso, Maria, Marcus, Echo,
-  Sentinel, Nova each still have one default pack).
+- ~~Taxonomy depth for the remaining 6 agents (Alphonso, Maria, Marcus, Echo,
+  Sentinel, Nova each still have one default pack).~~ **Done — corrected
+  2026-10-06:** all 9 agents have 17-21 agent-owned packs each.
 - Module-system convergence between `modules/` TOML manifests and
   `skillPackService.ts` packs (§4.3) — not attempted this pass.
 - A genuine skill-marketplace model — the recommendation to start with
