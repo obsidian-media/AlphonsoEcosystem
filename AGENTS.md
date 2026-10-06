@@ -73,7 +73,7 @@ gateway/               WhatsApp Cloud gateway (Railway-deployed, live)
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 5,239 tests (405 files)
+npm run test             # 5,239 tests (405 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command

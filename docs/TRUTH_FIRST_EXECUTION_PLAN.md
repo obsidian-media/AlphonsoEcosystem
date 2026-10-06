@@ -1067,6 +1067,8 @@ dropped.
     fixed).
   - Fixed: replaced tautological mDNS assertion with format checks and
     duplicate start-server test with actual command routing test.
+  - **Re-verified 2026-10-06:** that fix still mocked `invoke`; replaced by a
+    source-reading contract test (see change log).
 
 - [x] **G-OTHER4 — Function-level coverage still low (~5.88%)** — **closed
   2026-08-20** (checkbox corrected 2026-09-02).
@@ -1630,6 +1632,7 @@ dropped.
 | 2026-07-25 | Closed C2 and C3 — per-pack least-privilege enforcement fixed and verified; generated permission matrix + CI-enforced contract regression test added. | See C2/C3 evidence above; `agentContractService.ts`, `docs/AGENT_SKILL_PERMISSION_MATRIX.md`, `scripts/generate-skill-permission-matrix.mjs`, `src/test/services/skillPackContractMatrix.test.ts`. |
 | 2026-07-26 (Part 1) | Added Section F (3 audit-sourced Cloud Voice hardening items, independently re-verified against live code, not just copied from the source audit) and Section G (production-readiness T11–T20 carried forward into this file's tracked queue, with T13/T15/T16 cross-referenced as already closed by B3/D1/D2 rather than duplicated, plus 5 other previously-untracked open items). | User request, following an external "Hermes" audit report + its own Codex verification addendum; see Section F/G entries for per-item evidence and status notes. |
 | 2026-07-26 (Part 2) | **Closed F1** (timing-safe auth in cloud voice), **G-OTHER3** (companionIntegration tests fixed). PR #124 opened against `fix/audit-134-bugfixes` with 79 files changed across all layers (134 findings fixed from the full-repo bug audit). | PR #124: 3,486 insertions / 340 deletions. Full audit report in `audits/2026-07-26_FullBugAudit_Audit.md`. |
+| 2026-10-06 | **Re-closed G-OTHER3 for real:** the 2026-07-26 fix still mocked `invoke` and could not fail; replaced with a source-reading contract test (mutation-verified). Also fixed `bridge/tests/server.test.js` (syntax error, tautologies) and made `npm test` include `bridge`. | `docs/governance/DEFERRED_WORK.md` 2026-10-06; `npm test` 406 files passed. |
 | 2026-07-27 | Migrated `skillPackService` and `joseExecutionEngineService` from `.js` to `.ts`; split skill-pack content into registry/content/guidance modules and verified the affected test sets plus full Vitest, lint, and typecheck. | This session's code changes and verification output. |
 | 2026-07-29 | Codex completed a fresh risk-based all-angle audit after a full codebase-memory reindex. | `audits/2026-07-29_Codex_AllAngle_Audit.md`; lint passed; the full PowerShell verifier timed out in fallback secret scanning, so no release-readiness claim was made. |
 | 2026-07-29 | Codex resolved the Local Voice dependency/model/runtime-path deferrals and added a focused Vitest command. | Windows clean-venv install; `pytest voice/backend/tests -q` 37/37; Piper real WAV synthesis; pending only fresh Rust compile and hardware/Ollama/playback evidence. |

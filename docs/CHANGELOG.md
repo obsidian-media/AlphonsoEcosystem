@@ -6,6 +6,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-10-06 (approval hardening, macOS notarization, false-confidence tests)
+
+- **macOS notarization (#270).** `release.yml`'s `build-macos` signs with a Developer ID certificate and notarizes; written but not yet exercised on a real tag (see `docs/MACOS_SIGNING.md`).
+- **Per-command approval for AI-planned workspace-code commands (#271).** `commandApprovalService.ts`; fail-closed; also gates automatic post-write validation. Writes into `.git/` are blocked.
+- **Approval bridge fixed (#272).** `RequestApprovalProvider` previously never showed a prompt (Boardroom Hermes gate, plugin/workspace/verification flows awaited forever); it now forwards to the shell's approval modal.
+- **Approval for execute/restore/enable actions (#275).** `needsHighRiskApproval()` no longer relies only on risk keywords.
+- **Tests that could not fail were fixed.** `bridge/tests/server.test.js` now parses and asserts real behavior, and `npm test`/`test:watch` include `bridge` (it was never run in CI). `companionIntegration.test.js` is now a source-reading contract test for the Rust/Swift/frontend companion wiring.
+- **Held:** Tailwind v4 migration (#276) awaits a decision on macOS 10.15 support.
+
+---
+
 ## [Unreleased] — 2026-09-30 (pre-launch all-angle audit + fix pass)
 
 The audit report itself is private (`audits/private/`, gitignored) because it contains exploit detail. This entry lists what changed.
