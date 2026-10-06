@@ -57,6 +57,8 @@ const WorkflowOperationsDashboard = lazy(() =>
 );
 
 interface Props {
+  /** Which tab to open first. App.tsx remounts the hub (via key) per sidebar entry, so 'Agent Pairing' and 'Maturity' land directly on their tab. */
+  initialTab?: 'overview' | 'queue' | 'skills' | 'workflows' | 'pairings' | 'workshop' | 'advanced';
   settings: Record<string, unknown>;
   setSettings: (settings: Record<string, unknown>) => void;
   ollamaStatus: { state: string };
@@ -69,7 +71,7 @@ interface Props {
   nativeProofHooks: Record<string, unknown>;
 }
 
-export function EcosystemHub({ settings, setSettings, ollamaStatus, verificationLogs = [], voiceStatus, workspaceFoundation, updateCheckState, nativeSelfDevProof, setNativeSelfDevProof, nativeProofHooks }: Props) {
+export function EcosystemHub({ initialTab = 'overview', settings, setSettings, ollamaStatus, verificationLogs = [], voiceStatus, workspaceFoundation, updateCheckState, nativeSelfDevProof, setNativeSelfDevProof, nativeProofHooks }: Props) {
   const [packets, setPackets] = useState<ReturnType<typeof listAgentPackets>>(() => listAgentPackets());
   const [skills, setSkills] = useState<{ id: string; name: string; version: string; enabled: boolean; type: string; [key: string]: unknown }[]>(() => listSkillPacks());
   const [skillAudit, setSkillAudit] = useState(() => listSkillPackAudit());
@@ -79,7 +81,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   const [resourceSnapshots, setResourceSnapshots] = useState(() => listResourceSnapshots());
   const [marketItems, setMarketItems] = useState<{ id: string; name: string; type: string; status: string; [key: string]: unknown }[]>(() => listMarketplaceItems());
   const [snapshots, setSnapshots] = useState<{ id: string; timestampMs: number; payload?: Record<string, unknown> }[]>(() => listSnapshots());
-  const [showAdvancedSections, setShowAdvancedSections] = useState<string>('overview');
+  const [showAdvancedSections, setShowAdvancedSections] = useState<string>(initialTab);
   const [manifestInput, setManifestInput] = useState('{\n  "id": "pack.youtube-studio",\n  "name": "YouTube Pack",\n  "version": "1.0.0",\n  "permissions": ["memory.read", "workflows.write"],\n  "category": "creator"\n}');
   const [newWorkflowName, setNewWorkflowName] = useState('You -> Jose -> Agents -> Jose Confirmation Flow');
   const [handoffNote, setHandoffNote] = useState('Creative packet validated and queued for supervised execution.');

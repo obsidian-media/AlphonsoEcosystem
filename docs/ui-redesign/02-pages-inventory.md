@@ -54,7 +54,7 @@ These are real, built, working components with no `App.tsx activeTab` branch —
 
 | Component | Where it actually lives today |
 |---|---|
-| `AgentPairingView.tsx` | Reachable, but per CLAUDE.md's own 2026-09-02 note, "2+ clicks deep behind a generic tab label" — real discoverability problem, not fixed as of last verification |
+| `AgentPairingView.tsx` | Reachable, but per CLAUDE.md's own 2026-09-02 note, "2+ clicks deep behind a generic tab label" — real discoverability problem — **fixed 2026-10-06** (own sidebar item `pairings` + Dashboard card) |
 | `CompanionPairingPanel.tsx` | Embedded inside `SettingsView.tsx` |
 | `WorkspaceExportImportView.tsx` | Embedded inside `SettingsView.tsx` |
 | `CrashLogView.tsx` | Embedded inside `SettingsView.tsx` (Logs tab) |
@@ -83,7 +83,7 @@ These are real, built, working components with no `App.tsx activeTab` branch —
 
 ## D. Known IA/discoverability problems (per CLAUDE.md's own tracked gaps, still open as of last verification, cross-checked against real code above)
 
-- **Agent Pairing, Ecosystem Maturity panels, Operator Dashboard** — historically "2+ clicks deep" / "undiscoverable." Operator got a nav entry in a prior pass (confirmed: `operator` id IS in the current Sidebar list above), so that specific complaint is resolved. Agent Pairing's discoverability was NOT independently re-verified this session — flagged as needing a live check, not assumed fixed.
+- **Agent Pairing, Ecosystem Maturity panels, Operator Dashboard** — historically "2+ clicks deep" / "undiscoverable." Operator got a nav entry in a prior pass (confirmed: `operator` id IS in the current Sidebar list above), so that specific complaint is resolved. **Update 2026-10-06:** Agent Pairing and Maturity now have their own System sidebar items (`pairings`, `maturity`) plus a Dashboard quick-launch card for pairing — resolved.
 - **Coach Mode** feels "forgotten" — not because it's broken, but because it opens as a second OS window with no persistent visual signal in the main app that it's running (confirmed real: `coachModeService.ts` opens a literal separate `WebviewWindow`).
 - **The Orchestrator page has real internal duplication** — its embedded `OrchestratorQueueView` and a separate hand-rolled Monitor-tab panel cover the same dead-letter-queue data on different refresh cadences (documented in CLAUDE.md, left alone per explicit prior user instruction — worth revisiting during this redesign since it's a legitimate structural problem, not just cosmetic).
 - **NEW, found this session (Bug Log #1):** `agent_performance` sidebar nav is completely dead.
