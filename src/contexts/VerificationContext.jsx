@@ -60,7 +60,7 @@ export function VerificationProvider({ children, requestApproval, setApprovalReq
         return;
       }
     }
-    if (!await requestApproval({ actionLabel: `Execute command: ${program} ${args.join(' ')}` })) return;
+    if (!await requestApproval({ actionLabel: `Execute command: ${program} ${args.join(' ')}`, riskLevel: 'high', requireApproval: true })) return;
     const proof = await verifyCommandExecution(program, args, null);
     setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   }, [settings.safeMode, requestApproval, setApprovalRequiredNotice]);
@@ -71,7 +71,7 @@ export function VerificationProvider({ children, requestApproval, setApprovalReq
   }, [requestApproval, verifyCommand]);
 
   const handleRuntimeRepair = useCallback(async () => {
-    if (!await requestApproval({ actionLabel: 'Run supervised runtime repair checks' })) return;
+    if (!await requestApproval({ actionLabel: 'Run supervised runtime repair checks', riskLevel: 'high', requireApproval: true })) return;
     await runOllamaCheck();
     await verifyProcesses(['ollama']);
     const log = appendVerificationLog({
