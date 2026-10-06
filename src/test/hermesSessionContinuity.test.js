@@ -91,8 +91,8 @@ describe('Hermes sessionId is passed from every per-agent call site', () => {
     expect(sessionIdOf()).toBeUndefined();
   });
 
-  it('Hector synthesis passes the report id as the session', async () => {
-    await synthesizeHectorResearch('what is x?', [{ url: 'https://a.example', title: 'A', excerpt: 'x is y' }], { sessionId: 'report-1' });
+  it('Hector synthesis passes the caller-resolved session id through unchanged (resolution happens at the call site, breaking CodeQL insecure-randomness taint)', async () => {
+    await synthesizeHectorResearch('what is x?', [{ url: 'https://a.example', title: 'A', excerpt: 'x is y' }], { sessionId: resolveSecureSessionId('report-1') });
     expect(mockGenerate.mock.calls[0][0]).toBe('hector');
     expect(sessionIdOf()).toBe(resolveSecureSessionId('report-1'));
   });
@@ -104,7 +104,7 @@ describe('Hermes sessionId is passed from every per-agent call site', () => {
 
   it('Alphonso brain uses one session across its clarifying step', async () => {
     mockGenerate.mockResolvedValue({ response: '["What kind of app?"]' });
-    await executeWithBrain('app', { projectDirectory: '', sessionId: 'pkt-brain' });
+    await executeWithBrain('app', { projectDirectory: '', sessionId: resolveSecureSessionId('pkt-brain') });
     const alphonsoCalls = mockGenerate.mock.calls.filter((c) => c[0] === 'alphonso');
     expect(alphonsoCalls.length).toBeGreaterThan(0);
     for (const call of alphonsoCalls) {

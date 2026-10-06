@@ -10,7 +10,6 @@ import { getModelForTask } from './modelSelectionService';
 import { autoRunDevServer, getAutoRunEnabled } from './autoRunService';
 import { isComposioEnabled, executeViaComposio } from './composioService';
 import { recordAgentExecution } from './agentMetricsService';
-import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
 const PATTERN_MEMORY_KEY = 'alphonso_brain_patterns_v1';
 const MAX_PATTERNS = 200;
@@ -562,9 +561,11 @@ function buildValidationPrompt(commandText, validationErrors, writtenFiles) {
 
 export async function executeWithBrain(commandText, options = {}) {
   const { endpoint, projectDirectory, onProgress, previewOnly, conversationHistory, onToken } = options;
-  // One Hermes session per brain run (clarify -> plan -> every generate/fix step), keyed on the
-  // routing packet when Jose provides one, so Hermes memory groups the whole run together.
-  const sessionId = options.sessionId ? resolveSecureSessionId(options.sessionId) : undefined;
+  // One Hermes session per brain run (clarify -> plan -> every generate/fix step) so Hermes
+  // memory groups the whole run together. The caller (Jose) already passes a value resolved via
+  // resolveSecureSessionId at its own call site, which is what keeps the id out of CodeQL's
+  // insecure-randomness taint flow; it is used as-is here.
+  const { sessionId } = options;
   const results = [];
   const filesWritten = [];
   const artifacts = [];

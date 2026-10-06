@@ -663,7 +663,7 @@ async function executeAlphonsoAssignment(commandText: any, assignment: any, opti
       onProgress: options.onProgress,
       onToken: options.onToken,
       conversationHistory: options.conversationHistory,
-      sessionId: assignment?.packetId
+      sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
     });
 
     if (brainResult.filesWritten.length > 0) {

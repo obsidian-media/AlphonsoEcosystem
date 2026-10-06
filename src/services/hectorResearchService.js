@@ -408,7 +408,7 @@ export async function synthesizeHectorResearch(researchQuestion, sources, option
       endpoint: options.endpoint,
       model: options.model || PREFERRED_MODEL,
       prompt,
-      sessionId: options.sessionId ? resolveSecureSessionId(options.sessionId) : undefined
+      sessionId: options.sessionId
     });
     return parseHectorSynthesisResponse(response?.response);
   } catch {
@@ -1083,7 +1083,7 @@ export async function runHectorLiveResearch(reportId, onProgress) {
 
   let finalReport = updated;
   if (successProofs.length > 0) {
-    const synthesis = await synthesizeHectorResearch(workingReport.researchQuestion, successProofs, { sessionId: reportId });
+    const synthesis = await synthesizeHectorResearch(workingReport.researchQuestion, successProofs, { sessionId: resolveSecureSessionId(reportId) });
     if (synthesis) {
       finalReport = updateReport(reportId, { synthesis, summary: synthesis.overview });
       onProgress?.(finalReport);
@@ -1133,7 +1133,7 @@ export async function resynthesizeHectorReport(reportId, onProgress) {
   const successProofs = Array.isArray(report.sourceProofs) ? report.sourceProofs.filter((p) => p.ok) : [];
   if (successProofs.length === 0) return null;
 
-  const synthesis = await synthesizeHectorResearch(report.researchQuestion, successProofs, { sessionId: reportId });
+  const synthesis = await synthesizeHectorResearch(report.researchQuestion, successProofs, { sessionId: resolveSecureSessionId(reportId) });
   if (!synthesis) return null;
 
   const updated = updateReport(reportId, { synthesis, summary: synthesis.overview });
