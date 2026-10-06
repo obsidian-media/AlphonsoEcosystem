@@ -729,6 +729,15 @@ fn readiness_keyword_match(
     .find(|(needle, _, _, _)| lower.contains(needle))
 }
 
+/// True when any component of a workspace-relative path is a `.git` directory
+/// (case-insensitive: Windows and default macOS volumes are case-insensitive).
+fn rel_touches_git_dir(rel: &Path) -> bool {
+  rel.components().any(|component| match component {
+    Component::Normal(name) => name.to_string_lossy().eq_ignore_ascii_case(".git"),
+    _ => false,
+  })
+}
+
 #[tauri::command]
 pub(crate) fn write_workspace_text_file(
   workspace_root: String,
@@ -754,6 +763,12 @@ pub(crate) fn write_workspace_text_file(
     })
   {
     return Err("Unsafe relative path rejected.".to_string());
+  }
+
+  // Files under .git (hooks, config's core.fsmonitor, ...) are executed by
+  // ordinary git commands, so a text write there is a code-execution primitive.
+  if rel_touches_git_dir(rel) {
+    return Err("Writes inside .git are not allowed.".to_string());
   }
 
   let file_path = root_abs.join(rel);
@@ -2078,6 +2093,35 @@ pub(crate) fn mark_inbox_file_processed(
 mod tests {
   use super::*;
   use std::path::Component;
+
+  #[test]
+  fn git_dir_writes_are_detected_case_insensitively() {
+    assert!(rel_touches_git_dir(Path::new(".git/hooks/pre-commit")));
+    assert!(rel_touches_git_dir(Path::new(".git/config")));
+    assert!(rel_touches_git_dir(Path::new("sub/.GIT/config")));
+    assert!(!rel_touches_git_dir(Path::new("src/.gitignore")));
+    assert!(!rel_touches_git_dir(Path::new("docs/git-notes.md")));
+  }
+
+  #[test]
+  fn write_workspace_text_file_rejects_git_dir() {
+    let dir = std::env::temp_dir().join(format!("alphonso-gitwrite-{}", now_ms()));
+    fs::create_dir_all(&dir).unwrap();
+    let result = write_workspace_text_file(
+      dir.to_string_lossy().to_string(),
+      ".git/hooks/pre-commit".to_string(),
+      "#!/bin/sh\necho pwned".to_string(),
+    );
+    assert!(result.is_err());
+    assert!(!dir.join(".git").exists());
+    let ok = write_workspace_text_file(
+      dir.to_string_lossy().to_string(),
+      "src/a.txt".to_string(),
+      "x".to_string(),
+    );
+    assert!(ok.is_ok());
+    let _ = fs::remove_dir_all(&dir);
+  }
 
   #[test]
   fn parent_dir_component_detected() {
