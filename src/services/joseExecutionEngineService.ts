@@ -662,7 +662,8 @@ async function executeAlphonsoAssignment(commandText: any, assignment: any, opti
       projectDirectory: projectDir,
       onProgress: options.onProgress,
       onToken: options.onToken,
-      conversationHistory: options.conversationHistory
+      conversationHistory: options.conversationHistory,
+      sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
     });
 
     if (brainResult.filesWritten.length > 0) {

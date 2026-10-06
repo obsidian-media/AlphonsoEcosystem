@@ -11,6 +11,7 @@ import { ModeToggle } from './ModeToggle';
 import type { UxMode } from '../hooks/useUxMode';
 import alphonsoIcon from '../assets/alphonso-app-icon.png';
 import { useTheme } from '../hooks/useTheme';
+import { resolveSecureSessionId } from '../services/connectors/hermesAgentConnector';
 
 // Text-only companion persona -- same "no fabricated tool/file claims"
 // contract as chatUtils.js's CHAT_ASSISTANT_PROMPT, generalized across all
@@ -96,7 +97,7 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
         `\n${activeAgent.name}:`
       ].join('');
 
-      const result = await generateAgentLlmResponse(activeAgent.id, { prompt });
+      const result = await generateAgentLlmResponse(activeAgent.id, { prompt, sessionId: resolveSecureSessionId(`companion-mode:${activeAgent.id}`) });
 
       setConversations((prev) => ({
         ...prev,

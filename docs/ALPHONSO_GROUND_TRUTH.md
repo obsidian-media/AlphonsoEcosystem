@@ -2293,6 +2293,9 @@ Private audit: `audits/private/2026-09-30_Claude_PreLaunchAllAngle_Audit.md`. It
 - **`npm test` was a no-op gate.** `run-vitest-programmatic.mjs` passed `'run'` as vitest's mode argument (it must be `'test'`), so vitest 4 collected files but executed no test bodies; a failing test reported passed and exit code was always 0. Fixed (mode `'test'`, exit code propagated, `express` alias and 30s `testTimeout` mirrored from `vitest.config.js`). `test:coverage` (real vitest) was the only effective gate and still scopes to `src`.
 - Verification: real `npx vitest run src bridge --pool=forks` 406 files / 5,563 tests passed; `tsc --noEmit` clean; `verify-doc-counts.mjs` clean.
 
+## 11.30 Hermes session continuity completed (2026-10-06)
+
+All per-agent `generateAgentLlmResponse` call sites now pass a `sessionId` keyed on their unit of work (packet id, report id, watched file, or companion agent), resolved via `resolveSecureSessionId`. Calls with no natural id pass none. Guard: `src/test/hermesSessionContinuity.test.js`. Not live-verified against a running Hermes profile beyond the 2026-08-21 Hector check.
 ## 11.31 Skill-pack taxonomy depth is complete for all 9 agents (correction, 2026-10-06)
 
 Earlier docs (Sprint 3 entries, CLAUDE.md, ALPHONSOTOTHEMOON.md) said Alphonso, Maria, Marcus, Echo, Sentinel and Nova still had one default pack each. That was stale. Counting `ownerAgent` over `src/services/skillPackContent*.ts` and `skillPackWorkflowData.ts` gives alphonso 18, echo 17, hector 21, jose 21, marcus 17, maria 18, miya 21, nova 17, sentinel 17 agent-owned packs, each file covered by a `skillPackContent<Agent>.test.ts`. Still deferred: module-system convergence (`modules/` vs skill packs) and a full marketplace model.
