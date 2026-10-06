@@ -1,5 +1,9 @@
 import { startVitest } from 'vitest/node';
 import { configDefaults } from 'vitest/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 function sanitizeNodeOptions(raw) {
   if (!raw) return '';
@@ -28,13 +32,18 @@ if (sanitizedNpmNodeOptions) {
 }
 
 const filters = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
-const runMode = process.argv.includes('--watch') ? 'watch' : 'run';
+const watch = process.argv.includes('--watch');
 
+// The first argument of startVitest is the vitest *mode* ('test' | 'benchmark'),
+// not run-vs-watch. Passing 'run' made vitest 4 collect files but never execute
+// a test body, so a failing test reported "passed" and `npm test` always exited
+// 0. Run-vs-watch is controlled by the `run`/`watch` options below.
 const ctx = await startVitest(
-  runMode,
+  'test',
   filters,
   {
-    run: runMode === 'run',
+    run: !watch,
+    watch,
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setupTests.js'],
@@ -48,10 +57,16 @@ const ctx = await startVitest(
     configFile: false
   },
   {
-    configFile: false
+    configFile: false,
+    // Mirror vitest.config.js: bridge/server.js imports express, which the
+    // bridge tests replace with a mock.
+    resolve: { alias: { express: path.join(root, 'bridge/tests/__mocks__/express.js') } }
   }
 );
 
 if (ctx && !ctx.shouldKeepServer()) {
+  // Propagate failures: ctx.exit() alone does not set a non-zero exit code.
+  const failed = ctx.state.getCountOfFailedTests() > 0 || ctx.state.getFiles().some((f) => f.result?.state === 'fail');
   await ctx.exit();
+  if (failed) process.exitCode = 1;
 }
