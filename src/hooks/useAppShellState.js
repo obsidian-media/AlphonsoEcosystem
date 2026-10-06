@@ -68,6 +68,8 @@ export function useAppShellState({
   const [braveSearchConfigured, setBraveSearchConfigured] = useState(false);
 
   const approvalResolveRef = useRef(null);
+  const approvalActiveRef = useRef(false);
+  const approvalWaitersRef = useRef([]);
   const screenObserverRunRef = useRef(false);
   const workspaceRootBootstrapRef = useRef(false);
   const nativeSelfDevAutorunRef = useRef(false);
@@ -124,9 +126,27 @@ export function useAppShellState({
     // Logic from App.jsx
     if (!settings.approvalMode) return Promise.resolve(true);
     if (!requireApproval && !needsHighRiskApproval(actionLabel)) return Promise.resolve(true);
+    // The shell shows one approval modal and keeps one resolver, so a request
+    // that arrives while another is open (Boardroom bridge, command approval,
+    // direct callers) is queued and shown after the current decision, instead
+    // of overwriting the resolver and leaving the earlier caller hanging.
     return new Promise((resolve) => {
-      approvalResolveRef.current = resolve;
-      setApprovalPending({ actionLabel, packetId, agent, riskLevel, mariaScore });
+      const request = { actionLabel, packetId, agent, riskLevel, mariaScore };
+      if (approvalActiveRef.current) {
+        approvalWaitersRef.current.push({ request, resolve });
+        return;
+      }
+      const show = (req, done) => {
+        approvalActiveRef.current = true;
+        approvalResolveRef.current = (decision) => {
+          done(decision);
+          const next = approvalWaitersRef.current.shift();
+          if (next) show(next.request, next.resolve);
+          else approvalActiveRef.current = false;
+        };
+        setApprovalPending(req);
+      };
+      show(request, resolve);
     });
   }, [settings.approvalMode]);
 
