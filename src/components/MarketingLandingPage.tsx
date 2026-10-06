@@ -224,7 +224,7 @@ export default function MarketingLandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.45, delay: idx * 0.08 }}
-              className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur"
+              className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
             >
               <item.icon className="mb-3 h-5 w-5 text-amber-200" />
               <h3 className="mb-1 text-lg font-semibold">{item.title}</h3>
@@ -306,7 +306,7 @@ export default function MarketingLandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.45, delay: idx * 0.08 }}
-                className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-5"
+                className="rounded-2xl border border-white/10 bg-linear-to-b from-white/10 to-white/5 p-5"
               >
                 <div className="text-sm uppercase tracking-[0.14em] text-zinc-300">{plan.name}</div>
                 <div className="mt-2 flex items-end gap-2">
@@ -334,7 +334,7 @@ export default function MarketingLandingPage() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Name"
-              className="rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-sm outline-none placeholder:text-zinc-500 focus:border-amber-300/70"
+              className="rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-sm outline-hidden placeholder:text-zinc-500 focus:border-amber-300/70"
             />
             <input
               required
@@ -342,14 +342,14 @@ export default function MarketingLandingPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Work email"
-              className="rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-sm outline-none placeholder:text-zinc-500 focus:border-amber-300/70"
+              className="rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-sm outline-hidden placeholder:text-zinc-500 focus:border-amber-300/70"
             />
             <input
               type="text"
               value={company}
               onChange={(event) => setCompany(event.target.value)}
               placeholder="Company (optional)"
-              className="rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-sm outline-none placeholder:text-zinc-500 focus:border-amber-300/70"
+              className="rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-sm outline-hidden placeholder:text-zinc-500 focus:border-amber-300/70"
             />
             <div className="md:col-span-3 flex flex-wrap items-center gap-3">
               <button

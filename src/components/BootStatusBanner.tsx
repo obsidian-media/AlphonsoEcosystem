@@ -14,14 +14,14 @@ interface StatusDotProps {
 
 function StatusDot({ status }: StatusDotProps) {
   const colors: Record<string, string> = {
-    starting: 'bg-[var(--warning)] animate-pulse',
-    started: 'bg-[var(--success)]',
-    running: 'bg-[var(--success)]',
-    skipped: 'bg-[var(--text-3)]',
-    failed: 'bg-[var(--error)]',
+    starting: 'bg-(--warning) animate-pulse',
+    started: 'bg-(--success)',
+    running: 'bg-(--success)',
+    skipped: 'bg-(--text-3)',
+    failed: 'bg-(--error)',
   };
   return (
-    <span className={`w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-[var(--text-3)]'}`} />
+    <span className={`w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-(--text-3)'}`} />
   );
 }
 
@@ -62,12 +62,12 @@ export function BootStatusBanner() {
   if (!visible || dismissed || items.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-80 rounded-xl bg-surface-2 border border-[var(--border)] shadow-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]">
-        <span className="text-xs font-semibold text-[var(--text-2)]">Starting AI Runtimes</span>
+    <div className="fixed bottom-4 right-4 z-50 w-80 rounded-xl bg-surface-2 border border-(--border) shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-(--border)">
+        <span className="text-xs font-semibold text-(--text-2)">Starting AI Runtimes</span>
         <button
           onClick={() => setDismissed(true)}
-          className="text-[var(--text-3)] hover:text-[var(--text-1)] text-xs transition-colors"
+          className="text-(--text-3) hover:text-(--text-1) text-xs transition-colors"
           aria-label="Dismiss boot status"
         >
           ✕
@@ -78,8 +78,8 @@ export function BootStatusBanner() {
           <div key={item.tool} className="flex items-center gap-2">
             <StatusDot status={item.status} />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-[var(--text-2)] truncate">{item.displayName}</p>
-              <p className="text-[10px] text-[var(--text-3)] truncate">{item.message}</p>
+              <p className="text-xs font-medium text-(--text-2) truncate">{item.displayName}</p>
+              <p className="text-[10px] text-(--text-3) truncate">{item.message}</p>
             </div>
           </div>
         ))}

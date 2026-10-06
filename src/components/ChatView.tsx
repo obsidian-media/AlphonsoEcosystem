@@ -116,7 +116,7 @@ function ConnectorDegradationBanner({ onDismiss }) {
       <span className="flex-1">Some connectors are unavailable — results may be limited.</span>
       <button
         onClick={onDismiss}
-        className="rounded px-1 text-amber-400/60 hover:text-amber-300 transition-colors"
+        className="rounded-sm px-1 text-amber-400/60 hover:text-amber-300 transition-colors"
         aria-label="Dismiss"
       >
         ✕
@@ -1045,7 +1045,7 @@ export function ChatView({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="border-b border-[var(--border)] shrink-0 bg-[var(--surface-0)]">
+      <div className="border-b border-(--border) shrink-0 bg-(--surface-0)">
         <div className="h-12 flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <ModelProviderPicker
@@ -1063,7 +1063,7 @@ export function ChatView({
             />
             <button
               onClick={() => setDirectMode((d) => !d)}
-              className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${directMode ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-[var(--text-4)] hover:text-[var(--text-2)]'}`}
+              className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded-sm transition-colors uppercase tracking-widest font-bold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${directMode ? 'bg-(--accent-dim) text-(--accent)' : 'text-(--text-4) hover:text-(--text-2)'}`}
               aria-label={directMode ? `Direct mode on (${directAgent})` : 'Direct mode off'}
               title={directMode ? `Direct to ${directAgent} — bypasses Jose routing` : 'Enable direct agent mode'}
             >
@@ -1078,14 +1078,14 @@ export function ChatView({
           <div className="flex items-center gap-3">
             <button
               onClick={() => { setSearchOpen((o) => !o); setSearchQuery(''); }}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded ${searchOpen ? 'text-[var(--accent)]' : 'text-[var(--text-3)] hover:text-[var(--accent)]'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) rounded-sm ${searchOpen ? 'text-(--accent)' : 'text-(--text-3) hover:text-(--accent)'}`}
               aria-label={searchOpen ? 'Close search' : 'Open search'}
             >
               <Search className="w-3 h-3" />
             </button>
             <button
               onClick={() => setCompactChat((current) => !current)}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded ${compactChat ? 'text-[var(--success)]' : 'text-[var(--text-3)] hover:text-[var(--success)]'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) rounded-sm ${compactChat ? 'text-(--success)' : 'text-(--text-3) hover:text-(--success)'}`}
               aria-label={compactChat ? 'Expand chat spacing' : 'Compact chat spacing'}
             >
               {compactChat ? <ChevronsUp className="w-3 h-3" /> : <ChevronsDown className="w-3 h-3" />}
@@ -1094,14 +1094,14 @@ export function ChatView({
             <button
               onClick={exportChat}
               disabled={messages.length === 0}
-              className="text-2xs text-[var(--text-3)] hover:text-[var(--accent)] flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded"
+              className="text-2xs text-(--text-3) hover:text-(--accent) flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) rounded-sm"
               aria-label="Export chat as Markdown"
             >
               <Download className="w-3 h-3" /> Export
             </button>
             <button
               onClick={clearChat}
-              className="text-2xs text-[var(--text-3)] hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded"
+              className="text-2xs text-(--text-3) hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) rounded-sm"
               aria-label="Clear chat"
             >
               <Trash2 className="w-3 h-3" /> Clear
@@ -1110,18 +1110,18 @@ export function ChatView({
         </div>
         {searchOpen && (
           <div className="flex items-center gap-2 px-6 pb-2">
-            <Search className="w-3.5 h-3.5 text-[var(--text-3)] shrink-0" />
+            <Search className="w-3.5 h-3.5 text-(--text-3) shrink-0" />
             <input
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search messages…"
-              className="flex-1 bg-transparent text-sm text-[var(--text-1)] placeholder-zinc-600 outline-none"
+              className="flex-1 bg-transparent text-sm text-(--text-1) placeholder-zinc-600 outline-hidden"
             />
             {searchQuery && (
-              <span className="text-2xs text-[var(--text-3)]">{visibleMessages.length} of {messages.length}</span>
+              <span className="text-2xs text-(--text-3)">{visibleMessages.length} of {messages.length}</span>
             )}
-            <button onClick={() => setSearchQuery('')} className="text-[var(--text-4)] hover:text-[var(--text-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded" aria-label="Clear search query">
+            <button onClick={() => setSearchQuery('')} className="text-(--text-4) hover:text-(--text-2) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) rounded-sm" aria-label="Clear search query">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -1150,13 +1150,13 @@ export function ChatView({
           </span>
           <button
             onClick={onRetryOllama}
-            className="rounded px-2 py-0.5 text-[10px] font-bold text-amber-300 hover:bg-amber-400/10 transition-colors"
+            className="rounded-sm px-2 py-0.5 text-[10px] font-bold text-amber-300 hover:bg-amber-400/10 transition-colors"
           >
             Retry
           </button>
           <button
             onClick={() => setOllamaBannerDismissed(true)}
-            className="rounded px-1 text-amber-400/60 hover:text-amber-300 transition-colors"
+            className="rounded-sm px-1 text-amber-400/60 hover:text-amber-300 transition-colors"
             aria-label="Dismiss"
           >
             ✕
@@ -1169,19 +1169,19 @@ export function ChatView({
         <div className="mx-3 mt-2 shrink-0">
           <button
             onClick={() => setShowPinned((s) => !s)}
-            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors mb-1"
+            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-(--text-3) hover:text-(--text-1) transition-colors mb-1"
           >
             <Pin className="w-3 h-3" />
             {pinnedMessages.length} Pinned {showPinned ? '▲' : '▼'}
           </button>
           {showPinned && (
-            <div className="space-y-1 max-h-40 overflow-y-auto rounded-xl bg-[var(--surface-2)] p-2">
+            <div className="space-y-1 max-h-40 overflow-y-auto rounded-xl bg-(--surface-2) p-2">
               {pinnedMessages.map((pm) => (
                 <div key={pm.id} className="flex items-start gap-2 group">
-                  <div className="flex-1 text-[11px] text-[var(--text-2)] line-clamp-2 leading-relaxed">{pm.content}</div>
+                  <div className="flex-1 text-[11px] text-(--text-2) line-clamp-2 leading-relaxed">{pm.content}</div>
                   <button
                     onClick={() => unpinMessage(pm.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-[var(--text-4)] hover:text-amber-400"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-sm text-(--text-4) hover:text-amber-400"
                     aria-label="Unpin message"
                   >
                     <PinOff className="w-3 h-3" />
@@ -1203,10 +1203,10 @@ export function ChatView({
           <div className="h-full flex flex-col items-center justify-center select-none py-16 px-4">
             <div className="flex flex-col items-center gap-6 w-full max-w-lg">
               <div className="flex flex-col items-center gap-2 opacity-70">
-                <div className="w-10 h-10 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-[var(--accent)]" />
+                <div className="w-10 h-10 rounded-xl bg-(--accent-dim) border border-(--accent-border) flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-(--accent)" />
                 </div>
-                <p className="text-sm font-semibold text-[var(--text-1)]">What can I help you build?</p>
+                <p className="text-sm font-semibold text-(--text-1)">What can I help you build?</p>
               </div>
               <div className="grid grid-cols-2 gap-2 w-full">
                 {[
@@ -1218,9 +1218,9 @@ export function ChatView({
                   <button
                     key={s.label}
                     onClick={() => { setInputValue(s.cmd); inputRef.current?.focus(); }}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-2)] hover:border-[var(--accent-border)] hover:text-[var(--text-1)] transition-all text-left"
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-(--surface-2) border border-(--border) text-xs text-(--text-2) hover:border-(--accent-border) hover:text-(--text-1) transition-all text-left"
                   >
-                    <ArrowRight className="w-3 h-3 text-[var(--text-4)] shrink-0" />
+                    <ArrowRight className="w-3 h-3 text-(--text-4) shrink-0" />
                     {s.label}
                   </button>
                 ))}
@@ -1230,13 +1230,13 @@ export function ChatView({
         )}
 
         {searchQuery && visibleMessages.length === 0 && (
-          <div className="text-center text-xs text-[var(--text-4)] py-8">No messages match "{searchQuery}"</div>
+          <div className="text-center text-xs text-(--text-4) py-8">No messages match "{searchQuery}"</div>
         )}
         {hiddenCount > 0 && (
           <div className="text-center py-2">
             <button
               onClick={() => setMessageWindowStart((n) => n + WINDOW_SIZE)}
-              className="text-xs text-[var(--text-3)] hover:text-[var(--accent)] transition-colors underline underline-offset-2"
+              className="text-xs text-(--text-3) hover:text-(--accent) transition-colors underline underline-offset-2"
             >
               Show {hiddenCount} older message{hiddenCount !== 1 ? 's' : ''}
             </button>
@@ -1257,8 +1257,8 @@ export function ChatView({
               ) : message.agentId ? (
                 <AgentAvatar agentId={message.agentId} name={message.agentId} sizeClass="h-8 w-8" className="shrink-0 mt-1" />
               ) : (
-                <div className="w-8 h-8 rounded-lg bg-[var(--accent-dim)] border-[var(--accent-border)] border flex items-center justify-center shrink-0 mt-1">
-                  <Bot className="w-4 h-4 text-[var(--accent)]" />
+                <div className="w-8 h-8 rounded-lg bg-(--accent-dim) border-(--accent-border) border flex items-center justify-center shrink-0 mt-1">
+                  <Bot className="w-4 h-4 text-(--accent)" />
                 </div>
               )
             )}
@@ -1266,23 +1266,23 @@ export function ChatView({
               {message.role === 'assistant' ? (
                 <div className="relative group">
                   {message.isError ? (
-                    <div className="flex flex-col gap-2 px-4 py-3 bg-[var(--error-dim)] border border-red-500/20 rounded-[var(--radius-md)] text-sm">
-                      <div className="flex items-center gap-2 text-[var(--error)]">
+                    <div className="flex flex-col gap-2 px-4 py-3 bg-(--error-dim) border border-red-500/20 rounded-md text-sm">
+                      <div className="flex items-center gap-2 text-(--error)">
                         <AlertCircle className="w-4 h-4 shrink-0" />
                         <span className="font-medium">Something went wrong</span>
                       </div>
-                      <p className="text-[var(--text-2)] text-xs leading-relaxed">{message.content}</p>
+                      <p className="text-(--text-2) text-xs leading-relaxed">{message.content}</p>
                       {message.retryable !== false && (
                         <button
                           onClick={() => retryLastMessage?.()}
-                          className="self-start text-xs text-[var(--error)] hover:text-red-300 underline"
+                          className="self-start text-xs text-(--error) hover:text-red-300 underline"
                         >
                           Try again
                         </button>
                       )}
                     </div>
                   ) : (
-                    <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl bg-[var(--surface-1)] rounded-tl-sm ${message.isNew ? 'border-l-2 border-[var(--success)] animate-border-fade' : ''} text-[var(--text-1)]`}>
+                    <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl bg-(--surface-1) rounded-tl-sm ${message.isNew ? 'border-l-2 border-(--success) animate-border-fade' : ''} text-(--text-1)`}>
                       <MarkdownMessage content={message.content} />
                     </div>
                   )}
@@ -1291,7 +1291,7 @@ export function ChatView({
                     <div className="mt-2">
                       <button
                         onClick={() => setActiveTab?.('runtimes')}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg text-xs text-[var(--accent)] hover:bg-[var(--accent-dim)] hover:text-[var(--accent-hover)] transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-(--accent-dim) border border-(--accent-border) rounded-lg text-xs text-(--accent) hover:bg-(--accent-dim) hover:text-(--accent-hover) transition-colors"
                       >
                         <ArrowRight className="w-3 h-3" />
                         Open Runtime Hub to install ComfyUI or AUTOMATIC1111
@@ -1306,7 +1306,7 @@ export function ChatView({
                           const reply = await confirmMcpOutreachCall(message.pendingConfirmChatId);
                           setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: reply }]);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg text-xs text-[var(--accent)] hover:bg-[var(--accent-dim)] hover:text-[var(--accent-hover)] transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-(--accent-dim) border border-(--accent-border) rounded-lg text-xs text-(--accent) hover:bg-(--accent-dim) hover:text-(--accent-hover) transition-colors"
                       >
                         Approve &amp; Place Call
                       </button>
@@ -1333,7 +1333,7 @@ export function ChatView({
                                 key={i}
                                 href="#"
                                 onClick={(e) => { e.preventDefault(); openExternalUrl(src.url); }}
-                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-sky-900/40 border border-sky-700/50 rounded text-xs text-sky-400 hover:text-sky-300 hover:bg-sky-900/60"
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-sky-900/40 border border-sky-700/50 rounded-sm text-xs text-sky-400 hover:text-sky-300 hover:bg-sky-900/60"
                                 title={src.url}
                               >
                                 <span>↗</span>
@@ -1350,7 +1350,7 @@ export function ChatView({
                   <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
-                      className="p-1 rounded text-[var(--text-4)] hover:text-amber-400 hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+                      className="p-1 rounded-sm text-(--text-4) hover:text-amber-400 hover:bg-(--surface-3) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border)"
                       aria-label={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin message' : 'Pin message'}
                       title={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin' : 'Pin'}
                     >
@@ -1362,7 +1362,7 @@ export function ChatView({
                         setCopiedMsgId(message.id);
                         setTimeout(() => setCopiedMsgId((id) => id === message.id ? null : id), 1500);
                       }}
-                      className="p-1 rounded text-[var(--text-4)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+                      className="p-1 rounded-sm text-(--text-4) hover:text-(--text-1) hover:bg-(--surface-3) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border)"
                       aria-label={copiedMsgId === message.id ? 'Copied' : 'Copy message to clipboard'}
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -1371,10 +1371,10 @@ export function ChatView({
                 </div>
               ) : (
                 <div className="relative group">
-                  <div className={`px-3 py-2 text-xs rounded-2xl rounded-tr-sm bg-[var(--accent)] text-[var(--accent-contrast)] ${compactChat ? '' : 'px-4 py-3'}`}>{message.content as string}</div>
+                  <div className={`px-3 py-2 text-xs rounded-2xl rounded-tr-sm bg-(--accent) text-(--accent-contrast) ${compactChat ? '' : 'px-4 py-3'}`}>{message.content as string}</div>
                   <button
                     onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
-                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[var(--surface-0)] hover:text-[var(--surface-0)]"
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-sm text-(--surface-0) hover:text-(--surface-0)"
                     aria-label={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin message' : 'Pin message'}
                   >
                     {pinnedMessages.some((p) => p.id === message.id) ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
@@ -1396,8 +1396,8 @@ export function ChatView({
               </div>
             )}
             {isLastAssistantMessage && executionReceipts.length > 0 && !isGenerating && !pipelineResult && pipelineStateChatId === activeChatId && (
-              <div className="w-full mt-2 border border-[var(--border)] rounded-xl bg-[var(--surface-0)] p-3 space-y-2">
-                <div className="text-2xs font-bold uppercase tracking-widest text-[var(--text-3)]">
+              <div className="w-full mt-2 border border-(--border) rounded-xl bg-(--surface-0) p-3 space-y-2">
+                <div className="text-2xs font-bold uppercase tracking-widest text-(--text-3)">
                   Execution Receipts ({executionReceipts.length})
                 </div>
                 {executionReceipts.map((receipt) => {
@@ -1405,9 +1405,9 @@ export function ChatView({
                   const statusLabel = RECEIPT_STATUS_LABELS[receipt.status as string] ?? (receipt.status as string);
                   return (
                     <div key={receipt.id as string} className="flex items-center gap-2 text-xs">
-                      <span className={`px-1.5 py-0.5 rounded text-2xs font-bold uppercase tracking-widest ${receipt.status === 'reported_to_jose' || receipt.status === 'executed' ? 'bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success-border)]' : receipt.status === 'pending_approval' ? 'bg-[var(--warning-dim)] text-[var(--warning)] border border-[var(--warning-border)]' : receipt.status === 'dead_letter' || receipt.status === 'failed' ? 'bg-[var(--error-dim)] text-[var(--error)] border border-[var(--error-border)]' : 'bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)]'}`}>{statusLabel}</span>
-                      <span className="text-[var(--text-1)] font-medium">{receipt.agent as string}</span>
-                      <span className="text-[var(--text-3)] truncate">{(receipt.actionType || receipt.eventType) as string}</span>
+                      <span className={`px-1.5 py-0.5 rounded-sm text-2xs font-bold uppercase tracking-widest ${receipt.status === 'reported_to_jose' || receipt.status === 'executed' ? 'bg-(--success-dim) text-(--success) border border-(--success-border)' : receipt.status === 'pending_approval' ? 'bg-(--warning-dim) text-(--warning) border border-(--warning-border)' : receipt.status === 'dead_letter' || receipt.status === 'failed' ? 'bg-(--error-dim) text-(--error) border border-(--error-border)' : 'bg-(--surface-3) text-(--text-2) border border-(--border)'}`}>{statusLabel}</span>
+                      <span className="text-(--text-1) font-medium">{receipt.agent as string}</span>
+                      <span className="text-(--text-3) truncate">{(receipt.actionType || receipt.eventType) as string}</span>
                     </div>
                   );
                 })}
@@ -1472,16 +1472,16 @@ export function ChatView({
               </div>
             )}
             {isLastAssistantMessage && novaInsight && !isGenerating && (
-              <div className="w-full mt-2 rounded-2xl bg-[var(--surface-2)] p-4 space-y-2" style={{ boxShadow: '0 0 20px var(--agent-nova-glow)' }}>
+              <div className="w-full mt-2 rounded-2xl bg-(--surface-2) p-4 space-y-2" style={{ boxShadow: '0 0 20px var(--agent-nova-glow)' }}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-[var(--accent)] shrink-0" />
-                    <span className="text-xs font-bold text-[var(--accent)] uppercase tracking-widest">Nova Insight</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(novaInsight.valueScore as number) >= 80 ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]' : (novaInsight.valueScore as number) >= 60 ? 'bg-[var(--warning-dim)] border-[var(--warning-border)] text-[var(--warning)]' : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)]'}`}>Score {novaInsight.valueScore as number}/100</span>
+                    <Lightbulb className="w-4 h-4 text-(--accent) shrink-0" />
+                    <span className="text-xs font-bold text-(--accent) uppercase tracking-widest">Nova Insight</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(novaInsight.valueScore as number) >= 80 ? 'bg-(--success-dim) border-(--success-border) text-(--success)' : (novaInsight.valueScore as number) >= 60 ? 'bg-(--warning-dim) border-(--warning-border) text-(--warning)' : 'bg-(--surface-3) border-(--border) text-(--text-2)'}`}>Score {novaInsight.valueScore as number}/100</span>
                   </div>
-                  <button onClick={() => setNovaInsight(null)} className="text-[var(--text-4)] hover:text-[var(--text-2)] rounded"><X className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => setNovaInsight(null)} className="text-(--text-4) hover:text-(--text-2) rounded-sm"><X className="w-3.5 h-3.5" /></button>
                 </div>
-                {novaInsight.recommendation && <p className="text-xs text-[var(--text-1)] leading-relaxed">{novaInsight.recommendation as string}</p>}
+                {novaInsight.recommendation && <p className="text-xs text-(--text-1) leading-relaxed">{novaInsight.recommendation as string}</p>}
               </div>
             )}
           </div>
@@ -1495,22 +1495,22 @@ export function ChatView({
           <div className="flex gap-3 max-w-3xl mx-auto w-full py-2" aria-live="polite" aria-label="Streaming response">
             <AgentAvatar agentId={directMode ? directAgent : 'alphonso'} name={directMode ? directAgent : 'alphonso'} sizeClass="h-6 w-6" roundedClass="rounded-lg" className="shrink-0" />
             <div className="flex items-center gap-1.5 pt-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:0ms]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:150ms]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:300ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-(--text-3) animate-bounce [animation-delay:0ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-(--text-3) animate-bounce [animation-delay:150ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-(--text-3) animate-bounce [animation-delay:300ms]" />
             </div>
           </div>
         )}
 
         {liveProgress && isGenerating && (
           <div className="flex gap-4 max-w-3xl mx-auto w-full">
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-[var(--accent)] animate-pulse" />
+            <div className="w-8 h-8 rounded-lg bg-(--accent-dim) border border-(--accent-border) flex items-center justify-center shrink-0 mt-1">
+              <Bot className="w-4 h-4 text-(--accent) animate-pulse" />
             </div>
-            <div className="flex-1 px-3 py-2 rounded-xl bg-[var(--surface-1)] border border-[var(--border)]">
+            <div className="flex-1 px-3 py-2 rounded-xl bg-(--surface-1) border border-(--border)">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-pulse" />
-                <span className="text-xs text-[var(--text-2)] font-medium">
+                <div className="w-1.5 h-1.5 bg-(--accent) rounded-full animate-pulse" />
+                <span className="text-xs text-(--text-2) font-medium">
                   {liveProgress.stage === 'wave_start' && `Wave ${(liveProgress.wave || 0) + 1}: ${(liveProgress.agents || []).join(', ')}`}
                   {liveProgress.stage === 'executed' && `${liveProgress.assignment?.agent || 'Agent'} completed`}
                   {liveProgress.stage === 'generating_images' && `Generating ${liveProgress.promptCount || 0} image(s)...`}
@@ -1527,15 +1527,15 @@ export function ChatView({
 
       <div className={`${compactChat ? 'p-3' : 'p-5'} shrink-0 max-w-4xl mx-auto w-full`}>
         <div
-          className={`relative bg-[var(--surface-glass)] border rounded-2xl backdrop-blur-xl group focus-within:border-[var(--accent-border)] focus-within:shadow-[0_0_20px_var(--accent-glow)] transition-all ${isDragging ? 'border-[var(--warning-border)] border-dashed' : 'border-[var(--border)]'}`}
+          className={`relative bg-(--surface-glass) border rounded-2xl backdrop-blur-xl group focus-within:border-(--accent-border) focus-within:shadow-[0_0_20px_var(--accent-glow)] transition-all ${isDragging ? 'border-(--warning-border) border-dashed' : 'border-(--border)'}`}
           onDragEnter={() => setIsDragging(true)}
           onDragLeave={() => setIsDragging(false)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
           {isGenerating && (
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--accent-dim)] overflow-hidden rounded-t-2xl">
-              <div className="h-full bg-[var(--accent)] animate-shimmer" style={{ width: '40%' }} />
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-(--accent-dim) overflow-hidden rounded-t-2xl">
+              <div className="h-full bg-(--accent) animate-shimmer" style={{ width: '40%' }} />
             </div>
           )}
           <input
@@ -1556,15 +1556,15 @@ export function ChatView({
               }
             }}
             placeholder="Ask anything… or try: 'run workflow [name]', 'generate an image of…', 'implement a function that…'"
-            className={`w-full bg-transparent text-[var(--text-1)] placeholder:text-[var(--text-4)] px-4 pt-4 pb-2 focus:outline-none text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[56px]' : 'min-h-[80px]'}`}
+            className={`w-full bg-transparent text-(--text-1) placeholder:text-(--text-4) px-4 pt-4 pb-2 focus:outline-hidden text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[56px]' : 'min-h-[80px]'}`}
             data-testid="chat-compose-input"
           />
           <div className="px-4 pb-2">
             <div
-              className="flex items-start gap-2 rounded-xl bg-[var(--accent-dim)] px-3 py-2 text-[11px] leading-relaxed text-[var(--text-2)]"
+              className="flex items-start gap-2 rounded-xl bg-(--accent-dim) px-3 py-2 text-[11px] leading-relaxed text-(--text-2)"
               data-testid="jose-routing-explainer"
             >
-              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
+              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--accent)" />
               <span>
                 Workflow-style prompts route through Jose automatically. The result card stays attached to this chat so you can copy the summary, review receipts, or rerun the command without hunting through logs.
               </span>
@@ -1573,9 +1573,9 @@ export function ChatView({
           {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-4 pb-1">
               {attachedFiles.map((f, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-3)] border border-[var(--border)] text-[11px] text-[var(--text-1)]">
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-(--surface-3) border border-(--border) text-[11px] text-(--text-1)">
                   {(f as { name: string }).name}
-                  <button onClick={() => setAttachedFiles((prev) => prev.filter((_, idx) => idx !== i))} className="text-[var(--text-3)] hover:text-[var(--text-1)] ml-0.5" aria-label={`Remove ${(f as { name: string }).name}`}>×</button>
+                  <button onClick={() => setAttachedFiles((prev) => prev.filter((_, idx) => idx !== i))} className="text-(--text-3) hover:text-(--text-1) ml-0.5" aria-label={`Remove ${(f as { name: string }).name}`}>×</button>
                 </span>
               ))}
             </div>
@@ -1583,12 +1583,12 @@ export function ChatView({
           <div className="flex items-center gap-2 px-3 pb-3 pt-1">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-2xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-2xs font-bold transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${
                 (attachedFile as { error?: string; name?: string } | null)?.error
-                  ? 'border-[var(--error-border)] text-[var(--error)]'
+                  ? 'border-(--error-border) text-(--error)'
                   : (attachedFile as { error?: string; name?: string } | null)?.name
-                    ? 'border-[var(--success-border)] text-[var(--success)]'
-                    : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
+                    ? 'border-(--success-border) text-(--success)'
+                    : 'border-(--border) text-(--text-3) hover:text-(--text-1)'
               }`}
               aria-label="Attach a file to your message"
             >
@@ -1598,7 +1598,7 @@ export function ChatView({
 <Suspense fallback={null}>
                <SmartVoiceButton voiceStatus={voice.voiceStatus} onToggle={voice.toggleListening} />
              </Suspense>
-            <span className="flex-1 text-2xs text-[var(--text-4)]">
+            <span className="flex-1 text-2xs text-(--text-4)">
               {ollamaStatus.state === 'connected' && !selectedModelMissing
                 ? `${settings.selectedModel as string || 'local model'}`
                 : ollamaStatus.state !== 'connected'
@@ -1608,7 +1608,7 @@ export function ChatView({
             {isGenerating && (
               <button
                 onClick={handleAbortStream}
-                className="h-7 px-3 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest bg-[var(--surface-3)] text-[var(--error)] hover:bg-[var(--error-dim)] border border-[var(--error-border)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--error-border)]"
+                className="h-7 px-3 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest bg-(--surface-3) text-(--error) hover:bg-(--error-dim) border border-(--error-border) transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--error-border)"
                 aria-label="Abort and stop"
               >
                 <Square className="w-3 h-3" />
@@ -1618,10 +1618,10 @@ export function ChatView({
             <button
               onClick={() => handleSend()}
               disabled={isGenerating || !inputValue.trim()}
-              className={`h-7 px-4 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
+              className={`h-7 px-4 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${
                 isGenerating || !inputValue.trim()
-                  ? 'bg-[var(--surface-3)] text-[var(--text-4)] cursor-not-allowed opacity-50'
-                  : 'bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)]'
+                  ? 'bg-(--surface-3) text-(--text-4) cursor-not-allowed opacity-50'
+                  : 'bg-(--accent) text-(--accent-contrast) hover:bg-(--accent-hover)'
               }`}
               aria-label="Send message"
               data-testid="chat-send-button"
@@ -1648,7 +1648,7 @@ export function ChatView({
               <Lightbulb className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-amber-200">{proactiveSuggestion.title}</div>
-                <div className="text-xs text-[var(--text-2)] mt-1">{proactiveSuggestion.message}</div>
+                <div className="text-xs text-(--text-2) mt-1">{proactiveSuggestion.message}</div>
                 {proactiveSuggestion.actions && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {proactiveSuggestion.actions.map((action, i) => (
@@ -1672,7 +1672,7 @@ export function ChatView({
               </div>
               <button
                 onClick={() => setProactiveSuggestion(null)}
-                className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--text-4)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+                className="p-1 rounded-sm hover:bg-(--surface-3) text-(--text-4) shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border)"
                 aria-label="Dismiss suggestion"
               >
                 <X className="w-3.5 h-3.5" />
@@ -1685,29 +1685,29 @@ export function ChatView({
 
       {/* Keyboard shortcut help modal */}
       {showShortcutHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutHelp(false)} role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs" onClick={() => setShowShortcutHelp(false)} role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
           <div
-            className="w-full max-w-md bg-[var(--surface-0)] rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-md bg-(--surface-0) rounded-2xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between p-4 border-b border-(--border)">
               <div className="flex items-center gap-2">
-                <Keyboard className="w-5 h-5 text-[var(--text-2)]" />
-                <div className="text-sm font-semibold text-[var(--text-1)]">Keyboard Shortcuts</div>
+                <Keyboard className="w-5 h-5 text-(--text-2)" />
+                <div className="text-sm font-semibold text-(--text-1)">Keyboard Shortcuts</div>
               </div>
-              <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--text-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]" aria-label="Close keyboard shortcuts">
+              <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded-sm hover:bg-(--surface-3) text-(--text-3) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border)" aria-label="Close keyboard shortcuts">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
               {getShortcutList().map((shortcut, i) => (
                 <div key={i} className="flex items-center justify-between py-1">
-                  <span className="text-xs text-[var(--text-1)]">{shortcut.label}</span>
-                  <span className="text-[10px] font-mono text-[var(--text-3)] bg-[var(--surface-3)] px-2 py-0.5 rounded">{shortcut.keys}</span>
+                  <span className="text-xs text-(--text-1)">{shortcut.label}</span>
+                  <span className="text-[10px] font-mono text-(--text-3) bg-(--surface-3) px-2 py-0.5 rounded-sm">{shortcut.keys}</span>
                 </div>
               ))}
             </div>
-            <div className="p-3 border-t border-[var(--border)] text-[10px] text-[var(--text-4)] text-center">
+            <div className="p-3 border-t border-(--border) text-[10px] text-(--text-4) text-center">
               Press ? to toggle this help
             </div>
           </div>

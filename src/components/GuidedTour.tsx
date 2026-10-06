@@ -75,24 +75,24 @@ export function GuidedTour({ mode, onComplete, onDismiss }: GuidedTourProps) {
   useFocusTrap(panelRef, true);
 
   return (
-    <div className="fixed inset-0 z-[1000]" role="dialog" aria-modal="true" aria-label="Guided tour">
+    <div className="fixed inset-0 z-1000" role="dialog" aria-modal="true" aria-label="Guided tour">
       <div className="absolute inset-0 bg-black/60" onClick={handleDismiss} />
 
       <div
         ref={panelRef}
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-[var(--surface-1)] border border-[var(--border)] rounded-xl shadow-2xl p-6"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-(--surface-1) border border-(--border) rounded-xl shadow-2xl p-6"
         style={{ animation: 'fadeIn 150ms ease-out' }}
       >
         <button
           onClick={handleDismiss}
-          className="absolute top-3 right-3 p-1 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors"
+          className="absolute top-3 right-3 p-1 rounded-lg text-(--text-3) hover:text-(--text-1) hover:bg-(--surface-3) transition-colors"
           aria-label="Close tour"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <h2 className="text-lg font-semibold text-[var(--text-1)] mb-2">{step.title}</h2>
-        <p className="text-sm text-[var(--text-2)] mb-6">{step.body}</p>
+        <h2 className="text-lg font-semibold text-(--text-1) mb-2">{step.title}</h2>
+        <p className="text-sm text-(--text-2) mb-6">{step.body}</p>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
@@ -100,7 +100,7 @@ export function GuidedTour({ mode, onComplete, onDismiss }: GuidedTourProps) {
               <span
                 key={idx}
                 className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                  idx === currentStep ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'
+                  idx === currentStep ? 'bg-(--accent)' : 'bg-(--border)'
                 }`}
               />
             ))}
@@ -110,7 +110,7 @@ export function GuidedTour({ mode, onComplete, onDismiss }: GuidedTourProps) {
             {currentStep > 0 && (
               <button
                 onClick={handleBack}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-(--border) text-(--text-2) hover:bg-(--surface-3) transition-colors"
               >
                 <ChevronLeft className="w-3 h-3 inline mr-1" />
                 Back
@@ -118,7 +118,7 @@ export function GuidedTour({ mode, onComplete, onDismiss }: GuidedTourProps) {
             )}
             <button
               onClick={handleNext}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-dim)] transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-(--accent) text-(--accent-contrast) hover:bg-(--accent-dim) transition-colors"
             >
               {currentStep >= steps.length - 1 ? 'Get started' : 'Next'}
               {currentStep < steps.length - 1 && <ChevronRight className="w-3 h-3 inline ml-1" />}

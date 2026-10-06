@@ -34,7 +34,7 @@ export function KeyboardShortcutsModal({ onClose }: KeyboardShortcutsModalProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -42,17 +42,17 @@ export function KeyboardShortcutsModal({ onClose }: KeyboardShortcutsModalProps)
     >
       <div
         ref={dialogRef}
-        className="bg-[var(--surface-1)] border border-[var(--border)] rounded-xl shadow-xl w-full max-w-md mx-4 p-6"
+        className="bg-(--surface-1) border border-(--border) rounded-xl shadow-xl w-full max-w-md mx-4 p-6"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Keyboard className="w-4 h-4 text-[var(--accent)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-1)]">Keyboard Shortcuts</h2>
+            <Keyboard className="w-4 h-4 text-(--accent)" />
+            <h2 className="text-sm font-semibold text-(--text-1)">Keyboard Shortcuts</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors"
+            className="p-1 rounded-lg text-(--text-3) hover:text-(--text-1) hover:bg-(--surface-3) transition-colors"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -63,12 +63,12 @@ export function KeyboardShortcutsModal({ onClose }: KeyboardShortcutsModalProps)
           {SHORTCUTS.map(({ keys, description, available }) => (
             <div
               key={keys}
-              className={`flex items-center justify-between py-2 px-3 rounded-lg ${available ? 'bg-[var(--surface-2)]' : 'bg-[var(--surface-0)] opacity-50'}`}
+              className={`flex items-center justify-between py-2 px-3 rounded-lg ${available ? 'bg-(--surface-2)' : 'bg-(--surface-0) opacity-50'}`}
             >
-              <span className={`text-xs ${available ? 'text-[var(--text-2)]' : 'text-[var(--text-3)]'}`}>
+              <span className={`text-xs ${available ? 'text-(--text-2)' : 'text-(--text-3)'}`}>
                 {description}
               </span>
-              <kbd className="px-2 py-0.5 rounded text-[11px] font-mono bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-1)]">
+              <kbd className="px-2 py-0.5 rounded-sm text-[11px] font-mono bg-(--surface-3) border border-(--border) text-(--text-1)">
                 {keys}
               </kbd>
             </div>

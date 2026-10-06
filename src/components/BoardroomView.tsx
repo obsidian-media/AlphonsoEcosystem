@@ -261,18 +261,18 @@ export function BoardroomView() {
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         <div>
-          <h2 className="font-serif text-lg font-bold text-[var(--text-1)]">Boardroom</h2>
-          <p className="text-[var(--text-3)] text-sm mt-0.5">Multi-agent sessions for complex decisions</p>
+          <h2 className="font-serif text-lg font-bold text-(--text-1)">Boardroom</h2>
+          <p className="text-(--text-3) text-sm mt-0.5">Multi-agent sessions for complex decisions</p>
         </div>
 
         {/* New session form */}
-        <div className="rounded-xl bg-[var(--surface-2)] p-4 space-y-3">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">New Session</div>
+        <div className="rounded-xl bg-(--surface-2) p-4 space-y-3">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">New Session</div>
           <input
             value={topic}
             onChange={e => setTopic(e.target.value)}
             placeholder="Session topic..."
-            className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            className="w-full bg-(--surface-3) border border-(--border) rounded-lg px-3 py-2 text-sm text-(--text-1) placeholder-(--text-4) focus:outline-hidden focus:ring-1 focus:ring-(--accent)"
           />
           <div className="flex flex-wrap gap-1.5">
             {ALL_AGENTS.map(a => (
@@ -281,8 +281,8 @@ export function BoardroomView() {
                 onClick={() => toggleAgent(a.id)}
                 className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors ${
                   selectedAgents.includes(a.id)
-                    ? 'bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--accent)]'
-                    : 'bg-transparent border-[var(--border)] text-[var(--text-3)]'
+                    ? 'bg-(--accent-dim) border-(--accent-border) text-(--accent)'
+                    : 'bg-transparent border-(--border) text-(--text-3)'
                 }`}
               >
                 {a.label}
@@ -292,7 +292,7 @@ export function BoardroomView() {
           <button
             onClick={handleConvene}
             disabled={loading || !topic.trim() || selectedAgents.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 text-[var(--accent-contrast)] text-xs font-semibold transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-(--accent) hover:bg-(--accent-hover) disabled:opacity-40 text-(--accent-contrast) text-xs font-semibold transition-colors"
           >
             <Play className="w-3 h-3" />
             {loading ? 'Convening...' : 'Convene Session'}
@@ -302,26 +302,26 @@ export function BoardroomView() {
         {/* Session list */}
         {sessions.length > 0 && (
           <div className="space-y-1">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)] mb-2">Sessions</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3) mb-2">Sessions</div>
             {sessions.slice().reverse().map(s => (
               <button
                 key={s.sessionId}
                 onClick={() => setActiveSessionId(s.sessionId === activeSessionId ? null : s.sessionId)}
                 className={`w-full text-left rounded-lg px-3 py-2 text-xs transition-colors ${
                   activeSessionId === s.sessionId
-                    ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
-                    : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
+                    ? 'bg-(--accent-dim) ring-1 ring-(--accent-border)'
+                    : 'bg-(--surface-2) hover:bg-(--surface-3)'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-[var(--text-1)] truncate">{s.topic}</span>
+                  <span className="font-semibold text-(--text-1) truncate">{s.topic}</span>
                   <span className={`ml-2 shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
-                    s.status === 'concluded' ? 'bg-[var(--success-dim)] text-[var(--success)]' :
-                    s.status === 'active' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' :
-                    'bg-[var(--surface-3)] text-[var(--text-3)]'
+                    s.status === 'concluded' ? 'bg-(--success-dim) text-(--success)' :
+                    s.status === 'active' ? 'bg-(--accent-dim) text-(--accent)' :
+                    'bg-(--surface-3) text-(--text-3)'
                   }`}>{s.status}</span>
                 </div>
-                <div className="text-[var(--text-3)] mt-0.5">{new Date(s.createdAt).toLocaleString()}</div>
+                <div className="text-(--text-3) mt-0.5">{new Date(s.createdAt).toLocaleString()}</div>
               </button>
             ))}
           </div>
@@ -329,25 +329,25 @@ export function BoardroomView() {
 
         {/* Active session detail */}
         {activeSession && (
-          <div className="rounded-xl bg-[var(--surface-1)] p-4 space-y-3">
+          <div className="rounded-xl bg-(--surface-1) p-4 space-y-3">
             <div className="flex items-start justify-between">
               <div>
-                <div className="font-semibold text-[var(--text-1)]">{activeSession.topic}</div>
-                <div className="text-[11px] text-[var(--text-3)]">{activeSession.participants.length} agents · {activeSession.status}</div>
+                <div className="font-semibold text-(--text-1)">{activeSession.topic}</div>
+                <div className="text-[11px] text-(--text-3)">{activeSession.participants.length} agents · {activeSession.status}</div>
               </div>
               {activeSession.mariaScore !== undefined && (
                 <div className="flex flex-col items-center">
                   <ScoreRing score={activeSession.mariaScore} />
-                  <div className="text-[9px] text-[var(--text-3)] mt-0.5">Maria Risk</div>
+                  <div className="text-[9px] text-(--text-3) mt-0.5">Maria Risk</div>
                 </div>
               )}
             </div>
 
             {/* Hector briefing card */}
             {activeSession.messages.filter(m => m.type === 'briefing').map((m, i) => (
-              <div key={i} className="rounded-lg bg-[var(--info-dim)] border border-[var(--info-border)] p-3">
-                <div className="text-[10px] font-bold text-[var(--info)] mb-1">Hector Briefing</div>
-                <pre className="text-[11px] text-[var(--info)] whitespace-pre-wrap">{m.content}</pre>
+              <div key={i} className="rounded-lg bg-(--info-dim) border border-(--info-border) p-3">
+                <div className="text-[10px] font-bold text-(--info) mb-1">Hector Briefing</div>
+                <pre className="text-[11px] text-(--info) whitespace-pre-wrap">{m.content}</pre>
               </div>
             ))}
 
@@ -356,10 +356,10 @@ export function BoardroomView() {
               {activeSession.messages.filter(m => m.type !== 'briefing').map((m, i) => (
                 <div key={i} className={`rounded-lg p-2.5 border text-xs ${
                   m.type === 'conclusion'
-                    ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'
-                    : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-2)]'
+                    ? 'bg-(--success-dim) border-(--success-border) text-(--success)'
+                    : 'bg-(--surface-2) border-(--border) text-(--text-2)'
                 }`}>
-                  <span className="font-semibold text-[var(--text-1)]">{m.agentName}: </span>
+                  <span className="font-semibold text-(--text-1)">{m.agentName}: </span>
                   {m.content}
                 </div>
               ))}
@@ -371,7 +371,7 @@ export function BoardroomView() {
                 <button
                   onClick={handleConclude}
                   disabled={loading}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--success-dim)] hover:bg-[var(--success-dim)] disabled:opacity-40 text-[var(--success)] border border-[var(--success-border)] text-xs font-semibold transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-(--success-dim) hover:bg-(--success-dim) disabled:opacity-40 text-(--success) border border-(--success-border) text-xs font-semibold transition-colors"
                 >
                   <CheckCircle2 className="w-3 h-3" />
                   Conclude Session
@@ -381,14 +381,14 @@ export function BoardroomView() {
               {activeSession.status === 'concluded' && (
                 <>
                   {activeSession.mariaScore !== undefined && activeSession.mariaScore > 70 && !riskConfirmed && (
-                    <div className="w-full rounded-lg bg-[var(--warning-dim)] border border-[var(--warning-border)] p-2.5">
-                      <div className="flex items-center gap-1.5 text-[var(--warning)] text-xs font-semibold mb-1.5">
+                    <div className="w-full rounded-lg bg-(--warning-dim) border border-(--warning-border) p-2.5">
+                      <div className="flex items-center gap-1.5 text-(--warning) text-xs font-semibold mb-1.5">
                         <AlertTriangle className="w-3 h-3" />
                         High risk score ({activeSession.mariaScore}) — confirm before distributing
                       </div>
                       <button
                         onClick={() => setRiskConfirmed(true)}
-                        className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--warning-dim)] border border-[var(--warning-border)] text-[var(--warning)]"
+                        className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-(--warning-dim) border border-(--warning-border) text-(--warning)"
                       >
                         I understand the risk
                       </button>
@@ -399,7 +399,7 @@ export function BoardroomView() {
                     <button
                       onClick={handleDistribute}
                       disabled={distributingId === activeSession.sessionId}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--accent-dim)] hover:bg-[var(--accent-dim)] disabled:opacity-40 text-[var(--accent)] border border-[var(--accent-border)] text-xs font-semibold transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-(--accent-dim) hover:bg-(--accent-dim) disabled:opacity-40 text-(--accent) border border-(--accent-border) text-xs font-semibold transition-colors"
                     >
                       <Send className="w-3 h-3" />
                       Distribute Summary
@@ -408,7 +408,7 @@ export function BoardroomView() {
 
                   <button
                     onClick={handleGenerateCreativeBrief}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--agent-miya-glow)] hover:bg-[var(--agent-miya-glow)] text-[var(--agent-miya)] border border-[var(--agent-miya-glow)] text-xs font-semibold transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-(--agent-miya-glow) hover:bg-(--agent-miya-glow) text-(--agent-miya) border border-(--agent-miya-glow) text-xs font-semibold transition-colors"
                   >
                     <Brain className="w-3 h-3" />
                     Generate Creative Brief
@@ -423,24 +423,24 @@ export function BoardroomView() {
       {/* Creative Brief Modal */}
       {showCreativeBrief && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-[var(--surface-1)] border border-[var(--border)] rounded-2xl p-5 w-full max-w-md space-y-3">
+          <div className="bg-(--surface-1) border border-(--border) rounded-2xl p-5 w-full max-w-md space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-1)]">
-                <FileText className="w-4 h-4 text-[var(--agent-miya)]" />
+              <div className="flex items-center gap-2 text-sm font-bold text-(--text-1)">
+                <FileText className="w-4 h-4 text-(--agent-miya)" />
                 Creative Brief — Miya
               </div>
-              <button onClick={() => setShowCreativeBrief(false)}><X className="w-4 h-4 text-[var(--text-3)]" /></button>
+              <button onClick={() => setShowCreativeBrief(false)}><X className="w-4 h-4 text-(--text-3)" /></button>
             </div>
             {creativeBriefLoading ? (
-              <div className="text-[var(--text-3)] text-sm">Generating...</div>
+              <div className="text-(--text-3) text-sm">Generating...</div>
             ) : (
-              <div className="text-sm text-[var(--text-2)] bg-[var(--surface-2)] rounded-lg p-3 min-h-20">{creativeBrief}</div>
+              <div className="text-sm text-(--text-2) bg-(--surface-2) rounded-lg p-3 min-h-20">{creativeBrief}</div>
             )}
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowCreativeBrief(false)} className="px-3 py-1.5 text-xs text-[var(--text-3)] border border-[var(--border)] rounded-lg">
+              <button onClick={() => setShowCreativeBrief(false)} className="px-3 py-1.5 text-xs text-(--text-3) border border-(--border) rounded-lg">
                 Close
               </button>
-              <button onClick={handleSaveCreativeBrief} className="px-3 py-1.5 text-xs bg-[var(--agent-miya-glow)] text-[var(--agent-miya)] border border-[var(--agent-miya-glow)] rounded-lg font-semibold">
+              <button onClick={handleSaveCreativeBrief} className="px-3 py-1.5 text-xs bg-(--agent-miya-glow) text-(--agent-miya) border border-(--agent-miya-glow) rounded-lg font-semibold">
                 Save to Memory
               </button>
             </div>

@@ -6,18 +6,18 @@ type RiskLevel = 'high' | 'medium' | 'low';
 
 const RISK_BADGE: Record<RiskLevel, { classes: string; dot: string; label: string }> = {
   high: {
-    classes: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
-    dot: 'bg-[var(--error)]',
+    classes: 'border-(--error-border) bg-(--error-dim) text-(--error)',
+    dot: 'bg-(--error)',
     label: 'High Risk'
   },
   medium: {
-    classes: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]',
-    dot: 'bg-[var(--warning)]',
+    classes: 'border-(--warning-border) bg-(--warning-dim) text-(--warning)',
+    dot: 'bg-(--warning)',
     label: 'Medium Risk'
   },
   low: {
-    classes: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
-    dot: 'bg-[var(--success)]',
+    classes: 'border-(--success-border) bg-(--success-dim) text-(--success)',
+    dot: 'bg-(--success)',
     label: 'Low Risk'
   }
 };
@@ -107,7 +107,7 @@ function ScoreRing({ score }: { score: number }) {
           strokeLinecap="round"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-[var(--text-1)]">{score}</span>
+      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-(--text-1)">{score}</span>
     </div>
   );
 }
@@ -164,32 +164,32 @@ export function ApprovalModal({
   useFocusTrap(dialogRef, true);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--surface-0)] backdrop-blur-sm">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-(--surface-0) backdrop-blur-xs">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="approval-modal-title"
-        className="w-full max-w-sm rounded-2xl border border-[var(--warning-border)] bg-[var(--surface-1)] shadow-2xl p-6 space-y-4"
+        className="w-full max-w-sm rounded-2xl border border-(--warning-border) bg-(--surface-1) shadow-2xl p-6 space-y-4"
       >
         {/* Header */}
         <div className="flex items-start gap-3">
-          <RiskIcon className={`w-5 h-5 shrink-0 mt-0.5 ${resolvedRisk === 'high' ? 'text-[var(--error)]' : 'text-[var(--warning)]'}`} />
+          <RiskIcon className={`w-5 h-5 shrink-0 mt-0.5 ${resolvedRisk === 'high' ? 'text-(--error)' : 'text-(--warning)'}`} />
           <div className="flex-1 min-w-0">
             <div
               id="approval-modal-title"
-              className="text-xs font-bold uppercase tracking-widest text-[var(--warning)] mb-1"
+              className="text-xs font-bold uppercase tracking-widest text-(--warning) mb-1"
             >
               Approval Required
             </div>
-            <div className="text-sm text-[var(--text-2)] leading-snug break-words">{actionText}</div>
+            <div className="text-sm text-(--text-2) leading-snug wrap-break-word">{actionText}</div>
           </div>
         </div>
 
         {/* Meta row: connector + risk badge + score ring */}
         <div className="flex items-center gap-2 flex-wrap">
           {resolvedConnector && (
-            <div className="rounded-lg bg-[var(--surface-3)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)]">
+            <div className="rounded-lg bg-(--surface-3) px-2.5 py-1 text-[10px] font-semibold text-(--text-2)">
               {resolvedConnector}
             </div>
           )}
@@ -202,16 +202,16 @@ export function ApprovalModal({
 
         {/* Destructive warning */}
         {destructive && (
-          <div className="flex items-start gap-2 rounded-xl bg-[var(--error-dim)] px-3 py-2.5">
-            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[var(--error)]" />
-            <div className="text-[11px] text-[var(--error)] leading-relaxed font-semibold">
+          <div className="flex items-start gap-2 rounded-xl bg-(--error-dim) px-3 py-2.5">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-(--error)" />
+            <div className="text-[11px] text-(--error) leading-relaxed font-semibold">
               This action is irreversible. Proceed only if you are certain.
             </div>
           </div>
         )}
 
         {/* Subtitle */}
-        <div className="text-[11px] text-[var(--text-3)]">
+        <div className="text-[11px] text-(--text-3)">
           Jose requires explicit approval before this action executes. Denying will block the
           operation and log a rejection receipt.
         </div>
@@ -220,17 +220,17 @@ export function ApprovalModal({
         <div className="flex gap-3 justify-end pt-1">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-[var(--text-3)] bg-[var(--surface-3)] border border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-(--text-3) bg-(--surface-3) border border-(--border) hover:bg-(--surface-3) transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
             aria-label="Deny action"
           >
             Deny
           </button>
           <button
             onClick={onConfirm}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
               resolvedRisk === 'high'
-                ? 'bg-[var(--error)] hover:bg-[var(--error-dim)]'
-                : 'bg-[var(--warning)] hover:bg-[var(--warning-dim)]'
+                ? 'bg-(--error) hover:bg-(--error-dim)'
+                : 'bg-(--warning) hover:bg-(--warning-dim)'
             }`}
             aria-label="Approve action"
           >

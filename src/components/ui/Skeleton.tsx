@@ -7,7 +7,7 @@ interface SkeletonProps {
 
 export function Skeleton({ className = '' }: { className?: string }) {
   return (
-    <div className={`bg-[var(--surface-3)] rounded-md animate-pulse ${className}`} />
+    <div className={`bg-(--surface-3) rounded-md animate-pulse ${className}`} />
   );
 }
 
@@ -23,7 +23,7 @@ export function SkeletonList({ lines = 3 }: SkeletonProps) {
 
 export function SkeletonCard() {
   return (
-    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-lg)] p-4 space-y-3">
+    <div className="bg-(--surface-2) border border-(--border) rounded-lg p-4 space-y-3">
       <div className="flex items-center gap-3">
         <Skeleton className="w-8 h-8 rounded-full shrink-0" />
         <div className="flex-1 space-y-1.5">

@@ -80,28 +80,28 @@ const CONNECTOR_LABELS: Record<string, string> = {
 
 const STATUS_BADGE: Record<string, { dot: string; badge: string; label: string }> = {
   live: {
-    dot: 'bg-[var(--success)]',
-    badge: 'border-[var(--success-dim)] bg-[var(--success-dim)] text-[var(--success)]',
+    dot: 'bg-(--success)',
+    badge: 'border-(--success-dim) bg-(--success-dim) text-(--success)',
     label: 'Credentials saved'
   },
   missing_config: {
-    dot: 'bg-[var(--warning)]',
-    badge: 'border-[var(--warning-dim)] bg-[var(--warning-dim)] text-[var(--warning)]',
+    dot: 'bg-(--warning)',
+    badge: 'border-(--warning-dim) bg-(--warning-dim) text-(--warning)',
     label: 'Missing Config'
   },
   foundation_only: {
-    dot: 'bg-[var(--text-3)]',
-    badge: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]',
+    dot: 'bg-(--text-3)',
+    badge: 'border-(--border) bg-(--surface-2) text-(--text-1)',
     label: 'Local Only'
   },
   placeholder: {
-    dot: 'bg-[var(--text-3)]',
-    badge: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]',
+    dot: 'bg-(--text-3)',
+    badge: 'border-(--border) bg-(--surface-2) text-(--text-1)',
     label: 'Placeholder'
   },
   disabled: {
-    dot: 'bg-[var(--text-3)]',
-    badge: 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-3)]',
+    dot: 'bg-(--text-3)',
+    badge: 'border-(--border) bg-(--surface-1) text-(--text-3)',
     label: 'Disabled'
   }
 };
@@ -254,23 +254,23 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
   return (
     <div className={`flex flex-col gap-3 rounded-xl p-4 transition-colors ${
       status === 'live'
-        ? 'bg-[var(--success-dim)]'
+        ? 'bg-(--success-dim)'
         : status === 'missing_config'
-          ? 'bg-[var(--warning-dim)]'
+          ? 'bg-(--warning-dim)'
           : status === 'foundation_only'
-            ? 'bg-[var(--surface-2)]'
-            : 'bg-[var(--surface-1)]'
+            ? 'bg-(--surface-2)'
+            : 'bg-(--surface-1)'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <Icon className={`w-4 h-4 shrink-0 ${
-            status === 'live' ? 'text-[var(--success)]' :
-            status === 'missing_config' ? 'text-[var(--warning)]' :
-            status === 'foundation_only' ? 'text-[var(--text-3)]' :
-            'text-[var(--text-4)]'
+            status === 'live' ? 'text-(--success)' :
+            status === 'missing_config' ? 'text-(--warning)' :
+            status === 'foundation_only' ? 'text-(--text-3)' :
+            'text-(--text-4)'
           }`} />
-          <span className="text-sm font-semibold text-[var(--text-1)] leading-tight">{displayName}</span>
+          <span className="text-sm font-semibold text-(--text-1) leading-tight">{displayName}</span>
         </div>
 
         {/* Status badge */}
@@ -281,13 +281,13 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
       </div>
 
       {/* Transport */}
-      <div className="text-[10px] text-[var(--text-4)] font-mono leading-relaxed truncate">
+      <div className="text-[10px] text-(--text-4) font-mono leading-relaxed truncate">
         {connector.transport || 'unknown'}
       </div>
 
       {/* Zero-cost mode warning */}
       {zeroCostBlocking && (
-        <div className="flex items-center gap-1.5 rounded-lg bg-[var(--warning-dim)] px-2 py-1.5 text-[10px] text-[var(--warning)]">
+        <div className="flex items-center gap-1.5 rounded-lg bg-(--warning-dim) px-2 py-1.5 text-[10px] text-(--warning)">
           <ZapOff className="w-3 h-3 shrink-0" />
           Blocked by zero-cost mode
         </div>
@@ -296,13 +296,13 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
       {/* Env keys */}
       {requiredEnv.length > 0 && (
         <div className="space-y-1">
-          <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--text-4)]">Required env</div>
+          <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-(--text-4)">Required env</div>
           {requiredEnv.map((key) => {
             const present = Boolean(envPresence[key]);
             return (
-              <div key={key} className="flex items-center justify-between rounded bg-[var(--surface-0)] px-2 py-0.5 font-mono text-[9px]">
-                <span className="text-[var(--text-3)] truncate">{key}</span>
-                <span className={`shrink-0 ml-2 ${present ? 'text-[var(--success)]' : 'text-[var(--text-4)]'}`}>
+              <div key={key} className="flex items-center justify-between rounded-sm bg-(--surface-0) px-2 py-0.5 font-mono text-[9px]">
+                <span className="text-(--text-3) truncate">{key}</span>
+                <span className={`shrink-0 ml-2 ${present ? 'text-(--success)' : 'text-(--text-4)'}`}>
                   {present ? 'present' : 'missing'}
                 </span>
               </div>
@@ -312,13 +312,13 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
       )}
 
       {requiredEnv.length === 0 && (
-        <div className="text-[10px] text-[var(--text-4)] italic">No credentials required</div>
+        <div className="text-[10px] text-(--text-4) italic">No credentials required</div>
       )}
 
       {/* Last test */}
-      <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-4)]">
+      <div className="flex items-center gap-1.5 text-[10px] text-(--text-4)">
         {status === 'live' ? (
-          <CheckCircle className="w-3 h-3 text-[var(--success)] shrink-0" />
+          <CheckCircle className="w-3 h-3 text-(--success) shrink-0" />
         ) : (
           <ShieldOff className="w-3 h-3 shrink-0" />
         )}
@@ -330,7 +330,7 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
 
       {/* Disabled reason */}
       {status !== 'live' && connector.disabledReason && (
-        <div className="text-[10px] text-[var(--text-4)] leading-relaxed line-clamp-2">
+        <div className="text-[10px] text-(--text-4) leading-relaxed line-clamp-2">
           {connector.disabledReason}
         </div>
       )}
@@ -344,12 +344,12 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
             title="Test connector connectivity"
             className={`flex-1 rounded-lg px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
               testState === 'loading'
-                ? 'bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
+                ? 'bg-(--surface-3) text-(--text-3) cursor-wait'
                 : testState === 'ok'
-                  ? 'bg-[var(--success-dim)] text-[var(--success)] cursor-default'
+                  ? 'bg-(--success-dim) text-(--success) cursor-default'
                   : testState === 'fail'
-                    ? 'bg-[var(--error-dim)] text-[var(--error)] cursor-default'
-                    : 'bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
+                    ? 'bg-(--error-dim) text-(--error) cursor-default'
+                    : 'bg-(--surface-3) text-(--text-2) hover:bg-(--surface-4) hover:text-(--text-1) cursor-pointer'
             }`}
           >
             {testState === 'loading' ? '…testing' : testState === 'ok' ? 'OK' : testState === 'fail' ? 'FAIL' : 'Test'}
@@ -360,12 +360,12 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
             title="Validate credentials via Tauri env check"
             className={`flex items-center gap-1 rounded-lg px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
               validateState === 'loading'
-                ? 'bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
+                ? 'bg-(--surface-3) text-(--text-3) cursor-wait'
                 : validateResult
                   ? validateResult.ok
-                    ? 'bg-[var(--success-dim)] text-[var(--success)] cursor-default'
-                    : 'bg-[var(--error-dim)] text-[var(--error)] cursor-default'
-                  : 'bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
+                    ? 'bg-(--success-dim) text-(--success) cursor-default'
+                    : 'bg-(--error-dim) text-(--error) cursor-default'
+                  : 'bg-(--surface-3) text-(--text-2) hover:bg-(--surface-4) hover:text-(--text-1) cursor-pointer'
             }`}
           >
             <Key className="w-2.5 h-2.5" />
@@ -373,12 +373,12 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
           </button>
         </div>
         {testMessage ? (
-          <div className={`text-[9px] text-center truncate ${testState === 'ok' ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+          <div className={`text-[9px] text-center truncate ${testState === 'ok' ? 'text-(--success)' : 'text-(--error)'}`}>
             {testMessage}
           </div>
         ) : null}
         {validateResult ? (
-          <div className={`text-[9px] text-center truncate ${validateResult.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+          <div className={`text-[9px] text-center truncate ${validateResult.ok ? 'text-(--success)' : 'text-(--error)'}`}>
             {validateResult.message}
           </div>
         ) : null}
@@ -398,25 +398,25 @@ function StatusSummaryBar({ connectors, zeroCostMode }: { connectors: Connector[
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl bg-[var(--surface-1)] px-4 py-2.5 text-[10px] font-semibold">
+    <div className="flex flex-wrap items-center gap-3 rounded-xl bg-(--surface-1) px-4 py-2.5 text-[10px] font-semibold">
       <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
-        <span className="text-[var(--success)]">{counts.live || 0} live</span>
+        <span className="h-2 w-2 rounded-full bg-(--success)" />
+        <span className="text-(--success)">{counts.live || 0} live</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-[var(--warning)]" />
-        <span className="text-[var(--warning)]">{counts.missing_config || 0} missing config</span>
+        <span className="h-2 w-2 rounded-full bg-(--warning)" />
+        <span className="text-(--warning)">{counts.missing_config || 0} missing config</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-[var(--text-3)]" />
-        <span className="text-[var(--text-3)]">{counts.foundation_only || 0} local only</span>
+        <span className="h-2 w-2 rounded-full bg-(--text-3)" />
+        <span className="text-(--text-3)">{counts.foundation_only || 0} local only</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-[var(--text-4)]" />
-        <span className="text-[var(--text-3)]">{counts.disabled || 0} disabled</span>
+        <span className="h-2 w-2 rounded-full bg-(--text-4)" />
+        <span className="text-(--text-3)">{counts.disabled || 0} disabled</span>
       </div>
       {zeroCostMode && (
-        <div className="ml-auto flex items-center gap-1.5 text-[var(--warning)]">
+        <div className="ml-auto flex items-center gap-1.5 text-(--warning)">
           <ZapOff className="w-3 h-3" />
           Zero-cost mode active
         </div>
@@ -474,7 +474,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
       {/* Setup tab — credential entry for all connectors */}
       {activeTab === 'setup' && (
         <div>
-          <div className="mb-3 rounded-xl bg-[var(--accent-dim)] px-4 py-2.5 text-[11px] text-[var(--accent)] leading-relaxed">
+          <div className="mb-3 rounded-xl bg-(--accent-dim) px-4 py-2.5 text-[11px] text-(--accent) leading-relaxed">
             Enter API credentials here. Credentials are stored locally in encrypted storage and never sent to any server except the connector's own API.
           </div>
           <ConnectorSetupPanel />
@@ -488,15 +488,15 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
         <div>
           <div className="flex items-center gap-2">
             {probing ? (
-              <WifiOff className="w-4 h-4 text-[var(--text-3)] animate-pulse" />
+              <WifiOff className="w-4 h-4 text-(--text-3) animate-pulse" />
             ) : (
-              <Wifi className="w-4 h-4 text-[var(--accent)]" />
+              <Wifi className="w-4 h-4 text-(--accent)" />
             )}
-            <h2 className="text-sm font-bold tracking-widest text-[var(--text-1)] uppercase">
+            <h2 className="text-sm font-bold tracking-widest text-(--text-1) uppercase">
               Connector Health
             </h2>
           </div>
-          <p className="mt-0.5 text-[11px] text-[var(--text-3)] leading-relaxed">
+          <p className="mt-0.5 text-[11px] text-(--text-3) leading-relaxed">
             {probing
               ? 'Probing connector environments…'
               : 'Live status of connector paths. Local/private keys should stay local; Railway/public builds should remain demo-safe unless intentionally promoted.'}
@@ -506,17 +506,17 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
           onClick={() => {
             setConnectors(listConnectors());
           }}
-          className="shrink-0 rounded-lg bg-[var(--surface-3)] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-4)] transition-colors"
+          className="shrink-0 rounded-lg bg-(--surface-3) px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-(--text-1) hover:bg-(--surface-4) transition-colors"
         >
           Refresh
         </button>
       </div>
 
-      <div className="rounded-xl bg-[var(--info-dim)] px-4 py-3 text-[11px] leading-relaxed text-[var(--info)]">
+      <div className="rounded-xl bg-(--info-dim) px-4 py-3 text-[11px] leading-relaxed text-(--info)">
         <span className="font-semibold">How connectors work:</span> Connectors store your API credentials locally and are called by Alphonso's agents (Jose, Marcus, Hector…) running on your local Ollama instance. A "Connected" status means your credentials are saved — the agents will use them automatically when you ask them to take action (e.g. "open a GitHub issue", "post to Slack"). You do not call connectors directly.
       </div>
 
-      <div className="rounded-xl bg-[var(--warning-dim)] px-4 py-2 text-[11px] leading-relaxed text-[var(--warning)]">
+      <div className="rounded-xl bg-(--warning-dim) px-4 py-2 text-[11px] leading-relaxed text-(--warning)">
         Public deploy note: this app auto-deploys from GitHub main to Railway. Do not add real connector secrets to browser-exposed env vars unless that connector is meant to be public/cloud-facing.
       </div>
 
@@ -535,14 +535,14 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
       </div>
 
       {/* Composio callout */}
-      <div className="rounded-xl bg-[var(--surface-1)] px-4 py-3 flex items-start gap-3">
+      <div className="rounded-xl bg-(--surface-1) px-4 py-3 flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-[var(--text-1)]">Composio (External Tools)</p>
-          <p className="text-[11px] text-[var(--text-3)] mt-0.5">Composio gives agents access to 250+ external tools (GitHub Actions, Notion, Linear, Jira…). Configure your API key in <span className="font-semibold text-[var(--accent)]">Settings → Connectors → External Tools</span>.</p>
+          <p className="text-xs font-semibold text-(--text-1)">Composio (External Tools)</p>
+          <p className="text-[11px] text-(--text-3) mt-0.5">Composio gives agents access to 250+ external tools (GitHub Actions, Notion, Linear, Jira…). Configure your API key in <span className="font-semibold text-(--accent)">Settings → Connectors → External Tools</span>.</p>
         </div>
       </div>
 
-      <p className="text-[10px] text-[var(--text-4)] leading-relaxed">
+      <p className="text-[10px] text-(--text-4) leading-relaxed">
         Status is derived from the connector registry and Tauri env probe. A connector is marked
         &quot;live&quot; only when all required env vars are present and the last test returned verified.
         Use &quot;Test Connection&quot; to check key presence or local endpoint reachability without sending data.

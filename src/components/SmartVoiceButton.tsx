@@ -72,14 +72,14 @@ export function SmartVoiceButton({ voiceStatus: browserVoiceStatus, onToggle, on
       onClick={handleClick}
       data-testid="smart-voice-button"
       disabled={isRequesting || browserVoiceStatus?.state === VOICE_STATES.UNSUPPORTED}
-      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-t-lg text-2xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
+      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-t-lg text-2xs font-bold transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${
         isListening || jarvisThinking || jarvisSpeaking
-          ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-muted)]'
+          ? 'border-(--accent) text-(--accent) bg-(--accent-muted)'
           : isJarvisAvailable
-            ? 'border-[var(--success-border)] text-[var(--success)] hover:bg-[var(--success-muted)]'
+            ? 'border-(--success-border) text-(--success) hover:bg-(--success-muted)'
             : jarvisError
-              ? 'border-[var(--warning-border)] text-[var(--warning)] hover:bg-[var(--warning-dim)]'
-              : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
+              ? 'border-(--warning-border) text-(--warning) hover:bg-(--warning-dim)'
+              : 'border-(--border) text-(--text-3) hover:text-(--text-1)'
       }`}
       title={title}
     >

@@ -22,17 +22,17 @@ const ICONS: Record<ToastType, typeof CheckCircle> = {
 };
 
 const COLORS: Record<ToastType, string> = {
-  success: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
-  error: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
-  info: 'border-[var(--info-border)] bg-[var(--info-dim)] text-[var(--info)]',
-  warning: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]'
+  success: 'border-(--success-border) bg-(--success-dim) text-(--success)',
+  error: 'border-(--error-border) bg-(--error-dim) text-(--error)',
+  info: 'border-(--info-border) bg-(--info-dim) text-(--info)',
+  warning: 'border-(--warning-border) bg-(--warning-dim) text-(--warning)'
 };
 
 const ICON_COLORS: Record<ToastType, string> = {
-  success: 'text-[var(--success)]',
-  error: 'text-[var(--error)]',
-  info: 'text-[var(--info)]',
-  warning: 'text-[var(--warning)]'
+  success: 'text-(--success)',
+  error: 'text-(--error)',
+  info: 'text-(--info)',
+  warning: 'text-(--warning)'
 };
 
 interface ToastProps extends ToastItem {
@@ -48,7 +48,7 @@ function Toast({ id, type = 'info', title, message, onDismiss }: ToastProps) {
   }, [id, type, onDismiss]);
 
   return (
-    <div className={`flex items-start gap-3 w-80 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-sm animate-in slide-in-from-right-4 duration-200 ${COLORS[type]}`}>
+    <div className={`flex items-start gap-3 w-80 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-xs animate-in slide-in-from-right-4 duration-200 ${COLORS[type]}`}>
       <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${ICON_COLORS[type]}`} />
       <div className="flex-1 min-w-0">
         {title && <div className="text-[11px] font-bold uppercase tracking-widest mb-0.5">{title}</div>}
@@ -96,7 +96,7 @@ export function ToastProvider({ children }: ProviderProps) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed bottom-5 right-5 z-[9998] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed bottom-5 right-5 z-9998 flex flex-col gap-2 pointer-events-none">
         {toasts.map((t) => (
           <div key={t.id} className="pointer-events-auto">
             <Toast {...t} onDismiss={dismiss} />

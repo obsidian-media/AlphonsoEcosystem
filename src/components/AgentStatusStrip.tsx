@@ -89,7 +89,7 @@ export function AgentStatusStrip({
           const color = AGENT_COLOR[profile.id] ?? 'var(--accent)';
           const glow = AGENT_GLOW[profile.id] ?? 'var(--accent-glow)';
           return (
-            <div key={profile.id} className="relative flex flex-col items-center gap-1 flex-shrink-0" data-testid={`agent-portrait-${profile.id}`} data-active={isActive}>
+            <div key={profile.id} className="relative flex flex-col items-center gap-1 shrink-0" data-testid={`agent-portrait-${profile.id}`} data-active={isActive}>
               {isActive && (
                 <motion.div
                   className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full pointer-events-none"
@@ -102,17 +102,17 @@ export function AgentStatusStrip({
                 <img
                   src={mascot}
                   alt={profile.name}
-                  className={`relative z-10 h-11 w-11 rounded-full object-cover border-2 border-[var(--surface-0)] ${isActive ? '' : 'opacity-40 grayscale'}`}
+                  className={`relative z-10 h-11 w-11 rounded-full object-cover border-2 border-(--surface-0) ${isActive ? '' : 'opacity-40 grayscale'}`}
                 />
               ) : (
                 <div
-                  className={`relative z-10 h-11 w-11 rounded-full flex items-center justify-center text-xs font-bold border-2 border-[var(--surface-0)] ${isActive ? '' : 'opacity-40 grayscale'}`}
+                  className={`relative z-10 h-11 w-11 rounded-full flex items-center justify-center text-xs font-bold border-2 border-(--surface-0) ${isActive ? '' : 'opacity-40 grayscale'}`}
                   style={{ backgroundColor: color, color: 'var(--surface-0)' }}
                 >
                   {getAgentInitials(profile.name)}
                 </div>
               )}
-              <span className="text-[9px] text-[var(--text-4)]">{profile.name}</span>
+              <span className="text-[9px] text-(--text-4)">{profile.name}</span>
             </div>
           );
         })}
@@ -131,7 +131,7 @@ export function AgentStatusStrip({
         return (
           <div
             key={agent.name}
-            className={`flex items-center gap-1.5 bg-[var(--surface-3)] border border-[var(--border)] rounded-full ${compact ? 'px-2 py-0.5' : 'px-3 py-1'}`}
+            className={`flex items-center gap-1.5 bg-(--surface-3) border border-(--border) rounded-full ${compact ? 'px-2 py-0.5' : 'px-3 py-1'}`}
           >
             <span className="relative flex h-2 w-2">
               {agent.status === 'running' && (
@@ -146,7 +146,7 @@ export function AgentStatusStrip({
               />
             </span>
             {!compact && (
-              <span className="text-[var(--text-2)] font-medium text-sm">{agent.name}</span>
+              <span className="text-(--text-2) font-medium text-sm">{agent.name}</span>
             )}
           </div>
         );

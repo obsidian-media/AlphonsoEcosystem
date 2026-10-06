@@ -106,7 +106,7 @@ export function TrustLayerPanel({ verificationLogs = [], ollamaStatus }: { verif
             key={type}
             onClick={() => setFilter(type)}
             className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
-              filter === type ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'
+              filter === type ? 'bg-(--accent-dim) text-(--accent) ring-1 ring-(--accent-border)' : 'bg-(--surface-2) text-(--text-3)'
             }`}
           >
             {type.replace(/_/g, ' ')}
@@ -168,13 +168,13 @@ export function ApprovalCenterPanel({ onRefresh }: { onRefresh?: () => void }) {
             key={status}
             onClick={() => setStatusFilter(status)}
             className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
-              statusFilter === status ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'
+              statusFilter === status ? 'bg-(--accent-dim) text-(--accent) ring-1 ring-(--accent-border)' : 'bg-(--surface-2) text-(--text-3)'
             }`}
           >
             {status.replace(/_/g, ' ')}
           </button>
         ))}
-        <button onClick={refresh} className="rounded-lg bg-[var(--surface-2)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">
+        <button onClick={refresh} className="rounded-lg bg-(--surface-2) px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-(--text-2)">
           <RefreshCw className="inline h-3 w-3" /> Refresh
         </button>
       </div>
@@ -246,29 +246,29 @@ export function MemoryConfidencePanel() {
   return (
     <Panel icon={Brain} title="Memory Confidence System" tone="indigo">
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
-        <select aria-label="Filter by confidence" value={confidenceFilter} onChange={(event) => setConfidenceFilter(event.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+        <select aria-label="Filter by confidence" value={confidenceFilter} onChange={(event) => setConfidenceFilter(event.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)">
           {['all', 'verified', 'inferred', 'temporary', 'expired', 'unverified', 'user_confirmed'].map((value) => <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>)}
         </select>
-        <select aria-label="Filter by category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+        <select aria-label="Filter by category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)">
           {categories.map((value) => <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>)}
         </select>
-        <select aria-label="Filter by agent" value={agentFilter} onChange={(event) => setAgentFilter(event.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+        <select aria-label="Filter by agent" value={agentFilter} onChange={(event) => setAgentFilter(event.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)">
           {['all', 'jose', 'alphonso', 'miya', 'hector', 'maria', 'marcus', 'echo', 'sentinel', 'nova', 'shared'].map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
-        <select aria-label="Filter by date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+        <select aria-label="Filter by date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)">
           <option value="all">all dates</option>
           <option value="today">today</option>
           <option value="7d">last 7 days</option>
           <option value="30d">last 30 days</option>
         </select>
-        <input value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} placeholder="Filter by project/source text" className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" />
+        <input value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} placeholder="Filter by project/source text" className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" />
       </div>
-      <div className="mt-3 rounded-xl bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
+      <div className="mt-3 rounded-xl bg-(--accent-dim) p-3 text-[11px] text-(--accent)">
         SQLite durable memory is now the preferred store in the Tauri app. If SQLite is unavailable in browser preview, this panel falls back to localStorage. Semantic/vector memory remains setup_required.
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]">
-        <div className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">
+        <div className="rounded-xl bg-(--surface-2) p-3 text-[11px] text-(--text-2)">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-(--accent)">
             <Database className="h-3.5 w-3.5" />
             Durable Memory Store
           </div>
@@ -276,16 +276,16 @@ export function MemoryConfidencePanel() {
             <div>Status: {durableStatus?.available ? 'SQLite available' : 'SQLite unavailable / preview fallback'}</div>
             <div>Records: {String(durableStatus?.recordCount ?? durableRows.length)}</div>
             <div>Expired: {String(durableStatus?.expiredCount ?? 0)}</div>
-            <div>Path: <span className="text-[var(--text-3)]">{String(durableStatus?.path || 'not available')}</span></div>
+            <div>Path: <span className="text-(--text-3)">{String(durableStatus?.path || 'not available')}</span></div>
           </div>
-          {migrationProof && <div className="mt-2 text-[var(--accent)]">Last migration: requested {migrationProof.requested}, wrote {migrationProof.written}.</div>}
-          {migrationError && <div className="mt-2 text-[var(--error)]">{migrationError}</div>}
+          {migrationProof && <div className="mt-2 text-(--accent)">Last migration: requested {migrationProof.requested}, wrote {migrationProof.written}.</div>}
+          {migrationError && <div className="mt-2 text-(--error)">{migrationError}</div>}
         </div>
         <div className="flex flex-col gap-2">
-          <button onClick={refreshDurableMemory} className="rounded-xl bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">
+          <button onClick={refreshDurableMemory} className="rounded-xl bg-(--surface-2) px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-(--text-2)">
             Refresh SQLite
           </button>
-          <button onClick={migrateMemory} disabled={isMigrating} className="rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--accent-contrast)] disabled:cursor-not-allowed disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)]">
+          <button onClick={migrateMemory} disabled={isMigrating} className="rounded-xl bg-(--accent) hover:bg-(--accent-hover) px-4 py-2 text-[10px] font-black uppercase tracking-widest text-(--accent-contrast) disabled:cursor-not-allowed disabled:bg-(--surface-3) disabled:text-(--text-3)">
             {isMigrating ? 'Migrating...' : 'Migrate Local Memory'}
           </button>
         </div>
@@ -307,7 +307,7 @@ export function EcosystemMapPanel({ ollamaStatus }: { ollamaStatus?: { label?: s
 
   return (
     <Panel icon={Route} title="Live Ecosystem Map Foundation" tone="amber">
-      <div className="rounded-xl bg-[var(--surface-2)] p-4">
+      <div className="rounded-xl bg-(--surface-2) p-4">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.2fr_1fr]">
           <div className="space-y-3">
             <AgentNode agent="miya" title="Miya" subtitle="Creator" stat={`${packets.filter((p) => p.fromAgent === 'miya').length} handoffs`} />
@@ -333,7 +333,7 @@ export function EcosystemMapPanel({ ollamaStatus }: { ollamaStatus?: { label?: s
             <AgentNode agent="nova" title="Nova" subtitle="Opportunity" stat={`${packets.filter((p) => p.toAgent === 'nova' || p.fromAgent === 'nova').length} scored`} />
           </div>
         </div>
-        <div className="mt-4 grid gap-2 text-[11px] text-[var(--text-3)] md:grid-cols-2">
+        <div className="mt-4 grid gap-2 text-[11px] text-(--text-3) md:grid-cols-2">
           <Relationship text="Jose routes supervised packets to Alphonso and Miya." />
           <Relationship text="Alphonso reports verification receipts back into the trust layer." />
           <Relationship text="Miya sends creative handoffs to Jose/Alphonso through the local agent bus." />
@@ -343,7 +343,7 @@ export function EcosystemMapPanel({ ollamaStatus }: { ollamaStatus?: { label?: s
           <Relationship text="Memory connects to all agents through local ledgers." />
         </div>
       </div>
-      <div className="mt-3 rounded-xl bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]">
+      <div className="mt-3 rounded-xl bg-(--warning-dim) p-3 text-[11px] text-(--warning)">
         Visual foundation - live graph routing remains setup_required. Counts come from current local packets, workflow records, memory records, and runtime status.
       </div>
     </Panel>
@@ -371,33 +371,33 @@ export function SessionIntelligencePanel() {
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Timeline</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Timeline</div>
           <div className="mt-2 space-y-2 max-h-60 overflow-y-auto pr-1">
             {timeline.length === 0 && <EmptyState label="No session events recorded yet." />}
             {timeline.map((event) => (
-              <div key={event.id} className="rounded-xl bg-[var(--surface-2)] p-3">
+              <div key={event.id} className="rounded-xl bg-(--surface-2) p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-[var(--text-1)]">{event.title}</span>
+                  <span className="text-sm font-semibold text-(--text-1)">{event.title}</span>
                   <TrustBadge state={event.verificationState || event.confidence || TRUST_STATES.UNVERIFIED} />
                 </div>
-                <div className="mt-1 text-[11px] text-[var(--text-3)]">{event.category} | {event.agent} | {new Date(event.timestampMs).toLocaleTimeString()}</div>
+                <div className="mt-1 text-[11px] text-(--text-3)">{event.category} | {event.agent} | {new Date(event.timestampMs).toLocaleTimeString()}</div>
               </div>
             ))}
           </div>
         </div>
         <div className="space-y-3">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Recommended Next Actions</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Recommended Next Actions</div>
             <div className="mt-2 space-y-2">
               {(summary.recommendations || []).map((item) => (
-                <div key={item} className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">{item}</div>
+                <div key={item} className="rounded-xl bg-(--surface-2) p-3 text-[11px] text-(--text-2)">{item}</div>
               ))}
             </div>
           </div>
-          <div className="rounded-xl bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
+          <div className="rounded-xl bg-(--accent-dim) p-3 text-[11px] text-(--accent)">
             Export report remains a local reporting flow until file export is added end-to-end. This panel uses real local session events when available.
           </div>
-          <button onClick={() => setEvents(listSessionEvents())} className="rounded-lg bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)]">Refresh Session</button>
+          <button onClick={() => setEvents(listSessionEvents())} className="rounded-lg bg-(--surface-3) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--text-1) hover:bg-(--surface-3)">Refresh Session</button>
         </div>
       </div>
     </Panel>
@@ -424,7 +424,7 @@ export function WorkflowOperationsPanel() {
             key={status}
             onClick={() => setStatusFilter(status)}
             className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
-              statusFilter === status ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'
+              statusFilter === status ? 'bg-(--accent-dim) text-(--accent) ring-1 ring-(--accent-border)' : 'bg-(--surface-2) text-(--text-3)'
             }`}
           >
             {status.replace(/_/g, ' ')}
@@ -433,11 +433,11 @@ export function WorkflowOperationsPanel() {
       </div>
       <div className="mt-3 space-y-2 max-h-96 overflow-y-auto pr-1">
         {filtered.map((workflow) => (
-          <div key={workflow.id} className="rounded-xl bg-[var(--surface-2)] p-3">
+          <div key={workflow.id} className="rounded-xl bg-(--surface-2) p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold text-[var(--text-1)]">{workflow.name}</div>
-                <div className="text-[11px] text-[var(--text-3)]">{workflow.id}</div>
+                <div className="text-sm font-semibold text-(--text-1)">{workflow.name}</div>
+                <div className="text-[11px] text-(--text-3)">{workflow.id}</div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge color={workflow.riskLevel === 'critical' || workflow.riskLevel === 'high' ? 'red' : workflow.riskLevel === 'medium' ? 'amber' : 'green'}>
@@ -446,8 +446,8 @@ export function WorkflowOperationsPanel() {
                 <TrustBadge state={workflow.verificationState || TRUST_STATES.UNVERIFIED} />
               </div>
             </div>
-            <div className="mt-2 text-[11px] text-[var(--text-3)]">{workflow.purpose}</div>
-            <div className="mt-2 grid gap-1 text-[11px] text-[var(--text-3)] md:grid-cols-2">
+            <div className="mt-2 text-[11px] text-(--text-3)">{workflow.purpose}</div>
+            <div className="mt-2 grid gap-1 text-[11px] text-(--text-3) md:grid-cols-2">
               <div>Sequence: {(workflow.agentSequence || []).join(' -> ')}</div>
               <div>Approvals: {(workflow.requiredApprovals || []).join(', ')}</div>
               <div>Connectors: {(workflow.connectorRequirements || []).join(', ')}</div>
@@ -455,12 +455,12 @@ export function WorkflowOperationsPanel() {
                 Status:{' '}
                 <span className={
                   workflow.status === 'setup_required'
-                    ? 'text-[var(--warning)]'
+                    ? 'text-(--warning)'
                     : workflow.status === 'paused'
-                      ? 'text-[var(--text-3)]'
+                      ? 'text-(--text-3)'
                       : workflow.status === 'active'
-                        ? 'text-[var(--success)]'
-                        : 'text-[var(--text-3)]'
+                        ? 'text-(--success)'
+                        : 'text-(--text-3)'
                 }>
                   {workflow.status === 'active' ? 'active (not production-confirmed)' : workflow.status}
                 </span>
@@ -469,21 +469,21 @@ export function WorkflowOperationsPanel() {
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {(workflow.agentSequence || []).map((agentId, index) => (
                 <React.Fragment key={`${workflow.id}-${agentId}-${index}`}>
-                  <div className="flex items-center gap-1 rounded-lg bg-[var(--surface-2)] px-1.5 py-1 text-[10px] text-[var(--text-2)]">
-                    <AgentAvatar agentId={agentId} name={agentId} sizeClass="h-4 w-4" className="border-[var(--border)]" />
+                  <div className="flex items-center gap-1 rounded-lg bg-(--surface-2) px-1.5 py-1 text-[10px] text-(--text-2)">
+                    <AgentAvatar agentId={agentId} name={agentId} sizeClass="h-4 w-4" className="border-(--border)" />
                     <span className="capitalize">{String(agentId).replace(/_/g, ' ')}</span>
                   </div>
-                  {index < (workflow.agentSequence || []).length - 1 && <span className="text-[10px] text-[var(--text-4)]">{'->'}</span>}
+                  {index < (workflow.agentSequence || []).length - 1 && <span className="text-[10px] text-(--text-4)">{'->'}</span>}
                 </React.Fragment>
               ))}
             </div>
-            <div className="mt-2 rounded-lg bg-[var(--warning-dim)] px-2 py-1 text-[10px] text-[var(--warning)]">
+            <div className="mt-2 rounded-lg bg-(--warning-dim) px-2 py-1 text-[10px] text-(--warning)">
               Needs setup: {(workflow.setupRequired || []).join(' ')}
             </div>
             <div className="mt-2 flex gap-2">
-              <button onClick={() => setStatus(workflow.id, 'active')} className="rounded bg-[var(--success-dim)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--success)]">Active</button>
-              <button onClick={() => setStatus(workflow.id, 'paused')} className="rounded bg-[var(--surface-3)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">Pause</button>
-              <button onClick={() => setStatus(workflow.id, 'setup_required')} className="rounded bg-[var(--warning-dim)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)]">Setup Required</button>
+              <button onClick={() => setStatus(workflow.id, 'active')} className="rounded-sm bg-(--success-dim) px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-(--success)">Active</button>
+              <button onClick={() => setStatus(workflow.id, 'paused')} className="rounded-sm bg-(--surface-3) px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-(--text-2)">Pause</button>
+              <button onClick={() => setStatus(workflow.id, 'setup_required')} className="rounded-sm bg-(--warning-dim) px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-(--warning)">Setup Required</button>
             </div>
           </div>
         ))}
@@ -502,10 +502,10 @@ export function PrivacyShieldPanel({ settings, voiceStatus, workspaceFoundation 
         <PrivacyItem icon={UploadCloud} label="Upload / Network" value="No cloud upload path enabled" state="verified" />
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
+        <div className="rounded-xl bg-(--surface-2) p-3 text-[11px] text-(--text-3)">
           Sensitive-window protection is supervised-only. No screen capture runs silently; screen/OCR foundations must stay visible and supervised.
         </div>
-        <div className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
+        <div className="rounded-xl bg-(--surface-2) p-3 text-[11px] text-(--text-3)">
           Permission audit log remains read-only until backend permission events are persisted. Current microphone state is read from the real voice foundation.
         </div>
       </div>
@@ -532,19 +532,19 @@ export function OperatorModesPanel({ settings, setSettings }: { settings: Record
             key={mode.id}
             onClick={() => setSettings({ ...settings, focusMode: mode.id })}
             className={`rounded-xl p-3 text-left transition ${
-              active === mode.id ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)]'
+              active === mode.id ? 'bg-(--accent-dim) text-(--accent) ring-1 ring-(--accent-border)' : 'bg-(--surface-2) text-(--text-2) hover:bg-(--surface-3)'
             }`}
           >
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-semibold">{mode.label}</span>
               <Badge color={mode.agent}>{mode.agent}</Badge>
             </div>
-            <div className="mt-2 text-[11px] text-[var(--text-3)]">Notifications: {mode.intensity}</div>
-            <div className="text-[11px] text-[var(--text-3)]">Panels: {mode.panels}</div>
+            <div className="mt-2 text-[11px] text-(--text-3)">Notifications: {mode.intensity}</div>
+            <div className="text-[11px] text-(--text-3)">Panels: {mode.panels}</div>
           </button>
         ))}
       </div>
-      <p className="mt-3 text-[11px] text-[var(--text-3)]">
+      <p className="mt-3 text-[11px] text-(--text-3)">
         Mode selection is wired to local settings and Command Rib emphasis. Automatic panel hiding and mascot notification tuning are follow-up UI behavior.
       </p>
     </Panel>
@@ -560,23 +560,23 @@ function ActionReceipt({ log }: { log: any }) {
   const path = (payload as any).path || (payload as any).manifest_path || (payload as any).cwd || (Array.isArray((payload as any).paths) ? (payload as any).paths.join(', ') : '');
 
   return (
-    <div className="rounded-xl bg-[var(--surface-2)] p-3">
+    <div className="rounded-xl bg-(--surface-2) p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-[var(--text-1)]">{command}</div>
-          <div className="mt-1 text-[11px] text-[var(--text-3)]">{new Date(log.timestampMs as number).toLocaleString()} | {log.source || 'unknown source'}</div>
+          <div className="truncate text-sm font-semibold text-(--text-1)">{command}</div>
+          <div className="mt-1 text-[11px] text-(--text-3)">{new Date(log.timestampMs as number).toLocaleString()} | {log.source || 'unknown source'}</div>
         </div>
         <TrustBadge state={(log.trust || TRUST_STATES.UNVERIFIED) as string} />
       </div>
-      <div className="mt-2 grid grid-cols-1 gap-2 text-[11px] text-[var(--text-3)] md:grid-cols-3">
+      <div className="mt-2 grid grid-cols-1 gap-2 text-[11px] text-(--text-3) md:grid-cols-3">
         <div>Type: {log.type || 'receipt'}</div>
         <div>Exit: {exitCode === undefined ? 'n/a' : String(exitCode)}</div>
         <div className="truncate">Path: {path || 'n/a'}</div>
       </div>
       {(stdout || stderr) && (
         <div className="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
-          {stdout && <pre className="max-h-24 overflow-auto rounded-lg bg-black/30 p-2 text-[10px] text-[var(--success)]">{String(stdout).slice(0, 800)}</pre>}
-          {stderr && <pre className="max-h-24 overflow-auto rounded-lg bg-black/30 p-2 text-[10px] text-[var(--error)]">{String(stderr).slice(0, 800)}</pre>}
+          {stdout && <pre className="max-h-24 overflow-auto rounded-lg bg-black/30 p-2 text-[10px] text-(--success)">{String(stdout).slice(0, 800)}</pre>}
+          {stderr && <pre className="max-h-24 overflow-auto rounded-lg bg-black/30 p-2 text-[10px] text-(--error)">{String(stderr).slice(0, 800)}</pre>}
         </div>
       )}
     </div>
@@ -586,15 +586,15 @@ function ActionReceipt({ log }: { log: any }) {
 function ApprovalCard({ packet, onApprove, onReject }: { packet: any; onApprove: (id: string) => void; onReject: (id: string) => void }) {
   const risk = (packet.riskLevel as string) || inferRisk(packet);
   return (
-    <div className="rounded-xl bg-[var(--surface-2)] p-3">
+    <div className="rounded-xl bg-(--surface-2) p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-[var(--text-1)]">{packet.title}</div>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-3)]">
-            <AgentAvatar agentId={packet.fromAgent as string} name={packet.fromAgent as string} sizeClass="h-4 w-4" className="border-[var(--border)]" />
+          <div className="text-sm font-semibold text-(--text-1)">{packet.title}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-(--text-3)">
+            <AgentAvatar agentId={packet.fromAgent as string} name={packet.fromAgent as string} sizeClass="h-4 w-4" className="border-(--border)" />
             <span>{packet.fromAgent as string}</span>
             <span>requests {packet.actionType || packet.packetType} for</span>
-            <AgentAvatar agentId={packet.toAgent as string} name={packet.toAgent as string} sizeClass="h-4 w-4" className="border-[var(--border)]" />
+            <AgentAvatar agentId={packet.toAgent as string} name={packet.toAgent as string} sizeClass="h-4 w-4" className="border-(--border)" />
             <span>{packet.toAgent as string}</span>
           </div>
         </div>
@@ -603,18 +603,18 @@ function ApprovalCard({ packet, onApprove, onReject }: { packet: any; onApprove:
           <TrustBadge state={(packet.verificationState || packet.confidence) as string} />
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-[var(--text-3)] lg:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-(--text-3) lg:grid-cols-2">
         <PreviewBlock label="Command Preview" value={packet.commandPreview as string || 'No command preview supplied.'} placeholder={!packet.commandPreview} />
         <PreviewBlock label="File Change Preview" value={packet.fileChangePreview as string || 'File diff preview is not yet wired for this packet.'} placeholder={!packet.fileChangePreview} />
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {packet.status === 'pending_approval' && (
           <>
-            <button onClick={() => onApprove(packet.id as string)} className="rounded-lg bg-[var(--success-dim)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--success)]">Approve</button>
-            <button onClick={() => onReject(packet.id as string)} className="rounded-lg bg-[var(--error-dim)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--error)]">Reject</button>
+            <button onClick={() => onApprove(packet.id as string)} className="rounded-lg bg-(--success-dim) px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-(--success)">Approve</button>
+            <button onClick={() => onReject(packet.id as string)} className="rounded-lg bg-(--error-dim) px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-(--error)">Reject</button>
           </>
         )}
-          <span className="text-[11px] text-[var(--text-3)]">Rollback: {packet.rollbackAvailable ? 'available' : 'not available'}</span>
+          <span className="text-[11px] text-(--text-3)">Rollback: {packet.rollbackAvailable ? 'available' : 'not available'}</span>
       </div>
     </div>
   );
@@ -622,16 +622,16 @@ function ApprovalCard({ packet, onApprove, onReject }: { packet: any; onApprove:
 
 function MemoryCard({ item }: { item: any }) {
   return (
-    <div className="rounded-xl bg-[var(--surface-2)] p-3">
+    <div className="rounded-xl bg-(--surface-2) p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-[var(--text-1)]">{item.title || item.category}</div>
-          <div className="mt-1 text-[11px] text-[var(--text-3)]">{item.category} | {item.agent} | {item.source || 'unknown source'}</div>
+          <div className="text-sm font-semibold text-(--text-1)">{item.title || item.category}</div>
+          <div className="mt-1 text-[11px] text-(--text-3)">{item.category} | {item.agent} | {item.source || 'unknown source'}</div>
         </div>
         <TrustBadge state={(item.confidence || item.verificationState) as string} />
       </div>
-      <div className="mt-2 line-clamp-3 text-[11px] leading-relaxed text-[var(--text-3)]">{formatContent(item.content)}</div>
-      <div className="mt-2 text-[10px] text-[var(--text-4)]">{item.timestampMs ? new Date(item.timestampMs as number).toLocaleString() : 'No timestamp'}</div>
+      <div className="mt-2 line-clamp-3 text-[11px] leading-relaxed text-(--text-3)">{formatContent(item.content)}</div>
+      <div className="mt-2 text-[10px] text-(--text-4)">{item.timestampMs ? new Date(item.timestampMs as number).toLocaleString() : 'No timestamp'}</div>
     </div>
   );
 }
@@ -640,40 +640,40 @@ function AgentNode({ agent, title, subtitle, stat, large = false }: { agent: str
   return (
     <div className={`rounded-2xl p-4 text-center ${large ? 'min-h-36' : 'min-h-28'} ${nodeClass(agent)}`}>
       <div className="mb-2 flex justify-center">
-        <AgentAvatar agentId={agent} name={title} sizeClass={large ? 'h-12 w-12' : 'h-10 w-10'} className="border-[var(--border-strong)]" />
+        <AgentAvatar agentId={agent} name={title} sizeClass={large ? 'h-12 w-12' : 'h-10 w-10'} className="border-(--border-strong)" />
       </div>
-      <div className="text-lg font-bold text-[var(--text-1)]">{title}</div>
+      <div className="text-lg font-bold text-(--text-1)">{title}</div>
       <div className="mt-1 text-[10px] uppercase tracking-widest opacity-70">{subtitle}</div>
-      <div className="mt-3 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1 text-[11px]">{stat}</div>
+      <div className="mt-3 rounded-full border border-(--border) bg-(--surface-2) px-3 py-1 text-[11px]">{stat}</div>
     </div>
   );
 }
 
 function MapNode({ icon: Icon, label, value }: { icon: typeof Brain; label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-[var(--surface-2)] p-3">
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
+    <div className="rounded-xl bg-(--surface-2) p-3">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-(--text-3)">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </div>
-      <div className="mt-2 text-sm font-semibold text-[var(--text-1)]">{value}</div>
+      <div className="mt-2 text-sm font-semibold text-(--text-1)">{value}</div>
     </div>
   );
 }
 
 function Relationship({ text }: { text: string }) {
-  return <div className="rounded-xl bg-[var(--surface-2)] px-3 py-2">{text}</div>;
+  return <div className="rounded-xl bg-(--surface-2) px-3 py-2">{text}</div>;
 }
 
 function ProofTile({ icon: Icon, label, value, trust }: { icon: typeof Brain; label: string; value: React.ReactNode; trust: string }) {
   return (
-    <div className="rounded-xl bg-[var(--surface-2)] p-3">
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
+    <div className="rounded-xl bg-(--surface-2) p-3">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-(--text-3)">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </div>
       <div className="mt-2 flex items-center justify-between gap-3">
-        <span className="truncate text-sm font-semibold text-[var(--text-1)]">{value}</span>
+        <span className="truncate text-sm font-semibold text-(--text-1)">{value}</span>
         <TrustBadge state={trust} />
       </div>
     </div>
@@ -682,12 +682,12 @@ function ProofTile({ icon: Icon, label, value, trust }: { icon: typeof Brain; la
 
 function PrivacyItem({ icon: Icon, label, value, state }: { icon: typeof Database; label: string; value: string; state: string }) {
   return (
-    <div className="rounded-xl bg-[var(--surface-2)] p-3">
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
+    <div className="rounded-xl bg-(--surface-2) p-3">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-(--text-3)">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </div>
-      <div className="mt-2 text-sm font-semibold text-[var(--text-1)]">{value}</div>
+      <div className="mt-2 text-sm font-semibold text-(--text-1)">{value}</div>
       <div className="mt-2"><TrustBadge state={state} /></div>
     </div>
   );
@@ -695,10 +695,10 @@ function PrivacyItem({ icon: Icon, label, value, state }: { icon: typeof Databas
 
 function PreviewBlock({ label, value, placeholder }: { label: string; value: string; placeholder: boolean }) {
   return (
-    <div className={`rounded-lg p-3 ${placeholder ? 'bg-[var(--accent-dim)]' : 'bg-[var(--surface-2)]'}`}>
-      <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">{label}</div>
-      <pre className="mt-2 whitespace-pre-wrap text-[11px] text-[var(--text-2)]">{value}</pre>
-      {placeholder && <div className="mt-2 text-[10px] text-[var(--accent)]">preview not yet wired</div>}
+    <div className={`rounded-lg p-3 ${placeholder ? 'bg-(--accent-dim)' : 'bg-(--surface-2)'}`}>
+      <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">{label}</div>
+      <pre className="mt-2 whitespace-pre-wrap text-[11px] text-(--text-2)">{value}</pre>
+      {placeholder && <div className="mt-2 text-[10px] text-(--accent)">preview not yet wired</div>}
     </div>
   );
 }
@@ -714,8 +714,8 @@ function Metric({ label, value, tone = 'zinc' }: { label: string; value: React.R
 
 function Panel({ icon: Icon, title, children, tone = 'indigo' }: { icon: typeof Brain; title: string; children: React.ReactNode; tone?: string }) {
   return (
-    <section className="rounded-2xl bg-[var(--surface-1)] p-4 shadow-[0_0_50px_rgba(0,0,0,0.2)]">
-      <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
+    <section className="rounded-2xl bg-(--surface-1) p-4 shadow-[0_0_50px_rgba(0,0,0,0.2)]">
+      <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-(--text-3)">
         <Icon className={`h-4 w-4 ${iconClass(tone)}`} />
         {title}
       </div>
@@ -730,11 +730,11 @@ function TrustBadge({ state }: { state: string }) {
 }
 
 function Badge({ children, color = 'zinc' }: { children: React.ReactNode; color?: string }) {
-  return <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${badgeClass(color)}`}>{children}</span>;
+  return <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${badgeClass(color)}`}>{children}</span>;
 }
 
 function EmptyState({ label }: { label: string }) {
-  return <div className="rounded-xl bg-[var(--surface-2)] p-4 text-sm text-[var(--text-3)]">{label}</div>;
+  return <div className="rounded-xl bg-(--surface-2) p-4 text-sm text-(--text-3)">{label}</div>;
 }
 
 function countType(logs: unknown[], type: string) {
@@ -787,17 +787,17 @@ function formatContent(content: unknown) {
 // --agent-* identity tokens (see nodeClass's comment below), not a carve-out
 // anymore.
 function iconClass(tone: string) {
-  if (tone === 'green') return 'text-[var(--success)]';
-  return 'text-[var(--accent)]';
+  if (tone === 'green') return 'text-(--success)';
+  return 'text-(--accent)';
 }
 
 function badgeClass(color: string) {
   const colors: Record<string, string> = {
-    zinc: 'bg-[var(--surface-3)] text-[var(--text-3)] border-[var(--border)]',
-    green: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
-    blue: 'bg-[var(--info-dim)] text-[var(--info)] border-[var(--info-border)]',
-    amber: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
-    red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
+    zinc: 'bg-(--surface-3) text-(--text-3) border-(--border)',
+    green: 'bg-(--success-dim) text-(--success) border-(--success-border)',
+    blue: 'bg-(--info-dim) text-(--info) border-(--info-border)',
+    amber: 'bg-(--warning-dim) text-(--warning) border-(--warning-border)',
+    red: 'bg-(--error-dim) text-(--error) border-(--error-border)',
     // Real per-agent identity (OperatorModesPanel's per-agent Badge, keyed by
     // the actual agent name now instead of a hand-picked color family — see
     // REAL_AGENT_KEYS's comment above for the mismatches this replaced).
@@ -805,25 +805,25 @@ function badgeClass(color: string) {
     // -- Tailwind's JIT scanner only picks up classes that appear as literal
     // text in the source, so a dynamically-assembled `bg-[var(--agent-${key}...`
     // would silently produce an unstyled class at runtime.
-    jose: 'bg-[var(--agent-jose-glow)] text-[var(--agent-jose)] border-[var(--agent-jose-glow)]',
-    alphonso: 'bg-[var(--agent-alphonso-glow)] text-[var(--agent-alphonso)] border-[var(--agent-alphonso-glow)]',
-    miya: 'bg-[var(--agent-miya-glow)] text-[var(--agent-miya)] border-[var(--agent-miya-glow)]',
-    hector: 'bg-[var(--agent-hector-glow)] text-[var(--agent-hector)] border-[var(--agent-hector-glow)]',
-    maria: 'bg-[var(--agent-maria-glow)] text-[var(--agent-maria)] border-[var(--agent-maria-glow)]',
-    marcus: 'bg-[var(--agent-marcus-glow)] text-[var(--agent-marcus)] border-[var(--agent-marcus-glow)]',
-    echo: 'bg-[var(--agent-echo-glow)] text-[var(--agent-echo)] border-[var(--agent-echo-glow)]',
-    sentinel: 'bg-[var(--agent-sentinel-glow)] text-[var(--agent-sentinel)] border-[var(--agent-sentinel-glow)]',
-    nova: 'bg-[var(--agent-nova-glow)] text-[var(--agent-nova)] border-[var(--agent-nova-glow)]'
+    jose: 'bg-(--agent-jose-glow) text-(--agent-jose) border-(--agent-jose-glow)',
+    alphonso: 'bg-(--agent-alphonso-glow) text-(--agent-alphonso) border-(--agent-alphonso-glow)',
+    miya: 'bg-(--agent-miya-glow) text-(--agent-miya) border-(--agent-miya-glow)',
+    hector: 'bg-(--agent-hector-glow) text-(--agent-hector) border-(--agent-hector-glow)',
+    maria: 'bg-(--agent-maria-glow) text-(--agent-maria) border-(--agent-maria-glow)',
+    marcus: 'bg-(--agent-marcus-glow) text-(--agent-marcus) border-(--agent-marcus-glow)',
+    echo: 'bg-(--agent-echo-glow) text-(--agent-echo) border-(--agent-echo-glow)',
+    sentinel: 'bg-(--agent-sentinel-glow) text-(--agent-sentinel) border-(--agent-sentinel-glow)',
+    nova: 'bg-(--agent-nova-glow) text-(--agent-nova) border-(--agent-nova-glow)'
   };
   return colors[color] || colors.zinc;
 }
 
 function metricClass(tone: string) {
-  if (tone === 'green') return 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]';
-  if (tone === 'red') return 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]';
-  if (tone === 'amber') return 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]';
-  if (tone === 'blue') return 'border-[var(--info-border)] bg-[var(--info-dim)] text-[var(--info)]';
-  return 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]';
+  if (tone === 'green') return 'border-(--success-border) bg-(--success-dim) text-(--success)';
+  if (tone === 'red') return 'border-(--error-border) bg-(--error-dim) text-(--error)';
+  if (tone === 'amber') return 'border-(--warning-border) bg-(--warning-dim) text-(--warning)';
+  if (tone === 'blue') return 'border-(--info-border) bg-(--info-dim) text-(--info)';
+  return 'border-(--border) bg-(--surface-2) text-(--text-1)';
 }
 
 // Reconciled with tokens.css's real --agent-* identity tokens (bug-log.md
@@ -834,14 +834,14 @@ function metricClass(tone: string) {
 // interpolation, since Tailwind's JIT only picks up classes that appear as
 // literal text in the source.
 function nodeClass(agent: string) {
-  if (agent === 'jose') return 'border-[var(--agent-jose-glow)] bg-[var(--agent-jose-glow)] text-[var(--agent-jose)]';
-  if (agent === 'alphonso') return 'border-[var(--agent-alphonso-glow)] bg-[var(--agent-alphonso-glow)] text-[var(--agent-alphonso)]';
-  if (agent === 'miya') return 'border-[var(--agent-miya-glow)] bg-[var(--agent-miya-glow)] text-[var(--agent-miya)]';
-  if (agent === 'hector') return 'border-[var(--agent-hector-glow)] bg-[var(--agent-hector-glow)] text-[var(--agent-hector)]';
-  if (agent === 'maria') return 'border-[var(--agent-maria-glow)] bg-[var(--agent-maria-glow)] text-[var(--agent-maria)]';
-  if (agent === 'marcus') return 'border-[var(--agent-marcus-glow)] bg-[var(--agent-marcus-glow)] text-[var(--agent-marcus)]';
-  if (agent === 'echo') return 'border-[var(--agent-echo-glow)] bg-[var(--agent-echo-glow)] text-[var(--agent-echo)]';
-  if (agent === 'sentinel') return 'border-[var(--agent-sentinel-glow)] bg-[var(--agent-sentinel-glow)] text-[var(--agent-sentinel)]';
-  if (agent === 'nova') return 'border-[var(--agent-nova-glow)] bg-[var(--agent-nova-glow)] text-[var(--agent-nova)]';
-  return 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]';
+  if (agent === 'jose') return 'border-(--agent-jose-glow) bg-(--agent-jose-glow) text-(--agent-jose)';
+  if (agent === 'alphonso') return 'border-(--agent-alphonso-glow) bg-(--agent-alphonso-glow) text-(--agent-alphonso)';
+  if (agent === 'miya') return 'border-(--agent-miya-glow) bg-(--agent-miya-glow) text-(--agent-miya)';
+  if (agent === 'hector') return 'border-(--agent-hector-glow) bg-(--agent-hector-glow) text-(--agent-hector)';
+  if (agent === 'maria') return 'border-(--agent-maria-glow) bg-(--agent-maria-glow) text-(--agent-maria)';
+  if (agent === 'marcus') return 'border-(--agent-marcus-glow) bg-(--agent-marcus-glow) text-(--agent-marcus)';
+  if (agent === 'echo') return 'border-(--agent-echo-glow) bg-(--agent-echo-glow) text-(--agent-echo)';
+  if (agent === 'sentinel') return 'border-(--agent-sentinel-glow) bg-(--agent-sentinel-glow) text-(--agent-sentinel)';
+  if (agent === 'nova') return 'border-(--agent-nova-glow) bg-(--agent-nova-glow) text-(--agent-nova)';
+  return 'border-(--border) bg-(--surface-2) text-(--text-1)';
 }

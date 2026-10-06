@@ -132,7 +132,7 @@ export function MemoryGraphViewer({ size }: MemoryGraphViewerProps) {
 
   if (!loading && nodes.length === 0) {
     return (
-      <div className="flex items-center justify-center h-40 text-sm text-[var(--text-3)]">
+      <div className="flex items-center justify-center h-40 text-sm text-(--text-3)">
         No memory graph data yet.
       </div>
     );
@@ -147,12 +147,12 @@ export function MemoryGraphViewer({ size }: MemoryGraphViewerProps) {
         <button
           onClick={handleSuggestConnections}
           disabled={suggesting}
-          className="text-xs px-2 py-1 rounded border border-[var(--border)] text-[var(--text-2)] hover:text-[var(--text-1)] disabled:opacity-50"
+          className="text-xs px-2 py-1 rounded-sm border border-(--border) text-(--text-2) hover:text-(--text-1) disabled:opacity-50"
         >
           {suggesting ? 'Suggesting…' : 'Suggest connections'}
         </button>
         {suggestResult !== null && (
-          <span className="text-xs text-[var(--text-3)]">
+          <span className="text-xs text-(--text-3)">
             {suggestResult === 0
               ? 'No new connections found.'
               : `${suggestResult} new connection${suggestResult === 1 ? '' : 's'} found.`}
@@ -170,20 +170,20 @@ export function MemoryGraphViewer({ size }: MemoryGraphViewerProps) {
         />
       </div>
       {selectedNode && (
-        <div className="w-56 shrink-0 overflow-y-auto text-sm text-[var(--text-2)] space-y-2">
+        <div className="w-56 shrink-0 overflow-y-auto text-sm text-(--text-2) space-y-2">
           <p className="font-semibold">{selectedNode.nodeType}</p>
-          <p className="text-xs text-[var(--text-3)]">{selectedNode.refId}</p>
-          <p className="text-xs text-[var(--text-3)]">{new Date(selectedNode.createdAtMs).toLocaleString()}</p>
-          <div className="pt-2 border-t border-[var(--border)] space-y-1">
+          <p className="text-xs text-(--text-3)">{selectedNode.refId}</p>
+          <p className="text-xs text-(--text-3)">{new Date(selectedNode.createdAtMs).toLocaleString()}</p>
+          <div className="pt-2 border-t border-(--border) space-y-1">
             <p className="section-label">Connections</p>
-            {connections.length === 0 && <p className="text-xs text-[var(--text-3)]">None</p>}
+            {connections.length === 0 && <p className="text-xs text-(--text-3)">None</p>}
             {connections.map((edge) => {
               const otherId = edge.fromNodeId === selectedNode.id ? edge.toNodeId : edge.fromNodeId;
               return (
                 <button
                   key={edge.id}
                   onClick={() => selectNodeById(otherId)}
-                  className="block w-full text-left text-xs text-[var(--text-2)] hover:text-[var(--text-1)]"
+                  className="block w-full text-left text-xs text-(--text-2) hover:text-(--text-1)"
                 >
                   {edge.edgeType} → {otherId}
                 </button>

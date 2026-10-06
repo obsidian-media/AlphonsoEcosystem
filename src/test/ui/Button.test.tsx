@@ -9,19 +9,19 @@ describe('Button', () => {
     it('renders primary variant with correct classes', () => {
       render(<Button variant="primary">Primary</Button>);
       const btn = screen.getByText('Primary').closest('button');
-      expect(btn.className).toContain('bg-[var(--accent)]');
-      // text-[var(--surface-0)] on --accent was a real contrast bug (2026-09-08
+      expect(btn.className).toContain('bg-(--accent)');
+      // text-(--surface-0) on --accent was a real contrast bug (2026-09-08
       // a11y pass): --surface-0 inverts between themes, giving near-white text
       // on a medium-brightness cyan button in light mode (2.89:1, axe-core
       // flagged). --accent-contrast stays theme-invariant, matching every
       // other --accent-background text color across the app after this fix.
-      expect(btn.className).toContain('text-[var(--accent-contrast)]');
+      expect(btn.className).toContain('text-(--accent-contrast)');
     });
 
     it('renders secondary variant with correct classes', () => {
       render(<Button variant="secondary">Secondary</Button>);
       const btn = screen.getByText('Secondary').closest('button');
-      expect(btn.className).toContain('bg-[var(--surface-3)]');
+      expect(btn.className).toContain('bg-(--surface-3)');
     });
 
     it('renders ghost variant with correct classes', () => {
@@ -33,13 +33,13 @@ describe('Button', () => {
     it('renders danger variant with correct classes', () => {
       render(<Button variant="danger">Danger</Button>);
       const btn = screen.getByText('Danger').closest('button');
-      expect(btn.className).toContain('text-[var(--error)]');
+      expect(btn.className).toContain('text-(--error)');
     });
 
     it('renders success variant with correct classes', () => {
       render(<Button variant="success">Success</Button>);
       const btn = screen.getByText('Success').closest('button');
-      expect(btn.className).toContain('text-[var(--success)]');
+      expect(btn.className).toContain('text-(--success)');
     });
   });
 

@@ -10,21 +10,11 @@
 // fails CI until it is fixed or explicitly accepted here with a reason and a
 // tracking reference.
 //
-// 2026-10-06: temporarily accepted GHSA-vfj7-8cjw-p6xm (braces, stack-
-// exhaustion DoS via deeply nested glob patterns). It reaches this repo only
-// through tailwindcss 3.x's build-time scan of our own source files
-// (tailwindcss -> chokidar/fast-glob/micromatch -> braces): a dev-only tool,
-// never shipped, with no attacker-controlled glob input. `npm audit
-// --omit=dev` reports zero high/critical findings. The only fix npm offers is
-// the Tailwind v4 major migration, tracked in docs/governance/DEFERRED_WORK.md
-// (2026-10-06 entry). The exception EXPIRES: after ACCEPTED_UNTIL this script
-// fails again so it cannot be forgotten.
-const ACCEPTED_ADVISORY_IDS = new Set([1240992]);
-const ACCEPTED_UNTIL = '2026-12-31';
-if (ACCEPTED_ADVISORY_IDS.size > 0 && new Date().toISOString().slice(0, 10) > ACCEPTED_UNTIL) {
-  console.error(`Accepted npm advisories expired on ${ACCEPTED_UNTIL}: migrate Tailwind to v4 (see DEFERRED_WORK.md) or consciously renew this exception.`);
-  process.exit(1);
-}
+// 2026-10-06: a braces ReDoS advisory (GHSA-vfj7-8cjw-p6xm) was briefly
+// accepted here because it reached the repo only through tailwindcss 3.x's
+// build-time scan. The Tailwind v4 migration removed that dependency chain, so
+// the exception and its expiry guard were deleted; the list is empty again.
+const ACCEPTED_ADVISORY_IDS = new Set();
 
 import { execSync } from 'node:child_process';
 

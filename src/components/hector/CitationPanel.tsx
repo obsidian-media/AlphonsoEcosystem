@@ -23,28 +23,28 @@ export function CitationPanel({ report }: Props): React.JSX.Element {
   const urls = proofs.length ? proofs.map((proof) => proof.url) : report?.urls ?? [];
   return (
     <Zone mood="hector">
-      <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--agent-hector)]">Citations</div>
+      <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-(--agent-hector)">Citations</div>
       {urls.length === 0 ? (
-        <div className="rounded-xl bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">
+        <div className="rounded-xl bg-(--surface-1) p-4 text-sm text-(--text-3)">
           Citation list is empty because this report has not completed a live run yet.
         </div>
       ) : (
         <>
-          <p className="mb-2 text-[11px] text-[var(--text-3)]">Numbered bibliography for this report's approval handoff.</p>
+          <p className="mb-2 text-[11px] text-(--text-3)">Numbered bibliography for this report's approval handoff.</p>
           <ol className="space-y-2">
             {urls.map((url, index) => (
-              <li key={url} className="rounded-xl bg-[var(--surface-1)] p-3 text-[11px] text-[var(--text-2)]">
+              <li key={url} className="rounded-xl bg-(--surface-1) p-3 text-[11px] text-(--text-2)">
                 [{index + 1}]{' '}
                 <button
                   type="button"
                   onClick={() => openExternalUrl(url)}
-                  className="text-[var(--agent-hector)] underline decoration-[var(--agent-hector)] hover:decoration-[var(--agent-hector)] transition-colors break-all text-left"
+                  className="text-(--agent-hector) underline decoration-(--agent-hector) hover:decoration-(--agent-hector) transition-colors break-all text-left"
                   title={url}
                 >
                   {url}
                 </button>
                 {proofs[index] && (
-                  <div className="mt-1 text-[var(--text-3)]">
+                  <div className="mt-1 text-(--text-3)">
                     checked {proofs[index].dateChecked ?? 'n/a'} | {proofs[index].verificationState} | {proofs[index].httpStatus ? `HTTP ${proofs[index].httpStatus}` : 'no status'}
                   </div>
                 )}

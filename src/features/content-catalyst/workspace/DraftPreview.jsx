@@ -3,9 +3,9 @@ import { FileText, Image, Video, Mic, Eye, Send } from 'lucide-react';
 
 function MiniField({ label, value, mono = false }) {
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
-      <div className="text-[9px] uppercase tracking-widest text-[var(--text-4)] font-bold">{label}</div>
-      <div className={`mt-0.5 text-xs leading-snug ${mono ? 'font-mono break-all text-[var(--text-3)]' : 'text-[var(--text-2)]'}`}>{value}</div>
+    <div className="rounded-lg border border-(--border) bg-(--surface-2) px-3 py-2">
+      <div className="text-[9px] uppercase tracking-widest text-(--text-4) font-bold">{label}</div>
+      <div className={`mt-0.5 text-xs leading-snug ${mono ? 'font-mono break-all text-(--text-3)' : 'text-(--text-2)'}`}>{value}</div>
     </div>
   );
 }
@@ -28,9 +28,9 @@ function resolveImagePreview(assets) {
 export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, imageRuntime, onStartImageRuntime, onRefreshImageRuntime }) {
   if (!activeJob) {
     return (
-      <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] p-8 text-center">
-        <div className="text-sm font-bold text-[var(--text-2)]">No active job</div>
-        <p className="mt-1 text-[10px] text-[var(--text-4)]">Create a job above to see its draft here.</p>
+      <div className="rounded-xl border border-dashed border-(--border) bg-(--surface-1) p-8 text-center">
+        <div className="text-sm font-bold text-(--text-2)">No active job</div>
+        <p className="mt-1 text-[10px] text-(--text-4)">Create a job above to see its draft here.</p>
       </div>
     );
   }
@@ -45,15 +45,15 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
       : 'PARTIAL — no image asset is available yet for this job.';
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+    <div className="rounded-xl border border-(--border) bg-(--surface-1) overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-(--border)">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--accent)]">Creative output</span>
-          <p className="mt-0.5 text-[10px] text-[var(--text-4)]">Review the work, then move it to the next production step.</p>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-(--accent)">Creative output</span>
+          <p className="mt-0.5 text-[10px] text-(--text-4)">Review the work, then move it to the next production step.</p>
         </div>
         <div className="flex gap-1.5">
-          <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[9px] uppercase tracking-widest text-[var(--text-4)]">{activeJob.status}</span>
-          <span className="rounded-full border border-[var(--accent-border)] bg-[var(--accent-dim)] px-2 py-0.5 text-[9px] uppercase tracking-widest text-[var(--accent)]">{activeJob.currentStep || 'brief'}</span>
+          <span className="rounded-full border border-(--border) px-2 py-0.5 text-[9px] uppercase tracking-widest text-(--text-4)">{activeJob.status}</span>
+          <span className="rounded-full border border-(--accent-border) bg-(--accent-dim) px-2 py-0.5 text-[9px] uppercase tracking-widest text-(--accent)">{activeJob.currentStep || 'brief'}</span>
         </div>
       </div>
 
@@ -66,8 +66,8 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
         </div>
 
         <div className="grid grid-cols-1 gap-2">
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
-            <div className="text-[9px] uppercase tracking-widest text-[var(--text-4)] font-bold">Generated image</div>
+          <div className="rounded-lg border border-(--border) bg-(--surface-2) p-3">
+            <div className="text-[9px] uppercase tracking-widest text-(--text-4) font-bold">Generated image</div>
             {imagePreview ? (
               <img
                 src={imagePreview}
@@ -75,25 +75,25 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
                 className="mt-2 max-h-64 w-full rounded-md object-contain bg-black/20"
               />
             ) : imageRequested ? (
-              <div className="mt-2 space-y-2 text-xs text-[var(--text-2)]">
+              <div className="mt-2 space-y-2 text-xs text-(--text-2)">
                 <p>{imageStatusMessage} {imageRuntime?.message || 'Checking ComfyUI…'}</p>
                 {!imageRuntime?.checked ? (
-                  <button type="button" onClick={onRefreshImageRuntime} className="rounded border border-[var(--warning)]/40 px-2 py-1 text-[10px] font-bold uppercase">Retry runtime check</button>
+                  <button type="button" onClick={onRefreshImageRuntime} className="rounded-sm border border-(--warning)/40 px-2 py-1 text-[10px] font-bold uppercase">Retry runtime check</button>
                 ) : !imageRuntime?.running && (
-                  <button type="button" disabled={imageRuntime?.starting || !imageRuntime?.installed} onClick={onStartImageRuntime} className="rounded border border-[var(--warning)]/40 px-2 py-1 text-[10px] font-bold uppercase disabled:opacity-40">{imageRuntime?.starting ? 'Starting ComfyUI…' : imageRuntime?.installed ? 'Start ComfyUI' : 'Install ComfyUI in Runtimes'}</button>
+                  <button type="button" disabled={imageRuntime?.starting || !imageRuntime?.installed} onClick={onStartImageRuntime} className="rounded-sm border border-(--warning)/40 px-2 py-1 text-[10px] font-bold uppercase disabled:opacity-40">{imageRuntime?.starting ? 'Starting ComfyUI…' : imageRuntime?.installed ? 'Start ComfyUI' : 'Install ComfyUI in Runtimes'}</button>
                 )}
               </div>
             ) : (
-              <p className="mt-2 text-xs text-[var(--text-4)]">Image generation was not selected for this job.</p>
+              <p className="mt-2 text-xs text-(--text-4)">Image generation was not selected for this job.</p>
             )}
-            {activeJob.assets?.image_path && <div className="mt-2 text-[10px] font-mono break-all text-[var(--text-4)]">{activeJob.assets.image_path}</div>}
+            {activeJob.assets?.image_path && <div className="mt-2 text-[10px] font-mono break-all text-(--text-4)">{activeJob.assets.image_path}</div>}
           </div>
           <MiniField label="Video URL" value={activeJob.assets?.video_url || 'none'} mono />
         </div>
 
         {narrationText && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-2)]">
-            <div className="text-[9px] uppercase tracking-widest text-[var(--text-4)] font-bold">Narration script</div>
+          <div className="rounded-lg border border-(--border) bg-(--surface-2) px-3 py-2 text-xs text-(--text-2)">
+            <div className="text-[9px] uppercase tracking-widest text-(--text-4) font-bold">Narration script</div>
             <p className="mt-1 whitespace-pre-wrap">{narrationText}</p>
           </div>
         )}
@@ -108,8 +108,8 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
               onClick={() => onRunStep(key)}
               className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors disabled:opacity-40 ${
                 accent
-                  ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)] hover:bg-[var(--accent-muted)]'
-                  : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-1)]'
+                  ? 'border-(--accent-border) bg-(--accent-dim) text-(--accent) hover:bg-(--accent-muted)'
+                  : 'border-(--border) bg-(--surface-2) text-(--text-3) hover:text-(--text-1)'
               }`}
             >
               <Icon className="h-3 w-3" />
@@ -120,7 +120,7 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
             disabled={busy}
             type="button"
             onClick={onApprovePublish}
-            className="flex items-center gap-1 rounded-lg border border-[var(--warning)]/40 bg-[var(--warning-dim)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-2)] hover:opacity-90 transition-colors disabled:opacity-40"
+            className="flex items-center gap-1 rounded-lg border border-(--warning)/40 bg-(--warning-dim) px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-(--text-2) hover:opacity-90 transition-colors disabled:opacity-40"
           >
             <Send className="h-3 w-3" />
             Publish
@@ -128,7 +128,7 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
         </div>
 
         {(activeJob.preview?.summary || activeJob.draft?.preview_summary) && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-2)]">
+          <div className="rounded-lg border border-(--border) bg-(--surface-2) px-3 py-2 text-xs text-(--text-2)">
             {activeJob.preview?.summary || activeJob.draft?.preview_summary}
           </div>
         )}

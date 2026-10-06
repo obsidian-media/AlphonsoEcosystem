@@ -118,29 +118,29 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
   };
 
   return (
-    <div className="relative flex flex-col h-screen w-full overflow-hidden bg-[var(--companion-surface)]" data-companion-mode-ready="true">
-      <div className="absolute -top-24 -left-16 h-72 w-72 rounded-full bg-[var(--companion-blob-peach)] blur-3xl pointer-events-none" />
-      <div className="absolute top-1/3 -right-20 h-80 w-80 rounded-full bg-[var(--companion-blob-pink)] blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 h-64 w-64 rounded-full bg-[var(--companion-blob-lavender)] blur-3xl pointer-events-none" />
+    <div className="relative flex flex-col h-screen w-full overflow-hidden bg-(--companion-surface)" data-companion-mode-ready="true">
+      <div className="absolute -top-24 -left-16 h-72 w-72 rounded-full bg-(--companion-blob-peach) blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 -right-20 h-80 w-80 rounded-full bg-(--companion-blob-pink) blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 h-64 w-64 rounded-full bg-(--companion-blob-lavender) blur-3xl pointer-events-none" />
 
       <header className="relative z-10 flex items-center justify-between px-4 py-3">
-        <button type="button" aria-label="Menu" onClick={() => setMenuOpen((v) => !v)} className="h-9 w-9 flex items-center justify-center rounded-full bg-[var(--companion-bubble-theirs)] backdrop-blur-sm">
-          <Menu className="h-4 w-4 text-[var(--companion-bubble-theirs-text)]" />
+        <button type="button" aria-label="Menu" onClick={() => setMenuOpen((v) => !v)} className="h-9 w-9 flex items-center justify-center rounded-full bg-(--companion-bubble-theirs) backdrop-blur-xs">
+          <Menu className="h-4 w-4 text-(--companion-bubble-theirs-text)" />
         </button>
         <span className="flex items-center gap-1.5">
           <img src={alphonsoIcon} alt="Alphonso" className="h-5 w-5 rounded-md shrink-0" />
-          <span className="font-serif text-sm font-semibold text-[var(--companion-bubble-theirs-text)]">Alphonso</span>
+          <span className="font-serif text-sm font-semibold text-(--companion-bubble-theirs-text)">Alphonso</span>
         </span>
-        <button type="button" aria-label="Settings" onClick={onOpenSettings} className="h-9 w-9 flex items-center justify-center rounded-full bg-[var(--companion-bubble-theirs)] backdrop-blur-sm">
-          <SettingsIcon className="h-4 w-4 text-[var(--companion-bubble-theirs-text)]" />
+        <button type="button" aria-label="Settings" onClick={onOpenSettings} className="h-9 w-9 flex items-center justify-center rounded-full bg-(--companion-bubble-theirs) backdrop-blur-xs">
+          <SettingsIcon className="h-4 w-4 text-(--companion-bubble-theirs-text)" />
         </button>
       </header>
 
       {menuOpen && (
-        <div className="relative z-20 mx-4 mb-2 rounded-2xl bg-[var(--companion-bubble-theirs)] backdrop-blur-md p-4 space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[var(--companion-text-muted)]">Display mode</div>
+        <div className="relative z-20 mx-4 mb-2 rounded-2xl bg-(--companion-bubble-theirs) backdrop-blur-md p-4 space-y-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-(--companion-text-muted)">Display mode</div>
           <ModeToggle mode={uxMode} onModeChange={(m) => { onModeChange(m); setMenuOpen(false); }} />
-          <button type="button" onClick={() => { onOpenSettings(); setMenuOpen(false); }} className="text-sm font-medium text-[var(--companion-bubble-theirs-text)] underline underline-offset-2">
+          <button type="button" onClick={() => { onOpenSettings(); setMenuOpen(false); }} className="text-sm font-medium text-(--companion-bubble-theirs-text) underline underline-offset-2">
             Open Settings
           </button>
         </div>
@@ -149,8 +149,8 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
       <CompanionAgentRow agents={agents} activeAgentId={activeAgentId} onSelectAgent={handleSelectAgent} />
 
       <div className="relative z-10 px-5 pt-1 pb-2">
-        <div className="font-serif text-2xl font-semibold text-[var(--companion-bubble-theirs-text)]">{activeAgent?.name}</div>
-        <div className="text-sm text-[var(--companion-text-muted)] mt-0.5">{content.greeting}</div>
+        <div className="font-serif text-2xl font-semibold text-(--companion-bubble-theirs-text)">{activeAgent?.name}</div>
+        <div className="text-sm text-(--companion-text-muted) mt-0.5">{content.greeting}</div>
       </div>
 
       <div className="relative z-10 flex-1 overflow-y-auto px-4 space-y-3">
@@ -166,7 +166,7 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
               key={chip}
               type="button"
               onClick={() => sendMessage(chip)}
-              className="shrink-0 rounded-full bg-[var(--companion-bubble-theirs)] backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-[var(--companion-bubble-theirs-text)]"
+              className="shrink-0 rounded-full bg-(--companion-bubble-theirs) backdrop-blur-xs px-3 py-1.5 text-xs font-medium text-(--companion-bubble-theirs-text)"
             >
               {chip}
             </button>

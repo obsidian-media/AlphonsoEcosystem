@@ -101,7 +101,7 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
   };
 
   return (
-    <div data-testid="setup-flow-root" className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-1)]">
+    <div data-testid="setup-flow-root" className="flex h-screen w-screen items-center justify-center bg-(--surface-0) text-(--text-1)">
       {step === 'boot' && <BootRitualIntro onFinish={handleBootFinish} />}
       {step === 'scan' && <SystemScan onContinue={handleScanContinue} />}
       {step === 'intent' && <IntentSelection onSelect={handleIntentSelect} />}
@@ -124,16 +124,16 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
       )}
       {step === 'failed' && (
         <div className="flex flex-col items-center gap-4 p-8 w-full max-w-lg">
-          <h2 className="text-2xl font-semibold text-[var(--text-1)]">Some components didn&apos;t install</h2>
+          <h2 className="text-2xl font-semibold text-(--text-1)">Some components didn&apos;t install</h2>
           {/* role="alert" (assertive): this interrupts deliberately, because
               the user has to decide between retrying and continuing. */}
           <div
             role="alert"
-            className="w-full rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-sm"
+            className="w-full rounded-sm bg-(--error-dim) px-3 py-2 text-(--error) text-sm"
           >
             Failed: {failedLabels.join(', ')}
           </div>
-          <p className="text-sm text-[var(--text-3)] text-center">
+          <p className="text-sm text-(--text-3) text-center">
             {starterModelFailed
               ? // Continue Anyway is deliberately not offered here: it calls
                 // finishSetup(), which persists setup as complete and hides
@@ -149,14 +149,14 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
           <div className="flex gap-3">
             <button
               onClick={() => setStep('queue')}
-              className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-contrast)]"
+              className="rounded-sm bg-(--accent) px-4 py-2 text-sm font-semibold text-(--accent-contrast)"
             >
               Retry
             </button>
             {!starterModelFailed && (
               <button
                 onClick={finishSetup}
-                className="rounded border border-[var(--border-strong)] px-4 py-2 text-sm text-[var(--text-2)]"
+                className="rounded-sm border border-(--border-strong) px-4 py-2 text-sm text-(--text-2)"
               >
                 Continue Anyway
               </button>

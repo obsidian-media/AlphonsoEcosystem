@@ -77,7 +77,7 @@ export function CalleOutreachPanel(): React.JSX.Element {
           <Input aria-label="Business name" placeholder="Business name" value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
           <Input aria-label="Phone" placeholder="+15550123456" value={phone} onChange={(e) => setPhone(e.target.value)} />
           {hasNonTerminalForPhone && (
-            <div className="text-xs text-[--warning]">An outreach call for this number is already in progress.</div>
+            <div className="text-xs text-(--warning)">An outreach call for this number is already in progress.</div>
           )}
           <div className="flex gap-2">
             <button type="button" onClick={() => setTaskType('outreach')} className={taskType === 'outreach' ? 'font-bold' : ''}>Outreach</button>
@@ -93,18 +93,18 @@ export function CalleOutreachPanel(): React.JSX.Element {
           ) : (
             <div className="space-y-2">
               {records.map((record) => (
-                <div key={record.id} className="border border-[--border] rounded p-2">
+                <div key={record.id} className="border border-(--border) rounded-sm p-2">
                   <div className="flex items-center gap-2">
                     <StatusDot status={STATUS_TO_DOT[record.status] ?? 'offline'} />
                     <span>{record.businessName}</span>
                     <Badge>{record.status}</Badge>
                   </div>
                   {record.status === 'pending_approval' && record.policyBlockKind && record.policyBlockKind !== 'needs_approval_click' && (
-                    <div className="text-xs text-[--warning]">{POLICY_BLOCK_COPY[record.policyBlockKind]}</div>
+                    <div className="text-xs text-(--warning)">{POLICY_BLOCK_COPY[record.policyBlockKind]}</div>
                   )}
                   {record.status === 'pending_approval' && (!record.policyBlockKind || record.policyBlockKind === 'needs_approval_click') && (
                     <>
-                      <div className="text-xs text-[--text-3]">Calling {record.phone} — est. ${ESTIMATED_COST_USD.toFixed(2)}: "{record.task}"</div>
+                      <div className="text-xs text-(--text-3)">Calling {record.phone} — est. ${ESTIMATED_COST_USD.toFixed(2)}: "{record.task}"</div>
                       <Button onClick={() => handleApprove(record.id)}>Approve & Place Call</Button>
                     </>
                   )}
@@ -113,10 +113,10 @@ export function CalleOutreachPanel(): React.JSX.Element {
                   )}
                   {record.summary && <p className="text-sm">{record.summary}</p>}
                   {record.structuredResult && (
-                    <pre className="text-xs whitespace-pre-wrap break-words">{JSON.stringify(record.structuredResult, null, 2)}</pre>
+                    <pre className="text-xs whitespace-pre-wrap wrap-break-word">{JSON.stringify(record.structuredResult, null, 2)}</pre>
                   )}
                   {record.transcript && record.transcript.length > 0 && (
-                    <div className="text-xs text-[--text-3] space-y-1">
+                    <div className="text-xs text-(--text-3) space-y-1">
                       {record.transcript.map((turn, index) => (
                         <div key={index}><strong>{turn.speaker}:</strong> {turn.text}</div>
                       ))}
