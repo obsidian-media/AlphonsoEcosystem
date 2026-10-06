@@ -12,6 +12,7 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceService';
 import { addNode, addEdge } from './memoryGraphService';
 import { generateAgentLlmResponse, PREFERRED_MODEL, getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
@@ -406,7 +407,8 @@ export async function synthesizeHectorResearch(researchQuestion, sources, option
     const response = await generateAgentLlmResponse('hector', {
       endpoint: options.endpoint,
       model: options.model || PREFERRED_MODEL,
-      prompt
+      prompt,
+      sessionId: options.sessionId ? resolveSecureSessionId(options.sessionId) : undefined
     });
     return parseHectorSynthesisResponse(response?.response);
   } catch {
@@ -1081,7 +1083,7 @@ export async function runHectorLiveResearch(reportId, onProgress) {
 
   let finalReport = updated;
   if (successProofs.length > 0) {
-    const synthesis = await synthesizeHectorResearch(workingReport.researchQuestion, successProofs);
+    const synthesis = await synthesizeHectorResearch(workingReport.researchQuestion, successProofs, { sessionId: reportId });
     if (synthesis) {
       finalReport = updateReport(reportId, { synthesis, summary: synthesis.overview });
       onProgress?.(finalReport);
@@ -1131,7 +1133,7 @@ export async function resynthesizeHectorReport(reportId, onProgress) {
   const successProofs = Array.isArray(report.sourceProofs) ? report.sourceProofs.filter((p) => p.ok) : [];
   if (successProofs.length === 0) return null;
 
-  const synthesis = await synthesizeHectorResearch(report.researchQuestion, successProofs);
+  const synthesis = await synthesizeHectorResearch(report.researchQuestion, successProofs, { sessionId: reportId });
   if (!synthesis) return null;
 
   const updated = updateReport(reportId, { synthesis, summary: synthesis.overview });

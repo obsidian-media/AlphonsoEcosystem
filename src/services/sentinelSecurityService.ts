@@ -4,6 +4,7 @@ import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { classifyMissionRoomRisk, redactMissionRoomSecrets } from './missionRoomService';
+import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
 export interface ThreatPattern {
   pattern: RegExp;
@@ -193,7 +194,7 @@ export async function runSentinelSecurityScan(commandText: string, assignment: S
   if (shouldRunOllama) {
     try {
       const prompt = buildSentinelThreatPrompt(commandText, priorOutputs, scanResult);
-      const response = await generateAgentLlmResponse('sentinel', { endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt });
+      const response = await generateAgentLlmResponse('sentinel', { endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt, sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined });
       ollamaResult = parseSentinelThreatResponse(response?.response || '');
     } catch {
       // Ollama unavailable — use deterministic fallback

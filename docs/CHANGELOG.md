@@ -14,6 +14,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Approval for execute/restore/enable actions (#275).** `needsHighRiskApproval()` no longer relies only on risk keywords.
 - **Tests that could not fail were fixed.** `bridge/tests/server.test.js` now parses and asserts real behavior, and `npm test`/`test:watch` include `bridge` (it was never run in CI). `companionIntegration.test.js` is now a source-reading contract test for the Rust/Swift/frontend companion wiring.
 - **`npm test` could not fail.** `scripts/run-vitest-programmatic.mjs` used the wrong vitest mode argument so no test body ever ran and the exit code was always 0; fixed, with failures now exiting non-zero. A full real-vitest run (406 files / 5,563 tests) confirmed nothing was hiding.
+- **Hermes session continuity.** Every per-agent LLM call site (Maria, Echo, Nova, Sentinel, Alphonso's brain, Hector synthesis, the Echo file watcher, CompanionMode) now passes a stable session id, so Hermes profiles group related turns instead of treating each call as stateless. Previously only Boardroom and Jose's Miya/Hector builders did.
 - **Held:** Tailwind v4 migration (#276) awaits a decision on macOS 10.15 support.
 
 ---

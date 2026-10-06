@@ -4,6 +4,7 @@ import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { generateRiskScore } from './audit/marcusAuditService';
 import { addNode, addEdge } from './memoryGraphService';
+import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
 export interface MariaAuditResult {
   riskLevel: string;
@@ -177,7 +178,8 @@ export async function runMariaGovernanceAudit(commandText: string, assignment: M
       const response = await generateAgentLlmResponse('maria', {
         endpoint: options.endpoint,
         model: options.model || PREFERRED_MODEL,
-        prompt
+        prompt,
+        sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
       });
       const parsed = parseMariaAuditResponse(response?.response);
       if (parsed && parsed.summary.length > 10) {
