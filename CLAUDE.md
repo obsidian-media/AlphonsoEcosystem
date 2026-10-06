@@ -577,7 +577,7 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-10-06 (false-confidence tests)_ — `bridge/tests/server.test.js` never ran in CI (`npm test` filtered to `src`) and had TypeScript syntax in a `.js` file; fixed, and `test`/`test:watch` now run `src bridge`. `companionIntegration.test.js` rewritten as a source-reading contract test (mutation-verified). Same day: #270 macOS notarization, #271 AI-planned command approval, #272 approval-bridge fix, #275 approval for execute/restore/enable actions merged; #276 (Tailwind v4) held on the macOS 10.15 decision. See `docs/governance/DEFERRED_WORK.md` 2026-10-06 entries.
+_Last verified: 2026-10-06 (false-confidence tests)_ — `bridge/tests/server.test.js` never ran in CI (`npm test` filtered to `src`) and had TypeScript syntax in a `.js` file; fixed, and `test`/`test:watch` now run `src bridge`. `companionIntegration.test.js` rewritten as a source-reading contract test (mutation-verified). Same day: `scripts/run-vitest-programmatic.mjs` was found to run zero test bodies (wrong `startVitest` mode, exit always 0) and was fixed — trust `npm test` only from 2026-10-06 on; #270 macOS notarization, #271 AI-planned command approval, #272 approval-bridge fix, #275 approval for execute/restore/enable actions merged; #276 (Tailwind v4) held on the macOS 10.15 decision. See `docs/governance/DEFERRED_WORK.md` 2026-10-06 entries.
 
 ---
 
