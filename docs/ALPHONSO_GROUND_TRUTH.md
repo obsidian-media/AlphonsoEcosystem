@@ -1193,8 +1193,8 @@ big-bang rebuild of all 9 agents' skill systems.
   99/99 targeted tests passing, `npx tsc --noEmit` clean, ESLint clean on
   every touched file.
 - Explicitly deferred (per the roadmap's own scope note, not dropped):
-  taxonomy depth for the other 6 agents (Alphonso, Maria, Marcus, Echo,
-  Sentinel, Nova keep one default pack each), module-system convergence
+  taxonomy depth for the other 6 agents (since shipped — see §11.31 correction;
+  they no longer have one pack each), module-system convergence
   between `modules/` TOML manifests and `skillPackService.ts` packs, and a
   full skill-marketplace model.
 
@@ -2292,3 +2292,7 @@ Private audit: `audits/private/2026-09-30_Claude_PreLaunchAllAngle_Audit.md`. It
 - **`src/test/services/companionIntegration.test.js` was tautological.** It mocked `invoke` and asserted on the mock's own values. Rewritten as 9 contract tests that read the real sources: every `companion_*` command the frontend invokes is in `generate_handler!`; every registered command is a defined `#[tauri::command]`; every JSON-RPC method Swift sends is handled by `companion_router.rs` (or `authenticate`); the Rust port matches the port hard-coded in the three Swift files; the mDNS type matches; Voice OS port != companion port. Proven able to fail with 5 source mutations (each caught, then restored).
 - **`npm test` was a no-op gate.** `run-vitest-programmatic.mjs` passed `'run'` as vitest's mode argument (it must be `'test'`), so vitest 4 collected files but executed no test bodies; a failing test reported passed and exit code was always 0. Fixed (mode `'test'`, exit code propagated, `express` alias and 30s `testTimeout` mirrored from `vitest.config.js`). `test:coverage` (real vitest) was the only effective gate and still scopes to `src`.
 - Verification: real `npx vitest run src bridge --pool=forks` 406 files / 5,563 tests passed; `tsc --noEmit` clean; `verify-doc-counts.mjs` clean.
+
+## 11.31 Skill-pack taxonomy depth is complete for all 9 agents (correction, 2026-10-06)
+
+Earlier docs (Sprint 3 entries, CLAUDE.md, ALPHONSOTOTHEMOON.md) said Alphonso, Maria, Marcus, Echo, Sentinel and Nova still had one default pack each. That was stale. Counting `ownerAgent` over `src/services/skillPackContent*.ts` and `skillPackWorkflowData.ts` gives alphonso 18, echo 17, hector 21, jose 21, marcus 17, maria 18, miya 21, nova 17, sentinel 17 agent-owned packs, each file covered by a `skillPackContent<Agent>.test.ts`. Still deferred: module-system convergence (`modules/` vs skill packs) and a full marketplace model.
