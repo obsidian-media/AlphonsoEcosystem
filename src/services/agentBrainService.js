@@ -561,10 +561,10 @@ function buildValidationPrompt(commandText, validationErrors, writtenFiles) {
 
 export async function executeWithBrain(commandText, options = {}) {
   const { endpoint, projectDirectory, onProgress, previewOnly, conversationHistory, onToken } = options;
-  // One Hermes session per brain run (clarify -> plan -> every generate/fix step) so Hermes
-  // memory groups the whole run together. The caller (Jose) already passes a value resolved via
-  // resolveSecureSessionId at its own call site, which is what keeps the id out of CodeQL's
-  // insecure-randomness taint flow; it is used as-is here.
+  // Hermes-routed calls (clarify, plan, non-streaming generate/fix) use this caller-resolved session
+  // id to group a run's turns. Streaming generate/fix calls go through generateOllamaStream and do not
+  // join a Hermes session. Jose resolves the id via resolveSecureSessionId at its own call site to
+  // keep it out of CodeQL's insecure-randomness taint flow; it is used as-is here.
   const { sessionId } = options;
   const results = [];
   const filesWritten = [];
