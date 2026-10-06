@@ -46,7 +46,7 @@ nodes can point at memory items that were already deleted.
 
 ## Non-goals
 
-- Changing how edges are created or inferred.
+- Changing how edges are created or inferred. The one exception is metadata only: when an inference run finds that an edge with the same endpoints already exists, it refreshes that edge's `last_seen_at` instead of skipping it (today's inference path skips existing endpoint pairs silently). No new edges, no change to what gets inferred.
 - Pruning the underlying memory items (their own TTL already does that).
 - A new storage engine.
 
@@ -61,7 +61,7 @@ prune time from its `node_type` and, for `memory_item`, from the item's own
 | Node type | Class | Rule |
 |---|---|---|
 | `memory_item` | follows the item | `permanent` → keep; `standard_180d` → 180 d; `ephemeral_7d` → 7 d; if the item no longer exists → orphan (see §3) |
-| `receipt`, `packet` | follows the packet | 90 d after last edge activity, unless any edge touches a kept node |
+| `receipt`, `packet` | follows the packet | 90 d after last edge activity, unless any edge touches a kept node. "Edge activity" is the latest of an adjacent edge's `created_at` and `last_seen_at` (so re-confirming an inferred edge resets the window); pruning derives its cutoff from that timestamp, never from edge creation time alone |
 | `boardroom_message` | follows the thread | 180 d; threads the user marked escalated/acknowledged stay |
 | `research_report` | 180 d | `source` nodes belong to a report and age with it |
 | `source` | follows its report(s) | pruned only when no surviving report cites it |
