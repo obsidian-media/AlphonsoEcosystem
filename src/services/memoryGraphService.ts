@@ -86,6 +86,7 @@ export async function addEdge(
  * behavior and signature are unchanged since Phase 1.
  */
 export async function queryRelated(nodeId: string): Promise<GraphEdge[]> {
+  touchNodes([nodeId]);
   try {
     const rows = await invoke<GraphEdge[]>('memory_graph_query_related', { nodeId });
     return Array.isArray(rows) ? rows : [];
@@ -107,6 +108,7 @@ export async function queryRelatedDeep(
   maxDepth: number,
   direction: TraversalDirection
 ): Promise<GraphEdgeWithDepth[]> {
+  touchNodes([nodeId]);
   try {
     const rows = await invoke<GraphEdgeWithDepth[]>('memory_graph_query_related_deep', {
       nodeId,
@@ -162,5 +164,29 @@ export async function inferEdges(scopeNodeIds: string[], maxSuggestions: number)
     return Array.isArray(rows) ? rows : [];
   } catch {
     return [];
+  }
+}
+
+const TOUCH_THROTTLE_MS = 10 * 60 * 1000;
+const _recentlyTouched = new Map<string, number>();
+
+/**
+ * Marks nodes as recently read so retention pruning leaves them alone for the
+ * access window. Fire-and-forget and double-throttled (here per 10 minutes to
+ * save IPC, and in Rust per hour to bound writes) -- never blocks or fails a read.
+ */
+export function touchNodes(nodeIds: string[]): void {
+  const now = Date.now();
+  const fresh = nodeIds.filter((id) => {
+    const last = _recentlyTouched.get(id) ?? 0;
+    if (now - last < TOUCH_THROTTLE_MS) return false;
+    _recentlyTouched.set(id, now);
+    return true;
+  });
+  if (fresh.length === 0) return;
+  try {
+    Promise.resolve(invoke('memory_graph_touch_nodes', { nodeIds: fresh })).catch(() => {});
+  } catch {
+    // best-effort; a failed touch must never affect a read
   }
 }
