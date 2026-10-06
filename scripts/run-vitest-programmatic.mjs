@@ -45,6 +45,8 @@ const ctx = await startVitest(
     run: !watch,
     watch,
     globals: true,
+    // Mirror vitest.config.js; the 5s default times out slow tests under a serial single-fork run.
+    testTimeout: 30000,
     environment: 'jsdom',
     setupFiles: ['./src/test/setupTests.js'],
     // configFile is false, so vitest's default include pattern applies and the
