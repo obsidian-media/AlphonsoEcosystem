@@ -78,6 +78,7 @@ import { PluginProvider, usePlugins } from './contexts/PluginContext';
 import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
 import { VerificationProvider, useVerification } from './contexts/VerificationContext';
 import { CoachProvider, useCoach } from './contexts/CoachContext';
+import type { BoardroomRequestApproval } from './components/BoardroomChatView';
 
 // Mirrors Sidebar.tsx's SPACES 'system' group item ids exactly -- keep in
 // sync if that group's tabs ever change (see the RightPanel render branch
@@ -161,10 +162,9 @@ interface VerificationLogsBridgeValue {
 }
 
 interface RequestApprovalBridgeValue {
-  approvalPending: string | null;
-  setApprovalPending: React.Dispatch<React.SetStateAction<string | null>>;
-  requestApproval: (actionLabel: string) => Promise<boolean>;
-  approvalResolveRef: React.MutableRefObject<((value: boolean) => void) | null>;
+  /** Delegates to the shell's real approval flow once AppContent registers it; denies until then. */
+  requestApproval: BoardroomRequestApproval;
+  registerApprovalHandler: (handler: BoardroomRequestApproval | null) => void;
 }
 
 const VerificationLogsBridge = React.createContext<VerificationLogsBridgeValue | null>(null);
@@ -312,6 +312,15 @@ function AppShell() {
   // already owns checkAppUpdate()).
   useBootEffects({ settings, setSettings, setConversations, setActiveChatId, setDesktopBridge, setIsOnline });
   usePersistenceEffects({ settings, conversations, nativeSelfDevProof, coachMiniMode, coachSnapCorner });
+  // Point the context bridge (Plugin/Workspace/Verification providers, Boardroom)
+  // at the shell's real approval modal. Without this they await a prompt that never shows.
+  const approvalBridge = useRequestApprovalBridge();
+  useEffect(() => {
+    if (!approvalBridge) return undefined;
+    approvalBridge.registerApprovalHandler(requestApproval as unknown as BoardroomRequestApproval);
+    return () => approvalBridge.registerApprovalHandler(null);
+  }, [approvalBridge, requestApproval]);
+
   useSessionEffects({ isCoachWindow, activeTab, ollamaStatus, approvalRequiredNotice, prevOllamaStateRef, toast, setJoseCompanionState });
   useNativeProofEffects({ settings, desktopBridge, updateCheckState, workspaceFoundation, nativeProofHooks, writeNativeProofStage, nativeSelfDevAutorunRef, setNativeSelfDevProof });
   useDataHydration({ settings, desktopBridge, isCoachWindow, setVerificationLogs, setDurableAuditLogs, setDiskPluginManifests, setMemoryItems, setPlugins, setPluginAudit });
@@ -1070,18 +1079,23 @@ function VerificationLogsProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RequestApprovalProvider({ children }: { children: React.ReactNode }) {
-  const [approvalPending, setApprovalPending] = useState<string | null>(null);
-  const approvalResolveRef = useRef<((value: boolean) => void) | null>(null);
+export function RequestApprovalProvider({ children }: { children: React.ReactNode }) {
+  // This bridge used to keep its own `approvalPending` state that no component
+  // ever rendered, so every `await requestApproval(...)` routed through it
+  // (Boardroom's Hermes gate, plugin/workspace/verification actions) waited
+  // forever with no prompt. The one real approval modal lives in AppContent and
+  // is driven by useAppShellState, so the bridge now just forwards to it.
+  const handlerRef = useRef<BoardroomRequestApproval | null>(null);
 
-  const requestApproval = useCallback((actionLabel: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      approvalResolveRef.current = resolve;
-      setApprovalPending(actionLabel);
-    });
+  const requestApproval = useCallback<BoardroomRequestApproval>((request) => {
+    // Fail closed: before AppContent registers (or after it unmounts) nothing can show a prompt.
+    return handlerRef.current ? handlerRef.current(request) : Promise.resolve(false);
+  }, []);
+  const registerApprovalHandler = useCallback((handler: BoardroomRequestApproval | null) => {
+    handlerRef.current = handler;
   }, []);
 
-  const approvalValue = React.useMemo<RequestApprovalBridgeValue>(() => ({ approvalPending, setApprovalPending, requestApproval, approvalResolveRef }), [approvalPending, setApprovalPending, requestApproval]);
+  const approvalValue = React.useMemo<RequestApprovalBridgeValue>(() => ({ requestApproval, registerApprovalHandler }), [requestApproval, registerApprovalHandler]);
 
   return (
     <RequestApprovalBridge.Provider value={approvalValue}>

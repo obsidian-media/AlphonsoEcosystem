@@ -68,6 +68,8 @@ export function useAppShellState({
   const [braveSearchConfigured, setBraveSearchConfigured] = useState(false);
 
   const approvalResolveRef = useRef(null);
+  const approvalActiveRef = useRef(false);
+  const approvalWaitersRef = useRef([]);
   const screenObserverRunRef = useRef(false);
   const workspaceRootBootstrapRef = useRef(false);
   const nativeSelfDevAutorunRef = useRef(false);
@@ -115,13 +117,36 @@ export function useAppShellState({
 
   const nativeProofHooks = useMemo(() => ({ writeStage: writeNativeProofStage }), [writeNativeProofStage]);
 
-  const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null } = {}) => {
+  // `requireApproval: true` means the caller has already decided this action is
+  // high-risk (e.g. a Hermes-backed Boardroom reply) and its label carries no
+  // keyword that needsHighRiskApproval() would match -- without it the label
+  // filter below silently auto-approves. Approval Mode off is still the user's
+  // explicit opt-out and always wins.
+  const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null, requireApproval = false } = {}) => {
     // Logic from App.jsx
     if (!settings.approvalMode) return Promise.resolve(true);
-    if (!needsHighRiskApproval(actionLabel)) return Promise.resolve(true);
+    if (!requireApproval && !needsHighRiskApproval(actionLabel)) return Promise.resolve(true);
+    // The shell shows one approval modal and keeps one resolver, so a request
+    // that arrives while another is open (Boardroom bridge, command approval,
+    // direct callers) is queued and shown after the current decision, instead
+    // of overwriting the resolver and leaving the earlier caller hanging.
     return new Promise((resolve) => {
-      approvalResolveRef.current = resolve;
-      setApprovalPending({ actionLabel, packetId, agent, riskLevel, mariaScore });
+      const request = { actionLabel, packetId, agent, riskLevel, mariaScore };
+      if (approvalActiveRef.current) {
+        approvalWaitersRef.current.push({ request, resolve });
+        return;
+      }
+      const show = (req, done) => {
+        approvalActiveRef.current = true;
+        approvalResolveRef.current = (decision) => {
+          done(decision);
+          const next = approvalWaitersRef.current.shift();
+          if (next) show(next.request, next.resolve);
+          else approvalActiveRef.current = false;
+        };
+        setApprovalPending(req);
+      };
+      show(request, resolve);
     });
   }, [settings.approvalMode]);
 

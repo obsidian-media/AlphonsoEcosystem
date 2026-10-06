@@ -29,11 +29,27 @@ const AGENT_PROFILES = listAgentProfiles();
  * synchronously, before the Hermes call, since this runs inside a live
  * React event handler.
  */
-async function resolveHermesApproval(agentId: string, requestApproval?: (label: string) => Promise<boolean>): Promise<boolean> {
+export interface BoardroomApprovalRequest {
+  actionLabel: string;
+  agent?: string;
+  riskLevel?: 'low' | 'medium' | 'high';
+  /** Prompt even when the label has no high-risk keyword (see useAppShellState). */
+  requireApproval?: boolean;
+}
+export type BoardroomRequestApproval = (request: BoardroomApprovalRequest) => Promise<boolean>;
+
+async function resolveHermesApproval(agentId: string, requestApproval?: BoardroomRequestApproval): Promise<boolean> {
   if (getAgentProvider(agentId)?.provider !== 'hermes') return true;
   if (!getRuntimePolicySettings().approvalMode) return true;
   if (!requestApproval) return false;
-  return requestApproval(`${agentId} wants to use your Hermes profile to answer — it can run real tools, not just generate text.`);
+  // Must be an object: the shell's requestApproval destructures its argument,
+  // so a bare string left actionLabel undefined and the gate auto-approved.
+  return (await requestApproval({
+    actionLabel: `${agentId} wants to use your Hermes profile to answer — it can run real tools, not just generate text.`,
+    agent: agentId,
+    riskLevel: 'high',
+    requireApproval: true
+  })) === true;
 }
 
 // Spec 1.10.2: a hard cap on chained AI-generated hops per message, so an
@@ -135,7 +151,7 @@ function MessageBubble({
   );
 }
 
-export function BoardroomChatView({ requestApproval }: { requestApproval?: (label: string) => Promise<boolean> } = {}) {
+export function BoardroomChatView({ requestApproval }: { requestApproval?: BoardroomRequestApproval } = {}) {
   const [threads, setThreads] = useState<BoardroomThread[]>(() => {
     migrateLegacySessions();
     return listThreads();

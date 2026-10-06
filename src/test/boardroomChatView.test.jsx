@@ -161,6 +161,13 @@ describe('BoardroomChatView', () => {
 
     await screen.findByText('hector hermes reply');
     expect(requestApproval).toHaveBeenCalledTimes(1);
+    // Regression: the shell's requestApproval destructures an OBJECT. This used
+    // to be called with a bare string, leaving actionLabel undefined, which the
+    // shell's high-risk label filter then auto-approved without any prompt.
+    const arg = requestApproval.mock.calls[0][0];
+    expect(typeof arg).toBe('object');
+    expect(arg).toMatchObject({ agent: 'hector', riskLevel: 'high', requireApproval: true });
+    expect(arg.actionLabel).toMatch(/hector.*hermes/i);
     expect(facilitator.generateAgentResponse).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'hector', approved: true }));
   });
 
