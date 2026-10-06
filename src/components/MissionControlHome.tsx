@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import {
   Activity, AlertTriangle, Bot, CheckCircle2, Clapperboard, Crown,
-  Gauge, MessageSquare, RadioTower, Shield, Sparkles, Terminal, ArrowRight
+  Gauge, Link2, MessageSquare, RadioTower, Shield, Sparkles, Terminal, ArrowRight
 } from 'lucide-react';
 import { listApprovalQueue, listAgentPackets } from '../services/agentBusService';
 import { listAgentActivity } from '../services/agentActivityService';
@@ -277,11 +277,12 @@ export function MissionControlHome({
 
       <Zone mood="cool">
         <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-[var(--text-3)]">Quick launch</h2>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {[
             { title: 'Miya Studio', detail: 'Create images and video locally', tab: 'miya', icon: Clapperboard, color: 'text-[var(--agent-miya)]' },
             { title: 'Connectors', detail: 'Telegram, Slack, YouTube and more', tab: 'connectors', icon: RadioTower, color: 'text-cyan-400' },
             { title: 'Operator', detail: 'Settings, Coach, and memory', tab: 'operator', icon: Bot, color: 'text-violet-400' },
+            { title: 'Agent Pairing', detail: 'Pair agents to collaborate on tasks', tab: 'pairings', icon: Link2, color: 'text-[var(--agent-jose)]' },
           ].map((item) => (
             <button
               key={item.tab}

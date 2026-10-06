@@ -83,7 +83,7 @@ import type { BoardroomRequestApproval } from './components/BoardroomChatView';
 // Mirrors Sidebar.tsx's SPACES 'system' group item ids exactly -- keep in
 // sync if that group's tabs ever change (see the RightPanel render branch
 // below for why this exists).
-const SYSTEM_SPACE_TAB_IDS = ['orchestrator', 'ecosystem', 'agent_performance', 'runtimes', 'voice', 'connectors', 'operator'];
+const SYSTEM_SPACE_TAB_IDS = ['orchestrator', 'ecosystem', 'pairings', 'maturity', 'agent_performance', 'runtimes', 'voice', 'connectors', 'operator'];
 
 const ChatView = lazy(() => import('./components/ChatView').then((mod) => ({ default: mod.ChatView })));
 const WorkflowPanel = lazy(() => import('./components/WorkflowPanel').then((mod) => ({ default: mod.WorkflowPanel })));
@@ -962,8 +962,8 @@ function AppShell() {
                 )}
                 {activeTab === 'automation' && <AutomationView />}
                 {activeTab === 'files' && <FilesView memoryItems={memoryItems} />}
-                {activeTab === 'ecosystem' && (
-                  <EcosystemHub settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />
+                {(activeTab === 'ecosystem' || activeTab === 'pairings' || activeTab === 'maturity') && (
+                  <EcosystemHub key={activeTab} initialTab={activeTab === 'pairings' ? 'pairings' : activeTab === 'maturity' ? 'advanced' : 'overview'} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />
                 )}
                 {activeTab === 'project_execution' && <ProjectExecutionMode />}
                 {activeTab === 'orchestrator' && (
