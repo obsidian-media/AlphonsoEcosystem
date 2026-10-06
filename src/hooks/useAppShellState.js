@@ -115,10 +115,15 @@ export function useAppShellState({
 
   const nativeProofHooks = useMemo(() => ({ writeStage: writeNativeProofStage }), [writeNativeProofStage]);
 
-  const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null } = {}) => {
+  // `requireApproval: true` means the caller has already decided this action is
+  // high-risk (e.g. a Hermes-backed Boardroom reply) and its label carries no
+  // keyword that needsHighRiskApproval() would match -- without it the label
+  // filter below silently auto-approves. Approval Mode off is still the user's
+  // explicit opt-out and always wins.
+  const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null, requireApproval = false } = {}) => {
     // Logic from App.jsx
     if (!settings.approvalMode) return Promise.resolve(true);
-    if (!needsHighRiskApproval(actionLabel)) return Promise.resolve(true);
+    if (!requireApproval && !needsHighRiskApproval(actionLabel)) return Promise.resolve(true);
     return new Promise((resolve) => {
       approvalResolveRef.current = resolve;
       setApprovalPending({ actionLabel, packetId, agent, riskLevel, mariaScore });

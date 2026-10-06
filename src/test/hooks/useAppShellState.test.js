@@ -481,6 +481,35 @@ describe('useAppShellState', () => {
     });
   });
 
+  describe('requestApproval requireApproval flag', () => {
+    const withApprovalMode = (approvalMode) => ({ ...defaultProps, settings: { ...mockSettings, approvalMode } });
+
+    it('prompts for a low-risk-looking label when requireApproval is true', async () => {
+      needsHighRiskApproval.mockReturnValue(false);
+      const { result } = renderHook(() => useAppShellState(withApprovalMode(true)));
+      let pending;
+      act(() => {
+        pending = result.current.requestApproval({ actionLabel: 'hector wants to use Hermes', requireApproval: true });
+      });
+      expect(result.current.approvalPending).toEqual(expect.objectContaining({ actionLabel: 'hector wants to use Hermes' }));
+      act(() => { result.current.approvalResolveRef.current(false); });
+      await expect(pending).resolves.toBe(false);
+    });
+
+    it('still auto-approves a low-risk-looking label without the flag', async () => {
+      needsHighRiskApproval.mockReturnValue(false);
+      const { result } = renderHook(() => useAppShellState(withApprovalMode(true)));
+      await expect(result.current.requestApproval({ actionLabel: 'Check OCR engine capability' })).resolves.toBe(true);
+      expect(result.current.approvalPending).toBeNull();
+    });
+
+    it('honors Approval Mode off even when requireApproval is true', async () => {
+      const { result } = renderHook(() => useAppShellState(withApprovalMode(false)));
+      await expect(result.current.requestApproval({ actionLabel: 'x', requireApproval: true })).resolves.toBe(true);
+      expect(result.current.approvalPending).toBeNull();
+    });
+  });
+
   describe('Keyboard shortcut handlers', () => {
     it('returns switchTab function', () => {
       const { result } = renderHook(() => useAppShellState(defaultProps));
