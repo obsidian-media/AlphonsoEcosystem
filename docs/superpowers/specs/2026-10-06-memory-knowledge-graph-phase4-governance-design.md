@@ -1,7 +1,7 @@
 # Memory Knowledge Graph — Phase 4 (Governance): Retention & Pruning — Design Spec
 
 **Date:** 2026-10-06
-**Status:** DRAFT for review — no code until this is approved
+**Status:** Design decisions recorded 2026-10-06 (see "Decisions" below); no code until the final review of this spec and a separate implementation plan
 **Owner:** Echo (retention discipline), `memory_graph.rs` / `memoryGraphService.ts` (mechanism)
 **Parent:** `docs/superpowers/specs/2026-09-03-memory-knowledge-graph-design.md` (roadmap, Phase 4)
 **Register:** `docs/governance/DEFERRED_WORK.md` (2026-09-04 entry, "Phase 4 … open, deferred, not started")
@@ -151,7 +151,15 @@ small and shippable.
 - No change to existing `queryRelated*` tests; add one asserting traversal still
   terminates after a prune.
 
-## Open questions for you
+## Decisions (2026-10-06, from the owner)
+
+1. **Windows:** accepted as proposed — 7 d (`ephemeral_7d`), 90 d (receipts/packets), 180 d (`standard_180d`, boardroom messages, reports) for nodes; 30 d for inferred edges.
+2. **Automation:** the daily pass ships **off by default**, and a **Preview** (dry-run report) must be available in the UI before anyone can run a real cleanup. Order of delivery: dry-run command and Preview button first, manual "Clean up now" second, the automatic daily pass (behind a setting, off) last.
+3. **Provenance protection:** yes — nodes one hop from a `permanent` node via a non-inferred edge are protected.
+4. **`last_accessed_at`:** yes — include it in v1 so recently viewed nodes are protected for 14 days (implement the write cheaply, e.g. throttled/batched, not one write per read).
+5. **Validity windows (§7):** kept out of this phase and tracked as Phase 4b, per the original recommendation. The owner had been inclined to fold them into this spec instead; if that is still preferred, say so in review and §7 moves into scope (it adds an "as of" filter to every read path, so it would make this phase materially larger).
+
+## Original open questions (answered above)
 
 1. **Windows:** are 7 d / 90 d / 180 d / 30 d (inferred edges) the right numbers, or
    should anything be longer for a single-user local app?
