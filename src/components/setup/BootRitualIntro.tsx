@@ -71,7 +71,7 @@ export function BootRitualIntro({ onFinish }: BootRitualIntroProps) {
       // role="status" (not "alert"): this is atmosphere, not information the
       // user must act on -- a screen reader shouldn't interrupt anything to
       // announce it, and the "ALPHONSO" HUD line below is enough context.
-      className="relative flex h-screen w-screen items-center justify-center overflow-hidden bg-[var(--surface-0)] text-left cursor-pointer"
+      className="relative flex h-screen w-screen items-center justify-center overflow-hidden bg-(--surface-0) text-left cursor-pointer"
     >
       {!prefersReducedMotion && (
         <>
@@ -135,14 +135,14 @@ export function BootRitualIntro({ onFinish }: BootRitualIntroProps) {
           {HUD_LINES.map((line, i) => (
             <p
               key={line}
-              className={i === 0 ? 'text-lg font-bold uppercase tracking-[0.3em] text-[var(--accent)]' : 'text-[11px] uppercase tracking-widest text-[var(--text-3)]'}
+              className={i === 0 ? 'text-lg font-bold uppercase tracking-[0.3em] text-(--accent)' : 'text-[11px] uppercase tracking-widest text-(--text-3)'}
             >
               {line}
             </p>
           ))}
         </div>
       </motion.div>
-      <span className="absolute bottom-6 right-6 text-[10px] uppercase tracking-widest text-[var(--text-4)]">
+      <span className="absolute bottom-6 right-6 text-[10px] uppercase tracking-widest text-(--text-4)">
         Click or press Enter to skip
       </span>
     </button>

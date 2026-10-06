@@ -24,8 +24,8 @@ export function IntentSelection({ onSelect }: IntentSelectionProps) {
   return (
     <div className="flex flex-col items-center gap-6 p-8">
       <div className="text-center">
-        <h2 className="text-2xl font-semibold text-[var(--text-1)]">What do you want Alphonso to do?</h2>
-        <p className="text-sm text-[var(--text-3)] mt-1">You can change this any time later.</p>
+        <h2 className="text-2xl font-semibold text-(--text-1)">What do you want Alphonso to do?</h2>
+        <p className="text-sm text-(--text-3) mt-1">You can change this any time later.</p>
       </div>
       {/* Grouped and labelled so a screen reader announces what this set of
           buttons is for, not just four unrelated buttons in sequence. */}
@@ -41,10 +41,10 @@ export function IntentSelection({ onSelect }: IntentSelectionProps) {
             // Explicit label: without it the two spans below are read as one
             // run-on string ("Chat + Images Adds Fooocus, ~15GB").
             aria-label={`${tile.label}. ${tile.blurb}.`}
-            className="flex flex-col items-start gap-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-left transition-colors hover:border-[var(--accent-border)] hover:bg-[var(--accent-dim)]"
+            className="flex flex-col items-start gap-1 rounded-lg border border-(--border-strong) bg-(--surface-2) p-4 text-left transition-colors hover:border-(--accent-border) hover:bg-(--accent-dim)"
           >
-            <span className="font-semibold text-[var(--text-1)]">{tile.label}</span>
-            <span className="text-xs text-[var(--text-3)]">{tile.blurb}</span>
+            <span className="font-semibold text-(--text-1)">{tile.label}</span>
+            <span className="text-xs text-(--text-3)">{tile.blurb}</span>
           </button>
         ))}
       </div>

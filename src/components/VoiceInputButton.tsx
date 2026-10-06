@@ -34,16 +34,16 @@ export function VoiceInputButton({ voiceStatus, onToggle }: Props) {
     <button
       onClick={onToggle}
       disabled={requesting || voiceStatus.state === VOICE_STATES.UNSUPPORTED}
-      className={`flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-1)] border rounded-t-lg text-[10px] transition-colors ${
+      className={`flex items-center gap-1.5 px-3 py-1.5 bg-(--surface-1) border rounded-t-lg text-[10px] transition-colors ${
         listening
-          ? 'border-[var(--error-border)] text-[var(--error)]'
+          ? 'border-(--error-border) text-(--error)'
           : requesting
-            ? 'border-[var(--info-border)] text-[var(--info)] cursor-wait'
+            ? 'border-(--info-border) text-(--info) cursor-wait'
             : blocked
-              ? 'border-[var(--warning-border)] text-[var(--warning)]'
+              ? 'border-(--warning-border) text-(--warning)'
               : noTranscription
-                ? 'border-[var(--warning-border)] text-[var(--warning)] cursor-help'
-                : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
+                ? 'border-(--warning-border) text-(--warning) cursor-help'
+                : 'border-(--border) text-(--text-3) hover:text-(--text-1)'
       }`}
       title={title}
     >

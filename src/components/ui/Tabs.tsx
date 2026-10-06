@@ -29,7 +29,7 @@ interface TabsProps {
 export function Tabs({ tabs, activeId, onChange, className = '', compact = false }: TabsProps) {
   return (
     <div
-      className={`flex items-center ${compact ? 'gap-3' : 'gap-5 border-b border-[var(--border)]'} ${className}`.trim()}
+      className={`flex items-center ${compact ? 'gap-3' : 'gap-5 border-b border-(--border)'} ${className}`.trim()}
     >
       {tabs.map((tab) => {
         const isActive = activeId === tab.id;
@@ -45,8 +45,8 @@ export function Tabs({ tabs, activeId, onChange, className = '', compact = false
               compact ? 'pb-1 text-[10px]' : 'pb-2.5 text-xs'
             } ${
               isActive
-                ? 'border-[var(--accent)] text-[var(--text-1)]'
-                : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)]'
+                ? 'border-(--accent) text-(--text-1)'
+                : 'border-transparent text-(--text-3) hover:text-(--text-2)'
             }`}
           >
             {tab.icon}

@@ -30,7 +30,7 @@ describe('coachHistoryService', () => {
     expect(history.map((h) => h.id)).toEqual(['a', 'b', 'c']);
   });
 
-  it('caps the ring buffer at 50 entries, dropping the oldest first', () => {
+  it('caps the ring-3 buffer at 50 entries, dropping the oldest first', () => {
     for (let i = 0; i < 60; i++) {
       recordCoachHistory(makeSignal(`sig-${i}`));
     }

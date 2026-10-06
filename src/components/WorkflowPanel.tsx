@@ -36,14 +36,14 @@ export function WorkflowPanel({ onClose, onRunWorkflow }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-0)] backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-[var(--border)] bg-[var(--surface-0)] p-4 shadow-xl">
-        <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-(--surface-0) backdrop-blur-xs">
+      <div className="w-full max-w-2xl rounded-2xl border border-(--border) bg-(--surface-0) p-4 shadow-xl">
+        <div className="flex items-center justify-between border-b border-(--border) pb-2">
           <div className="flex items-center gap-2">
-            <ListChecks className="h-4 w-4 text-[var(--text-2)]" />
-            <h2 className="text-sm font-bold uppercase tracking-widest text-[var(--text-2)]">Workflows</h2>
+            <ListChecks className="h-4 w-4 text-(--text-2)" />
+            <h2 className="text-sm font-bold uppercase tracking-widest text-(--text-2)">Workflows</h2>
           </div>
-          <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-[var(--text-3)] hover:bg-[var(--surface-3)]">
+          <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-(--text-3) hover:bg-(--surface-3)">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -55,28 +55,28 @@ export function WorkflowPanel({ onClose, onRunWorkflow }: Props) {
               <div
                 key={workflow.id}
                 className={`rounded-xl p-3 ${
-                  isActive ? 'bg-[var(--surface-3)] ring-1 ring-[var(--border-strong)]' : 'bg-[var(--surface-2)]'
+                  isActive ? 'bg-(--surface-3) ring-1 ring-(--border-strong)' : 'bg-(--surface-2)'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="text-xs font-semibold text-[var(--text-1)]">{workflow.name}</div>
-                    <div className="text-[10px] text-[var(--text-3)]">{workflow.id}</div>
+                    <div className="text-xs font-semibold text-(--text-1)">{workflow.name}</div>
+                    <div className="text-[10px] text-(--text-3)">{workflow.id}</div>
                   </div>
                   <button
                     onClick={() => handleRun(workflow)}
-                    className="flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-2)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]"
+                    className="flex items-center gap-1 rounded-md border border-(--border) bg-(--surface-2) px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-(--text-2) hover:border-(--border-strong) hover:bg-(--surface-3)"
                   >
                     <Play className="h-3 w-3" />
                     Run
                   </button>
                 </div>
-                <div className="mt-2 text-[10px] text-[var(--text-3)]">{workflow.purpose}</div>
+                <div className="mt-2 text-[10px] text-(--text-3)">{workflow.purpose}</div>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {(workflow.chain || []).map((agent) => (
                     <span
                       key={agent}
-                      className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-[2px] text-[9px] font-semibold uppercase tracking-widest text-[var(--text-2)]"
+                      className="rounded-full border border-(--border) bg-(--surface-2) px-1.5 py-[2px] text-[9px] font-semibold uppercase tracking-widest text-(--text-2)"
                     >
                       {agent}
                     </span>
@@ -87,7 +87,7 @@ export function WorkflowPanel({ onClose, onRunWorkflow }: Props) {
           })}
         </div>
 
-        {status && <div className="mt-3 text-[11px] text-[var(--text-3)]">{status}</div>}
+        {status && <div className="mt-3 text-[11px] text-(--text-3)">{status}</div>}
       </div>
     </div>
   );

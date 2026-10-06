@@ -8,11 +8,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
 }
 const variantClasses: Record<Variant, string> = {
-  primary:   'bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] border-transparent',
-  secondary: 'bg-[var(--surface-3)] text-[var(--text-1)] hover:bg-[var(--surface-4)] border-[var(--border)]',
-  ghost:     'bg-transparent text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)] border-transparent',
-  danger:    'bg-[var(--error-dim)] text-[var(--error)] hover:bg-[var(--error-dim)] border-[var(--error-border)]',
-  success:   'bg-[var(--success-dim)] text-[var(--success)] hover:bg-[var(--success-dim)] border-[var(--success-border)]',
+  primary:   'bg-(--accent) text-(--accent-contrast) hover:bg-(--accent-hover) border-transparent',
+  secondary: 'bg-(--surface-3) text-(--text-1) hover:bg-(--surface-4) border-(--border)',
+  ghost:     'bg-transparent text-(--text-2) hover:bg-(--surface-3) hover:text-(--text-1) border-transparent',
+  danger:    'bg-(--error-dim) text-(--error) hover:bg-(--error-dim) border-(--error-border)',
+  success:   'bg-(--success-dim) text-(--success) hover:bg-(--success-dim) border-(--success-border)',
 };
 const sizeClasses: Record<Size, string> = {
   sm: 'px-2.5 py-1 text-xs gap-1.5',
@@ -24,7 +24,7 @@ export function Button({ variant = 'secondary', size = 'md', loading, icon, chil
     <button
       {...props}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center font-medium border rounded-[var(--radius-md)] transition-all duration-[var(--duration-normal)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] disabled:opacity-40 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center justify-center font-medium border rounded-md transition-all duration-(--duration-normal) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) disabled:opacity-40 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
     >
       {loading ? <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : icon}
       {children}

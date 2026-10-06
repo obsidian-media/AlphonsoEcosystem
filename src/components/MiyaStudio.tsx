@@ -934,14 +934,14 @@ export function MiyaStudio({
   return (
     <div className="h-full overflow-y-auto">
     <div className="max-w-6xl mx-auto px-8 py-8 space-y-6">
-      <header className="pb-5 border-b border-[var(--border)]">
+      <header className="pb-5 border-b border-(--border)">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--agent-miya)]">Creative Studio</div>
-            <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-[var(--text-1)]">Miya — Creator Agent</h1>
-            <p className="mt-1 text-[13px] text-[var(--text-3)]">{companionMessage || 'Storytelling, prompts, thumbnails, and creative handoffs.'}</p>
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-(--agent-miya)">Creative Studio</div>
+            <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-(--text-1)">Miya — Creator Agent</h1>
+            <p className="mt-1 text-[13px] text-(--text-3)">{companionMessage || 'Storytelling, prompts, thumbnails, and creative handoffs.'}</p>
           </div>
-          <div className="h-14 w-14 rounded-xl overflow-hidden border border-[var(--agent-miya-glow)] bg-[var(--surface-1)] shrink-0">
+          <div className="h-14 w-14 rounded-xl overflow-hidden border border-(--agent-miya-glow) bg-(--surface-1) shrink-0">
             <img src={miyaMascot} alt="Miya mascot" className="h-full w-full object-cover object-center miya-breathe" />
           </div>
         </div>
@@ -974,7 +974,7 @@ export function MiyaStudio({
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
           <div className="space-y-4">
             <section className="card">
-              <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Pipeline Inputs</div>
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-(--text-3)">Pipeline Inputs</div>
               <PipelineInputs pipeline={pipeline} setPipeline={setPipeline} />
             </section>
             <LocalGenerationPanel
@@ -1010,7 +1010,7 @@ export function MiyaStudio({
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
           <div className="space-y-4">
             <section className="card">
-              <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Pipeline Inputs</div>
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-(--text-3)">Pipeline Inputs</div>
               <PipelineInputs pipeline={pipeline} setPipeline={setPipeline} />
               <div className="mt-4 flex items-center gap-3">
                 <button
@@ -1022,14 +1022,14 @@ export function MiyaStudio({
                   {isGenerating ? 'Generating…' : 'Generate Package'}
                 </button>
                 {!canGenerate && (
-                  <span className="text-[11px] text-[var(--text-4)]">Connect Ollama to generate</span>
+                  <span className="text-[11px] text-(--text-4)">Connect Ollama to generate</span>
                 )}
                 {canGenerate && !hasRequiredInput && (
-                  <span className="text-[11px] text-[var(--text-4)]">Enter at least one field below first</span>
+                  <span className="text-[11px] text-(--text-4)">Enter at least one field below first</span>
                 )}
               </div>
               {lastError && (
-                <div className="mt-3 rounded-xl bg-[var(--error-dim)] p-3 text-[11px] text-[var(--error)]">{lastError}</div>
+                <div className="mt-3 rounded-xl bg-(--error-dim) p-3 text-[11px] text-(--error)">{lastError}</div>
               )}
             </section>
             {creativeOutput && (
@@ -1059,10 +1059,10 @@ export function MiyaStudio({
       </motion.div>
       </AnimatePresence>
 
-      <div className="rounded-xl bg-[var(--surface-1)] px-4 py-2.5 text-[11px] text-[var(--text-4)] flex items-center gap-3">
-        <span>State: <span className="text-[var(--text-3)]">{companionState}</span></span>
+      <div className="rounded-xl bg-(--surface-1) px-4 py-2.5 text-[11px] text-(--text-4) flex items-center gap-3">
+        <span>State: <span className="text-(--text-3)">{companionState}</span></span>
         <span>·</span>
-        <span>Model: <span className="text-[var(--text-3)]">{canGenerate ? settings.selectedModel : 'not connected'}</span></span>
+        <span>Model: <span className="text-(--text-3)">{canGenerate ? settings.selectedModel : 'not connected'}</span></span>
       </div>
     </div>
     </div>
@@ -1093,18 +1093,18 @@ function ProductionPipelineMatrix({ activeTab, canGenerate }: ProductionPipeline
           key={`${panel.title}-${index}`}
           className={`rounded-xl p-3 ${
             activeTab === panel.id
-              ? 'bg-[var(--agent-miya)]'
-              : 'bg-[var(--surface-1)]'
+              ? 'bg-(--agent-miya)'
+              : 'bg-(--surface-1)'
           }`}
         >
-          <div className="text-xs font-semibold text-[var(--agent-miya)]">{panel.title}</div>
-          <div className="mt-1 min-h-10 text-[11px] leading-relaxed text-[var(--text-3)]">{panel.detail}</div>
+          <div className="text-xs font-semibold text-(--agent-miya)">{panel.title}</div>
+          <div className="mt-1 min-h-10 text-[11px] leading-relaxed text-(--text-3)">{panel.detail}</div>
           <div className={`mt-2 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
             panel.status.includes('not connected')
-              ? 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]'
+              ? 'border-(--warning-border) bg-(--warning-dim) text-(--warning)'
               : panel.status.includes('wired')
-                ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]'
-                : 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]'
+                ? 'border-(--success-border) bg-(--success-dim) text-(--success)'
+                : 'border-(--accent-border) bg-(--accent-dim) text-(--accent)'
           }`}>
             {panel.status}
           </div>
@@ -1121,15 +1121,15 @@ interface ExportPackageReadinessProps {
 
 function ExportPackageReadiness({ output, canGenerate }: ExportPackageReadinessProps) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl bg-[var(--surface-1)] px-4 py-3">
+    <div className="flex items-center justify-between gap-4 rounded-xl bg-(--surface-1) px-4 py-3">
       <div>
-        <div className="text-xs font-bold uppercase tracking-widest text-[var(--agent-miya)]">Production Pipeline</div>
-        <p className="mt-0.5 text-[11px] text-[var(--text-3)]">
+        <div className="text-xs font-bold uppercase tracking-widest text-(--agent-miya)">Production Pipeline</div>
+        <p className="mt-0.5 text-[11px] text-(--text-3)">
           ComfyUI local images · Runway cloud video · CapCut & YouTube export handoffs
         </p>
       </div>
       <span className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
-        canGenerate ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]' : 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]'
+        canGenerate ? 'border-(--success-border) bg-(--success-dim) text-(--success)' : 'border-(--warning-border) bg-(--warning-dim) text-(--warning)'
       }`}>
         {canGenerate ? 'model ready' : 'model not connected'}
       </span>
@@ -1179,15 +1179,15 @@ function LocalGenerationPanel({
   onRunFullPipeline
 }: LocalGenerationPanelProps) {
   return (
-    <div className="rounded-xl bg-[var(--surface-1)] p-4 space-y-3">
+    <div className="rounded-xl bg-(--surface-1) p-4 space-y-3">
       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="text-xs font-bold uppercase tracking-widest text-[var(--agent-miya)]">Local Media Generators</div>
-          <p className="mt-1 text-[11px] text-[var(--text-3)]">
+          <div className="text-xs font-bold uppercase tracking-widest text-(--agent-miya)">Local Media Generators</div>
+          <p className="mt-1 text-[11px] text-(--text-3)">
             Low-cost local-first adapters: ComfyUI for SD 1.5 images and workflow queueing.
           </p>
         </div>
-        <span className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">
+        <span className="rounded-full border border-(--border) bg-(--surface-2) px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-(--text-2)">
           no cloud render lock-in
         </span>
       </div>
@@ -1197,14 +1197,14 @@ function LocalGenerationPanel({
           value={mediaRuntime.prompt}
           onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setMediaRuntime((current) => ({ ...current, prompt: event.target.value }))}
           rows={3}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="Media prompt (falls back to idea/topic if empty)"
         />
         <textarea
           value={mediaRuntime.negativePrompt}
           onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setMediaRuntime((current) => ({ ...current, negativePrompt: event.target.value }))}
           rows={3}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="Negative prompt for ComfyUI SD 1.5 (optional)"
         />
       </div>
@@ -1214,21 +1214,21 @@ function LocalGenerationPanel({
           type="number"
           value={mediaRuntime.width}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMediaRuntime((current) => ({ ...current, width: Number(event.target.value || 768) }))}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="Width"
         />
         <input
           type="number"
           value={mediaRuntime.height}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMediaRuntime((current) => ({ ...current, height: Number(event.target.value || 768) }))}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="Height"
         />
         <input
           type="number"
           value={mediaRuntime.steps}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMediaRuntime((current) => ({ ...current, steps: Number(event.target.value || 24) }))}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="Steps"
         />
         <input
@@ -1236,25 +1236,25 @@ function LocalGenerationPanel({
           step="0.5"
           value={mediaRuntime.cfgScale}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMediaRuntime((current) => ({ ...current, cfgScale: Number(event.target.value || 7) }))}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="CFG"
         />
         <button
           onClick={onGenerateImage}
           disabled={isBusy}
-          className="rounded-lg bg-[var(--agent-miya)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:opacity-90 disabled:opacity-60"
+          className="rounded-lg bg-(--agent-miya) px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:opacity-90 disabled:opacity-60"
         >
           {isBusy ? 'Running...' : 'Generate Image'}
         </button>
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-[var(--text-2)]">ComfyUI Workflow JSON (video pipeline)</label>
+        <label className="text-xs font-semibold text-(--text-2)">ComfyUI Workflow JSON (video pipeline)</label>
         <textarea
           value={mediaRuntime.workflowJson}
           onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setMediaRuntime((current) => ({ ...current, workflowJson: event.target.value }))}
           rows={6}
-          className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-1)] font-mono"
+          className="w-full rounded-xl bg-(--surface-2) px-3 py-2 text-xs text-(--text-1) font-mono"
           placeholder='Paste ComfyUI API workflow JSON here. Miya injects your prompt into CLIPTextEncode "text" fields.'
         />
       </div>
@@ -1263,46 +1263,46 @@ function LocalGenerationPanel({
         <input
           value={mediaRuntime.lastJobId}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMediaRuntime((current) => ({ ...current, lastJobId: event.target.value }))}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="ComfyUI prompt_id for history lookup"
         />
         <button
           onClick={onQueueVideo}
           disabled={isBusy}
-          className="rounded-lg bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)] disabled:opacity-60"
+          className="rounded-lg bg-(--surface-2) px-4 py-2 text-xs font-bold uppercase tracking-widest text-(--text-1) hover:bg-(--surface-3) disabled:opacity-60"
         >
           Queue Video
         </button>
         <button
           onClick={onLoadComfyHistory}
           disabled={isBusy}
-          className="rounded-lg bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)] disabled:opacity-60"
+          className="rounded-lg bg-(--surface-2) px-4 py-2 text-xs font-bold uppercase tracking-widest text-(--text-1) hover:bg-(--surface-3) disabled:opacity-60"
         >
           Check History
         </button>
       </div>
 
-      <div className="rounded-xl bg-[var(--agent-miya)] p-4 space-y-3">
+      <div className="rounded-xl bg-(--agent-miya) p-4 space-y-3">
         <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           {/* Full pipeline */}
-          <div className="rounded-xl bg-[var(--surface-1)] p-3 space-y-2">
+          <div className="rounded-xl bg-(--surface-1) p-3 space-y-2">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-widest text-[var(--agent-miya)]">One-Click Pipeline</div>
-                <div className="text-[10px] text-[var(--text-3)] mt-0.5">Script → SD Image → Runway Video</div>
+                <div className="text-[11px] font-bold uppercase tracking-widest text-(--agent-miya)">One-Click Pipeline</div>
+                <div className="text-[10px] text-(--text-3) mt-0.5">Script → SD Image → Runway Video</div>
               </div>
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={onLoadPromptsFromScript}
                   disabled={!hasScriptOutput || isBusy}
-                  className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)] disabled:opacity-50"
+                  className="rounded-lg bg-(--surface-2) px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-(--text-1) hover:bg-(--surface-3) disabled:opacity-50"
                 >
                   Load Prompts
                 </button>
                 <button
                   onClick={onRunFullPipeline}
                   disabled={!hasScriptOutput || isBusy}
-                  className="rounded-lg bg-[var(--agent-miya)] px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-white hover:opacity-90 disabled:opacity-50"
+                  className="rounded-lg bg-(--agent-miya) px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {isBusy && pipelineStep ? `${pipelineStep === 'image' ? '1/2 Image…' : '2/2 Video…'}` : 'Run Pipeline'}
                 </button>
@@ -1312,29 +1312,29 @@ function LocalGenerationPanel({
               <div className="flex items-center gap-2 text-[10px]">
                 {(['image', 'video', 'done'] as const).map((step, i) => (
                   <div key={step} className="flex items-center gap-1">
-                    <div className={`w-2 h-2 rounded-full ${pipelineStep === step ? 'bg-[var(--agent-miya)] animate-pulse' : (pipelineStep === 'done' || (pipelineStep === 'video' && i === 0)) ? 'bg-[var(--success)]' : pipelineStep === 'error' && i <= ['image','video'].indexOf(pipelineStep as 'image' | 'video') ? 'bg-[var(--error)]' : 'bg-[var(--surface-3)]'}`} />
-                    <span className={pipelineStep === step ? 'text-[var(--agent-miya)]' : 'text-[var(--text-4)]'}>{step === 'image' ? 'Image' : step === 'video' ? 'Runway' : 'Done'}</span>
-                    {i < 2 && <span className="text-[var(--text-4)]">→</span>}
+                    <div className={`w-2 h-2 rounded-full ${pipelineStep === step ? 'bg-(--agent-miya) animate-pulse' : (pipelineStep === 'done' || (pipelineStep === 'video' && i === 0)) ? 'bg-(--success)' : pipelineStep === 'error' && i <= ['image','video'].indexOf(pipelineStep as 'image' | 'video') ? 'bg-(--error)' : 'bg-(--surface-3)'}`} />
+                    <span className={pipelineStep === step ? 'text-(--agent-miya)' : 'text-(--text-4)'}>{step === 'image' ? 'Image' : step === 'video' ? 'Runway' : 'Done'}</span>
+                    {i < 2 && <span className="text-(--text-4)">→</span>}
                   </div>
                 ))}
-                {pipelineStep === 'error' && <span className="text-[var(--error)] ml-1">failed</span>}
+                {pipelineStep === 'error' && <span className="text-(--error) ml-1">failed</span>}
               </div>
             )}
           </div>
 
           {Array.isArray(pendingJobs) && pendingJobs.length > 0 && (
-            <div className="rounded-xl bg-[var(--warning-dim)] p-3 space-y-2">
-              <div className="text-[11px] font-bold uppercase tracking-widest text-[var(--warning)]">Interrupted Runway Jobs</div>
+            <div className="rounded-xl bg-(--warning-dim) p-3 space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-widest text-(--warning)">Interrupted Runway Jobs</div>
               {pendingJobs.map((job) => (
-                <div key={job.taskId} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
+                <div key={job.taskId} className="flex items-center justify-between gap-3 rounded-lg bg-(--surface-2) px-3 py-2">
                   <div className="min-w-0 flex-1">
-                    <div className="text-[11px] text-[var(--text-2)] font-mono truncate">{job.taskId}</div>
-                    <div className="text-[10px] text-[var(--text-3)] truncate">{job.promptText}</div>
+                    <div className="text-[11px] text-(--text-2) font-mono truncate">{job.taskId}</div>
+                    <div className="text-[10px] text-(--text-3) truncate">{job.promptText}</div>
                   </div>
                   <button
                     onClick={() => onResumePendingJob?.(job)}
                     disabled={isBusy}
-                    className="shrink-0 rounded-lg bg-[var(--warning)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--surface-0)] hover:opacity-90 disabled:opacity-60"
+                    className="shrink-0 rounded-lg bg-(--warning) px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-(--surface-0) hover:opacity-90 disabled:opacity-60"
                   >
                     Resume
                   </button>
@@ -1343,12 +1343,12 @@ function LocalGenerationPanel({
             </div>
           )}
           <div>
-            <div className="text-xs font-bold uppercase tracking-widest text-[var(--agent-miya)]">Runway Cloud Video</div>
-            <p className="mt-1 text-[11px] text-[var(--text-3)]">
+            <div className="text-xs font-bold uppercase tracking-widest text-(--agent-miya)">Runway Cloud Video</div>
+            <p className="mt-1 text-[11px] text-(--text-3)">
               Backend-backed Runway draft generation. Secret stays in the Tauri backend. Output is saved locally when available.
             </p>
           </div>
-          <span className="rounded-full border border-[var(--agent-miya-glow)] bg-[var(--agent-miya)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--agent-miya)]">
+          <span className="rounded-full border border-(--agent-miya-glow) bg-(--agent-miya) px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-(--agent-miya)">
             setup required until RUNWAYML_API_SECRET is set
           </span>
         </div>
@@ -1357,7 +1357,7 @@ function LocalGenerationPanel({
           value={mediaRuntime.runwayPrompt}
           onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setMediaRuntime((current) => ({ ...current, runwayPrompt: event.target.value }))}
           rows={3}
-          className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="w-full rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="Runway prompt (falls back to idea/topic if empty)"
         />
 
@@ -1365,20 +1365,20 @@ function LocalGenerationPanel({
           <input
             value={mediaRuntime.runwayModel}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMediaRuntime((current) => ({ ...current, runwayModel: event.target.value }))}
-            className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+            className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
             placeholder="Model"
           />
           <input
             value={mediaRuntime.runwayRatio}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMediaRuntime((current) => ({ ...current, runwayRatio: event.target.value }))}
-            className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+            className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
             placeholder="Ratio"
           />
           <input
             type="number"
             value={mediaRuntime.runwayDuration}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMediaRuntime((current) => ({ ...current, runwayDuration: Number(event.target.value || 5) }))}
-            className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+            className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
             placeholder="Duration seconds"
           />
         </div>
@@ -1386,46 +1386,46 @@ function LocalGenerationPanel({
         <button
           onClick={onGenerateRunwayVideo}
           disabled={isBusy}
-          className="rounded-lg bg-[var(--agent-miya)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:opacity-90 disabled:opacity-60"
+          className="rounded-lg bg-(--agent-miya) px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:opacity-90 disabled:opacity-60"
         >
           {isGeneratingMedia && mediaRuntime.provider === 'runway' ? `Generating... ${runwayElapsedLabel}` : 'Generate Runway Video'}
         </button>
 
         {isGeneratingMedia && mediaRuntime.provider === 'runway' && (
-          <div className="rounded-lg bg-[var(--surface-1)] p-3 space-y-2">
+          <div className="rounded-lg bg-(--surface-1) p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[var(--agent-miya)] animate-pulse" />
-              <span className="text-[11px] font-semibold text-[var(--agent-miya)]">Runway is rendering your video</span>
+              <div className="w-2 h-2 rounded-full bg-(--agent-miya) animate-pulse" />
+              <span className="text-[11px] font-semibold text-(--agent-miya)">Runway is rendering your video</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+              <div className="flex-1 h-1.5 rounded-full bg-(--surface-2) overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-[var(--agent-miya)] transition-all duration-1000"
+                  className="h-full rounded-full bg-(--agent-miya) transition-all duration-1000"
                   style={{ width: `${Math.min(95, (runwayElapsedMs / (5 * 60 * 1000)) * 100)}%` }}
                 />
               </div>
-              <span className="text-[11px] text-[var(--text-4)] tabular-nums shrink-0">{runwayElapsedLabel} / ~5 min</span>
+              <span className="text-[11px] text-(--text-4) tabular-nums shrink-0">{runwayElapsedLabel} / ~5 min</span>
             </div>
-            <div className="text-[10px] text-[var(--text-4)]">Rust engine is polling Runway's task API. This window stays responsive.</div>
+            <div className="text-[10px] text-(--text-4)">Rust engine is polling Runway's task API. This window stays responsive.</div>
           </div>
         )}
 
         {runwayResult && (
-          <div className="rounded-lg bg-[var(--surface-2)] p-3 space-y-2">
-            <div className="text-[11px] text-[var(--text-2)]">
+          <div className="rounded-lg bg-(--surface-2) p-3 space-y-2">
+            <div className="text-[11px] text-(--text-2)">
               Provider: <span className="font-semibold">{runwayResult.provider || 'runway'}</span> | Status:{' '}
-              <span className={`font-semibold ${runwayResult.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+              <span className={`font-semibold ${runwayResult.ok ? 'text-(--success)' : 'text-(--error)'}`}>
                 {runwayResult.ok ? 'ok' : runwayResult.setupRequired ? 'setup_required' : 'failed'}
               </span>
             </div>
-            <div className="text-[11px] text-[var(--text-4)]">{runwayResult.message || runwayResult.error || 'No runtime message.'}</div>
+            <div className="text-[11px] text-(--text-4)">{runwayResult.message || runwayResult.error || 'No runtime message.'}</div>
             {runwayResult.taskId && (
-              <div className="text-[11px] text-[var(--text-2)]">Task: <span className="font-mono">{runwayResult.taskId}</span></div>
+              <div className="text-[11px] text-(--text-2)">Task: <span className="font-mono">{runwayResult.taskId}</span></div>
             )}
             {Array.isArray(runwayResult.outputFiles) && runwayResult.outputFiles.length > 0 && (
               <div className="space-y-1">
                 {runwayResult.outputFiles.slice(0, 6).map((path) => (
-                  <div key={path} className="text-[11px] text-[var(--text-4)] font-mono">{path}</div>
+                  <div key={path} className="text-[11px] text-(--text-4) font-mono">{path}</div>
                 ))}
               </div>
             )}
@@ -1433,31 +1433,31 @@ function LocalGenerationPanel({
         )}
       </div>
 
-      <div className="rounded-lg bg-[var(--warning-dim)] px-3 py-2 text-[11px] text-[var(--text-2)]">
+      <div className="rounded-lg bg-(--warning-dim) px-3 py-2 text-[11px] text-(--text-2)">
         ComfyUI rendering is local only. Miya can generate SD 1.5 images through ComfyUI, queue ComfyUI workflows, and also offers a backend-backed Runway draft path; it does not fake completed renders.
       </div>
 
       {mediaResult && (
-        <div className="rounded-lg bg-[var(--surface-2)] p-3 space-y-2">
-          <div className="text-[11px] text-[var(--text-2)]">
+        <div className="rounded-lg bg-(--surface-2) p-3 space-y-2">
+          <div className="text-[11px] text-(--text-2)">
             Provider: <span className="font-semibold">{mediaResult.provider || mediaResult.connectorId}</span> | Status:{' '}
-            <span className={`font-semibold ${mediaResult.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+            <span className={`font-semibold ${mediaResult.ok ? 'text-(--success)' : 'text-(--error)'}`}>
               {mediaResult.ok ? 'ok' : 'failed'}
             </span>
           </div>
-          <div className="text-[11px] text-[var(--text-4)]">{mediaResult.message || mediaResult.error || 'No runtime message.'}</div>
+          <div className="text-[11px] text-(--text-4)">{mediaResult.message || mediaResult.error || 'No runtime message.'}</div>
           {mediaResult.jobId && (
-            <div className="text-[11px] text-[var(--text-2)]">Job: <span className="font-mono">{mediaResult.jobId}</span></div>
+            <div className="text-[11px] text-(--text-2)">Job: <span className="font-mono">{mediaResult.jobId}</span></div>
           )}
           {Array.isArray(mediaResult.outputPaths) && mediaResult.outputPaths.length > 0 && (
             <div className="space-y-1">
               {mediaResult.outputPaths.slice(0, 6).map((path) => (
-                <div key={path} className="text-[11px] text-[var(--text-4)] font-mono">{path}</div>
+                <div key={path} className="text-[11px] text-(--text-4) font-mono">{path}</div>
               ))}
             </div>
           )}
           {mediaResult.previewBase64 && (
-            <div className="overflow-hidden rounded-lg bg-[var(--surface-0)] p-2">
+            <div className="overflow-hidden rounded-lg bg-(--surface-0) p-2">
               <img
                 src={`data:image/png;base64,${mediaResult.previewBase64}`}
                 alt="Miya generated preview"
@@ -1484,12 +1484,12 @@ function PipelineInputs({ pipeline, setPipeline }: PipelineInputsProps) {
       <Field label="Niche" value={pipeline.niche} onChange={(value: string) => setPipeline({ ...pipeline, niche: value })} />
       <Field label="Goal" value={pipeline.goal} onChange={(value: string) => setPipeline({ ...pipeline, goal: value })} />
       <div className="lg:col-span-2 space-y-2">
-        <label className="text-xs font-semibold text-[var(--text-2)]">Script / Notes</label>
+        <label className="text-xs font-semibold text-(--text-2)">Script / Notes</label>
         <textarea
           value={pipeline.script}
           onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setPipeline({ ...pipeline, script: event.target.value })}
           rows={5}
-          className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="w-full rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
         />
       </div>
     </div>
@@ -1512,7 +1512,7 @@ function BrandKitEditor({ brandKit, setBrandKit, onSave }: BrandKitEditorProps) 
       </div>
       <button
         onClick={onSave}
-        className="rounded-lg bg-[var(--agent-miya)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:opacity-90"
+        className="rounded-lg bg-(--agent-miya) px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:opacity-90"
       >
         Save Brand Kit Memory
       </button>
@@ -1527,7 +1527,7 @@ interface OutputPanelsProps {
 function OutputPanels({ output }: OutputPanelsProps) {
   if (!output) {
     return (
-      <div className="rounded-xl bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">
+      <div className="rounded-xl bg-(--surface-1) p-4 text-sm text-(--text-3)">
         No package generated yet.
       </div>
     );
@@ -1536,9 +1536,9 @@ function OutputPanels({ output }: OutputPanelsProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {Object.entries(output).map(([key, value]) => (
-        <article key={key} className="rounded-xl bg-[var(--surface-1)] p-4 space-y-2">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--agent-miya)]">{toLabel(key)}</h3>
-          <pre className="whitespace-pre-wrap text-[12px] leading-relaxed text-[var(--text-2)]">
+        <article key={key} className="rounded-xl bg-(--surface-1) p-4 space-y-2">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-(--agent-miya)">{toLabel(key)}</h3>
+          <pre className="whitespace-pre-wrap text-[12px] leading-relaxed text-(--text-2)">
             {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
           </pre>
         </article>
@@ -1556,15 +1556,15 @@ interface YouTubePublishHandoffPanelProps {
 
 function YouTubePublishHandoffPanel({ output, publishDraft, setPublishDraft, onCreateHandoff }: YouTubePublishHandoffPanelProps) {
   return (
-    <div className="rounded-xl bg-[var(--surface-1)] p-4 space-y-3">
+    <div className="rounded-xl bg-(--surface-1) p-4 space-y-3">
       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">YouTube Publish Handoff</div>
-          <p className="mt-1 text-[11px] text-[var(--text-3)]">
+          <div className="text-xs font-bold uppercase tracking-widest text-(--text-2)">YouTube Publish Handoff</div>
+          <p className="mt-1 text-[11px] text-(--text-3)">
             Creates a high-risk external publish request packet for Jose. It does not auto-upload.
           </p>
         </div>
-        <span className="rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)]">
+        <span className="rounded-full border border-(--warning-border) bg-(--warning-dim) px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-(--warning)">
           approval required
         </span>
       </div>
@@ -1573,14 +1573,14 @@ function YouTubePublishHandoffPanel({ output, publishDraft, setPublishDraft, onC
         <input
           value={publishDraft.filePath}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPublishDraft((current) => ({ ...current, filePath: event.target.value }))}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="Local video file path (for connector upload)"
         />
         <select
           aria-label="YouTube privacy status"
           value={publishDraft.privacyStatus}
           onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setPublishDraft((current) => ({ ...current, privacyStatus: event.target.value }))}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
         >
           <option value="private">private</option>
           <option value="unlisted">unlisted</option>
@@ -1591,7 +1591,7 @@ function YouTubePublishHandoffPanel({ output, publishDraft, setPublishDraft, onC
       <button
         onClick={onCreateHandoff}
         disabled={!output}
-        className="rounded-lg bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)] disabled:opacity-60"
+        className="rounded-lg bg-(--surface-2) px-4 py-2 text-xs font-bold uppercase tracking-widest text-(--text-1) hover:bg-(--surface-3) disabled:opacity-60"
       >
         Create YouTube Publish Request
       </button>
@@ -1608,15 +1608,15 @@ interface CapCutExportHandoffPanelProps {
 
 function CapCutExportHandoffPanel({ output, capcutDraft, setCapcutDraft, onCreateHandoff }: CapCutExportHandoffPanelProps) {
   return (
-    <div className="rounded-xl bg-[var(--surface-1)] p-4 space-y-3">
+    <div className="rounded-xl bg-(--surface-1) p-4 space-y-3">
       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">CapCut Export Handoff</div>
-          <p className="mt-1 text-[11px] text-[var(--text-3)]">
+          <div className="text-xs font-bold uppercase tracking-widest text-(--text-2)">CapCut Export Handoff</div>
+          <p className="mt-1 text-[11px] text-(--text-3)">
             Creates a CapCut-ready export brief for manual import. It does not claim live CapCut automation.
           </p>
         </div>
-        <span className="rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)]">
+        <span className="rounded-full border border-(--warning-border) bg-(--warning-dim) px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-(--warning)">
           manual export only
         </span>
       </div>
@@ -1625,13 +1625,13 @@ function CapCutExportHandoffPanel({ output, capcutDraft, setCapcutDraft, onCreat
         <input
           value={capcutDraft.projectName}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => setCapcutDraft((current) => ({ ...current, projectName: event.target.value }))}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="CapCut project name"
         />
         <input
           value={capcutDraft.sourceFilePath}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => setCapcutDraft((current) => ({ ...current, sourceFilePath: event.target.value }))}
-          className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+          className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
           placeholder="Local source video path"
         />
       </div>
@@ -1639,7 +1639,7 @@ function CapCutExportHandoffPanel({ output, capcutDraft, setCapcutDraft, onCreat
       <button
         onClick={onCreateHandoff}
         disabled={!output}
-        className="rounded-lg bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)] disabled:opacity-60"
+        className="rounded-lg bg-(--surface-2) px-4 py-2 text-xs font-bold uppercase tracking-widest text-(--text-1) hover:bg-(--surface-3) disabled:opacity-60"
       >
         Create CapCut Export Brief
       </button>
@@ -1656,11 +1656,11 @@ interface FieldProps {
 function Field({ label, value, onChange }: FieldProps) {
   return (
     <div className="space-y-2">
-      <label className="text-xs font-semibold text-[var(--text-2)]">{label}</label>
+      <label className="text-xs font-semibold text-(--text-2)">{label}</label>
       <input
         value={value}
         onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
-        className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
+        className="w-full rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"
       />
     </div>
   );

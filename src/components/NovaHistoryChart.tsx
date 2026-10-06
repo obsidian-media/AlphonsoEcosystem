@@ -33,8 +33,8 @@ export function NovaHistoryChart() {
   return (
     <div className="space-y-3">
       {points.length < 2 ? (
-        <div className="flex items-center justify-center h-12 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-          <span className="text-xs text-[var(--text-3)]">Not enough data yet</span>
+        <div className="flex items-center justify-center h-12 rounded-xl bg-(--surface-2) border border-(--border)">
+          <span className="text-xs text-(--text-3)">Not enough data yet</span>
         </div>
       ) : (
         <svg
@@ -67,10 +67,10 @@ export function NovaHistoryChart() {
       {latest && (
         <div className="flex items-start gap-3">
           <div className="shrink-0">
-            <span className="text-3xl font-bold text-[var(--accent)] leading-none">{latest.score}</span>
-            <span className="text-xs text-[var(--text-3)] ml-1">/ 100</span>
+            <span className="text-3xl font-bold text-(--accent) leading-none">{latest.score}</span>
+            <span className="text-xs text-(--text-3) ml-1">/ 100</span>
           </div>
-          <p className="text-xs text-[var(--text-3)] leading-relaxed flex-1 truncate" title={latest.recommendation}>
+          <p className="text-xs text-(--text-3) leading-relaxed flex-1 truncate" title={latest.recommendation}>
             {latest.recommendation
               ? latest.recommendation.length > 120
                 ? latest.recommendation.slice(0, 117) + '...'
@@ -80,7 +80,7 @@ export function NovaHistoryChart() {
         </div>
       )}
 
-      <p className="text-[11px] text-[var(--text-3)]">
+      <p className="text-[11px] text-(--text-3)">
         last {count} opportunit{count === 1 ? 'y' : 'ies'} analyzed
       </p>
     </div>

@@ -556,7 +556,7 @@ async function executeYouTube(packet) {
     `- Workflow: ${packet.workflowId || 'standalone'}`,
     `- Title/Hook: brainstormed`,
     `- Thumbnail concept: designed`,
-    `- Script outline: drafted`,
+    `- Script outline-solid: drafted`,
     `- Upload checklist: prepared`
   ].join('\n');
   updatePacketAsDone(packet.id, output);

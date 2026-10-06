@@ -49,7 +49,7 @@ describe('agentAuditService', () => {
     });
   });
 
-  describe('ring buffer — max 100 entries', () => {
+  describe('ring-3 buffer — max 100 entries', () => {
     it('does not exceed 100 entries', () => {
       for (let i = 0; i < 110; i++) {
         logApprovalEvent(`pkt-${i}`, 'alphonso', 'action', 'approved');

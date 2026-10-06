@@ -150,7 +150,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
   if (!loaded) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <p className="text-sm text-[var(--text-2)]">Loading…</p>
+        <p className="text-sm text-(--text-2)">Loading…</p>
       </div>
     );
   }
@@ -167,8 +167,8 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
   return (
     <div className="flex flex-col items-center gap-4 p-8 w-full max-w-3xl">
       <div className="text-center">
-        <h2 className="text-2xl font-semibold text-[var(--text-1)]">Choose Your Agents</h2>
-        <p className="text-sm text-[var(--text-3)] mt-1">
+        <h2 className="text-2xl font-semibold text-(--text-1)">Choose Your Agents</h2>
+        <p className="text-sm text-(--text-3) mt-1">
           Alphonso is always included. Toggle the others on for their extra capability.
         </p>
       </div>
@@ -197,7 +197,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
             <div
               key={agent.agentId}
               style={{ borderColor: agent.color }}
-              className="flex flex-col gap-1 rounded-lg border p-3 bg-[var(--surface-2)]"
+              className="flex flex-col gap-1 rounded-lg border p-3 bg-(--surface-2)"
             >
               <div className="flex items-center gap-2">
                 <img
@@ -222,7 +222,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
                   />
                 ) : null}
               </div>
-              <span className="text-xs text-[var(--text-3)]">
+              <span className="text-xs text-(--text-3)">
                 {!agent.component
                   ? 'Included — no extra install needed'
                   : alreadyInstalled
@@ -235,18 +235,18 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
               </span>
               {unmetPrereq === 'python' && (
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-[var(--warning)]">Needs Python.</span>
+                  <span className="text-xs text-(--warning)">Needs Python.</span>
                   <button
                     onClick={handleInstallPython}
                     disabled={installingPython}
-                    className="shrink-0 rounded border border-[var(--warning)] px-2 py-1 text-xs text-[var(--warning)] disabled:opacity-50"
+                    className="shrink-0 rounded-sm border border-(--warning) px-2 py-1 text-xs text-(--warning) disabled:opacity-50"
                   >
                     {installingPython ? 'Installing…' : 'Install Python'}
                   </button>
                 </div>
               )}
               {unmetPrereq === 'docker' && (
-                <span className="text-xs text-[var(--warning)]">
+                <span className="text-xs text-(--warning)">
                   Needs Docker — not auto-installable, see Runtime Hub after Setup.
                 </span>
               )}
@@ -256,18 +256,18 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
       </div>
       <div className="flex flex-col gap-2 w-full max-w-md text-sm">
         {diskCheck.unknown && diskCheck.starterModelShortfallGb === undefined && (
-          <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
+          <div className="rounded-sm bg-(--warning-dim) px-3 py-2 text-(--warning) text-xs">
             Couldn&apos;t measure free disk space — install will proceed, but make sure you have
             at least {diskCheck.requiredGb}GB free.
           </div>
         )}
         {diskCheck.shortfallGb > 0 && (
-          <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
+          <div className="rounded-sm bg-(--error-dim) px-3 py-2 text-(--error) text-xs">
             Need {diskCheck.shortfallGb}GB more free disk space for your current selection.
           </div>
         )}
         {diskCheck.starterModelShortfallGb !== undefined && (
-          <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
+          <div className="rounded-sm bg-(--error-dim) px-3 py-2 text-(--error) text-xs">
             Your configured Ollama models directory (OLLAMA_MODELS) is {diskCheck.starterModelShortfallGb}GB
             short for the starter model.
           </div>
@@ -276,14 +276,14 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
       <div className="flex gap-3">
         <button
           onClick={onBack}
-          className="rounded border border-[var(--border-strong)] px-4 py-2 text-sm text-[var(--text-2)]"
+          className="rounded-sm border border-(--border-strong) px-4 py-2 text-sm text-(--text-2)"
         >
           Back
         </button>
         <button
           disabled={!diskCheck.ok}
           onClick={() => diskCheck.ok && onProceed(toInstall)}
-          className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-contrast)] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-sm bg-(--accent) px-4 py-2 text-sm font-semibold text-(--accent-contrast) disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Install Selected
         </button>

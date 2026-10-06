@@ -7,7 +7,7 @@ interface Props {
 export function ViewLoadingState({ activeTab }: Props) {
   return (
     <div className="flex h-full items-center justify-center px-6 py-10">
-      <div className="rounded-2xl bg-[var(--surface-2)] px-5 py-4 text-sm text-[var(--text-3)]">
+      <div className="rounded-2xl bg-(--surface-2) px-5 py-4 text-sm text-(--text-3)">
         Loading {activeTab}...
       </div>
     </div>

@@ -31,10 +31,10 @@ export function clearPersistedNotifications(): void {
 }
 
 const BORDER_COLOR: Record<NotificationType, string> = {
-  success: 'border-[var(--success)]',
-  warning: 'border-[var(--warning)]',
-  error: 'border-[var(--error)]',
-  info: 'border-[var(--info)]',
+  success: 'border-(--success)',
+  warning: 'border-(--warning)',
+  error: 'border-(--error)',
+  info: 'border-(--info)',
 };
 
 function relativeTime(timestamp: number): string {
@@ -72,7 +72,7 @@ export function NotificationCenter({ notifications, onDismiss, onClearAll }: Not
             clearPersistedNotifications();
             onClearAll();
           }}
-          className="self-end text-xs text-[var(--text-3)] hover:text-[var(--text-2)] underline"
+          className="self-end text-xs text-(--text-3) hover:text-(--text-2) underline"
         >
           Clear all
         </button>
@@ -80,16 +80,16 @@ export function NotificationCenter({ notifications, onDismiss, onClearAll }: Not
       {visible.map((n) => (
         <div
           key={n.id}
-          className={`bg-[var(--surface-1)] border border-[var(--border)] border-l-4 ${BORDER_COLOR[n.type] ?? BORDER_COLOR.info} rounded-lg p-3 flex items-start gap-2 shadow-lg`}
+          className={`bg-(--surface-1) border border-(--border) border-l-4 ${BORDER_COLOR[n.type] ?? BORDER_COLOR.info} rounded-lg p-3 flex items-start gap-2 shadow-lg`}
         >
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-[var(--text-1)] truncate">{n.title}</p>
-            <p className="text-xs text-[var(--text-3)] mt-0.5">{n.message}</p>
-            <p className="text-xs text-[var(--text-4)] mt-1">{relativeTime(n.timestamp)}</p>
+            <p className="text-sm font-bold text-(--text-1) truncate">{n.title}</p>
+            <p className="text-xs text-(--text-3) mt-0.5">{n.message}</p>
+            <p className="text-xs text-(--text-4) mt-1">{relativeTime(n.timestamp)}</p>
           </div>
           <button
             onClick={() => onDismiss(n.id)}
-            className="text-[var(--text-3)] hover:text-[var(--text-2)] text-xs flex-shrink-0 mt-0.5"
+            className="text-(--text-3) hover:text-(--text-2) text-xs shrink-0 mt-0.5"
             aria-label="Dismiss"
           >
             ×

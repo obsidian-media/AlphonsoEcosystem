@@ -46,7 +46,7 @@ describe('connectorAuditLogService', () => {
     });
   });
 
-  describe('ring buffer behavior — max 100 entries', () => {
+  describe('ring-3 buffer behavior — max 100 entries', () => {
     it('evicts oldest entries when exceeding 100', () => {
       const initialLength = getConnectorAuditLog().length;
       const entriesToAdd = 110 - initialLength;
@@ -92,7 +92,7 @@ describe('connectorAuditLogService', () => {
       expect(last.ok).toBe(false);
     });
 
-    it('returns null when the connector was evicted from ring buffer', () => {
+    it('returns null when the connector was evicted from ring-3 buffer', () => {
       for (let i = 0; i < 98; i++) {
         appendConnectorAuditEntry({ connectorId: `filler_${i}`, ok: true, latencyMs: 1 });
       }

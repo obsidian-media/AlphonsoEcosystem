@@ -8,15 +8,15 @@ import type { QueueSnapshot } from '../services/orchestrationQueueService';
 import { listAgentPackets } from '../services/agentBusService';
 
 const STATE_STYLES: Record<string, string> = {
-  queued: 'bg-[var(--surface-3)] text-[var(--text-3)] border-[var(--border)]',
-  executing: 'bg-[var(--info-dim)] text-[var(--info)] border-[var(--info-border)]',
-  in_progress: 'bg-[var(--info-dim)] text-[var(--info)] border-[var(--info-border)]',
-  pending_approval: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
-  approval_required: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
-  failed: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
-  dead_letter: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
-  reported_to_jose: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
-  completed: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
+  queued: 'bg-(--surface-3) text-(--text-3) border-(--border)',
+  executing: 'bg-(--info-dim) text-(--info) border-(--info-border)',
+  in_progress: 'bg-(--info-dim) text-(--info) border-(--info-border)',
+  pending_approval: 'bg-(--warning-dim) text-(--warning) border-(--warning-border)',
+  approval_required: 'bg-(--warning-dim) text-(--warning) border-(--warning-border)',
+  failed: 'bg-(--error-dim) text-(--error) border-(--error-border)',
+  dead_letter: 'bg-(--error-dim) text-(--error) border-(--error-border)',
+  reported_to_jose: 'bg-(--success-dim) text-(--success) border-(--success-border)',
+  completed: 'bg-(--success-dim) text-(--success) border-(--success-border)',
 };
 
 interface StateBadgeProps {
@@ -99,12 +99,12 @@ export function OrchestratorQueueView() {
 
   const STAT_ITEMS: StatItem[] = snapshot
     ? [
-        { label: 'Queued', value: snapshot.queued, color: 'text-[var(--text-2)]' },
-        { label: 'Executing', value: snapshot.executing, color: 'text-[var(--info)]' },
-        { label: 'Pending Approval', value: snapshot.pendingApproval, color: 'text-[var(--warning)]' },
-        { label: 'Failed', value: snapshot.failed, color: 'text-[var(--error)]' },
-        { label: 'Dead-letter', value: snapshot.deadLetter, color: 'text-[var(--error)]' },
-        { label: 'Reported', value: snapshot.reportedToJose, color: 'text-[var(--success)]' },
+        { label: 'Queued', value: snapshot.queued, color: 'text-(--text-2)' },
+        { label: 'Executing', value: snapshot.executing, color: 'text-(--info)' },
+        { label: 'Pending Approval', value: snapshot.pendingApproval, color: 'text-(--warning)' },
+        { label: 'Failed', value: snapshot.failed, color: 'text-(--error)' },
+        { label: 'Dead-letter', value: snapshot.deadLetter, color: 'text-(--error)' },
+        { label: 'Reported', value: snapshot.reportedToJose, color: 'text-(--success)' },
       ]
     : [];
 
@@ -112,16 +112,16 @@ export function OrchestratorQueueView() {
     <div className="flex flex-col gap-4 p-4 h-full">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-[var(--text-1)]">Orchestrator Queue</h2>
+          <h2 className="text-base font-semibold text-(--text-1)">Orchestrator Queue</h2>
           {lastRefresh && (
-            <p className="text-[11px] text-[var(--text-3)] mt-0.5">
+            <p className="text-[11px] text-(--text-3) mt-0.5">
               Last refresh: {new Date(lastRefresh).toLocaleTimeString()} · auto-refreshes every 5s
             </p>
           )}
         </div>
         <button
           onClick={load}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-(--surface-3) border border-(--border) text-(--text-2) hover:bg-(--surface-3) transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Refresh
@@ -133,10 +133,10 @@ export function OrchestratorQueueView() {
           {STAT_ITEMS.map((item) => (
             <div
               key={item.label}
-              className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-3 text-center"
+              className="rounded-xl bg-(--surface-2) border border-(--border) p-3 text-center"
             >
               <p className={`text-xl font-bold ${item.color}`}>{item.value}</p>
-              <p className="text-[10px] text-[var(--text-3)] mt-0.5 leading-tight">{item.label}</p>
+              <p className="text-[10px] text-(--text-3) mt-0.5 leading-tight">{item.label}</p>
             </div>
           ))}
         </div>
@@ -144,11 +144,11 @@ export function OrchestratorQueueView() {
 
       <div className="flex-1 overflow-y-auto space-y-4 pr-1">
         <section>
-          <h3 className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)] mb-2">
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-(--text-3) mb-2">
             Active Packets ({packets.length})
           </h3>
           {packets.length === 0 ? (
-            <p className="text-xs text-[var(--text-3)] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-4 py-3">
+            <p className="text-xs text-(--text-3) rounded-xl bg-(--surface-2) border border-(--border) px-4 py-3">
               No active packets in the queue.
             </p>
           ) : (
@@ -156,13 +156,13 @@ export function OrchestratorQueueView() {
               {packets.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center gap-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-4 py-2.5"
+                  className="flex items-center gap-3 rounded-xl bg-(--surface-2) border border-(--border) px-4 py-2.5"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-[var(--text-2)] truncate">
+                    <p className="text-xs text-(--text-2) truncate">
                       {p.title || p.packetType || p.id}
                     </p>
-                    <p className="text-[10px] text-[var(--text-3)] mt-0.5">
+                    <p className="text-[10px] text-(--text-3) mt-0.5">
                       {p.fromAgent} → {p.toAgent} · {formatTs(p.createdAtMs || p.updatedAtMs)}
                     </p>
                   </div>
@@ -175,15 +175,15 @@ export function OrchestratorQueueView() {
 
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)] flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-[var(--error)]" />
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-(--text-3) flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-(--error)" />
               Dead-letter ({deadLetterPackets.length})
             </h3>
             {deadLetterPackets.length > 0 && (
               <button
                 onClick={handleRetryAll}
                 disabled={retrying}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-lg bg-[var(--error-dim)] border border-[var(--error-border)] text-[var(--error)] hover:bg-[var(--error-dim)] transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-lg bg-(--error-dim) border border-(--error-border) text-(--error) hover:bg-(--error-dim) transition-colors disabled:opacity-50"
               >
                 <RotateCcw className="w-3 h-3" />
                 {retrying ? 'Retrying…' : 'Retry All'}
@@ -191,7 +191,7 @@ export function OrchestratorQueueView() {
             )}
           </div>
           {deadLetterPackets.length === 0 ? (
-            <p className="text-xs text-[var(--text-3)] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-4 py-3">
+            <p className="text-xs text-(--text-3) rounded-xl bg-(--surface-2) border border-(--border) px-4 py-3">
               No dead-letter packets — everything is running smoothly.
             </p>
           ) : (
@@ -199,13 +199,13 @@ export function OrchestratorQueueView() {
               {deadLetterPackets.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center gap-3 rounded-xl bg-[var(--error-dim)] border border-[var(--error-border)] px-4 py-2.5"
+                  className="flex items-center gap-3 rounded-xl bg-(--error-dim) border border-(--error-border) px-4 py-2.5"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-[var(--text-2)] truncate">
+                    <p className="text-xs text-(--text-2) truncate">
                       {p.title || p.packetType || p.id}
                     </p>
-                    <p className="text-[10px] text-[var(--text-3)] mt-0.5">
+                    <p className="text-[10px] text-(--text-3) mt-0.5">
                       {p.failureReason || 'No reason recorded'} · {formatTs(p.updatedAtMs || p.createdAtMs)}
                     </p>
                   </div>

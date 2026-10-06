@@ -35,15 +35,15 @@ function cx(...classes: (string | boolean | undefined)[]) {
 // removes the second, drifting palette entirely instead of
 // re-approximating it with yet another hand-picked Tailwind family.
 const AGENT_TONE_CLASS: Record<string, string> = {
-  alphonso: 'bg-[var(--agent-alphonso-glow)] text-[var(--agent-alphonso)]',
-  jose: 'bg-[var(--agent-jose-glow)] text-[var(--agent-jose)]',
-  hector: 'bg-[var(--agent-hector-glow)] text-[var(--agent-hector)]',
-  miya: 'bg-[var(--agent-miya-glow)] text-[var(--agent-miya)]',
-  maria: 'bg-[var(--agent-maria-glow)] text-[var(--agent-maria)]',
-  marcus: 'bg-[var(--agent-marcus-glow)] text-[var(--agent-marcus)]',
-  echo: 'bg-[var(--agent-echo-glow)] text-[var(--agent-echo)]',
-  sentinel: 'bg-[var(--agent-sentinel-glow)] text-[var(--agent-sentinel)]',
-  nova: 'bg-[var(--agent-nova-glow)] text-[var(--agent-nova)]',
+  alphonso: 'bg-(--agent-alphonso-glow) text-(--agent-alphonso)',
+  jose: 'bg-(--agent-jose-glow) text-(--agent-jose)',
+  hector: 'bg-(--agent-hector-glow) text-(--agent-hector)',
+  miya: 'bg-(--agent-miya-glow) text-(--agent-miya)',
+  maria: 'bg-(--agent-maria-glow) text-(--agent-maria)',
+  marcus: 'bg-(--agent-marcus-glow) text-(--agent-marcus)',
+  echo: 'bg-(--agent-echo-glow) text-(--agent-echo)',
+  sentinel: 'bg-(--agent-sentinel-glow) text-(--agent-sentinel)',
+  nova: 'bg-(--agent-nova-glow) text-(--agent-nova)',
   // 'user' is the human founder, not a real agent -- no --agent-* token to
   // key off of, kept as a distinct hardcoded border/bg tone matching this
   // session's established "deliberate, not tokenized" carve-out pattern
@@ -52,7 +52,7 @@ const AGENT_TONE_CLASS: Record<string, string> = {
   // bug -- illegible near-white text on a near-white card). 'kairo' (a
   // fictional legacy roster entry) was here too until it was found and
   // removed from MISSION_ROOM_AGENTS itself -- see missionRoomService.ts.
-  user: 'bg-emerald-500/10 text-[var(--success)]',
+  user: 'bg-emerald-500/10 text-(--success)',
 };
 
 function agentTone(key: string) {
@@ -60,25 +60,25 @@ function agentTone(key: string) {
 }
 
 function statusTone(status: string) {
-  if (status === 'approved') return 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]';
-  if (status === 'review') return 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]';
-  if (status === 'doing') return 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]';
-  if (status === 'blocked') return 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]';
-  return 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-2)]';
+  if (status === 'approved') return 'border-(--success-border) bg-(--success-dim) text-(--success)';
+  if (status === 'review') return 'border-(--accent-border) bg-(--accent-dim) text-(--accent)';
+  if (status === 'doing') return 'border-(--warning-border) bg-(--warning-dim) text-(--warning)';
+  if (status === 'blocked') return 'border-(--error-border) bg-(--error-dim) text-(--error)';
+  return 'border-(--border) bg-(--surface-1) text-(--text-2)';
 }
 
 function statusTextTone(status: string) {
-  if (status === 'approved') return 'text-[var(--success)]';
-  if (status === 'review') return 'text-[var(--accent)]';
-  if (status === 'doing') return 'text-[var(--warning)]';
-  if (status === 'blocked') return 'text-[var(--error)]';
-  return 'text-[var(--text-2)]';
+  if (status === 'approved') return 'text-(--success)';
+  if (status === 'review') return 'text-(--accent)';
+  if (status === 'doing') return 'text-(--warning)';
+  if (status === 'blocked') return 'text-(--error)';
+  return 'text-(--text-2)';
 }
 
 function riskTone(riskLevel: string) {
-  if (riskLevel === 'high') return 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]';
-  if (riskLevel === 'medium') return 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]';
-  return 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]';
+  if (riskLevel === 'high') return 'border-(--error-border) bg-(--error-dim) text-(--error)';
+  if (riskLevel === 'medium') return 'border-(--warning-border) bg-(--warning-dim) text-(--warning)';
+  return 'border-(--success-border) bg-(--success-dim) text-(--success)';
 }
 
 function speakerIcon(speaker: string) {
@@ -105,12 +105,12 @@ interface AgentCardProps {
 function AgentCard({ agentKey, reservedSlot }: AgentCardProps) {
   if (reservedSlot) {
     return (
-      <div className="flex items-center gap-2.5 text-[var(--text-3)]" title="Kept intentionally blank until you approve another participant lane.">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)]">
+      <div className="flex items-center gap-2.5 text-(--text-3)" title="Kept intentionally blank until you approve another participant lane.">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--surface-2)">
           <Plus className="h-4 w-4" />
         </div>
         <div>
-          <div className="text-xs font-black text-[var(--text-2)]">Empty slot</div>
+          <div className="text-xs font-black text-(--text-2)">Empty slot</div>
           <div className="text-[9px] font-bold uppercase tracking-[0.14em] opacity-65">reserved later</div>
         </div>
       </div>
@@ -124,7 +124,7 @@ function AgentCard({ agentKey, reservedSlot }: AgentCardProps) {
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
-        <div className="text-xs font-black text-[var(--text-1)]">{agent.name}</div>
+        <div className="text-xs font-black text-(--text-1)">{agent.name}</div>
         <div className="text-[9px] font-bold uppercase tracking-[0.14em] opacity-65">{agent.lane}</div>
       </div>
     </div>
@@ -152,7 +152,7 @@ function MessageBubble({ message }: { message: Message }) {
             <Icon className="h-4 w-4" />
           </div>
           <div>
-            <div className="text-sm font-black text-[var(--text-1)]">{agent.name}</div>
+            <div className="text-sm font-black text-(--text-1)">{agent.name}</div>
             <div className="text-[10px] uppercase tracking-widest opacity-60">{agent.role}</div>
           </div>
         </div>
@@ -167,22 +167,22 @@ function MessageBubble({ message }: { message: Message }) {
             --text-4 is already verified clean against every other surface
             this session's WCAG sweep covered and a global bump risks
             regressing those. */}
-        <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
+        <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-(--text-3)">
           {message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
         </span>
       </div>
-      <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-1)]">{message.content}</div>
+      <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-(--text-1)">{message.content}</div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span className={cx('rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-widest', riskTone(message.riskLevel || 'low'))}>
           {message.riskLevel || 'low'} risk
         </span>
         {message.approvalRequired && (
-          <span className="rounded-full border border-[var(--error-border)] bg-[var(--error-dim)] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--error)]">
+          <span className="rounded-full border border-(--error-border) bg-(--error-dim) px-2 py-1 text-[9px] font-black uppercase tracking-widest text-(--error)">
             approval required
           </span>
         )}
         {message.metadata?.secretRedacted && (
-          <span className="rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--warning)]">
+          <span className="rounded-full border border-(--warning-border) bg-(--warning-dim) px-2 py-1 text-[9px] font-black uppercase tracking-widest text-(--warning)">
             secret redacted
           </span>
         )}
@@ -209,24 +209,24 @@ function TaskCard({ task, onUpdate }: { task: Task; onUpdate: (taskId: string, p
     <div className="py-3 first:pt-0 last:pb-0">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-black text-[var(--text-1)]">{task.title}</div>
-          <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{task.priority} · {owner.name}</div>
+          <div className="text-sm font-black text-(--text-1)">{task.title}</div>
+          <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-(--text-3)">{task.priority} · {owner.name}</div>
         </div>
         <select
           aria-label={`Status for ${task.title}`}
           value={task.status}
           onChange={(event) => onUpdate(task.id, { status: event.target.value as MissionTaskStatus })}
-          className={cx('rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-widest outline-none', statusTone(task.status))}
+          className={cx('rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-widest outline-hidden', statusTone(task.status))}
         >
           {MISSION_TASK_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
         </select>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className={cx('rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-widest', riskTone(task.riskLevel || 'low'))}>{task.riskLevel || 'low'} risk</span>
-        {task.approvalRequired && <span className="rounded-full border border-[var(--error-border)] bg-[var(--error-dim)] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--error)]">approval required</span>}
+        {task.approvalRequired && <span className="rounded-full border border-(--error-border) bg-(--error-dim) px-2 py-1 text-[9px] font-black uppercase tracking-widest text-(--error)">approval required</span>}
       </div>
-      {task.acceptance && <div className="mt-3 text-xs leading-relaxed text-[var(--text-3)]"><b className="text-[var(--text-2)]">Acceptance:</b> {task.acceptance}</div>}
-      {task.proof && <div className="mt-2 text-xs leading-relaxed text-[var(--text-3)]"><b className="text-[var(--text-2)]">Proof:</b> {task.proof}</div>}
+      {task.acceptance && <div className="mt-3 text-xs leading-relaxed text-(--text-3)"><b className="text-(--text-2)">Acceptance:</b> {task.acceptance}</div>}
+      {task.proof && <div className="mt-2 text-xs leading-relaxed text-(--text-3)"><b className="text-(--text-2)">Proof:</b> {task.proof}</div>}
     </div>
   );
 }
@@ -347,13 +347,13 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
 
   return (
     <div className="h-full overflow-y-auto mx-auto max-w-7xl px-6 py-6 alphonso-premium-ui">
-      <section className="flex flex-col gap-6 border-b border-[var(--border)] pb-6 lg:flex-row lg:items-end lg:justify-between">
+      <section className="flex flex-col gap-6 border-b border-(--border) pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[var(--accent)]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-(--accent-border) bg-(--accent-dim) px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-(--accent)">
             <RadioTower className="h-3.5 w-3.5" /> Shared command table
           </div>
-          <h1 className="mt-4 font-serif text-4xl font-black tracking-[-0.055em] text-[var(--text-1)] md:text-6xl">Mission Room</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--text-2)]">
+          <h1 className="mt-4 font-serif text-4xl font-black tracking-[-0.055em] text-(--text-1) md:text-6xl">Mission Room</h1>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-(--text-2)">
             A local-first meeting board for you, Kite, and Hermes. Use it to capture decisions, assign execution work, paste Hermes outputs, and keep approvals explicit.
           </p>
         </div>
@@ -361,33 +361,33 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
           {MISSION_TASK_STATUSES.slice(0, 5).map((status) => (
             <div key={status} className="text-center">
               <div className={cx('text-xl font-black', statusTextTone(status))}>{taskStats[status] || 0}</div>
-              <div className="text-[9px] font-black uppercase tracking-widest text-[var(--text-3)]">{status}</div>
+              <div className="text-[9px] font-black uppercase tracking-widest text-(--text-3)">{status}</div>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-[var(--border)] pb-4">
+      <section className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-(--border) pb-4">
         {room.selectedAgents.map((agentKey: string) => <AgentCard key={agentKey} agentKey={agentKey} />)}
         {(room.openParticipantSlots || []).map((slot, index) => <AgentCard key={slot || index} agentKey={slot || 'reserved'} reservedSlot={slot} />)}
       </section>
 
       <section className="mt-4 grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div>
-          <div className="mb-3 flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+          <div className="mb-3 flex items-center justify-between gap-3 border-b border-(--border) pb-3">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Conversation</div>
-              <div className="mt-1 text-sm font-semibold text-[var(--text-1)]">{room.name}</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-(--text-3)">Conversation</div>
+              <div className="mt-1 text-sm font-semibold text-(--text-1)">{room.name}</div>
             </div>
-            <button type="button" onClick={clearRoom} className="text-[10px] font-black uppercase tracking-widest text-[var(--text-3)] hover:text-[var(--error)]">
+            <button type="button" onClick={clearRoom} className="text-[10px] font-black uppercase tracking-widest text-(--text-3) hover:text-(--error)">
               Clear local chat
             </button>
           </div>
-          <div ref={scrollRef} className="h-[520px] divide-y divide-[var(--border)] overflow-y-auto pr-1">
+          <div ref={scrollRef} className="h-[520px] divide-y divide-(--border) overflow-y-auto pr-1">
             {messages.map((message) => <div key={message.id} className="py-3 first:pt-0 last:pb-0"><MessageBubble message={message} /></div>)}
           </div>
-          <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3 md:flex-row">
-            <select aria-label="Speaking as" value={speaker} onChange={(event) => setSpeaker(event.target.value)} className="rounded-lg bg-[var(--surface-2)] px-3 py-2 text-sm font-bold text-[var(--text-2)] outline-none">
+          <div className="mt-3 flex flex-col gap-2 border-t border-(--border) pt-3 md:flex-row">
+            <select aria-label="Speaking as" value={speaker} onChange={(event) => setSpeaker(event.target.value)} className="rounded-lg bg-(--surface-2) px-3 py-2 text-sm font-bold text-(--text-2) outline-hidden">
               {Object.values(MISSION_ROOM_AGENTS).map((agent) => <option key={agent.key} value={agent.key}>{agent.name}</option>)}
             </select>
             <textarea
@@ -400,52 +400,52 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
                 }
               }}
               placeholder="Drop meeting notes, Hermes output, blockers, or decisions..."
-              className="min-h-12 flex-1 resize-none rounded-lg bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
+              className="min-h-12 flex-1 resize-none rounded-lg bg-(--surface-2) px-4 py-3 text-sm text-(--text-1) outline-hidden placeholder:text-(--text-4)"
             />
-            <button type="button" onClick={sendMessage} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--text-1)] px-4 py-2 text-sm font-black text-[var(--surface-0)] hover:opacity-90">
+            <button type="button" onClick={sendMessage} className="inline-flex items-center justify-center gap-2 rounded-lg bg-(--text-1) px-4 py-2 text-sm font-black text-(--surface-0) hover:opacity-90">
               <Send className="h-4 w-4" /> Send
             </button>
           </div>
         </div>
 
-        <div className="divide-y divide-[var(--border)]">
+        <div className="divide-y divide-(--border)">
           <div className="pb-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Hermes tasking</div>
-                <div className="mt-1 text-sm font-semibold text-[var(--text-1)]">Create worker assignment</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-(--text-3)">Hermes tasking</div>
+                <div className="mt-1 text-sm font-semibold text-(--text-1)">Create worker assignment</div>
               </div>
-              <Plus className="h-5 w-5 text-[var(--accent)]" />
+              <Plus className="h-5 w-5 text-(--accent)" />
             </div>
             <input
               value={taskTitle}
               onChange={(event) => setTaskTitle(event.target.value)}
               placeholder="Task title, e.g. Audit TapCash publish blockers"
-              className="mt-4 w-full rounded-lg bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
+              className="mt-4 w-full rounded-lg bg-(--surface-2) px-4 py-3 text-sm text-(--text-1) outline-hidden placeholder:text-(--text-4)"
             />
             <textarea
               value={taskAcceptance}
               onChange={(event) => setTaskAcceptance(event.target.value)}
               placeholder="Acceptance criteria / proof needed"
-              className="mt-2 min-h-24 w-full resize-none rounded-lg bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
+              className="mt-2 min-h-24 w-full resize-none rounded-lg bg-(--surface-2) px-4 py-3 text-sm text-(--text-1) outline-hidden placeholder:text-(--text-4)"
             />
-            <button type="button" onClick={createTask} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent-dim)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--accent)] hover:opacity-90">
+            <button type="button" onClick={createTask} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-(--accent-dim) px-4 py-3 text-xs font-black uppercase tracking-widest text-(--accent) hover:opacity-90">
               <Hammer className="h-4 w-4" /> Assign to Hermes
             </button>
           </div>
 
           <div className="py-4">
             <div className="flex items-center gap-3">
-              <LockKeyhole className="h-5 w-5 text-[var(--warning)]" />
+              <LockKeyhole className="h-5 w-5 text-(--warning)" />
               <div>
-                <div className="text-sm font-black text-[var(--text-1)]">Approval gate</div>
-                <div className="text-xs text-[var(--text-3)]">Publish / external / destructive actions require your approval. Open flags: {approvalRequiredCount}</div>
+                <div className="text-sm font-black text-(--text-1)">Approval gate</div>
+                <div className="text-xs text-(--text-3)">Publish / external / destructive actions require your approval. Open flags: {approvalRequiredCount}</div>
               </div>
             </div>
             <button
               type="button"
               onClick={() => onCreateApprovalRequest?.({ source: 'mission-room', actionType: 'external_worker_action', riskLevel: 'high', summary: 'Mission Room approval placeholder' })}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--warning-dim)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--warning)] hover:opacity-90"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-(--warning-dim) px-4 py-3 text-xs font-black uppercase tracking-widest text-(--warning) hover:opacity-90"
             >
               <Shield className="h-4 w-4" /> Approval placeholder
             </button>
@@ -453,18 +453,18 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
 
           <div className="py-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 text-[var(--error)]" />
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-(--error)" />
               <div>
-                <div className="text-sm font-black text-[var(--text-1)]">Security model</div>
-                <div className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">Bulletproof means layered and honest: this v1 is a local guardrail, not a tamper-proof security boundary.</div>
+                <div className="text-sm font-black text-(--text-1)">Security model</div>
+                <div className="mt-1 text-xs leading-relaxed text-(--text-3)">Bulletproof means layered and honest: this v1 is a local guardrail, not a tamper-proof security boundary.</div>
               </div>
             </div>
             <div className="mt-3 space-y-1.5">
               {MISSION_ROOM_SECURITY_MODEL.guarantees.map((item) => (
-                <div key={item} className="text-[11px] leading-relaxed text-[var(--success)]">✓ {item}</div>
+                <div key={item} className="text-[11px] leading-relaxed text-(--success)">✓ {item}</div>
               ))}
               {MISSION_ROOM_SECURITY_MODEL.nonGuarantees.slice(0, 2).map((item) => (
-                <div key={item} className="text-[11px] leading-relaxed text-[var(--warning)]">! {item}</div>
+                <div key={item} className="text-[11px] leading-relaxed text-(--warning)">! {item}</div>
               ))}
             </div>
           </div>
@@ -472,62 +472,62 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
           <div className="pt-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Handoff generator</div>
-                <div className="mt-1 text-sm font-semibold text-[var(--text-1)]">Copy-safe Hermes brief</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-(--text-3)">Handoff generator</div>
+                <div className="mt-1 text-sm font-semibold text-(--text-1)">Copy-safe Hermes brief</div>
               </div>
-              <Clipboard className="h-5 w-5 text-[var(--text-3)]" />
+              <Clipboard className="h-5 w-5 text-(--text-3)" />
             </div>
-            <input aria-label="Handoff project name" value={handoffProject} onChange={(event) => setHandoffProject(event.target.value)} className="mt-4 w-full rounded-lg bg-[var(--surface-2)] px-4 py-2 text-sm text-[var(--text-1)] outline-none" />
-            <textarea aria-label="Handoff objective" value={handoffObjective} onChange={(event) => setHandoffObjective(event.target.value)} className="mt-2 min-h-20 w-full resize-none rounded-lg bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none" />
-            <button type="button" onClick={generateHandoff} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--text-1)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--surface-0)] hover:opacity-90">
+            <input aria-label="Handoff project name" value={handoffProject} onChange={(event) => setHandoffProject(event.target.value)} className="mt-4 w-full rounded-lg bg-(--surface-2) px-4 py-2 text-sm text-(--text-1) outline-hidden" />
+            <textarea aria-label="Handoff objective" value={handoffObjective} onChange={(event) => setHandoffObjective(event.target.value)} className="mt-2 min-h-20 w-full resize-none rounded-lg bg-(--surface-2) px-4 py-3 text-sm text-(--text-1) outline-hidden" />
+            <button type="button" onClick={generateHandoff} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-(--text-1) px-4 py-3 text-xs font-black uppercase tracking-widest text-(--surface-0) hover:opacity-90">
               <Sparkles className="h-4 w-4" /> Generate + copy handoff
             </button>
-            {handoffText && <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-[var(--surface-2)] p-3 text-[11px] leading-relaxed text-[var(--text-2)]">{handoffText}</pre>}
+            {handoffText && <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-(--surface-2) p-3 text-[11px] leading-relaxed text-(--text-2)">{handoffText}</pre>}
           </div>
         </div>
       </section>
 
-      <section className="mt-6 border-t border-[var(--border)] pt-6">
+      <section className="mt-6 border-t border-(--border) pt-6">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Task board</div>
-            <div className="mt-1 text-sm text-[var(--text-3)]">Local board for Hermes assignments and Kite review.</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-(--text-3)">Task board</div>
+            <div className="mt-1 text-sm text-(--text-3)">Local board for Hermes assignments and Kite review.</div>
           </div>
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--text-3)]">
-            <CheckCircle2 className="h-4 w-4 text-[var(--success)]" /> Evidence first
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-(--text-3)">
+            <CheckCircle2 className="h-4 w-4 text-(--success)" /> Evidence first
           </div>
         </div>
         {tasks.length === 0 ? (
-          <div className="py-6 text-center text-sm text-[var(--text-3)]">
+          <div className="py-6 text-center text-sm text-(--text-3)">
             No Hermes tasks yet. Create one above when you want a worker lane.
           </div>
         ) : (
-          <div className="divide-y divide-[var(--border)]">
+          <div className="divide-y divide-(--border)">
             {tasks.map((task) => <TaskCard key={task.id} task={task} onUpdate={updateTask} />)}
           </div>
         )}
       </section>
 
-      <section className="mt-6 border-t border-[var(--border)] pt-6">
+      <section className="mt-6 border-t border-(--border) pt-6">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Security audit trail</div>
-            <div className="mt-1 text-sm text-[var(--text-3)]">Local hash-chained events for messages, task changes, redactions, and approval flags.</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-(--text-3)">Security audit trail</div>
+            <div className="mt-1 text-sm text-(--text-3)">Local hash-chained events for messages, task changes, redactions, and approval flags.</div>
           </div>
-          <Shield className="h-5 w-5 text-[var(--accent)]" />
+          <Shield className="h-5 w-5 text-(--accent)" />
         </div>
         {securityEvents.length === 0 ? (
-          <div className="py-6 text-center text-sm text-[var(--text-3)]">No security events yet.</div>
+          <div className="py-6 text-center text-sm text-(--text-3)">No security events yet.</div>
         ) : (
-          <div className="divide-y divide-[var(--border)]">
+          <div className="divide-y divide-(--border)">
             {securityEvents.slice(0, 9).map((event) => (
               <div key={event.id} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-2)]">{event.type}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-(--text-2)">{event.type}</span>
                   <span className={cx('rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest', riskTone(event.riskLevel))}>{event.riskLevel}</span>
                 </div>
-                <div className="mt-2 line-clamp-2 text-xs text-[var(--text-3)]">{event.summary}</div>
-                <div className="mt-2 truncate text-[9px] font-mono text-[var(--text-4)]">{event.eventHash}</div>
+                <div className="mt-2 line-clamp-2 text-xs text-(--text-3)">{event.summary}</div>
+                <div className="mt-2 truncate text-[9px] font-mono text-(--text-4)">{event.eventHash}</div>
               </div>
             ))}
           </div>

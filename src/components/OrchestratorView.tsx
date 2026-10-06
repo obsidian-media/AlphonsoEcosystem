@@ -619,38 +619,38 @@ export function OrchestratorView({
     <div className="mx-auto max-w-5xl px-6 py-6 space-y-5">
 
       {/* Header */}
-      <header className="pb-5 border-b border-[var(--border)]">
+      <header className="pb-5 border-b border-(--border)">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-(--accent)">
               <Crown className="h-3.5 w-3.5" />
               Orchestrator
             </div>
-            <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-[var(--text-1)]">Jose — Governance &amp; Routing</h1>
-            <p className="mt-1 text-[13px] text-[var(--text-3)]">Supervise agent handoffs, review approvals, route tasks. No automatic execution.</p>
+            <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-(--text-1)">Jose — Governance &amp; Routing</h1>
+            <p className="mt-1 text-[13px] text-(--text-3)">Supervise agent handoffs, review approvals, route tasks. No automatic execution.</p>
           </div>
           <div className="flex items-center gap-4 shrink-0">
             <div className="text-right">
-              <div className="text-[10px] text-[var(--text-4)] uppercase tracking-widest">Packets</div>
-              <div className="text-lg font-bold text-[var(--text-1)]">{packets.length}</div>
+              <div className="text-[10px] text-(--text-4) uppercase tracking-widest">Packets</div>
+              <div className="text-lg font-bold text-(--text-1)">{packets.length}</div>
             </div>
             {approvalQueue.length > 0 && (
               <div className="text-right">
-                <div className="text-[10px] text-[var(--text-4)] uppercase tracking-widest">Pending</div>
-                <div className="text-lg font-bold text-[var(--warning)]">{approvalQueue.length}</div>
+                <div className="text-[10px] text-(--text-4) uppercase tracking-widest">Pending</div>
+                <div className="text-lg font-bold text-(--warning)">{approvalQueue.length}</div>
               </div>
             )}
             <button
               type="button"
               aria-label="Refresh all"
               onClick={refreshAll}
-              className="rounded-lg bg-[var(--surface-1)] p-2 text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
+              className="rounded-lg bg-(--surface-1) p-2 text-(--text-3) hover:text-(--text-2) transition-colors"
             >
               <RefreshCw className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-[var(--surface-2)] p-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-(--surface-2) p-3 sm:grid-cols-4">
           <Metric label="Packets" value={packets.length} tone="amber" />
           <Metric label="Pending" value={approvalQueue.length} tone={approvalQueue.length > 0 ? 'amber' : 'zinc'} />
           <Metric label="Dead letters" value={deadLetters.length} tone={deadLetters.length > 0 ? 'red' : 'zinc'} />
@@ -687,16 +687,16 @@ export function OrchestratorView({
                   value={joseCommandText}
                   onChange={(e) => setJoseCommandText(e.target.value)}
                   rows={4}
-                  className="w-full rounded-xl bg-[var(--surface-1)] px-3 py-2.5 text-sm leading-relaxed text-[var(--text-1)] outline-none focus:ring-1 focus:ring-[var(--warning-border)] placeholder:text-[var(--text-4)]"
+                  className="w-full rounded-xl bg-(--surface-1) px-3 py-2.5 text-sm leading-relaxed text-(--text-1) outline-hidden focus:ring-1 focus:ring-(--warning-border) placeholder:text-(--text-4)"
                   placeholder="Describe what you want Jose to coordinate…"
                 />
                 <button
                   onClick={distributeUserCommand}
-                  className="rounded-xl bg-[var(--warning-dim)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors"
+                  className="rounded-xl bg-(--warning-dim) px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-(--warning) hover:opacity-90 transition-colors"
                 >
                   Send to Jose
                 </button>
-                <p className="text-[11px] text-[var(--text-4)] leading-relaxed">
+                <p className="text-[11px] text-(--text-4) leading-relaxed">
                   Creates local packets from Jose to selected agents. No system commands, browsing, or file writes.
                 </p>
               </div>
@@ -722,13 +722,13 @@ export function OrchestratorView({
                 <input
                   value={routeTitle}
                   onChange={(e) => setRouteTitle(e.target.value)}
-                  className="w-full rounded-xl bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] outline-none focus:ring-1 focus:ring-[var(--warning-border)]"
+                  className="w-full rounded-xl bg-(--surface-1) px-3 py-2.5 text-sm text-(--text-1) outline-hidden focus:ring-1 focus:ring-(--warning-border)"
                 />
                 <select
                   aria-label="Route target"
                   value={routeTarget}
                   onChange={(e) => setRouteTarget(e.target.value)}
-                  className="w-full rounded-xl bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] outline-none"
+                  className="w-full rounded-xl bg-(--surface-1) px-3 py-2.5 text-sm text-(--text-1) outline-hidden"
                 >
                   <option value={AGENTS.ALPHONSO}>Alphonso — execution</option>
                   <option value={AGENTS.MIYA}>Miya — creative</option>
@@ -739,7 +739,7 @@ export function OrchestratorView({
                   <option value={AGENTS.SENTINEL}>Sentinel — security</option>
                   <option value={AGENTS.NOVA}>Nova — opportunity</option>
                 </select>
-                <button onClick={createRoutingPacket} className="w-full rounded-xl bg-[var(--warning-dim)] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors">
+                <button onClick={createRoutingPacket} className="w-full rounded-xl bg-(--warning-dim) px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-(--warning) hover:opacity-90 transition-colors">
                   Create Supervised Route
                 </button>
               </div>
@@ -749,13 +749,13 @@ export function OrchestratorView({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className={`h-1.5 w-1.5 rounded-full ${whatsappConfigured ? 'bg-[var(--success)]' : 'bg-[var(--text-4)]'}`} />
-                    <span className="text-[12px] text-[var(--text-3)]">{whatsappConfigured ? 'Connected' : 'Not configured — see Settings'}</span>
+                    <div className={`h-1.5 w-1.5 rounded-full ${whatsappConfigured ? 'bg-(--success)' : 'bg-(--text-4)'}`} />
+                    <span className="text-[12px] text-(--text-3)">{whatsappConfigured ? 'Connected' : 'Not configured — see Settings'}</span>
                   </div>
                   <button
                     onClick={pollWhatsAppNow}
                     disabled={!whatsappConfigured || whatsappPolling}
-                    className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-1)] px-3 py-1.5 text-[10px] font-semibold text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-40 transition-colors"
+                    className="flex items-center gap-1.5 rounded-lg bg-(--surface-1) px-3 py-1.5 text-[10px] font-semibold text-(--text-3) hover:text-(--text-2) disabled:opacity-40 transition-colors"
                   >
                     <RefreshCw className={`h-3 w-3 ${whatsappPolling ? 'animate-spin' : ''}`} />
                     {whatsappPolling ? 'Polling…' : 'Poll'}
@@ -783,17 +783,17 @@ export function OrchestratorView({
       {orchTab === 'approvals' && (
         <div className="space-y-4">
           {approvalQueue.length === 0 ? (
-            <div className="rounded-2xl bg-[var(--surface-1)] p-10 text-center">
-              <p className="text-sm text-[var(--text-3)]">No pending approvals.</p>
+            <div className="rounded-2xl bg-(--surface-1) p-10 text-center">
+              <p className="text-sm text-(--text-3)">No pending approvals.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {approvalQueue.map((packet) => (
-                <div key={packet.id} className="rounded-xl bg-[var(--warning-dim)] p-4">
+                <div key={packet.id} className="rounded-xl bg-(--warning-dim) p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-[var(--text-1)]">{packet.title}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-3)]">
+                      <div className="text-sm font-medium text-(--text-1)">{packet.title}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-(--text-3)">
                         <AgentAvatar agentId={packet.fromAgent} name={packet.fromAgent} sizeClass="h-3.5 w-3.5" />
                         <span>{packet.fromAgent}</span>
                         <span>→</span>
@@ -821,21 +821,21 @@ export function OrchestratorView({
           )}
 
           {executionResults.length > 0 && (
-            <div className="rounded-2xl bg-[var(--surface-1)] p-4 space-y-2">
+            <div className="rounded-2xl bg-(--surface-1) p-4 space-y-2">
               <div className="flex items-center justify-between mb-1">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-3)]">Execution Results</div>
-                <button onClick={() => setExecutionResults([])} className="text-[10px] text-[var(--text-4)] hover:text-[var(--text-3)]">Clear</button>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-(--text-3)">Execution Results</div>
+                <button onClick={() => setExecutionResults([])} className="text-[10px] text-(--text-4) hover:text-(--text-3)">Clear</button>
               </div>
               {executionResults.map((r) => (
-                <div key={r.id + r.ts} className={`rounded-xl p-3 ${r.ok ? 'bg-[var(--success-dim)]' : 'bg-[var(--error-dim)]'}`}>
+                <div key={r.id + r.ts} className={`rounded-xl p-3 ${r.ok ? 'bg-(--success-dim)' : 'bg-(--error-dim)'}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[11px] font-semibold ${r.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+                    <span className={`text-[11px] font-semibold ${r.ok ? 'text-(--success)' : 'text-(--error)'}`}>
                       {r.ok ? (r.setupRequired ? 'Queued' : 'Success') : 'Failed'}
                     </span>
-                    <span className="text-[10px] text-[var(--text-4)]">{new Date(r.ts).toLocaleTimeString()}</span>
+                    <span className="text-[10px] text-(--text-4)">{new Date(r.ts).toLocaleTimeString()}</span>
                   </div>
-                  <div className="mt-1 text-[12px] font-medium text-[var(--text-2)]">{r.title}</div>
-                  <div className="mt-0.5 text-[11px] text-[var(--text-3)] leading-relaxed">{r.summary}</div>
+                  <div className="mt-1 text-[12px] font-medium text-(--text-2)">{r.title}</div>
+                  <div className="mt-0.5 text-[11px] text-(--text-3) leading-relaxed">{r.summary}</div>
                 </div>
               ))}
             </div>
@@ -850,12 +850,12 @@ export function OrchestratorView({
             <OCard label="Active Handoffs">
               <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                 {packets.filter((p) => ['pending_approval', 'approved', 'queued'].includes(p.status)).length === 0
-                  ? <p className="text-[12px] text-[var(--text-4)]">No active handoffs.</p>
+                  ? <p className="text-[12px] text-(--text-4)">No active handoffs.</p>
                   : packets.filter((p) => ['pending_approval', 'approved', 'queued'].includes(p.status)).slice().reverse().slice(0, 8).map((packet) => (
-                    <div key={packet.id} className="rounded-xl bg-[var(--surface-1)] p-3">
-                      <div className="text-[12px] font-medium text-[var(--text-2)]">{packet.title}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-3)]">
-                        <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">{packet.status}</span>
+                    <div key={packet.id} className="rounded-xl bg-(--surface-1) p-3">
+                      <div className="text-[12px] font-medium text-(--text-2)">{packet.title}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-(--text-3)">
+                        <span className="rounded-sm bg-(--surface-2) px-1.5 py-0.5">{packet.status}</span>
                         <span>{packet.fromAgent} → {packet.toAgent}</span>
                       </div>
                       <div className="mt-2 flex gap-1.5">
@@ -875,19 +875,19 @@ export function OrchestratorView({
 
             <OCard label="Jose Command Ledger">
               <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                {joseCommands.length === 0 && <p className="text-[12px] text-[var(--text-4)]">No commands recorded yet.</p>}
+                {joseCommands.length === 0 && <p className="text-[12px] text-(--text-4)">No commands recorded yet.</p>}
                 {joseCommands.slice().reverse().slice(0, 8).map((command) => (
-                  <div key={command.id} className="rounded-xl bg-[var(--surface-1)] p-3">
+                  <div key={command.id} className="rounded-xl bg-(--surface-1) p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="text-[12px] font-medium text-[var(--text-2)] line-clamp-2">{command.commandText}</div>
+                      <div className="text-[12px] font-medium text-(--text-2) line-clamp-2">{command.commandText}</div>
                       <TrustBadge state={command.trust} />
                     </div>
-                    <div className="mt-1 text-[11px] text-[var(--text-3)]">{command.status} · {command.assignments?.length || 0} assignments</div>
+                    <div className="mt-1 text-[11px] text-(--text-3)">{command.status} · {command.assignments?.length || 0} assignments</div>
                     <div className="mt-2 flex gap-1.5">
                       <NeutralBtn onClick={() => confirmCommand(command.id)}>Confirm &amp; Report</NeutralBtn>
                     </div>
                     {command.userReport && (
-                      <div className="mt-2 rounded-lg bg-[var(--success-dim)] p-2.5 text-[11px] text-[var(--text-2)]">
+                      <div className="mt-2 rounded-lg bg-(--success-dim) p-2.5 text-[11px] text-(--text-2)">
                         {command.userReport.summary}
                       </div>
                     )}
@@ -900,12 +900,12 @@ export function OrchestratorView({
           <OCard label="All Packets (recent)">
             <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
               {packets.slice().reverse().slice(0, 12).map((packet) => (
-                <div key={packet.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
+                <div key={packet.id} className="rounded-lg bg-(--surface-1) px-3 py-2 text-[11px] text-(--text-3)">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-[var(--text-2)] truncate">{packet.title}</span>
-                    <span className="shrink-0 rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px]">{packet.status}</span>
+                    <span className="font-medium text-(--text-2) truncate">{packet.title}</span>
+                    <span className="shrink-0 rounded-sm bg-(--surface-2) px-1.5 py-0.5 text-[10px]">{packet.status}</span>
                   </div>
-                  <div className="mt-0.5 text-[var(--text-4)]">{packet.fromAgent} → {packet.toAgent}</div>
+                  <div className="mt-0.5 text-(--text-4)">{packet.fromAgent} → {packet.toAgent}</div>
                 </div>
               ))}
             </div>
@@ -922,15 +922,15 @@ export function OrchestratorView({
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <OCard label="Agent Workload">
-              <div className="divide-y divide-white/[0.05]">
+              <div className="divide-y divide-white/5">
                 {workload.map((row) => (
                   <div key={row.agent} className="flex items-center justify-between py-2">
-                    <span className="text-[12px] font-medium capitalize text-[var(--text-2)]">{row.agent}</span>
-                    <div className="flex items-center gap-3 text-[11px] text-[var(--text-4)]">
+                    <span className="text-[12px] font-medium capitalize text-(--text-2)">{row.agent}</span>
+                    <div className="flex items-center gap-3 text-[11px] text-(--text-4)">
                       <span>{row.inbound} in</span>
                       <span>{row.outbound} out</span>
-                      <span className={row.pending ? 'text-[var(--warning)]' : ''}>{row.pending} pend</span>
-                      <span className="text-[var(--success)]">{row.completed} done</span>
+                      <span className={row.pending ? 'text-(--warning)' : ''}>{row.pending} pend</span>
+                      <span className="text-(--success)">{row.completed} done</span>
                     </div>
                   </div>
                 ))}
@@ -945,15 +945,15 @@ export function OrchestratorView({
               </div>
               <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                 {queueTransitions.slice(0, 6).map((row) => (
-                  <div key={row.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2">
+                  <div key={row.id} className="rounded-lg bg-(--surface-1) px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-[var(--text-2)]">{row.fromStatus} → {row.toStatus}</span>
+                      <span className="text-[11px] text-(--text-2)">{row.fromStatus} → {row.toStatus}</span>
                       <TrustBadge state={row.verificationState || 'unverified'} />
                     </div>
                     {row.toStatus === 'dead_letter' && (
                       <button
                         onClick={() => { replayPacketFromDeadLetter(row.packetId, 'Manual replay.'); refreshAll(); }}
-                        className="mt-1.5 rounded bg-[var(--warning-dim)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)]"
+                        className="mt-1.5 rounded-sm bg-(--warning-dim) px-2 py-0.5 text-[10px] font-semibold text-(--warning)"
                       >
                         Replay
                       </button>
@@ -983,10 +983,10 @@ export function OrchestratorView({
                 <RuntimeRow label="Dead Letters" value={workflowObs?.totals?.deadLetters ?? 0} trust={workflowObs?.totals?.deadLetters ? 'failed' : 'verified'} />
               </div>
               <div className="mt-3 flex gap-2">
-                <button onClick={runRetrySweep} className="rounded-xl bg-[var(--surface-1)] px-3 py-2 text-[10px] font-semibold tracking-wider text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+                <button onClick={runRetrySweep} className="rounded-xl bg-(--surface-1) px-3 py-2 text-[10px] font-semibold tracking-wider text-(--text-3) hover:text-(--text-2) transition-colors">
                   Retry Sweep
                 </button>
-                <button onClick={recordDecision} className="rounded-xl bg-[var(--warning-dim)] px-3 py-2 text-[10px] font-semibold tracking-wider text-[var(--warning)] hover:opacity-90 transition-colors">
+                <button onClick={recordDecision} className="rounded-xl bg-(--warning-dim) px-3 py-2 text-[10px] font-semibold tracking-wider text-(--warning) hover:opacity-90 transition-colors">
                   Record Snapshot
                 </button>
               </div>
@@ -1000,9 +1000,9 @@ export function OrchestratorView({
               </div>
               <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
                 {sessionEvents.slice().reverse().slice(0, 6).map((event) => (
-                  <div key={event.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
-                    <div className="font-medium text-[var(--text-2)]">{event.title}</div>
-                    <div className="mt-0.5 text-[var(--text-4)]">{event.category} · {new Date(event.timestampMs).toLocaleTimeString()}</div>
+                  <div key={event.id} className="rounded-lg bg-(--surface-1) px-3 py-2 text-[11px] text-(--text-3)">
+                    <div className="font-medium text-(--text-2)">{event.title}</div>
+                    <div className="mt-0.5 text-(--text-4)">{event.category} · {new Date(event.timestampMs).toLocaleTimeString()}</div>
                   </div>
                 ))}
               </div>
@@ -1011,14 +1011,14 @@ export function OrchestratorView({
 
           <OCard label="Dead-Letter Items">
             {deadLetters.length === 0
-              ? <p className="text-[12px] text-[var(--text-4)]">No dead-letter items.</p>
+              ? <p className="text-[12px] text-(--text-4)">No dead-letter items.</p>
               : (
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {deadLetters.slice().reverse().slice(0, 8).map((item) => (
-                    <div key={`${item.commandId}-${item.packetId}`} className="rounded-xl bg-[var(--error-dim)] p-3 text-[11px] text-[var(--text-2)]">
+                    <div key={`${item.commandId}-${item.packetId}`} className="rounded-xl bg-(--error-dim) p-3 text-[11px] text-(--text-2)">
                       <div className="font-medium">{item.agent}: {item.title}</div>
-                      <div className="mt-0.5 text-[var(--error)]">{item.commandText}</div>
-                      <div className="mt-0.5 text-[var(--text-3)]">Retries: {item.retries || 0}</div>
+                      <div className="mt-0.5 text-(--error)">{item.commandText}</div>
+                      <div className="mt-0.5 text-(--text-3)">Retries: {item.retries || 0}</div>
                     </div>
                   ))}
                 </div>
@@ -1036,7 +1036,7 @@ export function OrchestratorView({
 function OCard({ label, children }: OCardProps): React.ReactElement {
   return (
     <div className="card">
-      {label && <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{label}</div>}
+      {label && <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-(--text-3)">{label}</div>}
       {children}
     </div>
   );
@@ -1044,7 +1044,7 @@ function OCard({ label, children }: OCardProps): React.ReactElement {
 
 function ApproveBtn({ onClick, children }: ApproveBtnProps): React.ReactElement {
   return (
-    <button type="button" onClick={onClick} className="rounded-lg bg-[var(--success-dim)] px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--success)] hover:opacity-80 transition-colors">
+    <button type="button" onClick={onClick} className="rounded-lg bg-(--success-dim) px-3 py-1.5 text-[10px] font-semibold tracking-wider text-(--success) hover:opacity-80 transition-colors">
       {children}
     </button>
   );
@@ -1052,7 +1052,7 @@ function ApproveBtn({ onClick, children }: ApproveBtnProps): React.ReactElement 
 
 function RejectBtn({ onClick, children }: RejectBtnProps): React.ReactElement {
   return (
-    <button type="button" onClick={onClick} className="rounded-lg bg-[var(--error-dim)] px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--error)] hover:opacity-80 transition-colors">
+    <button type="button" onClick={onClick} className="rounded-lg bg-(--error-dim) px-3 py-1.5 text-[10px] font-semibold tracking-wider text-(--error) hover:opacity-80 transition-colors">
       {children}
     </button>
   );
@@ -1068,9 +1068,9 @@ function NeutralBtn({ onClick, disabled, children }: NeutralBtnProps): React.Rea
 
 function Panel({ icon: Icon, title, children }: PanelProps): React.ReactElement {
   return (
-    <section className="rounded-2xl bg-[var(--surface-1)] p-5">
-      <div className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-3)]">
-        <Icon className="h-3.5 w-3.5 text-[var(--accent)]" />
+    <section className="rounded-2xl bg-(--surface-1) p-5">
+      <div className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-(--text-3)">
+        <Icon className="h-3.5 w-3.5 text-(--accent)" />
         {title}
       </div>
       {children}
@@ -1081,28 +1081,28 @@ function Panel({ icon: Icon, title, children }: PanelProps): React.ReactElement 
 function CollapsiblePanel({ icon: Icon, title, id, focusMode, openPanels, onToggle, children }: CollapsiblePanelProps): React.ReactElement {
   const open = !focusMode || openPanels.has(id);
   return (
-    <section className="rounded-2xl bg-[var(--surface-1)]">
+    <section className="rounded-2xl bg-(--surface-1)">
       <button
         type="button"
         onClick={() => onToggle?.(id)}
         className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
       >
-        <span className="flex items-center gap-2 text-[11px] font-semibold text-[var(--text-2)]">
-          <Icon className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" />
+        <span className="flex items-center gap-2 text-[11px] font-semibold text-(--text-2)">
+          <Icon className="h-3.5 w-3.5 text-(--accent) shrink-0" />
           {title}
         </span>
-        {open ? <ChevronDown className="h-3.5 w-3.5 text-[var(--text-4)]" /> : <ChevronRight className="h-3.5 w-3.5 text-[var(--text-4)]" />}
+        {open ? <ChevronDown className="h-3.5 w-3.5 text-(--text-4)" /> : <ChevronRight className="h-3.5 w-3.5 text-(--text-4)" />}
       </button>
-      {open && <div className="border-t border-[var(--border)] px-5 py-4">{children}</div>}
+      {open && <div className="border-t border-(--border) px-5 py-4">{children}</div>}
     </section>
   );
 }
 
 function Metric({ label, value, tone = 'zinc' }: MetricProps): React.ReactElement {
-  const valueColor = tone === 'green' ? 'text-[var(--success)]' : tone === 'red' ? 'text-[var(--error)]' : tone === 'amber' ? 'text-[var(--warning)]' : tone === 'fuchsia' ? 'text-[var(--accent)]' : 'text-[var(--text-1)]';
+  const valueColor = tone === 'green' ? 'text-(--success)' : tone === 'red' ? 'text-(--error)' : tone === 'amber' ? 'text-(--warning)' : tone === 'fuchsia' ? 'text-(--accent)' : 'text-(--text-1)';
   return (
     <div>
-      <div className="text-[10px] font-medium text-[var(--text-4)] uppercase tracking-widest">{label}</div>
+      <div className="text-[10px] font-medium text-(--text-4) uppercase tracking-widest">{label}</div>
       <div className={`mt-0.5 text-lg font-bold truncate ${valueColor}`}>{value}</div>
     </div>
   );
@@ -1111,18 +1111,18 @@ function Metric({ label, value, tone = 'zinc' }: MetricProps): React.ReactElemen
 function MiniStat({ label, value }: MiniStatProps): React.ReactElement {
   return (
     <div className="text-center">
-      <div className="text-base font-bold text-[var(--text-1)]">{value}</div>
-      <div className="text-[10px] text-[var(--text-4)] mt-0.5">{label}</div>
+      <div className="text-base font-bold text-(--text-1)">{value}</div>
+      <div className="text-[10px] text-(--text-4) mt-0.5">{label}</div>
     </div>
   );
 }
 
 function RuntimeRow({ label, value, trust }: RuntimeRowProps): React.ReactElement {
   return (
-    <div className="flex items-center justify-between gap-3 py-2 border-b border-[var(--border)] last:border-0">
-      <span className="text-[12px] text-[var(--text-3)]">{label}</span>
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-(--border) last:border-0">
+      <span className="text-[12px] text-(--text-3)">{label}</span>
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-[12px] font-medium text-[var(--text-2)]">{value}</span>
+        <span className="truncate text-[12px] font-medium text-(--text-2)">{value}</span>
         <TrustBadge state={trust} />
       </div>
     </div>
@@ -1131,21 +1131,21 @@ function RuntimeRow({ label, value, trust }: RuntimeRowProps): React.ReactElemen
 
 function TrustBadge({ state }: TrustBadgeProps): React.ReactElement {
   const color = state === 'verified'
-    ? 'text-[var(--success)]'
+    ? 'text-(--success)'
     : state === 'failed'
-      ? 'text-[var(--error)]'
+      ? 'text-(--error)'
       : state === 'temporary' || state === 'pending'
-        ? 'text-[var(--warning)]'
-        : 'text-[var(--text-4)]';
+        ? 'text-(--warning)'
+        : 'text-(--text-4)';
   return <span className={`text-[10px] font-semibold ${color}`}>{state || 'unverified'}</span>;
 }
 
 function GovernanceRow({ label, value, state }: GovernanceRowProps): React.ReactElement {
   return (
-    <div className="flex items-center justify-between gap-3 py-2 border-b border-[var(--border)] last:border-0">
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-(--border) last:border-0">
       <div>
-        <div className="text-[12px] font-medium text-[var(--text-2)]">{label}</div>
-        <div className="text-[11px] text-[var(--text-4)] mt-0.5">{value}</div>
+        <div className="text-[12px] font-medium text-(--text-2)">{label}</div>
+        <div className="text-[11px] text-(--text-4) mt-0.5">{value}</div>
       </div>
       <TrustBadge state={state} />
     </div>
@@ -1155,8 +1155,8 @@ function GovernanceRow({ label, value, state }: GovernanceRowProps): React.React
 function FlowStep({ label, text }: FlowStepProps): React.ReactElement {
   return (
     <div className="flex items-start gap-3 py-1.5">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-dim)] text-[9px] font-bold text-[var(--accent)]">{label}</span>
-      <span className="text-[12px] text-[var(--text-3)]">{text}</span>
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-(--accent-dim) text-[9px] font-bold text-(--accent)">{label}</span>
+      <span className="text-[12px] text-(--text-3)">{text}</span>
     </div>
   );
 }

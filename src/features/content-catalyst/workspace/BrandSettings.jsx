@@ -17,7 +17,7 @@ function serializePillars(pillars = []) {
   return pillars.map((p) => [p.name, p.description, p.example_topics].join(' | ')).join('\n');
 }
 
-const inputCls = 'rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-2.5 py-1.5 text-xs text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]';
+const inputCls = 'rounded-lg border border-(--border) bg-(--surface-3) px-2.5 py-1.5 text-xs text-(--text-1) placeholder:text-(--text-4) focus:outline-hidden focus:border-(--accent-border)';
 
 export function BrandSettings({ brandProfile = DEFAULT_BRAND_PROFILE, onSave }) {
   const initial = useMemo(() => ({
@@ -30,10 +30,10 @@ export function BrandSettings({ brandProfile = DEFAULT_BRAND_PROFILE, onSave }) 
   const set = (key) => (e) => setDraft((c) => ({ ...c, [key]: e.target.value }));
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
-        <Settings className="h-3.5 w-3.5 text-[var(--accent)]" />
-        <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Brand settings</span>
+    <div className="rounded-xl border border-(--border) bg-(--surface-1) overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-(--border)">
+        <Settings className="h-3.5 w-3.5 text-(--accent)" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-(--text-3)">Brand settings</span>
       </div>
       <div className="p-4 space-y-2.5">
         <div className="grid grid-cols-2 gap-2">
@@ -47,7 +47,7 @@ export function BrandSettings({ brandProfile = DEFAULT_BRAND_PROFILE, onSave }) 
         <button
           type="button"
           onClick={() => onSave?.({ ...draft, content_pillars: normalizePillars(draft.pillarsText) })}
-          className="w-full rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)] text-[10px] font-bold uppercase tracking-widest px-4 py-2 transition-colors"
+          className="w-full rounded-lg bg-(--accent) hover:bg-(--accent-hover) text-(--accent-contrast) text-[10px] font-bold uppercase tracking-widest px-4 py-2 transition-colors"
         >
           Save Brand Profile
         </button>

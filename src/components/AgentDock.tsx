@@ -149,23 +149,23 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
 
   if (embedded) {
     return (
-      <div className="overflow-hidden rounded-xl bg-[var(--surface-2)] w-full">
+      <div className="overflow-hidden rounded-xl bg-(--surface-2) w-full">
         <div className="flex items-center gap-1.5 px-3 py-2.5">
-          <div className="flex-1 select-none text-[10px] font-semibold tracking-widest text-[var(--text-3)] uppercase">
+          <div className="flex-1 select-none text-[10px] font-semibold tracking-widest text-(--text-3) uppercase">
             Agent Deck
           </div>
           <div className="flex items-center gap-1">
             {ollamaOnline === null ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-4)] animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-(--text-4) animate-pulse" />
             ) : ollamaOnline ? (
-              <Wifi className="h-3 w-3 text-[var(--success)]" />
+              <Wifi className="h-3 w-3 text-(--success)" />
             ) : (
-              <WifiOff className="h-3 w-3 text-[var(--text-4)]" />
+              <WifiOff className="h-3 w-3 text-(--text-4)" />
             )}
           </div>
         </div>
         {busyCount > 0 && (
-          <div className="mx-3 mb-2 rounded-md bg-[var(--success-dim)] px-2 py-1 text-[10px] text-[var(--success)]">
+          <div className="mx-3 mb-2 rounded-md bg-(--success-dim) px-2 py-1 text-[10px] text-(--success)">
             {busyCount} agent{busyCount > 1 ? 's' : ''} active
           </div>
         )}
@@ -177,26 +177,26 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
               <div key={item.agentId} className="flex items-center gap-2.5">
                 <div className="relative shrink-0">
                   <AgentAvatar agentId={item.agentId} name={item.name ?? profile?.name ?? item.agentId} sizeClass="h-8 w-8" />
-                  {active && <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[var(--success)] ring-1 ring-black" />}
+                  {active && <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-(--success) ring-1 ring-black" />}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[11px] font-medium text-[var(--text-2)] truncate">{item.name ?? profile?.name ?? item.agentId}</div>
-                  <div className={`text-[10px] truncate ${active ? 'text-[var(--success)]' : 'text-[var(--text-3)]'}`}>{friendlyState(item.state)}</div>
+                  <div className="text-[11px] font-medium text-(--text-2) truncate">{item.name ?? profile?.name ?? item.agentId}</div>
+                  <div className={`text-[10px] truncate ${active ? 'text-(--success)' : 'text-(--text-3)'}`}>{friendlyState(item.state)}</div>
                 </div>
               </div>
             );
           })}
-          {otherAgents.length > 0 && companions.length > 0 && <div className="border-t border-[var(--border)]" />}
+          {otherAgents.length > 0 && companions.length > 0 && <div className="border-t border-(--border)" />}
           <div className="flex flex-wrap gap-1.5">
             {otherAgents.map((agent) => (
               <div key={agent.id} className="flex items-center gap-1">
                 <AgentAvatar agentId={agent.id} name={agent.name} sizeClass="h-5 w-5" />
-                <span className="text-[10px] text-[var(--text-3)] truncate max-w-[4rem]">{agent.name}</span>
+                <span className="text-[10px] text-(--text-3) truncate max-w-16">{agent.name}</span>
               </div>
             ))}
           </div>
           {ollamaOnline === false && (
-            <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2 text-[10px] text-[var(--text-3)]">
+            <div className="rounded-lg bg-(--surface-2) px-2.5 py-2 text-[10px] text-(--text-3)">
               Local AI is offline — start Ollama to enable agent reasoning.
             </div>
           )}
@@ -207,7 +207,7 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
 
   return (
     <div
-      className="pointer-events-auto fixed z-50 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] shadow-2xl backdrop-blur-xl"
+      className="pointer-events-auto fixed z-50 overflow-hidden rounded-2xl border border-(--border) bg-(--surface-1) shadow-2xl backdrop-blur-xl"
       style={{ left: `${position.x}px`, top: `${position.y}px`, width: minimized ? '11rem' : '16rem' }}
     >
       <div className="flex items-center gap-1.5 px-3 py-2.5">
@@ -215,13 +215,13 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
           type="button"
           aria-label="Drag to move agent dock"
           onPointerDown={startDrag}
-          className="cursor-grab rounded p-0.5 text-[var(--text-3)] hover:text-[var(--text-2)] active:cursor-grabbing"
+          className="cursor-grab rounded-sm p-0.5 text-(--text-3) hover:text-(--text-2) active:cursor-grabbing"
         >
           <GripHorizontal className="h-3 w-3" />
         </button>
 
         <div
-          className="flex-1 cursor-grab select-none text-[10px] font-semibold tracking-widest text-[var(--text-3)] uppercase"
+          className="flex-1 cursor-grab select-none text-[10px] font-semibold tracking-widest text-(--text-3) uppercase"
           onPointerDown={startDrag}
         >
           Agents
@@ -229,15 +229,15 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
 
         <div className="flex items-center gap-1">
           {ollamaOnline === null ? (
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-4)] animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-(--text-4) animate-pulse" />
           ) : ollamaOnline ? (
-            <Wifi className="h-3 w-3 text-[var(--success)]" />
+            <Wifi className="h-3 w-3 text-(--success)" />
           ) : (
-            <WifiOff className="h-3 w-3 text-[var(--text-4)]" />
+            <WifiOff className="h-3 w-3 text-(--text-4)" />
           )}
         </div>
 
-        <button onClick={toggle} aria-label={minimized ? 'Expand agent dock' : 'Minimize agent dock'} className="p-0.5 rounded text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+        <button onClick={toggle} aria-label={minimized ? 'Expand agent dock' : 'Minimize agent dock'} className="p-0.5 rounded-sm text-(--text-3) hover:text-(--text-2) transition-colors">
           {minimized ? <ChevronDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
         </button>
       </div>
@@ -249,19 +249,19 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
               <div key={item.agentId} className="relative">
                 <AgentAvatar agentId={item.agentId} name={item.name} sizeClass="h-6 w-6" />
                 {isAgentActive(item.state) && (
-                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-[var(--success)] ring-1 ring-[var(--surface-0)] animate-pulse" />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-(--success) ring-1 ring-(--surface-0) animate-pulse" />
                 )}
               </div>
             ))}
             {companions.length > 4 && (
-              <span className="text-[10px] text-[var(--text-3)]">+{companions.length - 4}</span>
+              <span className="text-[10px] text-(--text-3)">+{companions.length - 4}</span>
             )}
           </div>
           {busyCount > 0 && (
-            <div className="mt-1.5 text-[10px] text-[var(--success)]">{busyCount} active</div>
+            <div className="mt-1.5 text-[10px] text-(--success)">{busyCount} active</div>
           )}
           {!ollamaOnline && ollamaOnline !== null && (
-            <div className="mt-1 text-[10px] text-[var(--text-3)]">Local AI offline</div>
+            <div className="mt-1 text-[10px] text-(--text-3)">Local AI offline</div>
           )}
         </div>
       )}
@@ -275,12 +275,12 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
                 <div className="relative shrink-0">
                   <AgentAvatar agentId={item.agentId} name={item.name} sizeClass="h-7 w-7" />
                   {active && (
-                    <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-[var(--success)] ring-1 ring-[var(--surface-0)] animate-pulse" />
+                    <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-(--success) ring-1 ring-(--surface-0) animate-pulse" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-semibold text-[var(--text-1)] truncate">{item.name}</div>
-                  <div className={`text-[10px] truncate ${active ? 'text-[var(--success)]' : 'text-[var(--text-3)]'}`}>
+                  <div className="text-[11px] font-semibold text-(--text-1) truncate">{item.name}</div>
+                  <div className={`text-[10px] truncate ${active ? 'text-(--success)' : 'text-(--text-3)'}`}>
                     {friendlyState(item.state)}
                   </div>
                 </div>
@@ -290,12 +290,12 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
 
           {otherAgents.length > 0 && (
             <>
-              <div className="border-t border-[var(--border)]" />
+              <div className="border-t border-(--border)" />
               <div className="flex flex-wrap gap-1.5">
                 {otherAgents.map((agent) => (
                   <div key={agent.id} className="flex items-center gap-1">
                     <AgentAvatar agentId={agent.id} name={agent.name} sizeClass="h-5 w-5" />
-                    <span className="text-[10px] text-[var(--text-3)] truncate max-w-[4rem]">{agent.name}</span>
+                    <span className="text-[10px] text-(--text-3) truncate max-w-16">{agent.name}</span>
                   </div>
                 ))}
               </div>
@@ -303,7 +303,7 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
           )}
 
           {ollamaOnline === false && (
-            <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2 text-[10px] text-[var(--text-3)]">
+            <div className="rounded-lg bg-(--surface-2) px-2.5 py-2 text-[10px] text-(--text-3)">
               Local AI is offline — start Ollama to enable agent reasoning.
             </div>
           )}

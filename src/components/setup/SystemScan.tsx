@@ -65,30 +65,30 @@ export function SystemScan({ onContinue }: SystemScanProps) {
         {/* role="status" so the scanning state, and then its replacement by
             the results below, are both announced — this screen changes
             content without ever moving focus. */}
-        <p role="status" className="text-sm text-[var(--text-2)]">Scanning your system…</p>
+        <p role="status" className="text-sm text-(--text-2)">Scanning your system…</p>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col items-center gap-6 p-8">
-      <h2 className="text-2xl font-semibold text-[var(--text-1)]">System Scan Results</h2>
+      <h2 className="text-2xl font-semibold text-(--text-1)">System Scan Results</h2>
       <div role="status" className="flex flex-col gap-2 w-full max-w-md text-sm">
-        <div className="flex justify-between rounded bg-[var(--surface-2)] px-3 py-2">
-          <span className="text-[var(--text-2)]">RAM</span>
-          <span className="text-[var(--text-1)]">
+        <div className="flex justify-between rounded-sm bg-(--surface-2) px-3 py-2">
+          <span className="text-(--text-2)">RAM</span>
+          <span className="text-(--text-1)">
             {hardwareScanFailed ? 'Unknown' : `${profile.ramGb}GB RAM`}
           </span>
         </div>
-        <div className="flex justify-between rounded bg-[var(--surface-2)] px-3 py-2">
-          <span className="text-[var(--text-2)]">Disk</span>
-          <span className="text-[var(--text-1)]">
+        <div className="flex justify-between rounded-sm bg-(--surface-2) px-3 py-2">
+          <span className="text-(--text-2)">Disk</span>
+          <span className="text-(--text-1)">
             {profile.diskFreeGb === null ? 'Unknown' : `${profile.diskFreeGb}GB free`}
           </span>
         </div>
-        <div className="flex justify-between rounded bg-[var(--surface-2)] px-3 py-2">
-          <span className="text-[var(--text-2)]">GPU</span>
-          <span className="text-[var(--text-1)]">
+        <div className="flex justify-between rounded-sm bg-(--surface-2) px-3 py-2">
+          <span className="text-(--text-2)">GPU</span>
+          <span className="text-(--text-1)">
             {hardwareScanFailed
               ? 'Unknown'
               : profile.gpuPresent
@@ -97,21 +97,21 @@ export function SystemScan({ onContinue }: SystemScanProps) {
           </span>
         </div>
         {(hardwareScanFailed || prereqScanFailed) && (
-          <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
+          <div className="rounded-sm bg-(--warning-dim) px-3 py-2 text-(--warning) text-xs">
             Some checks couldn&apos;t complete on this system. You can continue — recommendations
             will be more conservative, and anything that turns out to be missing can still be
             installed later from Runtime Hub.
           </div>
         )}
         {!prereqScanFailed && prereqs.dockerFound === false && (
-          <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
+          <div className="rounded-sm bg-(--warning-dim) px-3 py-2 text-(--warning) text-xs">
             Docker not found — needed only if you choose n8n, ChromaDB, or OpenHands later. Not auto-installable; see Runtime Hub for manual setup instructions.
           </div>
         )}
       </div>
       <button
         onClick={() => onContinue(profile, prereqs)}
-        className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-contrast)]"
+        className="rounded-sm bg-(--accent) px-4 py-2 text-sm font-semibold text-(--accent-contrast)"
       >
         Continue
       </button>

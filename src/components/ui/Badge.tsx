@@ -4,12 +4,12 @@ type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'info' | 'acce
 interface BadgeProps { variant?: BadgeVariant; children: React.ReactNode; className?: string; dot?: boolean; }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: 'bg-surface-3 text-[var(--text-2)] border-[var(--border)]',
-  success: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
-  warning: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
-  error: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
-  info: 'bg-[var(--info-dim)] text-[var(--info)] border-[var(--info-border)]',
-  accent: 'bg-[var(--accent-dim)] text-accent border-[var(--accent-border)]',
+  default: 'bg-surface-3 text-(--text-2) border-(--border)',
+  success: 'bg-(--success-dim) text-(--success) border-(--success-border)',
+  warning: 'bg-(--warning-dim) text-(--warning) border-(--warning-border)',
+  error: 'bg-(--error-dim) text-(--error) border-(--error-border)',
+  info: 'bg-(--info-dim) text-(--info) border-(--info-border)',
+  accent: 'bg-(--accent-dim) text-accent border-(--accent-border)',
 };
 
 export function Badge({ variant = 'default', children, className = '', dot }: BadgeProps) {
@@ -32,19 +32,19 @@ export const statusColors = {
 
 export function StatusDot({ state }: { state?: string }) {
   const colors: Record<string, string> = {
-    connected: 'bg-[var(--success)]', listening: 'bg-[var(--success)]', permission_granted: 'bg-[var(--success)]',
-    observing: 'bg-[var(--success)]', connecting: 'bg-[var(--accent)]', requesting: 'bg-[var(--accent)]',
-    requesting_permission: 'bg-[var(--accent)]', model_missing: 'bg-[var(--warning)]', no_models: 'bg-[var(--warning)]',
-    no_microphone: 'bg-[var(--warning)]', unsupported: 'bg-[var(--warning)]', timeout: 'bg-[var(--warning)]',
-    warning: 'bg-[var(--warning)]', cors: 'bg-[var(--error)]', not_running: 'bg-[var(--error)]',
-    disconnected: 'bg-[var(--error)]', permission_denied: 'bg-[var(--error)]', error: 'bg-[var(--error)]',
+    connected: 'bg-(--success)', listening: 'bg-(--success)', permission_granted: 'bg-(--success)',
+    observing: 'bg-(--success)', connecting: 'bg-(--accent)', requesting: 'bg-(--accent)',
+    requesting_permission: 'bg-(--accent)', model_missing: 'bg-(--warning)', no_models: 'bg-(--warning)',
+    no_microphone: 'bg-(--warning)', unsupported: 'bg-(--warning)', timeout: 'bg-(--warning)',
+    warning: 'bg-(--warning)', cors: 'bg-(--error)', not_running: 'bg-(--error)',
+    disconnected: 'bg-(--error)', permission_denied: 'bg-(--error)', error: 'bg-(--error)',
   };
-  return <span className={`h-2 w-2 rounded-full ${colors[state ?? ''] ?? 'bg-[var(--text-3)]'}`} />;
+  return <span className={`h-2 w-2 rounded-full ${colors[state ?? ''] ?? 'bg-(--text-3)'}`} />;
 }
 
 export function SectionHeader({ icon: Icon, label }: { icon: React.ComponentType<{ className?: string }>; label: string }) {
   return (
-    <div className="flex items-center gap-2 text-[var(--text-3)] font-bold section-label border-b border-[var(--border)] pb-2">
+    <div className="flex items-center gap-2 text-(--text-3) font-bold section-label border-b border-(--border) pb-2">
       <Icon className="w-3.5 h-3.5" /> {label}
     </div>
   );

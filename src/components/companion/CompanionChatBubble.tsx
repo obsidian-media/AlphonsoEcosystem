@@ -19,10 +19,10 @@ export function CompanionChatBubble({ message }: { message: CompanionMessage }) 
         <AgentAvatar agentId={message.agentId || 'alphonso'} name={message.agentName} sizeClass="h-6 w-6" className="shrink-0 mb-1" />
       )}
       <div
-        className={`max-w-[75%] px-4 py-2.5 text-sm leading-relaxed backdrop-blur-sm ${
+        className={`max-w-[75%] px-4 py-2.5 text-sm leading-relaxed backdrop-blur-xs ${
           isUser
-            ? 'bg-[var(--companion-bubble-mine)] text-[var(--companion-bubble-mine-text)] rounded-2xl rounded-br-sm'
-            : 'bg-[var(--companion-bubble-theirs)] text-[var(--companion-bubble-theirs-text)] rounded-2xl rounded-bl-sm'
+            ? 'bg-(--companion-bubble-mine) text-(--companion-bubble-mine-text) rounded-2xl rounded-br-sm'
+            : 'bg-(--companion-bubble-theirs) text-(--companion-bubble-theirs-text) rounded-2xl rounded-bl-sm'
         }`}
       >
         {message.pending ? <TypingIndicator /> : message.text}
