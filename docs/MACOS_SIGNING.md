@@ -1,8 +1,12 @@
 # macOS signing & notarization
 
 `release.yml`'s `build-macos` job signs with a Developer ID certificate and
-notarizes through Apple when the secrets below exist. Without them it still
-builds, but the DMG is unsigned and Gatekeeper blocks it on macOS Sequoia+.
+notarizes through Apple when **all six** secrets below exist. Without the full
+set it still builds an unsigned DMG. Gatekeeper blocks the default launch of
+an unsigned app on macOS Sequoia+; users can usually approve it under
+System Settings > Privacy & Security ("Open Anyway") after trying to open it,
+but managed devices may forbid that override, and it is a poor first-run
+experience, which is why notarization matters.
 
 ## One-time setup (needs a Mac and a paid Apple Developer account)
 

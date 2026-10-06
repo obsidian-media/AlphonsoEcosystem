@@ -192,10 +192,20 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          if [ -z "${APPLE_CERTIFICATE:-}" ] || [ -z "${APPLE_SIGNING_IDENTITY:-}" ]; then
-            echo "No Apple signing secrets configured -- building an UNSIGNED, un-notarized DMG."
+          # All six are required together. A partial set would sign but skip (or
+          # fail) notarization, and the Gatekeeper verification step below would
+          # then fail the whole release, so fall back to the unsigned path instead.
+          missing=""
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "Apple signing secrets missing:${missing} -- building an UNSIGNED, un-notarized DMG."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -208,7 +218,14 @@ jobs:
           security unlock-keychain -p "$keychainPw" "$keychain"
           security import "$certPath" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
           security set-key-partition-list -S apple-tool:,apple: -k "$keychainPw" "$keychain"
-          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          # Keep the user's existing keychains searchable. Read them line by line:
+          # an unquoted $(...) would word-split any path containing spaces.
+          existing=()
+          while IFS= read -r line; do
+            k=$(printf '%s' "$line" | sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//')
+            if [ -n "$k" ]; then existing+=("$k"); fi
+          done < <(security list-keychains -d user)
+          security list-keychains -d user -s "$keychain" ${existing[@]+"${existing[@]}"}
           rm -f "$certPath"
           security find-identity -v -p codesigning "$keychain"
           echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -256,6 +273,10 @@ jobs:
         run: |
           set -euo pipefail
           app=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -maxdepth 1 -name "*.app" | head -n 1)
+          if [ -z "$app" ]; then
+            echo "No .app bundle found under bundle/macos for Gatekeeper verification" >&2
+            exit 1
+          fi
           codesign --verify --deep --strict --verbose=2 "$app"
           xcrun stapler validate "$app"
           spctl --assess --type execute --verbose=4 "$app"
