@@ -176,11 +176,110 @@ jobs:
       # AppImage came in under the limit even with the model bundled).
       # Same fallback applies: installComponent() pulls it over the network
       # on first launch if not bundled.
+      # Apple Developer ID signing + notarization. Entirely optional: when the
+      # APPLE_* secrets are absent this job still produces the same unsigned
+      # DMG as before. Required secrets (see docs/MACOS_SIGNING.md):
+      #   APPLE_CERTIFICATE            base64 of the Developer ID Application .p12
+      #   APPLE_CERTIFICATE_PASSWORD   .p12 export password
+      #   APPLE_SIGNING_IDENTITY       e.g. "Developer ID Application: Name (TEAMID)"
+      #   APPLE_ID                     Apple ID email used for notarization
+      #   APPLE_PASSWORD               app-specific password for that Apple ID
+      #   APPLE_TEAM_ID                10-character team id
+      - name: Import Apple signing certificate
+        id: apple_cert
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          # All six are required together. A partial set would sign but skip (or
+          # fail) notarization, and the Gatekeeper verification step below would
+          # then fail the whole release, so fall back to the unsigned path instead.
+          missing=""
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "Apple signing secrets missing:${missing} -- building an UNSIGNED, un-notarized DMG."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          keychain="$RUNNER_TEMP/alphonso-signing.keychain-db"
+          keychainPw="$(uuidgen)"
+          certPath="$RUNNER_TEMP/apple-cert.p12"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$certPath"
+          security create-keychain -p "$keychainPw" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychainPw" "$keychain"
+          security import "$certPath" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychainPw" "$keychain"
+          # Keep the user's existing keychains searchable. Read them line by line:
+          # an unquoted $(...) would word-split any path containing spaces.
+          existing=()
+          while IFS= read -r line; do
+            k=$(printf '%s' "$line" | sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//')
+            if [ -n "$k" ]; then existing+=("$k"); fi
+          done < <(security list-keychains -d user)
+          security list-keychains -d user -s "$keychain" ${existing[@]+"${existing[@]}"}
+          rm -f "$certPath"
+          security find-identity -v -p codesigning "$keychain"
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      # Tauri signs the app binary but treats vendor/ollama as opaque resource
+      # files. Apple's notary service rejects any unsigned or non-hardened
+      # Mach-O anywhere in the bundle, so sign the bundled Ollama runtime
+      # (executables and dylibs) ourselves first. Tauri then signs the .app.
+      - name: Sign bundled Ollama runtime (hardened runtime)
+        if: steps.apple_cert.outputs.enabled == 'true'
+        shell: bash
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r -d '' f; do
+            if file "$f" | grep -q "Mach-O"; then
+              codesign --force --timestamp --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$f"
+              count=$((count + 1))
+            fi
+          done < <(find src-tauri/vendor/ollama -type f -print0)
+          echo "Signed $count Mach-O files in src-tauri/vendor/ollama"
+          if [ "$count" -eq 0 ]; then
+            echo "No Mach-O files found under src-tauri/vendor/ollama -- runtime was not staged" >&2
+            exit 1
+          fi
+
       - name: Build signed Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Setting these makes Tauri sign with the hardened runtime AND submit
+          # to Apple's notary service, then staple the ticket. Empty strings
+          # (secrets not configured) leave Tauri in unsigned mode.
+          APPLE_SIGNING_IDENTITY: ${{ steps.apple_cert.outputs.enabled == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          APPLE_ID: ${{ steps.apple_cert.outputs.enabled == 'true' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ steps.apple_cert.outputs.enabled == 'true' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ steps.apple_cert.outputs.enabled == 'true' && secrets.APPLE_TEAM_ID || '' }}
         run: npm run tauri build -- --target aarch64-apple-darwin --verbose
+
+      - name: Verify Gatekeeper accepts the app (notarized builds only)
+        if: steps.apple_cert.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          app=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -maxdepth 1 -name "*.app" | head -n 1)
+          if [ -z "$app" ]; then
+            echo "No .app bundle found under bundle/macos for Gatekeeper verification" >&2
+            exit 1
+          fi
+          codesign --verify --deep --strict --verbose=2 "$app"
+          xcrun stapler validate "$app"
+          spctl --assess --type execute --verbose=4 "$app"
 
       # Tauri produces two distinct macOS artifacts, not one: the DMG (manual
       # installer, what a user downloads and drags to Applications) and a
@@ -234,11 +333,9 @@ jobs:
       # matters even more than in ci.yml's advisory build, since this is
       # what a real user downloads. Same check, same rationale as
       # build-linux's AppImage verification below. Note: this does NOT
-      # verify Gatekeeper/notarization status -- no Apple notarization
-      # credentials exist in this repo's secrets as of this job's addition,
-      # so a downloaded DMG will likely show a Gatekeeper warning on other
-      # users' Macs until that's set up separately (tracked in Boardroom
-      # ledger/tasks/071-alphonso-macos-release-artifact.md).
+      # verify Gatekeeper/notarization status -- that happens in the
+      # "Verify Gatekeeper accepts the app" step above, and only when the
+      # APPLE_* secrets are configured (see docs/MACOS_SIGNING.md).
       - name: Verify bundled Ollama runtime is inside the app bundle
         shell: bash
         run: |
@@ -479,7 +576,7 @@ jobs:
             ### Installation
             **Windows:** Download `${{ needs.build-windows.outputs.installer_name }}`, run the installer, launch Alphonso.
 
-            **macOS (Apple Silicon):** Download `${{ needs.build-macos.outputs.installer_name }}`, open it, and drag Alphonso to Applications. **Known issue:** this build is not yet Apple-notarized, so Gatekeeper will likely block it outright on current macOS versions (the old right-click-to-bypass workaround no longer works on macOS Sequoia and later). Building from source or waiting for a notarized release is recommended until that's resolved. Apple Silicon only; Intel Macs are not supported by this build.
+            **macOS (Apple Silicon):** Download `${{ needs.build-macos.outputs.installer_name }}`, open it, and drag Alphonso to Applications. If macOS says it cannot verify the app, this release was built without Apple notarization (Gatekeeper blocks un-notarized apps on macOS Sequoia and later); see `docs/MACOS_SIGNING.md`. Apple Silicon only; Intel Macs are not supported by this build.
 
             **Linux:** Download `${{ needs.build-linux.outputs.installer_name }}`, mark it executable (`chmod +x`), and run it.
 
