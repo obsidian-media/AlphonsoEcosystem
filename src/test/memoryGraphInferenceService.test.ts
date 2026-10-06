@@ -5,7 +5,12 @@ vi.mock('../services/memoryGraphService', () => ({
   inferEdges: vi.fn()
 }));
 
+vi.mock('../services/memoryGraphRetentionService', () => ({
+  runScheduledCleanupIfDue: vi.fn().mockResolvedValue(null)
+}));
+
 import { listAllNodes, inferEdges } from '../services/memoryGraphService';
+import { runScheduledCleanupIfDue } from '../services/memoryGraphRetentionService';
 import {
   runScheduledInferencePass,
   startMemoryGraphInferenceScheduler,
@@ -27,6 +32,12 @@ describe('runScheduledInferencePass', () => {
     vi.mocked(listAllNodes).mockResolvedValue([]);
     await runScheduledInferencePass();
     expect(inferEdges).not.toHaveBeenCalled();
+  });
+
+  it('still offers the opt-in daily cleanup after the inference step', async () => {
+    vi.mocked(listAllNodes).mockResolvedValue([]);
+    await runScheduledInferencePass();
+    expect(runScheduledCleanupIfDue).toHaveBeenCalledTimes(1);
   });
 
   it('calls inferEdges with a batch capped at 20 node ids and cap 20', async () => {

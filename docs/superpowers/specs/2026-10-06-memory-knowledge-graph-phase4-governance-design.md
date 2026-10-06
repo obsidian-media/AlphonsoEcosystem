@@ -1,7 +1,7 @@
 # Memory Knowledge Graph — Phase 4 (Governance): Retention & Pruning — Design Spec
 
 **Date:** 2026-10-06
-**Status:** Design decisions recorded 2026-10-06 (see "Decisions" below); no code until the final review of this spec and a separate implementation plan
+**Status:** Implemented 2026-10-06 on branch `claude/memory-graph-phase4-prune` (see "Implementation notes" at the end); Phase 4b (validity windows) still undecided
 **Owner:** Echo (retention discipline), `memory_graph.rs` / `memoryGraphService.ts` (mechanism)
 **Parent:** `docs/superpowers/specs/2026-09-03-memory-knowledge-graph-design.md` (roadmap, Phase 4)
 **Register:** `docs/governance/DEFERRED_WORK.md` (2026-09-04 entry, "Phase 4 … open, deferred, not started")
@@ -174,3 +174,12 @@ small and shippable.
 ## Out of scope for this PR
 
 Spec only. Implementation gets its own plan and PR once these are answered.
+
+## Implementation notes (2026-10-06)
+
+- Code: `src-tauri/src/memory_graph_prune.rs`, `src-tauri/src/memory_graph.rs` (schema migration, `memory_graph_touch_nodes`, inference re-confirmation), `src/services/memoryGraphRetentionService.ts`, `src/components/MemoryGraphCleanupPanel.tsx`.
+- "Unless any edge touches a kept node" (receipt/packet row) is implemented as the §4 provenance rule: protected only when a non-inferred edge touches a *permanent* node. Read literally, "any kept node" would protect every connected node indefinitely.
+- Node age is the newest of the node's `created_at` and any adjacent edge's `created_at`/`last_seen_at`, for every node type.
+- Memory items without an explicit policy use the 180-day standard window; their shorter category TTLs still apply because an expired item becomes an orphan and is pruned on the next pass. Echo's classified policy lives in `content.retentionPolicy` and takes precedence.
+- If the live memory-item list is empty/unavailable the TS side sends `memoryItems: null` and Rust protects every `memory_item` node (no orphan detection).
+- Delivery order followed the decisions: dry-run + Preview, then manual cleanup (requires a Preview from the last 30 minutes), then the opt-in daily pass (off by default, cannot be enabled before a Preview, runs after the scheduled inference step, at most once per 24 h).
