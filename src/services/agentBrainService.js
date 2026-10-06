@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { generateOllamaStream, generateAgentLlmResponse } from '../lib/ollama';
 import { parseJsonResponse } from '../lib/jsonUtils';
 import { verifyCommandExecution } from './verificationService';
+import { requestWorkspaceCommandApproval } from './commandApprovalService';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { timestampMs, TRUST_STATES } from './trustModel';
 import { pushMemoryItem } from './memoryService';
@@ -25,6 +26,9 @@ export function sanitizeRelativePath(rawPath) {
 
   const segments = normalized.split('/');
   if (segments.some((segment) => !segment || segment === '.' || segment === '..')) return null;
+  // Never let generated artifacts land inside .git: hooks and config there
+  // (pre-commit, core.fsmonitor, ...) execute during ordinary git commands.
+  if (segments.some((segment) => segment.toLowerCase() === '.git')) return null;
 
   return segments.join('/');
 }
@@ -466,7 +470,7 @@ function detectProjectType(projectDir, packageJson) {
   return null;
 }
 
-async function validateGeneratedFiles(projectDir, packageJson, writtenFiles) {
+async function validateGeneratedFiles(projectDir, packageJson, writtenFiles, approvalCache) {
   if (!projectDir || !writtenFiles.length) return { valid: true, errors: [], warnings: [] };
 
   const projectType = detectProjectType(projectDir, packageJson);
@@ -474,6 +478,23 @@ async function validateGeneratedFiles(projectDir, packageJson, writtenFiles) {
 
   const commands = VALIDATION_COMMANDS[projectType] || [];
   if (!commands.length) return { valid: true, errors: [], warnings: [`No validation commands for ${projectType}`] };
+
+  // These run package scripts / project config the AI may just have written,
+  // so they need the same per-command approval as AI-planned commands.
+  const approval = await requestWorkspaceCommandApproval(commands, {
+    source: 'post-write validation',
+    projectDir,
+    cache: approvalCache
+  });
+  if (!approval.approved) {
+    return {
+      valid: true,
+      skipped: true,
+      errors: [],
+      warnings: [`Validation skipped: running ${commands.map((c) => c.label).join(' / ')} was not approved (${approval.reason})`],
+      projectType
+    };
+  }
 
   const errors = [];
   const warnings = [];
@@ -546,6 +567,7 @@ export async function executeWithBrain(commandText, options = {}) {
   let lastError = null;
   let streamingText = '';
   let lastValidation = null;
+  const approvalCache = new Map();
   const startTimeMs = timestampMs();
 
   onProgress?.({ stage: 'reading_context', agent: 'alphonso', detail: 'Reading project structure and existing code' });
@@ -705,7 +727,7 @@ export async function executeWithBrain(commandText, options = {}) {
         // ─── Post-Write Validation ──────────────────────────────────────────
         if (filesWritten.length > 0 && projectDirectory) {
           onProgress?.({ stage: 'validating', agent: 'alphonso', detail: `Running build/lint validation on ${filesWritten.length} files` });
-          lastValidation = await validateGeneratedFiles(projectDirectory, projectContext.packageJson, filesWritten);
+          lastValidation = await validateGeneratedFiles(projectDirectory, projectContext.packageJson, filesWritten, approvalCache);
 
           if (!lastValidation.valid && lastValidation.errors.length > 0) {
             onProgress?.({ stage: 'validation_failed', agent: 'alphonso', detail: `Build failed — ${lastValidation.errors.length} error(s)` });
@@ -720,6 +742,13 @@ export async function executeWithBrain(commandText, options = {}) {
               iteration
             });
             continue; // Retry with error context
+          } else if (lastValidation.skipped) {
+            results.push(`Validation skipped (${lastValidation.projectType}): not approved`);
+            artifacts.push({
+              type: 'validation_skipped',
+              projectType: lastValidation.projectType,
+              warnings: lastValidation.warnings
+            });
           } else {
             results.push(`Validation passed (${lastValidation.projectType})`);
             artifacts.push({
@@ -731,15 +760,25 @@ export async function executeWithBrain(commandText, options = {}) {
         }
 
         if (Array.isArray(parsed.commands)) {
-          for (const cmd of parsed.commands) {
-            if (cmd.program && Array.isArray(cmd.args)) {
-              const execProof = await verifyCommandExecution(cmd.program, cmd.args, projectDirectory);
-              const payload = execProof?.payload || {};
-              const cmdSuccess = payload.success === true || payload.exitCode === 0;
-              results.push(`Command: ${cmd.program} ${cmd.args.join(' ')} — exit ${payload.exitCode ?? '?'}`);
-              if (!cmdSuccess && payload.stderr) {
-                lastError = payload.stderr;
-              }
+          const plannedCommands = parsed.commands.filter((cmd) => cmd && cmd.program && Array.isArray(cmd.args));
+          const approval = await requestWorkspaceCommandApproval(plannedCommands, {
+            source: 'AI-planned',
+            projectDir: projectDirectory,
+            cache: approvalCache
+          });
+          const gatedSet = new Set(approval.gated);
+          for (const cmd of plannedCommands) {
+            if (gatedSet.has(cmd) && !approval.approved) {
+              results.push(`Command not run (approval ${approval.reason}): ${cmd.program} ${cmd.args.join(' ')}`);
+              artifacts.push({ type: 'command_not_approved', program: cmd.program, args: cmd.args, reason: approval.reason });
+              continue;
+            }
+            const execProof = await verifyCommandExecution(cmd.program, cmd.args, projectDirectory);
+            const payload = execProof?.payload || {};
+            const cmdSuccess = payload.success === true || payload.exitCode === 0;
+            results.push(`Command: ${cmd.program} ${cmd.args.join(' ')} — exit ${payload.exitCode ?? '?'}`);
+            if (!cmdSuccess && payload.stderr) {
+              lastError = payload.stderr;
             }
           }
         }
@@ -799,8 +838,11 @@ export async function executeWithBrain(commandText, options = {}) {
   // ─── Final Validation Pass ────────────────────────────────────────────────
   if (filesWritten.length > 0 && projectDirectory) {
     onProgress?.({ stage: 'final_validation', agent: 'alphonso', detail: 'Running final build validation' });
-    const finalValidation = await validateGeneratedFiles(projectDirectory, projectContext.packageJson, filesWritten);
-    if (!finalValidation.valid) {
+    const finalValidation = await validateGeneratedFiles(projectDirectory, projectContext.packageJson, filesWritten, approvalCache);
+    if (finalValidation.skipped) {
+      results.push(`Final validation skipped (${finalValidation.projectType}): not approved`);
+      artifacts.push({ type: 'final_validation_skipped', projectType: finalValidation.projectType, warnings: finalValidation.warnings });
+    } else if (!finalValidation.valid) {
       results.push(`Final validation failed: ${finalValidation.errors.length} error(s)`);
       artifacts.push({ type: 'final_validation_failed', errors: finalValidation.errors, projectType: finalValidation.projectType });
     } else {
