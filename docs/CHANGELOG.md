@@ -15,6 +15,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Tests that could not fail were fixed.** `bridge/tests/server.test.js` now parses and asserts real behavior, and `npm test`/`test:watch` include `bridge` (it was never run in CI). `companionIntegration.test.js` is now a source-reading contract test for the Rust/Swift/frontend companion wiring.
 - **`npm test` could not fail.** `scripts/run-vitest-programmatic.mjs` used the wrong vitest mode argument so no test body ever ran and the exit code was always 0; fixed, with failures now exiting non-zero. A full real-vitest run (406 files / 5,563 tests) confirmed nothing was hiding.
 - **Spec:** memory knowledge graph Phase 4 (retention/pruning) design drafted for review at `docs/superpowers/specs/2026-10-06-memory-knowledge-graph-phase4-governance-design.md`; no code yet.
+- **Docs corrected:** skill-pack taxonomy depth was reported as missing for six agents; it is complete for all 9 (17-21 agent-owned packs each). Stale claims in CLAUDE.md, GROUND_TRUTH, README and ALPHONSOTOTHEMOON.md now carry corrections.
 - **Held:** Tailwind v4 migration (#276) awaits a decision on macOS 10.15 support.
 
 ---
