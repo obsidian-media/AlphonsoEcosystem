@@ -178,7 +178,7 @@ separate review queue. Both deviations from this section's original
 aspirational text are deliberate design decisions made during each half's
 own brainstorm, not drift.
 
-**Phase 4 — Governance**
+**Phase 4 — Governance** *(detailed spec drafted 2026-10-06: `2026-10-06-memory-knowledge-graph-phase4-governance-design.md`, awaiting review)*
 Retention/pruning tied into Echo's existing retention-tier logic (the same
 discipline that already caps `crashLogService.js`'s and `agentAuditService.js`'s
 rings at 100 entries) — without it, the graph only ever grows. Also where
