@@ -77,10 +77,10 @@ re-derive them from 12 separate plan docs:
 
 ## Other confirmed-open items (pre-dating the Boardroom rebuild)
 
-- [ ] `companionIntegration.test.js` asserts against fabricated Tauri
-  command names (`get_companion_status`, `start_companion_server`) that
-  don't match any real registered command. Test-quality issue, not a
-  production bug. Found 2026-07-10, not yet fixed.
+- [x] `companionIntegration.test.js` asserted against fabricated Tauri
+  command names and could never fail. **Closed 2026-10-06:** rewritten as a
+  contract test that reads the real Rust/Swift/JS sources (see
+  `docs/governance/DEFERRED_WORK.md`, 2026-10-06 entry).
 - [x] Full in-app auto-updater is merged (PR #98) and code-complete —
   **now live-verified against a real signed release.** Live-tested
   against v2.7.0 first: notification/download/progress-UI/Later button

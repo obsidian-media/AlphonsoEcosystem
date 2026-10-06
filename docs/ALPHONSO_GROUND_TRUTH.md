@@ -477,8 +477,8 @@ dev                      node scripts/run-vite-dev.mjs
 desktop:dev              npx.cmd tauri dev
 build                    node scripts/run-vite-build.mjs
 start                    node scripts/run-vite-preview.mjs
-test                     node scripts/run-vitest-programmatic.mjs src
-test:watch               node scripts/run-vitest-programmatic.mjs --watch src
+test                     node scripts/run-vitest-programmatic.mjs src bridge
+test:watch               node scripts/run-vitest-programmatic.mjs --watch src bridge
 lint                     eslint src
 typecheck                tsc --noEmit
 verify:app               npm run lint && npm run typecheck && npm run test && npm run build
@@ -540,7 +540,7 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **`voice/backend/router.py` keyword-routing bugs** — hector's broad keywords stole matches meant for nova/sentinel; miya was missing write/blog/draft keywords entirely.
 - [x] **Stale Boardroom docs referencing nonexistent "Hermes"/"Kairo" agents** — correction banners added to `BOARDROOM_ROLES.md`/`BOARDROOM_MODEL_REGISTRY.md`.
 - [ ] **Auto-update full in-app download+install+relaunch** — handed off, not built: `docs/AUTO_UPDATE_HANDOFF.md` + PR #98 on `feat/in-app-auto-update`.
-- [ ] **`companionIntegration.test.js` asserts against fabricated Tauri command names** — gives false confidence without testing real wiring. Found, not yet fixed.
+- [x] **`companionIntegration.test.js` asserts against fabricated Tauri command names** — closed 2026-10-06: rewritten as a source-reading contract test (§11.29).
 - [ ] **Mobile Companion pairing not independently re-verified live** — port collision fix is high-confidence but not confirmed against an actual paired phone this session; Windows Firewall (port 8765 / mDNS UDP 5353) remains a possible unverified contributor.
 
 ### CLOSED — 2026-07-02 (iOS companion pairing fix, post-audit Phase 1)
@@ -1861,9 +1861,8 @@ Commits (`main`): `a632711`, `8a4cbfc` (Phase 4) · `4ff93d2` (Phase 5) ·
 `feat/in-app-auto-update`, merged into `main` via PR #98.
 
 Still genuinely open: the merged auto-updater is unverified against a real
-release; `companionIntegration.test.js`'s fabricated Tauri command name
-assertions (noted in 11.15, still not fixed — pre-existing test-quality
-issue, not a production bug); all deliberately-deferred Boardroom spec
+release; ~~`companionIntegration.test.js`'s fabricated Tauri command name
+assertions~~ (closed 2026-10-06, see §11.29); all deliberately-deferred Boardroom spec
 items listed above.
 
 ---
@@ -2287,3 +2286,9 @@ Private audit: `audits/private/2026-09-30_Claude_PreLaunchAllAngle_Audit.md`. It
 - Crash-reporting provider.
 - Making the Windows desktop CI job a required check.
 
+## 11.29 False-confidence tests fixed; bridge tests now run in CI (2026-10-06)
+
+- **`bridge/tests/server.test.js` never ran in CI and did not parse.** `npm test` was `run-vitest-programmatic.mjs src`, so `bridge/` (included by `vitest.config.js`) was skipped. The file also contained TypeScript syntax (`let serverModule: any;`) in a `.js` file. Fixed the syntax, replaced the two `expect(true).toBe(true)` tests with real ones (port env override and default, default model/URL, `OLLAMA_MODEL`/`OLLAMA_BASE` overrides, 400 on missing `topic`), and changed `test`/`test:watch` to `... src bridge`. 13/13 pass.
+- **`src/test/services/companionIntegration.test.js` was tautological.** It mocked `invoke` and asserted on the mock's own values. Rewritten as 9 contract tests that read the real sources: every `companion_*` command the frontend invokes is in `generate_handler!`; every registered command is a defined `#[tauri::command]`; every JSON-RPC method Swift sends is handled by `companion_router.rs` (or `authenticate`); the Rust port matches the port hard-coded in the three Swift files; the mDNS type matches; Voice OS port != companion port. Proven able to fail with 5 source mutations (each caught, then restored).
+- **`npm test` was a no-op gate.** `run-vitest-programmatic.mjs` passed `'run'` as vitest's mode argument (it must be `'test'`), so vitest 4 collected files but executed no test bodies; a failing test reported passed and exit code was always 0. Fixed (mode `'test'`, exit code propagated, `express` alias and 30s `testTimeout` mirrored from `vitest.config.js`). `test:coverage` (real vitest) was the only effective gate and still scopes to `src`.
+- Verification: real `npx vitest run src bridge --pool=forks` 406 files / 5,563 tests passed; `tsc --noEmit` clean; `verify-doc-counts.mjs` clean.

@@ -15,7 +15,7 @@ or documentation work, select/update a task and follow its evidence rules.
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 5,107+ tests across 351 files — all should pass
+npm run test             # Run all tests (src + bridge) — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + typecheck + test + build in one command
@@ -281,6 +281,7 @@ Before writing any new service, component, or feature, check this list:
 | Agent pairing constants | `src/services/agentPairingConstants.ts` — typed constants for the pairing system. |
 | E2E voice + visual specs | `e2e/voice.spec.js` + `e2e/visual.spec.js` — Playwright voice flow + visual regression tests. Do NOT delete baseline snapshots. |
 | E2E accessibility spec (axe-core) | `e2e/a11y.spec.js` — real-browser `color-contrast` scan of the main shell in both dark and light themes, plus a full `wcag2a`/`wcag2aa`/`wcag21a`/`wcag21aa` sweep of Chat/Settings/Automation/Boardroom (all 4 genuinely clean and enforced) and AI Runtime Manager (`test.fixme` — one real, still-open color-contrast finding against alpha-overlay agent-glow tokens, not silently skipped), via `@axe-core/playwright`. Added 2026-09-08, extended same day — see `docs/governance/DEFERRED_WORK.md`'s 2026-09-08 entries for the full violation list each pass found and fixed. Do NOT add a second a11y scan script/tool — extend this spec if more surfaces need coverage. |
+| iOS companion wiring contract test | `src/test/services/companionIntegration.test.js` — reads the real Rust/Swift/JS sources and asserts command registration, JSON-RPC method coverage, and port/mDNS constants agree across the boundary (replaced a tautological mock-based version 2026-10-06). Extend this instead of adding mock-only companion tests |
 | App.tsx lazy-loaded views export-shape guard | `src/test/appLazyImports.test.js` — parses every `lazy(() => import(...))` call in `App.tsx` and asserts the target module actually exports what that call expects (default export vs. named export via `.then()`), so a missing `.then((mod) => ({ default: mod.X }))` mapping (which crashes the whole app via React.lazy resolving `undefined`) can't silently reappear. Added after this exact bug was found live in `BoardroomView` during the Sprint 3 discoverability audit |
 | iOS companion (Rust) | `src-tauri/src/companion_server.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_types.rs` — full WebSocket backend. Wired in lib.rs on startup. Frontend: `CompanionPairingPanel.tsx`. iOS Swift app in `ios/` + `AlphonsoCompanion/`. |
 | Agent activity log tab | `src/components/AgentActivityLog.tsx` — polls `listAgentActivity()`, per-agent color coding, friendly action/detail formatting |
@@ -468,7 +469,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Voice router keyword-collision bugs (miya/sentinel/nova misrouted)~~ — **CLOSED 2026-07-10** (`voice/backend/router.py`'s `ROUTING_PATTERNS` dict order meant hector's broad `find`/`scan` keywords stole matches meant for nova/sentinel; miya's pattern was missing write/blog/draft/copy/email keywords entirely. Reordered + added keywords; 31/31 pytest passing, was 28/31)
 - ~~Stale Boardroom planning docs referencing nonexistent "Hermes"/"Kairo" agents~~ — **CLOSED 2026-07-10** (`BOARDROOM_ROLES.md`/`BOARDROOM_MODEL_REGISTRY.md` described an early 11-seat design never actually built; added correction banners, kept for historical context — see Boardroom sessions row above)
 - ~~Auto-update full in-app download+install+relaunch~~ — **CLOSED 2026-07-10** (PR #98 / `feat/in-app-auto-update` merged into `main`. `UpdaterNotification.tsx` now does real `check()`/`downloadAndInstall()`/`relaunch()` via `@tauri-apps/plugin-updater`+`@tauri-apps/plugin-process`. Rust-side plugin wiring — `Cargo.toml`, `lib.rs`'s `tauri_plugin_updater::Builder`, `capabilities/default.json`'s `updater:default`, `tauri.conf.json`'s updater block — was already correct on `main` before this merge; the actual gap found and fixed during merge was that `package.json`/`package-lock.json` never declared the two npm packages despite `node_modules` physically having them and the component importing them — a fresh `npm ci` would have failed the build. Not yet verified against a real signed release (needs an actual version bump + tag to test end-to-end), so treat as code-complete-but-live-unverified)
-- `companionIntegration.test.js` asserts against fabricated Tauri command names (`get_companion_status`, `start_companion_server`) that don't match any real registered command — gives false test confidence without exercising real wiring. Found 2026-07-10, not yet fixed (test-quality issue, not a production bug) — still OPEN
+- ~~`companionIntegration.test.js` asserts against fabricated Tauri command names~~ — **CLOSED 2026-10-06** (rewritten as a source-reading contract test, mutation-verified; also `bridge/tests` now runs under `npm test` — it was silently skipped in CI before)
 - ~~License paywall client-side forgery~~ — **CLOSED 2026-07-16, PR #99** (regex gate → offline ECDSA-P256 signed tokens; see "Last verified" 2026-07-16 entry and `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` T5)
 - ~~Companion PIN unbounded guessing + timing side-channel~~ — **CLOSED 2026-07-16, PR #99** (5-attempt lockout + constant-time compare; T6)
 - ~~CI red on `main` (yanked `spin` crate silently skipped fmt/test/clippy)~~ — **CLOSED 2026-07-16, PR #99** (T1/T2)
@@ -573,6 +574,10 @@ modules/               TOML module manifests (alphonso.researcher.web_monitor)
 voice/                 Voice OS backend (FastAPI, faster-whisper, piper, webrtcvad)
 scripts/               Build, release, and auth helper scripts
 ```
+
+---
+
+_Last verified: 2026-10-06 (false-confidence tests)_ — `bridge/tests/server.test.js` never ran in CI (`npm test` filtered to `src`) and had TypeScript syntax in a `.js` file; fixed, and `test`/`test:watch` now run `src bridge`. `companionIntegration.test.js` rewritten as a source-reading contract test (mutation-verified). Same day: `scripts/run-vitest-programmatic.mjs` was found to run zero test bodies (wrong `startVitest` mode, exit always 0) and was fixed — trust `npm test` only from 2026-10-06 on; #270 macOS notarization, #271 AI-planned command approval, #272 approval-bridge fix, #275 approval for execute/restore/enable actions merged; #276 (Tailwind v4) held on the macOS 10.15 decision. See `docs/governance/DEFERRED_WORK.md` 2026-10-06 entries.
 
 ---
 
