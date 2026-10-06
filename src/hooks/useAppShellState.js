@@ -190,7 +190,7 @@ export function useAppShellState({
 
   const handleRestoreSnapshot = useCallback(async (snapshotId) => {
     // Logic from App.jsx
-    if (!await requestApproval({ actionLabel: `Restore snapshot: ${snapshotId}` })) return;
+    if (!await requestApproval({ actionLabel: `Restore snapshot: ${snapshotId}`, riskLevel: 'high', requireApproval: true })) return;
     const payload = restoreSnapshotById(snapshotId);
     if (!payload) return;
     if (payload.settings) setSettings(payload.settings);
