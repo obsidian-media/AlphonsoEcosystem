@@ -31,6 +31,14 @@ function walk(dir, accept, out = []) {
   return out;
 }
 
+/** Port from `impl Default for CompanionConfig` in companion_types.rs. */
+function companionDefaultPort() {
+  const src = read('src-tauri/src/companion_types.rs');
+  const start = src.indexOf('impl Default for CompanionConfig');
+  expect(start, 'impl Default for CompanionConfig not found').toBeGreaterThan(-1);
+  return src.slice(start).match(/port:\s*(\d+)/)?.[1];
+}
+
 const unique = (list) => [...new Set(list)].sort();
 
 /** Names registered in tauri::generate_handler![...] as `companion_server::<name>`. */
@@ -122,7 +130,9 @@ describe('iOS companion: JSON-RPC protocol', () => {
     expect(server).toMatch(/"pin"/);
 
     const swift = read(`${SWIFT_ROOT}/Services/WebSocketService.swift`);
-    const authBlock = swift.slice(swift.indexOf('"method": "authenticate"') - 200, swift.indexOf('"method": "authenticate"') + 300);
+    const at = swift.indexOf('"method": "authenticate"');
+    expect(at, 'authenticate request not found in WebSocketService.swift').toBeGreaterThan(-1);
+    const authBlock = swift.slice(Math.max(0, at - 200), at + 300);
     expect(authBlock).toMatch(/"pin"/);
   });
 });
@@ -131,7 +141,7 @@ describe('iOS companion: discovery and transport constants', () => {
   it('uses the same default port in Rust as the Swift app hard-codes', () => {
     // CLAUDE.md: the iOS app hard-codes this port, so changing the Rust default
     // without updating Swift breaks pairing with no error on either side.
-    const rustPort = read('src-tauri/src/companion_types.rs').match(/port:\s*(\d+)/)?.[1];
+    const rustPort = companionDefaultPort();
     expect(rustPort).toBeDefined();
 
     for (const rel of [
@@ -152,8 +162,8 @@ describe('iOS companion: discovery and transport constants', () => {
   });
 
   it('keeps Voice OS off the companion port (the 2026-07-10 collision)', () => {
-    const companionPort = read('src-tauri/src/companion_types.rs').match(/port:\s*(\d+)/)?.[1];
-    const voicePort = read('src-tauri/src/voice_sidecar.rs').match(/\b(87\d\d)\b/)?.[1];
+    const companionPort = companionDefaultPort();
+    const voicePort = read('src-tauri/src/voice_sidecar.rs').match(/"--port",\s*"(\d+)"/)?.[1];
     expect(companionPort).toBeDefined();
     expect(voicePort).toBeDefined();
     expect(voicePort).not.toBe(companionPort);
