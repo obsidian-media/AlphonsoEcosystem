@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useVoiceInput } from './hooks/useVoiceInput';
 import { getVerificationLogs } from './services/verificationService';
 import { appendVerificationLog } from './services/verificationService';
+import { setCommandApprovalHandler } from './services/commandApprovalService';
 import { TRUST_STATES } from './services/trustModel';
 import { sendNativeNotification } from './services/notificationService';
 import { checkAppUpdate, getLastUpdateNotice, setLastUpdateNotice } from './services/appUpdateService';
@@ -281,6 +282,13 @@ function AppShell() {
     privacyModeActive: settings.privacyShieldActive, approvalModeActive: settings.approvalMode,
     approvalRequiredNotice
   });
+
+  // AI-planned build/test/install commands execute workspace code; they go through
+  // the same approval modal as every other high-risk action (commandApprovalService).
+  useEffect(() => {
+    setCommandApprovalHandler((req) => (requestApproval as unknown as (r: unknown) => Promise<boolean>)(req));
+    return () => setCommandApprovalHandler(null);
+  }, [requestApproval]);
 
   useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab, setShowKeyboardShortcuts });
   useKeyboardShortcuts({ toggle_search: () => setShowMemorySearch((prev) => !prev) });
