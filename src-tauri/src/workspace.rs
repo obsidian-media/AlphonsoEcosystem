@@ -729,6 +729,32 @@ fn readiness_keyword_match(
     .find(|(needle, _, _, _)| lower.contains(needle))
 }
 
+/// Canonicalizes `path`, or, when it does not exist yet, its deepest existing
+/// ancestor with the not-yet-created remainder appended.
+fn resolve_through_existing_ancestor(path: &Path) -> PathBuf {
+  let mut remainder: Vec<std::ffi::OsString> = vec![];
+  let mut current = path.to_path_buf();
+  loop {
+    if let Ok(resolved) = fs::canonicalize(&current) {
+      let mut out = resolved;
+      for part in remainder.iter().rev() {
+        out.push(part);
+      }
+      return out;
+    }
+    match (
+      current.file_name().map(|n| n.to_os_string()),
+      current.parent(),
+    ) {
+      (Some(name), Some(parent)) => {
+        remainder.push(name);
+        current = parent.to_path_buf();
+      }
+      _ => return path.to_path_buf(),
+    }
+  }
+}
+
 /// True when any component of a workspace-relative path is a `.git` directory
 /// (case-insensitive: Windows and default macOS volumes are case-insensitive).
 fn rel_touches_git_dir(rel: &Path) -> bool {
@@ -773,9 +799,16 @@ pub(crate) fn write_workspace_text_file(
 
   let file_path = root_abs.join(rel);
 
-  let file_abs = fs::canonicalize(&file_path).unwrap_or_else(|_| file_path.clone());
+  // Resolve symlinks through the deepest existing ancestor, so a symlinked
+  // directory (or file) cannot alias into the sandbox's .git or out of it.
+  let file_abs = resolve_through_existing_ancestor(&file_path);
   if !file_abs.starts_with(&root_abs) {
     return Err("Path traversal detected: resolved path escapes workspace sandbox.".to_string());
+  }
+  if let Ok(resolved_rel) = file_abs.strip_prefix(&root_abs) {
+    if rel_touches_git_dir(resolved_rel) {
+      return Err("Writes inside .git are not allowed.".to_string());
+    }
   }
 
   if let Some(parent) = file_path.parent() {
@@ -1032,9 +1065,16 @@ pub(crate) fn read_workspace_file(
     return Err("Unsafe relative path rejected.".to_string());
   }
   let file_path = root_abs.join(rel);
-  let file_abs = fs::canonicalize(&file_path).unwrap_or_else(|_| file_path.clone());
+  // Resolve symlinks through the deepest existing ancestor, so a symlinked
+  // directory (or file) cannot alias into the sandbox's .git or out of it.
+  let file_abs = resolve_through_existing_ancestor(&file_path);
   if !file_abs.starts_with(&root_abs) {
     return Err("Path traversal detected: resolved path escapes workspace sandbox.".to_string());
+  }
+  if let Ok(resolved_rel) = file_abs.strip_prefix(&root_abs) {
+    if rel_touches_git_dir(resolved_rel) {
+      return Err("Writes inside .git are not allowed.".to_string());
+    }
   }
   if !file_abs.exists() {
     return Err(format!("File not found: {}", rel.display()));
@@ -1079,9 +1119,16 @@ pub(crate) fn delete_workspace_file(
     return Err("Unsafe relative path rejected.".to_string());
   }
   let file_path = root_abs.join(rel);
-  let file_abs = fs::canonicalize(&file_path).unwrap_or_else(|_| file_path.clone());
+  // Resolve symlinks through the deepest existing ancestor, so a symlinked
+  // directory (or file) cannot alias into the sandbox's .git or out of it.
+  let file_abs = resolve_through_existing_ancestor(&file_path);
   if !file_abs.starts_with(&root_abs) {
     return Err("Path traversal detected: resolved path escapes workspace sandbox.".to_string());
+  }
+  if let Ok(resolved_rel) = file_abs.strip_prefix(&root_abs) {
+    if rel_touches_git_dir(resolved_rel) {
+      return Err("Writes inside .git are not allowed.".to_string());
+    }
   }
   if !file_abs.exists() {
     return Err(format!("File not found: {}", rel.display()));
@@ -2120,6 +2167,22 @@ mod tests {
       "x".to_string(),
     );
     assert!(ok.is_ok());
+    let _ = fs::remove_dir_all(&dir);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn write_workspace_text_file_rejects_symlink_into_git_dir() {
+    let dir = std::env::temp_dir().join(format!("alphonso-gitlink-{}", now_ms()));
+    fs::create_dir_all(dir.join(".git/hooks")).unwrap();
+    std::os::unix::fs::symlink(dir.join(".git"), dir.join("alias")).unwrap();
+    let result = write_workspace_text_file(
+      dir.to_string_lossy().to_string(),
+      "alias/hooks/pre-commit".to_string(),
+      "#!/bin/sh\necho pwned".to_string(),
+    );
+    assert!(result.is_err());
+    assert!(!dir.join(".git/hooks/pre-commit").exists());
     let _ = fs::remove_dir_all(&dir);
   }
 

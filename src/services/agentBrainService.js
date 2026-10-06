@@ -838,8 +838,11 @@ export async function executeWithBrain(commandText, options = {}) {
   // ─── Final Validation Pass ────────────────────────────────────────────────
   if (filesWritten.length > 0 && projectDirectory) {
     onProgress?.({ stage: 'final_validation', agent: 'alphonso', detail: 'Running final build validation' });
-    const finalValidation = await validateGeneratedFiles(projectDirectory, projectContext.packageJson, filesWritten);
-    if (!finalValidation.valid) {
+    const finalValidation = await validateGeneratedFiles(projectDirectory, projectContext.packageJson, filesWritten, approvalCache);
+    if (finalValidation.skipped) {
+      results.push(`Final validation skipped (${finalValidation.projectType}): not approved`);
+      artifacts.push({ type: 'final_validation_skipped', projectType: finalValidation.projectType, warnings: finalValidation.warnings });
+    } else if (!finalValidation.valid) {
       results.push(`Final validation failed: ${finalValidation.errors.length} error(s)`);
       artifacts.push({ type: 'final_validation_failed', errors: finalValidation.errors, projectType: finalValidation.projectType });
     } else {
