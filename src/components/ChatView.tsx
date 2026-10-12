@@ -1248,7 +1248,7 @@ export function ChatView({
           const msgGlobalIdx = messageGlobalIndexMap.get(message) ?? -1;
           const isLastAssistantMessage = message.role === 'assistant' && msgGlobalIdx === lastAssistantIdx;
           return (
-          <motion.div key={message.id} variants={messageIn} initial="hidden" animate="visible" exit={{ opacity: 0, y: -4 }} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full ${message.role === 'user' ? 'justify-end' : ''}`}>
+          <motion.div key={message.id} data-testid={`chat-message-${message.role}`} variants={messageIn} initial="hidden" animate="visible" exit={{ opacity: 0, y: -4 }} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full ${message.role === 'user' ? 'justify-end' : ''}`}>
             {message.role === 'assistant' && !compactChat && (
               message.isError ? (
                 <div className="w-8 h-8 rounded-lg bg-red-500/10 border-red-500/20 border flex items-center justify-center shrink-0 mt-1">
