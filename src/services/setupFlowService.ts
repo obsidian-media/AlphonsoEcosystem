@@ -195,7 +195,12 @@ export async function isComponentAlreadyInstalled(
     return installedToolNames.has(componentId);
   }
   try {
-    const { models } = await fetchOllamaModels(getConfiguredOllamaEndpoint());
+    // Bounded here, not just inside fetchOllamaModels: when Ollama's port is
+    // open but nothing answers (it is still starting, or hung), that function
+    // waits out its own 8s request timeout and then the desktop fallback's 10s
+    // one, back to back — which left the Setup screens on "Loading…" for ~24s.
+    // "Couldn't tell in time" is treated like any other failure to check.
+    const { models } = await withTimeout(fetchOllamaModels(getConfiguredOllamaEndpoint()));
     return models.some((m) => m.name === STARTER_MODEL_TAG);
   } catch {
     return false;
