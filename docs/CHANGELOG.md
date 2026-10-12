@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-10-06 (approval hardening, macOS notarization, false-confidence tests)
+
+- **Runtime status is faster and can tell "starting" from "running".** `runtime_get_all_status` probed 13 tool ports one after another with a blocking connect (measured ~5.5s in the real desktop app); it now probes them concurrently (~1.1s). `ToolStatus` gains `responding` (the tool answered an HTTP request on its health path); `running` still means "port open", which the updater relies on to stop tools before installing. Runtime Hub shows "starting" while a tool's port is open but it is not answering yet.
+- **Setup screens no longer wait ~24s when Ollama is not answering.** `isComponentAlreadyInstalled()` now bounds the starter-model check with `withTimeout` instead of sitting through `fetchOllamaModels`' 8s request timeout and then the desktop fallback's 10s one. Found by the new desktop end-to-end suite.
+- **macOS notarization (#270).** `release.yml`'s `build-macos` signs with a Developer ID certificate and notarizes; written but not yet exercised on a real tag (see `docs/MACOS_SIGNING.md`).
+- **Per-command approval for AI-planned workspace-code commands (#271).** `commandApprovalService.ts`; fail-closed; also gates automatic post-write validation. Writes into `.git/` are blocked.
+- **Approval bridge fixed (#272).** `RequestApprovalProvider` previously never showed a prompt (Boardroom Hermes gate, plugin/workspace/verification flows awaited forever); it now forwards to the shell's approval modal.
+- **Approval for execute/restore/enable actions (#275).** `needsHighRiskApproval()` no longer relies only on risk keywords.
+- **Tests that could not fail were fixed.** `bridge/tests/server.test.js` now parses and asserts real behavior, and `npm test`/`test:watch` include `bridge` (it was never run in CI). `companionIntegration.test.js` is now a source-reading contract test for the Rust/Swift/frontend companion wiring.
+- **`npm test` could not fail.** `scripts/run-vitest-programmatic.mjs` used the wrong vitest mode argument so no test body ever ran and the exit code was always 0; fixed, with failures now exiting non-zero. A full real-vitest run (406 files / 5,563 tests) confirmed nothing was hiding.
+- **Hidden features surfaced.** New System sidebar items `Agent Pairing` and `Maturity` (Maturity opens the readiness / self-development panels), and an Agent Pairing quick-launch card on the Dashboard. Both reuse `EcosystemHub` via an `initialTab` prop.
+- **Hermes session continuity.** Every per-agent LLM call site (Maria, Echo, Nova, Sentinel, Alphonso's brain, Hector synthesis, the Echo file watcher, CompanionMode) now passes a stable session id, so Hermes profiles group related turns instead of treating each call as stateless. Previously only Boardroom and Jose's Miya/Hector builders did.
+- **Memory graph Phase 4 (governance) implemented:** new `memory_graph_prune` command (`src-tauri/src/memory_graph_prune.rs`) with dry-run, a 50% abort guard and one-transaction deletes; retention policy in `memoryGraphRetentionService.ts` (90 d receipts/packets, 180 d boardroom/report/source nodes, 30 d unconfirmed inferred edges, permanent memories + one-hop provenance + recently read nodes + escalated boardroom threads protected); additive `last_seen_at`/`last_accessed_at` columns; inference re-confirmation refreshes `last_seen_at`; Settings → Memory gets a Preview / Clean up now / opt-in daily cleanup panel (cleanup needs a fresh Preview; the daily pass is off by default). Spec: `docs/superpowers/specs/2026-10-06-memory-knowledge-graph-phase4-governance-design.md`. Not yet run against a real populated graph.
+- **Docs corrected:** skill-pack taxonomy depth was reported as missing for six agents; it is complete for all 9 (17-21 agent-owned packs each). Stale claims in CLAUDE.md, GROUND_TRUTH, README and ALPHONSOTOTHEMOON.md now carry corrections.
+- **Held:** Tailwind v4 migration (#276) awaits a decision on macOS 10.15 support.
+
+---
+
 ## [Unreleased] — 2026-09-30 (pre-launch all-angle audit + fix pass)
 
 The audit report itself is private (`audits/private/`, gitignored) because it contains exploit detail. This entry lists what changed.

@@ -104,7 +104,7 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
   if (!loaded) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <p className="text-sm text-[var(--text-2)]">Loading recommendations…</p>
+        <p className="text-sm text-(--text-2)">Loading recommendations…</p>
       </div>
     );
   }
@@ -137,35 +137,35 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
 
   return (
     <div className="flex flex-col items-center gap-4 p-8 w-full max-w-lg">
-      <h2 className="text-2xl font-semibold text-[var(--text-1)]">Recommended Setup</h2>
+      <h2 className="text-2xl font-semibold text-(--text-1)">Recommended Setup</h2>
       <div className="flex flex-col gap-2 w-full text-sm">
         {recommended.map((c) => {
           const alreadyInstalled = installedNames.has(c.id);
           const unmetPrereq = alreadyInstalled ? null : getUnmetPrereq(c.id, prereqs);
           return (
-            <div key={c.id} className="flex flex-col gap-1 rounded bg-[var(--surface-2)] px-3 py-2">
+            <div key={c.id} className="flex flex-col gap-1 rounded-sm bg-(--surface-2) px-3 py-2">
               <div className="flex justify-between">
-                <span className="text-[var(--text-1)]">{c.label}</span>
-                <span className="text-[var(--text-3)]">
+                <span className="text-(--text-1)">{c.label}</span>
+                <span className="text-(--text-3)">
                   {alreadyInstalled ? 'already installed' : unmetPrereq ? 'skipped' : `${c.sizeGb}GB`}
                 </span>
               </div>
               {unmetPrereq === 'python' && (
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-[var(--warning)]">
+                  <span className="text-xs text-(--warning)">
                     Needs Python, which isn&apos;t installed.
                   </span>
                   <button
                     onClick={handleInstallPython}
                     disabled={installingPython}
-                    className="shrink-0 rounded border border-[var(--warning)] px-2 py-1 text-xs text-[var(--warning)] disabled:opacity-50"
+                    className="shrink-0 rounded-sm border border-(--warning) px-2 py-1 text-xs text-(--warning) disabled:opacity-50"
                   >
                     {installingPython ? 'Installing…' : 'Install Python'}
                   </button>
                 </div>
               )}
               {unmetPrereq === 'docker' && (
-                <span className="text-xs text-[var(--warning)]">
+                <span className="text-xs text-(--warning)">
                   Needs Docker, which isn&apos;t installed. Docker can&apos;t be installed
                   automatically — see Runtime Hub after Setup for manual install steps, then add
                   this component from there.
@@ -175,34 +175,34 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
           );
         })}
         {pythonInstallError && (
-          <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
+          <div className="rounded-sm bg-(--error-dim) px-3 py-2 text-(--error) text-xs">
             Couldn&apos;t install Python: {pythonInstallError}
           </div>
         )}
         {needsImageGen && !hardware.gpuPresent && (
-          <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
+          <div className="rounded-sm bg-(--warning-dim) px-3 py-2 text-(--warning) text-xs">
             No GPU detected — image generation will be slow (CPU-only).
           </div>
         )}
         {statusUnknown && (
-          <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
+          <div className="rounded-sm bg-(--warning-dim) px-3 py-2 text-(--warning) text-xs">
             Couldn&apos;t check what&apos;s already installed — anything you already have may be
             reinstalled. Runtime Hub shows the real state once you&apos;re in the app.
           </div>
         )}
         {diskCheck.unknown && diskCheck.starterModelShortfallGb === undefined && (
-          <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
+          <div className="rounded-sm bg-(--warning-dim) px-3 py-2 text-(--warning) text-xs">
             Couldn&apos;t measure free disk space — install will proceed, but make sure you have
             at least {diskCheck.requiredGb}GB free.
           </div>
         )}
         {diskCheck.shortfallGb > 0 && (
-          <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
+          <div className="rounded-sm bg-(--error-dim) px-3 py-2 text-(--error) text-xs">
             Need {diskCheck.shortfallGb}GB more free disk space to install everything above.
           </div>
         )}
         {diskCheck.starterModelShortfallGb !== undefined && (
-          <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
+          <div className="rounded-sm bg-(--error-dim) px-3 py-2 text-(--error) text-xs">
             Your configured Ollama models directory (OLLAMA_MODELS) is {diskCheck.starterModelShortfallGb}GB
             short for the starter model.
           </div>
@@ -212,13 +212,13 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
         <button
           disabled={!diskCheck.ok}
           onClick={() => diskCheck.ok && onProceed(toInstall)}
-          className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-contrast)] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-sm bg-(--accent) px-4 py-2 text-sm font-semibold text-(--accent-contrast) disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Looks Good → Install
         </button>
         <button
           onClick={onCustomize}
-          className="rounded border border-[var(--border-strong)] px-4 py-2 text-sm text-[var(--text-2)]"
+          className="rounded-sm border border-(--border-strong) px-4 py-2 text-sm text-(--text-2)"
         >
           Customize
         </button>

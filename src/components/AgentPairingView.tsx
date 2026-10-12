@@ -64,17 +64,17 @@ function AgentCard({ agent, selected, onSelect }: AgentCardProps) {
       onClick={() => onSelect(agent.id)}
       className={`flex flex-col items-center gap-1.5 rounded-xl p-3 transition-all text-center cursor-pointer ${
         selected
-          ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
-          : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
+          ? 'bg-(--accent-dim) ring-1 ring-(--accent-border)'
+          : 'bg-(--surface-2) hover:bg-(--surface-3)'
       }`}
     >
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${selected ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'bg-[var(--surface-3)] text-[var(--text-3)]'}`}>
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${selected ? 'bg-(--accent-dim) text-(--accent)' : 'bg-(--surface-3) text-(--text-3)'}`}>
         {(agent.name || agent.id || '?').charAt(0).toUpperCase()}
       </div>
-      <p className="text-xs font-medium text-[var(--text-2)] leading-tight">{agent.name || agent.id}</p>
+      <p className="text-xs font-medium text-(--text-2) leading-tight">{agent.name || agent.id}</p>
       <p className={`text-[10px] ${roleColor} leading-tight`}>{agent.role || 'Agent'}</p>
       {selected && (
-        <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--accent)] bg-[var(--accent-dim)] px-1.5 py-0.5 rounded-full border border-[var(--accent-border)]">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-(--accent) bg-(--accent-dim) px-1.5 py-0.5 rounded-full border border-(--accent-border)">
           Selected
         </span>
       )}
@@ -168,13 +168,13 @@ export function AgentPairingView() {
   return (
     <div className="flex flex-col gap-5 p-4 h-full">
       <div className="flex items-center gap-2">
-        <Link2 className="w-4 h-4 text-[var(--accent)]" />
-        <h2 className="font-serif text-base font-semibold text-[var(--text-1)]">Agent Pairing</h2>
-        <span className="text-xs text-[var(--text-3)]">({pairs.length} pair{pairs.length !== 1 ? 's' : ''})</span>
+        <Link2 className="w-4 h-4 text-(--accent)" />
+        <h2 className="font-serif text-base font-semibold text-(--text-1)">Agent Pairing</h2>
+        <span className="text-xs text-(--text-3)">({pairs.length} pair{pairs.length !== 1 ? 's' : ''})</span>
       </div>
 
-      <div className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-4 space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
+      <div className="rounded-xl bg-(--surface-2) border border-(--border) p-4 space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">
           {selectionStep === 1 && 'Step 1 — Select Agent A'}
           {selectionStep === 2 && `Step 2 — Select Agent B (pairing with ${getAgentName(selectedA!)})`}
           {selectionStep === 3 && `Step 3 — Define trigger for ${getAgentName(selectedA!)} ↔ ${getAgentName(selectedB!)}`}
@@ -192,15 +192,15 @@ export function AgentPairingView() {
         </div>
 
         {selectionStep === 3 && (
-          <form onSubmit={handleAddPair} className="space-y-2 pt-2 border-t border-[var(--border)]">
-            {error && <p className="text-xs text-[var(--error)]">{error}</p>}
+          <form onSubmit={handleAddPair} className="space-y-2 pt-2 border-t border-(--border)">
+            {error && <p className="text-xs text-(--error)">{error}</p>}
             <div className="flex gap-2 flex-wrap">
               <input
                 type="text"
                 placeholder="Trigger condition (e.g. 'on_task_complete', 'risk_score > 80')"
                 value={form.triggerOn}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, triggerOn: e.target.value }))}
-                className="flex-1 min-w-48 px-3 py-1.5 text-xs rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-2)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--border-strong)]"
+                className="flex-1 min-w-48 px-3 py-1.5 text-xs rounded-lg bg-(--surface-3) border border-(--border) text-(--text-2) placeholder-(--text-4) focus:outline-hidden focus:border-(--border-strong)"
               />
             </div>
             <div className="flex gap-2">
@@ -209,11 +209,11 @@ export function AgentPairingView() {
                 placeholder="Note (optional)"
                 value={form.note}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, note: e.target.value }))}
-                className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-2)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--border-strong)]"
+                className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-(--surface-3) border border-(--border) text-(--text-2) placeholder-(--text-4) focus:outline-hidden focus:border-(--border-strong)"
               />
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-dim)] transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-(--accent-dim) border border-(--accent-border) text-(--accent) hover:bg-(--accent-dim) transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Create Pair
@@ -221,7 +221,7 @@ export function AgentPairingView() {
               <button
                 type="button"
                 onClick={() => { setSelectedA(null); setSelectedB(null); setError(''); }}
-                className="px-3 py-1.5 text-xs rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-3)] hover:bg-[var(--surface-3)] transition-colors"
+                className="px-3 py-1.5 text-xs rounded-lg bg-(--surface-3) border border-(--border) text-(--text-3) hover:bg-(--surface-3) transition-colors"
               >
                 Cancel
               </button>
@@ -230,43 +230,43 @@ export function AgentPairingView() {
         )}
 
         {error && selectionStep !== 3 && (
-          <p className="text-xs text-[var(--error)]">{error}</p>
+          <p className="text-xs text-(--error)">{error}</p>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">
           Existing Pairs
         </p>
         {pairs.length === 0 ? (
-          <p className="text-xs text-[var(--text-3)] rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-4 py-4 text-center">
+          <p className="text-xs text-(--text-3) rounded-xl bg-(--surface-2) border border-(--border) px-4 py-4 text-center">
             No agent pairs defined yet. Select two agents above to create a collaboration rule.
           </p>
         ) : (
           pairs.map((pair) => (
             <div
               key={pair.id}
-              className="flex items-start gap-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-4 py-3"
+              className="flex items-start gap-3 rounded-xl bg-(--surface-2) border border-(--border) px-4 py-3"
             >
               <div className="flex-1 min-w-0 space-y-0.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-medium text-[var(--accent)]">{getAgentName(pair.agentA)}</span>
-                  <Link2 className="w-3 h-3 text-[var(--text-3)]" />
-                  <span className="text-xs font-medium text-[var(--accent)]">{getAgentName(pair.agentB)}</span>
+                  <span className="text-xs font-medium text-(--accent)">{getAgentName(pair.agentA)}</span>
+                  <Link2 className="w-3 h-3 text-(--text-3)" />
+                  <span className="text-xs font-medium text-(--accent)">{getAgentName(pair.agentB)}</span>
                 </div>
-                <p className="text-[11px] text-[var(--text-3)]">
-                  Trigger: <span className="text-[var(--text-2)] font-mono">{pair.triggerOn}</span>
+                <p className="text-[11px] text-(--text-3)">
+                  Trigger: <span className="text-(--text-2) font-mono">{pair.triggerOn}</span>
                 </p>
                 {pair.note && (
-                  <p className="text-[11px] text-[var(--text-3)]">{pair.note}</p>
+                  <p className="text-[11px] text-(--text-3)">{pair.note}</p>
                 )}
-                <p className="text-[10px] text-[var(--text-4)]">
+                <p className="text-[10px] text-(--text-4)">
                   Created {new Date(pair.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <button
                 onClick={() => handleDeletePair(pair.id)}
-                className="shrink-0 p-1.5 rounded-lg text-[var(--text-4)] hover:text-[var(--error)] hover:bg-[var(--error-dim)] transition-colors"
+                className="shrink-0 p-1.5 rounded-lg text-(--text-4) hover:text-(--error) hover:bg-(--error-dim) transition-colors"
                 aria-label="Delete pair"
               >
                 <Trash2 className="w-3.5 h-3.5" />

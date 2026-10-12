@@ -52,16 +52,16 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       }
 
       return (
-        <div className="flex flex-col items-center justify-center p-8 bg-[var(--surface-0)] border border-[var(--error-border)] rounded-2xl">
-          <AlertTriangle className="w-8 h-8 text-[var(--error)] mb-3" />
-          <div className="text-sm font-semibold text-[var(--error)] mb-1">{label} crashed</div>
-          <div className="text-xs text-[var(--text-3)] mb-4 text-center max-w-sm">
+        <div className="flex flex-col items-center justify-center p-8 bg-(--surface-0) border border-(--error-border) rounded-2xl">
+          <AlertTriangle className="w-8 h-8 text-(--error) mb-3" />
+          <div className="text-sm font-semibold text-(--error) mb-1">{label} crashed</div>
+          <div className="text-xs text-(--text-3) mb-4 text-center max-w-sm">
             {this.state.error?.message || 'An unexpected error occurred'}
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={this.handleReset}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-3)] hover:bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-2)] transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-(--surface-3) hover:bg-(--surface-3) border border-(--border) rounded-lg text-xs text-(--text-2) transition-colors"
             >
               <RefreshCw className="w-3 h-3" />
               Try again
@@ -69,7 +69,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             {showDetails && (
               <button
                 onClick={this.handleCopyError}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-3)] hover:bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-3)] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-(--surface-3) hover:bg-(--surface-3) border border-(--border) rounded-lg text-xs text-(--text-3) transition-colors"
                 title="Copy error details"
               >
                 <Copy className="w-3 h-3" />
@@ -79,8 +79,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           </div>
           {showDetails && this.state.error && (
             <details className="mt-4 w-full max-w-lg">
-              <summary className="text-[10px] text-[var(--text-4)] cursor-pointer hover:text-[var(--text-3)]">Error details</summary>
-              <pre className="mt-2 p-3 bg-[var(--surface-1)] border border-[var(--border)] rounded-lg text-[10px] text-[var(--text-3)] font-mono overflow-auto max-h-40 whitespace-pre-wrap">
+              <summary className="text-[10px] text-(--text-4) cursor-pointer hover:text-(--text-3)">Error details</summary>
+              <pre className="mt-2 p-3 bg-(--surface-1) border border-(--border) rounded-lg text-[10px] text-(--text-3) font-mono overflow-auto max-h-40 whitespace-pre-wrap">
                 {this.state.error.stack || this.state.error.message}
               </pre>
             </details>

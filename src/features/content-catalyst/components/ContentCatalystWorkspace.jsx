@@ -265,30 +265,30 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
     <div className="mx-auto max-w-5xl px-6 py-6 space-y-5">
 
       {/* Page header */}
-      <header className="relative overflow-hidden rounded-2xl border border-[var(--accent-border)] bg-[var(--surface-1)] px-5 py-5 flex items-center justify-between gap-4">
+      <header className="relative overflow-hidden rounded-2xl border border-(--accent-border) bg-(--surface-1) px-5 py-5 flex items-center justify-between gap-4">
         <div className="relative">
-          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent)]">Creation room</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-(--accent)">Creation room</div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-white">Content Studio</h1>
-          <p className="mt-1 text-sm font-semibold text-[var(--text-2)]">Make the asset. Ship the story.</p>
-          <p className="mt-1 text-xs text-[var(--text-3)]">Brief → copy → image → motion → approved distribution. Every output stays attached to the job.</p>
+          <p className="mt-1 text-sm font-semibold text-(--text-2)">Make the asset. Ship the story.</p>
+          <p className="mt-1 text-xs text-(--text-3)">Brief → copy → image → motion → approved distribution. Every output stays attached to the job.</p>
           <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wider">
-            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-[var(--text-3)]">{analytics?.total ?? 0} drafts</span>
-            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-[var(--text-3)]">{analytics?.published ?? 0} published</span>
-            <span className={`rounded-full border px-2.5 py-1 ${activeJob?.status === 'failed' ? 'border-[var(--error)]/30 text-[var(--error)]' : 'border-[var(--accent-border)] text-[var(--accent)]'}`}>{creativeState}</span>
+            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-(--text-3)">{analytics?.total ?? 0} drafts</span>
+            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-(--text-3)">{analytics?.published ?? 0} published</span>
+            <span className={`rounded-full border px-2.5 py-1 ${activeJob?.status === 'failed' ? 'border-(--error)/30 text-(--error)' : 'border-(--accent-border) text-(--accent)'}`}>{creativeState}</span>
           </div>
         </div>
         {/* ACC Bridge pill */}
         <div className="flex items-center gap-2 shrink-0">
-          <CheckCircle2 className={`h-3.5 w-3.5 ${bridgeStatus.configured ? 'text-[var(--accent)]' : 'text-[var(--text-4)]'}`} />
-          <span className="text-[11px] text-[var(--text-3)]">
-            {bridgeStatus.configured ? <span className="text-[var(--accent)]">ACC Bridge connected</span> : 'ACC Bridge off'}
+          <CheckCircle2 className={`h-3.5 w-3.5 ${bridgeStatus.configured ? 'text-(--accent)' : 'text-(--text-4)'}`} />
+          <span className="text-[11px] text-(--text-3)">
+            {bridgeStatus.configured ? <span className="text-(--accent)">ACC Bridge connected</span> : 'ACC Bridge off'}
           </span>
           {activeJob && bridgeStatus.configured && (
             <button
               type="button"
               disabled={bridgeBusy}
               onClick={handleBridgeSyncActiveJob}
-              className="rounded-full border border-[var(--accent-border)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--accent)] transition hover:border-[var(--accent)] hover:text-white disabled:opacity-50"
+              className="rounded-full border border-(--accent-border) px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-(--accent) transition hover:border-(--accent) hover:text-white disabled:opacity-50"
             >
               Sync
             </button>
@@ -296,7 +296,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
           <button
             type="button"
             onClick={refreshBridge}
-            className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-3)] transition hover:text-white"
+            className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-(--text-3) transition hover:text-white"
           >
             ↺
           </button>
@@ -313,12 +313,12 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
             className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
               contentTab === tab.id
                 ? 'bg-white/10 text-white'
-                : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
+                : 'text-(--text-3) hover:text-(--text-2)'
             }`}
           >
             {tab.label}
             {tab.id === 'drafts' && drafts.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-[var(--accent-dim)] px-1.5 py-0.5 text-[9px] text-[var(--accent)]">{drafts.length}</span>
+              <span className="ml-1.5 rounded-full bg-(--accent-dim) px-1.5 py-0.5 text-[9px] text-(--accent)">{drafts.length}</span>
             )}
           </button>
         ))}

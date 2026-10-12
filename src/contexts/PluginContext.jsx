@@ -26,7 +26,7 @@ export function PluginProvider({ children, requestApproval, setVerificationLogs,
   const [lastManifestValidation, setLastManifestValidation] = useState(null);
 
   const handleTogglePlugin = useCallback(async (pluginId, enabled) => {
-    if (!await requestApproval({ actionLabel: `${enabled ? 'Enable' : 'Disable'} plugin: ${pluginId}` })) return;
+    if (!await requestApproval({ actionLabel: `${enabled ? 'Enable' : 'Disable'} plugin: ${pluginId}`, riskLevel: 'high', requireApproval: true })) return;
     setPlugins(togglePlugin(pluginId, enabled));
     setPluginAudit(listPluginAudit());
   }, [requestApproval]);
@@ -154,7 +154,7 @@ export function PluginProvider({ children, requestApproval, setVerificationLogs,
       }
     }
 
-    if (!await requestApproval({ actionLabel: `Execute plugin tool ${pluginId}:${toolId}` })) return;
+    if (!await requestApproval({ actionLabel: `Execute plugin tool ${pluginId}:${toolId}`, riskLevel: 'high', requireApproval: true })) return;
     try {
       const proof = await executePluginToolRun({
         manifestPath, pluginId, toolId, extraArgs, workspaceRoot: settings.workspaceRoot

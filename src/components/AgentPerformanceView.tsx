@@ -73,18 +73,18 @@ export function AgentPerformanceView({ receipts = [] }: AgentPerformanceViewProp
   return (
     <div className="p-3 space-y-4">
       <div className="flex items-center justify-between mb-1">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Agent Performance</div>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Agent Performance</div>
         {receipts.length > 0 && (
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleExportCSV}
-              className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-2)] transition-colors"
+              className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-(--surface-3) hover:bg-(--surface-3) text-(--text-2) transition-colors"
             >
               Export CSV
             </button>
             <button
               onClick={handleExportJSON}
-              className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-2)] transition-colors"
+              className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-(--surface-3) hover:bg-(--surface-3) text-(--text-2) transition-colors"
             >
               Export JSON
             </button>
@@ -93,7 +93,7 @@ export function AgentPerformanceView({ receipts = [] }: AgentPerformanceViewProp
       </div>
 
       {!receipts.length ? (
-        <div className="text-[var(--text-3)] text-sm">No performance data yet.</div>
+        <div className="text-(--text-3) text-sm">No performance data yet.</div>
       ) : (
         <div className="space-y-2">
           {Object.entries(stats).map(([name, s]) => {
@@ -101,11 +101,11 @@ export function AgentPerformanceView({ receipts = [] }: AgentPerformanceViewProp
               ? Math.round(s.latencies.reduce((a, b) => a + b, 0) / s.latencies.length)
               : null;
             return (
-              <div key={name} className="flex items-center gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
-                <span className="text-xs font-semibold text-[var(--text-2)] w-20 shrink-0">{name}</span>
-                <span className="text-[11px] text-[var(--success)]">{s.success} ok</span>
-                <span className="text-[11px] text-[var(--error)]">{s.error} err</span>
-                {avg !== null && <span className="text-[11px] text-[var(--text-3)]">{avg}ms avg</span>}
+              <div key={name} className="flex items-center gap-3 rounded-lg bg-(--surface-2) px-3 py-2">
+                <span className="text-xs font-semibold text-(--text-2) w-20 shrink-0">{name}</span>
+                <span className="text-[11px] text-(--success)">{s.success} ok</span>
+                <span className="text-[11px] text-(--error)">{s.error} err</span>
+                {avg !== null && <span className="text-[11px] text-(--text-3)">{avg}ms avg</span>}
               </div>
             );
           })}
@@ -113,25 +113,25 @@ export function AgentPerformanceView({ receipts = [] }: AgentPerformanceViewProp
       )}
 
       {/* Dead Letter Queue */}
-      <div className="mt-3 rounded-lg bg-[var(--warning-dim)] p-3">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--warning)] mb-2">Dead Letter Queue</div>
+      <div className="mt-3 rounded-lg bg-(--warning-dim) p-3">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-(--warning) mb-2">Dead Letter Queue</div>
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-sm font-semibold text-[var(--text-2)]">{dlqCount}</span>
-            <span className="text-[11px] text-[var(--text-3)] ml-1">packet{dlqCount !== 1 ? 's' : ''}</span>
+            <span className="text-sm font-semibold text-(--text-2)">{dlqCount}</span>
+            <span className="text-[11px] text-(--text-3) ml-1">packet{dlqCount !== 1 ? 's' : ''}</span>
             {oldestDlq && (
-              <div className="text-[10px] text-[var(--text-3)] mt-0.5">Oldest: {new Date(oldestDlq).toLocaleString()}</div>
+              <div className="text-[10px] text-(--text-3) mt-0.5">Oldest: {new Date(oldestDlq).toLocaleString()}</div>
             )}
           </div>
           <button
             onClick={handleRetryAll}
             disabled={dlqCount === 0}
-            className="px-3 py-1 rounded text-xs font-semibold bg-[var(--warning-dim)] hover:bg-[var(--warning-dim)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--warning)] border border-[var(--warning-border)] transition-colors"
+            className="px-3 py-1 rounded-sm text-xs font-semibold bg-(--warning-dim) hover:bg-(--warning-dim) disabled:opacity-40 disabled:cursor-not-allowed text-(--warning) border border-(--warning-border) transition-colors"
           >
             Retry All
           </button>
         </div>
-        {retryMsg && <div className="text-[11px] text-[var(--success)] mt-1">{retryMsg}</div>}
+        {retryMsg && <div className="text-[11px] text-(--success) mt-1">{retryMsg}</div>}
       </div>
     </div>
   );
