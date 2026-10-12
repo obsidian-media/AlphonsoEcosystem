@@ -392,7 +392,7 @@ jobs:
       # newly pushed commits are scanned (falls back to a full scan when
       # `before` is the all-zero SHA, e.g. a brand-new branch).
       - name: TruffleHog secrets scan
-        uses: trufflesecurity/trufflehog@363923b901c911a9164f50b6c423f47c15372b1c # v3.97.4
+        uses: trufflesecurity/trufflehog@4dd8831c5f12599465d4d45c3c447b4018a34c85 # v3.97.9
         with:
           path: ./
           base: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before || '') }}
