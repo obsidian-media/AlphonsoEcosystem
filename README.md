@@ -103,7 +103,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.5.5
 
 - **Fixed a crash**: opening Boardroom → "Boardroom Sessions" took down the entire app with an uncaught error, because `App.tsx`'s lazy-loading of `BoardroomView` was missing a required export mapping. Found via a live Playwright click-through audit (Sprint 3's discoverability half), fixed, and covered by new regression tests.
-- **Sprint 3 discoverability audit complete**: verified live (not just by reading source) which features are reachable from the UI and how many clicks deep. Operator Dashboard has no sidebar entry at all (reachable only via a Dashboard quick-launch card); Agent Pairing and the Ecosystem Maturity/Self-Development panels are 2 clicks deep behind generically-labeled tabs. Coach Mode is real and functional, just visually understated. Full findings in `ALPHONSOTOTHEMOON.md`.
+- **Sprint 3 discoverability audit complete**: verified live (not just by reading source) which features are reachable from the UI and how many clicks deep. (Update 2026-10-06: Agent Pairing and Maturity now have their own sidebar entries.) Operator Dashboard has no sidebar entry at all (reachable only via a Dashboard quick-launch card); Agent Pairing and the Ecosystem Maturity/Self-Development panels are 2 clicks deep behind generically-labeled tabs. Coach Mode is real and functional, just visually understated. Full findings in `ALPHONSOTOTHEMOON.md`.
 
 ## What's New in v2.5.4
 
