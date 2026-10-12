@@ -23,7 +23,68 @@ pub(crate) fn ensure_memory_graph_tables(conn: &Connection) -> Result<(), String
      CREATE INDEX IF NOT EXISTS idx_memory_edges_from ON memory_edges(from_node_id);
      CREATE INDEX IF NOT EXISTS idx_memory_edges_to ON memory_edges(to_node_id);",
     )
+    .map_err(|e| e.to_string())?;
+  // Phase 4 (governance) additive columns. Older databases upgrade in place;
+  // NULL means "fall back to created_at" for edges and "never accessed" for
+  // nodes, so existing rows need no backfill.
+  add_column_if_missing(conn, "memory_edges", "last_seen_at")?;
+  add_column_if_missing(conn, "memory_nodes", "last_accessed_at")?;
+  conn
+    .execute_batch(
+      "CREATE INDEX IF NOT EXISTS idx_memory_nodes_created ON memory_nodes(created_at);
+       CREATE INDEX IF NOT EXISTS idx_memory_edges_created ON memory_edges(created_at);",
+    )
     .map_err(|e| e.to_string())
+}
+
+fn add_column_if_missing(conn: &Connection, table: &str, column: &str) -> Result<(), String> {
+  let mut stmt = conn
+    .prepare(&format!("PRAGMA table_info({})", table))
+    .map_err(|e| e.to_string())?;
+  let exists = stmt
+    .query_map([], |row| row.get::<_, String>(1))
+    .map_err(|e| e.to_string())?
+    .any(|name| name.map(|n| n == column).unwrap_or(false));
+  if !exists {
+    conn
+      .execute(
+        &format!("ALTER TABLE {} ADD COLUMN {} INTEGER", table, column),
+        [],
+      )
+      .map_err(|e| e.to_string())?;
+  }
+  Ok(())
+}
+
+/// Throttled "this node was just read" marker (protects it from pruning for
+/// the access window). Only rows not touched in the last hour are written, so
+/// a hot node costs at most one write per hour.
+#[tauri::command]
+pub fn memory_graph_touch_nodes(
+  app: tauri::AppHandle,
+  node_ids: Vec<String>,
+) -> Result<(), String> {
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
+  ensure_memory_graph_tables(&conn)?;
+  touch_nodes_sql(&conn, &node_ids, crate::now_ms() as i64)
+}
+
+pub(crate) fn touch_nodes_sql(
+  conn: &Connection,
+  node_ids: &[String],
+  now: i64,
+) -> Result<(), String> {
+  let cutoff = now - 3_600_000;
+  for id in node_ids {
+    conn
+      .execute(
+        "UPDATE memory_nodes SET last_accessed_at = ?1
+         WHERE id = ?2 AND (last_accessed_at IS NULL OR last_accessed_at < ?3)",
+        params![now, id, cutoff],
+      )
+      .map_err(|e| e.to_string())?;
+  }
+  Ok(())
 }
 
 #[tauri::command]
@@ -416,6 +477,17 @@ pub(crate) fn infer_edges_sql(
       )
       .map_err(|e| e.to_string())?;
     if exists {
+      // Re-confirmation: the pair is still structurally related, so an
+      // existing inferred edge is refreshed instead of aging out. Metadata
+      // only -- no new edge, and manual/verified edges are never touched.
+      tx.execute(
+        "UPDATE memory_edges SET last_seen_at = ?3
+         WHERE confidence = 'inferred' AND (
+           (from_node_id = ?1 AND to_node_id = ?2) OR
+           (from_node_id = ?2 AND to_node_id = ?1))",
+        params![from_id, to_id, crate::now_ms() as i64],
+      )
+      .map_err(|e| e.to_string())?;
       continue;
     }
 
@@ -931,5 +1003,39 @@ mod tests {
       count, 1,
       "the suggested edge must actually be committed to the table"
     );
+  }
+
+  #[test]
+  fn infer_edges_refreshes_last_seen_on_an_existing_inferred_edge() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    seed_edge(&conn, "e1", "a", "hub", Some("evt"));
+    seed_edge(&conn, "e2", "b", "hub", Some("evt"));
+    let first = infer_edges_sql(&mut conn, &["a".to_string()], 10).expect("first");
+    assert_eq!(first.len(), 1);
+    conn
+      .execute(
+        "UPDATE memory_edges SET last_seen_at = NULL WHERE confidence = 'inferred'",
+        [],
+      )
+      .unwrap();
+    let second = infer_edges_sql(&mut conn, &["a".to_string()], 10).expect("second");
+    assert!(second.is_empty(), "no duplicate edge");
+    let seen: Option<i64> = conn
+      .query_row(
+        "SELECT last_seen_at FROM memory_edges WHERE confidence = 'inferred'",
+        [],
+        |r| r.get(0),
+      )
+      .unwrap();
+    assert!(seen.is_some(), "re-confirmation must refresh last_seen_at");
+    let manual: Option<i64> = conn
+      .query_row(
+        "SELECT last_seen_at FROM memory_edges WHERE id = 'e1'",
+        [],
+        |r| r.get(0),
+      )
+      .unwrap();
+    assert!(manual.is_none(), "manual edges are never touched");
   }
 }
