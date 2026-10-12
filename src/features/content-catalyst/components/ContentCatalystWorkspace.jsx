@@ -146,6 +146,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
       });
       const launched = await runContentCatalystJob(request, {
         workspaceRoot: settings.workspaceRoot,
+        settings: { endpoint: settings.endpoint, selectedModel: settings.selectedModel },
         brandProfile
       });
       setJobs(listContentJobs());
