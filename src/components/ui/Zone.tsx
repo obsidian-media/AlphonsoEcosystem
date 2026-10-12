@@ -13,8 +13,8 @@ const moodClasses: Record<ZoneMood, string> = {
   neutral: 'bg-surface-2',
   hector: 'bg-agent-hector/10',
   miya: 'bg-agent-miya/10',
-  warm: 'bg-[var(--warning-dim)]',
-  cool: 'bg-[var(--accent-dim)]',
+  warm: 'bg-(--warning-dim)',
+  cool: 'bg-(--accent-dim)',
 };
 
 // No border, no shadow, no radius-as-card treatment — hierarchy comes from
