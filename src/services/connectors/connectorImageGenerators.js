@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { TRUST_STATES } from '../trustModel';
 import { appendConnectorAudit, getConnectorCircuitState, recordConnectorFailure, recordConnectorSuccess } from './connectorRegistry.js';
 import { gateConnectorAction } from './connectorRegistry.js';
@@ -93,12 +93,46 @@ function createComfyClientId() {
   return `alphonso-miya-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/**
+ * One request to ComfyUI, shaped like the bits of `fetch` this file uses.
+ *
+ * ComfyUI answers any request that carries a foreign Origin header with 403,
+ * and the app window always sends one, so a direct `fetch` from the desktop
+ * window never reached a current ComfyUI. In the desktop app the request goes
+ * through the backend (`comfyui_request`, which sends no Origin) instead.
+ */
+async function comfyRequest(endpoint, path, { method = 'GET', body, signal } = {}) {
+  if (isTauri()) {
+    const result = await invoke('comfyui_request', { endpoint, method, path, body: body ?? null });
+    const status = Number(result?.status) || 0;
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      statusText: status ? `HTTP ${status}` : '',
+      json: async () => JSON.parse(result?.body || '{}'),
+      base64: async () => result?.bodyBase64 || ''
+    };
+  }
+  const response = await fetch(`${endpoint}${path}`, {
+    method,
+    ...(body !== undefined ? { headers: { 'Content-Type': 'application/json' }, body } : {}),
+    ...(signal ? { signal } : {})
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    json: () => response.json(),
+    base64: async () => blobToBase64(await response.blob())
+  };
+}
+
 async function resolveComfyUiCheckpoint() {
   const endpoint = getComfyUiEndpoint();
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;
   try {
-    const response = await fetch(`${endpoint}/object_info/CheckpointLoaderSimple`, controller ? { signal: controller.signal } : undefined);
+    const response = await comfyRequest(endpoint, '/object_info/CheckpointLoaderSimple', controller ? { signal: controller.signal } : undefined);
     const body = await response.json().catch(() => ({}));
     const configured = localStorage.getItem('alphonso_comfyui_checkpoint_v1') || '';
     const choices = body?.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0];
@@ -148,9 +182,8 @@ function parseAndInjectComfyWorkflow(workflowJson, prompt) {
 
 async function queueComfyUiPrompt({ workflow, clientId = createComfyClientId() }) {
   const endpoint = getComfyUiEndpoint();
-  const response = await fetch(`${endpoint}/prompt`, {
+  const response = await comfyRequest(endpoint, '/prompt', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt: workflow, client_id: clientId })
   });
   const body = await response.json().catch(() => ({}));
@@ -181,8 +214,8 @@ async function normalizeComfyUiHistory(history, promptId, endpoint) {
   let previewBase64 = '';
   if (imageUrls[0]) {
     try {
-      const response = await fetch(imageUrls[0]);
-      if (response.ok) previewBase64 = await blobToBase64(await response.blob());
+      const response = await comfyRequest(endpoint, imageUrls[0].slice(endpoint.length));
+      if (response.ok) previewBase64 = await response.base64();
     } catch {
       previewBase64 = '';
     }
@@ -197,7 +230,7 @@ async function normalizeComfyUiHistory(history, promptId, endpoint) {
 
 async function fetchComfyUiHistory(promptId) {
   const endpoint = getComfyUiEndpoint();
-  const response = await fetch(`${endpoint}/history/${encodeURIComponent(promptId)}`);
+  const response = await comfyRequest(endpoint, `/history/${encodeURIComponent(promptId)}`);
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     return { ok: false, provider: 'comfyui', endpoint, jobId: promptId, error: body?.error?.message || body?.error || response.statusText || 'ComfyUI history lookup failed.' };
@@ -205,7 +238,9 @@ async function fetchComfyUiHistory(promptId) {
   return normalizeComfyUiHistory(body, promptId, endpoint);
 }
 
-export async function pollComfyUiHistory(promptId, { timeoutMs = 180000, intervalMs = 1500 } = {}) {
+// 5 minutes: the first image after ComfyUI starts has to load the checkpoint,
+// which took over 3 minutes on a 6 GB GPU shared with a loaded Ollama model.
+export async function pollComfyUiHistory(promptId, { timeoutMs = 300000, intervalMs = 1500 } = {}) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     const result = await fetchComfyUiHistory(promptId);

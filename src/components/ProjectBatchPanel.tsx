@@ -47,9 +47,9 @@ interface PanelProps {
 
 function Panel({ icon: Icon, title, children }: PanelProps) {
   return (
-    <section className="rounded-2xl bg-[var(--surface-1)] p-3">
+    <section className="rounded-2xl bg-(--surface-1) p-3">
       <div className="flex items-center gap-2 section-label mb-2">
-        <Icon className="w-4 h-4 text-[var(--accent)]" /> {title}
+        <Icon className="w-4 h-4 text-(--accent)" /> {title}
       </div>
       {children}
     </section>
@@ -65,17 +65,17 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon: Icon, color = 'indigo' }: StatCardProps) {
   const colorMap: Record<string, string> = {
-    indigo: 'bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--accent-border)]',
-    emerald: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
-    amber: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
-    red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]'
+    indigo: 'bg-(--accent-dim) text-(--accent) border-(--accent-border)',
+    emerald: 'bg-(--success-dim) text-(--success) border-(--success-border)',
+    amber: 'bg-(--warning-dim) text-(--warning) border-(--warning-border)',
+    red: 'bg-(--error-dim) text-(--error) border-(--error-border)'
   };
   return (
     <div className={`rounded-xl ${colorMap[color]} p-3`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-2xs text-[var(--text-3)] uppercase tracking-widest font-mono">{label}</p>
-          <p className="text-xl font-bold text-[var(--text-1)] mt-0.5">{value}</p>
+          <p className="text-2xs text-(--text-3) uppercase tracking-widest font-mono">{label}</p>
+          <p className="text-xl font-bold text-(--text-1) mt-0.5">{value}</p>
         </div>
         <Icon className="w-4 h-4 opacity-60" />
       </div>
@@ -117,17 +117,17 @@ interface TaskRowProps {
 function TaskRow({ task }: TaskRowProps) {
   const [expanded, setExpanded] = useState(false);
   const statusColors: Record<string, string> = {
-    pending: 'bg-[var(--surface-2)] text-[var(--text-3)] border-[var(--border)]',
-    in_progress: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
-    completed: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
-    failed: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
-    running: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]'
+    pending: 'bg-(--surface-2) text-(--text-3) border-(--border)',
+    in_progress: 'bg-(--warning-dim) text-(--warning) border-(--warning-border)',
+    completed: 'bg-(--success-dim) text-(--success) border-(--success-border)',
+    failed: 'bg-(--error-dim) text-(--error) border-(--error-border)',
+    running: 'bg-(--warning-dim) text-(--warning) border-(--warning-border)'
   };
   const priorityColors: Record<string, string> = {
-    urgent: 'text-[var(--error)]',
-    high: 'text-[var(--warning)]',
-    medium: 'text-[var(--accent)]',
-    low: 'text-[var(--text-3)]'
+    urgent: 'text-(--error)',
+    high: 'text-(--warning)',
+    medium: 'text-(--accent)',
+    low: 'text-(--text-3)'
   };
   const statusIcon = task.status === 'in_progress' || task.status === 'running'
     ? <Loader2 className="w-3 h-3 animate-spin" />
@@ -155,58 +155,58 @@ function TaskRow({ task }: TaskRowProps) {
   };
 
   return (
-    <div className="rounded-lg bg-[var(--surface-2)] hover:border-[var(--border-strong)] transition-colors">
+    <div className="rounded-lg bg-(--surface-2) hover:border-(--border-strong) transition-colors">
       <div
         className="flex items-center gap-3 py-2 px-3 cursor-pointer"
         onClick={() => hasArtifacts && setExpanded(!expanded)}
       >
         {hasArtifacts && (
           <span className="shrink-0">
-            {expanded ? <ChevronDown className="w-3 h-3 text-[var(--text-3)]" /> : <ChevronRight className="w-3 h-3 text-[var(--text-3)]" />}
+            {expanded ? <ChevronDown className="w-3 h-3 text-(--text-3)" /> : <ChevronRight className="w-3 h-3 text-(--text-3)" />}
           </span>
         )}
-        <span className={`text-2xs font-bold uppercase w-12 ${priorityColors[task.priority] || 'text-[var(--text-3)]'}`}>
+        <span className={`text-2xs font-bold uppercase w-12 ${priorityColors[task.priority] || 'text-(--text-3)'}`}>
           {task.priority}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-[var(--text-2)] truncate">{task.title}</p>
-          <p className="text-2xs text-[var(--text-3)] font-mono">{task.agent}</p>
+          <p className="text-xs font-bold text-(--text-2) truncate">{task.title}</p>
+          <p className="text-2xs text-(--text-3) font-mono">{task.agent}</p>
         </div>
         <div className="flex items-center gap-1.5">
           {statusIcon}
-          <span className={`text-2xs font-bold uppercase px-2 py-0.5 rounded border ${statusColors[task.status] || statusColors.pending}`}>
+          <span className={`text-2xs font-bold uppercase px-2 py-0.5 rounded-sm border ${statusColors[task.status] || statusColors.pending}`}>
             {task.status.replace('_', ' ')}
           </span>
         </div>
       </div>
       {expanded && hasArtifacts && (
-        <div className="px-3 pb-2 space-y-1.5 border-t border-[var(--border)] pt-2">
+        <div className="px-3 pb-2 space-y-1.5 border-t border-(--border) pt-2">
           {task.summary && (
-            <p className="text-2xs text-[var(--text-3)] leading-relaxed">{task.summary}</p>
+            <p className="text-2xs text-(--text-3) leading-relaxed">{task.summary}</p>
           )}
           {task.artifacts?.map((artifact, i) => {
             const IconComponent = artifactIcons[artifact.type] || artifactIcons.default;
             return (
-              <div key={i} className="rounded-md bg-[var(--surface-2)] px-2.5 py-1.5">
+              <div key={i} className="rounded-md bg-(--surface-2) px-2.5 py-1.5">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <IconComponent className="w-3 h-3 text-[var(--accent)]" />
-                  <span className="text-2xs font-bold text-[var(--text-2)] uppercase tracking-wider">
+                  <IconComponent className="w-3 h-3 text-(--accent)" />
+                  <span className="text-2xs font-bold text-(--text-2) uppercase tracking-wider">
                     {artifact.type?.replace(/_/g, ' ')}
                   </span>
                   {artifact.riskScore != null && (
                     <span className={`text-2xs font-mono ml-auto ${
-                      artifact.riskScore >= 70 ? 'text-[var(--error)]' : artifact.riskScore >= 40 ? 'text-[var(--warning)]' : 'text-[var(--success)]'
+                      artifact.riskScore >= 70 ? 'text-(--error)' : artifact.riskScore >= 40 ? 'text-(--warning)' : 'text-(--success)'
                     }`}>
                       Risk: {artifact.riskScore}/100
                     </span>
                   )}
                   {artifact.combinedScore != null && (
-                    <span className="text-2xs font-mono ml-auto text-[var(--accent)]">
+                    <span className="text-2xs font-mono ml-auto text-(--accent)">
                       Score: {artifact.combinedScore}/100
                     </span>
                   )}
                   {artifact.success != null && (
-                    <span className={`text-2xs font-mono ml-auto ${artifact.success ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+                    <span className={`text-2xs font-mono ml-auto ${artifact.success ? 'text-(--success)' : 'text-(--error)'}`}>
                       {artifact.success ? 'OK' : 'FAIL'} (exit {artifact.exitCode ?? '?'})
                     </span>
                   )}
@@ -215,7 +215,7 @@ function TaskRow({ task }: TaskRowProps) {
                   <div className="space-y-0.5 mt-1">
                     {artifact.findings.map((f, j) => (
                       <p key={j} className={`text-2xs ${
-                        f.severity === 'critical' ? 'text-[var(--error)]' : f.severity === 'high' ? 'text-[var(--warning)]' : 'text-[var(--text-3)]'
+                        f.severity === 'critical' ? 'text-(--error)' : f.severity === 'high' ? 'text-(--warning)' : 'text-(--text-3)'
                       }`}>
                         [{f.severity}] {f.detail}
                       </p>
@@ -225,49 +225,49 @@ function TaskRow({ task }: TaskRowProps) {
                 {artifact.hints && artifact.hints.length > 0 && (
                   <div className="space-y-0.5 mt-1">
                     {artifact.hints.map((h, j) => (
-                      <p key={j} className="text-2xs text-[var(--text-3)]">{h}</p>
+                      <p key={j} className="text-2xs text-(--text-3)">{h}</p>
                     ))}
                   </div>
                 )}
                 {artifact.opportunitySignals && artifact.opportunitySignals.length > 0 && (
-                  <p className="text-2xs text-[var(--text-3)] mt-1 font-mono">
+                  <p className="text-2xs text-(--text-3) mt-1 font-mono">
                     Opportunity: {artifact.opportunitySignals.join(', ')}
                   </p>
                 )}
                 {artifact.riskSignals && artifact.riskSignals.length > 0 && (
-                  <p className="text-2xs text-[var(--text-3)] mt-1 font-mono">
+                  <p className="text-2xs text-(--text-3) mt-1 font-mono">
                     Risk: {artifact.riskSignals.join(', ')}
                   </p>
                 )}
                 {artifact.type === 'auto_run' && artifact.url && (
-                  <p className="text-2xs text-[var(--success)] mt-1 font-mono">
+                  <p className="text-2xs text-(--success) mt-1 font-mono">
                     Dev server: {artifact.url}
                   </p>
                 )}
                 {artifact.type === 'plan_preview' && artifact.plan && (
-                  <p className="text-2xs text-[var(--text-3)] mt-1">
+                  <p className="text-2xs text-(--text-3) mt-1">
                     Plan: {artifact.plan}
                   </p>
                 )}
                 {artifact.type === 'plan_preview' && artifact.files && artifact.files.length > 0 && (
-                  <p className="text-2xs text-[var(--text-3)] mt-0.5 font-mono">
+                  <p className="text-2xs text-(--text-3) mt-0.5 font-mono">
                     Files: {artifact.files.join(', ')}
                   </p>
                 )}
                 {artifact.type === 'clarifying_questions' && artifact.questions && artifact.questions.length > 0 && (
                   <div className="space-y-0.5 mt-1">
                     {artifact.questions.map((q, j) => (
-                      <p key={j} className="text-2xs text-[var(--warning)]">? {q}</p>
+                      <p key={j} className="text-2xs text-(--warning)">? {q}</p>
                     ))}
                   </div>
                 )}
                 {artifact.type === 'git_commit' && (
-                  <p className="text-2xs text-[var(--text-3)] mt-1 font-mono">
+                  <p className="text-2xs text-(--text-3) mt-1 font-mono">
                     Committed: {artifact.message}
                   </p>
                 )}
                 {artifact.type === 'brain_generation' && artifact.filesGenerated && artifact.filesGenerated.length > 0 && (
-                  <p className="text-2xs text-[var(--text-3)] mt-1 font-mono">
+                  <p className="text-2xs text-(--text-3) mt-1 font-mono">
                     Step {artifact.step}: {artifact.filesGenerated.join(', ')}
                   </p>
                 )}
@@ -389,7 +389,7 @@ export default function ProjectBatchPanel() {
     return (
       <Panel icon={Brain} title="Boardroom Orchestrator">
         <div className="space-y-4 py-4">
-          <p className="text-xs text-[var(--text-3)] text-center">
+          <p className="text-xs text-(--text-3) text-center">
             Set a project goal to begin autonomous batch planning and execution.
           </p>
           <div className="space-y-2">
@@ -399,19 +399,19 @@ export default function ProjectBatchPanel() {
               onChange={(e) => setGoalInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreateGoal()}
               placeholder="e.g. Build a SaaS analytics dashboard"
-              className="w-full bg-[var(--surface-2)] rounded-lg px-3 py-2 text-xs text-[var(--text-2)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+              className="w-full bg-(--surface-2) rounded-lg px-3 py-2 text-xs text-(--text-2) placeholder:text-(--text-4) focus:outline-hidden focus:border-(--accent-border)"
             />
             <input
               type="text"
               value={directoryInput}
               onChange={(e) => setDirectoryInput(e.target.value)}
               placeholder="Project folder (optional) e.g. /path/to/project"
-              className="w-full bg-[var(--surface-2)] rounded-lg px-3 py-2 text-xs text-[var(--text-2)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+              className="w-full bg-(--surface-2) rounded-lg px-3 py-2 text-xs text-(--text-2) placeholder:text-(--text-4) focus:outline-hidden focus:border-(--accent-border)"
             />
             <button
               onClick={handleCreateGoal}
               disabled={isGenerating || !goalInput.trim()}
-              className="w-full rounded-lg bg-[var(--accent-dim)] px-4 py-2 text-2xs font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-(--accent-dim) px-4 py-2 text-2xs font-bold uppercase tracking-widest text-(--accent) hover:bg-(--accent-dim) disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
             >
               {isGenerating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
               {isGenerating ? 'GENERATING...' : 'SET GOAL & GENERATE BATCH'}
@@ -425,23 +425,23 @@ export default function ProjectBatchPanel() {
   return (
     <Panel icon={Brain} title="Boardroom Orchestrator">
       <div className="space-y-4">
-        <div className="rounded-xl bg-[var(--surface-2)] p-3">
+        <div className="rounded-xl bg-(--surface-2) p-3">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-2xs text-[var(--text-3)] uppercase tracking-widest font-mono">Project Objective</p>
-              <p className="text-sm font-bold text-[var(--text-2)] mt-0.5 truncate">{goal.goal}</p>
+              <p className="text-2xs text-(--text-3) uppercase tracking-widest font-mono">Project Objective</p>
+              <p className="text-sm font-bold text-(--text-2) mt-0.5 truncate">{goal.goal}</p>
             </div>
             <div className="flex gap-1 shrink-0">
               <button
                 onClick={() => completeGoal(goal.id)}
-                className="text-2xs text-[var(--text-3)] hover:text-[var(--success)] transition-colors px-2 py-1"
+                className="text-2xs text-(--text-3) hover:text-(--success) transition-colors px-2 py-1"
               >
                 COMPLETE
               </button>
             </div>
           </div>
           {goal.directory && (
-            <div className="flex items-center gap-1.5 mt-2 text-2xs text-[var(--text-3)] font-mono">
+            <div className="flex items-center gap-1.5 mt-2 text-2xs text-(--text-3) font-mono">
               <FolderOpen className="w-3 h-3" />
               {goal.directory}
             </div>
@@ -462,12 +462,12 @@ export default function ProjectBatchPanel() {
               value={directoryInput}
               onChange={(e) => setDirectoryInput(e.target.value)}
               placeholder="Set project folder path"
-              className="flex-1 bg-[var(--surface-2)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-2)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+              className="flex-1 bg-(--surface-2) rounded-lg px-3 py-1.5 text-xs text-(--text-2) placeholder:text-(--text-4) focus:outline-hidden focus:border-(--accent-border)"
             />
             <button
               onClick={handleSetDirectory}
               disabled={!directoryInput.trim()}
-              className="rounded-lg bg-[var(--surface-2)] px-3 py-1.5 text-2xs font-bold uppercase tracking-widest text-[var(--text-3)] hover:bg-[var(--surface-2)] disabled:opacity-40 transition-colors"
+              className="rounded-lg bg-(--surface-2) px-3 py-1.5 text-2xs font-bold uppercase tracking-widest text-(--text-3) hover:bg-(--surface-2) disabled:opacity-40 transition-colors"
             >
               SET
             </button>
@@ -477,14 +477,14 @@ export default function ProjectBatchPanel() {
         {batchProgress && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-2xs text-[var(--text-3)] uppercase tracking-widest font-mono">
+              <p className="text-2xs text-(--text-3) uppercase tracking-widest font-mono">
                 Batch #{activeBatch?.batchNumber} — {batchProgress.completed}/{batchProgress.total} tasks
               </p>
-              <span className="text-2xs font-bold text-[var(--accent)]">{batchProgress.percent}%</span>
+              <span className="text-2xs font-bold text-(--accent)">{batchProgress.percent}%</span>
             </div>
-            <div className="h-1.5 w-full bg-[var(--surface-3)] rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-(--surface-3) rounded-full overflow-hidden">
               <div
-                className="h-full bg-[var(--accent)] rounded-full transition-all duration-500"
+                className="h-full bg-(--accent) rounded-full transition-all duration-500"
                 style={{ width: `${batchProgress.percent}%` }}
               />
             </div>
@@ -492,7 +492,7 @@ export default function ProjectBatchPanel() {
               <button
                 onClick={handleExecuteBatch}
                 disabled={isExecuting || !activeBatch || activeBatch.status === 'completed'}
-                className="flex-1 rounded-lg bg-[var(--success-dim)] px-3 py-2 text-2xs font-bold uppercase tracking-widest text-[var(--success)] hover:bg-[var(--success-dim)] disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 rounded-lg bg-(--success-dim) px-3 py-2 text-2xs font-bold uppercase tracking-widest text-(--success) hover:bg-(--success-dim) disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
               >
                 {isExecuting ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlayCircle className="w-3 h-3" />}
                 {isExecuting ? 'EXECUTING...' : 'EXECUTE BATCH'}
@@ -500,7 +500,7 @@ export default function ProjectBatchPanel() {
               <button
                 onClick={handleGenerateNext}
                 disabled={isGenerating || (activeBatch && batchProgress.percent < 100)}
-                className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-2xs font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                className="rounded-lg bg-(--accent-dim) px-3 py-2 text-2xs font-bold uppercase tracking-widest text-(--accent) hover:bg-(--accent-dim) disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
               >
                 {isGenerating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
                 NEXT
@@ -510,8 +510,8 @@ export default function ProjectBatchPanel() {
         )}
 
         {executionProgress && executionProgress.stage !== 'complete' && executionProgress.stage !== 'error' && (
-          <div className="rounded-xl bg-[var(--warning-dim)] p-3 space-y-1">
-            <div className="flex items-center gap-2 text-2xs text-[var(--warning)] font-bold uppercase tracking-widest">
+          <div className="rounded-xl bg-(--warning-dim) p-3 space-y-1">
+            <div className="flex items-center gap-2 text-2xs text-(--warning) font-bold uppercase tracking-widest">
               <Loader2 className="w-3 h-3 animate-spin" />
               {executionProgress.stage === 'task_start' && `Running: ${executionProgress.task?.title || '...'}`}
               {executionProgress.stage === 'task_complete' && `Completed: ${executionProgress.task?.title || '...'}`}
@@ -524,14 +524,14 @@ export default function ProjectBatchPanel() {
         )}
 
         {executionProgress?.stage === 'error' && (
-          <div className="rounded-xl bg-[var(--error-dim)] p-3 text-xs text-[var(--error)]">
+          <div className="rounded-xl bg-(--error-dim) p-3 text-xs text-(--error)">
             Execution error: {executionProgress.error}
           </div>
         )}
 
         {activeBatch && (
           <div className="space-y-1.5">
-            <p className="text-2xs text-[var(--text-3)] uppercase tracking-widest font-mono">Current Tasks</p>
+            <p className="text-2xs text-(--text-3) uppercase tracking-widest font-mono">Current Tasks</p>
             <div className="max-h-64 overflow-y-auto pr-1 space-y-1">
               {activeBatch.tasks.map((task: Task) => (
                 <TaskRow key={task.id} task={task} />
@@ -542,7 +542,7 @@ export default function ProjectBatchPanel() {
 
         {batches.length > 1 && (
           <div className="space-y-1.5">
-            <p className="text-2xs text-[var(--text-3)] uppercase tracking-widest font-mono">Batch History</p>
+            <p className="text-2xs text-(--text-3) uppercase tracking-widest font-mono">Batch History</p>
             <div className="max-h-36 overflow-y-auto pr-1 space-y-1">
               {batches.slice(1).map((b: { id: string; batchNumber: number; tasks: Task[]; generationMode: string }) => {
                 const isExpanded = expandedBatchId === b.id;
@@ -551,10 +551,10 @@ export default function ProjectBatchPanel() {
                   <div key={b.id}>
                     <button
                       onClick={() => setExpandedBatchId(isExpanded ? null : b.id)}
-                      className="flex items-center gap-2 w-full py-1.5 px-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-left"
+                      className="flex items-center gap-2 w-full py-1.5 px-2 rounded-lg hover:bg-(--surface-2) transition-colors text-left"
                     >
-                      {isExpanded ? <ChevronDown className="w-3 h-3 text-[var(--text-3)]" /> : <ChevronRight className="w-3 h-3 text-[var(--text-3)]" />}
-                      <span className="text-xs text-[var(--text-3)] font-mono">
+                      {isExpanded ? <ChevronDown className="w-3 h-3 text-(--text-3)" /> : <ChevronRight className="w-3 h-3 text-(--text-3)" />}
+                      <span className="text-xs text-(--text-3) font-mono">
                         Batch #{b.batchNumber} — {done}/{b.tasks.length} completed ({b.generationMode})
                       </span>
                     </button>
@@ -572,7 +572,7 @@ export default function ProjectBatchPanel() {
           </div>
         )}
 
-        <div className="text-2xs text-[var(--text-4)] font-mono flex items-center gap-2">
+        <div className="text-2xs text-(--text-4) font-mono flex items-center gap-2">
           <Cpu className="w-3 h-3" />
           Generation: {activeBatch?.generationMode || 'N/A'} | Goal ID: {goal.id.slice(0, 16)}...
         </div>

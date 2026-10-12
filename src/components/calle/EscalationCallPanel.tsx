@@ -51,7 +51,7 @@ export function EscalationCallPanel(): React.JSX.Element {
       <CardHeader>Escalation Calls</CardHeader>
       <CardContent>
         <div className="space-y-3">
-          <p className="text-xs text-[--text-3]">
+          <p className="text-xs text-(--text-3)">
             When a decision has been waiting for approval past the threshold below with no response
             through the app or messaging channels, Alphonso places one real phone call to ask for a
             verbal approve/reject. Requires CALL-E to be configured above and Zero-Cost Mode off.
@@ -71,8 +71,8 @@ export function EscalationCallPanel(): React.JSX.Element {
             value={settings.phoneNumber}
             onChange={(e) => update({ phoneNumber: e.target.value })}
           />
-          {!phoneValid && <div className="text-xs text-[--warning]">Enter a valid E.164 number, e.g. +15550123456.</div>}
-          <label className="text-xs text-[--text-3] flex items-center gap-2">
+          {!phoneValid && <div className="text-xs text-(--warning)">Enter a valid E.164 number, e.g. +15550123456.</div>}
+          <label className="text-xs text-(--text-3) flex items-center gap-2">
             Escalate after (minutes)
             <Input
               aria-label="Escalation threshold minutes"
@@ -84,7 +84,7 @@ export function EscalationCallPanel(): React.JSX.Element {
             />
           </label>
           {settings.enabled && !configured && (
-            <div className="text-xs text-[--warning]">CALL-E is not configured yet — add an API key above.</div>
+            <div className="text-xs text-(--warning)">CALL-E is not configured yet — add an API key above.</div>
           )}
           <Button onClick={handleCheckNow} disabled={checking || !settings.enabled}>
             {checking ? 'Checking…' : 'Check now'}
@@ -95,10 +95,10 @@ export function EscalationCallPanel(): React.JSX.Element {
           ) : (
             <div className="space-y-2">
               {records.map((record) => (
-                <div key={record.packetId} className="border border-[--border] rounded p-2">
+                <div key={record.packetId} className="border border-(--border) rounded-sm p-2">
                   <div className="flex items-center gap-2">
                     <StatusDot status={STATUS_TO_DOT[record.status] ?? 'offline'} />
-                    <span className="text-xs text-[--text-3]">packet {record.packetId}</span>
+                    <span className="text-xs text-(--text-3)">packet {record.packetId}</span>
                     <Badge>{record.status}</Badge>
                     {record.decision && <Badge>{record.decision}</Badge>}
                   </div>
