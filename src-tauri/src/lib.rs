@@ -31,6 +31,7 @@ mod companion_types;
 mod connector_commands;
 mod kv_store;
 mod memory_graph;
+mod memory_graph_prune;
 mod memory_store;
 mod meta_publish;
 mod native_proof;
@@ -93,7 +94,9 @@ pub(crate) use kv_store::{kv_delete, kv_get, kv_set, load_settings, save_setting
 pub(crate) use memory_graph::{
   memory_graph_add_edge, memory_graph_add_node, memory_graph_infer_edges, memory_graph_list_edges,
   memory_graph_list_nodes, memory_graph_query_related, memory_graph_query_related_deep,
+  memory_graph_touch_nodes,
 };
+pub(crate) use memory_graph_prune::memory_graph_prune;
 pub(crate) use memory_store::*;
 pub(crate) use meta_publish::*;
 pub(crate) use native_proof::{
@@ -315,7 +318,11 @@ pub fn run() {
 
   tauri::Builder::default()
     .manage(http_client)
-    .manage(runtime_manager::RuntimeManager::new())
+    // The same manager the auto-start thread records PIDs into (a clone
+    // shares its map), so commands can see and stop auto-started tools.
+    .manage(runtime_manager::RuntimeManager::clone(
+      &runtime_mgr_autostart,
+    ))
     .manage(VoiceSidecar(std::sync::Mutex::new(None)))
     .manage(VoiceToken(std::sync::Mutex::new(None)))
     .manage(RateLimiter::new())
@@ -743,6 +750,8 @@ pub fn run() {
       memory_graph_list_nodes,
       memory_graph_list_edges,
       memory_graph_infer_edges,
+      memory_graph_touch_nodes,
+      memory_graph_prune,
       secure_credential_set,
       secure_credential_get,
       secure_credential_delete,

@@ -103,11 +103,11 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.5.5
 
 - **Fixed a crash**: opening Boardroom → "Boardroom Sessions" took down the entire app with an uncaught error, because `App.tsx`'s lazy-loading of `BoardroomView` was missing a required export mapping. Found via a live Playwright click-through audit (Sprint 3's discoverability half), fixed, and covered by new regression tests.
-- **Sprint 3 discoverability audit complete**: verified live (not just by reading source) which features are reachable from the UI and how many clicks deep. Operator Dashboard has no sidebar entry at all (reachable only via a Dashboard quick-launch card); Agent Pairing and the Ecosystem Maturity/Self-Development panels are 2 clicks deep behind generically-labeled tabs. Coach Mode is real and functional, just visually understated. Full findings in `ALPHONSOTOTHEMOON.md`.
+- **Sprint 3 discoverability audit complete**: verified live (not just by reading source) which features are reachable from the UI and how many clicks deep. (Update 2026-10-06: Agent Pairing and Maturity now have their own sidebar entries.) Operator Dashboard has no sidebar entry at all (reachable only via a Dashboard quick-launch card); Agent Pairing and the Ecosystem Maturity/Self-Development panels are 2 clicks deep behind generically-labeled tabs. Coach Mode is real and functional, just visually understated. Full findings in `ALPHONSOTOTHEMOON.md`.
 
 ## What's New in v2.5.4
 
-- **Agent skill-library depth (Sprint 3)** — Miya, Hector, and Jose each moved from one catch-all skill pack to a real 5-pack taxonomy (e.g. Miya: video / image / UI-UX / brand-identity / motion-graphics), so a request that touches a specific sub-domain pulls in narrow guidance instead of one shallow pack handling everything. `validateSkillPackAgainstContract()` now supports optional per-pack permission scoping (`AGENT_SKILL_PACK_SCOPE_OVERRIDES`) on top of the existing per-agent check, so an individual skill pack can be scoped tighter than its owning agent's default boundary. The Skills tab in the Ecosystem Hub now groups packs by owning agent instead of one flat list.
+- **Agent skill-library depth (Sprint 3)** — Miya, Hector, and Jose each moved from one catch-all skill pack to a real 5-pack taxonomy (e.g. Miya: video / image / UI-UX / brand-identity / motion-graphics), so a request that touches a specific sub-domain pulls in narrow guidance instead of one shallow pack handling everything (the other six agents have since received the same treatment — all 9 agents now carry 17–21 agent-owned packs). `validateSkillPackAgainstContract()` now supports optional per-pack permission scoping (`AGENT_SKILL_PACK_SCOPE_OVERRIDES`) on top of the existing per-agent check, so an individual skill pack can be scoped tighter than its owning agent's default boundary. The Skills tab in the Ecosystem Hub now groups packs by owning agent instead of one flat list.
 
 ## What's New in v2.5.3
 
@@ -133,7 +133,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery and a PIN-authenticated local WebSocket (off until you enable mobile pairing on the desktop). Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **157 Rust unit tests across 38 modules** — 121 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **185 Rust unit tests across 39 modules** — 123 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -316,7 +316,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~809 lines · 121 Tauri commands · 38 modules   │    │
+│  │  lib.rs ~818 lines · 123 Tauri commands · 39 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -407,7 +407,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 5,239 tests across 402 files
+npm run test           # 5,239 tests across 408 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -488,7 +488,7 @@ blocker.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 203 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 205 services already exist.
 
 ## Security
 

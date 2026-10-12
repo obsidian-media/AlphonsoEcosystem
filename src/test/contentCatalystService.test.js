@@ -399,6 +399,38 @@ describe('generateContentDraft', () => {
     expect(result.draft.hashtags).toContain('#instagram');
   });
 
+  it('marks a fallback draft as the template and says why', async () => {
+    generateOllamaResponse.mockImplementationOnce(async () => { throw new Error('LLM error'); });
+    generateOllamaResponse.mockImplementationOnce(async () => { throw new Error('No Ollama model is selected.'); });
+    const job = createContentJobFromBridgeRequest({ idea: 'Template notice' });
+    const result = await generateContentDraft(job);
+    expect(result.draftSource).toBe('template');
+    expect(result.draftTemplateReason).toBe('No Ollama model is selected.');
+    expect(result.logs.at(-1)).toMatchObject({ level: 'warning' });
+    expect(result.logs.at(-1).message).toContain('built-in template');
+  });
+
+  it('marks a model-written draft as coming from the model', async () => {
+    const job = createContentJobFromBridgeRequest({ idea: 'Model draft' });
+    const result = await generateContentDraft(job);
+    expect(result.draftSource).toBe('model');
+    expect(result.draftTemplateReason).toBeNull();
+  });
+
+  it('sends the job settings to the model call', async () => {
+    const job = createContentJobFromBridgeRequest(
+      { idea: 'Uses settings' },
+      { settings: { endpoint: 'http://localhost:11434', selectedModel: 'llama3.2:3b', unrelated: 'dropped' } }
+    );
+    expect(job.settings).toEqual({ endpoint: 'http://localhost:11434', selectedModel: 'llama3.2:3b' });
+    generateOllamaResponse.mockClear();
+    await generateContentDraft(job);
+    expect(generateOllamaResponse).toHaveBeenCalled();
+    for (const [args] of generateOllamaResponse.mock.calls) {
+      expect(args).toMatchObject({ endpoint: 'http://localhost:11434', model: 'llama3.2:3b' });
+    }
+  });
+
   it('includes brief in output', async () => {
     const job = createContentJobFromBridgeRequest({ idea: 'With brief' });
     const result = await generateContentDraft(job);

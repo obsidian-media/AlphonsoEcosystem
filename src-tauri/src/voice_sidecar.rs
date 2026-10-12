@@ -87,7 +87,7 @@ fn resolve_voice_python(
 /// Uses `rand::rng()` (the crate-level CSPRNG) rather than `DefaultHasher`
 /// which is a non-cryptographic hash seeded from a predictable source.
 pub(crate) fn random_hex_token() -> String {
-  use rand::RngCore;
+  use rand::Rng;
   let mut bytes = [0u8; 16];
   rand::rng().fill_bytes(&mut bytes);
   bytes.iter().map(|b| format!("{b:02x}")).collect()
