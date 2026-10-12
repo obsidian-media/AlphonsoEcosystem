@@ -8,6 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-10-06 (approval hardening, macOS notarization, false-confidence tests)
 
+- **Runtime Hub could not stop the Ollama it started.** Two separate process trackers existed: one the boot auto-start recorded into, another the Start/Stop commands read. A tool auto-started at launch was invisible to Stop, and to the updater's stop-running-tools step. They are now one shared tracker. Separately, a start request racing the boot auto-start launched a second Ollama that died on the taken port and overwrote the real process id; a tool that is already started is no longer started again. Found by the desktop end-to-end suite.
+- **Creative Studio silently ignored the model's reply.** Miya parsed the reply with strict `JSON.parse`; a reply wrapped in code fences or with any text around it failed to parse, and the user got the built-in template with their idea ignored and no notice. The reply is now read with `extractJsonObject()` (`src/lib/jsonUtils.js`), and when it truly cannot be read the package says so.
 - **macOS notarization (#270).** `release.yml`'s `build-macos` signs with a Developer ID certificate and notarizes; written but not yet exercised on a real tag (see `docs/MACOS_SIGNING.md`).
 - **Per-command approval for AI-planned workspace-code commands (#271).** `commandApprovalService.ts`; fail-closed; also gates automatic post-write validation. Writes into `.git/` are blocked.
 - **Approval bridge fixed (#272).** `RequestApprovalProvider` previously never showed a prompt (Boardroom Hermes gate, plugin/workspace/verification flows awaited forever); it now forwards to the shell's approval modal.

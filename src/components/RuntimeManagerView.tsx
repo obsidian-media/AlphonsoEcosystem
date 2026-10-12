@@ -325,7 +325,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
   const handleStop = () => onAction('stop', tool.name);
 
   return (
-    <div className={`rounded-xl p-4 flex flex-col gap-3 ${meta.bg || 'bg-(--surface-1)'}`}>
+    <div data-testid={`runtime-tool-${tool.name}`} className={`rounded-xl p-4 flex flex-col gap-3 ${meta.bg || 'bg-(--surface-1)'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {(() => { const ToolIcon = meta.icon ?? Cpu; return typeof ToolIcon === 'string' ? <span>{ToolIcon}</span> : <ToolIcon className={`w-5 h-5 ${meta.color || 'text-(--text-3)'}`} />; })()}
