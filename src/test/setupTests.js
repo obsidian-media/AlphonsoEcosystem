@@ -38,3 +38,13 @@ if (
     configurable: true
   });
 }
+
+// Vitest's jsdom environment keeps Node's own `URL` global but replaces
+// `Blob` with jsdom's implementation. From jsdom 30 on, Node's
+// `URL.createObjectURL()` rejects that foreign Blob ("Cannot read properties
+// of undefined (reading '_buffer')"). No real browser has this mismatch, so
+// give tests a stable stand-in; a test that cares about the URL can still
+// replace these with its own `vi.fn()`.
+let objectUrlCounter = 0;
+URL.createObjectURL = () => `blob:mock-object-url-${++objectUrlCounter}`;
+URL.revokeObjectURL = () => {};

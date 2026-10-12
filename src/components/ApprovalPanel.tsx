@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { Shield, ShieldAlert, Check, X } from 'lucide-react';
 
 const RISK_STYLES: Record<string, { badge: string; dot: string; label: string }> = {
-  high: { badge: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]', dot: 'bg-[var(--error)]', label: 'High' },
-  medium: { badge: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]', dot: 'bg-[var(--warning)]', label: 'Medium' },
-  low: { badge: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]', dot: 'bg-[var(--success)]', label: 'Low' }
+  high: { badge: 'border-(--error-border) bg-(--error-dim) text-(--error)', dot: 'bg-(--error)', label: 'High' },
+  medium: { badge: 'border-(--warning-border) bg-(--warning-dim) text-(--warning)', dot: 'bg-(--warning)', label: 'Medium' },
+  low: { badge: 'border-(--success-border) bg-(--success-dim) text-(--success)', dot: 'bg-(--success)', label: 'Low' }
 };
 
 export interface PendingApprovalItem {
@@ -108,16 +108,16 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
   if (items.length === 0) return null;
 
   return (
-    <div className="border border-[var(--warning-border)] bg-[var(--warning-dim)] rounded-xl p-4 space-y-3">
+    <div className="border border-(--warning-border) bg-(--warning-dim) rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Shield className="w-4 h-4 text-[var(--warning)]" />
-        <span className="text-xs font-bold uppercase tracking-widest text-[var(--warning)]">
+        <Shield className="w-4 h-4 text-(--warning)" />
+        <span className="text-xs font-bold uppercase tracking-widest text-(--warning)">
           {items.length} item{items.length !== 1 ? 's' : ''} awaiting approval
         </span>
       </div>
 
       {error && (
-        <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] border border-[var(--error-border)] rounded-lg px-3 py-2">
+        <div className="text-[11px] text-(--error) bg-(--error-dim) border border-(--error-border) rounded-lg px-3 py-2">
           {error}
         </div>
       )}
@@ -133,25 +133,25 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
               key={item.itemId}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
                 status === 'approved'
-                  ? 'bg-[var(--success-dim)]'
+                  ? 'bg-(--success-dim)'
                   : status === 'rejected'
-                    ? 'bg-[var(--error-dim)] opacity-60'
-                    : 'bg-[var(--surface-3)]'
+                    ? 'bg-(--error-dim) opacity-60'
+                    : 'bg-(--surface-3)'
               }`}
             >
-              <RiskIcon className={`w-3.5 h-3.5 shrink-0 ${item.riskLevel === 'high' ? 'text-[var(--error)]' : 'text-[var(--warning)]'}`} />
+              <RiskIcon className={`w-3.5 h-3.5 shrink-0 ${item.riskLevel === 'high' ? 'text-(--error)' : 'text-(--warning)'}`} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-[var(--text-2)] truncate">{item.agent}</span>
-                  <span className="text-[10px] text-[var(--text-3)] truncate">{item.actionType}</span>
+                  <span className="text-[11px] font-semibold text-(--text-2) truncate">{item.agent}</span>
+                  <span className="text-[10px] text-(--text-3) truncate">{item.actionType}</span>
                 </div>
                 {item.reason && (
-                  <div className="text-[10px] text-[var(--text-3)] truncate mt-0.5">{item.reason}</div>
+                  <div className="text-[10px] text-(--text-3) truncate mt-0.5">{item.reason}</div>
                 )}
                 {item.previewContent && (
-                  <div className="mt-2 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
-                    <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-4)] mb-1">Preview</div>
-                    <div className="text-[10px] text-[var(--text-3)] whitespace-pre-wrap leading-relaxed">{item.previewContent}</div>
+                  <div className="mt-2 p-2 rounded-lg bg-(--surface-2) border border-(--border)">
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-(--text-4) mb-1">Preview</div>
+                    <div className="text-[10px] text-(--text-3) whitespace-pre-wrap leading-relaxed">{item.previewContent}</div>
                   </div>
                 )}
               </div>
@@ -160,7 +160,7 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
                 {risk.label}
               </div>
               {status ? (
-                <div className={`flex items-center gap-1 text-[10px] font-bold ${status === 'approved' ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+                <div className={`flex items-center gap-1 text-[10px] font-bold ${status === 'approved' ? 'text-(--success)' : 'text-(--error)'}`}>
                   {status === 'approved' ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
                   {status === 'approved' ? 'Approved' : 'Denied'}
                 </div>
@@ -168,7 +168,7 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => handleReject(item.itemId)}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)] bg-[var(--surface-3)] border border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors"
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest text-(--text-3) bg-(--surface-3) border border-(--border) hover:bg-(--surface-3) transition-colors"
                   >
                     Deny
                   </button>
@@ -176,8 +176,8 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
                     onClick={() => handleApprove(item.itemId)}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white transition-colors ${
                       item.riskLevel === 'high'
-                        ? 'bg-[var(--error)] hover:bg-[var(--error-dim)]'
-                        : 'bg-[var(--warning)] hover:bg-[var(--warning-dim)]'
+                        ? 'bg-(--error) hover:bg-(--error-dim)'
+                        : 'bg-(--warning) hover:bg-(--warning-dim)'
                     }`}
                   >
                     Approve
@@ -193,7 +193,7 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
         <div className="flex justify-end pt-1">
           <button
             onClick={handleContinue}
-            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-[var(--accent-contrast)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-colors"
+            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-(--accent-contrast) bg-(--accent) hover:bg-(--accent-hover) transition-colors"
           >
             Continue
           </button>
