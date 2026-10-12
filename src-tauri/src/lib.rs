@@ -319,7 +319,11 @@ pub fn run() {
 
   tauri::Builder::default()
     .manage(http_client)
-    .manage(runtime_manager::RuntimeManager::new())
+    // The same manager the auto-start thread records PIDs into (a clone
+    // shares its map), so commands can see and stop auto-started tools.
+    .manage(runtime_manager::RuntimeManager::clone(
+      &runtime_mgr_autostart,
+    ))
     .manage(VoiceSidecar(std::sync::Mutex::new(None)))
     .manage(VoiceToken(std::sync::Mutex::new(None)))
     .manage(RateLimiter::new())

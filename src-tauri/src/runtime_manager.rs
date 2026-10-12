@@ -258,6 +258,42 @@ fn tool_def(name: &str) -> Option<&'static ToolDef> {
 // Directory helpers
 // ─────────────────────────────────────────────────────────
 
+/// Origins the app's own window sends requests from. On Windows (and Android)
+/// Tauri serves the frontend from `http://tauri.localhost`, which is NOT on
+/// Ollama's default allow-list (that covers `localhost`/`127.0.0.1` hosts and
+/// the `tauri://` scheme used on macOS/Linux). Without this, an Ollama that
+/// Alphonso itself started answers the app's own chat requests with 403.
+///
+/// Only http/https entries belong here: Ollama refuses to start at all
+/// ("panic: bad origin") if `OLLAMA_ORIGINS` contains a `tauri://` entry, and
+/// it already allows that scheme by default.
+const APP_WINDOW_ORIGINS: [&str; 2] = ["http://tauri.localhost", "https://tauri.localhost"];
+
+/// `OLLAMA_ORIGINS` value for an Ollama process Alphonso starts: whatever the
+/// user already configured, plus the app's own window origins.
+pub(crate) fn ollama_origins_value(existing: Option<&str>) -> String {
+  let mut origins: Vec<&str> = existing
+    .unwrap_or("")
+    .split(',')
+    .map(str::trim)
+    .filter(|origin| !origin.is_empty())
+    .collect();
+  for origin in APP_WINDOW_ORIGINS {
+    if !origins.contains(&origin) {
+      origins.push(origin);
+    }
+  }
+  origins.join(",")
+}
+
+/// Environment a tool needs when Alphonso starts it.
+fn apply_tool_env(tool_name: &str, cmd: &mut Command) {
+  if tool_name == "ollama" {
+    let existing = std::env::var("OLLAMA_ORIGINS").ok();
+    cmd.env("OLLAMA_ORIGINS", ollama_origins_value(existing.as_deref()));
+  }
+}
+
 pub fn runtimes_dir() -> PathBuf {
   let base = std::env::var("APPDATA")
     .map(PathBuf::from)
@@ -1074,7 +1110,14 @@ pub struct ToolStartFailed {
 // Runtime Manager state
 // ─────────────────────────────────────────────────────────
 
-#[derive(Default)]
+/// Tracks the PIDs of tools Alphonso itself started.
+///
+/// `Clone` shares the same underlying map. The boot auto-start thread and the
+/// Tauri command state must be clones of ONE manager: when they were two
+/// separate `RuntimeManager::new()` values, a tool auto-started at launch was
+/// invisible to `runtime_stop_tool` and `runtime_get_all_status`, so the app
+/// could neither stop the Ollama it had started nor report it as its own.
+#[derive(Default, Clone)]
 pub struct RuntimeManager {
   spawned: Arc<Mutex<HashMap<String, u32>>>,
 }
@@ -1746,6 +1789,24 @@ pub async fn runtime_start_tool(
 ) -> Result<RuntimeActionResult, String> {
   let def = tool_def(&name).ok_or_else(|| format!("Unknown tool: {}", name))?;
 
+  // A tool Alphonso already started, whose process is still alive, is either
+  // running or still starting up (its port may not answer yet). Spawning a
+  // second copy would fail to bind the port and exit, and its PID would then
+  // replace the real one in the tracker, leaving Stop pointed at a dead
+  // process. Voice OS is excluded: it has its own restart-for-a-fresh-token
+  // path just below.
+  if name != "voice-os" {
+    if let Some(pid) = state.spawned_pid(&name) {
+      if is_pid_alive(pid) {
+        return Ok(RuntimeActionResult {
+          tool: name,
+          ok: true,
+          message: format!("{} is already started (PID {}).", def.display_name, pid),
+        });
+      }
+    }
+  }
+
   if let Some(port) = def.port {
     if is_running_async(port, def.health_path.unwrap_or("/")).await {
       // voice-os: if the VoiceToken was lost (e.g. app restarted while Voice OS kept
@@ -1855,6 +1916,7 @@ pub async fn runtime_start_tool(
   }
   cmd.stdout(std::process::Stdio::null());
   cmd.stderr(std::process::Stdio::null());
+  apply_tool_env(def.name, &mut cmd);
   no_window(&mut cmd);
 
   let child = cmd
@@ -2004,6 +2066,14 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
         continue;
       }
 
+      // Skip if a start request already launched it (see the matching guard
+      // in runtime_start_tool): the process is alive but may not answer yet.
+      if let Some(pid) = state.spawned_pid(def.name) {
+        if is_pid_alive(pid) {
+          continue;
+        }
+      }
+
       // Skip if already running
       if let Some(port) = def.port {
         if is_running_sync(port) {
@@ -2039,6 +2109,7 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
       }
       cmd.stdout(std::process::Stdio::null());
       cmd.stderr(std::process::Stdio::null());
+      apply_tool_env(def.name, &mut cmd);
       no_window(&mut cmd);
 
       match cmd.spawn() {
@@ -2288,6 +2359,36 @@ mod tests {
     if let Some(free) = profile.disk_free_gb {
       assert!(free < 1_000_000); // sanity upper bound, not a real limit
     }
+  }
+
+  #[test]
+  fn cloned_runtime_manager_shares_tracked_pids() {
+    let boot = RuntimeManager::new();
+    let commands = boot.clone();
+    boot.record_pid("ollama", 4242);
+    assert_eq!(commands.spawned_pid("ollama"), Some(4242));
+    commands.remove_pid("ollama");
+    assert_eq!(boot.spawned_pid("ollama"), None);
+  }
+
+  #[test]
+  fn ollama_origins_adds_the_app_window_origins() {
+    assert_eq!(
+      ollama_origins_value(None),
+      "http://tauri.localhost,https://tauri.localhost"
+    );
+  }
+
+  #[test]
+  fn ollama_origins_keeps_user_values_and_does_not_duplicate() {
+    assert_eq!(
+      ollama_origins_value(Some(" https://example.com , http://tauri.localhost,")),
+      "https://example.com,http://tauri.localhost,https://tauri.localhost"
+    );
+    assert_eq!(
+      ollama_origins_value(Some("*")),
+      "*,http://tauri.localhost,https://tauri.localhost"
+    );
   }
 
   #[test]
