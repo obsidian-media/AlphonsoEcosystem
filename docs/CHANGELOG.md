@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-10-06 (approval hardening, macOS notarization, false-confidence tests)
 
+- **Content Studio never used the model for copy.** The brief and draft steps read the Ollama endpoint and model from `job.settings`, but nothing ever set it, so every call failed and the job silently used the built-in template, logged as "Content draft generated". `ContentCatalystWorkspace` now passes the settings into the job, and a template draft is recorded as such (`draftSource`, a warning log, and a visible notice with the reason). Found by the desktop end-to-end suite.
 - **macOS notarization (#270).** `release.yml`'s `build-macos` signs with a Developer ID certificate and notarizes; written but not yet exercised on a real tag (see `docs/MACOS_SIGNING.md`).
 - **Per-command approval for AI-planned workspace-code commands (#271).** `commandApprovalService.ts`; fail-closed; also gates automatic post-write validation. Writes into `.git/` are blocked.
 - **Approval bridge fixed (#272).** `RequestApprovalProvider` previously never showed a prompt (Boardroom Hermes gate, plugin/workspace/verification flows awaited forever); it now forwards to the shell's approval modal.
