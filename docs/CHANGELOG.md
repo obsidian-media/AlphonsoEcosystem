@@ -24,6 +24,7 @@ New in this release:
 - **Desktop end-to-end suite** (`e2e-desktop/`, `npm run test:e2e:desktop`): WebdriverIO + tauri-driver against the real built app, on isolated test data. 16 spec files, 53 checks (#285, #288).
 - **Tailwind CSS v4** (#276), memory-graph retention pruning (#282), Hermes session continuity (#278), Agent Pairing and Maturity sidebar entries (#281), per-command approval for AI-planned commands (#271, #272, #275).
 - Dependencies: rand 0.10 (#284), jsdom 30 (#267), framer-motion 14 (#260), tauri-plugin-opener 2.7 (#261), plus CI action bumps.
+- Security: `quinn-proto` 0.11.16 -> 0.11.19 for five advisories published against it (RUSTSEC-2026-0338 to -0342, two rated high); they failed `cargo audit` on every PR touching the Rust lockfile.
 
 Known and not fixed (see `docs/governance/DEFERRED_WORK.md`, 2026-10-12): an Ollama the user starts themselves is still refused by the desktop window; an intermittent first-model-call failure right after launch; Research snippets include raw page CSS; several smaller display issues.
 
