@@ -40,3 +40,44 @@ export async function enterShell() {
   await browser.refresh();
   await $(SHELL_READY).waitForExist({ timeout: 60000 });
 }
+
+/** Visible text of the main content area, whitespace collapsed. */
+export async function mainText() {
+  return browser.execute(() => (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' '));
+}
+
+/** True once a local Ollama answers and has at least one model. The app
+ *  starts Ollama itself at launch, so this waits up to ~30s for it. */
+export async function ollamaHasModels() {
+  for (let attempt = 0; attempt < 15; attempt += 1) {
+    try {
+      const response = await fetch('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(3000) });
+      if (response.ok) {
+        const data = await response.json();
+        return Array.isArray(data.models) && data.models.length > 0;
+      }
+    } catch {
+      // Not up yet; the app may still be starting it.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  return false;
+}
+
+/** A visible button in the main area whose text contains `text`, ignoring
+ *  case. Many buttons are upper-cased by CSS, so their DOM text differs from
+ *  what is on screen; this matches either way. */
+export function buttonByText(text) {
+  const lower = text.toLowerCase();
+  return $(
+    `//main//button[contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), "${lower}")]`
+  );
+}
+
+/** Open a sidebar page by its Space id and nav item id (see Sidebar.tsx). */
+export async function openPage(space, item) {
+  await $(`[data-testid="space-pill-${space}"]`).click();
+  const nav = await $(`[data-testid="sidebar-nav-${item}"]`);
+  await nav.waitForDisplayed();
+  await nav.click();
+}
