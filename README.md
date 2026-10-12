@@ -107,7 +107,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 
 ## What's New in v2.5.4
 
-- **Agent skill-library depth (Sprint 3)** — Miya, Hector, and Jose each moved from one catch-all skill pack to a real 5-pack taxonomy (e.g. Miya: video / image / UI-UX / brand-identity / motion-graphics), so a request that touches a specific sub-domain pulls in narrow guidance instead of one shallow pack handling everything. `validateSkillPackAgainstContract()` now supports optional per-pack permission scoping (`AGENT_SKILL_PACK_SCOPE_OVERRIDES`) on top of the existing per-agent check, so an individual skill pack can be scoped tighter than its owning agent's default boundary. The Skills tab in the Ecosystem Hub now groups packs by owning agent instead of one flat list.
+- **Agent skill-library depth (Sprint 3)** — Miya, Hector, and Jose each moved from one catch-all skill pack to a real 5-pack taxonomy (e.g. Miya: video / image / UI-UX / brand-identity / motion-graphics), so a request that touches a specific sub-domain pulls in narrow guidance instead of one shallow pack handling everything (the other six agents have since received the same treatment — all 9 agents now carry 17–21 agent-owned packs). `validateSkillPackAgainstContract()` now supports optional per-pack permission scoping (`AGENT_SKILL_PACK_SCOPE_OVERRIDES`) on top of the existing per-agent check, so an individual skill pack can be scoped tighter than its owning agent's default boundary. The Skills tab in the Ecosystem Hub now groups packs by owning agent instead of one flat list.
 
 ## What's New in v2.5.3
 
@@ -407,7 +407,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 5,239 tests across 405 files
+npm run test           # 5,239 tests across 405 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
