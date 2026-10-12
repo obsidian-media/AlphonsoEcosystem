@@ -29,13 +29,13 @@ export function CompanionAgentRow({ agents, activeAgentId, onSelectAgent }: Prop
             onClick={() => onSelectAgent(agent.id)}
             className={`flex flex-col items-center gap-1 shrink-0 transition-opacity ${isActive ? 'opacity-100' : 'opacity-45 hover:opacity-75'}`}
           >
-            <div className={`relative rounded-full transition-transform ${isActive ? 'scale-105 ring-2 ring-offset-2 ring-offset-[var(--companion-surface)] ring-[var(--accent)]' : ''}`}>
+            <div className={`relative rounded-full transition-transform ${isActive ? 'scale-105 ring-2 ring-offset-2 ring-offset-(--companion-surface) ring-(--accent)' : ''}`}>
               <AgentAvatar agentId={agent.id} name={agent.name} sizeClass="h-14 w-14" />
-              <span className="absolute -bottom-1 -right-1 text-sm leading-none bg-[var(--surface-1)] border border-[var(--border)] rounded-full h-5 w-5 flex items-center justify-center">
+              <span className="absolute -bottom-1 -right-1 text-sm leading-none bg-(--surface-1) border border-(--border) rounded-full h-5 w-5 flex items-center justify-center">
                 {emoji}
               </span>
             </div>
-            <span className="text-[11px] font-medium text-[var(--companion-text-muted)] max-w-[64px] truncate">{agent.name}</span>
+            <span className="text-[11px] font-medium text-(--companion-text-muted) max-w-[64px] truncate">{agent.name}</span>
           </button>
         );
       })}

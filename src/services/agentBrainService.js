@@ -113,7 +113,7 @@ function needsClarification(commandText) {
   return (vague || tooShort || noAction) && commandText.trim().length < 30;
 }
 
-async function generateClarifyingQuestions(commandText, endpoint) {
+async function generateClarifyingQuestions(commandText, endpoint, sessionId) {
   const prompt = [
     'You are Alphonso, a coding assistant. The user gave a vague request.',
     'Generate 2-4 short clarifying questions to understand what they want.',
@@ -128,7 +128,7 @@ async function generateClarifyingQuestions(commandText, endpoint) {
   ].join('\n');
 
   try {
-    const response = await generateAgentLlmResponse('alphonso', { endpoint, prompt, model: getModelForTask('reason') });
+    const response = await generateAgentLlmResponse('alphonso', { endpoint, prompt, model: getModelForTask('reason'), sessionId });
     const parsed = parseJsonResponse(response?.response);
     if (Array.isArray(parsed)) return parsed.slice(0, 4);
     if (parsed?.questions && Array.isArray(parsed.questions)) return parsed.questions.slice(0, 4);
@@ -140,7 +140,7 @@ async function generateClarifyingQuestions(commandText, endpoint) {
 
 // ─── Brain 2: Plan Preview ──────────────────────────────────────────────────
 
-async function generatePlanPreview(commandText, projectContext, endpoint) {
+async function generatePlanPreview(commandText, projectContext, endpoint, sessionId) {
   const contextSnippet = projectContext.structure
     ? `\nEXISTING PROJECT STRUCTURE:\n${projectContext.structure.slice(0, 1000)}`
     : '';
@@ -172,7 +172,7 @@ async function generatePlanPreview(commandText, projectContext, endpoint) {
   ].join('\n');
 
   try {
-    const response = await generateAgentLlmResponse('alphonso', { endpoint, prompt, model: getModelForTask('reason') });
+    const response = await generateAgentLlmResponse('alphonso', { endpoint, prompt, model: getModelForTask('reason'), sessionId });
     return parseJsonResponse(response?.response);
   } catch {
     return null;
@@ -327,12 +327,12 @@ function buildFixPrompt(taskText, errorOutput, failedFiles) {
 
 // ─── Brain 5: Better Ollama Params ──────────────────────────────────────────
 
-async function generateWithOptimizedParams(prompt, endpoint, taskType, onToken) {
+async function generateWithOptimizedParams(prompt, endpoint, taskType, onToken, sessionId) {
   const model = getModelForTask(taskType || 'code');
   if (onToken) {
     return generateOllamaStream({ endpoint, model, prompt, onToken });
   }
-  return generateAgentLlmResponse('alphonso', { endpoint, prompt, model });
+  return generateAgentLlmResponse('alphonso', { endpoint, prompt, model, sessionId });
 }
 
 // ─── Brain 6: Multi-step Decomposition ──────────────────────────────────────
@@ -561,6 +561,11 @@ function buildValidationPrompt(commandText, validationErrors, writtenFiles) {
 
 export async function executeWithBrain(commandText, options = {}) {
   const { endpoint, projectDirectory, onProgress, previewOnly, conversationHistory, onToken } = options;
+  // Hermes-routed calls (clarify, plan, non-streaming generate/fix) use this caller-resolved session
+  // id to group a run's turns. Streaming generate/fix calls go through generateOllamaStream and do not
+  // join a Hermes session. Jose resolves the id via resolveSecureSessionId at its own call site to
+  // keep it out of CodeQL's insecure-randomness taint flow; it is used as-is here.
+  const { sessionId } = options;
   const results = [];
   const filesWritten = [];
   const artifacts = [];
@@ -575,7 +580,7 @@ export async function executeWithBrain(commandText, options = {}) {
 
   if (needsClarification(commandText)) {
     onProgress?.({ stage: 'clarifying', agent: 'alphonso', detail: 'Request is vague — generating questions' });
-    const questions = await generateClarifyingQuestions(commandText, endpoint);
+    const questions = await generateClarifyingQuestions(commandText, endpoint, sessionId);
     if (questions && questions.length > 0) {
       return {
         results: [],
@@ -590,7 +595,7 @@ export async function executeWithBrain(commandText, options = {}) {
   }
 
   onProgress?.({ stage: 'planning', agent: 'alphonso', detail: 'Generating execution plan' });
-  const planPreview = await generatePlanPreview(commandText, projectContext, endpoint);
+  const planPreview = await generatePlanPreview(commandText, projectContext, endpoint, sessionId);
   if (planPreview) {
     artifacts.push({
       type: 'plan_preview',
@@ -693,7 +698,7 @@ export async function executeWithBrain(commandText, options = {}) {
               onToken({ step: stepIdx + 1, iteration, token, fullText: full });
             }
           : undefined;
-        const response = await generateWithOptimizedParams(stepPrompt, endpoint, 'code', handleToken);
+        const response = await generateWithOptimizedParams(stepPrompt, endpoint, 'code', handleToken, sessionId);
         streamingText = '';
         const parsed = parseJsonResponse(response?.response || response);
 
@@ -809,7 +814,7 @@ export async function executeWithBrain(commandText, options = {}) {
         const handleToken = onToken
           ? (token, full) => { onToken({ step: 'fix', token, fullText: full }); }
           : undefined;
-        const fixResponse = await generateWithOptimizedParams(fixPrompt, endpoint, 'code', handleToken);
+        const fixResponse = await generateWithOptimizedParams(fixPrompt, endpoint, 'code', handleToken, sessionId);
         const fixParsed = parseJsonResponse(fixResponse?.response || fixResponse);
 
         if (fixParsed && Array.isArray(fixParsed.files)) {
