@@ -28,7 +28,42 @@ ollama pull llama3.2:3b
 2. Check firewall settings
 3. Try restarting Ollama: stop the process and run `ollama serve` again
 
+### Desktop app: chat replies stay empty, header says "Ollama offline" while Ollama is running
+
+Ollama answers the desktop window with `403 Forbidden`. On Windows the window's origin is `http://tauri.localhost`, which is not on Ollama's default allow-list.
+
+- From v2.9.0, an Ollama that Alphonso starts itself is configured correctly. Close any Ollama you started yourself (tray app, `ollama serve`) and let Alphonso start it, or use Runtimes > Ollama > Start.
+- To keep your own Ollama running, start it with the window origin allowed:
+
+  ```powershell
+  $env:OLLAMA_ORIGINS="http://tauri.localhost"
+  ollama serve
+  ```
+
+  Do not add `tauri://localhost` to `OLLAMA_ORIGINS`: Ollama refuses to start ("bad origin"), and it already allows that scheme.
+
+## Image Generation Issues
+
+### "Image generation failed" with ComfyUI running
+
+Before v2.9.0 ComfyUI refused the app window's requests (403) and no image could be queued. Update to v2.9.0 or later, where the desktop app reaches ComfyUI through its backend.
+
+In plain-browser dev mode (`npm run dev`) the window still calls ComfyUI directly, so ComfyUI must be started with `--enable-cors-header`.
+
+### "Timed out waiting for ComfyUI image output"
+
+The first image after ComfyUI starts has to load the model, which can take several minutes on a small GPU that is also holding an Ollama model. The app waits 5 minutes (3 before v2.9.0). Retry the Image step; later images are much faster.
+
+### Content Studio or Creative Studio shows a "built-in template" notice
+
+The model's reply could not be used, and the notice says why. Check that Ollama is running and a model is selected in Chat, then generate again.
+
 ## Build Issues
+
+### Desktop build fails with "Found version mismatched Tauri packages"
+
+The `tauri` crate in `src-tauri/Cargo.lock` and the `@tauri-apps/api` / `@tauri-apps/cli` npm packages must be on the same major.minor. Bump whichever is behind. This check runs only in the desktop build, which CI runs on `main` and release tags, not on PRs.
+
 
 ### `npm install` fails
 ```bash

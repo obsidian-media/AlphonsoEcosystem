@@ -69,7 +69,8 @@ src-tauri/             Rust backend
   src/ollama.rs        Ollama backend
   src/policy_gate.rs   Policy enforcement backend
 scripts/               Build, release, auth scripts
-e2e/                   Playwright E2E tests
+e2e/                   Playwright E2E tests (web build, Tauri bridge mocked)
+e2e-desktop/           Desktop E2E tests (real built app via tauri-driver)
 gateway/               WhatsApp Cloud gateway
 docs/                  120+ documentation files
 ```
@@ -137,7 +138,8 @@ git commit -m "type: description"
 ## Testing
 
 - **Unit tests**: `src/test/` (Vitest)
-- **E2E tests**: `e2e/` (Playwright)
+- **E2E tests**: `e2e/` (Playwright, web build with the Tauri bridge mocked)
+- **Desktop E2E tests**: `e2e-desktop/` (WebdriverIO + tauri-driver against the real built app; `npm run test:e2e:desktop`). Use these for anything that depends on the Rust backend, the real window origin, spawned processes or stored data. They run on isolated test data and are not in CI yet; prerequisites are listed at the top of `e2e-desktop/wdio.conf.mjs`.
 - **Rust tests**: `src-tauri/src/` (cargo test)
 
 Run tests before and after changes:

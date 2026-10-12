@@ -15,7 +15,7 @@ Alphonso is a local-first AI companion desktop application built with Tauri v2 (
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite 8, Tailwind CSS 3, Lucide React, Framer Motion — new UI components are `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain for a future migration. |
+| Frontend | React 18, Vite 8, Tailwind CSS 4, Lucide React, Framer Motion — new UI components are `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain for a future migration. |
 | Animation | Framer Motion (`src/lib/motion.ts` — `spring`, `tween`, `fadeUp`, `messageIn`, `panelIn` etc.) |
 | Design Tokens | OKLCH CSS custom properties (`src/styles/tokens.css`) — all colors in perceptually-uniform `oklch()` syntax |
 | Backend | Rust 1.77, Tauri 2.11, tokio async runtime, reqwest HTTP client |
@@ -217,7 +217,8 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - Frontend uses `.tsx` for new UI work, with legacy production `.jsx` contexts and Content Catalyst files still present. The service layer remains mixed JavaScript/TypeScript; current exact counts are verified by `npm run verify:docs`.
 - Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
-- Playwright E2E wired into CI (`e2e/smoke.spec.js`, `e2e/boot.spec.js`)
+- Playwright E2E wired into CI (`e2e/smoke.spec.js`, `e2e/boot.spec.js`) — runs the web build with the Tauri bridge mocked, so it never exercises the Rust backend
+- Desktop E2E suite (`e2e-desktop/`, `npm run test:e2e:desktop`) — WebdriverIO + tauri-driver against the real built binary on isolated test data; 16 spec files; run locally, not in CI yet
 - Component test coverage ~38%+ (threshold 38% via `npm run test:coverage`); 263 test files, 3,758 tests, all passing (verified 2026-07-25 — this line is not covered by `scripts/verify-doc-counts.mjs`'s ARCHITECTURE.md checks, so it can drift silently; cross-check against AGENTS.md's Project Identity line before trusting it)
 - GitHub connector tests: 20 tests in `githubConnector.test.js`; Slack connector tests: 16 tests in `slackConnector.test.js`
 - `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI; `cargo clippy -- -D warnings` clean (verified 2026-07-08)

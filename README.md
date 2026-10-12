@@ -4,17 +4,31 @@
 
 # Alphonso
 
-> **v2.8.0** — Local-first AI desktop companion with 9 agents, 26 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.9.0** — Local-first AI desktop companion with 9 agents, 26 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.8.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-3758%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
+[![Version](https://img.shields.io/badge/version-2.9.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
+[![Tests](https://img.shields.io/badge/tests-5608%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
 [**Download the latest release**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
-## Pre-launch hardening — 2026-09-30 (unreleased)
+## What's New in v2.9.0 (2026-10-12)
+
+The desktop app was tested end to end for the first time: the real built app, real backend, real Ollama and ComfyUI. That found desktop-only bugs that the mocked web-mode tests could not, and this release fixes them.
+
+- **Chat with local Ollama works in the desktop app.** Ollama was refusing the app window's requests (403).
+- **Image generation works.** ComfyUI was refusing the app window too, and a finished image made the Content Studio job disappear.
+- **Content Studio and Creative Studio use the model.** Both were silently showing stock template text.
+- **Runtime Hub can stop and restart Ollama.** Stop used to report success while Ollama kept running.
+- **Faster status checks** (5.5s to 1.1s) and no 24-second wait on the first-run Setup screen.
+- **New desktop end-to-end suite:** `npm run test:e2e:desktop`, 16 spec files, 53 checks against the real app on isolated test data.
+- Also in this release: Tailwind CSS v4, memory-graph retention pruning, Hermes session continuity, Agent Pairing and Maturity sidebar entries, per-command approval for AI-planned commands, and everything under "Pre-launch hardening" below.
+
+Known limits: an Ollama you start yourself (tray app or `ollama serve`) is still refused by the desktop window unless `OLLAMA_ORIGINS` includes `http://tauri.localhost`; let Alphonso start Ollama, or set that variable. Full list: `docs/governance/DEFERRED_WORK.md`.
+
+## Pre-launch hardening — 2026-09-30 (shipped in v2.9.0)
 
 Came out of a full pre-launch audit. Highlights:
 
@@ -294,7 +308,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                  React 18 (Vite 8, Tailwind 3)                   │
+│                  React 18 (Vite 8, Tailwind 4)                   │
 │                                                                  │
 │  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
 │  │  9 Agents     │  │  118 UI          │  │  188 Services      │  │
@@ -411,7 +425,8 @@ npm run test           # 5,239 tests across 409 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
-npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
+npm run test:e2e       # Playwright smoke tests (web build, Tauri bridge mocked; needs dev server + Ollama)
+npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app (see e2e-desktop/wdio.conf.mjs for prerequisites)
 ```
 
 ### Rust Backend

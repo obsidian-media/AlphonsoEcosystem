@@ -6,7 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] — 2026-10-06 (approval hardening, macOS notarization, false-confidence tests)
+## [2.9.0] — 2026-10-12 (desktop end-to-end testing pass and the fixes it found; approval hardening; Tailwind v4)
+
+**Why this release:** the desktop app was exercised end to end for the first time (a real built binary, real Rust backend, real Ollama and ComfyUI), instead of the web build with the backend mocked. That found a run of desktop-only failures that every earlier test had missed. All of them are fixed here. Everything recorded under the 2026-09-15/16, 2026-09-30 and 2026-10-06 headings below also ships in 2.9.0; none of it had been released.
+
+Headline fixes (details in the bullets that follow):
+
+- **Chat with local Ollama** was refused with 403 on Windows (#287).
+- **Image generation** could not reach ComfyUI, and a generated image made the job disappear (#291).
+- **Content Studio** never used the model for copy (#290); **Creative Studio** silently discarded fenced model replies (#289).
+- **Runtime Hub** could not stop the Ollama it started (#289).
+- **Runtime status** check 5.5s -> 1.1s, a "starting" state, no 24s Setup wait (#286).
+- **Release builds were broken on `main`** by a Tauri crate/npm version mismatch after a dependency bump; `@tauri-apps/api` and `@tauri-apps/cli` are now on 2.12 to match.
+
+New in this release:
+
+- **Desktop end-to-end suite** (`e2e-desktop/`, `npm run test:e2e:desktop`): WebdriverIO + tauri-driver against the real built app, on isolated test data. 16 spec files, 53 checks (#285, #288).
+- **Tailwind CSS v4** (#276), memory-graph retention pruning (#282), Hermes session continuity (#278), Agent Pairing and Maturity sidebar entries (#281), per-command approval for AI-planned commands (#271, #272, #275).
+- Dependencies: rand 0.10 (#284), jsdom 30 (#267), framer-motion 14 (#260), tauri-plugin-opener 2.7 (#261), plus CI action bumps.
+- Security: `quinn-proto` 0.11.16 -> 0.11.19 for five advisories published against it (RUSTSEC-2026-0338 to -0342, two rated high); they failed `cargo audit` on every PR touching the Rust lockfile.
+
+Known and not fixed (see `docs/governance/DEFERRED_WORK.md`, 2026-10-12): an Ollama the user starts themselves is still refused by the desktop window; an intermittent first-model-call failure right after launch; Research snippets include raw page CSS; several smaller display issues.
+
+### Changes — 2026-10-06 to 2026-10-12
 
 - **Image generation could not reach ComfyUI.** ComfyUI answers any request carrying a foreign `Origin` header with 403, and the app window always sends one, so `fetch` calls to ComfyUI from the window (model lookup, queue, history, image fetch) were all refused. In the desktop app they now go through a new, narrow backend command, `comfyui_request` (`src-tauri/src/comfyui_proxy.rs`: loopback http only, GET/POST only, five allowed paths). Plain-browser dev mode still uses `fetch` and still needs ComfyUI started with `--enable-cors-header`.
 - **A generated image made the Content Studio job disappear.** The job stored the image preview (hundreds of KB of base64) in its log details, artifacts, export package and bridge response as well as in its assets. Saving it overflowed localStorage, the error went unhandled, and the job vanished from the screen. The preview is now kept once per job, and a full storage no longer throws out of the pipeline.
@@ -31,7 +53,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] — 2026-09-30 (pre-launch all-angle audit + fix pass)
+### Included in 2.9.0 — 2026-09-30 (pre-launch all-angle audit + fix pass)
 
 The audit report itself is private (`audits/private/`, gitignored) because it contains exploit detail. This entry lists what changed.
 
@@ -81,7 +103,7 @@ The audit report itself is private (`audits/private/`, gitignored) because it co
 
 ---
 
-## [Unreleased] — 2026-09-15/16 (repo hygiene pass + top-3 deferred-work security/correctness fixes)
+### Included in 2.9.0 — 2026-09-15/16 (repo hygiene pass + top-3 deferred-work security/correctness fixes)
 
 - **Repo hygiene pass**: audited and dropped 3 stale stashes (all confirmed already superseded on `main`); confirmed `wip/opencode-test-coverage-2026-09-05` had never merged, was 235 commits stale, and was safe to delete after every commit's content was independently verified already present via later merged work; merged 9 safe dependabot PRs; caught dependabot PR #160 (`react-dom` 18→19 bump with no matching `react` bump) as genuinely broken via a live CI failure (119 test files) and left it open with auto-merge disabled and an explanation rather than merging it blind.
 - **Fixed a live CI-blocking security advisory found mid-session**: RUSTSEC-2026-0285 (rustls 0.23.42, published one day prior) was silently failing `cargo audit` on every PR touching `src-tauri/Cargo.lock` — bumped to 0.23.45.
