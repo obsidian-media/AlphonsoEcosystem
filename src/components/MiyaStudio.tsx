@@ -15,6 +15,7 @@ import { appendSessionEvent } from '../services/sessionIntelligenceService';
 import { pushMiyaMemory, upsertBrandKit } from '../services/miyaMemoryService';
 import { buildMiyaExportPacket } from '../services/miyaExportPacketService';
 import { generateOllamaResponse } from '../lib/ollama';
+import { extractJsonObject } from '../lib/jsonUtils';
 import { generateComfyUiImage, getComfyUiVideoHistory, queueComfyUiVideo } from '../services/connectorRegistryService';
 import { generateRunwayVideo, listPendingRunwayJobs, resumeRunwayTask } from '../services/runwayService';
 import { sendNativeNotification } from '../services/notificationService';
@@ -325,16 +326,17 @@ export function MiyaStudio({
         prompt
       });
 
-      let parsed: Record<string, unknown> | null = null;
-      try {
-        parsed = JSON.parse(response?.response || '{}');
-      } catch {
-        parsed = null;
-      }
+      // Models routinely wrap the JSON in ``` fences or add a sentence around
+      // it. A strict JSON.parse on the whole reply then failed, and the user
+      // silently got the built-in template, with their idea ignored.
+      const parsed = extractJsonObject(response?.response) as Record<string, unknown> | null;
 
       const merged: CreativeOutput = {
         ...basePackage,
         ...(parsed || {}),
+        ...(parsed
+          ? {}
+          : { notes: "The model's reply could not be read as a package, so this is the built-in template. Try Generate Package again, or a different model." }),
         rawModelResponse: response?.response || ''
       } as CreativeOutput;
 
