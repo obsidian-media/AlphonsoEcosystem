@@ -29,6 +29,19 @@ const tauriDriverBinary =
 
 let tauriDriver;
 let profileDir;
+let dataProfile;
+
+/** Folders the backend creates for an isolated test profile (see
+ *  `e2e_profile()` in src-tauri/src/utils.rs). Removed after each session. */
+function testDataDirs(profile) {
+  const identifier = `com.shayan.alphonso.e2e.${profile}`;
+  const roots = [process.env.APPDATA, process.env.LOCALAPPDATA, process.env.XDG_DATA_HOME, process.env.XDG_CONFIG_HOME]
+    .filter(Boolean);
+  return [
+    ...roots.map((root) => join(root, identifier)),
+    ...(process.env.APPDATA ? [join(process.env.APPDATA, `Alphonso-e2e-${profile}`)] : []),
+  ];
+}
 
 export const config = {
   runner: 'local',
@@ -66,24 +79,29 @@ export const config = {
   },
 
   beforeSession() {
-    // A throwaway WebView2 profile per run: tests start from a clean
-    // localStorage and never read or write the developer's real app profile.
-    // (The Rust side still uses the real app-data directory, so specs must
-    // not write durable state there without cleaning up.)
+    // Each spec file gets a throwaway WebView2 profile (clean localStorage)
+    // AND an isolated backend profile: ALPHONSO_E2E_PROFILE makes a debug
+    // build keep its SQLite store, config, runtimes folder and keychain
+    // entries apart from the developer's real ones. Without it the app loads
+    // real chat history and settings, and anything a spec sends or saves
+    // lands in the developer's real data.
     profileDir = mkdtempSync(join(tmpdir(), 'alphonso-e2e-profile-'));
+    dataProfile = `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    process.env.ALPHONSO_E2E_PROFILE = dataProfile;
     const args = ['--port', '4455', '--native-port', '4456'];
     if (process.env.ALPHONSO_E2E_EDGEDRIVER) {
       args.push('--native-driver', process.env.ALPHONSO_E2E_EDGEDRIVER);
     }
     tauriDriver = spawn(tauriDriverBinary, args, {
       stdio: [null, process.stdout, process.stderr],
-      env: { ...process.env, WEBVIEW2_USER_DATA_FOLDER: profileDir },
+      env: { ...process.env, WEBVIEW2_USER_DATA_FOLDER: profileDir, ALPHONSO_E2E_PROFILE: dataProfile },
     });
   },
 
   afterSession() {
     tauriDriver?.kill();
     try {
+      for (const dir of testDataDirs(dataProfile)) rmSync(dir, { recursive: true, force: true });
       rmSync(profileDir, { recursive: true, force: true });
     } catch {
       // WebView2 can hold the profile open briefly after exit; a leftover

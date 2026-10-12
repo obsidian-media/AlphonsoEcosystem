@@ -266,6 +266,13 @@ pub fn runtimes_dir() -> PathBuf {
         .map(|h| PathBuf::from(h).join(".alphonso"))
         .unwrap_or_else(|_| PathBuf::from(".alphonso"))
     });
+  // An end-to-end test profile (debug builds only) gets its own folder, so a
+  // test can never install into or delete the real runtimes.
+  if let Some(profile) = crate::utils::e2e_profile() {
+    return base
+      .join(format!("Alphonso-e2e-{profile}"))
+      .join("runtimes");
+  }
   if cfg!(target_os = "windows") {
     base.join("Alphonso").join("runtimes")
   } else {
