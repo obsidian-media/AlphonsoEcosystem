@@ -241,6 +241,15 @@ export function createContentJobFromBridgeRequest(bridgeRequest = {}, jobOptions
     request,
     request_id: request.request_id || null,
     brandProfile: jobOptions.brandProfile || null,
+    // Where the brief and draft steps reach the model. Without this on the
+    // job those steps had no endpoint or model, failed every time, and
+    // quietly produced the built-in template instead.
+    settings: jobOptions.settings
+      ? {
+          endpoint: jobOptions.settings.endpoint || null,
+          selectedModel: jobOptions.settings.selectedModel || null
+        }
+      : null,
     status: CONTENT_JOB_STATES.RECEIVED,
     currentStep: 'brief',
     draft: null,
@@ -333,6 +342,7 @@ export async function generateContentDraft(job) {
   const brief = await buildContentBrief(job);
   const prompt = buildPrompt(request, brief, job.brandProfile);
   let draft = null;
+  let templateReason = '';
   try {
     const response = await generateOllamaResponse({
       endpoint: job?.settings?.endpoint,
@@ -340,19 +350,28 @@ export async function generateContentDraft(job) {
       prompt
     });
     draft = parseLooseJson(response?.response) || null;
+    if (!draft) templateReason = "The model's reply could not be read as a draft.";
   } catch (error) {
     draft = null;
+    templateReason = error instanceof Error && error.message ? error.message : 'The local model could not be reached.';
   }
 
+  // A template draft is a real, usable fallback, but it must say what it is:
+  // presenting stock copy as "generated" hid the fact that no model ran.
+  const draftSource = draft ? 'model' : 'template';
   if (!draft) {
     draft = fallbackDraft(request);
   }
 
-  const next = withLog({ ...job, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'info', 'Content draft generated.', { draft });
+  const next = draftSource === 'model'
+    ? withLog({ ...job, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'info', 'Content draft generated.', { draft })
+    : withLog({ ...job, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'warning', `Content draft is the built-in template: ${templateReason}`, { draft });
   return {
     ...next,
     brief,
     draft,
+    draftSource,
+    draftTemplateReason: draftSource === 'template' ? templateReason : null,
     assets: job.assets || {
       image_url: null,
       video_url: null,
