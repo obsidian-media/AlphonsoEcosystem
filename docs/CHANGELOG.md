@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-10-06 (approval hardening, macOS notarization, false-confidence tests)
 
+- **Desktop chat with Ollama on Windows was answered with 403.** On Windows the app window's origin is `http://tauri.localhost`, which is not on Ollama's default allow-list, so chat requests from the window were refused; the model list still worked through a backend fallback, which hid it. An Ollama that Alphonso starts (boot auto-start or Runtime Hub) now gets `OLLAMA_ORIGINS` extended with the window's http/https origins, keeping whatever the user had set. Not fixed: an Ollama the user started themselves is still refused unless they set `OLLAMA_ORIGINS`. Found by the new desktop end-to-end chat spec.
 - **macOS notarization (#270).** `release.yml`'s `build-macos` signs with a Developer ID certificate and notarizes; written but not yet exercised on a real tag (see `docs/MACOS_SIGNING.md`).
 - **Per-command approval for AI-planned workspace-code commands (#271).** `commandApprovalService.ts`; fail-closed; also gates automatic post-write validation. Writes into `.git/` are blocked.
 - **Approval bridge fixed (#272).** `RequestApprovalProvider` previously never showed a prompt (Boardroom Hermes gate, plugin/workspace/verification flows awaited forever); it now forwards to the shell's approval modal.

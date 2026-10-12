@@ -258,6 +258,42 @@ fn tool_def(name: &str) -> Option<&'static ToolDef> {
 // Directory helpers
 // ─────────────────────────────────────────────────────────
 
+/// Origins the app's own window sends requests from. On Windows (and Android)
+/// Tauri serves the frontend from `http://tauri.localhost`, which is NOT on
+/// Ollama's default allow-list (that covers `localhost`/`127.0.0.1` hosts and
+/// the `tauri://` scheme used on macOS/Linux). Without this, an Ollama that
+/// Alphonso itself started answers the app's own chat requests with 403.
+///
+/// Only http/https entries belong here: Ollama refuses to start at all
+/// ("panic: bad origin") if `OLLAMA_ORIGINS` contains a `tauri://` entry, and
+/// it already allows that scheme by default.
+const APP_WINDOW_ORIGINS: [&str; 2] = ["http://tauri.localhost", "https://tauri.localhost"];
+
+/// `OLLAMA_ORIGINS` value for an Ollama process Alphonso starts: whatever the
+/// user already configured, plus the app's own window origins.
+pub(crate) fn ollama_origins_value(existing: Option<&str>) -> String {
+  let mut origins: Vec<&str> = existing
+    .unwrap_or("")
+    .split(',')
+    .map(str::trim)
+    .filter(|origin| !origin.is_empty())
+    .collect();
+  for origin in APP_WINDOW_ORIGINS {
+    if !origins.contains(&origin) {
+      origins.push(origin);
+    }
+  }
+  origins.join(",")
+}
+
+/// Environment a tool needs when Alphonso starts it.
+fn apply_tool_env(tool_name: &str, cmd: &mut Command) {
+  if tool_name == "ollama" {
+    let existing = std::env::var("OLLAMA_ORIGINS").ok();
+    cmd.env("OLLAMA_ORIGINS", ollama_origins_value(existing.as_deref()));
+  }
+}
+
 pub fn runtimes_dir() -> PathBuf {
   let base = std::env::var("APPDATA")
     .map(PathBuf::from)
@@ -1818,6 +1854,7 @@ pub async fn runtime_start_tool(
   }
   cmd.stdout(std::process::Stdio::null());
   cmd.stderr(std::process::Stdio::null());
+  apply_tool_env(def.name, &mut cmd);
   no_window(&mut cmd);
 
   let child = cmd
@@ -2002,6 +2039,7 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
       }
       cmd.stdout(std::process::Stdio::null());
       cmd.stderr(std::process::Stdio::null());
+      apply_tool_env(def.name, &mut cmd);
       no_window(&mut cmd);
 
       match cmd.spawn() {
@@ -2251,6 +2289,26 @@ mod tests {
     if let Some(free) = profile.disk_free_gb {
       assert!(free < 1_000_000); // sanity upper bound, not a real limit
     }
+  }
+
+  #[test]
+  fn ollama_origins_adds_the_app_window_origins() {
+    assert_eq!(
+      ollama_origins_value(None),
+      "http://tauri.localhost,https://tauri.localhost"
+    );
+  }
+
+  #[test]
+  fn ollama_origins_keeps_user_values_and_does_not_duplicate() {
+    assert_eq!(
+      ollama_origins_value(Some(" https://example.com , http://tauri.localhost,")),
+      "https://example.com,http://tauri.localhost,https://tauri.localhost"
+    );
+    assert_eq!(
+      ollama_origins_value(Some("*")),
+      "*,http://tauri.localhost,https://tauri.localhost"
+    );
   }
 
   #[test]
