@@ -19,9 +19,9 @@ describe('Card', () => {
   it('has correct base styles', () => {
     render(<Card>Content</Card>);
     const card = screen.getByText('Content').closest('div');
-    expect(card.className).toContain('bg-[--surface-2]');
+    expect(card.className).toContain('bg-(--surface-2)');
     expect(card.className).toContain('border');
-    expect(card.className).toContain('rounded-[--radius-lg]');
+    expect(card.className).toContain('rounded-lg');
   });
 
   describe('clickable', () => {

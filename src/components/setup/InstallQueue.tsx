@@ -151,16 +151,16 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
 
   return (
     <div className="flex flex-col gap-3 p-8 w-full max-w-lg">
-      <h2 className="text-2xl font-semibold text-[var(--text-1)]">Installing…</h2>
+      <h2 className="text-2xl font-semibold text-(--text-1)">Installing…</h2>
       {/* aria-busy tells assistive tech the list is still changing, so it can
           hold off on summarising a set of rows that are about to move. */}
       <ul role="list" aria-busy={anyInFlight} aria-label="Installation progress" className="contents">
         {tasks.map((task) => {
           const barColor = COMPONENT_AGENT_COLORS[task.id] ?? 'var(--accent)';
           return (
-            <li key={task.id} className="rounded bg-[var(--surface-2)] px-3 py-2">
+            <li key={task.id} className="rounded-sm bg-(--surface-2) px-3 py-2">
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--text-1)]">{task.label}</span>
+                <span className="text-(--text-1)">{task.label}</span>
                 {/* Failures use role="alert" (assertive) because they change
                     what the user has to do next; ordinary progress uses
                     role="status" (polite) so it never interrupts.
@@ -170,7 +170,7 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
                     of several components became ready. */}
                 <span
                   role={task.status === 'error' ? 'alert' : 'status'}
-                  className="text-[var(--text-3)]"
+                  className="text-(--text-3)"
                 >
                   <span className="sr-only">
                     {task.status === 'pending' && `${task.label}: pending`}
@@ -193,7 +193,7 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
                   aria-valuenow={task.pct ?? undefined}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-3)]"
+                  className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-(--surface-3)"
                 >
                   {task.pct != null ? (
                     <div
@@ -221,7 +221,7 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
           onClick={handleStartChatting}
           animate={{ opacity: [0.75, 1, 0.75] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-          className="mt-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-[var(--surface-0)]"
+          className="mt-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-(--surface-0)"
           style={{ backgroundColor: 'var(--accent)' }}
         >
           Start Chatting Now

@@ -146,27 +146,27 @@ function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColo
     <div className={`rounded-2xl ${bgColor} p-5`}>
       <div className="mb-4 flex items-center gap-2">
         {Icon && <Icon className={`h-4 w-4 ${accentColor}`} />}
-        <span className="text-sm font-semibold text-[var(--text-1)]">{title}</span>
+        <span className="text-sm font-semibold text-(--text-1)">{title}</span>
       </div>
       <div className="space-y-3">
         {fields.map((f) => (
           <div key={f.key}>
-            <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-3)]">{f.label}</label>
+            <label className="mb-1.5 block text-[11px] font-medium text-(--text-3)">{f.label}</label>
             <input
               type={f.secret === false ? 'text' : 'password'}
               value={f.value || ''}
               onChange={(e) => f.onChange(e.target.value)}
-              className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none"
+              className="w-full rounded-xl bg-(--surface-2) px-3 py-2.5 text-sm text-(--text-1) placeholder-(--text-4) focus:outline-hidden"
               placeholder={f.placeholder}
               autoComplete="off"
             />
           </div>
         ))}
       </div>
-      {hint && <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-3)]">{hint}</p>}
+      {hint && <p className="mt-3 text-[11px] leading-relaxed text-(--text-3)">{hint}</p>}
       <div className="mt-4 flex items-center justify-between">
         {saved ? (
-          <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--success)]">
+          <div className="flex items-center gap-1.5 text-[12px] font-medium text-(--success)">
             <CheckCircle2 className="h-3.5 w-3.5" />
             {savedLabel || 'Saved successfully'}
           </div>
@@ -175,7 +175,7 @@ function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColo
         )}
         <button
           onClick={handleSave}
-          className={`rounded-xl ${bgColor} px-4 py-2 text-[11px] font-semibold text-[var(--text-1)] transition-opacity hover:opacity-80`}
+          className={`rounded-xl ${bgColor} px-4 py-2 text-[11px] font-semibold text-(--text-1) transition-opacity hover:opacity-80`}
         >
           Save & Enable
         </button>
@@ -195,10 +195,10 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
   const live = isConnectorLive(connector);
 
   const statusConfig: Record<DisplayStatus, { label: string; dot: string; text: string; border: string }> = {
-    configured: { label: 'Active', dot: 'bg-[var(--success)]', text: 'text-[var(--success)]', border: 'bg-[var(--success-dim)]' },
-    local_only: { label: 'Local', dot: 'bg-[var(--accent)]', text: 'text-[var(--accent)]', border: 'bg-[var(--accent-dim)]' },
-    not_configured: { label: 'Not set up', dot: 'bg-[var(--text-4)]', text: 'text-[var(--text-3)]', border: 'bg-[var(--surface-1)]' },
-    error: { label: 'Error', dot: 'bg-[var(--warning)]', text: 'text-[var(--warning)]', border: 'bg-[var(--warning-dim)]' },
+    configured: { label: 'Active', dot: 'bg-(--success)', text: 'text-(--success)', border: 'bg-(--success-dim)' },
+    local_only: { label: 'Local', dot: 'bg-(--accent)', text: 'text-(--accent)', border: 'bg-(--accent-dim)' },
+    not_configured: { label: 'Not set up', dot: 'bg-(--text-4)', text: 'text-(--text-3)', border: 'bg-(--surface-1)' },
+    error: { label: 'Error', dot: 'bg-(--warning)', text: 'text-(--warning)', border: 'bg-(--warning-dim)' },
   };
 
   const cfg = statusConfig[displayStatus] ?? statusConfig.not_configured;
@@ -208,18 +208,18 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <Icon className={`h-4 w-4 shrink-0 ${cfg.text}`} />
-          <span className="text-sm font-medium text-[var(--text-1)]">{connector.name}</span>
+          <span className="text-sm font-medium text-(--text-1)">{connector.name}</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
           <span className={`text-[10px] font-medium ${cfg.text}`}>{cfg.label}</span>
         </div>
       </div>
-      {live && <div className="mt-2 text-[10px] text-[var(--success)]">Verified & ready</div>}
-      {displayStatus === 'not_configured' && <div className="mt-2 text-[10px] text-[var(--text-4)]">Enter credentials below to enable</div>}
+      {live && <div className="mt-2 text-[10px] text-(--success)">Verified & ready</div>}
+      {displayStatus === 'not_configured' && <div className="mt-2 text-[10px] text-(--text-4)">Enter credentials below to enable</div>}
       <button
         onClick={onVerifyEnv}
-        className="mt-3 w-full rounded-lg bg-[var(--surface-2)] px-3 py-1.5 text-[10px] font-medium text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-colors"
+        className="mt-3 w-full rounded-lg bg-(--surface-2) px-3 py-1.5 text-[10px] font-medium text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-2) transition-colors"
       >
         Test Connection
       </button>
@@ -231,10 +231,10 @@ function PlaceholderConnectorBanner({ children }: { children: React.ReactNode })
   return (
     <div className="relative">
       {/* Overlay covers the children area and catches pointer events — no pointer-events-none. */}
-      <div className="absolute inset-0 z-10 rounded-2xl bg-[var(--surface-1)] backdrop-blur-[1px]" />
-      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-2.5 py-1">
-        <span className="h-1.5 w-1.5 rounded-full bg-[var(--warning)]" />
-        <span className="text-[10px] font-semibold tracking-wide text-[var(--warning)]">Coming Soon</span>
+      <div className="absolute inset-0 z-10 rounded-2xl bg-(--surface-1) backdrop-blur-[1px]" />
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-(--warning-border) bg-(--warning-dim) px-2.5 py-1">
+        <span className="h-1.5 w-1.5 rounded-full bg-(--warning)" />
+        <span className="text-[10px] font-semibold tracking-wide text-(--warning)">Coming Soon</span>
       </div>
       {/* pointer-events-none + aria-hidden ensure neither mouse events nor assistive
           technology can reach or activate the disabled credential form. */}
@@ -433,17 +433,17 @@ function CollapsibleCategory({ id, label, icon: Icon, defaultOpen, children }: {
   };
 
   return (
-    <div className="border-t border-[var(--border)] first:border-t-0 first:pt-0 pt-2">
+    <div className="border-t border-(--border) first:border-t-0 first:pt-0 pt-2">
       <button
         type="button"
         onClick={toggle}
-        className="flex w-full items-center gap-2.5 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded-lg"
+        className="flex w-full items-center gap-2.5 py-2.5 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) rounded-lg"
         aria-expanded={open}
         data-testid={`connector-category-${id}`}
       >
-        <Icon className="h-4 w-4 text-[var(--text-3)] shrink-0" />
-        <span className="text-[13px] font-semibold text-[var(--text-1)]">{label}</span>
-        {open ? <ChevronUp className="ml-auto h-3.5 w-3.5 text-[var(--text-3)]" /> : <ChevronDown className="ml-auto h-3.5 w-3.5 text-[var(--text-3)]" />}
+        <Icon className="h-4 w-4 text-(--text-3) shrink-0" />
+        <span className="text-[13px] font-semibold text-(--text-1)">{label}</span>
+        {open ? <ChevronUp className="ml-auto h-3.5 w-3.5 text-(--text-3)" /> : <ChevronDown className="ml-auto h-3.5 w-3.5 text-(--text-3)" />}
       </button>
       {open && <div className="space-y-4 pb-4 pl-[26px]">{children}</div>}
     </div>
@@ -850,21 +850,21 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const outboundAllowed = Boolean(selectedConnector && isConnectorOutboundAllowed(selectedConnector, explicitApproval));
 
   const noticeColors: Record<NoticeType, string> = {
-    success: 'bg-[var(--success-dim)] text-[var(--success)]',
-    error: 'bg-[var(--error-dim)] text-[var(--error)]',
-    info: 'bg-[var(--accent-dim)] text-[var(--text-2)]',
+    success: 'bg-(--success-dim) text-(--success)',
+    error: 'bg-(--error-dim) text-(--error)',
+    info: 'bg-(--accent-dim) text-(--text-2)',
   };
 
   return (
-    <section className="rounded-2xl bg-[var(--surface-1)] p-5 space-y-6">
+    <section className="rounded-2xl bg-(--surface-1) p-5 space-y-6">
 
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-1)]">
-            <RadioTower className="h-4 w-4 text-[var(--accent)]" />
+          <div className="flex items-center gap-2 text-sm font-semibold text-(--text-1)">
+            <RadioTower className="h-4 w-4 text-(--accent)" />
             Connectors
           </div>
-          <p className="mt-1 text-[12px] text-[var(--text-3)]">
+          <p className="mt-1 text-[12px] text-(--text-3)">
             {activeCount > 0
               ? `${activeCount} of ${connectors.length} connectors active. Your credentials are stored locally.`
               : `Connect your tools below. All credentials are stored locally on your device.`}
@@ -893,7 +893,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       </div>
 
       <div>
-        <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Configure Integrations</h3>
+        <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-(--text-3)">Configure Integrations</h3>
         <div className="space-y-1">
 
         <CollapsibleCategory id="messaging" label="Messaging" icon={MessageSquare} defaultOpen>
@@ -902,38 +902,38 @@ export function ConnectorSetupPanel(): React.JSX.Element {
           <div className="rounded-2xl bg-sky-500/8 p-5">
             <div className="mb-4 flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-sky-400" />
-              <span className="text-sm font-semibold text-[var(--text-1)]">Telegram</span>
+              <span className="text-sm font-semibold text-(--text-1)">Telegram</span>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-3)]">Bot Token</label>
+                <label className="mb-1.5 block text-[11px] font-medium text-(--text-3)">Bot Token</label>
                 <input type="password" value={telegramBotToken} onChange={(e) => setTelegramBotToken(e.target.value)}
-                  className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none"
+                  className="w-full rounded-xl bg-(--surface-2) px-3 py-2.5 text-sm text-(--text-1) placeholder-(--text-4) focus:outline-hidden"
                   placeholder="Paste your bot token from @BotFather" autoComplete="off" />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-3)]">Allowed Chat IDs <span className="text-[var(--warning)] font-normal">(required to pair)</span></label>
+                <label className="mb-1.5 block text-[11px] font-medium text-(--text-3)">Allowed Chat IDs <span className="text-(--warning) font-normal">(required to pair)</span></label>
                 <input type="text" value={telegramChatIds} onChange={(e) => setTelegramChatIds(e.target.value)}
-                  className="w-full rounded-xl bg-[var(--surface-2)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none"
+                  className="w-full rounded-xl bg-(--surface-2) px-3 py-2.5 text-sm text-(--text-1) placeholder-(--text-4) focus:outline-hidden"
                   placeholder="e.g. 123456789, 987654321" />
               </div>
             </div>
-            <p className="mt-3 text-[11px] text-[var(--text-3)]">
-              Create a bot with <span className="text-[var(--text-3)]">@BotFather</span> on Telegram to get your bot token, then message <span className="text-[var(--text-3)]">@userinfobot</span> to get your own numeric chat ID. Set it here <span className="text-[var(--text-3)]">before</span> sending <span className="text-[var(--text-3)]">/start</span> to your bot — Alphonso will only let a chat ID on this list claim ownership, closing the window where anyone who finds your bot first could take control.
+            <p className="mt-3 text-[11px] text-(--text-3)">
+              Create a bot with <span className="text-(--text-3)">@BotFather</span> on Telegram to get your bot token, then message <span className="text-(--text-3)">@userinfobot</span> to get your own numeric chat ID. Set it here <span className="text-(--text-3)">before</span> sending <span className="text-(--text-3)">/start</span> to your bot — Alphonso will only let a chat ID on this list claim ownership, closing the window where anyone who finds your bot first could take control.
             </p>
             {telegramBotVerified !== null && (
-              <div className={`mt-3 flex items-center gap-1.5 text-[12px] font-medium ${telegramBotVerified.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+              <div className={`mt-3 flex items-center gap-1.5 text-[12px] font-medium ${telegramBotVerified.ok ? 'text-(--success)' : 'text-(--error)'}`}>
                 {telegramBotVerified.ok
                   ? <><CheckCircle2 className="h-3.5 w-3.5" /> Connected as @{telegramBotVerified.botUsername}</>
                   : <><AlertCircle className="h-3.5 w-3.5" /> {telegramBotVerified.error}</>}
               </div>
             )}
             <div className="mt-4 flex items-center gap-2">
-              <button onClick={saveTelegramCredentials} className="rounded-xl bg-sky-500/8 px-4 py-2 text-[11px] font-semibold text-[var(--text-1)] hover:opacity-80 transition-opacity">
+              <button onClick={saveTelegramCredentials} className="rounded-xl bg-sky-500/8 px-4 py-2 text-[11px] font-semibold text-(--text-1) hover:opacity-80 transition-opacity">
                 Save & Enable
               </button>
               <button onClick={verifyTelegramBot} disabled={transportBusy}
-                className="rounded-xl px-4 py-2 text-[11px] font-medium text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-40 transition-colors">
+                className="rounded-xl px-4 py-2 text-[11px] font-medium text-(--text-3) hover:text-(--text-2) disabled:opacity-40 transition-colors">
                 Verify Bot
               </button>
             </div>
@@ -1114,58 +1114,58 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       <div className="rounded-xl">
         <button
           onClick={() => setAdvancedOpen((v) => !v)}
-          className="flex w-full items-center justify-between px-4 py-3 text-[11px] font-medium text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
+          className="flex w-full items-center justify-between px-4 py-3 text-[11px] font-medium text-(--text-3) hover:text-(--text-2) transition-colors"
         >
           <span>Developer &amp; Testing Tools</span>
           {advancedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
 
         {advancedOpen && (
-          <div className="border-t border-[var(--border)] p-4 space-y-4">
+          <div className="border-t border-(--border) p-4 space-y-4">
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[11rem_1fr_12rem]">
-              <select aria-label="Connector to route" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+              <select aria-label="Connector to route" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)">
                 {connectors.map((c) => <option key={`route-${c.id}`} value={c.id}>{c.name}</option>)}
               </select>
-              <input value={simulatedText} onChange={(e) => setSimulatedText(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Simulated command text" />
-              <button onClick={createRoute} className="rounded-xl bg-[var(--accent)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)]">
+              <input value={simulatedText} onChange={(e) => setSimulatedText(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="Simulated command text" />
+              <button onClick={createRoute} className="rounded-xl bg-(--accent) px-4 py-2 text-[10px] font-black uppercase tracking-widest text-(--accent-contrast) hover:bg-(--accent-hover)">
                 Route To Jose
               </button>
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_2fr_auto_auto]">
-              <input value={senderId} onChange={(e) => setSenderId(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Simulated sender id" />
-              <input value={authInput} onChange={(e) => setAuthInput(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Allowlist ids (comma or newline)" />
-              <button onClick={applyAllowlist} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]">Save Allowlist</button>
-              <button onClick={disableAuthProfile} className="rounded-xl bg-[var(--warning-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)] hover:opacity-90">Disable Auth</button>
+              <input value={senderId} onChange={(e) => setSenderId(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="Simulated sender id" />
+              <input value={authInput} onChange={(e) => setAuthInput(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="Allowlist ids (comma or newline)" />
+              <button onClick={applyAllowlist} className="rounded-xl bg-(--surface-2) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--text-2) hover:bg-(--surface-3)">Save Allowlist</button>
+              <button onClick={disableAuthProfile} className="rounded-xl bg-(--warning-dim) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--warning) hover:opacity-90">Disable Auth</button>
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[10rem_1fr_1fr_auto_auto]">
-              <select aria-label="Connector for outbound message" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+              <select aria-label="Connector for outbound message" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)">
                 {connectors.map((c) => <option key={`outbound-${c.id}`} value={c.id}>{c.name}</option>)}
               </select>
               {connectorId === 'youtube' ? (
                 <>
-                  <input value={youtubeFilePath} onChange={(e) => setYoutubeFilePath(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Local video file path" />
-                  <input value={youtubeTitle} onChange={(e) => setYoutubeTitle(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="YouTube title" />
+                  <input value={youtubeFilePath} onChange={(e) => setYoutubeFilePath(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="Local video file path" />
+                  <input value={youtubeTitle} onChange={(e) => setYoutubeTitle(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="YouTube title" />
                 </>
               ) : (
                 <>
-                  <input value={outboundTarget} onChange={(e) => setOutboundTarget(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder={connectorId === 'telegram' ? 'Chat ID' : connectorId === 'whatsapp' ? 'Phone (E.164)' : 'Target'} />
-                  <input value={outboundText} onChange={(e) => setOutboundText(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Outbound message" />
+                  <input value={outboundTarget} onChange={(e) => setOutboundTarget(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder={connectorId === 'telegram' ? 'Chat ID' : connectorId === 'whatsapp' ? 'Phone (E.164)' : 'Target'} />
+                  <input value={outboundText} onChange={(e) => setOutboundText(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="Outbound message" />
                 </>
               )}
-              <button onClick={pollConnector} disabled={transportBusy || !pollAvailable} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-40">
+              <button onClick={pollConnector} disabled={transportBusy || !pollAvailable} className="rounded-xl bg-(--surface-2) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--text-2) hover:bg-(--surface-3) disabled:opacity-40">
                 {pollAvailable ? 'Poll' : 'Poll N/A'}
               </button>
-              <button onClick={sendOutbound} disabled={transportBusy || !outboundAllowed} className="rounded-xl bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-muted)] disabled:opacity-40">
+              <button onClick={sendOutbound} disabled={transportBusy || !outboundAllowed} className="rounded-xl bg-(--accent-dim) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--accent) hover:bg-(--accent-muted) disabled:opacity-40">
                 {connectorId === 'youtube' ? 'Upload' : 'Send'}
               </button>
               {connectorId === 'telegram' && (
-                <button onClick={runTelegramLiveProof} disabled={transportBusy} className="rounded-xl bg-[var(--success-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--success)] hover:opacity-90 disabled:opacity-40">Live Proof</button>
+                <button onClick={runTelegramLiveProof} disabled={transportBusy} className="rounded-xl bg-(--success-dim) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--success) hover:opacity-90 disabled:opacity-40">Live Proof</button>
               )}
               {connectorId === 'telegram' && (
-                <button onClick={runAutoPoll} disabled={transportBusy} className="rounded-xl bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-muted)] disabled:opacity-40">
+                <button onClick={runAutoPoll} disabled={transportBusy} className="rounded-xl bg-(--accent-dim) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--accent) hover:bg-(--accent-muted) disabled:opacity-40">
                   Auto-Poll {(autoPollState as { errors?: number }).errors ? `(${(autoPollState as { errors?: number }).errors} err)` : ''}
                 </button>
               )}
@@ -1173,9 +1173,9 @@ export function ConnectorSetupPanel(): React.JSX.Element {
 
             {connectorId === 'youtube' && (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_10rem]">
-                <input value={youtubeDescription} onChange={(e) => setYoutubeDescription(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Description (optional)" />
-                <input value={youtubeTags} onChange={(e) => setYoutubeTags(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Tags, comma-separated" />
-                <select aria-label="YouTube privacy" value={youtubePrivacy} onChange={(e) => setYoutubePrivacy(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]">
+                <input value={youtubeDescription} onChange={(e) => setYoutubeDescription(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="Description (optional)" />
+                <input value={youtubeTags} onChange={(e) => setYoutubeTags(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="Tags, comma-separated" />
+                <select aria-label="YouTube privacy" value={youtubePrivacy} onChange={(e) => setYoutubePrivacy(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)">
                   <option value="private">private</option>
                   <option value="unlisted">unlisted</option>
                   <option value="public">public</option>
@@ -1183,35 +1183,35 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               </div>
             )}
 
-            <div className="flex items-center gap-2 rounded-xl bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--text-2)]">
-              <input id="dev-approval" type="checkbox" checked={explicitApproval} onChange={(e) => setExplicitApproval(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--warning)]" />
+            <div className="flex items-center gap-2 rounded-xl bg-(--warning-dim) p-3 text-[11px] text-(--text-2)">
+              <input id="dev-approval" type="checkbox" checked={explicitApproval} onChange={(e) => setExplicitApproval(e.target.checked)} className="h-3.5 w-3.5 accent-(--warning)" />
               <label htmlFor="dev-approval" className="cursor-pointer">Approve this outbound action (required for sends and uploads)</label>
             </div>
 
-            <div className="rounded-xl bg-[var(--surface-1)] p-4">
-              <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">WhatsApp Cloud Webhook Simulation</div>
+            <div className="rounded-xl bg-(--surface-1) p-4">
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-(--accent)">WhatsApp Cloud Webhook Simulation</div>
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                <input value={cloudWebhookMode} onChange={(e) => setCloudWebhookMode(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="hub.mode" />
-                <input value={cloudWebhookVerifyToken} onChange={(e) => setCloudWebhookVerifyToken(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="hub.verify_token" />
-                <input value={cloudWebhookChallenge} onChange={(e) => setCloudWebhookChallenge(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="hub.challenge" />
+                <input value={cloudWebhookMode} onChange={(e) => setCloudWebhookMode(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="hub.mode" />
+                <input value={cloudWebhookVerifyToken} onChange={(e) => setCloudWebhookVerifyToken(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="hub.verify_token" />
+                <input value={cloudWebhookChallenge} onChange={(e) => setCloudWebhookChallenge(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="hub.challenge" />
               </div>
               <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_20rem_auto]">
-                <textarea value={cloudWebhookPayload} onChange={(e) => setCloudWebhookPayload(e.target.value)} rows={4} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="Webhook JSON payload" />
-                <input value={cloudWebhookSignature} onChange={(e) => setCloudWebhookSignature(e.target.value)} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" placeholder="X-Hub-Signature-256 header" />
-                <button onClick={runWhatsAppCloudWebhookSimulation} disabled={transportBusy} className="rounded-xl bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-muted)] disabled:opacity-40">Simulate</button>
+                <textarea value={cloudWebhookPayload} onChange={(e) => setCloudWebhookPayload(e.target.value)} rows={4} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="Webhook JSON payload" />
+                <input value={cloudWebhookSignature} onChange={(e) => setCloudWebhookSignature(e.target.value)} className="rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)" placeholder="X-Hub-Signature-256 header" />
+                <button onClick={runWhatsAppCloudWebhookSimulation} disabled={transportBusy} className="rounded-xl bg-(--accent-dim) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--accent) hover:bg-(--accent-muted) disabled:opacity-40">Simulate</button>
               </div>
             </div>
 
-            <div className="rounded-xl bg-[var(--surface-1)] p-3 text-[10px] text-[var(--text-3)] font-mono space-y-1">
-              <div>connector: <span className="text-[var(--text-2)]">{connectorId}</span> | status: <span className="text-[var(--text-2)]">{selectedConnector ? getDisplayStatus(selectedConnector) : 'n/a'}</span> | live: <span className="text-[var(--text-2)]">{selectedConnector ? String(isConnectorLive(selectedConnector)) : 'n/a'}</span></div>
-              <div>outbound_allowed: <span className="text-[var(--text-2)]">{String(outboundAllowed)}</span> | poll_available: <span className="text-[var(--text-2)]">{String(pollAvailable)}</span></div>
+            <div className="rounded-xl bg-(--surface-1) p-3 text-[10px] text-(--text-3) font-mono space-y-1">
+              <div>connector: <span className="text-(--text-2)">{connectorId}</span> | status: <span className="text-(--text-2)">{selectedConnector ? getDisplayStatus(selectedConnector) : 'n/a'}</span> | live: <span className="text-(--text-2)">{selectedConnector ? String(isConnectorLive(selectedConnector)) : 'n/a'}</span></div>
+              <div>outbound_allowed: <span className="text-(--text-2)">{String(outboundAllowed)}</span> | poll_available: <span className="text-(--text-2)">{String(pollAvailable)}</span></div>
             </div>
 
             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-4)] mb-2">Connector Audit</div>
-              {audit.length === 0 && <div className="rounded-xl bg-[var(--surface-1)] p-3 text-sm text-[var(--text-4)]">No activity yet.</div>}
+              <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-4) mb-2">Connector Audit</div>
+              {audit.length === 0 && <div className="rounded-xl bg-(--surface-1) p-3 text-sm text-(--text-4)">No activity yet.</div>}
               {(audit as Array<{ id: string; connectorId: string; action: string; timestampMs: number }>).slice().reverse().slice(0, 10).map((entry) => (
-                <div key={entry.id} className="rounded-xl bg-[var(--surface-1)] px-3 py-2 text-[10px] text-[var(--text-3)] font-mono">
+                <div key={entry.id} className="rounded-xl bg-(--surface-1) px-3 py-2 text-[10px] text-(--text-3) font-mono">
                   {entry.connectorId} · {entry.action} · {new Date(entry.timestampMs).toLocaleTimeString()}
                 </div>
               ))}

@@ -83,14 +83,14 @@ export function DeadLetterQueueView() {
     <div className="flex flex-col gap-4 p-4 h-full">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-[var(--error)]" />
-          <h2 className="text-base font-semibold text-[var(--text-1)]">Dead-letter Queue</h2>
-          <span className="text-xs text-[var(--text-3)]">({items.length} item{items.length !== 1 ? 's' : ''})</span>
+          <AlertTriangle className="w-4 h-4 text-(--error)" />
+          <h2 className="text-base font-semibold text-(--text-1)">Dead-letter Queue</h2>
+          <span className="text-xs text-(--text-3)">({items.length} item{items.length !== 1 ? 's' : ''})</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={load}
-            className="px-3 py-1.5 text-xs rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
+            className="px-3 py-1.5 text-xs rounded-lg bg-(--surface-3) border border-(--border) text-(--text-2) hover:bg-(--surface-3) transition-colors"
           >
             Refresh
           </button>
@@ -98,7 +98,7 @@ export function DeadLetterQueueView() {
             <button
               onClick={handleRetryAll}
               disabled={retryingAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[var(--error-dim)] border border-[var(--error-border)] text-[var(--error)] hover:bg-[var(--error-dim)] transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-(--error-dim) border border-(--error-border) text-(--error) hover:bg-(--error-dim) transition-colors disabled:opacity-50"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               {retryingAll ? 'Retrying…' : 'Retry All'}
@@ -111,15 +111,15 @@ export function DeadLetterQueueView() {
         <div
           className={`flex items-center gap-2 rounded-xl px-4 py-2.5 border text-xs ${
             lastResult.ok
-              ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'
-              : 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]'
+              ? 'bg-(--success-dim) border-(--success-border) text-(--success)'
+              : 'bg-(--error-dim) border-(--error-border) text-(--error)'
           }`}
         >
           {lastResult.ok ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
           {lastResult.msg}
           <button
             onClick={() => setLastResult(null)}
-            className="ml-auto text-[var(--text-3)] hover:text-[var(--text-2)] text-[11px]"
+            className="ml-auto text-(--text-3) hover:text-(--text-2) text-[11px]"
           >
             ✕
           </button>
@@ -129,7 +129,7 @@ export function DeadLetterQueueView() {
       {items.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <EmptyState
-            icon={<CheckCircle className="w-full h-full text-[var(--success)]" />}
+            icon={<CheckCircle className="w-full h-full text-(--success)" />}
             title="No failed tasks"
             description="Everything is running smoothly."
           />
@@ -139,23 +139,23 @@ export function DeadLetterQueueView() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="flex items-start gap-3 rounded-xl bg-[var(--error-dim)] border border-[var(--error-border)] px-4 py-3"
+              className="flex items-start gap-3 rounded-xl bg-(--error-dim) border border-(--error-border) px-4 py-3"
             >
               <div className="flex-1 min-w-0 space-y-0.5">
-                <p className="text-xs text-[var(--text-2)] truncate font-medium">
+                <p className="text-xs text-(--text-2) truncate font-medium">
                   {item.title || item.packetType || item.id}
                 </p>
-                <p className="text-[11px] text-[var(--error)] truncate">
+                <p className="text-[11px] text-(--error) truncate">
                   {item.failureReason || item.payload?.failureReason || 'No failure reason recorded'}
                 </p>
-                <p className="text-[10px] text-[var(--text-4)]">
+                <p className="text-[10px] text-(--text-4)">
                   {formatTs(item.updatedAtMs || item.createdAtMs || 0)} · {item.fromAgent} → {item.toAgent}
                 </p>
               </div>
               <button
                 onClick={() => handleRetry(item.id)}
                 disabled={retryingIds.has(item.id)}
-                className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors disabled:opacity-50"
+                className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-lg bg-(--surface-3) border border-(--border) text-(--text-2) hover:bg-(--surface-3) transition-colors disabled:opacity-50"
               >
                 <RotateCcw className="w-3 h-3" />
                 {retryingIds.has(item.id) ? 'Retrying…' : 'Retry'}

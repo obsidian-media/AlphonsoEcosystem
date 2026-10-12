@@ -118,22 +118,22 @@ export function WorkflowBuilderView() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Sidebar: workflow list */}
-      <div className="w-56 shrink-0 border-r border-[var(--border)] bg-[var(--surface-0)] flex flex-col">
-        <div className="p-3 border-b border-[var(--border)]">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)] mb-2">Workflows ({workflows.length})</p>
+      <div className="w-56 shrink-0 border-r border-(--border) bg-(--surface-0) flex flex-col">
+        <div className="p-3 border-b border-(--border)">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-(--text-3) mb-2">Workflows ({workflows.length})</p>
           <div className="flex gap-1">
             <input
               value={newName}
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleCreate()}
               placeholder="New workflow name"
-      className="flex-1 bg-[var(--surface-3)] text-xs text-[var(--text-1)] rounded-lg px-2 py-1.5 outline-none border border-[var(--border)] placeholder:text-[var(--text-4)] focus:border-[var(--accent)]"
+      className="flex-1 bg-(--surface-3) text-xs text-(--text-1) rounded-lg px-2 py-1.5 outline-hidden border border-(--border) placeholder:text-(--text-4) focus:border-(--accent)"
             />
             <button
               onClick={handleCreate}
               disabled={!newName.trim()}
               aria-label="Create workflow"
-              className="px-2 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--accent-contrast)] text-xs font-bold hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
+              className="px-2 py-1.5 rounded-lg bg-(--accent) text-(--accent-contrast) text-xs font-bold hover:bg-(--accent-hover) disabled:opacity-40 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -141,7 +141,7 @@ export function WorkflowBuilderView() {
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {workflows.length === 0 && (
-            <p className="text-[10px] text-[var(--text-4)] text-center py-4">No workflows yet. Create one above.</p>
+            <p className="text-[10px] text-(--text-4) text-center py-4">No workflows yet. Create one above.</p>
           )}
           {workflows.map(wf => (
             <button
@@ -149,12 +149,12 @@ export function WorkflowBuilderView() {
               onClick={() => setSelectedId(wf.id)}
          className={`w-full text-left px-3 py-2 rounded-xl text-xs transition-colors ${
                 selectedId === wf.id
-                  ? 'bg-[var(--accent-dim)] border border-[var(--accent-dim)] text-[var(--accent)]'
-                  : 'text-[var(--text-2)] hover:bg-[var(--surface-3)] border border-transparent'
+                  ? 'bg-(--accent-dim) border border-(--accent-dim) text-(--accent)'
+                  : 'text-(--text-2) hover:bg-(--surface-3) border border-transparent'
               }`}
             >
               <div className="font-medium truncate">{wf.name}</div>
-              <div className="text-[10px] text-[var(--text-4)] mt-0.5">{wf.nodes?.length || 0} steps &middot; {wf.agentScope}</div>
+              <div className="text-[10px] text-(--text-4) mt-0.5">{wf.nodes?.length || 0} steps &middot; {wf.agentScope}</div>
             </button>
           ))}
         </div>
@@ -163,7 +163,7 @@ export function WorkflowBuilderView() {
       {/* Main area: node editor */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {!selected ? (
-          <div className="flex-1 flex items-center justify-center text-[var(--text-4)]">
+          <div className="flex-1 flex items-center justify-center text-(--text-4)">
             <div className="text-center">
               <GitBranch className="w-12 h-12 mx-auto mb-3 opacity-20" />
               <p className="text-sm">Select or create a workflow</p>
@@ -172,35 +172,35 @@ export function WorkflowBuilderView() {
         ) : (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-(--border)">
               <div>
-                <h2 className="text-sm font-semibold text-[var(--text-1)]">{selected.name}</h2>
-                <p className="text-[10px] text-[var(--text-3)]">{selected.nodes?.length || 0} steps &middot; scope: {selected.agentScope}</p>
+                <h2 className="text-sm font-semibold text-(--text-1)">{selected.name}</h2>
+                <p className="text-[10px] text-(--text-3)">{selected.nodes?.length || 0} steps &middot; scope: {selected.agentScope}</p>
               </div>
               <div className="flex items-center gap-2">
-                {savedNotice && <span className="text-[10px] text-[var(--success)] font-medium">Saved ✓</span>}
+                {savedNotice && <span className="text-[10px] text-(--success) font-medium">Saved ✓</span>}
                 {runMessage && (
-                  <span className={`text-[10px] font-medium ${runState === 'error' ? 'text-[var(--error)]' : 'text-[var(--success)]'}`}>
+                  <span className={`text-[10px] font-medium ${runState === 'error' ? 'text-(--error)' : 'text-(--success)'}`}>
                     {runMessage}
                   </span>
                 )}
                 <button
                   onClick={() => setShowAddNode(!showAddNode)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent-dim)] text-white text-xs font-bold hover:bg-[var(--accent-hover)] transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-(--accent-dim) text-white text-xs font-bold hover:bg-(--accent-hover) transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Step
                   <ChevronDown className="w-3 h-3" />
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-3)] text-[var(--text-2)] text-xs font-bold hover:bg-[var(--surface-3)] transition-colors border border-[var(--border)]"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-(--surface-3) text-(--text-2) text-xs font-bold hover:bg-(--surface-3) transition-colors border border-(--border)"
                 >
                   <Save className="w-3.5 h-3.5" /> Save
                 </button>
                 <button
                   onClick={handleRun}
                   disabled={!selected?.nodes?.length || runState === 'running'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--success-dim)] text-white text-xs font-bold hover:bg-[var(--success)] disabled:opacity-40 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-(--success-dim) text-white text-xs font-bold hover:bg-(--success) disabled:opacity-40 transition-colors"
                   title={!selected?.nodes?.length ? 'Add at least one step before running' : 'Run workflow'}
                 >
                   {runState === 'running' ? (
@@ -219,8 +219,8 @@ export function WorkflowBuilderView() {
 
             {/* Add node dropdown */}
             {showAddNode && (
-              <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface-1)]">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)] mb-2">Choose step type</p>
+              <div className="px-5 py-3 border-b border-(--border) bg-(--surface-1)">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-(--text-3) mb-2">Choose step type</p>
                 <div className="flex flex-wrap gap-2">
                   {WORKFLOW_NODE_LIBRARY.map(n => {
                     const s = NODE_STYLE[n.type] || NODE_STYLE.action;
@@ -239,20 +239,20 @@ export function WorkflowBuilderView() {
             )}
 
             {/* Horizontal pipeline */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-[var(--surface-0)]">
+            <div className="flex-1 flex flex-col overflow-hidden bg-(--surface-0)">
               <div className="flex items-center gap-0 px-8 py-6 overflow-x-auto">
                 {selected.nodes?.map((node, i) => {
                   const s = NODE_STYLE[node.type] || NODE_STYLE.action;
                   return (
                     <React.Fragment key={node.id}>
                       {/* Stage card */}
-                      <div className="shrink-0 w-40 bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--border-strong)] rounded-[var(--radius-lg)] p-3 cursor-pointer transition-colors">
-                        <div className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1">{node.type}</div>
-                        <div className="text-xs text-[var(--text-1)] font-medium truncate">{(node.config?.label as string) || (node.config?.name as string) || (node.config?.phase as string) || node.id}</div>
+                      <div className="shrink-0 w-40 bg-(--surface-2) border border-(--border) hover:border-(--border-strong) rounded-lg p-3 cursor-pointer transition-colors">
+                        <div className="text-[10px] font-semibold uppercase tracking-widest text-(--text-3) mb-1">{node.type}</div>
+                        <div className="text-xs text-(--text-1) font-medium truncate">{(node.config?.label as string) || (node.config?.name as string) || (node.config?.phase as string) || node.id}</div>
                       </div>
                       {/* Connector arrow */}
                       {i < selected.nodes.length - 1 && (
-                        <div className="w-8 shrink-0 flex items-center justify-center text-[var(--text-4)]">
+                        <div className="w-8 shrink-0 flex items-center justify-center text-(--text-4)">
                           <ChevronRight className="w-4 h-4" />
                         </div>
                       )}
@@ -261,15 +261,15 @@ export function WorkflowBuilderView() {
                 })}
                 {/* Add node button inline in the flow */}
                 <button onClick={() => setShowAddNode(true)}
-                  className="shrink-0 w-10 h-10 ml-4 border-2 border-dashed border-[var(--border)] rounded-[var(--radius-lg)] flex items-center justify-center text-[var(--text-4)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">
+                  className="shrink-0 w-10 h-10 ml-4 border-2 border-dashed border-(--border) rounded-lg flex items-center justify-center text-(--text-4) hover:border-(--accent) hover:text-(--accent) transition-colors">
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
               {/* Node detail panel below pipeline */}
               {selected.nodes?.length > 0 && (
-                <div className="border-t border-[var(--border)] px-8 py-4 bg-[var(--surface-1)]">
-                  <p className="text-xs text-[var(--text-3)] mb-1">Node config</p>
-                  <p className="text-sm text-[var(--text-1)]">{(selected.nodes[selected.nodes.length - 1].config?.description as string) || 'No description'}</p>
+                <div className="border-t border-(--border) px-8 py-4 bg-(--surface-1)">
+                  <p className="text-xs text-(--text-3) mb-1">Node config</p>
+                  <p className="text-sm text-(--text-1)">{(selected.nodes[selected.nodes.length - 1].config?.description as string) || 'No description'}</p>
                 </div>
               )}
             </div>
