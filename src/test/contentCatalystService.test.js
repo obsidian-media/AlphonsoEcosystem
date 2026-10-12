@@ -399,6 +399,38 @@ describe('generateContentDraft', () => {
     expect(result.draft.hashtags).toContain('#instagram');
   });
 
+  it('marks a fallback draft as the template and says why', async () => {
+    generateOllamaResponse.mockImplementationOnce(async () => { throw new Error('LLM error'); });
+    generateOllamaResponse.mockImplementationOnce(async () => { throw new Error('No Ollama model is selected.'); });
+    const job = createContentJobFromBridgeRequest({ idea: 'Template notice' });
+    const result = await generateContentDraft(job);
+    expect(result.draftSource).toBe('template');
+    expect(result.draftTemplateReason).toBe('No Ollama model is selected.');
+    expect(result.logs.at(-1)).toMatchObject({ level: 'warning' });
+    expect(result.logs.at(-1).message).toContain('built-in template');
+  });
+
+  it('marks a model-written draft as coming from the model', async () => {
+    const job = createContentJobFromBridgeRequest({ idea: 'Model draft' });
+    const result = await generateContentDraft(job);
+    expect(result.draftSource).toBe('model');
+    expect(result.draftTemplateReason).toBeNull();
+  });
+
+  it('sends the job settings to the model call', async () => {
+    const job = createContentJobFromBridgeRequest(
+      { idea: 'Uses settings' },
+      { settings: { endpoint: 'http://localhost:11434', selectedModel: 'llama3.2:3b', unrelated: 'dropped' } }
+    );
+    expect(job.settings).toEqual({ endpoint: 'http://localhost:11434', selectedModel: 'llama3.2:3b' });
+    generateOllamaResponse.mockClear();
+    await generateContentDraft(job);
+    expect(generateOllamaResponse).toHaveBeenCalled();
+    for (const [args] of generateOllamaResponse.mock.calls) {
+      expect(args).toMatchObject({ endpoint: 'http://localhost:11434', model: 'llama3.2:3b' });
+    }
+  });
+
   it('includes brief in output', async () => {
     const job = createContentJobFromBridgeRequest({ idea: 'With brief' });
     const result = await generateContentDraft(job);
@@ -407,6 +439,43 @@ describe('generateContentDraft', () => {
 });
 
 describe('generateContentImage', () => {
+  it('keeps exactly one copy of the image preview on the job', async () => {
+    // A real preview is several hundred KB of base64. Copied into log details,
+    // artifacts and the export package it overflowed localStorage, the save
+    // threw mid-pipeline, and the job vanished from the screen.
+    const preview = 'UNIQUEPREVIEWMARKER'.repeat(50);
+    generateComfyUiImage.mockResolvedValueOnce({
+      ok: true,
+      provider: 'comfyui',
+      jobId: 'img-1',
+      imageUrls: ['http://127.0.0.1:8188/view?filename=out.png&type=output'],
+      outputPaths: ['out.png'],
+      previewBase64: preview,
+      rawHistory: { outputs: { 9: { images: [{ filename: 'out.png' }] } }, bulky: preview }
+    });
+    const job = createContentJobFromBridgeRequest({ idea: 'One preview copy' });
+    job.draft = { visual_prompt: 'test prompt' };
+    const result = await generateContentImage(job);
+
+    expect(result.status).toBe('image_ready');
+    expect(result.assets.image_preview_base64).toBe(preview);
+    const copies = JSON.stringify(result).split(preview).length - 1;
+    expect(copies).toBe(1);
+  });
+
+  it('does not throw when storage is full, and still completes the job', async () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key) => {
+      if (key === 'alphonso_content_catalyst_jobs_v1') throw new DOMException('quota', 'QuotaExceededError');
+    });
+    try {
+      const job = await runContentCatalystJob({ idea: 'Storage full', needs: { image: true } });
+      expect(job.status).not.toBe('failed');
+      expect(job.draft).toBeTruthy();
+    } finally {
+      setItem.mockRestore();
+    }
+  });
+
   it('returns failed status when ComfyUI fails', async () => {
     generateComfyUiImage.mockResolvedValueOnce({ ok: false, error: 'ComfyUI not running' });
     const job = createContentJobFromBridgeRequest({ idea: 'Image fail test' });

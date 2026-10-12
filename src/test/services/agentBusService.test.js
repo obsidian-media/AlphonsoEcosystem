@@ -346,7 +346,7 @@ describe('agentBusService', () => {
       expect(getAgentMessages('hector')).toEqual([]);
     });
 
-    it('enforces ring buffer limit of 50', () => {
+    it('enforces ring-3 buffer limit of 50', () => {
       for (let i = 0; i < 55; i++) {
         sendAgentMessage('jose', 'hector', `msg-${i}`);
       }

@@ -27,7 +27,7 @@ export function CompanionInputBar({ agentEmoji, onSend, disabled = false }: Prop
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-full bg-[var(--companion-bubble-theirs)] backdrop-blur-md px-3 py-2">
+    <div className="flex items-center gap-2 rounded-full bg-(--companion-bubble-theirs) backdrop-blur-md px-3 py-2">
       <span className="text-lg leading-none select-none" aria-hidden="true">{agentEmoji}</span>
       <input
         type="text"
@@ -41,7 +41,7 @@ export function CompanionInputBar({ agentEmoji, onSend, disabled = false }: Prop
         }}
         placeholder="Message..."
         disabled={disabled}
-        className="flex-1 bg-transparent text-sm text-[var(--companion-bubble-theirs-text)] placeholder:text-[var(--companion-text-muted)] outline-none min-w-0"
+        className="flex-1 bg-transparent text-sm text-(--companion-bubble-theirs-text) placeholder:text-(--companion-text-muted) outline-hidden min-w-0"
         aria-label="Message"
       />
       <SmartVoiceButton voiceStatus={voiceStatus} onToggle={toggleListening} />
@@ -50,7 +50,7 @@ export function CompanionInputBar({ agentEmoji, onSend, disabled = false }: Prop
         onClick={submit}
         disabled={disabled || !value.trim()}
         aria-label="Send"
-        className="rounded-full bg-[var(--companion-bubble-mine)] text-[var(--companion-bubble-mine-text)] h-8 w-8 flex items-center justify-center shrink-0 disabled:opacity-40"
+        className="rounded-full bg-(--companion-bubble-mine) text-(--companion-bubble-mine-text) h-8 w-8 flex items-center justify-center shrink-0 disabled:opacity-40"
       >
         →
       </button>

@@ -22,8 +22,17 @@ pub(crate) fn account_name(key: &str) -> String {
   key.trim().to_string()
 }
 
+/// The keychain service name. An end-to-end test profile (debug builds only)
+/// gets its own, so tests never read or overwrite real saved credentials.
+fn service_name() -> String {
+  match crate::utils::e2e_profile() {
+    Some(profile) => format!("{SERVICE}.e2e.{profile}"),
+    None => SERVICE.to_string(),
+  }
+}
+
 fn open_entry(key: &str) -> Result<Entry, String> {
-  Entry::new(SERVICE, &account_name(key)).map_err(|e| e.to_string())
+  Entry::new(&service_name(), &account_name(key)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

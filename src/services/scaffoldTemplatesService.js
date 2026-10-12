@@ -393,7 +393,7 @@ export default function App() {
         <h1 className="text-3xl font-bold mb-6 text-center">Todo App</h1>
         <div className="flex gap-2 mb-4">
           <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-hidden focus:border-blue-500"
             placeholder="What needs to be done?" />
           <button onClick={addTask} className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium transition">Add</button>
         </div>
@@ -479,7 +479,7 @@ export default function App() {
         <h1 className="text-3xl font-bold mb-6 text-center">Weather Dashboard</h1>
         <div className="flex gap-2 mb-6">
           <input value={city} onChange={(e) => setCity(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && fetchWeather()}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-hidden focus:border-blue-500"
             placeholder="Enter city name..." />
           <button onClick={fetchWeather} disabled={loading}
             className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium disabled:opacity-50">{loading ? '...' : 'Search'}</button>
