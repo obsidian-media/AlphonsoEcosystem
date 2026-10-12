@@ -238,7 +238,9 @@ async function fetchComfyUiHistory(promptId) {
   return normalizeComfyUiHistory(body, promptId, endpoint);
 }
 
-export async function pollComfyUiHistory(promptId, { timeoutMs = 180000, intervalMs = 1500 } = {}) {
+// 5 minutes: the first image after ComfyUI starts has to load the checkpoint,
+// which took over 3 minutes on a 6 GB GPU shared with a loaded Ollama model.
+export async function pollComfyUiHistory(promptId, { timeoutMs = 300000, intervalMs = 1500 } = {}) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     const result = await fetchComfyUiHistory(promptId);
