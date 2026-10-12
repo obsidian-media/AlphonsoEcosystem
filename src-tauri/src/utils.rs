@@ -199,3 +199,57 @@ mod tests {
     assert!(client.is_ok());
   }
 }
+
+/// Name of an isolated end-to-end test profile, if one was requested.
+///
+/// Desktop end-to-end tests set `ALPHONSO_E2E_PROFILE` so the app keeps its
+/// SQLite store, config files, runtimes folder and keychain entries apart
+/// from the developer's real ones (see `e2e-desktop/wdio.conf.mjs`). Debug
+/// builds only: a release build ignores the variable entirely, so an
+/// installed app can never be redirected to a different data folder by its
+/// environment.
+pub(crate) fn e2e_profile() -> Option<String> {
+  if !cfg!(debug_assertions) {
+    return None;
+  }
+  sanitize_e2e_profile(&std::env::var("ALPHONSO_E2E_PROFILE").ok()?)
+}
+
+/// The profile name ends up inside directory names and the keychain service
+/// name, so only a short lowercase alphanumeric/hyphen name is accepted.
+pub(crate) fn sanitize_e2e_profile(raw: &str) -> Option<String> {
+  let name = raw.trim();
+  let valid = !name.is_empty()
+    && name.len() <= 40
+    && name
+      .chars()
+      .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+  valid.then(|| name.to_string())
+}
+
+#[cfg(test)]
+mod e2e_profile_tests {
+  use super::sanitize_e2e_profile;
+
+  #[test]
+  fn accepts_a_simple_name() {
+    assert_eq!(sanitize_e2e_profile(" run-42 "), Some("run-42".to_string()));
+  }
+
+  #[test]
+  fn rejects_names_that_could_escape_a_directory_or_are_unbounded() {
+    for bad in [
+      "",
+      "  ",
+      "../x",
+      "a/b",
+      r"a\b",
+      "A",
+      "a.b",
+      "a b",
+      &"x".repeat(41),
+    ] {
+      assert_eq!(sanitize_e2e_profile(bad), None, "{bad:?}");
+    }
+  }
+}
