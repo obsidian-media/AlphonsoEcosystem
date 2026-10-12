@@ -94,6 +94,15 @@ describe('Sidebar — 5 Space pills', () => {
     expect(screen.getByTestId('sidebar-nav-operator')).toBeTruthy();
   });
 
+  it('exposes Agent Pairing and Maturity as one-click System items (previously 2+ clicks deep in All Agents tabs)', () => {
+    render(<Sidebar {...baseProps} />);
+    fireEvent.click(screen.getByTestId('space-pill-system'));
+    fireEvent.click(screen.getByTestId('sidebar-nav-pairings'));
+    expect(baseProps.setActiveTab).toHaveBeenCalledWith('pairings');
+    fireEvent.click(screen.getByTestId('sidebar-nav-maturity'));
+    expect(baseProps.setActiveTab).toHaveBeenCalledWith('maturity');
+  });
+
   it('clicking a nav item still calls setActiveTab with its real id, regardless of which space it moved to', () => {
     render(<Sidebar {...baseProps} />);
     fireEvent.click(screen.getByTestId('space-pill-work'));

@@ -137,6 +137,19 @@ describe('EcosystemHub', () => {
     expect(screen.getByTestId('maturity-gate')).toBeDefined();
   });
 
+  it('opens directly on the Pairings tab when initialTab is "pairings" (sidebar Agent Pairing entry)', () => {
+    render(<EcosystemHub {...defaultProps} initialTab="pairings" />);
+    expect(screen.getByTestId('agent-pairing')).toBeDefined();
+  });
+
+  it('opens directly on the Advanced (maturity) tab when initialTab is "advanced" (sidebar Maturity entry)', () => {
+    render(<EcosystemHub {...defaultProps} initialTab="advanced" />);
+    expect(screen.getByTestId('maturity-gate')).toBeDefined();
+    expect(screen.getByTestId('production-readiness')).toBeDefined();
+    expect(screen.getByTestId('self-development')).toBeDefined();
+    expect(screen.queryByTestId('agent-pairing')).toBeNull();
+  });
+
   it('renders overview by default', () => {
     render(<EcosystemHub {...defaultProps} />);
     expect(screen.getByTestId('maturity-gate')).toBeDefined();

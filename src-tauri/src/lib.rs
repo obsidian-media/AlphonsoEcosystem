@@ -10,6 +10,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{Emitter, Listener, Manager, WindowEvent};
 
 mod audit_log;
+mod comfyui_proxy;
 mod commands {
   pub(crate) mod bridge;
   pub(crate) mod clipboard;
@@ -331,7 +332,11 @@ pub fn run() {
 
   tauri::Builder::default()
     .manage(http_client)
-    .manage(runtime_manager::RuntimeManager::new())
+    // The same manager the auto-start thread records PIDs into (a clone
+    // shares its map), so commands can see and stop auto-started tools.
+    .manage(runtime_manager::RuntimeManager::clone(
+      &runtime_mgr_autostart,
+    ))
     .manage(VoiceSidecar(std::sync::Mutex::new(None)))
     .manage(VoiceToken(std::sync::Mutex::new(None)))
     .manage(RateLimiter::new())
@@ -821,6 +826,7 @@ pub fn run() {
       tool_connection_post_webhook,
       connector_generate_sdwebui_image,
       connector_queue_comfyui_video,
+      comfyui_proxy::comfyui_request,
       connector_get_comfyui_history,
       connector_check_local_runtime_health,
       connector_hermes_agent_request,
