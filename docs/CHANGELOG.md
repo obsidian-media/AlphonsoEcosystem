@@ -8,6 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-10-06 (approval hardening, macOS notarization, false-confidence tests)
 
+- **Runtime status is faster and can tell "starting" from "running".** `runtime_get_all_status` probed 13 tool ports one after another with a blocking connect (measured ~5.5s in the real desktop app); it now probes them concurrently (~1.1s). `ToolStatus` gains `responding` (the tool answered an HTTP request on its health path); `running` still means "port open", which the updater relies on to stop tools before installing. Runtime Hub shows "starting" while a tool's port is open but it is not answering yet.
+- **Setup screens no longer wait ~24s when Ollama is not answering.** `isComponentAlreadyInstalled()` now bounds the starter-model check with `withTimeout` instead of sitting through `fetchOllamaModels`' 8s request timeout and then the desktop fallback's 10s one. Found by the new desktop end-to-end suite.
 - **macOS notarization (#270).** `release.yml`'s `build-macos` signs with a Developer ID certificate and notarizes; written but not yet exercised on a real tag (see `docs/MACOS_SIGNING.md`).
 - **Per-command approval for AI-planned workspace-code commands (#271).** `commandApprovalService.ts`; fail-closed; also gates automatic post-write validation. Writes into `.git/` are blocked.
 - **Approval bridge fixed (#272).** `RequestApprovalProvider` previously never showed a prompt (Boardroom Hermes gate, plugin/workspace/verification flows awaited forever); it now forwards to the shell's approval modal.

@@ -23,6 +23,9 @@ export type ToolName = typeof TOOL_NAMES[number];
 export interface ToolStatus {
   name: string;
   running: boolean;
+  /** True once the tool answers a real request. `running` alone only means
+   *  its port is open, which is already the case while it is still starting. */
+  responding?: boolean;
   installed: boolean;
   [key: string]: unknown;
 }
