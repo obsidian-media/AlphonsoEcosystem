@@ -33,8 +33,37 @@ function readJobs() {
   }
 }
 
+// A generated image's preview is several hundred KB of base64. It is kept
+// once per job (assets.image_preview_base64, which the preview panel shows);
+// every other copy of the job's media is stored without it.
+function slimMedia(media) {
+  if (!media || typeof media !== 'object') return media;
+  const { previewBase64: _preview, rawHistory: _history, ...rest } = media;
+  return rest;
+}
+
+function slimAssets(assets) {
+  if (!assets || typeof assets !== 'object') return assets;
+  const { image_preview_base64: _preview, ...rest } = assets;
+  return Array.isArray(rest.local_media_artifacts)
+    ? { ...rest, local_media_artifacts: rest.local_media_artifacts.map(slimMedia) }
+    : rest;
+}
+
 function writeJobs(rows) {
-  localStorage.setItem(JOB_KEY, JSON.stringify(rows.slice(-200)));
+  const recent = rows.slice(-200);
+  try {
+    localStorage.setItem(JOB_KEY, JSON.stringify(recent));
+  } catch {
+    // Storage is full. Losing the inline previews is far better than what
+    // used to happen here: the save threw mid-pipeline and the whole job
+    // vanished from the screen with no output and no error.
+    try {
+      localStorage.setItem(JOB_KEY, JSON.stringify(recent.map((row) => ({ ...row, assets: slimAssets(row.assets) }))));
+    } catch {
+      // Still no room: keep going with the in-memory job rather than throw.
+    }
+  }
 }
 
 function persistJob(job) {
@@ -188,7 +217,7 @@ function snapshotBridgeState(job, bridgeEvent = 'update') {
     request_id: job.request_id || job.request?.request_id || null,
     brief: job.brief || null,
     draft: job.draft || null,
-    assets: job.assets || null,
+    assets: slimAssets(job.assets) || null,
     preview: job.preview || null,
     publish: job.publish || null,
     narration: job.narration || null,
@@ -241,6 +270,15 @@ export function createContentJobFromBridgeRequest(bridgeRequest = {}, jobOptions
     request,
     request_id: request.request_id || null,
     brandProfile: jobOptions.brandProfile || null,
+    // Where the brief and draft steps reach the model. Without this on the
+    // job those steps had no endpoint or model, failed every time, and
+    // quietly produced the built-in template instead.
+    settings: jobOptions.settings
+      ? {
+          endpoint: jobOptions.settings.endpoint || null,
+          selectedModel: jobOptions.settings.selectedModel || null
+        }
+      : null,
     status: CONTENT_JOB_STATES.RECEIVED,
     currentStep: 'brief',
     draft: null,
@@ -333,6 +371,7 @@ export async function generateContentDraft(job) {
   const brief = await buildContentBrief(job);
   const prompt = buildPrompt(request, brief, job.brandProfile);
   let draft = null;
+  let templateReason = '';
   try {
     const response = await generateOllamaResponse({
       endpoint: job?.settings?.endpoint,
@@ -340,19 +379,28 @@ export async function generateContentDraft(job) {
       prompt
     });
     draft = parseLooseJson(response?.response) || null;
+    if (!draft) templateReason = "The model's reply could not be read as a draft.";
   } catch (error) {
     draft = null;
+    templateReason = error instanceof Error && error.message ? error.message : 'The local model could not be reached.';
   }
 
+  // A template draft is a real, usable fallback, but it must say what it is:
+  // presenting stock copy as "generated" hid the fact that no model ran.
+  const draftSource = draft ? 'model' : 'template';
   if (!draft) {
     draft = fallbackDraft(request);
   }
 
-  const next = withLog({ ...job, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'info', 'Content draft generated.', { draft });
+  const next = draftSource === 'model'
+    ? withLog({ ...job, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'info', 'Content draft generated.', { draft })
+    : withLog({ ...job, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'warning', `Content draft is the built-in template: ${templateReason}`, { draft });
   return {
     ...next,
     brief,
     draft,
+    draftSource,
+    draftTemplateReason: draftSource === 'template' ? templateReason : null,
     assets: job.assets || {
       image_url: null,
       video_url: null,
@@ -391,7 +439,7 @@ export async function generateContentImage(job) {
     };
   }
   const mediaArtifact = normalizeLocalMediaArtifact(result, prompt);
-  const next = withLog({ ...job, status: CONTENT_JOB_STATES.IMAGE_READY, currentStep: 'image' }, 'info', 'ComfyUI image asset ready.', { result, mediaArtifact });
+  const next = withLog({ ...job, status: CONTENT_JOB_STATES.IMAGE_READY, currentStep: 'image' }, 'info', 'ComfyUI image asset ready.', { result: slimMedia(result), mediaArtifact: slimMedia(mediaArtifact) });
   return {
     ...next,
     assets: {
@@ -401,7 +449,7 @@ export async function generateContentImage(job) {
       image_preview_base64: mediaArtifact.previewBase64 || null,
       local_media_artifacts: [
         ...((job.assets?.local_media_artifacts || []).filter((artifact) => artifact.media_type !== 'image')),
-        mediaArtifact
+        slimMedia(mediaArtifact)
       ],
       comfyui: {
         provider: mediaArtifact.provider,
@@ -483,7 +531,7 @@ export async function generateContentPreview(job) {
     tone: job.request?.tone || 'confident and polished',
     request_id: job.request?.request_id || job.request_id || null,
     draft: job.draft || null,
-    assets: job.assets || null,
+    assets: slimAssets(job.assets) || null,
     readiness: {
       image: Boolean(job.assets?.image_url),
       video: Boolean(job.assets?.video_url),
@@ -691,7 +739,7 @@ export async function runContentCatalystJob(bridgeRequest = {}, jobOptions = {})
             job_id: job.id,
             status: job.status,
             draft: job.draft,
-            assets: job.assets,
+            assets: slimAssets(job.assets),
             preview: job.preview
           }
         })
@@ -705,7 +753,7 @@ export async function runContentCatalystJob(bridgeRequest = {}, jobOptions = {})
         job_id: job.id,
         status: job.status,
         draft: job.draft,
-        assets: job.assets,
+        assets: slimAssets(job.assets),
         preview: job.preview,
         bridge: job.bridge || getAccBridgeStatus()
       }

@@ -58,6 +58,11 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
       </div>
 
       <div className="p-4 space-y-3">
+        {activeJob.draftSource === 'template' && (
+          <p role="status" data-testid="content-draft-template-notice" className="rounded-lg bg-(--warning-dim) px-3 py-2 text-[11px] text-(--warning)">
+            This copy is the built-in template, not written by a model{activeJob.draftTemplateReason ? `: ${activeJob.draftTemplateReason}` : '.'}
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <MiniField label="Hook" value={activeJob.draft?.hook || '—'} />
           <MiniField label="Caption" value={activeJob.draft?.caption || '—'} />

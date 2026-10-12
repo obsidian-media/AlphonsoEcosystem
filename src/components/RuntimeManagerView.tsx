@@ -49,6 +49,7 @@ interface ToolStatus {
   description?: string;
   installed?: boolean;
   running?: boolean;
+  responding?: boolean;
   startedByUs?: boolean;
   installDir?: string;
   port?: number;
@@ -168,14 +169,23 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
 
 interface StatusDotProps {
   running?: boolean;
+  responding?: boolean;
   installing?: boolean;
 }
 
-function StatusDot({ running, installing }: StatusDotProps) {
+function StatusDot({ running, responding, installing }: StatusDotProps) {
   if (installing)
     return (
       <span className="flex items-center gap-1 text-(--warning) text-xs">
         <Loader2 size={10} className="animate-spin" /> installing
+      </span>
+    );
+  // Port open but not answering yet: still starting up (or hung). Saying
+  // "running" here is how a tool looked ready before it could take requests.
+  if (running && responding === false)
+    return (
+      <span className="flex items-center gap-1 text-[var(--warning)] text-xs">
+        <Loader2 size={10} className="animate-spin" /> starting
       </span>
     );
   if (running)
@@ -325,7 +335,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
   const handleStop = () => onAction('stop', tool.name);
 
   return (
-    <div className={`rounded-xl p-4 flex flex-col gap-3 ${meta.bg || 'bg-(--surface-1)'}`}>
+    <div data-testid={`runtime-tool-${tool.name}`} className={`rounded-xl p-4 flex flex-col gap-3 ${meta.bg || 'bg-(--surface-1)'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {(() => { const ToolIcon = meta.icon ?? Cpu; return typeof ToolIcon === 'string' ? <span>{ToolIcon}</span> : <ToolIcon className={`w-5 h-5 ${meta.color || 'text-(--text-3)'}`} />; })()}
@@ -354,7 +364,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
             )}
           </div>
         </div>
-        <StatusDot running={tool.running} installing={installing} />
+        <StatusDot running={tool.running} responding={tool.responding} installing={installing} />
       </div>
 
       {installing && progress && (
