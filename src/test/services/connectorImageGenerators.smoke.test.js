@@ -9,6 +9,7 @@ const mockRecordConnectorSuccess = vi.fn();
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args) => mockInvoke(...args),
+  isTauri: () => false,
 }));
 
 vi.mock('../../services/connectors/connectorRegistry.js', () => ({

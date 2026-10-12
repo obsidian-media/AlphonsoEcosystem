@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn(() => Promise.resolve())
+  invoke: vi.fn(() => Promise.resolve()),
+  isTauri: vi.fn(() => false)
 }));
 
 vi.mock('@tauri-apps/api/event', () => ({
