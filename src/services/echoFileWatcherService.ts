@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { generateAgentLlmResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
 import { runEchoPreservation } from './echoMemoryService';
+import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
 const WATCHER_CONFIG_KEY = 'alphonso_echo_watcher_config_v1';
 const POLL_INTERVAL_MS = 30_000;
@@ -77,6 +78,7 @@ async function processFile(relativePath: string, workspaceRoot: string): Promise
         endpoint: DEFAULT_OLLAMA_ENDPOINT,
         model: PREFERRED_MODEL,
         prompt: `Summarize this file content in 2-3 sentences for knowledge preservation:\n\n${content.slice(0, 4000)}`,
+        sessionId: resolveSecureSessionId(`echo-watch:${relativePath}`),
       });
       summary = String(ollamaResult?.response || content.slice(0, 500));
     } catch {

@@ -43,7 +43,7 @@ export function ActivationSequence({ variant, onFinish }: ActivationSequenceProp
     return (
       <div
         role="status"
-        className="fixed bottom-6 right-6 rounded-lg border border-[var(--emblem-green,#8EDB64)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)]"
+        className="fixed bottom-6 right-6 rounded-lg border border-(--emblem-green,#8EDB64) bg-(--surface-2) px-4 py-3 text-sm text-(--text-1)"
       >
         Alphonso is online.
       </div>
@@ -51,7 +51,7 @@ export function ActivationSequence({ variant, onFinish }: ActivationSequenceProp
   }
 
   return (
-    <div className="relative flex h-screen w-screen items-center justify-center overflow-hidden bg-[var(--surface-0)]">
+    <div className="relative flex h-screen w-screen items-center justify-center overflow-hidden bg-(--surface-0)">
       {!prefersReducedMotion && (
         <>
           {/* Step A: full-screen pulse in the real Alphonso green. */}
@@ -85,7 +85,7 @@ export function ActivationSequence({ variant, onFinish }: ActivationSequenceProp
         style={{ color: 'var(--emblem-green,#8EDB64)' }}
       >
         <img src={alphonsoEmblem} alt="Alphonso emblem" className="h-24 w-24" />
-        <p role="status" className="text-2xl font-semibold text-[var(--emblem-green,#8EDB64)]">
+        <p role="status" className="text-2xl font-semibold text-(--emblem-green,#8EDB64)">
           Alphonso is online.
         </p>
       </motion.div>

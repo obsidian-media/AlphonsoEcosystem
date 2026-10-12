@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useVoiceInput } from './hooks/useVoiceInput';
 import { getVerificationLogs } from './services/verificationService';
 import { appendVerificationLog } from './services/verificationService';
+import { setCommandApprovalHandler } from './services/commandApprovalService';
 import { TRUST_STATES } from './services/trustModel';
 import { sendNativeNotification } from './services/notificationService';
 import { checkAppUpdate, getLastUpdateNotice, setLastUpdateNotice } from './services/appUpdateService';
@@ -77,11 +78,12 @@ import { PluginProvider, usePlugins } from './contexts/PluginContext';
 import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
 import { VerificationProvider, useVerification } from './contexts/VerificationContext';
 import { CoachProvider, useCoach } from './contexts/CoachContext';
+import type { BoardroomRequestApproval } from './components/BoardroomChatView';
 
 // Mirrors Sidebar.tsx's SPACES 'system' group item ids exactly -- keep in
 // sync if that group's tabs ever change (see the RightPanel render branch
 // below for why this exists).
-const SYSTEM_SPACE_TAB_IDS = ['orchestrator', 'ecosystem', 'agent_performance', 'runtimes', 'voice', 'connectors', 'operator'];
+const SYSTEM_SPACE_TAB_IDS = ['orchestrator', 'ecosystem', 'pairings', 'maturity', 'agent_performance', 'runtimes', 'voice', 'connectors', 'operator'];
 
 const ChatView = lazy(() => import('./components/ChatView').then((mod) => ({ default: mod.ChatView })));
 const WorkflowPanel = lazy(() => import('./components/WorkflowPanel').then((mod) => ({ default: mod.WorkflowPanel })));
@@ -160,10 +162,9 @@ interface VerificationLogsBridgeValue {
 }
 
 interface RequestApprovalBridgeValue {
-  approvalPending: string | null;
-  setApprovalPending: React.Dispatch<React.SetStateAction<string | null>>;
-  requestApproval: (actionLabel: string) => Promise<boolean>;
-  approvalResolveRef: React.MutableRefObject<((value: boolean) => void) | null>;
+  /** Delegates to the shell's real approval flow once AppContent registers it; denies until then. */
+  requestApproval: BoardroomRequestApproval;
+  registerApprovalHandler: (handler: BoardroomRequestApproval | null) => void;
 }
 
 const VerificationLogsBridge = React.createContext<VerificationLogsBridgeValue | null>(null);
@@ -282,6 +283,13 @@ function AppShell() {
     approvalRequiredNotice
   });
 
+  // AI-planned build/test/install commands execute workspace code; they go through
+  // the same approval modal as every other high-risk action (commandApprovalService).
+  useEffect(() => {
+    setCommandApprovalHandler((req) => (requestApproval as unknown as (r: unknown) => Promise<boolean>)(req));
+    return () => setCommandApprovalHandler(null);
+  }, [requestApproval]);
+
   useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab, setShowKeyboardShortcuts });
   useKeyboardShortcuts({ toggle_search: () => setShowMemorySearch((prev) => !prev) });
   useIdleLock({ idleTimeoutMinutes: settings.idleTimeoutMinutes, setIsLocked, idleTimerRef });
@@ -304,6 +312,15 @@ function AppShell() {
   // already owns checkAppUpdate()).
   useBootEffects({ settings, setSettings, setConversations, setActiveChatId, setDesktopBridge, setIsOnline });
   usePersistenceEffects({ settings, conversations, nativeSelfDevProof, coachMiniMode, coachSnapCorner });
+  // Point the context bridge (Plugin/Workspace/Verification providers, Boardroom)
+  // at the shell's real approval modal. Without this they await a prompt that never shows.
+  const approvalBridge = useRequestApprovalBridge();
+  useEffect(() => {
+    if (!approvalBridge) return undefined;
+    approvalBridge.registerApprovalHandler(requestApproval as unknown as BoardroomRequestApproval);
+    return () => approvalBridge.registerApprovalHandler(null);
+  }, [approvalBridge, requestApproval]);
+
   useSessionEffects({ isCoachWindow, activeTab, ollamaStatus, approvalRequiredNotice, prevOllamaStateRef, toast, setJoseCompanionState });
   useNativeProofEffects({ settings, desktopBridge, updateCheckState, workspaceFoundation, nativeProofHooks, writeNativeProofStage, nativeSelfDevAutorunRef, setNativeSelfDevProof });
   useDataHydration({ settings, desktopBridge, isCoachWindow, setVerificationLogs, setDurableAuditLogs, setDiskPluginManifests, setMemoryItems, setPlugins, setPluginAudit });
@@ -803,7 +820,7 @@ function AppShell() {
 
   if (showSetup && !isCoachWindow) {
     return (
-      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-3)] text-sm">Loading...</div>}>
+      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-(--surface-0) text-(--text-3) text-sm">Loading...</div>}>
         <SetupFlow
           onComplete={(chosenModel?: string, chosenProvider?: string) => {
             setSettings((current: any) => ({
@@ -827,14 +844,14 @@ function AppShell() {
   // tab keeps that real, not a dead button.
   if (uxMode === 'simple' && activeTab !== 'settings') {
     return (
-      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-[var(--companion-surface)] text-[var(--text-3)] text-sm">Loading...</div>}>
+      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-(--companion-surface) text-(--text-3) text-sm">Loading...</div>}>
         <CompanionMode uxMode={uxMode} onModeChange={setUxMode} onOpenSettings={() => switchTab('settings')} />
       </Suspense>
     );
   }
 
   return (
-    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-[var(--accent-dim)] bg-[var(--surface-0)] text-[var(--text-1)] ${settings.colorScheme === 'light' ? 'light' : ''} ${themeClassFromSettings(settings)}`}>
+    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-(--accent-dim) bg-(--surface-0) text-(--text-1) ${settings.colorScheme === 'light' ? 'light' : ''} ${themeClassFromSettings(settings)}`}>
       <UpdaterNotification
         version={updaterVersion}
         onDismiss={() => setUpdaterVersion(null)}
@@ -916,8 +933,8 @@ function AppShell() {
           onRetry={runOllamaCheck}
           onOpenRuntimes={() => switchTab('runtimes')}
         />
-        <main className="flex-1 overflow-hidden relative bg-[var(--surface-0)]">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-[var(--accent-glow)] blur-[120px] rounded-full pointer-events-none" />
+        <main className="flex-1 overflow-hidden relative bg-(--surface-0)">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-(--accent-glow) blur-[120px] rounded-full pointer-events-none" />
           {/* AgentDock moved to RightPanel → Agents tab */}
           <div className="h-full relative z-10">
             <ErrorBoundary label="main-shell">
@@ -945,8 +962,8 @@ function AppShell() {
                 )}
                 {activeTab === 'automation' && <AutomationView />}
                 {activeTab === 'files' && <FilesView memoryItems={memoryItems} />}
-                {activeTab === 'ecosystem' && (
-                  <EcosystemHub settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />
+                {(activeTab === 'ecosystem' || activeTab === 'pairings' || activeTab === 'maturity') && (
+                  <EcosystemHub key={activeTab} initialTab={activeTab === 'pairings' ? 'pairings' : activeTab === 'maturity' ? 'advanced' : 'overview'} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />
                 )}
                 {activeTab === 'project_execution' && <ProjectExecutionMode />}
                 {activeTab === 'orchestrator' && (
@@ -962,18 +979,18 @@ function AppShell() {
                 )}
                 {activeTab === 'connectors' && (
                   <div className="h-full overflow-y-auto p-6">
-                    <React.Suspense fallback={<div className="flex items-center justify-center h-full text-[var(--text-3)] text-sm">Loading...</div>}>
+                    <React.Suspense fallback={<div className="flex items-center justify-center h-full text-(--text-3) text-sm">Loading...</div>}>
                       <ConnectorHealthPanel zeroCostMode={settings.zeroCostMode} />
                     </React.Suspense>
                   </div>
                 )}
                 {activeTab === 'runtimes' && (
-                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-[var(--text-3)] text-sm">Loading runtimes…</div>}>
+                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-(--text-3) text-sm">Loading runtimes…</div>}>
                     <RuntimeManagerView />
                   </React.Suspense>
                 )}
                 {activeTab === 'voice' && (
-                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-[var(--text-3)] text-sm">Loading voice…</div>}>
+                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-(--text-3) text-sm">Loading voice…</div>}>
                     <VoiceView />
                   </React.Suspense>
                 )}
@@ -1062,18 +1079,23 @@ function VerificationLogsProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RequestApprovalProvider({ children }: { children: React.ReactNode }) {
-  const [approvalPending, setApprovalPending] = useState<string | null>(null);
-  const approvalResolveRef = useRef<((value: boolean) => void) | null>(null);
+export function RequestApprovalProvider({ children }: { children: React.ReactNode }) {
+  // This bridge used to keep its own `approvalPending` state that no component
+  // ever rendered, so every `await requestApproval(...)` routed through it
+  // (Boardroom's Hermes gate, plugin/workspace/verification actions) waited
+  // forever with no prompt. The one real approval modal lives in AppContent and
+  // is driven by useAppShellState, so the bridge now just forwards to it.
+  const handlerRef = useRef<BoardroomRequestApproval | null>(null);
 
-  const requestApproval = useCallback((actionLabel: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      approvalResolveRef.current = resolve;
-      setApprovalPending(actionLabel);
-    });
+  const requestApproval = useCallback<BoardroomRequestApproval>((request) => {
+    // Fail closed: before AppContent registers (or after it unmounts) nothing can show a prompt.
+    return handlerRef.current ? handlerRef.current(request) : Promise.resolve(false);
+  }, []);
+  const registerApprovalHandler = useCallback((handler: BoardroomRequestApproval | null) => {
+    handlerRef.current = handler;
   }, []);
 
-  const approvalValue = React.useMemo<RequestApprovalBridgeValue>(() => ({ approvalPending, setApprovalPending, requestApproval, approvalResolveRef }), [approvalPending, setApprovalPending, requestApproval]);
+  const approvalValue = React.useMemo<RequestApprovalBridgeValue>(() => ({ requestApproval, registerApprovalHandler }), [requestApproval, registerApprovalHandler]);
 
   return (
     <RequestApprovalBridge.Provider value={approvalValue}>

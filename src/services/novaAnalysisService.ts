@@ -6,6 +6,7 @@ import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { durableGet, durableSet } from '../lib/durableStore';
 import { appendNotification } from './notificationService';
+import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -250,7 +251,7 @@ export async function runNovaAnalysis(commandText: string, assignment: Assignmen
   let ollamaResult: NovaAnalysisResult | null = null;
   try {
     const prompt = buildNovaAnalysisPrompt(commandText, priorOutputs, scores);
-    const response = await generateAgentLlmResponse('nova', { endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt }) as { response?: string } | null;
+    const response = await generateAgentLlmResponse('nova', { endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt, sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined }) as { response?: string } | null;
     ollamaResult = parseNovaAnalysisResponse(response?.response || '');
   } catch {
     // Ollama unavailable — use deterministic fallback

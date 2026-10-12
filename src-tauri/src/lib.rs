@@ -10,6 +10,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{Emitter, Listener, Manager, WindowEvent};
 
 mod audit_log;
+mod comfyui_proxy;
 mod commands {
   pub(crate) mod bridge;
   pub(crate) mod clipboard;
@@ -31,6 +32,7 @@ mod companion_types;
 mod connector_commands;
 mod kv_store;
 mod memory_graph;
+mod memory_graph_prune;
 mod memory_store;
 mod meta_publish;
 mod native_proof;
@@ -93,7 +95,9 @@ pub(crate) use kv_store::{kv_delete, kv_get, kv_set, load_settings, save_setting
 pub(crate) use memory_graph::{
   memory_graph_add_edge, memory_graph_add_node, memory_graph_infer_edges, memory_graph_list_edges,
   memory_graph_list_nodes, memory_graph_query_related, memory_graph_query_related_deep,
+  memory_graph_touch_nodes,
 };
+pub(crate) use memory_graph_prune::memory_graph_prune;
 pub(crate) use memory_store::*;
 pub(crate) use meta_publish::*;
 pub(crate) use native_proof::{
@@ -180,6 +184,19 @@ pub(crate) fn unix_now_iso() -> String {
     .map(|duration| duration.as_secs())
     .unwrap_or(0);
   format!("unix:{}", seconds)
+}
+
+/// The app context, with its identifier swapped for an isolated one when an
+/// end-to-end test profile is active (debug builds only, see
+/// `utils::e2e_profile`). Every Tauri path resolver call (app data, config,
+/// local data) derives from the identifier, so this one change moves all of
+/// them at once.
+fn e2e_aware_context() -> tauri::Context<tauri::Wry> {
+  let mut context = tauri::generate_context!();
+  if let Some(profile) = utils::e2e_profile() {
+    context.config_mut().identifier = format!("com.shayan.alphonso.e2e.{profile}");
+  }
+  context
 }
 
 pub(crate) fn app_data_subdir(app: &tauri::AppHandle, subdir: &str) -> Result<PathBuf, String> {
@@ -315,7 +332,11 @@ pub fn run() {
 
   tauri::Builder::default()
     .manage(http_client)
-    .manage(runtime_manager::RuntimeManager::new())
+    // The same manager the auto-start thread records PIDs into (a clone
+    // shares its map), so commands can see and stop auto-started tools.
+    .manage(runtime_manager::RuntimeManager::clone(
+      &runtime_mgr_autostart,
+    ))
     .manage(VoiceSidecar(std::sync::Mutex::new(None)))
     .manage(VoiceToken(std::sync::Mutex::new(None)))
     .manage(RateLimiter::new())
@@ -743,6 +764,8 @@ pub fn run() {
       memory_graph_list_nodes,
       memory_graph_list_edges,
       memory_graph_infer_edges,
+      memory_graph_touch_nodes,
+      memory_graph_prune,
       secure_credential_set,
       secure_credential_get,
       secure_credential_delete,
@@ -803,6 +826,7 @@ pub fn run() {
       tool_connection_post_webhook,
       connector_generate_sdwebui_image,
       connector_queue_comfyui_video,
+      comfyui_proxy::comfyui_request,
       connector_get_comfyui_history,
       connector_check_local_runtime_health,
       connector_hermes_agent_request,
@@ -847,6 +871,6 @@ pub fn run() {
       voice_sidecar::voice_status,
       voice_sidecar::voice_get_token
     ])
-    .run(tauri::generate_context!())
+    .run(e2e_aware_context())
     .expect("error while running tauri application");
 }

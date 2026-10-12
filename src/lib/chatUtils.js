@@ -65,7 +65,9 @@ export function needsHighRiskApproval(actionLabel) {
   const lower = String(actionLabel || '').toLowerCase();
   return [
     'delete', 'remove', 'write file', 'create file', 'rename', 'move', 'publish',
-    'upload', 'post', 'payment', 'charge', 'deploy', 'external', 'secret', 'credential'
+    'upload', 'post', 'payment', 'charge', 'deploy', 'external', 'secret', 'credential',
+    // commandApprovalService.ts labels AI-planned build/test/install runs this way
+    'run workspace code'
   ].some((term) => lower.includes(term));
 }
 

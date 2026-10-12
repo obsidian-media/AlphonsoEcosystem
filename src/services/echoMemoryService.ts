@@ -3,6 +3,7 @@ import { generateAgentLlmResponse, PREFERRED_MODEL } from '../lib/ollama';
 import { pushMemoryItem, listMemoryItems } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { addMemoryToChroma, semanticSearchMemory, isChromaHealthy } from './chromaDbService.js';
+import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
 export type RetentionPolicy = 'standard_180d' | 'permanent' | 'ephemeral_7d';
 export type MemoryCategory = 'project_memory' | 'timeline_memory' | 'preference_memory' | 'orchestration_memory';
@@ -190,7 +191,8 @@ export async function runEchoPreservation(commandText: string, assignment: EchoA
       const response = await generateAgentLlmResponse('echo', {
         endpoint: options.endpoint,
         model: options.model || PREFERRED_MODEL,
-        prompt
+        prompt,
+        sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
       });
       const parsed = parseEchoMemoryResponse(response?.response);
       if (parsed && parsed.title.length > 3 && parsed.content.length > 10) {
