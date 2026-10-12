@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import React from 'react';
 import { PluginProvider, usePlugins } from '../contexts/PluginContext';
 import { SettingsProvider } from '../contexts/SettingsContext';
@@ -88,5 +88,30 @@ describe('PluginContext', () => {
     }
     expect(() => render(<SettingsProvider><Bad /></SettingsProvider>)).toThrow('usePlugins must be used within PluginProvider');
     spy.mockRestore();
+  });
+});
+
+describe('PluginContext approval requests', () => {
+  it('forces a prompt for enabling a plugin even though the label has no risk keyword', async () => {
+    const requestApproval = vi.fn(async () => true);
+    let api;
+    function Capture() { api = usePlugins(); return null; }
+    render(
+      <SettingsProvider>
+        <PluginProvider
+          requestApproval={requestApproval}
+          setVerificationLogs={vi.fn()}
+          setDurableAuditLogs={vi.fn()}
+          setApprovalRequiredNotice={vi.fn()}
+        >
+          <Capture />
+        </PluginProvider>
+      </SettingsProvider>
+    );
+    await act(async () => { await api.handleTogglePlugin('test-plugin', true); });
+    expect(requestApproval).toHaveBeenCalledWith(expect.objectContaining({
+      actionLabel: 'Enable plugin: test-plugin',
+      requireApproval: true,
+    }));
   });
 });

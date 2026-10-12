@@ -47,7 +47,7 @@ describe('NotificationCenter', () => {
     const { container } = render(<NotificationCenter {...makeProps()} />);
     const items = container.querySelectorAll('[class*="l-4"]');
     expect(items.length).toBeGreaterThanOrEqual(2);
-    const bgSurface1 = container.querySelectorAll('[class*="bg-[var(--surface-1)]"]');
+    const bgSurface1 = container.querySelectorAll('[class*="bg-(--surface-1)"]');
     expect(bgSurface1.length).toBe(3);
   });
 

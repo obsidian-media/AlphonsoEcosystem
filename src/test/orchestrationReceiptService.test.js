@@ -208,7 +208,7 @@ describe('orchestrationReceiptService', () => {
     });
   });
 
-  describe('ring buffer behavior', () => {
+  describe('ring-3 buffer behavior', () => {
     it('drops oldest receipts when exceeding 3000 cap', () => {
       const many = Array.from({ length: 3000 }, (_, i) => ({
         id: `orx-old-${i}`,

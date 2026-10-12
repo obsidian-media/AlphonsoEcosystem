@@ -14,7 +14,7 @@ describe('Zone', () => {
     expect(screen.getByTestId('zone').className).toMatch(/bg-surface-2/);
   });
 
-  it('applies the hector mood as a tinted background, not a border or shadow', () => {
+  it('applies the hector mood as a tinted background, not a border or shadow-sm', () => {
     render(<Zone mood="hector" data-testid="zone">content</Zone>);
     const el = screen.getByTestId('zone');
     expect(el.className).toMatch(/bg-agent-hector\/10/);
@@ -27,7 +27,7 @@ describe('Zone', () => {
     expect(screen.getByTestId('zone').className).toMatch(/bg-agent-miya\/10/);
   });
 
-  it('never includes a shadow or border class regardless of mood', () => {
+  it('never includes a shadow-sm or border class regardless of mood', () => {
     (['neutral', 'hector', 'miya'] as const).forEach((mood) => {
       const { unmount } = render(<Zone mood={mood} data-testid={`zone-${mood}`}>x</Zone>);
       const el = screen.getByTestId(`zone-${mood}`);

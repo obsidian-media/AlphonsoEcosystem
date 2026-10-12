@@ -1,4 +1,5 @@
 import { listAllNodes, inferEdges } from './memoryGraphService';
+import { runScheduledCleanupIfDue } from './memoryGraphRetentionService';
 
 const SCHEDULED_BATCH_SIZE = 20;
 const SCHEDULED_MAX_SUGGESTIONS = 20;
@@ -13,11 +14,14 @@ const DEFAULT_INTERVAL_MS = 30 * 60 * 1000;
  */
 export async function runScheduledInferencePass(): Promise<void> {
   const nodes = await listAllNodes(NODE_SAMPLE_POOL);
-  if (nodes.length === 0) return;
-
-  const shuffled = [...nodes].sort(() => Math.random() - 0.5);
-  const batch = shuffled.slice(0, SCHEDULED_BATCH_SIZE).map((n) => n.id);
-  await inferEdges(batch, SCHEDULED_MAX_SUGGESTIONS);
+  if (nodes.length > 0) {
+    const shuffled = [...nodes].sort(() => Math.random() - 0.5);
+    const batch = shuffled.slice(0, SCHEDULED_BATCH_SIZE).map((n) => n.id);
+    await inferEdges(batch, SCHEDULED_MAX_SUGGESTIONS);
+  }
+  // Governance (Phase 4): opt-in daily prune, deliberately after inference so
+  // freshly re-confirmed edges are not pruned. A no-op unless the user enabled it.
+  await runScheduledCleanupIfDue().catch(() => {});
 }
 
 let _inferenceInterval: ReturnType<typeof setInterval> | null = null;

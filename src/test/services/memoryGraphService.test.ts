@@ -248,4 +248,25 @@ describe('memoryGraphService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('touchNodes', () => {
+    it('marks nodes read via queryRelated, throttled per node', async () => {
+      invoke.mockResolvedValue([]);
+      const { queryRelated } = await import('../../services/memoryGraphService');
+      await queryRelated('touch-throttle-1');
+      await queryRelated('touch-throttle-1');
+      const touches = invoke.mock.calls.filter((c) => c[0] === 'memory_graph_touch_nodes');
+      expect(touches).toHaveLength(1);
+      expect(touches[0][1]).toEqual({ nodeIds: ['touch-throttle-1'] });
+    });
+
+    it('never lets a failed touch break the read', async () => {
+      invoke.mockImplementation((cmd: string) =>
+        cmd === 'memory_graph_touch_nodes' ? Promise.reject(new Error('boom')) : Promise.resolve([{ id: 'e' }])
+      );
+      const { queryRelatedDeep } = await import('../../services/memoryGraphService');
+      const rows = await queryRelatedDeep('touch-failsoft-1', 2, 'both');
+      expect(rows).toEqual([{ id: 'e' }]);
+    });
+  });
 });

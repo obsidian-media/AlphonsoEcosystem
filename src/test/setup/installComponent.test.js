@@ -174,6 +174,21 @@ describe('installComponent — progress reporting', () => {
 });
 
 describe('isComponentAlreadyInstalled', () => {
+  it('gives up and reports not installed when ollama never answers', async () => {
+    // Port open but silent (still starting, or hung): fetchOllamaModels would
+    // otherwise hold the Setup screens on "Loading…" through two back-to-back
+    // timeouts of its own.
+    vi.useFakeTimers();
+    try {
+      fetchOllamaModels.mockReturnValue(new Promise(() => {}));
+      const pending = isComponentAlreadyInstalled(STARTER_MODEL_ID, new Set());
+      await vi.advanceTimersByTimeAsync(10_000);
+      await expect(pending).resolves.toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('reports the starter model as installed when ollama already lists it', async () => {
     // The model lives in ollama's own store, not Runtime Hub's installed-tool
     // list, so getAllStatus() can never answer this — it needs /api/tags.
