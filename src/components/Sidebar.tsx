@@ -253,13 +253,13 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
 
   return (
     <aside
-      className={`relative ${isOpen ? '' : 'w-14'} flex flex-col ${resizingWidth ? '' : 'transition-all duration-300 ease-in-out'} bg-[var(--surface-1)] shrink-0 border-r border-[var(--border)]`}
+      className={`relative ${isOpen ? '' : 'w-14'} flex flex-col ${resizingWidth ? '' : 'transition-all duration-300 ease-in-out'} bg-(--surface-1) shrink-0 border-r border-(--border)`}
       style={isOpen ? { width: sidebarWidth } : undefined}
     >
       {isOpen && (
         <div
           onPointerDown={(e) => { e.preventDefault(); setResizingWidth(true); }}
-          className="absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize z-10 hover:bg-[var(--accent-border)]"
+          className="absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize z-10 hover:bg-(--accent-border)"
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize sidebar"
@@ -267,21 +267,21 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         />
       )}
       {/* Logo */}
-      <div className="h-14 flex items-center px-4 py-3 border-b border-[var(--border)] shrink-0">
+      <div className="h-14 flex items-center px-4 py-3 border-b border-(--border) shrink-0">
         <div className="flex items-center gap-2.5 w-full">
           <button
             type="button"
             onClick={() => { setActiveSpace('home'); setActiveTab('mission'); }}
-            className="flex items-center gap-2.5 min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+            className="flex items-center gap-2.5 min-w-0 rounded-lg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border)"
             aria-label="Go to Dashboard"
             title="Go to Dashboard"
           >
             <img src={alphonsoIcon} alt="Alphonso" className="w-7 h-7 rounded-lg shrink-0 shadow-glow-sm" />
-            {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-[var(--text-1)]">ALPHONSO</span>}
+            {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-(--text-1)">ALPHONSO</span>}
           </button>
           <button
             onClick={onToggle}
-            className="ml-auto p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+            className="ml-auto p-1.5 rounded-lg text-(--text-3) hover:text-(--text-1) hover:bg-(--surface-3) transition-colors shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border)"
             aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? '-rotate-90' : 'rotate-90'}`} />
@@ -294,16 +294,16 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         <button
           onClick={onToggleSearch}
           data-testid="sidebar-search-trigger"
-          className="flex items-center gap-2 mx-3 mt-3 px-3 py-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-3)] text-xs hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+          className="flex items-center gap-2 mx-3 mt-3 px-3 py-2 rounded-lg bg-(--surface-2) text-(--text-3) text-xs hover:bg-(--surface-3) transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border)"
           aria-label="Search"
         >
           <Search className="w-3.5 h-3.5" />
           <span>Search</span>
-          <span className="ml-auto text-[10px] font-mono text-[var(--text-4)]">Ctrl+P</span>
+          <span className="ml-auto text-[10px] font-mono text-(--text-4)">Ctrl+P</span>
           <span
             data-testid="sidebar-ollama-dot"
             title={ollamaConnected ? 'Local AI online' : 'Local AI offline'}
-            className={`h-1.5 w-1.5 rounded-full shrink-0 ${ollamaConnected ? 'bg-[var(--success)]' : 'bg-[var(--text-4)]'}`}
+            className={`h-1.5 w-1.5 rounded-full shrink-0 ${ollamaConnected ? 'bg-(--success)' : 'bg-(--text-4)'}`}
           />
         </button>
       )}
@@ -315,12 +315,12 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         <button
           onClick={() => { setActiveSpace('home'); setActiveTab('chat'); }}
           data-testid="sidebar-chat-shortcut"
-          className={`flex items-center gap-2 mx-3 mt-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
-            activeTab === 'chat' ? 'bg-[var(--accent-muted)] text-[var(--text-1)]' : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)]'
+          className={`flex items-center gap-2 mx-3 mt-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${
+            activeTab === 'chat' ? 'bg-(--accent-muted) text-(--text-1)' : 'bg-(--surface-2) text-(--text-2) hover:bg-(--surface-3)'
           }`}
           aria-current={activeTab === 'chat' ? 'page' : undefined}
         >
-          <MessageSquare className={`w-4 h-4 shrink-0 ${activeTab === 'chat' ? 'text-[var(--accent)]' : ''}`} />
+          <MessageSquare className={`w-4 h-4 shrink-0 ${activeTab === 'chat' ? 'text-(--accent)' : ''}`} />
           <span>Chat</span>
         </button>
       )}
@@ -329,8 +329,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           onClick={() => { setActiveSpace('home'); setActiveTab('chat'); }}
           data-testid="sidebar-chat-shortcut"
           title="Chat"
-          className={`flex items-center justify-center mx-auto mt-2 p-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
-            activeTab === 'chat' ? 'bg-[var(--accent-muted)] text-[var(--accent)]' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]'
+          className={`flex items-center justify-center mx-auto mt-2 p-2 rounded-lg transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${
+            activeTab === 'chat' ? 'bg-(--accent-muted) text-(--accent)' : 'text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-1)'
           }`}
           aria-label="Open Chat"
         >
@@ -347,8 +347,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
               data-testid={`space-pill-${space.id}`}
               onClick={() => setActiveSpace(space.id)}
               title={space.label}
-              className={`flex items-center justify-center py-1.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
-                activeSpace === space.id ? 'bg-[var(--accent-muted)] text-[var(--accent)]' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]'
+              className={`flex items-center justify-center py-1.5 rounded-lg transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${
+                activeSpace === space.id ? 'bg-(--accent-muted) text-(--accent)' : 'text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-1)'
               }`}
               aria-label={space.label}
               aria-current={activeSpace === space.id ? 'true' : undefined}
@@ -360,7 +360,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
       )}
 
       {/* Agent status strip — dots variant, unchanged */}
-      <div className={`border-b border-[var(--border)] min-h-0 mt-3 ${isOpen ? 'px-3 py-2' : 'px-1.5 py-2 flex justify-center'}`}>
+      <div className={`border-b border-(--border) min-h-0 mt-3 ${isOpen ? 'px-3 py-2' : 'px-1.5 py-2 flex justify-center'}`}>
         <AgentStatusStrip compact={!isOpen} useAutoFeed />
       </div>
 
@@ -377,19 +377,19 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
               whileHover={{ x: 2 }}
               whileTap={{ scale: 0.97 }}
               title={!isOpen ? item.label : undefined}
-              className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
+              className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${
                 activeTab === item.id
-                  ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)]'
-                  : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)]'
+                  ? 'bg-(--accent-muted) text-(--text-1) shadow-[inset_0_0_12px_var(--accent-glow)]'
+                  : 'text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-2)'
               }`}
               aria-current={activeTab === item.id ? 'page' : undefined}
               aria-label={!isOpen ? item.label : undefined}
               data-testid={`sidebar-nav-${item.id}`}
             >
-              <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-[var(--accent)]' : ''}`} />
+              <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-(--accent)' : ''}`} />
               {isOpen && <span className="font-medium">{item.label}</span>}
               {isOpen && item.showApprovalBadge && pendingApprovalCount > 0 && (
-                <span className="ml-auto flex items-center justify-center w-4 h-4 rounded-full bg-[var(--warning)] text-[8px] font-bold text-[var(--surface-0)] animate-pulse">
+                <span className="ml-auto flex items-center justify-center w-4 h-4 rounded-full bg-(--warning) text-[8px] font-bold text-(--surface-0) animate-pulse">
                   {pendingApprovalCount > 9 ? '9+' : pendingApprovalCount}
                 </span>
               )}
@@ -417,7 +417,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                 recentChatsStartRef.current = { startY: e.clientY, startHeight: recentChatsHeight };
                 setResizingHeight(true);
               }}
-              className="mx-auto mb-1 h-1 w-8 shrink-0 cursor-row-resize rounded-full bg-[var(--border)] hover:bg-[var(--accent-border)]"
+              className="mx-auto mb-1 h-1 w-8 shrink-0 cursor-row-resize rounded-full bg-(--border) hover:bg-(--accent-border)"
               role="separator"
               aria-orientation="horizontal"
               aria-label="Resize recent chats"
@@ -425,7 +425,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
             />
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="section-label">Recent Chats</span>
-              <button onClick={onCreateChat} className="p-1 hover:bg-[var(--surface-3)] rounded-lg transition-colors text-[var(--text-3)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]" aria-label="Create new chat">
+              <button onClick={onCreateChat} className="p-1 hover:bg-(--surface-3) rounded-lg transition-colors text-(--text-3) hover:text-(--text-1) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border)" aria-label="Create new chat">
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -436,17 +436,17 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                   onClick={() => { setActiveChatId(chat.id); setActiveTab('chat'); }}
                   className={`group flex items-center justify-between px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all ${
                     activeChatId === chat.id && activeTab === 'chat'
-                      ? 'bg-[var(--surface-3)] text-[var(--accent)]'
-                      : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)]'
+                      ? 'bg-(--surface-3) text-(--accent)'
+                      : 'text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-2)'
                   }`}
                 >
                   <span className="truncate">{chat.title}</span>
                   <button
                     onClick={(e) => handleDeleteClick(chat.id, e)}
-                    className={`p-0.5 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] focus-visible:opacity-100 ${
+                    className={`p-0.5 rounded transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) focus-visible:opacity-100 ${
                       pendingDeleteId === chat.id
-                        ? 'opacity-100 bg-[var(--error-dim)] text-[var(--error)]'
-                        : 'opacity-0 group-hover:opacity-100 hover:bg-[var(--error-dim)] hover:text-[var(--error)]'
+                        ? 'opacity-100 bg-(--error-dim) text-(--error)'
+                        : 'opacity-0 group-hover:opacity-100 hover:bg-(--error-dim) hover:text-(--error)'
                     }`}
                     aria-label={pendingDeleteId === chat.id ? `Confirm delete chat: ${chat.title}` : `Delete chat: ${chat.title}`}
                     title={pendingDeleteId === chat.id ? 'Click again to confirm delete' : 'Delete chat'}
@@ -461,11 +461,11 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
       </div>
 
       {/* Footer — unchanged */}
-      <div className="p-2 border-t border-[var(--border)] space-y-0.5">
+      <div className="p-2 border-t border-(--border) space-y-0.5">
         {onOpenCoach && (
           <button
             onClick={onOpenCoach}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded-lg"
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-2) transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) rounded-lg"
             aria-label="Open Coach mode"
           >
             <BrainCircuit className="w-4 h-4" />
@@ -474,8 +474,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         )}
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
-            activeTab === 'settings' ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)] rounded-lg' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] rounded-lg'
+          className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${
+            activeTab === 'settings' ? 'bg-(--accent-muted) text-(--text-1) shadow-[inset_0_0_12px_var(--accent-glow)] rounded-lg' : 'text-(--text-3) hover:bg-(--surface-3) rounded-lg'
           }`}
           aria-label="Open settings"
           data-testid="sidebar-settings-button"
@@ -485,7 +485,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         </button>
         <button
           onClick={toggleTheme}
-          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded-lg"
+          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-2) transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) rounded-lg"
           aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
         >
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

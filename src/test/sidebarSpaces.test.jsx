@@ -109,8 +109,8 @@ describe('Sidebar — 5 Space pills', () => {
 
   it('shows a persistent Ollama status dot next to the search field, colored by connection state', () => {
     const { rerender } = render(<Sidebar {...baseProps} ollamaConnected={false} />);
-    expect(screen.getByTestId('sidebar-ollama-dot').className).toMatch(/bg-\[var\(--text-4\)\]/);
+    expect(screen.getByTestId('sidebar-ollama-dot').className).toMatch(/bg-\(--text-4\)/);
     rerender(<Sidebar {...baseProps} ollamaConnected={true} />);
-    expect(screen.getByTestId('sidebar-ollama-dot').className).toMatch(/bg-\[var\(--success\)\]/);
+    expect(screen.getByTestId('sidebar-ollama-dot').className).toMatch(/bg-\(--success\)/);
   });
 });

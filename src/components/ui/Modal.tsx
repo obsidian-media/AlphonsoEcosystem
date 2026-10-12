@@ -19,12 +19,12 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
       aria-modal="true"
       {...(title ? { 'aria-labelledby': titleId } : { 'aria-label': 'Dialog' })}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div ref={dialogRef} className={`relative w-full ${sizeClasses[size]} bg-[--surface-2] border border-[--border] rounded-[--radius-xl] shadow-[--shadow-lg] animate-in fade-in zoom-in-95 duration-[--duration-normal]`}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-xs" onClick={onClose} />
+      <div ref={dialogRef} className={`relative w-full ${sizeClasses[size]} bg-(--surface-2) border border-(--border) rounded-xl shadow-(--shadow-lg) animate-in fade-in zoom-in-95 duration-(--duration-normal)`}>
         {title && (
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[--border]">
-            <h2 id={titleId} className="text-sm font-semibold text-[--text-1]">{title}</h2>
-            <button onClick={onClose} className="text-[--text-3] hover:text-[--text-2] transition-colors text-lg leading-none">×</button>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-(--border)">
+            <h2 id={titleId} className="text-sm font-semibold text-(--text-1)">{title}</h2>
+            <button onClick={onClose} className="text-(--text-3) hover:text-(--text-2) transition-colors text-lg leading-none">×</button>
           </div>
         )}
         <div className="p-5">{children}</div>
