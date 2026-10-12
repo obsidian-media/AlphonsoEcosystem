@@ -123,6 +123,11 @@ export function updateThreadStatus(threadId: string, status: BoardroomThread['st
   return updated;
 }
 
+/** Every message across all threads (used by memory-graph retention to find protected threads). */
+export function listAllThreadMessages(): BoardroomThreadMessage[] {
+  return readJson<BoardroomThreadMessage[]>(MESSAGES_KEY, []);
+}
+
 export function listThreadMessages(threadId: string): BoardroomThreadMessage[] {
   const rows = readJson<BoardroomThreadMessage[]>(MESSAGES_KEY, []);
   return rows

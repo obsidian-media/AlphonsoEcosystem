@@ -4,6 +4,7 @@ import { Activity, AlertTriangle, ChevronDown, ClipboardCopy, Compass, Download,
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { Modal } from './ui/Modal';
 import { MemoryGraphViewer } from './MemoryGraphViewer';
+import { MemoryGraphCleanupPanel } from './MemoryGraphCleanupPanel';
 
 const LEGACY_COLOR_TO_VARIANT: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info' | 'accent'> = {
   green: 'success',
@@ -1473,6 +1474,7 @@ export function SettingsView({
         >
           Expand to fullscreen →
         </button>
+        <MemoryGraphCleanupPanel />
       </section>
       <section className="space-y-4">
         <SectionHeader icon={Database} label="Session History" />
