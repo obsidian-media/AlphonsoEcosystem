@@ -186,6 +186,19 @@ pub(crate) fn unix_now_iso() -> String {
   format!("unix:{}", seconds)
 }
 
+/// The app context, with its identifier swapped for an isolated one when an
+/// end-to-end test profile is active (debug builds only, see
+/// `utils::e2e_profile`). Every Tauri path resolver call (app data, config,
+/// local data) derives from the identifier, so this one change moves all of
+/// them at once.
+fn e2e_aware_context() -> tauri::Context<tauri::Wry> {
+  let mut context = tauri::generate_context!();
+  if let Some(profile) = utils::e2e_profile() {
+    context.config_mut().identifier = format!("com.shayan.alphonso.e2e.{profile}");
+  }
+  context
+}
+
 pub(crate) fn app_data_subdir(app: &tauri::AppHandle, subdir: &str) -> Result<PathBuf, String> {
   let mut dir = app
     .path()
@@ -858,6 +871,6 @@ pub fn run() {
       voice_sidecar::voice_status,
       voice_sidecar::voice_get_token
     ])
-    .run(tauri::generate_context!())
+    .run(e2e_aware_context())
     .expect("error while running tauri application");
 }
