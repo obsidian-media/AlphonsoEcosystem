@@ -17,8 +17,8 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
-- **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 8, Tailwind 3) + Ollama (local LLM)
-- **Version**: 2.8.0 (security hardened, 408 test files, 5,239 tests, 203 services)
+- **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 8, Tailwind 4) + Ollama (local LLM)
+- **Version**: 2.9.0 (security hardened, 410 test files, 5,239 tests, 205 services)
 - **Target**: v2.5.0 = security hardening complete, test coverage expanded, all connectors policy-gated
 
 ## Directory Structure
@@ -30,7 +30,7 @@ src/                   React frontend (132 .tsx, 39 .jsx — .jsx being migrated
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                409 test files, 5,239 tests (Vitest; see ground truth for current verification status)
+  test/                409 test files, 5,608 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -65,7 +65,8 @@ ios/                   iOS companion app (SwiftUI)
   src/companion_types.rs Shared companion data types
   src/companion_router.rs Companion command routing
 scripts/               Build, release, auth, verification scripts
-e2e/                   Playwright E2E tests (smoke.spec.js, boot.spec.js)
+e2e/                   Playwright E2E tests (smoke.spec.js, boot.spec.js) — web build, Tauri bridge mocked
+e2e-desktop/           Desktop E2E suite — real built app via tauri-driver, isolated test data (16 spec files)
 gateway/               WhatsApp Cloud gateway (Railway-deployed, live)
   docs/                  56 documentation .md files (65 markdown docs total incl. 11 root-level .md)
 ```
@@ -78,7 +79,8 @@ npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
 npm run test:coverage    # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
-npm run test:e2e         # Playwright smoke test (needs dev server + Ollama)
+npm run test:e2e         # Playwright smoke test (web build, Tauri bridge mocked; needs dev server + Ollama)
+npm run test:e2e:desktop # Desktop end-to-end suite against the real built app (WebdriverIO + tauri-driver)
 
 # From src-tauri/
 cargo check              # Verify Rust compiles

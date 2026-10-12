@@ -42,7 +42,12 @@ npm run test:coverage    # Run tests with coverage report
 
 # E2E — Playwright installed (no extra install needed)
 # Requires: npm run dev running on :5173 + Ollama running with a model
-npm run test:e2e         # Run Playwright golden-path smoke test
+npm run test:e2e         # Run Playwright golden-path smoke test (web build, Tauri bridge MOCKED)
+
+# Desktop E2E — the real built app via tauri-driver, isolated test data (16 spec files, 53 checks)
+# Requires: tauri-driver, an Edge driver matching WebView2 (ALPHONSO_E2E_EDGEDRIVER), and
+#           npm run tauri build -- --debug --no-bundle   (see e2e-desktop/wdio.conf.mjs)
+npm run test:e2e:desktop
 ```
 
 ---
@@ -55,8 +60,8 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **parallelExecutionService.ts**: parallel task execution with concurrency control, retry logic, and task queues
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **26 connectors** (`DEFAULT_CONNECTORS` in `connectorRegistry.js`): Telegram, WhatsApp, YouTube, mobile_bridge, ChatGPT, Claude, Qwen, Notion, ClickUp, SD WebUI, ComfyUI Video, Runway, GitHub, Slack, Discord, Generic Webhook, Ollama, Brave Search, Perplexity, Tavily, DeepSeek, n8n, NVIDIA NIM, Gemini, Hermes Agents, CALL-E — all policy-gated, all registered centrally, all have credential input UI in ConnectorSetupPanel. NVIDIA NIM, Gemini, and Hermes Agents are deliberately excluded from `PAID_OR_METERED_CONNECTORS` in `policyEnforcementService.ts` (NVIDIA/Gemini: free-tier cloud, see `docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md`; Hermes Agents: local/self-hosted, same posture as Ollama). CALL-E is registered as paid/high-risk (real outbound phone calls).
-- **lib.rs is ~2,024 lines** — 25 modules in src-tauri/src/ — see AGENTS.md for full module list
-- **All 2555+ tests are in `src/test/`** — 186 test files; Vitest via vitest.config.js (separate from vite build config)
+- **lib.rs is ~877 lines** — 40 Rust source files in src-tauri/src/, 124 Tauri commands, 189 Rust unit tests (as of v2.9.0, 2026-10-12) — see AGENTS.md for the module list
+- **5,608 unit tests across 410 test files** (as of v2.9.0, 2026-10-12; `src/test/` plus `bridge/tests/`); Vitest via vitest.config.js (separate from vite build config)
 - **Security (Batch 1 complete)**: boot TDZ crash fixed; `gateConnectorAction` exception-safe + DSL-wired; SSRF blocking on `fetch_url_content`; `execute_command_verified` real output redaction; PKCE on all 3 OAuth scripts; clipboard/dialog/open_url use native APIs (arboard, tauri-plugin-dialog, tauri-plugin-opener); CSP narrowed to explicit ports; per-program arg allowlist in `policy_gate.rs` (tightened 2026-09-30: every allowed program has an explicit fail-closed argument rule; `node -e`, `python -c`, `npx <pkg>`, `npm publish`, git `--upload-pack`/`-c`/`ext::`, and curl/wget/docker/URL openers are refused — LLM-planned commands from `agentBrainService.js` reach this path, so it is the real boundary).
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
@@ -339,9 +344,9 @@ Before writing any new service, component, or feature, check this list:
 ## Before Making Changes
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
-2. Check `src/services/` for an existing service before writing a new one — there are 163+ services
-3. Check `src/test/` — there are 218 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 3,174 tests must continue to pass
+2. Check `src/services/` for an existing service before writing a new one — there are 205 services
+3. Check `src/test/` — there are 410 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 5,608 tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 7. **When bumping the app version, bump all 4 locations together**: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock`'s `app` package entry. These drifted out of sync for 9 versions (2.4.4 → 2.5.9) before this was caught by a real release build in 2026-07-02 (the published installer was mislabeled `2.4.4`) — see the "Last verified" entry below for the full story.
@@ -507,18 +512,19 @@ src/                   React frontend (mix of .tsx and .jsx, 9+ .ts services)
     SessionHistoryView.tsx          — orchestration history search/filter
     OperatorDashboard.tsx           — operator-level control
     agentWorkshop/   agents/   approval/   audit/   dashboard/   hector/   projectExecution/   research/   ui/
-  services/            163+ services
+  services/            205 services
     connectors/        GitHub, Slack, Tavily, Perplexity, DeepSeek, n8n, and other connectors
   hooks/               17 custom hooks (useAppShellState, useAppEffects split into 6, useJarvisVoice, useTheme, etc.)
   lib/
     ollama.js / ollama.ts    Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
     durableStore.js          SQLite dual-write (localStorage + Tauri kv_set)
     motion.ts                Framer Motion helpers
-  test/                286 test files (Vitest, vitest.config.js)
-e2e/                   Playwright E2E tests (smoke.spec.js, voice.spec.js, visual.spec.js, multiagent.spec.js)
+  test/                409 test files (Vitest, vitest.config.js)
+e2e/                   Playwright E2E tests (smoke.spec.js, voice.spec.js, visual.spec.js, multiagent.spec.js) — web build, Tauri bridge mocked
+e2e-desktop/           Desktop E2E suite — wdio.conf.mjs, helpers.mjs, specs/*.e2e.mjs (real built app via tauri-driver)
 src-tauri/
   src/
-    lib.rs             Rust backend (~2,024 lines)
+    lib.rs             Rust backend (~877 lines)
     utils.rs           Shared utilities
     main.rs            Tauri entry point
     kv_store.rs        KV store — kv_set, kv_get, kv_delete, save_settings, load_settings
@@ -583,6 +589,22 @@ scripts/               Build, release, and auth helper scripts
 ---
 
 _Last verified: 2026-10-06 (false-confidence tests)_ — `bridge/tests/server.test.js` never ran in CI (`npm test` filtered to `src`) and had TypeScript syntax in a `.js` file; fixed, and `test`/`test:watch` now run `src bridge`. `companionIntegration.test.js` rewritten as a source-reading contract test (mutation-verified). Same day: `scripts/run-vitest-programmatic.mjs` was found to run zero test bodies (wrong `startVitest` mode, exit always 0) and was fixed — trust `npm test` only from 2026-10-06 on; #270 macOS notarization, #271 AI-planned command approval, #272 approval-bridge fix, #275 approval for execute/restore/enable actions merged; #276 (Tailwind v4) held on the macOS 10.15 decision. See `docs/governance/DEFERRED_WORK.md` 2026-10-06 entries.
+
+---
+
+_Last verified: 2026-10-12 (desktop end-to-end testing pass; v2.9.0)_ — the user asked for the real desktop app to be tested end to end, the findings fixed, and a release cut. Full record: `docs/ALPHONSO_GROUND_TRUTH.md` §11.33, `docs/CHANGELOG.md` [2.9.0], open items in `docs/governance/DEFERRED_WORK.md` (2026-10-12).
+
+**Things future sessions must know:**
+- **There are two end-to-end suites, and only one tests the real app.** `e2e/` (Playwright) runs the web build with the Tauri bridge mocked. `e2e-desktop/` (`npm run test:e2e:desktop`) drives the real built binary. Anything involving the Rust backend, the window origin, spawned processes or stored data needs a desktop spec. A green Playwright run says nothing about those.
+- **The desktop window's origin is `http://tauri.localhost` on Windows, and local servers refuse it.** Ollama returns 403 (fixed only for an Ollama that Alphonso starts, via `OLLAMA_ORIGINS`); ComfyUI returns 403 for any foreign origin (fixed via `comfyui_proxy.rs`). Before adding a `fetch` from the window to any local service, check it against that origin; prefer a backend command.
+- **Never put `tauri://localhost` in `OLLAMA_ORIGINS`.** Ollama panics on startup ("bad origin").
+- **Desktop tests run on isolated data, debug builds only.** `ALPHONSO_E2E_PROFILE` is honored by `utils::e2e_profile()` only under `debug_assertions`. Run `isolation.e2e.mjs` first when changing the harness.
+- **A silent fallback is a bug.** Creative Studio and Content Studio both showed stock templates as if generated. Any model-backed feature that falls back must say so on screen.
+- **Tauri crate and npm versions must match on major.minor, and PR CI does not check it.** The desktop build jobs run only on `main` and tags. After merging any `tauri*` crate bump, check `main`'s CI.
+- **`RuntimeManager` must be one shared instance** (it is `Clone`; clones share the PID map). Do not `RuntimeManager::new()` a second one.
+- **Doc counts are CI-enforced** (`node scripts/verify-doc-counts.mjs`): adding a Rust test, Tauri command, Rust module or test file changes numbers in README.md, AGENTS.md and ARCHITECTURE.md.
+
+**Not verified in this pass:** connectors with real accounts, phone pairing, CALL-E, Runway video, auto-update from a real release, starting Voice OS, macOS and Linux builds of 2.9.0 on real hardware.
 
 ---
 

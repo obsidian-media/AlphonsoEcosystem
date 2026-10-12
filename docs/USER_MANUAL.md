@@ -1,7 +1,7 @@
 # Alphonso User Manual
 
-**Version**: 2.2.3
-**Last Updated**: 2026-06-24
+**Version**: 2.9.0
+**Last Updated**: 2026-10-12 (Ollama setup and troubleshooting sections revised for v2.9.0; other sections were last reviewed on earlier dates and may describe older screens)
 **Status**: Production Ready
 
 ---
@@ -61,12 +61,14 @@ Alphonso is a **local-first AI desktop companion** that runs entirely on your ma
 
 ### Ollama Setup
 
-If Ollama is not running, Alphonso will show a preflight warning. To start Ollama:
+Alphonso starts Ollama for you at launch when it is installed. If you prefer to run Ollama yourself, the desktop app's window must be allowed to call it:
 
 ```powershell
-$env:OLLAMA_ORIGINS="*"
+$env:OLLAMA_ORIGINS="http://tauri.localhost"
 ollama serve
-```text
+```
+
+(`"*"` also works but allows any website open in your browser to call your local Ollama.)text
 
 ---
 
@@ -683,8 +685,9 @@ Policy enforcement now uses:
 ### Ollama Not Connecting
 
 ```powershell
-# Start Ollama with CORS enabled
-$env:OLLAMA_ORIGINS="*"
+# Either let Alphonso start Ollama (Runtimes > Ollama > Start), or start it
+# yourself with the desktop window's origin allowed:
+$env:OLLAMA_ORIGINS="http://tauri.localhost"
 ollama serve
 ```
 

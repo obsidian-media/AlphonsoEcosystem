@@ -127,15 +127,15 @@ the same change; no task is complete without the plan's stated verification.
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.8.0 |
+| Version | 2.9.0 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
-| Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
-| Frontend | React 18, Vite 8, Tailwind 3, Lucide React, Framer Motion — new UI work is `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain and are tracked for migration. |
+| Backend | Rust 1.77, Tauri 2.12, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
+| Frontend | React 18, Vite 8, Tailwind 4, Lucide React, Framer Motion — new UI work is `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain and are tracked for migration. |
 | UI System | **OKLCH** CSS design token system (`src/styles/tokens.css` — all colors in `oklch()` syntax), Framer Motion animation library (`src/lib/motion.ts` — spring/tween/fadeUp/fadeIn/slideInRight/scaleIn/staggerContainer/staggerItem/messageIn/panelIn), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
 | Voice OS | FastAPI + Python microservice in `voice/` — STT (faster-whisper), LLM (Ollama `/api/chat`), TTS (piper), VAD (webrtcvad), barge-in cancellation. Launched as Tauri sidecar via `voice_sidecar.rs`. |
-| Deployment | Windows NSIS + MSI installer, Railway static serve (gateway) |
+| Deployment | Windows NSIS + MSI installers, macOS and Linux builds (`release.yml`), Railway static serve (gateway) |
 
 ---
 
@@ -2305,3 +2305,23 @@ Earlier docs (Sprint 3 entries, CLAUDE.md, ALPHONSOTOTHEMOON.md) said Alphonso, 
 The graph previously only grew. `memory_graph_prune` (`src-tauri/src/memory_graph_prune.rs`) now removes expired graph rows in one SQLite transaction, with a dry-run mode and an abort when more than 50% of nodes would go. The policy numbers come from `src/services/memoryGraphRetentionService.ts` (`GRAPH_RETENTION`): receipts/packets 90 days, boardroom messages/research reports/sources 180 days, unconfirmed inferred edges 30 days, nodes read in the last 14 days protected. Permanent memory items, nodes one hop from them over non-inferred edges, and escalated/acknowledged boardroom threads are never removed. Memory items themselves are never touched, only graph rows.
 
 Verified: 43 Rust tests in `memory_graph*` (cargo test --lib memory_graph, 22 of them new) and 20 new TS tests pass; `cargo fmt --check` and `cargo clippy -- -D warnings` clean. Not verified: a run against a real populated graph. Use Settings → Memory → "Preview cleanup" first; "Clean up now" is disabled until a fresh Preview, and the automatic daily pass is off by default and cannot be switched on before a Preview. Interpretations of ambiguous spec wording are listed in `docs/governance/DEFERRED_WORK.md` (2026-10-06 Phase 4 entry).
+
+## 11.33 Desktop end-to-end testing pass; v2.9.0 (2026-10-12)
+
+**What changed in how this app is verified.** Until this pass, every end-to-end test (`e2e/`, Playwright) ran the Vite web build with the Tauri bridge mocked by `e2e/tauri-mock.js`. The Rust backend, the real window origin, spawned processes and the OS keychain were never exercised. There is now a second suite, `e2e-desktop/`, that drives the real built binary through `tauri-driver` (WebdriverIO). Run it with `npm run test:e2e:desktop` after `npm run tauri build -- --debug --no-bundle`.
+
+**Test isolation is real, and debug-only.** `wdio.conf.mjs` sets `ALPHONSO_E2E_PROFILE` per spec file. A DEBUG build honors it through `utils::e2e_profile()`: the Tauri identifier becomes `com.shayan.alphonso.e2e.<profile>` (moving every app-data and config path), and the runtimes folder and keychain service name get the same suffix. A release build ignores the variable. `isolation.e2e.mjs` fails if the app is ever on real data. Before this existed, a chat spec wrote test messages into the developer's real chat history.
+
+**Verified working in the real desktop app (53 checks, 16 spec files, one run):** boot and every sidebar page; a real backend call; KV persistence across an app restart; the command policy refusing `curl`, `node -e`, `python -c`, git `-c`; first-run Setup up to the recommendation screen; chat with a local Ollama model; Hector research with a real source fetch and a synthesized report; a Boardroom agent reply; Runtime Hub stop and restart of Ollama; a Creative Studio package; Content Studio copy and image generation through a real ComfyUI; Jose approvals (pending, approved, executed); the Project Execution approval gate; a visual workflow built, saved and run; the separate Coach window.
+
+**Desktop-only bugs this found (all fixed in 2.9.0).**
+- *Window origin refused by local servers.* On Windows the Tauri window's origin is `http://tauri.localhost`. Ollama's default allow-list does not include it (403), and ComfyUI refuses any foreign `Origin` at all (403). The model list still loaded through a backend fallback, which hid the Ollama case. Fixes: an Ollama that Alphonso starts gets `OLLAMA_ORIGINS` extended (`runtime_manager.rs`; http/https entries only, since a `tauri://` entry makes Ollama panic on startup); ComfyUI calls go through `comfyui_proxy.rs`.
+- *Two process trackers.* `lib.rs` created one `RuntimeManager` for boot auto-start and another as command state, so Stop could not see an auto-started tool. A racing start request also spawned a second Ollama whose PID overwrote the real one.
+- *Silent template fallbacks.* Creative Studio discarded any model reply that was not bare JSON. Content Studio never passed model settings into a job, so it never called the model at all. Both showed stock text as if generated.
+- *Storage overflow.* A Content Studio job stored the base64 image preview many times; saving it threw `QuotaExceededError` unhandled and the job vanished.
+- *Release builds broken on `main`.* Dependabot's `tauri-plugin-opener` 2.7 bump moved the `tauri` crate to 2.12 while `@tauri-apps/api` stayed on 2.11. Tauri's build refuses a minor mismatch. The desktop build jobs do not run on PRs, so the PR was green. `@tauri-apps/api` and `@tauri-apps/cli` are now on 2.12.
+
+**Numbers as of v2.9.0 (from `scripts/shared/counters.mjs` and CI):** 5,608 unit tests across 410 files (src + bridge); 189 Rust unit tests; 124 Tauri commands across 40 Rust source files; `lib.rs` 877 lines; 205 services; 135 components; 21 hooks.
+
+**Still open:** see the 2026-10-12 entry in `docs/governance/DEFERRED_WORK.md` (13 items, including: a user-started Ollama is still refused by the window; an intermittent first-model-call failure; the desktop suite is not in CI).
+
