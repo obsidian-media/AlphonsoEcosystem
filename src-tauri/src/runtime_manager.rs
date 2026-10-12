@@ -1051,6 +1051,12 @@ pub struct ToolStatus {
   pub description: String,
   pub installed: bool,
   pub running: bool,
+  /// Whether the tool actually answered an HTTP request on its health path.
+  /// `running` only means its port accepts connections, which is already true
+  /// while a tool is still starting up (or is hung); a caller that is about to
+  /// send it real work should check this instead. Tools with no health path
+  /// report the same value as `running`.
+  pub responding: bool,
   pub port: Option<u16>,
   pub pid: Option<u32>,
   pub started_by_us: bool,
@@ -1145,6 +1151,26 @@ fn is_running_sync(port: u16) -> bool {
     Duration::from_millis(400),
   )
   .is_ok()
+}
+
+/// Non-blocking equivalent of `is_running_sync`, for probing many ports at once.
+async fn is_port_open_async(port: u16) -> bool {
+  let connect = tokio::net::TcpStream::connect(("127.0.0.1", port));
+  matches!(
+    tokio::time::timeout(std::time::Duration::from_millis(400), connect).await,
+    Ok(Ok(_))
+  )
+}
+
+/// `(running, responding)` for one tool port — see `ToolStatus::responding`.
+async fn probe_tool_port(port: u16, health_path: Option<&str>) -> (bool, bool) {
+  if !is_port_open_async(port).await {
+    return (false, false);
+  }
+  match health_path {
+    Some(path) => (true, is_running_async(port, path).await),
+    None => (true, true),
+  }
 }
 
 async fn is_running_async(port: u16, health_path: &str) -> bool {
@@ -1518,7 +1544,18 @@ pub async fn runtime_get_all_status(
   let prefs = load_autostart_prefs();
   let mut statuses = Vec::new();
 
-  for def in TOOLS {
+  // Probe every tool's port at once. Done one after another (as this used to
+  // be, with a blocking 400ms connect each) the closed ports alone made this
+  // command take several seconds on a machine where little is running.
+  let probes = futures_util::future::join_all(TOOLS.iter().map(|def| async move {
+    match def.port {
+      Some(port) => Some(probe_tool_port(port, def.health_path).await),
+      None => None,
+    }
+  }))
+  .await;
+
+  for (def, probe) in TOOLS.iter().zip(probes) {
     let dir = tool_dir(def.name);
 
     let installed = match (def.repo_url, def.exe) {
@@ -1538,17 +1575,16 @@ pub async fn runtime_get_all_status(
       }
     };
 
-    let (running, pid) = if let Some(port) = def.port {
-      let up = is_running_sync(port);
+    let (running, responding, pid) = if let Some((up, responding)) = probe {
       let pid = if up {
         state.spawned_pid(def.name)
       } else {
         None
       };
-      (up, pid)
+      (up, responding, pid)
     } else {
       let pid = state.spawned_pid(def.name);
-      (pid.is_some(), pid)
+      (pid.is_some(), pid.is_some(), pid)
     };
 
     statuses.push(ToolStatus {
@@ -1557,6 +1593,7 @@ pub async fn runtime_get_all_status(
       description: def.description.to_string(),
       installed,
       running,
+      responding,
       port: def.port,
       pid,
       started_by_us: state.spawned_pid(def.name).is_some(),
