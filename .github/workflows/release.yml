@@ -258,14 +258,29 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Setting these makes Tauri sign with the hardened runtime AND submit
-          # to Apple's notary service, then staple the ticket. Empty strings
-          # (secrets not configured) leave Tauri in unsigned mode.
-          APPLE_SIGNING_IDENTITY: ${{ steps.apple_cert.outputs.enabled == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
-          APPLE_ID: ${{ steps.apple_cert.outputs.enabled == 'true' && secrets.APPLE_ID || '' }}
-          APPLE_PASSWORD: ${{ steps.apple_cert.outputs.enabled == 'true' && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ steps.apple_cert.outputs.enabled == 'true' && secrets.APPLE_TEAM_ID || '' }}
-        run: npm run tauri build -- --target aarch64-apple-darwin --verbose
+          APPLE_SIGNING_ENABLED: ${{ steps.apple_cert.outputs.enabled }}
+          SECRET_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          SECRET_APPLE_ID: ${{ secrets.APPLE_ID }}
+          SECRET_APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          SECRET_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Exporting APPLE_SIGNING_IDENTITY makes Tauri sign with the hardened
+          # runtime; APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID make it notarize and
+          # staple. They must be UNSET, not empty, for an unsigned build: with
+          # APPLE_SIGNING_IDENTITY="" Tauri still runs `codesign -s ""`, which
+          # fails with "no identity found" and takes the whole release down
+          # (this broke the first v2.9.0 release run).
+          if [ "$APPLE_SIGNING_ENABLED" = "true" ]; then
+            export APPLE_SIGNING_IDENTITY="$SECRET_APPLE_SIGNING_IDENTITY"
+            export APPLE_ID="$SECRET_APPLE_ID"
+            export APPLE_PASSWORD="$SECRET_APPLE_PASSWORD"
+            export APPLE_TEAM_ID="$SECRET_APPLE_TEAM_ID"
+          else
+            echo "Apple signing not configured: building an UNSIGNED, un-notarized app."
+          fi
+          npm run tauri build -- --target aarch64-apple-darwin --verbose
 
       - name: Verify Gatekeeper accepts the app (notarized builds only)
         if: steps.apple_cert.outputs.enabled == 'true'
