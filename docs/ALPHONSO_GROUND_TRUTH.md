@@ -2323,5 +2323,7 @@ Verified: 43 Rust tests in `memory_graph*` (cargo test --lib memory_graph, 22 of
 
 **Numbers as of v2.9.0 (from `scripts/shared/counters.mjs` and CI):** 5,608 unit tests across 410 files (src + bridge); 189 Rust unit tests; 124 Tauri commands across 40 Rust source files; `lib.rs` 877 lines; 205 services; 135 components; 21 hooks.
 
+**How 2.9.0 was actually released (2026-10-13).** Tag `v2.9.0` is at `4987705`. `release.yml`'s macOS job failed twice (first the unsigned-signing fallback, fixed in #293; then the bundled-Ollama check), and its publish job needs all three builds, so the workflow never published. The Windows and Linux installers from the rerun were published by hand with a `latest.json` covering those two platforms. macOS is not in the release. Verified after publishing: the release is marked latest, the installer link returns the file, and the updater endpoint serves 2.9.0. Not verified: running the installer, and the 2.8.0 to 2.9.0 auto-update.
+
 **Still open:** see the 2026-10-12 entry in `docs/governance/DEFERRED_WORK.md` (13 items, including: a user-started Ollama is still refused by the window; an intermittent first-model-call failure; the desktop suite is not in CI).
 
