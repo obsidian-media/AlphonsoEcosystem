@@ -136,7 +136,7 @@ jobs:
 
       - name: Render new task definition with the new image
         id: render
-        uses: aws-actions/amazon-ecs-render-task-definition@138c24f321fdbdf7edee4a685519d253cae2cdea # v1
+        uses: aws-actions/amazon-ecs-render-task-definition@8d79160660ad39c402a16e5fc7cd2a32e8f7d6b7 # v1
         with:
           task-definition: task-definition.json
           container-name: ${{ env.CONTAINER_NAME }}
