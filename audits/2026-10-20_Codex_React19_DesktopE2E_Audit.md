@@ -42,3 +42,5 @@ The harness now waits for a real Alphonso shell/setup root before touching stora
 The fresh run `39517091682` again kept the primary Test & Build job active while all independent gates completed, leaving the desktop dependency chain unopened. The CI workflow now gives that job an explicit 45-minute timeout so a stalled install/test process produces a terminal failure instead of withholding downstream evidence indefinitely. This does not claim the desktop suite is green; a fresh run must still reach and pass the real desktop job.
 
 The Rust quality prerequisite now has the same 45-minute bound because desktop jobs require both prerequisites; this prevents a stalled Cargo/toolchain operation from withholding desktop evidence indefinitely.
+
+The separate `governance-gate` workflow, which runs `scripts/verify.sh` before branch CI, now also has a 45-minute bound. Without this, the main CI workflow can remain queued even when its own prerequisite jobs are bounded.

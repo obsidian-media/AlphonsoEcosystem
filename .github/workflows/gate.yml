@@ -13,6 +13,9 @@ jobs:
   gate:
     name: gate (secret-scan, doc-freshness, build, test, deploy-dry)
     runs-on: ubuntu-latest
+    # Keep a stalled repository verifier from leaving branch CI queued
+    # indefinitely behind the governance prerequisite.
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
