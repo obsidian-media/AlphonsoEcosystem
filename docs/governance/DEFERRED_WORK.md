@@ -51,6 +51,17 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   successful desktop observations are still required before recommending
   branch-protection policy.
 
+- [2026-10-20] **Apple notarization production gate.** GitHub Actions secret
+  inventory confirms only `APPLE_TEAM_ID` exists; `APPLE_CERTIFICATE`,
+  `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, and
+  `APPLE_PASSWORD` are absent. The release workflow's macOS build already
+  fails on partial configuration, and its publish job now also fails closed
+  whenever the macOS artifact is not marked notarized; unsigned DMGs can only
+  be produced as diagnostic build artifacts. A real Gatekeeper/notary run
+  remains owner-gated on a Developer ID certificate, Apple app-specific
+  password, and Apple-hosted notarization. Status: implementation complete;
+  external secrets and real macOS acceptance remain open.
+
 - [2026-10-20] **Native Ollama acceptance attempt.** The installed runtime was
   found at `D:\AgentDevWork\Apps\Ollama\ollama.exe`. A local `ollama serve`
   process owns `127.0.0.1:11434`, but `/api/version` and `/api/tags` returned

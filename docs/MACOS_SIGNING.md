@@ -2,8 +2,10 @@
 
 `release.yml`'s `build-macos` job signs with a Developer ID certificate and
 notarizes through Apple when **all six** secrets below exist. With none of the
-secrets it explicitly builds an unsigned DMG; a partial secret set fails the
-release instead of silently producing an ambiguous artifact. Gatekeeper blocks the default launch of
+secrets it may build an unsigned DMG for diagnostic purposes, but the
+`publish` job now fails closed and will not publish that artifact. A partial
+secret set also fails the release instead of silently producing an ambiguous
+artifact. Gatekeeper blocks the default launch of
 an unsigned app on macOS Sequoia+; users can usually approve it under
 System Settings > Privacy & Security ("Open Anyway") after trying to open it,
 but managed devices may forbid that override, and it is a poor first-run
@@ -52,6 +54,13 @@ xcrun stapler validate /Applications/Alphonso.app
 
 Test the DMG as a user would: download it through a browser (so it carries
 the quarantine flag) and open it on a Mac that has never seen it.
+
+## Current repository state
+
+As of 2026-10-20, the repository has only `APPLE_TEAM_ID` configured in GitHub
+Actions. The certificate, identity, Apple ID, and app-specific password are
+not configured, so no notarized release has been run. This is an owner-gated
+external prerequisite, not a claim of completed notarization.
 
 ## Not covered
 

@@ -102,6 +102,14 @@ for the detected WebView2 version and verifies its first three version
 components before starting tauri-driver. Microsoft documents this matching
 requirement; a fresh desktop run is required for evidence.
 
+Apple release preflight was also executed: the GitHub Actions secret inventory
+contains only `APPLE_TEAM_ID` from the six required notarization secrets. The
+release workflow now exposes a `notarized` build output and the publish job
+fails closed unless it is `true`; an unsigned macOS build can no longer be
+published as a production release. A real notarization/Gatekeeper acceptance
+run remains blocked on owner-provided Apple credentials and a real macOS
+artifact check.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |
