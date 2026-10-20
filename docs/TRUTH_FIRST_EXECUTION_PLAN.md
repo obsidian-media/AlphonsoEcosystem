@@ -47,6 +47,11 @@ package-manager shim launch. The first post-fix run reached `npm ci` but timed
 out after 300 seconds on Node 25; the repository declares Node 22. No build or
 test result is promoted to verified from that run.
 
+Native Ollama acceptance was attempted on 2026-10-20. The installed
+`ollama.exe` owns port 11434 but did not answer `/api/version` or `/api/tags`
+within five seconds, so no model generation result is recorded. This remains a
+runtime blocker, not a pass.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |

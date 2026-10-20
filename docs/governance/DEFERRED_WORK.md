@@ -7,6 +7,25 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-20] **Native Ollama acceptance attempt.** The installed runtime was
+  found at `D:\AgentDevWork\Apps\Ollama\ollama.exe`. A local `ollama serve`
+  process owns `127.0.0.1:11434`, but `/api/version` and `/api/tags` returned
+  no response within five seconds; a second launch correctly reported the port
+  already occupied. No model list or immediate generation result was obtained,
+  so the desktop-origin/first-call item remains open. Resume hint: restart the
+  user-started Ollama process outside this session, confirm `/api/version` and
+  `/api/tags`, then run one built Tauri chat request immediately after launch.
+  Status: blocked by an unresponsive local Ollama process.
+
+- [2026-10-20] **Desktop CI observation attempt.** The workflow is confirmed
+  in source as a Windows real-binary job: it installs EdgeDriver and
+  `tauri-driver`, builds the debug Tauri binary, and runs
+  `npm run test:e2e:desktop`. GitHub Actions run lookup from this host failed
+  at the network boundary, so no runtime/flake observation or branch-protection
+  recommendation is claimed yet. Resume hint: inspect at least five successful
+  runs, record skip/failure rates and durations, then decide whether the job is
+  required for `main`. Status: blocked on CI observation access.
+
 - [2026-10-20] **Verifier completion slice started.** `scripts/verify.ps1` now
   bounds gitleaks to 90 seconds, falls back when the executable is blocked or
   exceeds that limit, uses Git-tracked files for the bounded fallback, and
