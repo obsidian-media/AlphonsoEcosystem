@@ -68,6 +68,9 @@ jobs:
   rust-quality:
     name: Rust Tests & Clippy
     runs-on: ubuntu-latest
+    # Desktop build/E2E jobs depend on this gate; bound a stalled toolchain or
+    # package download so the workflow eventually reports a result.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
