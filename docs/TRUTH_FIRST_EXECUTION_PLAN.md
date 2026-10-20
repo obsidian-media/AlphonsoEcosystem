@@ -88,6 +88,13 @@ deterministically on the Windows Server 2025 image now selected by
 E2E job is therefore pinned to `windows-2022` pending upstream resolution, and
 must be rerun before this item can be treated as successful.
 
+The first Windows 2022 rerun failed faster and identified the next setup
+defect: the runner supplied EdgeDriver 155 while the WebView2 runtime used by
+the built Tauri app was `131.0.2903.86`. The CI step now downloads the driver
+for the detected WebView2 version and verifies its first three version
+components before starting tauri-driver. Microsoft documents this matching
+requirement; a fresh desktop run is required for evidence.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |

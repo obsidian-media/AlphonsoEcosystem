@@ -263,15 +263,32 @@ jobs:
       - name: Install EdgeDriver
         shell: pwsh
         run: |
-          $driver = Get-Command msedgedriver.exe -ErrorAction SilentlyContinue
-          if (-not $driver) {
-            choco install selenium-edge-driver --no-progress --yes
+          $webViewRoot = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\EdgeWebView\Application'
+          $webView = Get-ChildItem -Path $webViewRoot -Filter msedgewebview2.exe -Recurse -File |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $webView) {
+            throw "Microsoft Edge WebView2 runtime was not found under $webViewRoot."
           }
-          $driver = Get-Command msedgedriver.exe -ErrorAction SilentlyContinue
+          $browserVersion = $webView.VersionInfo.ProductVersion
+          $driverVersion = ($browserVersion -split '\.')[0..2] -join '.'
+          $driverRoot = Join-Path $env:RUNNER_TEMP 'alphonso-msedgedriver'
+          $archive = Join-Path $env:RUNNER_TEMP "msedgedriver-$browserVersion.zip"
+          New-Item -ItemType Directory -Force -Path $driverRoot | Out-Null
+          $downloadUrl = "https://msedgedriver.microsoft.com/$browserVersion/edgedriver_win64.zip"
+          Write-Host "WebView2 version: $browserVersion"
+          Write-Host "Downloading matching EdgeDriver: $downloadUrl"
+          Invoke-WebRequest -Uri $downloadUrl -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $driverRoot -Force
+          $driver = Get-ChildItem -Path $driverRoot -Filter msedgedriver.exe -Recurse -File | Select-Object -First 1
           if (-not $driver) {
-            throw 'msedgedriver.exe is required for the real WebView2 desktop suite.'
+            throw "Matching msedgedriver.exe was not found after extracting $archive."
           }
-          "ALPHONSO_E2E_EDGEDRIVER=$($driver.Source)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $actualDriverVersion = (& $driver.FullName --version | Select-Object -First 1)
+          Write-Host "EdgeDriver: $actualDriverVersion"
+          if ($actualDriverVersion -notmatch "^MSEdgeDriver $driverVersion\.") {
+            throw "EdgeDriver major/minor/build does not match WebView2 $browserVersion: $actualDriverVersion"
+          }
+          "ALPHONSO_E2E_EDGEDRIVER=$($driver.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Install dependencies
         run: npm ci
