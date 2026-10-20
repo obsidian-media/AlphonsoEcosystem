@@ -7,6 +7,17 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-20] **Memory Graph Phase 4 local acceptance evidence captured.**
+  `cargo test memory_graph --lib` completed in 16m37s with **43 passed, 0
+  failed, 0 ignored**. The filtered set exercises the Phase 4 pruning rules,
+  old-schema migration, 50% safety guard, dry-run non-deletion, idempotence,
+  orphan handling, inferred-edge refresh, and cycle-safe traversal. This is
+  stronger than static inspection but is not the required live Preview against
+  a populated desktop database; the frontend focused tests remain unavailable
+  on this host because the Node 25 installation is missing
+  `@vitest/utils/dist/constants.js`. Status: local Rust acceptance verified;
+  populated-database Preview and UI acceptance remain open.
+
 - [2026-10-20] **React 19 coordinated migration started.** The runtime pair
   was mismatched with the already-19.x React type packages (`react` and
   `react-dom` were 18.3.1 while `@types/react`/`@types/react-dom` were 19.x),

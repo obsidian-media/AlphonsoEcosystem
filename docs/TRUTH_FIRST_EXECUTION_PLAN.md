@@ -74,6 +74,14 @@ on this host because the incomplete Node 25 installation is missing
 `@vitest/utils/dist/constants.js`; CI must supply the authoritative typecheck,
 test, build, and E2E evidence before this migration can be marked verified.
 
+Memory Graph Phase 4 local Rust acceptance completed on 2026-10-20:
+`cargo test memory_graph --lib` finished in 16m37s with 43 passed, 0 failed,
+0 ignored, including pruning rules, schema migration, the 50% guard, dry-run
+behavior, idempotence, orphan handling, inferred-edge refresh, and cycle-safe
+traversal. This does not close the required live Preview against a populated
+desktop database; the frontend focused tests remain invalid on this host for
+the missing Vitest dependency noted above.
+
 The dispatched CI run on 2026-10-20 found seven newly published RustSec
 advisories. `rustls` was upgraded to `0.23.46` and the updater to `2.14.0`;
 the remaining zip 4 and Linux notification/opener warnings are upstream-blocked and
