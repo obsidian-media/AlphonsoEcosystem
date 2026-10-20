@@ -7,6 +7,19 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-20] **React 19 coordinated migration started.** The runtime pair
+  was mismatched with the already-19.x React type packages (`react` and
+  `react-dom` were 18.3.1 while `@types/react`/`@types/react-dom` were 19.x),
+  and Dependabot's earlier `react-dom`-only bump is explicitly unsafe. Both
+  runtime packages and the lockfile are now aligned to `19.2.8`; the lockfile
+  also moves `scheduler` to `0.27.0`. Static inspection found the application
+  entry already uses `ReactDOM.createRoot`, with no runtime `ReactDOM.render`,
+  `findDOMNode`, or component `defaultProps` call sites in `src`. The local
+  frontend test runner remains invalid because this host's Node 25 install is
+  missing `@vitest/utils/dist/constants.js`; CI is required for the real
+  migration test/build evidence. Status: migration slice in progress,
+  awaiting CI compatibility results and focused React 19 regression coverage.
+
 - [2026-10-20] **CALL-E native/live preflight completed; external acceptance remains
   owner-gated.** The code graph confirms the native CALL-E path is present and
   connected (`confirmMcpOutreachCall` -> `runCall` ->

@@ -65,6 +65,15 @@ secret-name inventory contains no CALL-E/HeyCall/phone credential, and no secret
 value was read. Native OAuth, OS-keychain restart survival, and a real call
 remain owner-gated; no live call was attempted.
 
+The coordinated React 19 migration started on 2026-10-20. `react` and
+`react-dom` are now aligned at `19.2.8` in `package.json` and the lockfile;
+`scheduler` is `0.27.0`. The existing entry point already uses `createRoot`,
+and static source inspection found no runtime `ReactDOM.render`, `findDOMNode`,
+or component `defaultProps` usage in `src`. Local Vitest execution is not valid
+on this host because the incomplete Node 25 installation is missing
+`@vitest/utils/dist/constants.js`; CI must supply the authoritative typecheck,
+test, build, and E2E evidence before this migration can be marked verified.
+
 The dispatched CI run on 2026-10-20 found seven newly published RustSec
 advisories. `rustls` was upgraded to `0.23.46` and the updater to `2.14.0`;
 the remaining zip 4 and Linux notification/opener warnings are upstream-blocked and
