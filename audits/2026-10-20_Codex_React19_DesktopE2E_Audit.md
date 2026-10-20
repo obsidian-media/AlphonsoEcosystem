@@ -20,3 +20,7 @@ The workflow derived the compatible WebView2 `major.minor.build` version but use
 ## Status
 
 React 19 standard CI verification is green. Desktop E2E and the desktop-CI deferred item remain open pending a fresh run that proves EdgeDriver installation and real Tauri test execution. No branch-protection mutation was made.
+
+## Follow-up CI finding
+
+Replacement workflow `39504052015` reached `Test & Build` but failed at `Security audit (npm)` because Vite `8.0.16` fell within the affected `8.0.0`–`8.1.5` range for `GHSA-587h-7wmj-h5pm`. `npm audit fix --package-lock-only --ignore-scripts` resolved Vite to `8.3.4`; a local `npm audit --audit-level=high` then reported zero vulnerabilities. The lockfile-only update also refreshed compatible transitive Rolldown packages. A fresh CI run is required before claiming the desktop fix is verified.
