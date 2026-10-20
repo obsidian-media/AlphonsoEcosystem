@@ -117,6 +117,13 @@ signature and does not provide SmartScreen/Authenticode trust. A real Windows
 signing implementation remains owner-gated on certificate procurement,
 secret-handling, and provider choice.
 
+Cloud Voice production recheck is currently blocked: the configured voice CNAME
+points at `alphonso-cloud-voice-1113067864.ca-central-1.elb.amazonaws.com`,
+which has no DNS address from this environment, and the `/ready` HTTPS request
+cannot connect. CI Cloud Voice tests are green but do not prove live service
+health. AWS owner access is required to restore/inspect the ALB/DNS state before
+authenticated voice and physical-device acceptance can proceed.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |

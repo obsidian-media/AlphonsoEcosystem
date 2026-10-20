@@ -72,6 +72,16 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   provider. Status: owner-gated, not implemented; no signed Windows installer
   is claimed.
 
+- [2026-10-20] **Cloud Voice production readiness recheck.** A read-only
+  HTTPS check of `https://voice.obsidianmedia.online/ready` failed because the
+  hostname's CNAME (`alphonso-cloud-voice-1113067864.ca-central-1.elb.amazonaws.com`)
+  currently has no address, so port 443 is unreachable. CI's Cloud Voice and
+  gateway tests remain green, but that is not live production evidence. No AWS
+  or paid-infrastructure mutation was attempted. Status: blocked on the AWS
+  ALB/DNS service state; resume with AWS owner access, restore DNS/ALB health,
+  then repeat `/ready`, authenticated `/v1/voice/respond`, and physical-device
+  acceptance.
+
 - [2026-10-20] **Native Ollama acceptance attempt.** The installed runtime was
   found at `D:\AgentDevWork\Apps\Ollama\ollama.exe`. A local `ollama serve`
   process owns `127.0.0.1:11434`, but `/api/version` and `/api/tags` returned
