@@ -28,6 +28,8 @@
     "export:ground-truth": "node scripts/export-ground-truth.mjs",
     "verify:docs": "node scripts/verify-doc-counts.mjs",
     "verify:dnd-coverage": "node scripts/verify-dnd-coverage.mjs",
+    "generate:dnd-map": "node scripts/generate-dnd-map.mjs",
+    "verify:dnd-map": "node scripts/generate-dnd-map.mjs --check",
     "verify:no-window-coverage": "node scripts/verify-no-window-coverage.mjs",
     "verify:npm-audit": "node scripts/verify-npm-audit.mjs",
     "generate:skill-matrix": "node scripts/generate-skill-permission-matrix.mjs",

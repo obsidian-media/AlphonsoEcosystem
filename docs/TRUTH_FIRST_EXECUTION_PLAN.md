@@ -974,18 +974,19 @@ dropped.
   - **Done when:** `npm run verify:dnd-coverage` passes clean and the job
     blocks merges. — met, verified live 2026-09-03.
 
-- [ ] **G-T19b — Auto-generate the "Do Not Duplicate" map (the actual generator)**
+- [x] **G-T19b — Auto-generate the "Do Not Duplicate" map (the actual generator)** — CLOSED 2026-10-20
   - **Owner:** Echo
-  - **Still genuinely open, not closed by PR #206.** `scripts/verify-dnd-coverage.mjs`
-    is a **checker**: it confirms every file is *mentioned* somewhere in
-    CLAUDE.md (a backticked filename match), it does not derive or write
-    table rows from source. The 124-file backlog it flagged was closed by
-    a human writing the entries by hand (G-T19a), not by a generator. Do
-    not conflate the two — closing G-T19a does not close this item.
+  - **Status note (closed 2026-10-20):** Added `scripts/generate-dnd-map.mjs`,
+    which derives a stable source inventory from `src/services/` and
+    `src/components/`, including statically detected exports, and writes
+    `docs/DO_NOT_DUPLICATE.generated.md`. The hand-maintained purpose table
+    in CLAUDE.md remains authoritative for descriptions; the generated
+    inventory closes the source-existence half without inventing semantics.
+    `npm run verify:dnd-map` is a blocking CI doc-freshness step.
   - **Done when:** a generator (similar in spirit to
     `scripts/generate-skill-permission-matrix.mjs`) derives at least the
     service-existence half of the table from `src/services/` + component
-    exports, with a `--check` mode wired into CI doc-freshness.
+    exports, with a `--check` mode wired into CI doc-freshness. — met.
 
 - [x] **G-T20 — Add a token/cost budget to multi-agent fan-out; surface
   hidden features** — budget half CLOSED 2026-09-20/21, discoverability half
@@ -1657,5 +1658,6 @@ dropped.
 | 2026-10-20 | Codex continued the batch: Content Studio brief generation now records and surfaces model failures instead of silently presenting the built-in fallback as a successful brief. | `npx vitest run src/test/contentCatalystService.test.js src/test/features/content-catalyst/DraftPreview.test.jsx src/test/features/content-catalyst/ContentCatalystWorkspace.test.jsx` — 58 passed; live Ollama brief generation remains untested. |
 | 2026-10-20 | Codex continued the batch: AI Runtime Manager tool cards now use opaque theme surfaces for deterministic contrast, and the targeted axe assertion is active again. | Fresh `npx playwright test e2e/a11y.spec.js -g "AI Runtime Manager"` passed after reproducing the prior 8-node contrast failure; `npx tsc --noEmit` pending final slice verification. |
 | 2026-10-20 | Codex continued the batch: Jose's desktop approval path now asserts the visible execution result and expected queued/no-live-adapter output after approval. | `e2e-desktop/specs/jose-approval.e2e.mjs` updated; real desktop execution remains environment-gated. |
+| 2026-10-20 | Codex completed G-T19b: added a source-backed Do Not Duplicate inventory generator with static export detection and a blocking `--check` CI step. | `npm run verify:dnd-map`, `npm run verify:dnd-coverage`, and `npm run verify:docs` passed; `docs/DO_NOT_DUPLICATE.generated.md` committed. |
 | 2026-09-20/21 | Follow-up in the same PR, requested explicitly (user asked whether docs were fully updated and whether more work could land in the same branch before merge): (1) found and fixed a real gap in this session's own doc updates — `npm run verify:docs` (a required CI gate) was failing after the first two commits because the new `fanOutBudgetService.ts` + its test bumped the real services/test-file counts (201→202→203, 399→400→401) and the hardcoded counts in `README.md`/`AGENTS.md` were never updated to match; also fixed a third stale-count line in `AGENTS.md`'s "Project Identity" summary that the checker's own regex patterns don't cover (a live/current fact, not a dated historical "What's New" entry, so left correct on principle even though not CI-enforced). Verified `npm run verify:docs`/`verify:dnd-coverage` both clean after. (2) Closed the `searchBrave()` gap flagged-but-deferred in the G-T12 row above (see that row's correction and the "closed" update to G-T12's own entry higher in this file) — extracted into `src/services/connectors/braveSearchConnector.ts`, matching tavily/perplexity/deepseek's exact `evaluatePolicyGate` pattern, with 12 new tests. `npx tsc --noEmit` and `eslint` clean on every file touched across all 3 commits in this PR; none of the new tests could be executed locally (same documented vitest-harness failure); CI is the first real execution of all of them. | This row; `docs/governance/DEFERRED_WORK.md`'s updated searchBrave entry; `README.md`, `AGENTS.md`, `src/services/connectors/braveSearchConnector.ts`, `src/services/hectorResearchService.js`, `src/test/connectors/braveSearchConnector.test.js` (12 new), `CLAUDE.md`'s Do Not Duplicate table. |
 

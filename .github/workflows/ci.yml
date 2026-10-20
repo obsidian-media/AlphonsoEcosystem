@@ -463,6 +463,9 @@ jobs:
       - name: Verify agent skill-pack permission matrix is fresh
         run: npm run verify:skill-matrix
 
+      - name: Verify generated Do Not Duplicate inventory is fresh
+        run: npm run verify:dnd-map
+
       # Blocking as of 2026-09-02: the 124-file backlog this check surfaced
       # (see G-T19 in TRUTH_FIRST_EXECUTION_PLAN.md) has been fully documented
       # in CLAUDE.md's "Do Not Duplicate" table. Keep this blocking — a new
