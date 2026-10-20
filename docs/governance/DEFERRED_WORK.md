@@ -38,7 +38,11 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   frontend test runner remains invalid because this host's Node 25 install is
   missing `@vitest/utils/dist/constants.js`; CI is required for the real
   migration test/build evidence. Status: migration slice in progress,
-  awaiting CI compatibility results and focused React 19 regression coverage.
+  awaiting the corrective CI rerun; the first CI run passed 5,614 tests across
+  410 files but failed on one unhandled React 19 render error because
+  `WorkflowOperationsDashboard.test.tsx` mocked the array-returning governance
+  service as `{}`. The mock now matches the service contract; React 19 remains
+  unverified until the rerun reaches the full build and E2E gates.
 
 - [2026-10-20] **CALL-E native/live preflight completed; external acceptance remains
   owner-gated.** The code graph confirms the native CALL-E path is present and

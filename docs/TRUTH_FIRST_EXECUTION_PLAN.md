@@ -72,7 +72,11 @@ and static source inspection found no runtime `ReactDOM.render`, `findDOMNode`,
 or component `defaultProps` usage in `src`. Local Vitest execution is not valid
 on this host because the incomplete Node 25 installation is missing
 `@vitest/utils/dist/constants.js`; CI must supply the authoritative typecheck,
-test, build, and E2E evidence before this migration can be marked verified.
+test, build, and E2E evidence before this migration can be marked verified. The
+first full CI run passed 5,614 tests across 410 files but failed on one
+unhandled React 19 render error: `WorkflowOperationsDashboard.test.tsx` mocked
+the array-returning governance service as `{}`. The mock now matches the typed
+service contract; a full rerun is required.
 
 Memory Graph Phase 4 local Rust acceptance completed on 2026-10-20:
 `cargo test memory_graph --lib` finished in 16m37s with 43 passed, 0 failed,

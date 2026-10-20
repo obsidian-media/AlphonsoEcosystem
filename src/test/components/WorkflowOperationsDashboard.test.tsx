@@ -22,8 +22,7 @@ vi.mock('../../services/workflowMemoryService', () => ({
   listWorkflowMemory: vi.fn(() => [])
 }));
 vi.mock('../../services/workflowGovernanceService', () => ({
-  getAgentWorkflowParticipation: vi.fn(() => ({})
-  )
+  getAgentWorkflowParticipation: vi.fn(() => [])
 }));
 vi.mock('../../services/agentContractService', () => ({
   AGENT_EXECUTION_CONTRACTS: { alphonso: { allowedActions: ['*'] } }
