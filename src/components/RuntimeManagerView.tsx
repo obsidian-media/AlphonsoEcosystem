@@ -72,21 +72,21 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
     category: 'LLM',
     docsUrl: 'https://ollama.com',
     color: 'text-(--agent-alphonso)',
-    bg: 'bg-(--accent-muted)',
+    bg: 'bg-(--surface-1)',
   },
   comfyui: {
     icon: Wand2,
     category: 'Image / Video',
     docsUrl: 'https://github.com/comfyanonymous/ComfyUI',
     color: 'text-(--agent-echo)',
-    bg: 'bg-(--agent-echo-glow)',
+    bg: 'bg-(--surface-1)',
   },
   automatic1111: {
     icon: Image,
     category: 'Image',
     docsUrl: 'https://github.com/AUTOMATIC1111/stable-diffusion-webui',
     color: 'text-(--agent-miya)',
-    bg: 'bg-(--agent-miya-glow)',
+    bg: 'bg-(--surface-1)',
   },
   fooocus: {
     icon: Sparkles,
@@ -128,7 +128,7 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
     category: 'LLM',
     docsUrl: 'https://github.com/open-webui/open-webui',
     color: 'text-(--agent-nova)',
-    bg: 'bg-(--agent-nova-glow)',
+    bg: 'bg-(--surface-1)',
   },
   'mcp-server': {
     icon: Activity,
