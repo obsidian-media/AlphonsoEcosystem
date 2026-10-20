@@ -36,3 +36,7 @@ Run `39510208290` confirmed the exact archive download and executable launch suc
 Run `39512142677` proved the EdgeDriver setup and real Tauri launch path work. The desktop suite reached WebDriver execution and completed 16 specs with `3 passed, 13 failed`. The repeated failure was `Failed to read the 'localStorage' property from 'Window': Access is denied for this document.` in `e2e-desktop/helpers.mjs:37` inside `enterShell()`, under Microsoft Edge/WebView2 `131.0.2903.86`.
 
 The harness now waits for a real Alphonso shell/setup root before touching storage, verifies the JavaScript write, and falls back to WebDriver's storage endpoint with a verified readback. Desktop CI remains open pending a fresh run of the patched helper.
+
+## CI bounded-runtime follow-up
+
+The fresh run `39517091682` again kept the primary Test & Build job active while all independent gates completed, leaving the desktop dependency chain unopened. The CI workflow now gives that job an explicit 45-minute timeout so a stalled install/test process produces a terminal failure instead of withholding downstream evidence indefinitely. This does not claim the desktop suite is green; a fresh run must still reach and pass the real desktop job.

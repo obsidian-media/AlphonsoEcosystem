@@ -17,6 +17,9 @@ jobs:
   test:
     name: Test & Build
     runs-on: windows-latest
+    # Keep a stalled dependency install/test process from preventing all
+    # downstream desktop and Playwright jobs from ever receiving a result.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
