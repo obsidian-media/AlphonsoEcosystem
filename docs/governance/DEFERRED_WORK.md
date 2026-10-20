@@ -7,6 +7,19 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-20] **Next execution batch selected by Codex (10 repository-actionable items).** The next pass will take these in priority order, keeping each item paired with implementation, regression coverage where practical, and an evidence update in this register:
+  1. **Project Execution approval summary** — derive the heading from live pending gates and replace the missing `unknown` gate label with the actual field or an explicit fallback.
+  2. **Runtime start concurrency guard** — make `runtime_start_tool` / `autostart_all` single-flight so simultaneous requests cannot spawn duplicate processes.
+  3. **Voice runtime readiness truthfulness** — report Voice OS as installed only when the required packages are present, and make the start/readiness state explicit.
+  4. **Orchestrator connector status** — stop showing WhatsApp inbound as connected on a fresh profile without credentials.
+  5. **Boardroom speaker identity** — keep the active “thinking”/replying agent aligned with the mentioned or selected agent.
+  6. **Content Studio brief-step errors** — expose the failure state and label fallback output instead of silently treating it as a successful brief.
+  7. **Hector HTML-to-text sanitization** — remove `<style>`/CSS content before producing research snippets, with a regression test for the observed input.
+  8. **AI Runtime Manager contrast** — resolve the alpha-overlay contrast findings per usage site and theme, then remove the targeted `test.fixme` only after a fresh axe run.
+  9. **Jose execution evidence** — extend the approval E2E path to verify that an approved packet produces the expected output, not only a state transition.
+  10. **G-T19b Do Not Duplicate generator** — build the generator that derives the map from source metadata, keeping the existing checker as a blocking guard.
+  **Excluded from this batch because they need external state or owner action:** live AWS/Supabase production acceptance, Apple signing/notarization secrets, physical iOS pairing, real-account connector tests, branch-protection policy, and CI-runtime observation. The already-landed Ollama retry/origin work remains open only for native desktop verification.
+
 - [2026-10-12] **Desktop end-to-end testing pass (v2.9.0): what it fixed, and what it found and left open.** The desktop app was driven end to end for the first time: a real built binary through `tauri-driver`, real Rust backend, real Ollama and ComfyUI, on isolated test data (`e2e-desktop/`, 16 spec files, 53 checks). Every earlier end-to-end test ran the web build with the Tauri bridge mocked, so none of these failures could show up.
   **Fixed and merged:** Ollama refusing the desktop window with 403 (#287); Runtime Hub unable to stop the Ollama it started, and Ollama being started twice at launch (#289); Creative Studio discarding fenced model replies (#289); Content Studio never reaching the model (#290); ComfyUI refusing the window with 403, a generated image overflowing localStorage and losing the job, and a 3-minute image wait that a cold checkpoint load exceeded (#291); a 5.5s serial status probe and a 24s Setup wait (#286); release builds broken on `main` by a Tauri crate/npm minor mismatch after #261 (fixed in the 2.9.0 release PR).
   **OPEN — found, not fixed:**
