@@ -134,6 +134,42 @@ jobs:
             exit 1
           fi
 
+      # Fail closed on incomplete or unsafe task-definition configuration. The
+      # application can only report readiness after these values are present,
+      # and credentials must arrive through ECS secrets rather than plaintext
+      # environment values or workflow output.
+      - name: Require Cloud Voice runtime configuration and secret references
+        run: |
+          set -euo pipefail
+          required_env='["SUPABASE_URL","NVIDIA_NIM_MODEL","NVIDIA_TTS_MAGPIE_URL"]'
+          missing=$(jq -r --argjson required "$required_env" '
+            ($.containerDefinitions[0].environment // []) as $env |
+            [$required[] as $name | select(([ $env[].name ] | index($name)) | not)] | join(",")
+          ' task-definition.json)
+          if [ -n "$missing" ]; then
+            echo "::error::Task definition is missing required non-secret environment values: $missing"
+            exit 1
+          fi
+
+          for secret_name in NVIDIA_API_KEY SUPABASE_ANON_KEY; do
+            if ! jq -e --arg name "$secret_name" '
+              any(.containerDefinitions[0].secrets[]?; .name == $name and (.valueFrom | length > 0))
+            ' task-definition.json >/dev/null; then
+              echo "::error::$secret_name must be provided through an ECS secret reference."
+              exit 1
+            fi
+          done
+
+          plaintext=$(jq -r '
+            [.containerDefinitions[0].environment[]?
+              | select(.name == "NVIDIA_API_KEY" or .name == "SUPABASE_ANON_KEY" or .name == "PIPER_SERVICE_TOKEN")
+              | .name] | join(",")
+          ' task-definition.json)
+          if [ -n "$plaintext" ]; then
+            echo "::error::Credentials must not appear as plaintext environment values: $plaintext"
+            exit 1
+          fi
+
       - name: Render new task definition with the new image
         id: render
         uses: aws-actions/amazon-ecs-render-task-definition@138c24f321fdbdf7edee4a685519d253cae2cdea # v1

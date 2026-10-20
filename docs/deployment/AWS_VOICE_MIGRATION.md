@@ -4,7 +4,7 @@ This is the deployment how-to for moving **only** `voice/cloud-backend` from
 Railway to AWS. It does not move Supabase, NVIDIA NIM, or the Farsi Piper
 service in the first phase.
 
-## Current staging status (2026-07-31)
+## Current staging status (2026-10-20)
 
 The credit-constrained AWS staging service is live at
 `https://voice.obsidianmedia.online`: one 0.5 vCPU / 1 GB Fargate task is
@@ -17,6 +17,13 @@ reported NVIDIA NIM, Supabase enrollment, Magpie, and Farsi Piper configured.
 This is not cutover: Railway remains the rollback target until authenticated
 real-device English/Farsi voice acceptance and rollback/observability checks
 are recorded.
+
+The repository deployment workflow now fails closed before ECS registration when
+the task definition lacks an access policy, required non-secret runtime values,
+or ECS secret references for `NVIDIA_API_KEY` and `SUPABASE_ANON_KEY`. It also
+rejects plaintext credential environment entries. This protects the deployment
+path; it does not apply Supabase migrations, configure Supabase Auth, or grant
+AWS permissions automatically.
 
 ## Target architecture
 
@@ -115,3 +122,12 @@ Record the AWS region, ECR image digest, task-definition revision, ALB DNS
 name, deployment/circuit-breaker status, alarm configuration, and real-device
 test result in `docs/TRUTH_FIRST_EXECUTION_PLAN.md` and a dated audit before
 declaring the migration complete.
+
+Before calling Cloud Voice production-ready, the owner must also record:
+
+- the Supabase account-deletion migration applied successfully;
+- public Supabase sign-ups disabled, or an approved alternative access policy;
+- `VOICE_ACCESS_MODE` and `VOICE_ALLOWED_EMAILS` verified in the live task;
+- a successful authenticated English and Farsi round trip from a real paired
+  device; and
+- a rollback exercise with the prior endpoint still available.
