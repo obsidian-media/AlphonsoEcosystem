@@ -21,6 +21,16 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   after the lock refresh. Status: in progress, awaiting CI confirmation and
   upstream zip/zbus releases.
 
+- [2026-10-20] **RustSec follow-up for newly published TLS advisories.** The
+  next CI run exposed three advisories published after the original refresh:
+  `rustls-webpki 0.103.15` (`RUSTSEC-2026-0382`), `webpki-roots 1.0.9`
+  (`RUSTSEC-2026-0381`), and `webpki-root-certs 1.0.9`
+  (`RUSTSEC-2026-0383`). Cargo was updated to `rustls-webpki 0.103.16`,
+  `webpki-roots 1.0.10`, and `webpki-root-certs 1.0.10`; local
+  `cargo audit --deny warnings` now reports only the six already-dispositioned
+  zip/zbus IDs. Status: fixed locally, awaiting CI confirmation; the six
+  upstream exceptions remain open with their 2026-11-20 recheck.
+
 - [2026-10-20] **Desktop CI observation — first full dispatched run.** The
   rerun `39398348621` passed Rust Tests & Clippy, Test & Build, iOS, Cloud Voice,
   gateway health, secrets, documentation freshness, Playwright E2E, and all

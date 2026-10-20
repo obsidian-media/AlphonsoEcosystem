@@ -64,6 +64,13 @@ the remaining zip 4 and Linux notification/opener warnings are upstream-blocked 
 now have per-ID, expiring dispositions in `.github/workflows/ci.yml`. Local
 `cargo audit` reproduced exactly those six remaining IDs after the refresh.
 
+The following CI run also surfaced three newly published certificate-chain
+advisories (`RUSTSEC-2026-0381`, `0382`, and `0383`). The lockfile now carries
+the fixed releases `webpki-roots 1.0.10`, `rustls-webpki 0.103.16`, and
+`webpki-root-certs 1.0.10`; local `cargo audit --deny warnings` again reports
+only the six already-dispositioned zip/zbus IDs. CI confirmation is still
+required.
+
 The same dispatched run passed Rust Tests & Clippy, Test & Build, iOS, Cloud
 Voice, gateway health, secrets, and documentation freshness, but its macOS
 desktop build failed before compilation: the Rust updater crate was refreshed
