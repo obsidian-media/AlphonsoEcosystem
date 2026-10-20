@@ -31,6 +31,22 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 
 ## Current evidence and honest baseline
 
+### Codex execution batch — 2026-10-20
+
+The next ten deferred items are being handled in this order: verifier
+completion; native Ollama verification; desktop-CI observation and branch
+protection recommendation; Apple notarization; Windows Authenticode; Cloud
+Voice production gates and device acceptance; CALL-E live verification; Memory
+Graph Phase 4 live Preview; and a coordinated React 19 migration. External
+credentials, production access, Apple hardware/secrets, physical iOS hardware,
+and owner policy decisions remain explicit blockers rather than implied
+completion.
+
+The first slice repaired the Windows verifier's blocked-gitleaks fallback and
+package-manager shim launch. The first post-fix run reached `npm ci` but timed
+out after 300 seconds on Node 25; the repository declares Node 22. No build or
+test result is promoted to verified from that run.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |

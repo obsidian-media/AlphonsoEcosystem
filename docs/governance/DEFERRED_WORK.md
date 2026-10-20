@@ -7,6 +7,18 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-20] **Verifier completion slice started.** `scripts/verify.ps1` now
+  bounds gitleaks to 90 seconds, falls back when the executable is blocked or
+  exceeds that limit, uses Git-tracked files for the bounded fallback, and
+  launches Windows package-manager shims (`npm.cmd`/`pnpm.cmd`/`yarn.cmd`)
+  correctly. Evidence: the pre-fix run failed immediately on blocked
+  `gitleaks.exe` and could not start `npm`; the repaired run reached the
+  fallback and then reached `npm ci`, which timed out at 300 seconds on this
+  Node 25 host (the repository declares Node 22). Build/test stages therefore
+  remain unverified. Resume hint: rerun with a usable Node 22/npm cache, then
+  add a regression harness for blocked/slow gitleaks and shim launch behavior.
+  Status: in progress.
+
 - [2026-10-20] **Next execution batch selected by Codex (10 repository-actionable items).** The next pass will take these in priority order, keeping each item paired with implementation, regression coverage where practical, and an evidence update in this register:
   1. **Project Execution approval summary** — derive the heading from live pending gates and replace the missing `unknown` gate label with the actual field or an explicit fallback.
   2. **Runtime start concurrency guard** — make `runtime_start_tool` / `autostart_all` single-flight so simultaneous requests cannot spawn duplicate processes.

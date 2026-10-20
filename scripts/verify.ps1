@@ -9,36 +9,55 @@ $failed = $false
 function Notice($t,$m){ Write-Host "::notice title=$t::$m" }
 function Err($t,$m){ Write-Host "::error title=$t::$m"; $script:failed = $true }
 
-# ---------------------------------------------------------------- 1. secret-scan
-Write-Host "== secret-scan =="
-if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
-  gitleaks detect --no-banner --redact
-  if ($LASTEXITCODE -ne 0) { Err "secret-scan" "gitleaks found secrets" }
-} else {
-  # (a) filename-based: private key / credential files must not be committed.
-  #     Use Git's tracked-file list so large untracked/generated trees cannot
-  #     stall the release gate.
+function Invoke-SecretScanFallback {
+  # Scan only tracked files so untracked/generated trees cannot stall the gate.
   $badFiles = git -C $RepoRoot ls-files --cached -- |
     Where-Object { $_ -match '(^|[\\/])[^\\/]*(\.p8|\.p12|credential[^\\/]*|\.pem|\.key)$' }
-  if ($badFiles) { Err "secret-scan" "secret files present: $($badFiles.FullName -join ', ')" }
-  # (b) content-based: Git-tracked and non-ignored source/config only, require an assigned QUOTED
-  #     LITERAL value (not a variable/identifier reference) — matches the bash
-  #     script's fix: `SOMETHING_API_KEY: someVariableName` no longer matches,
-  #     only a token field set to an actual quoted literal string still does. Test dirs
-  #     excluded outright since fake placeholder tokens are expected there.
-  #     Exclude dependency / generated dirs + *.env.example / *.env.sample templates.
+  if ($badFiles) { Err "secret-scan" "secret files present: $($badFiles -join ', ')" }
   $excludeDirsWithTests = '[\\/](node_modules|\.git|audits[\\/]private|venv|\.venv|target|_repo_clone|dist|build|\.cache|coverage|scripts[\\/]certs|\.tauri|test|tests|e2e)[\\/]'
-  # `Get-ChildItem`/`Select-String` recursion became unbounded in workspaces
-  # that contain large untracked trees. `git grep` scans only repository
-  # content in one native process, which is precisely the material CI can
-  # merge and release.
   $rawHits = git -C $RepoRoot grep -n -I -E '(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)[[:space:]]*[=:][[:space:]]*["''][A-Za-z0-9/+_-]{8,}["'']' -- .
   if ($LASTEXITCODE -gt 1) { Err "secret-scan" "git grep failed (rc=$LASTEXITCODE)" }
   $hits = $rawHits |
     Where-Object { $_ -match '\.(json|env|ts|tsx|js|jsx|py|yml|yaml|toml|sh|rs|ps1|swift):' } |
     Where-Object { $_ -notmatch $excludeDirsWithTests } |
     Where-Object { $_ -notmatch '\.env\.(example|sample):' }
-  if ($hits) { Err "secret-scan" "possible hardcoded secrets in: $($hits.FullName -join ', ')" }
+  if ($hits) { Err "secret-scan" "possible hardcoded secrets in: $($hits -join ', ')" }
+}
+
+function Resolve-ProcessExecutable($name) {
+  if ($IsWindows -and $name -in @('npm','pnpm','yarn')) { return "$name.cmd" }
+  return $name
+}
+
+function Invoke-BoundedGitleaks {
+  $gitleaksPath = (Get-Command gitleaks -ErrorAction Stop).Source
+  try {
+    $p = Start-Process -NoNewWindow -PassThru -FilePath $gitleaksPath -ArgumentList @('detect','--no-banner','--redact')
+    $waited = 0
+    while (-not $p.WaitForExit(1000)) {
+      $waited += 1
+      if ($waited -ge 90) {
+        $p.Kill()
+        Notice "secret-scan" "gitleaks exceeded 90s; using Git-tracked-file fallback"
+        return $false
+      }
+    }
+    if ($p.ExitCode -ne 0) {
+      Err "secret-scan" "gitleaks found secrets (rc=$($p.ExitCode))"
+    }
+    return $true
+  } catch {
+    Notice "secret-scan" "gitleaks could not execute; using Git-tracked-file fallback ($($_.Exception.Message))"
+    return $false
+  }
+}
+
+# ---------------------------------------------------------------- 1. secret-scan
+Write-Host "== secret-scan =="
+if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
+  if (-not (Invoke-BoundedGitleaks)) { Invoke-SecretScanFallback }
+} else {
+  Invoke-SecretScanFallback
 }
 
 # ---------------------------------------------------------------- 2. doc-freshness
@@ -75,7 +94,10 @@ elseif (Test-Path (Join-Path $RepoRoot 'package-lock.json')) { $PM = 'npm' }
 
 function RunTimed($secs, $label, $cmd) {
   $timeoutSec = $secs
-  $p = Start-Process -NoNewWindow -PassThru $cmd[0] $cmd[1..($cmd.Count-1)]
+  $exe = Resolve-ProcessExecutable $cmd[0]
+  $p = Start-Process -NoNewWindow -PassThru -FilePath $exe -ArgumentList $cmd[1..($cmd.Count-1)]
+  $startedAt = [datetime]::UtcNow
+  if (-not $p) { Err $label "could not start $exe"; return }
   $waited = 0
   while (-not $p.WaitForExit(1000)) {
     $waited += 1
@@ -87,7 +109,10 @@ function RunTimed($secs, $label, $cmd) {
   }
   if ($p.ExitCode -eq 124) { Err $label "timed out after ${timeoutSec}s" }
   elseif ($p.ExitCode -ne 0) { Err $label "failed (rc=$($p.ExitCode))" }
-  else { Notice $label "ok" }
+  else {
+    $elapsed = [math]::Round(([datetime]::UtcNow - $startedAt).TotalSeconds, 1)
+    Notice $label "ok (${elapsed}s)"
+  }
 }
 
 if ($PM) {
