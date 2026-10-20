@@ -60,7 +60,7 @@
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "@tauri-apps/api": "^2.12.3",
     "@tauri-apps/plugin-process": "^2.3.1",
-    "@tauri-apps/plugin-updater": "^2.10.1",
+    "@tauri-apps/plugin-updater": "^2.14.0",
     "framer-motion": "^14.0.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.31.0",

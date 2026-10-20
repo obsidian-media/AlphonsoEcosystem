@@ -60,9 +60,17 @@ promoted to verified from this state.
 
 The dispatched CI run on 2026-10-20 found seven newly published RustSec
 advisories. `rustls` was upgraded to `0.23.46` and the updater to `2.14.0`;
-the remaining zip 4 and Linux secret-service warnings are upstream-blocked and
+the remaining zip 4 and Linux notification/opener warnings are upstream-blocked and
 now have per-ID, expiring dispositions in `.github/workflows/ci.yml`. Local
 `cargo audit` reproduced exactly those six remaining IDs after the refresh.
+
+The same dispatched run passed Rust Tests & Clippy, Test & Build, iOS, Cloud
+Voice, gateway health, secrets, and documentation freshness, but its macOS
+desktop build failed before compilation: the Rust updater crate was refreshed
+to `tauri-plugin-updater 2.14.0` while the npm package remained at `2.10.1`.
+Tauri rejected the mismatch. `package.json` is being aligned to
+`@tauri-apps/plugin-updater ^2.14.0`; the lockfile and a rerun are required
+before this desktop observation can count as successful.
 
 | Area | Current status | Evidence / limitation |
 |---|---|---|

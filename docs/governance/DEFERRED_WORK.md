@@ -21,6 +21,17 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   after the lock refresh. Status: in progress, awaiting CI confirmation and
   upstream zip/zbus releases.
 
+- [2026-10-20] **Desktop CI observation — first full dispatched run.** The
+  latest branch run passed Rust Tests & Clippy, Test & Build, iOS, Cloud Voice,
+  gateway health, secrets, and documentation freshness. The macOS desktop
+  build failed before compilation because the Rust updater crate was refreshed
+  to `tauri-plugin-updater 2.14.0` while `@tauri-apps/plugin-updater` remained
+  `2.10.1`; Tauri correctly rejects that version mismatch. The npm dependency
+  is now being aligned to `^2.14.0` and the run will be repeated. This is a
+  confirmed CI configuration defect, not a macOS signing/notarization result.
+  Status: in progress; five successful desktop observations are still required
+  before recommending branch-protection policy.
+
 - [2026-10-20] **Native Ollama acceptance attempt.** The installed runtime was
   found at `D:\AgentDevWork\Apps\Ollama\ollama.exe`. A local `ollama serve`
   process owns `127.0.0.1:11434`, but `/api/version` and `/api/tags` returned
@@ -34,11 +45,12 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 - [2026-10-20] **Desktop CI observation attempt.** The workflow is confirmed
   in source as a Windows real-binary job: it installs EdgeDriver and
   `tauri-driver`, builds the debug Tauri binary, and runs
-  `npm run test:e2e:desktop`. GitHub Actions run lookup from this host failed
-  at the network boundary, so no runtime/flake observation or branch-protection
-  recommendation is claimed yet. Resume hint: inspect at least five successful
-  runs, record skip/failure rates and durations, then decide whether the job is
-  required for `main`. Status: blocked on CI observation access.
+  `npm run test:e2e:desktop`. A manually dispatched run is now observable, but
+  its first full result is not a success: macOS failed on the updater package
+  version mismatch recorded above. Resume hint: inspect at least five
+  successful runs, record skip/failure rates and durations, then decide whether
+  the job is required for `main`. Status: in progress; branch-protection
+  recommendation remains open.
 
 - [2026-10-20] **Verifier completion slice started.** `scripts/verify.ps1` now
   bounds gitleaks to 90 seconds, falls back when the executable is blocked or
