@@ -165,6 +165,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
   const [composerSpeaker, setComposerSpeaker] = useState('user');
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [facilitatorPending, setFacilitatorPending] = useState(false);
+  const [activeResponder, setActiveResponder] = useState<string | null>(null);
   const stopRequestedRef = useRef(false);
   const generationAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -220,6 +221,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
     try {
     while (respondingAgents.length > 0) {
       const agentId = respondingAgents.shift() as string;
+      setActiveResponder(agentId);
 
       if (stopRequestedRef.current) {
         addThreadMessage({
@@ -316,6 +318,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
       if (generationAbortControllerRef.current === controller) {
         generationAbortControllerRef.current = null;
         setFacilitatorPending(false);
+        setActiveResponder(null);
       }
     }
   }
@@ -436,7 +439,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
             </div>
             {facilitatorPending && (
               <div className="flex items-center justify-between px-4 pb-1 text-xs text-(--text-3)">
-                <span>Alphonso is thinking…</span>
+                <span>{agentLabel(activeResponder || 'alphonso')} is thinking…</span>
                 <button
                   onClick={handleStop}
                   className="rounded-md border border-(--border) px-2 py-0.5 text-[10px] font-semibold text-(--text-2) hover:bg-(--surface-2)"
