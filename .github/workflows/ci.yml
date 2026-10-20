@@ -138,6 +138,19 @@ jobs:
       # revisit by 2026-10-25 (3-month expiry) even if no release has
       # landed, and re-run `cargo audit` without --ignore to see if the list
       # can shrink.
+      # Security update 2026-10-20: rustls 0.23.45 -> 0.23.46 removed the
+      # three newly published rustls advisories. The remaining zip 4.6.1
+      # advisories (RUSTSEC-2026-0367/0368/0369) are pulled exclusively by
+      # tauri-plugin-updater 2.14.0, whose manifest still requires zip ^4;
+      # zip 9 cannot be selected until the upstream plugin changes that
+      # constraint. The updater verifies the Minisign signature over the
+      # complete bytes before it extracts or installs them (confirmed from
+      # tauri-plugin-updater 2.14.0 source), which is the compensating control
+      # for the signed-release path. The zbus/zvariant advisories
+      # (RUSTSEC-2026-0370/0371/0372) are unmaintained Linux notification/
+      # opener transitive crates; they are not exploitable findings. These six IDs
+      # are narrowly ignored pending upstream releases and must be rechecked
+      # by 2026-11-20; any other advisory still fails this gate.
       - name: Security audit (cargo)
         if: always()
         run: |
@@ -159,7 +172,13 @@ jobs:
             --ignore RUSTSEC-2025-0075 `# unic-char-range: unmaintained, urlpattern/tauri-utils chain` \
             --ignore RUSTSEC-2025-0080 `# unic-common: unmaintained, urlpattern/tauri-utils chain` \
             --ignore RUSTSEC-2025-0100 `# unic-ucd-ident: unmaintained, urlpattern/tauri-utils chain` \
-            --ignore RUSTSEC-2025-0098 `# unic-ucd-version: unmaintained, urlpattern/tauri-utils chain`
+            --ignore RUSTSEC-2025-0098 `# unic-ucd-version: unmaintained, urlpattern/tauri-utils chain` \
+            --ignore RUSTSEC-2026-0367 `# zip 4.6.1: updater pins zip ^4; signature verified before extraction; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0368 `# zip 4.6.1: updater pins zip ^4; signature verified before extraction; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0369 `# zip 4.6.1: updater pins zip ^4; signature verified before extraction; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0370 `# zvariant 5.13.1: unmaintained Linux notification/opener transitive dependency; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0371 `# zbus_names 4.3.4: unmaintained Linux notification/opener transitive dependency; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0372 `# zvariant_derive 5.13.1: unmaintained Linux notification/opener transitive dependency; recheck 2026-11-20`
         continue-on-error: false
 
       - name: Rust coverage (tarpaulin)

@@ -7,6 +7,20 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-20] **RustSec dependency refresh from CI.** The dispatched CI run
+  surfaced seven newly published advisories. Cargo safely upgraded `rustls`
+  `0.23.45 -> 0.23.46` and `tauri-plugin-updater` `2.10.1 -> 2.14.0`; the
+  three rustls advisories are gone. `zip 4.6.1` remains because updater 2.14.0
+  still requires `zip ^4`, while the fixed release is `zip >=9`; the updater
+  verifies its Minisign signature before extraction/install, confirmed from
+  the 2.14.0 source. `zbus_names`, `zvariant`, and `zvariant_derive` are new
+  unmaintained Linux notification/opener transitive warnings. CI now has six
+  narrowly scoped ignores with a 2026-11-20 recheck, while every other/new
+  advisory remains blocking. Verification: local `cargo audit` reports exactly
+  the same three zip vulnerabilities and three unmaintained zbus warnings
+  after the lock refresh. Status: in progress, awaiting CI confirmation and
+  upstream zip/zbus releases.
+
 - [2026-10-20] **Native Ollama acceptance attempt.** The installed runtime was
   found at `D:\AgentDevWork\Apps\Ollama\ollama.exe`. A local `ollama serve`
   process owns `127.0.0.1:11434`, but `/api/version` and `/api/tags` returned

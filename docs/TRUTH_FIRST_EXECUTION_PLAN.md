@@ -58,6 +58,12 @@ installed, no Node 22 runtime was found, and offline npm repair failed with
 currently available from `node_modules/.bin`; no typecheck or lint result is
 promoted to verified from this state.
 
+The dispatched CI run on 2026-10-20 found seven newly published RustSec
+advisories. `rustls` was upgraded to `0.23.46` and the updater to `2.14.0`;
+the remaining zip 4 and Linux secret-service warnings are upstream-blocked and
+now have per-ID, expiring dispositions in `.github/workflows/ci.yml`. Local
+`cargo audit` reproduced exactly those six remaining IDs after the refresh.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |
