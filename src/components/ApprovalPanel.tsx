@@ -79,7 +79,9 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
   const [error, setError] = useState<string | null>(null);
 
   const items = pendingApprovals.map((item) => resolveItem(item, getItemDetail));
-  const allResolved = items.length > 0 && items.every((item) => resolved[item.itemId]);
+  const resolvedCount = items.filter((item) => resolved[item.itemId]).length;
+  const allResolved = items.length > 0 && resolvedCount === items.length;
+  const awaitingCount = items.length - resolvedCount;
 
   const handleApprove = (itemId: string) => {
     try {
@@ -112,7 +114,9 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
       <div className="flex items-center gap-2">
         <Shield className="w-4 h-4 text-(--warning)" />
         <span className="text-xs font-bold uppercase tracking-widest text-(--warning)">
-          {items.length} item{items.length !== 1 ? 's' : ''} awaiting approval
+          {awaitingCount > 0
+            ? `${awaitingCount} item${awaitingCount !== 1 ? 's' : ''} awaiting approval`
+            : `${items.length} item${items.length !== 1 ? 's' : ''} resolved`}
         </span>
       </div>
 

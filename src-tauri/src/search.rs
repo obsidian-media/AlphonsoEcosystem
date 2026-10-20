@@ -193,6 +193,27 @@ fn extract_title(html: &str) -> Option<String> {
 }
 
 pub(crate) fn strip_html_tags(input: &str) -> String {
+  fn remove_html_block(input: &str, tag: &str) -> String {
+    let lower = input.to_ascii_lowercase();
+    let open = format!("<{tag}");
+    let close = format!("</{tag}>");
+    let mut output = String::with_capacity(input.len());
+    let mut cursor = 0;
+    while let Some(relative_start) = lower[cursor..].find(&open) {
+      let start = cursor + relative_start;
+      output.push_str(&input[cursor..start]);
+      let Some(relative_end) = lower[start..].find(&close) else {
+        cursor = input.len();
+        break;
+      };
+      cursor = start + relative_end + close.len();
+    }
+    output.push_str(&input[cursor..]);
+    output
+  }
+
+  let without_style = remove_html_block(input, "style");
+  let input = remove_html_block(&without_style, "script");
   let mut output = String::new();
   let mut in_tag = false;
   for ch in input.chars() {
@@ -730,6 +751,14 @@ mod tests {
   #[test]
   fn strip_html_removes_tags() {
     assert_eq!(strip_html_tags("<p>Hello <b>world</b></p>"), "Hello world");
+  }
+
+  #[test]
+  fn strip_html_removes_style_and_script_blocks() {
+    assert_eq!(
+      strip_html_tags("<style>html { color: red }</style><p>Hello</p><script>alert(1)</script>"),
+      "Hello"
+    );
   }
 
   #[test]

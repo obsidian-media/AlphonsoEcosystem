@@ -12,7 +12,7 @@
 //!  9. Per-tool autostart toggle persisted to ~/.alphonso/runtimes/autostart_prefs.json
 
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
@@ -1127,12 +1127,25 @@ pub struct ToolStartFailed {
 #[derive(Default, Clone)]
 pub struct RuntimeManager {
   spawned: Arc<Mutex<HashMap<String, u32>>>,
+  starting: Arc<Mutex<HashSet<String>>>,
+}
+
+struct StartReservation {
+  state: RuntimeManager,
+  name: String,
+}
+
+impl Drop for StartReservation {
+  fn drop(&mut self) {
+    self.state.finish_start(&self.name);
+  }
 }
 
 impl RuntimeManager {
   pub fn new() -> Self {
     Self {
       spawned: Arc::new(Mutex::new(HashMap::new())),
+      starting: Arc::new(Mutex::new(HashSet::new())),
     }
   }
 
@@ -1149,6 +1162,25 @@ impl RuntimeManager {
   pub fn remove_pid(&self, name: &str) {
     if let Ok(mut map) = self.spawned.lock() {
       map.remove(name);
+    }
+  }
+
+  /// Reserve a tool start so concurrent command/autostart requests cannot
+  /// both pass the health check and spawn duplicate processes.
+  fn reserve_start(&self, name: &str) -> Option<StartReservation> {
+    let mut starting = self.starting.lock().ok()?;
+    if !starting.insert(name.to_string()) {
+      return None;
+    }
+    Some(StartReservation {
+      state: self.clone(),
+      name: name.to_string(),
+    })
+  }
+
+  fn finish_start(&self, name: &str) {
+    if let Ok(mut starting) = self.starting.lock() {
+      starting.remove(name);
     }
   }
 }
@@ -1844,6 +1876,17 @@ pub async fn runtime_start_tool(
     }
   }
 
+  let _start_reservation = match state.reserve_start(&name) {
+    Some(reservation) => reservation,
+    None => {
+      return Ok(RuntimeActionResult {
+        tool: name,
+        ok: true,
+        message: format!("{} is already starting.", def.display_name),
+      });
+    }
+  };
+
   let dir = tool_dir(def.name);
   let exe = resolve_exe(def, &dir);
 
@@ -2097,6 +2140,10 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
         }
       }
 
+      let Some(_start_reservation) = state.reserve_start(def.name) else {
+        continue;
+      };
+
       // Gap 8: emit starting status
       let _ = app.emit(
         "runtime://boot_status",
@@ -2266,6 +2313,17 @@ mod tests {
     assert_eq!(mgr.spawned_pid("ollama"), Some(1234));
     mgr.remove_pid("ollama");
     assert_eq!(mgr.spawned_pid("ollama"), None);
+  }
+
+  #[test]
+  fn runtime_manager_start_reservation_is_single_flight() {
+    let mgr = RuntimeManager::new();
+    let first = mgr
+      .reserve_start("ollama")
+      .expect("first start should reserve");
+    assert!(mgr.reserve_start("ollama").is_none());
+    drop(first);
+    assert!(mgr.reserve_start("ollama").is_some());
   }
 
   #[test]
