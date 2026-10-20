@@ -7,6 +7,15 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-20] **Cloud Voice production recheck confirms the DNS/ALB blocker is
+  still current.** A fresh read-only `Invoke-WebRequest` to
+  `https://voice.obsidianmedia.online/ready` failed with the Windows resolver
+  error for the HTTPS endpoint. `Resolve-DnsName` still returns only the CNAME
+  `alphonso-cloud-voice-1113067864.ca-central-1.elb.amazonaws.com` and no A/AAAA
+  address. No AWS mutation, authenticated voice request, or paid action was
+  attempted. Status: production endpoint remains blocked on AWS ALB/DNS state;
+  CI tests are not promoted to live acceptance.
+
 - [2026-10-20] **Memory Graph Phase 4 local acceptance evidence captured.**
   `cargo test memory_graph --lib` completed in 16m37s with **43 passed, 0
   failed, 0 ignored**. The filtered set exercises the Phase 4 pruning rules,

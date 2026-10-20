@@ -82,6 +82,13 @@ traversal. This does not close the required live Preview against a populated
 desktop database; the frontend focused tests remain invalid on this host for
 the missing Vitest dependency noted above.
 
+A fresh read-only Cloud Voice production check on 2026-10-20 still fails at
+the infrastructure boundary: `voice.obsidianmedia.online` resolves to the
+expected ALB CNAME but has no A/AAAA address, and HTTPS `/ready` cannot connect.
+No AWS mutation or authenticated voice call was attempted. CI Cloud Voice tests
+therefore remain test evidence only; the production and physical-device gates
+remain open.
+
 The dispatched CI run on 2026-10-20 found seven newly published RustSec
 advisories. `rustls` was upgraded to `0.23.46` and the updater to `2.14.0`;
 the remaining zip 4 and Linux notification/opener warnings are upstream-blocked and
