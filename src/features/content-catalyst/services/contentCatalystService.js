@@ -332,6 +332,8 @@ export async function buildContentBrief(job) {
   ].join('\n');
 
   let brief = null;
+  let briefSource = 'model';
+  let briefError = null;
   try {
     const response = await generateOllamaResponse({
       endpoint: job?.settings?.endpoint,
@@ -341,9 +343,12 @@ export async function buildContentBrief(job) {
     brief = parseLooseJson(response?.response) || null;
   } catch (error) {
     brief = null;
+    briefError = error instanceof Error && error.message ? error.message : 'The local model could not be reached.';
   }
 
   if (!brief) {
+    briefSource = 'fallback';
+    briefError ||= 'The model reply could not be read as a brief.';
     brief = {
       angle: request.tone,
       audience: request.business_context || 'Primary audience',
@@ -354,6 +359,8 @@ export async function buildContentBrief(job) {
       risk_notes: ['Draft generated locally without external publication.']
     };
   }
+
+  brief = { ...brief, briefSource, briefError };
 
   await syncProjectMemory({
     jobId: job.id,
@@ -369,6 +376,9 @@ export async function buildContentBrief(job) {
 export async function generateContentDraft(job) {
   const request = job.request || createDefaultContentRequest();
   const brief = await buildContentBrief(job);
+  const briefAwareJob = brief.briefSource === 'fallback'
+    ? withLog(job, 'warning', `Content brief used the built-in fallback: ${brief.briefError}`, { brief })
+    : job;
   const prompt = buildPrompt(request, brief, job.brandProfile);
   let draft = null;
   let templateReason = '';
@@ -393,11 +403,13 @@ export async function generateContentDraft(job) {
   }
 
   const next = draftSource === 'model'
-    ? withLog({ ...job, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'info', 'Content draft generated.', { draft })
-    : withLog({ ...job, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'warning', `Content draft is the built-in template: ${templateReason}`, { draft });
+    ? withLog({ ...briefAwareJob, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'info', 'Content draft generated.', { draft })
+    : withLog({ ...briefAwareJob, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' }, 'warning', `Content draft is the built-in template: ${templateReason}`, { draft });
   return {
     ...next,
     brief,
+    briefSource: brief.briefSource,
+    briefError: brief.briefError,
     draft,
     draftSource,
     draftTemplateReason: draftSource === 'template' ? templateReason : null,
@@ -704,7 +716,9 @@ export async function runContentCatalystJob(bridgeRequest = {}, jobOptions = {})
   try {
     job = { ...job, status: CONTENT_JOB_STATES.BRIEFING, currentStep: 'brief' };
     const brief = await buildContentBrief(job);
-    job = withLog({ ...job, brief }, 'info', 'Content brief generated.', { brief });
+    job = withLog({ ...job, brief, briefSource: brief.briefSource, briefError: brief.briefError }, brief.briefSource === 'fallback' ? 'warning' : 'info', brief.briefSource === 'fallback'
+      ? `Content brief used the built-in fallback: ${brief.briefError}`
+      : 'Content brief generated.', { brief });
     job = { ...job, bridge: (await syncJobBridge(job, 'briefing', jobOptions)) };
     job = { ...job, status: CONTENT_JOB_STATES.DRAFTING, currentStep: 'draft' };
     job = await generateContentDraft(job);

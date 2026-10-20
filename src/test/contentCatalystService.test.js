@@ -335,6 +335,8 @@ describe('buildContentBrief', () => {
     const brief = await buildContentBrief(job);
     expect(brief).toBeTruthy();
     expect(brief.angle).toBeTruthy();
+    expect(brief.briefSource).toBe('model');
+    expect(brief.briefError).toBeNull();
   });
 
   it('generates fallback brief when LLM fails', async () => {
@@ -345,6 +347,8 @@ describe('buildContentBrief', () => {
     expect(brief).toBeTruthy();
     expect(brief.angle).toBeTruthy();
     expect(brief.hook_options).toBeInstanceOf(Array);
+    expect(brief.briefSource).toBe('fallback');
+    expect(brief.briefError).toBe('LLM down');
   });
 
   it('generates fallback brief when LLM returns unparseable response', async () => {
@@ -354,6 +358,8 @@ describe('buildContentBrief', () => {
     const brief = await buildContentBrief(job);
     expect(brief).toBeTruthy();
     expect(brief.promise).toBe('Bad JSON test');
+    expect(brief.briefSource).toBe('fallback');
+    expect(brief.briefError).toBe('The model reply could not be read as a brief.');
   });
 });
 

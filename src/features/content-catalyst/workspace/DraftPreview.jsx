@@ -63,6 +63,11 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
             This copy is the built-in template, not written by a model{activeJob.draftTemplateReason ? `: ${activeJob.draftTemplateReason}` : '.'}
           </p>
         )}
+        {activeJob.briefSource === 'fallback' && (
+          <p role="alert" data-testid="content-brief-fallback-notice" className="rounded-lg bg-(--warning-dim) px-3 py-2 text-[11px] text-(--warning)">
+            This brief used the built-in fallback, not a model response{activeJob.briefError ? `: ${activeJob.briefError}` : '.'}
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <MiniField label="Hook" value={activeJob.draft?.hook || '—'} />
           <MiniField label="Caption" value={activeJob.draft?.caption || '—'} />
