@@ -24,3 +24,5 @@ React 19 standard CI verification is green. Desktop E2E and the desktop-CI defer
 ## Follow-up CI finding
 
 Replacement workflow `39504052015` reached `Test & Build` but failed at `Security audit (npm)` because Vite `8.0.16` fell within the affected `8.0.0`–`8.1.5` range for `GHSA-587h-7wmj-h5pm`. `npm audit fix --package-lock-only --ignore-scripts` resolved Vite to `8.3.4`; a local `npm audit --audit-level=high` then reported zero vulnerabilities. The lockfile-only update also refreshed compatible transitive Rolldown packages. A fresh CI run is required before claiming the desktop fix is verified.
+
+The combined run then reached the corrected EdgeDriver step but failed during PowerShell parsing because the validation message used `$browserVersion:`; PowerShell interpreted the colon as part of the variable reference. The message now uses `${browserVersion}:` so the setup script parses and can execute.
