@@ -109,6 +109,13 @@ for the detected WebView2 version and verifies its first three version
 components before starting tauri-driver. Microsoft documents this matching
 requirement; a fresh desktop run is required for evidence.
 
+The current `main` required-check contexts were read without mutation on
+2026-10-20. They include the standard build, Rust, secret, documentation,
+aggregate gate, and Playwright smoke checks, but not `desktop-e2e`. Keep the
+desktop job visible but non-required until five successful `windows-2022`
+observations establish its startup and skip/failure profile; then request an
+owner-approved branch-protection update adding the exact `desktop-e2e` context.
+
 Apple release preflight was also executed: the GitHub Actions secret inventory
 contains only `APPLE_TEAM_ID` from the six required notarization secrets. The
 release workflow now exposes a `notarized` build output and the publish job

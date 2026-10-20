@@ -63,6 +63,18 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   successful desktop observations are still required before recommending
   branch-protection policy.
 
+- [2026-10-20] **Branch-protection read-only recommendation captured.** The
+  current `main` required-status-check contexts are `Test & Build`, `Rust Tests
+  & Clippy`, `Secrets Scan (TruffleHog)`, `Doc Count Freshness`,
+  `gate (secret-scan, doc-freshness, build, test, deploy-dry)`, and `Playwright
+  E2E Smoke Test`; `desktop-e2e` is not currently required. Recommendation:
+  keep `desktop-e2e` visible but non-required until five successful
+  `windows-2022` observations establish stable startup and a measured
+  skip/failure profile, then ask the repository owner to add the exact job
+  context to required checks. No branch-protection mutation was attempted.
+  Status: recommendation ready; owner decision and five successful runs remain
+  open.
+
 - [2026-10-20] **Apple notarization production gate.** GitHub Actions secret
   inventory confirms only `APPLE_TEAM_ID` exists; `APPLE_CERTIFICATE`,
   `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, and
