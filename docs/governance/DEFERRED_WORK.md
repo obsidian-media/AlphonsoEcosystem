@@ -22,15 +22,16 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   upstream zip/zbus releases.
 
 - [2026-10-20] **Desktop CI observation — first full dispatched run.** The
-  latest branch run passed Rust Tests & Clippy, Test & Build, iOS, Cloud Voice,
-  gateway health, secrets, and documentation freshness. The macOS desktop
-  build failed before compilation because the Rust updater crate was refreshed
-  to `tauri-plugin-updater 2.14.0` while `@tauri-apps/plugin-updater` remained
-  `2.10.1`; Tauri correctly rejects that version mismatch. The npm dependency
-  is now being aligned to `^2.14.0` and the run will be repeated. This is a
-  confirmed CI configuration defect, not a macOS signing/notarization result.
-  Status: in progress; five successful desktop observations are still required
-  before recommending branch-protection policy.
+  rerun `39398348621` passed Rust Tests & Clippy, Test & Build, iOS, Cloud Voice,
+  gateway health, secrets, documentation freshness, Playwright E2E, and all
+  three Tauri desktop builds after the updater alignment. The Windows
+  real-binary E2E job did not pass: after setup/build, every spec failed to
+  create a WebDriver session with `DevToolsActivePort file doesn't exist`, then
+  the job was cancelled at 35 minutes while processing the 16-spec matrix. The
+  first run's macOS version-mismatch failure is fixed; the remaining issue is
+  a Windows WebView2/EdgeDriver/tauri-driver startup failure. Status: in
+  progress; five successful desktop observations are still required before
+  recommending branch-protection policy.
 
 - [2026-10-20] **Native Ollama acceptance attempt.** The installed runtime was
   found at `D:\AgentDevWork\Apps\Ollama\ollama.exe`. A local `ollama serve`
@@ -46,11 +47,13 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   in source as a Windows real-binary job: it installs EdgeDriver and
   `tauri-driver`, builds the debug Tauri binary, and runs
   `npm run test:e2e:desktop`. A manually dispatched run is now observable, but
-  its first full result is not a success: macOS failed on the updater package
-  version mismatch recorded above. Resume hint: inspect at least five
-  successful runs, record skip/failure rates and durations, then decide whether
-  the job is required for `main`. Status: in progress; branch-protection
-  recommendation remains open.
+  its first full result is not a success: the macOS package mismatch was fixed,
+  but the Windows real-binary E2E matrix was cancelled after repeated
+  `DevToolsActivePort file doesn't exist` session-creation failures. Resume
+  hint: fix the WebView2/EdgeDriver/tauri-driver startup path, then inspect at
+  least five successful runs, record skip/failure rates and durations, and
+  decide whether the job is required for `main`. Status: in progress;
+  branch-protection recommendation remains open.
 
 - [2026-10-20] **Verifier completion slice started.** `scripts/verify.ps1` now
   bounds gitleaks to 90 seconds, falls back when the executable is blocked or

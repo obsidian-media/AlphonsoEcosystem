@@ -72,6 +72,15 @@ Tauri rejected the mismatch. `package.json` is being aligned to
 `@tauri-apps/plugin-updater ^2.14.0`; the lockfile and a rerun are required
 before this desktop observation can count as successful.
 
+The rerun `39398348621` confirmed the updater fix and passed the full standard
+gate set, Playwright E2E, and Linux/macOS/Windows Tauri builds. Its Windows
+real-binary desktop E2E job did not pass: every spec failed to create a
+WebDriver session with `DevToolsActivePort file doesn't exist`, and GitHub
+cancelled the job after 35 minutes while the 16-spec matrix was still being
+processed. This is now a concrete Windows WebView2/EdgeDriver/tauri-driver
+startup blocker; no desktop E2E success or branch-protection recommendation is
+claimed.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |
