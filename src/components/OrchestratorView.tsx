@@ -369,7 +369,7 @@ export function OrchestratorView({
   const [openPanels, setOpenPanels] = useState<Set<string>>(() => new Set(['jose-task-queue', 'jose-intake', 'pending-approvals']));
   const [executionResults, setExecutionResults] = useState<ExecutionResult[]>([]);
   const [executingPacketIds, setExecutingPacketIds] = useState<Set<string>>(new Set());
-  const whatsappConfigured = isConnectorAuthenticated('whatsapp');
+  const whatsappConfigured = isConnectorAuthenticated('whatsapp').ok;
 
   const approvalQueue = useMemo<Packet[]>(() => listApprovalQueue() as Packet[], [packets]);
   const workload = useMemo<AgentWorkloadRow[]>(() => summarizeAgentWorkload(packets) as AgentWorkloadRow[], [packets]);
