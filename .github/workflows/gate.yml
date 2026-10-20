@@ -6,6 +6,10 @@ on:
   push:
     branches-ignore: [main]
 
+concurrency:
+  group: governance-gate-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

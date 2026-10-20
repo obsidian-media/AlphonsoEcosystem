@@ -44,3 +44,5 @@ The fresh run `39517091682` again kept the primary Test & Build job active while
 The Rust quality prerequisite now has the same 45-minute bound because desktop jobs require both prerequisites; this prevents a stalled Cargo/toolchain operation from withholding desktop evidence indefinitely.
 
 The separate `governance-gate` workflow, which runs `scripts/verify.sh` before branch CI, now also has a 45-minute bound. Without this, the main CI workflow can remain queued even when its own prerequisite jobs are bounded.
+
+Superseded governance-gate runs were also observed remaining active across branch commits. The workflow now uses branch-scoped concurrency cancellation so the current commit's gate is not delayed by stale gate runs.
