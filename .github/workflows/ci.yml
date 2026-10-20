@@ -274,16 +274,22 @@ jobs:
           $driverRoot = Join-Path $env:RUNNER_TEMP 'alphonso-msedgedriver'
           $archive = Join-Path $env:RUNNER_TEMP "msedgedriver-$browserVersion.zip"
           New-Item -ItemType Directory -Force -Path $driverRoot | Out-Null
-          $releaseUrl = "https://msedgedriver.microsoft.com/LATEST_RELEASE_$driverVersion"
-          $resolvedDriverVersion = (Invoke-WebRequest -Uri $releaseUrl).Content.Trim()
-          if ([string]::IsNullOrWhiteSpace($resolvedDriverVersion)) {
-            throw "Microsoft EdgeDriver release lookup returned no version for WebView2 $driverVersion."
-          }
-          $downloadUrl = "https://msedgedriver.microsoft.com/$resolvedDriverVersion/edgedriver_win64.zip"
           Write-Host "WebView2 version: $browserVersion"
-          Write-Host "Resolved compatible EdgeDriver version: $resolvedDriverVersion"
+          $downloadUrl = "https://msedgedriver.microsoft.com/$browserVersion/edgedriver_win64.zip"
           Write-Host "Downloading matching EdgeDriver: $downloadUrl"
-          Invoke-WebRequest -Uri $downloadUrl -OutFile $archive
+          try {
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $archive -ErrorAction Stop
+          } catch {
+            $releaseUrl = "https://msedgedriver.microsoft.com/LATEST_RELEASE_$driverVersion"
+            Write-Warning "Exact EdgeDriver archive was unavailable; trying compatible release lookup: $releaseUrl"
+            $resolvedDriverVersion = (Invoke-WebRequest -Uri $releaseUrl -ErrorAction Stop).Content.Trim()
+            if ([string]::IsNullOrWhiteSpace($resolvedDriverVersion)) {
+              throw "Microsoft EdgeDriver release lookup returned no version for WebView2 $driverVersion."
+            }
+            $downloadUrl = "https://msedgedriver.microsoft.com/$resolvedDriverVersion/edgedriver_win64.zip"
+            Write-Host "Resolved compatible EdgeDriver version: $resolvedDriverVersion"
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $archive -ErrorAction Stop
+          }
           Expand-Archive -Path $archive -DestinationPath $driverRoot -Force
           $driver = Get-ChildItem -Path $driverRoot -Filter msedgedriver.exe -Recurse -File | Select-Object -First 1
           if (-not $driver) {
