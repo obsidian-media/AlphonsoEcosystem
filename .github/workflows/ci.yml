@@ -218,6 +218,50 @@ jobs:
           path: src-tauri/target/release/bundle/nsis/Alphonso_*_x64-setup.exe
           retention-days: 14
 
+  desktop-e2e:
+    name: Desktop E2E (real Tauri binary)
+    needs: [test, rust-quality]
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install EdgeDriver
+        shell: pwsh
+        run: |
+          $driver = Get-Command msedgedriver.exe -ErrorAction SilentlyContinue
+          if (-not $driver) {
+            choco install selenium-edge-driver --no-progress --yes
+          }
+          $driver = Get-Command msedgedriver.exe -ErrorAction SilentlyContinue
+          if (-not $driver) {
+            throw 'msedgedriver.exe is required for the real WebView2 desktop suite.'
+          }
+          "ALPHONSO_E2E_EDGEDRIVER=$($driver.Source)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install tauri-driver
+        shell: pwsh
+        run: cargo install tauri-driver --locked --version "^2"
+
+      - name: Build debug Tauri binary
+        run: npm run tauri build -- --debug --no-bundle
+
+      - name: Run desktop E2E suite
+        run: npm run test:e2e:desktop
+
   desktop-macos:
     name: Tauri Desktop Build (macOS)
     needs: [test, rust-quality]
