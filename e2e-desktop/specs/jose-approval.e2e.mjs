@@ -1,7 +1,7 @@
 // Orchestrator: a command given to Jose becomes a packet that waits for
 // approval, and only moves on when a person approves and then executes it.
-// This checks the approval state machine (pending -> approved -> executed);
-// it does not check what the executed task produced.
+// This checks the approval state machine (pending -> approved -> executed)
+// and the visible execution result produced by the packet executor.
 import { enterShell, mainText, buttonByText, openPage } from '../helpers.mjs';
 
 const COMMAND = 'Research what the IANA example domain is used for.';
@@ -48,5 +48,8 @@ describe('Alphonso desktop Jose approvals', () => {
       timeout: 60000,
       timeoutMsg: 'the packet never reached "executed"',
     });
+    const output = await mainText();
+    expect(output).toContain('Execution Results');
+    expect(output).toContain('Task queued — no live runtime adapter');
   });
 });
