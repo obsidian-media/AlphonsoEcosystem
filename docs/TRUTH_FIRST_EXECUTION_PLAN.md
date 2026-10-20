@@ -52,6 +52,12 @@ Native Ollama acceptance was attempted on 2026-10-20. The installed
 within five seconds, so no model generation result is recorded. This remains a
 runtime blocker, not a pass.
 
+The local verification toolchain is also incomplete: only Node 25.9.0 is
+installed, no Node 22 runtime was found, and offline npm repair failed with
+`ENOTEMPTY` while cleaning `node_modules/filelist`. `eslint` and `tsc` are not
+currently available from `node_modules/.bin`; no typecheck or lint result is
+promoted to verified from this state.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |

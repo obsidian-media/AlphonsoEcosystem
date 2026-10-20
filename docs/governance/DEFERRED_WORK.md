@@ -38,6 +38,15 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   add a regression harness for blocked/slow gitleaks and shim launch behavior.
   Status: in progress.
 
+- [2026-10-20] **Verification environment follow-up.** The machine has only
+  Node `v25.9.0` on PATH; no Node 22 runtime was found. A cache-only
+  `npm ci --offline --ignore-scripts` failed while cleaning the partial
+  `node_modules/filelist` tree with `ENOTEMPTY`, and a non-clean offline
+  `npm install` did not restore the missing `eslint`/`tsc` binaries before it
+  was stopped. Source verification therefore remains limited to PowerShell
+  parsing and documentation generators until Node 22 plus a clean dependency
+  install is available. Status: blocked on local toolchain state.
+
 - [2026-10-20] **Next execution batch selected by Codex (10 repository-actionable items).** The next pass will take these in priority order, keeping each item paired with implementation, regression coverage where practical, and an evidence update in this register:
   1. **Project Execution approval summary** — derive the heading from live pending gates and replace the missing `unknown` gate label with the actual field or an explicit fallback.
   2. **Runtime start concurrency guard** — make `runtime_start_tool` / `autostart_all` single-flight so simultaneous requests cannot spawn duplicate processes.
