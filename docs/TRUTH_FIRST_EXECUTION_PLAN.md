@@ -110,6 +110,13 @@ published as a production release. A real notarization/Gatekeeper acceptance
 run remains blocked on owner-provided Apple credentials and a real macOS
 artifact check.
 
+Windows signing preflight found no Authenticode certificate/password/identity
+secrets in GitHub Actions and `src-tauri/tauri.conf.json` still declares a null
+certificate thumbprint. The existing updater `.sig` is a separate Tauri update
+signature and does not provide SmartScreen/Authenticode trust. A real Windows
+signing implementation remains owner-gated on certificate procurement,
+secret-handling, and provider choice.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |

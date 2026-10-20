@@ -62,6 +62,16 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   password, and Apple-hosted notarization. Status: implementation complete;
   external secrets and real macOS acceptance remain open.
 
+- [2026-10-20] **Windows Authenticode signing preflight.** GitHub Actions
+  secret inventory contains no Windows code-signing certificate, password, or
+  signing-identity secrets, and `src-tauri/tauri.conf.json` still has
+  `windows.certificateThumbprint: null`. The release's updater `.sig` is a
+  Tauri update signature, not Authenticode and does not satisfy Windows Smart
+  App Control/SmartScreen trust. Implementing the signing step requires an
+  owner decision on certificate procurement/storage and the chosen signing
+  provider. Status: owner-gated, not implemented; no signed Windows installer
+  is claimed.
+
 - [2026-10-20] **Native Ollama acceptance attempt.** The installed runtime was
   found at `D:\AgentDevWork\Apps\Ollama\ollama.exe`. A local `ollama serve`
   process owns `127.0.0.1:11434`, but `/api/version` and `/api/tags` returned
