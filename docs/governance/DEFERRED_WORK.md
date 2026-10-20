@@ -29,7 +29,11 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   create a WebDriver session with `DevToolsActivePort file doesn't exist`, then
   the job was cancelled at 35 minutes while processing the 16-spec matrix. The
   first run's macOS version-mismatch failure is fixed; the remaining issue is
-  a Windows WebView2/EdgeDriver/tauri-driver startup failure. Status: in
+  a Windows WebView2/EdgeDriver/tauri-driver startup failure on the
+  `windows-latest` runner. The failure matches the official
+  `actions/runner-images#14738` report; that regression is deterministic on
+  Windows Server 2025 and the same Tauri/WebView2 flow passes on Windows 2022.
+  CI is now pinned to `windows-2022` for this job and will be rerun. Status: in
   progress; five successful desktop observations are still required before
   recommending branch-protection policy.
 
@@ -50,10 +54,11 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   its first full result is not a success: the macOS package mismatch was fixed,
   but the Windows real-binary E2E matrix was cancelled after repeated
   `DevToolsActivePort file doesn't exist` session-creation failures. Resume
-  hint: fix the WebView2/EdgeDriver/tauri-driver startup path, then inspect at
-  least five successful runs, record skip/failure rates and durations, and
-  decide whether the job is required for `main`. Status: in progress;
-  branch-protection recommendation remains open.
+  hint: the failure matches `actions/runner-images#14738`; keep the job on
+  `windows-2022` until that upstream runner-image regression is resolved, then
+  inspect at least five successful runs, record skip/failure rates and
+  durations, and decide whether the job is required for `main`. Status: in
+  progress; branch-protection recommendation remains open.
 
 - [2026-10-20] **Verifier completion slice started.** `scripts/verify.ps1` now
   bounds gitleaks to 90 seconds, falls back when the executable is blocked or

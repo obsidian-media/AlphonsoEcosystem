@@ -81,6 +81,13 @@ processed. This is now a concrete Windows WebView2/EdgeDriver/tauri-driver
 startup blocker; no desktop E2E success or branch-protection recommendation is
 claimed.
 
+The failure matches the official GitHub Actions runner-images report
+`actions/runner-images#14738`: WebView2/EdgeDriver automation fails
+deterministically on the Windows Server 2025 image now selected by
+`windows-latest`, while the same Tauri flow passes on Windows 2022. The desktop
+E2E job is therefore pinned to `windows-2022` pending upstream resolution, and
+must be rerun before this item can be treated as successful.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |
