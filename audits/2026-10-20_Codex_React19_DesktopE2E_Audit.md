@@ -28,3 +28,5 @@ Replacement workflow `39504052015` reached `Test & Build` but failed at `Securit
 The combined run then reached the corrected EdgeDriver step but failed during PowerShell parsing because the validation message used `$browserVersion:`; PowerShell interpreted the colon as part of the variable reference. The message now uses `${browserVersion}:` so the setup script parses and can execute.
 
 The next run showed the lookup endpoint itself was unsuitable for this runner: a read-only check returned 404 for `LATEST_RELEASE_131.0.2903`, while the exact `131.0.2903.86/edgedriver_win64.zip` archive returned 200. The workflow now downloads the exact detected WebView2 version first and falls back to the compatible-release lookup only if the exact archive is unavailable.
+
+Run `39510208290` confirmed the exact archive download and executable launch succeeded: it reported `Microsoft Edge WebDriver 131.0.2903.86`. The remaining failure was the validation regex expecting the legacy `MSEdgeDriver` prefix. CI now accepts both `MSEdgeDriver` and `Microsoft Edge WebDriver` output formats.

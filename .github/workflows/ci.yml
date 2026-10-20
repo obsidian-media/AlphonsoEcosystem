@@ -297,7 +297,7 @@ jobs:
           }
           $actualDriverVersion = (& $driver.FullName --version | Select-Object -First 1)
           Write-Host "EdgeDriver: $actualDriverVersion"
-          if ($actualDriverVersion -notmatch "^MSEdgeDriver $driverVersion\.") {
+          if ($actualDriverVersion -notmatch "^(?:MSEdgeDriver|Microsoft Edge WebDriver)\s+$driverVersion\.") {
             throw "EdgeDriver major/minor/build does not match WebView2 ${browserVersion}: $actualDriverVersion"
           }
           "ALPHONSO_E2E_EDGEDRIVER=$($driver.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
