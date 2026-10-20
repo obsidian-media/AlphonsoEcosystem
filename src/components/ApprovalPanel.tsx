@@ -8,6 +8,13 @@ const RISK_STYLES: Record<string, { badge: string; dot: string; label: string }>
   low: { badge: 'border-(--success-border) bg-(--success-dim) text-(--success)', dot: 'bg-(--success)', label: 'Low' }
 };
 
+const ACTION_AGENT_FALLBACKS: Record<string, string> = {
+  file_write: 'alphonso',
+  external_api_connection: 'hector',
+  payout_payment_action: 'marcus',
+  deployment: 'marcus'
+};
+
 export interface PendingApprovalItem {
   itemId: string;
   actionType?: string;
@@ -55,9 +62,10 @@ function resolveItem(
     actionType: item.actionType ?? detail?.actionType,
     riskLevel: item.riskLevel ?? detail?.riskLevel
   };
+  const normalizedAction = String(merged.actionType || '').toLowerCase();
   return {
     itemId: item.itemId,
-    agent: merged.agent || 'unknown',
+    agent: merged.agent || ACTION_AGENT_FALLBACKS[normalizedAction] || 'unknown',
     actionType: merged.actionType || 'unknown',
     riskLevel: item.riskLevel || inferRisk(merged),
     reason: item.reason || '',
