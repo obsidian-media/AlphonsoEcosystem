@@ -274,8 +274,14 @@ jobs:
           $driverRoot = Join-Path $env:RUNNER_TEMP 'alphonso-msedgedriver'
           $archive = Join-Path $env:RUNNER_TEMP "msedgedriver-$browserVersion.zip"
           New-Item -ItemType Directory -Force -Path $driverRoot | Out-Null
-          $downloadUrl = "https://msedgedriver.microsoft.com/$browserVersion/edgedriver_win64.zip"
+          $releaseUrl = "https://msedgedriver.microsoft.com/LATEST_RELEASE_$driverVersion"
+          $resolvedDriverVersion = (Invoke-WebRequest -Uri $releaseUrl).Content.Trim()
+          if ([string]::IsNullOrWhiteSpace($resolvedDriverVersion)) {
+            throw "Microsoft EdgeDriver release lookup returned no version for WebView2 $driverVersion."
+          }
+          $downloadUrl = "https://msedgedriver.microsoft.com/$resolvedDriverVersion/edgedriver_win64.zip"
           Write-Host "WebView2 version: $browserVersion"
+          Write-Host "Resolved compatible EdgeDriver version: $resolvedDriverVersion"
           Write-Host "Downloading matching EdgeDriver: $downloadUrl"
           Invoke-WebRequest -Uri $downloadUrl -OutFile $archive
           Expand-Archive -Path $archive -DestinationPath $driverRoot -Force
