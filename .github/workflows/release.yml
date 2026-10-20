@@ -204,10 +204,19 @@ jobs:
           for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
             if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
           done
-          if [ -n "$missing" ]; then
-            echo "Apple signing secrets missing:${missing} -- building an UNSIGNED, un-notarized DMG."
+          provided=0
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -n "${!name:-}" ]; then provided=$((provided + 1)); fi
+          done
+          if [ "$provided" -eq 0 ]; then
+            echo "No Apple signing secrets configured -- building an explicitly UNSIGNED, un-notarized DMG."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Apple signing is partially configured; missing:${missing}"
+            echo "::error::Provide all six APPLE_* secrets or remove the partial set before releasing."
+            exit 1
           fi
           keychain="$RUNNER_TEMP/alphonso-signing.keychain-db"
           keychainPw="$(uuidgen)"
