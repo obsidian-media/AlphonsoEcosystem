@@ -58,6 +58,13 @@ installed, no Node 22 runtime was found, and offline npm repair failed with
 currently available from `node_modules/.bin`; no typecheck or lint result is
 promoted to verified from this state.
 
+CALL-E live verification received a read-only preflight on 2026-10-20. The
+indexed graph confirms the native path from MCP confirmation through `run_call`
+and terminal polling, plus the approval-escalation path. The GitHub Actions
+secret-name inventory contains no CALL-E/HeyCall/phone credential, and no secret
+value was read. Native OAuth, OS-keychain restart survival, and a real call
+remain owner-gated; no live call was attempted.
+
 The dispatched CI run on 2026-10-20 found seven newly published RustSec
 advisories. `rustls` was upgraded to `0.23.46` and the updater to `2.14.0`;
 the remaining zip 4 and Linux notification/opener warnings are upstream-blocked and

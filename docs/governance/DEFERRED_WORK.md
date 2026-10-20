@@ -7,6 +7,18 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-20] **CALL-E native/live preflight completed; external acceptance remains
+  owner-gated.** The code graph confirms the native CALL-E path is present and
+  connected (`confirmMcpOutreachCall` -> `runCall` ->
+  `pollMcpCallUntilTerminal`), and the approval escalation path is present via
+  `placeEscalationCall`. A read-only GitHub Actions secret-name audit found no
+  CALL-E, HeyCall, phone, or Twilio credential configured; no secret values were
+  read. Therefore no unattended native OAuth login, keychain-survival test, or
+  real `run_call` was attempted. The remaining acceptance evidence still
+  requires a human at the native Tauri app, an explicitly consenting recipient,
+  and Zero-Cost Mode disabled for the paid/high-risk action. Status: code path
+  ready; live verification remains open and owner-gated.
+
 - [2026-10-20] **RustSec dependency refresh from CI.** The dispatched CI run
   surfaced seven newly published advisories. Cargo safely upgraded `rustls`
   `0.23.45 -> 0.23.46` and `tauri-plugin-updater` `2.10.1 -> 2.14.0`; the
