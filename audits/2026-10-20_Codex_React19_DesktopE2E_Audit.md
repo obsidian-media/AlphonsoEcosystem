@@ -30,3 +30,9 @@ The combined run then reached the corrected EdgeDriver step but failed during Po
 The next run showed the lookup endpoint itself was unsuitable for this runner: a read-only check returned 404 for `LATEST_RELEASE_131.0.2903`, while the exact `131.0.2903.86/edgedriver_win64.zip` archive returned 200. The workflow now downloads the exact detected WebView2 version first and falls back to the compatible-release lookup only if the exact archive is unavailable.
 
 Run `39510208290` confirmed the exact archive download and executable launch succeeded: it reported `Microsoft Edge WebDriver 131.0.2903.86`. The remaining failure was the validation regex expecting the legacy `MSEdgeDriver` prefix. CI now accepts both `MSEdgeDriver` and `Microsoft Edge WebDriver` output formats.
+
+## Desktop runtime finding
+
+Run `39512142677` proved the EdgeDriver setup and real Tauri launch path work. The desktop suite reached WebDriver execution and completed 16 specs with `3 passed, 13 failed`. The repeated failure was `Failed to read the 'localStorage' property from 'Window': Access is denied for this document.` in `e2e-desktop/helpers.mjs:37` inside `enterShell()`, under Microsoft Edge/WebView2 `131.0.2903.86`.
+
+The harness now waits for a real Alphonso shell/setup root before touching storage, verifies the JavaScript write, and falls back to WebDriver's storage endpoint with a verified readback. Desktop CI remains open pending a fresh run of the patched helper.
