@@ -1339,6 +1339,35 @@ fn venv_python(dir: &Path) -> PathBuf {
   }
 }
 
+fn pip_package_name(spec: &str) -> &str {
+  spec
+    .split("==")
+    .next()
+    .unwrap_or(spec)
+    .split('[')
+    .next()
+    .unwrap_or(spec)
+}
+
+fn voice_runtime_installed(dir: &Path, packages: &[&str]) -> bool {
+  let python = venv_python(dir);
+  if !python.exists() || packages.is_empty() {
+    return false;
+  }
+
+  let package_names: Vec<&str> = packages.iter().map(|spec| pip_package_name(spec)).collect();
+  let mut command = Command::new(python);
+  command.args(["-m", "pip", "show"]);
+  command.args(package_names);
+  no_window(&mut command);
+  command
+    .stdout(std::process::Stdio::null())
+    .stderr(std::process::Stdio::null())
+    .status()
+    .map(|status| status.success())
+    .unwrap_or(false)
+}
+
 /// Gap 5 & 7: resolve the correct executable for a tool.
 /// Python-launched tools use venv/Scripts/python.exe (Windows) or venv/bin/python3.
 /// Pip-only CLI tools (invokeai-web, whisper) use venv/Scripts/<exe>.exe on Windows.
@@ -1607,6 +1636,7 @@ pub async fn runtime_get_all_status(
     let installed = match (def.repo_url, def.exe) {
       (Some(_), _) => dir.exists() && dir.join(".git").exists(),
       (None, "ollama") => find_ollama().is_some(),
+      (None, "python") if def.name == "voice-os" => voice_runtime_installed(&dir, def.pip_packages),
       (None, exe) => {
         // Check venv bin first, then PATH
         let venv_bin = if cfg!(target_os = "windows") {
@@ -2504,5 +2534,11 @@ mod tests {
     } else {
       assert!(vpy.to_string_lossy().contains("bin"));
     }
+  }
+
+  #[test]
+  fn pip_package_name_ignores_versions_and_extras() {
+    assert_eq!(pip_package_name("uvicorn[standard]==0.32.0"), "uvicorn");
+    assert_eq!(pip_package_name("faster-whisper==1.1.0"), "faster-whisper");
   }
 }

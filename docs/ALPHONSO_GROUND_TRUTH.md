@@ -2321,7 +2321,7 @@ Verified: 43 Rust tests in `memory_graph*` (cargo test --lib memory_graph, 22 of
 - *Storage overflow.* A Content Studio job stored the base64 image preview many times; saving it threw `QuotaExceededError` unhandled and the job vanished.
 - *Release builds broken on `main`.* Dependabot's `tauri-plugin-opener` 2.7 bump moved the `tauri` crate to 2.12 while `@tauri-apps/api` stayed on 2.11. Tauri's build refuses a minor mismatch. The desktop build jobs do not run on PRs, so the PR was green. `@tauri-apps/api` and `@tauri-apps/cli` are now on 2.12.
 
-**Numbers as of the current priority-hardening branch (from `scripts/shared/counters.mjs` and CI):** 5,608 unit tests across 410 files (src + bridge); 191 Rust unit tests; 124 Tauri commands across 40 Rust source files; `lib.rs` 877 lines; 205 services; 135 components; 21 hooks.
+**Numbers as of the current priority-hardening branch (from `scripts/shared/counters.mjs` and CI):** 5,608 unit tests across 410 files (src + bridge); 192 Rust unit tests; 124 Tauri commands across 40 Rust source files; `lib.rs` 877 lines; 205 services; 135 components; 21 hooks.
 
 **Still open:** see the 2026-10-12 entry in `docs/governance/DEFERRED_WORK.md` (13 items, including: a user-started Ollama is still refused by the window; an intermittent first-model-call failure; the desktop suite is not in CI).
 
