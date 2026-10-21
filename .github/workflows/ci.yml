@@ -223,6 +223,37 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: npm run tauri build
 
+      # The Windows counterpart of the Linux AppImage check below: a green
+      # build alone does not prove the Ollama runtime staged by
+      # fetch-ollama-runtime.mjs made it into the installer. 7-Zip ships on
+      # GitHub's Windows images and can list an NSIS installer's files.
+      - name: Verify bundled Ollama runtime is inside the NSIS installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem src-tauri/target/release/bundle/nsis -Filter 'Alphonso_*_x64-setup.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'No NSIS installer found to verify' }
+          $listing = & 7z l -slt $installer.FullName
+          if ($LASTEXITCODE -ne 0) { throw "7-Zip could not read the installer (exit $LASTEXITCODE)" }
+          $entries = @()
+          $current = $null
+          foreach ($line in $listing) {
+            if ($line -match '^Path = (.+)$') {
+              if ($current) { $entries += [pscustomobject]$current }
+              $current = @{ Path = $Matches[1]; Size = 0 }
+            } elseif ($line -match '^Size = (\d+)$' -and $current) {
+              $current.Size = [int64]$Matches[1]
+            }
+          }
+          if ($current) { $entries += [pscustomobject]$current }
+          $binary = $entries | Where-Object { $_.Path -match '(^|[\\/])ollama[\\/]ollama\.exe$' } | Select-Object -First 1
+          if (-not $binary) {
+            $entries | Where-Object { $_.Path -match 'ollama' } | Select-Object -First 20 | Format-Table -AutoSize | Out-String | Write-Host
+            throw 'Bundled ollama.exe not found inside the NSIS installer -- the runtime was not packaged'
+          }
+          # The real executable is tens of MB; anything far smaller is a stub.
+          if ($binary.Size -lt 10000000) { throw "Bundled ollama.exe is only $($binary.Size) bytes -- likely not the real executable" }
+          Write-Host "Found bundled $($binary.Path) ($($binary.Size) bytes)"
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
