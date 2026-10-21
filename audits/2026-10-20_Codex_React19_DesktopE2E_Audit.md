@@ -112,3 +112,8 @@ Run `39546580262` confirmed the panel and queued result were rendered. The
 remaining failure was assertion casing: the UI renders `EXECUTION RESULTS`,
 while the test searched case-sensitively for `Execution Results`. The test
 now matches the panel label case-insensitively; a fresh green run is required.
+
+Run `39549859072` completed the authoritative verification: all prerequisite
+gates passed and the Windows real-Tauri suite reported 16 of 16 spec files
+passed, including all three Jose approval tests. The case-insensitive result
+panel assertion is verified against the built desktop application.
