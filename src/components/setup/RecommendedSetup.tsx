@@ -3,6 +3,7 @@ import { getAllStatus, installPrerequisite } from '../../services/runtimeManager
 import type { PrereqStatus } from '../../services/runtimeManagerService';
 import {
   checkDiskSpace,
+  sameInstallVolume,
   withTimeout,
   isComponentAlreadyInstalled,
   getUnmetPrereq,
@@ -117,7 +118,7 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
   // component was already handled; Python-missing gets an inline fix instead
   // of a dead end, since Python (unlike Docker) has a real auto-install path.
   const toInstall = notInstalled.filter((c) => getUnmetPrereq(c.id, prereqs) === null);
-  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb, hardware.ollamaModelsDirFreeGb);
+  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb, hardware.ollamaModelsDirFreeGb, sameInstallVolume(hardware));
   const needsImageGen = recommended.some((c) => c.id === 'fooocus');
 
   const handleInstallPython = async () => {

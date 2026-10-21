@@ -8,6 +8,7 @@ import { invoke } from '@tauri-apps/api/core';
 import {
   scanHardware,
   checkDiskSpace,
+  sameInstallVolume,
   isSetupComplete,
   markSetupComplete,
   withTimeout,
@@ -142,6 +143,62 @@ describe('checkDiskSpace', () => {
       expect(result.starterModelShortfallGb).toBe(7);
       expect(result.ok).toBe(false);
     });
+  });
+});
+
+describe('checkDiskSpace with known drive identity', () => {
+  // Buffer is 10GB. Starter model 2GB + Fooocus 6GB = 8GB selected.
+  const selected = [{ id: STARTER_MODEL_ID, sizeGb: 2 }, { id: 'fooocus', sizeGb: 6 }];
+
+  it('same drive: one combined check, no second starter-model warning', () => {
+    // 17GB free on the one drive: short by 1GB for everything combined (18GB).
+    const result = checkDiskSpace(selected, 17, 17, true);
+    expect(result.requiredGb).toBe(18);
+    expect(result.shortfallGb).toBe(1);
+    expect(result.starterModelShortfallGb).toBeUndefined();
+    expect(result.ok).toBe(false);
+  });
+
+  it('same drive: passes when the drive fits everything', () => {
+    const result = checkDiskSpace(selected, 18, 18, true);
+    expect(result.ok).toBe(true);
+    expect(result.starterModelShortfallGb).toBeUndefined();
+  });
+
+  it('different drives: the starter model is checked on its own drive only', () => {
+    // Runtimes drive has 16GB: enough for Fooocus + buffer (16GB) once the
+    // starter model is not counted against it.
+    const result = checkDiskSpace(selected, 16, 50, false);
+    expect(result.neededGb).toBe(6);
+    expect(result.shortfallGb).toBe(0);
+    expect(result.starterModelShortfallGb).toBeUndefined();
+    expect(result.ok).toBe(true);
+  });
+
+  it('different drives: a full models drive still blocks', () => {
+    const result = checkDiskSpace(selected, 100, 5, false);
+    expect(result.starterModelShortfallGb).toBe(7);
+    expect(result.ok).toBe(false);
+  });
+
+  it('unknown drive identity keeps both checks, as before', () => {
+    const result = checkDiskSpace(selected, 17, 5, null);
+    expect(result.neededGb).toBe(8);
+    expect(result.shortfallGb).toBe(1);
+    expect(result.starterModelShortfallGb).toBe(7);
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('sameInstallVolume', () => {
+  it('compares the two mount points', () => {
+    expect(sameInstallVolume({ diskMount: '/', ollamaModelsDirMount: '/' })).toBe(true);
+    expect(sameInstallVolume({ diskMount: '/', ollamaModelsDirMount: '/mnt/models' })).toBe(false);
+  });
+
+  it('is unknown when either mount point is missing', () => {
+    expect(sameInstallVolume({ diskMount: '/', ollamaModelsDirMount: null })).toBeNull();
+    expect(sameInstallVolume({ diskMount: undefined, ollamaModelsDirMount: '/mnt/models' })).toBeNull();
   });
 });
 

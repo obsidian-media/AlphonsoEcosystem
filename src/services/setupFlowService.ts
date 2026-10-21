@@ -32,6 +32,13 @@ export interface HardwareProfile {
    * when it's a real number.
    */
   ollamaModelsDirFreeGb: number | null;
+  /** Mount point of the drive `diskFreeGb` measured, or `null` if unknown. */
+  diskMount?: string | null;
+  /**
+   * Mount point of the `OLLAMA_MODELS` drive, or `null` when the variable is
+   * unset or no disk matched. See `sameInstallVolume()`.
+   */
+  ollamaModelsDirMount?: string | null;
   gpuPresent: boolean;
   gpuVendor: string | null;
   gpuModel: string | null;
@@ -264,21 +271,42 @@ function computeStarterModelShortfall(
  * the disk would be worse than letting the real install surface a real
  * out-of-space error. It's reported via `unknown` so the UI can warn.
  *
- * `ollamaModelsDirFreeGb` is optional and purely additive: passing it (or
- * leaving it undefined/null) never changes the existing `neededGb`/
- * `requiredGb`/`shortfallGb`/`unknown` behavior for the general
- * (`runtimes_dir()`-backed) check — it only adds a second, independent
- * starter-model-specific check that can ALSO block `ok`, surfaced via
- * `starterModelShortfallGb`.
+ * `ollamaModelsDirFreeGb` adds a second, starter-model-specific check that
+ * can ALSO block `ok`, surfaced via `starterModelShortfallGb`.
+ *
+ * `sameVolume` (from `sameInstallVolume()`) says whether that second number
+ * is the same drive the general check measured:
+ *   - `true`: the general check already counts the starter model against
+ *     the one shared free-space number, so the separate starter check is
+ *     skipped instead of warning twice about the same shortfall.
+ *   - `false`: the starter model lands on another drive, so it is checked
+ *     there only and left out of the general sum.
+ *   - `null`/omitted: unknown; both checks run as before (conservative).
  */
+/**
+ * Whether the runtimes drive and the `OLLAMA_MODELS` drive are the same,
+ * or `null` when either mount point is unknown.
+ */
+export function sameInstallVolume(
+  hardware: Pick<HardwareProfile, 'diskMount' | 'ollamaModelsDirMount'>
+): boolean | null {
+  if (!hardware.diskMount || !hardware.ollamaModelsDirMount) return null;
+  return hardware.diskMount === hardware.ollamaModelsDirMount;
+}
+
 export function checkDiskSpace(
   selected: SelectableComponent[],
   freeGb: number | null,
-  ollamaModelsDirFreeGb?: number | null
+  ollamaModelsDirFreeGb?: number | null,
+  sameVolume?: boolean | null
 ): DiskSpaceCheck {
-  const neededGb = selected.reduce((sum, c) => sum + c.sizeGb, 0);
+  const starterOnOtherDrive = sameVolume === false && ollamaModelsDirFreeGb != null;
+  const counted = starterOnOtherDrive ? selected.filter((c) => c.id !== STARTER_MODEL_ID) : selected;
+  const neededGb = counted.reduce((sum, c) => sum + c.sizeGb, 0);
   const requiredGb = neededGb + DISK_SAFETY_BUFFER_GB;
-  const starterModelShortfallGb = computeStarterModelShortfall(selected, ollamaModelsDirFreeGb);
+  const starterModelShortfallGb = sameVolume === true
+    ? undefined
+    : computeStarterModelShortfall(selected, ollamaModelsDirFreeGb);
 
   if (freeGb === null) {
     return {
