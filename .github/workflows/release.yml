@@ -10,6 +10,11 @@ on:
         description: 'Version tag (e.g. v0.2.0)'
         required: true
         type: string
+      publish:
+        description: 'Publish the GitHub Release. Leave off to build and check all three installers without releasing anything.'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -198,17 +203,21 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          # All six are required together. A partial set fails closed so a
-          # release can never be mislabeled as signed/notarized.
-          provided=0
-          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
-            if [ -n "${!name:-}" ]; then provided=$((provided + 1)); fi
-          done
-          if [ "$provided" -eq 0 ]; then
-            echo "No Apple signing secrets configured -- building an explicitly UNSIGNED, un-notarized DMG."
+          # Signing starts only when the Developer ID certificate itself is
+          # present. Without it the build is explicitly UNSIGNED and labeled
+          # that way. APPLE_TEAM_ID alone does not count: the iOS pipeline
+          # uses that secret too, and it used to make this step fail every
+          # macOS release as "partially configured".
+          if [ -z "${APPLE_CERTIFICATE:-}" ]; then
+            for name in APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+              if [ -n "${!name:-}" ]; then echo "::notice::$name is set but APPLE_CERTIFICATE is not; it is ignored for macOS signing."; fi
+            done
+            echo "::warning::No APPLE_CERTIFICATE secret -- building an UNSIGNED, un-notarized DMG. See docs/MACOS_SIGNING.md."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # With the certificate present, all six are required together, so a
+          # release can never be mislabeled as signed/notarized.
           missing=""
           for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
             if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
@@ -364,29 +373,63 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The v2.9.0 release run died here in 90 ms with no message: the
+          # old `hdiutil attach -quiet` failed silently under `set -e`. Every
+          # step below now says what it checked and why it failed.
+          check_binary() {
+            # $1 = label, $2 = path to the ollama binary (may be empty)
+            if [ -z "$2" ] || [ ! -f "$2" ]; then
+              echo "::error::$1: bundled ollama binary not found -- the runtime was not packaged"
+              return 1
+            fi
+            size=$(wc -c < "$2" | tr -d ' ')
+            echo "$1: found $2 ($size bytes)"
+            if [ "$size" -lt 10000000 ]; then
+              echo "::error::$1: ollama binary is only $size bytes -- not the real executable"
+              return 1
+            fi
+          }
+
+          # 1. The updater archive: what auto-update installs.
+          updater="./${{ steps.collect.outputs.updater_name }}"
+          work=$(mktemp -d)
+          tar -xzf "$updater" -C "$work"
+          check_binary "updater archive" "$(find "$work" -type f -path '*/Contents/Resources/*ollama/ollama' -print -quit)"
+          rm -rf "$work"
+
+          # 2. The DMG: what a new user downloads.
           dmg="./${{ steps.collect.outputs.installer_name }}"
           mountpoint=$(mktemp -d)
-          hdiutil attach "$dmg" -mountpoint "$mountpoint" -nobrowse -quiet
-          app=$(find "$mountpoint" -maxdepth 1 -name "*.app" | head -n 1)
+          attached=false
+          for attempt in 1 2 3; do
+            # The DMG carries the EULA (tauri.conf.json bundle.licenseFile),
+            # so mounting it asks the user to agree first. With no one to
+            # answer, hdiutil prints "attach canceled" -- the real reason the
+            # v2.9.0 and first v2.10.0 dry-run checks failed. Answer "Y".
+            # pipefail is off inside the subshell so `yes` exiting on SIGPIPE
+            # does not count as a failure.
+            if (set +o pipefail; yes | PAGER=cat hdiutil attach "$dmg" -mountpoint "$mountpoint" -nobrowse -readonly -noverify >/dev/null); then
+              attached=true
+              break
+            fi
+            echo "hdiutil attach failed (attempt $attempt); retrying in 5s"
+            sleep 5
+          done
+          if [ "$attached" != true ]; then
+            echo "::error::Could not mount $dmg to check its contents"
+            exit 1
+          fi
+          status=0
+          app=$(find "$mountpoint" -maxdepth 1 -name "*.app" -print -quit)
           if [ -z "$app" ]; then
-            echo "No .app bundle found inside the DMG" >&2
-            hdiutil detach "$mountpoint" -quiet || true
-            exit 1
+            echo "::error::No .app bundle found inside the DMG"
+            ls -la "$mountpoint" || true
+            status=1
+          else
+            check_binary "DMG" "$(find "$app" -type f -path '*/Contents/Resources/*ollama/ollama' -print -quit)" || status=1
           fi
-          binary=$(find "$app" -type f -path "*/ollama/ollama" | head -n 1)
-          if [ -z "$binary" ]; then
-            echo "Bundled ollama binary not found inside the release app bundle -- the runtime was not packaged" >&2
-            find "$app" -iname "*ollama*" >&2 || true
-            hdiutil detach "$mountpoint" -quiet || true
-            exit 1
-          fi
-          size=$(stat -f%z "$binary")
-          echo "Found bundled ollama binary: $binary ($size bytes)"
-          hdiutil detach "$mountpoint" -quiet
-          if [ "$size" -lt 10000000 ]; then
-            echo "Bundled ollama binary is suspiciously small ($size bytes) -- likely not the real executable" >&2
-            exit 1
-          fi
+          hdiutil detach "$mountpoint" -force || true
+          exit "$status"
 
       - name: Upload macOS release assets
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -517,19 +560,24 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: [determine-tag, build-windows, build-macos, build-linux]
+    # A manual run only publishes when asked to; a tag push always does.
+    if: github.event_name == 'push' || inputs.publish
     runs-on: ubuntu-latest
     steps:
-      - name: Require notarized macOS release
+      # Owner decision 2026-10-21: until a Developer ID certificate exists,
+      # ship an unsigned macOS DMG (as v2.8.0 did) instead of no macOS build.
+      # The release notes say so plainly. This replaces a hard stop added in
+      # PR #304 that blocked every platform's release over macOS signing.
+      - name: Report macOS signing status
         shell: bash
         env:
           NOTARIZED: ${{ needs.build-macos.outputs.notarized }}
         run: |
-          if [ "$NOTARIZED" != "true" ]; then
-            echo "macOS release publication is blocked: Apple signing/notarization is not enabled." >&2
-            echo "Configure all six APPLE_* secrets documented in docs/MACOS_SIGNING.md." >&2
-            exit 1
+          if [ "$NOTARIZED" = "true" ]; then
+            echo "macOS artifact is signed and notarized."
+          else
+            echo "::warning::Publishing an UNSIGNED, un-notarized macOS DMG. Users must right-click > Open on first launch. See docs/MACOS_SIGNING.md."
           fi
-          echo "macOS artifact is marked notarized; continuing to publish."
 
       - name: Download Windows release assets
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -612,7 +660,7 @@ jobs:
             ### Installation
             **Windows:** Download `${{ needs.build-windows.outputs.installer_name }}`, run the installer, launch Alphonso.
 
-            **macOS (Apple Silicon):** Download `${{ needs.build-macos.outputs.installer_name }}`, open it, and drag Alphonso to Applications. Apple Silicon only; Intel Macs are not supported by this build.
+            **macOS (Apple Silicon):** Download `${{ needs.build-macos.outputs.installer_name }}`, open it, and drag Alphonso to Applications. Apple Silicon only; Intel Macs are not supported by this build. ${{ needs.build-macos.outputs.notarized == 'true' && 'This build is signed and notarized by Apple.' || 'This build is not yet signed by Apple: the first time, right-click Alphonso in Applications and choose Open, then confirm. Updates after that install normally.' }}
 
             **Linux:** Download `${{ needs.build-linux.outputs.installer_name }}`, mark it executable (`chmod +x`), and run it.
 

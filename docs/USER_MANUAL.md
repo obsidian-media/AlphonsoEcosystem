@@ -1,7 +1,7 @@
 # Alphonso User Manual
 
-**Version**: 2.9.0
-**Last Updated**: 2026-10-12 (Ollama setup and troubleshooting sections revised for v2.9.0; other sections were last reviewed on earlier dates and may describe older screens)
+**Version**: 2.10.0
+**Last Updated**: 2026-10-21 (version and macOS install note for v2.10.0; Ollama setup and troubleshooting sections revised for v2.9.0; other sections were last reviewed on earlier dates and may describe older screens)
 **Status**: Production Ready
 
 ---
@@ -53,6 +53,16 @@ Alphonso is a **local-first AI desktop companion** that runs entirely on your ma
 2. A model pulled (`ollama pull llama3.2:3b` or your preferred model)
 3. Alphonso desktop app built and running
 
+### Installing
+
+Download the installer for your system from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest):
+
+- **Windows:** `Alphonso_<version>_x64-setup.exe`. Run it, then launch Alphonso.
+- **macOS (Apple Silicon only):** `Alphonso_<version>_aarch64.dmg`. Open it and drag Alphonso to Applications. The Mac build is not yet signed by Apple, so the first time, right-click Alphonso in Applications and choose **Open**, then confirm (on newer macOS you may need System Settings > Privacy & Security > **Open Anyway**). After that it opens normally and updates install themselves.
+- **Linux:** `Alphonso_<version>_amd64.AppImage`. Make it executable (`chmod +x`) and run it.
+
+An installed copy checks for updates at launch and offers to install them.
+
 ### First Launch
 
 1. Open Alphonso
@@ -61,14 +71,14 @@ Alphonso is a **local-first AI desktop companion** that runs entirely on your ma
 
 ### Ollama Setup
 
-Alphonso starts Ollama for you at launch when it is installed. If you prefer to run Ollama yourself, the desktop app's window must be allowed to call it:
+Alphonso starts Ollama for you at launch when it is installed. If you prefer to run Ollama yourself, chat still works from v2.10.0 on: when Ollama refuses the app window, Alphonso sends the conversation through its backend instead, and the reply appears all at once rather than word by word. To get streamed replies from an Ollama you started yourself, allow the app window to call it:
 
 ```powershell
 $env:OLLAMA_ORIGINS="http://tauri.localhost"
 ollama serve
 ```
 
-(`"*"` also works but allows any website open in your browser to call your local Ollama.)text
+(`"*"` also works but allows any website open in your browser to call your local Ollama.)
 
 ---
 

@@ -32,6 +32,7 @@ ollama pull llama3.2:3b
 
 Ollama answers the desktop window with `403 Forbidden`. On Windows the window's origin is `http://tauri.localhost`, which is not on Ollama's default allow-list.
 
+- From v2.10.0, chat no longer stays empty here: Alphonso sends the conversation through its backend when the window is refused, so you get a reply, all at once instead of streamed. The steps below give you streamed replies again.
 - From v2.9.0, an Ollama that Alphonso starts itself is configured correctly. Close any Ollama you started yourself (tray app, `ollama serve`) and let Alphonso start it, or use Runtimes > Ollama > Start.
 - To keep your own Ollama running, start it with the window origin allowed:
 

@@ -127,7 +127,7 @@ the same change; no task is complete without the plan's stated verification.
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.9.0 |
+| Version | 2.10.0 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.12, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
@@ -2343,3 +2343,21 @@ Verified: 43 Rust tests in `memory_graph*` (cargo test --lib memory_graph, 22 of
 **Numbers after the batch (from `scripts/verify-doc-counts.mjs`):** 411 test files; 199 Rust unit tests; 125 Tauri commands; `lib.rs` ~834 lines.
 
 **Still open:** the owner-gated and live-only threads at the top of the register (Cloud Voice DNS, Apple and Windows signing, native Ollama acceptance, CALL-E live call, legal documents, branch-protection decision, and the never-run-live items).
+
+## 11.35 v2.10.0 release prep; macOS back in the release (2026-10-21)
+
+**PR 305 (the 13-item deferred batch) was squash-merged as `399ef43`** once every required check passed. Its Desktop E2E job failed once on a stale-element timing flake in `project-execution.e2e.mjs` and passed on rerun; the same commit's manual CI run had already passed every job, including all three desktop builds and the new NSIS check (`Found bundled ollama\ollama.exe (36525448 bytes)`).
+
+**Why 2.9.0 had no Mac build, corrected.** An earlier note blamed the bundled-Ollama check. The real sequence: the first tag run failed at `codesign -s ""` (fixed before the second run); the second failed in the DMG content check in 90 ms with no message. The rewritten check's first dry run (run 39675626882) showed both halves: the updater archive contains `Contents/Resources/ollama/ollama` (68,255,232 bytes), and `hdiutil attach` prints "attach canceled" because the DMG carries the EULA (`bundle.licenseFile`) and asks the user to agree. The runtime was never missing; the check now answers the agreement with `yes`.
+
+**What `release.yml` does now (owner decision 2026-10-21: ship macOS unsigned rather than not at all).**
+- Signing starts only when `APPLE_CERTIFICATE` is set. The repo has `APPLE_TEAM_ID` alone (shared with the iOS pipeline), which the PR 304 guard treated as a partial set and failed every macOS release on.
+- The DMG check now checks the updater archive (what auto-update installs) and the DMG (what new users download), retries the mount, and names what failed.
+- PR 304's hard stop that refused to publish any platform without a notarized macOS build is a warning now. The release notes say whether the Mac build is notarized and, if not, how to open it the first time.
+- A manual run takes `publish` (default off): it builds and checks all three installers and publishes nothing. Used before tagging 2.10.0.
+
+**Version 2.10.0** in `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `Cargo.lock`. CI test totals at `399ef43`: 5,645 JS tests in 412 Vitest files; 206 Rust tests (1 ignored).
+
+**Still open:** Apple Developer ID signing (five `APPLE_*` secrets, see `docs/MACOS_SIGNING.md`); running the published installers; auto-update from 2.8.0 (macOS) and 2.9.0 (Windows/Linux) to 2.10.0.
+
+---
