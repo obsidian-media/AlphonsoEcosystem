@@ -26,6 +26,8 @@ The desktop app was tested end to end for the first time: the real built app, re
 - **New desktop end-to-end suite:** `npm run test:e2e:desktop`, 16 spec files, 53 checks against the real app on isolated test data.
 - Also in this release: Tailwind CSS v4, memory-graph retention pruning, Hermes session continuity, Agent Pairing and Maturity sidebar entries, per-command approval for AI-planned commands, and everything under "Pre-launch hardening" below.
 
+Platforms: 2.9.0 is published for Windows and Linux. macOS is not included yet (its release build failed a packaging check); 2.8.0 remains the latest macOS build.
+
 Known limits: an Ollama you start yourself (tray app or `ollama serve`) is still refused by the desktop window unless `OLLAMA_ORIGINS` includes `http://tauri.localhost`; let Alphonso start Ollama, or set that variable. Full list: `docs/governance/DEFERRED_WORK.md`.
 
 ## Pre-launch hardening — 2026-09-30 (shipped in v2.9.0)
