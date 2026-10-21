@@ -62,3 +62,10 @@ The smoke spec now imports and uses `enterShell()`, removing the duplicate
 direct-storage setup. The current run is not a green desktop result: its
 Windows desktop job remains failed because it used the pre-fix commit. A fresh
 run after this correction is required.
+
+Run `39522981820` verified the harness correction: the smoke spec passed all 19
+checks and 15 of 16 desktop spec files passed. The sole failure was
+`jose-approval.e2e.mjs`, which executed the packet from the Packets tab and then
+asserted `Execution Results` without returning to Approvals, where that panel
+is rendered. The test now switches back to Approvals before asserting the
+visible result. A fresh run is required for the final desktop pass.

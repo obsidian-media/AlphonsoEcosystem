@@ -48,6 +48,13 @@ describe('Alphonso desktop Jose approvals', () => {
       timeout: 60000,
       timeoutMsg: 'the packet never reached "executed"',
     });
+    // Execution Results is rendered below the approval queue, so switch back
+    // to the Approvals tab after executing from Packets.
+    await buttonByText('approvals').click();
+    await browser.waitUntil(async () => (await mainText()).includes('Execution Results'), {
+      timeout: 10000,
+      timeoutMsg: 'the executed packet did not produce a visible result panel',
+    });
     const output = await mainText();
     expect(output).toContain('Execution Results');
     expect(output).toContain('Task queued — no live runtime adapter');
