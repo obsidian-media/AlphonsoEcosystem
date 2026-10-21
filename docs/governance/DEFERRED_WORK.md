@@ -7,6 +7,21 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-21] **v2.10.0 release prep (branch `release/v2.10.0`).**
+  PR 305 merged as `399ef43`. Owner decision: ship macOS as an unsigned DMG
+  rather than leave it out again. **Done in the branch:** version 2.10.0 in
+  all five files; `release.yml` signs macOS only when `APPLE_CERTIFICATE` is
+  set (an `APPLE_TEAM_ID` alone, which the iOS pipeline uses, made the PR 304
+  guard fail every macOS release); the DMG check now checks the updater
+  archive and the DMG, retries the mount and says what failed (in 2.9.0 it
+  died silently in 90 ms); PR 304's publish stop for a non-notarized Mac
+  build is a warning and the release notes say so; a manual run has a
+  `publish` switch (off by default) for a full dry run. Docs swept: README,
+  AGENTS, CLAUDE.md, CHANGELOG [2.10.0], GROUND_TRUTH §11.35, USER_MANUAL,
+  MACOS_SIGNING, TRUTH_FIRST log. **OPEN:** Apple Developer ID signing (five
+  missing `APPLE_*` secrets); running the published installers; auto-update
+  from 2.8.0 (macOS) and 2.9.0 (Windows/Linux). — `[OPEN]`
+
 - [2026-10-21] **Repo-actionable batch after PR 304 (branch
   `fix/deferred-code-batch-2026-10-21`, 13 items, one commit each).**
   **Done:** (1) the desktop chat fallback sends the real turns to a new
@@ -312,7 +327,9 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   13. *Not testable from the dev machine:* connectors with real accounts, phone pairing, CALL-E, Runway video, auto-update from a real release, starting Voice OS.
   **Also open, unrelated to the testing pass:** Cloud Voice deploy fails at `sts:AssumeRoleWithWebIdentity` (the workflow's auth step is unchanged since the last good deploy, so the cause is on the AWS side; not investigated for lack of an AWS session), and after that it will stop at the access-policy check unless the task definition has `VOICE_ALLOWED_EMAILS` or `VOICE_ACCESS_MODE=open`. Dependabot #163 (TypeScript 7) is blocked upstream (`typescript-eslint` supports TypeScript below 6.1); #160 (`react-dom` 19 alone) needs a real React 19 migration.
   **Release note (2026-10-12/13):** `v2.9.0` is published for Windows and Linux only, and it was published by hand. The first tag run failed in `release.yml`'s macOS job (the unsigned fallback passed an empty signing identity; fixed in #293). The rerun from `main` got further on macOS (an unsigned DMG was built) and then failed the step "Verify bundled Ollama runtime is inside the app bundle": no `*/ollama/ollama` file was found inside the app in the DMG. The publish job needs all three builds, so it was skipped both times. The Windows and Linux artifacts of the rerun (run 38325411396) were then published with `gh release create`, with a `latest.json` listing `windows-x86_64` and `linux-x86_64` only.
+  **[FIX PREPARED 2026-10-21, release/v2.10.0 — confirm on the v2.10.0 release run]** The log of run 38325411396 does not support "no `*/ollama/ollama` file was found": the step printed nothing and exited in 90 ms, which fits `hdiutil attach -quiet` failing silently under `set -e`. The check was rewritten (see the 2026-10-21 v2.10.0 entry at the top).
   **OPEN — macOS is missing from v2.9.0.** Mac installs stay on 2.8.0 and are not offered the update (no `darwin-aarch64` entry in `latest.json`). Resume hint: find why the bundled Ollama runtime is absent from the macOS app (2.8.0's macOS build passed this check, so compare against that run; `fetch-ollama-runtime.mjs darwin-universal` staging and the `vendor/ollama` resource mapping are the places to look), then add the `.app.tar.gz`, its `.sig` and the DMG to the release and a `darwin-aarch64` entry to `latest.json`. macOS signing and notarization are still untested on a real run: the six Apple secrets in `docs/MACOS_SIGNING.md` are not set.
+  **[PARTLY DONE 2026-10-21]** PR 304's extra "notarized macOS required" stop is now a warning, so macOS signing alone no longer blocks Windows and Linux. A failed build on any platform still blocks the publish.
   **OPEN — the publish job is all-or-nothing.** One platform failing blocks every platform's installers. Consider letting it publish the platforms that built.
   **Not verified:** the published Windows installer has not been run, and the 2.8.0 -> 2.9.0 auto-update has not been tried.
   **Process note:** Tauri's desktop build jobs run only on pushes to `main`, not on PRs, so a Rust-side Tauri bump can pass every PR check and still break the release build. Check `main`'s CI after merging any `tauri*` crate bump, and keep `@tauri-apps/api`/`@tauri-apps/cli` on the same minor as the `tauri` crate in `Cargo.lock`.

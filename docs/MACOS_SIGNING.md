@@ -1,11 +1,17 @@
 # macOS signing & notarization
 
 `release.yml`'s `build-macos` job signs with a Developer ID certificate and
-notarizes through Apple when **all six** secrets below exist. With none of the
-secrets it may build an unsigned DMG for diagnostic purposes, but the
-`publish` job now fails closed and will not publish that artifact. A partial
-secret set also fails the release instead of silently producing an ambiguous
-artifact. Gatekeeper blocks the default launch of
+notarizes through Apple when **all six** secrets below exist. Signing starts
+only when `APPLE_CERTIFICATE` is set; once it is, a missing one of the other
+five fails the release instead of producing an ambiguous artifact.
+`APPLE_TEAM_ID` on its own (the iOS pipeline uses it too) is ignored.
+
+Without the certificate the job builds an **unsigned** DMG and the release
+still publishes it, with a warning in the run and a note in the release text
+telling Mac users how to open it the first time. This was the owner's decision
+on 2026-10-21 (v2.10.0), after 2.9.0 shipped with no Mac build at all; it
+replaces the PR 304 rule that refused to publish anything without a notarized
+Mac build. Gatekeeper blocks the default launch of
 an unsigned app on macOS Sequoia+; users can usually approve it under
 System Settings > Privacy & Security ("Open Anyway") after trying to open it,
 but managed devices may forbid that override, and it is a poor first-run

@@ -4,15 +4,26 @@
 
 # Alphonso
 
-> **v2.9.0** — Local-first AI desktop companion with 9 agents, 26 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.10.0** — Local-first AI desktop companion with 9 agents, 26 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.9.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-5614%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
+[![Version](https://img.shields.io/badge/version-2.10.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
+[![Tests](https://img.shields.io/badge/tests-5645%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
 [**Download the latest release**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+
+## What's New in v2.10.0 (2026-10-21)
+
+- **macOS is back.** An Apple Silicon DMG ships again (2.9.0 had none), so Mac installs on 2.8.0 are offered the update. It is not yet signed by Apple: the first time, right-click Alphonso in Applications and choose Open.
+- **Updates relaunch the app on macOS and Linux.** The restart plugin's Rust half was missing, so the app could not restart itself after installing an update.
+- **Chat works with an Ollama you started yourself.** When Ollama refuses the app window, chat now goes through the backend with the whole conversation (the reply arrives in one piece rather than streamed). Before, it sent only a flattened prompt.
+- **Perplexity search works again**, on Perplexity's current Search API, and Hector uses it as an extra research source.
+- **Smaller fixes:** provider tabs lock while a reply is generating; Project Execution approval gates name their real owner agent; the Setup disk checks agree when Ollama keeps its models on another drive.
+- **CI:** a weekly npm and Rust security audit; a check that Tauri's JavaScript and Rust packages match; a check that the Windows installer really contains Ollama; the real desktop app's end-to-end suite now runs on every PR.
+
+Not tested with real accounts yet: Perplexity (no API key), and auto-update from 2.9.0 to 2.10.0.
 
 ## What's New in v2.9.0 (2026-10-12)
 
@@ -26,9 +37,9 @@ The desktop app was tested end to end for the first time: the real built app, re
 - **New desktop end-to-end suite:** `npm run test:e2e:desktop`, 16 spec files, 53 checks against the real app on isolated test data.
 - Also in this release: Tailwind CSS v4, memory-graph retention pruning, Hermes session continuity, Agent Pairing and Maturity sidebar entries, per-command approval for AI-planned commands, and everything under "Pre-launch hardening" below.
 
-Platforms: 2.9.0 is published for Windows and Linux. macOS is not included yet (its release build failed a packaging check); 2.8.0 remains the latest macOS build.
+Platforms: 2.9.0 was published for Windows and Linux only; 2.10.0 brings macOS back.
 
-Known limits: an Ollama you start yourself (tray app or `ollama serve`) is still refused by the desktop window unless `OLLAMA_ORIGINS` includes `http://tauri.localhost`; let Alphonso start Ollama, or set that variable. Full list: `docs/governance/DEFERRED_WORK.md`.
+Known limits at 2.9.0: an Ollama you start yourself (tray app or `ollama serve`) was refused by the desktop window unless `OLLAMA_ORIGINS` included `http://tauri.localhost`. 2.10.0 works around this through the backend (see above). Full list: `docs/governance/DEFERRED_WORK.md`.
 
 ## Pre-launch hardening — 2026-09-30 (shipped in v2.9.0)
 
