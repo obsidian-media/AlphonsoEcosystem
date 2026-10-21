@@ -32,3 +32,10 @@ rerun the desktop/native Ollama acceptance flow. The owner must also provision
 the managed Voice OS environment before claiming live Voice OS readiness.
 No paid API, credential, permission mutation, or service restart was performed
 by this audit.
+
+## Repository gate follow-up
+
+After this audit was pushed, governance workflow `39558985306` completed
+successfully for commit `72974b3`. The green gate validates the synchronized
+audit/deferred documentation change; it does not change the native runtime
+acceptance assessment above.
