@@ -14,4 +14,10 @@ describe('DraftPreview', () => {
     expect(screen.getByText('Creative output')).toBeTruthy();
     expect(screen.getByText('draft_ready')).toBeTruthy();
   });
+
+  it('labels a fallback brief as not written by a model', () => {
+    render(<DraftPreview activeJob={{ id: 'j1', status: 'drafting', currentStep: 'draft', briefSource: 'fallback', briefError: 'LLM down', draft: {}, request: {} }} busy={false} onRunStep={vi.fn()} onApprovePublish={vi.fn()} imageRuntime={{}} onStartImageRuntime={vi.fn()} onRefreshImageRuntime={vi.fn()} />);
+    expect(screen.getByTestId('content-brief-fallback-notice')).toHaveTextContent('built-in fallback');
+    expect(screen.getByTestId('content-brief-fallback-notice')).toHaveTextContent('LLM down');
+  });
 });

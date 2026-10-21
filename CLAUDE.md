@@ -77,6 +77,8 @@ npm run test:e2e:desktop
 
 Before writing any new service, component, or feature, check this list:
 
+The source-backed inventory is generated at [`docs/DO_NOT_DUPLICATE.generated.md`](docs/DO_NOT_DUPLICATE.generated.md). Refresh it with `npm run generate:dnd-map`; CI runs `npm run verify:dnd-map` so new services/components and their static exports cannot drift out of the map. This generated inventory complements the human purpose descriptions below; it does not replace them.
+
 | Thing you might think is missing | Where it actually lives |
 |---|---|
 | Connector health UI (full panel) | `src/components/ConnectorHealthPanel.jsx` (lazy chunk) |

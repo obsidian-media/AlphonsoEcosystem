@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 vi.mock('../../services/agentBusService', () => ({
   AGENTS: { ALPHONSO: 'alphonso', JOSE: 'jose' },
@@ -42,7 +42,7 @@ vi.mock('../../services/trustModel', () => ({
   TRUST_STATES: { VERIFIED: 'verified', UNVERIFIED: 'unverified', TEMPORARY: 'temporary' }
 }));
 vi.mock('../../services/connectorRegistryService', () => ({
-  isConnectorAuthenticated: vi.fn(() => false),
+  isConnectorAuthenticated: vi.fn(() => ({ ok: false })),
   listConnectorAudit: vi.fn(() => []),
   pollWhatsAppConnector: vi.fn()
 }));
@@ -89,5 +89,10 @@ describe('OrchestratorView', () => {
   it('renders with empty orchestration state', () => {
     const { container } = render(<OrchestratorView {...makeProps()} />);
     expect(container.querySelectorAll('div').length).toBeGreaterThan(0);
+  });
+
+  it('reports WhatsApp as not configured when authentication is unavailable', () => {
+    render(<OrchestratorView {...makeProps()} />);
+    expect(screen.getByText('Not configured — see Settings')).toBeTruthy();
   });
 });

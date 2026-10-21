@@ -12,7 +12,7 @@
 //!  9. Per-tool autostart toggle persisted to ~/.alphonso/runtimes/autostart_prefs.json
 
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
@@ -1127,12 +1127,25 @@ pub struct ToolStartFailed {
 #[derive(Default, Clone)]
 pub struct RuntimeManager {
   spawned: Arc<Mutex<HashMap<String, u32>>>,
+  starting: Arc<Mutex<HashSet<String>>>,
+}
+
+struct StartReservation {
+  state: RuntimeManager,
+  name: String,
+}
+
+impl Drop for StartReservation {
+  fn drop(&mut self) {
+    self.state.finish_start(&self.name);
+  }
 }
 
 impl RuntimeManager {
   pub fn new() -> Self {
     Self {
       spawned: Arc::new(Mutex::new(HashMap::new())),
+      starting: Arc::new(Mutex::new(HashSet::new())),
     }
   }
 
@@ -1149,6 +1162,25 @@ impl RuntimeManager {
   pub fn remove_pid(&self, name: &str) {
     if let Ok(mut map) = self.spawned.lock() {
       map.remove(name);
+    }
+  }
+
+  /// Reserve a tool start so concurrent command/autostart requests cannot
+  /// both pass the health check and spawn duplicate processes.
+  fn reserve_start(&self, name: &str) -> Option<StartReservation> {
+    let mut starting = self.starting.lock().ok()?;
+    if !starting.insert(name.to_string()) {
+      return None;
+    }
+    Some(StartReservation {
+      state: self.clone(),
+      name: name.to_string(),
+    })
+  }
+
+  fn finish_start(&self, name: &str) {
+    if let Ok(mut starting) = self.starting.lock() {
+      starting.remove(name);
     }
   }
 }
@@ -1305,6 +1337,35 @@ fn venv_python(dir: &Path) -> PathBuf {
   } else {
     dir.join("venv").join("bin").join("python3")
   }
+}
+
+fn pip_package_name(spec: &str) -> &str {
+  spec
+    .split("==")
+    .next()
+    .unwrap_or(spec)
+    .split('[')
+    .next()
+    .unwrap_or(spec)
+}
+
+fn voice_runtime_installed(dir: &Path, packages: &[&str]) -> bool {
+  let python = venv_python(dir);
+  if !python.exists() || packages.is_empty() {
+    return false;
+  }
+
+  let package_names: Vec<&str> = packages.iter().map(|spec| pip_package_name(spec)).collect();
+  let mut command = Command::new(python);
+  command.args(["-m", "pip", "show"]);
+  command.args(package_names);
+  no_window(&mut command);
+  command
+    .stdout(std::process::Stdio::null())
+    .stderr(std::process::Stdio::null())
+    .status()
+    .map(|status| status.success())
+    .unwrap_or(false)
 }
 
 /// Gap 5 & 7: resolve the correct executable for a tool.
@@ -1575,6 +1636,7 @@ pub async fn runtime_get_all_status(
     let installed = match (def.repo_url, def.exe) {
       (Some(_), _) => dir.exists() && dir.join(".git").exists(),
       (None, "ollama") => find_ollama().is_some(),
+      (None, "python") if def.name == "voice-os" => voice_runtime_installed(&dir, def.pip_packages),
       (None, exe) => {
         // Check venv bin first, then PATH
         let venv_bin = if cfg!(target_os = "windows") {
@@ -1795,6 +1857,19 @@ pub async fn runtime_start_tool(
   app: AppHandle,
 ) -> Result<RuntimeActionResult, String> {
   let def = tool_def(&name).ok_or_else(|| format!("Unknown tool: {}", name))?;
+
+  // Reserve before any PID/health checks. Otherwise two concurrent callers can
+  // both observe a stopped tool and race into spawn (or overwrite its token/PID).
+  let _start_reservation = match state.reserve_start(&name) {
+    Some(reservation) => reservation,
+    None => {
+      return Ok(RuntimeActionResult {
+        tool: name,
+        ok: true,
+        message: format!("{} is already starting.", def.display_name),
+      });
+    }
+  };
 
   // A tool Alphonso already started, whose process is still alive, is either
   // running or still starting up (its port may not answer yet). Spawning a
@@ -2097,6 +2172,10 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
         }
       }
 
+      let Some(_start_reservation) = state.reserve_start(def.name) else {
+        continue;
+      };
+
       // Gap 8: emit starting status
       let _ = app.emit(
         "runtime://boot_status",
@@ -2266,6 +2345,17 @@ mod tests {
     assert_eq!(mgr.spawned_pid("ollama"), Some(1234));
     mgr.remove_pid("ollama");
     assert_eq!(mgr.spawned_pid("ollama"), None);
+  }
+
+  #[test]
+  fn runtime_manager_start_reservation_is_single_flight() {
+    let mgr = RuntimeManager::new();
+    let first = mgr
+      .reserve_start("ollama")
+      .expect("first start should reserve");
+    assert!(mgr.reserve_start("ollama").is_none());
+    drop(first);
+    assert!(mgr.reserve_start("ollama").is_some());
   }
 
   #[test]
@@ -2446,5 +2536,11 @@ mod tests {
     } else {
       assert!(vpy.to_string_lossy().contains("bin"));
     }
+  }
+
+  #[test]
+  fn pip_package_name_ignores_versions_and_extras() {
+    assert_eq!(pip_package_name("uvicorn[standard]==0.32.0"), "uvicorn");
+    assert_eq!(pip_package_name("faster-whisper==1.1.0"), "faster-whisper");
   }
 }

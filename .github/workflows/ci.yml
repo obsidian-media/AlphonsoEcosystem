@@ -17,8 +17,13 @@ jobs:
   test:
     name: Test & Build
     runs-on: windows-latest
+    # Keep a stalled dependency install/test process from preventing all
+    # downstream desktop and Playwright jobs from ever receiving a result.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -65,6 +70,9 @@ jobs:
   rust-quality:
     name: Rust Tests & Clippy
     runs-on: ubuntu-latest
+    # Desktop build/E2E jobs depend on this gate; bound a stalled toolchain or
+    # package download so the workflow eventually reports a result.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -138,6 +146,19 @@ jobs:
       # revisit by 2026-10-25 (3-month expiry) even if no release has
       # landed, and re-run `cargo audit` without --ignore to see if the list
       # can shrink.
+      # Security update 2026-10-20: rustls 0.23.45 -> 0.23.46 removed the
+      # three newly published rustls advisories. The remaining zip 4.6.1
+      # advisories (RUSTSEC-2026-0367/0368/0369) are pulled exclusively by
+      # tauri-plugin-updater 2.14.0, whose manifest still requires zip ^4;
+      # zip 9 cannot be selected until the upstream plugin changes that
+      # constraint. The updater verifies the Minisign signature over the
+      # complete bytes before it extracts or installs them (confirmed from
+      # tauri-plugin-updater 2.14.0 source), which is the compensating control
+      # for the signed-release path. The zbus/zvariant advisories
+      # (RUSTSEC-2026-0370/0371/0372) are unmaintained Linux notification/
+      # opener transitive crates; they are not exploitable findings. These six IDs
+      # are narrowly ignored pending upstream releases and must be rechecked
+      # by 2026-11-20; any other advisory still fails this gate.
       - name: Security audit (cargo)
         if: always()
         run: |
@@ -159,7 +180,13 @@ jobs:
             --ignore RUSTSEC-2025-0075 `# unic-char-range: unmaintained, urlpattern/tauri-utils chain` \
             --ignore RUSTSEC-2025-0080 `# unic-common: unmaintained, urlpattern/tauri-utils chain` \
             --ignore RUSTSEC-2025-0100 `# unic-ucd-ident: unmaintained, urlpattern/tauri-utils chain` \
-            --ignore RUSTSEC-2025-0098 `# unic-ucd-version: unmaintained, urlpattern/tauri-utils chain`
+            --ignore RUSTSEC-2025-0098 `# unic-ucd-version: unmaintained, urlpattern/tauri-utils chain` \
+            --ignore RUSTSEC-2026-0367 `# zip 4.6.1: updater pins zip ^4; signature verified before extraction; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0368 `# zip 4.6.1: updater pins zip ^4; signature verified before extraction; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0369 `# zip 4.6.1: updater pins zip ^4; signature verified before extraction; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0370 `# zvariant 5.13.1: unmaintained Linux notification/opener transitive dependency; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0371 `# zbus_names 4.3.4: unmaintained Linux notification/opener transitive dependency; recheck 2026-11-20` \
+            --ignore RUSTSEC-2026-0372 `# zvariant_derive 5.13.1: unmaintained Linux notification/opener transitive dependency; recheck 2026-11-20`
         continue-on-error: false
 
       - name: Rust coverage (tarpaulin)
@@ -217,6 +244,84 @@ jobs:
           name: Alphonso-${{ github.sha }}-x64-setup
           path: src-tauri/target/release/bundle/nsis/Alphonso_*_x64-setup.exe
           retention-days: 14
+
+  desktop-e2e:
+    name: Desktop E2E (real Tauri binary)
+    needs: [test, rust-quality]
+    # windows-latest now resolves to the Windows Server 2025 image, whose
+    # WebView2/EdgeDriver stack fails every tauri-driver session with
+    # "DevToolsActivePort file doesn't exist". Keep real desktop coverage on
+    # the known-good Windows 2022 image until the runner-image regression is
+    # resolved upstream.
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install EdgeDriver
+        shell: pwsh
+        run: |
+          $webViewRoot = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\EdgeWebView\Application'
+          $webView = Get-ChildItem -Path $webViewRoot -Filter msedgewebview2.exe -Recurse -File |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $webView) {
+            throw "Microsoft Edge WebView2 runtime was not found under $webViewRoot."
+          }
+          $browserVersion = $webView.VersionInfo.ProductVersion
+          $driverVersion = ($browserVersion -split '\.')[0..2] -join '.'
+          $driverRoot = Join-Path $env:RUNNER_TEMP 'alphonso-msedgedriver'
+          $archive = Join-Path $env:RUNNER_TEMP "msedgedriver-$browserVersion.zip"
+          New-Item -ItemType Directory -Force -Path $driverRoot | Out-Null
+          Write-Host "WebView2 version: $browserVersion"
+          $downloadUrl = "https://msedgedriver.microsoft.com/$browserVersion/edgedriver_win64.zip"
+          Write-Host "Downloading matching EdgeDriver: $downloadUrl"
+          try {
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $archive -ErrorAction Stop
+          } catch {
+            $releaseUrl = "https://msedgedriver.microsoft.com/LATEST_RELEASE_$driverVersion"
+            Write-Warning "Exact EdgeDriver archive was unavailable; trying compatible release lookup: $releaseUrl"
+            $resolvedDriverVersion = (Invoke-WebRequest -Uri $releaseUrl -ErrorAction Stop).Content.Trim()
+            if ([string]::IsNullOrWhiteSpace($resolvedDriverVersion)) {
+              throw "Microsoft EdgeDriver release lookup returned no version for WebView2 $driverVersion."
+            }
+            $downloadUrl = "https://msedgedriver.microsoft.com/$resolvedDriverVersion/edgedriver_win64.zip"
+            Write-Host "Resolved compatible EdgeDriver version: $resolvedDriverVersion"
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $archive -ErrorAction Stop
+          }
+          Expand-Archive -Path $archive -DestinationPath $driverRoot -Force
+          $driver = Get-ChildItem -Path $driverRoot -Filter msedgedriver.exe -Recurse -File | Select-Object -First 1
+          if (-not $driver) {
+            throw "Matching msedgedriver.exe was not found after extracting $archive."
+          }
+          $actualDriverVersion = (& $driver.FullName --version | Select-Object -First 1)
+          Write-Host "EdgeDriver: $actualDriverVersion"
+          if ($actualDriverVersion -notmatch "^(?:MSEdgeDriver|Microsoft Edge WebDriver)\s+$driverVersion\.") {
+            throw "EdgeDriver major/minor/build does not match WebView2 ${browserVersion}: $actualDriverVersion"
+          }
+          "ALPHONSO_E2E_EDGEDRIVER=$($driver.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install tauri-driver
+        shell: pwsh
+        run: cargo install tauri-driver --locked --version "^2"
+
+      - name: Build debug Tauri binary
+        run: npm run tauri build -- --debug --no-bundle
+
+      - name: Run desktop E2E suite
+        run: npm run test:e2e:desktop
 
   desktop-macos:
     name: Tauri Desktop Build (macOS)
@@ -418,6 +523,9 @@ jobs:
 
       - name: Verify agent skill-pack permission matrix is fresh
         run: npm run verify:skill-matrix
+
+      - name: Verify generated Do Not Duplicate inventory is fresh
+        run: npm run verify:dnd-map
 
       # Blocking as of 2026-09-02: the 124-file backlog this check surfaced
       # (see G-T19 in TRUTH_FIRST_EXECUTION_PLAN.md) has been fully documented

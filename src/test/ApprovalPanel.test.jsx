@@ -31,10 +31,21 @@ describe('ApprovalPanel', () => {
     expect(screen.getByText('1 item awaiting approval')).toBeTruthy();
   });
 
+  it('shows resolved count after every gate is decided', () => {
+    render(<ApprovalPanel pendingApprovals={ONE_PENDING} onApprove={onApprove} onReject={onReject} />);
+    fireEvent.click(screen.getByRole('button', { name: /Approve/i }));
+    expect(screen.getByText('1 item resolved')).toBeTruthy();
+  });
+
   it('renders agent name and action type for each item', () => {
     render(<ApprovalPanel pendingApprovals={TWO_PENDING} commandId="cmd-1" onApprove={onApprove} onReject={onReject} />);
     expect(screen.getByText('marcus')).toBeTruthy();
     expect(screen.getByText('miya')).toBeTruthy();
+  });
+
+  it('derives the owner for Project Execution gate actions when metadata is absent', () => {
+    render(<ApprovalPanel pendingApprovals={[{ itemId: 'gate-1', actionType: 'deployment' }]} onApprove={onApprove} onReject={onReject} />);
+    expect(screen.getByText('marcus')).toBeTruthy();
   });
 
   it('calls the injected onApprove with the item id when Approve is clicked', () => {

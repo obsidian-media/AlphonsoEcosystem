@@ -81,6 +81,11 @@ describe('ollama utilities', () => {
       expect(classifyOllamaError(err).code).toBe('cors');
     });
 
+    it('classifies an Ollama 403 as an origin issue', () => {
+      const err = { message: 'Ollama /api/chat returned HTTP 403' };
+      expect(classifyOllamaError(err).code).toBe('cors');
+    });
+
     it('classifies fetch failures as not_running', () => {
       const err = { message: 'Failed to fetch' };
       expect(classifyOllamaError(err).code).toBe('not_running');

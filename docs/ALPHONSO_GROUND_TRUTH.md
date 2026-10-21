@@ -2321,7 +2321,7 @@ Verified: 43 Rust tests in `memory_graph*` (cargo test --lib memory_graph, 22 of
 - *Storage overflow.* A Content Studio job stored the base64 image preview many times; saving it threw `QuotaExceededError` unhandled and the job vanished.
 - *Release builds broken on `main`.* Dependabot's `tauri-plugin-opener` 2.7 bump moved the `tauri` crate to 2.12 while `@tauri-apps/api` stayed on 2.11. Tauri's build refuses a minor mismatch. The desktop build jobs do not run on PRs, so the PR was green. `@tauri-apps/api` and `@tauri-apps/cli` are now on 2.12.
 
-**Numbers as of v2.9.0 (from `scripts/shared/counters.mjs` and CI):** 5,608 unit tests across 410 files (src + bridge); 189 Rust unit tests; 124 Tauri commands across 40 Rust source files; `lib.rs` 877 lines; 205 services; 135 components; 21 hooks.
+**Numbers as of the current priority-hardening branch (from `scripts/shared/counters.mjs` and CI):** 5,614 unit tests across 410 files (src + bridge); 192 Rust unit tests; 124 Tauri commands across 40 Rust source files; `lib.rs` 877 lines; 205 services; 135 components; 21 hooks.
 
 **How 2.9.0 was actually released (2026-10-13).** Tag `v2.9.0` is at `4987705`. `release.yml`'s macOS job failed twice (first the unsigned-signing fallback, fixed in #293; then the bundled-Ollama check), and its publish job needs all three builds, so the workflow never published. The Windows and Linux installers from the rerun were published by hand with a `latest.json` covering those two platforms. macOS is not in the release. Verified after publishing: the release is marked latest, the installer link returns the file, and the updater endpoint serves 2.9.0. Not verified: running the installer, and the 2.8.0 to 2.9.0 auto-update.
 

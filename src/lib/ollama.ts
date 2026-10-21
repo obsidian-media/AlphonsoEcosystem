@@ -170,7 +170,10 @@ export function classifyOllamaError(error: unknown): OllamaErrorClassification {
 
   const text = String(err?.message || error || '').toLowerCase();
 
-  if (text.includes('cors') || text.includes('origin')) {
+  // Ollama commonly answers a Tauri webview with HTTP 403 when the user
+  // started `ollama serve` without OLLAMA_ORIGINS. Treat that response like
+  // the browser-side CORS failure so native callers use the Rust bridge.
+  if (text.includes('cors') || text.includes('origin') || text.includes('http 403')) {
     return {
       code: 'cors',
       label: 'CORS/origin issue',
@@ -205,6 +208,48 @@ export function classifyOllamaError(error: unknown): OllamaErrorClassification {
     label: 'Disconnected',
     message: err?.message || 'Ollama could not be reached.'
   };
+}
+
+function isTransientDesktopOllamaError(error: string | null | undefined): boolean {
+  const text = String(error || '').toLowerCase();
+  return text.includes('connection refused')
+    || text.includes('timed out')
+    || text.includes('request timeout')
+    || text.includes('http 502')
+    || text.includes('http 503')
+    || text.includes('temporarily unavailable');
+}
+
+async function invokeOllamaGenerateWithRetry(
+  endpoint: string,
+  model: string,
+  prompt: string,
+  signal?: AbortSignal
+): Promise<OllamaGenerateProof> {
+  let proof = await invoke<OllamaGenerateProof>('ollama_generate', { endpoint, model, prompt });
+  if (proof?.error && isTransientDesktopOllamaError(proof.error)) {
+    // A user-started Ollama can be reachable before its runner is ready. One
+    // bounded retry removes that launch race without turning a real model
+    // error into an unbounded request loop.
+    await new Promise<void>((resolve) => {
+      if (signal?.aborted) {
+        resolve();
+        return;
+      }
+      const timeoutId = window.setTimeout(() => {
+        signal?.removeEventListener('abort', abort);
+        resolve();
+      }, 750);
+      const abort = () => {
+        window.clearTimeout(timeoutId);
+        resolve();
+      };
+      signal?.addEventListener('abort', abort, { once: true });
+    });
+    if (signal?.aborted) return proof;
+    proof = await invoke<OllamaGenerateProof>('ollama_generate', { endpoint, model, prompt });
+  }
+  return proof;
 }
 
 function mapOllamaModel(model: { name: string; size: number | null; modifiedAt?: string; modified_at?: string; digest: string | null; details: unknown }): OllamaModel {
@@ -469,7 +514,7 @@ export async function generateOllamaStream({ endpoint, model, prompt, onToken, s
     if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
       throw error;
     }
-    const proof = await invoke<OllamaGenerateProof>('ollama_generate', { endpoint: baseUrl, model, prompt });
+    const proof = await invokeOllamaGenerateWithRetry(baseUrl, model, prompt, signal);
     if (!proof || proof.error) throw new Error(proof?.error || 'Desktop bridge generation failed.');
     const text = proof.response || '';
     onToken?.(text, text);
@@ -533,7 +578,7 @@ export async function generateOllamaChatStream({ endpoint, model, messages, onTo
     const promptFallback = messages
       .map((m) => `${m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Assistant' : 'System'}: ${m.content}`)
       .join('\n\n');
-    const proof = await invoke<OllamaGenerateProof>('ollama_generate', { endpoint: baseUrl, model, prompt: promptFallback });
+    const proof = await invokeOllamaGenerateWithRetry(baseUrl, model, promptFallback);
     if (!proof || proof.error) throw new Error(proof?.error || 'Desktop bridge generation failed.');
     const text = proof.response || '';
     onToken?.(text, text);
@@ -581,11 +626,7 @@ export async function generateOllamaResponse({ endpoint, model, prompt, signal }
       throw error;
     }
 
-    const proof = await invoke<OllamaGenerateProof>('ollama_generate', {
-      endpoint: baseUrl,
-      model,
-      prompt
-    });
+    const proof = await invokeOllamaGenerateWithRetry(baseUrl, model, prompt);
     if (!proof || proof.error) {
       throw new Error(proof?.error || 'Desktop bridge generation failed.');
     }

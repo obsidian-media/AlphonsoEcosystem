@@ -30,13 +30,50 @@ export async function waitForPageLoad() {
   });
 }
 
+async function waitForAppDocument() {
+  await browser.waitUntil(
+    async () =>
+      await browser.execute(() => {
+        const href = window.location.href;
+        const isRealAppDocument = href !== 'about:blank' && href !== 'about:blank/';
+        const hasAppRoot = Boolean(
+          document.querySelector('[data-alphonso-shell-ready="true"]') ||
+            document.querySelector('[data-testid="setup-flow-root"]'),
+        );
+        return isRealAppDocument && hasAppRoot;
+      }),
+    {
+      timeout: 60000,
+      timeoutMsg: 'app window loaded, but no Alphonso shell or setup root appeared',
+    },
+  );
+}
+
 /** Every spec file starts on a fresh WebView profile, which would show the
  *  first-run Setup flow. Mark it complete and reload to reach the main shell. */
 export async function enterShell() {
   await waitForPageLoad();
-  await browser.execute(() => {
-    window.localStorage.setItem('alphonso_setup_complete_v1', 'true');
+  await waitForAppDocument();
+
+  const wroteStorage = await browser.execute(() => {
+    try {
+      window.localStorage.setItem('alphonso_setup_complete_v1', 'true');
+      return window.localStorage.getItem('alphonso_setup_complete_v1') === 'true';
+    } catch {
+      return false;
+    }
   });
+
+  if (!wroteStorage) {
+    // WebView2 can reject JS localStorage access while the document is still
+    // transitioning origins. The WebDriver storage endpoint is the supported
+    // protocol-level fallback once the app root is present.
+    await browser.setLocalStorage('alphonso_setup_complete_v1', 'true');
+    const stored = await browser.getLocalStorage('alphonso_setup_complete_v1');
+    if (stored !== 'true' && stored?.value !== 'true') {
+      throw new Error('desktop E2E could not persist the setup-complete flag');
+    }
+  }
   await browser.refresh();
   await $(SHELL_READY).waitForExist({ timeout: 60000 });
 }

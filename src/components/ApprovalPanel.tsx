@@ -8,6 +8,13 @@ const RISK_STYLES: Record<string, { badge: string; dot: string; label: string }>
   low: { badge: 'border-(--success-border) bg-(--success-dim) text-(--success)', dot: 'bg-(--success)', label: 'Low' }
 };
 
+const ACTION_AGENT_FALLBACKS: Record<string, string> = {
+  file_write: 'alphonso',
+  external_api_connection: 'hector',
+  payout_payment_action: 'marcus',
+  deployment: 'marcus'
+};
+
 export interface PendingApprovalItem {
   itemId: string;
   actionType?: string;
@@ -55,9 +62,10 @@ function resolveItem(
     actionType: item.actionType ?? detail?.actionType,
     riskLevel: item.riskLevel ?? detail?.riskLevel
   };
+  const normalizedAction = String(merged.actionType || '').toLowerCase();
   return {
     itemId: item.itemId,
-    agent: merged.agent || 'unknown',
+    agent: merged.agent || ACTION_AGENT_FALLBACKS[normalizedAction] || 'unknown',
     actionType: merged.actionType || 'unknown',
     riskLevel: item.riskLevel || inferRisk(merged),
     reason: item.reason || '',
@@ -79,7 +87,9 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
   const [error, setError] = useState<string | null>(null);
 
   const items = pendingApprovals.map((item) => resolveItem(item, getItemDetail));
-  const allResolved = items.length > 0 && items.every((item) => resolved[item.itemId]);
+  const resolvedCount = items.filter((item) => resolved[item.itemId]).length;
+  const allResolved = items.length > 0 && resolvedCount === items.length;
+  const awaitingCount = items.length - resolvedCount;
 
   const handleApprove = (itemId: string) => {
     try {
@@ -112,7 +122,9 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onR
       <div className="flex items-center gap-2">
         <Shield className="w-4 h-4 text-(--warning)" />
         <span className="text-xs font-bold uppercase tracking-widest text-(--warning)">
-          {items.length} item{items.length !== 1 ? 's' : ''} awaiting approval
+          {awaitingCount > 0
+            ? `${awaitingCount} item${awaitingCount !== 1 ? 's' : ''} awaiting approval`
+            : `${items.length} item${items.length !== 1 ? 's' : ''} resolved`}
         </span>
       </div>
 

@@ -31,6 +31,141 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 
 ## Current evidence and honest baseline
 
+### Codex execution batch — 2026-10-20
+
+The next ten deferred items are being handled in this order: verifier
+completion; native Ollama verification; desktop-CI observation and branch
+protection recommendation; Apple notarization; Windows Authenticode; Cloud
+Voice production gates and device acceptance; CALL-E live verification; Memory
+Graph Phase 4 live Preview; and a coordinated React 19 migration. External
+credentials, production access, Apple hardware/secrets, physical iOS hardware,
+and owner policy decisions remain explicit blockers rather than implied
+completion.
+
+The first slice repaired the Windows verifier's blocked-gitleaks fallback and
+package-manager shim launch. The first post-fix run reached `npm ci` but timed
+out after 300 seconds on Node 25; the repository declares Node 22. No build or
+test result is promoted to verified from that run.
+
+Native Ollama acceptance was attempted on 2026-10-20. The installed
+`ollama.exe` owns port 11434 but did not answer `/api/version` or `/api/tags`
+within five seconds, so no model generation result is recorded. This remains a
+runtime blocker, not a pass.
+
+The local verification toolchain is also incomplete: only Node 25.9.0 is
+installed, no Node 22 runtime was found, and offline npm repair failed with
+`ENOTEMPTY` while cleaning `node_modules/filelist`. `eslint` and `tsc` are not
+currently available from `node_modules/.bin`; no typecheck or lint result is
+promoted to verified from this state.
+
+CALL-E live verification received a read-only preflight on 2026-10-20. The
+indexed graph confirms the native path from MCP confirmation through `run_call`
+and terminal polling, plus the approval-escalation path. The GitHub Actions
+secret-name inventory contains no CALL-E/HeyCall/phone credential, and no secret
+value was read. Native OAuth, OS-keychain restart survival, and a real call
+remain owner-gated; no live call was attempted.
+
+The coordinated React 19 migration started on 2026-10-20. `react` and
+`react-dom` are now aligned at `19.2.8` in `package.json` and the lockfile;
+`scheduler` is `0.27.0`. The existing entry point already uses `createRoot`,
+and static source inspection found no runtime `ReactDOM.render`, `findDOMNode`,
+or component `defaultProps` usage in `src`. Local Vitest execution is not valid
+on this host because the incomplete Node 25 installation is missing
+`@vitest/utils/dist/constants.js`; CI must supply the authoritative typecheck,
+test, build, and E2E evidence before this migration can be marked verified. The
+first full CI run passed 5,614 tests across 410 files but failed on one
+unhandled React 19 render error: `WorkflowOperationsDashboard.test.tsx` mocked
+the array-returning governance service as `{}`. The mock now matches the typed
+service contract; a full rerun is required.
+
+Memory Graph Phase 4 local Rust acceptance completed on 2026-10-20:
+`cargo test memory_graph --lib` finished in 16m37s with 43 passed, 0 failed,
+0 ignored, including pruning rules, schema migration, the 50% guard, dry-run
+behavior, idempotence, orphan handling, inferred-edge refresh, and cycle-safe
+traversal. This does not close the required live Preview against a populated
+desktop database; the frontend focused tests remain invalid on this host for
+the missing Vitest dependency noted above.
+
+A fresh read-only Cloud Voice production check on 2026-10-20 still fails at
+the infrastructure boundary: `voice.obsidianmedia.online` resolves to the
+expected ALB CNAME but has no A/AAAA address, and HTTPS `/ready` cannot connect.
+No AWS mutation or authenticated voice call was attempted. CI Cloud Voice tests
+therefore remain test evidence only; the production and physical-device gates
+remain open.
+
+The dispatched CI run on 2026-10-20 found seven newly published RustSec
+advisories. `rustls` was upgraded to `0.23.46` and the updater to `2.14.0`;
+the remaining zip 4 and Linux notification/opener warnings are upstream-blocked and
+now have per-ID, expiring dispositions in `.github/workflows/ci.yml`. Local
+`cargo audit` reproduced exactly those six remaining IDs after the refresh.
+
+The following CI run also surfaced three newly published certificate-chain
+advisories (`RUSTSEC-2026-0381`, `0382`, and `0383`). The lockfile now carries
+the fixed releases `webpki-roots 1.0.10`, `rustls-webpki 0.103.16`, and
+`webpki-root-certs 1.0.10`; local `cargo audit --deny warnings` again reports
+only the six already-dispositioned zip/zbus IDs. CI confirmation is still
+required.
+
+The same dispatched run passed Rust Tests & Clippy, Test & Build, iOS, Cloud
+Voice, gateway health, secrets, and documentation freshness, but its macOS
+desktop build failed before compilation: the Rust updater crate was refreshed
+to `tauri-plugin-updater 2.14.0` while the npm package remained at `2.10.1`.
+Tauri rejected the mismatch. `package.json` is being aligned to
+`@tauri-apps/plugin-updater ^2.14.0`; the lockfile and a rerun are required
+before this desktop observation can count as successful.
+
+The rerun `39398348621` confirmed the updater fix and passed the full standard
+gate set, Playwright E2E, and Linux/macOS/Windows Tauri builds. Its Windows
+real-binary desktop E2E job did not pass: every spec failed to create a
+WebDriver session with `DevToolsActivePort file doesn't exist`, and GitHub
+cancelled the job after 35 minutes while the 16-spec matrix was still being
+processed. This is now a concrete Windows WebView2/EdgeDriver/tauri-driver
+startup blocker; no desktop E2E success or branch-protection recommendation is
+claimed.
+
+The failure matches the official GitHub Actions runner-images report
+`actions/runner-images#14738`: WebView2/EdgeDriver automation fails
+deterministically on the Windows Server 2025 image now selected by
+`windows-latest`, while the same Tauri flow passes on Windows 2022. The desktop
+E2E job is therefore pinned to `windows-2022` pending upstream resolution, and
+must be rerun before this item can be treated as successful.
+
+The first Windows 2022 rerun failed faster and identified the next setup
+defect: the runner supplied EdgeDriver 155 while the WebView2 runtime used by
+the built Tauri app was `131.0.2903.86`. The CI step now downloads the driver
+for the detected WebView2 version and verifies its first three version
+components before starting tauri-driver. Microsoft documents this matching
+requirement; a fresh desktop run is required for evidence.
+
+The current `main` required-check contexts were read without mutation on
+2026-10-20. They include the standard build, Rust, secret, documentation,
+aggregate gate, and Playwright smoke checks, but not `desktop-e2e`. Keep the
+desktop job visible but non-required until five successful `windows-2022`
+observations establish its startup and skip/failure profile; then request an
+owner-approved branch-protection update adding the exact `desktop-e2e` context.
+
+Apple release preflight was also executed: the GitHub Actions secret inventory
+contains only `APPLE_TEAM_ID` from the six required notarization secrets. The
+release workflow now exposes a `notarized` build output and the publish job
+fails closed unless it is `true`; an unsigned macOS build can no longer be
+published as a production release. A real notarization/Gatekeeper acceptance
+run remains blocked on owner-provided Apple credentials and a real macOS
+artifact check.
+
+Windows signing preflight found no Authenticode certificate/password/identity
+secrets in GitHub Actions and `src-tauri/tauri.conf.json` still declares a null
+certificate thumbprint. The existing updater `.sig` is a separate Tauri update
+signature and does not provide SmartScreen/Authenticode trust. A real Windows
+signing implementation remains owner-gated on certificate procurement,
+secret-handling, and provider choice.
+
+Cloud Voice production recheck is currently blocked: the configured voice CNAME
+points at `alphonso-cloud-voice-1113067864.ca-central-1.elb.amazonaws.com`,
+which has no DNS address from this environment, and the `/ready` HTTPS request
+cannot connect. CI Cloud Voice tests are green but do not prove live service
+health. AWS owner access is required to restore/inspect the ALB/DNS state before
+authenticated voice and physical-device acceptance can proceed.
+
 | Area | Current status | Evidence / limitation |
 |---|---|---|
 | Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |
@@ -974,18 +1109,19 @@ dropped.
   - **Done when:** `npm run verify:dnd-coverage` passes clean and the job
     blocks merges. — met, verified live 2026-09-03.
 
-- [ ] **G-T19b — Auto-generate the "Do Not Duplicate" map (the actual generator)**
+- [x] **G-T19b — Auto-generate the "Do Not Duplicate" map (the actual generator)** — CLOSED 2026-10-20 (PR #304, commit `736c93c`)
   - **Owner:** Echo
-  - **Still genuinely open, not closed by PR #206.** `scripts/verify-dnd-coverage.mjs`
-    is a **checker**: it confirms every file is *mentioned* somewhere in
-    CLAUDE.md (a backticked filename match), it does not derive or write
-    table rows from source. The 124-file backlog it flagged was closed by
-    a human writing the entries by hand (G-T19a), not by a generator. Do
-    not conflate the two — closing G-T19a does not close this item.
+  - **Status note (closed 2026-10-20):** Added `scripts/generate-dnd-map.mjs`,
+    which derives a stable source inventory from `src/services/` and
+    `src/components/`, including statically detected exports, and writes
+    `docs/DO_NOT_DUPLICATE.generated.md`. The hand-maintained purpose table
+    in CLAUDE.md remains authoritative for descriptions; the generated
+    inventory closes the source-existence half without inventing semantics.
+    `npm run verify:dnd-map` is a blocking CI doc-freshness step.
   - **Done when:** a generator (similar in spirit to
     `scripts/generate-skill-permission-matrix.mjs`) derives at least the
     service-existence half of the table from `src/services/` + component
-    exports, with a `--check` mode wired into CI doc-freshness.
+    exports, with a `--check` mode wired into CI doc-freshness. — met.
 
 - [x] **G-T20 — Add a token/cost budget to multi-agent fan-out; surface
   hidden features** — budget half CLOSED 2026-09-20/21, discoverability half
@@ -1648,6 +1784,38 @@ dropped.
 | 2026-08-21 | Closed **I1** for real: live-verified Phase 1a against the actual running Hector Hermes profile (spawned via the `hermes-fleet-scripts` lazy-spawn mechanism, confirmed via Hermes' own `agent.log` that a real chat completion round-tripped through Nous Research inference). Closed **I2** (Hermes Phase 1b hardening): circuit-breaker `configure()` API, rate-limiter/circuit-breaker tuning, audit logging on every call path, `hermes_agents` classified high-risk in the policy gate (with the real "Approval Mode now blocks Hermes by default, no call site passes `approved:true` yet" nuance flagged, not hidden — tracked as a new deferred item in `docs/governance/DEFERRED_WORK.md`), session continuity (`X-Hermes-Session-Id`, derived as a fresh `crypto.randomUUID()` per logical unit of work rather than sent raw — a real CodeQL `js/insecure-randomness` finding caught and fixed mid-review, since the raw threadId/packetId are `Math.random()`-generated and were never previously used in a security-sensitive context — wired into 2 of 9 call sites), and `backend`/`model` exposed on `generateAgentLlmResponse`'s result (also fixed a related bug this surfaced: `boardroomFacilitatorService.ts`'s `generateAgentResponse` was returning the requested model instead of the provider-resolved one). Also flagged, not fixed (tracked as a separate deferred item): `hermes_agents` bypasses Zero-Cost Mode for any saved endpoint, including a non-loopback one — pre-existing since PR 1a, surfaced by a 1b test that documented rather than fixed it. 113 targeted tests across touched files + 525 regression-verified tests across every file importing a touched module, `tsc --noEmit` clean, lint clean. | PR #168; this file's I1/I2 entries above for full per-subsection evidence; `docs/governance/DEFERRED_WORK.md`'s 2026-08-21 entries; `src/test/hermesAgentConnector.test.js` (27), `src/test/connectorCircuitBreakerService.test.js` (17 incl. 3 new), `src/test/policyEnforcementService.test.js` (4 incl. 3 new hermes tests), `src/test/connectorHealthCheckService.test.js` (5 new), `src/test/generateAgentLlmResponse.test.js` (1 new), `src/test/services/boardroomFacilitatorService.test.ts` (1 new). |
 | 2026-09-02 | Doc-drift reconciliation pass, requested after confirming PR #204 (Linux AppImage bundling fix) landed green on `main`. Checked every `[ ]` item in Section G against current code rather than trusting the existing notes, and closed 4 that were stale: **G-T11** (persistence schema/migrations — done since `52f2ad0`, 2026-07-21), **G-OTHER2** (`ios-build.yml` xcodebuild test step — done since PR #146, 2026-08-14), **G-OTHER4** (function coverage floor — raised since 2026-08-20), **G-OTHER5** (Voice OS Python auto-install — has existed since `053c641`, 2026-06-23; the item's own premise was already false when written). Updated status notes (not closed, still genuinely open) on **G-T14** (`lib.rs` split: 2,206→837 lines via PRs #194–#197; CI lint enforcement still missing), **G-T17** (bridge/MCP server structured logging added by PR #203; log-inspection docs still missing), **G-T19** (advisory CI checker wired by PR #201; found 124 undocumented files; the actual generator is not built), **G-T20** (Operator Dashboard nav entry added by PR #202; Agent Pairing/Ecosystem Maturity discoverability and the fan-out budget are still untouched). Also updated `CLAUDE.md` (test-count header, ios-build.yml gap note, Voice OS Python note, a new consolidated "Last verified: 2026-09-02" entry bridging the previously-undocumented 2026-08-14→2026-09-02 gap covering PRs #184–#204) and appended a resolution note to `docs/governance/DEFERRED_WORK.md`'s Linux-installer entry. **Not attempted:** hand-writing the 124 missing "Do Not Duplicate" entries G-T19 surfaced — flagged as real, substantial follow-up work rather than rushed through with low-quality one-liners; building G-T19's own generator is the better use of that effort. | This row; `CLAUDE.md`'s 2026-09-02 entry; `docs/governance/DEFERRED_WORK.md`'s 2026-09-02 entry; `npm run verify:docs` (clean before and after), `npm run verify:dnd-coverage` (124 files, confirmed still failing/advisory), `git log`/`gh pr view` for every PR number cited above. |
 | 2026-09-20/21 | Closed **G-T12** (full-coverage connector-DSL fail-closed audit): traced all 26 registered connectors' real call chains, not just the DSL layer. Found and fixed a genuine gap — `runway` (RunwayML, real paid cloud video generation) had zero policy gate anywhere in its call chain, so Zero-Cost Mode and Approval Mode silently did not apply to it; fixed by classifying it high-risk/paid and wiring the same gate sequence every other paid connector already uses directly into `generateRunwayVideo()`, with 6 new regression tests. Found and closed a second gap in the same PR (see the follow-up row below): `searchBrave()` bypassed the gate entirely — extracted into `braveSearchConnector.ts` matching its siblings' pattern. Found and deferred one smaller gap (documented in `docs/governance/DEFERRED_WORK.md`): `PAID_OR_METERED_CONNECTORS` carries 3 dead entries (`gmail`/`google_drive`/`airtable`) that name no real connector. Also separately fixed a real credential-blast-radius issue named in Section I's I3 prerequisite: Miya and Alphonso's Hermes profiles shared the byte-for-byte identical `api_server` key (in both `config.yaml` and `.env`), and Marcus's was a corrupted near-duplicate of the same string — rotated all three to fresh, independent keys (user explicitly authorized editing these live daemon config files, overriding this plan's own "never write to a Hermes profile's config" guardrail, since the guardrail's default posture was correctly cautious but the specific fix was reviewed and approved). `npx tsc --noEmit` clean after both changes; the new Runway tests could not be executed locally — this dev machine's vitest harness produced no output/exit 1 even for a trivial, completely unmodified test file run through the identical harness, confirming this is the machine's own pre-existing instability (see this file's and `CLAUDE.md`'s many prior notes on the same constraint), not a regression from this change; CI is the first real execution. | This row; G-T12's entry above for full detail; `docs/governance/DEFERRED_WORK.md`'s 2026-09-20/21 entries; `src/services/runwayService.ts`, `src/services/policyEnforcementService.ts`, `src/features/content-catalyst/services/contentCatalystService.js`, `src/test/runwayService.test.js` (6 new tests). |
-| 2026-09-20/21 | Closed the budget half of **G-T20**: Boardroom `@mention` fan-out had no cost/token ceiling beyond the existing 3-hop `MAX_CHAIN_DEPTH` cap. Added `src/services/fanOutBudgetService.ts` (`createFanOutBudgetTracker`, `DEFAULT_FANOUT_CHAR_BUDGET = 40000`) using total prompt+response character count as the token proxy — the same approximation `streamingService.ts` already uses for its own live counter — since none of the 4 LLM provider paths return real token-usage figures today. Wired into `BoardroomChatView.tsx`'s chain loop alongside the existing depth check, with a matching escalation message. 8 new tests (7 unit, 1 integration proving the budget — not the depth cap — stops a single oversized-reply hop). `npx tsc --noEmit` clean; tests not executed locally, same documented vitest-harness failure as the G-T12 row above. Discoverability half of G-T20 was already downgraded to optional polish on 2026-09-03 — not re-touched this pass. | G-T20's entry above; `src/services/fanOutBudgetService.ts`, `src/components/BoardroomChatView.tsx`, `src/test/fanOutBudgetService.test.js` (7 new), `src/test/boardroomChatView.test.jsx` (1 new). |
+| 2026-10-20 | Codex priority-hardening branch: reconciled AI workspace-command approval and Boardroom/Hermes approval evidence; strengthened Cloud Voice ECS pre-deploy checks; added Ollama HTTP-403 origin classification plus one bounded startup-race retry; wired the real desktop E2E suite into Windows CI; and made partial Apple signing configuration fail closed. | Commits `2d2e21d`, `ae67974`, `e8637d2`, `74f972c`, `4d50090`; targeted approval tests 69 passed, Cloud Voice tests 72 passed, Ollama tests 20 passed, `npx tsc --noEmit` passed, workflow YAML parsed, and `verify-doc-counts.mjs` passed. Live AWS/Supabase/device/notarization evidence remains owner-gated and is not claimed. |
+| 2026-10-20 | Codex began the next deferred-work batch: made runtime starts single-flight across command and autostart paths; corrected approval-panel resolved-count and source-agent display; and removed style/script blocks from research snippets. | `cargo test --lib runtime_manager` — 23 passed; `npx vitest run src/test/ApprovalPanel.test.jsx src/test/hectorResearchService.test.js` — 51 passed; `npx tsc --noEmit` passed. |
+| 2026-10-20 | Codex continued the batch: Project Execution approval panels now derive owners for known gate actions, eliminating the observed `unknown` label for current and legacy requests. | `npx vitest run src/test/ApprovalPanel.test.jsx src/test/agentRunnerService.test.js src/test/ProjectExecutionMode.test.tsx` — 41 passed; `npx tsc --noEmit` passed. Durable gate-owner metadata remains a follow-up. |
+| 2026-10-20 | Codex continued the batch: Voice OS installation status now requires the managed venv and declared pip dependencies, rather than reporting Installed when only system Python exists. | `cargo test --lib runtime_manager` — 24 passed; `npx vitest run src/test/voiceView.test.jsx src/test/runtimeManagerService.test.js` — 26 passed; `npx tsc --noEmit` passed. Real Voice OS startup remains untested. |
+| 2026-10-20 | Codex continued the batch: Orchestrator WhatsApp status now reads the authentication result's `ok` field, preventing fresh profiles from displaying a false Connected state. | Focused `OrchestratorView` regression test; live WhatsApp inbound polling remains untested. |
+| 2026-10-20 | Codex continued the batch: Boardroom's active-generation indicator now names the agent actually being queried instead of always saying Alphonso. | `npx vitest run src/test/boardroomChatView.test.jsx src/test/services/boardroomFacilitatorService.test.ts` — 49 passed; live multi-agent generation remains untested. |
+| 2026-10-20 | Codex continued the batch: Content Studio brief generation now records and surfaces model failures instead of silently presenting the built-in fallback as a successful brief. | `npx vitest run src/test/contentCatalystService.test.js src/test/features/content-catalyst/DraftPreview.test.jsx src/test/features/content-catalyst/ContentCatalystWorkspace.test.jsx` — 58 passed; live Ollama brief generation remains untested. |
+| 2026-10-20 | Codex continued the batch: AI Runtime Manager tool cards now use opaque theme surfaces for deterministic contrast, and the targeted axe assertion is active again. | Fresh `npx playwright test e2e/a11y.spec.js -g "AI Runtime Manager"` passed after reproducing the prior 8-node contrast failure; `npx tsc --noEmit` pending final slice verification. |
+| 2026-10-20 | Codex continued the batch: Jose's desktop approval path now asserts the visible execution result and expected queued/no-live-adapter output after approval. | `e2e-desktop/specs/jose-approval.e2e.mjs` updated; real desktop execution remains environment-gated. |
+| 2026-10-20 | Codex completed G-T19b in PR #304 (`736c93c`): added a source-backed Do Not Duplicate inventory generator with static export detection and a blocking `--check` CI step. | `npm run verify:dnd-map`, `npm run verify:dnd-coverage`, and `npm run verify:docs` passed; `docs/DO_NOT_DUPLICATE.generated.md` committed. |
 | 2026-09-20/21 | Follow-up in the same PR, requested explicitly (user asked whether docs were fully updated and whether more work could land in the same branch before merge): (1) found and fixed a real gap in this session's own doc updates — `npm run verify:docs` (a required CI gate) was failing after the first two commits because the new `fanOutBudgetService.ts` + its test bumped the real services/test-file counts (201→202→203, 399→400→401) and the hardcoded counts in `README.md`/`AGENTS.md` were never updated to match; also fixed a third stale-count line in `AGENTS.md`'s "Project Identity" summary that the checker's own regex patterns don't cover (a live/current fact, not a dated historical "What's New" entry, so left correct on principle even though not CI-enforced). Verified `npm run verify:docs`/`verify:dnd-coverage` both clean after. (2) Closed the `searchBrave()` gap flagged-but-deferred in the G-T12 row above (see that row's correction and the "closed" update to G-T12's own entry higher in this file) — extracted into `src/services/connectors/braveSearchConnector.ts`, matching tavily/perplexity/deepseek's exact `evaluatePolicyGate` pattern, with 12 new tests. `npx tsc --noEmit` and `eslint` clean on every file touched across all 3 commits in this PR; none of the new tests could be executed locally (same documented vitest-harness failure); CI is the first real execution of all of them. | This row; `docs/governance/DEFERRED_WORK.md`'s updated searchBrave entry; `README.md`, `AGENTS.md`, `src/services/connectors/braveSearchConnector.ts`, `src/services/hectorResearchService.js`, `src/test/connectors/braveSearchConnector.test.js` (12 new), `CLAUDE.md`'s Do Not Duplicate table. |
 
+- 2026-10-20: Corrected React 19 CI run `39500638718` passed unit tests, coverage, web build, bundle size, Rust, secrets, docs, gateway, iOS, and Playwright. Its Windows desktop E2E job failed at `Install EdgeDriver`; the workflow was using the full WebView2 patch version for the download URL after deriving the compatible first-three-component version. The workflow now resolves `LATEST_RELEASE_<major.minor.build>`, downloads the resolved driver, and keeps the existing version validation. A fresh full run is required before React migration or desktop CI observation can close.
+- 2026-10-20: Replacement CI run `39504052015` exposed a separate high-severity Vite advisory (`GHSA-587h-7wmj-h5pm`) at locked Vite `8.0.16`; `npm audit fix --package-lock-only --ignore-scripts` updated the lockfile to Vite `8.3.4`, and local high-severity audit is clean. Fresh CI verification remains required before the desktop fix can close.
+- 2026-10-20: Run `39504981227` passed standard verification but the corrected EdgeDriver step failed at PowerShell parse time because `$browserVersion:` was not delimited. Changed the message to `${browserVersion}:`; another CI run is required before desktop E2E can close.
+- 2026-10-20: Desktop run `39508050144` showed `LATEST_RELEASE_131.0.2903` is unavailable even though the exact `131.0.2903.86` EdgeDriver archive returns HTTP 200. Changed CI to use the exact detected WebView2 archive first and retain a fallback lookup; fresh desktop evidence is still required.
+- 2026-10-20: Run `39510208290` proved the exact EdgeDriver archive and executable work, reporting `Microsoft Edge WebDriver 131.0.2903.86`; only the legacy-prefix regex failed. Updated validation to accept both current and legacy labels. Desktop test execution still needs a fresh run.
+- 2026-10-20: **Desktop CI runtime finding.** Run `39512142677` reached the real Tauri suite after EdgeDriver setup succeeded, then recorded `3 passed, 13 failed` on the shared `enterShell()` helper because WebView2 denied JavaScript `localStorage` access for the current document. The helper now waits for an actual Alphonso root, verifies storage persistence, and uses WebDriver storage as a fallback. Required evidence remains a fresh green desktop job.
+- 2026-10-21: **Native Ollama acceptance recheck.** The installed client reports `0.33.1`, but no listener exists on `127.0.0.1:11434` and the bounded `/api/version` probe is actively refused. Native model-call and desktop Ollama evidence remains absent; do not mark the runtime item complete without a running local server and model.
+- 2026-10-21: **CI bounded-runtime follow-up.** Run `39517091682` again left Test & Build active while independent gates completed, delaying the desktop dependency chain. The primary Test & Build job now has a 45-minute timeout; this is a liveness guard, not desktop-pass evidence. A fresh run must still reach and pass the real desktop suite.
+- 2026-10-21: **CI prerequisite liveness completion.** Rust Tests & Clippy also gates desktop jobs and now has the matching 45-minute timeout. Both prerequisite bounds are liveness guards only; fresh green desktop evidence is still required.
+- 2026-10-21: **Governance gate liveness completion.** The upstream `governance-gate` workflow now has a 45-minute timeout around `scripts/verify.sh`; otherwise the main CI run can remain queued before its own bounded jobs start. This is a liveness guard, not desktop-pass evidence.
+- 2026-10-21: **Governance gate stale-run cancellation.** Branch-scoped concurrency cancellation was added after observing superseded governance gates remain active across commits. This keeps current-head verification from waiting behind stale runs; it does not replace the required green desktop evidence.
+- 2026-10-21: **Desktop CI smoke-spec setup correction.** Run `39518466140` reached the real Windows suite and passed 14/16 spec files, but the smoke spec's duplicate `before all` setup still read `window.localStorage` directly and failed with WebView2 error 18, bypassing the hardened shared helper. The smoke spec now uses `enterShell()`; the failed run is retained as evidence and a fresh run is required.
+- 2026-10-21: **Desktop CI Jose assertion correction.** Run `39522981820` passed the corrected smoke suite and 15/16 desktop spec files; the remaining Jose failure asserted the Approvals-tab `Execution Results` panel while the test was still on Packets. The test now switches back to Approvals before asserting the queued/no-live-adapter result; a fresh run is required.
+- 2026-10-21: **Desktop CI Jose tab synchronization tightened.** Run `39527088509` again passed 15/16 desktop spec files; the packet reached `executed`, but the test timed out observing `Execution Results` after its tab click. The test now waits for the exact Approvals tab's `aria-pressed=true` state before asserting the result panel. Fresh governance and full desktop verification are required.
+- 2026-10-21: **Desktop CI Jose result-panel wait bounded.** Run `39531450328` reproduced the same isolated result-panel observation failure after the Approvals tab became active; 15/16 desktop spec files passed and the packet reached `executed`. The result-panel wait now uses the same 60-second bound as packet execution to cover asynchronous UI completion. Fresh governance and full desktop verification are required.
+- 2026-10-21: **Desktop CI Jose execution feedback made observable.** Run `39535487818` showed the 60-second panel wait still failed while the packet reached `executed` and 15/16 specs passed. `OrchestratorView` now renders immediate `Executing approved packet…` feedback and replaces it with the durable final result; the Jose test waits for the final queued summary. Fresh governance and full desktop verification are required.
+- 2026-10-21: **Desktop CI Jose Execute locator scoped.** Run `39539686231` showed the global `Execute` selector could click a different active packet when more than one handoff was present; the Jose packet still reached `executed`, while its result panel was absent. The test now scopes the click to the approved IANA packet card. The same run had one separate Project Execution stale-element failure; fresh governance and full desktop verification are required.
+- 2026-10-21: **Desktop CI Jose diagnostic evidence added.** Run `39543100340` passed Project Execution and 15/16 desktop specs, but Jose still lacked the result panel after the scoped click. The test now includes active-tab and visible-main-text context when the panel assertion times out; fresh governance and full desktop verification are required.
+- 2026-10-21: **Desktop CI Jose result-label casing corrected.** Run `39546580262` showed the panel and queued result rendered correctly as `EXECUTION RESULTS`; the test searched case-sensitively for `Execution Results`. The assertion now matches case-insensitively; fresh governance and full desktop verification are required.
+- 2026-10-21: **Desktop CI Jose execution evidence verified.** Run `39549859072` passed all prerequisite gates and all 16 Windows real-Tauri desktop spec files, including all three Jose approval tests. The queued execution result and case-insensitive `EXECUTION RESULTS` assertion are verified against the built app.
+- 2026-10-21: **Desktop CI exact-head verification completed.** Run `39553613636` passed every required gate for `ed778e9`, including frontend build/test/coverage, Rust checks, Linux and macOS builds, Windows packaging, Playwright, and the Windows real-Tauri suite. Jose's queued execution-result evidence is verified on the pushed branch.
+- 2026-10-21: **Native Ollama acceptance rechecked.** `ollama list` found the installed client but could not start its local server because Ollama reported access denied while opening/rotating files under its local log directory, then timed out. The managed Voice OS venv is absent. Native model-call and live Voice OS acceptance remain owner-gated; see `audits/2026-10-21_Codex_NativeOllama_Audit.md`.
+- 2026-10-21: **Native Ollama acceptance rechecked.** `ollama list` found the installed client but could not start its local server because Ollama reported access denied while opening/rotating files under its local log directory, then timed out. The managed Voice OS venv is absent. Native model-call and live Voice OS acceptance remain owner-gated; see `audits/2026-10-21_Codex_NativeOllama_Audit.md`. Governance gate `39558985306` passed for the pushed documentation commit `72974b3`.

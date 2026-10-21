@@ -7,7 +7,7 @@
 > **v2.9.0** — Local-first AI desktop companion with 9 agents, 26 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.9.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-5608%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
+[![Tests](https://img.shields.io/badge/tests-5614%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
@@ -149,7 +149,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery and a PIN-authenticated local WebSocket (off until you enable mobile pairing on the desktop). Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **189 Rust unit tests across 40 modules** — 124 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **193 Rust unit tests across 40 modules** — 124 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 

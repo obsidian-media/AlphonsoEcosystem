@@ -141,6 +141,28 @@ describe('BoardroomChatView', () => {
     expect(facilitator.generateAgentResponse).not.toHaveBeenCalledWith(expect.objectContaining({ agentId: 'alphonso' }));
   });
 
+  it('shows the mentioned agent as thinking while that agent is generating a reply', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    let resolveResponse;
+    facilitator.generateAgentResponse.mockImplementation(() => new Promise((resolve) => { resolveResponse = resolve; }));
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Thinking Identity Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Thinking Identity Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector investigate this' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    expect(await screen.findByText('Hector is thinking…')).toBeInTheDocument();
+    expect(screen.queryByText('Alphonso is thinking…')).not.toBeInTheDocument();
+
+    resolveResponse({ ok: true, text: 'Hector reply' });
+    expect(await screen.findByText('Hector reply')).toBeInTheDocument();
+  });
+
   it('requests approval via requestApproval before delegating to a Hermes-backed agent, and passes approved:true through once granted (Phase 1b gap fix)', async () => {
     localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider: 'hermes', model: 'hermes-agent' } }));
     localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));

@@ -110,18 +110,9 @@ test.describe('Alphonso accessibility (axe-core) — full WCAG sweep, non-Setup 
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
 
-  // fixme, not skip: this genuinely fails today. Real finding, not a flake --
-  // 8 nodes fail color-contrast where text-3/text-4/agent-color tokens sit
-  // on top of the *-glow/-muted alpha-overlay tokens (--accent-muted,
-  // --agent-echo-glow, --agent-nova-glow). Those are translucent (12-30%
-  // alpha), so the rendered contrast depends on whatever surface they
-  // composite over -- unlike the solid bg-[var(--accent)]/text-white pairs
-  // fixed elsewhere this pass, a blind token bump here can't be verified
-  // correct without re-checking every card that uses these overlays, in
-  // both themes. See docs/governance/DEFERRED_WORK.md's 2026-09-08
-  // "Full WCAG sweep" entry for the exact violation data. Un-skip once
-  // that's fixed for real.
-  test.fixme('AI Runtime Manager (System space)', async ({ page }) => {
+  // Runtime tool cards use an opaque theme surface so text contrast stays
+  // deterministic across the accent glow behind the page and both themes.
+  test('AI Runtime Manager (System space)', async ({ page }) => {
     await page.getByTestId('space-pill-system').click();
     await page.getByRole('button', { name: 'Runtimes' }).click();
     await expect(page.getByRole('heading', { name: 'AI Runtime Manager' })).toBeVisible({ timeout: 10000 });
