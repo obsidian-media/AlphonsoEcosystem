@@ -117,8 +117,9 @@ jobs:
       # exactly what happened when `spin 0.9.8` was yanked. The gate still fails
       # the job on advisories; it just no longer masks the real quality checks.
       #
-      # Truth-First plan B1 (2026-07-25): 17 RUSTSEC advisories are explicitly
-      # ignored below by ID, each triaged and confirmed upstream-blocked, not
+      # Truth-First plan B1 (2026-07-25): reviewed RUSTSEC advisories are
+      # ignored by ID via .cargo/audit.toml (read by scripts/cargo-audit.sh),
+      # each triaged and confirmed upstream-blocked, not
       # ignored blind. All 17 are "unmaintained"/"unsound" warnings, not
       # exploitable CVE-severity vulnerabilities. Two independent chains:
       #   - atk/atk-sys/gdk/gdk-sys/gdkwayland-sys/gdkx11/gdkx11-sys/gtk/
@@ -161,32 +162,11 @@ jobs:
       # by 2026-11-20; any other advisory still fails this gate.
       - name: Security audit (cargo)
         if: always()
+        # The ignore list lives in .cargo/audit.toml, with the reason for each
+        # ID. The weekly security-audit workflow runs the same script.
         run: |
-          cargo install cargo-audit
-          cargo audit --file src-tauri/Cargo.lock --deny warnings \
-            --ignore RUSTSEC-2024-0413 `# atk: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0416 `# atk-sys: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0412 `# gdk: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0418 `# gdk-sys: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0411 `# gdkwayland-sys: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0417 `# gdkx11: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0414 `# gdkx11-sys: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0415 `# gtk: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0420 `# gtk-sys: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0419 `# gtk3-macros: unmaintained, gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2024-0370 `# proc-macro-error: unmaintained, gtk3-tray-icon chain (via glib-macros)` \
-            --ignore RUSTSEC-2024-0429 `# glib: unsound (GH Dependabot #3), gtk3-tray-icon chain` \
-            --ignore RUSTSEC-2025-0081 `# unic-char-property: unmaintained, urlpattern/tauri-utils chain` \
-            --ignore RUSTSEC-2025-0075 `# unic-char-range: unmaintained, urlpattern/tauri-utils chain` \
-            --ignore RUSTSEC-2025-0080 `# unic-common: unmaintained, urlpattern/tauri-utils chain` \
-            --ignore RUSTSEC-2025-0100 `# unic-ucd-ident: unmaintained, urlpattern/tauri-utils chain` \
-            --ignore RUSTSEC-2025-0098 `# unic-ucd-version: unmaintained, urlpattern/tauri-utils chain` \
-            --ignore RUSTSEC-2026-0367 `# zip 4.6.1: updater pins zip ^4; signature verified before extraction; recheck 2026-11-20` \
-            --ignore RUSTSEC-2026-0368 `# zip 4.6.1: updater pins zip ^4; signature verified before extraction; recheck 2026-11-20` \
-            --ignore RUSTSEC-2026-0369 `# zip 4.6.1: updater pins zip ^4; signature verified before extraction; recheck 2026-11-20` \
-            --ignore RUSTSEC-2026-0370 `# zvariant 5.13.1: unmaintained Linux notification/opener transitive dependency; recheck 2026-11-20` \
-            --ignore RUSTSEC-2026-0371 `# zbus_names 4.3.4: unmaintained Linux notification/opener transitive dependency; recheck 2026-11-20` \
-            --ignore RUSTSEC-2026-0372 `# zvariant_derive 5.13.1: unmaintained Linux notification/opener transitive dependency; recheck 2026-11-20`
+          cargo install cargo-audit --locked
+          bash scripts/cargo-audit.sh
         continue-on-error: false
 
       - name: Rust coverage (tarpaulin)

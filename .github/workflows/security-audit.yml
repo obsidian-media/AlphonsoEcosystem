@@ -1,0 +1,53 @@
+name: Security Audit (weekly)
+
+# New advisories get published against dependencies that have not changed.
+# Without a scheduled run they only surface when an unrelated PR happens to
+# touch a lockfile and its audit step turns red. This workflow runs the same
+# two gates CI runs (npm and cargo) every Monday, and on demand, so a new
+# advisory shows up as its own failed run instead.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-audit
+  cancel-in-progress: true
+
+jobs:
+  npm:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      # npm audit reads package-lock.json; no install is needed.
+      - name: Security audit (npm)
+        run: node scripts/verify-npm-audit.mjs
+
+  cargo:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      # Same script and ignore list (.cargo/audit.toml) as the CI Rust job.
+      - name: Security audit (cargo)
+        run: bash scripts/cargo-audit.sh
