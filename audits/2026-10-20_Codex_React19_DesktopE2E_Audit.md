@@ -117,3 +117,8 @@ Run `39549859072` completed the authoritative verification: all prerequisite
 gates passed and the Windows real-Tauri suite reported 16 of 16 spec files
 passed, including all three Jose approval tests. The case-insensitive result
 panel assertion is verified against the built desktop application.
+
+Exact-head CI `39553613636` then passed every required gate for `ed778e9`,
+including frontend build/test/coverage, Rust checks, Linux and macOS builds,
+Windows packaging, Playwright, and the Windows real-Tauri suite. This closes
+the Jose desktop-E2E verification on the pushed branch.
