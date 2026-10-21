@@ -83,3 +83,15 @@ failure after the tab became active; 15 of 16 spec files passed again. The
 packet reached `executed`, so the result-panel wait is now bounded at 60
 seconds, matching the execution-state wait, to account for asynchronous UI
 completion before another fresh run.
+
+Run `39535487818` showed the 60-second wait still could not observe the panel;
+the packet nevertheless reached `executed` and 15/16 spec files passed. The
+root cause is now addressed in `OrchestratorView`: execution feedback is
+rendered immediately as `Executing approved packet…` and replaced by the
+durable final result. The Jose test now waits for the final queued summary.
+Fresh governance and full CI verification are required.
+
+Local targeted typecheck/Vitest execution is unavailable in this worktree
+because the existing `node_modules` is incomplete (`tsc` cannot resolve its
+binary and `@vitest/utils/dist/constants.js` is missing); clean CI installs
+remain the authoritative check for the touched TypeScript component.

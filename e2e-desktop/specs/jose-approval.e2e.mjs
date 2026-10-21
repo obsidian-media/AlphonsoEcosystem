@@ -61,6 +61,10 @@ describe('Alphonso desktop Jose approvals', () => {
       timeout: 60000,
       timeoutMsg: 'the executed packet did not produce a visible result panel',
     });
+    await browser.waitUntil(async () => (await mainText()).includes('Task queued — no live runtime adapter'), {
+      timeout: 60000,
+      timeoutMsg: 'the execution result panel did not settle with the queued result',
+    });
     const output = await mainText();
     expect(output).toContain('Execution Results');
     expect(output).toContain('Task queued — no live runtime adapter');

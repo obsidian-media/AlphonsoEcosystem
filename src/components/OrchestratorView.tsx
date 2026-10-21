@@ -579,6 +579,18 @@ export function OrchestratorView({
     }
     setExecutingPacketIds((prev) => new Set(prev).add(packetId));
     const startedAt = Date.now();
+    setExecutionResults((prev) => [
+      {
+        id: packetId,
+        title: packet.title,
+        packetType: packet.packetType,
+        ok: false,
+        setupRequired: false,
+        summary: 'Executing approved packet…',
+        ts: startedAt
+      },
+      ...prev.filter((item) => item.id !== packetId).slice(0, 9)
+    ]);
     const result = await executeApprovedPacket(packet as AgentPacket);
     setExecutingPacketIds((prev) => { const next = new Set(prev); next.delete(packetId); return next; });
     appendSessionEvent({
@@ -600,7 +612,7 @@ export function OrchestratorView({
       : (result?.error || 'Execution failed — check session events for details.');
     setExecutionResults((prev) => [
       { id: packetId, title: packet.title, packetType: packet.packetType, ok: Boolean(result?.ok), setupRequired: Boolean(result?.setupRequired), summary, ts: startedAt },
-      ...prev.slice(0, 9)
+      ...prev.filter((item) => item.id !== packetId).slice(0, 9)
     ]);
     onJoseStateChange?.(result?.ok ? 'task_complete' : 'warning', result?.ok ? 'Approved packet executed.' : 'Packet execution failed.');
     refreshAll();
