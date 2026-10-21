@@ -107,3 +107,8 @@ Run `39543100340` passed Project Execution and 15 of 16 desktop specs, but
 Jose still lacked the result panel after the scoped click. The next run now
 reports the active tab and visible main text when the panel assertion times
 out, so the remaining UI-state issue can be fixed from direct evidence.
+
+Run `39546580262` confirmed the panel and queued result were rendered. The
+remaining failure was assertion casing: the UI renders `EXECUTION RESULTS`,
+while the test searched case-sensitively for `Execution Results`. The test
+now matches the panel label case-insensitively; a fresh green run is required.

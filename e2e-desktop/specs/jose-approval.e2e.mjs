@@ -58,7 +58,7 @@ describe('Alphonso desktop Jose approvals', () => {
       timeoutMsg: 'the Approvals tab did not become active after packet execution',
     });
     try {
-      await browser.waitUntil(async () => (await mainText()).includes('Execution Results'), {
+      await browser.waitUntil(async () => /execution results/i.test(await mainText()), {
         timeout: 60000,
         timeoutMsg: 'the executed packet did not produce a visible result panel',
       });
@@ -72,7 +72,7 @@ describe('Alphonso desktop Jose approvals', () => {
       timeoutMsg: 'the execution result panel did not settle with the queued result',
     });
     const output = await mainText();
-    expect(output).toContain('Execution Results');
+    expect(output).toMatch(/execution results/i);
     expect(output).toContain('Task queued — no live runtime adapter');
   });
 });
