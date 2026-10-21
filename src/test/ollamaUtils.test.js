@@ -1,3 +1,9 @@
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(),
+  isTauri: vi.fn(() => false)
+}));
+
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import {
   chooseDefaultModel,
   classifyOllamaError,
@@ -155,6 +161,67 @@ describe('ollama utilities', () => {
           messages: [{ role: 'user', content: 'hi' }]
         })
       ).rejects.toThrow('model error');
+    });
+
+    describe('desktop fallback when the window is refused', () => {
+      const messages = [
+        { role: 'system', content: 'be brief' },
+        { role: 'user', content: 'hi' },
+        { role: 'assistant', content: 'hello' },
+        { role: 'user', content: 'and again' }
+      ];
+
+      beforeEach(() => {
+        isTauri.mockReturnValue(true);
+        invoke.mockReset();
+        global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => ({}) });
+      });
+
+      afterEach(() => {
+        isTauri.mockReturnValue(false);
+      });
+
+      it('sends the real chat turns to ollama_chat instead of a flattened prompt', async () => {
+        invoke.mockResolvedValue({ response: 'from backend', error: null });
+        const tokens = [];
+
+        const result = await generateOllamaChatStream({
+          endpoint: 'http://localhost:11434/',
+          model: 'llama3.2:3b',
+          messages,
+          onToken: (_tok, full) => tokens.push(full)
+        });
+
+        expect(result).toBe('from backend');
+        expect(tokens).toEqual(['from backend']);
+        expect(invoke).toHaveBeenCalledTimes(1);
+        expect(invoke).toHaveBeenCalledWith('ollama_chat', {
+          endpoint: 'http://localhost:11434',
+          model: 'llama3.2:3b',
+          messages
+        });
+      });
+
+      it('retries once when the backend reports a transient startup error', async () => {
+        invoke
+          .mockResolvedValueOnce({ response: '', error: 'connection refused' })
+          .mockResolvedValueOnce({ response: 'second try', error: null });
+
+        const result = await generateOllamaChatStream({ endpoint: 'http://localhost:11434', model: 'm', messages });
+
+        expect(result).toBe('second try');
+        expect(invoke).toHaveBeenCalledTimes(2);
+        expect(invoke.mock.calls.every(([command]) => command === 'ollama_chat')).toBe(true);
+      });
+
+      it('surfaces a real model error from the backend', async () => {
+        invoke.mockResolvedValue({ response: '', error: "model 'm' not found" });
+
+        await expect(
+          generateOllamaChatStream({ endpoint: 'http://localhost:11434', model: 'm', messages })
+        ).rejects.toThrow("model 'm' not found");
+        expect(invoke).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });

@@ -777,6 +777,7 @@ pub fn run() {
       check_ollama_runtime,
       ollama_list_models,
       ollama_generate,
+      ollama_chat,
       record_restore_point,
       write_handoff_export_file,
       workspace::write_workspace_text_file,
