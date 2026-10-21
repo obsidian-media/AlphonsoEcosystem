@@ -91,6 +91,13 @@ rendered immediately as `Executing approved packet…` and replaced by the
 durable final result. The Jose test now waits for the final queued summary.
 Fresh governance and full CI verification are required.
 
+Run `39539686231` exposed the remaining locator defect: the global `Execute`
+selector could target another active packet when the isolated profile contained
+more than one handoff. The Jose test now scopes the click to the approved IANA
+packet card. That run also recorded one independent Project Execution stale
+element failure; it is not conflated with the Jose fix and will be triaged if
+it repeats.
+
 Local targeted typecheck/Vitest execution is unavailable in this worktree
 because the existing `node_modules` is incomplete (`tsc` cannot resolve its
 binary and `@vitest/utils/dist/constants.js` is missing); clean CI installs

@@ -41,7 +41,7 @@ describe('Alphonso desktop Jose approvals', () => {
     await buttonByText('packets').click();
     await browser.waitUntil(async () => (await mainText()).includes('ACTIVE HANDOFFS'));
     expect(await mainText()).toMatch(/used for\. approved jose → hector/);
-    const execute = await exact('Execute');
+    const execute = await $('//main//div[div[contains(normalize-space(.), "Research what the IANA example domain is used for.")] and .//span[normalize-space(.)="approved"]]//button[normalize-space(.)="Execute"]');
     await execute.waitForClickable();
     await execute.click();
     await browser.waitUntil(async () => /used for\. executed jose → hector/.test(await mainText()), {
