@@ -46,3 +46,19 @@ The Rust quality prerequisite now has the same 45-minute bound because desktop j
 The separate `governance-gate` workflow, which runs `scripts/verify.sh` before branch CI, now also has a 45-minute bound. Without this, the main CI workflow can remain queued even when its own prerequisite jobs are bounded.
 
 Superseded governance-gate runs were also observed remaining active across branch commits. The workflow now uses branch-scoped concurrency cancellation so the current commit's gate is not delayed by stale gate runs.
+
+## Fresh desktop failure and harness correction
+
+Run `39518466140` reached the real Windows desktop suite after all standard
+gates, EdgeDriver setup, and Tauri launch succeeded. The suite completed 14
+spec files successfully and failed only the smoke spec's `before all` hook:
+`window.localStorage` was accessed directly from
+`e2e-desktop/specs/smoke.e2e.mjs:42`, producing WebView2 error 18
+(`Access is denied for this document`). The shared `enterShell()` helper had
+already been hardened, but the smoke spec had its own duplicate setup path and
+therefore bypassed that fix.
+
+The smoke spec now imports and uses `enterShell()`, removing the duplicate
+direct-storage setup. The current run is not a green desktop result: its
+Windows desktop job remains failed because it used the pre-fix commit. A fresh
+run after this correction is required.

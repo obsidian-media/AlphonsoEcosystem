@@ -4,6 +4,8 @@
 //
 // Navigation targets mirror SPACES in src/components/Sidebar.tsx. A page
 // added there without being added here is not covered by this suite.
+import { enterShell } from '../helpers.mjs';
+
 const SPACES = [
   { id: 'home', items: ['mission', 'session_history'] },
   { id: 'work', items: ['project_execution', 'content', 'automation', 'miya'] },
@@ -36,14 +38,7 @@ describe('Alphonso desktop smoke', () => {
     // Fresh profile means the first-run Setup flow would show. That flow has
     // its own spec to earn; here we mark it complete and reload so the main
     // shell is what gets tested.
-    await browser.waitUntil(async () => (await browser.execute(() => document.readyState)) === 'complete', {
-      timeoutMsg: 'app window never finished loading',
-    });
-    await browser.execute(() => {
-      window.localStorage.setItem('alphonso_setup_complete_v1', 'true');
-    });
-    await browser.refresh();
-    await $(SHELL_READY).waitForExist({ timeout: 60000 });
+    await enterShell();
     await browser.execute(() => {
       window.__alphonsoE2eErrors = [];
       window.addEventListener('error', (event) => {
