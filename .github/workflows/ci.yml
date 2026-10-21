@@ -36,6 +36,11 @@ jobs:
       - name: Security audit (npm)
         run: npm run verify:npm-audit
 
+      # Desktop builds only run on main; this catches a Tauri crate/npm
+      # version split on the PR instead of after the merge.
+      - name: Verify Tauri crate and npm versions match
+        run: npm run verify:tauri-versions
+
       - name: Lint check
         run: npm run lint --if-present
 
