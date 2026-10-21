@@ -2327,3 +2327,19 @@ Verified: 43 Rust tests in `memory_graph*` (cargo test --lib memory_graph, 22 of
 
 **Still open:** see the 2026-10-12 entry in `docs/governance/DEFERRED_WORK.md` (13 items, including: a user-started Ollama is still refused by the window; an intermittent first-model-call failure; the desktop suite is not in CI).
 
+
+## 11.34 PR 304 merged; repo-actionable deferred batch (2026-10-21)
+
+**PR 304 (Codex priority hardening) was squash-merged as `4f36fe3`** after every required check and the non-required Desktop E2E passed on its final head. Codacy and CodeFactor (advisory, not required) still reported issues; their detail pages could not be read without a login. The deferred-work register was reconciled against the code first: 41 entries were marked done, superseded or partly done, and 39 open threads were listed at the top of `docs/governance/DEFERRED_WORK.md`.
+
+**The repo-actionable batch that followed (13 items, branch `fix/deferred-code-batch-2026-10-21`)** is recorded entry by entry at the top of the register. What changed that future sessions need to know:
+- *Ollama desktop chat fallback.* `ollama_chat` (new Tauri command, 125 total) posts the real turns to `/api/chat` from Rust when the window is refused. Before, the fallback flattened the chat into one `ollama_generate` prompt.
+- *The process plugin was missing.* `tauri-plugin-process` is now a dependency and registered (`process:allow-restart` only). Without it `relaunch()` after an update failed on macOS and Linux.
+- *Version checks on PRs.* `scripts/verify-tauri-versions.mjs` runs in Test & Build. It is the PR-time guard for the release breakage described in §11.33.
+- *One cargo-audit ignore list.* `.cargo/audit.toml`, read by `scripts/cargo-audit.sh` from CI and from the new weekly `security-audit.yml`.
+- *Perplexity uses its Search API.* The old `/chat/completions` call used a retired model; Perplexity ended Sonar Chat Completions support on 2026-09-27. Not live-tested.
+- *Setup disk checks know which drive is which.* `setup_scan_hardware` returns `diskMount` and `ollamaModelsDirMount`.
+
+**Numbers after the batch (from `scripts/verify-doc-counts.mjs`):** 411 test files; 199 Rust unit tests; 125 Tauri commands; `lib.rs` ~834 lines.
+
+**Still open:** the owner-gated and live-only threads at the top of the register (Cloud Voice DNS, Apple and Windows signing, native Ollama acceptance, CALL-E live call, legal documents, branch-protection decision, and the never-run-live items).
