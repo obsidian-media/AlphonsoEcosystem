@@ -24,11 +24,11 @@ const RISK_CACHE_TTL = 300000;
 // Zero-Cost Mode and Approval Mode (both on by default) silently did not
 // apply to it; see runwayService.ts for the matching gate fix.
 //
-// 'gmail', 'google_drive', and 'airtable' below are NOT real registered
-// connectors (confirmed against connectorRegistry.js's 26 DEFAULT_CONNECTORS
-// during the same audit) -- dead entries that can never be triggered. Left
-// in place rather than removed blind, in case they name a near-future
-// connector; flagged in docs/governance/DEFERRED_WORK.md instead.
+// Every id here must be a registered connector (connectorRegistry.js's
+// DEFAULT_CONNECTORS); policyEnforcementService.test.js enforces that. The
+// 'gmail', 'google_drive' and 'airtable' entries were removed on 2026-10-21:
+// none of them was ever a connector, so they could never match. Add a new
+// paid connector here in the same change that registers it.
 const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'chatgpt',
   'claude',
@@ -36,12 +36,14 @@ const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'whatsapp',
   'notion',
   'clickup',
-  'gmail',
-  'google_drive',
-  'airtable',
   'calle',
   'runway'
 ]);
+
+/** The connector ids Zero-Cost Mode treats as paid or metered. */
+export function listPaidOrMeteredConnectors(): string[] {
+  return [...PAID_OR_METERED_CONNECTORS];
+}
 
 // Only match genuinely outbound/destructive actions — not user-initiated commands
 const HIGH_RISK_ACTION_PATTERNS: RegExp[] = [
