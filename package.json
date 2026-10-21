@@ -13,7 +13,7 @@
     "start": "node scripts/run-vite-preview.mjs",
     "test": "node scripts/run-vitest-programmatic.mjs src bridge",
     "test:file": "vitest run",
-    "test:coverage": "vitest run --coverage src --pool=forks",
+    "test:coverage": "vitest run --coverage src bridge --pool=forks",
     "test:watch": "node scripts/run-vitest-programmatic.mjs --watch src bridge",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
