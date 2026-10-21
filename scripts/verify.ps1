@@ -30,27 +30,25 @@ function Resolve-ProcessExecutable($name) {
   return $name
 }
 
+. (Join-Path $PSScriptRoot 'lib/bounded-process.ps1')
+
 function Invoke-BoundedGitleaks {
   $gitleaksPath = (Get-Command gitleaks -ErrorAction Stop).Source
-  try {
-    $p = Start-Process -NoNewWindow -PassThru -FilePath $gitleaksPath -ArgumentList @('detect','--no-banner','--redact')
-    $waited = 0
-    while (-not $p.WaitForExit(1000)) {
-      $waited += 1
-      if ($waited -ge 90) {
-        $p.Kill()
-        Notice "secret-scan" "gitleaks exceeded 90s; using Git-tracked-file fallback"
-        return $false
-      }
+  $result = Invoke-BoundedProcess -FilePath $gitleaksPath -ArgumentList @('detect','--no-banner','--redact') -TimeoutSeconds 90
+  switch ($result.Status) {
+    'timeout' {
+      Notice "secret-scan" "gitleaks exceeded 90s; using Git-tracked-file fallback"
+      return $false
     }
-    if ($p.ExitCode -ne 0) {
-      Err "secret-scan" "gitleaks found secrets (rc=$($p.ExitCode))"
+    'error' {
+      Notice "secret-scan" "gitleaks could not execute; using Git-tracked-file fallback ($($result.Message))"
+      return $false
     }
-    return $true
-  } catch {
-    Notice "secret-scan" "gitleaks could not execute; using Git-tracked-file fallback ($($_.Exception.Message))"
-    return $false
   }
+  if ($result.ExitCode -ne 0) {
+    Err "secret-scan" "gitleaks found secrets (rc=$($result.ExitCode))"
+  }
+  return $true
 }
 
 # ---------------------------------------------------------------- 1. secret-scan

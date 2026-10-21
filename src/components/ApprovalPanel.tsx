@@ -8,6 +8,8 @@ const RISK_STYLES: Record<string, { badge: string; dot: string; label: string }>
   low: { badge: 'border-(--success-border) bg-(--success-dim) text-(--success)', dot: 'bg-(--success)', label: 'Low' }
 };
 
+// Only for approval records created before gates carried ownerAgent
+// (2026-10-21); new Project Execution gates pass the owner explicitly.
 const ACTION_AGENT_FALLBACKS: Record<string, string> = {
   file_write: 'alphonso',
   external_api_connection: 'hector',

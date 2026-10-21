@@ -879,6 +879,14 @@ fn detect_ram_gb() -> u64 {
 /// pairs rather than sysinfo's own types, so no real disk I/O is needed to
 /// test the matching logic itself.
 fn pick_disk_for_path(path: &str, disks: &[(String, u64)]) -> Option<u64> {
+  pick_mount_for_path(path, disks).map(|(_, available)| *available)
+}
+
+/// The (mount_point, available_bytes) entry whose mount point is the
+/// longest matching prefix of `path`. `pick_disk_for_path` reads the free
+/// space from it; Setup also needs the mount point itself, to tell whether
+/// two install targets share one drive.
+fn pick_mount_for_path<'a>(path: &str, disks: &'a [(String, u64)]) -> Option<&'a (String, u64)> {
   let target = Path::new(path);
   disks
     .iter()
@@ -887,7 +895,23 @@ fn pick_disk_for_path(path: &str, disks: &[(String, u64)]) -> Option<u64> {
     // match, and would then report free space from the wrong volume).
     .filter(|(mount, _)| target.starts_with(Path::new(mount)))
     .max_by_key(|(mount, _)| Path::new(mount).components().count())
-    .map(|(_, available)| *available)
+}
+
+/// Mount point of the drive `path` lives on, or None when no mounted disk
+/// matches. Used only to compare two targets; never to guess free space.
+fn detect_mount_for_path(path: &str) -> Option<String> {
+  let disks = sysinfo::Disks::new_with_refreshed_list();
+  let disk_list: Vec<(String, u64)> = disks
+    .list()
+    .iter()
+    .map(|d| {
+      (
+        d.mount_point().to_string_lossy().to_string(),
+        d.available_space(),
+      )
+    })
+    .collect();
+  pick_mount_for_path(path, &disk_list).map(|(mount, _)| mount.clone())
 }
 
 /// Free disk space (GB) for the drive Runtime Hub tool installs actually
@@ -1455,6 +1479,13 @@ pub struct HardwareProfile {
   /// incorrect blocking behavior. See docs/governance/DEFERRED_WORK.md's
   /// 2026-09-08 entry for the full reasoning trail this followed from.
   pub ollama_models_dir_free_gb: Option<u64>,
+  /// Mount point of the drive `disk_free_gb` measured, or None if unknown.
+  pub disk_mount: Option<String>,
+  /// Mount point of the `OLLAMA_MODELS` drive, or None when the variable is
+  /// unset or no disk matches. When both mounts are known and equal, Setup
+  /// checks the starter model against one shared free-space number instead
+  /// of warning twice about the same drive.
+  pub ollama_models_dir_mount: Option<String>,
   pub gpu_present: bool,
   pub gpu_vendor: Option<String>,
   pub gpu_model: Option<String>,
@@ -1472,6 +1503,10 @@ pub fn setup_scan_hardware() -> HardwareProfile {
     ram_gb: detect_ram_gb(),
     disk_free_gb: detect_disk_free_gb(),
     ollama_models_dir_free_gb: detect_ollama_models_dir_free_gb(),
+    disk_mount: detect_mount_for_path(&runtimes_dir().to_string_lossy()),
+    ollama_models_dir_mount: std::env::var("OLLAMA_MODELS")
+      .ok()
+      .and_then(|dir| detect_mount_for_path(&dir)),
     gpu_present,
     gpu_vendor,
     gpu_model,
@@ -2388,6 +2423,17 @@ mod tests {
     ];
     let picked = pick_disk_for_path("/var/lib/alphonso", &disks);
     assert_eq!(picked, Some(50_000_000_000u64));
+  }
+
+  #[test]
+  fn pick_mount_for_path_returns_the_matching_mount_point() {
+    let disks = vec![("/".to_string(), 10u64), ("/mnt/models".to_string(), 20u64)];
+    let picked = pick_mount_for_path("/mnt/models/ollama", &disks).map(|(m, _)| m.as_str());
+    assert_eq!(picked, Some("/mnt/models"));
+    let root = pick_mount_for_path("/home/user", &disks).map(|(m, _)| m.as_str());
+    assert_eq!(root, Some("/"));
+    let none: Vec<(String, u64)> = vec![];
+    assert!(pick_mount_for_path("/x", &none).is_none());
   }
 
   #[test]

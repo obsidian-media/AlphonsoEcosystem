@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::time::Duration;
 
@@ -216,26 +216,107 @@ pub(crate) async fn ollama_list_models(
   }
 }
 
-#[tauri::command]
-pub(crate) async fn ollama_generate(
-  endpoint: Option<String>,
+/// One turn of an `/api/chat` conversation, as the frontend sends it.
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub(crate) struct OllamaChatMessage {
+  role: String,
+  content: String,
+}
+
+/// Reply text from an Ollama response body. `/api/generate` answers with
+/// `response`; `/api/chat` answers with `message.content`.
+fn ollama_reply_text(data: &Value) -> String {
+  data
+    .get("response")
+    .and_then(Value::as_str)
+    .or_else(|| {
+      data
+        .get("message")
+        .and_then(|message| message.get("content"))
+        .and_then(Value::as_str)
+    })
+    .unwrap_or("")
+    .to_string()
+}
+
+/// Turns an Ollama HTTP answer into the proof the frontend reads. Shared by
+/// `ollama_generate` and `ollama_chat` so both report errors the same way.
+fn ollama_reply_proof(
+  base: String,
   model: String,
-  prompt: String,
-) -> Result<OllamaGenerateProof, String> {
-  let base = endpoint
+  code: u16,
+  status_ok: bool,
+  data: &Value,
+  api_path: &str,
+) -> OllamaGenerateProof {
+  let response_text = ollama_reply_text(data);
+  let done = data
+    .get("done")
+    .and_then(Value::as_bool)
+    .unwrap_or(!response_text.is_empty());
+  let error_text = data
+    .get("error")
+    .and_then(Value::as_str)
+    .map(str::to_string);
+  let success = status_ok && error_text.is_none();
+
+  OllamaGenerateProof {
+    endpoint: base,
+    http_status: Some(code),
+    model,
+    response: response_text,
+    done,
+    trust: if success {
+      "verified".to_string()
+    } else {
+      "failed".to_string()
+    },
+    error: if success {
+      None
+    } else {
+      error_text.or_else(|| Some(format!("HTTP {code} from {api_path}")))
+    },
+  }
+}
+
+fn ollama_request_failed_proof(
+  base: String,
+  model: String,
+  error: reqwest::Error,
+) -> OllamaGenerateProof {
+  OllamaGenerateProof {
+    endpoint: base,
+    http_status: None,
+    model,
+    response: String::new(),
+    done: false,
+    trust: "failed".to_string(),
+    error: Some(if error.is_timeout() {
+      "Request timeout".to_string()
+    } else {
+      error.to_string()
+    }),
+  }
+}
+
+fn ollama_base(endpoint: Option<String>) -> String {
+  endpoint
     .unwrap_or_else(|| "http://localhost:11434".to_string())
     .trim_end_matches('/')
-    .to_string();
-  let url = format!("{base}/api/generate");
+    .to_string()
+}
 
-  let client = reqwest::Client::new();
-  let body = serde_json::json!({
-    "model": model,
-    "prompt": prompt,
-    "stream": false
-  });
-
-  let response = client
+/// POSTs a non-streaming request to one Ollama endpoint and converts the
+/// answer. Requests leave from the Rust side, so a user-started Ollama that
+/// rejects the desktop window's origin still answers them.
+async fn ollama_post(
+  base: String,
+  model: String,
+  api_path: &str,
+  body: Value,
+) -> OllamaGenerateProof {
+  let url = format!("{base}{api_path}");
+  let response = reqwest::Client::new()
     .post(&url)
     .json(&body)
     // A cold local model load (especially from a secondary drive) can take
@@ -248,56 +329,117 @@ pub(crate) async fn ollama_generate(
   match response {
     Ok(response) => {
       let code = response.status().as_u16();
-      let status = response.status();
+      let status_ok = response.status().is_success();
       let data: Value = response
         .json()
         .await
         .unwrap_or(Value::Object(serde_json::Map::new()));
-      let response_text = data
-        .get("response")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string();
-      let done = data
-        .get("done")
-        .and_then(Value::as_bool)
-        .unwrap_or(!response_text.is_empty());
-      let error_text = data
-        .get("error")
-        .and_then(Value::as_str)
-        .map(str::to_string);
-      let success = status.is_success() && error_text.is_none();
-
-      Ok(OllamaGenerateProof {
-        endpoint: base,
-        http_status: Some(code),
-        model,
-        response: response_text,
-        done,
-        trust: if success {
-          "verified".to_string()
-        } else {
-          "failed".to_string()
-        },
-        error: if success {
-          None
-        } else {
-          error_text.or_else(|| Some(format!("HTTP {code} from /api/generate")))
-        },
-      })
+      ollama_reply_proof(base, model, code, status_ok, &data, api_path)
     }
-    Err(error) => Ok(OllamaGenerateProof {
-      endpoint: base,
-      http_status: None,
-      model,
-      response: String::new(),
-      done: false,
-      trust: "failed".to_string(),
-      error: Some(if error.is_timeout() {
-        "Request timeout".to_string()
-      } else {
-        error.to_string()
-      }),
-    }),
+    Err(error) => ollama_request_failed_proof(base, model, error),
+  }
+}
+
+#[tauri::command]
+pub(crate) async fn ollama_generate(
+  endpoint: Option<String>,
+  model: String,
+  prompt: String,
+) -> Result<OllamaGenerateProof, String> {
+  let base = ollama_base(endpoint);
+  let body = serde_json::json!({
+    "model": model,
+    "prompt": prompt,
+    "stream": false
+  });
+  Ok(ollama_post(base, model, "/api/generate", body).await)
+}
+
+/// Non-streaming `/api/chat` call used as the desktop fallback for chat. It
+/// keeps the real role/content turns, so the model's own chat template
+/// applies instead of a flattened prompt.
+#[tauri::command]
+pub(crate) async fn ollama_chat(
+  endpoint: Option<String>,
+  model: String,
+  messages: Vec<OllamaChatMessage>,
+) -> Result<OllamaGenerateProof, String> {
+  let base = ollama_base(endpoint);
+  let body = serde_json::json!({
+    "model": model,
+    "messages": messages,
+    "stream": false
+  });
+  Ok(ollama_post(base, model, "/api/chat", body).await)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn reply_text_reads_generate_and_chat_shapes() {
+    assert_eq!(
+      ollama_reply_text(&serde_json::json!({ "response": "hi" })),
+      "hi"
+    );
+    assert_eq!(
+      ollama_reply_text(
+        &serde_json::json!({ "message": { "role": "assistant", "content": "hello" } })
+      ),
+      "hello"
+    );
+    assert_eq!(ollama_reply_text(&serde_json::json!({})), "");
+  }
+
+  #[test]
+  fn reply_proof_marks_success_and_done() {
+    let data = serde_json::json!({ "message": { "content": "ok" }, "done": true });
+    let proof = ollama_reply_proof("http://x".into(), "m".into(), 200, true, &data, "/api/chat");
+    assert_eq!(proof.response, "ok");
+    assert!(proof.done);
+    assert_eq!(proof.trust, "verified");
+    assert!(proof.error.is_none());
+  }
+
+  #[test]
+  fn reply_proof_reports_http_status_without_error_body() {
+    let data = serde_json::json!({});
+    let proof = ollama_reply_proof(
+      "http://x".into(),
+      "m".into(),
+      403,
+      false,
+      &data,
+      "/api/chat",
+    );
+    assert_eq!(proof.trust, "failed");
+    assert_eq!(proof.error.as_deref(), Some("HTTP 403 from /api/chat"));
+  }
+
+  #[test]
+  fn reply_proof_prefers_ollama_error_text() {
+    let data = serde_json::json!({ "error": "model 'x' not found" });
+    let proof = ollama_reply_proof(
+      "http://x".into(),
+      "m".into(),
+      404,
+      false,
+      &data,
+      "/api/generate",
+    );
+    assert_eq!(proof.error.as_deref(), Some("model 'x' not found"));
+  }
+
+  #[test]
+  fn chat_message_serializes_role_and_content() {
+    let message = OllamaChatMessage {
+      role: "user".into(),
+      content: "hey".into(),
+    };
+    assert_eq!(
+      serde_json::to_value(&message).unwrap(),
+      serde_json::json!({ "role": "user", "content": "hey" })
+    );
   }
 }

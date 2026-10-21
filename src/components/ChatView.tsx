@@ -1050,6 +1050,7 @@ export function ChatView({
           <div className="flex items-center gap-3">
             <ModelProviderPicker
               agentId="alphonso"
+              locked={isGenerating}
               provider={selectedProvider}
               onProviderChange={handleProviderChange}
               selectedModel={settings.selectedModel as string || ''}

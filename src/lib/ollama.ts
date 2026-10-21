@@ -226,7 +226,24 @@ async function invokeOllamaGenerateWithRetry(
   prompt: string,
   signal?: AbortSignal
 ): Promise<OllamaGenerateProof> {
-  let proof = await invoke<OllamaGenerateProof>('ollama_generate', { endpoint, model, prompt });
+  return invokeOllamaBridgeWithRetry('ollama_generate', { endpoint, model, prompt }, signal);
+}
+
+async function invokeOllamaChatWithRetry(
+  endpoint: string,
+  model: string,
+  messages: ChatStreamOptions['messages'],
+  signal?: AbortSignal
+): Promise<OllamaGenerateProof> {
+  return invokeOllamaBridgeWithRetry('ollama_chat', { endpoint, model, messages }, signal);
+}
+
+async function invokeOllamaBridgeWithRetry(
+  command: 'ollama_generate' | 'ollama_chat',
+  args: Record<string, unknown>,
+  signal?: AbortSignal
+): Promise<OllamaGenerateProof> {
+  let proof = await invoke<OllamaGenerateProof>(command, args);
   if (proof?.error && isTransientDesktopOllamaError(proof.error)) {
     // A user-started Ollama can be reachable before its runner is ready. One
     // bounded retry removes that launch race without turning a real model
@@ -247,7 +264,7 @@ async function invokeOllamaGenerateWithRetry(
       signal?.addEventListener('abort', abort, { once: true });
     });
     if (signal?.aborted) return proof;
-    proof = await invoke<OllamaGenerateProof>('ollama_generate', { endpoint, model, prompt });
+    proof = await invoke<OllamaGenerateProof>(command, args);
   }
   return proof;
 }
@@ -575,10 +592,9 @@ export async function generateOllamaChatStream({ endpoint, model, messages, onTo
     if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
       throw error;
     }
-    const promptFallback = messages
-      .map((m) => `${m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Assistant' : 'System'}: ${m.content}`)
-      .join('\n\n');
-    const proof = await invokeOllamaGenerateWithRetry(baseUrl, model, promptFallback);
+    // Send the real turns to /api/chat from the Rust side, so the model's
+    // chat template still applies. The reply arrives in one piece.
+    const proof = await invokeOllamaChatWithRetry(baseUrl, model, messages, signal);
     if (!proof || proof.error) throw new Error(proof?.error || 'Desktop bridge generation failed.');
     const text = proof.response || '';
     onToken?.(text, text);

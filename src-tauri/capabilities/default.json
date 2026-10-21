@@ -12,6 +12,7 @@
     "notification:default",
     "global-shortcut:default",
     "updater:default",
+    "process:allow-restart",
     "log:default"
   ]
 }

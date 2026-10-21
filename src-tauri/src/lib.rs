@@ -345,6 +345,7 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_updater::Builder::new().build())
+    .plugin(tauri_plugin_process::init())
     .setup(|app| {
       let proof_output_dir = native_proof_output_dir();
       let proof_request = read_native_proof_request(&proof_output_dir);
@@ -777,6 +778,7 @@ pub fn run() {
       check_ollama_runtime,
       ollama_list_models,
       ollama_generate,
+      ollama_chat,
       record_restore_point,
       write_handoff_export_file,
       workspace::write_workspace_text_file,

@@ -41,27 +41,57 @@ describe('perplexityConnector', () => {
     await expect(searchPerplexity('what is alphonso?')).rejects.toThrow('blocked by policy');
   });
 
-  it('submits a configured search and maps citations', async () => {
+  it('posts to the Search API and maps ranked results', async () => {
     const { searchPerplexity } = await import('../../services/connectors/perplexityConnector');
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        choices: [{ message: { content: 'Perplexity summary' } }],
-        citations: ['https://example.com/a', 'https://example.com/b']
+        id: 'req-1',
+        results: [
+          { title: 'Alphonso docs', url: 'https://example.com/a', snippet: 'First snippet.', date: '2026-10-01' },
+          { title: 'Second page', url: 'https://example.com/b', snippet: 'Second snippet.' },
+          { title: 'No url', snippet: 'dropped' }
+        ]
       })
     });
 
-    const result = await searchPerplexity('what is alphonso?', { maxTokens: 256 });
+    const result = await searchPerplexity('what is alphonso?', { maxResults: 5 });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.perplexity.ai/chat/completions',
+      'https://api.perplexity.ai/search',
       expect.objectContaining({
-        method: 'POST'
+        method: 'POST',
+        body: JSON.stringify({ query: 'what is alphonso?', max_results: 5 })
       })
     );
-    expect(result.summary).toBe('Perplexity summary');
     expect(result.provider).toBe('perplexity');
     expect(result.sources).toHaveLength(2);
-    expect(result.sources[0]).toEqual(expect.objectContaining({ url: 'https://example.com/a' }));
+    expect(result.sources[0]).toEqual(expect.objectContaining({
+      url: 'https://example.com/a',
+      title: 'Alphonso docs',
+      snippet: 'First snippet.',
+      date: '2026-10-01'
+    }));
+    expect(result.sources[1].date).toBeNull();
+    expect(result.sources[0].relevance).toBeGreaterThan(result.sources[1].relevance);
+    expect(result.summary).toBe('First snippet. Second snippet.');
+  });
+
+  it('keeps max_results inside the range the Search API accepts', async () => {
+    const { searchPerplexity } = await import('../../services/connectors/perplexityConnector');
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) });
+
+    const result = await searchPerplexity('q', { maxResults: 99 });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).max_results).toBe(20);
+    expect(result.sources).toEqual([]);
+    expect(result.confidenceLevel).toBe('low');
+  });
+
+  it('reports the HTTP status when the API rejects the request', async () => {
+    const { searchPerplexity } = await import('../../services/connectors/perplexityConnector');
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 401, text: async () => 'invalid key' });
+
+    await expect(searchPerplexity('q')).rejects.toThrow('Perplexity API error 401: invalid key');
   });
 });

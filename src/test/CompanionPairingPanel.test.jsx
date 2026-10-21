@@ -56,7 +56,33 @@ describe('CompanionPairingPanel', () => {
   it('enables mobile pairing on request when the listener is off', async () => {
     mockInvokeByCommand({ companion_get_status: { running: false, port: 8765, connected_clients: 0 } });
     render(<CompanionPairingPanel />);
-    const button = await screen.findByText('Enable mobile pairing');
+    // The "off" view renders before the first status read resolves, and the
+    // button stays disabled until it does. Clicking before then was ignored,
+    // which made this test pass or fail depending on timing.
+    const button = (await screen.findByText('Enable mobile pairing')).closest('button');
+    await waitFor(() => expect(button).not.toBeDisabled());
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('companion_set_enabled', { enabled: true });
+    });
+  });
+
+  it('keeps Enable disabled until the first status read lands, then accepts the click', async () => {
+    let resolveStatus;
+    invoke.mockImplementation((cmd) => {
+      if (cmd === 'companion_get_status') {
+        return new Promise((resolve) => { resolveStatus = resolve; });
+      }
+      return Promise.resolve(null);
+    });
+    render(<CompanionPairingPanel />);
+    const button = (await screen.findByText('Enable mobile pairing')).closest('button');
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(invoke).not.toHaveBeenCalledWith('companion_set_enabled', { enabled: true });
+
+    resolveStatus({ running: false, port: 8765, connected_clients: 0 });
+    await waitFor(() => expect(button).not.toBeDisabled());
     fireEvent.click(button);
     await waitFor(() => {
       expect(invoke).toHaveBeenCalledWith('companion_set_enabled', { enabled: true });

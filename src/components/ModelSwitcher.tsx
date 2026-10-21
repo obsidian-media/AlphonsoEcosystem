@@ -343,6 +343,11 @@ interface ModelProviderPickerProps {
   onModelChange: (name: string) => void;
   ollamaPicker: React.ReactNode;
   /**
+   * True while a reply is generating. The provider tabs are locked so a
+   * switch cannot change which backend owns the request mid-reply.
+   */
+  locked?: boolean;
+  /**
    * Which agent this picker controls, gating whether a Hermes tab appears
    * (via isHermesAgentConfigured(agentId)) since Hermes has no single
    * "the app's" profile, only per-agent ones. ChatView passes 'alphonso'
@@ -353,7 +358,7 @@ interface ModelProviderPickerProps {
   agentId?: string;
 }
 
-export function ModelProviderPicker({ provider, onProviderChange, selectedModel, onModelChange, ollamaPicker, agentId }: ModelProviderPickerProps): React.JSX.Element {
+export function ModelProviderPicker({ provider, onProviderChange, selectedModel, onModelChange, ollamaPicker, agentId, locked = false }: ModelProviderPickerProps): React.JSX.Element {
   const [configured, setConfigured] = useState<Record<CloudProvider, boolean>>({ nvidia_nim: false, gemini: false });
   const [hermesConfigured, setHermesConfigured] = useState(false);
 
@@ -390,11 +395,14 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
     <div className="flex flex-col gap-1.5">
       <div className="flex rounded-lg overflow-hidden border border-(--border) text-[9px]">
         {visibleProviders.map((id) => {
-          const disabled = !isConfigured(id);
+          const unconfigured = !isConfigured(id);
+          const disabled = unconfigured || locked;
           return (
             <button key={id} type="button" disabled={disabled}
               onClick={() => onProviderChange(id)}
-              title={disabled ? `${PROVIDER_LABELS[id]} is not configured — add ${id === 'hermes' ? 'an endpoint' : 'a key'} in Settings → Connectors` : PROVIDER_LABELS[id]}
+              title={unconfigured
+                ? `${PROVIDER_LABELS[id]} is not configured — add ${id === 'hermes' ? 'an endpoint' : 'a key'} in Settings → Connectors`
+                : locked ? 'Wait for the current reply to finish before switching provider' : PROVIDER_LABELS[id]}
               className={`px-2 py-0.5 uppercase tracking-widest font-bold transition-colors ${
                 provider === id ? 'bg-(--accent) text-(--accent-contrast)' : disabled ? 'bg-(--surface-2) text-(--text-4) cursor-not-allowed' : 'bg-(--surface-3) text-(--text-3) hover:bg-(--surface-3)'
               }`}>

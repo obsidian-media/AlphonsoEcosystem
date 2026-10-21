@@ -324,10 +324,48 @@ vi.mock('../services/connectors/tavilyConnector.js', () => ({
   }))
 }));
 
+let perplexityEnabled = false;
+const mockSearchPerplexity = vi.fn(async () => ({
+  summary: 'Perplexity snippet.',
+  sources: [
+    { url: 'https://tavily.example.com/1', title: 'Duplicate of Tavily', snippet: 'dup', date: null, relevance: 1 },
+    { url: 'https://perplexity.example.com/1', title: 'Perplexity Result', snippet: 'Perplexity snippet.', date: null, relevance: 0.95 }
+  ],
+  confidenceLevel: 'high',
+  provider: 'perplexity'
+}));
+
+vi.mock('../services/connectors/perplexityConnector', () => ({
+  isPerplexityConfigured: vi.fn(() => perplexityEnabled),
+  searchPerplexity: (...args) => mockSearchPerplexity(...args)
+}));
+
 describe('runMultiSourceResearch Tavily and fallback', () => {
   beforeEach(() => {
     localStorage.clear();
     braveEnabled = false;
+    perplexityEnabled = false;
+    mockSearchPerplexity.mockClear();
+  });
+
+  it('adds Perplexity results after Tavily when sources are still thin, without duplicates', async () => {
+    perplexityEnabled = true;
+    const result = await runMultiSourceResearch('test query for perplexity');
+    expect(mockSearchPerplexity).toHaveBeenCalledWith('test query for perplexity', { maxResults: 8 });
+    expect(result.providerChain.indexOf('perplexity')).toBeGreaterThan(result.providerChain.indexOf('tavily'));
+    const urls = result.sources.map((s) => s.url);
+    expect(urls.filter((u) => u === 'https://tavily.example.com/1')).toHaveLength(1);
+    expect(result.sources).toContainEqual(expect.objectContaining({
+      url: 'https://perplexity.example.com/1',
+      provider: 'perplexity',
+      sourceType: 'public_web'
+    }));
+  });
+
+  it('skips Perplexity when no key is configured', async () => {
+    const result = await runMultiSourceResearch('test query without perplexity');
+    expect(mockSearchPerplexity).not.toHaveBeenCalled();
+    expect(result.providerChain).not.toContain('perplexity');
   });
 
   it('includes tavily in provider chain when configured', async () => {

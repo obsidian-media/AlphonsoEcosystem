@@ -170,6 +170,7 @@ import { nextMsgId, shouldRouteThroughCalleMcp } from '../lib/chatUtils';
 import { invoke } from '@tauri-apps/api/core';
 import { getMcpOutreachRecord, isAwaitingMcpOutreachInput, handleMcpOutreachMessage } from '../services/calleMcpOutreachService';
 import { loadChatMessages } from '../services/chatPersistenceService';
+import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -521,6 +522,79 @@ describe('ChatView', () => {
     expect(rejectPacket).toHaveBeenCalledWith('pkt-1', 'Rejected from chat inline approval');
 
     expect(props.getItemDetail('pkt-1')).toEqual({ agent: 'marcus', actionType: 'external_publish', riskLevel: 'high' });
+  });
+
+  describe('Jose command path', () => {
+    async function sendJoseCommand(text) {
+      render(<ChatView {...makeProps()} />);
+      await screen.findByText('What can I help you build?');
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: text } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    }
+
+    beforeEach(() => {
+      localStorage.clear();
+      isJoseIntakeCommand.mockReturnValue(true);
+    });
+
+    afterEach(() => {
+      isJoseIntakeCommand.mockReturnValue(false);
+      listOrchestrationReceipts.mockReturnValue([]);
+    });
+
+    it('shows an error reply and a warning state when the pipeline throws', async () => {
+      nextMsgId.mockReturnValueOnce('jose-err-user').mockReturnValueOnce('jose-err-reply');
+      runJoseCommandExecutionPipeline.mockRejectedValueOnce(new Error('pipeline exploded'));
+      const props = makeProps();
+      render(<ChatView {...props} />);
+      await screen.findByText('What can I help you build?');
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'build the thing' } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+      await screen.findByText(/Jose orchestration failed\.[\s\S]*pipeline exploded/);
+      expect(props.onJoseExecutionState).toHaveBeenCalledWith('warning', 'Jose orchestration failed.');
+      expect(props.onTaskComplete).not.toHaveBeenCalled();
+      expect(props.onGenerationChange).toHaveBeenLastCalledWith(false);
+    });
+
+    it('loads receipts for the command, reports completion and shows Hector sources', async () => {
+      nextMsgId.mockReturnValueOnce('jose-ok-user').mockReturnValueOnce('jose-ok-reply');
+      runJoseCommandExecutionPipeline.mockResolvedValueOnce({
+        commandId: 'cmd-ok',
+        pendingApprovalCount: 0,
+        executionReceipts: [],
+        command: { userReport: { summary: 'Research finished.' } }
+      });
+      listOrchestrationReceipts.mockReturnValue([
+        { agent: 'hector', details: { sources: [{ url: 'https://example.org/report', title: 'Example report' }] } }
+      ]);
+      const props = makeProps();
+      render(<ChatView {...props} />);
+      await screen.findByText('What can I help you build?');
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'research the thing' } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+      await screen.findByText('Example report');
+      expect(listOrchestrationReceipts).toHaveBeenCalledWith({ commandId: 'cmd-ok' });
+      expect(props.onJoseExecutionState).toHaveBeenCalledWith('task_complete', 'Jose completed routing and merged reports.');
+      expect(props.onTaskComplete).toHaveBeenCalledTimes(1);
+      const saved = JSON.parse(localStorage.getItem('alphonso_jose_pipeline_v1_test-chat-id'));
+      expect(saved.pipelineCommandText).toBe('research the thing');
+      expect(saved.executionReceipts).toHaveLength(1);
+    });
+
+    it('still saves the run and completes when the pipeline returns no command id', async () => {
+      nextMsgId.mockReturnValueOnce('jose-none-user').mockReturnValueOnce('jose-none-reply');
+      runJoseCommandExecutionPipeline.mockResolvedValueOnce({ commandId: null, executionReceipts: [] });
+      await sendJoseCommand('do a quick thing');
+
+      await waitFor(() => {
+        expect(localStorage.getItem('alphonso_jose_pipeline_v1_test-chat-id')).not.toBeNull();
+      });
+      expect(listOrchestrationReceipts).not.toHaveBeenCalled();
+      const saved = JSON.parse(localStorage.getItem('alphonso_jose_pipeline_v1_test-chat-id'));
+      expect(saved.executionReceipts).toEqual([]);
+    });
   });
 
   it('keeps a message sent while chat-history hydration is still in flight (does not get clobbered once it resolves)', async () => {

@@ -3,6 +3,7 @@ import { getAllStatus, installPrerequisite } from '../../services/runtimeManager
 import type { PrereqStatus } from '../../services/runtimeManagerService';
 import {
   checkDiskSpace,
+  sameInstallVolume,
   withTimeout,
   isComponentAlreadyInstalled,
   getUnmetPrereq,
@@ -162,7 +163,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
   ).map((a) => a.component!);
   const notInstalled = selectedComponents.filter((c) => !installedNames.has(c.id));
   const toInstall = notInstalled.filter((c) => getUnmetPrereq(c.id, prereqs) === null);
-  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb, hardware.ollamaModelsDirFreeGb);
+  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb, hardware.ollamaModelsDirFreeGb, sameInstallVolume(hardware));
 
   return (
     <div className="flex flex-col items-center gap-4 p-8 w-full max-w-3xl">

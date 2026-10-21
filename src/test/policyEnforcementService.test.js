@@ -5,11 +5,24 @@ vi.mock('@tauri-apps/api/core', () => ({
   isTauri: vi.fn().mockReturnValue(false)
 }));
 
-const { getRuntimePolicySettings, classifyConnectorRisk, evaluatePolicyGate } = await import('../services/policyEnforcementService.ts');
+const { getRuntimePolicySettings, classifyConnectorRisk, evaluatePolicyGate, listPaidOrMeteredConnectors } = await import('../services/policyEnforcementService.ts');
+const { DEFAULT_CONNECTORS } = await import('../services/connectors/connectorRegistry.js');
 
 describe('policyEnforcementService', () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  describe('paid or metered connector list', () => {
+    it('only names connectors that are actually registered', () => {
+      const registered = new Set(DEFAULT_CONNECTORS.map((connector) => connector.id));
+      const unknown = listPaidOrMeteredConnectors().filter((id) => !registered.has(id));
+      expect(unknown).toEqual([]);
+    });
+
+    it('still treats the real paid connectors as paid', () => {
+      expect(listPaidOrMeteredConnectors()).toEqual(expect.arrayContaining(['chatgpt', 'claude', 'calle', 'runway']));
+    });
   });
 
   describe('getRuntimePolicySettings', () => {

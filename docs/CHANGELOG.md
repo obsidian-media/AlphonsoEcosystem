@@ -6,6 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-10-21 (PR 304 merged; repo-actionable deferred batch)
+
+### Fixed
+- **Update relaunch on macOS and Linux.** The Rust `tauri-plugin-process` crate was never installed, so `relaunch()` after an update failed. It is now registered with only the restart permission.
+- **Desktop chat fallback keeps the conversation.** When Ollama refuses the app window, chat now goes through a new `ollama_chat` backend command that sends the real turns, instead of a single flattened prompt.
+- **Perplexity search works again.** The connector moved to Perplexity's Search API (the old endpoint and model were retired) and Hector now uses it after Tavily.
+- **Provider tabs lock while a reply is generating.**
+- **Project Execution names each gate's real owner** instead of guessing from the action type.
+- **Setup disk checks agree with each other** when the models folder is on the same or a different drive.
+- Removed three paid-connector entries that never matched a real connector.
+
+### CI and tests
+- Weekly npm and cargo security audit workflow; one cargo ignore list (`.cargo/audit.toml`) for CI and the weekly run.
+- PRs now fail when a Tauri crate and its npm package differ in major.minor, or a JS plugin has no Rust plugin.
+- The Windows build checks that the bundled Ollama runtime is inside the NSIS installer.
+- Coverage now includes `bridge/`.
+- New tests: the desktop chat fallback, the Jose command path in chat, the gitleaks time limit, the drive-aware disk checks; a flaky pairing test made deterministic.
+
+### Also merged
+- PR 304 (Codex priority hardening): the 10-item deferred batch, the real desktop E2E suite in CI, Apple signing guards, RustSec and Vite lockfile refreshes, React 19 runtime alignment. See `docs/governance/DEFERRED_WORK.md`.
+
+---
+
 ## [2.9.0] — 2026-10-12 (desktop end-to-end testing pass and the fixes it found; approval hardening; Tailwind v4)
 
 **Why this release:** the desktop app was exercised end to end for the first time (a real built binary, real Rust backend, real Ollama and ComfyUI), instead of the web build with the backend mocked. That found a run of desktop-only failures that every earlier test had missed. All of them are fixed here. Everything recorded under the 2026-09-15/16, 2026-09-30 and 2026-10-06 headings below also ships in 2.9.0; none of it had been released.

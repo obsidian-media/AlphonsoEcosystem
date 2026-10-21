@@ -192,7 +192,7 @@ export function runProjectWorkshop(projectInput) {
     actionType: gate.actionType,
     riskLevel: gate.riskLevel,
     summary: gate.reason,
-    metadata: { projectId: project.id, traceId, gateId: gate.id }
+    metadata: { projectId: project.id, traceId, gateId: gate.id, ownerAgent: gate.ownerAgent || null }
   }));
   appendTraceEvent({
     traceId,
