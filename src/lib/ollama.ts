@@ -223,14 +223,30 @@ function isTransientDesktopOllamaError(error: string | null | undefined): boolea
 async function invokeOllamaGenerateWithRetry(
   endpoint: string,
   model: string,
-  prompt: string
+  prompt: string,
+  signal?: AbortSignal
 ): Promise<OllamaGenerateProof> {
   let proof = await invoke<OllamaGenerateProof>('ollama_generate', { endpoint, model, prompt });
   if (proof?.error && isTransientDesktopOllamaError(proof.error)) {
     // A user-started Ollama can be reachable before its runner is ready. One
     // bounded retry removes that launch race without turning a real model
     // error into an unbounded request loop.
-    await new Promise((resolve) => window.setTimeout(resolve, 750));
+    await new Promise<void>((resolve) => {
+      if (signal?.aborted) {
+        resolve();
+        return;
+      }
+      const timeoutId = window.setTimeout(() => {
+        signal?.removeEventListener('abort', abort);
+        resolve();
+      }, 750);
+      const abort = () => {
+        window.clearTimeout(timeoutId);
+        resolve();
+      };
+      signal?.addEventListener('abort', abort, { once: true });
+    });
+    if (signal?.aborted) return proof;
     proof = await invoke<OllamaGenerateProof>('ollama_generate', { endpoint, model, prompt });
   }
   return proof;
@@ -498,7 +514,7 @@ export async function generateOllamaStream({ endpoint, model, prompt, onToken, s
     if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
       throw error;
     }
-    const proof = await invokeOllamaGenerateWithRetry(baseUrl, model, prompt);
+    const proof = await invokeOllamaGenerateWithRetry(baseUrl, model, prompt, signal);
     if (!proof || proof.error) throw new Error(proof?.error || 'Desktop bridge generation failed.');
     const text = proof.response || '';
     onToken?.(text, text);

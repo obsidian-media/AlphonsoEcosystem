@@ -9,7 +9,7 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | component | `src/components/AgentAvatar.tsx` | `AgentAvatar` |
 | component | `src/components/AgentDock.tsx` | `AgentDock` |
 | component | `src/components/AgentMetricsPanel.tsx` | `AgentMetricsPanel` |
-| component | `src/components/AgentPairingView.tsx` | `AgentPairingView` |
+| component | `src/components/AgentPairingView.tsx` | `AgentPairingView`, `default` |
 | component | `src/components/AgentPerformanceView.tsx` | `AgentPerformanceView` |
 | component | `src/components/agents/AgentCapabilityMatrix.tsx` | `AgentCapabilityMatrix` |
 | component | `src/components/agents/AgentCard.tsx` | `AgentCard` |
@@ -51,7 +51,7 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | component | `src/components/ConnectorStatusIndicators.tsx` | `ConnectorStatusDot`, `ConnectorStatusStrip` |
 | component | `src/components/CrashLogView.tsx` | `CrashLogView` |
 | component | `src/components/dashboard/HectorResearchDesk.tsx` | `HectorResearchDesk` |
-| component | `src/components/DeadLetterQueueView.tsx` | `DeadLetterQueueView` |
+| component | `src/components/DeadLetterQueueView.tsx` | `DeadLetterQueueView`, `default` |
 | component | `src/components/DigestPanel.tsx` | `DigestItem`, `DigestPanel` |
 | component | `src/components/EcosystemHub.tsx` | `EcosystemHub` |
 | component | `src/components/EcosystemMaturityPanels.tsx` | `ApprovalCenterPanel`, `EcosystemMapPanel`, `MemoryConfidencePanel`, `OperatorModesPanel`, `PrivacyShieldPanel`, `SessionIntelligencePanel`, `TrustLayerPanel`, `WorkflowOperationsPanel` |
@@ -69,7 +69,7 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | component | `src/components/JoseTaskQueue.tsx` | `JoseTaskQueue` |
 | component | `src/components/KeyboardShortcutsModal.tsx` | `KeyboardShortcutsModal` |
 | component | `src/components/MarkdownMessage.tsx` | `MarkdownMessage` |
-| component | `src/components/MarketingLandingPage.tsx` | `MarketingLandingPage` |
+| component | `src/components/MarketingLandingPage.tsx` | `default` |
 | component | `src/components/MemoryGraphCleanupPanel.tsx` | `MemoryGraphCleanupPanel` |
 | component | `src/components/MemoryGraphViewer.tsx` | `MemoryGraphViewer`, `NODE_TYPE_COLORS` |
 | component | `src/components/MemorySearch.tsx` | `MemorySearch` |
@@ -81,28 +81,28 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | component | `src/components/ModelSwitcher.tsx` | `CloudModelPicker`, `CloudProvider`, `HermesModelPicker`, `ModelProviderId`, `ModelProviderPicker`, `ModelSwitcher`, `OllamaModelPicker` |
 | component | `src/components/ModeToggle.tsx` | `ModeToggle` |
 | component | `src/components/NotificationCenter.tsx` | `clearPersistedNotifications`, `loadPersistedNotifications`, `NotificationCenter` |
-| component | `src/components/NotionSyncPanel.tsx` | `NotionSyncPanel` |
+| component | `src/components/NotionSyncPanel.tsx` | `default`, `NotionSyncPanel` |
 | component | `src/components/NovaHistoryChart.tsx` | `NovaHistoryChart` |
 | component | `src/components/OllamaOfflineBanner.tsx` | `OllamaOfflineBanner` |
-| component | `src/components/OllamaPreflightPanel.tsx` | `OllamaPreflightPanel` |
+| component | `src/components/OllamaPreflightPanel.tsx` | `default`, `OllamaPreflightPanel` |
 | component | `src/components/OperatorDashboard.tsx` | `OperatorDashboard` |
-| component | `src/components/OrchestratorQueueView.tsx` | `OrchestratorQueueView` |
+| component | `src/components/OrchestratorQueueView.tsx` | `default`, `OrchestratorQueueView` |
 | component | `src/components/OrchestratorView.tsx` | `OrchestratorView` |
 | component | `src/components/PipelineResultCard.tsx` | `PipelineResultCard` |
 | component | `src/components/ProductionReadinessPanel.tsx` | `ProductionReadinessPanel` |
-| component | `src/components/ProjectBatchPanel.tsx` | `ProjectBatchPanel` |
+| component | `src/components/ProjectBatchPanel.tsx` | `default` |
 | component | `src/components/projectExecution/ProjectExecutionMode.tsx` | `ProjectExecutionMode`, `TAPCASH_PRESET` |
 | component | `src/components/projectExecution/ProjectRiskRegister.tsx` | `ProjectRiskRegister` |
 | component | `src/components/projectExecution/ProjectRoadmap.tsx` | `ProjectRoadmap` |
 | component | `src/components/projectExecution/ProjectVerificationChecklist.tsx` | `ProjectVerificationChecklist` |
 | component | `src/components/research/HectorResearchPanel.tsx` | `HectorResearchPanel` |
 | component | `src/components/RightPanel.tsx` | `RightPanel` |
-| component | `src/components/RuntimeManagerView.tsx` | `RuntimeManagerView` |
+| component | `src/components/RuntimeManagerView.tsx` | `default` |
 | component | `src/components/RuntimeNotice.tsx` | `RuntimeNotice` |
 | component | `src/components/SelfDevelopmentPanel.tsx` | `SelfDevelopmentPanel` |
-| component | `src/components/SentinelAllowlistPanel.tsx` | `SentinelAllowlistPanel` |
+| component | `src/components/SentinelAllowlistPanel.tsx` | `default`, `SentinelAllowlistPanel` |
 | component | `src/components/SentinelFindingModal.tsx` | `SentinelFindingModal` |
-| component | `src/components/SessionHistoryView.tsx` | `SessionHistoryView` |
+| component | `src/components/SessionHistoryView.tsx` | `default`, `SessionHistoryView` |
 | component | `src/components/SettingsView.tsx` | `SettingsView` |
 | component | `src/components/setup/ActivationSequence.tsx` | `ActivationSequence`, `ActivationSequenceProps` |
 | component | `src/components/setup/AgentGrid.tsx` | `AgentGrid`, `AgentGridProps`, `COMPONENT_AGENT_COLORS` |
@@ -231,7 +231,7 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | service | `src/services/echoFileWatcherService.ts` | `getWatcherConfig`, `saveWatcherConfig`, `startFileWatcher`, `stopFileWatcher`, `WatcherConfig` |
 | service | `src/services/echoMemoryService.ts` | `buildEchoFallbackEntry`, `buildEchoSynthesisPrompt`, `classifyMemoryCategory`, `classifyRetentionPolicy`, `EchoAssignment`, `EchoMemoryEntry`, `EchoMemorySchema`, `EchoOptions`, `EchoPreservationResult`, `isChromaHealthy`, `MemoryCategory`, `MemorySensitivity`, `NormalizedMemoryEntry`, `normalizeMemoryConfidence`, `parseEchoMemoryResponse`, `RetentionPolicy`, `runEchoPreservation`, `searchEchoMemorySemantic`, `synthesizeSession` |
 | service | `src/services/escalationCallService.ts` | `EscalationCallRecord`, `EscalationDecision`, `EscalationSettings`, `getEscalationSettings`, `listEscalationCallRecords`, `runEscalationCheck`, `saveEscalationSettings`, `startEscalationPolling` |
-| service | `src/services/eventsService.ts` | `aggregateEventsByType`, `aggregateEventsWeekly`, `buildEvent`, `buildEventId`, `BuildEventParams`, `buildNotionSyncEvent`, `buildOllamaPreflightEvent`, `dedupeEvents`, `EVENT_OUTCOMES`, `EVENT_SOURCES`, `EVENT_TRUST_STATES`, `EventOutcome`, `EventRecord`, `EVENTS_SERVICE_PUBLIC_API`, `EventSource`, `EventTrustState`, `getEventStoreStatus`, `isEventsTableAvailable`, `listEventDedup`, `listEvents`, `normalizeEventRecord`, `RawEventRow`, `recordEvent`, `resetEventsAvailability`, `unifiedWeeklyReport`, `UnifiedWeeklyReportParams`, `WeeklyReportParams` |
+| service | `src/services/eventsService.ts` | `aggregateEventsByType`, `aggregateEventsWeekly`, `buildEvent`, `buildEventId`, `BuildEventParams`, `buildNotionSyncEvent`, `buildOllamaPreflightEvent`, `dedupeEvents`, `default`, `EVENT_OUTCOMES`, `EVENT_SOURCES`, `EVENT_TRUST_STATES`, `EventOutcome`, `EventRecord`, `EVENTS_SERVICE_PUBLIC_API`, `EventSource`, `EventTrustState`, `getEventStoreStatus`, `isEventsTableAvailable`, `listEventDedup`, `listEvents`, `normalizeEventRecord`, `RawEventRow`, `recordEvent`, `resetEventsAvailability`, `unifiedWeeklyReport`, `UnifiedWeeklyReportParams`, `WeeklyReportParams` |
 | service | `src/services/fanOutBudgetService.ts` | `createFanOutBudgetTracker`, `DEFAULT_FANOUT_CHAR_BUDGET`, `FanOutBudgetTracker` |
 | service | `src/services/genericWebhookService.ts` | `pollGenericWebhookGateway`, `startGenericWebhookPolling`, `stopGenericWebhookPolling` |
 | service | `src/services/gitService.ts` | `getGitLog`, `getGitStatus`, `gitDiffStat`, `gitRevert`, `gitRevertLast` |
@@ -264,7 +264,7 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | service | `src/services/nativeRc0ProofService.ts` | `formatNativeProofDetail`, `formatNativeRc0ProofResult`, `hasRustProofReceipts`, `NativeRc0ProofResult`, `PROOF_AUTHORITY`, `runNativeRc0Proof` |
 | service | `src/services/nativeSelfDevelopmentAutostartService.ts` | `isNativeSelfDevelopmentAutostartRunning`, `startNativeSelfDevelopmentAutostart` |
 | service | `src/services/notificationService.ts` | `appendNotification`, `clearNotifications`, `getNotifications`, `sendNativeNotification` |
-| service | `src/services/notionSyncService.js` | `buildConflictRecord`, `buildCorrelationId`, `buildNotionPageProperties`, `buildNotionSyncMemoryRecord`, `buildNotionSyncRecordId`, `buildPullReconcilePlan`, `buildReconcilePlan`, `buildSyncMetadata`, `correlationKey`, `detectFieldConflict`, `extractCorrelationFromMemoryRecord`, `extractNotionPageIdFromUrl`, `fetchNotionApi`, `fetchNotionDatabasePages`, `fetchNotionPage`, `findLatestNotionSyncRecord`, `getNotionSyncStatus`, `ingestAlphonsoTaskFromNotionPage`, `isNotionConnectorReady`, `isNotionPullEnabled`, `isNotionSyncMemoryRecord`, `listNotionSyncRecords`, `normalizeAssignedAgent`, `normalizeNotionPhase`, `normalizePortfolio`, `normalizeRiskLevel`, `NOTION_AGENT_OPTIONS`, `NOTION_APPROVAL_STATES`, `NOTION_CONFLICT_STATES`, `NOTION_PORTFOLIO_OPTIONS`, `NOTION_PROPERTY_TYPES`, `NOTION_RISK_LEVELS`, `NOTION_SYNC_PUBLIC_API`, `NOTION_SYNC_SCOPE`, `NOTION_SYNC_SOURCES`, `NOTION_WORKFLOW_DATABASE_SCHEMA`, `NOTION_WORKFLOW_PHASES`, `notionSyncWeeklyReport`, `parseNotionPageId`, `persistNotionSyncRecord`, `pullNotionDatabase`, `pullNotionPage`, `pushAlphonsoTaskToNotion`, `recordNotionConflict` |
+| service | `src/services/notionSyncService.js` | `buildConflictRecord`, `buildCorrelationId`, `buildNotionPageProperties`, `buildNotionSyncMemoryRecord`, `buildNotionSyncRecordId`, `buildPullReconcilePlan`, `buildReconcilePlan`, `buildSyncMetadata`, `correlationKey`, `default`, `detectFieldConflict`, `extractCorrelationFromMemoryRecord`, `extractNotionPageIdFromUrl`, `fetchNotionApi`, `fetchNotionDatabasePages`, `fetchNotionPage`, `findLatestNotionSyncRecord`, `getNotionSyncStatus`, `ingestAlphonsoTaskFromNotionPage`, `isNotionConnectorReady`, `isNotionPullEnabled`, `isNotionSyncMemoryRecord`, `listNotionSyncRecords`, `normalizeAssignedAgent`, `normalizeNotionPhase`, `normalizePortfolio`, `normalizeRiskLevel`, `NOTION_AGENT_OPTIONS`, `NOTION_APPROVAL_STATES`, `NOTION_CONFLICT_STATES`, `NOTION_PORTFOLIO_OPTIONS`, `NOTION_PROPERTY_TYPES`, `NOTION_RISK_LEVELS`, `NOTION_SYNC_PUBLIC_API`, `NOTION_SYNC_SCOPE`, `NOTION_SYNC_SOURCES`, `NOTION_WORKFLOW_DATABASE_SCHEMA`, `NOTION_WORKFLOW_PHASES`, `notionSyncWeeklyReport`, `parseNotionPageId`, `persistNotionSyncRecord`, `pullNotionDatabase`, `pullNotionPage`, `pushAlphonsoTaskToNotion`, `recordNotionConflict` |
 | service | `src/services/novaAnalysisService.ts` | `buildNovaAnalysisPrompt`, `buildNovaFallbackAnalysis`, `classifyPriorityTier`, `computeOpportunityScores`, `getAlertThreshold`, `getOpportunityHistory`, `NovaOpportunitySchema`, `parseNovaAnalysisResponse`, `PriorityTier`, `runNovaAnalysis`, `saveOpportunityScore`, `setAlertThreshold` |
 | service | `src/services/novaFeedbackService.ts` | `clearNovaScores`, `computeScoreTrend`, `getDecompositionHints`, `getNovaScore`, `listRecentScores`, `NOVA_SCORE_SCOPE`, `storeNovaScore` |
 | service | `src/services/offlineChatService.ts` | `clearOfflineMessages`, `getOfflineMessages`, `getPendingSyncMessages`, `markSynced`, `OfflineMessageInput`, `saveMessageOffline` |
@@ -292,7 +292,7 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | service | `src/services/runtimeLedgerService.ts` | `bootstrapRuntimeLedgerHydration`, `hydrateScopeToLocalStorage`, `HydrationResult`, `LedgerRecord`, `listScopeRecords`, `persistScopeRows` |
 | service | `src/services/runtimeManagerService.ts` | `checkPrerequisites`, `getAllStatus`, `getAutostartPrefs`, `installPrerequisite`, `installTool`, `listTools`, `loadBundledStarterModel`, `LogEvent`, `onAnyProgress`, `onLogLine`, `PrereqStatus`, `ProgressEvent`, `saveAutostartPref`, `startTool`, `stopTool`, `TOOL_NAMES`, `ToolName`, `ToolResult`, `ToolStatus`, `waitForTool` |
 | service | `src/services/runwayService.ts` | `buildRunwayVideoRequest`, `generateRunwayVideo`, `listPendingRunwayJobs`, `resumeRunwayTask`, `RunwayResult` |
-| service | `src/services/scaffoldTemplatesService.js` | `App`, `detectStackTemplate`, `Home`, `listScaffoldTemplates`, `scaffoldProject` |
+| service | `src/services/scaffoldTemplatesService.js` | `default`, `detectStackTemplate`, `listScaffoldTemplates`, `scaffoldProject` |
 | service | `src/services/screenIntelligenceService.ts` | `getScreenObserverLogs`, `getScreenObserverState`, `requestScreenNotificationPermission`, `ScreenEvent`, `ScreenObserverState`, `startScreenObserver`, `stopScreenObserver`, `updateScreenObserverState` |
 | service | `src/services/searchService.ts` | `getSearchSuggestions`, `searchMemory`, `searchProjects` |
 | service | `src/services/secureStorageService.ts` | `secureDelete`, `secureGet`, `secureSet` |

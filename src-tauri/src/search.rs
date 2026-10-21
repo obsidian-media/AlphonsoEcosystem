@@ -212,8 +212,8 @@ pub(crate) fn strip_html_tags(input: &str) -> String {
     output
   }
 
-  let without_style = remove_html_block(input, "style");
-  let input = remove_html_block(&without_style, "script");
+  let without_script = remove_html_block(input, "script");
+  let input = remove_html_block(&without_script, "style");
   let mut output = String::new();
   let mut in_tag = false;
   for ch in input.chars() {
@@ -758,6 +758,14 @@ mod tests {
     assert_eq!(
       strip_html_tags("<style>html { color: red }</style><p>Hello</p><script>alert(1)</script>"),
       "Hello"
+    );
+  }
+
+  #[test]
+  fn strip_html_preserves_text_after_script_containing_style_marker() {
+    assert_eq!(
+      strip_html_tags("<script>const marker = '<style>'; </script><p>Visible</p>"),
+      "Visible"
     );
   }
 

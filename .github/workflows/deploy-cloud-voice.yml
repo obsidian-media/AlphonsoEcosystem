@@ -143,8 +143,8 @@ jobs:
           set -euo pipefail
           required_env='["SUPABASE_URL","NVIDIA_NIM_MODEL","NVIDIA_TTS_MAGPIE_URL"]'
           missing=$(jq -r --argjson required "$required_env" '
-            ($.containerDefinitions[0].environment // []) as $env |
-            [$required[] as $name | select(([ $env[].name ] | index($name)) | not)] | join(",")
+            (.containerDefinitions[0].environment // []) as $env |
+            [$required[] as $name | select(([ $env[].name ] | index($name)) == null) | $name] | join(",")
           ' task-definition.json)
           if [ -n "$missing" ]; then
             echo "::error::Task definition is missing required non-secret environment values: $missing"

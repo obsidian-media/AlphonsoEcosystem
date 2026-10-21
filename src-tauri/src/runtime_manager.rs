@@ -1858,6 +1858,19 @@ pub async fn runtime_start_tool(
 ) -> Result<RuntimeActionResult, String> {
   let def = tool_def(&name).ok_or_else(|| format!("Unknown tool: {}", name))?;
 
+  // Reserve before any PID/health checks. Otherwise two concurrent callers can
+  // both observe a stopped tool and race into spawn (or overwrite its token/PID).
+  let _start_reservation = match state.reserve_start(&name) {
+    Some(reservation) => reservation,
+    None => {
+      return Ok(RuntimeActionResult {
+        tool: name,
+        ok: true,
+        message: format!("{} is already starting.", def.display_name),
+      });
+    }
+  };
+
   // A tool Alphonso already started, whose process is still alive, is either
   // running or still starting up (its port may not answer yet). Spawning a
   // second copy would fail to bind the port and exit, and its PID would then
@@ -1905,17 +1918,6 @@ pub async fn runtime_start_tool(
       }
     }
   }
-
-  let _start_reservation = match state.reserve_start(&name) {
-    Some(reservation) => reservation,
-    None => {
-      return Ok(RuntimeActionResult {
-        tool: name,
-        ok: true,
-        message: format!("{} is already starting.", def.display_name),
-      });
-    }
-  };
 
   let dir = tool_dir(def.name);
   let exe = resolve_exe(def, &dir);

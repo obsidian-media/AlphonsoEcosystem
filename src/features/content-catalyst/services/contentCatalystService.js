@@ -185,6 +185,15 @@ function parseLooseJson(text) {
   }
 }
 
+function isUsableBrief(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const requiredText = ['angle', 'audience', 'promise'];
+  if (requiredText.some((key) => typeof value[key] !== 'string' || !value[key].trim())) return false;
+  if (!Array.isArray(value.hook_options) || !value.hook_options.length) return false;
+  if (!value.asset_plan || typeof value.asset_plan !== 'object' || Array.isArray(value.asset_plan)) return false;
+  return ['platform_notes', 'risk_notes'].every((key) => Array.isArray(value[key]));
+}
+
 function fallbackDraft(request) {
   const idea = request.idea || 'Untitled campaign';
   const tone = request.tone || 'confident and polished';
@@ -340,7 +349,8 @@ export async function buildContentBrief(job) {
       model: job?.settings?.selectedModel,
       prompt
     });
-    brief = parseLooseJson(response?.response) || null;
+    const parsed = parseLooseJson(response?.response);
+    brief = isUsableBrief(parsed) ? parsed : null;
   } catch (error) {
     brief = null;
     briefError = error instanceof Error && error.message ? error.message : 'The local model could not be reached.';
@@ -375,7 +385,7 @@ export async function buildContentBrief(job) {
 
 export async function generateContentDraft(job) {
   const request = job.request || createDefaultContentRequest();
-  const brief = await buildContentBrief(job);
+  const brief = job.brief || await buildContentBrief(job);
   const briefAwareJob = brief.briefSource === 'fallback'
     ? withLog(job, 'warning', `Content brief used the built-in fallback: ${brief.briefError}`, { brief })
     : job;

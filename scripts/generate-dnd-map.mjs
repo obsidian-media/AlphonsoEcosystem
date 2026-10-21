@@ -35,7 +35,7 @@ function parseExports(source) {
   const names = new Set();
   const patterns = [
     /export\s+(?:async\s+)?(?:function|class|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g,
-    /export\s+default\s+(?:async\s+)?(?:function|class)\s*([A-Za-z_$][\w$]*)?/g,
+    /export\s+default\b/g,
     /export\s*\{([^}]+)\}/g
   ];
 
@@ -47,6 +47,8 @@ function parseExports(source) {
           const name = entry.trim().split(/\s+as\s+/i).pop();
           if (name && /^[A-Za-z_$][\w$]*$/.test(name)) names.add(name);
         });
+      } else if (pattern === patterns[1]) {
+        names.add('default');
       } else if (match[1]) {
         names.add(match[1]);
       } else {

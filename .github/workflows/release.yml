@@ -198,13 +198,8 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          # All six are required together. A partial set would sign but skip (or
-          # fail) notarization, and the Gatekeeper verification step below would
-          # then fail the whole release, so fall back to the unsigned path instead.
-          missing=""
-          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
-            if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
-          done
+          # All six are required together. A partial set fails closed so a
+          # release can never be mislabeled as signed/notarized.
           provided=0
           for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
             if [ -n "${!name:-}" ]; then provided=$((provided + 1)); fi
@@ -214,6 +209,10 @@ jobs:
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          missing=""
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
+          done
           if [ -n "$missing" ]; then
             echo "::error::Apple signing is partially configured; missing:${missing}"
             echo "::error::Provide all six APPLE_* secrets or remove the partial set before releasing."
@@ -522,8 +521,10 @@ jobs:
     steps:
       - name: Require notarized macOS release
         shell: bash
+        env:
+          NOTARIZED: ${{ needs.build-macos.outputs.notarized }}
         run: |
-          if [ "${{ needs.build-macos.outputs.notarized }}" != "true" ]; then
+          if [ "$NOTARIZED" != "true" ]; then
             echo "macOS release publication is blocked: Apple signing/notarization is not enabled." >&2
             echo "Configure all six APPLE_* secrets documented in docs/MACOS_SIGNING.md." >&2
             exit 1
@@ -611,7 +612,7 @@ jobs:
             ### Installation
             **Windows:** Download `${{ needs.build-windows.outputs.installer_name }}`, run the installer, launch Alphonso.
 
-            **macOS (Apple Silicon):** Download `${{ needs.build-macos.outputs.installer_name }}`, open it, and drag Alphonso to Applications. If macOS says it cannot verify the app, this release was built without Apple notarization (Gatekeeper blocks un-notarized apps on macOS Sequoia and later); see `docs/MACOS_SIGNING.md`. Apple Silicon only; Intel Macs are not supported by this build.
+            **macOS (Apple Silicon):** Download `${{ needs.build-macos.outputs.installer_name }}`, open it, and drag Alphonso to Applications. Apple Silicon only; Intel Macs are not supported by this build.
 
             **Linux:** Download `${{ needs.build-linux.outputs.installer_name }}`, mark it executable (`chmod +x`), and run it.
 

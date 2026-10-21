@@ -30,7 +30,7 @@ src/                   React frontend (132 .tsx, 39 .jsx — .jsx being migrated
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                409 test files, 5,608 tests (Vitest; see ground truth for current verification status)
+  test/                409 test files, 5,614 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point

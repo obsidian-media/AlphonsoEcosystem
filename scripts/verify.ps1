@@ -25,7 +25,8 @@ function Invoke-SecretScanFallback {
 }
 
 function Resolve-ProcessExecutable($name) {
-  if ($IsWindows -and $name -in @('npm','pnpm','yarn')) { return "$name.cmd" }
+  $isWindowsHost = $env:OS -eq 'Windows_NT' -or $PSVersionTable.PSEdition -eq 'Desktop'
+  if ($isWindowsHost -and $name -in @('npm','pnpm','yarn')) { return "$name.cmd" }
   return $name
 }
 

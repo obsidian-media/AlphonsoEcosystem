@@ -9,8 +9,8 @@ Scope: native desktop Ollama readiness and Voice OS follow-up
 
 - `Get-Command ollama` found the installed client at
   `D:\AgentDevWork\Apps\Ollama\ollama.exe`.
-- No managed Voice OS virtual environment exists at
-  `src-tauri\voice-venv\Scripts\python.exe`.
+- No managed Voice OS virtual environment was found at the runtime-manager
+  location `%APPDATA%\\Alphonso\\runtimes\\voice-os\\venv\\Scripts\\python.exe`.
 - Running `ollama list` did not produce model inventory. The client reported
   access denied while opening/rotating files under
   `C:\Users\AgentDev\AppData\Local\Ollama\` and then timed out waiting for

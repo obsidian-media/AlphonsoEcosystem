@@ -228,6 +228,7 @@ interface ExecutionResult {
   packetType: string;
   ok: boolean;
   setupRequired: boolean;
+  status: 'running' | 'success' | 'queued' | 'failed';
   summary: string;
   ts: number;
 }
@@ -586,6 +587,7 @@ export function OrchestratorView({
         packetType: packet.packetType,
         ok: false,
         setupRequired: false,
+        status: 'running',
         summary: 'Executing approved packet…',
         ts: startedAt
       },
@@ -611,7 +613,16 @@ export function OrchestratorView({
         : ((result as any).executionResult?.note || (result as any).result?.message || `Packet "${packet.title}" executed successfully.`))
       : (result?.error || 'Execution failed — check session events for details.');
     setExecutionResults((prev) => [
-      { id: packetId, title: packet.title, packetType: packet.packetType, ok: Boolean(result?.ok), setupRequired: Boolean(result?.setupRequired), summary, ts: startedAt },
+      {
+        id: packetId,
+        title: packet.title,
+        packetType: packet.packetType,
+        ok: Boolean(result?.ok),
+        setupRequired: Boolean(result?.setupRequired),
+        status: result?.ok ? (result?.setupRequired ? 'queued' : 'success') : 'failed',
+        summary,
+        ts: startedAt
+      },
       ...prev.filter((item) => item.id !== packetId).slice(0, 9)
     ]);
     onJoseStateChange?.(result?.ok ? 'task_complete' : 'warning', result?.ok ? 'Approved packet executed.' : 'Packet execution failed.');
@@ -839,10 +850,10 @@ export function OrchestratorView({
                 <button onClick={() => setExecutionResults([])} className="text-[10px] text-(--text-4) hover:text-(--text-3)">Clear</button>
               </div>
               {executionResults.map((r) => (
-                <div key={r.id + r.ts} className={`rounded-xl p-3 ${r.ok ? 'bg-(--success-dim)' : 'bg-(--error-dim)'}`}>
+                <div key={r.id + r.ts} className={`rounded-xl p-3 ${r.status === 'running' ? 'bg-(--warning-dim)' : r.ok ? 'bg-(--success-dim)' : 'bg-(--error-dim)'}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[11px] font-semibold ${r.ok ? 'text-(--success)' : 'text-(--error)'}`}>
-                      {r.ok ? (r.setupRequired ? 'Queued' : 'Success') : 'Failed'}
+                    <span className={`text-[11px] font-semibold ${r.status === 'running' ? 'text-(--warning)' : r.ok ? 'text-(--success)' : 'text-(--error)'}`}>
+                      {r.status === 'running' ? 'Running' : r.status === 'queued' ? 'Queued' : r.status === 'success' ? 'Success' : 'Failed'}
                     </span>
                     <span className="text-[10px] text-(--text-4)">{new Date(r.ts).toLocaleTimeString()}</span>
                   </div>
