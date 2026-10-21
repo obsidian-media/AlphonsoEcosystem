@@ -286,11 +286,85 @@ pub(crate) fn ollama_origins_value(existing: Option<&str>) -> String {
   origins.join(",")
 }
 
+/// The Ollama desktop app's own settings database. Its Settings screen has a
+/// "Model location" field that is saved here (`settings.models`), not in the
+/// `OLLAMA_MODELS` environment variable, and the app passes it only to the
+/// server it starts itself. Checked against Ollama 0.33 on Windows
+/// (`%LOCALAPPDATA%\Ollama\db.sqlite`, schema_version 18). The location on
+/// macOS/Linux is not verified, so no path is guessed there.
+fn ollama_app_settings_db() -> Option<PathBuf> {
+  if !cfg!(windows) {
+    return None;
+  }
+  let local = std::env::var_os("LOCALAPPDATA")?;
+  let db = PathBuf::from(local).join("Ollama").join("db.sqlite");
+  db.is_file().then_some(db)
+}
+
+/// The model folder saved in the Ollama app's settings database, or None if
+/// the database, table or column is missing, the value is empty, or the
+/// folder does not exist. Opened read-only; any error means "not known".
+pub(crate) fn read_ollama_app_models_setting(db: &Path) -> Option<String> {
+  use rusqlite::OpenFlags;
+  let conn = rusqlite::Connection::open_with_flags(
+    db,
+    OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+  )
+  .ok()?;
+  let value: String = conn
+    .query_row("SELECT models FROM settings WHERE id = 1", [], |row| {
+      row.get(0)
+    })
+    .ok()?;
+  let value = value.trim();
+  if value.is_empty() || !Path::new(value).is_dir() {
+    return None;
+  }
+  Some(value.to_string())
+}
+
+/// Where Ollama keeps its models on this machine, when that is known for
+/// certain: `OLLAMA_MODELS` first, then the folder chosen in the Ollama
+/// app's own settings. None means "Ollama's built-in default" (not guessed).
+///
+/// Without the second source, a user who moved their models to another
+/// drive in the Ollama app saw none of them in an Ollama that Alphonso
+/// started, and Setup downloaded the starter model again onto C:.
+pub(crate) fn resolve_ollama_models_dir(
+  env_value: Option<String>,
+  app_db: Option<&Path>,
+) -> Option<String> {
+  if let Some(dir) = env_value
+    .map(|v| v.trim().to_string())
+    .filter(|v| !v.is_empty())
+  {
+    return Some(dir);
+  }
+  app_db.and_then(read_ollama_app_models_setting)
+}
+
+pub(crate) fn configured_ollama_models_dir() -> Option<String> {
+  resolve_ollama_models_dir(
+    std::env::var("OLLAMA_MODELS").ok(),
+    ollama_app_settings_db().as_deref(),
+  )
+}
+
 /// Environment a tool needs when Alphonso starts it.
 fn apply_tool_env(tool_name: &str, cmd: &mut Command) {
   if tool_name == "ollama" {
     let existing = std::env::var("OLLAMA_ORIGINS").ok();
     cmd.env("OLLAMA_ORIGINS", ollama_origins_value(existing.as_deref()));
+    // An inherited OLLAMA_MODELS already reaches the child; only fill it in
+    // from the Ollama app's settings when it is not set.
+    if std::env::var("OLLAMA_MODELS")
+      .map(|v| v.trim().is_empty())
+      .unwrap_or(true)
+    {
+      if let Some(dir) = configured_ollama_models_dir() {
+        cmd.env("OLLAMA_MODELS", dir);
+      }
+    }
   }
 }
 
@@ -961,9 +1035,10 @@ fn detect_disk_free_gb() -> Option<u64> {
 }
 
 /// Free disk space (GB) for the volume the starter model is actually pulled
-/// onto, but ONLY when that volume is known with certainty — i.e. only when
-/// `OLLAMA_MODELS` is explicitly set. Returns None (not a guessed default
-/// path) when it isn't set, which is the common case: Ollama's own default
+/// onto, but ONLY when that volume is known with certainty: `OLLAMA_MODELS`
+/// is set, or the Ollama app's settings name a model folder that exists (see
+/// `configured_ollama_models_dir`). Returns None (not a guessed default
+/// path) otherwise, which is the common case: Ollama's own default
 /// location varies by OS and install method (service vs. manual) and can
 /// change between Ollama versions, so a guessed default risks being wrong
 /// in a way `runtimes_dir()` (a location this app fully controls) never
@@ -971,7 +1046,7 @@ fn detect_disk_free_gb() -> Option<u64> {
 /// disk-space check that measured the wrong drive — worse than the
 /// pre-existing gap of simply not checking this volume at all.
 fn detect_ollama_models_dir_free_gb() -> Option<u64> {
-  let ollama_models_dir = std::env::var("OLLAMA_MODELS").ok()?;
+  let ollama_models_dir = configured_ollama_models_dir()?;
 
   let disks = sysinfo::Disks::new_with_refreshed_list();
   let disk_list: Vec<(String, u64)> = disks
@@ -1470,10 +1545,10 @@ pub struct HardwareProfile {
   /// the starter model — see `ollama_models_dir_free_gb` below for that.
   pub disk_free_gb: Option<u64>,
   /// Free space (GB) on the volume the starter model will actually be
-  /// pulled onto by Ollama — resolved ONLY when the `OLLAMA_MODELS`
-  /// environment variable is explicitly set, since that is the one case
-  /// where the real target directory is known with certainty rather than
-  /// guessed. None whenever the env var is unset (the common case): this
+  /// pulled onto by Ollama — resolved ONLY when the real target directory
+  /// is known with certainty: `OLLAMA_MODELS` is set, or the Ollama app's
+  /// own settings name an existing model folder. None otherwise (the
+  /// common case): this
   /// is NOT "unknown, assume default" — it deliberately means "not
   /// checked", so a wrong default-path guess can never introduce new
   /// incorrect blocking behavior. See docs/governance/DEFERRED_WORK.md's
@@ -1481,8 +1556,8 @@ pub struct HardwareProfile {
   pub ollama_models_dir_free_gb: Option<u64>,
   /// Mount point of the drive `disk_free_gb` measured, or None if unknown.
   pub disk_mount: Option<String>,
-  /// Mount point of the `OLLAMA_MODELS` drive, or None when the variable is
-  /// unset or no disk matches. When both mounts are known and equal, Setup
+  /// Mount point of the Ollama models drive (`configured_ollama_models_dir`),
+  /// or None when that folder is not known or no disk matches. When both mounts are known and equal, Setup
   /// checks the starter model against one shared free-space number instead
   /// of warning twice about the same drive.
   pub ollama_models_dir_mount: Option<String>,
@@ -1504,8 +1579,7 @@ pub fn setup_scan_hardware() -> HardwareProfile {
     disk_free_gb: detect_disk_free_gb(),
     ollama_models_dir_free_gb: detect_ollama_models_dir_free_gb(),
     disk_mount: detect_mount_for_path(&runtimes_dir().to_string_lossy()),
-    ollama_models_dir_mount: std::env::var("OLLAMA_MODELS")
-      .ok()
+    ollama_models_dir_mount: configured_ollama_models_dir()
       .and_then(|dir| detect_mount_for_path(&dir)),
     gpu_present,
     gpu_vendor,
@@ -2343,6 +2417,82 @@ fn is_pid_alive(pid: u32) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  fn ollama_app_db(dir: &Path, models: Option<&str>) -> PathBuf {
+    let db = dir.join("db.sqlite");
+    let conn = rusqlite::Connection::open(&db).unwrap();
+    conn
+      .execute_batch("CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK (id = 1), models TEXT NOT NULL DEFAULT '')")
+      .unwrap();
+    if let Some(m) = models {
+      conn
+        .execute("INSERT INTO settings (id, models) VALUES (1, ?1)", [m])
+        .unwrap();
+    }
+    db
+  }
+
+  fn temp_dir(tag: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!(
+      "alphonso-ollama-models-{}-{}",
+      tag,
+      std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+  }
+
+  #[test]
+  fn ollama_models_dir_prefers_the_environment_variable() {
+    let dir = temp_dir("env");
+    let models = dir.join("from-app");
+    std::fs::create_dir_all(&models).unwrap();
+    let db = ollama_app_db(&dir, Some(&models.to_string_lossy()));
+    assert_eq!(
+      resolve_ollama_models_dir(Some("/mnt/e/ollama".into()), Some(&db)),
+      Some("/mnt/e/ollama".to_string())
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+  }
+
+  #[test]
+  fn ollama_models_dir_falls_back_to_the_ollama_app_setting() {
+    let dir = temp_dir("app");
+    let models = dir.join("models-on-d");
+    std::fs::create_dir_all(&models).unwrap();
+    let db = ollama_app_db(&dir, Some(&models.to_string_lossy()));
+    let expected = models.to_string_lossy().to_string();
+    assert_eq!(
+      resolve_ollama_models_dir(None, Some(&db)),
+      Some(expected.clone())
+    );
+    // A blank variable counts as unset.
+    assert_eq!(
+      resolve_ollama_models_dir(Some("  ".into()), Some(&db)),
+      Some(expected)
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+  }
+
+  #[test]
+  fn ollama_models_dir_is_unknown_when_the_app_setting_is_empty_missing_or_gone() {
+    let dir = temp_dir("none");
+    let empty = ollama_app_db(&dir, Some(""));
+    assert_eq!(resolve_ollama_models_dir(None, Some(&empty)), None);
+    std::fs::remove_file(&empty).unwrap();
+    let no_row = ollama_app_db(&dir, None);
+    assert_eq!(resolve_ollama_models_dir(None, Some(&no_row)), None);
+    std::fs::remove_file(&no_row).unwrap();
+    let gone = ollama_app_db(&dir, Some(&dir.join("deleted").to_string_lossy()));
+    assert_eq!(resolve_ollama_models_dir(None, Some(&gone)), None);
+    assert_eq!(
+      resolve_ollama_models_dir(None, Some(&dir.join("no-such.sqlite"))),
+      None
+    );
+    assert_eq!(resolve_ollama_models_dir(None, None), None);
+    let _ = std::fs::remove_dir_all(&dir);
+  }
 
   #[test]
   fn all_tools_have_unique_names() {
