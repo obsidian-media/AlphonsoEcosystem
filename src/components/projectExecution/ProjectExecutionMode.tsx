@@ -192,7 +192,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
 
   const traceSummary = result?.traceId ? getTraceSummary(result.traceId as string) : null;
   const pendingGates = result?.traceId
-    ? (listPendingApprovalsByTrace(result.traceId as string) as { id: string; actionType: string; riskLevel: string; reason: string }[])
+    ? (listPendingApprovalsByTrace(result.traceId as string) as { id: string; actionType: string; riskLevel: string; reason: string; metadata?: { ownerAgent?: string | null } }[])
     : [];
   const hasDeniedGate = result?.traceId
     ? (listApprovalsByTrace(result.traceId as string) as { status: string }[]).some((g) => g.status === 'rejected')
@@ -387,7 +387,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
                 </div>
               ) : (
                 <ApprovalPanel
-                  pendingApprovals={pendingGates.map((g) => ({ itemId: g.id, actionType: g.actionType, reason: g.reason, riskLevel: g.riskLevel }))}
+                  pendingApprovals={pendingGates.map((g) => ({ itemId: g.id, actionType: g.actionType, reason: g.reason, riskLevel: g.riskLevel, agent: g.metadata?.ownerAgent || undefined }))}
                   commandId={result.traceId as string}
                   onApprove={approveRequest}
                   onReject={rejectRequest}

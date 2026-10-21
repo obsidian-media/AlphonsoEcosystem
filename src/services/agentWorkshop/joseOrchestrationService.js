@@ -35,12 +35,15 @@ export function produceExecutionSequence(project) {
   ].map((item) => ({ ...item, projectId: project.id }));
 }
 
+// ownerAgent is the agent whose work each gate holds back. It is stored on
+// the approval record so the Approval tab can name it without guessing from
+// the action type.
 export function produceApprovalGates(project) {
   return [
-    { id: 'gate-file-write', actionType: 'file_write', riskLevel: 'high', reason: 'Prevent unsupervised code writes.' },
-    { id: 'gate-external-api', actionType: 'external_api_connection', riskLevel: 'high', reason: 'Require explicit connector approval.' },
-    { id: 'gate-payout', actionType: 'payout_payment_action', riskLevel: 'critical', reason: 'Payment and fraud risk requires manual approval.' },
-    { id: 'gate-deploy', actionType: 'deployment', riskLevel: 'critical', reason: 'Production deployment requires explicit approval.' }
+    { id: 'gate-file-write', actionType: 'file_write', ownerAgent: 'alphonso', riskLevel: 'high', reason: 'Prevent unsupervised code writes.' },
+    { id: 'gate-external-api', actionType: 'external_api_connection', ownerAgent: 'hector', riskLevel: 'high', reason: 'Require explicit connector approval.' },
+    { id: 'gate-payout', actionType: 'payout_payment_action', ownerAgent: 'marcus', riskLevel: 'critical', reason: 'Payment and fraud risk requires manual approval.' },
+    { id: 'gate-deploy', actionType: 'deployment', ownerAgent: 'marcus', riskLevel: 'critical', reason: 'Production deployment requires explicit approval.' }
   ].map((item) => ({ ...item, projectId: project.id, status: 'pending' }));
 }
 

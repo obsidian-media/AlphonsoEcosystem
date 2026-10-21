@@ -58,7 +58,7 @@ vi.mock('../services/agentWorkshop/aiReviewPolicyService', () => ({
 
 vi.mock('../services/agentWorkshop/joseOrchestrationService', () => ({
   createJoseCoordinationReport: vi.fn(() => ({ id: 'report_1' })),
-  produceApprovalGates: vi.fn(() => [{ id: 'gate_1', actionType: 'external_posting', riskLevel: 'high', reason: 'test gate' }]),
+  produceApprovalGates: vi.fn(() => [{ id: 'gate_1', actionType: 'external_posting', ownerAgent: 'hector', riskLevel: 'high', reason: 'test gate' }]),
   produceExecutionSequence: vi.fn(() => ['step1', 'step2']),
   receiveProjectIntake: vi.fn((input) => ({
     id: `proj_${Date.now()}`,
@@ -223,6 +223,7 @@ describe('runProjectWorkshop', () => {
     expect(result.sequence).toEqual(['step1', 'step2']);
     expect(result.approvalGates).toHaveLength(1);
     expect(result.approvalRequests).toHaveLength(1);
+    expect(result.approvalRequests[0].metadata).toEqual(expect.objectContaining({ gateId: 'gate_1', ownerAgent: 'hector' }));
     expect(result.workContracts).toBeTruthy();
     expect(result.verificationChain).toBeTruthy();
     expect(result.scopedContexts).toBeTruthy();
