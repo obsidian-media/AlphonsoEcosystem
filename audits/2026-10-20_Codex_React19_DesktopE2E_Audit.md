@@ -102,3 +102,8 @@ Local targeted typecheck/Vitest execution is unavailable in this worktree
 because the existing `node_modules` is incomplete (`tsc` cannot resolve its
 binary and `@vitest/utils/dist/constants.js` is missing); clean CI installs
 remain the authoritative check for the touched TypeScript component.
+
+Run `39543100340` passed Project Execution and 15 of 16 desktop specs, but
+Jose still lacked the result panel after the scoped click. The next run now
+reports the active tab and visible main text when the panel assertion times
+out, so the remaining UI-state issue can be fixed from direct evidence.

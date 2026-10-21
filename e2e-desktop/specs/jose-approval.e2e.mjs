@@ -57,10 +57,16 @@ describe('Alphonso desktop Jose approvals', () => {
       timeout: 10000,
       timeoutMsg: 'the Approvals tab did not become active after packet execution',
     });
-    await browser.waitUntil(async () => (await mainText()).includes('Execution Results'), {
-      timeout: 60000,
-      timeoutMsg: 'the executed packet did not produce a visible result panel',
-    });
+    try {
+      await browser.waitUntil(async () => (await mainText()).includes('Execution Results'), {
+        timeout: 60000,
+        timeoutMsg: 'the executed packet did not produce a visible result panel',
+      });
+    } catch (error) {
+      const visibleText = await mainText();
+      const activeTab = await approvalsTab.getAttribute('aria-pressed');
+      throw new Error(`${error.message}; approvalsTab=${activeTab}; visibleMain=${visibleText.slice(-2000)}`);
+    }
     await browser.waitUntil(async () => (await mainText()).includes('Task queued — no live runtime adapter'), {
       timeout: 60000,
       timeoutMsg: 'the execution result panel did not settle with the queued result',
