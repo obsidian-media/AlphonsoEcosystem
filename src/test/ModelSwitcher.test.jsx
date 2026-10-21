@@ -66,6 +66,18 @@ describe('ModelProviderPicker', () => {
     expect(onProviderChange).toHaveBeenCalledWith('nvidia_nim');
   });
 
+  it('locks every provider tab while a reply is generating', async () => {
+    const onProviderChange = vi.fn();
+    render(<ModelProviderPicker provider="ollama" locked onProviderChange={onProviderChange} selectedModel="" onModelChange={() => {}} ollamaPicker={<div>ollama-picker</div>} />);
+    await waitFor(() => {
+      expect(screen.getByText('NVIDIA NIM').closest('button')).toBeDisabled();
+    });
+    expect(screen.getByText('Ollama').closest('button')).toBeDisabled();
+    expect(screen.getByText('NVIDIA NIM').closest('button')).toHaveAttribute('title', 'Wait for the current reply to finish before switching provider');
+    fireEvent.click(screen.getByText('NVIDIA NIM'));
+    expect(onProviderChange).not.toHaveBeenCalled();
+  });
+
   it('renders the ollama picker when provider is ollama', () => {
     render(<ModelProviderPicker provider="ollama" onProviderChange={() => {}} selectedModel="" onModelChange={() => {}} ollamaPicker={<div>ollama-picker</div>} />);
     expect(screen.getByText('ollama-picker')).toBeInTheDocument();
