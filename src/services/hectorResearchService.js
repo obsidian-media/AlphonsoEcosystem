@@ -1,5 +1,6 @@
 import { appendAgentActivity } from './agentActivityService';
 import { isTavilyConfigured, searchTavily } from './connectors/tavilyConnector.js';
+import { isPerplexityConfigured, searchPerplexity } from './connectors/perplexityConnector';
 import { isDeepSeekConfigured, searchWithDeepSeek } from './connectors/deepseekConnector.js';
 import { isBraveSearchConfigured, searchBrave } from './connectors/braveSearchConnector';
 import { invoke } from '@tauri-apps/api/core';
@@ -1263,6 +1264,23 @@ export async function runMultiSourceResearch(query) {
         }
       }
     } catch { /* Tavily unavailable — fall through */ }
+  }
+
+  // 2b. Try Perplexity's Search API (ranked web results) when sources are still thin
+  if (allSources.length < 3 && isPerplexityConfigured()) {
+    try {
+      const perplexityResult = await searchPerplexity(query, { maxResults: 8 });
+      if (perplexityResult?.sources?.length > 0) {
+        providerChain.push('perplexity');
+        if (!preferredProvider) preferredProvider = 'perplexity';
+        for (const src of perplexityResult.sources) {
+          if (!allSources.some(s => s.url === src.url)) {
+            allSources.push({ ...src, sourceType: 'public_web', provider: 'perplexity' });
+            citations.push({ url: src.url, title: src.title || '', source: 'perplexity', confidence: 'inferred' });
+          }
+        }
+      }
+    } catch { /* Perplexity unavailable — fall through */ }
   }
 
   // 3. Try DeepSeek AI synthesis (tier-3 fallback when web sources are thin)
