@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { generateAgentLlmResponse } from '../lib/ollama';
 import {
   computeOpportunityScores,
   classifyPriorityTier,
@@ -34,7 +35,10 @@ vi.mock('../lib/ollama', () => ({
     }),
     done: true
   })),
-  PREFERRED_MODEL: 'qwen2.5-coder:7b'
+  generateAgentLlmResponse: vi.fn(async () => null),
+  getConfiguredOllamaEndpoint: vi.fn(() => 'http://configured-host:11434'),
+  getConfiguredOllamaModel: vi.fn(() => 'picked-by-user:3b'),
+  PREFERRED_MODEL: 'llama3.2:3b'
 }));
 
 // ── computeOpportunityScores ──────────────────────────────────────────────────
@@ -338,5 +342,19 @@ describe('alertThreshold', () => {
     expect(getAlertThreshold()).toBe(100);
     setAlertThreshold(-10);
     expect(getAlertThreshold()).toBe(0);
+  });
+});
+
+describe('runNovaAnalysis model choice', () => {
+  // Nova used to ask for a hardcoded 'qwen2.5-coder:7b' at the default
+  // endpoint, so on a machine without that model its AI analysis always
+  // failed silently (QA Bug 25, 2026-10-21).
+  it('asks the model and endpoint the user configured', async () => {
+    generateAgentLlmResponse.mockClear();
+    await runNovaAnalysis('Build a product launch plan', null, null);
+    expect(generateAgentLlmResponse).toHaveBeenCalledWith(
+      'nova',
+      expect.objectContaining({ endpoint: 'http://configured-host:11434', model: 'picked-by-user:3b' })
+    );
   });
 });

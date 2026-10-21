@@ -16,6 +16,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `release.yml`: a manual run has a `publish` switch (off by default), so all three installers can be built and checked without releasing anything.
 
 ### Fixed
+- **Agents use your model.** Nova, Sentinel, Echo, Maria, Hector, Miya and the goal runner asked for a hardcoded `qwen2.5-coder:7b` (and Nova, Sentinel and Echo's file watcher for the default Ollama address), so on a fresh install their AI step failed and they fell back to rules without saying so. They now use the model and address you chose.
+- **Default model is the starter model.** With no model picked, the app now chooses the one you picked last, else the bundled starter `llama3.2:3b`, instead of `qwen2.5-coder:7b` whenever that was installed.
+- **Content Studio uses the model selected when a step runs**, so a job created before a model was chosen no longer fails every step.
+- **Content Studio drafts are honest.** A model reply with no hook or caption was shown as a finished model-written draft with "—" in its place; it is now labelled as the template with the reason. The brief and draft also ask Ollama for JSON output, so small models answer in a usable shape.
+- **Real error reasons.** A backend command that fails reports its actual reason; Content Studio showed "The local model could not be reached" instead.
+- **Desktop test harness** waits for `tauri-driver` before each spec and for it to exit after, fixing an intermittent "Unable to connect" on the first spec.
+- **User manual:** governance and risk review is Maria's, not Marcus's.
 - **Update relaunch on macOS and Linux.** The Rust `tauri-plugin-process` crate was never installed, so `relaunch()` after an update failed. It is now registered with only the restart permission.
 - **Desktop chat fallback keeps the conversation.** When Ollama refuses the app window, chat now goes through a new `ollama_chat` backend command that sends the real turns, instead of a single flattened prompt.
 - **Perplexity search works again.** The connector moved to Perplexity's Search API (the old endpoint and model were retired) and Hector now uses it after Tavily.

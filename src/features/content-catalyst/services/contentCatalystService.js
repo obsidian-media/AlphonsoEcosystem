@@ -1,4 +1,4 @@
-import { generateOllamaResponse } from '../../../lib/ollama';
+import { generateOllamaResponse, getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../../../lib/ollama';
 import { generateComfyUiImage } from '../../../services/connectorRegistryService';
 import { publishMetaContent } from '../../../services/metaPublishService';
 import { generateRunwayVideo } from '../../../services/runwayService';
@@ -185,6 +185,14 @@ function parseLooseJson(text) {
   }
 }
 
+// A draft only counts as written by the model when it has the copy a post
+// needs. A reply with no hook or caption used to be shown as a finished,
+// model-written draft with "—" in its place (QA Bug 28).
+function isUsableDraft(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return ['hook', 'caption'].every((key) => typeof value[key] === 'string' && value[key].trim());
+}
+
 function isUsableBrief(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const requiredText = ['angle', 'audience', 'promise'];
@@ -271,6 +279,27 @@ export function createContentBridgeRequest(payload = {}) {
   };
 }
 
+// The model and endpoint are read when a step runs, not frozen when the job
+// is created: on a fresh install a job could be created before any model was
+// chosen, and then every model step failed for that job. The job's own
+// endpoint still wins when it was set explicitly.
+function modelRequest(job, prompt) {
+  return {
+    endpoint: job?.settings?.endpoint || getConfiguredOllamaEndpoint(),
+    model: getConfiguredOllamaModel(),
+    prompt,
+    // Both replies are parsed as JSON; ask Ollama to guarantee it.
+    format: 'json'
+  };
+}
+
+// Keep the real reason a model step failed. Tauri commands reject with a
+// plain string, which `error.message` alone would drop.
+function describeModelError(error) {
+  const reason = error instanceof Error ? error.message : String(error ?? '');
+  return reason.trim() || 'The local model could not be reached.';
+}
+
 export function createContentJobFromBridgeRequest(bridgeRequest = {}, jobOptions = {}) {
   const request = createContentBridgeRequest(bridgeRequest);
   const id = `content_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
@@ -344,16 +373,12 @@ export async function buildContentBrief(job) {
   let briefSource = 'model';
   let briefError = null;
   try {
-    const response = await generateOllamaResponse({
-      endpoint: job?.settings?.endpoint,
-      model: job?.settings?.selectedModel,
-      prompt
-    });
+    const response = await generateOllamaResponse(modelRequest(job, prompt));
     const parsed = parseLooseJson(response?.response);
     brief = isUsableBrief(parsed) ? parsed : null;
   } catch (error) {
     brief = null;
-    briefError = error instanceof Error && error.message ? error.message : 'The local model could not be reached.';
+    briefError = describeModelError(error);
   }
 
   if (!brief) {
@@ -393,16 +418,17 @@ export async function generateContentDraft(job) {
   let draft = null;
   let templateReason = '';
   try {
-    const response = await generateOllamaResponse({
-      endpoint: job?.settings?.endpoint,
-      model: job?.settings?.selectedModel,
-      prompt
-    });
-    draft = parseLooseJson(response?.response) || null;
-    if (!draft) templateReason = "The model's reply could not be read as a draft.";
+    const response = await generateOllamaResponse(modelRequest(job, prompt));
+    const parsed = parseLooseJson(response?.response);
+    draft = isUsableDraft(parsed) ? parsed : null;
+    if (!draft) {
+      templateReason = parsed
+        ? "The model's reply had no hook or caption, so it could not be used as a draft."
+        : "The model's reply could not be read as a draft.";
+    }
   } catch (error) {
     draft = null;
-    templateReason = error instanceof Error && error.message ? error.message : 'The local model could not be reached.';
+    templateReason = describeModelError(error);
   }
 
   // A template draft is a real, usable fallback, but it must say what it is:

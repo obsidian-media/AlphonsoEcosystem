@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { generateAgentLlmResponse } from '../lib/ollama';
 import {
   scanForThreats,
   buildSentinelThreatPrompt,
@@ -28,7 +29,10 @@ vi.mock('../lib/ollama', () => ({
     }),
     done: true
   })),
-  PREFERRED_MODEL: 'qwen2.5-coder:7b'
+  generateAgentLlmResponse: vi.fn(async () => null),
+  getConfiguredOllamaEndpoint: vi.fn(() => 'http://configured-host:11434'),
+  getConfiguredOllamaModel: vi.fn(() => 'picked-by-user:3b'),
+  PREFERRED_MODEL: 'llama3.2:3b'
 }));
 
 // ── scanForThreats ────────────────────────────────────────────────────────────
@@ -236,5 +240,18 @@ describe('runSentinelSecurityScan', () => {
   it('handles null assignment gracefully', async () => {
     const result = await runSentinelSecurityScan('test', null, {});
     expect(result).toHaveProperty('summary');
+  });
+});
+
+describe('runSentinelSecurityScan model choice', () => {
+  // Same bug as Nova: a hardcoded model and endpoint (QA Bug 25).
+  it('asks the model and endpoint the user configured', async () => {
+    generateAgentLlmResponse.mockClear();
+    const longCommand = 'Review this deployment plan carefully and flag anything that touches credentials or production data before it runs.';
+    await runSentinelSecurityScan(longCommand, { packetId: 'p1' });
+    expect(generateAgentLlmResponse).toHaveBeenCalledWith(
+      'sentinel',
+      expect.objectContaining({ endpoint: 'http://configured-host:11434', model: 'picked-by-user:3b' })
+    );
   });
 });

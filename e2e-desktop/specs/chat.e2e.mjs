@@ -4,12 +4,16 @@
 //
 // Relies on the isolated backend profile (see isolation.e2e.mjs): the
 // conversation lands in the throwaway test store, not real chat history.
-import { enterShell, ollamaHasModels } from '../helpers.mjs';
+import { enterShell, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
 
 describe('Alphonso desktop chat', () => {
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
+    // Load the model first: these specs check what it writes, not how fast
+    // a cold model comes off the disk.
+    this.timeout(400000);
+    await warmSelectedModel();
   });
 
   it('sends a message and renders a real model reply', async () => {

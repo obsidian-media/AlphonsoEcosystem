@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { generateAgentLlmResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
+import { generateAgentLlmResponse, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
 import { runEchoPreservation } from './echoMemoryService';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
@@ -75,8 +75,8 @@ async function processFile(relativePath: string, workspaceRoot: string): Promise
     let summary = '';
     try {
       const ollamaResult = await generateAgentLlmResponse('echo', {
-        endpoint: DEFAULT_OLLAMA_ENDPOINT,
-        model: PREFERRED_MODEL,
+        endpoint: getConfiguredOllamaEndpoint(),
+        model: getConfiguredOllamaModel(),
         prompt: `Summarize this file content in 2-3 sentences for knowledge preservation:\n\n${content.slice(0, 4000)}`,
         sessionId: resolveSecureSessionId(`echo-watch:${relativePath}`),
       });

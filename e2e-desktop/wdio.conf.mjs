@@ -11,6 +11,7 @@
 //
 // Run: npm run test:e2e:desktop
 import { spawn } from 'node:child_process';
+import { createConnection } from 'node:net';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -41,6 +42,32 @@ function testDataDirs(profile) {
     ...roots.map((root) => join(root, identifier)),
     ...(process.env.APPDATA ? [join(process.env.APPDATA, `Alphonso-e2e-${profile}`)] : []),
   ];
+}
+
+/** Resolve once something accepts TCP connections on 127.0.0.1:port. */
+async function waitForPort(port, timeoutMs, child) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (child && child.exitCode !== null) {
+      throw new Error(`tauri-driver exited (code ${child.exitCode}) before listening on port ${port}`);
+    }
+    const open = await new Promise((resolveOpen) => {
+      const socket = createConnection({ host: '127.0.0.1', port });
+      socket.once('connect', () => { socket.destroy(); resolveOpen(true); });
+      socket.once('error', () => { socket.destroy(); resolveOpen(false); });
+    });
+    if (open) return;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  throw new Error(`tauri-driver did not start listening on port ${port} within ${timeoutMs} ms`);
+}
+
+/** Stop a child process and wait until it has really exited. */
+async function stopProcess(child, timeoutMs = 10000) {
+  if (!child || child.exitCode !== null) return;
+  const exited = new Promise((r) => child.once('exit', r));
+  child.kill();
+  await Promise.race([exited, new Promise((r) => setTimeout(r, timeoutMs))]);
 }
 
 export const config = {
@@ -78,7 +105,7 @@ export const config = {
     }
   },
 
-  beforeSession() {
+  async beforeSession() {
     // Each spec file gets a throwaway WebView2 profile (clean localStorage)
     // AND an isolated backend profile: ALPHONSO_E2E_PROFILE makes a debug
     // build keep its SQLite store, config, runtimes folder and keychain
@@ -96,10 +123,15 @@ export const config = {
       stdio: [null, process.stdout, process.stderr],
       env: { ...process.env, WEBVIEW2_USER_DATA_FOLDER: profileDir, ALPHONSO_E2E_PROFILE: dataProfile },
     });
+    // The session is created right after this hook returns. Without waiting,
+    // the first spec could connect before tauri-driver was listening and fail
+    // with "Unable to connect to 127.0.0.1:4455" (QA Bug 22, 2026-10-21).
+    await waitForPort(4455, 30000, tauriDriver);
   },
 
-  afterSession() {
-    tauriDriver?.kill();
+  async afterSession() {
+    // Wait for the driver to exit, so the next spec's driver can bind 4455.
+    await stopProcess(tauriDriver);
     try {
       for (const dir of testDataDirs(dataProfile)) rmSync(dir, { recursive: true, force: true });
       rmSync(profileDir, { recursive: true, force: true });

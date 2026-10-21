@@ -44,7 +44,7 @@ import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
 import { executeWithBrain } from './agentBrainService';
-import { generateAgentLlmResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
+import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel } from '../lib/ollama';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { getAgentProvider } from './modelSelectionService';
 import { getRuntimePolicySettings } from './policyEnforcementService';
@@ -583,7 +583,7 @@ async function buildMiyaPackage(commandText: any, assignment: any, options: any 
     const prompt = draftPrompt('miya', commandText, { snippet: options.retrievedContext?.snippet || '' });
     const response = await generateAgentLlmResponse('miya', {
       endpoint: options.endpoint,
-      model: options.model || PREFERRED_MODEL,
+      model: options.model || getConfiguredOllamaModel(),
       prompt,
       // One orchestration packet = one Hermes session unit (per-run scoping,
       // §1b.3 in docs/HERMES_AGENT_DELEGATION_PLAN.md). Ignored for non-Hermes providers.

@@ -242,7 +242,7 @@ If enabled, Jose blocks any task that would use paid external services (Telegram
 | **Miya** | Creative | `video`, `script`, `brand`, `campaign`, `image`, `creative` | Scripts, storyboards, images (ComfyUI), content | System commands, file operations |
 | **Alphonso** | Operator | `build`, `file`, `verify`, `install`, `command`, `fix`, `test`, `github` | Execute commands, write files, install packages, verify builds, GitHub PR/issue management, code search | Bypass safety checks |
 | **Maria** | Governance | `audit`, `compliance`, `policy`, `approval`, `risk` | Requirements, roadmaps, risk registers, audits | Destructive execution |
-| **Marcus** | Distribution | `distribute`, `schedule`, `publish`, `upload`, `release`, `slack` | Approved publishing, security reviews, release readiness, GitHub releases, Slack notifications | Execute without approval |
+| **Marcus** | Distribution | `distribute`, `schedule`, `publish`, `upload`, `release`, `slack` | Approved publishing, release readiness, GitHub releases, Slack notifications | Execute without approval |
 | **Echo** | Memory | `remember`, `archive`, `knowledge`, `history` | Store decisions, preserve context, knowledge archival | Execution, posting |
 | **Sentinel** | Security | `security`, `secrets`, `permission`, `vulnerability` | Safety monitoring, vulnerability scanning, alerts | Execution, posting |
 | **Nova** | Analysis | `opportunity`, `priority`, `score`, `roi`, `value` | Scoring, prioritization, performance analysis | Execution, file writes |
@@ -305,7 +305,8 @@ roadmap Design a React Native mobile app
    - **Maria** defines requirements and data models
    - **Miya** creates UI/UX designs and creative packages
    - **Alphonso** implements code, builds, and tests
-   - **Marcus** performs security audits
+   - **Maria** reviews governance and risk
+   - **Marcus** prepares approved distribution
    - **Sentinel** monitors for safety issues
    - **Nova** scores and prioritizes
    - **Echo** preserves knowledge
@@ -464,8 +465,9 @@ When approval is required, an **Approval Panel** appears **directly in the chat 
 
 ### Governance Agents
 
-- **Maria**: Reviews requirements, roadmaps, and acceptance criteria
-- **Marcus**: Reviews security, release readiness, and distribution
+- **Maria**: Governance and risk review: requirements, roadmaps, acceptance criteria, risk
+- **Sentinel**: Security scanning of commands and outputs
+- **Marcus**: Release readiness and distribution (publishing only after approval)
 - **Sentinel**: Monitors for safety violations and blocks dangerous actions
 
 ---
@@ -531,7 +533,7 @@ A structured workflow for complex projects.
 2. **Agent Selection** — Choose which agents participate
 3. **Decomposition** — Jose breaks the project into agent tasks
 4. **Execution** — Agents work in dependency order
-5. **Audit** — Marcus reviews security and readiness
+5. **Audit** — Maria reviews governance and risk
 6. **Final Packet** — Complete execution report with all artifacts
 
 ### Access
