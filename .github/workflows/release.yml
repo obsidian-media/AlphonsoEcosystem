@@ -402,7 +402,13 @@ jobs:
           mountpoint=$(mktemp -d)
           attached=false
           for attempt in 1 2 3; do
-            if hdiutil attach "$dmg" -mountpoint "$mountpoint" -nobrowse -readonly -noverify; then
+            # The DMG carries the EULA (tauri.conf.json bundle.licenseFile),
+            # so mounting it asks the user to agree first. With no one to
+            # answer, hdiutil prints "attach canceled" -- the real reason the
+            # v2.9.0 and first v2.10.0 dry-run checks failed. Answer "Y".
+            # pipefail is off inside the subshell so `yes` exiting on SIGPIPE
+            # does not count as a failure.
+            if (set +o pipefail; yes | PAGER=cat hdiutil attach "$dmg" -mountpoint "$mountpoint" -nobrowse -readonly -noverify >/dev/null); then
               attached=true
               break
             fi
