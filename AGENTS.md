@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 8, Tailwind 4) + Ollama (local LLM)
-- **Version**: 2.9.0 (security hardened, 410 test files, 5,239 tests, 205 services)
+- **Version**: 2.10.0 (security hardened, 411 test files, 5,239 tests, 205 services)
 - **Target**: v2.5.0 = security hardening complete, test coverage expanded, all connectors policy-gated
 
 ## Directory Structure

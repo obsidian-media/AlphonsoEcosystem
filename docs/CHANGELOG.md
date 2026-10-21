@@ -6,7 +6,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] — 2026-10-21 (PR 304 merged; repo-actionable deferred batch)
+## [2.10.0] — 2026-10-21 (PR 304 and PR 305: deferred-work batches; macOS back in the release)
+
+### Release
+- **macOS is back.** 2.9.0 shipped without a Mac build. 2.10.0 ships an Apple Silicon DMG again, unsigned by Apple (as 2.8.0 was): the first time, right-click Alphonso in Applications and choose Open. Mac installs on 2.8.0 are offered this update.
+- `release.yml`: an `APPLE_TEAM_ID` secret on its own (the iOS pipeline uses it) no longer fails the macOS job as "partially configured"; signing starts only when `APPLE_CERTIFICATE` is set.
+- `release.yml`: the DMG content check failed silently in 2.9.0 (`hdiutil attach -quiet` under `set -e`, 90 ms, no message). It now checks the updater archive and the DMG, retries the mount, and names what failed.
+- `release.yml`: the hard stop that refused to publish any platform without a notarized macOS build (PR 304) is now a warning, by owner decision, and the release notes say whether the Mac build is notarized.
+- `release.yml`: a manual run has a `publish` switch (off by default), so all three installers can be built and checked without releasing anything.
 
 ### Fixed
 - **Alphonso finds Ollama models on another drive.** A model folder chosen in the Ollama desktop app's Settings is saved in Ollama's own settings file, not in `OLLAMA_MODELS`, so an Ollama that Alphonso started looked in the default folder, found no models, and Setup downloaded the starter model again onto C:. Alphonso now reads that setting (Windows) and passes it on; the Setup disk check uses it too.
