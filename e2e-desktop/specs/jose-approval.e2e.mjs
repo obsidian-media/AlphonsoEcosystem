@@ -50,7 +50,13 @@ describe('Alphonso desktop Jose approvals', () => {
     });
     // Execution Results is rendered below the approval queue, so switch back
     // to the Approvals tab after executing from Packets.
-    await buttonByText('approvals').click();
+    const approvalsTab = await $('//main//button[normalize-space(.)="Approvals"]');
+    await approvalsTab.waitForClickable();
+    await approvalsTab.click();
+    await browser.waitUntil(async () => (await approvalsTab.getAttribute('aria-pressed')) === 'true', {
+      timeout: 10000,
+      timeoutMsg: 'the Approvals tab did not become active after packet execution',
+    });
     await browser.waitUntil(async () => (await mainText()).includes('Execution Results'), {
       timeout: 10000,
       timeoutMsg: 'the executed packet did not produce a visible result panel',

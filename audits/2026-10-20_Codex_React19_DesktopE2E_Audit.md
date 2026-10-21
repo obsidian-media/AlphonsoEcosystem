@@ -69,3 +69,11 @@ checks and 15 of 16 desktop spec files passed. The sole failure was
 asserted `Execution Results` without returning to Approvals, where that panel
 is rendered. The test now switches back to Approvals before asserting the
 visible result. A fresh run is required for the final desktop pass.
+
+Run `39527088509` reached the real Windows suite after all prerequisites passed.
+The suite again passed 15 of 16 spec files; the Jose case still timed out while
+observing `Execution Results` after the tab switch. The packet reached
+`executed`, so the failure is isolated to test synchronization around the tab
+transition. The test now waits for the exact Approvals tab's
+`aria-pressed=true` state before checking the result panel. A fresh governance
+gate and full CI run are required.
