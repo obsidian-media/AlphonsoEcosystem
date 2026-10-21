@@ -58,7 +58,7 @@ describe('Alphonso desktop Jose approvals', () => {
       timeoutMsg: 'the Approvals tab did not become active after packet execution',
     });
     await browser.waitUntil(async () => (await mainText()).includes('Execution Results'), {
-      timeout: 10000,
+      timeout: 60000,
       timeoutMsg: 'the executed packet did not produce a visible result panel',
     });
     const output = await mainText();

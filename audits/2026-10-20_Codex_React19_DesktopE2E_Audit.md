@@ -77,3 +77,9 @@ observing `Execution Results` after the tab switch. The packet reached
 transition. The test now waits for the exact Approvals tab's
 `aria-pressed=true` state before checking the result panel. A fresh governance
 gate and full CI run are required.
+
+Run `39531450328` reproduced the same isolated Jose result-panel observation
+failure after the tab became active; 15 of 16 spec files passed again. The
+packet reached `executed`, so the result-panel wait is now bounded at 60
+seconds, matching the execution-state wait, to account for asynchronous UI
+completion before another fresh run.
