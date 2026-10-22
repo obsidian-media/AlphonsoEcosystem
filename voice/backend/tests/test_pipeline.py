@@ -9,7 +9,7 @@ def _pcm():
 
 
 def test_pipeline_yields_event_types():
-    async def fake_ollama(session_id, text, agent, history):
+    async def fake_ollama(session_id, text, agent, history, **_kwargs):
         yield "test reply"
 
     with patch("pipeline._call_ollama", new=fake_ollama), \
@@ -47,7 +47,7 @@ def test_pipeline_silent_audio_no_events():
 
 
 def test_pipeline_accepts_conversation_history():
-    async def fake_ollama(session_id, text, agent, history):
+    async def fake_ollama(session_id, text, agent, history, **_kwargs):
         assert isinstance(history, list)
         yield "ok"
 
@@ -63,3 +63,13 @@ def test_pipeline_accepts_conversation_history():
                 pass
 
         asyncio.run(_run())
+
+
+# QA 2026-10-22: the model was fixed at "llama3.2"; the launcher now passes the
+# one chosen in Alphonso.
+def test_ollama_model_comes_from_the_launcher(monkeypatch):
+    import pipeline
+    monkeypatch.setenv("VOICE_OLLAMA_MODEL", "qwen2.5:7b")
+    assert pipeline.ollama_model() == "qwen2.5:7b"
+    monkeypatch.delenv("VOICE_OLLAMA_MODEL")
+    assert pipeline.ollama_model() == "llama3.2:3b"

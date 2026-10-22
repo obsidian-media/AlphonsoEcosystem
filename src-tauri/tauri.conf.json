@@ -50,7 +50,8 @@
     "licenseFile": "../legal/EULA.txt",
     "shortDescription": "Local-first multi-agent AI companion",
     "resources": {
-      "../voice/backend": "voice/backend",
+      "../voice/backend/*.py": "voice/backend/",
+      "../voice/backend/requirements.txt": "voice/backend/requirements.txt",
       "../NOTICE": "NOTICE",
       "../legal/EULA.txt": "EULA.txt",
       "vendor/ollama": "ollama",

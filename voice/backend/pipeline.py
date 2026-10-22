@@ -7,7 +7,14 @@ from tts import synthesize
 from router import detect_agent
 from vad import is_speech
 
-DEFAULT_MODEL = "llama3.2"
+# The model is the one chosen in Alphonso (passed in by the launcher as
+# VOICE_OLLAMA_MODEL). QA 2026-10-22: it was fixed at "llama3.2", which a fresh
+# install (starter model llama3.2:3b) may not have.
+DEFAULT_MODEL = "llama3.2:3b"
+
+
+def ollama_model() -> str:
+    return (os.environ.get("VOICE_OLLAMA_MODEL") or DEFAULT_MODEL).strip()
 
 
 def local_ollama_url() -> str:
@@ -15,13 +22,17 @@ def local_ollama_url() -> str:
     return os.environ.get("LOCAL_OLLAMA_URL", "http://localhost:11434/api/chat").strip()
 
 
-async def _call_ollama(session_id, text, agent, history):
-    """Stream a reply from Ollama's /api/chat, yielding text chunks as they arrive."""
+async def _call_ollama(session_id, text, agent, history, model=None, url=None):
+    """Stream a reply from Ollama's /api/chat, yielding text chunks as they arrive.
+
+    ``model``/``url`` come from the app's config message (the user's choices in
+    Alphonso); without one, the launcher's settings or the defaults apply.
+    """
     messages = [*history, {"role": "user", "content": text}]
-    payload = {"model": DEFAULT_MODEL, "messages": messages, "stream": True}
+    payload = {"model": model or ollama_model(), "messages": messages, "stream": True}
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            async with client.stream("POST", local_ollama_url(), json=payload) as response:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            async with client.stream("POST", url or local_ollama_url(), json=payload) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if not line:
@@ -39,7 +50,7 @@ async def _call_ollama(session_id, text, agent, history):
         yield f"[Voice OS could not reach Ollama: {error}]"
 
 
-async def run_pipeline(session_id, pcm, history):
+async def run_pipeline(session_id, pcm, history, model=None, url=None):
     if not is_speech(pcm):
         return
 
@@ -55,7 +66,7 @@ async def run_pipeline(session_id, pcm, history):
     yield {'type': 'state', 'value': 'thinking'}
 
     full_reply = ""
-    async for chunk in _call_ollama(session_id, text, agent, history):
+    async for chunk in _call_ollama(session_id, text, agent, history, model=model, url=url):
         full_reply += chunk
         yield {'type': 'llm', 'text': chunk}
 
