@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+vi.mock('../../lib/ollama', () => ({
+  freeOllamaGpuMemory: vi.fn(async () => ({ unloaded: [], error: null })),
+  getConfiguredOllamaEndpoint: vi.fn(() => 'http://localhost:11434')
+}));
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(() => Promise.resolve()),
   isTauri: vi.fn(() => false)

@@ -368,6 +368,85 @@ pub(crate) fn ollama_generate_body(model: &str, prompt: &str, format: Option<&st
   body
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct OllamaUnloadReport {
+  endpoint: String,
+  unloaded: Vec<String>,
+  error: Option<String>,
+}
+
+/// Names of the models `/api/ps` reports as loaded.
+pub(crate) fn loaded_model_names(ps: &Value) -> Vec<String> {
+  ps.get("models")
+    .and_then(Value::as_array)
+    .map(|models| {
+      models
+        .iter()
+        .filter_map(|m| {
+          m.get("name")
+            .or_else(|| m.get("model"))
+            .and_then(Value::as_str)
+        })
+        .map(str::to_string)
+        .collect()
+    })
+    .unwrap_or_default()
+}
+
+/// Asks Ollama to unload every model it has in memory (`keep_alive: 0`), so
+/// a local image job gets the GPU. On a 6 GB card a loaded 7B model left
+/// ComfyUI so little memory that the first image took 445 s (QA, 2026-10-21).
+/// Best effort: the report says what was unloaded and what went wrong; the
+/// caller carries on either way. The next chat reloads the model.
+#[tauri::command]
+pub(crate) async fn ollama_unload_models(
+  endpoint: Option<String>,
+) -> Result<OllamaUnloadReport, String> {
+  let base = ollama_base(endpoint);
+  let client = reqwest::Client::new();
+  let ps = match client
+    .get(format!("{base}/api/ps"))
+    .timeout(Duration::from_secs(10))
+    .send()
+    .await
+  {
+    Ok(response) => response.json::<Value>().await.unwrap_or(Value::Null),
+    Err(error) => {
+      return Ok(OllamaUnloadReport {
+        endpoint: base,
+        unloaded: Vec::new(),
+        error: Some(error.to_string()),
+      })
+    }
+  };
+  let mut unloaded = Vec::new();
+  let mut errors = Vec::new();
+  for name in loaded_model_names(&ps) {
+    let body = serde_json::json!({ "model": name, "keep_alive": 0 });
+    match client
+      .post(format!("{base}/api/generate"))
+      .json(&body)
+      .timeout(Duration::from_secs(30))
+      .send()
+      .await
+    {
+      Ok(response) if response.status().is_success() => unloaded.push(name),
+      Ok(response) => errors.push(format!("{name}: HTTP {}", response.status().as_u16())),
+      Err(error) => errors.push(format!("{name}: {error}")),
+    }
+  }
+  Ok(OllamaUnloadReport {
+    endpoint: base,
+    unloaded,
+    error: if errors.is_empty() {
+      None
+    } else {
+      Some(errors.join("; "))
+    },
+  })
+}
+
 /// Non-streaming `/api/chat` call used as the desktop fallback for chat. It
 /// keeps the real role/content turns, so the model's own chat template
 /// applies instead of a flattened prompt.
@@ -389,6 +468,17 @@ pub(crate) async fn ollama_chat(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn loaded_model_names_reads_api_ps() {
+    let ps = serde_json::json!({ "models": [{ "name": "qwen2.5-coder:7b" }, { "model": "llama3.2:3b" }, { "size": 1 }] });
+    assert_eq!(
+      loaded_model_names(&ps),
+      vec!["qwen2.5-coder:7b", "llama3.2:3b"]
+    );
+    assert!(loaded_model_names(&serde_json::json!({})).is_empty());
+    assert!(loaded_model_names(&Value::Null).is_empty());
+  }
 
   #[test]
   fn generate_body_asks_for_json_only_when_requested() {

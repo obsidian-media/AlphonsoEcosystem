@@ -7,6 +7,10 @@ const mockAppendConnectorAudit = vi.fn();
 const mockRecordConnectorFailure = vi.fn();
 const mockRecordConnectorSuccess = vi.fn();
 
+vi.mock('../../lib/ollama', () => ({
+  freeOllamaGpuMemory: vi.fn(async () => ({ unloaded: [], error: null })),
+  getConfiguredOllamaEndpoint: vi.fn(() => 'http://localhost:11434')
+}));
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args) => mockInvoke(...args),
   isTauri: () => false,

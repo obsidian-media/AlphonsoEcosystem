@@ -99,10 +99,15 @@ export async function warmSelectedModel() {
     },
     { timeout: 90000, interval: 1000, timeoutMsg: 'the app never chose a model to warm up' }
   );
-  const result = await invoke('ollama_generate', { endpoint: 'http://127.0.0.1:11434', model, prompt: 'Reply with: ok' });
-  if (!result.ok || result.value?.error) {
-    throw new Error(`warming ${model} failed: ${result.ok ? result.value.error : result.error}`);
-  }
+  // Straight from the test runner, not through the window: WebDriver gives a
+  // script 30 s, and a cold load can take minutes. This only loads the model.
+  const response = await fetch('http://127.0.0.1:11434/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, prompt: 'Reply with: ok', stream: false }),
+    signal: AbortSignal.timeout(360000),
+  });
+  if (!response.ok) throw new Error(`warming ${model} failed: HTTP ${response.status} ${await response.text()}`);
   return model;
 }
 
