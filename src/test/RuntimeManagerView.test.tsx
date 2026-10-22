@@ -30,6 +30,15 @@ vi.mock('../services/policyDslService', () => ({
   getPolicyRules: vi.fn().mockReturnValue([]),
 }));
 
+const mockFindComfy = vi.fn().mockResolvedValue([]);
+vi.mock('../services/comfyuiSettingsService', () => ({
+  findComfyuiInstalls: (...args: unknown[]) => mockFindComfy(...args),
+}));
+const mockTauriInvoke = vi.fn();
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => mockTauriInvoke(...args),
+}));
+
 const mockOpenExternalUrl = vi.fn();
 vi.mock('../services/browserAutomationService', () => ({
   openExternalUrl: (...args: unknown[]) => mockOpenExternalUrl(...args),
@@ -126,5 +135,21 @@ describe('RuntimeManagerView', () => {
     expect(mockOpenExternalUrl).toHaveBeenCalledWith('http://127.0.0.1:1234');
     const ollama = await screen.findByTestId('runtime-tool-ollama');
     expect(within(ollama).queryByText(/Open UI/)).toBeNull();
+  });
+
+  // QA Bug 31 (2026-10-22): a user with their own ComfyUI saw "not installed"
+  // and was offered only a second copy.
+  it("uses the user's own ComfyUI when Alphonso has no copy, and starts it", async () => {
+    mockGetAllStatus.mockResolvedValue(runtimeNames.map((t) => t.name === 'comfyui' ? { ...t, installed: false, running: false } : t));
+    mockFindComfy.mockResolvedValue([
+      { path: 'D:/Mine/ComfyUI', python: 'D:/Mine/venv/Scripts/python.exe', running: false, sources: ['settings'], checkpoints: 2, alphonsoCopy: false },
+    ]);
+    mockTauriInvoke.mockResolvedValue({ message: 'ComfyUI launched.' });
+    render(<RuntimeManagerView />);
+    const card = await screen.findByTestId('runtime-tool-comfyui');
+    expect((await within(card).findByTestId('runtime-tool-existing-comfyui')).textContent).toContain('Using your ComfyUI: D:/Mine/ComfyUI · 2 image models');
+    expect(within(card).getByText(/Install a separate copy/)).toBeTruthy();
+    fireEvent.click(within(card).getByText('Start'));
+    await vi.waitFor(() => expect(mockTauriInvoke).toHaveBeenCalledWith('launch_comfyui', { comfyuiDir: 'D:/Mine/ComfyUI', pythonExe: 'D:/Mine/venv/Scripts/python.exe' }));
   });
 });

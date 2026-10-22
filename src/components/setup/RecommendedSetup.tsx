@@ -37,11 +37,13 @@ const STARTER_MODEL_ENTRY: RecommendedComponent = {
   sizeGb: 2,
 };
 
+// Images come from ComfyUI, the tool the agents use (owner, 2026-10-22). It
+// used to be Fooocus (15 GB), which nothing in the app called.
 const INTENT_RECOMMENDATIONS: Record<RecommendableIntent, RecommendedComponent[]> = {
   'chat-only': [STARTER_MODEL_ENTRY],
   'chat-images': [
     STARTER_MODEL_ENTRY,
-    { id: 'fooocus', label: 'Fooocus (image generation)', sizeGb: 15 },
+    { id: 'comfyui', label: 'ComfyUI + starter image model (Stable Diffusion 1.5)', sizeGb: 8 },
   ],
   'chat-voice': [
     STARTER_MODEL_ENTRY,
@@ -49,7 +51,7 @@ const INTENT_RECOMMENDATIONS: Record<RecommendableIntent, RecommendedComponent[]
   ],
   'full-power': [
     STARTER_MODEL_ENTRY,
-    { id: 'fooocus', label: 'Fooocus (image generation)', sizeGb: 15 },
+    { id: 'comfyui', label: 'ComfyUI + starter image model (Stable Diffusion 1.5)', sizeGb: 8 },
     { id: 'voice-os', label: 'Voice OS', sizeGb: 1 },
     { id: 'chromadb', label: 'ChromaDB (memory)', sizeGb: 1 },
   ],
@@ -119,7 +121,7 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
   // of a dead end, since Python (unlike Docker) has a real auto-install path.
   const toInstall = notInstalled.filter((c) => getUnmetPrereq(c.id, prereqs) === null);
   const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb, hardware.ollamaModelsDirFreeGb, sameInstallVolume(hardware));
-  const needsImageGen = recommended.some((c) => c.id === 'fooocus');
+  const needsImageGen = recommended.some((c) => c.id === 'comfyui');
 
   const handleInstallPython = async () => {
     setInstallingPython(true);

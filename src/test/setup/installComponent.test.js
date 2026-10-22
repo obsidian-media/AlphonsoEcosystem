@@ -4,6 +4,11 @@ vi.mock('../../services/runtimeManagerService', () => ({
   installTool: vi.fn(),
   loadBundledStarterModel: vi.fn(),
 }));
+const mockFindComfy = vi.fn().mockResolvedValue([]);
+vi.mock('../../services/comfyuiSettingsService', () => ({
+  findComfyuiInstalls: (...args) => mockFindComfy(...args),
+}));
+
 vi.mock('../../lib/ollama', () => ({
   pullOllamaModel: vi.fn(),
   fetchOllamaModels: vi.fn(),
@@ -229,5 +234,15 @@ describe('isComponentAlreadyInstalled', () => {
     await expect(isComponentAlreadyInstalled('fooocus', new Set(['fooocus']))).resolves.toBe(true);
     await expect(isComponentAlreadyInstalled('fooocus', new Set())).resolves.toBe(false);
     expect(fetchOllamaModels).not.toHaveBeenCalled();
+  });
+
+  // QA Bug 31 (2026-10-22): Setup installed a second ComfyUI beside the user's own.
+  it("counts the user's own ComfyUI when it can make images", async () => {
+    mockFindComfy.mockResolvedValueOnce([{ path: 'D:/Mine/ComfyUI', python: 'D:/Mine/venv/Scripts/python.exe', checkpoints: 2 }]);
+    await expect(isComponentAlreadyInstalled('comfyui', new Set())).resolves.toBe(true);
+    // No model, or no Python: it can't make an image yet, so Setup still offers the install.
+    mockFindComfy.mockResolvedValueOnce([{ path: 'D:/A', python: 'x', checkpoints: 0 }, { path: 'D:/B', python: null, checkpoints: 3 }]);
+    await expect(isComponentAlreadyInstalled('comfyui', new Set())).resolves.toBe(false);
+    await expect(isComponentAlreadyInstalled('comfyui', new Set(['comfyui']))).resolves.toBe(true);
   });
 });

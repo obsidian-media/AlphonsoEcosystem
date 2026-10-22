@@ -26,11 +26,11 @@ const allPrereqsOk = { missing: [], installHint: 'ok', pythonFound: true, docker
 beforeEach(() => vi.clearAllMocks());
 
 describe('RecommendedSetup', () => {
-  it('recommends the starter model plus Fooocus for the chat-images intent', async () => {
+  it('recommends the starter model plus ComfyUI for the chat-images intent', async () => {
     getAllStatus.mockResolvedValue([]);
     render(<RecommendedSetup intent="chat-images" hardware={hardware} prereqs={allPrereqsOk} onProceed={() => {}} onCustomize={() => {}} />);
     await waitFor(() => expect(screen.getByText(/starter model/i)).toBeInTheDocument());
-    expect(screen.getByText(/Fooocus/i)).toBeInTheDocument();
+    expect(screen.getByText(/ComfyUI/i)).toBeInTheDocument();
   });
 
   it('shows a no-GPU warning next to the image-gen recommendation when hardware.gpuPresent is false', async () => {
@@ -40,7 +40,7 @@ describe('RecommendedSetup', () => {
   });
 
   it('marks a component as already installed when getAllStatus reports it installed', async () => {
-    getAllStatus.mockResolvedValue([{ name: 'fooocus', installed: true, running: false }]);
+    getAllStatus.mockResolvedValue([{ name: 'comfyui', installed: true, running: false }]);
     render(<RecommendedSetup intent="chat-images" hardware={hardware} prereqs={allPrereqsOk} onProceed={() => {}} onCustomize={() => {}} />);
     await waitFor(() => expect(screen.getByText(/already installed/i)).toBeInTheDocument());
   });
@@ -95,8 +95,8 @@ describe('RecommendedSetup', () => {
 });
 
 describe('RecommendedSetup — prerequisite gating', () => {
-  it('excludes Fooocus from the queue and offers to install Python when Python is missing', async () => {
-    // Regression target: fooocus/voice-os run via `exe: "python"` in
+  it('excludes ComfyUI from the queue and offers to install Python when Python is missing', async () => {
+    // Regression target: comfyui/voice-os run via `exe: "python"` in
     // runtime_manager.rs's TOOLS — queuing them without Python present is
     // the same failure shape starter-model had with installTool.
     getAllStatus.mockResolvedValue([]);
@@ -107,7 +107,7 @@ describe('RecommendedSetup — prerequisite gating', () => {
     await waitFor(() => expect(screen.getByText(/needs python/i)).toBeInTheDocument());
     fireEvent.click(screen.getByText('Looks Good → Install'));
     const queued = onProceed.mock.calls[0][0];
-    expect(queued.some((c) => c.id === 'fooocus')).toBe(false);
+    expect(queued.some((c) => c.id === 'comfyui')).toBe(false);
     expect(queued.some((c) => c.id === 'starter-model')).toBe(true); // unaffected component still proceeds
   });
 
@@ -145,7 +145,7 @@ describe('RecommendedSetup — prerequisite gating', () => {
 
     fireEvent.click(screen.getByText('Looks Good → Install'));
     const queued = onProceed.mock.calls[0][0];
-    expect(queued.some((c) => c.id === 'fooocus')).toBe(true);
+    expect(queued.some((c) => c.id === 'comfyui')).toBe(true);
   });
 
   it('does not gate an intent with no Python/Docker-dependent components at all', async () => {

@@ -28,9 +28,9 @@ describe('IntentSelection', () => {
 
   it('gives each tile an accessible name carrying both the choice and its cost', () => {
     // Without an explicit label a screen reader reads the two child spans as
-    // one run-on string ("Chat + Images Adds Fooocus, ~15GB").
+    // one run-on string ("Chat + Images Adds ComfyUI + an image model, ~8GB").
     render(<IntentSelection onSelect={() => {}} />);
-    const tile = screen.getByRole('button', { name: /chat \+ images.*fooocus/i });
+    const tile = screen.getByRole('button', { name: /chat \+ images.*comfyui/i });
     expect(tile).toBeInTheDocument();
   });
 

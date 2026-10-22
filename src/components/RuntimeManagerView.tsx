@@ -43,6 +43,9 @@ import { listModules, enableModule, disableModule, type ModuleRecord } from '../
 import { loadPolicy, getPolicyRules, type PolicyRule } from '../services/policyDslService';
 import { Tabs } from './ui/Tabs';
 import { openExternalUrl } from '../services/browserAutomationService';
+import { findComfyuiInstalls, type ComfyUiInstall } from '../services/comfyuiSettingsService';
+import { getStorage } from '../lib/appStorage';
+import { invoke } from '@tauri-apps/api/core';
 
 interface ToolStatus {
   name: string;
@@ -87,7 +90,7 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
     icon: Wand2,
     category: 'Image / Video',
     usedBy: 'Miya Studio and Content Studio (images)',
-    difference: 'The image tool Alphonso\'s agents use. You build pictures from connected steps (nodes), so agents can run saved recipes.',
+    difference: 'The image tool Alphonso\'s agents use. You build pictures from connected steps (nodes), so agents can run saved recipes. Installing it here sets it up for your NVIDIA GPU and adds a starter image model (Stable Diffusion 1.5, about 2 GB).',
     webUi: true,
     docsUrl: 'https://github.com/comfyanonymous/ComfyUI',
     color: 'text-(--agent-echo)',
@@ -356,9 +359,12 @@ interface ToolCardProps {
   tool: ToolStatus;
   onAction: (action: string, name: string, onProgress?: (p: InstallProgress) => void) => void;
   onAutostartToggle: (name: string, enabled: boolean) => void;
+  /** The user's own ComfyUI, used when Alphonso has no copy of its own (QA Bug 31). */
+  existingInstall?: ComfyUiInstall | null;
 }
 
-function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
+function ToolCard({ tool, onAction, onAutostartToggle, existingInstall }: ToolCardProps) {
+  const usingExisting = Boolean(existingInstall && !tool.installed);
   const meta = TOOL_META[tool.name] || {} as ToolMetaEntry;
   const [expanded, setExpanded] = useState(false);
   const [log, setLog] = useState<string[]>([]);
@@ -420,6 +426,14 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
         <StatusDot running={tool.running} responding={tool.responding} installing={installing} />
       </div>
 
+      {usingExisting && existingInstall && (
+        <p className="text-xs text-(--success)" data-testid="runtime-tool-existing-comfyui">
+          Using your ComfyUI: <span className="font-mono">{existingInstall.path}</span>
+          {existingInstall.checkpoints > 0 ? ` · ${existingInstall.checkpoints} image model${existingInstall.checkpoints === 1 ? '' : 's'}` : ' · no image models yet'}
+          {existingInstall.python ? '' : ' · its Python was not found; set it in Settings → Runtime → ComfyUI'}
+        </p>
+      )}
+
       {installing && progress && (
         <div>
           <p className="text-xs text-(--text-3)">{progress.message}</p>
@@ -432,12 +446,22 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
           <span className="text-xs text-(--text-4) italic">Open the desktop app to install</span>
         ) : (
           <>
+            {usingExisting && !tool.running && !installing && (
+              <button
+                onClick={() => onAction('start-existing', tool.name)}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-(--success) hover:opacity-90 text-(--surface-0) transition-colors"
+              >
+                <Play size={12} /> Start
+              </button>
+            )}
             {!tool.installed && !installing && (
               <button
                 onClick={handleInstall}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-(--accent) hover:bg-(--accent-hover) text-(--accent-contrast) transition-colors"
+                className={usingExisting
+                  ? 'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-(--surface-2) hover:bg-(--surface-3) text-(--text-2) transition-colors'
+                  : 'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-(--accent) hover:bg-(--accent-hover) text-(--accent-contrast) transition-colors'}
               >
-                <Download size={12} /> Install
+                <Download size={12} /> {usingExisting ? 'Install a separate copy' : 'Install'}
               </button>
             )}
             {tool.installed && !tool.running && !installing && (
@@ -626,10 +650,17 @@ export default function RuntimeManagerView() {
   const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const unlistenRef = useRef<(() => void) | null>(null);
 
+  const [existingComfy, setExistingComfy] = useState<ComfyUiInstall | null>(null);
+
   const load = useCallback(async () => {
     try {
-      const [statusResult, prereqResult] = await Promise.allSettled([getAllStatus(), checkPrerequisites()]);
+      const savedComfyDir = getStorage<{ comfyuiDir?: string } | null>('alphonso_settings', null)?.comfyuiDir || '';
+      const [statusResult, prereqResult, comfyResult] = await Promise.allSettled([getAllStatus(), checkPrerequisites(), findComfyuiInstalls(savedComfyDir)]);
       setTools((statusResult.status === 'fulfilled' ? statusResult.value : null) ?? []);
+      // The ComfyUI the app would use when Alphonso has no copy of its own: the
+      // one chosen in Settings, else a running one, else the best one found.
+      const found = comfyResult.status === 'fulfilled' ? comfyResult.value : [];
+      setExistingComfy(found.find((i) => !i.alphonsoCopy) ?? null);
       setPrereqs(prereqResult.status === 'fulfilled' ? prereqResult.value : null);
       setError(null);
     } catch (e) {
@@ -670,11 +701,18 @@ export default function RuntimeManagerView() {
         const result = await stopTool(name);
         showMsg(result.message);
         await load();
+      } else if (action === 'start-existing' && existingComfy) {
+        const result = await invoke<{ message?: string }>('launch_comfyui', {
+          comfyuiDir: existingComfy.path,
+          pythonExe: existingComfy.python || 'python'
+        });
+        showMsg(result?.message || 'ComfyUI started.');
+        setTimeout(load, 8000);
       }
     } catch (e) {
       showMsg(String(e), true);
     }
-  }, [load]);
+  }, [load, existingComfy]);
 
   const handleAutostartToggle = useCallback(async (name: string, enabled: boolean) => {
     try {
@@ -858,6 +896,7 @@ export default function RuntimeManagerView() {
               tool={tool}
               onAction={handleAction}
               onAutostartToggle={handleAutostartToggle}
+              existingInstall={tool.name === 'comfyui' ? existingComfy : null}
             />
           ))}
         </div>

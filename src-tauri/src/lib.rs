@@ -10,6 +10,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{Emitter, Listener, Manager, WindowEvent};
 
 mod audit_log;
+mod comfyui_installs;
 mod comfyui_proxy;
 mod commands {
   pub(crate) mod bridge;
@@ -829,6 +830,7 @@ pub fn run() {
       tool_connection_post_webhook,
       connector_generate_sdwebui_image,
       connector_queue_comfyui_video,
+      comfyui_installs::comfyui_find_installs,
       comfyui_proxy::comfyui_request,
       connector_get_comfyui_history,
       connector_check_local_runtime_health,

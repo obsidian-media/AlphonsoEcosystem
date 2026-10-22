@@ -1,14 +1,23 @@
 import { invoke } from '@tauri-apps/api/core';
-import { getAllStatus } from './runtimeManagerService';
 
 interface PathProof {
   exists: boolean;
   is_dir: boolean;
 }
 
-interface RuntimeEnvValueProof {
-  present: boolean;
-  value?: string | null;
+/** One ComfyUI install found on this machine (backend `comfyui_find_installs`). */
+export interface ComfyUiInstall {
+  /** The folder that holds ComfyUI's main.py. */
+  path: string;
+  /** The Python that runs it, when one was found. */
+  python: string | null;
+  running: boolean;
+  /** How it was found: "settings", "running", "alphonso", "usual-place". */
+  sources: string[];
+  /** Image models in its models/checkpoints folder. */
+  checkpoints: number;
+  /** Alphonso's own copy, installed from Runtime Hub. */
+  alphonsoCopy: boolean;
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -23,87 +32,45 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
-async function resolveWindowsUserProfile(): Promise<string> {
+const samePath = (a: string, b: string) =>
+  a.trim().replace(/[\\/]+$/, '').toLowerCase() === b.trim().replace(/[\\/]+$/, '').toLowerCase();
+
+/**
+ * Every ComfyUI install the backend can find: running ones, the folder chosen
+ * in Settings, Alphonso's own copy, and usual places. Chosen first, then
+ * running, then Alphonso's copy, then the one with the most image models.
+ * Until 2026-10-22 this searched a few fixed folders from one developer's
+ * machine (QA Bug 31). Empty outside the desktop app.
+ */
+export async function findComfyuiInstalls(savedDir?: string | null): Promise<ComfyUiInstall[]> {
   try {
-    const result = await invoke<RuntimeEnvValueProof>('read_runtime_env_value', { name: 'USERPROFILE' });
-    const value = String(result?.value || '').trim().replace(/[\\/]+$/, '');
-    return result?.present && value ? value : '';
+    const found = await invoke<ComfyUiInstall[]>('comfyui_find_installs', { savedDir: savedDir || null });
+    return Array.isArray(found) ? found : [];
   } catch {
-    return '';
+    return [];
   }
 }
 
-async function normalizeComfyuiRoot(basePath: string | null | undefined): Promise<string> {
-  const trimmed = String(basePath || '').trim().replace(/[\\/]+$/, '');
-  if (!trimmed) return '';
-
-  if (await pathExists(`${trimmed}\\main.py`)) return trimmed;
-
-  const nestedRoot = `${trimmed}\\ComfyUI`;
-  if (await pathExists(`${nestedRoot}\\main.py`)) return nestedRoot;
-
-  return '';
-}
-
-async function normalizeComfyuiPython(
-  currentPython: string | null | undefined,
-  comfyuiDir: string | null | undefined
-): Promise<string> {
-  const trimmedPython = String(currentPython || '').trim();
-  if (trimmedPython && trimmedPython.toLowerCase() !== 'python' && await pathExists(trimmedPython)) {
-    return trimmedPython;
-  }
-
-  const resolvedDir = await normalizeComfyuiRoot(comfyuiDir);
-  if (!resolvedDir) return '';
-
-  const bundledPython = `${resolvedDir}\\.venv\\Scripts\\python.exe`;
-  if (await pathExists(bundledPython)) return bundledPython;
-
-  return trimmedPython && trimmedPython.toLowerCase() !== 'python' ? trimmedPython : '';
-}
-
+/** The ComfyUI folder to use: the saved one if it is still a ComfyUI, else the best one found. */
 export async function resolveComfyuiDirectory(currentDir: string | null | undefined): Promise<string> {
-  const currentResolved = await normalizeComfyuiRoot(currentDir);
-  if (currentResolved) return currentResolved;
-
-  const candidates: string[] = [];
-  const windowsUserProfile = await resolveWindowsUserProfile();
-
-  try {
-    const tools = await getAllStatus();
-    const comfyui = tools.find(
-      (tool) => tool.name === 'comfyui' && tool.installed && typeof tool.installDir === 'string' && tool.installDir.trim()
-    );
-    if (comfyui?.installDir) candidates.push(String(comfyui.installDir));
-  } catch {
-    // Fall through to explicit discovery hints below.
+  const installs = await findComfyuiInstalls(currentDir);
+  const saved = String(currentDir || '').trim();
+  if (saved) {
+    const match = installs.find((i) => samePath(i.path, saved) || samePath(i.path, `${saved}\\ComfyUI`) || samePath(i.path, `${saved}/ComfyUI`));
+    if (match) return match.path;
   }
-
-  candidates.push(
-    'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI',
-    'D:\\Comfy-Desktop',
-    'C:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI',
-    'C:\\Comfy-Desktop'
-  );
-
-  if (windowsUserProfile) {
-    candidates.push(`${windowsUserProfile}\\ComfyUI-Installs\\ComfyUI`);
-  }
-
-  for (const candidate of candidates) {
-    const resolved = await normalizeComfyuiRoot(candidate);
-    if (resolved) {
-      return resolved;
-    }
-  }
-
-  return '';
+  return installs[0]?.path || '';
 }
 
+/** The Python for a ComfyUI folder: a real path the user set, else the one found next to that install. */
 export async function resolveComfyuiPython(
   currentPython: string | null | undefined,
   comfyuiDir: string | null | undefined
 ): Promise<string> {
-  return normalizeComfyuiPython(currentPython, comfyuiDir);
+  const chosen = String(currentPython || '').trim();
+  if (chosen && chosen.toLowerCase() !== 'python' && await pathExists(chosen)) return chosen;
+  const dir = String(comfyuiDir || '').trim();
+  if (!dir) return '';
+  const installs = await findComfyuiInstalls(dir);
+  return installs.find((i) => samePath(i.path, dir))?.python || '';
 }

@@ -198,6 +198,19 @@ export async function isComponentAlreadyInstalled(
   componentId: string,
   installedToolNames: Set<string>
 ): Promise<boolean> {
+  if (componentId === 'comfyui') {
+    if (installedToolNames.has('comfyui')) return true;
+    // The user's own ComfyUI counts when it can make images (it has a model
+    // and its Python was found); Setup used to install a second copy beside
+    // it (QA Bug 31).
+    try {
+      const { findComfyuiInstalls } = await import('./comfyuiSettingsService');
+      const installs = await withTimeout(findComfyuiInstalls());
+      return installs.some((i) => i.checkpoints > 0 && Boolean(i.python));
+    } catch {
+      return false;
+    }
+  }
   if (componentId !== STARTER_MODEL_ID) {
     return installedToolNames.has(componentId);
   }
@@ -342,12 +355,13 @@ export type PrereqKind = 'python' | 'docker';
 
 /**
  * Which prerequisite each Setup component genuinely needs, per
- * `runtime_manager.rs`'s `TOOLS` array (`exe: "python"` for fooocus/voice-os,
+ * `runtime_manager.rs`'s `TOOLS` array (`exe: "python"` for comfyui/fooocus/voice-os,
  * `exe: "docker"` for chromadb) — not guessed from the component name.
  * Components absent from this map (the starter model, and any future
  * component that needs neither) are never blocked.
  */
 const COMPONENT_PREREQ: Partial<Record<string, PrereqKind>> = {
+  comfyui: 'python',
   fooocus: 'python',
   'voice-os': 'python',
   chromadb: 'docker',

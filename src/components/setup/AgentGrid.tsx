@@ -58,7 +58,7 @@ const AGENTS: AgentEntry[] = [
     name: 'Miya',
     color: '#FF2D95',
     portrait: miyaPortrait,
-    component: { id: 'fooocus', label: 'Fooocus (image generation)', sizeGb: 15 },
+    component: { id: 'comfyui', label: 'ComfyUI + starter image model (Stable Diffusion 1.5)', sizeGb: 8 },
   },
   { agentId: 'hector', name: 'Hector', color: '#FF9800', portrait: hectorPortrait },
   {
