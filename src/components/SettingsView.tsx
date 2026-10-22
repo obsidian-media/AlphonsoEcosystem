@@ -219,6 +219,9 @@ function CoachSettingsSection() {
           </div>
         </div>
         <button
+          role="switch"
+          aria-checked={enabled}
+          aria-label="Toggle Session Coach detection engine"
           onClick={() => { const next = !enabled; setCoachEnabled(next); setEnabledState(next); }}
           className={`p-1 rounded-full transition-colors ${enabled ? 'text-(--success)' : 'text-(--text-4)'}`}
         >
@@ -235,6 +238,9 @@ function CoachSettingsSection() {
           </div>
         </div>
         <button
+          role="switch"
+          aria-checked={narrativeEnabled}
+          aria-label="Toggle Ollama-narrative rewriting"
           onClick={() => { const next = !narrativeEnabled; setCoachNarrativeEnabled(next); setNarrativeEnabledState(next); }}
           className={`p-1 rounded-full transition-colors ${narrativeEnabled ? 'text-(--success)' : 'text-(--text-4)'}`}
         >
@@ -287,6 +293,9 @@ function CoachSettingsSection() {
                 setCoachTriggerEnabled(id, next);
                 setTriggerToggles({ ...triggerToggles, [id]: next });
               }}
+              role="switch"
+              aria-checked={Boolean(triggerToggles[id])}
+              aria-label={`Toggle ${COACH_TRIGGER_LABELS[id] || id}`}
               className={`p-0.5 rounded-full transition-colors ${triggerToggles[id] ? 'text-(--success)' : 'text-(--text-4)'}`}
             >
               {triggerToggles[id] ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
@@ -1596,7 +1605,7 @@ export function SettingsView({
           )}
 
           <div className="text-[11px] text-(--text-3)">
-            Backup includes: memory items, chat history, agent patterns, Composio config, settings, project goals/batches, and SQLite records.
+            Backup includes all app data (settings, chats, memory, Boardroom threads, agent choices, research, schedules) and the stored records. Passwords, API keys and other secrets are left out; keep them in your password manager.
           </div>
         </div>
       </section>

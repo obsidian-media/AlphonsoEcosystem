@@ -98,10 +98,9 @@ const MissionControlHome = lazy(() => import('./components/MissionControlHome').
 const CompanionMode = lazy(() => import('./components/CompanionMode').then((mod) => ({ default: mod.CompanionMode })));
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
 const BoardroomView = lazy(() => import('./components/BoardroomChatView').then((mod) => ({ default: mod.BoardroomChatView })));
-const BoardroomLegacyView = lazy(() => import('./components/BoardroomView').then((mod) => ({ default: mod.BoardroomView })));
 
 function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprovalRequest: () => void }) {
-  const [subTab, setSubTab] = React.useState<'mission' | 'boardroom' | 'boardroom_legacy'>('mission');
+  const [subTab, setSubTab] = React.useState<'mission' | 'boardroom'>('mission');
   const approval = useRequestApprovalBridge();
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -109,18 +108,18 @@ function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprova
         <Tabs
           tabs={[
             { id: 'mission', label: 'Mission Room' },
-            { id: 'boardroom', label: 'Boardroom Sessions' },
-            { id: 'boardroom_legacy', label: 'Boardroom Legacy' }
+            { id: 'boardroom', label: 'Boardroom Sessions' }
+            // The old "Boardroom Legacy" session view was removed (owner,
+            // 2026-10-21); its Conclude, Distribute and Creative brief actions
+            // now live on each Boardroom thread. Source: archive/MIGHTBEUSEDLATER.
           ]}
           activeId={subTab}
-          onChange={(id) => setSubTab(id as 'mission' | 'boardroom' | 'boardroom_legacy')}
+          onChange={(id) => setSubTab(id as 'mission' | 'boardroom')}
         />
       </div>
       <div className="flex-1 overflow-hidden">
         {subTab === 'mission' ? (
           <MissionRoom onCreateApprovalRequest={onCreateApprovalRequest} />
-        ) : subTab === 'boardroom_legacy' ? (
-          <Suspense fallback={null}><BoardroomLegacyView /></Suspense>
         ) : (
           <Suspense fallback={null}><BoardroomView requestApproval={approval?.requestApproval} /></Suspense>
         )}

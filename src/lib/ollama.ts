@@ -716,6 +716,8 @@ export interface AgentGenerateOptions {
   model?: string;
   prompt: string;
   signal?: AbortSignal;
+  /** 'json' asks Ollama for valid JSON output; other providers ignore it. */
+  format?: 'json';
   /**
    * A stable id for the logical unit of work this call belongs to — only
    * used when the resolved provider is 'hermes' (see
@@ -765,7 +767,8 @@ export async function generateAgentLlmResponse(agentId: string, options: AgentGe
       endpoint: options.endpoint,
       model,
       prompt: options.prompt,
-      signal: options.signal
+      signal: options.signal,
+      ...(options.format ? { format: options.format } : {})
     });
     return { ...result, backend: 'ollama', model };
   }

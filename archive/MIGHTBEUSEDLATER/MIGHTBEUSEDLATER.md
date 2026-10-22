@@ -56,3 +56,14 @@ as new work requiring its own review, not a revert.
   API surface first, since several functions it called
   (`checkOllama`, `pullOllamaModel` signatures, etc.) may have changed
   since 2026-09-07.
+
+---
+
+## BoardroomView.tsx (+ 1 test file)
+
+- **Archived:** 2026-10-21, with the owner's approval ("move those three actions into the Boardroom chat, then remove Legacy Tab")
+- **Files:** `BoardroomView.tsx` (was `src/components/BoardroomView.tsx`), `boardroomView.test.jsx` (was `src/test/boardroomView.test.jsx`)
+- **What it was:** the original session-style Boardroom (pick agents and a topic, "Convene Session"), shown as the "Boardroom Legacy" tab next to the group chat (`BoardroomChatView.tsx`) that replaced it on 2026-07-10.
+- **Why it was removed:** two Boardrooms side by side, and the owner decided Boardroom is the group chat (QA Q2, Bug 45). Its agent "discussion" was mostly scripted rather than model replies.
+- **What moved, and what did not:** its three actions now live on every Boardroom thread: Conclude (Maria's governance review), Distribute (Marcus) and Creative brief (Miya via Jose). Two behaviours were deliberately not carried over because they were untrue: Conclude showed a random "Maria risk score" (`Math.random()*40+20`; Maria's audit returns a risk level, not a number), and Distribute always toasted "sent via Marcus" although it gave Marcus no destination, so nothing was sent. Old sessions are imported into threads by `migrateLegacySessions()`, which now picks up every session not yet imported, not just those that existed on its first run.
+- **Before restoring:** don't. Extend the thread actions in `BoardroomChatView.tsx` instead.

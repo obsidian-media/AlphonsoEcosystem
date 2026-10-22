@@ -23,6 +23,19 @@ vi.mock('../services/boardroomThreadService', async () => {
   };
 });
 
+vi.mock('../services/mariaAuditService', () => ({
+  runMariaGovernanceAudit: vi.fn()
+}));
+vi.mock('../services/marcusExecutionService', () => ({
+  runMarcusDistribution: vi.fn()
+}));
+vi.mock('../services/joseCommandRouterService', () => ({
+  createJoseCommandRoute: vi.fn()
+}));
+vi.mock('../services/unifiedMemoryService.js', () => ({
+  pushMemory: vi.fn()
+}));
+
 describe('BoardroomChatView', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -657,5 +670,117 @@ describe('BoardroomChatView', () => {
       expect(replyCall).toBeDefined();
       expect(replyCall[0].informedByMessageId).toBeDefined();
     });
+  });
+});
+
+// Thread actions moved from the old "Boardroom Legacy" tab (owner, 2026-10-21).
+describe('BoardroomChatView thread actions', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  async function openThread(props = {}) {
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView {...props} />);
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Launch plan' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Launch plan');
+  }
+
+  async function conclude(review = { riskLevel: 'medium', approvalRequired: false, summary: 'Looks fine.' }) {
+    const { runMariaGovernanceAudit } = await import('../services/mariaAuditService');
+    runMariaGovernanceAudit.mockResolvedValue({ schema: review });
+    fireEvent.click(screen.getByRole('button', { name: /^conclude$/i }));
+    await screen.findByRole('button', { name: /^concluded$/i });
+  }
+
+  it("Conclude posts Maria's real risk level and summary, with no made-up score", async () => {
+    await openThread();
+    await conclude({ riskLevel: 'high', approvalRequired: true, summary: 'Needs legal review.' });
+    expect(screen.getByText(/Maria's governance review: risk high, approval required before anything is sent out\. Needs legal review\./)).toBeInTheDocument();
+    expect(screen.getByTestId('boardroom-governance-badge')).toHaveTextContent('Maria: risk high · approval required');
+    expect(screen.queryByText(/risk score/i)).toBeNull();
+  });
+
+  it("says when the verdict came from Maria's rule-based check, not her model review", async () => {
+    await openThread();
+    await conclude({ riskLevel: 'low', approvalRequired: false, summary: 'Rule check passed.', confidenceLevel: 'temporary' });
+    expect(screen.getByText(/Maria's rule-based check \(her model review could not be read\): risk low\./)).toBeInTheDocument();
+    expect(screen.getByTestId('boardroom-governance-badge')).toHaveTextContent('Maria (rule-based): risk low');
+  });
+
+  it('a failed review says so and leaves the thread open', async () => {
+    await openThread();
+    const { runMariaGovernanceAudit } = await import('../services/mariaAuditService');
+    runMariaGovernanceAudit.mockRejectedValue(new Error('model unreachable'));
+    fireEvent.click(screen.getByRole('button', { name: /^conclude$/i }));
+    expect(await screen.findByText(/Maria's review did not complete: model unreachable\. The thread stays open\./)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^conclude$/i })).not.toBeDisabled();
+  });
+
+  it('Distribute is unavailable until the thread is concluded', async () => {
+    await openThread();
+    expect(screen.getByRole('button', { name: /^distribute$/i })).toBeDisabled();
+  });
+
+  it('review-only distribution says nothing was sent and passes Maria\'s review to Marcus', async () => {
+    await openThread();
+    await conclude();
+    const { runMarcusDistribution } = await import('../services/marcusExecutionService');
+    runMarcusDistribution.mockResolvedValue({ summary: 'Distribution review prepared.' });
+    fireEvent.click(screen.getByRole('button', { name: /^distribute$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /review only/i }));
+    expect(await screen.findByText(/Distribution review only, nothing was sent\. Distribution review prepared\./)).toBeInTheDocument();
+    const [, assignment, prior] = runMarcusDistribution.mock.calls[0];
+    expect(assignment.actionType).toBe('distribution_review');
+    expect(prior.maria.schema).toEqual({ riskLevel: 'medium', approvalRequired: false });
+  });
+
+  it('does not post to Slack when the approval is declined', async () => {
+    const requestApproval = vi.fn().mockResolvedValue(false);
+    await openThread({ requestApproval });
+    await conclude();
+    const { runMarcusDistribution } = await import('../services/marcusExecutionService');
+    fireEvent.click(screen.getByRole('button', { name: /^distribute$/i }));
+    fireEvent.change(screen.getByLabelText('Slack channel'), { target: { value: '#launch' } });
+    fireEvent.click(screen.getByRole('button', { name: /post to slack/i }));
+    expect(await screen.findByText(/Nothing was sent: posting to Slack #launch was not approved\./)).toBeInTheDocument();
+    expect(requestApproval).toHaveBeenCalledWith(expect.objectContaining({ agent: 'marcus', requireApproval: true }));
+    expect(runMarcusDistribution).not.toHaveBeenCalled();
+  });
+
+  it('refuses to post to Slack when no approval prompt is available', async () => {
+    await openThread();
+    await conclude();
+    const { runMarcusDistribution } = await import('../services/marcusExecutionService');
+    fireEvent.click(screen.getByRole('button', { name: /^distribute$/i }));
+    fireEvent.change(screen.getByLabelText('Slack channel'), { target: { value: '#launch' } });
+    fireEvent.click(screen.getByRole('button', { name: /post to slack/i }));
+    expect(await screen.findByText(/Nothing was sent/)).toBeInTheDocument();
+    expect(runMarcusDistribution).not.toHaveBeenCalled();
+  });
+
+  it("posts to Slack after approval and reports Marcus's result", async () => {
+    const requestApproval = vi.fn().mockResolvedValue(true);
+    await openThread({ requestApproval });
+    await conclude();
+    const { runMarcusDistribution } = await import('../services/marcusExecutionService');
+    runMarcusDistribution.mockResolvedValue({ summary: 'Posted to #launch.' });
+    fireEvent.click(screen.getByRole('button', { name: /^distribute$/i }));
+    fireEvent.change(screen.getByLabelText('Slack channel'), { target: { value: '#launch' } });
+    fireEvent.click(screen.getByRole('button', { name: /post to slack/i }));
+    expect(await screen.findByText('Posted to #launch.')).toBeInTheDocument();
+    const [, assignment] = runMarcusDistribution.mock.calls[0];
+    expect(assignment).toMatchObject({ actionType: 'slack_message', payload: { channel: '#launch' } });
+  });
+
+  it('Creative brief routes to Miya through Jose and says where to follow it', async () => {
+    await openThread();
+    const { createJoseCommandRoute } = await import('../services/joseCommandRouterService');
+    createJoseCommandRoute.mockResolvedValue({ status: 'pending_approval' });
+    fireEvent.click(screen.getByRole('button', { name: /creative brief/i }));
+    expect(await screen.findByText(/Creative brief request sent to Miya \(status: pending_approval\)/)).toBeInTheDocument();
+    expect(createJoseCommandRoute.mock.calls[0][0].commandText).toMatch(/^ask miya: Generate a creative brief for: Launch plan/);
   });
 });

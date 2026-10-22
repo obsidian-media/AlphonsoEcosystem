@@ -91,7 +91,7 @@ pub(crate) use commands::system::*;
 pub(crate) use commands::updates::*;
 pub(crate) use commands::url::*;
 pub(crate) use connector_commands::*;
-pub(crate) use kv_store::{kv_delete, kv_get, kv_set, load_settings, save_settings};
+pub(crate) use kv_store::{kv_delete, kv_get, kv_list_keys, kv_set, load_settings, save_settings};
 pub(crate) use memory_graph::{
   memory_graph_add_edge, memory_graph_add_node, memory_graph_infer_edges, memory_graph_list_edges,
   memory_graph_list_nodes, memory_graph_query_related, memory_graph_query_related_deep,
@@ -756,6 +756,7 @@ pub fn run() {
       load_settings,
       kv_set,
       kv_get,
+      kv_list_keys,
       kv_delete,
       memory_graph_add_node,
       memory_graph_add_edge,

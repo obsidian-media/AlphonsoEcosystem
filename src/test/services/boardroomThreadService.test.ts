@@ -181,6 +181,34 @@ describe('boardroomThreadService', () => {
   });
 
   describe('migrateLegacySessions', () => {
+    // The import used to run once and set a flag, so sessions created in the
+    // old view afterwards were never imported; with that view removed they
+    // would have disappeared (owner, 2026-10-21).
+    it('imports a session created after the first import, without duplicating earlier ones', async () => {
+      const legacy = (id: string, topic: string) => ({
+        sessionId: id, topic, participants: ['jose'], status: 'active',
+        createdAt: `2026-10-0${id.slice(-1)}T10:00:00.000Z`,
+        messages: [{ agentId: 'jose', agentName: 'Jose', content: `About ${topic}`, timestamp: `2026-10-0${id.slice(-1)}T10:01:00.000Z`, type: 'response' }]
+      });
+      localStorage.setItem('alphonso_boardroom_sessions_v1', JSON.stringify([legacy('s1', 'First')]));
+      const { migrateLegacySessions, listThreads } = await import('../../services/boardroomThreadService');
+      migrateLegacySessions();
+      expect(listThreads().map((t) => t.topic)).toEqual(['First']);
+
+      localStorage.setItem('alphonso_boardroom_sessions_v1', JSON.stringify([legacy('s1', 'First'), legacy('s2', 'Second')]));
+      migrateLegacySessions();
+      migrateLegacySessions();
+      expect(listThreads().map((t) => t.topic).sort()).toEqual(['First', 'Second']);
+    });
+
+    it('treats a thread imported before ids were recorded as already imported', async () => {
+      const { THREADS_KEY, migrateLegacySessions, listThreads } = await import('../../services/boardroomThreadService');
+      localStorage.setItem(THREADS_KEY, JSON.stringify([{ id: 't-old', topic: 'Old', participants: [], status: 'active', createdAt: '2026-09-01T00:00:00.000Z', createdAtMs: 1, seq: 1, updatedAt: '2026-09-01T00:00:00.000Z', updatedAtMs: 1 }]));
+      localStorage.setItem('alphonso_boardroom_sessions_v1', JSON.stringify([{ sessionId: 'old', topic: 'Old', participants: [], status: 'active', createdAt: '2026-09-01T00:00:00.000Z', messages: [] }]));
+      migrateLegacySessions();
+      expect(listThreads()).toHaveLength(1);
+    });
+
     const LEGACY_KEY = 'alphonso_boardroom_sessions_v1';
 
     it('converts each legacy session into a thread with its messages replayed', async () => {
