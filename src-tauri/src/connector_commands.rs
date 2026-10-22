@@ -992,8 +992,7 @@ pub(crate) async fn connector_send_chatgpt(
     });
   }
 
-  let model =
-    std::env::var("OPENAI_CONNECTOR_MODEL").unwrap_or_else(|_| "gpt-4.1-mini".to_string());
+  let model = std::env::var("OPENAI_CONNECTOR_MODEL").unwrap_or_else(|_| "gpt-6-luna".to_string()); // gpt-4.1-mini is deprecated
   let client = http_client.inner();
   let payload = serde_json::json!({
     "model": model,
@@ -1072,8 +1071,8 @@ pub(crate) async fn connector_send_claude(
     });
   }
 
-  let model = std::env::var("CLAUDE_CONNECTOR_MODEL")
-    .unwrap_or_else(|_| "claude-3-5-sonnet-latest".to_string());
+  let model =
+    std::env::var("CLAUDE_CONNECTOR_MODEL").unwrap_or_else(|_| "claude-sonnet-5-5".to_string()); // claude-3-5-sonnet was retired 2025-10-28
   let client = http_client.inner();
   let payload = serde_json::json!({
     "model": model,

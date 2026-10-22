@@ -8,6 +8,7 @@ import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
 import { requireApproval } from '../approval/approvalService';
 import { hydrateConnectorAuthProfilesFromSqlite, getConnectorCredential } from './connectorAuth.js';
 import { durableSet } from '../../lib/durableStore.js';
+import { getComfyUiEndpoint } from './comfyUiEndpoint.js';
 import { evaluateAction as evaluateDslAction } from '../policyDslService';
 
 // Read credentials saved via UI (separate from OS env vars). Delegates to
@@ -573,7 +574,7 @@ export async function verifyConnectorEnvironment(connectorId) {
           ok: false,
           connectorId: connector.id,
           provider: connector.id === 'sd_webui' ? 'automatic1111' : 'comfyui',
-          endpoint: connector.id === 'sd_webui' ? 'http://127.0.0.1:7860' : 'http://127.0.0.1:8188',
+          endpoint: connector.id === 'sd_webui' ? 'http://127.0.0.1:7860' : getComfyUiEndpoint(),
           probePath: connector.id === 'sd_webui' ? '/sdapi/v1/samplers' : '/system_stats',
           checkedAtMs: timestampMs(),
           trust: TRUST_STATES.FAILED,

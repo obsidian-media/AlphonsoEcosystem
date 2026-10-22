@@ -952,6 +952,18 @@ describe('coachEngineService', () => {
       expect(promptArg).toContain('gentle');
     });
 
+    // QA 2026-10-22: it used a fixed 'llama3.2:3b' and the default address.
+    it("uses the user's chosen Ollama model and address", async () => {
+      setCoachNarrativeEnabled(true);
+      localStorage.setItem('alphonso_settings', JSON.stringify({ selectedModel: 'qwen2.5:7b', endpoint: 'http://192.168.1.20:11434' }));
+      ollama.generateOllamaResponse.mockResolvedValue({ response: 'Rewritten.', done: true });
+      await generateNarrativeCoachMessage(warningSignal, 'balanced');
+      const args = ollama.generateOllamaResponse.mock.calls.at(-1)[0];
+      expect(args.model).toBe('qwen2.5:7b');
+      expect(args.endpoint).toBe('http://192.168.1.20:11434');
+      localStorage.removeItem('alphonso_settings');
+    });
+
     it('returns null and does not throw when Ollama rejects', async () => {
       setCoachNarrativeEnabled(true);
       ollama.generateOllamaResponse.mockRejectedValue(new Error('Ollama is not running'));

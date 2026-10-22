@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 205 services and 138 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 206 services and 139 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -32,6 +32,7 @@ Source-backed inventory: 205 services and 138 components. Human purpose descript
 | component | `src/components/calle/CalleOutreachPanel.tsx` | `CalleOutreachPanel` |
 | component | `src/components/calle/EscalationCallPanel.tsx` | `EscalationCallPanel` |
 | component | `src/components/ChatView.tsx` | `ChatView` |
+| component | `src/components/CloudModelSelect.tsx` | `CloudModelSelect` |
 | component | `src/components/CoachHardInterruptOverlay.tsx` | `CoachHardInterruptOverlay` |
 | component | `src/components/CoachHistoryPanel.tsx` | `CoachHistoryPanel` |
 | component | `src/components/CoachInterventionCard.tsx` | `CoachInterventionCard` |
@@ -185,10 +186,10 @@ Source-backed inventory: 205 services and 138 components. Human purpose descript
 | service | `src/services/calleMcpAuthService.ts` | `CallePendingLogin`, `disconnectCalleMcp`, `getCalleMcpToken`, `isCalleMcpConfigured`, `pollBrokerLogin`, `startBrokerLogin` |
 | service | `src/services/calleMcpOutreachService.ts` | `__resetMcpOutreachStateForTests`, `cancelMcpOutreachCall`, `confirmMcpOutreachCall`, `getMcpOutreachRecord`, `handleMcpOutreachMessage`, `isAwaitingMcpOutreachInput`, `markMcpOutreachDelivered`, `McpOutreachRecord`, `McpOutreachStage`, `recoverInterruptedMcpOutreachCalls` |
 | service | `src/services/calleOutreachService.ts` | `createOutreachDraft`, `dismissOutreachCall`, `ESTIMATED_COST_USD`, `listOutreachCalls`, `OutreachCallRecord`, `PolicyBlockKind`, `recoverInterruptedOutreachCalls`, `runOutreachCall` |
-| service | `src/services/chatgptService.ts` | `sendChatGPTMessage`, `streamChatGPTMessage` |
+| service | `src/services/chatgptService.ts` | `CloudModelList`, `isOpenAiChatModel`, `listOpenAiModels`, `OPENAI_DEFAULT_MODEL`, `sendChatGPTMessage`, `streamChatGPTMessage` |
 | service | `src/services/chatPersistenceService.ts` | `ChatMemoryRecord`, `ChatMessage`, `deleteChatMessages`, `loadChatMessages`, `persistChatMessages`, `resetDurableCache` |
 | service | `src/services/chromaDbService.ts` | `addMemoryToChroma`, `deleteMemoryFromChroma`, `getChromaWriteErrors`, `isChromaHealthy`, `semanticSearchMemory` |
-| service | `src/services/claudeService.ts` | `sendClaudeMessage`, `streamClaudeMessage` |
+| service | `src/services/claudeService.ts` | `CLAUDE_DEFAULT_MODEL`, `CloudModelList`, `listClaudeModels`, `sendClaudeMessage`, `streamClaudeMessage` |
 | service | `src/services/coachEngineService.ts` | `ALL_COACH_TRIGGER_IDS`, `clearCoachSnooze`, `COACH_ENABLED_KEY`, `COACH_NARRATIVE_ENABLED_KEY`, `COACH_SNOOZE_UNTIL_KEY`, `COACH_STYLE_KEY`, `COACH_TRIGGER_TOGGLES_KEY`, `CoachSignal`, `detectAgentWhiplash`, `detectApprovalRubberStamp`, `detectApprovalTheater`, `detectBoardroomHedgePileup`, `detectConfidenceDecay`, `detectDeadLetterGraveyard`, `detectLateNightApproval`, `detectLicenseWall`, `detectLongUnbrokenSession`, `detectRepeatedPipelineFailure`, `detectUnusedSurfaceArea`, `generateNarrativeCoachMessage`, `getAllCoachTriggerToggles`, `getCoachEnabled`, `getCoachMessageStyle`, `getCoachNarrativeEnabled`, `getCoachSnoozeUntilMs`, `isCoachSnoozed`, `isCoachTriggerEnabled`, `MessageStyle`, `resetCoachCooldowns`, `runCoachDetectors`, `setCoachEnabled`, `setCoachMessageStyle`, `setCoachNarrativeEnabled`, `setCoachSnoozeHours`, `setCoachTriggerEnabled` |
 | service | `src/services/coachHistoryService.ts` | `clearCoachHistory`, `CoachHistoryEntry`, `getCoachHistory`, `recordCoachHistory` |
 | service | `src/services/coachInterventionService.ts` | `buildCoachIntervention`, `buildDemoIntervention`, `COACH_ENGINE_EVENT`, `COACH_ENGINE_EVENT_TYPES`, `COACH_ENGINE_STORAGE_KEY`, `COACH_INTERVENTION_ACTION_LOG_KEY`, `COACH_INTERVENTION_LEVELS`, `CoachInterventionLevel`, `getLatestCoachEngineIntervention`, `listCoachEngineEvents`, `listCoachInterventionActionLog`, `normalizeCoachEngineEvent`, `pushCoachEngineEvent`, `recordCoachInterventionAction`, `subscribeCoachEngine` |
@@ -208,9 +209,10 @@ Source-backed inventory: 205 services and 138 components. Human purpose descript
 | service | `src/services/connectors/braveSearchConnector.ts` | `BraveSearchResult`, `BraveSearchResultItem`, `isBraveSearchConfigured`, `searchBrave` |
 | service | `src/services/connectors/calleConnector.ts` | `CalleCallAttempt`, `CalleCallStatus`, `CalleCallTask`, `CalleCreateCallRequest`, `CalleTranscriptTurn`, `createCall`, `getCall`, `isCalleConfigured`, `pollCallUntilTerminal` |
 | service | `src/services/connectors/calleMcpConnector.ts` | `CallRunActivityEntry`, `CallRunOutcome`, `CallRunResult`, `CallRunResultPayload`, `getCallRun`, `planCall`, `PlanCallArgs`, `PlanCallQuestion`, `PlanCallResult`, `runCall` |
+| service | `src/services/connectors/comfyUiEndpoint.js` | `COMFYUI_ENDPOINT_KEY`, `DEFAULT_COMFYUI_ENDPOINT`, `getComfyUiEndpoint`, `setComfyUiEndpoint` |
 | service | `src/services/connectors/connectorAuth.ts` | `authorizeConnectorRequest`, `ConnectorAuthProfile`, `ConnectorAuthProfiles`, `ConnectorCredentials`, `DEFAULT_AUTH_PROFILES`, `getConnectorCredential`, `getConnectorCredentials`, `hydrateConnectorAuthProfilesFromSqlite`, `hydrateConnectorCredentialsFromSqlite`, `isConnectorAuthenticated`, `listConnectorAuthProfiles`, `logUnauthenticatedConnectorRequest`, `LogUnauthenticatedOptions`, `normalizeAllowlist`, `readAuthProfiles`, `saveConnectorCredential`, `updateConnectorAuthProfile`, `writeAuthProfiles` |
 | service | `src/services/connectors/connectorConstants.ts` | `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE` |
-| service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setSelectedComfyUiCheckpoint` |
+| service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_ENDPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `DEFAULT_COMFYUI_ENDPOINT`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiEndpoint`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setComfyUiEndpoint`, `setSelectedComfyUiCheckpoint` |
 | service | `src/services/connectors/connectorOutbound.js` | `proveTelegramConnectorPath`, `sendChatGptConnectorMessage`, `sendClaudeConnectorMessage`, `sendClickUpConnectorTask`, `sendGitHubAction`, `sendNotionConnectorEntry`, `sendQwenConnectorMessage`, `sendSlackMessage`, `sendTelegramConnectorMessage`, `sendWhatsAppConnectorMessage`, `uploadYouTubeConnectorVideo` |
 | service | `src/services/connectors/connectorPolling.js` | `createConnectorRoutePacket`, `normalizeWhatsAppCloudInboundPayload`, `parseInboundConnectorMessage`, `pollTelegramConnector`, `pollWhatsAppConnector`, `simulateWhatsAppCloudInbound`, `verifyWhatsAppCloudWebhookChallenge`, `verifyWhatsAppCloudWebhookSignature` |
 | service | `src/services/connectors/connectorRegistry.js` | `appendConnectorAudit`, `CIRCUIT_BREAKER_RESET_MS`, `CIRCUIT_BREAKER_THRESHOLD`, `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE`, `DEFAULT_CONNECTORS`, `gateConnectorAction`, `getConnectorCircuitState`, `hydrateConnectorAuditFromSqlite`, `hydrateConnectorRegistryFromSqlite`, `initializeConnectorRegistryFromSqlite`, `listConnectorAudit`, `listConnectors`, `readRows`, `recordConnectorFailure`, `recordConnectorSuccess`, `requireConnectorApproval`, `requireConnectorReady`, `resetConnectorCircuitState`, `setConnectorStatus`, `verifyConnectorEnvironment`, `writeRows` |

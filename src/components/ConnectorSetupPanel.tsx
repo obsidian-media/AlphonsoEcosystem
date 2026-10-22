@@ -42,6 +42,7 @@ import { saveConnectorCredential, getConnectorCredential, hydrateConnectorCreden
 import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { getHermesAgentEndpoint, saveHermesAgentEndpoint, getHermesAgentHealth } from '../services/connectors/hermesAgentConnector';
+import { CloudModelSelect } from './CloudModelSelect';
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number | string }>;
 
@@ -989,6 +990,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
               hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
               savedLabel="Anthropic key saved" />
+            {anthropicApiKey && <CloudModelSelect provider="claude" />}
           </PlaceholderConnectorBanner>
 
           <PlaceholderConnectorBanner>
@@ -997,6 +999,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
               hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
               savedLabel="OpenAI key saved" />
+            {openaiApiKey && <CloudModelSelect provider="chatgpt" />}
           </PlaceholderConnectorBanner>
 
           <CredentialSection title="Qwen / DashScope" icon={Cpu} borderColor="border-yellow-300/20" bgColor="bg-yellow-500/8" accentColor="text-yellow-400"

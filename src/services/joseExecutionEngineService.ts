@@ -49,6 +49,7 @@ import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { getAgentProvider } from './modelSelectionService';
 import { getRuntimePolicySettings } from './policyEnforcementService';
 import { generateComfyUiImage, generateSdWebUiImage } from './connectors/connectorImageGenerators';
+import { getComfyUiEndpoint } from './connectors/comfyUiEndpoint.js';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
 import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress, executeBatch, getGoalById } from './batchOrchestratorService';
 import { parseJsonResponse } from '../lib/jsonUtils';
@@ -540,7 +541,7 @@ async function executeImageGeneration(prompts: any, options: any = {}) {
           height: 512,
           steps: 20,
           cfgScale: 7
-        }, { endpoint: options.endpoint || 'http://127.0.0.1:8188' });
+        }, { endpoint: options.endpoint || getComfyUiEndpoint() });
         imageResult = comfyResult;
         provider = 'comfyui';
       }
@@ -871,7 +872,7 @@ async function executeMiyaAssignment(commandText: any, assignment: any, options:
       {
         type: 'comfyui_local_generation_options',
         connectorId: 'comfyui_video',
-        endpoint: 'http://127.0.0.1:8188',
+        endpoint: getComfyUiEndpoint(),
         presets: listMiyaComfyWorkflowPresets().map((preset) => ({
           id: preset.id,
           name: preset.name,
@@ -1209,7 +1210,7 @@ export async function runJoseCommandExecutionPipeline({
         const prompt = commandText;
         let imageResult = null;
         // ComfyUI only (owner, 2026-10-22); routeToCreativeTool never returns another tool.
-        imageResult = await generateComfyUiImage({ prompt, width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: 'http://127.0.0.1:8188' });
+        imageResult = await generateComfyUiImage({ prompt, width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: getComfyUiEndpoint() });
         onProgress?.({ stage: 'creative_image_done', tool: routing.tool, result: imageResult });
         return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, creativeResult: imageResult, command: null };
       }
