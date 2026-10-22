@@ -565,6 +565,9 @@ interface SettingsViewProps {
   ollamaTroubleshootingCommand?: string;
   braveSearchConfigured?: boolean;
   memoryItems?: unknown[];
+  /** Developer mode: shows the Operator Dashboard (owner, 2026-10-22). Stored as `alphonso_operator_mode_v1`. */
+  developerMode?: boolean;
+  setDeveloperMode?: (on: boolean) => void;
 }
 
 interface LaunchStatus {
@@ -629,6 +632,8 @@ export function SettingsView({
   ollamaTroubleshootingCommand,
   braveSearchConfigured = false,
   memoryItems = [],
+  developerMode = false,
+  setDeveloperMode,
 }: SettingsViewProps) {
   const resolvedNormalizeEndpoint = normalizeEndpoint || _normalizeEndpoint;
   const folderPickerRef = useRef<HTMLInputElement>(null);
@@ -1038,6 +1043,23 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Monitor} label="Desktop & UI" />
         <div className="space-y-4">
+          {setDeveloperMode && (
+            <div className="flex items-center justify-between rounded-2xl bg-(--surface-2) p-4">
+              <div>
+                <div className="text-sm font-semibold text-(--text-1)">Developer mode</div>
+                <div className="text-[11px] text-(--text-3) mt-0.5">Shows the Operator Dashboard (System → Operator): runtime proofs, audit logs, process checks, recovery and supervised commands. Off for everyday use.</div>
+              </div>
+              <button
+                role="switch"
+                aria-checked={developerMode}
+                aria-label="Developer mode"
+                onClick={() => setDeveloperMode(!developerMode)}
+                className={`w-10 h-5 rounded-full transition-colors relative shrink-0 ${developerMode ? 'bg-(--success)' : 'bg-(--surface-3)'}`}
+              >
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${developerMode ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+          )}
           <div className="rounded-2xl bg-(--surface-2) p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>

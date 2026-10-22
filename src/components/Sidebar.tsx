@@ -107,7 +107,12 @@ interface SidebarProps {
   mode?: 'simple' | 'advanced';
   onToggleSearch: () => void;
   ollamaConnected?: boolean;
+  /** Developer mode (Settings → Desktop & UI). Off: the Operator Dashboard entry is hidden (owner, 2026-10-22). */
+  developerMode?: boolean;
 }
+
+// Shown only in developer mode.
+const DEVELOPER_ONLY_ITEMS = new Set(['operator']);
 
 // Regrouping per docs/ui-redesign/draft-a-power-user-direction.md's locked
 // "Rooms" design — deliberately NOT a 1:1 mirror of the old 4 groups. Research
@@ -180,7 +185,7 @@ const SIMPLE_MODE_ITEMS = new Set([
   'settings',
 ]);
 
-export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach, mode = 'advanced', onToggleSearch, ollamaConnected = false }: SidebarProps) {
+export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach, mode = 'advanced', onToggleSearch, ollamaConnected = false, developerMode = false }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
   const { theme, toggleTheme } = useTheme();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -238,9 +243,10 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
   }, [resizingHeight]);
 
   const currentSpace = SPACES.find((s) => s.id === activeSpace) ?? SPACES[0];
-  const visibleItems = mode === 'simple'
+  const visibleItems = (mode === 'simple'
     ? currentSpace.items.filter((item) => SIMPLE_MODE_ITEMS.has(item.id))
-    : currentSpace.items;
+    : currentSpace.items
+  ).filter((item) => developerMode || !DEVELOPER_ONLY_ITEMS.has(item.id));
 
   function handleDeleteClick(chatId: string, e: React.MouseEvent) {
     e.stopPropagation();

@@ -206,4 +206,26 @@ describe('SettingsView smoke', () => {
     expect(screen.getByRole('switch', { name: 'Toggle Ollama-narrative rewriting' }).getAttribute('aria-checked')).toBe('false');
     expect(screen.getByRole('switch', { name: 'Toggle Approval theater (repeated high-risk approvals)' }).getAttribute('aria-checked')).toBe('true');
   });
+
+  // The Operator Dashboard is a developer tool, shown only in developer mode (owner, 2026-10-22).
+  it('has a Developer mode switch that turns developer mode on', () => {
+    const setDeveloperMode = vi.fn();
+    render(
+      <SettingsView
+        settings={minimalSettings}
+        setSettings={vi.fn()}
+        ollamaStatus={{ state: 'running', label: 'Running' }}
+        installedModels={[]}
+        onCheckOllama={vi.fn()}
+        onCopyTroubleshootingCommand={vi.fn()}
+        copyState=""
+        developerMode={false}
+        setDeveloperMode={setDeveloperMode}
+      />
+    );
+    const toggle = screen.getByRole('switch', { name: 'Developer mode' });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(toggle);
+    expect(setDeveloperMode).toHaveBeenCalledWith(true);
+  });
 });

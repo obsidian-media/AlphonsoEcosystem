@@ -9,6 +9,7 @@ import {
   verifyProcessProof
 } from '../services/verificationService';
 import { TRUST_STATES } from '../services/trustModel';
+import { assessCommandRisk } from '../services/commandApprovalService';
 import { AUDIT_LOG_FETCH_LIMIT, VERIFICATION_LOG_CAP } from '../constants/appConstants';
 import { useSettings } from './SettingsContext';
 import { useOllama } from './OllamaContext';
@@ -46,7 +47,7 @@ export function VerificationProvider({ children, requestApproval, setApprovalReq
     setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
   }, [requestApproval]);
 
-  const verifyCommand = useCallback(async (program, args) => {
+  const verifyCommand = useCallback(async (program, args, description = '') => {
     if (!program) return;
     if (settings.safeMode) {
       const safePrograms = ['ollama', 'where', 'where.exe', 'tasklist', 'npm', 'npm.cmd'];
@@ -60,18 +61,26 @@ export function VerificationProvider({ children, requestApproval, setApprovalReq
         return;
       }
     }
-    if (!await requestApproval({ actionLabel: `Execute command: ${program} ${args.join(' ')}`, riskLevel: 'high', requireApproval: true })) return;
+    // The rating comes from what the command does (owner, 2026-10-22: every
+    // command used to be "high, 85"). Read-only commands run without asking.
+    const risk = assessCommandRisk(program, args);
+    if (!risk.readOnly) {
+      const actionLabel = description || `Run command: ${program} ${args.join(' ')}`;
+      if (!await requestApproval({ actionLabel, riskLevel: risk.level, riskReasons: risk.reasons, requireApproval: true })) return;
+    }
     const proof = await verifyCommandExecution(program, args, null);
     setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   }, [settings.safeMode, requestApproval, setApprovalRequiredNotice]);
 
   const handleRunReleasePreflight = useCallback(async () => {
-    if (!await requestApproval({ actionLabel: 'Run release preflight: test + build + tauri build' })) return;
-    await verifyCommand('npm.cmd', ['run', 'verify:desktop']);
+    // One approval, asked by verifyCommand with the command's own rating
+    // (it used to ask twice).
+    await verifyCommand('npm.cmd', ['run', 'verify:desktop'], 'Run release preflight (tests, web build and desktop build): npm run verify:desktop');
   }, [requestApproval, verifyCommand]);
 
   const handleRuntimeRepair = useCallback(async () => {
-    if (!await requestApproval({ actionLabel: 'Run supervised runtime repair checks', riskLevel: 'high', requireApproval: true })) return;
+    // These checks only read (is Ollama answering, is its process running), so
+    // they no longer ask for approval (owner, 2026-10-22).
     await runOllamaCheck();
     await verifyProcesses(['ollama']);
     const log = appendVerificationLog({

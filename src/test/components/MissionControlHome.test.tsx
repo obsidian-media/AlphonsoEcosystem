@@ -216,3 +216,14 @@ describe('MissionControlHome — Zone-wrapped empty state', () => {
     expect(screen.queryByText('Nothing needs you right now')).toBeNull();
   });
 });
+
+// The Operator quick-launch card is shown only in developer mode (owner, 2026-10-22).
+describe('MissionControlHome developer mode', () => {
+  it('hides the Operator card unless developer mode is on', async () => {
+    const { unmount } = render(<MissionControlHome {...baseProps} />);
+    expect(screen.queryByRole('button', { name: /Operator/ })).toBeNull();
+    unmount();
+    render(<MissionControlHome {...baseProps} operatorMode />);
+    expect(await screen.findByRole('button', { name: /Operator/ })).toBeInTheDocument();
+  });
+});

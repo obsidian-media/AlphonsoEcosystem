@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import React from 'react';
 import { VerificationProvider, useVerification } from '../contexts/VerificationContext';
 import { SettingsProvider } from '../contexts/SettingsContext';
@@ -86,5 +86,53 @@ describe('VerificationContext', () => {
     }
     expect(() => render(<SettingsProvider><OllamaProvider><Bad /></OllamaProvider></SettingsProvider>)).toThrow('useVerification must be used within VerificationProvider');
     spy.mockRestore();
+  });
+});
+
+// Commands are rated from what they do; read-only ones run without asking
+// (owner, 2026-10-22: every command used to ask as "high, 85").
+describe('VerificationContext command ratings', () => {
+  function renderWith(requestApproval) {
+    let api;
+    function Grab() { api = useVerification(); return null; }
+    render(
+      <SettingsProvider>
+        <OllamaProvider>
+          <VerificationProvider
+            requestApproval={requestApproval}
+            setApprovalRequiredNotice={vi.fn()}
+            verificationLogs={[]}
+            setVerificationLogs={vi.fn()}
+            durableAuditLogs={[]}
+            setDurableAuditLogs={vi.fn()}
+            auditChainProof={null}
+            setAuditChainProof={vi.fn()}
+          >
+            <Grab />
+          </VerificationProvider>
+        </OllamaProvider>
+      </SettingsProvider>
+    );
+    return api;
+  }
+
+  it('runs a read-only command without asking', async () => {
+    const requestApproval = vi.fn(async () => true);
+    const { verifyCommandExecution } = await import('../services/verificationService');
+    verifyCommandExecution.mockClear();
+    const api = renderWith(requestApproval);
+    await act(async () => { await api.verifyCommand('ollama', ['list']); });
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(verifyCommandExecution).toHaveBeenCalledWith('ollama', ['list'], null);
+  });
+
+  it('asks once for the release preflight, rated high with its reasons', async () => {
+    const requestApproval = vi.fn(async () => true);
+    const api = renderWith(requestApproval);
+    await act(async () => { await api.handleRunReleasePreflight(); });
+    expect(requestApproval).toHaveBeenCalledTimes(1);
+    const req = requestApproval.mock.calls[0][0];
+    expect(req.riskLevel).toBe('high');
+    expect(req.riskReasons.join(' ')).toMatch(/Runs code from your project folder/);
   });
 });

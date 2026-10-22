@@ -51,7 +51,7 @@ async function waitForAppDocument() {
 
 /** Every spec file starts on a fresh WebView profile, which would show the
  *  first-run Setup flow. Mark it complete and reload to reach the main shell. */
-export async function enterShell() {
+export async function enterShell({ developerMode = false } = {}) {
   await waitForPageLoad();
   await waitForAppDocument();
 
@@ -73,6 +73,10 @@ export async function enterShell() {
     if (stored !== 'true' && stored?.value !== 'true') {
       throw new Error('desktop E2E could not persist the setup-complete flag');
     }
+  }
+  if (developerMode) {
+    // The Operator Dashboard is shown only in developer mode (2026-10-22).
+    await browser.execute(() => window.localStorage.setItem('alphonso_operator_mode_v1', 'true'));
   }
   await browser.refresh();
   await $(SHELL_READY).waitForExist({ timeout: 60000 });

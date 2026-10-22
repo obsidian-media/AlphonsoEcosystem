@@ -39,8 +39,9 @@ describe('Alphonso desktop smoke', () => {
   before(async () => {
     // Fresh profile means the first-run Setup flow would show. That flow has
     // its own spec to earn; here we mark it complete and reload so the main
-    // shell is what gets tested.
-    await enterShell();
+    // shell is what gets tested. Developer mode on, so the Operator page
+    // (developer mode only since 2026-10-22) is visited too.
+    await enterShell({ developerMode: true });
     await browser.execute(() => {
       window.__alphonsoE2eErrors = [];
       window.addEventListener('error', (event) => {

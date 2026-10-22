@@ -91,6 +91,16 @@ describe('Sidebar — 5 Space pills', () => {
     expect(screen.getByTestId('sidebar-nav-runtimes')).toBeTruthy();
     expect(screen.getByTestId('sidebar-nav-voice')).toBeTruthy();
     expect(screen.getByTestId('sidebar-nav-connectors')).toBeTruthy();
+  });
+
+  // The Operator Dashboard is a developer tool (owner, 2026-10-22).
+  it('shows Operator only in developer mode', () => {
+    const { unmount } = render(<Sidebar {...baseProps} />);
+    fireEvent.click(screen.getByTestId('space-pill-system'));
+    expect(screen.queryByTestId('sidebar-nav-operator')).toBeNull();
+    unmount();
+    render(<Sidebar {...baseProps} developerMode />);
+    fireEvent.click(screen.getByTestId('space-pill-system'));
     expect(screen.getByTestId('sidebar-nav-operator')).toBeTruthy();
   });
 

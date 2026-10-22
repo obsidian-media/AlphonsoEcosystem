@@ -332,14 +332,14 @@ export function OperatorDashboard({
         <section className="rounded-2xl bg-(--surface-1) p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="font-serif text-xl font-bold text-(--text-1)">Operator Mode is Off</h1>
-              <p className="text-sm text-(--text-3) mt-1">Enable Operator Mode to access telemetry, proofs, memory dashboards, and supervised runtime tools.</p>
+              <h1 className="font-serif text-xl font-bold text-(--text-1)">Developer mode is off</h1>
+              <p className="text-sm text-(--text-3) mt-1">The Operator Dashboard is a developer tool: telemetry, proofs, memory dashboards and supervised runtime commands. Turn on developer mode to use it (also in Settings → Desktop &amp; UI).</p>
             </div>
             <button
               onClick={() => setOperatorMode(true)}
               className="rounded-lg bg-(--success-dim) text-(--success) px-4 py-2 text-xs font-bold uppercase tracking-widest"
             >
-              Enable
+              Turn on developer mode
             </button>
           </div>
         </section>
@@ -351,7 +351,7 @@ export function OperatorDashboard({
     <div className="max-w-4xl mx-auto py-5 px-4 space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="font-serif text-xl font-bold text-(--text-1)">Operator Mode</h1>
+          <h1 className="font-serif text-xl font-bold text-(--text-1)">Operator Dashboard</h1>
           <p className="text-sm text-(--text-3)">Supervised runtime control, verification logs, memory state, plugin registry, and recovery foundations.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -363,6 +363,10 @@ export function OperatorDashboard({
             {focusMode ? 'Focus' : 'Full'}
           </button>
           <button
+            role="switch"
+            aria-checked={operatorMode}
+            aria-label="Developer mode"
+            title="Developer mode"
             onClick={() => setOperatorMode(!operatorMode)}
             className={`w-14 h-7 rounded-full transition-colors relative ${operatorMode ? 'bg-(--success)' : 'bg-(--surface-2)'}`}
           >

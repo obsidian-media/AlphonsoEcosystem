@@ -288,7 +288,8 @@ export function MissionControlHome({
           {[
             { title: 'Miya Studio', detail: 'Create images and video locally', tab: 'miya', icon: Clapperboard, color: 'text-(--agent-miya)' },
             { title: 'Connectors', detail: 'Telegram, Slack, YouTube and more', tab: 'connectors', icon: RadioTower, color: 'text-cyan-400' },
-            { title: 'Operator', detail: 'Settings, Coach, and memory', tab: 'operator', icon: Bot, color: 'text-violet-400' },
+            // Developer mode only (owner, 2026-10-22).
+            ...(operatorMode ? [{ title: 'Operator', detail: 'Developer tools: runtime proofs, logs, recovery', tab: 'operator', icon: Bot, color: 'text-violet-400' }] : []),
             { title: 'Agent Pairing', detail: 'Pair agents to collaborate on tasks', tab: 'pairings', icon: Link2, color: 'text-(--agent-jose)' },
           ].map((item) => (
             <button

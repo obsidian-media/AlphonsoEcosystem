@@ -122,7 +122,7 @@ export function useAppShellState({
   // keyword that needsHighRiskApproval() would match -- without it the label
   // filter below silently auto-approves. Approval Mode off is still the user's
   // explicit opt-out and always wins.
-  const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null, requireApproval = false } = {}) => {
+  const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null, requireApproval = false, riskReasons = null } = {}) => {
     // Logic from App.jsx
     if (!settings.approvalMode) return Promise.resolve(true);
     if (!requireApproval && !needsHighRiskApproval(actionLabel)) return Promise.resolve(true);
@@ -131,7 +131,7 @@ export function useAppShellState({
     // direct callers) is queued and shown after the current decision, instead
     // of overwriting the resolver and leaving the earlier caller hanging.
     return new Promise((resolve) => {
-      const request = { actionLabel, packetId, agent, riskLevel, mariaScore };
+      const request = { actionLabel, packetId, agent, riskLevel, mariaScore, riskReasons };
       if (approvalActiveRef.current) {
         approvalWaitersRef.current.push({ request, resolve });
         return;

@@ -90,3 +90,18 @@ describe('ApprovalModal', () => {
     expect(screen.getByText('High Risk')).toBeTruthy();
   });
 });
+
+// owner, 2026-10-22: no made-up number; the reasons for the rating are shown.
+describe('ApprovalModal rating', () => {
+  it('shows the reasons and no score when none was measured', () => {
+    render(<ApprovalModal action="Run command: ollama pull x" riskLevel="medium" riskReasons={['Contacts the internet.']} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByTestId('approval-risk-reasons').textContent).toMatch(/Contacts the internet/);
+    expect(screen.queryByText('85')).toBeNull();
+    expect(screen.queryByText('55')).toBeNull();
+  });
+
+  it("shows Maria's measured score when there is one", () => {
+    render(<ApprovalModal action="Publish post" riskLevel="high" mariaScore={72} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByText('72')).toBeInTheDocument();
+  });
+});
