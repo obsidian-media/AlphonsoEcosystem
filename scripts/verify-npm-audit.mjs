@@ -1,94 +1,118 @@
 #!/usr/bin/env node
-// Runs `npm audit --json` and fails on any high/critical vulnerability EXCEPT
-// the explicitly accepted advisories below. Each accepted advisory must have
-// a reason and a tracking reference -- do not add one without both.
+// Fails on any high/critical npm advisory affecting an installed package,
+// EXCEPT the explicitly accepted advisories below. Each accepted advisory must
+// have a reason and a tracking reference -- do not add one without both.
+//
+// How it checks (2026-10-22): every package and version in package-lock.json
+// is sent to npm's bulk advisory endpoint, and each advisory is matched
+// against the installed version with semver. It used to run `npm audit
+// --json`, but npm retired the "quick" audit endpoint that command fell back
+// to ("This endpoint is being retired. Use the bulk advisory endpoint
+// instead", HTTP 400), which failed every CI run. The rules are unchanged: dev
+// dependencies count, and a registry error fails the gate rather than passing.
 //
 // History: 2026-09-05 accepted two image-size DoS advisories (transitive via
 // pptxgenjs; no upstream fix existed then). image-size 2.0.4 patched both, and
 // on 2026-09-30 the package.json override was raised to ^2.0.4 and the
-// exceptions were removed. The list is empty: any new high/critical advisory
-// fails CI until it is fixed or explicitly accepted here with a reason and a
-// tracking reference.
-//
-// 2026-10-06: a braces ReDoS advisory (GHSA-vfj7-8cjw-p6xm) was briefly
-// accepted here because it reached the repo only through tailwindcss 3.x's
-// build-time scan. The Tailwind v4 migration removed that dependency chain, so
-// the exception and its expiry guard were deleted; the list is empty again.
+// exceptions were removed. 2026-10-06: a braces ReDoS advisory was briefly
+// accepted (tailwindcss 3.x); the Tailwind v4 migration removed it. The list
+// is empty: any new high/critical advisory fails CI until it is fixed or
+// explicitly accepted here with a reason and a tracking reference.
 const ACCEPTED_ADVISORY_IDS = new Set();
 
-import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-function runAudit() {
-  try {
-    // Fixed, literal command -- no interpolated/user-controlled input, so a
-    // plain shell string is safe here (avoids the npm.cmd spawnSync EINVAL
-    // issue execFileSync hits on Windows without a shell).
-    const out = execSync('npm audit --json', { encoding: 'utf8' });
-    return JSON.parse(out);
-  } catch (err) {
-    // npm audit exits non-zero when vulnerabilities are found; stdout still has the JSON.
-    const out = err.stdout ? String(err.stdout) : '';
-    if (!out.trim()) {
-      console.error('npm audit produced no output to parse.');
-      console.error(err.message);
-      process.exit(1);
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const require = createRequire(path.join(root, 'package.json'));
+const semver = require('semver');
+
+const BULK_URL = 'https://registry.npmjs.org/-/npm/v1/security/advisories/bulk';
+const CHUNK = 400;
+
+function fail(message, detail) {
+  console.error(message);
+  if (detail) console.error(detail);
+  process.exit(1);
+}
+
+/** name -> Set(versions) for every installed package in package-lock.json. */
+export function installedPackages(lock) {
+  const out = new Map();
+  for (const [key, entry] of Object.entries(lock.packages || {})) {
+    if (!key || entry.link || !entry.version) continue;
+    const name = entry.name || key.slice(key.lastIndexOf('node_modules/') + 'node_modules/'.length);
+    if (!name) continue;
+    if (!out.has(name)) out.set(name, new Set());
+    out.get(name).add(entry.version);
+  }
+  return out;
+}
+
+/** High/critical advisories (not accepted) that affect an installed version. */
+export function findUnaccepted(advisoriesByName, installed) {
+  const found = [];
+  for (const [name, advisories] of Object.entries(advisoriesByName)) {
+    for (const advisory of advisories || []) {
+      if (advisory.severity !== 'high' && advisory.severity !== 'critical') continue;
+      if (ACCEPTED_ADVISORY_IDS.has(advisory.id)) continue;
+      const hit = [...(installed.get(name) || [])].filter((v) =>
+        semver.satisfies(v, advisory.vulnerable_versions || '<0.0.0', { includePrerelease: true })
+      );
+      if (hit.length) found.push({ name, versions: hit, severity: advisory.severity, id: advisory.id, url: advisory.url, title: advisory.title });
     }
-    return JSON.parse(out);
   }
+  return found;
 }
 
-const report = runAudit();
-
-// A genuine npm error (registry unreachable, auth failure, etc.) produces
-// JSON with an `error` field and no `vulnerabilities` key at all -- treating
-// that as "no vulnerabilities" would silently pass the gate on a report that
-// was never actually generated. Fail loudly instead.
-if (report.error && !report.vulnerabilities) {
-  console.error('npm audit failed to produce a real report:');
-  console.error(JSON.stringify(report.error, null, 2));
-  process.exit(1);
-}
-
-const vulnerabilities = report.vulnerabilities || {};
-
-// `via` entries are either advisory objects (direct findings, carry a
-// numeric `source` id) or plain package-name strings (this package is only
-// vulnerable because it depends on that other, already-reported package).
-// A package is "accepted" if every advisory id it carries directly is in
-// ACCEPTED_ADVISORY_IDS, and every package name it points to is itself
-// accepted -- resolved as a fixed point since the dependency chain here is
-// shallow (image-size -> pptxgenjs).
-function isAccepted(name, seen = new Set()) {
-  if (seen.has(name)) return true; // cycle guard, shouldn't happen in practice
-  seen.add(name);
-  const vuln = vulnerabilities[name];
-  if (!vuln) return true; // referenced package has no vulnerability entry of its own
-  if (vuln.severity !== 'high' && vuln.severity !== 'critical') return true;
-  const via = Array.isArray(vuln.via) ? vuln.via : [];
-  return via.every((v) => {
-    if (typeof v === 'object' && v !== null) return ACCEPTED_ADVISORY_IDS.has(v.source);
-    if (typeof v === 'string') return isAccepted(v, seen);
-    return false;
-  });
-}
-
-const unaccepted = [];
-for (const [name, vuln] of Object.entries(vulnerabilities)) {
-  if (vuln.severity !== 'high' && vuln.severity !== 'critical') continue;
-  if (!isAccepted(name)) {
-    unaccepted.push({ name, severity: vuln.severity });
+async function main() {
+  let lock;
+  try {
+    lock = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  } catch (error) {
+    fail('Could not read package-lock.json.', String(error));
   }
-}
+  const installed = installedPackages(lock);
+  if (installed.size === 0) fail('package-lock.json lists no installed packages; refusing to report "no vulnerabilities".');
 
-if (unaccepted.length > 0) {
-  console.error('npm audit found high/critical vulnerabilities not in the accepted list:');
-  for (const item of unaccepted) {
-    console.error(`  - ${item.name} (${item.severity})`);
+  const names = [...installed.keys()];
+  const advisoriesByName = {};
+  for (let i = 0; i < names.length; i += CHUNK) {
+    const body = Object.fromEntries(names.slice(i, i + CHUNK).map((n) => [n, [...installed.get(n)]]));
+    // Each request gets 60 s and one retry: a hung registry call must fail
+    // the gate, not stall CI.
+    let response;
+    for (let attempt = 1; attempt <= 2 && !response; attempt++) {
+      try {
+        response = await fetch(BULK_URL, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(60000)
+        });
+      } catch (error) {
+        if (attempt === 2) fail('npm advisory lookup failed (registry unreachable or too slow):', String(error));
+      }
+    }
+    if (!response.ok) fail(`npm advisory lookup failed: HTTP ${response.status}`, await response.text().catch(() => ''));
+    const json = await response.json().catch(() => null);
+    if (!json || typeof json !== 'object' || Array.isArray(json)) fail('npm advisory lookup returned an unexpected response.');
+    Object.assign(advisoriesByName, json);
   }
-  process.exit(1);
+
+  const unaccepted = findUnaccepted(advisoriesByName, installed);
+  if (unaccepted.length > 0) {
+    console.error('npm advisories: high/critical vulnerabilities not in the accepted list:');
+    for (const item of unaccepted) {
+      console.error(`  - ${item.name}@${item.versions.join(',')} (${item.severity}) ${item.title || ''} ${item.url || ''}`);
+    }
+    process.exit(1);
+  }
+  console.log(`npm advisories: no unaccepted high/critical vulnerabilities in ${installed.size} installed packages.`);
 }
 
-console.log('npm audit: no unaccepted high/critical vulnerabilities found.');
-if (Object.keys(vulnerabilities).length > 0) {
-  console.log(`(${Object.keys(vulnerabilities).length} vulnerability group(s) present, all explicitly accepted -- see script header.)`);
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
 }
