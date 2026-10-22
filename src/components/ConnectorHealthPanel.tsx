@@ -23,6 +23,7 @@ import {
   verifyConnectorEnvironment
 } from '../services/connectorRegistryService';
 import { checkConnectorHealth } from '../services/connectorHealthCheckService';
+import { getConnectorCredential } from '../services/connectors/connectorAuth';
 import { deriveConnectorStatus } from '../services/connectorStatusService';
 import { getConfiguredOllamaEndpoint } from '../lib/ollama';
 import { Tabs } from './ui/Tabs';
@@ -42,6 +43,8 @@ interface Connector {
 interface TestResult {
   ok: boolean;
   message?: string;
+  /** 'live' = the service answered; 'key_only' = only a saved key was found. */
+  checked?: 'live' | 'key_only';
 }
 
 type TestState = 'idle' | 'loading' | 'ok' | 'fail';
@@ -94,10 +97,12 @@ const STATUS_BADGE: Record<string, { dot: string; badge: string; label: string }
     badge: 'border-(--border) bg-(--surface-2) text-(--text-1)',
     label: 'Local Only'
   },
+  // ChatGPT/Claude with no key. "Placeholder" read as "not a real
+  // connector"; both work once a key is saved (QA Bug 34).
   placeholder: {
     dot: 'bg-(--text-3)',
     badge: 'border-(--border) bg-(--surface-2) text-(--text-1)',
-    label: 'Placeholder'
+    label: 'Not set up'
   },
   disabled: {
     dot: 'bg-(--text-3)',
@@ -106,118 +111,99 @@ const STATUS_BADGE: Record<string, { dot: string; badge: string; label: string }
   }
 };
 
-// VITE_ env key map per connector id used by testConnector
-const CONNECTOR_VITE_ENV_KEYS: Record<string, string> = {
-  telegram: 'VITE_TELEGRAM_BOT_TOKEN',
-  whatsapp: 'VITE_WHATSAPP_ACCESS_TOKEN',
-  youtube: 'VITE_YOUTUBE_CLIENT_ID',
-  claude: 'VITE_ANTHROPIC_API_KEY',
-  chatgpt: 'VITE_OPENAI_API_KEY',
-  qwen: 'VITE_DASHSCOPE_API_KEY',
-  notion: 'VITE_NOTION_API_KEY',
-  clickup: 'VITE_CLICKUP_API_KEY',
-  runway: 'VITE_RUNWAYML_API_SECRET'
-};
-
+// Ollama and ComfyUI refuse requests from the app window's origin (403), so
+// their Test goes through the backend; the window is only the fallback for
+// the plain browser build. Every other connector goes through the shared
+// health checks, which say whether the service itself answered ('live') or
+// only a saved key was found ('key_only'). The old Test read build-time
+// VITE_* values, never the keys saved in Settings (QA Bug 33, 2026-10-21).
 async function testConnector(connectorId: string): Promise<TestResult> {
   if (connectorId === 'ollama') {
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2000);
-      const res = await fetch(`${getConfiguredOllamaEndpoint()}/api/tags`, { signal: controller.signal });
-      clearTimeout(timer);
-      return res.ok
-        ? { ok: true, message: 'Ollama reachable' }
-        : { ok: false, message: `HTTP ${res.status}` };
+      const { invoke } = await import('@tauri-apps/api/core');
+      const proof = await invoke<{ reachable?: boolean; models?: string[]; reason?: string | null }>('check_ollama_runtime', { endpoint: getConfiguredOllamaEndpoint() });
+      return proof?.reachable
+        ? { ok: true, checked: 'live', message: `Ollama answered: ${proof.models?.length ?? 0} model(s) installed` }
+        : { ok: false, checked: 'live', message: proof?.reason || 'Ollama did not answer' };
     } catch {
-      return { ok: false, message: 'Ollama unreachable' };
-    }
-  }
-
-  if (connectorId === 'telegram' || connectorId === 'whatsapp') {
-    return checkConnectorHealth(connectorId);
-  }
-
-  if (connectorId === 'sd_webui') {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2000);
-      const res = await fetch('http://127.0.0.1:7860/sdapi/v1/samplers', { signal: controller.signal });
-      clearTimeout(timer);
-      return res.ok
-        ? { ok: true, message: 'SD WebUI reachable' }
-        : { ok: false, message: `HTTP ${res.status}` };
-    } catch {
-      return { ok: false, message: 'SD WebUI unreachable' };
+      return windowProbe(`${getConfiguredOllamaEndpoint()}/api/tags`, 'Ollama');
     }
   }
 
   if (connectorId === 'comfyui_video') {
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2000);
-      const res = await fetch('http://127.0.0.1:8188/system_stats', { signal: controller.signal });
-      clearTimeout(timer);
-      return res.ok
-        ? { ok: true, message: 'ComfyUI reachable' }
-        : { ok: false, message: `HTTP ${res.status}` };
-    } catch {
-      return { ok: false, message: 'ComfyUI unreachable' };
+      const { invoke } = await import('@tauri-apps/api/core');
+      const response = await invoke<{ status: number }>('comfyui_request', { endpoint: 'http://127.0.0.1:8188', method: 'GET', path: '/system_stats', body: null });
+      return response?.status === 200
+        ? { ok: true, checked: 'live', message: 'ComfyUI answered' }
+        : { ok: false, checked: 'live', message: `ComfyUI answered HTTP ${response?.status}` };
+    } catch (error) {
+      const reason = String((error as Error)?.message || error || '');
+      return reason.includes('invoke') || reason.includes('__TAURI')
+        ? windowProbe('http://127.0.0.1:8188/system_stats', 'ComfyUI')
+        : { ok: false, checked: 'live', message: `ComfyUI not reachable: ${reason || 'no answer'}` };
     }
   }
 
-  if (connectorId === 'mobile_bridge') {
-    return checkConnectorHealth('mobile_bridge');
+  if (connectorId === 'sd_webui') {
+    return windowProbe('http://127.0.0.1:7860/sdapi/v1/samplers', 'SD WebUI');
   }
 
-  if (['github', 'slack', 'discord', 'generic_webhook', 'n8n', 'brave_search', 'perplexity', 'tavily', 'deepseek', 'hermes_agents'].includes(connectorId)) {
-    return checkConnectorHealth(connectorId);
-  }
-
-  const envKey = CONNECTOR_VITE_ENV_KEYS[connectorId];
-  if (envKey) {
-    const present = Boolean((import.meta as unknown as { env: Record<string, unknown> }).env[envKey]);
-    return present
-      ? { ok: true, message: 'OK key present' }
-      : { ok: false, message: 'FAIL no key' };
-  }
-
-  return { ok: false, message: 'Unknown connector' };
+  return checkConnectorHealth(connectorId);
 }
 
-async function validateConnectorCredentials(connectorId: string): Promise<TestResult> {
-  if (['sd_webui', 'comfyui_video', 'mobile_bridge', 'ollama'].includes(connectorId)) {
-    return { ok: true, message: 'Local connector — no cloud credentials required' };
+async function windowProbe(url: string, label: string): Promise<TestResult> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return res.ok
+      ? { ok: true, checked: 'live', message: `${label} answered` }
+      : { ok: false, checked: 'live', message: `${label} answered HTTP ${res.status}` };
+  } catch {
+    return { ok: false, checked: 'live', message: `${label} not reachable` };
+  }
+}
+
+// Validate checks the keys a connector needs, saved in Settings or set in
+// the environment. It used to read only process environment variables (so a
+// key saved in Settings showed as missing) and to answer "No credential
+// validation required" for most connectors (QA Bug 33).
+async function validateConnectorCredentials(connector: Connector): Promise<TestResult> {
+  if (['sd_webui', 'comfyui_video', 'mobile_bridge', 'ollama'].includes(connector.id)) {
+    return { ok: true, message: 'Local connector: no keys needed' };
+  }
+  const required = Array.isArray(connector.requiredEnv) ? connector.requiredEnv : [];
+  if (required.length === 0) {
+    return { ok: true, message: 'This connector needs no keys' };
   }
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    const requiredEnv: string[] = [];
-    if (connectorId === 'telegram') requiredEnv.push('TELEGRAM_BOT_TOKEN');
-    if (connectorId === 'whatsapp') requiredEnv.push('WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID');
-    if (connectorId === 'youtube') requiredEnv.push('YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET');
-    if (connectorId === 'claude') requiredEnv.push('ANTHROPIC_API_KEY');
-    if (connectorId === 'chatgpt') requiredEnv.push('OPENAI_API_KEY');
-    if (connectorId === 'qwen') requiredEnv.push('DASHSCOPE_API_KEY');
-    if (connectorId === 'notion') requiredEnv.push('NOTION_API_KEY');
-    if (connectorId === 'clickup') requiredEnv.push('CLICKUP_API_KEY');
-    if (connectorId === 'runway') requiredEnv.push('RUNWAYML_API_SECRET');
-    if (requiredEnv.length === 0) {
-      return { ok: true, message: 'No credential validation required' };
-    }
-    const presence = (await invoke<Record<string, boolean>>('check_env_vars_presence', { names: requiredEnv })) ?? {};
-    const missing = requiredEnv.filter((k) => !presence[k]);
-    if (missing.length === 0) {
-      return { ok: true, message: `All ${requiredEnv.length} credential(s) present` };
-    }
-    return { ok: false, message: `Missing: ${missing.join(', ')}` };
+    const proof = await verifyConnectorEnvironment(connector.id) as { envPresence?: Record<string, boolean> } | null;
+    const presence = proof?.envPresence || {};
+    const missing = required.filter((name) => !presence[name]);
+    return missing.length === 0
+      ? { ok: true, message: `All ${required.length} required key(s) are saved` }
+      : { ok: false, message: `Missing: ${missing.join(', ')}. Add in Settings → Connectors` };
   } catch (error) {
-    return { ok: false, message: `Validation error: ${String(error)}` };
+    return { ok: false, message: `Could not check keys: ${String(error)}` };
   }
 }
+
+// What the Health line says. lastTestStatus 'verified' is written when the
+// required keys are found; nothing has been sent at that point.
+const HEALTH_TEXT: Record<string, string> = {
+  verified: 'keys saved, not tested',
+  setup_required: 'keys missing',
+  configured: 'ready',
+  failed: 'not reachable',
+  foundation_only: 'not checked yet'
+};
 
 function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zeroCostMode: boolean }) {
   const [testState, setTestState] = useState<TestState>('idle');
   const [testMessage, setTestMessage] = useState('');
+  const [testChecked, setTestChecked] = useState<'live' | 'key_only' | undefined>(undefined);
   const [validateState, setValidateState] = useState<'idle' | 'loading'>('idle');
   const [validateResult, setValidateResult] = useState<TestResult | null>(null);
 
@@ -226,19 +212,17 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
     setTestState('loading');
     setTestMessage('');
     const result = await testConnector(connector.id);
+    // The result stays on the card: it used to flash "OK" for 3 s.
     setTestState(result.ok ? 'ok' : 'fail');
+    setTestChecked(result.checked);
     setTestMessage(result.message || '');
-    setTimeout(() => {
-      setTestState('idle');
-      setTestMessage('');
-    }, 3000);
   };
 
   const handleValidate = async () => {
     if (validateState === 'loading') return;
     setValidateState('loading');
     setValidateResult(null);
-    const result = await validateConnectorCredentials(connector.id);
+    const result = await validateConnectorCredentials(connector);
     setValidateResult(result);
     setValidateState('idle');
   };
@@ -296,14 +280,23 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
       {/* Env keys */}
       {requiredEnv.length > 0 && (
         <div className="space-y-1">
-          <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-(--text-4)">Required env</div>
+          <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-(--text-4)">Required keys</div>
           {requiredEnv.map((key) => {
+            // Where the key is matters: some connectors call the service from
+            // the app window and can only use a key saved in Settings, so an
+            // environment-only key is not the same as "present".
+            const saved = Boolean(String(getConnectorCredential(connector.id, key) || '').trim());
             const present = Boolean(envPresence[key]);
+            const source = saved ? 'saved' : present ? 'environment only' : 'missing';
             return (
               <div key={key} className="flex items-center justify-between rounded-sm bg-(--surface-0) px-2 py-0.5 font-mono text-[9px]">
                 <span className="text-(--text-3) truncate">{key}</span>
-                <span className={`shrink-0 ml-2 ${present ? 'text-(--success)' : 'text-(--text-4)'}`}>
-                  {present ? 'present' : 'missing'}
+                <span
+                  data-testid={`connector-key-${connector.id}-${key}`}
+                  title={source === 'environment only' ? 'Set as an environment variable but not saved in Settings. Save it in Settings → Connectors so every feature can use it.' : undefined}
+                  className={`shrink-0 ml-2 ${saved ? 'text-(--success)' : present ? 'text-(--warning)' : 'text-(--text-4)'}`}
+                >
+                  {source}
                 </span>
               </div>
             );
@@ -323,7 +316,7 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
           <ShieldOff className="w-3 h-3 shrink-0" />
         )}
         <span>
-          Health: {connector.lastTestStatus || 'not run'}
+          Health: {HEALTH_TEXT[connector.lastTestStatus || ''] || connector.lastTestStatus || 'not checked yet'}
           {connector.lastTestAtMs ? ` · ${new Date(connector.lastTestAtMs).toLocaleDateString()}` : ''}
         </span>
       </div>
@@ -352,12 +345,12 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
                     : 'bg-(--surface-3) text-(--text-2) hover:bg-(--surface-4) hover:text-(--text-1) cursor-pointer'
             }`}
           >
-            {testState === 'loading' ? '…testing' : testState === 'ok' ? 'OK' : testState === 'fail' ? 'FAIL' : 'Test'}
+            {testState === 'loading' ? '…testing' : 'Test'}
           </button>
           <button
             onClick={handleValidate}
             disabled={validateState === 'loading'}
-            title="Validate credentials via Tauri env check"
+            title="Check that the keys this connector needs are saved"
             className={`flex items-center gap-1 rounded-lg px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
               validateState === 'loading'
                 ? 'bg-(--surface-3) text-(--text-3) cursor-wait'
@@ -369,11 +362,16 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
             }`}
           >
             <Key className="w-2.5 h-2.5" />
-            {validateState === 'loading' ? '…' : validateResult ? (validateResult.ok ? 'OK' : 'FAIL') : 'Validate'}
+            {validateState === 'loading' ? '…' : 'Validate'}
           </button>
         </div>
         {testMessage ? (
-          <div className={`text-[9px] text-center truncate ${testState === 'ok' ? 'text-(--success)' : 'text-(--error)'}`}>
+          <div
+            data-testid={`connector-test-result-${connector.id}`}
+            title={testMessage}
+            className={`text-[9px] leading-snug ${testState === 'fail' ? 'text-(--error)' : testChecked === 'live' ? 'text-(--success)' : 'text-(--text-3)'}`}
+          >
+            {testState === 'fail' ? 'Failed: ' : testChecked === 'live' ? 'Live check passed: ' : 'Key saved, not tested: '}
             {testMessage}
           </div>
         ) : null}
@@ -513,11 +511,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
       </div>
 
       <div className="rounded-xl bg-(--info-dim) px-4 py-3 text-[11px] leading-relaxed text-(--info)">
-        <span className="font-semibold">How connectors work:</span> Connectors store your API credentials locally and are called by Alphonso's agents (Jose, Marcus, Hector…) running on your local Ollama instance. A "Connected" status means your credentials are saved — the agents will use them automatically when you ask them to take action (e.g. "open a GitHub issue", "post to Slack"). You do not call connectors directly.
-      </div>
-
-      <div className="rounded-xl bg-(--warning-dim) px-4 py-2 text-[11px] leading-relaxed text-(--warning)">
-        Public deploy note: this app auto-deploys from GitHub main to Railway. Do not add real connector secrets to browser-exposed env vars unless that connector is meant to be public/cloud-facing.
+        <span className="font-semibold">How connectors work:</span> Connectors store your API credentials locally and are called by Alphonso's agents (Jose, Marcus, Hector…) running on your local Ollama instance. "Credentials saved" means the keys are saved; it does not mean the service was reached. Use Test to check: some connectors can be checked live, others only for a saved key. The agents use saved keys automatically when you ask them to act (e.g. "open a GitHub issue", "post to Slack").
       </div>
 
       {/* Summary bar */}

@@ -266,12 +266,46 @@ describe('connectorHealthCheckService', () => {
       expect(result.details.reason).toBe('missing_key');
     });
 
-    it.each(['brave_search', 'perplexity', 'tavily', 'deepseek', 'nvidia_nim', 'gemini'])('%s: reports ok when a key is configured', async (connectorId) => {
+    it.each(['brave_search', 'perplexity', 'tavily', 'deepseek'])('%s: reports a saved key, and says it was not tested', async (connectorId) => {
       mockGetConnectorCredential.mockReturnValue('a-real-key');
       const { checkConnectorHealth } = await import('../../services/connectorHealthCheckService');
       const result = await checkConnectorHealth(connectorId);
       expect(result.ok).toBe(true);
       expect(result.details.reason).toBe('key_present');
+      // QA Bug 33: a presence check must not pass as a live check.
+      expect(result.checked).toBe('key_only');
+      expect(result.message).toContain('Not tested');
+    });
+
+    it('nvidia_nim: a live check that asks NVIDIA for its model list', async () => {
+      mockGetConnectorCredential.mockReturnValue('a-real-key');
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [{ id: 'm1' }, { id: 'm2' }] }) });
+      const { checkConnectorHealth } = await import('../../services/connectorHealthCheckService');
+      const result = await checkConnectorHealth('nvidia_nim');
+      expect(result).toMatchObject({ ok: true, checked: 'live' });
+      expect(result.message).toContain('2 models');
+      fetchSpy.mockRestore();
+    });
+
+    it('gemini: a live check that asks Gemini for its model list', async () => {
+      mockGetConnectorCredential.mockReturnValue('a-real-key');
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => ({ models: [{}, {}, {}] }) });
+      const { checkConnectorHealth } = await import('../../services/connectorHealthCheckService');
+      const result = await checkConnectorHealth('gemini');
+      expect(result).toMatchObject({ ok: true, checked: 'live' });
+      expect(result.message).toContain('3 models');
+      expect(String(fetchSpy.mock.calls[0][0])).toContain('generativelanguage.googleapis.com/v1beta/models');
+      fetchSpy.mockRestore();
+    });
+
+    it('gemini: a rejected key fails the live check', async () => {
+      mockGetConnectorCredential.mockReturnValue('bad-key');
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 400, json: async () => ({}) });
+      const { checkConnectorHealth } = await import('../../services/connectorHealthCheckService');
+      const result = await checkConnectorHealth('gemini');
+      expect(result).toMatchObject({ ok: false, checked: 'live' });
+      expect(result.message).toContain('HTTP 400');
+      fetchSpy.mockRestore();
     });
   });
 

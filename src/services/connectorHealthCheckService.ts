@@ -7,6 +7,10 @@ interface HealthCheckResult {
   message: string;
   latency: number;
   details: Record<string, unknown>;
+  /** 'live': the service itself answered. 'key_only': only checked that a
+   *  key is saved; nothing was sent. The UI must not call a key_only pass
+   *  "verified" (QA Bug 33, 2026-10-21). */
+  checked?: 'live' | 'key_only';
 }
 
 interface TelegramApiData {
@@ -321,15 +325,58 @@ async function checkApiKeyConfigured(connectorId: string, envKey: string, label:
   const key = getConnectorCredential(connectorId, envKey);
   return {
     ok: Boolean(key),
+    checked: 'key_only',
     message: key
-      ? `${label} API key is configured. (No free/side-effect-free reachability endpoint — presence-checked only, same as other paid-API connectors.)`
-      : `No ${label} API key configured.`,
+      ? `${label} key is saved. Not tested: ${label} has no free check that sends nothing.`
+      : `No ${label} key saved. Add it in Settings → Connectors.`,
     latency: measureLatency(startTime),
     details: { reason: key ? 'key_present' : 'missing_key' }
   };
 }
 
+/** Live check: NVIDIA's model list is free and changes nothing. */
+export async function checkNvidiaConnection(): Promise<HealthCheckResult> {
+  const startTime = timestampMs();
+  if (!getConnectorCredential('nvidia_nim', 'NVIDIA_API_KEY')) {
+    return { ok: false, checked: 'live', message: 'No NVIDIA NIM key saved. Add it in Settings → Connectors.', latency: 0, details: { reason: 'missing_key' } };
+  }
+  try {
+    const { listNvidiaModels } = await import('./connectors/nvidiaNimConnector');
+    const models = await listNvidiaModels();
+    return { ok: true, checked: 'live', message: `NVIDIA NIM answered: ${models.length} models available.`, latency: measureLatency(startTime), details: { modelCount: models.length } };
+  } catch (error) {
+    return { ok: false, checked: 'live', message: `NVIDIA NIM check failed: ${String((error as Error)?.message || error)}`, latency: measureLatency(startTime), details: { reason: 'error' } };
+  }
+}
+
+/** Live check: Gemini's model list is free and changes nothing. */
+export async function checkGeminiConnection(): Promise<HealthCheckResult> {
+  const startTime = timestampMs();
+  const key = getConnectorCredential('gemini', 'GEMINI_API_KEY');
+  if (!key) {
+    return { ok: false, checked: 'live', message: 'No Gemini key saved. Add it in Settings → Connectors.', latency: 0, details: { reason: 'missing_key' } };
+  }
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
+    if (!response.ok) {
+      return { ok: false, checked: 'live', message: `Gemini answered HTTP ${response.status}; check the key.`, latency: measureLatency(startTime), details: { httpStatus: response.status } };
+    }
+    const data = await response.json() as { models?: unknown[] };
+    const count = Array.isArray(data.models) ? data.models.length : 0;
+    return { ok: true, checked: 'live', message: `Gemini answered: ${count} models available.`, latency: measureLatency(startTime), details: { modelCount: count } };
+  } catch (error) {
+    return { ok: false, checked: 'live', message: `Gemini check failed: ${String((error as Error)?.message || error)}`, latency: measureLatency(startTime), details: { reason: 'error' } };
+  }
+}
+
 export async function checkConnectorHealth(connectorId: string, options: { botToken?: string; gatewayUrl?: string } = {}): Promise<HealthCheckResult> {
+  const result = await runConnectorHealthCheck(connectorId, options);
+  // The checks below that call the service are live; checkApiKeyConfigured
+  // marks itself key_only.
+  return { checked: 'live', ...result };
+}
+
+async function runConnectorHealthCheck(connectorId: string, options: { botToken?: string; gatewayUrl?: string }): Promise<HealthCheckResult> {
   switch (connectorId) {
     case 'telegram':
       return checkTelegramConnection(options);
@@ -358,9 +405,25 @@ export async function checkConnectorHealth(connectorId: string, options: { botTo
     case 'deepseek':
       return checkApiKeyConfigured('deepseek', 'DEEPSEEK_API_KEY', 'DeepSeek');
     case 'nvidia_nim':
-      return checkApiKeyConfigured('nvidia_nim', 'NVIDIA_API_KEY', 'NVIDIA NIM');
+      return checkNvidiaConnection();
     case 'gemini':
-      return checkApiKeyConfigured('gemini', 'GEMINI_API_KEY', 'Gemini');
+      return checkGeminiConnection();
+    case 'chatgpt':
+      return checkApiKeyConfigured('chatgpt', 'OPENAI_API_KEY', 'ChatGPT');
+    case 'claude':
+      return checkApiKeyConfigured('claude', 'ANTHROPIC_API_KEY', 'Claude');
+    case 'qwen':
+      return checkApiKeyConfigured('qwen', 'DASHSCOPE_API_KEY', 'Qwen');
+    case 'notion':
+      return checkApiKeyConfigured('notion', 'NOTION_API_KEY', 'Notion');
+    case 'clickup':
+      return checkApiKeyConfigured('clickup', 'CLICKUP_API_KEY', 'ClickUp');
+    case 'youtube':
+      return checkApiKeyConfigured('youtube', 'YOUTUBE_REFRESH_TOKEN', 'YouTube');
+    case 'runway':
+      return checkApiKeyConfigured('runway', 'RUNWAYML_API_SECRET', 'Runway');
+    case 'calle':
+      return checkApiKeyConfigured('calle', 'CALLE_API_KEY', 'CALL-E');
     default:
       return {
         ok: false,

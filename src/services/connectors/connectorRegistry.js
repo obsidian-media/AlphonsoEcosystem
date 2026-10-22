@@ -49,10 +49,12 @@ export const DEFAULT_CONNECTORS = [
     id: 'whatsapp',
     name: 'WhatsApp Bridge',
     status: 'not_configured',
-    transport: 'whatsapp_cloud_api_or_twilio',
-    requiredEnv: ['WHATSAPP_PROVIDER', 'WHATSAPP_ALLOWED_NUMBERS'],
+    // Meta's WhatsApp Cloud API only (owner, 2026-10-21: Twilio is not
+    // supported). The gateway drain URL is needed for inbound messages.
+    transport: 'whatsapp_cloud_api',
+    requiredEnv: ['WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID'],
     permissions: ['inbound_messages', 'jose_routing', 'approval_requests'],
-    disabledReason: 'WhatsApp Cloud API or Twilio credentials are not configured.'
+    disabledReason: 'Add the WhatsApp Cloud API access token and phone number id in Settings → Connectors (and the gateway drain URL to receive messages).'
   },
   {
     id: 'youtube',
@@ -70,7 +72,7 @@ export const DEFAULT_CONNECTORS = [
     transport: 'companion_websocket_pin_paired',
     requiredEnv: [],
     permissions: ['remote_approvals', 'runtime_status', 'active_tasks', 'voice_notes'],
-    disabledReason: 'Requires the Companion pairing server running locally (port 8765) and at least one paired device. Pair from Settings → Companion.'
+    disabledReason: 'Needs phone pairing turned on and at least one paired device. Pair from Settings → Runtime → Remote Access.'
   },
   {
     id: 'chatgpt',
@@ -79,7 +81,7 @@ export const DEFAULT_CONNECTORS = [
     transport: 'openai_api_adapter',
     requiredEnv: ['OPENAI_API_KEY'],
     permissions: ['prompt_exchange', 'approval_requests'],
-    disabledReason: 'Placeholder connector. Leave visible; not part of the active cloud lane.'
+    disabledReason: 'Add your OpenAI API key in Settings → Connectors to use ChatGPT. Paid: blocked while Zero-Cost Mode is on.'
   },
   {
     id: 'claude',
@@ -88,7 +90,7 @@ export const DEFAULT_CONNECTORS = [
     transport: 'anthropic_api_adapter',
     requiredEnv: ['ANTHROPIC_API_KEY'],
     permissions: ['prompt_exchange', 'approval_requests'],
-    disabledReason: 'Placeholder connector. Leave visible; not part of the active cloud lane.'
+    disabledReason: 'Add your Anthropic API key in Settings → Connectors to use Claude. Paid: blocked while Zero-Cost Mode is on.'
   },
   {
     id: 'qwen',
@@ -617,24 +619,6 @@ export async function verifyConnectorEnvironment(connectorId) {
 
   let ok = connector.requiredEnv.every((name) => Boolean(envPresence[name]));
   let missing = connector.requiredEnv.filter((name) => !envPresence[name]);
-  if (connector.id === 'whatsapp') {
-    const cloudSet = ['WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID'];
-    const twilioSet = ['WHATSAPP_TWILIO_ACCOUNT_SID', 'WHATSAPP_TWILIO_AUTH_TOKEN', 'WHATSAPP_TWILIO_FROM'];
-    let providerPresence = {};
-    try { providerPresence = await invoke('check_env_vars_presence', { names: [...cloudSet, ...twilioSet] }) ?? {}; } catch { /* ignore */ }
-    // merge stored credentials for WhatsApp provider keys
-    for (const name of [...cloudSet, ...twilioSet]) {
-      providerPresence[name] = Boolean(providerPresence[name]) || Boolean(getStoredCredential('whatsapp', name));
-    }
-    envPresence = { ...envPresence, ...providerPresence };
-    const cloudReady = cloudSet.every((name) => Boolean(providerPresence[name]));
-    const twilioReady = twilioSet.every((name) => Boolean(providerPresence[name]));
-    ok = ok && (cloudReady || twilioReady);
-    missing = [
-      ...missing,
-      ...(cloudReady || twilioReady ? [] : ['WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID or WHATSAPP_TWILIO_*'])
-    ];
-  }
   const status = ok ? 'configured' : 'not_configured';
   const connectors = listConnectors().map((item) => (
     item.id === connector.id

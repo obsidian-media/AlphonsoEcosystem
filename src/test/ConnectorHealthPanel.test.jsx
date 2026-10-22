@@ -54,7 +54,7 @@ describe('ConnectorHealthPanel', () => {
 
     render(<ConnectorHealthPanel zeroCostMode={false} />);
     fireEvent.click(screen.getByText(/Health Monitor/i));
-    const validateButtons = screen.getAllByTitle('Validate credentials via Tauri env check');
+    const validateButtons = screen.getAllByTitle('Check that the keys this connector needs are saved');
     fireEvent.click(validateButtons[0]);
 
     await waitFor(() => {
@@ -72,7 +72,7 @@ describe('ConnectorHealthPanel', () => {
     // so this pins that real behavior as a regression test rather than
     // re-fixing something already working.
     const { checkConnectorHealth } = await import('../services/connectorHealthCheckService');
-    checkConnectorHealth.mockResolvedValue({ ok: true, latencyMs: 42 });
+    checkConnectorHealth.mockResolvedValue({ ok: true, checked: 'live', message: 'GitHub answered', latencyMs: 42 });
 
     render(<ConnectorHealthPanel zeroCostMode={false} />);
     fireEvent.click(screen.getByText(/Health Monitor/i));
@@ -83,8 +83,30 @@ describe('ConnectorHealthPanel', () => {
     await waitFor(() => {
       expect(checkConnectorHealth).toHaveBeenCalledWith('github');
     });
+    // The result stays on the card and says what was checked (QA Bug 33).
     await waitFor(() => {
-      expect(githubTestButton).toHaveTextContent('OK');
+      expect(screen.getByTestId('connector-test-result-github')).toHaveTextContent('Live check passed: GitHub answered');
     });
+  });
+
+  it('does not call a key-only check a live pass (QA Bug 33)', async () => {
+    const { checkConnectorHealth } = await import('../services/connectorHealthCheckService');
+    checkConnectorHealth.mockResolvedValue({ ok: true, checked: 'key_only', message: 'Brave key is saved.' });
+
+    render(<ConnectorHealthPanel zeroCostMode={false} />);
+    fireEvent.click(screen.getByText(/Health Monitor/i));
+    const testButtons = screen.getAllByTitle('Test connector connectivity');
+    fireEvent.click(testButtons[testButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('connector-test-result-github')).toHaveTextContent('Key saved, not tested: Brave key is saved.');
+    });
+    expect(screen.queryByText(/Live check passed/)).not.toBeInTheDocument();
+  });
+
+  it('shows no internal deploy note to users (QA Bug 34)', () => {
+    render(<ConnectorHealthPanel zeroCostMode={false} />);
+    fireEvent.click(screen.getByText(/Health Monitor/i));
+    expect(screen.queryByText(/auto-deploys from GitHub main to Railway/)).not.toBeInTheDocument();
   });
 });

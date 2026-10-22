@@ -1293,10 +1293,8 @@ export function SettingsView({
         <SectionHeader icon={BarChart3} label="Agent Performance" />
         <AgentMetricsPanel />
       </section>
-      <section className="space-y-4">
-        <SectionHeader icon={Bot} label="Agent Companions" />
-        <CompanionPairingPanel />
-      </section>
+      {/* Phone pairing lives only in Runtime -> Remote Access (owner, 2026-10-21;
+          it was shown here too as "Agent Companions", QA Bug 36). */}
     </div>
   )}
   {activeSection === 'runtime' && (

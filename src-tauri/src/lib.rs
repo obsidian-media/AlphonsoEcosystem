@@ -215,8 +215,19 @@ pub(crate) fn dedup_strings(mut values: Vec<String>) -> Vec<String> {
   values
 }
 
+/// `.env` in the current folder is a developer convenience. It is loaded
+/// only in debug builds, and never for a desktop test profile: the test app
+/// runs from the repo folder, so it picked up the developer's real GitHub and
+/// Slack tokens from `.env` (QA Bug 37, 2026-10-21). A release build must not
+/// take settings from whatever `.env` sits next to where it was started.
+pub(crate) fn should_load_dotenv(debug_build: bool, e2e_profile: bool) -> bool {
+  debug_build && !e2e_profile
+}
+
 fn load_dotenv() {
-  dotenvy::dotenv().ok();
+  if should_load_dotenv(cfg!(debug_assertions), utils::e2e_profile().is_some()) {
+    dotenvy::dotenv().ok();
+  }
 }
 
 fn native_proof_output_dir() -> PathBuf {
@@ -869,6 +880,14 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn dotenv_loads_only_for_plain_debug_runs() {
+    assert!(should_load_dotenv(true, false));
+    assert!(!should_load_dotenv(true, true));
+    assert!(!should_load_dotenv(false, false));
+    assert!(!should_load_dotenv(false, true));
+  }
 
   #[test]
   fn to_hex_produces_correct_lowercase_hex() {
