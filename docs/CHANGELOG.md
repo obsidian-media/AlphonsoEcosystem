@@ -38,6 +38,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Backups hold everything, and no secrets.** Settings → Backup left out your app settings and most of your data, and silently skipped the stored records. Backups and Workspace Export now include all app data, and leave out passwords, API keys, the license token and the plugin-signing key (Workspace Export used to include that key). Importing a file never writes a secret.
 - **Coach toggles are accessible.** The Coach settings toggles now have names and report on/off, so screen readers can use them.
 - **Maria's reviews are real.** When the model's reply could not be read, Maria reported "failed to parse" as if it were her review. She now asks the model for JSON, falls back to her rule-based check when the reply is still unreadable, and Boardroom says which one produced the verdict.
+- **CI security audit works again.** npm retired the audit endpoint our npm audit check relied on, so every build failed; the check now asks npm's bulk advisory service directly, with the same rule (no high or critical advisories).
 - **Real error reasons.** A backend command that fails reports its actual reason; Content Studio showed "The local model could not be reached" instead.
 - **Desktop test harness** waits for `tauri-driver` before each spec and for it to exit after, fixing an intermittent "Unable to connect" on the first spec.
 - **User manual:** governance and risk review is Maria's, not Marcus's.
