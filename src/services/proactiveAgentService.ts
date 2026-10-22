@@ -197,7 +197,11 @@ function checkProjectStaleness(): ProactiveSuggestion | null {
   if (hasRecentSuggestion('project_stale')) return null;
   const memoryItems = listMemory({ category: 'code_generation' });
   const lastBuild = memoryItems.reduce((max, m) => Math.max(max, m.timestampMs || 0), 0);
-  const daysSinceBuild = lastBuild ? Math.round((timestampMs() - lastBuild) / 86_400_000) : 999;
+  // Never generated code: nothing to pick up again. QA 2026-10-22 (Bug 72):
+  // this used 999 as "never" and said "It's been 999 days since the last
+  // code generation" to everyone who never used it.
+  if (!lastBuild) return null;
+  const daysSinceBuild = Math.round((timestampMs() - lastBuild) / 86_400_000);
 
   if (daysSinceBuild > 3) {
     recordSuggestion('project_stale', `No builds in ${daysSinceBuild} days`);

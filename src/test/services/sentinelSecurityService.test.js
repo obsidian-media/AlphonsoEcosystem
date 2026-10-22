@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   scanForThreats, buildSentinelThreatPrompt, parseSentinelThreatResponse,
-  buildSentinelFallbackAlert, startScheduledScans
+  buildSentinelFallbackAlert, startScheduledScans, scanRecentActivity
 } from '../../services/sentinelSecurityService';
+import { listOrchestrationReceipts } from '../../services/orchestrationReceiptService';
+import { listAgentActivity } from '../../services/agentActivityService';
 
 vi.mock('../../services/trustModel', () => ({
   TRUST_STATES: { VERIFIED: 'verified', INFERRED: 'inferred', TEMPORARY: 'temporary', PENDING: 'pending', UNVERIFIED: 'unverified', FAILED: 'failed' },
@@ -18,7 +20,12 @@ vi.mock('../../services/sessionIntelligenceService', () => ({
 }));
 
 vi.mock('../../services/orchestrationReceiptService', () => ({
-  appendOrchestrationReceipt: vi.fn()
+  appendOrchestrationReceipt: vi.fn(),
+  listOrchestrationReceipts: vi.fn(() => [])
+}));
+
+vi.mock('../../services/agentActivityService', () => ({
+  listAgentActivity: vi.fn(() => [])
 }));
 
 vi.mock('../../services/missionRoomService', () => ({
@@ -96,6 +103,30 @@ describe('sentinelSecurityService', () => {
       const cleanup = startScheduledScans(1000, () => {});
       expect(typeof cleanup).toBe('function');
       cleanup();
+    });
+  });
+
+  // QA 2026-10-22 (Bug 71): the sidebar's quick scan scanned '' and so always
+  // said all clear. It now scans the last week's agent work.
+  describe('scanRecentActivity', () => {
+    it("finds a credential in the last week's work and ignores older work", () => {
+      const now = Date.now();
+      listOrchestrationReceipts.mockReturnValue([
+        { id: 'r1', agent: 'jose', eventType: 'executed', status: 'completed', timestampMs: now - 1000, details: { summary: 'Saved config with api_key = secret123' } },
+        { id: 'r2', agent: 'miya', eventType: 'executed', status: 'completed', timestampMs: now - 30 * 86_400_000, details: { summary: 'old password = hunter2' } },
+      ]);
+      listAgentActivity.mockReturnValue([{ agent: 'hector', action: 'research', detail: 'read three sources', ts: now - 500 }]);
+      const result = scanRecentActivity(7);
+      expect(result.itemsScanned).toBe(2);
+      expect(result.findings.length).toBeGreaterThan(0);
+    });
+
+    it('reports nothing scanned when there is no recent work', () => {
+      listOrchestrationReceipts.mockReturnValue([]);
+      listAgentActivity.mockReturnValue([]);
+      const result = scanRecentActivity(7);
+      expect(result.itemsScanned).toBe(0);
+      expect(result.findings).toEqual([]);
     });
   });
 });

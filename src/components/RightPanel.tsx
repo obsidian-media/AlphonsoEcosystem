@@ -3,7 +3,7 @@ import { Activity, Bot, ChevronLeft, ChevronRight, Cpu, Network, RefreshCw, Shie
 import { AgentStatusStrip } from './AgentStatusStrip';
 import { AgentDock } from './AgentDock';
 import { formatModelSize } from '../lib/ollama';
-import { scanForThreats } from '../services/sentinelSecurityService';
+import { scanRecentActivity } from '../services/sentinelSecurityService';
 import { getAuditLog } from '../services/agentAuditService';
 import { SentinelFindingModal } from './SentinelFindingModal';
 import { SentinelAllowlistPanel } from './SentinelAllowlistPanel';
@@ -58,6 +58,7 @@ interface SentinelScan {
   riskLevel?: string;
   findings?: SentinelFinding[];
   scannedAt?: number;
+  itemsScanned?: number;
 }
 
 interface AuditEntry {
@@ -161,7 +162,8 @@ export function RightPanel({
   const [selectedFinding, setSelectedFinding] = useState<SentinelFinding | null>(null);
 
   const runQuickScan = () => {
-    const result = scanForThreats('', {});
+    // The last week's agent work; scanning '' always said all clear (QA Bug 71).
+    const result = scanRecentActivity(7);
     const scan: SentinelScan = { ...result, scannedAt: Date.now() };
     setSentinelScan(scan);
     localStorage.setItem('alphonso_sentinel_last_scan_v1', JSON.stringify(scan));
@@ -334,7 +336,11 @@ export function RightPanel({
                     ))}
                   </div>
                 ) : (
-                  <p className="px-3 text-[10px] text-(--text-4)">No threats detected</p>
+                  <p className="px-3 text-[10px] text-(--text-4)">
+                    {sentinelScan.itemsScanned === 0
+                      ? 'Nothing to scan yet: no agent activity in the last 7 days.'
+                      : `No threats found in the last 7 days of agent activity${sentinelScan.itemsScanned ? ` (${sentinelScan.itemsScanned} items)` : ''}.`}
+                  </p>
                 )}
                 {sentinelScan.scannedAt && (
                   <p className="px-3 text-[10px] text-(--text-4)">
