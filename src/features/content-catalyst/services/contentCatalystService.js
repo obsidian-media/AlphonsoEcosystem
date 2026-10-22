@@ -1,5 +1,5 @@
 import { generateOllamaResponse, getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../../../lib/ollama';
-import { generateComfyUiImage } from '../../../services/connectorRegistryService';
+import { checkComfyUiImage, generateComfyUiImage } from '../../../services/connectorRegistryService';
 import { publishMetaContent } from '../../../services/metaPublishService';
 import { generateRunwayVideo } from '../../../services/runwayService';
 import { requireApproval } from '../../../services/approval/approvalService';
@@ -460,14 +460,29 @@ export async function generateContentDraft(job) {
 
 export async function generateContentImage(job) {
   const prompt = job.draft?.visual_prompt || job.brief?.visual_prompt || `${job.request.idea || 'Content'} premium studio visual`;
-  const result = await generateComfyUiImage({
-    prompt,
-    negativePrompt: job.request?.tone ? `low quality, blurry, ${job.request.tone}` : 'low quality, blurry',
-    width: 512,
-    height: 512,
-    steps: 20,
-    cfgScale: 7
-  });
+  // An image that finished after the app stopped waiting is still in
+  // ComfyUI's history: pick it up instead of starting a new one.
+  const pendingPromptId = job.assets?.comfyui_pending_prompt_id || null;
+  const late = pendingPromptId ? await checkComfyUiImage(pendingPromptId) : null;
+  const result = late?.ok
+    ? late
+    : await generateComfyUiImage({
+      prompt,
+      negativePrompt: job.request?.tone ? `low quality, blurry, ${job.request.tone}` : 'low quality, blurry',
+      width: 512,
+      height: 512,
+      steps: 20,
+      cfgScale: 7
+    });
+  if (!result?.ok && result?.pending && result?.jobId) {
+    return {
+      ...withLog(job, 'warning', 'ComfyUI is still working on this image. Retry the image step to pick it up when it finishes.', { jobId: result.jobId }),
+      status: CONTENT_JOB_STATES.FAILED,
+      currentStep: 'image',
+      error: 'ComfyUI is still working on this image. Retry the image step to pick it up when it finishes.',
+      assets: { ...(job.assets || { image_url: null, video_url: null, narration_url: null }), comfyui_pending_prompt_id: result.jobId }
+    };
+  }
   if (!result?.ok) {
     const reason = result?.error || result?.message;
     window.dispatchEvent(new CustomEvent('alphonso:toast', {
@@ -492,6 +507,7 @@ export async function generateContentImage(job) {
     ...next,
     assets: {
       ...(job.assets || {}),
+      comfyui_pending_prompt_id: null,
       image_url: mediaArtifact.url || mediaArtifact.path || null,
       image_path: mediaArtifact.path || null,
       image_preview_base64: mediaArtifact.previewBase64 || null,

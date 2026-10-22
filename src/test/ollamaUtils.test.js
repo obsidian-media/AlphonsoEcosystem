@@ -8,6 +8,7 @@ import {
   chooseDefaultModel,
   classifyOllamaError,
   formatModelSize,
+  freeOllamaGpuMemory,
   generateOllamaChatStream,
   generateOllamaResponse,
   normalizeEndpoint,
@@ -189,6 +190,14 @@ describe('ollama utilities', () => {
 
       afterEach(() => {
         isTauri.mockReturnValue(false);
+      });
+
+      it('frees GPU memory through the backend and never throws', async () => {
+        invoke.mockResolvedValueOnce({ unloaded: ['qwen2.5-coder:7b'], error: null });
+        await expect(freeOllamaGpuMemory('http://localhost:11434/')).resolves.toEqual({ unloaded: ['qwen2.5-coder:7b'], error: null });
+        expect(invoke).toHaveBeenCalledWith('ollama_unload_models', { endpoint: 'http://localhost:11434' });
+        invoke.mockRejectedValueOnce('backend gone');
+        await expect(freeOllamaGpuMemory()).resolves.toEqual({ unloaded: [], error: 'backend gone' });
       });
 
       it('reports the backend reason when the command rejects with a plain string', async () => {

@@ -37,7 +37,8 @@ vi.mock('../services/connectorRegistryService', () => ({
     previewBase64: 'base64-preview'
   })),
   queueComfyUiVideo: vi.fn(),
-  getComfyUiVideoHistory: vi.fn()
+  getComfyUiVideoHistory: vi.fn(),
+  checkComfyUiImage: vi.fn(async () => ({ ok: false, pending: true, jobId: 'late-1' }))
 }));
 
 vi.mock('../services/runwayService', () => ({
@@ -67,7 +68,7 @@ vi.mock('../services/workspaceArtifactService', () => ({
 
 import { requireApproval } from '../services/approval/approvalService';
 import { publishMetaContent } from '../services/metaPublishService';
-import { generateComfyUiImage } from '../services/connectorRegistryService';
+import { checkComfyUiImage, generateComfyUiImage } from '../services/connectorRegistryService';
 import { generateRunwayVideo } from '../services/runwayService';
 import { generateOllamaResponse, getConfiguredOllamaModel } from '../lib/ollama';
 import { buildContentBrief } from '../features/content-catalyst/services/contentCatalystService';
@@ -538,6 +539,30 @@ describe('generateContentImage', () => {
     expect(result.assets.image_url).toBeTruthy();
     expect(result.assets.comfyui).toBeTruthy();
     expect(result.assets.local_media_artifacts).toHaveLength(1);
+  });
+
+  it('keeps the ComfyUI job id when the image is still being made, and says so', async () => {
+    // Owner decision 2026-10-21 (QA Bug 23): an image that finishes late
+    // must still reach the job.
+    generateComfyUiImage.mockResolvedValueOnce({ ok: false, pending: true, jobId: 'late-1', error: 'Timed out waiting for ComfyUI image output.' });
+    const job = createContentJobFromBridgeRequest({ idea: 'Slow GPU' });
+    const result = await generateContentImage(job);
+    expect(result.status).toBe('failed');
+    expect(result.assets.comfyui_pending_prompt_id).toBe('late-1');
+    expect(result.error).toContain('still working on this image');
+  });
+
+  it('picks up a late image on retry instead of starting a new one', async () => {
+    checkComfyUiImage.mockResolvedValueOnce({ ok: true, provider: 'comfyui', jobId: 'late-1', outputPaths: ['late.png'], imageUrls: ['http://127.0.0.1:8188/view?filename=late.png&type=output'], previewBase64: 'TEFURQ==' });
+    generateComfyUiImage.mockClear();
+    const job = createContentJobFromBridgeRequest({ idea: 'Slow GPU' });
+    job.assets = { image_url: null, video_url: null, narration_url: null, comfyui_pending_prompt_id: 'late-1' };
+    const result = await generateContentImage(job);
+    expect(checkComfyUiImage).toHaveBeenCalledWith('late-1');
+    expect(generateComfyUiImage).not.toHaveBeenCalled();
+    expect(result.status).toBe('image_ready');
+    expect(result.assets.comfyui_pending_prompt_id).toBeNull();
+    expect(result.assets.image_preview_base64).toBe('TEFURQ==');
   });
 });
 

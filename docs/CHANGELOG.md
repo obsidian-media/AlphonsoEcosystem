@@ -21,6 +21,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Default model is the starter model.** With no model picked, the app now chooses the one you picked last, else the bundled starter `llama3.2:3b`, instead of `qwen2.5-coder:7b` whenever that was installed.
 - **Content Studio uses the model selected when a step runs**, so a job created before a model was chosen no longer fails every step.
 - **Content Studio drafts are honest.** A model reply with no hook or caption was shown as a finished model-written draft with "—" in its place; it is now labelled as the template with the reason. The brief and draft also ask Ollama for JSON output, so small models answer in a usable shape.
+- **Images get the graphics card.** Before every ComfyUI image the app asks Ollama to unload the models it holds in GPU memory (the next chat reloads its model). On a 6 GB card a loaded chat model made the first image take over 7 minutes. The image wait is now 15 minutes, and Content Studio keeps the ComfyUI job, so retrying the image step picks up an image that finished late instead of starting again.
 - **Real error reasons.** A backend command that fails reports its actual reason; Content Studio showed "The local model could not be reached" instead.
 - **Desktop test harness** waits for `tauri-driver` before each spec and for it to exit after, fixing an intermittent "Unable to connect" on the first spec.
 - **User manual:** governance and risk review is Maria's, not Marcus's.

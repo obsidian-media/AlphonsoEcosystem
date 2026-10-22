@@ -5,6 +5,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // (ComfyUI answers a foreign Origin header with 403).
 const mockInvoke = vi.fn();
 
+vi.mock('../../lib/ollama', () => ({
+  freeOllamaGpuMemory: vi.fn(async () => ({ unloaded: [], error: null })),
+  getConfiguredOllamaEndpoint: vi.fn(() => 'http://localhost:11434')
+}));
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args) => mockInvoke(...args),
   isTauri: () => true,
@@ -70,6 +74,18 @@ describe('connectorImageGenerators in the desktop app', () => {
     for (const [, args] of mockInvoke.mock.calls) expect(args.endpoint).toBe(ENDPOINT);
     const queued = mockInvoke.mock.calls.find(([, args]) => args.path === '/prompt')[1];
     expect(JSON.parse(queued.body).prompt).toBeTruthy();
+  });
+
+  it('frees Ollama GPU memory before queueing the image', async () => {
+    // Owner decision 2026-10-21 (QA Bug 23): a loaded chat model left
+    // ComfyUI so little GPU memory that the first image took 445 s.
+    const { freeOllamaGpuMemory } = await import('../../lib/ollama');
+    freeOllamaGpuMemory.mockClear();
+    const { generateComfyUiImage } = await import('../../services/connectors/connectorImageGenerators');
+    await generateComfyUiImage({ prompt: 'sunset over a bay' });
+    expect(freeOllamaGpuMemory).toHaveBeenCalledTimes(1);
+    const promptCall = mockInvoke.mock.calls.findIndex(([, args]) => args.path === '/prompt');
+    expect(freeOllamaGpuMemory.mock.invocationCallOrder[0]).toBeLessThan(mockInvoke.mock.invocationCallOrder[promptCall]);
   });
 
   it('reports a ComfyUI refusal instead of succeeding', async () => {

@@ -128,6 +128,36 @@ export function getConfiguredOllamaEndpoint(): string {
 // llama3.2:3b on every turn regardless of what the user actually selected in
 // Settings (or whether they even have that model installed), silently ignoring
 // PREFERRED_MODEL and the user's own choice alike.
+export interface OllamaUnloadReport {
+  unloaded: string[];
+  error: string | null;
+}
+
+/**
+ * Ask Ollama to unload the models it has in memory, so a local image job
+ * gets the GPU (owner decision 2026-10-21). On a 6 GB card a loaded 7B model
+ * made the first ComfyUI image take 445 s. Never throws: the image job runs
+ * either way, and the next chat simply reloads its model.
+ */
+export async function freeOllamaGpuMemory(endpoint?: string | null): Promise<OllamaUnloadReport> {
+  const baseUrl = normalizeEndpoint(endpoint);
+  try {
+    if (isTauri()) {
+      // From the backend: a user-started Ollama refuses the app window.
+      const report = await invoke<{ unloaded?: string[]; error?: string | null }>('ollama_unload_models', { endpoint: baseUrl });
+      return { unloaded: report?.unloaded || [], error: report?.error || null };
+    }
+    const ps = await fetch(`${baseUrl}/api/ps`).then((r) => r.json()) as { models?: Array<{ name?: string }> };
+    const names = (ps.models || []).map((m) => m.name).filter((n): n is string => Boolean(n));
+    for (const name of names) {
+      await fetch(`${baseUrl}/api/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: name, keep_alive: 0 }) });
+    }
+    return { unloaded: names, error: null };
+  } catch (error) {
+    return { unloaded: [], error: error instanceof Error ? error.message : String(error ?? '') };
+  }
+}
+
 export function getConfiguredOllamaModel(): string {
   const settings = getStorage<{ selectedModel?: string } | null>('alphonso_settings', null);
   return settings?.selectedModel || PREFERRED_MODEL;

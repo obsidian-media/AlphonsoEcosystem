@@ -2,6 +2,7 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 import { TRUST_STATES } from '../trustModel';
 import { appendConnectorAudit, getConnectorCircuitState, recordConnectorFailure, recordConnectorSuccess } from './connectorRegistry.js';
 import { gateConnectorAction } from './connectorRegistry.js';
+import { freeOllamaGpuMemory, getConfiguredOllamaEndpoint } from '../../lib/ollama';
 
 export async function generateSdWebUiImage({
   prompt,
@@ -240,14 +241,28 @@ async function fetchComfyUiHistory(promptId) {
 
 // 5 minutes: the first image after ComfyUI starts has to load the checkpoint,
 // which took over 3 minutes on a 6 GB GPU shared with a loaded Ollama model.
-export async function pollComfyUiHistory(promptId, { timeoutMs = 300000, intervalMs = 1500 } = {}) {
+// The first image after ComfyUI starts (or after another app used the GPU)
+// loads the checkpoint and can take minutes; 445 s was measured on a 6 GB
+// card (QA, 2026-10-21). The wait was 5 minutes.
+export const COMFYUI_IMAGE_TIMEOUT_MS = 15 * 60 * 1000;
+
+/** One look at a queued prompt's history: the image if it is done, else
+ *  `{ ok: false, pending: true }`. Used to pick up an image that finished
+ *  after the app stopped waiting for it. */
+export async function checkComfyUiImage(promptId) {
+  const result = await fetchComfyUiHistory(promptId);
+  if (result.ok && (result.previewBase64 || result.imageUrls?.length || result.outputPaths?.length)) return result;
+  return { ok: false, pending: true, provider: 'comfyui', jobId: promptId, error: result.error || 'ComfyUI has not finished this image yet.' };
+}
+
+export async function pollComfyUiHistory(promptId, { timeoutMs = COMFYUI_IMAGE_TIMEOUT_MS, intervalMs = 1500 } = {}) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     const result = await fetchComfyUiHistory(promptId);
     if (result.ok && (result.previewBase64 || result.imageUrls?.length || result.outputPaths?.length)) return result;
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
-  return { ok: false, provider: 'comfyui', jobId: promptId, error: 'Timed out waiting for ComfyUI image output.', message: 'Prompt was queued, but no image output appeared before timeout.' };
+  return { ok: false, pending: true, provider: 'comfyui', jobId: promptId, error: 'Timed out waiting for ComfyUI image output.', message: 'ComfyUI is still working on this image. Retry the image step later to pick it up.' };
 }
 
 export async function generateComfyUiImage({
@@ -284,6 +299,11 @@ export async function generateComfyUiImage({
     recordConnectorFailure('comfyui_video', 'local_image_generation');
     appendConnectorAudit('comfyui_video', 'image_generation_failed', { provider: 'comfyui', error: `Workflow creation failed: ${errMsg}` });
     return { ok: false, connectorId: 'comfyui_video', blocked: false, error: `ComfyUI workflow error: ${errMsg}`, trust: TRUST_STATES.FAILED };
+  }
+  // Give the image the GPU: unload any Ollama model first (best effort).
+  const freed = await freeOllamaGpuMemory(getConfiguredOllamaEndpoint());
+  if (freed.unloaded.length || freed.error) {
+    appendConnectorAudit('comfyui_video', 'ollama_gpu_memory_freed', { unloaded: freed.unloaded, error: freed.error });
   }
   let queued;
   try {

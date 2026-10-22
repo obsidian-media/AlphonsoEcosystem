@@ -216,7 +216,7 @@ nobody has seen it work in the real app yet.
 | 20 | The app picks `qwen2.5-coder:7b` (a 5.1 GB coding model, `PREFERRED_MODEL`) as the chat default whenever it is installed, ahead of Setup's starter `llama3.2:3b` | Fixed in code (batch 1: `PREFERRED_MODEL` is the starter, test-checked against `STARTER_MODEL_TAG`) |
 | 21 | On a fresh profile with a user-started Ollama, choosing a model takes about 20 s (the window's request fails, then the backend path is used) | Open; measure |
 | 22 | Harness: the first spec can start before `tauri-driver` is listening ("Unable to connect to 127.0.0.1:4455") | Fixed (batch 1: `wdio.conf.mjs` waits for the port and for the old driver to exit) |
-| 23 | The first ComfyUI image took 445 s while Ollama held 4.2 GB of the 6 GB GPU; the app gave up and marked the image failed, and the picture that finished later is not picked up | Open; owner chose all three fixes (Q16) |
+| 23 | The first ComfyUI image took 445 s while Ollama held 4.2 GB of the 6 GB GPU; the app gave up and marked the image failed, and the picture that finished later is not picked up | Fixed in code (batch 2): every ComfyUI image first asks Ollama to unload its models (`ollama_unload_models`, `freeOllamaGpuMemory()`), the wait is 15 min (`COMFYUI_IMAGE_TIMEOUT_MS`), and Content Studio keeps the ComfyUI job id so retrying the image step picks up a late image (`checkComfyUiImage`). Real-app check passed for the GPU hand-off (see Checks); the late-image pickup is covered by unit tests only |
 | 25 | Nova, Sentinel, Echo (memory and file watcher), Maria, Hector, Miya (in Jose) and the goal runner asked for the hardcoded `PREFERRED_MODEL` (`qwen2.5-coder:7b`) instead of the user's model; Nova, Sentinel and the Echo file watcher also used the default endpoint. On a fresh install (starter model only) their AI step failed and they silently used their rule-based fallback. Their unit tests never mocked the model call, so this was never caught | Fixed in code (batch 1: all use `getConfiguredOllamaModel()`/`getConfiguredOllamaEndpoint()`; Nova and Sentinel tests now check the call) |
 | 26 | Project Execution's audit step is Marcus (`MarcusAuditPanel`, `marcusAuditService.js`); per the owner, governance and risk review is Maria's (Q3) | Open; fix with the Projects rebuild (Q1) |
 | 24 | Chat's first reply on a cold model did not arrive within the spec's 150 s; passes in 14 s once the model is loaded | Cause found: on the owner's machine the models live on D:, an external USB hard drive (WD My Passport, ~68 MB/s); cold loads took 1 min 24 s to 2 min 30 s (Ollama log). Not an app bug. Specs now load the model first (`warmSelectedModel()` in `helpers.mjs`). App follow-up still open: say "loading the model" during a long first call instead of looking stuck |
@@ -229,6 +229,11 @@ nobody has seen it work in the real app yet.
 One block per feature as it is tested: **Intended** (with its source),
 **Observed** (real app, date, build), **Verdict**, and the spec that now
 guards it.
+
+### Content Studio — image gets the GPU (fix batch 2, 2026-10-21, debug build)
+- **Intended:** before an image job, Ollama gives up its GPU memory so the image is fast (owner, Q16).
+- **Observed:** with `qwen2.5-coder:7b` pre-loaded in Ollama, `content-image.e2e.mjs` ran a job: brief and draft from `llama3.2:3b` (2–3 s each), then the app called `/api/ps` and unloaded the model (`keep_alive: 0`, 9 ms), and ComfyUI made the image in 4.4 s. Afterwards `/api/ps` listed no loaded model. Before the fix the first image took 445 s.
+- **Verdict:** Pass. **Guarded by:** `connectorImageGenerators.desktop.test.js` — "frees Ollama GPU memory before queueing the image"; `content-image.e2e.mjs`.
 
 ### After fix batch 1 — 2026-10-21, branch `qa/fix-batch-1`, debug build
 - **Result:** full suite 15 of 16 spec files passed (baseline 12). The one failure was `content.e2e.mjs` (Bug 29, intermittent).
