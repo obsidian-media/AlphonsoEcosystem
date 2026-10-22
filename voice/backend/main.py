@@ -13,6 +13,7 @@ from starlette.websockets import WebSocketDisconnect
 from pipeline import local_ollama_url, run_pipeline
 from session import register, cancel, cleanup_done
 from state import get_state, set_state, remove_state
+from vad import UtteranceCollector
 from stt import _load_model as load_stt
 from tts import _load_piper as load_tts, _model_path as tts_model_path
 
@@ -76,9 +77,11 @@ async def _process_pcm(
     session_id: str,
     pcm: bytes,
     conversation_history: list[dict],
+    config: dict | None = None,
 ) -> None:
-    """Run the STT→LLM→TTS pipeline for one PCM chunk and stream events back."""
-    async for event in run_pipeline(session_id, pcm, conversation_history):
+    """Run the STT→LLM→TTS pipeline for one utterance and stream events back."""
+    config = config or {}
+    async for event in run_pipeline(session_id, pcm, conversation_history, model=config.get("model"), url=config.get("ollama_url")):
         etype = event.get("type")
         try:
             if etype == "tts":
@@ -113,45 +116,57 @@ async def _handle_bytes_msg(
     ws: WebSocket,
     session_id: str,
     raw: bytes,
-    buffer: bytearray,
+    collector: UtteranceCollector,
     conversation_history: list[dict],
-) -> bytearray:
-    """Handle an inbound PCM chunk: apply barge-in then dispatch to pipeline."""
-    if get_state(session_id) == "speaking":
+    config: dict | None = None,
+) -> None:
+    """Handle an inbound PCM chunk.
+
+    Audio is collected into whole utterances (speech, then a pause). Only a
+    finished utterance starts an answer. QA 2026-10-22: every 1.5 s piece used
+    to start its own answer and cancel the previous one, silent pieces included,
+    so a question was cut up and its answer cancelled by the silence after it.
+    """
+    utterances = collector.feed(raw)
+    # Barge-in: the user starts talking while Voice OS is speaking.
+    if collector.in_utterance and get_state(session_id) == "speaking":
         cancel(session_id)
         set_state(session_id, "idle")
-        buffer = bytearray()
-
-    buffer.extend(raw)
-
-    if len(buffer) >= 24000:  # ~1.5s of 16kHz 16-bit mono PCM
-        data = bytes(buffer)
-        buffer = bytearray()
-        task = asyncio.create_task(_process_pcm(ws, session_id, data, conversation_history))
+    for utterance in utterances:
+        task = asyncio.create_task(_process_pcm(ws, session_id, utterance, conversation_history, config))
         register(session_id, task)
-
-    return buffer
 
 
 async def _handle_text_msg(
     ws: WebSocket,
     session_id: str,
     text: str,
-    buffer: bytearray,
+    collector: UtteranceCollector,
     conversation_history: list[dict],
-) -> bytearray:
-    """Handle a JSON control message; returns (possibly reset) buffer."""
+    config: dict | None = None,
+) -> None:
+    """Handle a JSON control message (reset, or the app's config)."""
     try:
         ctrl = json.loads(text)
     except json.JSONDecodeError:
         ctrl = {}  # ignore malformed control messages
+    if ctrl.get("type") == "config" and config is not None:
+        # The user's choices in Alphonso (QA 2026-10-22: the model and Ollama
+        # address used to be fixed). Only http(s) addresses are accepted.
+        model = str(ctrl.get("ollamaModel") or "").strip()
+        endpoint = str(ctrl.get("ollamaEndpoint") or "").strip().rstrip("/")
+        if model:
+            config["model"] = model[:200]
+        if endpoint.startswith(("http://", "https://")):
+            config["ollama_url"] = endpoint + "/api/chat"
+        await ws.send_json({"type": "config", "model": config.get("model"), "ollamaUrl": config.get("ollama_url")})
+        return
     if ctrl.get("type") == "reset":
         cancel(session_id)
         conversation_history.clear()
-        buffer = bytearray()
+        collector.reset()
         set_state(session_id, "idle")
         await ws.send_json({"type": "state", "value": "idle"})
-    return buffer
 
 
 @app.websocket("/ws")
@@ -166,7 +181,8 @@ async def ws_endpoint(ws: WebSocket):
 
     session_id = ws.headers.get("x-session", "anon")
     set_state(session_id, "idle")
-    buffer: bytearray = bytearray()
+    collector = UtteranceCollector()
+    config: dict = {}
     conversation_history: list[dict] = []
 
     try:
@@ -178,9 +194,9 @@ async def ws_endpoint(ws: WebSocket):
             if msg.get("type") == "websocket.disconnect":
                 break
             if "bytes" in msg:
-                buffer = await _handle_bytes_msg(ws, session_id, msg["bytes"], buffer, conversation_history)
+                await _handle_bytes_msg(ws, session_id, msg["bytes"], collector, conversation_history, config)
             elif "text" in msg:
-                buffer = await _handle_text_msg(ws, session_id, msg["text"], buffer, conversation_history)
+                await _handle_text_msg(ws, session_id, msg["text"], collector, conversation_history, config)
     finally:
         cancel(session_id)
         remove_state(session_id)

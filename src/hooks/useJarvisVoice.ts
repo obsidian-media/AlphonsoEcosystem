@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { PCM_WORKLET_CODE } from './pcm-processor.worklet';
 
 import { getVoiceWebSocketUrl, getVoiceToken } from '../services/voiceOsService.js';
+import { getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../lib/ollama';
 
 async function buildVoiceWsUrl(): Promise<string> {
   const baseUrl = getVoiceWebSocketUrl();
@@ -82,7 +83,15 @@ export function useJarvisVoice() {
       socket.binaryType = 'arraybuffer';
       ws.current = socket;
 
-      socket.onopen = () => { if (!isDisposed.current) setIsConnected(true); };
+      socket.onopen = () => {
+        if (isDisposed.current) return;
+        setIsConnected(true);
+        // Tell Voice OS which model and Ollama address to use: the user's
+        // choices in Alphonso (QA 2026-10-22: they were fixed in Voice OS).
+        try {
+          socket.send(JSON.stringify({ type: 'config', ollamaModel: getConfiguredOllamaModel(), ollamaEndpoint: getConfiguredOllamaEndpoint() }));
+        } catch { /* the socket closed again */ }
+      };
       socket.onclose = () => {
         if (isDisposed.current) return;
         setIsConnected(false);
@@ -117,10 +126,12 @@ export function useJarvisVoice() {
         if (typeof e.data === 'string') {
           const msg = JSON.parse(e.data);
           if (isDisposed.current) return;
-          if (msg.type === 'stt') setTranscript(msg.text);
-          if (msg.type === 'llm') setReply(prev => prev + msg.text);
+          // A new question starts a new reply (QA 2026-10-22: replies used to pile up).
+          if (msg.type === 'stt') { setTranscript(msg.text); setReply(''); }
+          if (msg.type === 'llm') setReply(prev => prev + (msg.text || ''));
           if (msg.type === 'state') setVoiceState(msg.value);
-          if (msg.type === 'agent') setActiveAgent(msg.name);
+          // Voice OS sends the agent as `value` (QA 2026-10-22: read as `name`, so it was never shown).
+          if (msg.type === 'agent') setActiveAgent(msg.value ?? msg.name);
           if (msg.type === 'error') {
             setError(msg.message);
             setVoiceState('error');

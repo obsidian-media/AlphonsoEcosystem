@@ -35,3 +35,19 @@ def test_no_subprocess_calls():
     source = inspect.getsource(stt)
     assert "subprocess" not in source
     assert "tempfile" not in source
+
+
+# QA 2026-10-22: the speech-recognition model and language were fixed.
+def test_stt_model_and_language_come_from_the_launcher(monkeypatch):
+    import stt
+    monkeypatch.delenv("VOICE_STT_MODEL", raising=False)
+    monkeypatch.delenv("VOICE_STT_LANGUAGE", raising=False)
+    assert stt.stt_model_name() == "tiny.en"
+    assert stt.stt_language() == "en"
+    monkeypatch.setenv("VOICE_STT_MODEL", "small")
+    monkeypatch.setenv("VOICE_STT_LANGUAGE", "fa")
+    assert stt.stt_language() == "fa"
+    monkeypatch.setenv("VOICE_STT_LANGUAGE", "auto")
+    assert stt.stt_language() is None
+    monkeypatch.setenv("VOICE_STT_MODEL", "base.en")
+    assert stt.stt_language() == "en"

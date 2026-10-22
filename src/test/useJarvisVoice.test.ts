@@ -225,4 +225,31 @@ describe('useJarvisVoice', () => {
     // checking that unmount didn't throw.
     expect(ws.close).toHaveBeenCalled();
   });
+
+  // QA 2026-10-22 (local Voice OS end to end).
+  describe('Voice OS conversation', () => {
+    it("tells Voice OS the user's model and Ollama address when it connects", async () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ selectedModel: 'qwen2.5:7b', endpoint: 'http://192.168.1.20:11434' }));
+      const { result } = renderHook(() => useJarvisVoice());
+      await act(async () => { await result.current.start(); });
+      const ws = wsInstances[wsInstances.length - 1];
+      const sent = ws.send.mock.calls.map(([m]) => (typeof m === 'string' ? JSON.parse(m) : null)).filter(Boolean);
+      expect(sent).toContainEqual({ type: 'config', ollamaModel: 'qwen2.5:7b', ollamaEndpoint: 'http://192.168.1.20:11434' });
+      localStorage.removeItem('alphonso_settings');
+    });
+
+    it('shows the agent Voice OS picked, and starts a new reply for each question', async () => {
+      const { result } = renderHook(() => useJarvisVoice());
+      await act(async () => { await result.current.start(); });
+      const ws = wsInstances[wsInstances.length - 1];
+      const say = (m) => act(() => { ws.onmessage?.({ data: JSON.stringify(m) }); });
+      say({ type: 'stt', text: 'What is 2 plus 3?' });
+      say({ type: 'agent', value: 'alphonso_core' });
+      say({ type: 'llm', text: 'The answer is 5.' });
+      expect(result.current.activeAgent).toBe('alphonso_core');
+      say({ type: 'stt', text: 'And 3 plus 4?' });
+      say({ type: 'llm', text: 'It is 7.' });
+      expect(result.current.reply).toBe('It is 7.');
+    });
+  });
 });

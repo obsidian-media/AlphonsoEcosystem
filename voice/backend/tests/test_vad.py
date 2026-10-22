@@ -36,3 +36,52 @@ def test_voice_activity_level_handles_short_input():
     short = b'\x00\x00'
     result = voice_activity_level(short)
     assert isinstance(result, float)
+
+# ── UtteranceCollector (QA 2026-10-22) ──────────────────────────────────────
+# A sentence used to be cut every 1.5 s and each piece answered on its own.
+from vad import UtteranceCollector
+
+FRAME = UtteranceCollector.FRAME_BYTES
+SPEECH = b'\x01' * FRAME   # the test classifier calls a frame starting with 0x01 speech
+SILENCE = b'\x00' * FRAME
+
+
+def _collector(**kw):
+    return UtteranceCollector(classify=lambda frame: frame[:1] == b'\x01', **kw)
+
+
+def test_a_whole_sentence_becomes_one_utterance_after_the_pause():
+    c = _collector(end_silence_ms=300, pre_roll_ms=0)
+    out = []
+    # 3 s of speech with short gaps (shorter than the end pause), sent in uneven chunks.
+    stream = (SPEECH * 40 + SILENCE * 5) * 2 + SPEECH * 20 + SILENCE * 12
+    for i in range(0, len(stream), 1000):
+        out += c.feed(stream[i:i + 1000])
+    assert len(out) == 1
+    assert len(out[0]) >= FRAME * 100
+
+
+def test_silence_alone_is_never_an_utterance():
+    c = _collector()
+    assert c.feed(SILENCE * 200) == []
+    assert not c.in_utterance
+
+
+def test_keeps_a_little_audio_from_just_before_the_speech():
+    c = _collector(end_silence_ms=90, pre_roll_ms=90)
+    out = c.feed(SILENCE * 10 + SPEECH * 5 + SILENCE * 3)
+    assert out[0].startswith(SILENCE * 3 + SPEECH)
+
+
+def test_a_long_monologue_is_still_answered():
+    c = _collector(max_ms=900)
+    out = c.feed(SPEECH * 61)
+    assert len(out) == 2
+
+
+def test_reset_drops_a_half_finished_utterance():
+    c = _collector()
+    c.feed(SPEECH * 10)
+    assert c.in_utterance
+    c.reset()
+    assert not c.in_utterance
