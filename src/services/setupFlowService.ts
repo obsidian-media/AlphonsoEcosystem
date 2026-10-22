@@ -300,6 +300,25 @@ function computeStarterModelShortfall(
  * Whether the runtimes drive and the `OLLAMA_MODELS` drive are the same,
  * or `null` when either mount point is unknown.
  */
+/**
+ * The hardware profile with the disk numbers of the install location the user
+ * chose (owner, 2026-10-22), since the scan measured the old default folder.
+ * Unchanged when nothing is chosen yet.
+ */
+export function hardwareForInstallLocation(
+  hardware: HardwareProfile,
+  location: { chosen: string | null; effective: string; freeGb: number | null } | null
+): HardwareProfile {
+  if (!location?.chosen) return hardware;
+  const drive = /^[A-Za-z]:[\\/]/.test(location.effective) ? `${location.effective.slice(0, 2).toUpperCase()}\\` : hardware.diskMount;
+  return { ...hardware, diskFreeGb: location.freeGb ?? hardware.diskFreeGb, diskMount: drive ?? hardware.diskMount };
+}
+
+/** True when the selection includes a Runtime Hub tool (anything but the chat model). */
+export function needsInstallLocation(selected: SelectableComponent[]): boolean {
+  return selected.some((c) => c.id !== STARTER_MODEL_ID);
+}
+
 export function sameInstallVolume(
   hardware: Pick<HardwareProfile, 'diskMount' | 'ollamaModelsDirMount'>
 ): boolean | null {

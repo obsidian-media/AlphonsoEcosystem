@@ -230,7 +230,7 @@ pub fn comfyui_find_installs(saved_dir: Option<String>) -> Vec<ComfyUiInstall> {
       add(root, "settings", None, false, false);
     }
   }
-  let own = crate::runtime_manager::runtimes_dir().join("comfyui");
+  let own = crate::runtime_manager::tool_dir("comfyui");
   if let Some(root) = normalize_root(&own) {
     add(root, "alphonso", None, false, true);
   }
@@ -241,6 +241,135 @@ pub fn comfyui_find_installs(saved_dir: Option<String>) -> Vec<ComfyUiInstall> {
   }
   sort_installs(&mut found);
   found
+}
+
+// ── Search this computer (owner, 2026-10-22) ─────────────────────────────
+// An install that is not running, not chosen and not in a usual place is only
+// found by looking. A whole-drive scan is slow, so it runs only when the user
+// asks (Settings → Runtime → ComfyUI → Search this computer).
+
+const SEARCH_MAX_DEPTH: usize = 6;
+const SEARCH_TIME_LIMIT: std::time::Duration = std::time::Duration::from_secs(240);
+
+/// Folders never worth descending into: system folders, package and build
+/// trees, caches. Compared case-insensitively against the folder name.
+pub(crate) fn skip_while_searching(name: &str) -> bool {
+  let lower = name.to_lowercase();
+  lower.starts_with('.')
+    || lower.starts_with('$')
+    || matches!(
+      lower.as_str(),
+      "windows"
+        | "program files"
+        | "program files (x86)"
+        | "programdata"
+        | "appdata"
+        | "system volume information"
+        | "recovery"
+        | "node_modules"
+        | "site-packages"
+        | "venv"
+        | "__pycache__"
+        | "target"
+        | "dist"
+        | "build"
+        | "models"
+        | "output"
+        | "input"
+        | "custom_nodes"
+    )
+}
+
+/// ComfyUI folders under `starts`, at most `max_depth` levels down, stopping
+/// at `deadline`. Returns (folders found, whether the time limit was hit).
+///
+/// Breadth-first across all starts at once: every drive's shallow folders are
+/// checked before anything deeper. Searching one drive to the bottom first
+/// spent the whole time limit inside C: and never reached D: (seen on the
+/// owner's machine, 2026-10-22); ComfyUI folders are rarely deep.
+pub(crate) fn search_tree(
+  starts: &[PathBuf],
+  max_depth: usize,
+  deadline: std::time::Instant,
+) -> (Vec<PathBuf>, bool) {
+  let mut found = Vec::new();
+  let mut queue: std::collections::VecDeque<(PathBuf, usize)> =
+    starts.iter().map(|s| (s.clone(), 0usize)).collect();
+  while let Some((dir, depth)) = queue.pop_front() {
+    if std::time::Instant::now() >= deadline {
+      return (found, true);
+    }
+    if is_comfyui_root(&dir) {
+      found.push(dir);
+      continue; // nothing to find inside a ComfyUI folder
+    }
+    if depth >= max_depth {
+      continue;
+    }
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+      continue;
+    };
+    for entry in entries.flatten() {
+      let Ok(kind) = entry.file_type() else {
+        continue;
+      };
+      if !kind.is_dir() || kind.is_symlink() {
+        continue;
+      }
+      if skip_while_searching(&entry.file_name().to_string_lossy()) {
+        continue;
+      }
+      queue.push_back((entry.path(), depth + 1));
+    }
+  }
+  (found, false)
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComfyUiSearchResult {
+  pub installs: Vec<ComfyUiInstall>,
+  /// True when the time limit stopped the search before it finished.
+  pub stopped_early: bool,
+}
+
+/// Scan this computer's fixed drives for ComfyUI installs. Slow (minutes on a
+/// large drive); runs off the main thread.
+#[tauri::command]
+pub async fn comfyui_search_computer() -> Result<ComfyUiSearchResult, String> {
+  tauri::async_runtime::spawn_blocking(|| {
+    let deadline = std::time::Instant::now() + SEARCH_TIME_LIMIT;
+    let roots: Vec<PathBuf> = sysinfo::Disks::new_with_refreshed_list()
+      .iter()
+      .filter(|d| !d.is_removable())
+      .map(|d| d.mount_point().to_path_buf())
+      .collect();
+    let (found, stopped_early) = search_tree(&roots, SEARCH_MAX_DEPTH, deadline);
+    let mut installs: Vec<ComfyUiInstall> = Vec::new();
+    for dir in found {
+      if installs
+        .iter()
+        .any(|i| key(Path::new(&i.path)) == key(&dir))
+      {
+        continue;
+      }
+      installs.push(ComfyUiInstall {
+        path: dir.to_string_lossy().to_string(),
+        python: python_for_root(&dir).map(|p| p.to_string_lossy().to_string()),
+        running: false,
+        sources: vec!["search".to_string()],
+        checkpoints: count_checkpoints(&dir),
+        alphonso_copy: false,
+      });
+    }
+    sort_installs(&mut installs);
+    ComfyUiSearchResult {
+      installs,
+      stopped_early,
+    }
+  })
+  .await
+  .map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -326,5 +455,46 @@ mod tests {
       list.iter().map(|i| i.path.as_str()).collect::<Vec<_>>(),
       vec!["c", "b", "a"]
     );
+  }
+
+  #[test]
+  fn search_finds_nested_installs_and_skips_package_folders() {
+    let base = temp("search");
+    let deep = make_root(&base.join("work").join("tools").join("ComfyUI"));
+    // Inside node_modules and a venv: never searched.
+    make_root(&base.join("node_modules").join("ComfyUI"));
+    make_root(&base.join("x").join("venv").join("ComfyUI"));
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    let (found, stopped) = search_tree(std::slice::from_ref(&base), 6, deadline);
+    assert_eq!(found, vec![deep]);
+    assert!(!stopped);
+    // Too deep for the limit: not found.
+    let (shallow, _) = search_tree(std::slice::from_ref(&base), 2, deadline);
+    assert!(shallow.is_empty());
+    let _ = std::fs::remove_dir_all(&base);
+  }
+
+  #[test]
+  fn search_checks_every_start_level_by_level() {
+    let a = temp("bfs-a");
+    let b = temp("bfs-b");
+    let deep_a = make_root(&a.join("1").join("2").join("3").join("ComfyUI"));
+    let shallow_b = make_root(&b.join("ComfyUI"));
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    let (found, _) = search_tree(&[a.clone(), b.clone()], 6, deadline);
+    // The shallow one on the second start is found before the deep one on the first.
+    assert_eq!(found, vec![shallow_b, deep_a]);
+    let _ = std::fs::remove_dir_all(&a);
+    let _ = std::fs::remove_dir_all(&b);
+  }
+
+  #[test]
+  fn search_stops_at_the_time_limit() {
+    let base = temp("deadline");
+    make_root(&base.join("ComfyUI"));
+    let (found, stopped) = search_tree(std::slice::from_ref(&base), 6, std::time::Instant::now());
+    assert!(found.is_empty());
+    assert!(stopped);
+    let _ = std::fs::remove_dir_all(&base);
   }
 }

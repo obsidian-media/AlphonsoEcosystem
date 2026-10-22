@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getAllStatus, installPrerequisite } from '../../services/runtimeManagerService';
-import type { PrereqStatus } from '../../services/runtimeManagerService';
+import type { InstallLocation, PrereqStatus } from '../../services/runtimeManagerService';
+import { InstallLocationPicker } from '../InstallLocationPicker';
 import {
   checkDiskSpace,
   sameInstallVolume,
@@ -8,6 +9,8 @@ import {
   isComponentAlreadyInstalled,
   getUnmetPrereq,
   STARTER_MODEL_ID,
+  hardwareForInstallLocation,
+  needsInstallLocation,
   STARTER_MODEL_TAG,
   type SelectableComponent,
 } from '../../services/setupFlowService';
@@ -66,6 +69,7 @@ export interface RecommendedSetupProps {
 }
 
 export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, onProceed, onCustomize }: RecommendedSetupProps) {
+  const [installLocation, setInstallLocationState] = useState<InstallLocation | null>(null);
   const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [statusUnknown, setStatusUnknown] = useState(false);
@@ -120,7 +124,11 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
   // component was already handled; Python-missing gets an inline fix instead
   // of a dead end, since Python (unlike Docker) has a real auto-install path.
   const toInstall = notInstalled.filter((c) => getUnmetPrereq(c.id, prereqs) === null);
-  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb, hardware.ollamaModelsDirFreeGb, sameInstallVolume(hardware));
+  // Tools go where the user chose (owner, 2026-10-22); measure that drive.
+  const askLocation = needsInstallLocation(toInstall);
+  const placed = hardwareForInstallLocation(hardware, installLocation);
+  const locationReady = !askLocation || Boolean(installLocation?.chosen);
+  const diskCheck = checkDiskSpace(toInstall, placed.diskFreeGb, placed.ollamaModelsDirFreeGb, sameInstallVolume(placed));
   const needsImageGen = recommended.some((c) => c.id === 'comfyui');
 
   const handleInstallPython = async () => {
@@ -193,6 +201,7 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
             reinstalled. Runtime Hub shows the real state once you&apos;re in the app.
           </div>
         )}
+        <InstallLocationPicker attention hidden={!askLocation} onChange={setInstallLocationState} />
         {diskCheck.unknown && diskCheck.starterModelShortfallGb === undefined && (
           <div className="rounded-sm bg-(--warning-dim) px-3 py-2 text-(--warning) text-xs">
             Couldn&apos;t measure free disk space — install will proceed, but make sure you have
@@ -213,8 +222,8 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
       </div>
       <div className="flex gap-3">
         <button
-          disabled={!diskCheck.ok}
-          onClick={() => diskCheck.ok && onProceed(toInstall)}
+          disabled={!diskCheck.ok || !locationReady}
+          onClick={() => diskCheck.ok && locationReady && onProceed(toInstall)}
           className="rounded-sm bg-(--accent) px-4 py-2 text-sm font-semibold text-(--accent-contrast) disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Looks Good → Install

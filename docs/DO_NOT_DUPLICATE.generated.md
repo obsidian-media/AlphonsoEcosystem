@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 205 services and 137 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 205 services and 138 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -66,6 +66,7 @@ Source-backed inventory: 205 services and 137 components. Human purpose descript
 | component | `src/components/hector/ResearchReportPanel.tsx` | `ResearchReportPanel` |
 | component | `src/components/hector/SourceBoard.tsx` | `SourceBoard` |
 | component | `src/components/HectorCompanionWidget.tsx` | `HectorCompanionWidget` |
+| component | `src/components/InstallLocationPicker.tsx` | `InstallLocationPicker` |
 | component | `src/components/JoseCompanionWidget.tsx` | `JoseCompanionWidget` |
 | component | `src/components/JoseTaskQueue.tsx` | `JoseTaskQueue` |
 | component | `src/components/KeyboardShortcutsModal.tsx` | `KeyboardShortcutsModal` |
@@ -195,7 +196,7 @@ Source-backed inventory: 205 services and 137 components. Human purpose descript
 | service | `src/services/coachSkillService.ts` | `COACH_SKILLS`, `getCoachSkill`, `listCoachSkills` |
 | service | `src/services/coachSoundCueService.ts` | `getCoachSoundCuePattern`, `getCoachSoundCueSettings`, `playCoachSoundCue`, `shouldPlayCoachSoundCue`, `updateCoachSoundCueSettings` |
 | service | `src/services/codingAgentService.ts` | `isCodingRequest`, `runCodingAgent` |
-| service | `src/services/comfyuiSettingsService.ts` | `ComfyUiInstall`, `findComfyuiInstalls`, `resolveComfyuiDirectory`, `resolveComfyuiPython` |
+| service | `src/services/comfyuiSettingsService.ts` | `ComfyUiInstall`, `ComfyUiSearchResult`, `findComfyuiInstalls`, `resolveComfyuiDirectory`, `resolveComfyuiPython`, `searchComputerForComfyui` |
 | service | `src/services/commandApprovalService.ts` | `CommandApprovalHandler`, `CommandApprovalOutcome`, `CommandApprovalRequest`, `isWorkspaceCodeExecuting`, `PlannedCommand`, `requestWorkspaceCommandApproval`, `setCommandApprovalHandler` |
 | service | `src/services/companionGreetingsService.ts` | `COMPANION_CONTENT`, `CompanionAgentContent`, `getCompanionContent` |
 | service | `src/services/composioService.ts` | `__resetComposioApiKeyCacheForTests`, `checkComposioHealth`, `ComposioActionResult`, `ComposioConfig`, `ComposioHealthResult`, `ComposioStatusResult`, `ComposioTool`, `ComposioToolkit`, `executeComposioAction`, `executeViaComposio`, `fetchComposioToolkits`, `getCachedToolkits`, `getComposioConfig`, `getComposioStatus`, `getComposioToolsForAgent`, `hydrateComposioApiKeyFromKeychain`, `isComposioEnabled`, `setComposioConfig` |
@@ -291,7 +292,7 @@ Source-backed inventory: 205 services and 137 components. Human purpose descript
 | service | `src/services/resourceCostService.ts` | `collectResourceSnapshot`, `listResourceSnapshots`, `summarizeResourceUsage` |
 | service | `src/services/runtimeApiService.ts` | `getRunStatus`, `listModulesRemote`, `publishEvent`, `runModule` |
 | service | `src/services/runtimeLedgerService.ts` | `bootstrapRuntimeLedgerHydration`, `hydrateScopeToLocalStorage`, `HydrationResult`, `LedgerRecord`, `listScopeRecords`, `persistScopeRows` |
-| service | `src/services/runtimeManagerService.ts` | `checkPrerequisites`, `getAllStatus`, `getAutostartPrefs`, `installPrerequisite`, `installTool`, `listTools`, `loadBundledStarterModel`, `LogEvent`, `onAnyProgress`, `onLogLine`, `PrereqStatus`, `ProgressEvent`, `saveAutostartPref`, `startTool`, `stopTool`, `TOOL_NAMES`, `ToolName`, `ToolResult`, `ToolStatus`, `waitForTool` |
+| service | `src/services/runtimeManagerService.ts` | `checkPrerequisites`, `getAllStatus`, `getAutostartPrefs`, `getInstallLocation`, `InstallLocation`, `installPrerequisite`, `installTool`, `listTools`, `loadBundledStarterModel`, `LogEvent`, `onAnyProgress`, `onLogLine`, `PrereqStatus`, `ProgressEvent`, `saveAutostartPref`, `setInstallLocation`, `startTool`, `stopTool`, `TOOL_NAMES`, `ToolName`, `ToolResult`, `ToolStatus`, `waitForTool` |
 | service | `src/services/runwayService.ts` | `buildRunwayVideoRequest`, `generateRunwayVideo`, `listPendingRunwayJobs`, `resumeRunwayTask`, `RunwayResult` |
 | service | `src/services/scaffoldTemplatesService.js` | `default`, `detectStackTemplate`, `listScaffoldTemplates`, `scaffoldProject` |
 | service | `src/services/screenIntelligenceService.ts` | `getScreenObserverLogs`, `getScreenObserverState`, `requestScreenNotificationPermission`, `ScreenEvent`, `ScreenObserverState`, `startScreenObserver`, `stopScreenObserver`, `updateScreenObserverState` |
@@ -302,7 +303,7 @@ Source-backed inventory: 205 services and 137 components. Human purpose descript
 | service | `src/services/sentinelSecurityService.ts` | `buildSentinelFallbackAlert`, `buildSentinelThreatPrompt`, `parseSentinelThreatResponse`, `runSentinelSecurityScan`, `scanForThreats`, `ScanResult`, `SentinelAlertSchema`, `SentinelAssignment`, `SentinelScanOptions`, `SentinelScanResult`, `SentinelThreatAnalysis`, `startScheduledScans`, `ThreatFinding`, `ThreatPattern` |
 | service | `src/services/serviceScopes.ts` | `AGENT_OUTPUT_SCOPE`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_SCOPE`, `DEV_PACKET_SCOPE`, `GOVERNANCE_SCOPE`, `JOSE_COMMAND_SCOPE`, `MIYA_MEMORY_SCOPE`, `NOVA_SCORE_SCOPE`, `ORCHESTRATION_QUEUE_SCOPE`, `ORCHESTRATION_RECEIPT_SCOPE`, `PACKET_SCOPE`, `PLUGIN_AUDIT_SCOPE`, `PLUGINS_SCOPE`, `PRODUCTION_READINESS_SCOPE`, `PROOF_AUTHORITY`, `REPO_AUDIT_SCOPE`, `SELF_DEVELOPMENT_SCOPE`, `SESSION_EVENT_SCOPE`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `VERIFICATION_SCOPE`, `WORKFLOW_OPS_SCOPE`, `WORKFLOW_RECEIPT_SCOPE`, `WORKFLOW_RUN_SCOPE`, `WORKFLOW_TELEMETRY_SCOPE` |
 | service | `src/services/sessionIntelligenceService.ts` | `appendSessionEvent`, `listSessionEvents`, `SESSION_EVENT_SCOPE`, `summarizeSession` |
-| service | `src/services/setupFlowService.ts` | `checkDiskSpace`, `ComponentProgress`, `DiskSpaceCheck`, `getUnmetPrereq`, `HardwareProfile`, `installComponent`, `isComponentAlreadyInstalled`, `isSetupComplete`, `markSetupComplete`, `PrereqKind`, `sameInstallVolume`, `SCAN_TIMEOUT_MS`, `scanHardware`, `SelectableComponent`, `STARTER_MODEL_ID`, `STARTER_MODEL_TAG`, `withTimeout` |
+| service | `src/services/setupFlowService.ts` | `checkDiskSpace`, `ComponentProgress`, `DiskSpaceCheck`, `getUnmetPrereq`, `hardwareForInstallLocation`, `HardwareProfile`, `installComponent`, `isComponentAlreadyInstalled`, `isSetupComplete`, `markSetupComplete`, `needsInstallLocation`, `PrereqKind`, `sameInstallVolume`, `SCAN_TIMEOUT_MS`, `scanHardware`, `SelectableComponent`, `STARTER_MODEL_ID`, `STARTER_MODEL_TAG`, `withTimeout` |
 | service | `src/services/skillPackContent.ts` | `DEFAULT_PACKS` |
 | service | `src/services/skillPackContentCore.ts` | `CORE_BASE_PACKS` |
 | service | `src/services/skillPackContentEcho.ts` | `ECHO_BASE_PACKS` |

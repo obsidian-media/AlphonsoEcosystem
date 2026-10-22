@@ -1,4 +1,3 @@
-use crate::runtime_manager::runtimes_dir;
 use crate::{now_ms, write_native_proof_stage, NativeProofStageProof};
 use serde::Serialize;
 use serde_json::Value;
@@ -1954,7 +1953,7 @@ pub(crate) async fn transcribe_audio_file(
   let model_name = model.as_deref().unwrap_or("base");
 
   // Resolve whisper exe: prefer venv inside runtimes/whisper/, then PATH
-  let whisper_dir = runtimes_dir().join("whisper");
+  let whisper_dir = crate::runtime_manager::tool_dir("whisper");
   let whisper_exe = {
     let venv_bin = if cfg!(target_os = "windows") {
       whisper_dir.join("venv").join("Scripts").join("whisper.exe")

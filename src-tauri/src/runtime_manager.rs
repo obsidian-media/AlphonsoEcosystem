@@ -393,7 +393,9 @@ fn apply_tool_env(tool_name: &str, cmd: &mut Command) {
   }
 }
 
-pub fn runtimes_dir() -> PathBuf {
+/// Where Runtime Hub installed tools before the user could choose:
+/// `%APPDATA%\Alphonso\runtimes` (an isolated folder under a test profile).
+pub fn default_runtimes_dir() -> PathBuf {
   let base = std::env::var("APPDATA")
     .map(PathBuf::from)
     .unwrap_or_else(|_| {
@@ -415,12 +417,146 @@ pub fn runtimes_dir() -> PathBuf {
   }
 }
 
-fn tool_dir(name: &str) -> PathBuf {
-  runtimes_dir().join(name)
+// ── Install location (owner, 2026-10-22) ─────────────────────────────────
+// Runtime Hub used to install every tool under %APPDATA% (on C:), with no
+// choice; ComfyUI alone is several GB (QA Bug 60). The user now picks a folder
+// (Runtime Hub and Setup ask before the first install); tools go in an
+// `Alphonso-runtimes` subfolder of it, so they never mix with the user's own
+// folders. Nothing about the location is hardcoded.
+
+/// Name of the subfolder created inside the chosen location.
+pub(crate) const RUNTIMES_SUBFOLDER: &str = "Alphonso-runtimes";
+
+fn install_location_file() -> PathBuf {
+  default_runtimes_dir()
+    .parent()
+    .map(Path::to_path_buf)
+    .unwrap_or_else(default_runtimes_dir)
+    .join("install_location.json")
+}
+
+/// The folder the user chose for Runtime Hub installs, if any.
+pub(crate) fn chosen_install_location() -> Option<PathBuf> {
+  let text = std::fs::read_to_string(install_location_file()).ok()?;
+  let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+  let path = value.get("path")?.as_str()?.trim();
+  (!path.is_empty()).then(|| PathBuf::from(path))
+}
+
+/// Where new tools are installed: `<chosen>\Alphonso-runtimes`, or the old
+/// default when nothing was chosen.
+pub fn runtimes_dir() -> PathBuf {
+  chosen_install_location()
+    .map(|p| p.join(RUNTIMES_SUBFOLDER))
+    .unwrap_or_else(default_runtimes_dir)
+}
+
+/// A tool's folder. One already installed in the old default location keeps
+/// working after the user chooses a new place.
+pub(crate) fn tool_dir(name: &str) -> PathBuf {
+  let current = runtimes_dir().join(name);
+  if current.exists() {
+    return current;
+  }
+  let old = default_runtimes_dir().join(name);
+  if old.exists() {
+    return old;
+  }
+  current
+}
+
+/// pip's download cache goes beside the tools instead of the user profile
+/// (on C:), since PyTorch alone is a multi-GB download.
+fn pip_cache_args() -> [String; 2] {
+  [
+    "--cache-dir".to_string(),
+    runtimes_dir()
+      .join(".pip-cache")
+      .to_string_lossy()
+      .to_string(),
+  ]
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallLocation {
+  /// The folder the user chose, if any.
+  pub chosen: Option<String>,
+  /// Where new tools go now.
+  pub effective: String,
+  /// Free space on that drive, in GB.
+  pub free_gb: Option<u64>,
+  /// A suggestion when nothing is chosen: the drive with the most free space.
+  pub suggested: String,
+}
+
+fn fixed_disks() -> Vec<(String, u64)> {
+  sysinfo::Disks::new_with_refreshed_list()
+    .iter()
+    .filter(|d| !d.is_removable())
+    .map(|d| {
+      (
+        d.mount_point().to_string_lossy().to_string(),
+        d.available_space(),
+      )
+    })
+    .collect()
+}
+
+/// `<mount>\Alphonso` on the disk with the most free space.
+pub(crate) fn suggest_install_location(disks: &[(String, u64)]) -> Option<PathBuf> {
+  disks
+    .iter()
+    .max_by_key(|(_, available)| *available)
+    .map(|(mount, _)| PathBuf::from(mount).join("Alphonso"))
+}
+
+fn install_location_info() -> InstallLocation {
+  let disks = fixed_disks();
+  let effective = runtimes_dir();
+  InstallLocation {
+    chosen: chosen_install_location().map(|p| p.to_string_lossy().to_string()),
+    free_gb: pick_disk_for_path(&effective.to_string_lossy(), &disks)
+      .map(|b| b / 1024 / 1024 / 1024),
+    effective: effective.to_string_lossy().to_string(),
+    suggested: suggest_install_location(&disks)
+      .unwrap_or_else(default_runtimes_dir)
+      .to_string_lossy()
+      .to_string(),
+  }
+}
+
+#[tauri::command]
+pub fn runtime_get_install_location() -> InstallLocation {
+  install_location_info()
+}
+
+/// Save the folder for Runtime Hub installs, after checking it can be created
+/// and written to.
+#[tauri::command]
+pub fn runtime_set_install_location(path: String) -> Result<InstallLocation, String> {
+  let chosen = PathBuf::from(path.trim());
+  if !chosen.is_absolute() {
+    return Err("Choose a full folder path, for example D:\\Alphonso.".to_string());
+  }
+  let target = chosen.join(RUNTIMES_SUBFOLDER);
+  std::fs::create_dir_all(&target)
+    .map_err(|e| format!("Can't create {}: {e}", target.display()))?;
+  let probe = target.join(".write-test");
+  std::fs::write(&probe, b"ok").map_err(|e| format!("Can't write to {}: {e}", target.display()))?;
+  let _ = std::fs::remove_file(&probe);
+  let file = install_location_file();
+  if let Some(parent) = file.parent() {
+    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+  }
+  let json = serde_json::json!({ "path": chosen.to_string_lossy() });
+  std::fs::write(&file, json.to_string()).map_err(|e| e.to_string())?;
+  Ok(install_location_info())
 }
 
 fn prefs_path() -> PathBuf {
-  runtimes_dir().join("autostart_prefs.json")
+  // Kept in the default place: it is settings, not an installed tool.
+  default_runtimes_dir().join("autostart_prefs.json")
 }
 
 // ─────────────────────────────────────────────────────────
@@ -452,7 +588,7 @@ fn load_autostart_prefs_from(path: &std::path::Path) -> HashMap<String, bool> {
 }
 
 fn save_autostart_prefs_to_disk(prefs: &HashMap<String, bool>) {
-  let _ = std::fs::create_dir_all(runtimes_dir());
+  let _ = std::fs::create_dir_all(default_runtimes_dir());
   if let Ok(json) = serde_json::to_string_pretty(prefs) {
     let _ = std::fs::write(prefs_path(), json);
   }
@@ -2079,6 +2215,7 @@ pub async fn runtime_install_tool(
   }
 
   // Use venv python for all pip operations
+  let cache = pip_cache_args();
   let vpy = venv_python(&dir);
   let pip_py = if vpy.exists() {
     vpy.to_string_lossy().to_string()
@@ -2115,6 +2252,8 @@ pub async fn runtime_install_tool(
         url,
         "--progress-bar",
         "off",
+        &cache[0],
+        &cache[1],
       ],
       Some(&dir),
     )
@@ -2136,7 +2275,17 @@ pub async fn runtime_install_tool(
         &app,
         &name,
         &pip_py,
-        &["-m", "pip", "install", "-r", req, "--progress-bar", "off"],
+        &[
+          "-m",
+          "pip",
+          "install",
+          "-r",
+          req,
+          "--progress-bar",
+          "off",
+          &cache[0],
+          &cache[1],
+        ],
         Some(&dir),
       )
       .await
@@ -2150,7 +2299,15 @@ pub async fn runtime_install_tool(
       &format!("pip install {} …", def.pip_packages.join(" ")),
       55,
     );
-    let mut args = vec!["-m", "pip", "install", "--progress-bar", "off"];
+    let mut args = vec![
+      "-m",
+      "pip",
+      "install",
+      "--progress-bar",
+      "off",
+      &cache[0],
+      &cache[1],
+    ];
     args.extend_from_slice(def.pip_packages);
     run_streaming(&app, &name, &pip_py, &args, Some(&dir))
       .await
@@ -3118,5 +3275,24 @@ mod find_python_tests {
       pick_python(&[("py314".to_string(), (3, 14))]).as_deref(),
       Some("py314")
     );
+  }
+}
+
+#[cfg(test)]
+mod install_location_tests {
+  use super::*;
+
+  #[test]
+  fn suggests_the_disk_with_the_most_free_space() {
+    let disks = vec![
+      ("C:\\".to_string(), 13),
+      ("D:\\".to_string(), 172),
+      ("E:\\".to_string(), 50),
+    ];
+    assert_eq!(
+      suggest_install_location(&disks),
+      Some(PathBuf::from("D:\\").join("Alphonso"))
+    );
+    assert_eq!(suggest_install_location(&[]), None);
   }
 }

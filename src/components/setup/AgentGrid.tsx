@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getAllStatus, installPrerequisite } from '../../services/runtimeManagerService';
-import type { PrereqStatus } from '../../services/runtimeManagerService';
+import type { InstallLocation, PrereqStatus } from '../../services/runtimeManagerService';
+import { InstallLocationPicker } from '../InstallLocationPicker';
 import {
   checkDiskSpace,
   sameInstallVolume,
@@ -8,6 +9,8 @@ import {
   isComponentAlreadyInstalled,
   getUnmetPrereq,
   STARTER_MODEL_ID,
+  hardwareForInstallLocation,
+  needsInstallLocation,
   STARTER_MODEL_TAG,
   type SelectableComponent,
 } from '../../services/setupFlowService';
@@ -95,6 +98,7 @@ export interface AgentGridProps {
 }
 
 export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack }: AgentGridProps) {
+  const [installLocation, setInstallLocationState] = useState<InstallLocation | null>(null);
   const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [toggled, setToggled] = useState<Set<string>>(new Set());
@@ -163,7 +167,11 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
   ).map((a) => a.component!);
   const notInstalled = selectedComponents.filter((c) => !installedNames.has(c.id));
   const toInstall = notInstalled.filter((c) => getUnmetPrereq(c.id, prereqs) === null);
-  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb, hardware.ollamaModelsDirFreeGb, sameInstallVolume(hardware));
+  // Tools go where the user chose (owner, 2026-10-22); measure that drive.
+  const askLocation = needsInstallLocation(toInstall);
+  const placed = hardwareForInstallLocation(hardware, installLocation);
+  const locationReady = !askLocation || Boolean(installLocation?.chosen);
+  const diskCheck = checkDiskSpace(toInstall, placed.diskFreeGb, placed.ollamaModelsDirFreeGb, sameInstallVolume(placed));
 
   return (
     <div className="flex flex-col items-center gap-4 p-8 w-full max-w-3xl">
@@ -256,6 +264,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
         })}
       </div>
       <div className="flex flex-col gap-2 w-full max-w-md text-sm">
+        <InstallLocationPicker attention hidden={!askLocation} onChange={setInstallLocationState} />
         {diskCheck.unknown && diskCheck.starterModelShortfallGb === undefined && (
           <div className="rounded-sm bg-(--warning-dim) px-3 py-2 text-(--warning) text-xs">
             Couldn&apos;t measure free disk space — install will proceed, but make sure you have
@@ -282,8 +291,8 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
           Back
         </button>
         <button
-          disabled={!diskCheck.ok}
-          onClick={() => diskCheck.ok && onProceed(toInstall)}
+          disabled={!diskCheck.ok || !locationReady}
+          onClick={() => diskCheck.ok && locationReady && onProceed(toInstall)}
           className="rounded-sm bg-(--accent) px-4 py-2 text-sm font-semibold text-(--accent-contrast) disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Install Selected

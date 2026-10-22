@@ -5,15 +5,19 @@ import { render, screen, within, fireEvent } from '@testing-library/react';
 const mockGetAllStatus = vi.fn();
 const mockCheckPrerequisites = vi.fn();
 const mockOnAnyProgress = vi.fn();
+const mockInstallTool = vi.fn();
+const mockGetInstallLocation = vi.fn();
 
 vi.mock('../services/runtimeManagerService', () => ({
   getAllStatus: (...args: unknown[]) => mockGetAllStatus(...args),
   checkPrerequisites: (...args: unknown[]) => mockCheckPrerequisites(...args),
   getAutostartPrefs: vi.fn(),
   installPrerequisite: vi.fn(),
-  installTool: vi.fn(),
+  installTool: (...args: unknown[]) => mockInstallTool(...args),
+  getInstallLocation: (...args: unknown[]) => mockGetInstallLocation(...args),
+  setInstallLocation: vi.fn(),
   onAnyProgress: (...args: unknown[]) => mockOnAnyProgress(...args),
-  onLogLine: vi.fn(),
+  onLogLine: vi.fn(async () => () => {}),
   saveAutostartPref: vi.fn(),
   startTool: vi.fn(),
   stopTool: vi.fn(),
@@ -97,6 +101,7 @@ describe('RuntimeManagerView', () => {
     mockGetAllStatus.mockResolvedValue(runtimeNames);
     mockCheckPrerequisites.mockResolvedValue({ missing: [], installHint: 'ok' });
     mockOnAnyProgress.mockResolvedValue(() => {});
+    mockGetInstallLocation.mockResolvedValue({ chosen: 'D:/Tools', effective: 'D:/Tools/Alphonso-runtimes', freeGb: 100, suggested: 'D:/Alphonso' });
   });
 
   it('renders the runtime catalog entries that were previously untested', async () => {
@@ -151,5 +156,23 @@ describe('RuntimeManagerView', () => {
     expect(within(card).getByText(/Install a separate copy/)).toBeTruthy();
     fireEvent.click(within(card).getByText('Start'));
     await vi.waitFor(() => expect(mockTauriInvoke).toHaveBeenCalledWith('launch_comfyui', { comfyuiDir: 'D:/Mine/ComfyUI', pythonExe: 'D:/Mine/venv/Scripts/python.exe' }));
+  });
+
+  // Owner, 2026-10-22: the user chooses where tools are installed before the
+  // first install; nothing is hardcoded.
+  it('asks where to install tools before the first install, instead of installing', async () => {
+    mockGetAllStatus.mockResolvedValue(runtimeNames.map((t) => t.name === 'whisper' ? { ...t, installed: false, running: false } : t));
+    mockGetInstallLocation.mockResolvedValue({ chosen: null, effective: 'C:/AppData/Alphonso/runtimes', freeGb: 13, suggested: 'D:/Alphonso' });
+    render(<RuntimeManagerView />);
+    expect(await screen.findByText('Where should tools be installed?')).toBeTruthy();
+    const card = await screen.findByTestId('runtime-tool-whisper');
+    fireEvent.click(within(card).getByText('Install'));
+    expect(await screen.findByText(/Choose where to install tools first/)).toBeTruthy();
+    expect(mockInstallTool).not.toHaveBeenCalled();
+  });
+
+  it('shows where tools install to once a location is chosen', async () => {
+    render(<RuntimeManagerView />);
+    expect((await screen.findByTestId('install-location')).textContent).toContain('Tools install to: D:/Tools/Alphonso-runtimes · 100 GB free');
   });
 });

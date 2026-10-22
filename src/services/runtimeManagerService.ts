@@ -118,6 +118,26 @@ export async function loadBundledStarterModel(
   }
 }
 
+/** Where Runtime Hub installs tools (owner, 2026-10-22: the user chooses; nothing hardcoded). */
+export interface InstallLocation {
+  /** The folder the user chose, or null when none was chosen yet. */
+  chosen: string | null;
+  /** Where new tools go now (`<chosen>\Alphonso-runtimes`, or the old default). */
+  effective: string;
+  /** Free space on that drive, in GB. */
+  freeGb: number | null;
+  /** A suggestion when nothing is chosen: the drive with the most free space. */
+  suggested: string;
+}
+
+export async function getInstallLocation(): Promise<InstallLocation> {
+  return invoke('runtime_get_install_location');
+}
+
+export async function setInstallLocation(path: string): Promise<InstallLocation> {
+  return invoke('runtime_set_install_location', { path });
+}
+
 export async function startTool(name: string): Promise<ToolResult> {
   return invoke('runtime_start_tool', { name });
 }

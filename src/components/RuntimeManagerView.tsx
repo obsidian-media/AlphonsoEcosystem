@@ -45,6 +45,8 @@ import { Tabs } from './ui/Tabs';
 import { openExternalUrl } from '../services/browserAutomationService';
 import { findComfyuiInstalls, type ComfyUiInstall } from '../services/comfyuiSettingsService';
 import { getStorage } from '../lib/appStorage';
+import { InstallLocationPicker } from './InstallLocationPicker';
+import type { InstallLocation } from '../services/runtimeManagerService';
 import { invoke } from '@tauri-apps/api/core';
 
 interface ToolStatus {
@@ -651,6 +653,8 @@ export default function RuntimeManagerView() {
   const unlistenRef = useRef<(() => void) | null>(null);
 
   const [existingComfy, setExistingComfy] = useState<ComfyUiInstall | null>(null);
+  const [installLocation, setInstallLocationState] = useState<InstallLocation | null>(null);
+  const [needLocation, setNeedLocation] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -690,6 +694,13 @@ export default function RuntimeManagerView() {
   const handleAction = useCallback(async (action: string, name: string, onProgress?: (p: InstallProgress) => void) => {
     try {
       if (action === 'install') {
+        // The user chooses where tools go before the first install (owner, 2026-10-22).
+        if (installLocation && !installLocation.chosen) {
+          setNeedLocation(true);
+          onProgress?.({ tool: name, stage: 'error', message: 'Choose where to install tools first (above).', pct: 0 } as InstallProgress);
+          showMsg('Choose where to install tools first, then press Install again.', true);
+          return;
+        }
         const result = await installTool(name, onProgress);
         showMsg(result.message);
         await load();
@@ -712,7 +723,7 @@ export default function RuntimeManagerView() {
     } catch (e) {
       showMsg(String(e), true);
     }
-  }, [load, existingComfy]);
+  }, [load, existingComfy, installLocation]);
 
   const handleAutostartToggle = useCallback(async (name: string, enabled: boolean) => {
     try {
@@ -885,6 +896,13 @@ export default function RuntimeManagerView() {
           prereqs={prereqs}
           onInstall={handlePrereqInstall}
           installing={prereqInstalling}
+        />
+      )}
+
+      {!loading && (
+        <InstallLocationPicker
+          attention={needLocation}
+          onChange={(loc) => { setInstallLocationState(loc); if (loc?.chosen) setNeedLocation(false); }}
         />
       )}
 
