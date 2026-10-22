@@ -93,3 +93,15 @@ export interface ContentProject {
   createdAtMs: number;
   updatedAtMs: number;
 }
+
+/** What a content-factory step sends to an agent through Jose. */
+export interface ContentStepPayload {
+  projectId: string;
+  step: StepId;
+  brief: ContentBrief;
+  brand: ContentBrand;
+  /** The chosen output of each earlier step. */
+  prior: Partial<Record<StepId, unknown>>;
+  /** The step's instruction, plus any reason the user sent it back with. */
+  task: string;
+}

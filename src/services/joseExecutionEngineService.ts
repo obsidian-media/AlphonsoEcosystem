@@ -28,6 +28,7 @@ import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutputStoreService';
+import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
@@ -1175,6 +1176,9 @@ async function executeBoardroomAdvance(assignment: any, commandText: any, option
 
 async function executeAssignment(packet: any, assignment: any, commandText: any, options: any = {}) {
   appendAgentActivity({ agent: assignment?.agent || 'jose', action: 'execute', detail: (commandText || '').slice(0, 80) });
+  if (assignment?.contentStep) {
+    return executeContentStepAssignment(assignment, options);
+  }
   if (assignment?.actionType === 'boardroom_planning') {
     return executeBoardroomPlanning(assignment, commandText, options);
   }
@@ -1228,10 +1232,14 @@ export async function runJoseCommandExecutionPipeline({
   previewMode = true,
   onProgress,
   onToken,
-  conversationHistory
-}) {
+  conversationHistory,
+  assignments = undefined
+}: any) {
+  // Explicit assignments (the content factory) skip the shortcuts below: the
+  // caller already decided which agent does what.
+  const explicitAssignments = Array.isArray(assignments) && assignments.length > 0;
   // Creative intent routing — detect image/video/audio and dispatch to running Runtime Hub tool
-  const creativeIntent = detectCreativeIntent(commandText);
+  const creativeIntent = explicitAssignments ? null : detectCreativeIntent(commandText);
   if (creativeIntent) {
     const routing = await routeToCreativeTool(creativeIntent);
     if (routing && !routing.ok) {
@@ -1251,7 +1259,7 @@ export async function runJoseCommandExecutionPipeline({
   }
 
   // Workflow chat invocation — match "run/start/execute workflow [name]" or just command containing workflow name
-  const workflows = listWorkflows();
+  const workflows = explicitAssignments ? [] : listWorkflows();
   const lowerCommand = commandText.toLowerCase();
   const hasWorkflowKeyword = /\b(run|start|execute|trigger)\b.{0,20}\bworkflow\b/i.test(commandText);
   const workflowMatch = workflows.find(w =>
@@ -1265,7 +1273,7 @@ export async function runJoseCommandExecutionPipeline({
   }
 
   // Coding agent — only route if Claude connector is configured; return early with response
-  if (isCodingRequest(commandText) && !creativeIntent) {
+  if (!explicitAssignments && isCodingRequest(commandText) && !creativeIntent) {
     const codingResult = await runCodingAgent(commandText);
     if (codingResult?.ok) {
       onProgress?.({ stage: 'coding_agent_response', content: codingResult.content });
@@ -1277,7 +1285,7 @@ export async function runJoseCommandExecutionPipeline({
   const memoryItems = listMemoryItems();
   const retrievedContext = retrieveRelevantContext(commandText, memoryItems);
 
-  const command: any = await createJoseCommandRoute({ commandText, source, zeroCostMode });
+  const command: any = await createJoseCommandRoute({ commandText, source, zeroCostMode, assignments });
   if (!command) {
     return {
       ok: false,
