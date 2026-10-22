@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { SmartVoiceButton } from '../SmartVoiceButton';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
 
@@ -6,10 +6,23 @@ interface Props {
   agentEmoji: string;
   onSend: (text: string) => void;
   disabled?: boolean;
+  /** Text to put in the box for the user to finish (a new `nonce` each time). */
+  draft?: { text: string; nonce: number } | null;
 }
 
-export function CompanionInputBar({ agentEmoji, onSend, disabled = false }: Props) {
+export function CompanionInputBar({ agentEmoji, onSend, disabled = false, draft = null }: Props) {
   const [value, setValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!draft) return;
+    setValue(draft.text);
+    const input = inputRef.current;
+    if (input) {
+      input.focus();
+      requestAnimationFrame(() => input.setSelectionRange(draft.text.length, draft.text.length));
+    }
+  }, [draft]);
   // Real bug fix: SmartVoiceButton's browser-fallback click handler only
   // does anything if it's given voiceStatus/onToggle -- rendered bare
   // (as it was before this fix), the mic button silently no-oped whenever
@@ -30,6 +43,7 @@ export function CompanionInputBar({ agentEmoji, onSend, disabled = false }: Prop
     <div className="flex items-center gap-2 rounded-full bg-(--companion-bubble-theirs) backdrop-blur-md px-3 py-2">
       <span className="text-lg leading-none select-none" aria-hidden="true">{agentEmoji}</span>
       <input
+        ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}

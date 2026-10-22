@@ -43,4 +43,23 @@ describe('CompanionMode', () => {
     fireEvent.click(screen.getByLabelText('Menu'));
     expect(screen.getByRole('radiogroup', { name: 'Display mode' })).toBeTruthy();
   });
+
+  // QA 2026-10-22: "Find sources on..." was sent unfinished, so Hector had to
+  // ask which area. A quick start ending in "..." now goes into the box.
+  it('an unfinished quick start fills the message box instead of sending', () => {
+    vi.mocked(generateAgentLlmResponse).mockClear();
+    render(<CompanionMode uxMode="simple" onModeChange={vi.fn()} onOpenSettings={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Hector' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Find sources on...' }));
+    expect((screen.getByLabelText('Message') as HTMLInputElement).value).toBe('Find sources on ');
+    expect(generateAgentLlmResponse).not.toHaveBeenCalled();
+  });
+
+  it('a complete quick start is sent straight away', async () => {
+    vi.mocked(generateAgentLlmResponse).mockClear();
+    render(<CompanionMode uxMode="simple" onModeChange={vi.fn()} onOpenSettings={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Echo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remind me what happened last time' }));
+    await waitFor(() => expect(generateAgentLlmResponse).toHaveBeenCalled());
+  });
 });

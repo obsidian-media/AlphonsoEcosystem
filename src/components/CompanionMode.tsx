@@ -63,6 +63,7 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
   const [showQuickStarts, setShowQuickStarts] = useState(true);
   const [conversations, setConversations] = useState<Record<string, CompanionMessage[]>>({});
   const [isPending, setIsPending] = useState(false);
+  const [draft, setDraft] = useState<{ text: string; nonce: number } | null>(null);
 
   const activeAgent = agents.find((a) => a.id === activeAgentId) || agents[0];
   const content = getCompanionContent(activeAgentId);
@@ -118,6 +119,17 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
     }
   };
 
+  // A quick start ending in "..." ("Find sources on...") is the start of a
+  // sentence: put it in the box to finish instead of sending it unfinished
+  // (QA 2026-10-22: Hector then had to ask "which area?").
+  const startFromQuickStart = (chip: string) => {
+    if (/(\.\.\.|…)\s*$/.test(chip)) {
+      setDraft({ text: `${chip.replace(/(\.\.\.|…)\s*$/, '').trimEnd()} `, nonce: Date.now() });
+      return;
+    }
+    void sendMessage(chip);
+  };
+
   return (
     <div className="relative flex flex-col h-screen w-full overflow-hidden bg-(--companion-surface)" data-companion-mode-ready="true">
       <div className="absolute -top-24 -left-16 h-72 w-72 rounded-full bg-(--companion-blob-peach) blur-3xl pointer-events-none" />
@@ -166,7 +178,7 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
             <button
               key={chip}
               type="button"
-              onClick={() => sendMessage(chip)}
+              onClick={() => startFromQuickStart(chip)}
               className="shrink-0 rounded-full bg-(--companion-bubble-theirs) backdrop-blur-xs px-3 py-1.5 text-xs font-medium text-(--companion-bubble-theirs-text)"
             >
               {chip}
@@ -176,7 +188,7 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
       )}
 
       <div className="relative z-10 px-4 pb-4 pt-2">
-        <CompanionInputBar agentEmoji={content.emoji} onSend={sendMessage} disabled={isPending} />
+        <CompanionInputBar agentEmoji={content.emoji} onSend={sendMessage} disabled={isPending} draft={draft} />
       </div>
     </div>
   );
