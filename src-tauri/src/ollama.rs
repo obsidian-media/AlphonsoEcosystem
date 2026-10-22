@@ -468,6 +468,89 @@ pub(crate) async fn ollama_unload_models(
   })
 }
 
+/// One line of Ollama's /api/pull stream as the app reads it.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct OllamaPullProgress {
+  pull_id: String,
+  status: String,
+  completed: Option<u64>,
+  total: Option<u64>,
+}
+
+/// Reads one /api/pull line: progress, or the error Ollama reported.
+fn parse_pull_line(pull_id: &str, line: &str) -> Option<Result<OllamaPullProgress, String>> {
+  let value: Value = serde_json::from_str(line.trim()).ok()?;
+  if let Some(error) = value.get("error").and_then(Value::as_str) {
+    return Some(Err(error.to_string()));
+  }
+  Some(Ok(OllamaPullProgress {
+    pull_id: pull_id.to_string(),
+    status: value
+      .get("status")
+      .and_then(Value::as_str)
+      .unwrap_or("")
+      .to_string(),
+    completed: value.get("completed").and_then(Value::as_u64),
+    total: value.get("total").and_then(Value::as_u64),
+  }))
+}
+
+/// Downloads a model into Ollama from the backend, relaying progress as
+/// `ollama://pull_progress` events (QA 2026-10-22, Bug 73). Pulling from the
+/// app window failed for an Ollama the user started, which refuses the
+/// window's origin; this route works for every Ollama.
+#[tauri::command]
+pub(crate) async fn ollama_pull_model(
+  app: tauri::AppHandle,
+  endpoint: Option<String>,
+  model: String,
+  pull_id: String,
+) -> Result<serde_json::Value, String> {
+  use tauri::Emitter;
+  let model = model.trim().to_string();
+  if model.is_empty() {
+    return Err("Name the model to download.".to_string());
+  }
+  let base = ollama_base(endpoint);
+  let mut response = reqwest::Client::new()
+    .post(format!("{base}/api/pull"))
+    .json(&serde_json::json!({ "name": model, "stream": true }))
+    .timeout(Duration::from_secs(6 * 60 * 60))
+    .send()
+    .await
+    .map_err(|error| format!("Ollama did not answer at {base}: {error}"))?;
+  let status = response.status();
+  if !status.is_success() {
+    let body = response.text().await.unwrap_or_default();
+    let detail = serde_json::from_str::<Value>(&body)
+      .ok()
+      .and_then(|v| v.get("error").and_then(Value::as_str).map(str::to_string))
+      .unwrap_or_else(|| format!("HTTP {}", status.as_u16()));
+    return Err(detail);
+  }
+  let mut pending = String::new();
+  let mut last_status = String::new();
+  while let Some(chunk) = response.chunk().await.map_err(|error| error.to_string())? {
+    pending.push_str(&String::from_utf8_lossy(&chunk));
+    while let Some(newline) = pending.find('\n') {
+      let line: String = pending.drain(..=newline).collect();
+      match parse_pull_line(&pull_id, &line) {
+        Some(Ok(progress)) => {
+          last_status = progress.status.clone();
+          let _ = app.emit("ollama://pull_progress", progress);
+        }
+        Some(Err(error)) => return Err(error),
+        None => {}
+      }
+    }
+  }
+  if let Some(Err(error)) = parse_pull_line(&pull_id, &pending) {
+    return Err(error);
+  }
+  Ok(serde_json::json!({ "ok": true, "model": model, "status": last_status }))
+}
+
 /// Non-streaming `/api/chat` call used as the desktop fallback for chat. It
 /// keeps the real role/content turns, so the model's own chat template
 /// applies instead of a flattened prompt.
@@ -535,6 +618,40 @@ mod tests {
     assert!(proof.done);
     assert_eq!(proof.trust, "verified");
     assert!(proof.error.is_none());
+  }
+
+  #[test]
+  fn pull_lines_give_progress_or_the_ollama_error() {
+    let progress = parse_pull_line(
+      "p1",
+      r#"{"status":"pulling abc","total":100,"completed":40}"#,
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(
+      progress,
+      OllamaPullProgress {
+        pull_id: "p1".into(),
+        status: "pulling abc".into(),
+        completed: Some(40),
+        total: Some(100)
+      }
+    );
+    let done = parse_pull_line("p1", r#"{"status":"success"}"#)
+      .unwrap()
+      .unwrap();
+    assert_eq!(done.status, "success");
+    assert_eq!(done.total, None);
+    let error = parse_pull_line(
+      "p1",
+      r#"{"error":"pull model manifest: file does not exist"}"#,
+    )
+    .unwrap();
+    assert_eq!(
+      error,
+      Err("pull model manifest: file does not exist".to_string())
+    );
+    assert!(parse_pull_line("p1", "   ").is_none());
   }
 
   #[test]

@@ -1,14 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Cpu } from 'lucide-react';
-import { fetchOllamaModels, getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { fetchOllamaModels, getConfiguredOllamaEndpoint, pullOllamaModel } from '../lib/ollama';
 
 const STORAGE_KEY = 'alphonso_selected_model_v1';
 // Computed per-call, not module-scoped constants — the configured endpoint
 // (Settings → "Ollama API Endpoint") can change without a page reload, and a
 // value captured once at import time would go stale (a real QA finding —
 // these two constants ignored the setting entirely).
-const ollamaTagsUrl = () => `${getConfiguredOllamaEndpoint()}/api/tags`;
-const ollamaPullUrl = () => `${getConfiguredOllamaEndpoint()}/api/pull`;
 
 const AI_MODELS = ['ollama', 'claude', 'chatgpt'] as const;
 type AIModel = typeof AI_MODELS[number];
@@ -90,56 +88,30 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
     if (!modelName) return;
     setPullingModel(modelName);
     setPullProgress('Starting download...');
+    // QA 2026-10-22 (Bug 73): this pulled from the window, which an Ollama the
+    // user started refuses. pullOllamaModel() goes through the backend in the
+    // desktop app.
     try {
-      const res = await fetch(ollamaPullUrl(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: modelName, stream: true }),
+      await pullOllamaModel({
+        endpoint: getConfiguredOllamaEndpoint(),
+        model: modelName,
+        onProgress: (p) => setPullProgress(p.percent !== null ? `${p.status} — ${p.percent}%` : p.status || 'Downloading...')
       });
-      if (!res.ok) {
-        setPullProgress(`Error: HTTP ${res.status}`);
-        setTimeout(() => { setPullingModel(null); setPullProgress(''); }, 3000);
-        return;
-      }
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line) as { status?: string; total?: number; completed?: number };
-            if (data.status) {
-              const parts = [data.status];
-              if (data.total && data.completed) parts.push(`${Math.round((data.completed / data.total) * 100)}%`);
-              setPullProgress(parts.join(' — '));
-            }
-          } catch { /* ignore malformed progress line */ }
-        }
-      }
       setPullProgress('Download complete');
       try {
-        const tagRes = await fetch(ollamaTagsUrl());
-        if (tagRes.ok) {
-          const tagData = await tagRes.json() as { models?: { name?: string; model?: string }[] };
-          const names = Array.isArray(tagData?.models) ? tagData.models.map((m) => m.name ?? m.model ?? '').filter(Boolean) : [];
-          setModels(names);
-          if (names.includes(modelName)) {
-            setSelected(modelName);
-            localStorage.setItem(STORAGE_KEY, modelName);
-            onModelChangeRef.current?.(modelName);
-          }
+        const { models: listed } = await fetchOllamaModels(getConfiguredOllamaEndpoint());
+        const names = listed.map((m: { name?: string; model?: string }) => m.name ?? m.model ?? '').filter(Boolean);
+        setModels(names);
+        if (names.includes(modelName)) {
+          setSelected(modelName);
+          localStorage.setItem(STORAGE_KEY, modelName);
+          onModelChangeRef.current?.(modelName);
         }
-      } catch { /* ignore tag refresh failure — model list stays as last successfully fetched */ }
+      } catch { /* ignore list refresh failure — model list stays as last successfully fetched */ }
       setTimeout(() => { setPullingModel(null); setPullProgress(''); }, 2000);
-    } catch {
-      setPullProgress('Could not reach Ollama');
-      setTimeout(() => { setPullingModel(null); setPullProgress(''); }, 3000);
+    } catch (error) {
+      setPullProgress(`Download failed: ${error instanceof Error ? error.message : String(error)}`);
+      setTimeout(() => { setPullingModel(null); setPullProgress(''); }, 6000);
     }
   }
 
@@ -176,7 +148,7 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
       </div>
       {ollamaOnline && (
         <div className="flex items-center gap-1">
-          <input type="text" value={customModel} onChange={(e) => setCustomModel(e.target.value)} placeholder="model name to pull"
+          <input type="text" value={customModel} onChange={(e) => setCustomModel(e.target.value)} placeholder="model name to pull" aria-label="Model name to download"
             className="flex-1 min-w-0 bg-(--surface-2) border border-(--border) rounded-sm px-2 py-1 text-[9px] text-(--text-3) placeholder-(--text-4) focus:outline-hidden focus:border-(--accent-border)" />
           {showPullButton && (
             <button onClick={handlePullModel} disabled={!!pullingModel}
