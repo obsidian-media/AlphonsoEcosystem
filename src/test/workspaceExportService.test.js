@@ -73,3 +73,26 @@ describe('importWorkspace', () => {
     expect(JSON.parse(localStorage.getItem('alphonso_memory'))).toEqual([{ id: 1 }]);
   });
 });
+
+// QA 2026-10-21: Workspace Export wrote every alphonso_* key, including the
+// plugin-signing private key, into the export file.
+describe('secrets', () => {
+  it('leaves secret keys and secret-named fields out of the export', () => {
+    localStorage.clear();
+    localStorage.setItem('alphonso_plugin_signer_keypair_v1', JSON.stringify({ privateKey: 'PRIVATE' }));
+    localStorage.setItem('alphonso_composio_api_key_v1', 'cmp_key');
+    localStorage.setItem('alphonso_settings', JSON.stringify({ theme: 'dark', nested: { accessToken: 'tok' } }));
+    const out = JSON.parse(exportWorkspace());
+    expect(out).not.toHaveProperty('alphonso_plugin_signer_keypair_v1');
+    expect(out).not.toHaveProperty('alphonso_composio_api_key_v1');
+    expect(out.alphonso_settings).toEqual({ theme: 'dark', nested: {} });
+  });
+
+  it('does not import a secret key', () => {
+    localStorage.clear();
+    const result = importWorkspace(JSON.stringify({ alphonso_license_token: 'forged', alphonso_settings: { a: 1 } }));
+    expect(localStorage.getItem('alphonso_license_token')).toBeNull();
+    expect(result.imported).toBe(1);
+    expect(result.errors.join(' ')).toMatch(/Skipped secret key: alphonso_license_token/);
+  });
+});

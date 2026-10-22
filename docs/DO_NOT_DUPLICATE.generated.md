@@ -341,7 +341,7 @@ Source-backed inventory: 205 services and 135 components. Human purpose descript
 | service | `src/services/workflowRegistryService.ts` | `executeWorkflowTasks`, `getWorkflow`, `listWorkflows`, `runWorkflow`, `runWorkflowChain`, `WORKFLOW_EXECUTION_SCOPE`, `WORKFLOWS` |
 | service | `src/services/workflowTelemetryService.ts` | `appendWorkflowTelemetryEvent`, `listWorkflowTelemetry`, `summarizeWorkflowTelemetry`, `WORKFLOW_TELEMETRY_SCOPE` |
 | service | `src/services/workspaceArtifactService.ts` | `writeHandoffArtifact`, `WriteHandoffArtifactOptions`, `writeWorkspaceArtifact`, `WriteWorkspaceArtifactOptions` |
-| service | `src/services/workspaceExportService.ts` | `exportWorkspace`, `importWorkspace` |
+| service | `src/services/workspaceExportService.ts` | `collectExportableStorage`, `exportWorkspace`, `importWorkspace`, `isSecretStorageKey`, `stripSecretFields` |
 | service | `src/services/workspaceFileService.ts` | `deleteWorkspaceFile`, `getWorkspaceTree`, `listWorkspaceDirectory`, `moveWorkspaceFile`, `readWorkspaceFile`, `searchWorkspaceFiles` |
 | service | `src/services/workspaceIntelligenceService.ts` | `buildWorkspaceSymbolIndex`, `checkOcrCapability`, `collectWorkspaceProof`, `getWorkspaceFoundation`, `runOcrAdapter`, `updateWorkspaceFoundation` |
 | service | `src/services/workspaceRootService.ts` | `CURRENT_WORKSPACE_ROOT`, `getDefaultWorkspaceRoot`, `validateWorkspaceRoot` |

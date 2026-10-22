@@ -1605,7 +1605,7 @@ export function SettingsView({
           )}
 
           <div className="text-[11px] text-(--text-3)">
-            Backup includes: memory items, chat history, agent patterns, Composio config, settings, project goals/batches, and SQLite records.
+            Backup includes all app data (settings, chats, memory, Boardroom threads, agent choices, research, schedules) and the stored records. Passwords, API keys and other secrets are left out; keep them in your password manager.
           </div>
         </div>
       </section>
