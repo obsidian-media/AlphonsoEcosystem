@@ -104,8 +104,8 @@ a finding.
 | Boardroom | Boardroom | E2E | `boardroom.e2e.mjs` | chained mentions, Stop, Retry, Acknowledge, Confirm-to-reveal, speaker name (Bug 7) |
 | System | Orchestrator | Visit | `smoke` | Command, Packets, Monitor tabs; WhatsApp status (Bug 8) |
 | System | All Agents (Ecosystem Hub) | Visit | `smoke` | Overview, Queue, Skills, Workflows, Pairings, Workshop, Advanced tabs |
-| System | Agent Pairing | — | not in `smoke`'s list | everything; `smoke`'s SPACES list is missing this page |
-| System | Maturity | — | not in `smoke`'s list | everything; `smoke`'s SPACES list is missing this page |
+| System | Agent Pairing | Visit | `smoke` | everything past opening; to be redesigned as a visual map (Q9) |
+| System | Maturity | Visit | `smoke` | everything past opening; to be split (Q10) |
 | System | Agent Performance | Visit | `smoke` | numbers after real runs |
 | System | Runtimes (Runtime Hub) | E2E (Ollama stop/start) | `runtime-hub.e2e.mjs` | install a tool, Activity tab, Modules tab, live log, autostart prefs, prerequisite install |
 | System | Voice | Visit | `smoke` | Start/Stop Voice OS; "Installed" label (Bug 6) |
@@ -208,8 +208,8 @@ nobody has seen it work in the real app yet.
 | 9 | Content Studio brief step falls back silently | Open |
 | 11 | Runtime start guard is check-then-spawn | Fixed in code (`starting` set); live check pending |
 | 14 | Models chosen in the Ollama app's Settings are invisible to an Ollama Alphonso starts | Fixed in code (PR 307); live check pending |
-| 15 | `smoke.e2e.mjs` page list misses Agent Pairing and Maturity | Open |
-| 16 | `cargo clippy --all-targets` fails on test code in `lib.rs`, `companion_router.rs`, `connector_commands.rs` (CI runs without `--all-targets`) | Open |
+| 15 | `smoke.e2e.mjs` page list misses Agent Pairing and Maturity | Fixed (batch 3): both added and pass in the real app; `src/test/desktopSmokeCoverage.test.js` fails if the sidebar gains a page the smoke spec does not visit |
+| 16 | `cargo clippy --all-targets` fails on test code in `lib.rs`, `companion_router.rs`, `connector_commands.rs` (CI runs without `--all-targets`) | Fixed (batch 3): test modules moved to the end of `lib.rs` and `companion_router.rs`, redundant `-> ()` removed; `cargo clippy --all-targets -- -D warnings` is clean |
 | 17 | Settings' suggested model list (`SUGGESTED_MODELS`) names old models (`phi3.5`, `codellama`) | Open |
 | 18 | A backend command that fails returns a plain string, and callers that only read `Error.message` drop it: Content Studio showed "The local model could not be reached" when the real reason was `invalid args \`model\` … expected a string` | Fixed in code (batch 1: backend rejections keep their reason); real-app re-check pending |
 | 19 | Content Studio freezes the model when the job is created (`job.settings.selectedModel`). A job created before a model is chosen sends no model, so every model step fails for that job | Fixed in code (batch 1: model read when the step runs); real-app re-check pending |

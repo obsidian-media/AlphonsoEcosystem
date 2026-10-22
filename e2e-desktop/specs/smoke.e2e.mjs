@@ -13,7 +13,9 @@ const SPACES = [
   { id: 'boardroom', items: ['mission_room'] },
   {
     id: 'system',
-    items: ['orchestrator', 'ecosystem', 'agent_performance', 'runtimes', 'voice', 'connectors', 'operator'],
+    // Same order as Sidebar.tsx. 'pairings' and 'maturity' were added to the
+    // sidebar on 2026-10-06 and missing here until 2026-10-21 (QA Bug 15).
+    items: ['orchestrator', 'ecosystem', 'pairings', 'maturity', 'agent_performance', 'runtimes', 'voice', 'connectors', 'operator'],
   },
 ];
 

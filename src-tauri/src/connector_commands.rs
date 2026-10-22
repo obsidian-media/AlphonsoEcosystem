@@ -2007,7 +2007,7 @@ mod tests {
 
   fn run_with_env<F>(f: F)
   where
-    F: FnOnce(&tokio::runtime::Runtime) -> () + Send,
+    F: FnOnce(&tokio::runtime::Runtime) + Send,
   {
     let _guard = env_lock().lock().unwrap();
     let runtime = tokio::runtime::Builder::new_current_thread()
