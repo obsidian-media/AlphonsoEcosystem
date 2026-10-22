@@ -253,6 +253,29 @@ describe('ChatView', () => {
     expect(screen.queryByRole('button', { name: /abort and stop/i })).toBeNull();
   });
 
+  // Owner, 2026-10-22 (QA Q7): a thinking model's reasoning shows folded
+  // above the answer, and Settings can hide it.
+  it("shows a thinking model's reasoning folded, and hides it when the setting is off", async () => {
+    const reply = ({ onThinking, onToken }) => { onThinking?.('2+3 makes 5.'); onToken?.('Five.', 'Five.'); return Promise.resolve('Five.'); };
+    generateOllamaChatStream.mockImplementationOnce(reply);
+    const { unmount } = render(<ChatView {...makeProps()} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'What is 2+3?' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    const thinking = await screen.findByTestId('chat-message-thinking');
+    expect(thinking.tagName).toBe('DETAILS');
+    expect(thinking.textContent).toContain('2+3 makes 5.');
+    unmount();
+    localStorage.clear();
+
+    generateOllamaChatStream.mockImplementationOnce(reply);
+    render(<ChatView {...makeProps({ settings: { selectedModel: 'qwen3:0.6b', colorScheme: 'dark', showModelThinking: false } })} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'What is 2+3?' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    await waitFor(() => expect(generateOllamaChatStream).toHaveBeenCalledTimes(2));
+    await screen.findAllByText('Five.');
+    expect(screen.queryByTestId('chat-message-thinking')).toBeNull();
+  });
+
   it('cancels an active Ollama stream from the stop control', async () => {
     let resolveStream;
     generateOllamaChatStream.mockImplementationOnce(({ signal }) => new Promise((resolve) => {

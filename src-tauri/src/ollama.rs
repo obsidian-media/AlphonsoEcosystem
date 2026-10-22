@@ -42,6 +42,9 @@ pub(crate) struct OllamaGenerateProof {
   http_status: Option<u16>,
   model: String,
   response: String,
+  /// A thinking model's reasoning, kept apart from the answer (empty for
+  /// other models). Chat shows it folded, or hides it (owner, 2026-10-22).
+  thinking: String,
   done: bool,
   trust: String,
   error: Option<String>,
@@ -225,6 +228,22 @@ pub(crate) struct OllamaChatMessage {
 
 /// Reply text from an Ollama response body. `/api/generate` answers with
 /// `response`; `/api/chat` answers with `message.content`.
+/// The reasoning Ollama returns separately for a thinking model
+/// (`message.thinking` from /api/chat, `thinking` from /api/generate).
+fn ollama_reply_thinking(data: &Value) -> String {
+  data
+    .get("thinking")
+    .and_then(Value::as_str)
+    .or_else(|| {
+      data
+        .get("message")
+        .and_then(|message| message.get("thinking"))
+        .and_then(Value::as_str)
+    })
+    .unwrap_or("")
+    .to_string()
+}
+
 fn ollama_reply_text(data: &Value) -> String {
   data
     .get("response")
@@ -265,6 +284,7 @@ fn ollama_reply_proof(
     http_status: Some(code),
     model,
     response: response_text,
+    thinking: ollama_reply_thinking(data),
     done,
     trust: if success {
       "verified".to_string()
@@ -289,6 +309,7 @@ fn ollama_request_failed_proof(
     http_status: None,
     model,
     response: String::new(),
+    thinking: String::new(),
     done: false,
     trust: "failed".to_string(),
     error: Some(if error.is_timeout() {
@@ -514,6 +535,34 @@ mod tests {
     assert!(proof.done);
     assert_eq!(proof.trust, "verified");
     assert!(proof.error.is_none());
+  }
+
+  #[test]
+  fn reply_proof_keeps_a_thinking_models_reasoning_apart() {
+    let chat = serde_json::json!({ "message": { "content": "five", "thinking": "2+3 is 5." }, "done": true });
+    let proof = ollama_reply_proof("http://x".into(), "m".into(), 200, true, &chat, "/api/chat");
+    assert_eq!(proof.response, "five");
+    assert_eq!(proof.thinking, "2+3 is 5.");
+    let generate = serde_json::json!({ "response": "five", "thinking": "add them", "done": true });
+    let proof = ollama_reply_proof(
+      "http://x".into(),
+      "m".into(),
+      200,
+      true,
+      &generate,
+      "/api/generate",
+    );
+    assert_eq!(proof.thinking, "add them");
+    let plain = serde_json::json!({ "message": { "content": "hi" }, "done": true });
+    let proof = ollama_reply_proof(
+      "http://x".into(),
+      "m".into(),
+      200,
+      true,
+      &plain,
+      "/api/chat",
+    );
+    assert_eq!(proof.thinking, "");
   }
 
   #[test]
