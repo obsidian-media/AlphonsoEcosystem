@@ -4,6 +4,10 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 vi.mock('../../services/runtimeManagerService', () => ({
   getAllStatus: vi.fn(),
   installPrerequisite: vi.fn(),
+  // A location is already chosen unless a test says otherwise (owner,
+  // 2026-10-22: Setup asks before installing a Runtime Hub tool).
+  getInstallLocation: vi.fn(async () => ({ chosen: 'D:/Tools', effective: 'D:/Tools/Alphonso-runtimes', freeGb: null, suggested: 'D:/Alphonso' })),
+  setInstallLocation: vi.fn(async (path) => ({ chosen: path, effective: `${path}/Alphonso-runtimes`, freeGb: null, suggested: 'D:/Alphonso' })),
 }));
 vi.mock('../../services/setupFlowService', async (importOriginal) => {
   const actual = await importOriginal();

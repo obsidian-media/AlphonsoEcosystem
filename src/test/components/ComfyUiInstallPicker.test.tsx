@@ -6,8 +6,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 // Alphonso uses, from the installs found on the machine.
 
 const mockFind = vi.fn();
+const mockSearch = vi.fn();
 vi.mock('../../services/comfyuiSettingsService', () => ({
   findComfyuiInstalls: (...a: unknown[]) => mockFind(...a),
+  searchComputerForComfyui: (...a: unknown[]) => mockSearch(...a),
 }));
 
 import { ComfyUiInstallPicker } from '../../components/ComfyUiInstallPicker';
@@ -18,7 +20,7 @@ const found = [
 ];
 
 describe('ComfyUiInstallPicker', () => {
-  beforeEach(() => mockFind.mockReset());
+  beforeEach(() => { mockFind.mockReset(); mockSearch.mockReset(); });
 
   it('lists the installs found and saves the chosen folder with its Python', async () => {
     mockFind.mockResolvedValue(found);
@@ -41,6 +43,23 @@ describe('ComfyUiInstallPicker', () => {
   it('says what to do when no ComfyUI is found', async () => {
     mockFind.mockResolvedValue([]);
     render(<ComfyUiInstallPicker comfyuiDir="" onChoose={vi.fn()} />);
-    expect(await screen.findByText(/No ComfyUI found\. Install it from Runtime Hub, or enter its folder below\./)).toBeTruthy();
+    expect(await screen.findByText(/No ComfyUI found yet\. Search this computer/)).toBeTruthy();
+  });
+
+  // Owner, 2026-10-22: a search for installs that are not running and not in
+  // a usual place, only when asked.
+  it('searches the computer on request and adds what it finds to the list', async () => {
+    mockFind.mockResolvedValue([]);
+    let finish: (v: unknown) => void = () => {};
+    mockSearch.mockReturnValue(new Promise((r) => { finish = r; }));
+    const onChoose = vi.fn();
+    render(<ComfyUiInstallPicker comfyuiDir="" onChoose={onChoose} />);
+    fireEvent.click(await screen.findByText('Search this computer'));
+    expect(await screen.findByText('Searching this computer…')).toBeTruthy();
+    expect(screen.getByText('This can take a few minutes.')).toBeTruthy();
+    finish({ installs: [{ path: 'E:/Deep/ComfyUI', python: 'E:/Deep/venv/Scripts/python.exe', running: false, sources: ['search'], checkpoints: 1, alphonsoCopy: false }], stoppedEarly: true });
+    expect(await screen.findByText(/Found 1 ComfyUI install on this computer\. The search stopped after 4 minutes/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('ComfyUI install'), { target: { value: 'E:/Deep/ComfyUI' } });
+    expect(onChoose).toHaveBeenCalledWith('E:/Deep/ComfyUI', 'E:/Deep/venv/Scripts/python.exe');
   });
 });

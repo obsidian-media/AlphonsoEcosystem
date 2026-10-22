@@ -4,6 +4,10 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 vi.mock('../../services/runtimeManagerService', () => ({
   getAllStatus: vi.fn(),
   installPrerequisite: vi.fn(),
+  // A location is already chosen unless a test says otherwise (owner,
+  // 2026-10-22: Setup asks before installing a Runtime Hub tool).
+  getInstallLocation: vi.fn(async () => ({ chosen: 'D:/Tools', effective: 'D:/Tools/Alphonso-runtimes', freeGb: null, suggested: 'D:/Alphonso' })),
+  setInstallLocation: vi.fn(async (path) => ({ chosen: path, effective: `${path}/Alphonso-runtimes`, freeGb: null, suggested: 'D:/Alphonso' })),
 }));
 // Real withTimeout/checkDiskSpace preserved; isComponentAlreadyInstalled is
 // stubbed to the Runtime-Hub-set behaviour so these tests stay focused on the
@@ -17,7 +21,7 @@ vi.mock('../../services/setupFlowService', async (importOriginal) => {
   };
 });
 
-import { getAllStatus, installPrerequisite } from '../../services/runtimeManagerService';
+import { getAllStatus, installPrerequisite, getInstallLocation, setInstallLocation } from '../../services/runtimeManagerService';
 import { RecommendedSetup } from '../../components/setup/RecommendedSetup';
 
 const hardware = { ramGb: 16, diskFreeGb: 220, gpuPresent: false, gpuVendor: null, gpuModel: null };
@@ -89,8 +93,35 @@ describe('RecommendedSetup', () => {
     const unknownDisk = { ...hardware, diskFreeGb: null };
     render(<RecommendedSetup intent="chat-images" hardware={unknownDisk} prereqs={allPrereqsOk} onProceed={onProceed} onCustomize={() => {}} />);
     await waitFor(() => expect(screen.getByText(/couldn't measure free disk space/i)).toBeInTheDocument());
+    // The install location loads a moment after the screen opens.
+    await waitFor(() => expect(screen.getByText('Looks Good → Install')).not.toBeDisabled());
     fireEvent.click(screen.getByText('Looks Good → Install'));
     expect(onProceed).toHaveBeenCalled();
+  });
+});
+
+describe('RecommendedSetup — install location', () => {
+  // Owner, 2026-10-22: the user chooses where tools go; nothing is hardcoded.
+  it('asks where to install before installing a tool, and the suggestion unblocks it', async () => {
+    getAllStatus.mockResolvedValue([]);
+    getInstallLocation.mockResolvedValueOnce({ chosen: null, effective: 'C:/AppData/Alphonso/runtimes', freeGb: 13, suggested: 'D:/Alphonso' });
+    const onProceed = vi.fn();
+    render(<RecommendedSetup intent="chat-images" hardware={hardware} prereqs={allPrereqsOk} onProceed={onProceed} onCustomize={() => {}} />);
+    expect(await screen.findByText('Where should tools be installed?')).toBeInTheDocument();
+    expect(screen.getByText('Looks Good → Install')).toBeDisabled();
+    fireEvent.click(screen.getByText('Use this folder'));
+    await waitFor(() => expect(screen.getByText('Looks Good → Install')).not.toBeDisabled());
+    expect(setInstallLocation).toHaveBeenCalledWith('D:/Alphonso');
+    fireEvent.click(screen.getByText('Looks Good → Install'));
+    expect(onProceed).toHaveBeenCalled();
+  });
+
+  it('does not ask when only the chat model is being installed', async () => {
+    getAllStatus.mockResolvedValue([]);
+    getInstallLocation.mockResolvedValueOnce({ chosen: null, effective: 'C:/x', freeGb: 13, suggested: 'D:/Alphonso' });
+    render(<RecommendedSetup intent="chat-only" hardware={hardware} prereqs={allPrereqsOk} onProceed={vi.fn()} onCustomize={() => {}} />);
+    await waitFor(() => expect(screen.getByText('Looks Good → Install')).toBeInTheDocument());
+    expect(screen.queryByText('Where should tools be installed?')).toBeNull();
   });
 });
 
@@ -142,6 +173,7 @@ describe('RecommendedSetup — prerequisite gating', () => {
 
     fireEvent.click(await waitFor(() => screen.getByText('Install Python')));
     await waitFor(() => expect(screen.queryByText(/needs python/i)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Looks Good → Install')).not.toBeDisabled());
 
     fireEvent.click(screen.getByText('Looks Good → Install'));
     const queued = onProceed.mock.calls[0][0];

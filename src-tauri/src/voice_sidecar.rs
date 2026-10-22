@@ -151,7 +151,13 @@ pub async fn voice_start(
       .map_err(|e| format!("Failed to resolve resource dir: {e}"))?
       .join("voice")
       .join("backend");
-    let runtimes_dir = crate::runtime_manager::runtimes_dir();
+    // The folder holding voice-os: the chosen install location, or the old
+    // default if Voice OS was installed there before a location was chosen.
+    let voice_dir = crate::runtime_manager::tool_dir("voice-os");
+    let runtimes_dir = voice_dir
+      .parent()
+      .map(std::path::Path::to_path_buf)
+      .unwrap_or_else(crate::runtime_manager::runtimes_dir);
     let python_bin = resolve_voice_python(&backend_path, &runtimes_dir);
     let token = random_hex_token();
     *token_state.0.lock().map_err(|e| e.to_string())? = Some(token.clone());

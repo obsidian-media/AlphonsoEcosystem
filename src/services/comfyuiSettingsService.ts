@@ -51,6 +51,17 @@ export async function findComfyuiInstalls(savedDir?: string | null): Promise<Com
   }
 }
 
+export interface ComfyUiSearchResult {
+  installs: ComfyUiInstall[];
+  /** True when the 4-minute limit stopped the search before it finished. */
+  stoppedEarly: boolean;
+}
+
+/** Scan this computer's drives for ComfyUI installs (slow; only when the user asks). */
+export async function searchComputerForComfyui(): Promise<ComfyUiSearchResult> {
+  return invoke<ComfyUiSearchResult>('comfyui_search_computer');
+}
+
 /** The ComfyUI folder to use: the saved one if it is still a ComfyUI, else the best one found. */
 export async function resolveComfyuiDirectory(currentDir: string | null | undefined): Promise<string> {
   const installs = await findComfyuiInstalls(currentDir);
