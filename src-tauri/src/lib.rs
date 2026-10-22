@@ -286,18 +286,6 @@ fn write_native_proof_event(output_dir: &Path, payload: &Value) -> Result<(), St
   Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn to_hex_produces_correct_lowercase_hex() {
-    assert_eq!(to_hex(&[0x00, 0xff, 0xab, 0x12]), "00ffab12");
-    assert_eq!(to_hex(&[]), "");
-    assert_eq!(to_hex(&[0x0a]), "0a");
-  }
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   // Capture panics to a log file before the process exits so startup crashes
@@ -876,4 +864,16 @@ pub fn run() {
     ])
     .run(e2e_aware_context())
     .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn to_hex_produces_correct_lowercase_hex() {
+    assert_eq!(to_hex(&[0x00, 0xff, 0xab, 0x12]), "00ffab12");
+    assert_eq!(to_hex(&[]), "");
+    assert_eq!(to_hex(&[0x0a]), "0a");
+  }
 }

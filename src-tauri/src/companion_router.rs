@@ -88,60 +88,6 @@ async fn handle_send_command(params: Value, app: AppHandle) -> Result<Value, Jso
   Ok(json!({ "commandId": command_id, "status": "queued", "text": text }))
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn voice_command_payload_preserves_agent_and_language() {
-    let payload = json!({
-      "agentId": "maria",
-      "language": "fa-IR",
-      "voiceConversation": true
-    });
-    assert_eq!(payload["agentId"], "maria");
-    assert_eq!(payload["language"], "fa-IR");
-    assert_eq!(payload["voiceConversation"], true);
-  }
-
-  #[test]
-  fn operations_snapshot_keeps_empty_state_honest() {
-    let snapshot = operations_snapshot(&[]);
-    assert_eq!(snapshot["activeWork"], json!([]));
-    assert_eq!(snapshot["recentOutcomes"], json!([]));
-    assert_eq!(snapshot["approvals"], json!([]));
-  }
-
-  #[test]
-  fn operations_snapshot_separates_active_and_terminal_receipts() {
-    let receipts = vec![
-      json!({ "id": "done", "status": "completed", "agent": "maria", "details": { "summary": "Verified" }, "timestampMs": 2 }),
-      json!({ "id": "live", "status": "running", "agent": "jose", "details": { "summary": "Deploying" }, "timestampMs": 3 }),
-    ];
-    let snapshot = operations_snapshot(&receipts);
-    assert_eq!(snapshot["activeWork"][0]["id"], "live");
-    assert_eq!(snapshot["recentOutcomes"][0]["id"], "done");
-  }
-
-  #[test]
-  fn operations_snapshot_keeps_all_completed_receipt_variants_out_of_active_work() {
-    let receipts = vec![
-      json!({ "id": "executed", "status": "executed", "timestampMs": 1 }),
-      json!({ "id": "reported", "status": "reported_to_jose", "timestampMs": 2 }),
-      json!({ "id": "success", "status": "success", "timestampMs": 3 }),
-      json!({ "id": "approval", "status": "pending_approval", "timestampMs": 4 }),
-    ];
-
-    let snapshot = operations_snapshot(&receipts);
-
-    assert_eq!(snapshot["activeWork"][0]["id"], "approval");
-    assert_eq!(snapshot["recentOutcomes"].as_array().unwrap().len(), 3);
-    assert_eq!(snapshot["recentOutcomes"][0]["id"], "success");
-    assert_eq!(snapshot["recentOutcomes"][1]["id"], "reported");
-    assert_eq!(snapshot["recentOutcomes"][2]["id"], "executed");
-  }
-}
-
 async fn handle_abort_command(params: Value, app: AppHandle) -> Result<Value, JsonRpcError> {
   let command_id = params["commandId"].as_str().ok_or(JsonRpcError {
     code: -32602,
@@ -343,4 +289,58 @@ async fn handle_get_boardroom(app: AppHandle) -> Result<Value, JsonRpcError> {
     .and_then(|r| serde_json::from_str(&r).ok())
     .unwrap_or(json!([]));
   Ok(json!({ "sessions": sessions }))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn voice_command_payload_preserves_agent_and_language() {
+    let payload = json!({
+      "agentId": "maria",
+      "language": "fa-IR",
+      "voiceConversation": true
+    });
+    assert_eq!(payload["agentId"], "maria");
+    assert_eq!(payload["language"], "fa-IR");
+    assert_eq!(payload["voiceConversation"], true);
+  }
+
+  #[test]
+  fn operations_snapshot_keeps_empty_state_honest() {
+    let snapshot = operations_snapshot(&[]);
+    assert_eq!(snapshot["activeWork"], json!([]));
+    assert_eq!(snapshot["recentOutcomes"], json!([]));
+    assert_eq!(snapshot["approvals"], json!([]));
+  }
+
+  #[test]
+  fn operations_snapshot_separates_active_and_terminal_receipts() {
+    let receipts = vec![
+      json!({ "id": "done", "status": "completed", "agent": "maria", "details": { "summary": "Verified" }, "timestampMs": 2 }),
+      json!({ "id": "live", "status": "running", "agent": "jose", "details": { "summary": "Deploying" }, "timestampMs": 3 }),
+    ];
+    let snapshot = operations_snapshot(&receipts);
+    assert_eq!(snapshot["activeWork"][0]["id"], "live");
+    assert_eq!(snapshot["recentOutcomes"][0]["id"], "done");
+  }
+
+  #[test]
+  fn operations_snapshot_keeps_all_completed_receipt_variants_out_of_active_work() {
+    let receipts = vec![
+      json!({ "id": "executed", "status": "executed", "timestampMs": 1 }),
+      json!({ "id": "reported", "status": "reported_to_jose", "timestampMs": 2 }),
+      json!({ "id": "success", "status": "success", "timestampMs": 3 }),
+      json!({ "id": "approval", "status": "pending_approval", "timestampMs": 4 }),
+    ];
+
+    let snapshot = operations_snapshot(&receipts);
+
+    assert_eq!(snapshot["activeWork"][0]["id"], "approval");
+    assert_eq!(snapshot["recentOutcomes"].as_array().unwrap().len(), 3);
+    assert_eq!(snapshot["recentOutcomes"][0]["id"], "success");
+    assert_eq!(snapshot["recentOutcomes"][1]["id"], "reported");
+    assert_eq!(snapshot["recentOutcomes"][2]["id"], "executed");
+  }
 }
