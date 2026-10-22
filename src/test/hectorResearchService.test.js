@@ -304,6 +304,27 @@ describe('RSS failover', () => {
     expect(Array.isArray(results)).toBe(true);
   });
 
+  // QA 2026-10-22: the desktop window can't reach feed sites, so in the app
+  // the feed comes through the backend's fetch_rss_feed command.
+  it('fetchRssSources uses the backend in the desktop app', async () => {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const original = invoke.getMockImplementation();
+    invoke.mockImplementation(async (command, args) => (
+      command === 'fetch_rss_feed' ? { ok: true, status: 200, text: rssXml } : original?.(command, args)
+    ));
+    global.fetch = vi.fn();
+    window.__TAURI_INTERNALS__ = {};
+    try {
+      const results = await fetchRssSources('artificial intelligence tech', 8);
+      expect(results.length).toBeGreaterThan(0);
+      expect(invoke).toHaveBeenCalledWith('fetch_rss_feed', expect.objectContaining({ url: expect.stringMatching(/^https:\/\//) }));
+      expect(global.fetch).not.toHaveBeenCalled();
+    } finally {
+      delete window.__TAURI_INTERNALS__;
+      invoke.mockImplementation(original);
+    }
+  });
+
   it('fetchRssSources handles fetch failure gracefully and returns empty array', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
     const results = await fetchRssSources('artificial intelligence tech', 8);

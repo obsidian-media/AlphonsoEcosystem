@@ -885,7 +885,22 @@ function collectAgentReports(command: JoseCommand): any[] {
   ));
 }
 
-function buildUserSummary(command: JoseCommand, reports: any[], resultUrl: string | null, pendingAssignments: JoseCommandAssignment[]): string {
+/**
+ * Why an assignment's work packet failed, or null if it didn't. QA 2026-10-22:
+ * a failed step used to be reported as "No agent report received yet" under
+ * "Jose ... is waiting for agent reports", so failures looked like pending work.
+ */
+function assignmentFailure(assignment: JoseCommandAssignment): string | null {
+  const packet: any = assignment.packetId ? getPacketById(assignment.packetId) : null;
+  if (!packet || !['dead_letter', 'failed'].includes(String(packet.status))) return null;
+  return String(packet.failureReason || packet.deadLetterReason || 'no reason was recorded');
+}
+
+function buildUserSummary(command: JoseCommand, reports: any[], resultUrl: string | null, pendingAssignments: JoseCommandAssignment[], failedAssignments: JoseCommandAssignment[] = []): string {
+  if (failedAssignments.length) {
+    const done = reports.length ? ` ${reports.length} agent report(s) arrived.` : '';
+    return `${failedAssignments.length} of ${(command.assignments || []).length} assignment(s) failed for "${shorten(command.commandText)}".${done} See each agent's report below.`;
+  }
   if (!reports.length) {
     return `Jose distributed "${shorten(command.commandText)}" and is waiting for agent reports.`;
   }
@@ -929,6 +944,7 @@ export function createJoseReportToUser(
     return !report || !['verified', 'completed'].includes(state);
   });
   const hasContractFailure = assignments.some((assignment) => assignment.status === 'contract_invalid');
+  const failedAssignments = assignments.filter((assignment) => assignmentFailure(assignment) !== null);
 
   const userReport: UserReport = {
     id: newId('jose-user-report'),
@@ -936,7 +952,7 @@ export function createJoseReportToUser(
     createdAtMs: timestampMs(),
     fromAgent: AGENTS.JOSE,
     to: 'user',
-    summary: buildUserSummary(command, reports, resultUrl, pendingAssignments),
+    summary: buildUserSummary(command, reports, resultUrl, pendingAssignments, failedAssignments),
     confirmation,
     resultUrl,
     assignmentCount: assignments.length,
@@ -949,19 +965,20 @@ export function createJoseReportToUser(
     })),
     assignmentSummaries: assignments.map((assignment) => {
       const report = reports.find((item) => item.payload?.originalPacketId === assignment.packetId);
+      const failure = report ? null : assignmentFailure(assignment);
       return {
         agent: assignment.agent,
         title: assignment.title,
-        assignmentStatus: assignment.status || 'unknown',
-        reportStatus: report?.payload?.resultState || 'not_reported',
-        reportSummary: report?.payload?.summary || 'No agent report received yet.',
+        assignmentStatus: failure ? 'failed' : (assignment.status || 'unknown'),
+        reportStatus: report?.payload?.resultState || (failure ? 'failed' : 'not_reported'),
+        reportSummary: report?.payload?.summary || (failure ? `Failed: ${failure}` : 'No agent report received yet.'),
         artifacts: Array.isArray(report?.payload?.artifacts) ? report.payload.artifacts : [],
         resultUrl: report?.payload?.resultUrl || null,
         packetId: assignment.packetId || '',
         reportPacketId: report?.id || null
       };
     }),
-    trust: hasContractFailure
+    trust: hasContractFailure || failedAssignments.length
       ? TRUST_STATES.FAILED
       : pendingAssignments.length
         ? TRUST_STATES.INFERRED

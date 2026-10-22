@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Cpu } from 'lucide-react';
-import { getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { fetchOllamaModels, getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 const STORAGE_KEY = 'alphonso_selected_model_v1';
 // Computed per-call, not module-scoped constants — the configured endpoint
@@ -9,7 +9,6 @@ const STORAGE_KEY = 'alphonso_selected_model_v1';
 // these two constants ignored the setting entirely).
 const ollamaTagsUrl = () => `${getConfiguredOllamaEndpoint()}/api/tags`;
 const ollamaPullUrl = () => `${getConfiguredOllamaEndpoint()}/api/pull`;
-const FETCH_TIMEOUT_MS = 3000;
 
 const AI_MODELS = ['ollama', 'claude', 'chatgpt'] as const;
 type AIModel = typeof AI_MODELS[number];
@@ -51,16 +50,15 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
 
   useEffect(() => {
     let cancelled = false;
+    // QA 2026-10-22 (Bug 73): this asked Ollama from the window only. An
+    // Ollama the user started refuses the app window, so the picker said
+    // "Ollama offline" and no model could be chosen while chat worked through
+    // the backend. fetchOllamaModels falls back to the backend.
     async function fetchModels() {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       try {
-        const resp = await fetch(ollamaTagsUrl(), { signal: controller.signal });
-        clearTimeout(timer);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json() as { models?: { name?: string; model?: string }[] };
+        const { models: listed } = await fetchOllamaModels(getConfiguredOllamaEndpoint());
         if (cancelled) return;
-        const names = Array.isArray(data?.models) ? data.models.map((m) => m.name ?? m.model ?? '').filter(Boolean) : [];
+        const names = listed.map((m: { name?: string; model?: string }) => m.name ?? m.model ?? '').filter(Boolean);
         setModels(names);
         setOllamaOnline(names.length > 0);
         if (names.length > 0) {
@@ -73,7 +71,6 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
           onModelChangeRef.current?.(resolved);
         }
       } catch {
-        clearTimeout(timer);
         if (!cancelled) { setOllamaOnline(false); setModels([]); }
       }
     }

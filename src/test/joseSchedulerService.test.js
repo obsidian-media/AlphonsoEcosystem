@@ -6,8 +6,29 @@ import {
   deleteSchedule,
   startScheduler,
   stopScheduler,
+  runSchedule,
+  tickScheduler,
+  nextCronMs,
   SCHEDULE_PRESETS,
 } from '../services/joseSchedulerService';
+
+vi.mock('../services/novaAnalysisService', () => ({
+  runNovaAnalysis: vi.fn(async () => ({ summary: 'Nova: 2 opportunities.', schema: { valueScore: 40 } })),
+  saveOpportunityScore: vi.fn(),
+}));
+vi.mock('../services/sentinelSecurityService', () => ({
+  runSentinelSecurityScan: vi.fn(async () => ({ summary: 'Sentinel: risk 10/100, 0 findings.' })),
+}));
+vi.mock('../services/mariaAuditService', () => ({
+  runMariaGovernanceAudit: vi.fn(async () => ({ summary: 'Maria: low risk.', schema: { riskLevel: 'low' } })),
+}));
+vi.mock('../services/agentActivityService', () => ({
+  appendAgentActivity: vi.fn(),
+  listAgentActivity: vi.fn(() => []),
+}));
+vi.mock('../services/orchestrationReceiptService', () => ({
+  listOrchestrationReceipts: vi.fn(() => []),
+}));
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -131,9 +152,15 @@ describe('deleteSchedule', () => {
   });
 });
 
-// ── startScheduler / stopScheduler ────────────────────────────────────────────
+// ── Running (QA 2026-10-22: until then no schedule ran anything) ──────────────
 
-describe('startScheduler', () => {
+function makeDue() {
+  const all = listSchedules();
+  all.forEach((s) => { s.nextRunAtMs = Date.now() - 1000; });
+  localStorageMock.setItem('alphonso_jose_schedules_v1', JSON.stringify(all));
+}
+
+describe('running schedules', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorageMock.clear();
@@ -146,75 +173,119 @@ describe('startScheduler', () => {
   });
 
   it('returns a stop function', () => {
-    const stop = startScheduler(() => {});
+    const stop = startScheduler({ runCommand: vi.fn() });
     expect(typeof stop).toBe('function');
     stop();
   });
 
-  it('fires callback for due schedules', () => {
-    const callback = vi.fn();
-    startScheduler(callback);
+  it('runs a due command through Jose and saves the result', async () => {
+    const runCommand = vi.fn(async () => ({ ok: true, summary: 'Summary written.', pendingApprovalCount: 0 }));
+    const onResult = vi.fn();
+    startScheduler({ runCommand, onResult });
+    createSchedule({ name: 'Due', commandText: 'summarise today', presetId: 'hourly' });
+    makeDue();
 
-    // Create a schedule that's already due (nextRunAtMs in the past)
-    const sched = createSchedule({ name: 'Due', commandText: 'cmd', presetId: 'hourly' });
-    const all = listSchedules();
-    all[0].nextRunAtMs = Date.now() - 1000;
-    localStorageMock.setItem('alphonso_jose_schedules_v1', JSON.stringify(all));
+    await vi.advanceTimersByTimeAsync(61_000);
 
-    // Advance timer past the 60s interval
-    vi.advanceTimersByTime(61_000);
-
-    expect(callback).toHaveBeenCalled();
-    stopScheduler();
+    expect(runCommand).toHaveBeenCalledWith('summarise today', expect.objectContaining({ name: 'Due' }));
+    const saved = listSchedules()[0];
+    expect(saved.lastResult).toMatchObject({ state: 'done', summary: 'Summary written.' });
+    expect(saved.nextRunAtMs).toBeGreaterThan(Date.now());
+    expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ name: 'Due' }), expect.objectContaining({ state: 'done' }));
   });
 
-  it('does not fire callback for future schedules', () => {
-    const callback = vi.fn();
-    startScheduler(callback);
+  it('reports work that waits for approval, and failures', async () => {
+    const runCommand = vi.fn()
+      .mockResolvedValueOnce({ ok: true, summary: 'Prepared a post.', pendingApprovalCount: 1 })
+      .mockResolvedValueOnce({ ok: false, error: 'Command could not be parsed.' });
+    startScheduler({ runCommand });
+    const sched = createSchedule({ name: 'Post', commandText: 'post the update', presetId: 'hourly' });
+    expect((await runSchedule(sched.id)).state).toBe('waiting_approval');
+    const failed = await runSchedule(sched.id);
+    expect(failed).toMatchObject({ state: 'failed', summary: 'Command could not be parsed.' });
+    expect(listSchedules()[0].lastResult.state).toBe('failed');
+  });
 
+  it('does not run future or switched-off schedules', async () => {
+    const runCommand = vi.fn(async () => ({ ok: true }));
+    startScheduler({ runCommand });
     createSchedule({ name: 'Future', commandText: 'cmd', presetId: 'weekly' });
+    const off = createSchedule({ name: 'Off', commandText: 'cmd', presetId: 'hourly' });
+    saveSchedule({ ...off, enabled: false, nextRunAtMs: Date.now() - 1000 });
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(runCommand).not.toHaveBeenCalled();
+  });
 
-    vi.advanceTimersByTime(61_000);
-
-    expect(callback).not.toHaveBeenCalled();
+  it('stops running after stopScheduler', async () => {
+    const runCommand = vi.fn(async () => ({ ok: true }));
+    startScheduler({ runCommand });
+    createSchedule({ name: 'Due', commandText: 'cmd' });
+    makeDue();
     stopScheduler();
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it('runs the built-in jobs with the real agent functions', async () => {
+    const { listAgentActivity, appendAgentActivity } = await import('../services/agentActivityService');
+    listAgentActivity.mockReturnValue([{ agent: 'jose', action: 'executed', detail: 'wrote a report', ts: Date.now() }]);
+    appendAgentActivity.mockClear();
+    startScheduler({ runCommand: vi.fn() });
+    const cases = [
+      ['nova_daily_scan', 'Nova: 2 opportunities.'],
+      ['sentinel_daily_summary', 'Sentinel: risk 10/100'],
+      ['maria_weekly_audit', 'Maria: low risk.'],
+    ];
+    for (const [presetId, text] of cases) {
+      const job = createSchedule({ name: presetId, presetId });
+      const result = await runSchedule(job.id);
+      expect(result.state).toBe('done');
+      expect(result.summary).toContain(text);
+    }
+    expect(appendAgentActivity).toHaveBeenCalledTimes(3);
+  });
+
+  it('says so when a built-in job has nothing to review', async () => {
+    const { listAgentActivity } = await import('../services/agentActivityService');
+    listAgentActivity.mockReturnValue([]);
+    startScheduler({ runCommand: vi.fn() });
+    const job = createSchedule({ name: 'Nova', presetId: 'nova_daily_scan' });
+    expect((await runSchedule(job.id)).state).toBe('skipped');
+  });
+
+  it('needs a command unless it is a built-in job', () => {
+    expect(createSchedule({ name: 'Empty', commandText: '  ', presetId: 'hourly' })).toMatchObject({ success: false });
+    expect(createSchedule({ name: 'Job', presetId: 'hector_morning_briefing' }).id).toMatch(/^sched_/);
+  });
+
+  it('only runs due schedules when ticked', () => {
+    startScheduler({ runCommand: vi.fn(async () => ({ ok: true })) });
+    createSchedule({ name: 'Due', commandText: 'cmd' });
+    expect(tickScheduler()).toEqual([]);
+    makeDue();
+    expect(tickScheduler()).toHaveLength(1);
   });
 });
 
-// ── stopScheduler ─────────────────────────────────────────────────────────────
+describe('nextCronMs', () => {
+  const at = (y, mo, d, h, mi) => new Date(y, mo - 1, d, h, mi, 0, 0).getTime();
 
-describe('stopScheduler', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    localStorageMock.clear();
-    stopScheduler();
+  it('finds the next daily time', () => {
+    expect(nextCronMs('0 9 * * *', at(2026, 10, 22, 8, 30))).toBe(at(2026, 10, 22, 9, 0));
+    expect(nextCronMs('0 9 * * *', at(2026, 10, 22, 9, 0))).toBe(at(2026, 10, 23, 9, 0));
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    stopScheduler();
+  it('handles "every N minutes", which used to give an invalid date', () => {
+    expect(nextCronMs('*/15 * * * *', at(2026, 10, 22, 10, 7))).toBe(at(2026, 10, 22, 10, 15));
   });
 
-  it('stops the interval', () => {
-    const callback = vi.fn();
-    startScheduler(callback);
+  it('honours the weekday (Monday at 9:00)', () => {
+    // 2026-10-22 is a Thursday; the next Monday is 2026-10-26.
+    expect(nextCronMs('0 9 * * 1', at(2026, 10, 22, 12, 0))).toBe(at(2026, 10, 26, 9, 0));
+  });
 
-    // Make a schedule due
-    const all = listSchedules();
-    if (all.length > 0) {
-      all[0].nextRunAtMs = Date.now() - 1000;
-      localStorageMock.setItem('alphonso_jose_schedules_v1', JSON.stringify(all));
-    } else {
-      const sched = createSchedule({ name: 'Test', commandText: 'cmd' });
-      const schedules = listSchedules();
-      schedules[0].nextRunAtMs = Date.now() - 1000;
-      localStorageMock.setItem('alphonso_jose_schedules_v1', JSON.stringify(schedules));
-    }
-
-    stopScheduler();
-    vi.advanceTimersByTime(120_000);
-
-    // callback should not be called after stop
-    expect(callback).not.toHaveBeenCalled();
+  it('rejects an invalid time when creating', () => {
+    expect(createSchedule({ name: 'Bad', commandText: 'x', cron: '61 * * * *' })).toMatchObject({ success: false });
+    expect(createSchedule({ name: 'Ok', commandText: 'x', cron: '*/5 * * * *' }).cron).toBe('*/5 * * * *');
   });
 });

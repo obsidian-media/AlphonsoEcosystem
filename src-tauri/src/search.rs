@@ -701,6 +701,43 @@ pub(crate) async fn search_brave_sources(
   Ok(results)
 }
 
+/// The most a news feed may be (2 MB); a larger reply is cut off.
+const RSS_MAX_BYTES: usize = 2 * 1024 * 1024;
+
+/// Fetches a news feed's raw text for Hector (QA 2026-10-22). The app window
+/// cannot: the feed sites aren't in the content-security policy and refuse its
+/// origin, so Hector's RSS fallback and the morning briefing never got a feed
+/// in the desktop app. Public https addresses only; every redirect hop is
+/// checked by `fetch_with_ssrf_guard`.
+#[tauri::command]
+pub(crate) async fn fetch_rss_feed(url: String) -> Result<serde_json::Value, String> {
+  let parsed =
+    reqwest::Url::parse(url.trim()).map_err(|_| "Not a valid feed address.".to_string())?;
+  if parsed.scheme() != "https" {
+    return Err("Only https feeds are fetched.".to_string());
+  }
+  if is_private_host(parsed.host_str().unwrap_or("")).await {
+    return Err("Requests to private or loopback addresses are not allowed.".to_string());
+  }
+  let client = reqwest::Client::builder()
+    .timeout(std::time::Duration::from_secs(10))
+    .redirect(reqwest::redirect::Policy::none())
+    .user_agent("Alphonso-Hector/0.1 feed reader")
+    .build()
+    .map_err(|error| error.to_string())?;
+  let response = fetch_with_ssrf_guard(&client, parsed).await?;
+  let status = response.status().as_u16();
+  let bytes = response.bytes().await.map_err(|error| error.to_string())?;
+  let truncated = bytes.len() > RSS_MAX_BYTES;
+  let text = String::from_utf8_lossy(&bytes[..bytes.len().min(RSS_MAX_BYTES)]).into_owned();
+  Ok(serde_json::json!({
+    "ok": (200..300).contains(&status),
+    "status": status,
+    "text": text,
+    "truncated": truncated,
+  }))
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

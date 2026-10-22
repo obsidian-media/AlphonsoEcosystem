@@ -466,18 +466,70 @@ function AppShell() {
     };
   }, []);
 
-  // Jose scheduler background service
+  // Jose scheduler background service. The ref keeps the scheduler on the
+  // latest endpoint / Zero-Cost Mode without restarting it on every change.
+  const schedulerSettingsRef = useRef(settings);
+  schedulerSettingsRef.current = settings;
   useEffect(() => {
     let schedulerStop: (() => void) | null = null;
     (async () => {
       try {
         const { startScheduler } = await import('./services/joseSchedulerService');
-        schedulerStop = startScheduler((schedule) => {
-          addNotification({
-            type: 'info',
-            title: `Scheduled: ${schedule.name}`,
-            message: `Executing: ${String(schedule.commandText || '').slice(0, 100)}`
-          });
+        // QA 2026-10-22: this used to only show "Executing: ..." and run nothing.
+        // A scheduled command now goes through Jose exactly like a typed one,
+        // so Approval Mode still holds back anything high-risk.
+        schedulerStop = startScheduler({
+          runCommand: async (commandText) => {
+            const { runJoseCommandExecutionPipeline, isJoseIntakeCommand } = await import('./services/joseExecutionEngineService');
+            const { shouldRouteThroughJose, CHAT_ASSISTANT_PROMPT } = await import('./lib/chatUtils');
+            const current = schedulerSettingsRef.current;
+            // The same rule as Chat: a task goes to Jose, anything else gets a
+            // direct answer. Sending "write a note" through Jose's pipeline only
+            // produced "Jose completed orchestration review" and no note.
+            if (!isJoseIntakeCommand(commandText) && !shouldRouteThroughJose(commandText)) {
+              const { generateAgentLlmResponse, getConfiguredOllamaModel } = await import('./lib/ollama');
+              const reply = await generateAgentLlmResponse('alphonso', {
+                endpoint: current.endpoint,
+                model: current.selectedModel || getConfiguredOllamaModel(),
+                prompt: `${CHAT_ASSISTANT_PROMPT}\n\nUser: ${commandText}\nAlphonso:`
+              }) as { response?: string } | null;
+              const text = String(reply?.response || '').trim();
+              if (!text) return { ok: false, error: 'The model returned an empty reply.' };
+              return { ok: true, summary: text.split('\n')[0].slice(0, 200), details: text };
+            }
+            const result = await runJoseCommandExecutionPipeline({
+              commandText,
+              source: 'schedule',
+              endpoint: current.endpoint,
+              zeroCostMode: current.zeroCostMode,
+              previewMode: false,
+              conversationHistory: [],
+              onProgress: undefined,
+              onToken: undefined
+            });
+            const reports = (result?.command?.userReport?.assignmentSummaries || [])
+              .filter((a: { reportSummary?: string }) => a?.reportSummary)
+              .map((a: { agent?: string; reportSummary?: string }) => `${a.agent || 'agent'}: ${a.reportSummary}`)
+              .join('\n\n');
+            return {
+              ok: Boolean(result?.ok),
+              summary: result?.command?.userReport?.summary || '',
+              details: reports,
+              pendingApprovalCount: Number(result?.pendingApprovalCount || 0),
+              error: result?.ok ? undefined : String(result?.reason || 'Jose could not run the command.')
+            };
+          },
+          onResult: (schedule, outcome) => {
+            const title = outcome.state === 'done' ? `Scheduled: ${schedule.name} finished`
+              : outcome.state === 'waiting_approval' ? `Scheduled: ${schedule.name} needs your approval`
+                : outcome.state === 'skipped' ? `Scheduled: ${schedule.name} had nothing to do`
+                  : `Scheduled: ${schedule.name} failed`;
+            addNotification({
+              type: outcome.state === 'failed' ? 'error' : outcome.state === 'done' ? 'success' : 'info',
+              title,
+              message: outcome.summary.slice(0, 300)
+            });
+          }
         });
       } catch { /* non-critical */ }
     })();
