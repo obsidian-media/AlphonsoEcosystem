@@ -9,6 +9,8 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 - [2026-10-21] **Desktop QA pass started; fix batch 1 (branch `qa/fix-batch-1`).** The owner asked for every part of the app to go through E2E, checked against what it is *supposed* to do, before v2.10.0 is tagged. Working checklist, owner decisions and findings: `docs/qa/DESKTOP_QA_COVERAGE.md`. Baseline: 12 of 16 desktop spec files passed. Batch 1 fixed Bugs 18, 19, 20, 22, 25 (see that file and CHANGELOG [Unreleased]). **OPEN:** Bugs 21, 23, 24, 26 and every row still marked "—" in the checklist; real-app re-check of batch 1. — `[OPEN]`
 
+- [2026-10-21] **[DONE in code, branch `fix/ollama-models-location`; live check in the QA pass]** **Ollama models on another drive were invisible to an Ollama that Alphonso started.** The Ollama desktop app saves "Model location" in `%LOCALAPPDATA%\Ollama\db.sqlite` (`settings.models`, schema_version 18, checked on Ollama 0.33.1) and passes it only to its own server. Alphonso read only `OLLAMA_MODELS`, so without that variable its Ollama used `%USERPROFILE%\.ollama\models`, saw no models, and Setup pulled the starter model again onto C:. Found when the owner said their models are on D:. Fix: `configured_ollama_models_dir()` (env first, then the app setting, read-only, only if the folder exists) feeds `apply_tool_env` and both Setup disk-check fields; 3 Rust tests. **Not covered:** the Ollama app's settings location on macOS/Linux is unverified, so nothing is read there. — `[DONE in code]`
+
 - [2026-10-21] **v2.10.0 release prep (branch `release/v2.10.0`).**
   PR 305 merged as `399ef43`. Owner decision: ship macOS as an unsigned DMG
   rather than leave it out again. **Done in the branch:** version 2.10.0 in
