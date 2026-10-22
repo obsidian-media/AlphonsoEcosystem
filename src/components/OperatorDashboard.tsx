@@ -824,6 +824,7 @@ function OperatorSection({ title, id, focusMode, openSections, onToggle, childre
       <button
         type="button"
         onClick={() => onToggle?.(id)}
+        aria-expanded={open}
         className="flex w-full items-center justify-between gap-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-(--text-3) hover:text-(--accent)"
       >
         <span>{title}</span>
