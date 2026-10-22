@@ -12,10 +12,11 @@ import {
 import miyaMascot from '../assets/agents/miya/portrait.jpg';
 import { createAgentPacket, AGENTS } from '../services/agentBusService';
 import { appendSessionEvent } from '../services/sessionIntelligenceService';
-import { pushMiyaMemory, upsertBrandKit } from '../services/miyaMemoryService';
+import { listMiyaMemory, pushMiyaMemory, upsertBrandKit } from '../services/miyaMemoryService';
 import { buildMiyaExportPacket } from '../services/miyaExportPacketService';
-import { generateOllamaResponse } from '../lib/ollama';
+import { generateAgentLlmResponse } from '../lib/ollama';
 import { extractJsonObject } from '../lib/jsonUtils';
+import { toReadableText } from '../lib/readableValue';
 import { generateComfyUiImage, getComfyUiVideoHistory, queueComfyUiVideo } from '../services/connectorRegistryService';
 import { generateRunwayVideo, listPendingRunwayJobs, resumeRunwayTask } from '../services/runwayService';
 import { sendNativeNotification } from '../services/notificationService';
@@ -196,6 +197,15 @@ const defaultPipeline: PipelineInput = {
   script: ''
 };
 
+function loadSavedBrandKit(): BrandKit {
+  try {
+    const rows = (listMiyaMemory as unknown as () => Array<{ id?: string; content?: unknown }>)() || [];
+    const saved = rows.find((row) => row?.id === 'miya-brand-kit')?.content;
+    if (saved && typeof saved === 'object') return { ...defaultBrandKit, ...(saved as Partial<BrandKit>) };
+  } catch { /* memory unavailable */ }
+  return defaultBrandKit;
+}
+
 const defaultBrandKit: BrandKit = {
   fonts: '',
   logos: '',
@@ -242,7 +252,8 @@ export function MiyaStudio({
 }: MiyaStudioProps) {
   const [activeTab, setActiveTab] = useState<string>('script');
   const [pipeline, setPipeline] = useState<PipelineInput>(defaultPipeline);
-  const [brandKit, setBrandKit] = useState<BrandKit>(defaultBrandKit);
+  // QA 2026-10-22: the saved brand kit was never loaded back, so it was empty again on every visit.
+  const [brandKit, setBrandKit] = useState<BrandKit>(loadSavedBrandKit);
   const [creativeOutput, setCreativeOutput] = useState<CreativeOutput | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [lastError, setLastError] = useState<string>('');
@@ -317,14 +328,18 @@ export function MiyaStudio({
         `Topic: ${pipeline.topic}`,
         `Niche: ${pipeline.niche}`,
         `Goal: ${pipeline.goal}`,
-        `Script: ${pipeline.script}`
-      ].join('\n');
+        `Script: ${pipeline.script}`,
+        // QA 2026-10-22: the saved brand kit was never part of the prompt.
+        brandKitPrompt(brandKit)
+      ].filter(Boolean).join('\n');
 
-      const response = await generateOllamaResponse({
+      // Miya's own model choice (Settings -> Agent Providers), not Chat's.
+      const response = await generateAgentLlmResponse('miya', {
         endpoint: settings.endpoint!,
         model: settings.selectedModel!,
-        prompt
-      });
+        prompt,
+        format: 'json'
+      }) as { response?: string } | null;
 
       // Models routinely wrap the JSON in ``` fences or add a sentence around
       // it. A strict JSON.parse on the whole reply then failed, and the user
@@ -1488,8 +1503,9 @@ function PipelineInputs({ pipeline, setPipeline }: PipelineInputsProps) {
       <Field label="Niche" value={pipeline.niche} onChange={(value: string) => setPipeline({ ...pipeline, niche: value })} />
       <Field label="Goal" value={pipeline.goal} onChange={(value: string) => setPipeline({ ...pipeline, goal: value })} />
       <div className="lg:col-span-2 space-y-2">
-        <label className="text-xs font-semibold text-(--text-2)">Script / Notes</label>
+        <label htmlFor="miya-script-notes" className="text-xs font-semibold text-(--text-2)">Script / Notes</label>
         <textarea
+          id="miya-script-notes"
           value={pipeline.script}
           onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setPipeline({ ...pipeline, script: event.target.value })}
           rows={5}
@@ -1506,7 +1522,21 @@ interface BrandKitEditorProps {
   onSave: () => void;
 }
 
+/** The brand kit as prompt lines, or '' when nothing is filled in. */
+export function brandKitPrompt(kit: object | null | undefined): string {
+  const lines = Object.entries((kit || {}) as Record<string, unknown>)
+    .filter(([, v]) => typeof v === 'string' && v.trim())
+    .map(([k, v]) => `- ${toLabel(k)}: ${String(v).trim()}`);
+  return lines.length ? ['Follow this brand kit:', ...lines].join('\n') : '';
+}
+
 function BrandKitEditor({ brandKit, setBrandKit, onSave }: BrandKitEditorProps) {
+  // QA 2026-10-22: saving gave no visible sign that it worked.
+  const [savedAt, setSavedAt] = React.useState<number | null>(null);
+  const save = () => {
+    onSave();
+    setSavedAt(Date.now());
+  };
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1514,12 +1544,15 @@ function BrandKitEditor({ brandKit, setBrandKit, onSave }: BrandKitEditorProps) 
           <Field key={key} label={toLabel(key)} value={value} onChange={(next: string) => setBrandKit({ ...brandKit, [key]: next })} />
         ))}
       </div>
-      <button
-        onClick={onSave}
-        className="rounded-lg bg-(--agent-miya) px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:opacity-90"
-      >
-        Save Brand Kit Memory
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={save}
+          className="rounded-lg bg-(--agent-miya) px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:opacity-90"
+        >
+          Save Brand Kit Memory
+        </button>
+        {savedAt && <span role="status" className="text-[11px] text-(--text-3)">Saved {new Date(savedAt).toLocaleTimeString()}. Miya uses it in new packages.</span>}
+      </div>
     </div>
   );
 }
@@ -1537,16 +1570,27 @@ function OutputPanels({ output }: OutputPanelsProps) {
     );
   }
 
+  // QA 2026-10-22: nested values were printed as JSON; the model's full reply
+  // is kept, but folded away instead of shown as one more panel.
+  const { rawModelResponse, ...fields } = output as Record<string, unknown>;
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {Object.entries(output).map(([key, value]) => (
-        <article key={key} className="rounded-xl bg-(--surface-1) p-4 space-y-2">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-(--agent-miya)">{toLabel(key)}</h3>
-          <pre className="whitespace-pre-wrap text-[12px] leading-relaxed text-(--text-2)">
-            {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
-          </pre>
-        </article>
-      ))}
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {Object.entries(fields).map(([key, value]) => (
+          <article key={key} className="rounded-xl bg-(--surface-1) p-4 space-y-2" data-testid={`miya-output-${key}`}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-(--agent-miya)">{toLabel(key)}</h3>
+            <div className="whitespace-pre-wrap text-[12px] leading-relaxed text-(--text-2)">
+              {toReadableText(value)}
+            </div>
+          </article>
+        ))}
+      </div>
+      {typeof rawModelResponse === 'string' && rawModelResponse.trim() && (
+        <details className="rounded-xl bg-(--surface-1) p-3">
+          <summary className="cursor-pointer text-[11px] text-(--text-3)">The model's full reply</summary>
+          <pre className="mt-2 whitespace-pre-wrap text-[11px] text-(--text-3)">{rawModelResponse}</pre>
+        </details>
+      )}
     </div>
   );
 }
@@ -1658,10 +1702,12 @@ interface FieldProps {
 }
 
 function Field({ label, value, onChange }: FieldProps) {
+  const id = React.useId();
   return (
     <div className="space-y-2">
-      <label className="text-xs font-semibold text-(--text-2)">{label}</label>
+      <label htmlFor={id} className="text-xs font-semibold text-(--text-2)">{label}</label>
       <input
+        id={id}
         value={value}
         onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
         className="w-full rounded-xl bg-(--surface-2) px-3 py-2 text-sm text-(--text-1)"

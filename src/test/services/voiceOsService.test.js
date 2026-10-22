@@ -22,7 +22,9 @@ import {
   getVoiceServerStatus,
   getVoiceWebSocketUrl,
   startVoiceWatchdog,
-  stopVoiceWatchdog
+  stopVoiceWatchdog,
+  checkVoiceWatchdog,
+  resetVoiceWatchdogState
 } from '../../services/voiceOsService';
 
 import { invoke } from '@tauri-apps/api/core';
@@ -99,5 +101,49 @@ describe('voiceOsService', () => {
     vi.stubGlobal('window', { dispatchEvent: toastHandler });
     startVoiceWatchdog();
     expect(setInterval).toHaveBeenCalled();
+  });
+
+  // QA 2026-10-22: the watchdog treated "never started" as "crashed" and
+  // showed "Voice OS offline - restarting..." five times to every user.
+  describe('watchdog', () => {
+    beforeEach(() => {
+      resetVoiceWatchdogState();
+      invoke.mockReset();
+      vi.stubGlobal('window', { dispatchEvent: vi.fn() });
+    });
+
+    it('does nothing when Voice OS was never started', async () => {
+      invoke.mockResolvedValue('stopped');
+      for (let i = 0; i < 6; i++) await checkVoiceWatchdog();
+      expect(window.dispatchEvent).not.toHaveBeenCalled();
+      expect(invoke).not.toHaveBeenCalledWith('voice_start');
+    });
+
+    it('restarts Voice OS when it was running and stopped', async () => {
+      invoke.mockResolvedValueOnce('running');
+      await checkVoiceWatchdog();
+      invoke.mockResolvedValue('stopped');
+      await checkVoiceWatchdog();
+      expect(invoke).toHaveBeenCalledWith('voice_start');
+      expect(window.dispatchEvent.mock.calls[0][0].detail.message).toMatch(/stopped unexpectedly/);
+    });
+
+    it('does not restart Voice OS after a deliberate Stop', async () => {
+      invoke.mockResolvedValueOnce('running');
+      await checkVoiceWatchdog();
+      invoke.mockResolvedValue('stopped');
+      await stopVoiceServer();
+      await checkVoiceWatchdog();
+      expect(invoke).not.toHaveBeenCalledWith('voice_start');
+    });
+
+    it('gives up after five attempts', async () => {
+      invoke.mockResolvedValueOnce('running');
+      await checkVoiceWatchdog();
+      invoke.mockImplementation(async (cmd) => (cmd === 'voice_status' ? 'stopped' : null));
+      for (let i = 0; i < 8; i++) await checkVoiceWatchdog();
+      expect(invoke.mock.calls.filter(([c]) => c === 'voice_start')).toHaveLength(4);
+      expect(window.dispatchEvent.mock.calls.at(-1)[0].detail.message).toMatch(/could not be restarted after 5 attempts/);
+    });
   });
 });

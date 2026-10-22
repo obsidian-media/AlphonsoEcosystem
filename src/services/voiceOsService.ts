@@ -10,6 +10,8 @@ export async function startVoiceServer() {
 }
 
 export async function stopVoiceServer() {
+  // A deliberate stop: the watchdog must not start it again.
+  _seenRunning = false;
   const result = await invoke('voice_stop');
   appendAgentActivity({ agent: 'alphonso', action: 'voice_server_stop', detail: 'Voice OS stopped' });
   return result;
@@ -38,38 +40,52 @@ export function getVoiceWebSocketUrl(): string {
 
 let _watchdogInterval: ReturnType<typeof setInterval> | null = null;
 let _watchdogFailures = 0;
+let _seenRunning = false;
 const WATCHDOG_MAX_FAILURES = 5;
+
+function toast(message: string): void {
+  window.dispatchEvent(new CustomEvent('alphonso:toast', { detail: { type: 'error', message } }));
+}
+
+/**
+ * One watchdog check. Restarts Voice OS only when it was running and has
+ * stopped (QA 2026-10-22): the watchdog used to treat "not started" as
+ * "crashed", so everyone who doesn't use voice got "Voice OS offline -
+ * restarting..." five times after launch while it tried to start Python.
+ */
+export async function checkVoiceWatchdog(): Promise<void> {
+  if (_watchdogFailures >= WATCHDOG_MAX_FAILURES) return; // backed off
+  let status: unknown;
+  try {
+    status = await getVoiceServerStatus();
+  } catch {
+    status = 'unknown';
+  }
+  if (status === 'running') {
+    _seenRunning = true;
+    _watchdogFailures = 0;
+    return;
+  }
+  if (!_seenRunning) return; // never started (or stopped on purpose): nothing to restart
+  _watchdogFailures++;
+  if (_watchdogFailures >= WATCHDOG_MAX_FAILURES) {
+    toast('Voice OS stopped and could not be restarted after 5 attempts. Start it again from the Voice page.');
+    return;
+  }
+  toast('Voice OS stopped unexpectedly. Restarting...');
+  try { await startVoiceServer(); } catch { /* the next check reports it */ }
+}
 
 export async function startVoiceWatchdog() {
   stopVoiceWatchdog();
   _watchdogFailures = 0;
-  _watchdogInterval = setInterval(async () => {
-    if (_watchdogFailures >= WATCHDOG_MAX_FAILURES) return; // backed off — stop spamming
-    try {
-      const status = await getVoiceServerStatus();
-      if (status === 'stopped') {
-        _watchdogFailures++;
-        window.dispatchEvent(new CustomEvent('alphonso:toast', {
-          detail: { type: 'error', message: _watchdogFailures >= WATCHDOG_MAX_FAILURES
-            ? 'Voice OS offline — giving up after 5 attempts. Restart manually in Runtimes.'
-            : 'Voice OS offline — restarting...' }
-        }));
-        if (_watchdogFailures < WATCHDOG_MAX_FAILURES) {
-          try { await startVoiceServer(); } catch { /* non-blocking */ }
-        }
-      } else {
-        _watchdogFailures = 0; // reset on healthy status
-      }
-    } catch {
-      _watchdogFailures++;
-      if (_watchdogFailures <= WATCHDOG_MAX_FAILURES) {
-        window.dispatchEvent(new CustomEvent('alphonso:toast', {
-          detail: { type: 'error', message: 'Voice OS offline — restarting...' }
-        }));
-        try { await startVoiceServer(); } catch { /* non-blocking */ }
-      }
-    }
-  }, 30_000);
+  _watchdogInterval = setInterval(() => { void checkVoiceWatchdog(); }, 30_000);
+}
+
+/** Test helper: forget what the watchdog has seen. */
+export function resetVoiceWatchdogState(): void {
+  _watchdogFailures = 0;
+  _seenRunning = false;
 }
 
 export function stopVoiceWatchdog() {
