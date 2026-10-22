@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { SettingsView } from '../components/SettingsView';
 
@@ -62,10 +62,10 @@ vi.mock('../services/memoryMonitorService', () => ({
 }));
 
 vi.mock('../services/coachEngineService', () => ({
-  ALL_COACH_TRIGGER_IDS: [],
+  ALL_COACH_TRIGGER_IDS: ['critical_override_pattern'],
   getCoachEnabled: vi.fn().mockReturnValue(false),
   setCoachEnabled: vi.fn(),
-  getAllCoachTriggerToggles: vi.fn().mockReturnValue({}),
+  getAllCoachTriggerToggles: vi.fn().mockReturnValue({ critical_override_pattern: true }),
   setCoachTriggerEnabled: vi.fn(),
   getCoachNarrativeEnabled: vi.fn().mockReturnValue(false),
   setCoachNarrativeEnabled: vi.fn(),
@@ -184,5 +184,26 @@ describe('SettingsView smoke', () => {
       />
     );
     expect(document.body.textContent.length).toBeGreaterThan(0);
+  });
+
+  // QA 2026-10-21: the Coach toggles were icon-only buttons with no name or
+  // on/off state, so a screen reader (and the desktop tests) could not tell
+  // what they did or whether they were on.
+  it('names the Coach toggles and reports their on/off state', () => {
+    render(
+      <SettingsView
+        settings={minimalSettings}
+        setSettings={vi.fn()}
+        ollamaStatus={{ state: 'running', label: 'Running' }}
+        installedModels={[]}
+        onCheckOllama={vi.fn()}
+        onCopyTroubleshootingCommand={vi.fn()}
+        copyState=""
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Coach' }));
+    expect(screen.getByRole('switch', { name: 'Toggle Session Coach detection engine' }).getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByRole('switch', { name: 'Toggle Ollama-narrative rewriting' }).getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByRole('switch', { name: 'Toggle Approval theater (repeated high-risk approvals)' }).getAttribute('aria-checked')).toBe('true');
   });
 });

@@ -53,7 +53,9 @@ const ctx = await startVitest(
     // `src` filter would also match gateway/*/src/*.test.mjs. Those are Node
     // built-in test-runner files, run separately by CI's "Cloud Voice &
     // Gateway Tests" job, so keep them (and the Python voice tree) out of here.
-    exclude: [...configDefaults.exclude, 'gateway/**', 'voice/**'],
+    // `.claude/**` holds local agent worktrees (full repo copies); without it
+    // the `src` filter ran their tests too, doubling local counts (2026-10-21).
+    exclude: [...configDefaults.exclude, 'gateway/**', 'voice/**', '.claude/**'],
     pool: 'forks',
     fileParallelism: false,
     configFile: false

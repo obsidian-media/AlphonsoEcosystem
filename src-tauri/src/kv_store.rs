@@ -42,6 +42,33 @@ pub fn kv_get(app: tauri::AppHandle, key: String) -> Result<Option<String>, Stri
   }
 }
 
+/// Keys that start with `prefix`, sorted. Compares with `substr`, not `LIKE`,
+/// because `_` in a prefix such as `alphonso_` is a `LIKE` wildcard.
+pub(crate) fn list_keys_with_prefix(
+  conn: &Connection,
+  prefix: &str,
+) -> Result<Vec<String>, String> {
+  let mut stmt = conn
+    .prepare("SELECT key FROM kv_store WHERE substr(key, 1, length(?1)) = ?1 ORDER BY key")
+    .map_err(|e| e.to_string())?;
+  let rows = stmt
+    .query_map(params![prefix], |row| row.get::<_, String>(0))
+    .map_err(|e| e.to_string())?;
+  rows
+    .collect::<Result<Vec<_>, _>>()
+    .map_err(|e| e.to_string())
+}
+
+/// Lists stored keys with a prefix. Settings → Backup calls this to include
+/// the backend store; it was called before the command existed, so backups
+/// silently left the store out (QA, 2026-10-21).
+#[tauri::command]
+pub fn kv_list_keys(app: tauri::AppHandle, prefix: String) -> Result<Vec<String>, String> {
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
+  ensure_kv_table(&conn)?;
+  list_keys_with_prefix(&conn, &prefix)
+}
+
 #[tauri::command]
 pub fn kv_delete(app: tauri::AppHandle, key: String) -> Result<(), String> {
   let (conn, _) = crate::memory_store::open_memory_db(&app)?;
@@ -128,6 +155,28 @@ mod tests {
       )
       .expect("kv_get query");
     assert_eq!(result, "test_value");
+  }
+
+  #[test]
+  fn list_keys_with_prefix_matches_the_literal_prefix_only() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_kv_table(&conn).expect("ensure_kv_table");
+    for key in ["alphonso_b", "alphonso_a", "alphonsoX_c", "other_d"] {
+      conn
+        .execute(
+          "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, 'v', 0)",
+          params![key],
+        )
+        .expect("insert");
+    }
+    // `alphonsoX_c` would match `LIKE 'alphonso_%'`, since `_` is a wildcard.
+    assert_eq!(
+      list_keys_with_prefix(&conn, "alphonso_").expect("list"),
+      vec!["alphonso_a".to_string(), "alphonso_b".to_string()]
+    );
+    assert!(list_keys_with_prefix(&conn, "none_")
+      .expect("list")
+      .is_empty());
   }
 
   #[test]

@@ -9,6 +9,7 @@ import {
   acknowledgeThreadMessage,
   confirmThreadMessage,
   migrateLegacySessions,
+  setThreadGovernance,
   parseMentions,
   findCrossThreadContext,
   type BoardroomThread,
@@ -166,6 +167,9 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [facilitatorPending, setFacilitatorPending] = useState(false);
   const [activeResponder, setActiveResponder] = useState<string | null>(null);
+  const [threadAction, setThreadAction] = useState<'conclude' | 'distribute' | 'brief' | null>(null);
+  const [distributeOpen, setDistributeOpen] = useState(false);
+  const [slackChannel, setSlackChannel] = useState('');
   const stopRequestedRef = useRef(false);
   const generationAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -323,6 +327,150 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
     }
   }
 
+  // ── Thread actions, moved here from the old Boardroom session view (owner,
+  // 2026-10-21). Each one posts what really happened into the thread. The old
+  // view showed a random "risk score" (Maria returns a risk level, not a
+  // number) and said "sent via Marcus" even when nothing was sent.
+  function refreshActiveThread() {
+    setThreads(listThreads());
+    if (activeThreadId) setMessages(listThreadMessages(activeThreadId));
+  }
+
+  function postThreadNote(speaker: string, content: string, kind: BoardroomThreadMessage['kind'] = 'system') {
+    if (!activeThreadId) return;
+    addThreadMessage({ threadId: activeThreadId, speaker, content, kind });
+  }
+
+  async function handleConclude() {
+    if (!activeThreadId || !activeThread || threadAction) return;
+    setThreadAction('conclude');
+    try {
+      const transcript = messages
+        .filter((m) => ['message', 'response', 'briefing'].includes(m.kind))
+        .slice(-20)
+        .map((m) => `${agentLabel(m.speaker)}: ${m.content}`)
+        .join('\n')
+        .slice(0, 6000);
+      const { runMariaGovernanceAudit } = await import('../services/mariaAuditService');
+      const result = await runMariaGovernanceAudit(
+        `Boardroom discussion: ${activeThread.topic}\n\n${transcript}`,
+        { commandText: activeThread.topic, actionType: 'boardroom_conclusion' }
+      );
+      const review = result?.schema;
+      if (!review?.riskLevel) throw new Error('Maria returned no review');
+      // confidenceLevel 'temporary' means Maria's model review could not be
+      // used and her rule-based check produced this verdict; say which.
+      const source: 'model' | 'rules' = review.confidenceLevel === 'temporary' ? 'rules' : 'model';
+      const governance = {
+        riskLevel: String(review.riskLevel),
+        approvalRequired: Boolean(review.approvalRequired),
+        summary: String(review.summary || '').trim(),
+        reviewedAt: new Date().toISOString(),
+        source
+      };
+      setThreadGovernance(activeThreadId, governance);
+      const label = source === 'rules'
+        ? "Maria's rule-based check (her model review could not be read)"
+        : "Maria's governance review";
+      postThreadNote(
+        'maria',
+        `${label}: risk ${governance.riskLevel}${governance.approvalRequired ? ', approval required before anything is sent out' : ''}. ${governance.summary}`,
+        'conclusion'
+      );
+      try {
+        const { pushMemory } = await import('../services/unifiedMemoryService.js');
+        // pushMemory is plain JS; its inferred parameter type lists only
+        // `namespace`, though it stores every field (same call as the old view).
+        pushMemory({
+          title: `Boardroom: ${activeThread.topic}`,
+          content: { governance, messages: messages.length },
+          category: 'decision_memory',
+          namespace: 'ecosystem',
+          sourceAgent: 'maria'
+        } as Parameters<typeof pushMemory>[0]);
+      } catch { /* saving to memory must not undo the conclusion */ }
+    } catch (error) {
+      postThreadNote('alphonso', `Maria's review did not complete: ${error instanceof Error ? error.message : String(error)}. The thread stays open.`, 'failure');
+    } finally {
+      refreshActiveThread();
+      setThreadAction(null);
+    }
+  }
+
+  async function handleDistribute(mode: 'review' | 'slack') {
+    const governance = activeThread?.governance;
+    if (!activeThreadId || !activeThread || !governance || threadAction) return;
+    const channel = slackChannel.trim();
+    if (mode === 'slack' && !channel) return;
+    setThreadAction('distribute');
+    try {
+      if (mode === 'slack') {
+        // Sending to Slack leaves the app: ask first, and refuse if no
+        // approval prompt is available.
+        const approved = requestApproval
+          ? await requestApproval({
+            actionLabel: `Post the Boardroom conclusion "${activeThread.topic}" to Slack ${channel}`,
+            agent: 'marcus',
+            riskLevel: governance.riskLevel === 'low' ? 'medium' : 'high',
+            requireApproval: true
+          })
+          : false;
+        if (!approved) {
+          postThreadNote('marcus', `Nothing was sent: posting to Slack ${channel} was not approved.`);
+          return;
+        }
+      }
+      const text = `Boardroom: ${activeThread.topic}\n${governance.summary}`;
+      const { runMarcusDistribution } = await import('../services/marcusExecutionService');
+      const result = await runMarcusDistribution(
+        text,
+        {
+          actionType: mode === 'slack' ? 'slack_message' : 'distribution_review',
+          commandText: activeThread.topic,
+          payload: mode === 'slack' ? { channel, text } : {}
+        },
+        { maria: { schema: { riskLevel: governance.riskLevel, approvalRequired: governance.approvalRequired } } }
+      );
+      const summary = String(result?.summary || '').trim() || 'Marcus returned no summary.';
+      postThreadNote(
+        'marcus',
+        mode === 'review'
+          ? `Distribution review only, nothing was sent. ${summary}`
+          : summary
+      );
+      if (mode === 'slack') setDistributeOpen(false);
+    } catch (error) {
+      postThreadNote('marcus', `Distribution failed, nothing was sent: ${error instanceof Error ? error.message : String(error)}`, 'failure');
+    } finally {
+      refreshActiveThread();
+      setThreadAction(null);
+    }
+  }
+
+  async function handleCreativeBrief() {
+    if (!activeThreadId || !activeThread || threadAction) return;
+    setThreadAction('brief');
+    try {
+      const { createJoseCommandRoute } = await import('../services/joseCommandRouterService');
+      const context = activeThread.governance?.summary || messages.slice(-5).map((m) => m.content).join(' ').slice(0, 800);
+      const route = await createJoseCommandRoute({
+        commandText: `ask miya: Generate a creative brief for: ${activeThread.topic}\nContext: ${context}`,
+        source: 'boardroom'
+      });
+      postThreadNote(
+        'jose',
+        route
+          ? `Creative brief request sent to Miya (status: ${route.status}). Follow it in Orchestrator → Packets.`
+          : 'Jose could not route the creative brief request to Miya.'
+      );
+    } catch (error) {
+      postThreadNote('jose', `The creative brief request failed: ${error instanceof Error ? error.message : String(error)}`, 'failure');
+    } finally {
+      refreshActiveThread();
+      setThreadAction(null);
+    }
+  }
+
   function handleStop() {
     stopRequestedRef.current = true;
     generationAbortControllerRef.current?.abort();
@@ -432,6 +580,64 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
       <div className="flex-1 flex flex-col overflow-hidden">
         {activeThread ? (
           <>
+            <div className="flex flex-wrap items-center gap-2 border-b border-(--border) px-4 py-2" data-testid="boardroom-thread-actions">
+              <button
+                onClick={handleConclude}
+                disabled={Boolean(threadAction) || activeThread.status === 'concluded'}
+                title="Maria reviews this discussion for governance and risk, and the thread is marked concluded"
+                className="rounded-md border border-(--border) px-2.5 py-1 text-[11px] font-semibold text-(--text-2) hover:bg-(--surface-2) disabled:opacity-40"
+              >
+                {threadAction === 'conclude' ? 'Maria is reviewing…' : activeThread.status === 'concluded' ? 'Concluded' : 'Conclude'}
+              </button>
+              <button
+                onClick={() => setDistributeOpen((open) => !open)}
+                disabled={Boolean(threadAction) || !activeThread.governance}
+                title={activeThread.governance ? 'Marcus prepares or sends the conclusion' : 'Conclude the thread first, so Maria has reviewed it'}
+                className="rounded-md border border-(--border) px-2.5 py-1 text-[11px] font-semibold text-(--text-2) hover:bg-(--surface-2) disabled:opacity-40"
+              >
+                {threadAction === 'distribute' ? 'Marcus is working…' : 'Distribute'}
+              </button>
+              <button
+                onClick={handleCreativeBrief}
+                disabled={Boolean(threadAction)}
+                title="Ask Miya, through Jose, for a creative brief on this topic"
+                className="rounded-md border border-(--border) px-2.5 py-1 text-[11px] font-semibold text-(--text-2) hover:bg-(--surface-2) disabled:opacity-40"
+              >
+                {threadAction === 'brief' ? 'Sending to Miya…' : 'Creative brief'}
+              </button>
+              {activeThread.governance && (
+                <span className="text-[10px] text-(--text-3)" data-testid="boardroom-governance-badge">
+                  Maria{activeThread.governance.source === 'rules' ? ' (rule-based)' : ''}: risk {activeThread.governance.riskLevel}
+                  {activeThread.governance.approvalRequired ? ' · approval required' : ''}
+                </span>
+              )}
+            </div>
+            {distributeOpen && activeThread.governance && (
+              <div className="flex flex-wrap items-center gap-2 border-b border-(--border) bg-(--surface-1) px-4 py-2 text-[11px]">
+                <button
+                  onClick={() => handleDistribute('review')}
+                  disabled={Boolean(threadAction)}
+                  className="rounded-md border border-(--border) px-2.5 py-1 font-semibold text-(--text-2) hover:bg-(--surface-2) disabled:opacity-40"
+                >
+                  Review only (sends nothing)
+                </button>
+                <span className="text-(--text-3)">or post to Slack</span>
+                <input
+                  aria-label="Slack channel"
+                  value={slackChannel}
+                  onChange={(e) => setSlackChannel(e.target.value)}
+                  placeholder="#channel"
+                  className="w-32 rounded-md border border-(--border) bg-(--surface-2) px-2 py-1 text-(--text-1)"
+                />
+                <button
+                  onClick={() => handleDistribute('slack')}
+                  disabled={Boolean(threadAction) || !slackChannel.trim()}
+                  className="rounded-md border border-(--border) px-2.5 py-1 font-semibold text-(--text-2) hover:bg-(--surface-2) disabled:opacity-40"
+                >
+                  Post to Slack (asks first)
+                </button>
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto space-y-2 p-4">
               {messages.map((m) => (
                 <MessageBubble key={m.id} message={m} onRetry={handleRetry} onAcknowledge={handleAcknowledge} onConfirm={handleConfirm} />
