@@ -824,8 +824,36 @@ export async function generateAgentLlmResponse(agentId: string, options: AgentGe
   throw new Error(`Unknown provider "${(config as { provider: string }).provider}" for agent "${agentId}"`);
 }
 
+/**
+ * The desktop app pulls through the backend (`ollama_pull_model`), which works
+ * for every Ollama; the window's own request is refused by an Ollama the user
+ * started (QA 2026-10-22, Bug 73).
+ */
+async function pullOllamaModelThroughBackend(baseUrl: string, model: string, onProgress?: (p: ModelProgress) => void): Promise<{ ok: boolean; model: string }> {
+  const { listen } = await import('@tauri-apps/api/event');
+  const pullId = `pull-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const unlisten = await listen<{ pullId: string; status: string; completed: number | null; total: number | null }>('ollama://pull_progress', (event) => {
+    const p = event.payload;
+    if (!p || p.pullId !== pullId) return;
+    const hasBytes = typeof p.completed === 'number' && typeof p.total === 'number' && p.total > 0;
+    onProgress?.({
+      status: p.status || '',
+      completed: hasBytes ? p.completed : null,
+      total: hasBytes ? p.total : null,
+      percent: hasBytes ? Math.round(((p.completed as number) / (p.total as number)) * 100) : null
+    });
+  });
+  try {
+    await invoke('ollama_pull_model', { endpoint: baseUrl, model, pullId });
+    return { ok: true, model };
+  } finally {
+    unlisten();
+  }
+}
+
 export async function pullOllamaModel({ endpoint, model, onProgress }: PullModelOptions): Promise<{ ok: boolean; model: string }> {
   const baseUrl = normalizeEndpoint(endpoint);
+  if (isTauri()) return pullOllamaModelThroughBackend(baseUrl, model, onProgress);
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 600000);
 
