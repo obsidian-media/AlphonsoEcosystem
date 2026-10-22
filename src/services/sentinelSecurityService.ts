@@ -2,7 +2,8 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { generateAgentLlmResponse, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
-import { appendOrchestrationReceipt } from './orchestrationReceiptService';
+import { appendOrchestrationReceipt, listOrchestrationReceipts } from './orchestrationReceiptService';
+import { listAgentActivity } from './agentActivityService';
 import { classifyMissionRoomRisk, redactMissionRoomSecrets } from './missionRoomService';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
@@ -79,6 +80,31 @@ const THREAT_PATTERNS: ThreatPattern[] = [
   { pattern: /\b(delete|remove|destroy|wipe|clear\s+all)\b/i, severity: 'medium', type: 'destructive_action', weight: 10 },
   { pattern: /\b(install|npm\s+install|pip\s+install|cargo\s+add)\b/i, severity: 'low', type: 'dependency_install', weight: 4 }
 ];
+
+/**
+ * Sentinel's quick scan of recent agent work: the last `days` days of
+ * orchestration receipts and the activity log (QA 2026-10-22, Bug 71). The
+ * sidebar's "quick scan" used to call scanForThreats('', {}) and so always
+ * reported all clear.
+ */
+export function scanRecentActivity(days = 7): ScanResult & { itemsScanned: number } {
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const lines: string[] = [];
+  const outputs: Record<string, { summary?: string; resultState?: string }> = {};
+  try {
+    for (const r of listOrchestrationReceipts().filter((row) => Number(row.timestampMs || 0) > since).slice(0, 200)) {
+      const detail = String(r.details?.summary || r.details?.error || r.details?.reason || '');
+      lines.push(`${r.agent} ${r.eventType} ${r.status} ${r.actionType || ''} ${detail}`.trim());
+      if (r.status === 'failed' || r.status === 'rejected') outputs[`${r.agent}:${r.id}`] = { summary: detail, resultState: r.status };
+    }
+  } catch { /* receipts unavailable */ }
+  try {
+    for (const a of listAgentActivity().filter((row) => row.ts > since).slice(-200)) {
+      lines.push(`${a.agent} ${a.action} ${a.detail || ''}`.trim());
+    }
+  } catch { /* activity unavailable */ }
+  return { ...scanForThreats(lines.join('\n'), outputs), itemsScanned: lines.length };
+}
 
 export function scanForThreats(commandText: string, priorOutputs: Record<string, { summary?: string; resultState?: string }>): ScanResult {
   const allText = [

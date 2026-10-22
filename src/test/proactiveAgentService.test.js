@@ -210,3 +210,37 @@ describe('startProactiveWatcher', () => {
     vi.useRealTimers();
   });
 });
+
+// QA 2026-10-22 (Bug 72): "It's been 999 days since the last code generation"
+// was shown to everyone who never generated code.
+describe('project staleness suggestion', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMemory.mockReset();
+    // Earlier tests change the metrics; keep every other check quiet here.
+    getAgentMetrics.mockReturnValue({ totalExecutions: 0, avgConfidence: 80, avgIterations: 1.0, validationPassRate: 90, errorPatterns: [] });
+  });
+
+  it('says nothing when code was never generated', () => {
+    listMemory.mockImplementation(() => []);
+    const found = [];
+    for (let i = 0; i < 8; i++) {
+      const s = runProactiveCheck();
+      if (s) found.push(s);
+    }
+    expect(found.map((s) => s.type)).not.toContain('project_stale');
+    expect(JSON.stringify(found)).not.toMatch(/999 days/);
+  });
+
+  it('suggests picking up again after a real gap', () => {
+    const tenDaysAgo = Date.now() - 10 * 86_400_000;
+    listMemory.mockImplementation((filter) => (filter?.category === 'code_generation' ? [{ timestampMs: tenDaysAgo }] : []));
+    const found = [];
+    for (let i = 0; i < 8; i++) {
+      const s = runProactiveCheck();
+      if (s) found.push(s);
+    }
+    const stale = found.find((s) => s.type === 'project_stale');
+    expect(stale?.message).toMatch(/It's been 10 days/);
+  });
+});
