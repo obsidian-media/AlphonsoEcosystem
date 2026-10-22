@@ -566,7 +566,8 @@ export function createHermesHandoff({ objective = '', project = '', constraints 
     'Role: Hermes, external executor worker.',
     `Project: ${redactMissionRoomSecrets(project || 'UNSPECIFIED')}`,
     `Objective: ${redactMissionRoomSecrets(objective || 'Audit and execute the assigned task.')}`,
-    'Commander: Kite. Final approval: the project owner.',
+    // "Kite" was a planned external Hermes agent; removed (owner, 2026-10-21).
+    'Final approval: the project owner.',
     'Requirements:',
     '- Inspect before editing.',
     '- Separate proved facts from assumptions.',

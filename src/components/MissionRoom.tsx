@@ -491,7 +491,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-(--text-3)">Task board</div>
-            <div className="mt-1 text-sm text-(--text-3)">Local board for Hermes assignments and Kite review.</div>
+            <div className="mt-1 text-sm text-(--text-3)">Local board for Hermes assignments and your review.</div>
           </div>
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-(--text-3)">
             <CheckCircle2 className="h-4 w-4 text-(--success)" /> Evidence first
