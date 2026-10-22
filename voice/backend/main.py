@@ -81,7 +81,7 @@ async def _process_pcm(
 ) -> None:
     """Run the STT→LLM→TTS pipeline for one utterance and stream events back."""
     config = config or {}
-    async for event in run_pipeline(session_id, pcm, conversation_history, model=config.get("model"), url=config.get("ollama_url")):
+    async for event in run_pipeline(session_id, pcm, conversation_history, model=config.get("model")):
         etype = event.get("type")
         try:
             if etype == "tts":
@@ -151,15 +151,13 @@ async def _handle_text_msg(
     except json.JSONDecodeError:
         ctrl = {}  # ignore malformed control messages
     if ctrl.get("type") == "config" and config is not None:
-        # The user's choices in Alphonso (QA 2026-10-22: the model and Ollama
-        # address used to be fixed). Only http(s) addresses are accepted.
+        # The user's model choice in Alphonso (QA 2026-10-22: it used to be
+        # fixed). The Ollama address is set only by the launcher
+        # (LOCAL_OLLAMA_URL), never by a client, so it is not accepted here.
         model = str(ctrl.get("ollamaModel") or "").strip()
-        endpoint = str(ctrl.get("ollamaEndpoint") or "").strip().rstrip("/")
         if model:
             config["model"] = model[:200]
-        if endpoint.startswith(("http://", "https://")):
-            config["ollama_url"] = endpoint + "/api/chat"
-        await ws.send_json({"type": "config", "model": config.get("model"), "ollamaUrl": config.get("ollama_url")})
+        await ws.send_json({"type": "config", "model": config.get("model"), "ollamaUrl": local_ollama_url()})
         return
     if ctrl.get("type") == "reset":
         cancel(session_id)

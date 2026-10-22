@@ -40,8 +40,11 @@ describe('voiceOsService', () => {
 
   it('startVoiceServer calls invoke and logs activity', async () => {
     invoke.mockResolvedValue({ status: 'running' });
+    localStorageMock.getItem.mockImplementation((key) => (key === 'alphonso_settings' ? JSON.stringify({ endpoint: 'http://192.168.1.20:11434', selectedModel: 'qwen2.5:7b' }) : null));
     const result = await startVoiceServer();
-    expect(invoke).toHaveBeenCalledWith('voice_start');
+    // The Ollama address and model from Settings are given at start (2026-10-22).
+    expect(invoke).toHaveBeenCalledWith('voice_start', { ollamaEndpoint: 'http://192.168.1.20:11434', ollamaModel: 'qwen2.5:7b' });
+    localStorageMock.getItem.mockReset();
     expect(appendAgentActivity).toHaveBeenCalledWith({
       agent: 'alphonso',
       action: 'voice_server_start',
@@ -116,7 +119,7 @@ describe('voiceOsService', () => {
       invoke.mockResolvedValue('stopped');
       for (let i = 0; i < 6; i++) await checkVoiceWatchdog();
       expect(window.dispatchEvent).not.toHaveBeenCalled();
-      expect(invoke).not.toHaveBeenCalledWith('voice_start');
+      expect(invoke.mock.calls.some(([cmd]) => cmd === 'voice_start')).toBe(false);
     });
 
     it('restarts Voice OS when it was running and stopped', async () => {
@@ -124,7 +127,7 @@ describe('voiceOsService', () => {
       await checkVoiceWatchdog();
       invoke.mockResolvedValue('stopped');
       await checkVoiceWatchdog();
-      expect(invoke).toHaveBeenCalledWith('voice_start');
+      expect(invoke).toHaveBeenCalledWith('voice_start', expect.objectContaining({ ollamaModel: expect.any(String) }));
       expect(window.dispatchEvent.mock.calls[0][0].detail.message).toMatch(/stopped unexpectedly/);
     });
 
@@ -134,7 +137,7 @@ describe('voiceOsService', () => {
       invoke.mockResolvedValue('stopped');
       await stopVoiceServer();
       await checkVoiceWatchdog();
-      expect(invoke).not.toHaveBeenCalledWith('voice_start');
+      expect(invoke.mock.calls.some(([cmd]) => cmd === 'voice_start')).toBe(false);
     });
 
     it('gives up after five attempts', async () => {

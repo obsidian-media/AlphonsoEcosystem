@@ -1,10 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
 import { appendAgentActivity } from './agentActivityService.js';
+import { getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../lib/ollama';
 
 const DEFAULT_WS_URL = 'ws://127.0.0.1:8766/ws';
 
 export async function startVoiceServer() {
-  const result = await invoke('voice_start');
+  // The Ollama address and model chosen in Settings. The address is given to
+  // Voice OS only here, at start, never over its connection (2026-10-22).
+  const result = await invoke('voice_start', { ollamaEndpoint: getConfiguredOllamaEndpoint(), ollamaModel: getConfiguredOllamaModel() });
   appendAgentActivity({ agent: 'alphonso', action: 'voice_server_start', detail: 'Voice OS started' });
   return result;
 }

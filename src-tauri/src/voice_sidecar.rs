@@ -93,11 +93,37 @@ pub(crate) fn random_hex_token() -> String {
   bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
+/// The `/api/chat` address for Voice OS, from the Ollama address chosen in
+/// Settings. Only http(s) with a host is accepted; anything else keeps Voice
+/// OS's default (localhost). Voice OS never takes an address from a client
+/// connection, only from here (2026-10-22).
+fn voice_ollama_chat_url(endpoint: Option<&str>) -> Option<String> {
+  let raw = endpoint?.trim().trim_end_matches('/');
+  let url = reqwest::Url::parse(raw).ok()?;
+  if !matches!(url.scheme(), "http" | "https") || url.host_str().map_or(true, str::is_empty) {
+    return None;
+  }
+  Some(format!("{raw}/api/chat"))
+}
+
+/// The Ollama model for Voice OS: a plain model name, or none.
+fn voice_ollama_model(model: Option<&str>) -> Option<String> {
+  let m = model?.trim();
+  let ok = !m.is_empty()
+    && m.len() <= 200
+    && m
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || "._:-/".contains(c));
+  ok.then(|| m.to_string())
+}
+
 #[tauri::command]
 pub async fn voice_start(
   app: tauri::AppHandle,
   state: State<'_, VoiceSidecar>,
   token_state: State<'_, VoiceToken>,
+  ollama_endpoint: Option<String>,
+  ollama_model: Option<String>,
 ) -> Result<String, String> {
   // Another launch path (Runtime Hub's "voice-os" ToolDef in runtime_manager.rs)
   // can independently spawn the same uvicorn process on this port with its own
@@ -178,10 +204,16 @@ pub async fn voice_start(
         "--app-dir",
       ])
       .arg(&backend_path)
-      .env("VOICE_PIPER_MODEL_DIR", runtimes_dir.join("voice-os"))
+      .env("VOICE_PIPER_MODEL_DIR", &voice_dir)
       .env("VOICE_OS_TOKEN", &token)
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
+    if let Some(url) = voice_ollama_chat_url(ollama_endpoint.as_deref()) {
+      cmd.env("LOCAL_OLLAMA_URL", url);
+    }
+    if let Some(model) = voice_ollama_model(ollama_model.as_deref()) {
+      cmd.env("VOICE_OLLAMA_MODEL", model);
+    }
     crate::utils::no_window(&mut cmd);
     let mut child = match cmd.spawn() {
       Ok(c) => c,
@@ -396,5 +428,31 @@ mod tests {
     };
     assert_eq!(resolved, std::path::PathBuf::from(expected_name));
     let _ = fs::remove_dir_all(&tmp);
+  }
+}
+
+#[cfg(test)]
+mod voice_ollama_settings_tests {
+  use super::*;
+
+  #[test]
+  fn chat_url_comes_from_a_web_address_only() {
+    assert_eq!(
+      voice_ollama_chat_url(Some("http://192.168.1.20:11434/")).as_deref(),
+      Some("http://192.168.1.20:11434/api/chat")
+    );
+    assert_eq!(voice_ollama_chat_url(Some("file:///etc/passwd")), None);
+    assert_eq!(voice_ollama_chat_url(Some("not a url")), None);
+    assert_eq!(voice_ollama_chat_url(None), None);
+  }
+
+  #[test]
+  fn model_must_be_a_plain_name() {
+    assert_eq!(
+      voice_ollama_model(Some("qwen2.5:7b")).as_deref(),
+      Some("qwen2.5:7b")
+    );
+    assert_eq!(voice_ollama_model(Some("bad name; rm -rf")), None);
+    assert_eq!(voice_ollama_model(Some("  ")), None);
   }
 }

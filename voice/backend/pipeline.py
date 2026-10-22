@@ -22,17 +22,19 @@ def local_ollama_url() -> str:
     return os.environ.get("LOCAL_OLLAMA_URL", "http://localhost:11434/api/chat").strip()
 
 
-async def _call_ollama(session_id, text, agent, history, model=None, url=None):
+async def _call_ollama(session_id, text, agent, history, model=None):
     """Stream a reply from Ollama's /api/chat, yielding text chunks as they arrive.
 
-    ``model``/``url`` come from the app's config message (the user's choices in
-    Alphonso); without one, the launcher's settings or the defaults apply.
+    ``model`` comes from the app's config message (the user's choice in
+    Alphonso). The address is only ever the launcher's LOCAL_OLLAMA_URL: it is
+    never taken from the connection, so a client cannot make Voice OS send
+    requests to an address of its choosing (CodeQL, 2026-10-22).
     """
     messages = [*history, {"role": "user", "content": text}]
     payload = {"model": model or ollama_model(), "messages": messages, "stream": True}
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
-            async with client.stream("POST", url or local_ollama_url(), json=payload) as response:
+            async with client.stream("POST", local_ollama_url(), json=payload) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if not line:
@@ -50,7 +52,7 @@ async def _call_ollama(session_id, text, agent, history, model=None, url=None):
         yield f"[Voice OS could not reach Ollama: {error}]"
 
 
-async def run_pipeline(session_id, pcm, history, model=None, url=None):
+async def run_pipeline(session_id, pcm, history, model=None):
     if not is_speech(pcm):
         return
 
@@ -66,7 +68,7 @@ async def run_pipeline(session_id, pcm, history, model=None, url=None):
     yield {'type': 'state', 'value': 'thinking'}
 
     full_reply = ""
-    async for chunk in _call_ollama(session_id, text, agent, history, model=model, url=url):
+    async for chunk in _call_ollama(session_id, text, agent, history, model=model):
         full_reply += chunk
         yield {'type': 'llm', 'text': chunk}
 
