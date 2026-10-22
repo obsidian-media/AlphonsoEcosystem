@@ -810,6 +810,7 @@ pub fn run() {
       search::fetch_research_sources,
       search::search_research_sources,
       search::search_brave_sources,
+      search::fetch_rss_feed,
       decompose_jose_command_backend,
       workspace::build_workspace_symbol_index,
       workspace::scan_workspace_readiness,

@@ -11,21 +11,23 @@ import {
   listSchedules,
   saveSchedule,
   deleteSchedule,
+  runSchedule,
+  isBuiltInJob,
   SCHEDULE_PRESETS,
+  type Schedule,
+  type ScheduleRunResult,
 } from '../services/joseSchedulerService';
 
-interface Schedule {
-  id: string;
-  name: string;
-  commandText: string;
-  presetId: string;
-  intervalMs: number;
-  agentId: string;
-  enabled: boolean;
-  lastRunAtMs: number | null;
-  nextRunAtMs: number;
-  createdAtMs: number;
-}
+const RUN_STATE_TEXT: Record<ScheduleRunResult['state'], string> = {
+  done: 'Finished',
+  waiting_approval: 'Waiting for your approval',
+  failed: 'Failed',
+  skipped: 'Nothing to do',
+};
+
+const TIMING_PRESETS = SCHEDULE_PRESETS.filter((p) => !p.handler);
+const JOB_PRESETS = SCHEDULE_PRESETS.filter((p) => p.handler);
+const COMMAND = 'command';
 
 interface Workflow {
   id: string;
@@ -49,26 +51,44 @@ interface WorkflowOperation {
   enabled?: boolean;
 }
 
+/**
+ * Schedules (QA 2026-10-22): a schedule runs either a command for Jose (like a
+ * typed one, so Approval Mode still applies) or a built-in agent job, while the
+ * app is open. "Run now" really runs it, and each card shows how the last run
+ * went. A run that was due while the app was closed runs once when it opens.
+ */
 function JoseSchedulerPanel() {
   const [schedules, setSchedules] = React.useState<Schedule[]>(() => listSchedules());
   const [newName, setNewName] = React.useState('');
   const [newCommand, setNewCommand] = React.useState('');
-  const [newPreset, setNewPreset] = React.useState('hourly');
+  const [what, setWhat] = React.useState(COMMAND);
+  const [timing, setTiming] = React.useState('hourly');
   const [createError, setCreateError] = React.useState<string | null>(null);
+  const [runningId, setRunningId] = React.useState<string | null>(null);
 
   const refresh = () => setSchedules(listSchedules());
+  const isJob = what !== COMMAND;
+  const job = JOB_PRESETS.find((p) => p.id === what);
+  const canCreate = Boolean(newName.trim()) && (isJob || Boolean(newCommand.trim()));
+
+  // Scheduled runs finish in the background; keep the cards current.
+  React.useEffect(() => {
+    const id = setInterval(refresh, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleCreate = () => {
-    if (!newName.trim() || !newCommand.trim()) return;
-    const result = createSchedule({ name: newName, commandText: newCommand, presetId: newPreset });
+    if (!canCreate) return;
+    const result = createSchedule({ name: newName, commandText: isJob ? '' : newCommand, presetId: isJob ? what : timing });
     if (result && 'success' in result && !result.success) {
-      setCreateError((result as any).error ?? 'Failed to create schedule');
+      setCreateError(result.error ?? 'Failed to create schedule');
       return;
     }
     setCreateError(null);
     setNewName('');
     setNewCommand('');
-    setNewPreset('hourly');
+    setWhat(COMMAND);
+    setTiming('hourly');
     refresh();
   };
 
@@ -77,14 +97,22 @@ function JoseSchedulerPanel() {
     refresh();
   };
 
-  const handleRunNow = (sched: Schedule) => {
-    window.dispatchEvent(new CustomEvent('alphonso-schedule-run', { detail: sched }));
+  const handleRunNow = async (sched: Schedule) => {
+    setRunningId(sched.id);
+    try {
+      await runSchedule(sched.id);
+    } finally {
+      setRunningId(null);
+      refresh();
+    }
   };
 
   const handleDelete = (id: string) => {
     deleteSchedule(id);
     refresh();
   };
+
+  const field = 'bg-(--surface-3) rounded-xl px-3 py-2 text-sm text-(--text-1) placeholder:text-(--text-4) focus:outline-hidden focus:border-(--accent-border)';
 
   return (
     <div className="space-y-4">
@@ -95,29 +123,36 @@ function JoseSchedulerPanel() {
             value={newName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
             placeholder="Schedule name..."
-            className="bg-(--surface-3) rounded-xl px-3 py-2 text-sm text-(--text-1) placeholder:text-(--text-4) focus:outline-hidden focus:border-(--accent-border)"
+            aria-label="Schedule name"
+            className={field}
           />
-          <select
-            aria-label="Schedule preset"
-            value={newPreset}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewPreset(e.target.value)}
-            className="bg-(--surface-3) rounded-xl px-3 py-2 text-sm text-(--text-1) focus:outline-hidden focus:border-(--accent-border)"
-          >
-            {SCHEDULE_PRESETS.map((p: { id: string; label: string }) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
+          <select aria-label="What to run" value={what} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setWhat(e.target.value)} className={field}>
+            <option value={COMMAND}>A command for Jose</option>
+            {JOB_PRESETS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
         </div>
-        <textarea
-          value={newCommand}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewCommand(e.target.value)}
-          placeholder="Command text to execute on schedule..."
-          rows={2}
-          className="w-full bg-(--surface-3) rounded-xl px-3 py-2 text-sm text-(--text-1) placeholder:text-(--text-4) focus:outline-hidden focus:border-(--accent-border)"
-        />
+        {isJob ? (
+          <div className="text-xs text-(--text-3)">{job?.description}</div>
+        ) : (
+          <>
+            <select aria-label="How often" value={timing} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTiming(e.target.value)} className={`${field} w-full`}>
+              {TIMING_PRESETS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+            <textarea
+              value={newCommand}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewCommand(e.target.value)}
+              placeholder="What Jose should do each time, e.g. Summarise today's research into a short note"
+              aria-label="Command for Jose"
+              rows={2}
+              className={`${field} w-full`}
+            />
+            <div className="text-[11px] text-(--text-4)">Runs like a command you type in Chat; anything that needs approval waits for you.</div>
+          </>
+        )}
+        <div className="text-[11px] text-(--text-4)">Schedules run while Alphonso is open. One that was due while it was closed runs once when it opens.</div>
         <button
           onClick={handleCreate}
-          disabled={!newName.trim() || !newCommand.trim()}
+          disabled={!canCreate}
           className="px-4 py-2 rounded-xl bg-(--accent) hover:bg-(--accent-hover) text-(--accent-contrast) text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-colors"
         >
           Create Schedule
@@ -133,26 +168,38 @@ function JoseSchedulerPanel() {
           <div className="text-xs text-(--text-4) py-2">No schedules yet. Create one above.</div>
         )}
         {schedules.map((sched) => (
-          <div key={sched.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-(--surface-3)">
+          <div key={sched.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-(--surface-3)" data-testid="schedule-card">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-(--text-1)">{sched.name}</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-sm text-(--text-3)">
-                  {SCHEDULE_PRESETS.find((p: { id: string; label: string }) => p.id === sched.presetId)?.label || sched.presetId}
+                  {SCHEDULE_PRESETS.find((p) => p.id === sched.presetId)?.label || sched.presetId}
                 </span>
               </div>
-              <div className="text-[10px] text-(--text-4) mt-0.5 truncate">{sched.commandText}</div>
-              {sched.lastRunAtMs && (
-                <div className="text-[10px] text-(--text-4) mt-0.5">
-                  Last run: {new Date(sched.lastRunAtMs).toLocaleString()}
+              {!isBuiltInJob(sched.presetId) && <div className="text-[10px] text-(--text-4) mt-0.5 truncate">{sched.commandText}</div>}
+              <div className="text-[10px] text-(--text-4) mt-0.5">
+                {sched.enabled ? `Next run: ${new Date(sched.nextRunAtMs).toLocaleString()}` : 'Off'}
+              </div>
+              {runningId === sched.id && <div className="text-[10px] text-(--text-3) mt-0.5" role="status">Running…</div>}
+              {runningId !== sched.id && sched.lastResult && (
+                <div className={`text-[10px] mt-0.5 ${sched.lastResult.state === 'failed' ? 'text-(--error)' : 'text-(--text-3)'}`} role="status">
+                  Last run {new Date(sched.lastResult.atMs).toLocaleString()}: {RUN_STATE_TEXT[sched.lastResult.state]}. {sched.lastResult.summary.slice(0, 200)}
                 </div>
+              )}
+              {runningId !== sched.id && sched.lastResult?.details && (
+                <details className="mt-1">
+                  <summary className="text-[10px] text-(--accent) cursor-pointer">Show result</summary>
+                  <div className="mt-1 text-[11px] leading-relaxed whitespace-pre-wrap text-(--text-2)" data-testid="schedule-result">{sched.lastResult.details}</div>
+                </details>
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-3">
               <button
-                onClick={() => handleRunNow(sched)}
-                className="p-1.5 rounded-lg text-(--text-3) hover:text-(--success) hover:border-(--success-border) transition-colors"
+                onClick={() => void handleRunNow(sched)}
+                disabled={runningId === sched.id}
+                className="p-1.5 rounded-lg text-(--text-3) hover:text-(--success) hover:border-(--success-border) transition-colors disabled:opacity-40"
                 title="Run now"
+                aria-label={`Run ${sched.name} now`}
               >
                 <Play className="w-3 h-3" />
               </button>
@@ -170,6 +217,7 @@ function JoseSchedulerPanel() {
                 onClick={() => handleDelete(sched.id)}
                 className="p-1.5 rounded-lg text-(--text-3) hover:text-(--error) hover:border-(--error-border) transition-colors"
                 title="Delete"
+                aria-label={`Delete ${sched.name}`}
               >
                 <Trash2 className="w-3 h-3" />
               </button>

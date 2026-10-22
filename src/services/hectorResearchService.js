@@ -471,6 +471,21 @@ export function parseRssItems(xmlText, feedUrl, limit) {
   }
 }
 
+/**
+ * A feed's raw text. In the desktop app it comes through the backend
+ * (`fetch_rss_feed`): the window can't reach the feed sites (the content
+ * security policy doesn't list them and they refuse its origin), so until
+ * 2026-10-22 every feed failed there and the RSS fallback found nothing.
+ */
+async function fetchFeedText(url) {
+  if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+    const proof = await invoke('fetch_rss_feed', { url });
+    return proof?.ok ? String(proof.text || '') : '';
+  }
+  const resp = await fetchWithRetry(url);
+  return resp.ok ? resp.text() : '';
+}
+
 export async function fetchRssSources(query, limit = 8) {
   if (!query || typeof query !== 'string') return [];
 
@@ -483,9 +498,8 @@ export async function fetchRssSources(query, limit = 8) {
   const results = [];
   await Promise.allSettled(scored.map(async ({ feed }) => {
     try {
-      const resp = await fetchWithRetry(feed.url);
-      if (!resp.ok) return;
-      const text = await resp.text();
+      const text = await fetchFeedText(feed.url);
+      if (!text) return;
       const items = parseRssItems(text, feed.url, Math.ceil(limit / scored.length) + 1);
       results.push(...items);
     } catch {

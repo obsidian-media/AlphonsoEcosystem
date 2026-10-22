@@ -44,7 +44,8 @@ import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
 import { executeWithBrain } from './agentBrainService';
-import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel } from '../lib/ollama';
+import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { CHAT_ASSISTANT_PROMPT } from '../lib/chatUtils';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { getAgentProvider } from './modelSelectionService';
 import { getRuntimePolicySettings } from './policyEnforcementService';
@@ -933,15 +934,47 @@ async function executeHectorAssignment(commandText: any, assignment: any) {
   };
 }
 
-async function executeJoseAssignment(commandText: any, assignment: any) {
-  return {
-    summary: `Jose completed orchestration review for "${commandText}".`,
-    resultState: 'completed',
+/**
+ * A request no specialist agent matched ("write a note", "draft an email"...).
+ * Jose answers it directly with his model (QA 2026-10-22). Until then this
+ * step returned "Jose completed orchestration review" without asking any model,
+ * so such requests produced nothing in Chat, schedules and the phone app while
+ * the card said "1 executed". If the model can't answer, it says so.
+ */
+async function executeJoseAssignment(commandText: any, assignment: any, options: any = {}) {
+  const base = {
     resultUrl: null,
-    artifacts: [{ type: 'orchestration_review', action: assignment?.actionType || 'orchestration_review' }],
     sources: [],
     contractAction: assignment?.actionType || 'orchestration_review'
   };
+  try {
+    const prompt = [
+      CHAT_ASSISTANT_PROMPT,
+      'No specialist agent took this request, so you (Jose) answer it directly. Do the writing or thinking asked for, in text.',
+      `Request: ${String(commandText || '').slice(0, 4000)}`
+    ].join('\n\n');
+    const reply = await generateAgentLlmResponse('jose', {
+      endpoint: options.endpoint || getConfiguredOllamaEndpoint(),
+      model: options.model || getConfiguredOllamaModel(),
+      prompt,
+      sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
+    }) as { response?: string } | null;
+    const text = String(reply?.response || '').trim();
+    if (!text) throw new Error('the model returned an empty reply');
+    return {
+      ...base,
+      summary: text,
+      resultState: 'completed',
+      artifacts: [{ type: 'direct_answer', action: assignment?.actionType || 'orchestration_review' }]
+    };
+  } catch (error) {
+    return {
+      ...base,
+      summary: `No specialist agent matched this request, and Jose's model didn't answer (${error instanceof Error ? error.message : String(error)}). Nothing was produced.`,
+      resultState: 'failed',
+      artifacts: [{ type: 'orchestration_review', action: assignment?.actionType || 'orchestration_review' }]
+    };
+  }
 }
 
 async function executeMariaAssignment(commandText: any, assignment: any, options: any = {}) {
@@ -1175,7 +1208,7 @@ async function executeAssignment(packet: any, assignment: any, commandText: any,
   if (assignment?.agent === AGENTS.MARCUS) {
     return executeMarcusAssignment(commandText, assignment);
   }
-  return executeJoseAssignment(commandText, assignment);
+  return executeJoseAssignment(commandText, assignment, options);
 }
 
 async function checkOllamaAvailable(endpoint: any) {

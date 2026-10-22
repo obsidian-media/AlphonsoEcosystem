@@ -72,8 +72,13 @@ vi.mock('../lib/ollama', () => ({
   fetchOllamaModels: vi.fn(async () => ({
     models: ollamaAvailable ? [{ name: 'llama3.2:3b' }] : []
   })),
-  PREFERRED_MODEL: 'llama3.2:3b'
+  PREFERRED_MODEL: 'llama3.2:3b',
+  generateAgentLlmResponse: (...args) => mockAgentLlm(...args),
+  getConfiguredOllamaEndpoint: () => 'http://localhost:11434',
+  getConfiguredOllamaModel: () => 'llama3.2:3b'
 }));
+
+const mockAgentLlm = vi.fn(async () => { throw new Error('model unavailable'); });
 
 const mockMemoryItems = [
   { id: 'mem-1', title: 'Space exploration project plan', category: 'project_memory', content: 'Mars colony timeline' },
@@ -234,6 +239,52 @@ describe('parseJsonResponse', () => {
 
   it('throws on invalid JSON', () => {
     expect(() => parseJsonResponse('not json')).toThrow();
+  });
+});
+
+// QA 2026-10-22: a request no specialist matched used to get a fixed
+// "orchestration review" sentence and no answer at all.
+describe('requests no specialist takes', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    runtimeReachable = true;
+    mockSetTimeout();
+    mockAgentLlm.mockReset();
+  });
+  afterEach(() => {
+    restoreSetTimeout();
+  });
+
+  it("Jose answers them with his model", async () => {
+    mockAgentLlm.mockResolvedValue({ response: 'Backups protect your work when a disk fails. Keep one copy off-site.' });
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Write a two-sentence note about why backups matter.',
+      source: 'user',
+      endpoint: 'http://localhost:11434',
+      zeroCostMode: true
+    });
+    expect(result.ok).toBe(true);
+    expect(mockAgentLlm).toHaveBeenCalledWith('jose', expect.objectContaining({ prompt: expect.stringContaining('why backups matter') }));
+    const reports = result.command.userReport.assignmentSummaries.map((a) => a.reportSummary).join(' ');
+    expect(reports).toContain('Backups protect your work');
+    expect(reports).not.toContain('orchestration review');
+  });
+
+  it("says nothing was produced when the model can't answer", async () => {
+    mockAgentLlm.mockRejectedValue(new Error('Ollama is not running'));
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Write a two-sentence note about why backups matter.',
+      source: 'user',
+      endpoint: 'http://localhost:11434',
+      zeroCostMode: true
+    });
+    const report = result.command.userReport;
+    expect(result.failedCount).toBe(1);
+    // A failed step is reported as failed, with its reason, not as "waiting".
+    expect(report.summary).toMatch(/1 of 1 assignment\(s\) failed/);
+    expect(report.summary).not.toMatch(/waiting for agent reports/);
+    expect(report.assignmentSummaries[0]).toMatchObject({ reportStatus: 'failed' });
+    expect(report.assignmentSummaries[0].reportSummary).toMatch(/^Failed: .*Nothing was produced/);
   });
 });
 
