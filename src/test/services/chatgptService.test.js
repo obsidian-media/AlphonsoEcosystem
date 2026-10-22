@@ -9,8 +9,9 @@ vi.mock('../../services/connectorRegistryService', () => ({
   appendConnectorAudit: vi.fn()
 }));
 
+const savedSettings = { OPENAI_API_KEY: 'mock-openai-key', OPENAI_MODEL: '' };
 vi.mock('../../services/connectors/connectorAuth', () => ({
-  getConnectorCredential: vi.fn(() => 'mock-openai-key')
+  getConnectorCredential: vi.fn((_id, key) => savedSettings[key] || '')
 }));
 
 vi.mock('../../services/trustModel', () => ({
@@ -88,7 +89,8 @@ describe('chatgptService', () => {
       await sendChatGPTMessage('hello');
       const call = fetch.mock.calls[0];
       const body = JSON.parse(call[1].body);
-      expect(body.model).toBe('gpt-4o-mini');
+      // QA 2026-10-22: gpt-4o-mini is deprecated; gpt-6-luna is OpenAI's replacement.
+      expect(body.model).toBe('gpt-6-luna');
     });
 
     it('uses custom model when specified', async () => {
@@ -182,6 +184,25 @@ describe('chatgptService', () => {
       const result = await sendChatGPTMessage('hello');
       expect(result.ok).toBe(false);
       expect(result.error).toContain('Network error');
+    });
+  });
+
+  describe('model choice', () => {
+    it('uses the model chosen in Connectors', async () => {
+      savedSettings.OPENAI_MODEL = 'gpt-6.1-sol';
+      const { sendChatGPTMessage } = await import('../../services/chatgptService');
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ choices: [{ message: { content: 'ok' } }] }) });
+      await sendChatGPTMessage('hello');
+      expect(JSON.parse(fetch.mock.calls[0][1].body).model).toBe('gpt-6.1-sol');
+      savedSettings.OPENAI_MODEL = '';
+    });
+
+    it("lists the key's chat models from OpenAI, without embeddings, speech or images", async () => {
+      const { listOpenAiModels } = await import('../../services/chatgptService');
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ data: [
+        { id: 'gpt-6-luna' }, { id: 'text-embedding-3-small' }, { id: 'whisper-1' }, { id: 'gpt-realtime-mini' }, { id: 'o5' }, { id: 'dall-e-3' }, { id: 'gpt-6.1-sol' },
+      ] }) });
+      expect(await listOpenAiModels()).toEqual({ ok: true, models: ['gpt-6-luna', 'gpt-6.1-sol', 'o5'] });
     });
   });
 });

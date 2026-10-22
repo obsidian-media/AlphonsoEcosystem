@@ -53,6 +53,7 @@ import {
 import { openExternalUrl } from '../services/browserAutomationService';
 import { ComfyUiModelPicker } from './ComfyUiModelPicker';
 import { ComfyUiInstallPicker } from './ComfyUiInstallPicker';
+import { getComfyUiEndpoint, setComfyUiEndpoint, DEFAULT_COMFYUI_ENDPOINT } from '../services/connectors/comfyUiEndpoint.js';
 
 interface MemoryItem {
   id?: string;
@@ -585,6 +586,31 @@ interface ComposioToolkit {
   key?: string;
   name?: string;
   [key: string]: unknown;
+}
+
+/**
+ * ComfyUI's address, used by every image feature (owner, 2026-10-22). Until
+ * then six places used a fixed 127.0.0.1:8188 and nothing could change it.
+ * "Launch Now" still starts a local ComfyUI on port 8188.
+ */
+function ComfyUiAddressField() {
+  const [value, setValue] = useState(() => getComfyUiEndpoint());
+  const save = () => { setComfyUiEndpoint(value); setValue(getComfyUiEndpoint()); };
+  return (
+    <div className="space-y-1">
+      <label htmlFor="comfyui-address" className="text-xs font-semibold text-(--text-2)">ComfyUI address</label>
+      <input
+        id="comfyui-address"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
+        placeholder={DEFAULT_COMFYUI_ENDPOINT}
+        className="w-full bg-(--surface-2) rounded-xl px-4 py-2.5 text-sm font-mono text-(--text-1) placeholder-(--text-4) focus:outline-hidden focus:ring-1 focus:ring-(--accent-border)"
+      />
+      <div className="text-[11px] text-(--text-4)">Where Alphonso reaches ComfyUI. Leave it empty for {DEFAULT_COMFYUI_ENDPOINT}.</div>
+    </div>
+  );
 }
 
 export function SettingsView({
@@ -1385,7 +1411,7 @@ export function SettingsView({
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-(--text-1)">ComfyUI</div>
-                <div className="text-xs text-(--text-3) mt-0.5">Local image generation server at localhost:8188.</div>
+                <div className="text-xs text-(--text-3) mt-0.5">Local image generation server. The image tool Alphonso's agents use.</div>
               </div>
               <button
                 onClick={handleLaunchComfyUI}
@@ -1396,6 +1422,7 @@ export function SettingsView({
                 {launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
               </button>
             </div>
+            <ComfyUiAddressField />
             <ComfyUiInstallPicker
               comfyuiDir={settings.comfyuiDir || ''}
               onChoose={(dir, python) => setSettings({ ...settings, comfyuiDir: dir, comfyuiPython: python })}

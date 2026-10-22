@@ -8,7 +8,7 @@ import { THREADS_KEY, MESSAGES_KEY } from './boardroomThreadService';
 import { listConnectors } from './connectors/connectorRegistry';
 import { listSkillPacks, getSkillPackLastInvoked } from './skillPackService';
 import { getLicenseDenialLog } from './licenseService';
-import { generateOllamaResponse, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
+import { generateOllamaResponse, getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../lib/ollama';
 import { recordCoachHistory } from './coachHistoryService';
 
 export type MessageStyle = 'direct' | 'balanced' | 'gentle';
@@ -48,7 +48,6 @@ export function setCoachMessageStyle(style: MessageStyle): void {
 // Alphonso's own domain (agent orchestration), not gambling. Default OFF:
 // Phases 1-3 already deliver full value without an LLM dependency.
 export const COACH_NARRATIVE_ENABLED_KEY = 'alphonso_coach_narrative_enabled_v1';
-const NARRATIVE_MODEL = 'llama3.2:3b';
 
 export function getCoachNarrativeEnabled(): boolean {
   try { return localStorage.getItem(COACH_NARRATIVE_ENABLED_KEY) === 'true'; } catch { return false; }
@@ -84,7 +83,10 @@ export async function generateNarrativeCoachMessage(
   if (signal.severity !== 'critical' && signal.severity !== 'warning') return null;
   if (!getCoachNarrativeEnabled()) return null;
 
-  const { endpoint = DEFAULT_OLLAMA_ENDPOINT, model = NARRATIVE_MODEL, signal: abortSignal } = opts;
+  // The model and address chosen in Settings. This used a fixed
+  // 'llama3.2:3b' and the default address, ignoring the user's choice
+  // (QA, 2026-10-22).
+  const { endpoint = getConfiguredOllamaEndpoint(), model = getConfiguredOllamaModel(), signal: abortSignal } = opts;
   const toneLine = style === 'direct'
     ? 'Tone: direct and plain-spoken.'
     : style === 'gentle'

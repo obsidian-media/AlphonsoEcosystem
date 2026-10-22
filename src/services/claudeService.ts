@@ -24,6 +24,36 @@ async function streamWithReconnect<T>(fn: () => Promise<T>, maxRetries: number =
   throw lastError;
 }
 
+/**
+ * Used when no model is set in Connectors → Claude → Model. The old default,
+ * claude-3-haiku-20240307, was retired on 2026-04-20, so every call failed
+ * (QA, 2026-10-22; see Anthropic's model deprecations page).
+ */
+export const CLAUDE_DEFAULT_MODEL = 'claude-haiku-5-5';
+
+export interface CloudModelList {
+  ok: boolean;
+  models: string[];
+  error?: string;
+}
+
+/**
+ * The models this Anthropic key can use, from Anthropic's own list, so the
+ * choice in Connectors is never a fixed list in the code (owner, 2026-10-22).
+ */
+export async function listClaudeModels(apiKey: string = getConnectorCredential('claude', 'ANTHROPIC_API_KEY')): Promise<CloudModelList> {
+  if (!apiKey) return { ok: false, models: [], error: 'Save an Anthropic API key first.' };
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/models?limit=100', { headers: buildHeaders(apiKey) });
+    if (!response.ok) return { ok: false, models: [], error: `Anthropic answered HTTP ${response.status}.` };
+    const body = await response.json();
+    const models = Array.isArray(body?.data) ? body.data.map((m: { id?: string }) => String(m?.id || '')).filter(Boolean) : [];
+    return { ok: true, models };
+  } catch (error) {
+    return { ok: false, models: [], error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 function getApiKey(): string {
   return getConnectorCredential('claude', 'ANTHROPIC_API_KEY');
 }
@@ -128,7 +158,7 @@ export async function sendClaudeMessage(text: string, options: ClaudeOptions = {
     return { success: false, ok: false, connectorId: 'claude', error: 'No API key configured for Claude.', trust: TRUST_STATES.FAILED };
   }
 
-  const model = options.model || 'claude-3-haiku-20240307';
+  const model = options.model || String(getConnectorCredential('claude', 'CLAUDE_MODEL') || '').trim() || CLAUDE_DEFAULT_MODEL;
   const maxTokens = options.maxTokens || 1024;
   const messages = options.messages || [{ role: 'user', content: text }];
   const systemPrompt = options.system || '';

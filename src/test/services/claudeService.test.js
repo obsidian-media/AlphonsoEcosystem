@@ -9,8 +9,9 @@ vi.mock('../../services/connectorRegistryService', () => ({
   appendConnectorAudit: vi.fn()
 }));
 
+const savedSettings = { ANTHROPIC_API_KEY: 'mock-anthropic-key', CLAUDE_MODEL: '' };
 vi.mock('../../services/connectors/connectorAuth', () => ({
-  getConnectorCredential: vi.fn(() => 'mock-anthropic-key')
+  getConnectorCredential: vi.fn((_id, key) => savedSettings[key] || '')
 }));
 
 vi.mock('../../services/trustModel', () => ({
@@ -49,7 +50,8 @@ describe('claudeService', () => {
       expect(result.error).toContain('No API key');
     });
 
-    it('uses default model claude-3-haiku-20240307', async () => {
+    // QA 2026-10-22: claude-3-haiku-20240307 was retired on 2026-04-20.
+    it('uses the current default model, claude-haiku-5-5, when none is chosen', async () => {
       const { sendClaudeMessage } = await import('../../services/claudeService');
       fetch.mockResolvedValueOnce({
         ok: true,
@@ -61,7 +63,7 @@ describe('claudeService', () => {
       await sendClaudeMessage('hello');
       const call = fetch.mock.calls[0];
       const body = JSON.parse(call[1].body);
-      expect(body.model).toBe('claude-3-haiku-20240307');
+      expect(body.model).toBe('claude-haiku-5-5');
     });
 
     it('uses custom model when specified', async () => {
@@ -288,6 +290,27 @@ describe('claudeService', () => {
       });
       await sendClaudeMessage('hello', { stream: true });
       expect(appendConnectorAudit).toHaveBeenCalled();
+    });
+  });
+
+  // Owner, 2026-10-22: the user chooses the model; nothing is a fixed list.
+  describe('model choice', () => {
+    it('uses the model chosen in Connectors', async () => {
+      savedSettings.CLAUDE_MODEL = 'claude-sonnet-5-5';
+      const { sendClaudeMessage } = await import('../../services/claudeService');
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ content: [{ text: 'ok' }], usage: {} }) });
+      await sendClaudeMessage('hello');
+      expect(JSON.parse(fetch.mock.calls[0][1].body).model).toBe('claude-sonnet-5-5');
+      savedSettings.CLAUDE_MODEL = '';
+    });
+
+    it("lists the key's models from Anthropic", async () => {
+      const { listClaudeModels } = await import('../../services/claudeService');
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ id: 'claude-haiku-5-5' }, { id: 'claude-sonnet-5-5' }] }) });
+      expect(await listClaudeModels()).toEqual({ ok: true, models: ['claude-haiku-5-5', 'claude-sonnet-5-5'] });
+      expect(fetch.mock.calls[0][0]).toBe('https://api.anthropic.com/v1/models?limit=100');
+      fetch.mockResolvedValueOnce({ ok: false, status: 401 });
+      expect((await listClaudeModels()).error).toMatch(/HTTP 401/);
     });
   });
 });

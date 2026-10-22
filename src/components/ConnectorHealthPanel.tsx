@@ -26,6 +26,7 @@ import { checkConnectorHealth } from '../services/connectorHealthCheckService';
 import { getConnectorCredential } from '../services/connectors/connectorAuth';
 import { deriveConnectorStatus } from '../services/connectorStatusService';
 import { getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { getComfyUiEndpoint } from '../services/connectors/comfyUiEndpoint.js';
 import { Tabs } from './ui/Tabs';
 
 interface Connector {
@@ -133,14 +134,14 @@ async function testConnector(connectorId: string): Promise<TestResult> {
   if (connectorId === 'comfyui_video') {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      const response = await invoke<{ status: number }>('comfyui_request', { endpoint: 'http://127.0.0.1:8188', method: 'GET', path: '/system_stats', body: null });
+      const response = await invoke<{ status: number }>('comfyui_request', { endpoint: getComfyUiEndpoint(), method: 'GET', path: '/system_stats', body: null });
       return response?.status === 200
         ? { ok: true, checked: 'live', message: 'ComfyUI answered' }
         : { ok: false, checked: 'live', message: `ComfyUI answered HTTP ${response?.status}` };
     } catch (error) {
       const reason = String((error as Error)?.message || error || '');
       return reason.includes('invoke') || reason.includes('__TAURI')
-        ? windowProbe('http://127.0.0.1:8188/system_stats', 'ComfyUI')
+        ? windowProbe(`${getComfyUiEndpoint()}/system_stats`, 'ComfyUI')
         : { ok: false, checked: 'live', message: `ComfyUI not reachable: ${reason || 'no answer'}` };
     }
   }

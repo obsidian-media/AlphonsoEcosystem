@@ -3,6 +3,8 @@ import { TRUST_STATES } from '../trustModel';
 import { appendConnectorAudit, getConnectorCircuitState, recordConnectorFailure, recordConnectorSuccess } from './connectorRegistry.js';
 import { gateConnectorAction } from './connectorRegistry.js';
 import { freeOllamaGpuMemory, getConfiguredOllamaEndpoint } from '../../lib/ollama';
+import { DEFAULT_COMFYUI_ENDPOINT, getComfyUiEndpoint } from './comfyUiEndpoint.js';
+export { DEFAULT_COMFYUI_ENDPOINT, COMFYUI_ENDPOINT_KEY, getComfyUiEndpoint, setComfyUiEndpoint } from './comfyUiEndpoint.js';
 
 export async function generateSdWebUiImage({
   prompt,
@@ -76,18 +78,9 @@ export async function generateSdWebUiImage({
   };
 }
 
-const DEFAULT_COMFYUI_ENDPOINT = 'http://127.0.0.1:8188';
 const DEFAULT_COMFYUI_CHECKPOINT = 'v1-5-pruned-emaonly-fp16.safetensors';
 const FALLBACK_COMFYUI_CHECKPOINT = 'DreamShaper_8_pruned.safetensors';
 
-function getComfyUiEndpoint() {
-  try {
-    const configured = localStorage.getItem('alphonso_comfyui_endpoint_v1');
-    return String(configured || DEFAULT_COMFYUI_ENDPOINT).replace(/\/+$/, '');
-  } catch {
-    return DEFAULT_COMFYUI_ENDPOINT;
-  }
-}
 
 function createComfyClientId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();

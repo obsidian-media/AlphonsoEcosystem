@@ -28,6 +28,47 @@ function getApiKey(): string {
   return getConnectorCredential('chatgpt', 'OPENAI_API_KEY');
 }
 
+/**
+ * Used when no model is set in Connectors → ChatGPT → Model. The old default,
+ * gpt-4o-mini, is deprecated (removed from the API on 2027-01-14) and OpenAI
+ * names gpt-6-luna as its replacement (QA, 2026-10-22).
+ */
+export const OPENAI_DEFAULT_MODEL = 'gpt-6-luna';
+
+export interface CloudModelList {
+  ok: boolean;
+  models: string[];
+  error?: string;
+}
+
+/** True for OpenAI models that chat (not embeddings, speech, images, moderation). */
+export function isOpenAiChatModel(id: string): boolean {
+  const lower = id.toLowerCase();
+  if (!/^(gpt-|o\d|chatgpt-)/.test(lower)) return false;
+  return !/(embed|whisper|tts|audio|realtime|transcribe|image|dall-e|moderation|search)/.test(lower);
+}
+
+/**
+ * The chat models this OpenAI key can use, from OpenAI's own list, so the
+ * choice in Connectors is never a fixed list in the code (owner, 2026-10-22).
+ */
+export async function listOpenAiModels(apiKey: string = getConnectorCredential('chatgpt', 'OPENAI_API_KEY')): Promise<CloudModelList> {
+  if (!apiKey) return { ok: false, models: [], error: 'Save an OpenAI API key first.' };
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${apiKey}` } });
+    if (!response.ok) return { ok: false, models: [], error: `OpenAI answered HTTP ${response.status}.` };
+    const body = await response.json();
+    const ids = Array.isArray(body?.data) ? body.data.map((m: { id?: string }) => String(m?.id || '')).filter(Boolean) : [];
+    return { ok: true, models: ids.filter(isOpenAiChatModel).sort() };
+  } catch (error) {
+    return { ok: false, models: [], error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function chosenModel(): string {
+  return String(getConnectorCredential('chatgpt', 'OPENAI_MODEL') || '').trim();
+}
+
 function buildHeaders(apiKey: string): Record<string, string> {
   return {
     'Content-Type': 'application/json',
@@ -130,7 +171,7 @@ export async function sendChatGPTMessage(text: string, options: ChatGPTOptions =
     return { success: false, ok: false, connectorId: 'chatgpt', error: 'No API key configured for ChatGPT.', trust: TRUST_STATES.FAILED };
   }
 
-  const model = options.model || 'gpt-4o-mini';
+  const model = options.model || chosenModel() || OPENAI_DEFAULT_MODEL;
   const maxTokens = options.maxTokens || 1024;
   const messages = options.messages || [{ role: 'user', content: text }];
 
