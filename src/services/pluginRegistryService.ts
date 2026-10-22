@@ -98,7 +98,7 @@ const DEFAULT_PLUGINS: PluginEntry[] = [
   {
     id: 'connector.whatsapp',
     name: 'WhatsApp Connector',
-    description: 'Safe WhatsApp Cloud API/Twilio route foundation. External transport is not configured.',
+    description: 'Safe WhatsApp Cloud API route foundation. External transport is not configured.',
     version: '0.1.0',
     author: 'Alphonso Core',
     enabled: false,

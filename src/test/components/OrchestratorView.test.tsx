@@ -43,6 +43,7 @@ vi.mock('../../services/trustModel', () => ({
 }));
 vi.mock('../../services/connectorRegistryService', () => ({
   isConnectorAuthenticated: vi.fn(() => ({ ok: false })),
+  getConnectorCredential: vi.fn(() => ''),
   listConnectorAudit: vi.fn(() => []),
   pollWhatsAppConnector: vi.fn()
 }));
@@ -93,6 +94,6 @@ describe('OrchestratorView', () => {
 
   it('reports WhatsApp as not configured when authentication is unavailable', () => {
     render(<OrchestratorView {...makeProps()} />);
-    expect(screen.getByText('Not configured — see Settings')).toBeTruthy();
+    expect(screen.getByTestId('whatsapp-inbound-status').textContent).toMatch(/^Not configured — add the access token and gateway drain URL/);
   });
 });

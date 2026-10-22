@@ -155,8 +155,10 @@ describe('connectorOutbound', () => {
       expect(result.ok).toBe(false);
     });
 
-    it('blocks on missing env key', async () => {
+    it('blocks when the key is neither saved nor in the environment', async () => {
       const { invoke } = await import('@tauri-apps/api/core');
+      const { getConnectorCredential } = await import('../services/connectors/connectorAuth');
+      getConnectorCredential.mockReturnValueOnce('');
       invoke.mockResolvedValueOnce({ OPENAI_API_KEY: false });
       const result = await outbound.sendChatGptConnectorMessage('hello');
       expect(result.ok).toBe(false);
@@ -243,8 +245,10 @@ describe('connectorOutbound', () => {
       expect(result.ts).toBe('123.456');
     });
 
-    it('blocks on missing token', async () => {
+    it('blocks when the token is neither saved nor in the environment', async () => {
       const { invoke } = await import('@tauri-apps/api/core');
+      const { getConnectorCredential } = await import('../services/connectors/connectorAuth');
+      getConnectorCredential.mockReturnValueOnce('');
       invoke.mockResolvedValueOnce({ SLACK_BOT_TOKEN: false });
       const result = await outbound.sendSlackMessage('#general', 'hello');
       expect(result.ok).toBe(false);

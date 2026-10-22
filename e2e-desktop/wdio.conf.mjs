@@ -44,6 +44,20 @@ function testDataDirs(profile) {
   ];
 }
 
+// The app under test must never see a real credential. The WebdriverIO CLI
+// loads the repo's .env (`import "dotenv/config"`) and this config passed its
+// whole environment on, so the test app saw the developer's real GitHub and
+// Slack tokens and their user-level NVIDIA/Gemini/DashScope keys (QA Bug 37,
+// 2026-10-21). Anything named like a secret is dropped.
+const SECRET_ENV_NAME = /(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|ACCESS_KEY|PRIVATE_KEY|_KEY|_SID|CREDENTIALS?)$/i;
+export function testAppEnv(extra = {}) {
+  const env = {};
+  for (const [name, value] of Object.entries(process.env)) {
+    if (!SECRET_ENV_NAME.test(name)) env[name] = value;
+  }
+  return { ...env, ...extra };
+}
+
 /** Resolve once something accepts TCP connections on 127.0.0.1:port. */
 async function waitForPort(port, timeoutMs, child) {
   const deadline = Date.now() + timeoutMs;
@@ -121,7 +135,7 @@ export const config = {
     }
     tauriDriver = spawn(tauriDriverBinary, args, {
       stdio: [null, process.stdout, process.stderr],
-      env: { ...process.env, WEBVIEW2_USER_DATA_FOLDER: profileDir, ALPHONSO_E2E_PROFILE: dataProfile },
+      env: testAppEnv({ WEBVIEW2_USER_DATA_FOLDER: profileDir, ALPHONSO_E2E_PROFILE: dataProfile }),
     });
     // The session is created right after this hook returns. Without waiting,
     // the first spec could connect before tauri-driver was listening and fail

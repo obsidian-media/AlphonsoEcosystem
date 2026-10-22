@@ -17,6 +17,17 @@ describe('Alphonso desktop test isolation', () => {
     if (root) expect(existsSync(join(root, `com.shayan.alphonso.e2e.${profile}`))).toBe(true);
   });
 
+  it('sees none of the developer real credentials', async () => {
+    // QA Bug 37: the test app used to inherit real tokens from the repo's
+    // .env (loaded by the WebdriverIO CLI and by the app itself) and from the
+    // user's environment.
+    const names = ['GITHUB_TOKEN', 'SLACK_BOT_TOKEN', 'NVIDIA_API_KEY', 'GEMINI_API_KEY', 'DASHSCOPE_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TAURI_SIGNING_PRIVATE_KEY'];
+    const presence = await invoke('check_env_vars_presence', { names });
+    expect(presence.ok).toBe(true);
+    const leaked = names.filter((name) => presence.value?.[name]);
+    expect(leaked).toEqual([]);
+  });
+
   it('starts with no chat history', async () => {
     await $('[data-testid="sidebar-chat-shortcut"]').click();
     await $('[data-testid="chat-compose-input"]').waitForDisplayed();

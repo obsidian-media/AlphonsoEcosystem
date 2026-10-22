@@ -1,6 +1,5 @@
-use crate::{
-  dedup_strings, now_ms, ConnectorInboundMessage, ConnectorPollProof, ConnectorSendProof,
-};
+use crate::utils::secret_or_env;
+use crate::{dedup_strings, now_ms, ConnectorPollProof, ConnectorSendProof};
 use serde::Serialize;
 use serde_json::Value;
 use std::time::Duration;
@@ -177,9 +176,10 @@ pub(crate) struct SlackSendProof {
 pub(crate) async fn connector_github_action(
   action: String,
   payload: Value,
+  token: Option<String>,
 ) -> Result<GithubActionProof, String> {
   let sent_at_ms = now_ms();
-  let token = std::env::var("GITHUB_TOKEN").unwrap_or_default();
+  let token = secret_or_env(token, "GITHUB_TOKEN");
   if token.trim().is_empty() {
     return Ok(GithubActionProof {
       ok: false,
@@ -411,9 +411,10 @@ pub(crate) async fn connector_slack_send(
   channel: String,
   text: String,
   thread_ts: Option<String>,
+  token: Option<String>,
 ) -> Result<SlackSendProof, String> {
   let sent_at_ms = now_ms();
-  let token = std::env::var("SLACK_BOT_TOKEN").unwrap_or_default();
+  let token = secret_or_env(token, "SLACK_BOT_TOKEN");
   if token.trim().is_empty() {
     return Ok(SlackSendProof {
       ok: false,
@@ -504,12 +505,11 @@ pub(crate) async fn connector_send_whatsapp(
   rate_limiter: tauri::State<'_, crate::RateLimiter>,
   to: String,
   text: String,
+  access_token: Option<String>,
+  phone_number_id: Option<String>,
 ) -> Result<ConnectorSendProof, String> {
   rate_limiter.check_and_record("connector_send_whatsapp")?;
   let sent_at_ms = now_ms();
-  let provider = std::env::var("WHATSAPP_PROVIDER")
-    .map(|value| value.trim().to_ascii_lowercase())
-    .unwrap_or_else(|_| "cloud_api".to_string());
   let clean_to = to.trim().to_string();
   let clean_text = text.trim().to_string();
   if clean_to.is_empty() || clean_text.is_empty() {
@@ -530,86 +530,8 @@ pub(crate) async fn connector_send_whatsapp(
     .build()
     .map_err(|error| error.to_string())?;
 
-  if provider == "twilio" {
-    let account_sid = std::env::var("WHATSAPP_TWILIO_ACCOUNT_SID").unwrap_or_default();
-    let auth_token = std::env::var("WHATSAPP_TWILIO_AUTH_TOKEN").unwrap_or_default();
-    let from_number = std::env::var("WHATSAPP_TWILIO_FROM").unwrap_or_default();
-    if account_sid.trim().is_empty()
-      || auth_token.trim().is_empty()
-      || from_number.trim().is_empty()
-    {
-      return Ok(ConnectorSendProof {
-        connector_id: "whatsapp".to_string(),
-        ok: false,
-        target: clean_to,
-        external_id: None,
-        sent_at_ms,
-        trust: "unverified".to_string(),
-        error: Some("Twilio provider is selected, but WHATSAPP_TWILIO_ACCOUNT_SID, WHATSAPP_TWILIO_AUTH_TOKEN, or WHATSAPP_TWILIO_FROM is missing.".to_string()),
-      });
-    }
-
-    let endpoint = format!(
-      "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json",
-      account_sid.trim()
-    );
-    let formatted_to = if clean_to.starts_with("whatsapp:") {
-      clean_to.clone()
-    } else {
-      format!("whatsapp:{clean_to}")
-    };
-    let formatted_from = if from_number.trim().starts_with("whatsapp:") {
-      from_number.trim().to_string()
-    } else {
-      format!("whatsapp:{}", from_number.trim())
-    };
-    let form = [
-      ("To", formatted_to.clone()),
-      ("From", formatted_from),
-      ("Body", clean_text.clone()),
-    ];
-
-    let response = client
-      .post(endpoint)
-      .basic_auth(account_sid.trim(), Some(auth_token.trim()))
-      .form(&form)
-      .send()
-      .await
-      .map_err(|error| error.to_string())?;
-    let status = response.status();
-    let body: Value = response.json().await.map_err(|error| error.to_string())?;
-    if !status.is_success() {
-      let error_message = body
-        .get("message")
-        .and_then(|value| value.as_str())
-        .unwrap_or("Twilio WhatsApp send failed.");
-      return Ok(ConnectorSendProof {
-        connector_id: "whatsapp".to_string(),
-        ok: false,
-        target: formatted_to,
-        external_id: None,
-        sent_at_ms,
-        trust: "failed".to_string(),
-        error: Some(error_message.to_string()),
-      });
-    }
-    let external_id = body
-      .get("sid")
-      .and_then(|value| value.as_str())
-      .map(|value| value.to_string());
-    return Ok(ConnectorSendProof {
-      connector_id: "whatsapp".to_string(),
-      ok: true,
-      target: formatted_to,
-      external_id,
-      sent_at_ms,
-      trust: "verified".to_string(),
-      error: None,
-    });
-  }
-
-  let access_token = std::env::var("WHATSAPP_ACCESS_TOKEN").unwrap_or_default();
-  let phone_number_id = std::env::var("WHATSAPP_PHONE_NUMBER_ID").unwrap_or_default();
+  let access_token = secret_or_env(access_token, "WHATSAPP_ACCESS_TOKEN");
+  let phone_number_id = secret_or_env(phone_number_id, "WHATSAPP_PHONE_NUMBER_ID");
   if access_token.trim().is_empty() || phone_number_id.trim().is_empty() {
     return Ok(ConnectorSendProof {
       connector_id: "whatsapp".to_string(),
@@ -689,9 +611,10 @@ pub(crate) async fn connector_send_notion(
   title: String,
   content: String,
   parent_page_id: Option<String>,
+  token: Option<String>,
 ) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
-  let token = std::env::var("NOTION_API_KEY").unwrap_or_default();
+  let token = secret_or_env(token, "NOTION_API_KEY");
   if token.trim().is_empty() {
     return Ok(ConnectorSendProof {
       connector_id: "notion".to_string(),
@@ -820,9 +743,10 @@ pub(crate) async fn connector_send_clickup(
   title: String,
   content: String,
   list_id: Option<String>,
+  token: Option<String>,
 ) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
-  let token = std::env::var("CLICKUP_API_KEY").unwrap_or_default();
+  let token = secret_or_env(token, "CLICKUP_API_KEY");
   if token.trim().is_empty() {
     return Ok(ConnectorSendProof {
       connector_id: "clickup".to_string(),
@@ -1019,148 +943,20 @@ pub(crate) async fn tool_connection_post_webhook(
 pub(crate) async fn connector_poll_whatsapp(
   limit: Option<u16>,
 ) -> Result<ConnectorPollProof, String> {
-  let checked_at_ms = now_ms();
-  let provider = std::env::var("WHATSAPP_PROVIDER")
-    .map(|value| value.trim().to_ascii_lowercase())
-    .unwrap_or_else(|_| "cloud_api".to_string());
-  if provider != "twilio" {
-    return Ok(ConnectorPollProof {
-      connector_id: "whatsapp".to_string(),
-      ok: false,
-      count: 0,
-      cursor: None,
-      messages: vec![],
-      checked_at_ms,
-      trust: "placeholder".to_string(),
-      error: Some("Inbound polling is only supported for WHATSAPP_PROVIDER=twilio. Cloud API inbound requires webhook wiring.".to_string()),
-    });
-  }
-
-  let account_sid = std::env::var("WHATSAPP_TWILIO_ACCOUNT_SID").unwrap_or_default();
-  let auth_token = std::env::var("WHATSAPP_TWILIO_AUTH_TOKEN").unwrap_or_default();
-  let from_number = std::env::var("WHATSAPP_TWILIO_FROM").unwrap_or_default();
-  if account_sid.trim().is_empty() || auth_token.trim().is_empty() || from_number.trim().is_empty()
-  {
-    return Ok(ConnectorPollProof {
-      connector_id: "whatsapp".to_string(),
-      ok: false,
-      count: 0,
-      cursor: None,
-      messages: vec![],
-      checked_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("Twilio inbound polling requires WHATSAPP_TWILIO_ACCOUNT_SID, WHATSAPP_TWILIO_AUTH_TOKEN, and WHATSAPP_TWILIO_FROM.".to_string()),
-    });
-  }
-
-  let max = limit.unwrap_or(15).clamp(1, 50);
-  let formatted_from = if from_number.trim().starts_with("whatsapp:") {
-    from_number.trim().to_string()
-  } else {
-    format!("whatsapp:{}", from_number.trim())
-  };
-
-  let endpoint = format!(
-    "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json",
-    account_sid.trim()
-  );
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(20))
-    .user_agent("Alphonso-WhatsApp-Bridge/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-
-  let response = client
-    .get(endpoint)
-    .basic_auth(account_sid.trim(), Some(auth_token.trim()))
-    .query(&[
-      ("PageSize", max.to_string()),
-      ("To", formatted_from.clone()),
-    ])
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let error_message = body
-      .get("message")
-      .and_then(|value| value.as_str())
-      .unwrap_or("Twilio message poll failed.");
-    return Ok(ConnectorPollProof {
-      connector_id: "whatsapp".to_string(),
-      ok: false,
-      count: 0,
-      cursor: None,
-      messages: vec![],
-      checked_at_ms,
-      trust: "failed".to_string(),
-      error: Some(error_message.to_string()),
-    });
-  }
-
-  let mut messages: Vec<ConnectorInboundMessage> = vec![];
-  if let Some(rows) = body.get("messages").and_then(|value| value.as_array()) {
-    for row in rows {
-      let direction = row
-        .get("direction")
-        .and_then(|value| value.as_str())
-        .unwrap_or("");
-      if direction != "inbound" {
-        continue;
-      }
-      let from = row
-        .get("from")
-        .and_then(|value| value.as_str())
-        .unwrap_or("")
-        .to_string();
-      let to = row
-        .get("to")
-        .and_then(|value| value.as_str())
-        .unwrap_or("")
-        .to_string();
-      if to != formatted_from {
-        continue;
-      }
-      let text = row
-        .get("body")
-        .and_then(|value| value.as_str())
-        .unwrap_or("")
-        .trim()
-        .to_string();
-      if text.is_empty() {
-        continue;
-      }
-      let sid = row
-        .get("sid")
-        .and_then(|value| value.as_str())
-        .unwrap_or("0");
-      messages.push(ConnectorInboundMessage {
-        update_id: 0,
-        chat_id: from.clone(),
-        from_id: Some(from),
-        text,
-        date_unix: None,
-        received_at_ms: checked_at_ms,
-      });
-      if messages.len() >= usize::from(max) {
-        break;
-      }
-      if sid.is_empty() {
-        continue;
-      }
-    }
-  }
-
+  // WhatsApp runs on Meta's Cloud API only (owner, 2026-10-21: Twilio is not
+  // supported). Cloud API messages arrive through the gateway queue, which
+  // the app drains itself (browserPollWhatsAppGateway); this command only
+  // tells it so, with trust "placeholder" as pollWhatsAppConnector expects.
+  let _ = limit;
   Ok(ConnectorPollProof {
     connector_id: "whatsapp".to_string(),
-    ok: true,
-    count: messages.len(),
+    ok: false,
+    count: 0,
     cursor: None,
-    messages,
-    checked_at_ms,
-    trust: "verified".to_string(),
-    error: None,
+    messages: vec![],
+    checked_at_ms: now_ms(),
+    trust: "placeholder".to_string(),
+    error: Some("WhatsApp messages arrive through the Cloud API gateway queue.".to_string()),
   })
 }
 
@@ -1332,9 +1128,10 @@ pub(crate) async fn connector_send_claude(
 pub(crate) async fn connector_send_qwen(
   http_client: tauri::State<'_, reqwest::Client>,
   text: String,
+  api_key: Option<String>,
 ) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
-  let key = std::env::var("DASHSCOPE_API_KEY").unwrap_or_default();
+  let key = secret_or_env(api_key, "DASHSCOPE_API_KEY");
   if key.trim().is_empty() {
     return Ok(ConnectorSendProof {
       connector_id: "qwen".to_string(),
@@ -2024,7 +1821,7 @@ mod tests {
       std::env::set_var("GITHUB_TOKEN", "test-token");
       let payload = serde_json::json!({});
       let result = runtime
-        .block_on(connector_github_action("".to_string(), payload))
+        .block_on(connector_github_action("".to_string(), payload, None))
         .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
@@ -2040,7 +1837,11 @@ mod tests {
       std::env::set_var("GITHUB_TOKEN", "test-token");
       let payload = serde_json::json!({});
       let result = runtime
-        .block_on(connector_github_action("fly_to_mars".to_string(), payload))
+        .block_on(connector_github_action(
+          "fly_to_mars".to_string(),
+          payload,
+          None,
+        ))
         .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
@@ -2061,7 +1862,11 @@ mod tests {
         "body": "Description"
       });
       let result = runtime
-        .block_on(connector_github_action("create_issue".to_string(), payload))
+        .block_on(connector_github_action(
+          "create_issue".to_string(),
+          payload,
+          None,
+        ))
         .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
@@ -2086,6 +1891,7 @@ mod tests {
         .block_on(connector_github_action(
           "dispatch_workflow".to_string(),
           payload,
+          None,
         ))
         .unwrap();
       assert!(!result.ok);
@@ -2107,6 +1913,7 @@ mod tests {
         .block_on(connector_slack_send(
           "".to_string(),
           "hello".to_string(),
+          None,
           None,
         ))
         .unwrap();
@@ -2130,6 +1937,7 @@ mod tests {
           "C012345".to_string(),
           "".to_string(),
           None,
+          None,
         ))
         .unwrap();
       assert!(!result.ok);
@@ -2148,7 +1956,11 @@ mod tests {
       std::env::remove_var("GITHUB_TOKEN");
       let payload = serde_json::json!({});
       let result = runtime
-        .block_on(connector_github_action("get_repo".to_string(), payload))
+        .block_on(connector_github_action(
+          "get_repo".to_string(),
+          payload,
+          None,
+        ))
         .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "unverified");
@@ -2167,6 +1979,7 @@ mod tests {
         .block_on(connector_slack_send(
           "C012345".to_string(),
           "hello".to_string(),
+          None,
           None,
         ))
         .unwrap();
@@ -2190,6 +2003,7 @@ mod tests {
           "Task title".to_string(),
           "Task content".to_string(),
           None,
+          None,
         ))
         .unwrap();
       assert!(!result.ok);
@@ -2212,6 +2026,7 @@ mod tests {
           "Task title".to_string(),
           "Task content".to_string(),
           None,
+          None,
         ))
         .unwrap();
       assert!(!result.ok);
@@ -2232,6 +2047,7 @@ mod tests {
         .block_on(connector_send_clickup(
           "   ".to_string(),
           "Task content".to_string(),
+          None,
           None,
         ))
         .unwrap();

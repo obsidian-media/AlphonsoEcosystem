@@ -56,6 +56,7 @@ vi.mock('../../services/whatsappBrowserConnector', () => ({
 describe('connectorOutbound qwen bridge', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetConnectorCredential.mockReturnValue('unused');
     mockIsConnectorAuthenticated.mockReturnValue({ ok: true });
     mockGetConnectorCircuitState.mockReturnValue({ ok: true });
     mockGateConnectorAction.mockReturnValue({ ok: true, verificationState: 'verified' });
@@ -72,8 +73,11 @@ describe('connectorOutbound qwen bridge', () => {
     });
   });
 
-  it('fails closed when the backend environment check reports a missing key', async () => {
+  it('fails closed when the key is neither saved in Settings nor in the environment', async () => {
     const { sendQwenConnectorMessage } = await import('../../services/connectors/connectorOutbound');
+    // QA Bug 32: a key saved in Settings counts too, so the key must be
+    // missing from both places for the send to be refused.
+    mockGetConnectorCredential.mockReturnValue('');
     mockInvoke.mockImplementationOnce(async (command) => {
       if (command === 'check_env_vars_presence') {
         return { DASHSCOPE_API_KEY: false };
@@ -95,7 +99,8 @@ describe('connectorOutbound qwen bridge', () => {
 
     const result = await sendQwenConnectorMessage('hello qwen');
 
-    expect(mockInvoke).toHaveBeenCalledWith('connector_send_qwen', { text: 'hello qwen' });
+    // The key saved in Settings is passed to the backend (QA Bug 32).
+    expect(mockInvoke).toHaveBeenCalledWith('connector_send_qwen', { text: 'hello qwen', apiKey: 'unused' });
     expect(result.ok).toBe(true);
     expect(result.externalId).toBe('qwen-123');
     expect(mockRecordConnectorSuccess).toHaveBeenCalledWith('qwen', 'paid_connector_send');

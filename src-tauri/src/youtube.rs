@@ -1,13 +1,24 @@
+use crate::utils::secret_or_env;
 use crate::{now_ms, YouTubeUploadProof};
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
 
-pub(crate) async fn youtube_access_token() -> Result<String, String> {
-  let client_id = std::env::var("YOUTUBE_CLIENT_ID").unwrap_or_default();
-  let client_secret = std::env::var("YOUTUBE_CLIENT_SECRET").unwrap_or_default();
-  let refresh_token = std::env::var("YOUTUBE_REFRESH_TOKEN").unwrap_or_default();
+/// Saved OAuth values passed from the app; any that are missing fall back to
+/// the environment (see `secret_or_env`).
+#[derive(Default, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct YouTubeOAuth {
+  pub(crate) client_id: Option<String>,
+  pub(crate) client_secret: Option<String>,
+  pub(crate) refresh_token: Option<String>,
+}
+
+pub(crate) async fn youtube_access_token(oauth: YouTubeOAuth) -> Result<String, String> {
+  let client_id = secret_or_env(oauth.client_id, "YOUTUBE_CLIENT_ID");
+  let client_secret = secret_or_env(oauth.client_secret, "YOUTUBE_CLIENT_SECRET");
+  let refresh_token = secret_or_env(oauth.refresh_token, "YOUTUBE_REFRESH_TOKEN");
   if client_id.trim().is_empty()
     || client_secret.trim().is_empty()
     || refresh_token.trim().is_empty()
@@ -81,6 +92,7 @@ pub(crate) async fn connector_upload_youtube(
   description: Option<String>,
   tags: Option<Vec<String>>,
   privacy_status: Option<String>,
+  oauth: Option<YouTubeOAuth>,
 ) -> Result<YouTubeUploadProof, String> {
   rate_limiter.check_and_record("connector_upload_youtube")?;
   let uploaded_at_ms = now_ms();
@@ -123,7 +135,7 @@ pub(crate) async fn connector_upload_youtube(
     });
   }
 
-  let access_token = match youtube_access_token().await {
+  let access_token = match youtube_access_token(oauth.unwrap_or_default()).await {
     Ok(token) => token,
     Err(error) => {
       return Ok(YouTubeUploadProof {
@@ -304,7 +316,7 @@ mod tests {
       .enable_all()
       .build()
       .unwrap();
-    let result = runtime.block_on(youtube_access_token());
+    let result = runtime.block_on(youtube_access_token(YouTubeOAuth::default()));
 
     assert!(result.is_err());
     assert!(result

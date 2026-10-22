@@ -254,6 +254,31 @@ fn tool_def(name: &str) -> Option<&'static ToolDef> {
   TOOLS.iter().find(|t| t.name == name)
 }
 
+/// The image a Docker-run tool starts: the last start argument (every
+/// Docker tool in TOOLS ends its `docker run` arguments with the image).
+fn docker_image(def: &ToolDef) -> Option<&'static str> {
+  if def.exe != "docker" {
+    return None;
+  }
+  def.args.last().copied().filter(|arg| !arg.starts_with('-'))
+}
+
+/// True only when the tool's image is present locally. "Docker is on PATH"
+/// used to count as installed, and Install pulled nothing, so n8n, ChromaDB
+/// and OpenHands showed as installed on a machine that had never pulled them
+/// and whose Docker was not even running (QA Bug 30, 2026-10-21).
+fn docker_image_present(docker: &str, image: &str) -> bool {
+  let mut command = Command::new(docker);
+  command.args(["image", "inspect", image]);
+  no_window(&mut command);
+  command
+    .stdout(std::process::Stdio::null())
+    .stderr(std::process::Stdio::null())
+    .status()
+    .map(|status| status.success())
+    .unwrap_or(false)
+}
+
 // ─────────────────────────────────────────────────────────
 // Directory helpers
 // ─────────────────────────────────────────────────────────
@@ -1746,6 +1771,10 @@ pub async fn runtime_get_all_status(
       (Some(_), _) => dir.exists() && dir.join(".git").exists(),
       (None, "ollama") => find_ollama().is_some(),
       (None, "python") if def.name == "voice-os" => voice_runtime_installed(&dir, def.pip_packages),
+      (None, "docker") => match (find_docker(), docker_image(def)) {
+        (Some(docker), Some(image)) => docker_image_present(&docker, image),
+        _ => false,
+      },
       (None, exe) => {
         // Check venv bin first, then PATH
         let venv_bin = if cfg!(target_os = "windows") {
@@ -1818,6 +1847,34 @@ pub async fn runtime_install_tool(
 
   let py = py_path.unwrap_or_else(|_| "python".to_string());
   let git = git_path.unwrap_or_else(|_| "git".to_string());
+
+  // Docker tools: installing means pulling the image the tool runs.
+  if let Some(image) = docker_image(def) {
+    let docker = find_docker().ok_or_else(|| {
+      "Docker not found. Install Docker Desktop first, then start it.".to_string()
+    })?;
+    emit_progress(&app, &name, "starting", &format!("Pulling {image} …"), 10);
+    run_streaming(&app, &name, &docker, &["pull", image], None)
+      .await
+      .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+    if !docker_image_present(&docker, image) {
+      let message = format!("{image} was not found after docker pull.");
+      emit_progress(&app, &name, "error", &message, 0);
+      return Err(message);
+    }
+    emit_progress(
+      &app,
+      &name,
+      "done",
+      &format!("{} installed successfully.", def.display_name),
+      100,
+    );
+    return Ok(RuntimeActionResult {
+      tool: name,
+      ok: true,
+      message: format!("{} installed ({image}).", def.display_name),
+    });
+  }
 
   let dir = tool_dir(def.name);
   std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -2417,6 +2474,27 @@ fn is_pid_alive(pid: u32) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn docker_tools_name_their_image() {
+    assert_eq!(docker_image(tool_def("n8n").unwrap()), Some("n8nio/n8n"));
+    assert_eq!(
+      docker_image(tool_def("chromadb").unwrap()),
+      Some("chromadb/chroma")
+    );
+    assert_eq!(
+      docker_image(tool_def("openHands").unwrap()),
+      Some("ghcr.io/all-hands-ai/openhands:main")
+    );
+    assert_eq!(docker_image(tool_def("ollama").unwrap()), None);
+    for def in TOOLS.iter().filter(|d| d.exe == "docker") {
+      assert!(
+        docker_image(def).is_some(),
+        "{} has no image argument",
+        def.name
+      );
+    }
+  }
 
   fn ollama_app_db(dir: &Path, models: Option<&str>) -> PathBuf {
     let db = dir.join("db.sqlite");
