@@ -236,12 +236,19 @@ fn node_start_script(start: &str) -> Result<String, String> {
     ));
   }
   let script = parts[1];
+  // A drive path (`C:/x.js`) is not "absolute" to Linux's Path, so refuse a
+  // leading slash or any `:` directly, the same on every system.
   let bad = script.starts_with('-')
+    || script.starts_with('/')
+    || script.starts_with('\\')
     || script.contains("..")
     || std::path::Path::new(script).is_absolute()
-    || script
-      .chars()
-      .any(|c| matches!(c, '&' | '|' | ';' | '<' | '>' | '$' | '`' | '"' | '\''));
+    || script.chars().any(|c| {
+      matches!(
+        c,
+        ':' | '&' | '|' | ';' | '<' | '>' | '$' | '`' | '"' | '\''
+      )
+    });
   if bad {
     return Err(format!(
       "ACC's start script \"{}\" isn't a plain file inside the folder.",
