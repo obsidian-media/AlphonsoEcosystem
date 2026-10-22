@@ -3,6 +3,7 @@ import { isTavilyConfigured, searchTavily } from './connectors/tavilyConnector.j
 import { isPerplexityConfigured, searchPerplexity } from './connectors/perplexityConnector';
 import { isDeepSeekConfigured, searchWithDeepSeek } from './connectors/deepseekConnector.js';
 import { isBraveSearchConfigured, searchBrave } from './connectors/braveSearchConnector';
+import { getConnectorCredential } from './connectors/connectorAuth';
 import { invoke } from '@tauri-apps/api/core';
 import { HECTOR_RESEARCH_SCHEMA } from '../agents/hector/hectorResearchSchema';
 import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../agents/hector/hectorPermissions';
@@ -508,7 +509,9 @@ async function discoverResearchSourcesBrave({ researchQuestion, sourceType, limi
     results = await retryWithBackoff(() => invoke('search_brave_sources', {
       query: researchQuestion,
       limit,
-      sourceType
+      sourceType,
+      // The key saved in Settings; the backend falls back to the environment.
+      apiKey: String(getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY') || '').trim() || null
     }));
   } catch {
     // Rust path failed — fall through to frontend path below

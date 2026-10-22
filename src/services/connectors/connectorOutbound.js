@@ -7,6 +7,28 @@ import { appendConnectorAuditEntry } from '../connectorAuditLogService';
 import { browserSendTelegram } from '../telegramBrowserConnector';
 import { browserSendWhatsApp } from '../whatsappBrowserConnector';
 import { getConnectorCredential } from './connectorAuth.js';
+
+/**
+ * Which of a connector's keys are available: saved in Settings (OS keychain)
+ * or set as a process environment variable. These paths used to check only
+ * the environment, so a key saved in Settings was refused as "missing"
+ * (QA Bug 32, 2026-10-21). Returns `{ NAME: boolean }`; never throws.
+ */
+async function secretPresence(connectorId, names) {
+  let env = {};
+  try {
+    env = (await invoke('check_env_vars_presence', { names })) ?? {};
+  } catch {
+    env = {};
+  }
+  return Object.fromEntries(names.map((name) => [name, Boolean(getConnectorCredential(connectorId, name)) || Boolean(env[name])]));
+}
+
+/** A saved credential to pass to a backend command, or null to let it use the environment. */
+function savedSecret(connectorId, name) {
+  const value = String(getConnectorCredential(connectorId, name) || '').trim();
+  return value || null;
+}
 import {
   gateConnectorAction,
   requireConnectorReady,
@@ -272,7 +294,7 @@ export async function sendWhatsAppConnectorMessage(to, text, options = {}) {
   // Check env vars in Rust process AND in the credential store.
   let envCheck = null;
   try {
-    envCheck = await invoke('check_env_vars_presence', { names: ['WHATSAPP_ACCESS_TOKEN'] });
+    envCheck = await secretPresence('whatsapp', ['WHATSAPP_ACCESS_TOKEN']);
   } catch {
     envCheck = null;
   }
@@ -290,7 +312,12 @@ export async function sendWhatsAppConnectorMessage(to, text, options = {}) {
   let result;
   if (rustHasToken) {
     try {
-      result = await invoke('connector_send_whatsapp', { to, text });
+      result = await invoke('connector_send_whatsapp', {
+        to,
+        text,
+        accessToken: savedSecret('whatsapp', 'WHATSAPP_ACCESS_TOKEN'),
+        phoneNumberId: savedSecret('whatsapp', 'WHATSAPP_PHONE_NUMBER_ID')
+      });
     } catch {
       result = null;
     }
@@ -340,7 +367,7 @@ export async function sendChatGptConnectorMessage(text, options = {}) {
 
   let envCheck = null;
   try {
-    envCheck = await invoke('check_env_vars_presence', { names: ['OPENAI_API_KEY'] });
+    envCheck = await secretPresence('chatgpt', ['OPENAI_API_KEY']);
   } catch {
     envCheck = null;
   }
@@ -408,7 +435,7 @@ export async function sendClaudeConnectorMessage(text, options = {}) {
 
   let envCheck = null;
   try {
-    envCheck = await invoke('check_env_vars_presence', { names: ['ANTHROPIC_API_KEY'] });
+    envCheck = await secretPresence('claude', ['ANTHROPIC_API_KEY']);
   } catch {
     envCheck = null;
   }
@@ -476,7 +503,7 @@ export async function sendQwenConnectorMessage(text, options = {}) {
 
   let envCheck = null;
   try {
-    envCheck = await invoke('check_env_vars_presence', { names: ['DASHSCOPE_API_KEY'] });
+    envCheck = await secretPresence('qwen', ['DASHSCOPE_API_KEY']);
   } catch {
     envCheck = null;
   }
@@ -512,7 +539,7 @@ export async function sendQwenConnectorMessage(text, options = {}) {
   let result;
   try {
     const timeoutMs = options.timeoutMs || 30000;
-    const invokePromise = invoke('connector_send_qwen', { text });
+    const invokePromise = invoke('connector_send_qwen', { text, apiKey: savedSecret('qwen', 'DASHSCOPE_API_KEY') });
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('CONNECTOR_TIMEOUT')), timeoutMs)
     );
@@ -600,7 +627,7 @@ export async function sendNotionConnectorEntry({ title, content = '', parentPage
   }
   let envCheck = null;
   try {
-    envCheck = await invoke('check_env_vars_presence', { names: ['NOTION_API_KEY'] });
+    envCheck = await secretPresence('notion', ['NOTION_API_KEY']);
   } catch {
     envCheck = null;
   }
@@ -618,7 +645,8 @@ export async function sendNotionConnectorEntry({ title, content = '', parentPage
     result = await invoke('connector_send_notion', {
       title,
       content,
-      parentPageId: parentPageId || null
+      parentPageId: parentPageId || savedSecret('notion', 'NOTION_PARENT_PAGE_ID'),
+      token: savedSecret('notion', 'NOTION_API_KEY')
     });
   } catch (error) {
     const errMsg = String(error || '');
@@ -678,7 +706,7 @@ export async function sendClickUpConnectorTask({ title, content = '', listId = '
   }
   let envCheck = null;
   try {
-    envCheck = await invoke('check_env_vars_presence', { names: ['CLICKUP_API_KEY'] });
+    envCheck = await secretPresence('clickup', ['CLICKUP_API_KEY']);
   } catch {
     envCheck = null;
   }
@@ -696,7 +724,8 @@ export async function sendClickUpConnectorTask({ title, content = '', listId = '
     result = await invoke('connector_send_clickup', {
       title,
       content,
-      listId: listId || null
+      listId: listId || savedSecret('clickup', 'CLICKUP_LIST_ID'),
+      token: savedSecret('clickup', 'CLICKUP_API_KEY')
     });
   } catch (error) {
     const errMsg = String(error || '');
@@ -762,7 +791,7 @@ export async function uploadYouTubeConnectorVideo({
   }
   let envCheck = null;
   try {
-    envCheck = await invoke('check_env_vars_presence', { names: ['YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET'] });
+    envCheck = await secretPresence('youtube', ['YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET']);
   } catch {
     envCheck = null;
   }
@@ -782,7 +811,12 @@ export async function uploadYouTubeConnectorVideo({
       title,
       description,
       tags,
-      privacyStatus
+      privacyStatus,
+      oauth: {
+        clientId: savedSecret('youtube', 'YOUTUBE_CLIENT_ID'),
+        clientSecret: savedSecret('youtube', 'YOUTUBE_CLIENT_SECRET'),
+        refreshToken: savedSecret('youtube', 'YOUTUBE_REFRESH_TOKEN')
+      }
     });
   } catch (error) {
     const errMsg = String(error || '');
@@ -841,7 +875,7 @@ export async function sendGitHubAction(action, payload, options = {}) {
   }
   let envCheck = null;
   try {
-    envCheck = await invoke('check_env_vars_presence', { names: ['GITHUB_TOKEN'] });
+    envCheck = await secretPresence('github', ['GITHUB_TOKEN']);
   } catch {
     envCheck = null;
   }
@@ -849,14 +883,14 @@ export async function sendGitHubAction(action, payload, options = {}) {
     appendConnectorAudit('github', 'action_blocked_missing_key', { action });
     return {
       ok: false, connectorId: 'github', blocked: true,
-      error: 'GitHub token is not configured — set GITHUB_TOKEN in environment',
+      error: 'GitHub token is not configured — add it in Settings → Connectors → GitHub',
       code: 'MISSING_KEY', trust: TRUST_STATES.FAILED
     };
   }
   await guardConnectorRateLimit('github');
   let result;
   try {
-    result = await invoke('connector_github_action', { action, payload });
+    result = await invoke('connector_github_action', { action, payload, token: savedSecret('github', 'GITHUB_TOKEN') });
   } catch (error) {
     const errMsg = String(error || '');
     recordConnectorFailure('github', action);
@@ -915,7 +949,7 @@ export async function sendSlackMessage(channel, text, options = {}) {
   }
   let envCheck = null;
   try {
-    envCheck = await invoke('check_env_vars_presence', { names: ['SLACK_BOT_TOKEN'] });
+    envCheck = await secretPresence('slack', ['SLACK_BOT_TOKEN']);
   } catch {
     envCheck = null;
   }
@@ -930,7 +964,7 @@ export async function sendSlackMessage(channel, text, options = {}) {
   await guardConnectorRateLimit('slack');
   let result;
   try {
-    result = await invoke('connector_slack_send', { channel, text, threadTs: options.threadTs || options.thread_ts || null });
+    result = await invoke('connector_slack_send', { channel, text, threadTs: options.threadTs || options.thread_ts || null, token: savedSecret('slack', 'SLACK_BOT_TOKEN') });
   } catch (error) {
     const errMsg = String(error || '');
     recordConnectorFailure('slack', 'message_send');

@@ -40,6 +40,7 @@ vi.mock('../../services/connectorAuditLogService', () => ({
 describe('connectorOutbound youtube bridge', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetConnectorCredential.mockReturnValue('unused');
     mockIsConnectorAuthenticated.mockReturnValue({ ok: true });
     mockGetConnectorCircuitState.mockReturnValue({ ok: true });
     mockGateConnectorAction.mockReturnValue({ ok: true, verificationState: 'verified' });
@@ -62,8 +63,11 @@ describe('connectorOutbound youtube bridge', () => {
     });
   });
 
-  it('fails closed when the backend environment check reports missing credentials', async () => {
+  it('fails closed when the credentials are neither saved in Settings nor in the environment', async () => {
     const { uploadYouTubeConnectorVideo } = await import('../../services/connectors/connectorOutbound');
+    // QA Bug 32: a key saved in Settings counts too, so the key must be
+    // missing from both places for the send to be refused.
+    mockGetConnectorCredential.mockReturnValue('');
     mockInvoke.mockImplementationOnce(async (command) => {
       if (command === 'check_env_vars_presence') {
         return { YOUTUBE_CLIENT_ID: false, YOUTUBE_CLIENT_SECRET: false };
@@ -99,7 +103,9 @@ describe('connectorOutbound youtube bridge', () => {
       title: 'Test video',
       description: 'demo',
       tags: ['alpha', 'beta'],
-      privacyStatus: 'unlisted'
+      privacyStatus: 'unlisted',
+      // The OAuth values saved in Settings are passed to the backend (QA Bug 32).
+      oauth: { clientId: 'unused', clientSecret: 'unused', refreshToken: 'unused' }
     });
     expect(result.ok).toBe(true);
     expect(result.videoId).toBe('abc123');

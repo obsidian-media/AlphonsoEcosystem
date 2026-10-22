@@ -152,6 +152,7 @@ needs the owner's account and is marked separately.
 
 | Connector | No-credentials behaviour | Real account |
 |---|---|---|
+| (all 26) | Probed 2026-10-21: every Test and Validate clicked on a fresh profile; results and findings 32–37 above | — |
 | ollama | — (chat specs use it) | local, available |
 | telegram | — | owner has a bot token |
 | whatsapp | — | — |
@@ -223,6 +224,12 @@ nobody has seen it work in the real app yet.
 | 27 | Each Content Studio job stores its generated image inside `localStorage` (`alphonso_content_catalyst_jobs_v1` went from 7 KB to 620 KB after one job). WebView storage is about 5 MB, so a handful of jobs could fill it (the 2026-10-12 "job disappears" bug class) | Open; measure how many jobs fit, then store images as files |
 | 30 | Runtime Hub reported n8n, ChromaDB and OpenHands as installed whenever Docker was on PATH (Docker was not even running, no image pulled), and their Install button did nothing but report success | Fixed (batch 4): Install runs `docker pull <image>` and checks the image is there; installed means `docker image inspect <image>` succeeds; 1 Rust test. Real-app install not run yet (needs Docker running) |
 | 31 | Runtime Hub shows a ComfyUI installed outside Alphonso (`D:\AgentDevWork\Programs\comfyui`) as not installed but running | Open (minor): show "running (installed outside Alphonso)" instead of offering Install |
+| 32 | **Credentials saved in the app are ignored by the older outbound connector paths.** `connectorOutbound.js` blocks WhatsApp, ChatGPT, Claude, Qwen, Notion, ClickUp, YouTube, GitHub and Slack sends unless the key is a process environment variable (`check_env_vars_presence`), with messages like "API key missing — configure OPENAI_API_KEY in settings"; the Rust commands behind them (`connector_github_action`, the ChatGPT command, …) also read only `std::env::var`. Keys saved in Settings live in the OS keychain (since 2026-07-25), so these paths never see them. Callers: ConnectorSetupPanel's own send tests, `marcusPublishService.ts` (WhatsApp/Notion/ClickUp/YouTube), `providerAdapterService.js` (ChatGPT/Claude/Qwen), `notionSyncService.js`, `packetExecutionService.ts` | Fixed in code (batch 5): `secretPresence()` in `connectorOutbound.js` counts a key saved in Settings or set in the environment; saved keys are passed to the backend, and `secret_or_env()` (`utils.rs`) makes `connector_github_action`, `connector_slack_send`, `connector_send_whatsapp`, `connector_send_notion`, `connector_send_clickup`, `connector_send_qwen`, `connector_upload_youtube` and `search_brave_sources` use them, falling back to the environment. Tests: Rust `secret_or_env…`; `clickupConnector.test.js` "uses a key saved in Settings when the environment has none" (fails on the old code). Not changed: Meta publishing (no credential fields in Settings, so environment only) and Runway resume (lowest priority) |
+| 33 | Health Monitor's **Validate** checks only process environment variables (so a key saved in Settings shows "Missing"), and answers "No credential validation required" for GitHub, Slack, Discord, Brave, Perplexity, Tavily, DeepSeek, n8n and others; **Test** for Qwen, NVIDIA NIM and Gemini only checks a key is present and then shows "verified" / "TEST OK" without calling the service | Open; batch 5 |
+| 34 | Health Monitor shows internal text to users: "Public deploy note: this app auto-deploys from GitHub main to Railway…", and ChatGPT/Claude as "PLACEHOLDER … not part of the active cloud lane" although both connectors work | Open; batch 5 |
+| 35 | WhatsApp's listed required fields are `WHATSAPP_PROVIDER` and `WHATSAPP_ALLOWED_NUMBERS` ("Cloud API or Twilio"); the real setup needs the access token, phone number id and gateway drain URL | Open; batch 5 (Twilio support to be confirmed with the owner) |
+| 36 | The phone-pairing panel is rendered twice in Settings (Agents → "Agent Companions" and Runtime → "Remote Access"); the Mobile Bridge hint says "Pair from Settings → Companion", which does not exist | Open; owner to pick one place |
+| 37 | Test isolation: a fresh desktop test profile showed GitHub and Slack tokens as saved (neither is in the environment), so the test profile can read credentials saved by the real app | Open; investigate `utils::e2e_profile()` keychain naming |
 | 29 | `content.e2e.mjs` timed out once in a full suite run (after `content-image`) although every model call took under 4 s and every image about 4 s; it then passed 3 times alone and twice paired with `content-image` | Intermittent, not reproduced; the spec now reports the job's status, last log lines and screen text when it times out |
 | 28 | Content Studio accepted any JSON reply as a model-written draft: a reply with no hook or caption showed as a finished draft with "—" and no notice; and `llama3.2:3b` often failed the brief's JSON | Fixed in code: drafts need a hook and a caption or they are labelled as the template with the reason; brief and draft ask Ollama for JSON (`format: "json"`, new optional argument on `ollama_generate`, 1 Rust test); real-app re-check pending |
 
@@ -231,6 +238,11 @@ nobody has seen it work in the real app yet.
 One block per feature as it is tested: **Intended** (with its source),
 **Observed** (real app, date, build), **Verdict**, and the spec that now
 guards it.
+
+### Connectors — backend uses a key passed from Settings (fix batch 5, 2026-10-21, debug build)
+- **Intended:** a key saved in Settings is the one connector calls use; an environment variable is only a fallback (QA Bug 32).
+- **Observed:** in the real app, `search_brave_sources` with no key says "Brave Search API key is not set: add it in Settings → Connectors"; with a dummy key passed in, the request reaches Brave and Brave answers HTTP 422. Before the fix the command read only `BRAVE_SEARCH_API_KEY` from the environment.
+- **Verdict:** Pass for the backend half. The app half (saved key counted and passed on) is covered by unit tests; a real send with a real account is still to do.
 
 ### Content Studio — image gets the GPU (fix batch 2, 2026-10-21, debug build)
 - **Intended:** before an image job, Ollama gives up its GPU memory so the image is fast (owner, Q16).

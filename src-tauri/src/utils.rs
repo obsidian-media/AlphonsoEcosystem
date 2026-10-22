@@ -11,6 +11,22 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 /// Apply CREATE_NO_WINDOW on Windows so child processes don't flash a
 /// visible console window. No-op on other platforms.
 #[allow(unused_variables)]
+/// A connector secret for a backend command: the value the app passes (saved
+/// in Settings, kept in the OS keychain) wins, and a process environment
+/// variable is the fallback. Before 2026-10-21 most connector commands read
+/// only the environment, so a key saved in Settings was never used (QA Bug 32).
+pub(crate) fn secret_or_env(passed: Option<String>, env_name: &str) -> String {
+  passed
+    .map(|value| value.trim().to_string())
+    .filter(|value| !value.is_empty())
+    .or_else(|| {
+      std::env::var(env_name)
+        .ok()
+        .map(|value| value.trim().to_string())
+    })
+    .unwrap_or_default()
+}
+
 pub(crate) fn no_window(cmd: &mut Command) -> &mut Command {
   #[cfg(target_os = "windows")]
   cmd.creation_flags(CREATE_NO_WINDOW);
@@ -96,6 +112,22 @@ pub(crate) fn generate_id() -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn secret_or_env_prefers_the_passed_value_and_falls_back_to_env() {
+    let name = "ALPHONSO_TEST_SECRET_OR_ENV_7F3A";
+    std::env::remove_var(name);
+    assert_eq!(
+      secret_or_env(Some("  saved-key  ".into()), name),
+      "saved-key"
+    );
+    assert_eq!(secret_or_env(None, name), "");
+    std::env::set_var(name, " env-key ");
+    assert_eq!(secret_or_env(None, name), "env-key");
+    assert_eq!(secret_or_env(Some("   ".into()), name), "env-key");
+    assert_eq!(secret_or_env(Some("saved".into()), name), "saved");
+    std::env::remove_var(name);
+  }
 
   #[test]
   fn trim_trailing_slashes_removes_trailing_slashes() {

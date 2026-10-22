@@ -1,3 +1,4 @@
+use crate::utils::secret_or_env;
 use crate::{now_ms, unix_now_iso};
 use serde::{Deserialize, Serialize};
 
@@ -611,16 +612,15 @@ pub(crate) async fn search_brave_sources(
   query: String,
   limit: Option<u8>,
   source_type: Option<String>,
+  api_key: Option<String>,
 ) -> Result<Vec<ResearchSearchResult>, String> {
   let query = query.trim().to_string();
   if query.is_empty() {
     return Ok(vec![]);
   }
-  let api_key = std::env::var("BRAVE_SEARCH_API_KEY")
-    .map_err(|_| "BRAVE_SEARCH_API_KEY not set".to_string())?;
-  let api_key = api_key.trim().to_string();
+  let api_key = secret_or_env(api_key, "BRAVE_SEARCH_API_KEY");
   if api_key.is_empty() {
-    return Err("BRAVE_SEARCH_API_KEY is empty".to_string());
+    return Err("Brave Search API key is not set: add it in Settings → Connectors".to_string());
   }
   let count = limit.unwrap_or(8).clamp(1, 20);
   let src_type = source_type.unwrap_or_else(|| "official_docs".to_string());

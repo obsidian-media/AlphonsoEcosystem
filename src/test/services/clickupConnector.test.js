@@ -40,6 +40,7 @@ vi.mock('../../services/connectorAuditLogService', () => ({
 describe('connectorOutbound clickup bridge', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetConnectorCredential.mockReturnValue('unused');
     mockIsConnectorAuthenticated.mockReturnValue({ ok: true });
     mockGetConnectorCircuitState.mockReturnValue({ ok: true });
     mockGateConnectorAction.mockReturnValue({ ok: true, verificationState: 'verified' });
@@ -62,8 +63,11 @@ describe('connectorOutbound clickup bridge', () => {
     });
   });
 
-  it('fails closed when the backend environment check reports a missing key', async () => {
+  it('fails closed when the key is neither saved in Settings nor in the environment', async () => {
     const { sendClickUpConnectorTask } = await import('../../services/connectors/connectorOutbound');
+    // QA Bug 32: a key saved in Settings counts too, so the key must be
+    // missing from both places for the send to be refused.
+    mockGetConnectorCredential.mockReturnValue('');
     mockInvoke.mockImplementationOnce(async (command) => {
       if (command === 'check_env_vars_presence') {
         return { CLICKUP_API_KEY: false };
@@ -80,6 +84,23 @@ describe('connectorOutbound clickup bridge', () => {
     expect(mockInvoke).not.toHaveBeenCalledWith('connector_send_clickup', expect.anything());
   });
 
+  it('uses a key saved in Settings when the environment has none', async () => {
+    // QA Bug 32: a key saved in Settings lives in the OS keychain, not in the
+    // environment. It used to be refused as missing.
+    const { sendClickUpConnectorTask } = await import('../../services/connectors/connectorOutbound');
+    mockGetConnectorCredential.mockImplementation((connectorId, name) => (name === 'CLICKUP_API_KEY' ? 'saved-key' : ''));
+    mockInvoke.mockImplementation(async (command) => {
+      if (command === 'check_env_vars_presence') return { CLICKUP_API_KEY: false };
+      if (command === 'connector_send_clickup') return { ok: true, connectorId: 'clickup', taskId: 't-1', trust: 'verified' };
+      return {};
+    });
+
+    const result = await sendClickUpConnectorTask({ title: 'Task', content: 'Body', listId: 'list-1' });
+
+    expect(result.ok).toBe(true);
+    expect(mockInvoke).toHaveBeenCalledWith('connector_send_clickup', expect.objectContaining({ token: 'saved-key' }));
+  });
+
   it('invokes the Tauri command when the gate passes', async () => {
     const { sendClickUpConnectorTask } = await import('../../services/connectors/connectorOutbound');
 
@@ -88,7 +109,9 @@ describe('connectorOutbound clickup bridge', () => {
     expect(mockInvoke).toHaveBeenCalledWith('connector_send_clickup', {
       title: 'Task',
       content: 'Body',
-      listId: 'list-1'
+      listId: 'list-1',
+      // The key saved in Settings is passed to the backend (QA Bug 32).
+      token: 'unused'
     });
     expect(result.ok).toBe(true);
     expect(result.taskId).toBe('task-123');

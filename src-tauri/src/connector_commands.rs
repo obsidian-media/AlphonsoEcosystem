@@ -1,3 +1,4 @@
+use crate::utils::secret_or_env;
 use crate::{
   dedup_strings, now_ms, ConnectorInboundMessage, ConnectorPollProof, ConnectorSendProof,
 };
@@ -177,9 +178,10 @@ pub(crate) struct SlackSendProof {
 pub(crate) async fn connector_github_action(
   action: String,
   payload: Value,
+  token: Option<String>,
 ) -> Result<GithubActionProof, String> {
   let sent_at_ms = now_ms();
-  let token = std::env::var("GITHUB_TOKEN").unwrap_or_default();
+  let token = secret_or_env(token, "GITHUB_TOKEN");
   if token.trim().is_empty() {
     return Ok(GithubActionProof {
       ok: false,
@@ -411,9 +413,10 @@ pub(crate) async fn connector_slack_send(
   channel: String,
   text: String,
   thread_ts: Option<String>,
+  token: Option<String>,
 ) -> Result<SlackSendProof, String> {
   let sent_at_ms = now_ms();
-  let token = std::env::var("SLACK_BOT_TOKEN").unwrap_or_default();
+  let token = secret_or_env(token, "SLACK_BOT_TOKEN");
   if token.trim().is_empty() {
     return Ok(SlackSendProof {
       ok: false,
@@ -504,6 +507,8 @@ pub(crate) async fn connector_send_whatsapp(
   rate_limiter: tauri::State<'_, crate::RateLimiter>,
   to: String,
   text: String,
+  access_token: Option<String>,
+  phone_number_id: Option<String>,
 ) -> Result<ConnectorSendProof, String> {
   rate_limiter.check_and_record("connector_send_whatsapp")?;
   let sent_at_ms = now_ms();
@@ -608,8 +613,8 @@ pub(crate) async fn connector_send_whatsapp(
     });
   }
 
-  let access_token = std::env::var("WHATSAPP_ACCESS_TOKEN").unwrap_or_default();
-  let phone_number_id = std::env::var("WHATSAPP_PHONE_NUMBER_ID").unwrap_or_default();
+  let access_token = secret_or_env(access_token, "WHATSAPP_ACCESS_TOKEN");
+  let phone_number_id = secret_or_env(phone_number_id, "WHATSAPP_PHONE_NUMBER_ID");
   if access_token.trim().is_empty() || phone_number_id.trim().is_empty() {
     return Ok(ConnectorSendProof {
       connector_id: "whatsapp".to_string(),
@@ -689,9 +694,10 @@ pub(crate) async fn connector_send_notion(
   title: String,
   content: String,
   parent_page_id: Option<String>,
+  token: Option<String>,
 ) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
-  let token = std::env::var("NOTION_API_KEY").unwrap_or_default();
+  let token = secret_or_env(token, "NOTION_API_KEY");
   if token.trim().is_empty() {
     return Ok(ConnectorSendProof {
       connector_id: "notion".to_string(),
@@ -820,9 +826,10 @@ pub(crate) async fn connector_send_clickup(
   title: String,
   content: String,
   list_id: Option<String>,
+  token: Option<String>,
 ) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
-  let token = std::env::var("CLICKUP_API_KEY").unwrap_or_default();
+  let token = secret_or_env(token, "CLICKUP_API_KEY");
   if token.trim().is_empty() {
     return Ok(ConnectorSendProof {
       connector_id: "clickup".to_string(),
@@ -1332,9 +1339,10 @@ pub(crate) async fn connector_send_claude(
 pub(crate) async fn connector_send_qwen(
   http_client: tauri::State<'_, reqwest::Client>,
   text: String,
+  api_key: Option<String>,
 ) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
-  let key = std::env::var("DASHSCOPE_API_KEY").unwrap_or_default();
+  let key = secret_or_env(api_key, "DASHSCOPE_API_KEY");
   if key.trim().is_empty() {
     return Ok(ConnectorSendProof {
       connector_id: "qwen".to_string(),
@@ -2024,7 +2032,7 @@ mod tests {
       std::env::set_var("GITHUB_TOKEN", "test-token");
       let payload = serde_json::json!({});
       let result = runtime
-        .block_on(connector_github_action("".to_string(), payload))
+        .block_on(connector_github_action("".to_string(), payload, None))
         .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
@@ -2040,7 +2048,11 @@ mod tests {
       std::env::set_var("GITHUB_TOKEN", "test-token");
       let payload = serde_json::json!({});
       let result = runtime
-        .block_on(connector_github_action("fly_to_mars".to_string(), payload))
+        .block_on(connector_github_action(
+          "fly_to_mars".to_string(),
+          payload,
+          None,
+        ))
         .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
@@ -2061,7 +2073,11 @@ mod tests {
         "body": "Description"
       });
       let result = runtime
-        .block_on(connector_github_action("create_issue".to_string(), payload))
+        .block_on(connector_github_action(
+          "create_issue".to_string(),
+          payload,
+          None,
+        ))
         .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
@@ -2086,6 +2102,7 @@ mod tests {
         .block_on(connector_github_action(
           "dispatch_workflow".to_string(),
           payload,
+          None,
         ))
         .unwrap();
       assert!(!result.ok);
@@ -2107,6 +2124,7 @@ mod tests {
         .block_on(connector_slack_send(
           "".to_string(),
           "hello".to_string(),
+          None,
           None,
         ))
         .unwrap();
@@ -2130,6 +2148,7 @@ mod tests {
           "C012345".to_string(),
           "".to_string(),
           None,
+          None,
         ))
         .unwrap();
       assert!(!result.ok);
@@ -2148,7 +2167,11 @@ mod tests {
       std::env::remove_var("GITHUB_TOKEN");
       let payload = serde_json::json!({});
       let result = runtime
-        .block_on(connector_github_action("get_repo".to_string(), payload))
+        .block_on(connector_github_action(
+          "get_repo".to_string(),
+          payload,
+          None,
+        ))
         .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "unverified");
@@ -2167,6 +2190,7 @@ mod tests {
         .block_on(connector_slack_send(
           "C012345".to_string(),
           "hello".to_string(),
+          None,
           None,
         ))
         .unwrap();
@@ -2190,6 +2214,7 @@ mod tests {
           "Task title".to_string(),
           "Task content".to_string(),
           None,
+          None,
         ))
         .unwrap();
       assert!(!result.ok);
@@ -2212,6 +2237,7 @@ mod tests {
           "Task title".to_string(),
           "Task content".to_string(),
           None,
+          None,
         ))
         .unwrap();
       assert!(!result.ok);
@@ -2232,6 +2258,7 @@ mod tests {
         .block_on(connector_send_clickup(
           "   ".to_string(),
           "Task content".to_string(),
+          None,
           None,
         ))
         .unwrap();
