@@ -1,6 +1,6 @@
 # Bridges: SessionGuard and ACC — design (owner decisions, 2026-10-22)
 
-Status: **agreed with the owner, not built yet.** The decisions are the owner's
+Status: **agreed with the owner. Phase 1 done 2026-10-22 (batch 14). Phases 2–4 deferred by the owner on 2026-10-22** (too large; it would pull the QA pass away from Alphonso). Read "Findings before deferring" first when resuming. The decisions are the owner's
 answers to QA questions Q27–Q31 (`docs/qa/DESKTOP_QA_COVERAGE.md`). Build in
 phases, one PR each, with the owner's review between phases.
 
@@ -50,8 +50,32 @@ ends nothing).
 - Coach: `GET /coach/{run_id}` (session access), `POST /coach/{run_id}/reset`
   (admin), `GET /coach-status`. Its engine (`engines/live_coach_engine.py`)
   fires every 3 spins with 8 detectors, NVIDIA/Ollama/rule fallback.
-- To confirm when building: the login endpoint's exact path and body, how a
-  session is ended through the API, and how a live session's id is found.
+- To confirm when building: how a live session's id is found for a
+  non-admin user, and what "End session" should call (`POST /api/v1/live/{run_id}/stop`
+  stops the run).
+
+## Findings before deferring (read from SessionGuard `2d05921`, 2026-10-22)
+
+- **The live feed sends nothing.** `WS /api/v1/ws/{scope}` accepts a connection
+  and answers pings, but `push_live_event`, `push_alert` and `push_insight` in
+  `backend/routes/ws.py` are never called anywhere in SessionGuard. Listening to
+  the feed (decision 2a) therefore cannot work until SessionGuard is changed.
+- **Sign-in:** `POST /api/v1/auth/login` `{email, password}` returns
+  `access_token` (60 min), `refresh_token` and `user` (with `role`).
+  `POST /api/v1/auth/refresh` `{refresh_token}` **rotates** the refresh token:
+  store the new one every time, or the next refresh fails. `POST /api/v1/auth/logout`
+  revokes it; `GET /api/v1/auth/me` checks the access token. Login, sign-up and
+  refresh are rate-limited per IP (429). `POST /api/v1/auth/signup` exists.
+- **Live runs:** `POST /api/v1/live/start` `{session_id, mode, tick_interval}`,
+  `/{run_id}/pause`, `/resume`, `/stop`, `GET /api/v1/live/{run_id}`,
+  `GET /api/v1/live/{run_id}/events?since_id=&limit=` (poll for new spins),
+  `GET /api/v1/live/session/{session_id}/runs`. All need access to the session.
+- **Coach:** `GET /api/v1/coach/coach/{run_id}?style=strict|balanced|supportive`
+  (note the doubled `coach`: router prefix plus route) returns `{message,
+  event_count}` from the last 100 events; `GET /api/v1/coach/coach-status`
+  says whether AI or the rule-based coach is active.
+- **Websocket scopes:** `global` needs an admin account; a numeric scope needs
+  access to that session. Close codes 4401 (no or bad token), 4403, 4429.
 
 ## ACC facts this design relies on
 
@@ -68,7 +92,9 @@ ends nothing).
 
 1. **Bridges section + ACC audit.** Move ACC's settings into Bridges; test the
    whole round trip against a running ACC (status, a `content_job`, the three
-   truth states); fix what doesn't match.
+   truth states); fix what doesn't match. **Done 2026-10-22:** found and fixed
+   QA Bugs 64 (backend ignored Settings) and 65 (the bridge was never turned
+   on); Bug 66 (ACC accepts unknown kinds) is on ACC's side.
 2. **SessionGuard connection.** Sign-in flow, keychain storage, token renewal,
    live-feed client, found/connected status, Test button.
 3. **Coach Mode = gambling coach.** Show Coach Mode only when SessionGuard is
@@ -78,6 +104,17 @@ ends nothing).
    its settings.
 
 ## Open questions (ask the owner, don't assume)
+
+Asked on 2026-10-22 and deferred before an answer:
+
+- **Live data:** poll SessionGuard's REST endpoints every 2–3 seconds (works
+  today, a few seconds' delay); fix SessionGuard's live feed so it really sends
+  (edits the SessionGuard repo); or poll now and switch to the fixed feed later.
+- **Which session:** Alphonso finds the run that is live, or the user picks it.
+- **Account:** the Bridges card only signs in to an existing SessionGuard
+  account, or can also create one.
+
+Still open from the design:
 
 - Which Alphonso agent words the gambling coaching (Alphonso himself, or a new
   "Coach" persona)? Spoken aloud by Voice OS as well, or text only?
