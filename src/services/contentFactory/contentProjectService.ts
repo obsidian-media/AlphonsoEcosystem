@@ -167,6 +167,15 @@ export function failStep(id: string, step: StepId, error: string): ContentProjec
   });
 }
 
+/** Sets a status with a message, e.g. waiting for approval. */
+export function markStepStatus(id: string, step: StepId, status: StepState['status'], message: string | null): ContentProject {
+  return update(id, (p) => {
+    p.steps[step].status = status;
+    p.steps[step].error = message;
+    p.steps[step].runBasedOn = null;
+  });
+}
+
 export function chooseVersion(id: string, step: StepId, version: number): ContentProject {
   return update(id, (p) => {
     if (!p.steps[step].versions.some((v) => v.version === version)) throw new Error(`No version ${version} of ${step}`);
