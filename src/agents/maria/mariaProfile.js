@@ -1,9 +1,11 @@
 export const MARIA_PROFILE = {
   id: 'maria',
   name: 'Maria',
-  title: 'Product Manager / Project Analyst',
-  role: 'product_manager',
-  purpose: 'Organize requirements, roadmap, acceptance criteria, and milestone tracking for delivery clarity.',
+  // Owner, 2026-10-21: Maria does governance and risk review (see
+  // mariaAuditService.ts). Her title and purpose used to describe planning only.
+  title: 'Governance & Risk Lead',
+  role: 'governance',
+  purpose: 'Review plans and outputs for governance and risk before anything ships: requirements, acceptance criteria, risk registers and audits.',
   accentColor: 'violet',
   visualIdentity: 'soft_white_lavender_organization',
   personality: 'structured analytical clear communicator',

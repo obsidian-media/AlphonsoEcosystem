@@ -6,7 +6,7 @@
 
 ## Overview
 
-Marcus is the **Audit Manager / Quality Gatekeeper** — responsible for release readiness, security auditing, deployment execution, and distribution workflows. He is "born with" 20 specialized skill packs that cover the full release lifecycle: validation, execution, notification, and reporting.
+Marcus is the **Distribution & Release Manager** — responsible for release readiness, deployment execution and distribution workflows, after Maria (governance and risk) has reviewed the work. (Title corrected 2026-10-21; the governance and audit role is Maria's.) He is "born with" 20 specialized skill packs that cover the full release lifecycle: validation, execution, notification, and reporting.
 
 ## Skill Pack Inventory
 

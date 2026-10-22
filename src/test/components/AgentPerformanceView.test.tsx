@@ -52,9 +52,11 @@ describe('AgentPerformanceView', () => {
     expect(screen.getByText('200ms avg')).toBeTruthy();
   });
 
-  it('handles empty state', () => {
+  it('handles empty state and says what will fill it', () => {
+    // Owner, 2026-10-21 (QA Bug 48): real numbers only, and the empty state
+    // tells the user what produces them.
     render(<AgentPerformanceView receipts={[]} />);
-    expect(screen.getByText('No performance data yet.')).toBeTruthy();
+    expect(screen.getByText(/No performance data yet\. Run a command, a workflow or a research task/)).toBeTruthy();
   });
 
   it('handles missing duration gracefully', () => {

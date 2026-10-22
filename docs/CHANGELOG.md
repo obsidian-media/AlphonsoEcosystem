@@ -29,6 +29,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **WhatsApp is Cloud API only.** Twilio was never supported for setup; its leftover code and the wrong required fields are gone.
 - **Phone pairing appears once**, in Settings → Runtime → Remote Access.
 - **Desktop tests never see real credentials.** The test app inherited real GitHub and Slack tokens from the repo `.env` (loaded by the test runner and by the app). The app now loads `.env` only in plain debug runs, the test runner drops secret-looking variables, and the isolation test fails if one leaks.
+- **Pages say what is true.** The Dashboard no longer says "Local AI is not running" while it is still checking, and points to Runtimes to start Ollama. Agent titles match their jobs: Maria is the Governance & Risk Lead, Marcus the Distribution & Release Manager. Automation's operations read "Enabled", not "Active"; System Health says "not checked yet" until something is verified; the Voice page sees a Voice OS that was started elsewhere; Mission Room no longer calls Nova a designer; and the empty Agent Performance page says what will fill it.
 - **Real error reasons.** A backend command that fails reports its actual reason; Content Studio showed "The local model could not be reached" instead.
 - **Desktop test harness** waits for `tauri-driver` before each spec and for it to exit after, fixing an intermittent "Unable to connect" on the first spec.
 - **User manual:** governance and risk review is Maria's, not Marcus's.

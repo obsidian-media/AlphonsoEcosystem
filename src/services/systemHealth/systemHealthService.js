@@ -34,11 +34,13 @@ export function getSystemHealthSummary() {
   const failedTasks = traces.filter((row) => row.executionResult === 'failed').length + packets.filter((p) => p.status === 'failed').length;
   const dependencyConflicts = traces.filter((row) => String(row.reason || '').toLowerCase().includes('dependency')).length;
   const verificationFailures = traces.filter((row) => row.verificationState === 'failed').length;
+  const verificationPasses = traces.filter((row) => row.verificationState === 'verified').length;
   const activeAgents = new Set(traces.map((row) => row.generatedBy).filter(Boolean)).size;
 
   return {
     buildStatus: getLastBuildStatus(),
-    verificationStatus: verificationFailures ? 'degraded' : 'healthy',
+    // "healthy" only once something has actually been verified (QA Bug 42).
+    verificationStatus: verificationFailures ? 'degraded' : verificationPasses ? 'healthy' : 'not checked yet',
     pendingApprovals: approvals.length,
     failedAgentTasks: failedTasks,
     dependencyConflicts,

@@ -130,8 +130,15 @@ export function MissionControlHome({
     if (coachIntervention?.level === 'hard' || coachIntervention?.level === 'firm') {
       items.push({ title: 'Coach intervention', detail: coachIntervention.message || 'Active protective intervention', cta: 'Open Operator', tab: 'operator', icon: Shield, accent: 'text-(--error)' });
     }
-    if (ollamaStatus?.state !== 'connected') {
-      items.push({ title: 'Start Ollama', detail: 'Local AI is not running — agent reasoning is limited', cta: 'Open Settings', tab: 'settings', icon: Terminal, accent: 'text-(--text-3)' });
+    // Only say "not running" when the check found it not running; while the
+    // first check is still going it used to say so too (QA Bug 38).
+    const ollamaState = ollamaStatus?.state;
+    if (ollamaState === 'not_running' || ollamaState === 'disconnected') {
+      items.push({ title: 'Start Ollama', detail: 'Local AI is not running — agent reasoning is limited', cta: 'Open Runtimes', tab: 'runtimes', icon: Terminal, accent: 'text-(--text-3)' });
+    } else if (ollamaState === 'no_models' || ollamaState === 'model_missing') {
+      items.push({ title: 'Choose a model', detail: 'Ollama is running but no usable model is selected', cta: 'Open Chat', tab: 'chat', icon: Terminal, accent: 'text-(--text-3)' });
+    } else if (ollamaState === 'cors' || ollamaState === 'timeout' || ollamaState === 'error') {
+      items.push({ title: 'Ollama is not answering', detail: ollamaStatus?.label || 'The last check did not get an answer', cta: 'Open Runtimes', tab: 'runtimes', icon: Terminal, accent: 'text-(--text-3)' });
     }
     items.push({ title: 'Continue your mission', detail: 'Use Project Execution for structured work packets and proof-first planning', cta: 'Open Project Exec', tab: 'project_execution', icon: Sparkles, accent: 'text-(--accent)' });
     items.push({ title: 'Talk to Alphonso', detail: 'Direct commands, research, and Jose delegation', cta: 'Open Chat', tab: 'chat', icon: MessageSquare, accent: 'text-(--agent-alphonso)' });

@@ -7,8 +7,8 @@
 // lists "GitHub release management"/"distribution workflow automation" --
 // his real job -- while his `title`/`purpose` describe Maria's real job,
 // "Audit Manager"/"Audit code and project readiness", and vice versa for
-// Maria). Flagged as a separate, unfixed data bug in bug-log.md rather than
-// silently propagated into this new user-facing surface.
+// Maria). That swap was fixed on 2026-10-21 (QA Bug 41: Maria is now
+// "Governance & Risk Lead", Marcus "Distribution & Release Manager").
 
 export interface CompanionAgentContent {
   emoji: string;

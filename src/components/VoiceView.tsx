@@ -87,7 +87,10 @@ export function VoiceView() {
     }
   }
 
-  const isRunning = status === 'running';
+  // Runtime Hub checks the port, so it also sees a Voice OS started outside
+  // this window; this page used to say "Not listening" then (QA Bug 47).
+  const runningElsewhere = status !== 'running' && runtime.running;
+  const isRunning = status === 'running' || runtime.running;
   const canStart = pythonFound === true && runtime.checked && runtime.installed;
   const localSummary = isRunning
     ? 'The local speech pipeline is running. The Chat microphone can connect to it.'
@@ -129,7 +132,7 @@ export function VoiceView() {
             <div className="mt-4 grid gap-2">
               <ReadinessRow label="Voice OS runtime" ready={runtime.checked ? runtime.installed : null} detail={runtime.checked ? runtime.installed ? 'Installed and available to the desktop application.' : 'Install Voice OS from Runtimes to provide the managed Python environment.' : 'Checking the managed runtime…'} />
               <ReadinessRow label="Python prerequisite" ready={pythonFound} detail={pythonFound === false ? 'Python 3.10+ was not detected. Set it up before starting Voice OS.' : pythonFound === true ? 'Python was detected for the local voice pipeline.' : 'Checking Python availability…'} />
-              <ReadinessRow label="WebSocket service" ready={status === 'unknown' ? null : isRunning} detail={isRunning ? `Listening at ${wsUrl}` : 'Not listening. Start the local service after the prerequisites are ready.'} />
+              <ReadinessRow label="WebSocket service" ready={status === 'unknown' ? null : isRunning} detail={runningElsewhere ? `Listening at ${wsUrl} (started outside this window)` : isRunning ? `Listening at ${wsUrl}` : 'Not listening. Start the local service after the prerequisites are ready.'} />
             </div>
 
             {error && <p role="alert" className="mt-3 rounded-lg bg-(--error-dim) px-3 py-2 text-xs text-(--error)">{error}</p>}

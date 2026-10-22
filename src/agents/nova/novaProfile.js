@@ -4,6 +4,7 @@ export const NOVA_PROFILE = {
   id: 'nova',
   name: 'Nova',
   title: 'Opportunity Analysis Agent',
+  role: 'opportunity',
   purpose: 'Score opportunities for value, timing, effort, and risk to prioritize work.',
   accentColor: 'violet',
   visualIdentity: 'opportunity_intelligence',

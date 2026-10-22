@@ -282,8 +282,10 @@ export const MISSION_ROOM_AGENTS: Record<string, AgentInfo> = {
   nova: {
     key: 'nova',
     name: 'Nova',
-    role: 'Frontend design, UI/UX, visual systems, layout, scoring, analysis, opportunity prioritization',
-    lane: 'design',
+    // Nova is the opportunity analyst (novaAnalysisService.ts). "Frontend
+    // design" came from the early 11-seat roster, like 'kairo' below (QA Bug 44).
+    role: 'Opportunity analysis: scoring, prioritization and timing of what to do next',
+    lane: 'opportunity',
     accent: 'fuchsia'
   }
   // 'kairo' removed -- a fictional legacy roster entry from an early
@@ -564,7 +566,8 @@ export function createHermesHandoff({ objective = '', project = '', constraints 
     'Role: Hermes, external executor worker.',
     `Project: ${redactMissionRoomSecrets(project || 'UNSPECIFIED')}`,
     `Objective: ${redactMissionRoomSecrets(objective || 'Audit and execute the assigned task.')}`,
-    'Commander: Kite. Final approval: the project owner.',
+    // "Kite" was a planned external Hermes agent; removed (owner, 2026-10-21).
+    'Final approval: the project owner.',
     'Requirements:',
     '- Inspect before editing.',
     '- Separate proved facts from assumptions.',

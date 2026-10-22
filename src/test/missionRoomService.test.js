@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 
 describe('mission room service', () => {
-  it('creates the default User/Kite/Hermes room', () => {
+  it('creates the default room with the user and the nine agents', () => {
     const rooms = listMissionRooms();
     expect(rooms).toHaveLength(1);
     expect(rooms[0].selectedAgents).toEqual(['user', 'alphonso', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova']);
@@ -30,7 +30,7 @@ describe('mission room service', () => {
 
   it('stores local room messages and tasks', () => {
     const room = getMissionRoom();
-    const message = addMissionMessage({ roomId: room.id, speaker: 'kite', content: 'Mission note' });
+    const message = addMissionMessage({ roomId: room.id, speaker: 'user', content: 'Mission note' });
     const task = addMissionTask({ roomId: room.id, title: 'Audit TapCash', owner: 'hermes', acceptance: 'Report blockers.' });
 
     expect(message.content).toBe('Mission note');

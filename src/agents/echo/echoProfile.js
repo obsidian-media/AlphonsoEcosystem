@@ -5,6 +5,7 @@ export const ECHO_PROFILE = {
   id: 'echo',
   name: 'Echo',
   title: 'Memory Historian / Archivist',
+  role: 'memory',
   purpose: 'Preserve decisions, normalize memory confidence, and maintain retention metadata across all interactions.',
   accentColor: 'indigo',
   visualIdentity: 'memory_preservation_archival',
