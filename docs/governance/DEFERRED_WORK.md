@@ -7,6 +7,8 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-21] **[DONE in code, branch `fix/ollama-models-location`; live check in the QA pass]** **Ollama models on another drive were invisible to an Ollama that Alphonso started.** The Ollama desktop app saves "Model location" in `%LOCALAPPDATA%\Ollama\db.sqlite` (`settings.models`, schema_version 18, checked on Ollama 0.33.1) and passes it only to its own server. Alphonso read only `OLLAMA_MODELS`, so without that variable its Ollama used `%USERPROFILE%\.ollama\models`, saw no models, and Setup pulled the starter model again onto C:. Found when the owner said their models are on D:. Fix: `configured_ollama_models_dir()` (env first, then the app setting, read-only, only if the folder exists) feeds `apply_tool_env` and both Setup disk-check fields; 3 Rust tests. **Not covered:** the Ollama app's settings location on macOS/Linux is unverified, so nothing is read there. — `[DONE in code]`
+
 - [2026-10-21] **v2.10.0 release prep (branch `release/v2.10.0`).**
   PR 305 merged as `399ef43`. Owner decision: ship macOS as an unsigned DMG
   rather than leave it out again. **Done in the branch:** version 2.10.0 in

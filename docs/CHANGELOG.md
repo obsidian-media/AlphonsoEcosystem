@@ -16,6 +16,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `release.yml`: a manual run has a `publish` switch (off by default), so all three installers can be built and checked without releasing anything.
 
 ### Fixed
+- **Alphonso finds Ollama models on another drive.** A model folder chosen in the Ollama desktop app's Settings is saved in Ollama's own settings file, not in `OLLAMA_MODELS`, so an Ollama that Alphonso started looked in the default folder, found no models, and Setup downloaded the starter model again onto C:. Alphonso now reads that setting (Windows) and passes it on; the Setup disk check uses it too.
 - **Update relaunch on macOS and Linux.** The Rust `tauri-plugin-process` crate was never installed, so `relaunch()` after an update failed. It is now registered with only the restart permission.
 - **Desktop chat fallback keeps the conversation.** When Ollama refuses the app window, chat now goes through a new `ollama_chat` backend command that sends the real turns, instead of a single flattened prompt.
 - **Perplexity search works again.** The connector moved to Perplexity's Search API (the old endpoint and model were retired) and Hector now uses it after Tavily.
