@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Bot, CheckCircle2, ChevronDown, ChevronUp, Clock, Copy, Download, ExternalLink, Eye, FileText, AlertTriangle, RefreshCw, XCircle } from 'lucide-react';
+import { openExternalUrl } from '../services/browserAutomationService';
 
 // Agent-generated resultUrl strings must never be rendered as an href unchecked —
 // a malicious/hallucinated "javascript:" or "data:" scheme would execute in-app,
@@ -381,6 +382,9 @@ interface PipelineResult {
   executionReceipts?: ExecutionReceipt[];
   command?: PipelineCommand;
   commandId?: string;
+  /** false with `reason` when Jose stopped before doing anything. */
+  ok?: boolean;
+  reason?: string;
 }
 
 interface PipelineResultCardProps {
@@ -401,7 +405,9 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
   const receipts = result.executionReceipts || [];
   const command = result.command || {};
   const userReport = command.userReport || null;
-  const summary = userReport?.summary || 'Pipeline completed.';
+  // A run Jose stopped before starting is not "completed" (QA Bug 57).
+  const stoppedReason = result.ok === false && !userReport && result.reason?.trim() ? result.reason.trim() : '';
+  const summary = userReport?.summary || (stoppedReason ? `Stopped: ${stoppedReason}` : 'Pipeline completed.');
   const url = safeHttpUrl(userReport?.resultUrl);
   const assignmentSummaries = userReport?.assignmentSummaries || [];
   const artifacts = assignmentSummaries.flatMap((a) => a.artifacts || []);
@@ -471,7 +477,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
         <div className="text-[11px] uppercase tracking-[0.18em] text-(--text-3)">Summary</div>
         <div className="mt-1.5 text-[12px] leading-relaxed text-(--text-2)">{summary}</div>
         {url && (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-(--accent-dim) px-2.5 py-1 text-[11px] font-medium text-(--accent) transition-colors hover:bg-(--accent-dim) hover:text-(--accent-hover)">
+          <a href={url} onClick={(e) => { e.preventDefault(); void openExternalUrl(url); }} rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-(--accent-dim) px-2.5 py-1 text-[11px] font-medium text-(--accent) transition-colors hover:bg-(--accent-dim) hover:text-(--accent-hover)">
             <ExternalLink className="w-3 h-3" />
             View Result
           </a>

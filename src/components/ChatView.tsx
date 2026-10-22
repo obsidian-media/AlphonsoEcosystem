@@ -691,14 +691,20 @@ export function ChatView({
 
       const command = result?.command || {};
       const userReport = command?.userReport || null;
-      const baseSummary = userReport?.summary || 'Jose processed the command.';
+      // When Jose stops before doing anything (e.g. "ComfyUI is not running",
+      // "Making videos from chat isn't available yet") there is no command or
+      // report; show his reason. Until 2026-10-22 chat said "Jose processed the
+      // command." instead, which was untrue (QA Bug 57).
+      const stoppedEarly = result?.ok === false && !userReport && typeof result?.reason === 'string' && result.reason.trim();
+      const baseSummary = userReport?.summary || (stoppedEarly ? result.reason.trim() : 'Jose processed the command.');
       const hintLine = (result?.pendingApprovalCount || 0) > 0
         ? '\nApprove the pending tasks below to continue.'
         : '';
 
       const richSummary = buildProjectSummary(result, cleanInput, baseSummary, screenObserverLogs);
-      const needsRuntimeHub = richSummary.startsWith('__RUNTIME_HUB_REQUIRED__');
-      const displaySummary = needsRuntimeHub ? richSummary.slice('__RUNTIME_HUB_REQUIRED__'.length) : richSummary;
+      const hasRuntimeMarker = richSummary.startsWith('__RUNTIME_HUB_REQUIRED__');
+      const needsRuntimeHub = hasRuntimeMarker || Boolean(stoppedEarly && result?.needsRuntime);
+      const displaySummary = hasRuntimeMarker ? richSummary.slice('__RUNTIME_HUB_REQUIRED__'.length) : richSummary;
 
       const newMsgId = nextMsgId();
       setNewMessageIds((prev) => new Set(prev).add(String(newMsgId)));

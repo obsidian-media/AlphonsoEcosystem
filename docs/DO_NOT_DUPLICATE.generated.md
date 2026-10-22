@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 205 services and 135 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 205 services and 136 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -38,6 +38,7 @@ Source-backed inventory: 205 services and 135 components. Human purpose descript
 | component | `src/components/CoachMissionBadge.tsx` | `CoachMissionBadge` |
 | component | `src/components/CoachSkillGrid.tsx` | `CoachSkillGrid` |
 | component | `src/components/CoachWindow.tsx` | `CoachWindow` |
+| component | `src/components/ComfyUiModelPicker.tsx` | `ComfyUiModelPicker` |
 | component | `src/components/CommandRib.tsx` | `CommandRib` |
 | component | `src/components/companion/CompanionAgentRow.tsx` | `CompanionAgentRow` |
 | component | `src/components/companion/CompanionChatBubble.tsx` | `CompanionChatBubble`, `CompanionMessage` |
@@ -207,7 +208,7 @@ Source-backed inventory: 205 services and 135 components. Human purpose descript
 | service | `src/services/connectors/calleMcpConnector.ts` | `CallRunActivityEntry`, `CallRunOutcome`, `CallRunResult`, `CallRunResultPayload`, `getCallRun`, `planCall`, `PlanCallArgs`, `PlanCallQuestion`, `PlanCallResult`, `runCall` |
 | service | `src/services/connectors/connectorAuth.ts` | `authorizeConnectorRequest`, `ConnectorAuthProfile`, `ConnectorAuthProfiles`, `ConnectorCredentials`, `DEFAULT_AUTH_PROFILES`, `getConnectorCredential`, `getConnectorCredentials`, `hydrateConnectorAuthProfilesFromSqlite`, `hydrateConnectorCredentialsFromSqlite`, `isConnectorAuthenticated`, `listConnectorAuthProfiles`, `logUnauthenticatedConnectorRequest`, `LogUnauthenticatedOptions`, `normalizeAllowlist`, `readAuthProfiles`, `saveConnectorCredential`, `updateConnectorAuthProfile`, `writeAuthProfiles` |
 | service | `src/services/connectors/connectorConstants.ts` | `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE` |
-| service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `COMFYUI_IMAGE_TIMEOUT_MS`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiVideoHistory`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow` |
+| service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setSelectedComfyUiCheckpoint` |
 | service | `src/services/connectors/connectorOutbound.js` | `proveTelegramConnectorPath`, `sendChatGptConnectorMessage`, `sendClaudeConnectorMessage`, `sendClickUpConnectorTask`, `sendGitHubAction`, `sendNotionConnectorEntry`, `sendQwenConnectorMessage`, `sendSlackMessage`, `sendTelegramConnectorMessage`, `sendWhatsAppConnectorMessage`, `uploadYouTubeConnectorVideo` |
 | service | `src/services/connectors/connectorPolling.js` | `createConnectorRoutePacket`, `normalizeWhatsAppCloudInboundPayload`, `parseInboundConnectorMessage`, `pollTelegramConnector`, `pollWhatsAppConnector`, `simulateWhatsAppCloudInbound`, `verifyWhatsAppCloudWebhookChallenge`, `verifyWhatsAppCloudWebhookSignature` |
 | service | `src/services/connectors/connectorRegistry.js` | `appendConnectorAudit`, `CIRCUIT_BREAKER_RESET_MS`, `CIRCUIT_BREAKER_THRESHOLD`, `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE`, `DEFAULT_CONNECTORS`, `gateConnectorAction`, `getConnectorCircuitState`, `hydrateConnectorAuditFromSqlite`, `hydrateConnectorRegistryFromSqlite`, `initializeConnectorRegistryFromSqlite`, `listConnectorAudit`, `listConnectors`, `readRows`, `recordConnectorFailure`, `recordConnectorSuccess`, `requireConnectorApproval`, `requireConnectorReady`, `resetConnectorCircuitState`, `setConnectorStatus`, `verifyConnectorEnvironment`, `writeRows` |

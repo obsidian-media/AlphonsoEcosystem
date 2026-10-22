@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 
 const mockGetAllStatus = vi.fn();
 const mockCheckPrerequisites = vi.fn();
@@ -28,6 +28,11 @@ vi.mock('../services/moduleRegistryService', () => ({
 vi.mock('../services/policyDslService', () => ({
   loadPolicy: vi.fn().mockResolvedValue(null),
   getPolicyRules: vi.fn().mockReturnValue([]),
+}));
+
+const mockOpenExternalUrl = vi.fn();
+vi.mock('../services/browserAutomationService', () => ({
+  openExternalUrl: (...args: unknown[]) => mockOpenExternalUrl(...args),
 }));
 
 vi.mock('../components/AgentActivityLog', () => ({
@@ -70,7 +75,7 @@ const runtimeNames = [
       : 'Ollama',
   description: `${name} runtime`,
   installed: true,
-  running: name === 'ollama',
+  running: name === 'ollama' || name === 'fooocus',
   port: 1234,
   installDir: `D:\\Alphonso\\runtimes\\${name}`,
   autoStart: false,
@@ -97,5 +102,29 @@ describe('RuntimeManagerView', () => {
     for (const name of ['ComfyUI', 'AUTOMATIC1111 WebUI', 'Fooocus', 'InvokeAI', 'Whisper', 'n8n', 'Ollama']) {
       expect(await screen.findByText(name)).toBeTruthy();
     }
+  });
+
+  // Owner, 2026-10-22: each tool says who uses it and how it differs, so a
+  // user can tell e.g. ComfyUI (used by Miya) from Fooocus (standalone).
+  it('says which tools agents use and which are standalone', async () => {
+    render(<RuntimeManagerView />);
+    const comfy = await screen.findByTestId('runtime-tool-note-comfyui');
+    expect(comfy.textContent).toMatch(/Used by: Miya Studio and Content Studio/);
+    const fooocus = await screen.findByTestId('runtime-tool-note-fooocus');
+    expect(fooocus.textContent).toMatch(/Standalone/);
+    for (const name of runtimeNames.map((t) => t.name)) {
+      expect(await screen.findByTestId(`runtime-tool-note-${name}`)).toBeTruthy();
+    }
+  });
+
+  // Bare <a target="_blank"> does nothing in the desktop window, and Open UI
+  // was offered for background services with no page (Ollama).
+  it('opens a running tool through the backend, and only tools with a web page', async () => {
+    render(<RuntimeManagerView />);
+    const fooocus = await screen.findByTestId('runtime-tool-fooocus');
+    fireEvent.click(within(fooocus).getByText(/Open UI/));
+    expect(mockOpenExternalUrl).toHaveBeenCalledWith('http://127.0.0.1:1234');
+    const ollama = await screen.findByTestId('runtime-tool-ollama');
+    expect(within(ollama).queryByText(/Open UI/)).toBeNull();
   });
 });
