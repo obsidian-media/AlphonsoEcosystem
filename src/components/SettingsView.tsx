@@ -219,6 +219,9 @@ function CoachSettingsSection() {
           </div>
         </div>
         <button
+          role="switch"
+          aria-checked={enabled}
+          aria-label="Toggle Session Coach detection engine"
           onClick={() => { const next = !enabled; setCoachEnabled(next); setEnabledState(next); }}
           className={`p-1 rounded-full transition-colors ${enabled ? 'text-(--success)' : 'text-(--text-4)'}`}
         >
@@ -235,6 +238,9 @@ function CoachSettingsSection() {
           </div>
         </div>
         <button
+          role="switch"
+          aria-checked={narrativeEnabled}
+          aria-label="Toggle Ollama-narrative rewriting"
           onClick={() => { const next = !narrativeEnabled; setCoachNarrativeEnabled(next); setNarrativeEnabledState(next); }}
           className={`p-1 rounded-full transition-colors ${narrativeEnabled ? 'text-(--success)' : 'text-(--text-4)'}`}
         >
@@ -287,6 +293,9 @@ function CoachSettingsSection() {
                 setCoachTriggerEnabled(id, next);
                 setTriggerToggles({ ...triggerToggles, [id]: next });
               }}
+              role="switch"
+              aria-checked={Boolean(triggerToggles[id])}
+              aria-label={`Toggle ${COACH_TRIGGER_LABELS[id] || id}`}
               className={`p-0.5 rounded-full transition-colors ${triggerToggles[id] ? 'text-(--success)' : 'text-(--text-4)'}`}
             >
               {triggerToggles[id] ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}

@@ -241,6 +241,7 @@ nobody has seen it work in the real app yet.
 | 47 | Voice says the Voice OS service is "Not listening" while Runtime Hub says Voice OS is running (a Voice OS started elsewhere answers on port 8766) | Fixed (batch 7): the Voice page also uses Runtime Hub's port check and says "Listening at … (started outside this window)". Real app (batch 7 build): confirmed. Guarded by `voiceView.test.jsx` |
 | 48 | Agent Performance's empty state says only "No performance data yet" (owner Q11b: say what fills it) | Fixed (batch 7): "Run a command, a workflow or a research task, and each agent's success rate and speed appear here." Real app (batch 7 build): confirmed. |
 | 49 | Maria's governance review reported "Maria audit failed to parse — manual review required" as her model review (found running Boardroom Conclude in the real app). The model's reply was not valid JSON; the parse-failure placeholder passed the "summary is long enough" check, so the rule-based audit never ran, and the result was labelled as a model review | Fixed (batch 8): Maria asks the model for JSON (`format: 'json'`, passed through `generateAgentLlmResponse` to Ollama); an unreadable reply now falls through to her rule-based audit; Boardroom says which one produced the verdict ("Maria's rule-based check" / badge "(rule-based)") |
+| 50 | Settings → Coach: the engine, narrative and per-trigger toggles were icon-only buttons with no name and no on/off state, so a screen reader announced only "button" and could not say whether a trigger was on | Fixed (batch 9): each is a named `role="switch"` with `aria-checked`, like the General toggles |
 | 29 | `content.e2e.mjs` (and on 2026-10-21 again `content-image.e2e.mjs`) timed out once in a full suite run (after `content-image`) although every model call took under 4 s and every image about 4 s; it then passed 3 times alone and twice paired with `content-image`; the image spec passed twice more in full-suite order | Intermittent, not reproduced in 9 runs; both Content specs now report the job's status, last log lines and screen text when it times out |
 | 28 | Content Studio accepted any JSON reply as a model-written draft: a reply with no hook or caption showed as a finished draft with "—" and no notice; and `llama3.2:3b` often failed the brief's JSON | Fixed in code: drafts need a hook and a caption or they are labelled as the template with the reason; brief and draft ask Ollama for JSON (`format: "json"`, new optional argument on `ollama_generate`, 1 Rust test); real-app re-check pending |
 
@@ -249,6 +250,12 @@ nobody has seen it work in the real app yet.
 One block per feature as it is tested: **Intended** (with its source),
 **Observed** (real app, date, build), **Verdict**, and the spec that now
 guards it.
+
+### Settings — survive an app restart (batch 9, 2026-10-21, debug build)
+- **Intended:** a setting you change is still set after you close and reopen the app.
+- **Checked:** changed all nine General switches, two Coach toggles and the theme, then relaunched the real app.
+- **Result:** the nine General switches survived. Coach toggles and the theme did not, but neither did an unrelated test value, so the cause is the test driver: every relaunch gets a fresh WebView profile, which wipes browser storage. General survives because the backend also saves it.
+- **Not verified:** Coach, Appearance and other settings stored only in the browser. On a real install the WebView profile is kept, so they should persist. That needs a manual check (change Coach and theme, quit, reopen), or a harness that relaunches with the same profile.
 
 ### Connectors — backend uses a key passed from Settings (fix batch 5, 2026-10-21, debug build)
 - **Intended:** a key saved in Settings is the one connector calls use; an environment variable is only a fallback (QA Bug 32).
