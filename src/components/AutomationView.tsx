@@ -307,7 +307,7 @@ export function AutomationView() {
                       : 'border-(--border) text-(--text-3) hover:border-(--accent-border) hover:text-(--text-1)'
                   }`}
                 >
-                  {isActive ? 'Active' : 'Enable'}
+                  {isActive ? 'Enabled' : 'Enable'}
                 </button>
               </div>
             );

@@ -704,7 +704,7 @@ export default function RuntimeManagerView() {
         <div>
           <h2 className="font-serif text-lg font-bold text-(--text-1)">AI Runtime Manager</h2>
           <p className="text-(--text-3) text-sm mt-0.5">
-            All tools auto-start with Alphonso. Install once, run forever.
+            Install local AI tools once. Turn on Auto-start on a tool to have it start with Alphonso.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

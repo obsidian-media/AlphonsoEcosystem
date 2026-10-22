@@ -131,7 +131,7 @@ export function DeadLetterQueueView() {
           <EmptyState
             icon={<CheckCircle className="w-full h-full text-(--success)" />}
             title="No failed tasks"
-            description="Everything is running smoothly."
+            description="Nothing has failed. Failed tasks land here so you can retry them."
           />
         </div>
       ) : (

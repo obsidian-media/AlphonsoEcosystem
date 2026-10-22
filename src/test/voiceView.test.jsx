@@ -22,6 +22,19 @@ describe('VoiceView', () => {
     getAllStatus.mockResolvedValue([{ name: 'voice-os', installed: true, running: false }]);
   });
 
+  it('says Voice OS is listening when it answers on its port but was started elsewhere (QA Bug 47)', async () => {
+    const { getVoiceServerStatus } = await import('../services/voiceOsService');
+    getVoiceServerStatus.mockResolvedValue('stopped');
+    const { getAllStatus } = await import('../services/runtimeManagerService');
+    getAllStatus.mockResolvedValue([{ name: 'voice-os', installed: true, running: true }]);
+
+    const { VoiceView } = await import('../components/VoiceView');
+    render(<VoiceView />);
+
+    expect(await screen.findByText(/started outside this window/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Not listening/i)).toBeNull();
+  });
+
   it('shows stopped status with a Start button when the voice server is not running', async () => {
     const { getVoiceServerStatus } = await import('../services/voiceOsService');
     getVoiceServerStatus.mockResolvedValue('stopped');

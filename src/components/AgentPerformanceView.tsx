@@ -93,7 +93,7 @@ export function AgentPerformanceView({ receipts = [] }: AgentPerformanceViewProp
       </div>
 
       {!receipts.length ? (
-        <div className="text-(--text-3) text-sm">No performance data yet.</div>
+        <div className="text-(--text-3) text-sm">No performance data yet. Run a command, a workflow or a research task, and each agent's success rate and speed appear here.</div>
       ) : (
         <div className="space-y-2">
           {Object.entries(stats).map(([name, s]) => {

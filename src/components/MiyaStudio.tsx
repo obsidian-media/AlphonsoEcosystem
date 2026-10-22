@@ -1001,7 +1001,7 @@ export function MiyaStudio({
             />
           </div>
           <div className="space-y-4">
-            <ExportPackageReadiness output={creativeOutput} canGenerate={canGenerate} />
+            <ExportPackageReadiness output={creativeOutput} canGenerate={canGenerate} checking={ollamaStatus.state === 'connecting'} />
             <OutputPanels output={creativeOutput} />
           </div>
         </div>
@@ -1052,7 +1052,7 @@ export function MiyaStudio({
             )}
           </div>
           <div className="space-y-4">
-            <ExportPackageReadiness output={creativeOutput} canGenerate={canGenerate} />
+            <ExportPackageReadiness output={creativeOutput} canGenerate={canGenerate} checking={ollamaStatus.state === 'connecting'} />
             <OutputPanels output={creativeOutput} />
           </div>
         </div>
@@ -1064,7 +1064,7 @@ export function MiyaStudio({
       <div className="rounded-xl bg-(--surface-1) px-4 py-2.5 text-[11px] text-(--text-4) flex items-center gap-3">
         <span>State: <span className="text-(--text-3)">{companionState}</span></span>
         <span>·</span>
-        <span>Model: <span className="text-(--text-3)">{canGenerate ? settings.selectedModel : 'not connected'}</span></span>
+        <span>Model: <span className="text-(--text-3)">{canGenerate ? settings.selectedModel : ollamaStatus.state === 'connecting' ? 'checking…' : 'not connected'}</span></span>
       </div>
     </div>
     </div>
@@ -1119,9 +1119,11 @@ function ProductionPipelineMatrix({ activeTab, canGenerate }: ProductionPipeline
 interface ExportPackageReadinessProps {
   output: CreativeOutput | null;
   canGenerate: boolean | string | undefined;
+  /** True while the first Ollama check is still running. */
+  checking?: boolean;
 }
 
-function ExportPackageReadiness({ output, canGenerate }: ExportPackageReadinessProps) {
+function ExportPackageReadiness({ output, canGenerate, checking = false }: ExportPackageReadinessProps) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-xl bg-(--surface-1) px-4 py-3">
       <div>
@@ -1133,7 +1135,7 @@ function ExportPackageReadiness({ output, canGenerate }: ExportPackageReadinessP
       <span className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
         canGenerate ? 'border-(--success-border) bg-(--success-dim) text-(--success)' : 'border-(--warning-border) bg-(--warning-dim) text-(--warning)'
       }`}>
-        {canGenerate ? 'model ready' : 'model not connected'}
+        {canGenerate ? 'model ready' : checking ? 'checking model…' : 'model not connected'}
       </span>
     </div>
   );

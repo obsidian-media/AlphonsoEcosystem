@@ -43,11 +43,27 @@ describe('Alphonso desktop Content Studio image generation', function () {
     const create = await buttonByText('create content job');
     await create.waitForEnabled();
     await create.click();
-    await browser.waitUntil(async () => (await mainText()).includes('CREATIVE OUTPUT'), {
-      timeout: 420000,
-      interval: 3000,
-      timeoutMsg: 'the job never produced output (a job that vanishes after the image step looks like this)',
-    });
+    try {
+      await browser.waitUntil(async () => (await mainText()).includes('CREATIVE OUTPUT'), { timeout: 420000, interval: 3000 });
+    } catch {
+      // Say what the job was doing, so an intermittent failure (QA Bug 29)
+      // can be diagnosed from the log.
+      const state = await browser.execute(() => {
+        let jobs = [];
+        try { jobs = JSON.parse(localStorage.getItem('alphonso_content_catalyst_jobs_v1') || '[]'); } catch { /* unreadable */ }
+        const job = Array.isArray(jobs) ? jobs[0] : null;
+        return {
+          jobs: Array.isArray(jobs) ? jobs.length : 0,
+          storedChars: (localStorage.getItem('alphonso_content_catalyst_jobs_v1') || '').length,
+          status: job?.status,
+          step: job?.currentStep,
+          logs: (job?.logs || []).slice(-5).map((l) => `${l.level}: ${l.message}`),
+          errors: (window.__alphonsoE2eErrors || []).map(String).slice(-3),
+          screen: (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' ').slice(-400),
+        };
+      });
+      throw new Error(`the job never produced output: ${JSON.stringify(state)}`);
+    }
     const text = await mainText();
     expect(text).not.toContain('image generation failed');
     const images = await browser.execute(() =>

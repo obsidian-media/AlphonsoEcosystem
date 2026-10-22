@@ -4,6 +4,7 @@ export const SENTINEL_PROFILE = {
   id: 'sentinel',
   name: 'Sentinel',
   title: 'Security Monitoring Agent',
+  role: 'security',
   purpose: 'Audit risk posture, monitor permission drift, and flag unsafe automation paths.',
   accentColor: 'red',
   visualIdentity: 'security_monitoring_guardian',

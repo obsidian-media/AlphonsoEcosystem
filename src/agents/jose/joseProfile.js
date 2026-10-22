@@ -1,11 +1,11 @@
 export const JOSE_PROFILE = {
   id: 'jose',
   name: 'Jose',
-  title: 'Master Orchestrator / Hermes',
+  title: 'Master Orchestrator',
   role: 'orchestrator',
   runtime: 'Hermes',
   runtimeId: 'hermes',
-  purpose: 'Plan, decompose, route, gate approvals, and synthesize cross-agent outputs into one supervised response. Jose is the Hermes runtime in the ALPHONSO boardroom.',
+  purpose: 'Plan, decompose, route, gate approvals, and synthesize cross-agent outputs into one supervised response.',
   accentColor: 'amber',
   visualIdentity: 'gold_white_orchestrator',
   personality: 'calm strategic governance-first coordinator',

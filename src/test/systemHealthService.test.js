@@ -46,6 +46,20 @@ import {
   getSystemHealthSummary
 } from '../services/systemHealth/systemHealthService';
 
+describe('verification status (QA Bug 42)', () => {
+  it('says "not checked yet" when nothing has been verified, not "healthy"', async () => {
+    const { listTraceEvents } = await import('../services/agentWorkshop/traceabilityService');
+    listTraceEvents.mockReturnValueOnce([]);
+    expect(getSystemHealthSummary().verificationStatus).toBe('not checked yet');
+  });
+
+  it('says "healthy" only after something was verified', async () => {
+    const { listTraceEvents } = await import('../services/agentWorkshop/traceabilityService');
+    listTraceEvents.mockReturnValueOnce([{ generatedBy: 'jose', executionResult: 'executed', verificationState: 'verified', reason: 'ok' }]);
+    expect(getSystemHealthSummary().verificationStatus).toBe('healthy');
+  });
+});
+
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();

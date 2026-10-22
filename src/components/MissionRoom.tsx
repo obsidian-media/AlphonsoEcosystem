@@ -354,7 +354,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
           </div>
           <h1 className="mt-4 font-serif text-4xl font-black tracking-[-0.055em] text-(--text-1) md:text-6xl">Mission Room</h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-(--text-2)">
-            A local-first meeting board for you, Kite, and Hermes. Use it to capture decisions, assign execution work, paste Hermes outputs, and keep approvals explicit.
+            A local-first meeting board for you, your nine agents, and any Hermes worker you hand tasks to. Use it to capture decisions, assign execution work, paste Hermes outputs, and keep approvals explicit.
           </p>
         </div>
         <div className="flex w-full max-w-md flex-wrap gap-x-6 gap-y-3">

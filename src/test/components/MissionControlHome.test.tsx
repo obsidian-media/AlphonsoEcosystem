@@ -33,6 +33,33 @@ const baseProps = {
   onNavigate: vi.fn(),
 };
 
+describe('MissionControlHome — what it says about Ollama (QA Bug 38)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (getAttentionItems as any).mockResolvedValue([]);
+  });
+
+  it('does not say Ollama is not running while the first check is still going', async () => {
+    render(<MissionControlHome {...baseProps} ollamaStatus={{ state: 'connecting' }} />);
+    await waitFor(() => expect(screen.getByText(/Continue your mission/)).toBeTruthy());
+    expect(screen.queryByText('Start Ollama')).toBeNull();
+    expect(screen.queryByText(/Local AI is not running/)).toBeNull();
+  });
+
+  it('says it is not running when the check found it not running, and points to Runtimes', async () => {
+    render(<MissionControlHome {...baseProps} ollamaStatus={{ state: 'not_running' }} />);
+    const row = await screen.findByText('Start Ollama');
+    row.closest('button')!.click();
+    expect(baseProps.onNavigate).toHaveBeenCalledWith('runtimes');
+  });
+
+  it('asks for a model when Ollama runs without one', async () => {
+    render(<MissionControlHome {...baseProps} ollamaStatus={{ state: 'no_models' }} />);
+    expect(await screen.findByText('Choose a model')).toBeTruthy();
+    expect(screen.queryByText('Start Ollama')).toBeNull();
+  });
+});
+
 describe('MissionControlHome — attention aggregator wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();

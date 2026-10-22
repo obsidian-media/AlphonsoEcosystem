@@ -282,8 +282,10 @@ export const MISSION_ROOM_AGENTS: Record<string, AgentInfo> = {
   nova: {
     key: 'nova',
     name: 'Nova',
-    role: 'Frontend design, UI/UX, visual systems, layout, scoring, analysis, opportunity prioritization',
-    lane: 'design',
+    // Nova is the opportunity analyst (novaAnalysisService.ts). "Frontend
+    // design" came from the early 11-seat roster, like 'kairo' below (QA Bug 44).
+    role: 'Opportunity analysis: scoring, prioritization and timing of what to do next',
+    lane: 'opportunity',
     accent: 'fuchsia'
   }
   // 'kairo' removed -- a fictional legacy roster entry from an early
