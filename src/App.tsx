@@ -924,6 +924,7 @@ function AppShell() {
             action={approvalPending.actionLabel}
             connector={undefined}
             riskLevel={approvalPending.riskLevel}
+            riskReasons={approvalPending.riskReasons}
             mariaScore={approvalPending.mariaScore}
             onConfirm={() => {
               logApprovalEvent(approvalPending.packetId || `approval-${Date.now()}`, approvalPending.agent, approvalPending.actionLabel, 'approved', approvalPending.riskLevel, approvalPending.mariaScore);
@@ -942,6 +943,7 @@ function AppShell() {
         </Suspense>
       )}
       <Sidebar
+        developerMode={operatorMode}
         activeTab={activeTab}
         setActiveTab={switchTab}
         isOpen={isSidebarOpen}
@@ -1025,7 +1027,7 @@ function AppShell() {
                 )}
                 {activeTab === 'settings' && (
                   <Suspense fallback={null}>
-                    <SettingsView settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} updateCheckState={updateCheckState} onCheckUpdates={checkAppUpdate} normalizeEndpoint={(e: string) => e} ollamaTroubleshootingCommand="ollama" braveSearchConfigured={braveSearchConfigured} memoryItems={memoryItems} />
+                    <SettingsView settings={settings} setSettings={setSettings} developerMode={operatorMode} setDeveloperMode={setOperatorMode} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} updateCheckState={updateCheckState} onCheckUpdates={checkAppUpdate} normalizeEndpoint={(e: string) => e} ollamaTroubleshootingCommand="ollama" braveSearchConfigured={braveSearchConfigured} memoryItems={memoryItems} />
                   </Suspense>
                 )}
                 {activeTab === 'connectors' && (

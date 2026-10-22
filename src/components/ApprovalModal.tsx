@@ -84,12 +84,6 @@ function inferConnector(label?: string | null): string | null {
   return null;
 }
 
-function riskToScore(level: RiskLevel): number {
-  if (level === 'high') return 85;
-  if (level === 'low') return 20;
-  return 55; // medium
-}
-
 function ScoreRing({ score }: { score: number }) {
   const radius = 18;
   const circumference = 2 * Math.PI * radius;
@@ -129,6 +123,8 @@ interface ApprovalModalProps {
   action?: string;
   connector?: string;
   riskLevel?: RiskLevel;
+  /** Why the action got its rating (e.g. from assessCommandRisk). */
+  riskReasons?: string[] | null;
   mariaScore?: number | null;
   onConfirm?: () => void;
   onCancel?: () => void;
@@ -139,6 +135,7 @@ export function ApprovalModal({
   action,
   connector,
   riskLevel,
+  riskReasons,
   mariaScore,
   onConfirm,
   onCancel
@@ -147,7 +144,15 @@ export function ApprovalModal({
   const resolvedConnector = connector || inferConnector(actionText);
   const resolvedRisk = riskLevel || inferRiskLevel(actionText);
   const destructive = isDestructiveAction(actionText);
-  const displayScore = mariaScore !== undefined && mariaScore !== null ? mariaScore : riskToScore(resolvedRisk);
+  // A number is shown only when one was measured (Maria's risk score). A level
+  // alone is not turned into a made-up number (owner, 2026-10-22: every command
+  // used to show "85").
+  const hasMeasuredScore = typeof mariaScore === 'number' && Number.isFinite(mariaScore);
+  const reasons = Array.isArray(riskReasons) && riskReasons.length > 0
+    ? riskReasons
+    : riskLevel
+      ? []
+      : ['Rated from the wording of the action.'];
 
   const risk = RISK_BADGE[resolvedRisk] || RISK_BADGE.medium;
   const RiskIcon = resolvedRisk === 'high' ? ShieldAlert : Shield;
@@ -193,12 +198,21 @@ export function ApprovalModal({
               {resolvedConnector}
             </div>
           )}
-          <ScoreRing score={displayScore} />
+          {hasMeasuredScore && <ScoreRing score={mariaScore as number} />}
           <div className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest ${risk.classes}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${risk.dot}`} />
             {risk.label}
           </div>
         </div>
+
+        {reasons.length > 0 && (
+          <div className="rounded-xl bg-(--surface-2) px-3 py-2.5" data-testid="approval-risk-reasons">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3) mb-1">Why this rating</div>
+            <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-(--text-2) leading-relaxed">
+              {reasons.map((reason) => <li key={reason}>{reason}</li>)}
+            </ul>
+          </div>
+        )}
 
         {/* Destructive warning */}
         {destructive && (

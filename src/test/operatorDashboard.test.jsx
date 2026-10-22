@@ -60,8 +60,8 @@ const baseProps = {
 describe('OperatorDashboard mode gating', () => {
   it('shows off-state panel when operator mode is disabled', () => {
     render(<OperatorDashboard {...baseProps} />);
-    expect(screen.getByText('Operator Mode is Off')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Enable' })).toBeInTheDocument();
+    expect(screen.getByText('Developer mode is off')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Turn on developer mode' })).toBeInTheDocument();
   });
 
   it('shows runtime panel when operator mode is enabled', () => {

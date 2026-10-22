@@ -92,17 +92,16 @@ def test_ws_handles_normal_disconnect():
             # Leaving the block triggers a normal disconnect — no exception expected.
 
 
-# QA 2026-10-22: the model and Ollama address were fixed; the app now sends the
-# user's choices in a config message when it connects.
-def test_config_message_sets_the_model_and_ollama_address():
+# QA 2026-10-22: the model was fixed; the app now sends the user's choice in a
+# config message. The Ollama address comes only from the launcher: a client
+# cannot point Voice OS at another address (server-side request forgery).
+def test_config_message_sets_the_model_but_never_the_address(monkeypatch):
     import main as main_module
     from main import app
 
+    monkeypatch.setenv("LOCAL_OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
     with patch.object(main_module, "_VOICE_TOKEN", _MOCK_TOKEN):
         with TestClient(app).websocket_connect(f"/ws?token={_MOCK_TOKEN}") as ws:
-            ws.send_text('{"type": "config", "ollamaModel": "qwen2.5:7b", "ollamaEndpoint": "http://192.168.1.20:11434/"}')
+            ws.send_text('{"type": "config", "ollamaModel": "qwen2.5:7b", "ollamaEndpoint": "http://169.254.169.254/"}')
             reply = ws.receive_json()
-            assert reply == {"type": "config", "model": "qwen2.5:7b", "ollamaUrl": "http://192.168.1.20:11434/api/chat"}
-            ws.send_text('{"type": "config", "ollamaEndpoint": "file:///etc/passwd"}')
-            reply = ws.receive_json()
-            assert reply["ollamaUrl"] == "http://192.168.1.20:11434/api/chat"
+            assert reply == {"type": "config", "model": "qwen2.5:7b", "ollamaUrl": "http://127.0.0.1:11434/api/chat"}

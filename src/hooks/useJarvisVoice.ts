@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { PCM_WORKLET_CODE } from './pcm-processor.worklet';
 
 import { getVoiceWebSocketUrl, getVoiceToken } from '../services/voiceOsService.js';
-import { getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../lib/ollama';
+import { getConfiguredOllamaModel } from '../lib/ollama';
 
 async function buildVoiceWsUrl(): Promise<string> {
   const baseUrl = getVoiceWebSocketUrl();
@@ -86,10 +86,11 @@ export function useJarvisVoice() {
       socket.onopen = () => {
         if (isDisposed.current) return;
         setIsConnected(true);
-        // Tell Voice OS which model and Ollama address to use: the user's
-        // choices in Alphonso (QA 2026-10-22: they were fixed in Voice OS).
+        // Tell Voice OS which model to use: the user's choice in Alphonso
+        // (QA 2026-10-22: it was fixed). The Ollama address is passed when
+        // Voice OS is started (startVoiceServer), not over this connection.
         try {
-          socket.send(JSON.stringify({ type: 'config', ollamaModel: getConfiguredOllamaModel(), ollamaEndpoint: getConfiguredOllamaEndpoint() }));
+          socket.send(JSON.stringify({ type: 'config', ollamaModel: getConfiguredOllamaModel() }));
         } catch { /* the socket closed again */ }
       };
       socket.onclose = () => {

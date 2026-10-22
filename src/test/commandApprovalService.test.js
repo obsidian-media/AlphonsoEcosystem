@@ -103,3 +103,36 @@ describe('requestWorkspaceCommandApproval', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 });
+
+// owner, 2026-10-22: the rating comes from what the command does.
+import { assessCommandRisk } from '../services/commandApprovalService';
+
+describe('assessCommandRisk', () => {
+  it('rates read-only commands low and lets them run without asking', () => {
+    for (const [p, a] of [['ollama', ['list']], ['git', ['status']], ['npm.cmd', ['--version']], ['tasklist', []], ['where.exe', ['ollama']]]) {
+      const r = assessCommandRisk(p, a);
+      expect(r.level, `${p} ${a.join(' ')}`).toBe('low');
+      expect(r.readOnly).toBe(true);
+    }
+  });
+
+  it('rates commands that run project code high, with the reason', () => {
+    const r = assessCommandRisk('npm.cmd', ['run', 'build']);
+    expect(r.level).toBe('high');
+    expect(r.readOnly).toBe(false);
+    expect(r.reasons.join(' ')).toMatch(/Runs code from your project folder/);
+  });
+
+  it('rates changes and downloads medium, and deletions high', () => {
+    expect(assessCommandRisk('ollama', ['pull', 'qwen3:0.6b']).level).toBe('medium');
+    expect(assessCommandRisk('git', ['commit', '-m', 'x']).level).toBe('medium');
+    expect(assessCommandRisk('ollama', ['rm', 'qwen3:0.6b']).level).toBe('high');
+    expect(assessCommandRisk('git', ['reset', '--hard']).level).toBe('high');
+  });
+
+  it('rates an unknown program high (fail closed)', () => {
+    const r = assessCommandRisk('mystery-tool', ['--go']);
+    expect(r.level).toBe('high');
+    expect(r.reasons.join(' ')).toMatch(/does not know/);
+  });
+});
