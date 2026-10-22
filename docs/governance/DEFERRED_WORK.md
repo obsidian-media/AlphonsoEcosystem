@@ -7,6 +7,14 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-22] **Jose's orchestration design needs fixing (owner: "it does look broken").** Found while designing the Miya content factory (`docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`).
+  - **Problem 1, one task per agent.** `buildExecutionPlan()` (`agentOutputStoreService.ts`) keys assignments by agent, so a request can give each agent only one task. A second assignment for the same agent replaces the first.
+  - **Problem 2, a fixed order.** `AGENT_DEPENDENCIES` fixes the order for every request: Hector, Maria, Sentinel, Nova and Jose first; Miya after Hector; Alphonso after Miya; Marcus after Maria; Echo last. So Nova and Maria can never review work made in the same request; Maria's audit runs before the work it should audit.
+  - **Problem 3, no loops.** There is no way to say "Nova reviews Miya's script, then Miya revises".
+  - **Why deferred:** the owner asked to note it and fix it after the content-factory design. The factory works around it by sending each step as its own Jose request.
+  - **Resume hint:** design per-request dependencies (a step graph with several tasks per agent and review/revise loops), keep packets, approvals, receipts and the budget, and check every current caller of `runJoseCommandExecutionPipeline`.
+  - **Status:** OPEN, to be designed with the owner.
+
 - [2026-10-22] **ACC accepts packets of any kind (QA Bug 66), parked by the owner.** ACC's receiver (`cloud/services/alphonsoBridgeService.js` in `github.com/Thatisshayan/ACC`) records a packet whose `kind` is not one of `content_job`, `task`, `result`, `approval`, `memory` (tested: `"nonsense"` was recorded). The fix belongs in ACC (refuse unknown kinds with a clear error), so it is parked beside the SessionGuard bridge and Coach Mode: more work on the ACC side than in Alphonso. Alphonso only sends the five known kinds. Status: OPEN, parked.
 
 - [2026-10-22] **Small findings from batch 15:** the sidebar Sentinel scan (QA Bug 71) and the "999 days" banner (Bug 72) were fixed in batch 17. Pulling a model (Bug 73) was fixed in batch 21. Status: CLOSED.
