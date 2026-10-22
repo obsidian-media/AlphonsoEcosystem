@@ -900,6 +900,11 @@ export function ChatView({
             setMessages((current) => current.map((msg) =>
               msg.id === assistantMsgId ? { ...msg, content: full } : msg
             ));
+          },
+          onThinking: (thinking) => {
+            setMessages((current) => current.map((msg) =>
+              msg.id === assistantMsgId ? { ...msg, thinking } : msg
+            ));
           }
         });
         setMessages((current) => current.map((msg) => {
@@ -1290,6 +1295,13 @@ export function ChatView({
                     </div>
                   ) : (
                     <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl bg-(--surface-1) rounded-tl-sm ${message.isNew ? 'border-l-2 border-(--success) animate-border-fade' : ''} text-(--text-1)`}>
+                      {/* A thinking model's reasoning, folded (owner, 2026-10-22); Settings can hide it. */}
+                      {message.thinking && settings.showModelThinking !== false && (
+                        <details className="mb-2 rounded-lg bg-(--surface-2) px-3 py-2" data-testid="chat-message-thinking">
+                          <summary className="cursor-pointer text-[11px] font-semibold text-(--text-3)">Thinking</summary>
+                          <div className="mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-(--text-3)">{message.thinking}</div>
+                        </details>
+                      )}
                       <MarkdownMessage content={message.content} />
                     </div>
                   )}

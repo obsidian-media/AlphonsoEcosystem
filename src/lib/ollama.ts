@@ -1,4 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { joinThinking, splitThinking } from './thinking';
 import type { OllamaModelsProof, OllamaGenerateProof } from '../types/tauri-commands';
 // Type-only — zero runtime footprint, so this doesn't reintroduce the module
 // cycle the dynamic value-imports in generateAgentLlmResponse avoid below.
@@ -57,6 +58,8 @@ export interface ChatStreamOptions {
   model: string;
   messages: OllamaMessage[];
   onToken?: (token: string, full: string) => void;
+  /** A thinking model's reasoning so far (never part of the answer). */
+  onThinking?: (thinking: string) => void;
   signal?: AbortSignal;
 }
 
@@ -598,7 +601,7 @@ export async function generateOllamaStream({ endpoint, model, prompt, onToken, s
   }
 }
 
-export async function generateOllamaChatStream({ endpoint, model, messages, onToken, signal }: ChatStreamOptions): Promise<string> {
+export async function generateOllamaChatStream({ endpoint, model, messages, onToken, onThinking, signal }: ChatStreamOptions): Promise<string> {
   const baseUrl = normalizeEndpoint(endpoint);
   const controller = new AbortController();
   const mergedSignal = signal || controller.signal;
@@ -624,7 +627,12 @@ export async function generateOllamaChatStream({ endpoint, model, messages, onTo
 
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
-    let full = '';
+    // Raw content may carry <think>...</think> (older Ollama); current Ollama
+    // sends the reasoning apart in message.thinking. The answer passed to
+    // onToken never contains the reasoning.
+    let raw = '';
+    let separateThinking = '';
+    let answer = '';
 
     while (true) {
       const { done, value } = await reader.read();
@@ -633,17 +641,25 @@ export async function generateOllamaChatStream({ endpoint, model, messages, onTo
       for (const line of chunk.split('\n')) {
         if (!line.trim()) continue;
         try {
-          const obj = JSON.parse(line) as { message?: { content?: string }; done?: boolean };
+          const obj = JSON.parse(line) as { message?: { content?: string; thinking?: string }; done?: boolean };
+          if (typeof obj.message?.thinking === 'string' && obj.message.thinking) {
+            separateThinking += obj.message.thinking;
+            onThinking?.(joinThinking(separateThinking, splitThinking(raw).thinking));
+          }
           if (typeof obj.message?.content === 'string') {
-            full += obj.message.content;
-            onToken?.(obj.message.content, full);
+            raw += obj.message.content;
+            const split = splitThinking(raw);
+            if (split.thinking) onThinking?.(joinThinking(separateThinking, split.thinking));
+            const delta = split.answer.slice(answer.length);
+            answer = split.answer;
+            if (delta) onToken?.(delta, answer);
           }
           if (obj.done) break;
         } catch { /* skip malformed line */ }
       }
     }
 
-    return full;
+    return answer;
   } catch (error) {
     const classified = classifyOllamaError(error);
     if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
@@ -653,9 +669,11 @@ export async function generateOllamaChatStream({ endpoint, model, messages, onTo
     // chat template still applies. The reply arrives in one piece.
     const proof = await invokeOllamaChatWithRetry(baseUrl, model, messages, signal);
     if (!proof || proof.error) throw new Error(proof?.error || 'Desktop bridge generation failed.');
-    const text = proof.response || '';
-    onToken?.(text, text);
-    return text;
+    const split = splitThinking(proof.response || '');
+    const thinking = joinThinking((proof as { thinking?: string }).thinking, split.thinking);
+    if (thinking) onThinking?.(thinking);
+    onToken?.(split.answer, split.answer);
+    return split.answer;
   } finally {
     window.clearTimeout(timeoutId);
   }

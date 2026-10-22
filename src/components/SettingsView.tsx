@@ -896,6 +896,22 @@ export function SettingsView({
             />
           </div>
 
+          <div className="flex items-center justify-between rounded-2xl bg-(--surface-2) p-4">
+            <div>
+              <div className="text-sm font-semibold text-(--text-1)">Show model thinking</div>
+              <div className="text-[11px] text-(--text-3) mt-0.5">Thinking models (such as Qwen3 or DeepSeek-R1) reason before they answer. On: the reasoning is shown folded above the answer. Off: only the answer is shown.</div>
+            </div>
+            <button
+              role="switch"
+              aria-checked={settings.showModelThinking !== false}
+              aria-label="Show model thinking"
+              onClick={() => setSettings({ ...settings, showModelThinking: settings.showModelThinking === false })}
+              className={`w-10 h-5 rounded-full transition-colors relative shrink-0 ${settings.showModelThinking !== false ? 'bg-(--success)' : 'bg-(--surface-3)'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.showModelThinking !== false ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+
           <div className="space-y-2">
             <label htmlFor="settings-workspace-root" className="block text-xs leading-6 font-semibold text-(--text-2)">Workspace Root (for supervised proofs)</label>
             <div className="flex gap-2">

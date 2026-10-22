@@ -160,7 +160,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery and a PIN-authenticated local WebSocket (off until you enable mobile pairing on the desktop). Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **226 Rust unit tests across 41 modules** — 137 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **227 Rust unit tests across 41 modules** — 137 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -434,7 +434,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 5,239 tests across 419 files (src + bridge)
+npm run test           # 5,239 tests across 420 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
