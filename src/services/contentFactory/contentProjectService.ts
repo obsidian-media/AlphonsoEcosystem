@@ -176,6 +176,15 @@ export function markStepStatus(id: string, step: StepId, status: StepState['stat
   });
 }
 
+/** Adds or replaces fields on a version's output (e.g. the pictures made for it). */
+export function setVersionOutputField(id: string, step: StepId, version: number, field: string, value: unknown): ContentProject {
+  return update(id, (p) => {
+    const v = p.steps[step].versions.find((item) => item.version === version);
+    if (!v) throw new Error(`No version ${version} of ${step}`);
+    v.output = { ...((v.output as Record<string, unknown>) || {}), [field]: value };
+  });
+}
+
 export function chooseVersion(id: string, step: StepId, version: number): ContentProject {
   return update(id, (p) => {
     if (!p.steps[step].versions.some((v) => v.version === version)) throw new Error(`No version ${version} of ${step}`);

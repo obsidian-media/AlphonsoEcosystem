@@ -9,6 +9,7 @@ import {
   addStepProgress, chosenVersionOf, failStep, getProject, markStepStatus, saveStepVersion, startStep,
 } from './contentProjectService';
 import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
+import { renderScenePictures, renderThumbnails } from './contentImages';
 import { STEP_ORDER, type ContentProject, type ContentStepPayload, type StepId } from './contentTypes';
 
 export interface StepAgent { agent: string; actionType: string; title: string }
@@ -160,6 +161,13 @@ export async function runContentStep(projectId: string, step: StepId, options: R
     await writeProjectFile(root, brand, getProject(projectId) || saved);
   } catch (error) {
     say(`Saved in the app, but the project folder could not be written: ${(error as Error).message}`);
+  }
+  // The Scene Builder and Thumbnail Studio go on to make their pictures.
+  try {
+    if (step === 'scenes') await renderScenePictures(projectId, options.settings, say);
+    if (step === 'thumbnail') await renderThumbnails(projectId, options.settings, say);
+  } catch (error) {
+    say(`The pictures could not be made: ${(error as Error).message}`);
   }
   return getProject(projectId) || saved;
 }

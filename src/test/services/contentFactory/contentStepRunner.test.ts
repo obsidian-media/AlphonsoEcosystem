@@ -11,6 +11,10 @@ vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   return { ...actual, writeProjectFile: vi.fn(async () => undefined), writeStepText: vi.fn(async () => 'x/v1.md') };
 });
 vi.mock('../../../services/miyaMemoryService', () => ({ listMiyaMemory: vi.fn(() => []) }));
+vi.mock('../../../services/contentFactory/contentImages', () => ({
+  renderScenePictures: vi.fn(async () => []),
+  renderThumbnails: vi.fn(async () => []),
+}));
 
 import { runJoseCommandExecutionPipeline } from '../../../services/joseExecutionEngineService';
 import { getAllAgentOutputs } from '../../../services/agentOutputStoreService';
@@ -18,6 +22,7 @@ import { writeProjectFile } from '../../../services/contentFactory/contentProjec
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief, getProject, saveStepVersion } from '../../../services/contentFactory/contentProjectService';
 import { runContentStep, STEP_AGENTS } from '../../../services/contentFactory/contentStepRunner';
+import { renderScenePictures, renderThumbnails } from '../../../services/contentFactory/contentImages';
 
 const settings = { outputFolder: 'D:\\Content' };
 const output = (data: unknown) => ({ summary: 'ok', resultState: 'completed', artifacts: [{ type: 'content_step_output', data }] });
@@ -108,5 +113,18 @@ describe('runContentStep', () => {
   it('every AI step has agents; the brief has none', () => {
     expect(STEP_AGENTS.brief).toEqual([]);
     expect(STEP_AGENTS.quality.map((a) => a.agent)).toEqual(['maria', 'sentinel']);
+  });
+
+  it('makes the pictures after the scene and thumbnail plans', async () => {
+    vi.mocked(runJoseCommandExecutionPipeline).mockResolvedValue({ ok: true, commandId: 'c6', failedCount: 0, pendingApprovalCount: 0, executionReceipts: [] } as never);
+    vi.mocked(getAllAgentOutputs).mockReturnValue({ miya: output({ style: 's', scenes: [] }) } as never);
+    const p = newProject();
+    await runContentStep(p.id, 'scenes', { settings });
+    expect(renderScenePictures).toHaveBeenCalledWith(p.id, settings, expect.any(Function));
+    await runContentStep(p.id, 'thumbnail', { settings });
+    expect(renderThumbnails).toHaveBeenCalledWith(p.id, settings, expect.any(Function));
+    vi.mocked(renderScenePictures).mockClear();
+    await runContentStep(p.id, 'script', { settings });
+    expect(renderScenePictures).not.toHaveBeenCalled();
   });
 });
