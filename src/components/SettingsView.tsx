@@ -52,6 +52,7 @@ import {
 } from '../services/coachEngineService';
 import { openExternalUrl } from '../services/browserAutomationService';
 import { ComfyUiModelPicker } from './ComfyUiModelPicker';
+import { ComfyUiInstallPicker } from './ComfyUiInstallPicker';
 
 interface MemoryItem {
   id?: string;
@@ -1395,7 +1396,12 @@ export function SettingsView({
                 {launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
               </button>
             </div>
+            <ComfyUiInstallPicker
+              comfyuiDir={settings.comfyuiDir || ''}
+              onChoose={(dir, python) => setSettings({ ...settings, comfyuiDir: dir, comfyuiPython: python })}
+            />
             <div className="space-y-2">
+              <div className="text-[11px] text-(--text-4)">Or enter a ComfyUI folder:</div>
               <div className="flex gap-2">
                 <input
                   type="text"

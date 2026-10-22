@@ -86,27 +86,25 @@ pub(crate) async fn launch_comfyui(
       launched_at_ms: now_ms(),
     });
   }
-  let bundled_python = if cfg!(target_os = "windows") {
-    Path::new(&dir)
-      .join(".venv")
-      .join("Scripts")
-      .join("python.exe")
+  // The Python next to this ComfyUI (its .venv/venv, a venv beside it, or the
+  // portable build's python_embeded). It used to look only in <dir>\.venv, so
+  // other layouts fell back to a bare `python` without ComfyUI's packages
+  // (QA Bug 31). A Python chosen in Settings still wins.
+  let chosen = python_exe.trim();
+  let detected = crate::comfyui_installs::python_for_root(Path::new(&dir));
+  let py = if !chosen.is_empty() && !chosen.eq_ignore_ascii_case("python") {
+    chosen.to_string()
+  } else if let Some(found) = detected.as_ref() {
+    found.to_string_lossy().to_string()
   } else {
-    Path::new(&dir).join(".venv").join("bin").join("python3")
-  };
-  let py = if bundled_python.exists() {
-    bundled_python.to_string_lossy().to_string()
-  } else if python_exe.trim().is_empty() {
     "python".to_string()
-  } else {
-    python_exe.trim().to_string()
   };
   let py_path = Path::new(&py);
   let py_name = py_path
     .file_name()
     .and_then(|name| name.to_str())
     .unwrap_or(py.as_str());
-  if py_path != bundled_python.as_path() && !allowed_program(py_name) {
+  if detected.as_deref() != Some(py_path) && !allowed_program(py_name) {
     return Err(format!(
       "'{}' is not allowed by Alphonso supervised command policy. Use python, python3, or the bundled ComfyUI venv interpreter.",
       py

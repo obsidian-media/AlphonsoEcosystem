@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 205 services and 136 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 205 services and 137 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -38,6 +38,7 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | component | `src/components/CoachMissionBadge.tsx` | `CoachMissionBadge` |
 | component | `src/components/CoachSkillGrid.tsx` | `CoachSkillGrid` |
 | component | `src/components/CoachWindow.tsx` | `CoachWindow` |
+| component | `src/components/ComfyUiInstallPicker.tsx` | `ComfyUiInstallPicker` |
 | component | `src/components/ComfyUiModelPicker.tsx` | `ComfyUiModelPicker` |
 | component | `src/components/CommandRib.tsx` | `CommandRib` |
 | component | `src/components/companion/CompanionAgentRow.tsx` | `CompanionAgentRow` |
@@ -194,7 +195,7 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | service | `src/services/coachSkillService.ts` | `COACH_SKILLS`, `getCoachSkill`, `listCoachSkills` |
 | service | `src/services/coachSoundCueService.ts` | `getCoachSoundCuePattern`, `getCoachSoundCueSettings`, `playCoachSoundCue`, `shouldPlayCoachSoundCue`, `updateCoachSoundCueSettings` |
 | service | `src/services/codingAgentService.ts` | `isCodingRequest`, `runCodingAgent` |
-| service | `src/services/comfyuiSettingsService.ts` | `resolveComfyuiDirectory`, `resolveComfyuiPython` |
+| service | `src/services/comfyuiSettingsService.ts` | `ComfyUiInstall`, `findComfyuiInstalls`, `resolveComfyuiDirectory`, `resolveComfyuiPython` |
 | service | `src/services/commandApprovalService.ts` | `CommandApprovalHandler`, `CommandApprovalOutcome`, `CommandApprovalRequest`, `isWorkspaceCodeExecuting`, `PlannedCommand`, `requestWorkspaceCommandApproval`, `setCommandApprovalHandler` |
 | service | `src/services/companionGreetingsService.ts` | `COMPANION_CONTENT`, `CompanionAgentContent`, `getCompanionContent` |
 | service | `src/services/composioService.ts` | `__resetComposioApiKeyCacheForTests`, `checkComposioHealth`, `ComposioActionResult`, `ComposioConfig`, `ComposioHealthResult`, `ComposioStatusResult`, `ComposioTool`, `ComposioToolkit`, `executeComposioAction`, `executeViaComposio`, `fetchComposioToolkits`, `getCachedToolkits`, `getComposioConfig`, `getComposioStatus`, `getComposioToolsForAgent`, `hydrateComposioApiKeyFromKeychain`, `isComposioEnabled`, `setComposioConfig` |

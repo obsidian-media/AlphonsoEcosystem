@@ -10,7 +10,7 @@ interface IntentTile {
 
 const INTENT_TILES: IntentTile[] = [
   { id: 'chat-only', label: 'Chat Only', blurb: 'Fastest setup, ~2GB' },
-  { id: 'chat-images', label: 'Chat + Images', blurb: 'Adds Fooocus, ~15GB' },
+  { id: 'chat-images', label: 'Chat + Images', blurb: 'Adds ComfyUI + an image model, ~8GB' },
   { id: 'chat-voice', label: 'Chat + Voice', blurb: 'Adds Voice OS, lightweight' },
   { id: 'full-power', label: 'Full Power Mode', blurb: 'Everything recommended for your hardware' },
   { id: 'custom', label: 'Custom', blurb: 'Pick agents individually' },
@@ -39,7 +39,7 @@ export function IntentSelection({ onSelect }: IntentSelectionProps) {
             key={tile.id}
             onClick={() => onSelect(tile.id)}
             // Explicit label: without it the two spans below are read as one
-            // run-on string ("Chat + Images Adds Fooocus, ~15GB").
+            // run-on string ("Chat + Images Adds ComfyUI + an image model, ~8GB").
             aria-label={`${tile.label}. ${tile.blurb}.`}
             className="flex flex-col items-start gap-1 rounded-lg border border-(--border-strong) bg-(--surface-2) p-4 text-left transition-colors hover:border-(--accent-border) hover:bg-(--accent-dim)"
           >

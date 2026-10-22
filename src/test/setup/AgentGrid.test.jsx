@@ -53,7 +53,7 @@ describe('AgentGrid', () => {
     expect(screen.getAllByText(/included/i).length).toBeGreaterThanOrEqual(5);
   });
 
-  it('lets the user toggle Miya (Fooocus) on and includes it in the queued selection', async () => {
+  it('lets the user toggle Miya (ComfyUI) on and includes it in the queued selection', async () => {
     getAllStatus.mockResolvedValue([]);
     const onProceed = vi.fn();
     render(<AgentGrid hardware={hardware} prereqs={allPrereqsOk} onProceed={onProceed} onBack={() => {}} />);
@@ -64,7 +64,7 @@ describe('AgentGrid', () => {
     fireEvent.click(screen.getByText('Install Selected'));
 
     const queued = onProceed.mock.calls[0][0];
-    expect(queued.some((c) => c.id === 'fooocus')).toBe(true);
+    expect(queued.some((c) => c.id === 'comfyui')).toBe(true);
   });
 
   it('lets the user toggle an agent component off, excluding it from the queue', async () => {
@@ -81,7 +81,7 @@ describe('AgentGrid', () => {
   });
 
   it('marks a toggled component as already installed rather than re-queuing it', async () => {
-    getAllStatus.mockResolvedValue([{ name: 'fooocus', installed: true, running: false }]);
+    getAllStatus.mockResolvedValue([{ name: 'comfyui', installed: true, running: false }]);
     render(<AgentGrid hardware={hardware} prereqs={allPrereqsOk} onProceed={() => {}} onBack={() => {}} />);
     await waitFor(() => expect(screen.getByText(/miya/i)).toBeInTheDocument());
     expect(screen.getByText(/already installed/i)).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('AgentGrid', () => {
     // regardless of selection), so the unchecked state misleadingly looked
     // like an action the user still needed to take. Should match Alphonso's
     // own checked+disabled "nothing to do here" treatment instead.
-    getAllStatus.mockResolvedValue([{ name: 'fooocus', installed: true, running: false }]);
+    getAllStatus.mockResolvedValue([{ name: 'comfyui', installed: true, running: false }]);
     const onProceed = vi.fn();
     render(<AgentGrid hardware={hardware} prereqs={allPrereqsOk} onProceed={onProceed} onBack={() => {}} />);
 
@@ -109,7 +109,7 @@ describe('AgentGrid', () => {
     // rather than re-queuing it" test above.
     fireEvent.click(screen.getByText('Install Selected'));
     const queued = onProceed.mock.calls[0][0];
-    expect(queued.some((c) => c.id === 'fooocus')).toBe(false);
+    expect(queued.some((c) => c.id === 'comfyui')).toBe(false);
   });
 
   it('excludes a toggled component from the queue when its prerequisite is unmet', async () => {
@@ -123,7 +123,7 @@ describe('AgentGrid', () => {
     fireEvent.click(screen.getByText('Install Selected'));
 
     const queued = onProceed.mock.calls[0][0];
-    expect(queued.some((c) => c.id === 'fooocus')).toBe(false);
+    expect(queued.some((c) => c.id === 'comfyui')).toBe(false);
     expect(queued.some((c) => c.id === 'starter-model')).toBe(true);
   });
 

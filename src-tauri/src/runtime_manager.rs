@@ -482,38 +482,69 @@ pub struct PrereqStatus {
 }
 
 /// Gap 1: find Python across PATH + common Windows install locations
+/// Rank of a Python version for running the AI tools; lower is better, `None`
+/// means not usable. 3.12 first (works with every tool here), 3.14 last
+/// (ComfyUI: "works but some custom nodes may have issues"), nothing below
+/// 3.10 (current PyTorch has no 3.9 build).
+pub(crate) fn python_preference(version: (u32, u32)) -> Option<u8> {
+  match version {
+    (3, 12) => Some(0),
+    (3, 13) => Some(1),
+    (3, 11) => Some(2),
+    (3, 10) => Some(3),
+    (3, 14) => Some(4),
+    _ => None,
+  }
+}
+
+/// The best usable Python among `(executable, version)` candidates.
+pub(crate) fn pick_python(candidates: &[(String, (u32, u32))]) -> Option<String> {
+  candidates
+    .iter()
+    .filter_map(|(exe, v)| python_preference(*v).map(|rank| (rank, exe)))
+    .min_by_key(|(rank, _)| *rank)
+    .map(|(_, exe)| exe.clone())
+}
+
+/// A suitable Python for the AI tools (3.10 to 3.14). It used to return the
+/// first `python` on PATH whatever its version; on a machine where that was
+/// 3.9, every Python tool install failed, although 3.10 to 3.14 were installed
+/// too (QA, 2026-10-22).
 pub fn find_python() -> Option<String> {
-  let candidates: &[&str] = if cfg!(target_os = "windows") {
-    &[
-      "python",
-      "python3",
-      "python3.12",
-      "python3.11",
-      "python3.10",
+  let mut names: Vec<String> = if cfg!(target_os = "windows") {
+    vec![
+      "python".into(),
+      "python3".into(),
+      "python3.12".into(),
+      "python3.11".into(),
+      "python3.10".into(),
     ]
   } else {
-    &[
-      "python3",
-      "python3.12",
-      "python3.11",
-      "python3.10",
-      "python",
+    vec![
+      "python3".into(),
+      "python3.12".into(),
+      "python3.13".into(),
+      "python3.11".into(),
+      "python3.10".into(),
+      "python".into(),
     ]
   };
 
-  for name in candidates {
-    let mut cmd = Command::new(name);
-    cmd
-      .arg("--version")
-      .stdout(std::process::Stdio::null())
-      .stderr(std::process::Stdio::null());
-    no_window(&mut cmd);
-    if cmd.status().map(|s| s.success()).unwrap_or(false) {
-      return Some((*name).to_string());
+  // Windows: the py launcher knows every installed version.
+  if cfg!(target_os = "windows") {
+    for v in ["3.12", "3.13", "3.11", "3.10", "3.14"] {
+      let mut cmd = Command::new("py");
+      cmd.args([&format!("-{v}"), "-c", "import sys; print(sys.executable)"]);
+      no_window(&mut cmd);
+      if let Ok(out) = cmd.output() {
+        let exe = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if out.status.success() && !exe.is_empty() {
+          names.push(exe);
+        }
+      }
     }
   }
 
-  // Gap 1: Windows-specific fallback paths
   if cfg!(target_os = "windows") {
     let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
     let user = std::env::var("USERPROFILE").unwrap_or_default();
@@ -533,11 +564,7 @@ pub fn find_python() -> Option<String> {
         user
       ),
     ];
-    for p in &win_paths {
-      if Path::new(p).exists() {
-        return Some(p.clone());
-      }
-    }
+    names.extend(win_paths.into_iter().filter(|p| Path::new(p).exists()));
   } else if cfg!(target_os = "macos") {
     let home = std::env::var("HOME").unwrap_or_default();
     let mac_paths = [
@@ -556,13 +583,8 @@ pub fn find_python() -> Option<String> {
       "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3".to_string(),
       "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3".to_string(),
     ];
-    for p in &mac_paths {
-      if Path::new(p).exists() {
-        return Some(p.clone());
-      }
-    }
+    names.extend(mac_paths.into_iter().filter(|p| Path::new(p).exists()));
   } else {
-    // Linux
     let home = std::env::var("HOME").unwrap_or_default();
     let linux_paths = [
       "/usr/bin/python3".to_string(),
@@ -572,13 +594,19 @@ pub fn find_python() -> Option<String> {
       format!("{}/.linuxbrew/bin/python3", home),
       "/home/linuxbrew/.linuxbrew/bin/python3".to_string(),
     ];
-    for p in &linux_paths {
-      if Path::new(p).exists() {
-        return Some(p.clone());
-      }
-    }
+    names.extend(linux_paths.into_iter().filter(|p| Path::new(p).exists()));
   }
-  None
+
+  let mut seen = HashSet::new();
+  let candidates: Vec<(String, (u32, u32))> = names
+    .into_iter()
+    .filter(|n| seen.insert(n.to_lowercase()))
+    .filter_map(|exe| {
+      let version = python_version(&exe).and_then(|v| parse_python_version(&v))?;
+      Some((exe, version))
+    })
+    .collect();
+  pick_python(&candidates)
 }
 
 fn python_version(exe: &str) -> Option<String> {
@@ -1823,6 +1851,149 @@ pub async fn runtime_get_all_status(
   Ok(statuses)
 }
 
+// ── ComfyUI: GPU PyTorch and a starter image model (owner, 2026-10-22) ──
+//
+// A plain `pip install -r requirements.txt` gets the CPU-only PyTorch build on
+// Windows, and ComfyUI ships with no image model, so a ComfyUI installed here
+// could not make a picture. Its install now picks the PyTorch build that
+// matches the NVIDIA driver, and downloads Stable Diffusion 1.5 when no model
+// is present.
+
+/// Stable Diffusion 1.5 (fp16) from Comfy-Org's archive, pinned to one commit
+/// and checked by SHA-256. It is the checkpoint the image generator expects
+/// (`DEFAULT_COMFYUI_CHECKPOINT` in connectorImageGenerators.js).
+const COMFYUI_STARTER_MODEL_FILE: &str = "v1-5-pruned-emaonly-fp16.safetensors";
+const COMFYUI_STARTER_MODEL_URL: &str = "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/9cfd069101959ca3828bf9c04a4419870832b74f/v1-5-pruned-emaonly-fp16.safetensors";
+const COMFYUI_STARTER_MODEL_SHA256: &str =
+  "e9476a13728cd75d8279f6ec8bad753a66a1957ca375a1464dc63b37db6e3916";
+const COMFYUI_STARTER_MODEL_BYTES: u64 = 2_132_696_762;
+
+/// Highest CUDA version the NVIDIA driver supports, from `nvidia-smi`'s header
+/// ("CUDA Version: 12.4" on older drivers, "CUDA UMD Version: 13.3" on newer).
+pub(crate) fn parse_nvidia_smi_cuda(text: &str) -> Option<(u32, u32)> {
+  let at = text
+    .find("CUDA UMD Version:")
+    .map(|i| i + "CUDA UMD Version:".len())
+    .or_else(|| {
+      text
+        .find("CUDA Version:")
+        .map(|i| i + "CUDA Version:".len())
+    })?;
+  let rest = text[at..].trim_start();
+  let version: String = rest
+    .chars()
+    .take_while(|c| c.is_ascii_digit() || *c == '.')
+    .collect();
+  let mut parts = version.split('.');
+  let major = parts.next()?.parse().ok()?;
+  let minor = parts.next().and_then(|m| m.parse().ok()).unwrap_or(0);
+  Some((major, minor))
+}
+
+/// The PyTorch wheel index for a driver's CUDA version; `None` means the CPU
+/// build. `cu130` and `cu126` both carry current PyTorch for Windows and Linux.
+pub(crate) fn torch_index_for_cuda(cuda: Option<(u32, u32)>) -> Option<&'static str> {
+  match cuda {
+    Some((major, _)) if major >= 13 => Some("https://download.pytorch.org/whl/cu130"),
+    Some((12, minor)) if minor >= 6 => Some("https://download.pytorch.org/whl/cu126"),
+    _ => None,
+  }
+}
+
+fn nvidia_cuda_version() -> Option<(u32, u32)> {
+  let mut cmd = Command::new("nvidia-smi");
+  crate::utils::no_window(&mut cmd);
+  let out = cmd.output().ok()?;
+  if !out.status.success() {
+    return None;
+  }
+  parse_nvidia_smi_cuda(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// True when ComfyUI's checkpoints folder already holds a model file.
+pub(crate) fn comfyui_has_checkpoint(dir: &Path) -> bool {
+  let Ok(entries) = std::fs::read_dir(dir.join("models").join("checkpoints")) else {
+    return false;
+  };
+  entries.flatten().any(|e| {
+    let name = e.file_name().to_string_lossy().to_lowercase();
+    name.ends_with(".safetensors") || name.ends_with(".ckpt")
+  })
+}
+
+/// Downloads to `<dest>.part`, checks size and SHA-256, then renames, so a
+/// broken or partial download never sits where ComfyUI looks for models.
+async fn download_verified(
+  app: &AppHandle,
+  tool: &str,
+  url: &str,
+  dest: &Path,
+  expected_sha256: &str,
+  expected_bytes: u64,
+) -> Result<(), String> {
+  use sha2::{Digest, Sha256};
+  use std::io::Write;
+  if let Some(parent) = dest.parent() {
+    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+  }
+  let part = dest.with_extension("part");
+  let client = reqwest::Client::builder()
+    .connect_timeout(std::time::Duration::from_secs(30))
+    .build()
+    .map_err(|e| e.to_string())?;
+  let mut response = client
+    .get(url)
+    .send()
+    .await
+    .map_err(|e| format!("Download failed to start: {e}"))?;
+  if !response.status().is_success() {
+    return Err(format!("Download failed: HTTP {}", response.status()));
+  }
+  let mut file = std::fs::File::create(&part).map_err(|e| e.to_string())?;
+  let mut hasher = Sha256::new();
+  let mut written: u64 = 0;
+  let mut last_pct: u8 = 0;
+  loop {
+    let chunk = match response.chunk().await {
+      Ok(Some(chunk)) => chunk,
+      Ok(None) => break,
+      Err(e) => {
+        let _ = std::fs::remove_file(&part);
+        return Err(format!("Download interrupted: {e}"));
+      }
+    };
+    hasher.update(&chunk);
+    file.write_all(&chunk).map_err(|e| e.to_string())?;
+    written += chunk.len() as u64;
+    // 80..95 of the install's progress bar belongs to this download.
+    let pct = 80 + ((written.min(expected_bytes) * 15) / expected_bytes.max(1)) as u8;
+    if pct != last_pct {
+      last_pct = pct;
+      emit_progress(
+        app,
+        tool,
+        "downloading_model",
+        &format!(
+          "Downloading the starter image model… {} of {} MB",
+          written / 1_000_000,
+          expected_bytes / 1_000_000
+        ),
+        pct,
+      );
+    }
+  }
+  file.flush().map_err(|e| e.to_string())?;
+  drop(file);
+  let digest = crate::utils::to_hex(&hasher.finalize());
+  if written != expected_bytes || digest != expected_sha256 {
+    let _ = std::fs::remove_file(&part);
+    return Err(format!(
+      "The downloaded model did not match (got {written} bytes, sha256 {digest}); it was deleted."
+    ));
+  }
+  std::fs::rename(&part, dest).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn runtime_install_tool(
   name: String,
@@ -1915,6 +2086,42 @@ pub async fn runtime_install_tool(
     py.clone()
   };
 
+  // ── Step 3a: ComfyUI gets the PyTorch build that matches the GPU ──
+  // Installed before requirements.txt, which lists `torch` unpinned, so pip
+  // keeps this build instead of fetching the CPU one. macOS uses the default
+  // build (Apple GPUs work through it).
+  if name == "comfyui" && !cfg!(target_os = "macos") {
+    let index = torch_index_for_cuda(nvidia_cuda_version());
+    let (message, url) = match index {
+      Some(url) => ("Installing PyTorch for your NVIDIA GPU…", url),
+      None => (
+        "No supported NVIDIA GPU found: installing the CPU build of PyTorch. Images will be slow (minutes each).",
+        "https://download.pytorch.org/whl/cpu",
+      ),
+    };
+    emit_progress(&app, &name, "installing_torch", message, 50);
+    run_streaming(
+      &app,
+      &name,
+      &pip_py,
+      &[
+        "-m",
+        "pip",
+        "install",
+        "torch",
+        "torchvision",
+        "torchaudio",
+        "--index-url",
+        url,
+        "--progress-bar",
+        "off",
+      ],
+      Some(&dir),
+    )
+    .await
+    .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+  }
+
   // ── Step 3: pip install deps ──────────────────────────────
   if let Some(req) = def.requirements_file {
     if dir.join(req).exists() {
@@ -1948,6 +2155,25 @@ pub async fn runtime_install_tool(
     run_streaming(&app, &name, &pip_py, &args, Some(&dir))
       .await
       .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+  }
+
+  // ComfyUI cannot make an image without a model; fetch the starter one
+  // unless the user already has a model in its checkpoints folder.
+  if name == "comfyui" && !comfyui_has_checkpoint(&dir) {
+    let dest = dir
+      .join("models")
+      .join("checkpoints")
+      .join(COMFYUI_STARTER_MODEL_FILE);
+    download_verified(
+      &app,
+      &name,
+      COMFYUI_STARTER_MODEL_URL,
+      &dest,
+      COMFYUI_STARTER_MODEL_SHA256,
+      COMFYUI_STARTER_MODEL_BYTES,
+    )
+    .await
+    .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
   }
 
   if name == "voice-os" {
@@ -2816,5 +3042,81 @@ mod tests {
   fn pip_package_name_ignores_versions_and_extras() {
     assert_eq!(pip_package_name("uvicorn[standard]==0.32.0"), "uvicorn");
     assert_eq!(pip_package_name("faster-whisper==1.1.0"), "faster-whisper");
+  }
+}
+
+#[cfg(test)]
+mod comfyui_install_tests {
+  use super::*;
+
+  #[test]
+  fn reads_cuda_version_from_old_and_new_nvidia_smi_headers() {
+    let new = "| NVIDIA-SMI 610.88   KMD Version: 610.88   CUDA UMD Version: 13.3     |";
+    let old = "| NVIDIA-SMI 552.22   Driver Version: 552.22   CUDA Version: 12.4     |";
+    assert_eq!(parse_nvidia_smi_cuda(new), Some((13, 3)));
+    assert_eq!(parse_nvidia_smi_cuda(old), Some((12, 4)));
+    assert_eq!(parse_nvidia_smi_cuda("no gpu here"), None);
+  }
+
+  #[test]
+  fn picks_the_pytorch_build_the_driver_can_run() {
+    assert_eq!(
+      torch_index_for_cuda(Some((13, 3))),
+      Some("https://download.pytorch.org/whl/cu130")
+    );
+    assert_eq!(
+      torch_index_for_cuda(Some((12, 8))),
+      Some("https://download.pytorch.org/whl/cu126")
+    );
+    assert_eq!(
+      torch_index_for_cuda(Some((12, 6))),
+      Some("https://download.pytorch.org/whl/cu126")
+    );
+    assert_eq!(torch_index_for_cuda(Some((12, 4))), None);
+    assert_eq!(torch_index_for_cuda(None), None);
+  }
+
+  #[test]
+  fn sees_an_existing_checkpoint_and_ignores_other_files() {
+    let dir = std::env::temp_dir().join(format!("alphonso-ckpt-test-{}", std::process::id()));
+    let ckpts = dir.join("models").join("checkpoints");
+    std::fs::create_dir_all(&ckpts).unwrap();
+    assert!(!comfyui_has_checkpoint(&dir));
+    std::fs::write(ckpts.join("put_checkpoints_here"), b"").unwrap();
+    assert!(!comfyui_has_checkpoint(&dir));
+    std::fs::write(ckpts.join("Model.SafeTensors"), b"x").unwrap();
+    assert!(comfyui_has_checkpoint(&dir));
+    let _ = std::fs::remove_dir_all(&dir);
+  }
+}
+
+#[cfg(test)]
+mod find_python_tests {
+  use super::*;
+
+  #[test]
+  fn never_picks_a_python_older_than_3_10() {
+    let found = vec![("py39".to_string(), (3, 9)), ("py27".to_string(), (2, 7))];
+    assert_eq!(pick_python(&found), None);
+  }
+
+  #[test]
+  fn prefers_3_12_then_3_13_and_takes_3_14_only_as_a_last_resort() {
+    let found = vec![
+      ("py39".to_string(), (3, 9)),
+      ("py314".to_string(), (3, 14)),
+      ("py310".to_string(), (3, 10)),
+      ("py312".to_string(), (3, 12)),
+    ];
+    assert_eq!(pick_python(&found).as_deref(), Some("py312"));
+    let only_new = vec![
+      ("py314".to_string(), (3, 14)),
+      ("py313".to_string(), (3, 13)),
+    ];
+    assert_eq!(pick_python(&only_new).as_deref(), Some("py313"));
+    assert_eq!(
+      pick_python(&[("py314".to_string(), (3, 14))]).as_deref(),
+      Some("py314")
+    );
   }
 }
