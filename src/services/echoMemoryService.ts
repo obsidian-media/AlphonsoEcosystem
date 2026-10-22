@@ -1,5 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
-import { generateAgentLlmResponse, PREFERRED_MODEL } from '../lib/ollama';
+import { generateAgentLlmResponse, getConfiguredOllamaModel } from '../lib/ollama';
 import { pushMemoryItem, listMemoryItems } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { addMemoryToChroma, semanticSearchMemory, isChromaHealthy } from './chromaDbService.js';
@@ -190,7 +190,7 @@ export async function runEchoPreservation(commandText: string, assignment: EchoA
       const prompt = buildEchoSynthesisPrompt(commandText, priorOutputs);
       const response = await generateAgentLlmResponse('echo', {
         endpoint: options.endpoint,
-        model: options.model || PREFERRED_MODEL,
+        model: options.model || getConfiguredOllamaModel(),
         prompt,
         sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
       });

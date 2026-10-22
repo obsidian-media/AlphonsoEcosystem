@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL, normalizeEndpoint } from '../lib/ollama';
+import { generateOllamaResponse, fetchOllamaModels, getConfiguredOllamaModel, normalizeEndpoint } from '../lib/ollama';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 
 const GOALS_KEY = 'alphonso_boardroom_goals_v1';
@@ -223,7 +223,7 @@ Rules:
 }
 
 export async function generateBatchViaLLM(goal, completedTasks = [], batchNumber = 1, endpoint) {
-  const model = PREFERRED_MODEL;
+  const model = getConfiguredOllamaModel();
   const normalizedEndpoint = normalizeEndpoint(endpoint);
   const prompt = buildLLMPrompt(goal, completedTasks, batchNumber);
 

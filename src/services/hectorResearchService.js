@@ -12,7 +12,7 @@ import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceService';
 import { addNode, addEdge } from './memoryGraphService';
-import { generateAgentLlmResponse, PREFERRED_MODEL, getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { generateAgentLlmResponse, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
 const REPORT_KEY = 'alphonso_hector_reports_v1';
@@ -407,7 +407,7 @@ export async function synthesizeHectorResearch(researchQuestion, sources, option
     const prompt = buildHectorSynthesisPrompt(researchQuestion, sources);
     const response = await generateAgentLlmResponse('hector', {
       endpoint: options.endpoint,
-      model: options.model || PREFERRED_MODEL,
+      model: options.model || getConfiguredOllamaModel(),
       prompt,
       sessionId: options.sessionId
     });

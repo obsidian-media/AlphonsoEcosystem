@@ -345,14 +345,27 @@ pub(crate) async fn ollama_generate(
   endpoint: Option<String>,
   model: String,
   prompt: String,
+  format: Option<String>,
 ) -> Result<OllamaGenerateProof, String> {
   let base = ollama_base(endpoint);
-  let body = serde_json::json!({
+  let body = ollama_generate_body(&model, &prompt, format.as_deref());
+  Ok(ollama_post(base, model, "/api/generate", body).await)
+}
+
+/// Body for `/api/generate`. `format: "json"` makes Ollama constrain the
+/// reply to valid JSON, which small models otherwise often get wrong when a
+/// caller parses the reply (Content Studio's brief and draft). Any other
+/// value is ignored rather than passed through.
+pub(crate) fn ollama_generate_body(model: &str, prompt: &str, format: Option<&str>) -> Value {
+  let mut body = serde_json::json!({
     "model": model,
     "prompt": prompt,
     "stream": false
   });
-  Ok(ollama_post(base, model, "/api/generate", body).await)
+  if format == Some("json") {
+    body["format"] = Value::String("json".to_string());
+  }
+  body
 }
 
 /// Non-streaming `/api/chat` call used as the desktop fallback for chat. It
@@ -376,6 +389,17 @@ pub(crate) async fn ollama_chat(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn generate_body_asks_for_json_only_when_requested() {
+    let plain = ollama_generate_body("llama3.2:3b", "hi", None);
+    assert!(plain.get("format").is_none());
+    assert_eq!(plain["stream"], serde_json::json!(false));
+    let json = ollama_generate_body("llama3.2:3b", "hi", Some("json"));
+    assert_eq!(json["format"], serde_json::json!("json"));
+    let other = ollama_generate_body("llama3.2:3b", "hi", Some("yaml"));
+    assert!(other.get("format").is_none());
+  }
 
   #[test]
   fn reply_text_reads_generate_and_chat_shapes() {

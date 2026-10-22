@@ -8,7 +8,14 @@ import type { HermesSendResult } from '../services/connectors/hermesAgentConnect
 import { getStorage } from './appStorage';
 
 export const DEFAULT_OLLAMA_ENDPOINT = 'http://localhost:11434';
-export const PREFERRED_MODEL = 'qwen2.5-coder:7b';
+// The model to fall back on when the user has not picked one (or the one
+// they picked is gone). It is the bundled starter model, which Setup installs
+// on every machine; it must stay equal to STARTER_MODEL_TAG in
+// setupFlowService.ts (checked by a test). Until 2026-10-21 this was
+// 'qwen2.5-coder:7b': a 5.1 GB coding model most installs do not have, which
+// made Nova, Sentinel and Echo fail on a fresh install and became the chat
+// default whenever it happened to be installed.
+export const PREFERRED_MODEL = 'llama3.2:3b';
 export const OLLAMA_TROUBLESHOOTING_COMMAND = '$env:OLLAMA_ORIGINS="*"\nollama serve';
 
 const REQUEST_TIMEOUT_MS = 8000;
@@ -58,6 +65,8 @@ export interface GenerateResponseOptions {
   model: string;
   prompt: string;
   signal?: AbortSignal;
+  /** 'json' makes Ollama return valid JSON only. Use it when the reply is parsed. */
+  format?: 'json';
 }
 
 export interface OllamaMessage {
@@ -224,9 +233,10 @@ async function invokeOllamaGenerateWithRetry(
   endpoint: string,
   model: string,
   prompt: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  format?: 'json'
 ): Promise<OllamaGenerateProof> {
-  return invokeOllamaBridgeWithRetry('ollama_generate', { endpoint, model, prompt }, signal);
+  return invokeOllamaBridgeWithRetry('ollama_generate', { endpoint, model, prompt, ...(format ? { format } : {}) }, signal);
 }
 
 async function invokeOllamaChatWithRetry(
@@ -238,12 +248,29 @@ async function invokeOllamaChatWithRetry(
   return invokeOllamaBridgeWithRetry('ollama_chat', { endpoint, model, messages }, signal);
 }
 
+// A Tauri command that cannot even run (bad arguments, a missing model name)
+// rejects with a plain string, not an Error. Callers that only read
+// `error.message` used to drop it and show "The local model could not be
+// reached" instead of the real reason. Turn a rejection into a proof with
+// the reason in `error`, which every caller already reports.
+async function invokeOllamaBridge(
+  command: 'ollama_generate' | 'ollama_chat',
+  args: Record<string, unknown>
+): Promise<OllamaGenerateProof> {
+  try {
+    return await invoke<OllamaGenerateProof>(command, args);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error ?? '');
+    return { error: reason || `Desktop bridge command ${command} failed.` } as OllamaGenerateProof;
+  }
+}
+
 async function invokeOllamaBridgeWithRetry(
   command: 'ollama_generate' | 'ollama_chat',
   args: Record<string, unknown>,
   signal?: AbortSignal
 ): Promise<OllamaGenerateProof> {
-  let proof = await invoke<OllamaGenerateProof>(command, args);
+  let proof = await invokeOllamaBridge(command, args);
   if (proof?.error && isTransientDesktopOllamaError(proof.error)) {
     // A user-started Ollama can be reachable before its runner is ready. One
     // bounded retry removes that launch race without turning a real model
@@ -264,7 +291,7 @@ async function invokeOllamaBridgeWithRetry(
       signal?.addEventListener('abort', abort, { once: true });
     });
     if (signal?.aborted) return proof;
-    proof = await invoke<OllamaGenerateProof>(command, args);
+    proof = await invokeOllamaBridge(command, args);
   }
   return proof;
 }
@@ -604,7 +631,7 @@ export async function generateOllamaChatStream({ endpoint, model, messages, onTo
   }
 }
 
-export async function generateOllamaResponse({ endpoint, model, prompt, signal }: GenerateResponseOptions): Promise<{ response: string; done: boolean }> {
+export async function generateOllamaResponse({ endpoint, model, prompt, signal, format }: GenerateResponseOptions): Promise<{ response: string; done: boolean }> {
   const baseUrl = normalizeEndpoint(endpoint);
   try {
     const response = await fetchWithTimeout(`${baseUrl}/api/generate`, {
@@ -616,7 +643,8 @@ export async function generateOllamaResponse({ endpoint, model, prompt, signal }
       body: JSON.stringify({
         model,
         prompt,
-        stream: false
+        stream: false,
+        ...(format ? { format } : {})
       }),
       signal
     }, 120000);
@@ -642,7 +670,7 @@ export async function generateOllamaResponse({ endpoint, model, prompt, signal }
       throw error;
     }
 
-    const proof = await invokeOllamaGenerateWithRetry(baseUrl, model, prompt);
+    const proof = await invokeOllamaGenerateWithRetry(baseUrl, model, prompt, undefined, format);
     if (!proof || proof.error) {
       throw new Error(proof?.error || 'Desktop bridge generation failed.');
     }
@@ -702,7 +730,7 @@ export async function generateAgentLlmResponse(agentId: string, options: AgentGe
   const config = getAgentProvider(agentId);
 
   if (config.provider === 'ollama') {
-    const model = options.model || PREFERRED_MODEL;
+    const model = options.model || getConfiguredOllamaModel();
     const result = await generateOllamaResponse({
       endpoint: options.endpoint,
       model,

@@ -5,7 +5,7 @@
 // Guards two desktop-only failures: ComfyUI refusing the app window's
 // requests with 403, and the finished job overflowing localStorage and
 // vanishing from the screen.
-import { enterShell, mainText, buttonByText, openPage, ollamaHasModels } from '../helpers.mjs';
+import { enterShell, mainText, buttonByText, openPage, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
 
 async function comfyUiIsUp() {
   try {
@@ -24,6 +24,10 @@ describe('Alphonso desktop Content Studio image generation', function () {
     if (!(await comfyUiIsUp())) this.skip();
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
+    // Load the model first: these specs check what it writes, not how fast
+    // a cold model comes off the disk.
+    this.timeout(400000);
+    await warmSelectedModel();
     await $('[data-testid="sidebar-chat-shortcut"]').click();
     await browser.waitUntil(
       async () => !(await mainText()).includes('Start Ollama to enable AI'),

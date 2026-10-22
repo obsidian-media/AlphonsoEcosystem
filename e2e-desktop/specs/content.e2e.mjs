@@ -2,7 +2,7 @@
 // real local model, or is clearly labelled as the template. Image/video production is
 // not covered here (it needs ComfyUI or Runway). Skipped when no Ollama
 // model is reachable.
-import { enterShell, mainText, buttonByText, openPage, ollamaHasModels } from '../helpers.mjs';
+import { enterShell, mainText, buttonByText, openPage, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
 
 const IDEA = 'Announce our new seasonal pumpkin latte';
 
@@ -10,6 +10,10 @@ describe('Alphonso desktop Content Studio', () => {
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
+    // Load the model first: these specs check what it writes, not how fast
+    // a cold model comes off the disk.
+    this.timeout(400000);
+    await warmSelectedModel();
     // A job uses the model the app has selected; on a fresh profile that
     // takes a moment after launch.
     await $('[data-testid="sidebar-chat-shortcut"]').click();
@@ -27,18 +31,34 @@ describe('Alphonso desktop Content Studio', () => {
     const create = await buttonByText('create content job');
     await create.waitForEnabled();
     await create.click();
-    await browser.waitUntil(async () => (await mainText()).includes('CREATIVE OUTPUT'), {
-      timeout: 300000,
-      interval: 2000,
-      timeoutMsg: 'no draft within 5 minutes',
-    });
+    try {
+      await browser.waitUntil(async () => (await mainText()).includes('CREATIVE OUTPUT'), {
+        timeout: 170000,
+        interval: 2000,
+      });
+    } catch {
+      // Say what the job was doing, so a failure can be diagnosed from the log.
+      const state = await browser.execute(() => {
+        let jobs = [];
+        try { jobs = JSON.parse(localStorage.getItem('alphonso_content_catalyst_jobs_v1') || '[]'); } catch { /* unreadable */ }
+        const job = Array.isArray(jobs) ? jobs[0] : null;
+        return {
+          jobs: Array.isArray(jobs) ? jobs.length : 0,
+          status: job?.status,
+          logs: (job?.logs || []).slice(-4).map((l) => `${l.level}: ${l.message}`),
+          screen: (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' ').slice(-400),
+        };
+      });
+      throw new Error(`no draft within 170 s: ${JSON.stringify(state)}`);
+    }
     const notice = await $('[data-testid="content-draft-template-notice"]');
     if (await notice.isExisting()) {
       // A labelled template is acceptable only when the model answered with
       // something unreadable (models do that occasionally). Any other reason
       // means the job never reached the model, which is the bug this guards.
       const reason = await notice.getText();
-      if (!reason.includes('could not be read as a draft')) throw new Error(`draft never reached the model: ${reason}`);
+      const modelAnswered = reason.includes('could not be read as a draft') || reason.includes('no hook or caption');
+      if (!modelAnswered) throw new Error(`draft never reached the model: ${reason}`);
       return;
     }
     const text = await mainText();

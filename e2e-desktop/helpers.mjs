@@ -83,6 +83,29 @@ export async function mainText() {
   return browser.execute(() => (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' '));
 }
 
+/** Wait until the app has chosen a model, then load that model into Ollama
+ *  through the real backend command. A cold load from a slow drive can take
+ *  minutes (2.5 min seen on a USB hard drive, 2026-10-21); specs that check
+ *  *what* the model writes should not also be timing the disk. Call from a
+ *  `before` hook with `this.timeout(400000)`. Returns the model name. */
+export async function warmSelectedModel() {
+  let model = '';
+  await browser.waitUntil(
+    async () => {
+      model = await browser.execute(() => {
+        try { return JSON.parse(localStorage.getItem('alphonso_settings') || '{}').selectedModel || ''; } catch { return ''; }
+      });
+      return Boolean(model);
+    },
+    { timeout: 90000, interval: 1000, timeoutMsg: 'the app never chose a model to warm up' }
+  );
+  const result = await invoke('ollama_generate', { endpoint: 'http://127.0.0.1:11434', model, prompt: 'Reply with: ok' });
+  if (!result.ok || result.value?.error) {
+    throw new Error(`warming ${model} failed: ${result.ok ? result.value.error : result.error}`);
+  }
+  return model;
+}
+
 /** True once a local Ollama answers and has at least one model. The app
  *  starts Ollama itself at launch, so this waits up to ~30s for it. */
 export async function ollamaHasModels() {

@@ -1,5 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
-import { generateAgentLlmResponse, PREFERRED_MODEL } from '../lib/ollama';
+import { generateAgentLlmResponse, getConfiguredOllamaModel } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { generateRiskScore } from './audit/marcusAuditService';
@@ -177,7 +177,7 @@ export async function runMariaGovernanceAudit(commandText: string, assignment: M
       const prompt = buildMariaAuditPrompt(commandText, priorOutputs);
       const response = await generateAgentLlmResponse('maria', {
         endpoint: options.endpoint,
-        model: options.model || PREFERRED_MODEL,
+        model: options.model || getConfiguredOllamaModel(),
         prompt,
         sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
       });

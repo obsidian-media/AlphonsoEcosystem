@@ -9,10 +9,16 @@ vi.mock('../lib/ollama', () => ({
       hook_options: ['Launch with confidence'],
       asset_plan: { image: true, video: true, narration: true, publish: false },
       platform_notes: ['instagram'],
-      risk_notes: ['preview only']
+      risk_notes: ['preview only'],
+      // Draft fields: the same mock answers both the brief and the draft call.
+      hook: 'A latte worth the walk',
+      caption: 'Our pumpkin latte is back for autumn.',
+      hashtags: ['#pumpkinlatte']
     }),
     done: true
-  }))
+  })),
+  getConfiguredOllamaEndpoint: vi.fn(() => 'http://localhost:11434'),
+  getConfiguredOllamaModel: vi.fn(() => 'current-model:1b')
 }));
 
 vi.mock('../services/connectorRegistryService', () => ({
@@ -63,7 +69,7 @@ import { requireApproval } from '../services/approval/approvalService';
 import { publishMetaContent } from '../services/metaPublishService';
 import { generateComfyUiImage } from '../services/connectorRegistryService';
 import { generateRunwayVideo } from '../services/runwayService';
-import { generateOllamaResponse } from '../lib/ollama';
+import { generateOllamaResponse, getConfiguredOllamaModel } from '../lib/ollama';
 import { buildContentBrief } from '../features/content-catalyst/services/contentCatalystService';
 
 import {
@@ -423,18 +429,51 @@ describe('generateContentDraft', () => {
     expect(result.draftTemplateReason).toBeNull();
   });
 
-  it('sends the job settings to the model call', async () => {
+  it('uses the model selected when the step runs, not the one saved with the job', async () => {
+    // A job created before any model was chosen used to keep sending no
+    // model, so every step failed for that job (QA Bug 19, 2026-10-21).
     const job = createContentJobFromBridgeRequest(
       { idea: 'Uses settings' },
-      { settings: { endpoint: 'http://localhost:11434', selectedModel: 'llama3.2:3b', unrelated: 'dropped' } }
+      { settings: { endpoint: 'http://localhost:11434', selectedModel: null, unrelated: 'dropped' } }
     );
-    expect(job.settings).toEqual({ endpoint: 'http://localhost:11434', selectedModel: 'llama3.2:3b' });
+    expect(job.settings).toEqual({ endpoint: 'http://localhost:11434', selectedModel: null });
     generateOllamaResponse.mockClear();
+    getConfiguredOllamaModel.mockReturnValue('picked-later:3b');
     await generateContentDraft(job);
     expect(generateOllamaResponse).toHaveBeenCalled();
     for (const [args] of generateOllamaResponse.mock.calls) {
-      expect(args).toMatchObject({ endpoint: 'http://localhost:11434', model: 'llama3.2:3b' });
+      expect(args).toMatchObject({ endpoint: 'http://localhost:11434', model: 'picked-later:3b' });
     }
+    getConfiguredOllamaModel.mockReturnValue('current-model:1b');
+  });
+
+  it('does not present a reply with no hook or caption as a model draft', async () => {
+    // QA Bug 28: such a reply used to show as a finished draft with "—".
+    generateOllamaResponse.mockImplementationOnce(async () => { throw new Error('brief skipped'); });
+    generateOllamaResponse.mockImplementationOnce(async () => ({ response: JSON.stringify({ hashtags: [] }), done: true }));
+    const job = createContentJobFromBridgeRequest({ idea: 'Hollow reply' });
+    const result = await generateContentDraft(job);
+    expect(result.draftSource).toBe('template');
+    expect(result.draftTemplateReason).toContain('no hook or caption');
+  });
+
+  it('asks Ollama for JSON for the brief and the draft', async () => {
+    generateOllamaResponse.mockClear();
+    await generateContentDraft(createContentJobFromBridgeRequest({ idea: 'JSON please' }));
+    expect(generateOllamaResponse.mock.calls.length).toBeGreaterThanOrEqual(2);
+    for (const [args] of generateOllamaResponse.mock.calls) expect(args.format).toBe('json');
+  });
+
+  it('reports the real reason when the backend rejects with a plain string', async () => {
+    // Tauri commands reject with a string, not an Error. The reason used to
+    // be replaced by "The local model could not be reached" (QA Bug 18).
+    generateOllamaResponse.mockRejectedValueOnce('invalid args `model` for command `ollama_generate`');
+    generateOllamaResponse.mockRejectedValueOnce('invalid args `model` for command `ollama_generate`');
+    const job = createContentJobFromBridgeRequest({ idea: 'String rejection' });
+    const result = await generateContentDraft(job);
+    expect(result.draftSource).toBe('template');
+    expect(result.draftTemplateReason).toContain('invalid args `model`');
+    expect(result.draftTemplateReason).not.toBe('The local model could not be reached.');
   });
 
   it('includes brief in output', async () => {

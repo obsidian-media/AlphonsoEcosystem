@@ -14,7 +14,9 @@ describe('Ollama state mapping', () => {
 
     const result = await checkOllama('http://localhost:11434', '');
     expect(result.state).toBe('connected');
-    expect(result.selectedModel).toBe('mistral:latest');
+    // With nothing picked yet, the bundled starter model wins over the first
+    // model in the list (owner decision 2026-10-21, QA Bug 20).
+    expect(result.selectedModel).toBe('llama3.2:3b');
   });
 
   it('returns model_missing when selected model is absent', async () => {

@@ -9,9 +9,11 @@ import {
   classifyOllamaError,
   formatModelSize,
   generateOllamaChatStream,
+  generateOllamaResponse,
   normalizeEndpoint,
   PREFERRED_MODEL
 } from '../lib/ollama';
+import { STARTER_MODEL_TAG } from '../services/setupFlowService';
 
 describe('ollama utilities', () => {
   describe('normalizeEndpoint', () => {
@@ -56,6 +58,14 @@ describe('ollama utilities', () => {
   });
 
   describe('chooseDefaultModel', () => {
+    it('falls back to the bundled starter model, not a coding model', () => {
+      // Owner decision 2026-10-21: last picked model, else the starter.
+      // PREFERRED_MODEL was 'qwen2.5-coder:7b' until then (QA Bug 20).
+      expect(PREFERRED_MODEL).toBe(STARTER_MODEL_TAG);
+      const models = [{ name: 'qwen2.5-coder:7b' }, { name: 'glm-ocr:latest' }, { name: STARTER_MODEL_TAG }];
+      expect(chooseDefaultModel(models, '')).toBe(STARTER_MODEL_TAG);
+    });
+
     it('prefers the preferred model when available', () => {
       const models = [{ name: 'mistral:latest' }, { name: PREFERRED_MODEL }];
       expect(chooseDefaultModel(models, '')).toBe(PREFERRED_MODEL);
@@ -179,6 +189,16 @@ describe('ollama utilities', () => {
 
       afterEach(() => {
         isTauri.mockReturnValue(false);
+      });
+
+      it('reports the backend reason when the command rejects with a plain string', async () => {
+        // Tauri rejects with a string, not an Error; callers used to lose it
+        // and say "The local model could not be reached" (QA Bug 18).
+        invoke.mockRejectedValue('invalid args `model` for command `ollama_generate`: invalid type: null, expected a string');
+        await expect(
+          generateOllamaResponse({ endpoint: 'http://localhost:11434', model: null, prompt: 'hi' })
+        ).rejects.toThrow('invalid args `model` for command `ollama_generate`');
+        expect(invoke).toHaveBeenCalledTimes(1);
       });
 
       it('sends the real chat turns to ollama_chat instead of a flattened prompt', async () => {
