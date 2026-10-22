@@ -15,7 +15,7 @@ import {
 const brand = { folderName: 'my-brand' } as never;
 const project = { id: 'p1', folderName: 'launch-video', name: 'Launch video' } as never;
 
-beforeEach(() => vi.mocked(invoke).mockReset().mockResolvedValue({}));
+beforeEach(() => { vi.mocked(invoke).mockReset().mockResolvedValue({}); });
 
 describe('contentProjectFiles', () => {
   it('builds the brand/project folder', () => {
