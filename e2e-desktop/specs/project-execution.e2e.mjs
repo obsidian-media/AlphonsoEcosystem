@@ -34,13 +34,37 @@ describe('Alphonso desktop Project Execution', () => {
   });
 
   it('opens Results once every gate is approved', async () => {
-    for (let remaining = (await approveButtons()).length; remaining > 0; remaining -= 1) {
-      await (await approveButtons())[0].click();
-      await browser.waitUntil(async () => (await approveButtons()).length === remaining - 1);
+    // The panel re-renders after each approval, so a button found a moment
+    // ago can be gone ("stale element", seen in CI on PR 305). Re-find and
+    // retry until the count drops.
+    while ((await approveButtons()).length > 0) {
+      const before = (await approveButtons()).length;
+      await browser.waitUntil(
+        async () => {
+          const buttons = await approveButtons();
+          if (buttons.length < before) return true;
+          try { await buttons[0].click(); } catch { /* re-rendered; try again */ }
+          return false;
+        },
+        { timeout: 20000, interval: 1000, timeoutMsg: 'an approval click never took effect' }
+      );
     }
+    // QA Bug 5: the heading kept saying "4 items awaiting approval" after
+    // every gate was approved.
+    const afterApproval = (await mainText()).toLowerCase();
+    expect(afterApproval).not.toContain('awaiting approval');
+    expect(afterApproval).toContain('all gates resolved');
+    // Depending on timing the panel shows its own Continue button, or the
+    // page has already replaced it with "All gates resolved"; either way the
+    // Results tab must now be open to the user.
     const proceed = await $('//main//button[normalize-space(.)="Continue"]');
-    await proceed.waitForClickable();
-    await proceed.click();
+    if ((await proceed.isExisting()) && (await proceed.isClickable())) {
+      await proceed.click();
+    } else {
+      const resultsTab = await $('//main//button[normalize-space(.)="Results"]');
+      await resultsTab.waitForClickable({ timeoutMsg: 'the Results tab never unlocked' });
+      await resultsTab.click();
+    }
     await browser.waitUntil(async () => (await mainText()).includes('AGENT ASSIGNMENT BOARD'), {
       timeoutMsg: 'Results never opened after all gates were approved',
     });

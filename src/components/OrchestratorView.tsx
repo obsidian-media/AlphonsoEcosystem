@@ -51,7 +51,7 @@ import {
 } from '../services/joseCommandRouterService';
 import { executeApprovedPacket } from '../services/packetExecutionService';
 import { TRUST_STATES } from '../services/trustModel';
-import { isConnectorAuthenticated, listConnectorAudit, pollWhatsAppConnector } from '../services/connectorRegistryService';
+import { getConnectorCredential, isConnectorAuthenticated, listConnectorAudit, pollWhatsAppConnector } from '../services/connectorRegistryService';
 import { getOrchestrationQueueSnapshot, listOrchestrationQueueTransitions, replayPacketFromDeadLetter } from '../services/orchestrationQueueService';
 import { Tabs } from './ui/Tabs';
 import { AgentAvatar } from './AgentAvatar';
@@ -370,7 +370,19 @@ export function OrchestratorView({
   const [openPanels, setOpenPanels] = useState<Set<string>>(() => new Set(['jose-task-queue', 'jose-intake', 'pending-approvals']));
   const [executionResults, setExecutionResults] = useState<ExecutionResult[]>([]);
   const [executingPacketIds, setExecutingPacketIds] = useState<Set<string>>(new Set());
-  const whatsappConfigured = isConnectorAuthenticated('whatsapp').ok;
+  // Inbound polling needs the access token and the gateway drain URL, and the
+  // connector switched on. Nothing here checks a live connection, so the card
+  // says "Configured", never "Connected" (QA Bug 8).
+  const whatsappEnabled = isConnectorAuthenticated('whatsapp').ok;
+  const whatsappHasCredentials = Boolean(
+    getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN') && getConnectorCredential('whatsapp', 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL')
+  );
+  const whatsappConfigured = whatsappEnabled && whatsappHasCredentials;
+  const whatsappStatusText = whatsappConfigured
+    ? 'Configured'
+    : whatsappHasCredentials
+      ? 'Credentials saved — turn WhatsApp on in Connectors'
+      : 'Not configured — add the access token and gateway drain URL in Connectors';
 
   const approvalQueue = useMemo<Packet[]>(() => listApprovalQueue() as Packet[], [packets]);
   const workload = useMemo<AgentWorkloadRow[]>(() => summarizeAgentWorkload(packets) as AgentWorkloadRow[], [packets]);
@@ -773,7 +785,7 @@ export function OrchestratorView({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className={`h-1.5 w-1.5 rounded-full ${whatsappConfigured ? 'bg-(--success)' : 'bg-(--text-4)'}`} />
-                    <span className="text-[12px] text-(--text-3)">{whatsappConfigured ? 'Connected' : 'Not configured — see Settings'}</span>
+                    <span className="text-[12px] text-(--text-3)" data-testid="whatsapp-inbound-status">{whatsappStatusText}</span>
                   </div>
                   <button
                     onClick={pollWhatsAppNow}

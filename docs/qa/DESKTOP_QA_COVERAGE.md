@@ -201,11 +201,11 @@ nobody has seen it work in the real app yet.
 | 2 | First model call right after launch sometimes fails | Fixed in code (PR 304 retry); live check pending |
 | 3 | Hector snippets contain raw page CSS | Fixed in code (`strip_html_tags` tests); live check pending |
 | 4 | Executed Jose packet: output never checked | Open |
-| 5 | Project Execution heading counts approved gates; gates show "unknown" | Owner field fixed (PR 305); heading not checked |
-| 6 | Voice page says Voice OS "Installed" with only Python present | Open |
+| 5 | Project Execution heading counts approved gates; gates show "unknown" | Fixed: real app shows "All gates resolved. See Results for the full packet." once every gate is approved; `project-execution.e2e.mjs` checks it and no longer flakes on a re-rendered button (batch 4). Owner field fixed in PR 305 |
+| 6 | Voice page says Voice OS "Installed" with only Python present | Fixed (PR 304, `voice_runtime_installed` checks the pip packages); real app: Runtime Hub reports `voice-os: installed=false` on a profile without them. The same "PATH counts as installed" rule remained for Docker tools: Bug 30 |
 | 7 | Boardroom names the wrong agent as thinking | Fixed in code (PR 304); live check pending |
-| 8 | Orchestrator says "WhatsApp inbound: Connected" with no credentials | Open |
-| 9 | Content Studio brief step falls back silently | Open |
+| 8 | Orchestrator says "WhatsApp inbound: Connected" with no credentials | Fixed (batch 4): the card says "Configured" only with the access token, the gateway drain URL and the connector on, otherwise says what is missing; it never says "Connected" (nothing checks a live connection). `orchestratorViewSmoke.test.jsx` checks both cases |
+| 9 | Content Studio brief step falls back silently | Fixed: the real app shows "This brief used the built-in fallback, not a model response: <reason>" (seen in the 2026-10-21 baseline) |
 | 11 | Runtime start guard is check-then-spawn | Fixed in code (`starting` set); live check pending |
 | 14 | Models chosen in the Ollama app's Settings are invisible to an Ollama Alphonso starts | Fixed in code (PR 307); live check pending |
 | 15 | `smoke.e2e.mjs` page list misses Agent Pairing and Maturity | Fixed (batch 3): both added and pass in the real app; `src/test/desktopSmokeCoverage.test.js` fails if the sidebar gains a page the smoke spec does not visit |
@@ -221,6 +221,8 @@ nobody has seen it work in the real app yet.
 | 26 | Project Execution's audit step is Marcus (`MarcusAuditPanel`, `marcusAuditService.js`); per the owner, governance and risk review is Maria's (Q3) | Open; fix with the Projects rebuild (Q1) |
 | 24 | Chat's first reply on a cold model did not arrive within the spec's 150 s; passes in 14 s once the model is loaded | Cause found: on the owner's machine the models live on D:, an external USB hard drive (WD My Passport, ~68 MB/s); cold loads took 1 min 24 s to 2 min 30 s (Ollama log). Not an app bug. Specs now load the model first (`warmSelectedModel()` in `helpers.mjs`). App follow-up still open: say "loading the model" during a long first call instead of looking stuck |
 | 27 | Each Content Studio job stores its generated image inside `localStorage` (`alphonso_content_catalyst_jobs_v1` went from 7 KB to 620 KB after one job). WebView storage is about 5 MB, so a handful of jobs could fill it (the 2026-10-12 "job disappears" bug class) | Open; measure how many jobs fit, then store images as files |
+| 30 | Runtime Hub reported n8n, ChromaDB and OpenHands as installed whenever Docker was on PATH (Docker was not even running, no image pulled), and their Install button did nothing but report success | Fixed (batch 4): Install runs `docker pull <image>` and checks the image is there; installed means `docker image inspect <image>` succeeds; 1 Rust test. Real-app install not run yet (needs Docker running) |
+| 31 | Runtime Hub shows a ComfyUI installed outside Alphonso (`D:\AgentDevWork\Programs\comfyui`) as not installed but running | Open (minor): show "running (installed outside Alphonso)" instead of offering Install |
 | 29 | `content.e2e.mjs` timed out once in a full suite run (after `content-image`) although every model call took under 4 s and every image about 4 s; it then passed 3 times alone and twice paired with `content-image` | Intermittent, not reproduced; the spec now reports the job's status, last log lines and screen text when it times out |
 | 28 | Content Studio accepted any JSON reply as a model-written draft: a reply with no hook or caption showed as a finished draft with "—" and no notice; and `llama3.2:3b` often failed the brief's JSON | Fixed in code: drafts need a hook and a caption or they are labelled as the template with the reason; brief and draft ask Ollama for JSON (`format: "json"`, new optional argument on `ollama_generate`, 1 Rust test); real-app re-check pending |
 
