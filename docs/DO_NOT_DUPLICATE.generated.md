@@ -81,7 +81,7 @@ Source-backed inventory: 206 services and 140 components. Human purpose descript
 | component | `src/components/MissionControlHome.tsx` | `MissionControlHome` |
 | component | `src/components/MissionRoom.tsx` | `MissionRoom` |
 | component | `src/components/MiyaCompanionWidget.tsx` | `MiyaCompanionWidget` |
-| component | `src/components/MiyaStudio.tsx` | `MiyaStudio` |
+| component | `src/components/MiyaStudio.tsx` | `brandKitPrompt`, `MiyaStudio` |
 | component | `src/components/ModelSwitcher.tsx` | `CloudModelPicker`, `CloudProvider`, `HermesModelPicker`, `ModelProviderId`, `ModelProviderPicker`, `ModelSwitcher`, `OllamaModelPicker` |
 | component | `src/components/ModeToggle.tsx` | `ModeToggle` |
 | component | `src/components/NotificationCenter.tsx` | `clearPersistedNotifications`, `loadPersistedNotifications`, `NotificationCenter` |
@@ -332,7 +332,7 @@ Source-backed inventory: 206 services and 140 components. Human purpose descript
 | service | `src/services/trustModel.ts` | `timestampMs`, `TRUST_STATES`, `trustColor`, `TrustState` |
 | service | `src/services/unifiedMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getDurableMemoryStatus`, `getMemorySize`, `getMemorySummary`, `getNamespaceCount`, `hydrateFromDurable`, `hydrateMemoryFromDurable`, `importMemoryItems`, `listDurableMemoryRecords`, `listEcosystemMemoryItems`, `listMemory`, `listMemoryByNamespace`, `listMemoryItems`, `listMiyaMemory`, `listWorkflowMemory`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `normalizeMemoryRecord`, `pushMemory`, `pushMemoryItem`, `pushMiyaMemory`, `pushWorkflowMemory`, `resetMemoryServiceState`, `tickExpiry`, `upsertBrandKit`, `upsertDurableMemoryRecords` |
 | service | `src/services/verificationService.ts` | `appendVerificationLog`, `buildOllamaStartupGuide`, `getVerificationLogs`, `listOllamaModels`, `OllamaStartupGuide`, `readDurableAuditLog`, `VERIFICATION_SCOPE`, `VerificationLogEntry`, `VerificationLogInput`, `verifyCommandExecution`, `verifyDurableAuditChain`, `verifyOllamaRuntimeProof`, `verifyPathProof`, `verifyProcessProof` |
-| service | `src/services/voiceOsService.ts` | `getVoiceServerStatus`, `getVoiceToken`, `getVoiceWebSocketUrl`, `startVoiceServer`, `startVoiceWatchdog`, `stopVoiceServer`, `stopVoiceWatchdog` |
+| service | `src/services/voiceOsService.ts` | `checkVoiceWatchdog`, `getVoiceServerStatus`, `getVoiceToken`, `getVoiceWebSocketUrl`, `resetVoiceWatchdogState`, `startVoiceServer`, `startVoiceWatchdog`, `stopVoiceServer`, `stopVoiceWatchdog` |
 | service | `src/services/voiceService.ts` | `classifyVoiceError`, `getVoicePrivacyLabel`, `requestAudioStream`, `SpeechRecognitionOptions`, `startSpeechRecognition`, `stopAudioStream`, `supportsMicrophoneCapture`, `supportsSpeechRecognition`, `TRANSCRIPTION_PIPELINE_STATUS`, `VOICE_STATES`, `VoiceErrorClassification`, `VoiceState` |
 | service | `src/services/whatsappBrowserConnector.ts` | `browserPollWhatsAppGateway`, `browserSendWhatsApp`, `processWhatsAppWebhook`, `verifyWhatsAppWebhook` |
 | service | `src/services/whatsappCompanionService.ts` | `isWhatsAppCompanionRunning`, `processInboundWhatsAppMessages`, `startWhatsAppCompanion`, `stopWhatsAppCompanion` |

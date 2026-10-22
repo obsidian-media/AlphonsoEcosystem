@@ -28,7 +28,7 @@ vi.mock('../services/miyaExportPacketService', () => ({
 }));
 
 vi.mock('../lib/ollama', () => ({
-  generateOllamaResponse: vi.fn().mockResolvedValue({ response: '{}', done: true })
+  generateAgentLlmResponse: vi.fn().mockResolvedValue({ response: '{}', done: true })
 }));
 
 vi.mock('../services/connectorRegistryService', () => ({
@@ -48,7 +48,7 @@ vi.mock('../services/notificationService', () => ({
 }));
 
 import { MiyaStudio } from '../components/MiyaStudio';
-import { generateOllamaResponse } from '../lib/ollama';
+import { generateAgentLlmResponse } from '../lib/ollama';
 
 function makeProps(overrides = {}) {
   return {
@@ -83,14 +83,13 @@ describe('MiyaStudio Generate Package empty-input guard', () => {
     // Defensive: even a disabled button's onClick should short-circuit if
     // ever reached programmatically (fireEvent bypasses the disabled attr).
     fireEvent.click(button);
-    expect(generateOllamaResponse).not.toHaveBeenCalled();
+    expect(generateAgentLlmResponse).not.toHaveBeenCalled();
   });
 
   it('enables Generate Package once any pipeline field has real content', () => {
     render(<MiyaStudio {...makeProps()} />);
-    // PipelineInputs renders Idea, Topic, Niche, Goal (in that order) as plain
-    // <input>s with an unassociated <label> — no htmlFor/id to query by label.
-    const [, topicInput] = screen.getAllByRole('textbox');
+    // The labels are linked to their inputs since 2026-10-22 (accessibility).
+    const topicInput = screen.getByLabelText('Topic');
     fireEvent.change(topicInput, { target: { value: 'A real topic' } });
     const button = screen.getByRole('button', { name: /generate package/i });
     expect(button).not.toBeDisabled();
