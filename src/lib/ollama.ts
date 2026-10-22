@@ -764,7 +764,10 @@ export async function generateAgentLlmResponse(agentId: string, options: AgentGe
   if (config.provider === 'ollama') {
     const model = options.model || getConfiguredOllamaModel();
     const result = await generateOllamaResponse({
-      endpoint: options.endpoint,
+      // The address set in Settings when the caller passes none (QA
+      // 2026-10-22): an empty address meant localhost:11434, so callers like
+      // Companion Mode ignored an Ollama running anywhere else.
+      endpoint: options.endpoint || getConfiguredOllamaEndpoint(),
       model,
       prompt: options.prompt,
       signal: options.signal,

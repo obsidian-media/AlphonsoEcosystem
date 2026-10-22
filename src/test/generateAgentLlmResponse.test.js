@@ -88,4 +88,14 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     await expect(generateAgentLlmResponse('jose', { prompt: 'x' })).rejects.toThrow('Hermes endpoint not configured');
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  // QA 2026-10-22: with no address passed, this used localhost:11434 and so
+  // ignored an Ollama the user had set elsewhere in Settings (Companion Mode).
+  it("uses the Ollama address from Settings when the caller passes none", async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ endpoint: 'http://192.168.1.50:11434' }));
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ response: 'ok', done: true }) });
+    await generateAgentLlmResponse('alphonso', { prompt: 'hello' });
+    expect(fetch.mock.calls[0][0]).toBe('http://192.168.1.50:11434/api/generate');
+    localStorage.removeItem('alphonso_settings');
+  });
 });
