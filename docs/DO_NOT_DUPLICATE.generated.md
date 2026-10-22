@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 205 services and 136 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 205 services and 135 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -28,7 +28,6 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | component | `src/components/audit/MarcusAuditPanel.tsx` | `MarcusAuditPanel` |
 | component | `src/components/AutomationView.tsx` | `AutomationView` |
 | component | `src/components/BoardroomChatView.tsx` | `BoardroomApprovalRequest`, `BoardroomChatView`, `BoardroomRequestApproval` |
-| component | `src/components/BoardroomView.tsx` | `BoardroomMessage`, `BoardroomSession`, `BoardroomView` |
 | component | `src/components/BootStatusBanner.tsx` | `BootStatusBanner` |
 | component | `src/components/calle/CalleOutreachPanel.tsx` | `CalleOutreachPanel` |
 | component | `src/components/calle/EscalationCallPanel.tsx` | `EscalationCallPanel` |
@@ -177,7 +176,7 @@ Source-backed inventory: 205 services and 136 components. Human purpose descript
 | service | `src/services/backupService.ts` | `BackupSizeEstimate`, `createBackup`, `exportBackupToFile`, `getBackupSizeEstimate`, `importBackupFromFile`, `restoreBackup` |
 | service | `src/services/batchOrchestratorService.js` | `advanceToNextBatch`, `completeGoal`, `createProjectGoal`, `executeBatch`, `generateBatch`, `generateBatchRuleBased`, `generateBatchViaLLM`, `getActiveBatch`, `getActiveGoal`, `getBatch`, `getBatchById`, `getBatchProgress`, `getGoalById`, `getGoalProgress`, `getTaskById`, `isBatchComplete`, `listBatches`, `listGoals`, `updateBatchStatus`, `updateGoal`, `updateTaskStatus` |
 | service | `src/services/boardroomFacilitatorService.ts` | `buildFacilitatorPrompt`, `detectLowConfidence`, `FacilitatorResult`, `generateAgentResponse`, `generateAlphonsoResponse` |
-| service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `THREADS_KEY`, `updateThreadStatus` |
+| service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BoardroomGovernance`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `setThreadGovernance`, `THREADS_KEY`, `updateThreadStatus` |
 | service | `src/services/browserAutomationService.ts` | `fetchUrlContent`, `openAndScrape`, `openExternalUrl`, `openUrl`, `readClipboard`, `scrapeWebPage`, `writeClipboard` |
 | service | `src/services/cacheService.ts` | `agentCache`, `cached`, `CacheEntry`, `CacheOptions`, `connectorCache`, `createCacheKey`, `globalCache`, `MemoryCache` |
 | service | `src/services/calleMcpAuthService.ts` | `CallePendingLogin`, `disconnectCalleMcp`, `getCalleMcpToken`, `isCalleMcpConfigured`, `pollBrokerLogin`, `startBrokerLogin` |

@@ -13,6 +13,8 @@ export interface MariaAuditResult {
   complianceNotes: string[];
   summary: string;
   confidenceLevel?: string;
+  /** True when the model's reply could not be read; the result is a placeholder, not a review. */
+  parseFailed?: boolean;
 }
 
 export interface MariaAuditAssignment {
@@ -89,7 +91,8 @@ export function parseMariaAuditResponse(text: string | undefined): MariaAuditRes
       approvalRequired: true,
       policyFindings: ['Analysis failed — defaulting to cautious posture.'],
       complianceNotes: [],
-      summary: 'Maria audit failed to parse — manual review required.'
+      summary: 'Maria audit failed to parse — manual review required.',
+      parseFailed: true
     };
   }
 }
@@ -179,10 +182,15 @@ export async function runMariaGovernanceAudit(commandText: string, assignment: M
         endpoint: options.endpoint,
         model: options.model || getConfiguredOllamaModel(),
         prompt,
+        // The reply is parsed as JSON; ask the model to guarantee it.
+        format: 'json',
         sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
       });
       const parsed = parseMariaAuditResponse(response?.response);
-      if (parsed && parsed.summary.length > 10) {
+      // An unreadable reply used to pass this check (its placeholder summary
+      // is long enough) and was reported as a model review; the rule-based
+      // audit below now runs instead (QA Bug 49, 2026-10-21).
+      if (parsed && !parsed.parseFailed && parsed.summary.length > 10) {
         auditResult = parsed;
         ollamaUsed = true;
       }

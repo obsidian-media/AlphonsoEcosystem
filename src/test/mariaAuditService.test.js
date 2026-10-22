@@ -23,7 +23,10 @@ vi.mock('../services/memoryGraphService', () => ({
 const mockOllamaResponse = { response: JSON.stringify({ riskLevel: 'low', approvalRequired: false, policyFindings: ['No issues'], complianceNotes: ['Compliant'], summary: 'Looks good' }), done: true };
 
 vi.mock('../lib/ollama', () => ({
-  generateOllamaResponse: vi.fn(async () => mockOllamaResponse)
+  generateOllamaResponse: vi.fn(async () => mockOllamaResponse),
+  // Default: no model reply, so Maria uses her rule-based audit (as before).
+  generateAgentLlmResponse: vi.fn(async () => { throw new Error('no model in tests'); }),
+  getConfiguredOllamaModel: vi.fn(() => 'llama3.2:3b')
 }));
 
 vi.mock('../services/connectorRegistryService', () => ({
@@ -155,6 +158,26 @@ describe('runMariaGovernanceAudit', () => {
     const result = await runMariaGovernanceAudit('review project plan', {}, {});
     expect(result).toHaveProperty('summary');
     expect(typeof result.summary).toBe('string');
+  });
+
+  // QA Bug 49 (2026-10-21): an unreadable model reply used to be reported as
+  // Maria's model review ("Maria audit failed to parse"); the rule-based audit
+  // must run instead, and the model must be asked for JSON.
+  it('uses the rule-based audit, not a parse-failure placeholder, when the model reply is unreadable', async () => {
+    const { generateAgentLlmResponse } = await import('../lib/ollama');
+    generateAgentLlmResponse.mockResolvedValueOnce({ response: 'Sure! Here is my assessment of the plan.' });
+    const result = await runMariaGovernanceAudit('review project plan', {}, {});
+    expect(generateAgentLlmResponse.mock.calls[0][1].format).toBe('json');
+    expect(result.schema.summary).not.toMatch(/failed to parse/i);
+    expect(result.schema.confidenceLevel).toBe('temporary');
+  });
+
+  it("uses the model's review when the reply is valid JSON", async () => {
+    const { generateAgentLlmResponse } = await import('../lib/ollama');
+    generateAgentLlmResponse.mockResolvedValueOnce({ response: JSON.stringify({ riskLevel: 'low', approvalRequired: false, summary: 'Plan is internal and reversible.' }) });
+    const result = await runMariaGovernanceAudit('review project plan', {}, {});
+    expect(result.schema.summary).toBe('Plan is internal and reversible.');
+    expect(result.schema.confidenceLevel).toBe('inferred');
   });
 
   it('returns artifacts array', async () => {

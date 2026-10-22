@@ -5,6 +5,16 @@ import { TRUST_STATES } from './trustModel';
 export const THREADS_KEY = 'alphonso_boardroom_threads_v2';
 export const MESSAGES_KEY = 'alphonso_boardroom_thread_messages_v2';
 
+/** Maria's governance review of a thread, recorded when the thread is concluded. */
+export interface BoardroomGovernance {
+  riskLevel: string;
+  approvalRequired: boolean;
+  summary: string;
+  reviewedAt: string;
+  /** 'model': Maria's model review. 'rules': her rule-based check, used when the model's reply could not be read. */
+  source?: 'model' | 'rules';
+}
+
 export interface BoardroomThread {
   id: string;
   topic: string;
@@ -15,6 +25,9 @@ export interface BoardroomThread {
   seq: number;
   updatedAt: string;
   updatedAtMs: number;
+  governance?: BoardroomGovernance;
+  /** Set on threads imported from the old Boardroom session view. */
+  legacySessionId?: string;
 }
 
 export interface BoardroomThreadMessage {
@@ -117,6 +130,19 @@ export function updateThreadStatus(threadId: string, status: BoardroomThread['st
   const next = threads.map((t) => {
     if (t.id !== threadId) return t;
     updated = { ...t, status, updatedAt: nowIso(), updatedAtMs: nowMs() };
+    return updated;
+  });
+  writeJson(THREADS_KEY, next);
+  return updated;
+}
+
+/** Record Maria's governance review and mark the thread concluded. */
+export function setThreadGovernance(threadId: string, governance: BoardroomGovernance): BoardroomThread | null {
+  const threads = readJson<BoardroomThread[]>(THREADS_KEY, []);
+  let updated: BoardroomThread | null = null;
+  const next = threads.map((t) => {
+    if (t.id !== threadId) return t;
+    updated = { ...t, status: 'concluded', governance, updatedAt: nowIso(), updatedAtMs: nowMs() };
     return updated;
   });
   writeJson(THREADS_KEY, next);
@@ -300,22 +326,32 @@ interface LegacyBoardroomSession {
   createdAt: string;
 }
 
+// Imports every old Boardroom session that has not been imported yet. It
+// used to run once and set a flag, so sessions created in the old view
+// after that were never imported; with that view removed (owner,
+// 2026-10-21) they would have disappeared. A session counts as imported
+// when a thread carries its id, or, for threads imported before ids were
+// recorded, the same topic and creation time.
 export function migrateLegacySessions(): void {
-  if (localStorage.getItem(MIGRATION_FLAG_KEY) === 'true') return;
-
   const legacySessions = readJson<LegacyBoardroomSession[]>(LEGACY_SESSIONS_KEY, []);
   if (legacySessions.length === 0) {
     localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
     return;
   }
 
+  const existing = readJson<BoardroomThread[]>(THREADS_KEY, []);
+  const importedIds = new Set(existing.map((t) => t.legacySessionId).filter(Boolean));
+  const importedKeys = new Set(existing.map((t) => `${t.topic}|${t.createdAt}`));
+
   for (const session of legacySessions) {
+    if (importedIds.has(session.sessionId) || importedKeys.has(`${session.topic}|${session.createdAt}`)) continue;
     const createdAtMs = new Date(session.createdAt).getTime() || nowMs();
     const thread: BoardroomThread = {
       id: makeId('boardroom_thread'),
       topic: session.topic,
       participants: session.participants,
       status: session.status === 'concluded' ? 'concluded' : 'active',
+      legacySessionId: session.sessionId,
       createdAt: session.createdAt,
       createdAtMs,
       seq: nextSeq(),
