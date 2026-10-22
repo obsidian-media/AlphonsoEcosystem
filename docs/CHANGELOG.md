@@ -16,6 +16,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `release.yml`: a manual run has a `publish` switch (off by default), so all three installers can be built and checked without releasing anything.
 
 ### Fixed
+- **Alphonso finds Ollama models on another drive.** A model folder chosen in the Ollama desktop app's Settings is saved in Ollama's own settings file, not in `OLLAMA_MODELS`, so an Ollama that Alphonso started looked in the default folder, found no models, and Setup downloaded the starter model again onto C:. Alphonso now reads that setting (Windows) and passes it on; the Setup disk check uses it too.
 - **Agents use your model.** Nova, Sentinel, Echo, Maria, Hector, Miya and the goal runner asked for a hardcoded `qwen2.5-coder:7b` (and Nova, Sentinel and Echo's file watcher for the default Ollama address), so on a fresh install their AI step failed and they fell back to rules without saying so. They now use the model and address you chose.
 - **Default model is the starter model.** With no model picked, the app now chooses the one you picked last, else the bundled starter `llama3.2:3b`, instead of `qwen2.5-coder:7b` whenever that was installed.
 - **Content Studio uses the model selected when a step runs**, so a job created before a model was chosen no longer fails every step.
