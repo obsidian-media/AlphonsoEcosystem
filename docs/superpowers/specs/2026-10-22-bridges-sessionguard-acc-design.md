@@ -1,6 +1,6 @@
 # Bridges: SessionGuard and ACC — design (owner decisions, 2026-10-22)
 
-Status: **agreed with the owner, not built yet.** The decisions are the owner's
+Status: **agreed with the owner. Phase 1 done 2026-10-22 (batch 14); phases 2–4 not built.** The decisions are the owner's
 answers to QA questions Q27–Q31 (`docs/qa/DESKTOP_QA_COVERAGE.md`). Build in
 phases, one PR each, with the owner's review between phases.
 
@@ -68,7 +68,9 @@ ends nothing).
 
 1. **Bridges section + ACC audit.** Move ACC's settings into Bridges; test the
    whole round trip against a running ACC (status, a `content_job`, the three
-   truth states); fix what doesn't match.
+   truth states); fix what doesn't match. **Done 2026-10-22:** found and fixed
+   QA Bugs 64 (backend ignored Settings) and 65 (the bridge was never turned
+   on); Bug 66 (ACC accepts unknown kinds) is on ACC's side.
 2. **SessionGuard connection.** Sign-in flow, keychain storage, token renewal,
    live-feed client, found/connected status, Test button.
 3. **Coach Mode = gambling coach.** Show Coach Mode only when SessionGuard is

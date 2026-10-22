@@ -7,7 +7,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
-- [2026-10-22] **Bridges to SessionGuard and ACC; Coach Mode as the gambling coach.** Agreed with the owner, not built: `docs/superpowers/specs/2026-10-22-bridges-sessionguard-acc-design.md` (decisions Q27–Q32). Four phases: Bridges section + ACC audit; SessionGuard sign-in and live feed; Coach Mode as the gambling coach (only when SessionGuard is connected); rename the agent-operations coach. Open questions in the spec. Status: OPEN, design agreed.
+- [2026-10-22] **Bridges to SessionGuard and ACC; Coach Mode as the gambling coach.** Agreed with the owner, not built: `docs/superpowers/specs/2026-10-22-bridges-sessionguard-acc-design.md` (decisions Q27–Q32). Four phases: Bridges section + ACC audit (**done 2026-10-22**, batch 14: QA Bugs 64–66); SessionGuard sign-in and live feed; Coach Mode as the gambling coach (only when SessionGuard is connected); rename the agent-operations coach. Open questions in the spec. Status: OPEN, design agreed.
 
 - [2026-10-22] **Video and audio from chat are not wired.** Owner (QA Q4): Jose now says plainly "Making videos from chat isn't available yet. Nothing was started." (and the same for music/audio) instead of finding a tool and silently carrying on; the owner asked for it to be planned and properly wired. To do: video through ComfyUI (owner Q6: ComfyUI for image and video) using a video workflow, with the result shown in chat like images; audio has no tool agents use (AudioCraft is standalone). Resume in `src/services/creativeRoutingService.ts` (`NOT_AVAILABLE`) and `joseExecutionEngineService.ts` (creative intent block). Status: OPEN, planned.
 

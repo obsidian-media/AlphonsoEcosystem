@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, AlertTriangle, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare, PhoneCall } from 'lucide-react';
+import { Activity, AlertTriangle, Cable, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare, PhoneCall } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { Modal } from './ui/Modal';
 import { MemoryGraphViewer } from './MemoryGraphViewer';
@@ -19,7 +19,6 @@ import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits, hydrateComposioApiKeyFromKeychain } from '../services/composioService';
 import { listPlugins, togglePlugin } from '../services/pluginRegistryService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate, type BackupSizeEstimate } from '../services/backupService';
-import { getAccBridgeConfig, updateAccBridgeConfig } from '../services/agentWorkshop/accBridgeService';
 import { resolveComfyuiDirectory, resolveComfyuiPython } from '../services/comfyuiSettingsService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
 import { listMemoryItems } from '../services/memoryService';
@@ -53,6 +52,7 @@ import {
 import { openExternalUrl } from '../services/browserAutomationService';
 import { ComfyUiModelPicker } from './ComfyUiModelPicker';
 import { ComfyUiInstallPicker } from './ComfyUiInstallPicker';
+import { BridgesPanel } from './BridgesPanel';
 import { getComfyUiEndpoint, setComfyUiEndpoint, DEFAULT_COMFYUI_ENDPOINT } from '../services/connectors/comfyUiEndpoint.js';
 
 interface MemoryItem {
@@ -540,6 +540,7 @@ const SETTINGS_SECTIONS = [
   { id: 'connectors',  label: 'Connectors',   Icon: Plug },
   { id: 'agents',      label: 'Agents',       Icon: Bot },
   { id: 'runtime',     label: 'Runtime',      Icon: Cpu },
+  { id: 'bridges',     label: 'Bridges',      Icon: Cable },
   { id: 'memory',      label: 'Memory',       Icon: Database },
   { id: 'knowledge',   label: 'Knowledge',    Icon: Compass },
   { id: 'appearance',  label: 'Appearance',   Icon: Palette },
@@ -1497,6 +1498,13 @@ export function SettingsView({
       </section>
     </div>
   )}
+  {activeSection === 'bridges' && (
+    <div className="max-w-4xl mx-auto space-y-4">
+      <SectionHeader icon={Cable} label="Bridges" />
+      <BridgesPanel />
+    </div>
+  )}
+
   {activeSection === 'memory' && (
     <div className="max-w-4xl mx-auto space-y-10">
       <section className="space-y-4">
@@ -1650,7 +1658,6 @@ export function SettingsView({
         <WorkspaceExportImportView />
       </div>
 
-      <AccBridgeSettings />
       <McpServerInfo />
     </div>
   )}
@@ -1837,49 +1844,6 @@ function McpServerInfo() {
   }
 }`}</pre>
         <p className="text-(--text-3)">Tools available: run_pipeline · search_memory · research · get_status · get_receipts</p>
-      </div>
-    </section>
-  );
-}
-
-function AccBridgeSettings() {
-  const [cfg, setCfg] = React.useState(() => getAccBridgeConfig());
-  const [saved, setSaved] = React.useState(false);
-
-  const save = () => {
-    updateAccBridgeConfig(cfg);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  return (
-    <section className="mt-6 border-t border-(--border) pt-6">
-      <div className="flex items-center gap-2 mb-3">
-        <Plug className="w-4 h-4 text-(--accent)" />
-        <span className="text-sm font-semibold text-(--text-1)">ACC Bridge</span>
-      </div>
-      <p className="text-xs text-(--text-3) mb-3">Connect to an external Agent Control Center bridge for remote orchestration.</p>
-      <div className="space-y-2">
-        <input
-          type="text"
-          value={cfg.baseUrl}
-          onChange={e => setCfg(c => ({ ...c, baseUrl: e.target.value }))}
-          placeholder="http://localhost:PORT  (ACC bridge base URL)"
-          className="w-full text-xs bg-(--surface-2) rounded-sm px-3 py-2 text-(--text-1) placeholder:text-(--text-3) focus:outline-hidden focus:border-(--accent-border)"
-        />
-        <input
-          type="password"
-          value={cfg.token}
-          onChange={e => setCfg(c => ({ ...c, token: e.target.value }))}
-          placeholder="Auth token (optional)"
-          className="w-full text-xs bg-(--surface-2) rounded-sm px-3 py-2 text-(--text-1) placeholder:text-(--text-3) focus:outline-hidden focus:border-(--accent-border)"
-        />
-        <button
-          onClick={save}
-          className="px-3 py-1.5 text-xs rounded-sm bg-(--accent-dim) text-(--accent) hover:bg-(--accent) hover:text-(--text-1) transition-colors"
-        >
-          {saved ? 'Saved ✓' : 'Save Bridge Config'}
-        </button>
       </div>
     </section>
   );

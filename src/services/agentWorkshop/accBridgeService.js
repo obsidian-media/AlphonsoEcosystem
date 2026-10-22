@@ -123,9 +123,24 @@ async function writePacketArtifact(packet, workspaceRoot) {
   });
 }
 
+/**
+ * The saved Settings, in the shape the backend bridge commands take. Until
+ * 2026-10-22 the backend read only environment variables, so a bridge set up
+ * in Settings always failed there and only worked through the window
+ * fallback below (QA Bug 64).
+ */
+function backendArgs(config = getAccBridgeConfig()) {
+  return {
+    baseUrl: config.baseUrl || null,
+    token: config.token || null,
+    pathPrefix: config.pathPrefix || null,
+    timeoutMs: Number(config.timeoutMs) || null
+  };
+}
+
 async function postPacket(packet, config) {
   try {
-    const backendResult = await invoke('alphonso_bridge_send_packet', { packet });
+    const backendResult = await invoke('alphonso_bridge_send_packet', { packet, ...backendArgs(config) });
     if (backendResult == null) throw new Error('Tauri invoke returned empty');
     return {
       ok: Boolean(backendResult?.success ?? backendResult?.ok ?? true),
@@ -229,19 +244,54 @@ export function getAccBridgeStatus() {
 }
 
 export async function refreshAccBridgeStatus() {
+  const local = getAccBridgeStatus();
+  // Turned off in Settings: report off even if environment variables exist.
+  if (!local.enabled) return local;
   try {
-    const proof = await invoke('alphonso_bridge_status');
+    const proof = await invoke('alphonso_bridge_status', backendArgs());
     if (proof && typeof proof === 'object') {
       return {
-        ...getAccBridgeStatus(),
-        ...proof.bridge,
-        status: proof.bridge?.status || proof.status || getAccBridgeStatus().status
+        ...local,
+        configured: Boolean(proof.configured),
+        status: proof.status || local.status,
+        baseUrlConfigured: Boolean(proof.baseUrlConfigured),
+        tokenConfigured: Boolean(proof.tokenConfigured),
+        pathPrefix: proof.pathPrefix || local.pathPrefix
       };
     }
   } catch {
     // fall through to local snapshot
   }
-  return getAccBridgeStatus();
+  return local;
+}
+
+/**
+ * Ask ACC itself whether it answers and accepts the token (the Test button).
+ * status: connected | unauthorized | setup_required_in_acc | unreachable |
+ * setup_required | failed.
+ */
+export async function checkAccBridge() {
+  const config = getAccBridgeConfig();
+  try {
+    const result = await invoke('alphonso_bridge_check', backendArgs(config));
+    if (result && typeof result === 'object') return result;
+  } catch {
+    // Not in the desktop app: ask ACC from the window instead.
+  }
+  if (!config.baseUrl || !config.token) {
+    return { ok: false, reachable: false, status: 'setup_required', error: "ACC's address and token are needed." };
+  }
+  try {
+    const response = await fetch(`${trimTrailingSlash(config.baseUrl)}${config.pathPrefix || DEFAULT_PATH_PREFIX}/status`, {
+      headers: { Authorization: `Bearer ${config.token}` }
+    });
+    const status = response.ok ? 'connected'
+      : (response.status === 401 || response.status === 403) ? 'unauthorized'
+        : response.status === 503 ? 'setup_required_in_acc' : 'failed';
+    return { ok: response.ok, reachable: true, httpStatus: response.status, status };
+  } catch (error) {
+    return { ok: false, reachable: false, status: 'unreachable', error: String(error) };
+  }
 }
 
 export function listAccBridgePackets(limit = 20) {
@@ -349,4 +399,57 @@ export async function syncContentCatalystJob(jobSnapshot = {}, options = {}) {
     jobId: jobSnapshot?.id || null,
     requestId: jobSnapshot?.requestId || null
   });
+}
+
+// ── Starting ACC on this computer (Settings → Bridges, owner 2026-10-22) ──
+// The folder is chosen in a dialog the backend opens itself and checked to be
+// ACC; Start takes no path or command from the window.
+
+const NOT_DESKTOP = { ok: false, error: 'Starting ACC needs the desktop app.' };
+
+/** { folder, folderProblem, startedByAlphonso } */
+export async function getAccLocalState() {
+  try {
+    return (await invoke('bridge_acc_state')) || { folder: null };
+  } catch {
+    return { folder: null, unavailable: true };
+  }
+}
+
+export async function chooseAccFolder() {
+  try {
+    return await invoke('bridge_acc_choose_folder');
+  } catch (error) {
+    return { ...NOT_DESKTOP, error: String(error?.message || error || NOT_DESKTOP.error) };
+  }
+}
+
+/**
+ * Start the chosen ACC, then wait (up to `timeoutMs`) for it to answer.
+ * Returns { ok, status, error } where status is checkAccBridge()'s status.
+ */
+export async function startAcc({ timeoutMs = 60000, intervalMs = 2000 } = {}) {
+  let started;
+  try {
+    started = await invoke('bridge_acc_start');
+  } catch (error) {
+    return { ok: false, status: 'not_started', error: String(error?.message || error) };
+  }
+  if (!started?.ok) return { ok: false, status: 'not_started', error: started?.error || 'ACC was not started.' };
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  while (Date.now() < deadline) {
+    last = await checkAccBridge();
+    if (last.reachable) return { ok: last.ok, status: last.status, started: true };
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  return { ok: false, status: 'unreachable', started: true, error: "ACC was started but didn't answer within a minute. Its output is in acc_bridge.log in Alphonso's settings folder." };
+}
+
+export async function stopAcc() {
+  try {
+    return await invoke('bridge_acc_stop');
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
 }

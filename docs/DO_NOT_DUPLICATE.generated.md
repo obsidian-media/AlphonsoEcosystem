@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 206 services and 139 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 206 services and 140 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -29,6 +29,7 @@ Source-backed inventory: 206 services and 139 components. Human purpose descript
 | component | `src/components/AutomationView.tsx` | `AutomationView` |
 | component | `src/components/BoardroomChatView.tsx` | `BoardroomApprovalRequest`, `BoardroomChatView`, `BoardroomRequestApproval` |
 | component | `src/components/BootStatusBanner.tsx` | `BootStatusBanner` |
+| component | `src/components/BridgesPanel.tsx` | `BridgesPanel` |
 | component | `src/components/calle/CalleOutreachPanel.tsx` | `CalleOutreachPanel` |
 | component | `src/components/calle/EscalationCallPanel.tsx` | `EscalationCallPanel` |
 | component | `src/components/ChatView.tsx` | `ChatView` |
@@ -158,7 +159,7 @@ Source-backed inventory: 206 services and 139 components. Human purpose descript
 | service | `src/services/agentPairingRegistryService.ts` | `isAgentPairingRoute`, `listAvailablePairings`, `resolveAgentPairingRoute` |
 | service | `src/services/agentPerformanceService.ts` | `getAgentDashboard`, `getAllAgentsDashboard`, `getPerformanceSummary`, `getPerformanceTrend`, `listPerformanceSnapshots`, `recordAgentExecutionWithPerformance`, `snapshotAgentPerformance` |
 | service | `src/services/agentVisualService.ts` | `getAgentInitials`, `getAgentMascotPath` |
-| service | `src/services/agentWorkshop/accBridgeService.js` | `getAccBridgeConfig`, `getAccBridgeStatus`, `isAccBridgeConfigured`, `listAccBridgePackets`, `receiveACCResult`, `refreshAccBridgeStatus`, `resetAccBridgeConfig`, `sendTaskToACC`, `syncApprovalState`, `syncBridgePacket`, `syncContentCatalystJob`, `syncProjectMemory`, `updateAccBridgeConfig` |
+| service | `src/services/agentWorkshop/accBridgeService.js` | `checkAccBridge`, `chooseAccFolder`, `getAccBridgeConfig`, `getAccBridgeStatus`, `getAccLocalState`, `isAccBridgeConfigured`, `listAccBridgePackets`, `receiveACCResult`, `refreshAccBridgeStatus`, `resetAccBridgeConfig`, `sendTaskToACC`, `startAcc`, `stopAcc`, `syncApprovalState`, `syncBridgePacket`, `syncContentCatalystJob`, `syncProjectMemory`, `updateAccBridgeConfig` |
 | service | `src/services/agentWorkshop/agentRunnerService.js` | `collectAgentOutputs`, `createFinalExecutionPacket`, `runAgentTask`, `runProjectWorkshop`, `synthesizeAgentOutputs` |
 | service | `src/services/agentWorkshop/aiReviewPolicyService.js` | `evaluateAiReviewRequirement` |
 | service | `src/services/agentWorkshop/contentCatalystBridgeService.js` | `createAccContentCatalystBridgeRequest`, `getAccContentCatalystStatus`, `listAccContentCatalystJobs`, `submitAccContentCatalystBrief`, `submitAccContentCatalystImage`, `submitAccContentCatalystJob`, `submitAccContentCatalystNarration`, `submitAccContentCatalystPreview`, `submitAccContentCatalystPublish`, `submitAccContentCatalystVideo` |

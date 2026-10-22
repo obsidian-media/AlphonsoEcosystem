@@ -2805,7 +2805,7 @@ fn which_exe(name: &str) -> bool {
   cmd.status().map(|s| s.success()).unwrap_or(false)
 }
 
-fn kill_pid(pid: u32) {
+pub(crate) fn kill_pid(pid: u32) {
   if cfg!(target_os = "windows") {
     let mut cmd = Command::new("taskkill");
     cmd
@@ -2822,7 +2822,7 @@ fn kill_pid(pid: u32) {
 }
 
 /// Check if a process with the given PID is still alive.
-fn is_pid_alive(pid: u32) -> bool {
+pub(crate) fn is_pid_alive(pid: u32) -> bool {
   if cfg!(target_os = "windows") {
     let mut cmd = Command::new("tasklist");
     cmd
