@@ -583,6 +583,22 @@ describe('ChatView', () => {
       expect(saved.executionReceipts).toHaveLength(1);
     });
 
+    // QA Bug 57 (2026-10-22): when Jose stopped early, chat said "Jose
+    // processed the command." and dropped his reason.
+    it("shows Jose's reason when he stops before doing anything", async () => {
+      nextMsgId.mockReturnValueOnce('jose-stop-user').mockReturnValueOnce('jose-stop-reply');
+      runJoseCommandExecutionPipeline.mockResolvedValueOnce({
+        ok: false,
+        reason: "Making videos from chat isn't available yet. Nothing was started.",
+        needsRuntime: false,
+        notAvailable: true,
+        command: null
+      });
+      await sendJoseCommand('make a video of a cat');
+      expect(await screen.findByText(/Making videos from chat isn't available yet\. Nothing was started\./)).toBeInTheDocument();
+      expect(screen.queryByText('Jose processed the command.')).toBeNull();
+    });
+
     it('still saves the run and completes when the pipeline returns no command id', async () => {
       nextMsgId.mockReturnValueOnce('jose-none-user').mockReturnValueOnce('jose-none-reply');
       runJoseCommandExecutionPipeline.mockResolvedValueOnce({ commandId: null, executionReceipts: [] });

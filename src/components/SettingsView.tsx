@@ -50,6 +50,8 @@ import {
   setCoachSnoozeHours,
   clearCoachSnooze,
 } from '../services/coachEngineService';
+import { openExternalUrl } from '../services/browserAutomationService';
+import { ComfyUiModelPicker } from './ComfyUiModelPicker';
 
 interface MemoryItem {
   id?: string;
@@ -1210,7 +1212,7 @@ export function SettingsView({
         <div className="space-y-4">
           <div className="p-4 bg-(--surface-2) rounded-2xl space-y-3">
             <div className="text-sm font-semibold text-(--text-1)">Composio API Key</div>
-            <div className="text-xs text-(--text-3)">Connect agents to 1000+ external services (GitHub, Slack, Notion, Jira, etc.). Get your key at <a href="https://app.composio.dev" target="_blank" rel="noopener noreferrer" className="text-(--accent) hover:underline">app.composio.dev</a>.</div>
+            <div className="text-xs text-(--text-3)">Connect agents to 1000+ external services (GitHub, Slack, Notion, Jira, etc.). Get your key at <a href="https://app.composio.dev" onClick={(e) => { e.preventDefault(); void openExternalUrl("https://app.composio.dev"); }} rel="noopener noreferrer" className="text-(--accent) hover:underline">app.composio.dev</a>.</div>
             <div className="flex gap-2">
               <input
                 type="password"
@@ -1420,6 +1422,7 @@ export function SettingsView({
               />
               <div className="text-[11px] text-(--text-4)">Python executable used to run <span className="font-mono">main.py</span>. Leave blank to use <span className="font-mono">python</span>.</div>
             </div>
+            <ComfyUiModelPicker />
             {launchStatus?.service === 'comfyui' && launchStatus?.state !== 'launching' && (
               <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-(--error-dim) border-(--error-border) text-(--error)' : 'bg-(--success-dim) border-(--success-border) text-(--success)'}`}>
                 {launchStatus.state === 'error' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}

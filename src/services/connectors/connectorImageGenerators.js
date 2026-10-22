@@ -128,26 +128,58 @@ async function comfyRequest(endpoint, path, { method = 'GET', body, signal } = {
   };
 }
 
-async function resolveComfyUiCheckpoint() {
+export const COMFYUI_CHECKPOINT_KEY = 'alphonso_comfyui_checkpoint_v1';
+
+/** The image model the user chose in Settings → Runtime, or '' for automatic. */
+export function getSelectedComfyUiCheckpoint() {
+  try { return localStorage.getItem(COMFYUI_CHECKPOINT_KEY) || ''; } catch { return ''; }
+}
+
+/** Save the user's image model; '' means automatic. */
+export function setSelectedComfyUiCheckpoint(name) {
+  try {
+    if (name) localStorage.setItem(COMFYUI_CHECKPOINT_KEY, name);
+    else localStorage.removeItem(COMFYUI_CHECKPOINT_KEY);
+  } catch { /* storage unavailable */ }
+}
+
+/**
+ * The image models (checkpoints) ComfyUI has, read from ComfyUI itself.
+ * `{ ok: false, error }` when ComfyUI can't be reached. Until 2026-10-22 the
+ * app read a saved choice, but nothing let the user make one (owner request).
+ */
+export async function listComfyUiCheckpoints() {
   const endpoint = getComfyUiEndpoint();
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;
   try {
     const response = await comfyRequest(endpoint, '/object_info/CheckpointLoaderSimple', controller ? { signal: controller.signal } : undefined);
+    if (!response.ok) return { ok: false, models: [], error: `ComfyUI answered ${response.status}` };
     const body = await response.json().catch(() => ({}));
-    const configured = localStorage.getItem('alphonso_comfyui_checkpoint_v1') || '';
     const choices = body?.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0];
-    const available = Array.isArray(choices) ? choices.filter((item) => typeof item === 'string' && item.trim()) : [];
-    if (!available.length) return configured || FALLBACK_COMFYUI_CHECKPOINT;
-    if (configured && available.includes(configured)) return configured;
-    if (available.includes(DEFAULT_COMFYUI_CHECKPOINT)) return DEFAULT_COMFYUI_CHECKPOINT;
-    if (available.includes(FALLBACK_COMFYUI_CHECKPOINT)) return FALLBACK_COMFYUI_CHECKPOINT;
-    return available[0];
-  } catch {
-    return FALLBACK_COMFYUI_CHECKPOINT;
+    const models = Array.isArray(choices) ? choices.filter((item) => typeof item === 'string' && item.trim()) : [];
+    return { ok: true, models };
+  } catch (error) {
+    return { ok: false, models: [], error: error instanceof Error ? error.message : String(error) };
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
+}
+
+/** Which model "automatic" picks from a list: the starter model, then the fallback, then the first. */
+export function pickAutomaticCheckpoint(models) {
+  if (models.includes(DEFAULT_COMFYUI_CHECKPOINT)) return DEFAULT_COMFYUI_CHECKPOINT;
+  if (models.includes(FALLBACK_COMFYUI_CHECKPOINT)) return FALLBACK_COMFYUI_CHECKPOINT;
+  return models[0] || '';
+}
+
+async function resolveComfyUiCheckpoint() {
+  const configured = getSelectedComfyUiCheckpoint();
+  const { ok, models } = await listComfyUiCheckpoints();
+  if (!ok) return configured || FALLBACK_COMFYUI_CHECKPOINT;
+  if (!models.length) return configured || FALLBACK_COMFYUI_CHECKPOINT;
+  if (configured && models.includes(configured)) return configured;
+  return pickAutomaticCheckpoint(models);
 }
 
 function createMiyaSd15ComfyWorkflow({

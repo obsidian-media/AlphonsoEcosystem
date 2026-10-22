@@ -42,6 +42,7 @@ import {
 import { listModules, enableModule, disableModule, type ModuleRecord } from '../services/moduleRegistryService';
 import { loadPolicy, getPolicyRules, type PolicyRule } from '../services/policyDslService';
 import { Tabs } from './ui/Tabs';
+import { openExternalUrl } from '../services/browserAutomationService';
 
 interface ToolStatus {
   name: string;
@@ -61,6 +62,12 @@ interface ToolStatus {
 interface ToolMetaEntry {
   icon: React.ComponentType<{ className?: string; size?: number }> | string;
   category: string;
+  /** Which agents or pages use this tool; null = standalone (owner, 2026-10-22). */
+  usedBy: string | null;
+  /** One plain sentence on what it is for and how it differs from similar tools. */
+  difference: string;
+  /** Has a web page to open; background services (Ollama, ChromaDB, MCP) do not. */
+  webUi?: boolean;
   docsUrl?: string;
   color?: string;
   bg?: string;
@@ -70,6 +77,8 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   ollama: {
     icon: Bot,
     category: 'LLM',
+    usedBy: 'All 9 agents: chat, research, reviews, Boardroom',
+    difference: 'Runs the language models. Every other tool here is optional; this one is not.',
     docsUrl: 'https://ollama.com',
     color: 'text-(--agent-alphonso)',
     bg: 'bg-(--surface-1)',
@@ -77,6 +86,9 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   comfyui: {
     icon: Wand2,
     category: 'Image / Video',
+    usedBy: 'Miya Studio and Content Studio (images)',
+    difference: 'The image tool Alphonso\'s agents use. You build pictures from connected steps (nodes), so agents can run saved recipes.',
+    webUi: true,
     docsUrl: 'https://github.com/comfyanonymous/ComfyUI',
     color: 'text-(--agent-echo)',
     bg: 'bg-(--surface-1)',
@@ -84,6 +96,9 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   automatic1111: {
     icon: Image,
     category: 'Image',
+    usedBy: null,
+    difference: 'The classic Stable Diffusion web page with many add-ons; strong for touching up or repainting part of an image by hand.',
+    webUi: true,
     docsUrl: 'https://github.com/AUTOMATIC1111/stable-diffusion-webui',
     color: 'text-(--agent-miya)',
     bg: 'bg-(--surface-1)',
@@ -91,6 +106,9 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   fooocus: {
     icon: Sparkles,
     category: 'Image',
+    usedBy: null,
+    difference: 'The simplest image tool: type what you want and get a picture, with very few settings to learn.',
+    webUi: true,
     docsUrl: 'https://github.com/lllyasviel/Fooocus',
     color: 'text-(--agent-jose)',
     bg: 'bg-(--agent-jose-glow)',
@@ -98,6 +116,9 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   invokeai: {
     icon: Layers,
     category: 'Image',
+    usedBy: null,
+    difference: 'A drawing-board style editor: paint over, extend and rework images by hand on a canvas.',
+    webUi: true,
     docsUrl: 'https://github.com/invoke-ai/InvokeAI',
     color: 'text-(--agent-hector)',
     bg: 'bg-(--agent-hector-glow)',
@@ -105,6 +126,8 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   whisper: {
     icon: Mic,
     category: 'Audio',
+    usedBy: 'Echo: Settings → Knowledge → meeting transcription',
+    difference: 'Turns recorded audio files into text. Voice OS uses its own faster copy for live talking.',
     docsUrl: 'https://github.com/openai/whisper',
     color: 'text-(--agent-maria)',
     bg: 'bg-(--agent-maria-glow)',
@@ -112,6 +135,9 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   audiocraft: {
     icon: Music,
     category: 'Audio',
+    usedBy: null,
+    difference: 'Makes music and sound effects from a text description. Agents can\'t use it yet.',
+    webUi: true,
     docsUrl: 'https://github.com/facebookresearch/audiocraft',
     color: 'text-(--agent-marcus)',
     bg: 'bg-(--agent-marcus-glow)',
@@ -119,6 +145,8 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   'voice-os': {
     icon: '🎙️',
     category: 'Voice',
+    usedBy: 'The Voice page and the microphone buttons',
+    difference: 'Live talking: listens to you, gets an agent\'s reply, and speaks it back.',
     docsUrl: 'https://github.com/obsidian-media/AlphonsoEcosystem',
     color: 'text-cyan-400',
     bg: 'bg-cyan-500/10',
@@ -126,6 +154,9 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   openwebui: {
     icon: Bot,
     category: 'LLM',
+    usedBy: null,
+    difference: 'A separate ChatGPT-style chat page for your Ollama models. Alphonso\'s own Chat already does this, with agents and approvals.',
+    webUi: true,
     docsUrl: 'https://github.com/open-webui/open-webui',
     color: 'text-(--agent-nova)',
     bg: 'bg-(--surface-1)',
@@ -133,6 +164,8 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   'mcp-server': {
     icon: Activity,
     category: 'Integration',
+    usedBy: 'Outside apps (Claude Desktop, Cursor, Windsurf), not Alphonso\'s agents',
+    difference: 'Lets other AI apps call Alphonso as a tool. Needs Alphonso Bridge running.',
     docsUrl: 'https://modelcontextprotocol.io',
     color: 'text-purple-400',
     bg: 'bg-purple-500/10',
@@ -140,6 +173,8 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   'alphonso-bridge': {
     icon: Activity,
     category: 'Integration',
+    usedBy: 'The MCP Server',
+    difference: 'The connection the MCP Server uses to reach Alphonso. Only needed if you use the MCP Server.',
     docsUrl: 'https://modelcontextprotocol.io',
     color: 'text-violet-400',
     bg: 'bg-violet-500/10',
@@ -147,6 +182,8 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   chromadb: {
     icon: Layers,
     category: 'Memory',
+    usedBy: 'Echo: "find related memories" search',
+    difference: 'A memory index that finds memories by meaning, not exact words. Needs Docker.',
     docsUrl: 'https://docs.trychroma.com',
     color: 'text-emerald-400',
     bg: 'bg-emerald-500/10',
@@ -154,6 +191,9 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   openHands: {
     icon: Bot,
     category: 'Agent',
+    usedBy: null,
+    difference: 'A separate coding agent that works in its own sandbox. Alphonso\'s own agents don\'t hand work to it.',
+    webUi: true,
     docsUrl: 'https://github.com/All-Hands-AI/OpenHands',
     color: 'text-cyan-400',
     bg: 'bg-cyan-500/10',
@@ -161,6 +201,9 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   n8n: {
     icon: Zap,
     category: 'Automation',
+    usedBy: 'Marcus: n8n distribution target, and n8n workflows',
+    difference: 'Connects hundreds of outside apps with drag-and-drop automations. Needs Docker.',
+    webUi: true,
     docsUrl: 'https://n8n.io',
     color: 'text-orange-400',
     bg: 'bg-orange-500/10',
@@ -352,10 +395,20 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
               )}
             </div>
             <p className="text-(--text-3) text-xs mt-0.5 leading-tight">{tool.description}</p>
+            {meta.difference && (
+              <div data-testid={`runtime-tool-note-${tool.name}`} className="mt-1.5 space-y-0.5">
+                <p className="text-(--text-2) text-[11px] leading-snug">{meta.difference}</p>
+                <p className="text-[11px] leading-snug">
+                  {meta.usedBy
+                    ? <span className="text-(--success)">Used by: {meta.usedBy}</span>
+                    : <span className="text-(--text-4)">Standalone: use it on its own (Open, once it's running); Alphonso's agents don't use it</span>}
+                </p>
+              </div>
+            )}
             {tool.repoUrl && (
               <a
                 href={tool.repoUrl}
-                target="_blank"
+                onClick={(e) => { e.preventDefault(); void openExternalUrl(tool.repoUrl); }}
                 rel="noreferrer"
                 className="text-[10px] text-(--text-4) hover:text-(--text-3) font-mono truncate block mt-0.5"
               >
@@ -403,10 +456,10 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
                 <Square size={12} /> Stop
               </button>
             )}
-            {tool.running && tool.port && (
+            {tool.running && tool.port && meta.webUi && (
               <a
                 href={`http://127.0.0.1:${tool.port}`}
-                target="_blank"
+                onClick={(e) => { e.preventDefault(); void openExternalUrl(`http://127.0.0.1:${tool.port}`); }}
                 rel="noreferrer"
                 className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg text-(--text-3) hover:text-(--text-1) transition-colors"
               >
@@ -418,7 +471,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
         {meta.docsUrl && (
           <a
             href={meta.docsUrl}
-            target="_blank"
+            onClick={(e) => { e.preventDefault(); void openExternalUrl(meta.docsUrl); }}
             rel="noreferrer"
             className="text-xs text-(--text-4) hover:text-(--text-3) transition-colors ml-auto"
           >

@@ -55,6 +55,13 @@ describe('PipelineResultCard', () => {
     });
   });
 
+  // QA Bug 57 (2026-10-22): a request Jose refused showed "Pipeline completed."
+  it('says the run stopped, and why, when Jose refused before starting', () => {
+    render(<PipelineResultCard result={{ ok: false, reason: "Making videos from chat isn't available yet. Nothing was started.", executionReceipts: [] }} commandText="make a video" />);
+    expect(screen.getByText(/Stopped: Making videos from chat isn't available yet/)).toBeTruthy();
+    expect(screen.queryByText('Pipeline completed.')).toBeNull();
+  });
+
   it('reruns the last command when Rerun is clicked', () => {
     const onRerunCommand = vi.fn();
 
