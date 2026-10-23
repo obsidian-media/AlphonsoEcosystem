@@ -45,13 +45,14 @@ function buildPrompt(text: string, template: JoseTemplate | null, history: PlanO
     'You are Jose, the orchestrator. Plan the request as steps for the agents below. You never do the work yourself.',
     `Agents:\n${agentsForPrompt()}`,
     `Effects a step can have: ${JOSE_EFFECTS.map((e) => `${e} (${EFFECT_LABELS[e]})`).join(', ')}. Only alphonso may run; only marcus may publish_or_send.`,
+    `A review step names the step it reviews ("reviewOf"); if it finds problems the work goes back for at most ${JOSE_LIMITS.maxFixRounds} rounds, so plan one review, not several.`,
     `Limits: at most ${JOSE_LIMITS.maxSteps} steps. Use "kind": "project" for long work such as building an app, otherwise "normal".`,
     installed.length ? `Installed models you may choose for a step ("model"; leave it out to use the agent's own): ${installed.join(', ')}. Use a larger one only where the step needs it.` : '',
     template ? templateForPrompt(template) : '',
     recent ? `Recent conversation:\n${recent}` : '',
     `Request: ${text}`,
     problems.length ? `Your last plan did not pass the checks:\n- ${problems.join('\n- ')}\nFix these problems.` : '',
-    'Answer with JSON only: {"basedOnTemplate": "<template id>" or null, "kind": "normal" or "project", "steps": [{"id": "short_id", "agent": "<agent>", "taskType": "<task type>", "instruction": "<what to do>", "effects": ["<effect>"], "needs": ["<step id>"], "model": "<installed model, optional>"}]}',
+    'Answer with JSON only: {"basedOnTemplate": "<template id>" or null, "kind": "normal" or "project", "steps": [{"id": "short_id", "agent": "<agent>", "taskType": "<task type>", "instruction": "<what to do>", "effects": ["<effect>"], "needs": ["<step id>"], "model": "<installed model, optional>", "reviewOf": "<step id this step reviews, for a review step>"}]}',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -98,6 +99,7 @@ function readModelPlan(raw: string, installed: string[] = []): ModelPlan | null 
       instruction: typeof item.instruction === 'string' ? item.instruction : '',
       effects,
       needs: Array.isArray(item.needs) ? item.needs.filter((n): n is string => typeof n === 'string') : [],
+      ...(typeof item.reviewOf === 'string' && item.reviewOf ? { reviewOf: item.reviewOf } : {}),
     });
   }
   return {

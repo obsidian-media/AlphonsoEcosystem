@@ -17,8 +17,8 @@ export interface JoseTemplate {
 /** A template fits when every one of its word groups matches. */
 export const TEMPLATE_FIT_THRESHOLD = 0.75;
 
-const step = (stepId: string, agent: string, actionType: string, instruction: string, needs: string[] = [], effects: PlanStep['effects'] = ['read']): PlanStep =>
-  ({ stepId, agent, actionType, instruction, needs, effects });
+const step = (stepId: string, agent: string, actionType: string, instruction: string, needs: string[] = [], effects: PlanStep['effects'] = ['read'], reviewOf?: string): PlanStep =>
+  ({ stepId, agent, actionType, instruction, needs, effects, ...(reviewOf ? { reviewOf } : {}) });
 
 export const JOSE_TEMPLATES: JoseTemplate[] = [
   {
@@ -33,8 +33,8 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
       step('research_trends', 'hector', 'research_virality', 'Find what makes videos on this topic do well: real examples, hooks and formats, with sources.'),
       step('research_market', 'nova', 'analysis_market', 'Judge the audience and the opportunity for this video: who it is for and why now.'),
       step('script', 'miya', 'creative_script', 'Write three hooks and a timed script for the video, using the research.', ['research_trends', 'research_market'], ['write_own_work']),
-      step('review_value', 'nova', 'analysis_content_review', 'Review the script for value to the audience and say what to improve.', ['script']),
-      step('review_quality', 'maria', 'audit_content_quality', 'Check the script for accuracy, honest claims and quality against the research.', ['script']),
+      step('review_value', 'nova', 'analysis_content_review', 'Review the script for value to the audience and say what to improve.', ['script'], ['read'], 'script'),
+      step('review_quality', 'maria', 'audit_content_quality', 'Check the script for accuracy, honest claims and quality against the research.', ['script'], ['read'], 'script'),
       step('campaign', 'miya', 'creative_campaign', 'Write the captions, hashtags and ad copy for the video, using the reviews.', ['review_value', 'review_quality'], ['write_own_work']),
     ],
   },
@@ -50,8 +50,8 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
       step('research', 'hector', 'research_report', 'Find how similar apps solve this, and the libraries and docs that apply, with sources.'),
       step('design', 'miya', 'creative_ui_design', 'Design the screens and the user flow, and draft the front-end.', ['research'], ['write_own_work']),
       step('build', 'alphonso', 'local_operation', 'Build the app in the project folder from the design, and check that it runs.', ['design'], ['run']),
-      step('security', 'sentinel', 'security_review', 'Review the app for security problems: secrets, unsafe inputs, risky dependencies.', ['build']),
-      step('quality', 'maria', 'audit_quality', 'Check the app against the request: what works, what is missing.', ['build']),
+      step('security', 'sentinel', 'security_review', 'Review the app for security problems: secrets, unsafe inputs, risky dependencies.', ['build'], ['read'], 'build'),
+      step('quality', 'maria', 'audit_quality', 'Check the app against the request: what works, what is missing.', ['build'], ['read'], 'build'),
       step('summary', 'jose', 'orchestration_summary', 'Write one summary: what was built, where it is, and what still needs doing.', ['security', 'quality'], ['write_own_work']),
     ],
   },
@@ -66,7 +66,7 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
     steps: [
       step('research', 'hector', 'research_report', 'Find the facts and sources for the question, with citations.'),
       step('analysis', 'nova', 'analysis_findings', 'Judge what the findings mean: what matters most and why.', ['research']),
-      step('review', 'maria', 'audit_quality', 'Check the findings against the sources: anything unsupported or missing.', ['analysis']),
+      step('review', 'maria', 'audit_quality', 'Check the findings against the sources: anything unsupported or missing.', ['analysis'], ['read'], 'analysis'),
       step('summary', 'jose', 'orchestration_summary', 'Write the report: the answer, the key findings and the sources.', ['review'], ['write_own_work']),
     ],
   },

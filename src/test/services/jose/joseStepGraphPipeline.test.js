@@ -40,6 +40,14 @@ vi.mock('../../../lib/ollama', () => ({
   fetchOllamaModels: vi.fn(async () => ({ models: [] })),
   PREFERRED_MODEL: 'llama3.2:3b',
   getConfiguredOllamaModel: () => 'llama3.2:3b',
+  // Review verdicts (phase 4): a queue the tests fill; anything else gets a plain answer.
+  generateAgentLlmResponse: vi.fn(async (_agent, { prompt }) => {
+    if (/Did your review ask for changes/.test(prompt)) {
+      const verdict = (globalThis.__joseVerdicts || []).shift() || 'pass';
+      return { response: JSON.stringify({ verdict, findings: verdict === 'fix' ? ['The hook is weak.'] : [] }) };
+    }
+    return { response: JSON.stringify({ summary: 'done', title: 'x', hook: 'x', script: 'x', scenes: [], prompts: [] }) };
+  }),
   getConfiguredOllamaEndpoint: () => 'http://127.0.0.1:11434',
   // The per-step model in force, for the escalation tests (phase 4).
   withAgentModel: vi.fn(async (_agent, model, fn) => {
@@ -95,7 +103,7 @@ vi.mock('../../../services/codingAgentService', () => ({
 
 import { runJoseCommandExecutionPipeline, stepCommandText } from '../../../services/joseExecutionEngineService';
 import { runCodingAgent } from '../../../services/codingAgentService';
-import { createJoseCommandRoute } from '../../../services/joseCommandRouterService';
+import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
 import { setPlanAdapterForTests } from '../../../services/jose/joseAdapt';
@@ -349,5 +357,22 @@ describe('Jose runs plans as step graphs', () => {
       expect(request.steps).toHaveLength(1);
       expect(request.changeLog.map((c) => c.text).join(' ')).toMatch(/Not added: .*50/);
     });
+  });
+
+  // Phase 4: a review that finds problems sends the work back.
+  it('runs the revision and the re-review before the steps after the review', async () => {
+    globalThis.__joseVerdicts = ['fix', 'pass'];
+    const result = await run([
+      step('miya', 'creative_script', { stepId: 'script', effects: ['write_own_work'] }),
+      step('nova', 'analysis_content_review', { stepId: 'review_value', effects: ['read'], needs: ['script'], reviewOf: 'script' }),
+      step('miya', 'creative_campaign', { stepId: 'campaign', effects: ['write_own_work'], needs: ['review_value'] }),
+    ]);
+    globalThis.__joseVerdicts = [];
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    const command = listJoseCommands().find((c) => c.id === result.commandId);
+    const stepOf = Object.fromEntries(command.assignments.map((a) => [a.packetId, a.stepId]));
+    const order = result.executionReceipts.map((r) => stepOf[r.packetId]);
+    expect(order).toEqual(['script', 'review_value', 'script-fix-1', 'review_value-r1', 'campaign']);
+    expect(request.steps.find((s) => s.stepId === 'campaign').needs).toEqual(['review_value-r1']);
   });
 });

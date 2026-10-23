@@ -89,7 +89,7 @@ export function JosePlanMap({ steps, compact = false, selectedStepId, onSelectSt
               style={{ left: node.x, top: node.y, width: box.width, height: box.height, borderColor: `var(--agent-${step.agent}, var(--border))` }}
             >
               <div className="flex items-center justify-between gap-1 text-[11px] font-semibold text-(--text-1)">
-                <span>{AGENT_NAMES[step.agent] || step.agent}</span>
+                <span>{AGENT_NAMES[step.agent] || step.agent}{step.round ? <span className="ml-1 font-normal text-(--text-3)">Round {step.round}</span> : null}</span>
                 {status === 'waiting_approval'
                   ? <Badge variant="warning" className="px-1! py-0! text-[9px]!">Waiting for you</Badge>
                   : <span className="text-[9px] font-normal text-(--text-3)">{STATUS_LABELS[status] || status}{time ? ` · ${time}` : ''}</span>}

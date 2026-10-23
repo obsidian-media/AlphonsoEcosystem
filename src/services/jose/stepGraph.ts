@@ -24,6 +24,12 @@ export interface PlanStep {
   instruction?: string;
   /** The model Jose chose for this step (phase 4); an installed local model. */
   model?: string;
+  /** For a review step: the step it reviews (phase 4). */
+  reviewOf?: string;
+  /** Review round, 1 or 2, for a revision or a re-review (phase 4). */
+  round?: number;
+  /** For a revision: the original step it revises (phase 4). */
+  revises?: string;
 }
 
 const NAMES: Record<string, string> = {

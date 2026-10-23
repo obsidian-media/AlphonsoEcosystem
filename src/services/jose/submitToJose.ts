@@ -30,6 +30,11 @@ export interface SubmitToJoseInput {
   showPlanFirst?: PlanFirstSetting;
 }
 
+/** The plan note, plus what changed while it ran (a review that still found problems). */
+function withNotes(planNote: string, result: any): string {
+  return [planNote, ...(Array.isArray(result?.adaptNotes) ? result.adaptNotes : [])].filter(Boolean).join(' ');
+}
+
 function noteFor(plan: JosePlan): string {
   const notes = [describePlanSource(plan)];
   if (plan.templateId === 'content_video') notes.push(CONTENT_VIDEO_STUDIO_NOTE);
@@ -83,7 +88,7 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
     requestKind: plan.kind,
     planInfo: { source: plan.source, templateId: plan.templateId, note: plan.note },
   });
-  return { ...result, plan, planNote, requestId: result?.commandId ? `jose-request-${result.commandId}` : null };
+  return { ...result, plan, planNote: withNotes(planNote, result), requestId: result?.commandId ? `jose-request-${result.commandId}` : null };
 }
 
 function planOf(request: JoseRequest, steps: PlanStep[]): JosePlan {
@@ -124,7 +129,7 @@ export async function runApprovedPlan(requestId: string, options: { onProgress?:
     planInfo: request.plan || null,
     existingRequestId: requestId,
   });
-  return { ...result, plan, planNote, requestId };
+  return { ...result, plan, planNote: withNotes(planNote, result), requestId };
 }
 
 /** Cancel a plan that is waiting. */

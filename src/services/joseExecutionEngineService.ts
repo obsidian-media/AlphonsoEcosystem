@@ -1476,6 +1476,8 @@ export async function runJoseCommandExecutionPipeline({
   // Run every step whose needs are done, then let Jose adapt the plan, and
   // again until nothing is left (phase 4: the plan can grow while it runs).
   const processedSteps = new Set<string>();
+  // Notes from adapting the plan (a review that still found problems), for the final reply.
+  const adaptNotes: string[] = [];
   const statusOf = (stepId: string) => {
     const packetId = assignmentMap[stepId]?.packetId;
     return executionReceipts.find((r) => packetId && r.packetId === packetId)?.status || 'not_run';
@@ -1486,7 +1488,15 @@ export async function runJoseCommandExecutionPipeline({
   };
   const applyPlanChange = (change: PlanChange) => {
     let next: PlanStep[] = [...planSteps, ...change.add.map((step) => ({ ...step, needs: [...step.needs] }))];
-    if (change.rewire) next = rewireNeeds(next, change.rewire.from, change.rewire.to, [...processedSteps]);
+    // A rewire never changes steps already run, or the steps being added (a
+    // revision needs the old reviews, not its own re-reviews).
+    const keep = [...processedSteps, ...change.add.map((step) => step.stepId)];
+    if (change.add.length === 0) {
+      adaptNotes.push(change.reason);
+      noteOnRequest(change.reason);
+      return;
+    }
+    if (change.rewire) next = rewireNeeds(next, change.rewire.from, change.rewire.to, keep);
     if (next.length > JOSE_LIMITS.maxSteps) {
       noteOnRequest(`Not added: the plan would have ${next.length} steps; the limit is ${JOSE_LIMITS.maxSteps}.`);
       return;
@@ -1517,7 +1527,7 @@ export async function runJoseCommandExecutionPipeline({
     if (joseRequestId) {
       try {
         addRequestSteps(joseRequestId, change.add, change.reason);
-        if (change.rewire) rewireRequestNeeds(joseRequestId, change.rewire.from, change.rewire.to, [...processedSteps]);
+        if (change.rewire) rewireRequestNeeds(joseRequestId, change.rewire.from, change.rewire.to, keep);
       } catch { /* display aid only */ }
     }
   };
@@ -2090,7 +2100,8 @@ export async function runJoseCommandExecutionPipeline({
     pendingApprovalCount,
     failedCount,
     executionReceipts,
-    novaFeedback: novaHints
+    novaFeedback: novaHints,
+    adaptNotes
   };
 }
 
