@@ -3,6 +3,7 @@
 import { getTemplate } from '../jose/joseTemplates';
 import type { PlanStep } from '../jose/stepGraph';
 import { STEP_ORDER, type ContentBrand, type ContentProject, type StepId } from './contentTypes';
+import { getVideoSettings } from './contentProjectService';
 
 /** Which content-factory step each template step belongs to. */
 export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
@@ -16,6 +17,7 @@ export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
   voice: 'voice',
   music: 'music',
   broll: 'broll',
+  clips: 'clips',
   assemble: 'assemble',
   campaign: 'campaign',
   timing: 'campaign',
@@ -26,6 +28,10 @@ export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
 /** Why Scenes waits: you approve the review in Miya Studio first (owner, 2026-10-23). */
 export const REVIEW_WAIT = 'Approve the review in Miya Studio first.';
 
+/** Why AI clips wait (phase 2b): you check Miya's main moments first; for Runway, the cost too. */
+export const CLIPS_WAIT = 'Check the main moments in Miya Studio first.';
+export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Miya Studio first.';
+
 /**
  * The project's plan from `from` (default research) onward, or with `only`
  * just that factory step's steps. Links to steps not in the plan are dropped.
@@ -34,7 +40,7 @@ export function contentProjectPlanSteps(
   project: ContentProject,
   brand: ContentBrand,
   from: StepId = 'research',
-  options: { only?: boolean } = {},
+  options: { only?: boolean; clipEngine?: 'local' | 'runway' | null } = {},
 ): PlanStep[] {
   const template = getTemplate('content_video');
   if (!template) throw new Error('The Content video template is missing.');
@@ -66,6 +72,13 @@ export function contentProjectPlanSteps(
     };
     if (s.reviewOf && ids.has(s.reviewOf)) step.reviewOf = s.reviewOf;
     if (factoryStep === 'scenes' && hasReview) step.waitFor = REVIEW_WAIT;
+    // AI clips stop once for the main moments; a Runway run is that same stop plus its cost.
+    // Run on its own from Miya Studio, the user is already looking at the marks: no extra stop,
+    // but a Runway run still asks for its cost (spending always asks).
+    if (factoryStep === 'clips' && getVideoSettings(project).aiClips !== 'none') {
+      if (options.clipEngine === 'runway') step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+      if (!options.only) step.waitFor = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : CLIPS_WAIT;
+    }
     return step;
   });
 }

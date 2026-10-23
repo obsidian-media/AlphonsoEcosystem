@@ -109,6 +109,9 @@ export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean } = 
       else if (effect === 'publish_or_send' && s.agent !== 'marcus') problems.push(`Step "${s.stepId}": only Marcus may publish or send anything outside.`);
       // A paid-model step's spending is the model call Jose arranges; it always asks (phase 4).
       else if (effect === 'spend' && isPaidModelId(s.model)) continue;
+      // Miya's AI clips through Runway (content factory phase 2b): paid through the gated Runway
+      // connector, approved once per run with the estimate. Only that step, only Miya.
+      else if (effect === 'spend' && s.agent === 'miya' && s.actionType === 'creative_video_clips') continue;
       else if (!isEffectAllowed(s.agent, effect)) problems.push(`Step "${s.stepId}": ${name} may not ${EFFECT_LABELS[effect].toLowerCase()}.`);
     }
     for (const need of s.needs) {

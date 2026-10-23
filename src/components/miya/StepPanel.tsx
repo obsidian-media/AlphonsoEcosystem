@@ -14,6 +14,7 @@ const STEP_LABELS: Record<StepId, string> = {
   voice: 'Voice-over',
   music: 'Music',
   broll: 'Stock clips',
+  clips: 'AI clips',
   assemble: 'Finished video',
   campaign: 'Campaign',
   quality: 'Quality gate',

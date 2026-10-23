@@ -6,6 +6,10 @@ vi.mock('../../../services/jose/submitToJose', () => ({ submitStepsToJose: vi.fn
 vi.mock('../../../services/joseExecutionEngineService', () => ({ approveRequestStep: vi.fn(async () => ({ ok: true })) }));
 vi.mock('../../../services/jose/joseRequestStore', () => ({ getJoseRequest: vi.fn(() => null) }));
 vi.mock('../../../services/miyaMemoryService', () => ({ listMiyaMemory: vi.fn(() => []) }));
+vi.mock('../../../services/contentFactory/contentMediaExecutor', async () => {
+  const actual = await vi.importActual<any>('../../../services/contentFactory/contentMediaExecutor');
+  return { ...actual, resolveProjectClipEngine: vi.fn(async () => ({ engine: 'local', modelId: 'ltx_video_2b', maxSeconds: 5 })) };
+});
 
 import { submitStepsToJose } from '../../../services/jose/submitToJose';
 import { approveRequestStep } from '../../../services/joseExecutionEngineService';
@@ -15,7 +19,8 @@ import { createProject, emptyBrief, getProject, markStepStatus, startStep } from
 import {
   runContentStep, runContentProject, approveContentStep, STEP_AGENTS, CONTENT_TASK_PREVIEW, PROJECT_LABEL, WAITING_FOR_APPROVAL,
 } from '../../../services/contentFactory/contentStepRunner';
-import { REVIEW_WAIT } from '../../../services/contentFactory/contentProjectPlan';
+import { CLIPS_WAIT, CLIPS_WAIT_PAID, REVIEW_WAIT } from '../../../services/contentFactory/contentProjectPlan';
+import { resolveProjectClipEngine } from '../../../services/contentFactory/contentMediaExecutor';
 import { canExecutePacket } from '../../../services/agentBusService';
 
 const settings = { outputFolder: 'D:\\Content' };
@@ -41,7 +46,7 @@ describe('runContentProject', () => {
     const args = submitted();
     expect(args).toMatchObject({ source: 'content-factory', label: PROJECT_LABEL, saveDecisions: false });
     expect(PROJECT_LABEL).toBe('Steps set by Miya Studio.');
-    expect(args.steps).toHaveLength(15);
+    expect(args.steps).toHaveLength(16);
     expect(args.text).toContain('Why we wait');
     expect(getProject(p.id)!.joseRequestId).toBe('jose-request-c1');
   });
@@ -141,6 +146,26 @@ describe('approveContentStep', () => {
     const result = await approveContentStep(p.id, 'review');
     expect(result.steps.review.status).toBe('approved');
     expect(approveRequestStep).toHaveBeenCalledWith('jose-request-c1', 'scenes');
+  });
+
+  // Phase 2b: AI clips stop for the main moments; with Runway the same stop approves the cost.
+  it('plans the clips step for the engine this computer will use', async () => {
+    const p = newProject();
+    vi.mocked(resolveProjectClipEngine).mockResolvedValueOnce({ engine: 'runway' } as never);
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok() as never);
+    await runContentProject(p.id, { settings });
+    const clips = submitted().steps.find((s: any) => s.stepId === 'clips');
+    expect(clips).toMatchObject({ waitFor: CLIPS_WAIT_PAID, effects: ['write_own_work', 'spend'] });
+  });
+
+  it('"Make AI clips" carries the request on from the clips stop, without marking the step approved', async () => {
+    const p = newProject();
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok({ pendingApprovalCount: 1 }) as never);
+    await runContentProject(p.id, { settings });
+    vi.mocked(getJoseRequest).mockReturnValue({ id: 'jose-request-c1', status: 'waiting_approval', steps: [{ stepId: 'clips', status: 'waiting_approval', waitFor: CLIPS_WAIT }] } as never);
+    const result = await approveContentStep(p.id, 'clips');
+    expect(approveRequestStep).toHaveBeenCalledWith('jose-request-c1', 'clips');
+    expect(result.steps.clips.status).toBe('not_started');
   });
 
   it('when nothing waits, only the status changes', async () => {
