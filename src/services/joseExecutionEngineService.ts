@@ -1259,7 +1259,9 @@ async function executeBoardroomAdvance(assignment: any, commandText: any, option
   }
 }
 
-const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'replaces', 'costEstimateUsd'];
+// waitFor, contentStep and payload (phase 6b) so a saved request knows why a step waits and a
+// review-loop revision of a content step keeps the project's data.
+const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'replaces', 'costEstimateUsd', 'waitFor', 'contentStep', 'payload'];
 
 /** A routed assignment as a plan step, with every field Jose's adapters read (phase 4). */
 function toPlanStep(assignment: any): PlanStep {

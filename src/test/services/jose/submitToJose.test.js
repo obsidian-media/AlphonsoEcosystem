@@ -120,6 +120,15 @@ describe('submitToJose', () => {
     expect(result).toMatchObject({ ok: true, contentProjectId: 'p1', planNote: 'Started the project.' });
   });
 
+  // Real app (2026-10-23): the creative shortcut answered "Making videos from
+  // chat isn't available yet" before the content-video check ran.
+  it('a content video becomes a project even when a creative shortcut would answer first', async () => {
+    vi.mocked(runPipelineShortcuts).mockResolvedValueOnce({ ok: false, reason: "Making videos from chat isn't available yet. Nothing was started." });
+    const result = await submitToJose({ text: 'Make a YouTube video script about home coffee', source: 'user' });
+    expect(result.contentProjectId).toBe('p1');
+    expect(runPipelineShortcuts).not.toHaveBeenCalled();
+  });
+
   it('"Plan this fresh" still plans a content video', async () => {
     planner.mockResolvedValueOnce(freshPlan);
     await submitToJose({ text: 'Make a YouTube video script', source: 'user', planFresh: true });

@@ -76,11 +76,9 @@ function toAssignments(steps: PlanStep[], planNote: string) {
 export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const { text, source, history, planFresh, endpoint, zeroCostMode, previewMode, onProgress, onToken } = input;
 
-  const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });
-  if (shortcut) return { ...shortcut, plan: null, planNote: '' };
-
   // From Chat, a content video becomes a Miya Studio project run as one request
-  // (phase 6b, owner). "Plan this fresh" still plans it.
+  // (phase 6b, owner). "Plan this fresh" still plans it. Checked before the
+  // shortcuts: the creative one would answer "videos aren't available" first.
   if (source === 'user' && !planFresh) {
     const best = scoreTemplateFit(text)[0];
     if (best?.templateId === 'content_video' && best.score >= TEMPLATE_FIT_THRESHOLD) {
@@ -89,6 +87,9 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
       return { ok: started.ok, reason: started.ok ? undefined : started.note, contentProjectId: started.projectId || null, plan: null, planNote: started.note };
     }
   }
+
+  const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });
+  if (shortcut) return { ...shortcut, plan: null, planNote: '' };
 
   onProgress?.({ stage: 'planning' });
   const allowPaidModels = input.allowPaidModels !== false;
