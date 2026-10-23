@@ -31,7 +31,7 @@ import { recordOrchestrationQueueTransition } from './orchestrationQueueService'
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput } from './agentOutputStoreService';
 import { checkPlan, JOSE_LIMITS } from './jose/stepGraph';
-import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus } from './jose/joseRequestStore';
+import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus, getJoseRequest, findRequestByPacket } from './jose/joseRequestStore';
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
@@ -1390,11 +1390,21 @@ export async function runJoseCommandExecutionPipeline({
   assignments = undefined,
   requestKind = 'normal',
   planInfo = null,
-  existingRequestId = null
+  existingRequestId = null,
+  resumeRequestId = null
 }: any) {
+  // Resuming a saved request after an approval (phase 4): same loop, the saved
+  // command and packets, the steps already done kept as they are.
+  const resumeRequest: any = resumeRequestId ? getJoseRequest(resumeRequestId) : null;
+  const resumeCommand: any = resumeRequest ? listJoseCommands().find((item) => item.id === resumeRequest.commandId) : null;
+  if (resumeRequestId && !resumeCommand) {
+    if (resumeRequest) setJoseRequestStatus(resumeRequestId, 'failed');
+    return { ok: false, reason: 'The saved request could not be found.', command: null };
+  }
+  if (resumeCommand) commandText = resumeCommand.commandText || resumeRequest.text;
   // Explicit assignments (the content factory) skip the shortcuts below: the
-  // caller already decided which agent does what.
-  const explicitAssignments = Array.isArray(assignments) && assignments.length > 0;
+  // caller already decided which agent does what. A resumed request is a step graph.
+  const explicitAssignments = Boolean(resumeCommand) || (Array.isArray(assignments) && assignments.length > 0);
   // Creative intent routing — detect image/video/audio and dispatch to running Runtime Hub tool
   // Shortcuts (an image request, a named workflow) answer without a plan. The
   // Claude coding shortcut was removed (owner, 2026-10-23): coding requests
@@ -1407,7 +1417,7 @@ export async function runJoseCommandExecutionPipeline({
   const memoryItems = listMemoryItems();
   const retrievedContext = retrieveRelevantContext(commandText, memoryItems);
 
-  const command: any = await createJoseCommandRoute({ commandText, source, zeroCostMode, assignments });
+  const command: any = resumeCommand || await createJoseCommandRoute({ commandText, source, zeroCostMode, assignments });
   if (!command) {
     return {
       ok: false,
@@ -1430,8 +1440,16 @@ export async function runJoseCommandExecutionPipeline({
   // soon as the steps it needs are done. The splitter's plans leave task types
   // to the per-step contract check below, as before.
   const planAssignments: any[] = command.assignments || [];
+  if (resumeRequest) {
+    // The request holds the needs as they are now (a review or help request may have moved them).
+    for (const assignment of planAssignments) {
+      const saved = resumeRequest.steps.find((step: any) => step.stepId === assignment.stepId);
+      if (saved) assignment.needs = saved.needs;
+    }
+  }
   const planSteps: PlanStep[] = planAssignments.map(toPlanStep);
-  const planCheck = checkPlan(planSteps, { taskTypes: explicitAssignments });
+  // A resumed plan was checked when it first ran, and every step added since was checked when added.
+  const planCheck = resumeRequest ? { ok: true, problems: [] as string[] } : checkPlan(planSteps, { taskTypes: explicitAssignments });
   if (!planCheck.ok) {
     for (const a of planAssignments) {
       if (a.packetId) updatePacketStatus(a.packetId, 'failed', { failureReason: `Plan refused: ${planCheck.problems.join(' ')}` });
@@ -1459,7 +1477,7 @@ export async function runJoseCommandExecutionPipeline({
   let joseRequestId: string | null = null;
   try {
     // An approved plan (phase 3) runs on the request it was saved as.
-    joseRequestId = existingRequestId
+    joseRequestId = resumeRequest ? resumeRequestId : existingRequestId
       ? attachRunToRequest(existingRequestId, { commandId: command.id, steps: planSteps }).id
       : createJoseRequest({ commandId: command.id, source, text: commandText, kind: requestKind === 'project' ? 'project' : 'normal', steps: planSteps, ...(planInfo ? { plan: planInfo } : {}) }).id;
   } catch {
@@ -1478,6 +1496,16 @@ export async function runJoseCommandExecutionPipeline({
   // Run every step whose needs are done, then let Jose adapt the plan, and
   // again until nothing is left (phase 4: the plan can grow while it runs).
   const processedSteps = new Set<string>();
+  if (resumeRequest) {
+    // Steps that finished (or failed) before the approval stay as they are.
+    for (const saved of resumeRequest.steps) {
+      if (saved.status !== 'done' && saved.status !== 'failed') continue;
+      const assignment = assignmentMap[saved.stepId];
+      if (!assignment) continue;
+      processedSteps.add(saved.stepId);
+      executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: saved.status === 'done' ? 'executed' : 'failed', resumed: true });
+    }
+  }
   // Notes from adapting the plan (a review that still found problems), for the final reply.
   const adaptNotes: string[] = [];
   const statusOf = (stepId: string) => {
@@ -1726,7 +1754,8 @@ export async function runJoseCommandExecutionPipeline({
         continue;
       }
 
-      if (isRiskyAssignment(assignment) && previewMode) {
+      // A packet you approved has been previewed already.
+      if (isRiskyAssignment(assignment) && previewMode && packet.status !== 'approved') {
         const previewPriorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
         const previewContent = buildPreviewContent(previewPriorOutputs);
         pendingApprovalCount += 1;
@@ -1808,12 +1837,15 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       const beforeQueueStatus = packet.status || 'unknown';
-      approvePacket(assignment.packetId, 'jose-auto-safe');
-      updatePacketStatus(assignment.packetId, 'queued', {
-        routedBy: AGENTS.JOSE,
-        routedAtMs: timestampMs(),
-        verificationState: TRUST_STATES.PENDING
-      });
+      // A step you approved keeps that approval: the execution gate checks it (phase 4).
+      if (beforeQueueStatus !== 'approved') {
+        approvePacket(assignment.packetId, 'jose-auto-safe');
+        updatePacketStatus(assignment.packetId, 'queued', {
+          routedBy: AGENTS.JOSE,
+          routedAtMs: timestampMs(),
+          verificationState: TRUST_STATES.PENDING
+        });
+      }
       recordOrchestrationQueueTransition({
         commandId: command.id,
         packetId: assignment.packetId,
@@ -2271,13 +2303,66 @@ export async function retryDLQ(taskId) {
  * @param {{ endpoint?: string, onProgress?: Function, onToken?: Function, conversationHistory?: any[] }} options
  * @returns {Promise<{ ok: boolean, summary: string, results: object[] }>}
  */
+/**
+ * Carry a saved request on after you approved one of its steps (phase 4): the
+ * approved step runs, then every step that needed it. Does nothing unless the
+ * request is waiting for an approval; it is claimed before anything awaits, so
+ * approving twice runs it once.
+ */
+export async function resumeJoseRequest(requestId: string, options: any = {}) {
+  const request: any = getJoseRequest(requestId);
+  if (!request || request.status !== 'waiting_approval') {
+    return { ok: false, reason: request ? `This request is ${String(request.status).replace(/_/g, ' ')}, not waiting for an approval.` : 'Request not found.', requestId };
+  }
+  setJoseRequestStatus(requestId, 'running');
+  const run = request.runOptions || {};
+  const result = await runJoseCommandExecutionPipeline({
+    resumeRequestId: requestId,
+    source: request.source,
+    endpoint: options.endpoint ?? run.endpoint,
+    zeroCostMode: run.zeroCostMode,
+    previewMode: run.previewMode ?? true,
+    onProgress: options.onProgress,
+    onToken: options.onToken,
+    conversationHistory: options.history,
+  });
+  return { ...result, requestId };
+}
+
 export async function executeApprovedPackets(packetIds: any, options: any = {}) {
   const { endpoint, onProgress, onToken, conversationHistory } = options;
   const results = [];
   let succeeded = 0;
   let failed = 0;
 
+  // Packets that belong to a saved request carry the whole request on.
+  const byRequest = new Map<string, string[]>();
+  const loosePackets: string[] = [];
   for (const packetId of packetIds) {
+    const request = findRequestByPacket(packetId);
+    if (request) byRequest.set(request.id, [...(byRequest.get(request.id) || []), packetId]);
+    else loosePackets.push(packetId);
+  }
+  for (const [requestId, ids] of byRequest) {
+    const request: any = getJoseRequest(requestId);
+    if (request?.status === 'waiting_approval') {
+      for (const id of ids) approvePacket(id, 'operator');
+    }
+    const resumed: any = await resumeJoseRequest(requestId, { endpoint, onProgress, onToken, history: conversationHistory });
+    for (const id of ids) {
+      const receipt = (resumed.executionReceipts || []).find((r: any) => r.packetId === id && !r.resumed);
+      const agent = (getPacketById(id) as any)?.payload?.assignment?.agent;
+      if (receipt?.status === 'executed') {
+        succeeded += 1;
+        results.push({ packetId: id, ok: true, agent, summary: 'Done.' });
+      } else {
+        failed += 1;
+        results.push({ packetId: id, ok: false, agent, error: receipt?.reason || resumed.reason || 'It did not run.' });
+      }
+    }
+  }
+
+  for (const packetId of loosePackets) {
     const packet: any = getPacketById(packetId);
     if (!packet) {
       results.push({ packetId, ok: false, error: 'Packet not found' });

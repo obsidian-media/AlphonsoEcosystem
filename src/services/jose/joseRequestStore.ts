@@ -4,6 +4,7 @@
 import { durableGet, durableSet } from '../../lib/durableStore.js';
 import type { PlanStep } from './stepGraph';
 import { rewireNeeds } from './josePlanEdits';
+import { getPacketById } from '../agentBusService';
 
 const REQUESTS_KEY = 'alphonso_jose_requests_v1';
 const MAX_REQUESTS = 200;
@@ -195,6 +196,15 @@ export function setJoseRequestStatus(requestId: string, status: JoseRequestStatu
 
 export function getJoseRequest(id: string): JoseRequest | null {
   return readAll().find((r) => r.id === id) || null;
+}
+
+/** The request a packet's step belongs to (phase 4), or null for a packet made outside Jose's requests. */
+export function findRequestByPacket(packetId: string): JoseRequest | null {
+  const packet: any = getPacketById(packetId);
+  const commandId = packet?.payload?.joseCommandId;
+  const stepId = packet?.payload?.assignment?.stepId;
+  if (!commandId || !stepId) return null;
+  return readAll().find((r) => r.commandId === commandId && r.steps.some((step) => step.stepId === stepId)) || null;
 }
 
 export function listJoseRequests(): JoseRequest[] {

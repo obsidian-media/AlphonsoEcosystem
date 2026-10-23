@@ -101,13 +101,14 @@ vi.mock('../../../services/codingAgentService', () => ({
   runCodingAgent: vi.fn(async () => ({ ok: true, content: 'code' })),
 }));
 
-import { runJoseCommandExecutionPipeline, stepCommandText } from '../../../services/joseExecutionEngineService';
+import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets } from '../../../services/joseExecutionEngineService';
+import { createAgentPacket } from '../../../services/agentBusService';
 import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
 import { setPlanAdapterForTests } from '../../../services/jose/joseAdapt';
-import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests } from '../../../services/jose/joseRequestStore';
+import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests, setJoseRequestStatus, findRequestByPacket } from '../../../services/jose/joseRequestStore';
 
 function step(agent, actionType, extra = {}) {
   return {
@@ -395,5 +396,69 @@ describe('Jose runs plans as step graphs', () => {
     const request = getJoseRequest(`jose-request-${result.commandId}`);
     expect(request.steps.find((s) => s.stepId === 'script-help').agent).toBe('hector');
     expect(request.steps.find((s) => s.stepId === 'campaign').needs).toEqual(['script-again']);
+  });
+
+  // Phase 4: approving a waiting step carries the request on.
+  describe('after you approve a step', () => {
+    const waitingPlan = () => run([
+      step('nova', 'analysis_x', { stepId: 'facts', effects: ['read'] }),
+      step('marcus', 'distribution_execution', { stepId: 'post', effects: ['publish_or_send'], needs: ['facts'] }),
+      step('maria', 'audit_quality', { stepId: 'check', effects: ['read'], needs: ['post'] }),
+    ]);
+    const packetOf = (commandId, stepId) => listJoseCommands().find((c) => c.id === commandId).assignments.find((a) => a.stepId === stepId).packetId;
+    const ranSteps = () => vi.mocked(executeContentStepAssignment).mock.calls.map((c) => c[0].stepId);
+
+    it('runs the approved step, then the steps that needed it, and the request ends done', async () => {
+      const first = await waitingPlan();
+      const requestId = `jose-request-${first.commandId}`;
+      expect(getJoseRequest(requestId).status).toBe('waiting_approval');
+      expect(findRequestByPacket(packetOf(first.commandId, 'post')).id).toBe(requestId);
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await executeApprovedPackets([packetOf(first.commandId, 'post')]);
+      expect(result.ok).toBe(true);
+      expect(ranSteps()).toEqual(['post', 'check']);
+      const request = getJoseRequest(requestId);
+      expect(request.steps.map((s) => [s.stepId, s.status])).toEqual([['facts', 'done'], ['post', 'done'], ['check', 'done']]);
+      expect(request.status).toBe('done');
+    });
+
+    it('runs an approved step once when it is approved twice', async () => {
+      const first = await waitingPlan();
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const packetId = packetOf(first.commandId, 'post');
+      const [a, b] = await Promise.all([executeApprovedPackets([packetId]), executeApprovedPackets([packetId])]);
+      expect(ranSteps().filter((id) => id === 'post')).toHaveLength(1);
+      expect([a.ok, b.ok].sort()).toEqual([false, true]);
+      expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('done');
+      await executeApprovedPackets([packetId]);
+      expect(ranSteps().filter((id) => id === 'post')).toHaveLength(1);
+    });
+
+    it('does not resume a cancelled or finished request', async () => {
+      const done = await waitingPlan();
+      setJoseRequestStatus(`jose-request-${done.commandId}`, 'done');
+      vi.mocked(executeContentStepAssignment).mockClear();
+      expect((await executeApprovedPackets([packetOf(done.commandId, 'post')])).ok).toBe(false);
+      expect(ranSteps()).toEqual([]);
+      const first = await waitingPlan();
+      setJoseRequestStatus(`jose-request-${first.commandId}`, 'cancelled');
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await executeApprovedPackets([packetOf(first.commandId, 'post')]);
+      expect(ranSteps()).toEqual([]);
+      expect(result.ok).toBe(false);
+      expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('cancelled');
+    });
+
+    it('keeps the old one-packet path for a packet made outside a request', async () => {
+      const packet = createAgentPacket({
+        fromAgent: 'jose', toAgent: 'nova', title: 'x', packetType: 'assignment', source: 'test',
+        payload: { originalCommand: 'x', assignment: step('nova', 'analysis_x', { stepId: 'solo', effects: ['read'] }) },
+      });
+      expect(findRequestByPacket(packet.id)).toBeNull();
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await executeApprovedPackets([packet.id]);
+      expect(result.ok).toBe(true);
+      expect(ranSteps()).toEqual(['solo']);
+    });
   });
 });
