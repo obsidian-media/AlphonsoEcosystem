@@ -329,6 +329,221 @@ pub async fn content_music_generate(
   result
 }
 
+/// A search address and the header (name, value) that carries its key, if any.
+type StockSearchCall = (reqwest::Url, Option<(&'static str, String)>);
+
+/// The search request for one stock source (phase 2a). Fixed endpoints only;
+/// the key goes in the source's own place (a header, or Pixabay's query).
+fn stock_search_request(
+  source: &str,
+  query: &str,
+  orientation: &str,
+  api_key: &str,
+) -> Result<StockSearchCall, String> {
+  let query: String = query.chars().take(100).collect();
+  let portrait = orientation == "portrait";
+  match source {
+    "pexels" => {
+      let url = reqwest::Url::parse_with_params(
+        "https://api.pexels.com/v1/videos/search",
+        &[
+          ("query", query.as_str()),
+          (
+            "orientation",
+            if portrait { "portrait" } else { "landscape" },
+          ),
+          ("per_page", "15"),
+        ],
+      )
+      .map_err(|e| e.to_string())?;
+      Ok((url, Some(("Authorization", api_key.to_string()))))
+    }
+    "pixabay" => {
+      let url = reqwest::Url::parse_with_params(
+        "https://pixabay.com/api/videos/",
+        &[
+          ("key", api_key),
+          ("q", query.as_str()),
+          ("per_page", "15"),
+          ("safesearch", "true"),
+        ],
+      )
+      .map_err(|e| e.to_string())?;
+      Ok((url, None))
+    }
+    "coverr" => {
+      let url = reqwest::Url::parse_with_params(
+        "https://api.coverr.co/videos",
+        &[
+          ("query", query.as_str()),
+          ("page_size", "15"),
+          ("urls", "true"),
+        ],
+      )
+      .map_err(|e| e.to_string())?;
+      Ok((url, Some(("Authorization", format!("Bearer {api_key}")))))
+    }
+    _ => Err("Unknown stock footage source.".to_string()),
+  }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StockSearchRequest {
+  source: String,
+  query: String,
+  orientation: String,
+  api_key: Option<String>,
+}
+
+/// Searches one stock footage source (the app window cannot reach them).
+#[tauri::command]
+pub async fn content_stock_search(
+  request: StockSearchRequest,
+) -> Result<serde_json::Value, String> {
+  let env_name = match request.source.as_str() {
+    "pexels" => "PEXELS_API_KEY",
+    "pixabay" => "PIXABAY_API_KEY",
+    "coverr" => "COVERR_API_KEY",
+    _ => return Err("Unknown stock footage source.".to_string()),
+  };
+  let key = crate::utils::secret_or_env(request.api_key, env_name);
+  if key.is_empty() {
+    return Err(format!("No {} key is set.", request.source));
+  }
+  let (url, header) =
+    stock_search_request(&request.source, &request.query, &request.orientation, &key)?;
+  let client = reqwest::Client::builder()
+    .timeout(std::time::Duration::from_secs(30))
+    .build()
+    .map_err(|e| e.to_string())?;
+  let mut call = client.get(url);
+  if let Some((name, value)) = header {
+    call = call.header(name, value);
+  }
+  let response = call.send().await.map_err(|e| e.to_string())?;
+  if !response.status().is_success() {
+    return Err(format!(
+      "{} answered HTTP {}.",
+      request.source,
+      response.status().as_u16()
+    ));
+  }
+  response.json().await.map_err(|e| e.to_string())
+}
+
+/// Where stock clips may be downloaded from (each redirect is checked too).
+pub(crate) fn allowed_media_host(host: &str) -> bool {
+  let host = host.to_ascii_lowercase();
+  [
+    "pexels.com",
+    "vimeo.com",
+    "vimeocdn.com",
+    "pixabay.com",
+    "coverr.co",
+  ]
+  .iter()
+  .any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
+}
+
+pub(crate) const MAX_MEDIA_BYTES: u64 = 300 * 1024 * 1024;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadRequest {
+  workspace_root: String,
+  url: String,
+  rel_path: String,
+  /// For Coverr: the clip id, so the download is counted as Coverr requires.
+  coverr_id: Option<String>,
+  api_key: Option<String>,
+}
+
+/// Downloads a stock clip into the project folder (https, the stock hosts
+/// only, at most 300 MB; written as .part, then renamed).
+#[tauri::command]
+pub async fn content_download_media(request: DownloadRequest) -> Result<serde_json::Value, String> {
+  use tokio::io::AsyncWriteExt;
+  let dest = checked_file(
+    &request.workspace_root,
+    &request.rel_path,
+    &["mp4", "mov", "webm"],
+  )?;
+  let client = reqwest::Client::builder()
+    .redirect(reqwest::redirect::Policy::none())
+    .timeout(std::time::Duration::from_secs(600))
+    .build()
+    .map_err(|e| e.to_string())?;
+  let mut current = reqwest::Url::parse(&request.url).map_err(|e| e.to_string())?;
+  let mut response = None;
+  for _ in 0..6 {
+    if current.scheme() != "https" || !current.host_str().map(allowed_media_host).unwrap_or(false) {
+      return Err("That address is not an allowed stock footage host.".to_string());
+    }
+    let reply = client
+      .get(current.clone())
+      .send()
+      .await
+      .map_err(|e| e.to_string())?;
+    if reply.status().is_redirection() {
+      let next = reply
+        .headers()
+        .get(reqwest::header::LOCATION)
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| "A redirect had no address.".to_string())?;
+      current = current.join(next).map_err(|e| e.to_string())?;
+      continue;
+    }
+    response = Some(reply);
+    break;
+  }
+  let response = response.ok_or_else(|| "Too many redirects.".to_string())?;
+  if !response.status().is_success() {
+    return Err(format!(
+      "The download answered HTTP {}.",
+      response.status().as_u16()
+    ));
+  }
+  if response.content_length().unwrap_or(0) > MAX_MEDIA_BYTES {
+    return Err("The clip is larger than 300 MB.".to_string());
+  }
+  let part = dest.with_extension("part");
+  let mut file = tokio::fs::File::create(&part)
+    .await
+    .map_err(|e| e.to_string())?;
+  let mut response = response;
+  let mut bytes: u64 = 0;
+  while let Some(chunk) = response.chunk().await.map_err(|e| e.to_string())? {
+    bytes += chunk.len() as u64;
+    if bytes > MAX_MEDIA_BYTES {
+      drop(file);
+      let _ = tokio::fs::remove_file(&part).await;
+      return Err("The clip is larger than 300 MB.".to_string());
+    }
+    file.write_all(&chunk).await.map_err(|e| e.to_string())?;
+  }
+  file.flush().await.map_err(|e| e.to_string())?;
+  drop(file);
+  tokio::fs::rename(&part, &dest)
+    .await
+    .map_err(|e| e.to_string())?;
+  // Coverr requires each download to be counted.
+  if let Some(id) = request.coverr_id.filter(|id| {
+    id.chars()
+      .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+  }) {
+    let key = crate::utils::secret_or_env(request.api_key, "COVERR_API_KEY");
+    if !key.is_empty() {
+      let _ = reqwest::Client::new()
+        .patch(format!("https://api.coverr.co/videos/{id}/stats/downloads"))
+        .header("Authorization", format!("Bearer {key}"))
+        .send()
+        .await;
+    }
+  }
+  Ok(serde_json::json!({ "ok": true, "path": dest.to_string_lossy(), "bytes": bytes }))
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -416,5 +631,34 @@ mod tests {
     assert!(checked_file(&root_s, "../music.wav", &["wav"]).is_err());
     assert!(checked_file(&root_s, "music.wav", &["wav"]).is_err());
     std::fs::remove_dir_all(&root).ok();
+  }
+
+  #[test]
+  fn each_stock_source_has_a_fixed_endpoint_and_its_own_key_place() {
+    let (url, header) = stock_search_request("pexels", "coffee & cake", "portrait", "pk").unwrap();
+    assert_eq!(url.host_str(), Some("api.pexels.com"));
+    assert!(url.query().unwrap().contains("orientation=portrait"));
+    assert!(
+      url.query().unwrap().contains("coffee+%26+cake")
+        || url.query().unwrap().contains("coffee%20%26%20cake")
+    );
+    assert_eq!(header, Some(("Authorization", "pk".to_string())));
+    let (url, header) = stock_search_request("pixabay", "tea", "landscape", "xk").unwrap();
+    assert!(url.query().unwrap().contains("key=xk"));
+    assert_eq!(header, None);
+    let (_, header) = stock_search_request("coverr", "tea", "landscape", "ck").unwrap();
+    assert_eq!(header, Some(("Authorization", "Bearer ck".to_string())));
+    assert!(stock_search_request("example", "tea", "landscape", "k").is_err());
+  }
+
+  #[test]
+  fn downloads_only_from_the_stock_hosts() {
+    assert!(allowed_media_host("videos.pexels.com"));
+    assert!(allowed_media_host("player.vimeo.com"));
+    assert!(allowed_media_host("cdn.pixabay.com"));
+    assert!(allowed_media_host("storage.coverr.co"));
+    assert!(!allowed_media_host("pexels.com.evil.example"));
+    assert!(!allowed_media_host("169.254.169.254"));
+    assert!(!allowed_media_host("localhost"));
   }
 }

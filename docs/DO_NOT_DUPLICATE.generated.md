@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 247 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 248 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -243,6 +243,7 @@ Source-backed inventory: 247 services and 155 components. Human purpose descript
 | service | `src/services/connectors/nvidiaNimConnector.ts` | `DEFAULT_MODEL`, `isNvidiaConfigured`, `listNvidiaModels`, `NvidiaChatOptions`, `NvidiaChatSuccess`, `NvidiaMessage`, `NvidiaRateLimited`, `NvidiaSendResult`, `sendNvidiaMessage` |
 | service | `src/services/connectors/perplexityConnector.ts` | `isPerplexityConfigured`, `PerplexitySearchOptions`, `PerplexitySearchResult`, `PerplexitySource`, `searchPerplexity` |
 | service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `updateMessage`, `uploadFile` |
+| service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |

@@ -228,6 +228,34 @@ export const DEFAULT_CONNECTORS = [
     permissions: ['web_search'],
     disabledReason: 'Tavily API key is not configured.'
   },
+  // Stock footage for Miya's B-roll step (content factory phase 2a): free keys, read only.
+  {
+    id: 'pexels',
+    name: 'Pexels',
+    status: 'not_configured',
+    transport: 'pexels_video_api',
+    requiredEnv: ['PEXELS_API_KEY'],
+    permissions: ['stock_media_search'],
+    disabledReason: 'Pexels API key is not configured.'
+  },
+  {
+    id: 'pixabay',
+    name: 'Pixabay',
+    status: 'not_configured',
+    transport: 'pixabay_video_api',
+    requiredEnv: ['PIXABAY_API_KEY'],
+    permissions: ['stock_media_search'],
+    disabledReason: 'Pixabay API key is not configured.'
+  },
+  {
+    id: 'coverr',
+    name: 'Coverr',
+    status: 'not_configured',
+    transport: 'coverr_video_api',
+    requiredEnv: ['COVERR_API_KEY'],
+    permissions: ['stock_media_search'],
+    disabledReason: 'Coverr API key is not configured.'
+  },
   {
     id: 'deepseek',
     name: 'DeepSeek',

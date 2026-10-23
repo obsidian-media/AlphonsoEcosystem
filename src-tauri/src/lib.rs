@@ -757,6 +757,8 @@ pub fn run() {
       media_tools::media_tools_status,
       media_tools::content_tts_kokoro,
       media_tools::content_music_generate,
+      media_tools::content_stock_search,
+      media_tools::content_download_media,
       execute_command_verified,
       run_native_rc0_proof,
       runway_generate_video,
