@@ -1,0 +1,79 @@
+// A content-factory step's results, saved as they arrive from Jose (phase 6b).
+// A project runs as one Jose request and may be carried on from the board,
+// Telegram or Carry on, so the saving happens here, reached from the engine,
+// not in Miya Studio's own run call.
+import { getBrand } from './contentBrandService';
+import {
+  addStepProgress, approveStep, getProject, markStepStatus, saveStepVersion, setPendingAgents, startStep,
+} from './contentProjectService';
+import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
+import { renderScenePictures, renderThumbnails } from './contentImages';
+import { STEP_AGENTS, stepMarkdown } from './contentStepAgents';
+import { hasOwnKey, type StepId } from './contentTypes';
+
+function appSettings(): { outputFolder?: string | null } {
+  try {
+    const saved = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
+    return saved && typeof saved === 'object' ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Shows a step as running when its first agent starts. Scenes starting means the review was accepted. */
+export function beginContentStep(projectId: string, step: StepId): void {
+  const project = getProject(projectId);
+  if (!project) return;
+  if (step === 'scenes' && project.steps.review.status === 'needs_approval') approveStep(projectId, 'review');
+  if (project.steps[step].status !== 'running') startStep(projectId, step);
+}
+
+export async function recordContentStepResult(input: {
+  projectId: string;
+  step: StepId;
+  agent: string;
+  data: unknown;
+  commandId: string | null;
+}): Promise<'partial' | 'saved' | 'ignored'> {
+  const project = getProject(input.projectId);
+  const agents = STEP_AGENTS[input.step] || [];
+  if (!project || !agents.some((a) => a.agent === input.agent)) return 'ignored';
+
+  const pending = { ...(project.steps[input.step].pendingAgents || {}), [input.agent]: input.data };
+  if (!agents.every((a) => hasOwnKey(pending, a.agent))) {
+    setPendingAgents(input.projectId, input.step, pending);
+    return 'partial';
+  }
+  const output: Record<string, unknown> = {};
+  for (const { agent } of agents) output[agent] = pending[agent];
+  const saved = saveStepVersion(input.projectId, input.step, {
+    output,
+    summary: agents.map((a) => a.title).join(', '),
+    joseCommandId: input.commandId,
+  });
+  const say = (message: string) => { addStepProgress(input.projectId, input.step, message); };
+  const settings = appSettings();
+  const brand = getBrand(saved.brandId);
+  if (brand) {
+    try {
+      const root = requireOutputRoot(settings);
+      const version = saved.steps[input.step].chosenVersion as number;
+      await writeStepText(root, brand, saved, input.step, version, stepMarkdown(saved, input.step, version, output));
+      await writeProjectFile(root, brand, getProject(input.projectId) || saved);
+    } catch (error) {
+      say(`Saved in the app, but the project folder could not be written: ${(error as Error).message}`);
+    }
+  }
+  // Scenes and thumbnails go on to make their pictures; the step stays "running" meanwhile.
+  if (input.step === 'scenes' || input.step === 'thumbnail') {
+    markStepStatus(input.projectId, input.step, 'running', null);
+    try {
+      if (input.step === 'scenes') await renderScenePictures(input.projectId, settings, say);
+      else await renderThumbnails(input.projectId, settings, say);
+    } catch (error) {
+      say(`The pictures could not be made: ${(error as Error).message}`);
+    }
+    markStepStatus(input.projectId, input.step, 'done', null);
+  }
+  return 'saved';
+}

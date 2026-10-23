@@ -157,6 +157,14 @@ export function saveStepVersion(
     s.status = APPROVAL_STEPS.includes(step) ? 'needs_approval' : 'done';
     s.error = null;
     s.runBasedOn = null;
+    delete s.pendingAgents;
+  });
+}
+
+/** Keeps the answers of a step's agents that have finished (phase 6b). */
+export function setPendingAgents(id: string, step: StepId, pending: Record<string, unknown>): ContentProject {
+  return update(id, (p) => {
+    p.steps[step].pendingAgents = pending;
   });
 }
 
@@ -165,6 +173,7 @@ export function failStep(id: string, step: StepId, error: string): ContentProjec
     p.steps[step].status = 'failed';
     p.steps[step].error = error;
     p.steps[step].runBasedOn = null;
+    delete p.steps[step].pendingAgents;
   });
 }
 

@@ -10,32 +10,10 @@ import {
 } from './contentProjectService';
 import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
 import { renderScenePictures, renderThumbnails } from './contentImages';
-import { STEP_ORDER, type ContentProject, type ContentStepPayload, type StepId } from './contentTypes';
+import { type ContentProject, type ContentStepPayload, type StepId } from './contentTypes';
+import { STEP_AGENTS, priorOutputs, stepMarkdown } from './contentStepAgents';
 
-export interface StepAgent { agent: string; actionType: string; title: string }
-
-export const STEP_AGENTS: Record<StepId, StepAgent[]> = {
-  brief: [],
-  research: [
-    { agent: 'hector', actionType: 'research_virality', title: 'Virality research' },
-    { agent: 'nova', actionType: 'analysis_market', title: 'Market and competitor check' },
-  ],
-  script: [{ agent: 'miya', actionType: 'creative_script', title: 'Hooks and timed script' }],
-  review: [
-    { agent: 'nova', actionType: 'analysis_content_review', title: 'Hook and script review' },
-    { agent: 'maria', actionType: 'audit_content_quality', title: 'Quality review against the references' },
-  ],
-  scenes: [{ agent: 'miya', actionType: 'creative_scenes', title: 'Storyboard and shot list' }],
-  thumbnail: [{ agent: 'miya', actionType: 'creative_thumbnails', title: 'Three thumbnail concepts' }],
-  campaign: [
-    { agent: 'miya', actionType: 'creative_campaign', title: 'Captions, ads and calendar' },
-    { agent: 'nova', actionType: 'strategy_timing', title: 'Posting times' },
-  ],
-  quality: [
-    { agent: 'maria', actionType: 'audit_content_quality', title: 'Quality gate' },
-    { agent: 'sentinel', actionType: 'security_content_check', title: 'Text and link check' },
-  ],
-};
+export { STEP_AGENTS, type StepAgent } from './contentStepAgents';
 
 /** What the user sees while an agent works. */
 const WORKING: Record<string, string> = {
@@ -64,23 +42,6 @@ export interface RunStepOptions {
   /** Extra instruction, e.g. the reason the user sent the step back with. */
   extraTask?: string;
   onProgress?: (message: string) => void;
-}
-
-function priorOutputs(project: ContentProject, step: StepId): Partial<Record<StepId, unknown>> {
-  const prior: Partial<Record<StepId, unknown>> = {};
-  for (const earlier of STEP_ORDER.slice(0, STEP_ORDER.indexOf(step))) {
-    const chosen = chosenVersionOf(project, earlier);
-    if (chosen) prior[earlier] = chosen.output;
-  }
-  return prior;
-}
-
-function stepMarkdown(project: ContentProject, step: StepId, version: number, output: Record<string, unknown>): string {
-  const parts = [`# ${project.name}: ${step}, version ${version}`, `Idea: ${project.brief.idea}`];
-  for (const [agent, data] of Object.entries(output)) {
-    parts.push(`## ${agent}`, '```json', JSON.stringify(data, null, 2), '```');
-  }
-  return `${parts.join('\n\n')}\n`;
 }
 
 export async function runContentStep(projectId: string, step: StepId, options: RunStepOptions): Promise<ContentProject> {

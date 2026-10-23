@@ -102,6 +102,10 @@ vi.mock('../../../services/contentFactory/contentAgentExecutor', () => ({
   })),
 }));
 
+vi.mock('../../../services/contentFactory/contentStepRecorder', () => ({
+  recordContentStepResult: vi.fn(async () => 'saved'),
+  beginContentStep: vi.fn(),
+}));
 vi.mock('../../../services/codingAgentService', () => ({
   isCodingRequest: vi.fn(() => true),
   runCodingAgent: vi.fn(async () => ({ ok: true, content: 'code' })),
@@ -114,6 +118,7 @@ import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
+import { recordContentStepResult } from '../../../services/contentFactory/contentStepRecorder';
 import { setPlanAdapterForTests } from '../../../services/jose/joseAdapt';
 import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests, setJoseRequestStatus, findRequestByPacket, updateJoseStep } from '../../../services/jose/joseRequestStore';
 
@@ -688,5 +693,11 @@ describe('Jose runs plans as step graphs', () => {
     expect(request.status).toBe('waiting_approval');
     expect(request.steps.find((s) => s.stepId === 'a').status).toBe('done');
     expect(request.steps.find((s) => s.stepId === 'b').status).toBe('waiting_approval');
+  });
+
+  // Phase 6b: the factory saves each step as it finishes, however the request runs.
+  it('a finished content step is handed to the factory', async () => {
+    const result = await run([step('miya', 'creative_script', { stepId: 'script', effects: ['write_own_work'], contentStep: { projectId: 'p1', step: 'script', task: 'x', prior: {} } })]);
+    expect(recordContentStepResult).toHaveBeenCalledWith({ projectId: 'p1', step: 'script', agent: 'miya', data: { ok: true }, commandId: result.commandId });
   });
 });

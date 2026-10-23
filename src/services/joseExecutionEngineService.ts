@@ -2008,6 +2008,22 @@ export async function runJoseCommandExecutionPipeline({
       // By agent (that agent's latest step, as before) and by step.
       setAgentOutput(command.id, assignment.agent, stepOutput);
       setStepOutput(command.id, assignment.stepId, assignment.agent, stepOutput);
+      // A content-factory step is saved to its Miya Studio project as it finishes (phase 6b),
+      // whichever way the request is run or carried on.
+      const contentData = assignment.contentStep
+        ? (result.artifacts || []).find((a: any) => a?.type === 'content_step_output')?.data
+        : undefined;
+      if (assignment.contentStep && contentData !== undefined && contentData !== null) {
+        try {
+          const { recordContentStepResult } = await import('./contentFactory/contentStepRecorder');
+          await recordContentStepResult({
+            projectId: assignment.contentStep.projectId, step: assignment.contentStep.step,
+            agent: assignment.agent, data: contentData, commandId: command.id,
+          });
+        } catch (error) {
+          console.warn('[jose] content step not saved to its project', error);
+        }
+      }
       if (assignment.agent === AGENTS.NOVA) {
         const novaScore = extractNovaScore(result);
         if (novaScore) {

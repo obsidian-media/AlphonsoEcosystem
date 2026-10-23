@@ -65,6 +65,8 @@ export interface StepState {
   progress: { message: string; atMs: number }[];
   /** Snapshot taken when the step started, so a run is judged against what it was given. */
   runBasedOn?: BasedOn | null;
+  /** Answers from a step's agents that have finished, while the others still work (phase 6b). */
+  pendingAgents?: Record<string, unknown>;
 }
 
 export type ContentFormat =
