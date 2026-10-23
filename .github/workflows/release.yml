@@ -89,6 +89,9 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs windows-amd64
 
+      - name: Fetch bundled ffmpeg (LGPL)
+        run: node scripts/fetch-ffmpeg.mjs
+
       # Deliberately NOT fetching the starter model here, unlike Linux/macOS.
       # This is the same class of bug already hit and fixed once before
       # (DEPENDENCY_BUNDLING_PLAN.md's O5 entry, 2026-08-21) - makensis has a

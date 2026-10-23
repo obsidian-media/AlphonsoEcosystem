@@ -32,6 +32,7 @@ mod companion_server;
 mod companion_types;
 mod connector_commands;
 mod kv_store;
+mod media_tools;
 mod memory_graph;
 mod memory_graph_prune;
 mod memory_store;
@@ -753,6 +754,7 @@ pub fn run() {
       _ => {}
     })
     .invoke_handler(tauri::generate_handler![
+      media_tools::media_tools_status,
       execute_command_verified,
       run_native_rc0_proof,
       runway_generate_video,

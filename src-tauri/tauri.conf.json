@@ -55,6 +55,7 @@
       "../NOTICE": "NOTICE",
       "../legal/EULA.txt": "EULA.txt",
       "vendor/ollama": "ollama",
+      "vendor/ffmpeg": "ffmpeg",
       "vendor/starter-model": "starter-model"
     },
     "icon": [
