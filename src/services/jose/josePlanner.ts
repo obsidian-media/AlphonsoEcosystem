@@ -11,6 +11,7 @@ import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './jo
 import { TEMPLATE_FIT_THRESHOLD, getTemplate, scoreTemplateFit, type JoseTemplate } from './joseTemplates';
 import { JOSE_LIMITS, checkPlan, legacyNeeds, type PlanStep } from './stepGraph';
 import { listInstalledModels } from './joseModels';
+import { paidModelAvailable, paidModelId, estimateCostUsd, PAID_MAX_OUTPUT_TOKENS, PAID_PROMPT_ALLOWANCE_CHARS } from './joseSpend';
 import { getAgentProvider } from '../modelSelectionService';
 
 export interface JosePlan {
@@ -39,7 +40,7 @@ function templateForPrompt(template: JoseTemplate): string {
   return `Starting point: ${template.name} (template "${template.id}"). Adapt it to the request, or ignore it if it does not fit:\n${JSON.stringify(steps, null, 2)}`;
 }
 
-function buildPrompt(text: string, template: JoseTemplate | null, history: PlanOptions['history'], problems: string[], installed: string[] = []): string {
+function buildPrompt(text: string, template: JoseTemplate | null, history: PlanOptions['history'], problems: string[], installed: string[] = [], paidModel: string | null = null): string {
   const recent = (history || []).slice(-6).map((m) => `${m.role}: ${String(m.content).slice(0, 400)}`).join('\n');
   return [
     'You are Jose, the orchestrator. Plan the request as steps for the agents below. You never do the work yourself.',
@@ -48,6 +49,7 @@ function buildPrompt(text: string, template: JoseTemplate | null, history: PlanO
     `A review step names the step it reviews ("reviewOf"); if it finds problems the work goes back for at most ${JOSE_LIMITS.maxFixRounds} rounds, so plan one review, not several.`,
     `Limits: at most ${JOSE_LIMITS.maxSteps} steps. Use "kind": "project" for long work such as building an app, otherwise "normal".`,
     installed.length ? `Installed models you may choose for a step ("model"; leave it out to use the agent's own): ${installed.join(', ')}. Use a larger one only where the step needs it.` : '',
+    paidModel ? `A paid model is also allowed: ${paidModel}. Use it only where no local model would do; a step given it costs money and waits for approval.` : '',
     template ? templateForPrompt(template) : '',
     recent ? `Recent conversation:\n${recent}` : '',
     `Request: ${text}`,
@@ -79,7 +81,7 @@ function extractJson(raw: string): unknown {
 }
 
 /** The model's answer as steps, or null when it is not a usable plan. */
-function readModelPlan(raw: string, installed: string[] = []): ModelPlan | null {
+function readModelPlan(raw: string, installed: string[] = [], paidModel: string | null = null): ModelPlan | null {
   const parsed = extractJson(raw) as { basedOnTemplate?: unknown; kind?: unknown; steps?: unknown } | null;
   if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.steps) || parsed.steps.length === 0) return null;
   const steps: PlanStep[] = [];
@@ -90,13 +92,19 @@ function readModelPlan(raw: string, installed: string[] = []): ModelPlan | null 
     const effects = [...new Set([...declared, ...inferEffects(item.taskType)])];
     // A model only if it is installed and the agent runs on Ollama (phase 4).
     const agent = item.agent.toLowerCase();
-    const model = typeof item.model === 'string' && installed.includes(item.model) && getAgentProvider(agent)?.provider === 'ollama' ? item.model : undefined;
+    const localModel = typeof item.model === 'string' && installed.includes(item.model) && getAgentProvider(agent)?.provider === 'ollama' ? item.model : undefined;
+    // The paid model only when you allow it; such a step spends, so it asks (phase 4).
+    const paid = Boolean(paidModel) && item.model === paidModel;
+    const model = localModel || (paid ? paidModel! : undefined);
+    const instruction = typeof item.instruction === 'string' ? item.instruction : '';
+    if (paid && !effects.includes('spend')) effects.push('spend');
     steps.push({
       ...(model ? { model } : {}),
+      ...(paid ? { costEstimateUsd: estimateCostUsd(instruction.length + PAID_PROMPT_ALLOWANCE_CHARS, PAID_MAX_OUTPUT_TOKENS) } : {}),
       stepId: item.id,
       agent,
       actionType: item.taskType,
-      instruction: typeof item.instruction === 'string' ? item.instruction : '',
+      instruction,
       effects,
       needs: Array.isArray(item.needs) ? item.needs.filter((n): n is string => typeof n === 'string') : [],
       ...(typeof item.reviewOf === 'string' && item.reviewOf ? { reviewOf: item.reviewOf } : {}),
@@ -145,15 +153,16 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
   const template = best ? getTemplate(best.templateId) : null;
   let problems: string[] = [];
   const installed = await listInstalledModels();
+  const paidModel = paidModelAvailable().ok ? paidModelId() : null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let raw: string;
     try {
-      const result = await generateAgentLlmResponse('jose', { prompt: buildPrompt(text, template, options.history, problems, installed), format: 'json', signal: options.signal });
+      const result = await generateAgentLlmResponse('jose', { prompt: buildPrompt(text, template, options.history, problems, installed, paidModel), format: 'json', signal: options.signal });
       raw = String(result?.response || '');
     } catch {
       return fallback(text, template, "Jose's model isn't available, so I used the simple plan.");
     }
-    const plan = readModelPlan(raw, installed);
+    const plan = readModelPlan(raw, installed, paidModel);
     if (!plan) {
       problems = ['The answer could not be read as a plan with at least one step.'];
       continue;

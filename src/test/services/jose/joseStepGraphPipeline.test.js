@@ -61,6 +61,12 @@ vi.mock('../../../services/jose/joseModels', async (importOriginal) => ({
   listInstalledModels: vi.fn(async () => globalThis.__joseInstalledModels || []),
 }));
 
+// Paid models (phase 4): whether one is available is set per test.
+vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
+  ...(await importOriginal()),
+  paidModelAvailable: () => globalThis.__josePaid || { ok: false, reason: 'Paid models are off in Settings.' },
+}));
+
 vi.mock('../../../services/sentinelGateService', () => ({
   shouldBlock: vi.fn(() => ({ blocked: false, reason: '' })),
   checkSentinelAlerts: vi.fn(() => ({ found: false, alerts: [], output: null }))
@@ -480,5 +486,41 @@ describe('Jose runs plans as step graphs', () => {
     const request = getJoseRequest(`jose-request-${result.commandId}`);
     expect(request.status).toBe('done');
     expect((request.changeLog || []).map((c) => c.text)).toContain('Echo saved what was decided.');
+  });
+
+  // Phase 4: a step that keeps failing can be tried by a paid model you approve.
+  describe('a paid retry', () => {
+    afterEach(() => { globalThis.__josePaid = undefined; });
+    const failingPlan = () => {
+      vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+        if (assignment.stepId === 'a') throw new Error('the model gave nothing usable');
+        return { summary: 'ok', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+      });
+      return run([
+        step('miya', 'creative_script', { stepId: 'a', effects: ['write_own_work'] }),
+        step('nova', 'analysis_x', { stepId: 'b', effects: ['read'], needs: ['a'] }),
+      ]);
+    };
+
+    it('adds a paid step that waits for approval, with what it would cost', async () => {
+      globalThis.__josePaid = { ok: true };
+      localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'claude', model: 'claude-haiku-5-5', inputPerMillionUsd: 3, outputPerMillionUsd: 15 } }));
+      const result = await failingPlan();
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      const paid = request.steps.find((s) => s.stepId === 'a-paid');
+      expect(paid).toMatchObject({ agent: 'miya', actionType: 'creative_script', model: 'claude:claude-haiku-5-5', replaces: 'a', status: 'waiting_approval' });
+      expect(paid.effects).toEqual(expect.arrayContaining(['write_own_work', 'spend']));
+      expect(request.steps.find((s) => s.stepId === 'b').needs).toEqual(['a-paid']);
+      const waiting = result.executionReceipts.find((r) => r.status === 'approval_required');
+      expect(waiting.reason).toMatch(/Spend money \(about \$\d+\.\d\d\)/);
+      expect(request.status).toBe('waiting_approval');
+    });
+
+    it('adds nothing when paid models are not available', async () => {
+      const result = await failingPlan();
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      expect(request.steps.map((s) => s.stepId)).toEqual(['a', 'b']);
+      expect(request.status).toBe('failed');
+    });
   });
 });

@@ -94,10 +94,12 @@ const STEP_STATUS_BY_RECEIPT: Record<string, string> = {
 function recordStepOutcomes(requestId: string, assignments: any[], receipts: any[], cutShort: boolean): void {
   try {
     const statuses: string[] = [];
+    // A failed step a paid retry took over does not fail the request (phase 4).
+    const replaced = new Set(assignments.map((a) => a.replaces).filter(Boolean));
     for (const assignment of assignments) {
       const receipt = receipts.find((r) => r.packetId && r.packetId === assignment.packetId);
       const status = receipt ? (STEP_STATUS_BY_RECEIPT[receipt.status] || 'failed') : 'not_run';
-      statuses.push(status);
+      if (!replaced.has(assignment.stepId)) statuses.push(status);
       updateJoseStep(requestId, assignment.stepId, {
         status,
         endedAtMs: timestampMs(),
@@ -1252,7 +1254,7 @@ async function executeBoardroomAdvance(assignment: any, commandText: any, option
   }
 }
 
-const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'costEstimateUsd'];
+const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'replaces', 'costEstimateUsd'];
 
 /** A routed assignment as a plan step, with every field Jose's adapters read (phase 4). */
 function toPlanStep(assignment: any): PlanStep {
@@ -1807,7 +1809,9 @@ export async function runJoseCommandExecutionPipeline({
       // approves those himself (2026-10-23). Resumed by executeApprovedPackets.
       const effectsToWaitFor = Array.isArray(assignment.effects) ? stepEffectsToWaitFor(assignment.effects) : [];
       if (effectsToWaitFor.length > 0 && packet.status !== 'approved') {
-        const reason = `Waiting for your approval: ${effectsToWaitFor.map((e) => EFFECT_LABELS[e]).join(', ')}.`;
+        // A paid step says what it is expected to cost (phase 4).
+        const cost = Number.isFinite(assignment.costEstimateUsd) ? ` (about $${Number(assignment.costEstimateUsd).toFixed(2)})` : '';
+        const reason = `Waiting for your approval: ${effectsToWaitFor.map((e) => EFFECT_LABELS[e]).join(', ')}${cost}.`;
         pendingApprovalCount += 1;
         updatePacketStatus(assignment.packetId, 'pending_approval', {
           policyReason: reason,

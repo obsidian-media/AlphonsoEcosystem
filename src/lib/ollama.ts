@@ -758,7 +758,7 @@ export interface AgentGenerateResult {
 
 // Kept as a bare string union (not imported from modelSelectionService) to
 // avoid the same import-cycle risk documented below for the dynamic imports.
-type AgentModelProviderLike = 'ollama' | 'nvidia_nim' | 'gemini' | 'hermes';
+type AgentModelProviderLike = 'ollama' | 'nvidia_nim' | 'gemini' | 'hermes' | 'claude' | 'chatgpt';
 
 /**
  * The one shared per-agent LLM dispatcher — every per-agent service should
@@ -795,7 +795,40 @@ export async function withAgentModel<T>(agentId: string, model: string, fn: () =
   }
 }
 
+/**
+ * A step Jose gave a paid model ("claude:<model>" / "chatgpt:<model>", phase
+ * 4). Refused unless paid models are available and the month's cap allows it;
+ * the cost is recorded from the usage the provider reports.
+ */
+async function generatePaidResponse(paidModel: string, options: AgentGenerateOptions): Promise<AgentGenerateResult> {
+  const [provider, ...rest] = paidModel.split(':');
+  const model = rest.join(':').trim() || undefined;
+  const spend = await import('../services/jose/joseSpend');
+  const available = spend.paidModelAvailable();
+  if (!available.ok) throw new Error(available.reason);
+  const allowed = spend.canSpend(spend.estimateCostUsd(String(options.prompt || '').length, spend.PAID_MAX_OUTPUT_TOKENS));
+  if (!allowed.ok) throw new Error(allowed.reason);
+  if (provider === 'claude') {
+    const { sendClaudeMessage } = await import('../services/claudeService');
+    const result: any = await sendClaudeMessage(options.prompt, { model, maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
+    if (!result?.ok) throw new Error(result?.error || 'Claude did not answer.');
+    spend.recordSpend({ inputTokens: result.usage?.input_tokens || 0, outputTokens: result.usage?.output_tokens || 0 });
+    return { response: result.text || '', done: true, backend: 'claude', model: result.model || model };
+  }
+  const { sendChatGPTMessage } = await import('../services/chatgptService');
+  const result: any = await sendChatGPTMessage(options.prompt, { model, maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
+  if (!result?.ok) throw new Error(result?.error || 'ChatGPT did not answer.');
+  spend.recordSpend({ inputTokens: result.usage?.prompt_tokens || 0, outputTokens: result.usage?.completion_tokens || 0 });
+  return { response: result.text || '', done: true, backend: 'chatgpt', model: result.model || model };
+}
+
+const isPaidModel = (model: unknown): model is string => typeof model === 'string' && /^(claude|chatgpt):/.test(model);
+
 export async function generateAgentLlmResponse(agentId: string, options: AgentGenerateOptions): Promise<AgentGenerateResult> {
+  // A paid model Jose chose for this step goes first, whatever the agent's own provider.
+  const stepModel = options.model || getAgentModelOverride(agentId);
+  if (isPaidModel(stepModel)) return generatePaidResponse(stepModel, options);
+
   const { getAgentProvider } = await import('../services/modelSelectionService');
   const config = getAgentProvider(agentId);
 

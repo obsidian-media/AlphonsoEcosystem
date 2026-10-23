@@ -6,6 +6,41 @@
 import type { PlanStep } from './stepGraph';
 import { judgeReview, planReviewRound } from './joseReviewLoop';
 import { findHelpRequest, chooseHelper, planHelp } from './joseHelp';
+import { paidModelAvailable, paidModelId, estimateCostUsd, PAID_MAX_OUTPUT_TOKENS, PAID_PROMPT_ALLOWANCE_CHARS } from './joseSpend';
+const isPaidModel = (model?: string) => typeof model === 'string' && /^(claude|chatgpt):/.test(model);
+
+/**
+ * A step that still failed after the local retries and the larger local
+ * model: a paid model may try it, as a new step that asks first (it spends).
+ */
+function planPaidRetry(steps: PlanStep[], step: PlanStep, requestText: string): PlanChange | null {
+  const paidId = `${step.stepId}-paid`;
+  if (step.replaces || isPaidModel(step.model) || steps.some((s) => s.stepId === paidId)) return null;
+  if (!paidModelAvailable().ok) return null;
+  const model = paidModelId();
+  if (!model) return null;
+  const costEstimateUsd = estimateCostUsd((step.instruction || '').length + requestText.length + PAID_PROMPT_ALLOWANCE_CHARS, PAID_MAX_OUTPUT_TOKENS);
+  const { reviewOf, round, revises, helpRound, instruction } = step;
+  return {
+    add: [{
+      stepId: paidId,
+      agent: step.agent,
+      actionType: step.actionType,
+      effects: [...new Set([...step.effects, 'spend' as const])],
+      needs: [...step.needs],
+      ...(instruction ? { instruction } : {}),
+      ...(reviewOf ? { reviewOf } : {}),
+      ...(round ? { round } : {}),
+      ...(revises ? { revises } : {}),
+      ...(helpRound ? { helpRound } : {}),
+      model,
+      replaces: step.stepId,
+      costEstimateUsd,
+    }],
+    rewire: { from: [step.stepId], to: [paidId] },
+    reason: `${step.agent} still failed with the local models, so a paid model (${model}) can try it, for about $${costEstimateUsd.toFixed(2)}, if you approve.`,
+  };
+}
 
 export interface PlanChange {
   add: PlanStep[];
@@ -57,6 +92,14 @@ export async function adaptPlan(ctx: AdaptContext): Promise<PlanChange[]> {
     const helper = await chooseHelper(request, step.agent);
     const change = helper ? planHelp(ctx.steps, step, request, helper) : null;
     changes.push(change || note(`${step.agent} asked for help (${request}), but no agent can safely help with that here.`));
+  }
+
+  // Paid retries: a step that just failed, when you allow paid models.
+  for (const step of ctx.steps) {
+    const status = ctx.done[step.stepId]?.status;
+    if (!ctx.justRan.includes(step.stepId) || (status !== 'failed' && status !== 'dead_letter')) continue;
+    const change = planPaidRetry(ctx.steps, step, ctx.requestText);
+    if (change) changes.push(change);
   }
   return changes;
 }

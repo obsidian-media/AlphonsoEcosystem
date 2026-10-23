@@ -32,6 +32,10 @@ export interface PlanStep {
   revises?: string;
   /** Set on a step re-run after a help request; it may not ask again (phase 4). */
   helpRound?: number;
+  /** For a paid retry: the step it takes over (phase 4). */
+  replaces?: string;
+  /** What a paid step is expected to cost, in US dollars (phase 4). */
+  costEstimateUsd?: number;
 }
 
 const NAMES: Record<string, string> = {
@@ -91,6 +95,8 @@ export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean } = 
     for (const effect of s.effects) {
       if (effect === 'run' && s.agent !== 'alphonso') problems.push(`Step "${s.stepId}": only Alphonso may run code and commands.`);
       else if (effect === 'publish_or_send' && s.agent !== 'marcus') problems.push(`Step "${s.stepId}": only Marcus may publish or send anything outside.`);
+      // A paid-model step's spending is the model call Jose arranges; it always asks (phase 4).
+      else if (effect === 'spend' && typeof s.model === 'string' && /^(claude|chatgpt):/.test(s.model)) continue;
       else if (!isEffectAllowed(s.agent, effect)) problems.push(`Step "${s.stepId}": ${name} may not ${EFFECT_LABELS[effect].toLowerCase()}.`);
     }
     for (const need of s.needs) {

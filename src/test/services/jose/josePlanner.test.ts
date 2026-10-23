@@ -9,6 +9,12 @@ vi.mock('../../../services/jose/joseModels', async (importOriginal) => ({
   listInstalledModels: vi.fn(async () => ['llama3.2:3b', 'qwen2.5:7b']),
 }));
 
+vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
+  ...(await importOriginal()),
+  paidModelAvailable: vi.fn(() => (globalThis as any).__josePaid || { ok: false, reason: 'off' }),
+  paidModelId: vi.fn(() => 'claude:claude-haiku-5-5'),
+}));
+
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { planJoseRequest, describePlanSource } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
@@ -160,5 +166,23 @@ describe('the model for each step', () => {
     llm.mockResolvedValueOnce(answer([{ id: 'a', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'], model: 'gpt-imaginary:70b' }]));
     const plan = await planJoseRequest(PARTY);
     expect(plan.steps[0].model).toBeUndefined();
+  });
+
+  it('offers the paid model only when you allow it; a step given it spends and has a cost', async () => {
+    const paidStep = { id: 'a', agent: 'miya', taskType: 'creative_script', instruction: 'Write it.', effects: ['write_own_work'], model: 'claude:claude-haiku-5-5' };
+    llm.mockResolvedValueOnce(answer([paidStep]));
+    const off = await planJoseRequest(PARTY);
+    expect(promptOf(0)).not.toMatch(/claude:/);
+    expect(off.steps[0].model).toBeUndefined();
+    expect(off.steps[0].effects).not.toContain('spend');
+
+    (globalThis as any).__josePaid = { ok: true };
+    llm.mockResolvedValueOnce(answer([paidStep]));
+    const on = await planJoseRequest(PARTY);
+    (globalThis as any).__josePaid = undefined;
+    expect(promptOf(1)).toMatch(/claude:claude-haiku-5-5/);
+    expect(on.steps[0]).toMatchObject({ model: 'claude:claude-haiku-5-5' });
+    expect(on.steps[0].effects).toEqual(expect.arrayContaining(['write_own_work', 'spend']));
+    expect(on.steps[0].costEstimateUsd).toBeGreaterThanOrEqual(0);
   });
 });
