@@ -10,6 +10,10 @@ vi.mock('../../../services/joseExecutionEngineService', () => ({
   runJoseCommandExecutionPipeline: vi.fn(async () => ({ ok: true, commandId: 'c1', executedCount: 1, pendingApprovalCount: 0, failedCount: 0, executionReceipts: [] })),
 }));
 
+vi.mock('../../../services/contentFactory/contentFromChat', () => ({
+  startContentProjectFromChat: vi.fn(async () => ({ ok: true, projectId: 'p1', note: 'Started the project.' })),
+}));
+import { startContentProjectFromChat } from '../../../services/contentFactory/contentFromChat';
 import { submitToJose, submitStepsToJose, runApprovedPlan, cancelPlan, CONTENT_VIDEO_STUDIO_NOTE } from '../../../services/jose/submitToJose';
 import { getJoseRequest, replacePlanSteps, createWaitingPlanRequest } from '../../../services/jose/joseRequestStore';
 import { planJoseRequest } from '../../../services/jose/josePlanner';
@@ -18,6 +22,7 @@ import { getTemplate } from '../../../services/jose/joseTemplates';
 
 const pipeline = vi.mocked(runJoseCommandExecutionPipeline);
 const planner = vi.mocked(planJoseRequest);
+const startFromChat = vi.mocked(startContentProjectFromChat);
 
 const freshPlan = {
   steps: [
@@ -32,6 +37,7 @@ beforeEach(() => {
   // These tests run plans straight away; showing the plan first is tested below.
   localStorage.setItem('alphonso_settings', JSON.stringify({ showPlanFirst: 'never' }));
   vi.mocked(runPipelineShortcuts).mockReset().mockResolvedValue(null);
+  startFromChat.mockClear();
   pipeline.mockClear();
   planner.mockReset();
 });
@@ -105,9 +111,24 @@ describe('submitToJose', () => {
     expect(result.planNote).toMatch(/isn't available/);
   });
 
-  it('points to Miya Studio for a content video', async () => {
+  // Phase 6b: from Chat a content video becomes a Miya Studio project (owner);
+  // other places (Telegram, schedules) still run the template's steps.
+  it('from Chat, a content video starts a Miya Studio project instead of planning', async () => {
+    const result = await submitToJose({ text: 'Make a YouTube video script about home coffee', source: 'user' });
+    expect(startFromChat).toHaveBeenCalledWith('Make a YouTube video script about home coffee', expect.anything());
+    expect(planner).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: true, contentProjectId: 'p1', planNote: 'Started the project.' });
+  });
+
+  it('"Plan this fresh" still plans a content video', async () => {
+    planner.mockResolvedValueOnce(freshPlan);
+    await submitToJose({ text: 'Make a YouTube video script', source: 'user', planFresh: true });
+    expect(startFromChat).not.toHaveBeenCalled();
+  });
+
+  it('points to Miya Studio for a content video asked elsewhere', async () => {
     planner.mockResolvedValueOnce({ steps: getTemplate('content_video').steps, source: 'template', templateId: 'content_video', kind: 'normal', note: '' });
-    const result = await submitToJose({ text: 'Make a YouTube video script', source: 'user' });
+    const result = await submitToJose({ text: 'Make a YouTube video script', source: 'telegram' });
     expect(result.planNote).toContain('Based on template Content video.');
     expect(result.planNote).toContain(CONTENT_VIDEO_STUDIO_NOTE);
   });

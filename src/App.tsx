@@ -145,6 +145,16 @@ const AgentPerformanceView = lazy(() => import('./components/AgentPerformanceVie
 const SessionHistoryView = lazy(() => import('./components/SessionHistoryView').then((mod) => ({ default: mod.SessionHistoryView })));
 
 import { handleCompanionCommand } from './services/companionCommandService';
+
+/** Miya Studio opens on this project (a content video started from Chat, phase 6b). */
+async function openContentProject(projectId: string): Promise<void> {
+  const [{ getProject }, { selectContentProject }] = await Promise.all([
+    import('./services/contentFactory/contentProjectService'),
+    import('./components/miya/ContentFactoryPanel'),
+  ]);
+  const project = getProject(projectId);
+  if (project) selectContentProject(project.brandId, project.id);
+}
 import { markRunningRequestsInterrupted } from './services/jose/joseRequestStore';
 import { expireWaitingRequests } from './services/jose/joseExpiry';
 
@@ -916,7 +926,7 @@ function AppShell() {
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState activeTab="Chat" />}>
-                    <ChatView onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} onProviderChange={(provider: string) => setSettings((current: any) => ({ ...current, selectedProvider: provider, selectedModel: '' }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} onPendingCountChange={setPendingApprovalCount} />
+                    <ChatView onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} onOpenContentProject={(projectId: string) => { void openContentProject(projectId).then(() => switchTab('miya')); }} activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} onProviderChange={(provider: string) => setSettings((current: any) => ({ ...current, selectedProvider: provider, selectedModel: '' }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} onPendingCountChange={setPendingApprovalCount} />
                   </Suspense>
                 )}
                 {activeTab === 'miya' && (

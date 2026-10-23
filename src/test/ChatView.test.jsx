@@ -799,6 +799,28 @@ describe('ChatView: everything goes to Jose', () => {
     expect(submitToJose).not.toHaveBeenCalled();
   });
 
+  // Phase 6b (owner): a content video from Chat becomes a Miya Studio project.
+  it('shows Open in Miya Studio for a content project', async () => {
+    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
+    submitToJose.mockResolvedValueOnce({ ok: true, contentProjectId: 'p1', plan: null, planNote: 'Started the Miya Studio project "Coffee" for My brand.' });
+    const onOpenContentProject = vi.fn();
+    render(<ChatView {...makeProps({ onOpenContentProject })} />);
+    send('Make a YouTube video about coffee');
+    expect(await screen.findByText(/Started the Miya Studio project "Coffee" for My brand\./)).toBeTruthy();
+    expect(screen.queryByText('Jose processed the command.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open in Miya Studio' }));
+    expect(onOpenContentProject).toHaveBeenCalledWith('p1');
+  });
+
+  it('says what to do when a content project could not start', async () => {
+    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
+    submitToJose.mockResolvedValueOnce({ ok: false, reason: 'Choose an output folder in Settings first, then ask again.', contentProjectId: null, plan: null, planNote: 'Choose an output folder in Settings first, then ask again.' });
+    render(<ChatView {...makeProps()} />);
+    send('Make a YouTube video about coffee');
+    expect(await screen.findByText('Choose an output folder in Settings first, then ask again.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Open in Miya Studio' })).toBeNull();
+  });
+
   // Phase 3 (2026-10-23): bigger requests show their plan first.
   it('shows the plan card for a plan that waits, and runs it from Chat', async () => {
     const waiting = createWaitingPlanRequest({
