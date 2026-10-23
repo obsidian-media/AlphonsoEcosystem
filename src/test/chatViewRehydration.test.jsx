@@ -40,6 +40,12 @@ vi.mock('../services/chatPersistenceService', () => ({
   deleteChatMessages: vi.fn().mockResolvedValue(undefined)
 }));
 
+vi.mock('../services/jose/joseDecision', () => ({
+  decideJoseRoute: vi.fn().mockResolvedValue({ route: 'direct', source: 'rule', reason: 'test' })
+}));
+vi.mock('../services/jose/submitToJose', () => ({
+  submitToJose: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [], plan: null, planNote: '' })
+}));
 vi.mock('../services/joseExecutionEngineService', () => ({
   isJoseIntakeCommand: vi.fn().mockReturnValue(false),
   runJoseCommandExecutionPipeline: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [] })

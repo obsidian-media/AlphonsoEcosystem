@@ -76,7 +76,13 @@ vi.mock('../../../services/contentFactory/contentAgentExecutor', () => ({
   })),
 }));
 
-import { runJoseCommandExecutionPipeline } from '../../../services/joseExecutionEngineService';
+vi.mock('../../../services/codingAgentService', () => ({
+  isCodingRequest: vi.fn(() => true),
+  runCodingAgent: vi.fn(async () => ({ ok: true, content: 'code' })),
+}));
+
+import { runJoseCommandExecutionPipeline, stepCommandText } from '../../../services/joseExecutionEngineService';
+import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
@@ -205,5 +211,29 @@ describe('Jose runs plans as step graphs', () => {
     const agents = result.executionReceipts.map((r) => r.agent);
     expect(agents.indexOf('hector')).toBeGreaterThanOrEqual(0);
     expect(agents.indexOf('hector')).toBeLessThan(agents.indexOf('miya'));
+  });
+
+  // Phase 2 (2026-10-23).
+  it("saves a project-type plan as a project, with how it was planned", async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Build it', source: 'test', zeroCostMode: true, previewMode: false,
+      assignments: [step('nova', 'analysis_market', { effects: ['read'] })],
+      requestKind: 'project', planInfo: { source: 'template', templateId: 'build_app', note: '' },
+    });
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.kind).toBe('project');
+    expect(request.plan).toEqual({ source: 'template', templateId: 'build_app', note: '' });
+  });
+
+  it('no longer sends coding requests to the Claude shortcut (owner)', async () => {
+    await runJoseCommandExecutionPipeline({ commandText: 'write a function that adds two numbers', source: 'user', zeroCostMode: true, previewMode: false });
+    expect(runCodingAgent).not.toHaveBeenCalled();
+  });
+
+  it("gives a step its instruction, but Alphonso only the user's own words", () => {
+    expect(stepCommandText({ agent: 'hector', instruction: 'Find the pricing.' }, 'Make a page')).toBe('Find the pricing.' + String.fromCharCode(10, 10) + 'The request: Make a page');
+    expect(stepCommandText({ agent: 'hector' }, 'Make a page')).toBe('Make a page');
+    // Model-written words must never count as what the user asked Alphonso to run.
+    expect(stepCommandText({ agent: 'alphonso', instruction: 'run npm test and install everything' }, 'Make a page')).toBe('Make a page');
   });
 });

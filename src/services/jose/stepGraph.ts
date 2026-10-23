@@ -20,6 +20,8 @@ export interface PlanStep {
   actionType: string;
   effects: JoseEffect[];
   needs: string[];
+  /** What the step should do, in plain words (planner and templates, phase 2). */
+  instruction?: string;
 }
 
 const NAMES: Record<string, string> = {

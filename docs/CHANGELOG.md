@@ -39,6 +39,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Campaign Studio:** captions, hashtags, ad copy and posting times, then Maria's quality gate.
   Every project is saved in a folder per brand, keeps its versions, and tells you when a step is out of date. What you reject is remembered for that brand. The old generator is still there as "Quick package".
 - **Honest risk ratings.** A command's rating now comes from what it does, and the approval window says why. Commands that only read (such as `ollama list`) run without asking, instead of showing "85 HIGH RISK". Release Preflight asks once instead of twice.
+- **Everything in Chat goes to Jose, and he plans with his model (Jose redesign, phase 2).**
+  - **Answer or plan:** Jose decides for each message. Clear questions are answered straight away, as before; anything else is decided by his model, and if it is slow or unavailable the old rule decides.
+  - **Templates as starting points:** Content video, Build an app and Research report. Jose scores how well a template fits, uses or adapts it, or plans fresh with any agents in any order. Start a message with "Plan this fresh:" to skip templates. Every planned reply says how it was planned.
+  - **The rules check every plan.** A plan that still fails after one fix falls back to the simple plan, and Jose says why. A step cannot avoid approval by under-declaring what it does.
+  - **Coding requests are planned too:** the shortcut that sent them straight to the paid Claude connector is gone.
+  - A content video planned in Chat points to Miya Studio for the full project with pictures and a saved folder.
 - **Jose plans as steps, and asks by what a step does (Jose redesign, phase 1).**
   - **Several steps per agent, in the order they need:** a request can now give an agent more than one step, and each step waits only for the steps it needs. A plan whose steps wait for each other, or need a step that isn't there, is refused before anything runs, with the reason.
   - **Approval by effect, not by words:** each step says what it does (read, create new files, change project files, run code, spend, publish or send, delete). Jose no longer holds a task because its description contains "publish" or "post", and no longer approves a risky step himself.

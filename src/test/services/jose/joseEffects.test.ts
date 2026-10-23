@@ -54,6 +54,15 @@ describe('joseEffects', () => {
     expect(stepEffectsToWaitFor(['change_project'], undefined, false)).toEqual([]);
   });
 
+  // Phase 2: a planner-written task type is judged by its family prefix.
+  it('infers a new task type from its family, as each agent uses them', () => {
+    expect(inferEffects('analysis_party')).toEqual(['read']);
+    expect(inferEffects('audit_launch')).toEqual(['read']);
+    expect(inferEffects('creative_poster')).toEqual(['write_own_work']);
+    expect(inferEffects('distribution_newsletter')).toEqual(['publish_or_send']);
+    expect(inferEffects('research_pricing')).toEqual(['read']);
+  });
+
   it('treats an unknown task type as running code (fail closed)', () => {
     expect(inferEffects('unknown_x')).toEqual(['run']);
     expect(inferEffects('')).toEqual(['run']);
