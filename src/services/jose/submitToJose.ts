@@ -50,6 +50,7 @@ function toAssignments(steps: PlanStep[], planNote: string) {
     instruction: step.instruction || '',
     ...(step.model ? { model: step.model } : {}),
     ...(step.reviewOf ? { reviewOf: step.reviewOf } : {}),
+    ...(step.payload ? { payload: step.payload } : {}),
     title: `${agentName(step.agent)} ${step.actionType}`,
     rationale: planNote,
     riskLevel: 'low',

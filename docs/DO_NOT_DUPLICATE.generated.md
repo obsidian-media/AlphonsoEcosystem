@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 242 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 243 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -195,6 +195,7 @@ Source-backed inventory: 242 services and 154 components. Human purpose descript
 | service | `src/services/backupService.ts` | `BackupSizeEstimate`, `createBackup`, `exportBackupToFile`, `getBackupSizeEstimate`, `importBackupFromFile`, `restoreBackup` |
 | service | `src/services/batchOrchestratorService.js` | `advanceToNextBatch`, `completeGoal`, `createProjectGoal`, `executeBatch`, `generateBatch`, `generateBatchRuleBased`, `generateBatchViaLLM`, `getActiveBatch`, `getActiveGoal`, `getBatch`, `getBatchById`, `getBatchProgress`, `getGoalById`, `getGoalProgress`, `getTaskById`, `isBatchComplete`, `listBatches`, `listGoals`, `updateBatchStatus`, `updateGoal`, `updateTaskStatus` |
 | service | `src/services/boardroomFacilitatorService.ts` | `buildFacilitatorPrompt`, `detectLowConfidence`, `FacilitatorResult`, `generateAgentResponse`, `generateAlphonsoResponse` |
+| service | `src/services/boardroomJoseService.ts` | `BOARDROOM_LABEL`, `BoardroomReview`, `concludeOnJose`, `creativeBriefOnJose`, `distributeOnJose` |
 | service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BoardroomGovernance`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `setThreadGovernance`, `THREADS_KEY`, `updateThreadStatus` |
 | service | `src/services/browserAutomationService.ts` | `fetchUrlContent`, `openAndScrape`, `openExternalUrl`, `openUrl`, `readClipboard`, `scrapeWebPage`, `writeClipboard` |
 | service | `src/services/cacheService.ts` | `agentCache`, `cached`, `CacheEntry`, `CacheOptions`, `connectorCache`, `createCacheKey`, `globalCache`, `MemoryCache` |

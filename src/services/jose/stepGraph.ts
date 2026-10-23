@@ -36,6 +36,8 @@ export interface PlanStep {
   replaces?: string;
   /** What a paid step is expected to cost, in US dollars (phase 4). */
   costEstimateUsd?: number;
+  /** Data a given step's agent needs, such as Marcus's Slack channel and text (phase 6a). */
+  payload?: Record<string, unknown>;
 }
 
 const NAMES: Record<string, string> = {

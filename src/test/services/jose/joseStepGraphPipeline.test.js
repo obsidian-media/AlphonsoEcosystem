@@ -666,4 +666,15 @@ describe('Jose runs plans as step graphs', () => {
     expect(request.steps.map((s) => s.stepId)).toEqual(['a']);
     expect(request.runOptions.allowPaidModels).toBe(false);
   });
+
+  // Phase 6a: Boardroom's Conclude reads Maria's verdict from her step's output.
+  it("keeps a step's structured result (Maria's review) in its output", async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Boardroom discussion: launch plan', source: 'boardroom', zeroCostMode: true, previewMode: false,
+      // Maria's own executor (no contentStep), with her model mocked away: her rule-based review.
+      assignments: [step('maria', 'audit_governance', { stepId: 'maria', effects: ['read'], contentStep: undefined })],
+    });
+    const output = getStepOutput(result.commandId, 'maria');
+    expect(output.schema.riskLevel).toBeTruthy();
+  });
 });

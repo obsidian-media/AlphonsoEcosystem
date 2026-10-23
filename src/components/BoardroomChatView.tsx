@@ -351,12 +351,9 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
         .map((m) => `${agentLabel(m.speaker)}: ${m.content}`)
         .join('\n')
         .slice(0, 6000);
-      const { runMariaGovernanceAudit } = await import('../services/mariaAuditService');
-      const result = await runMariaGovernanceAudit(
-        `Boardroom discussion: ${activeThread.topic}\n\n${transcript}`,
-        { commandText: activeThread.topic, actionType: 'boardroom_conclusion' }
-      );
-      const review = result?.schema;
+      // Phase 6a: Maria's review is a step in a Jose request (shown on the board).
+      const { concludeOnJose } = await import('../services/boardroomJoseService');
+      const { review } = await concludeOnJose(activeThread.topic, transcript);
       if (!review?.riskLevel) throw new Error('Maria returned no review');
       // confidenceLevel 'temporary' means Maria's model review could not be
       // used and her rule-based check produced this verdict; say which.
@@ -404,40 +401,16 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
     if (mode === 'slack' && !channel) return;
     setThreadAction('distribute');
     try {
-      if (mode === 'slack') {
-        // Sending to Slack leaves the app: ask first, and refuse if no
-        // approval prompt is available.
-        const approved = requestApproval
-          ? await requestApproval({
-            actionLabel: `Post the Boardroom conclusion "${activeThread.topic}" to Slack ${channel}`,
-            agent: 'marcus',
-            riskLevel: governance.riskLevel === 'low' ? 'medium' : 'high',
-            requireApproval: true
-          })
-          : false;
-        if (!approved) {
-          postThreadNote('marcus', `Nothing was sent: posting to Slack ${channel} was not approved.`);
-          return;
-        }
+      // Phase 6a: Marcus's step in a Jose request. Posting to Slack sends, so
+      // the step waits for your approval (on the board, or on Telegram).
+      const { distributeOnJose } = await import('../services/boardroomJoseService');
+      const result = await distributeOnJose(activeThread.topic, governance.summary, mode, channel);
+      if (result.waiting) {
+        postThreadNote('marcus', `Posting to Slack ${channel} is waiting for your approval. Nothing is sent until you approve it. Follow it on the Orchestrator page, Requests tab.`);
+      } else {
+        const summary = result.summary || 'Marcus returned no summary.';
+        postThreadNote('marcus', mode === 'review' ? `Distribution review only, nothing was sent. ${summary}` : summary);
       }
-      const text = `Boardroom: ${activeThread.topic}\n${governance.summary}`;
-      const { runMarcusDistribution } = await import('../services/marcusExecutionService');
-      const result = await runMarcusDistribution(
-        text,
-        {
-          actionType: mode === 'slack' ? 'slack_message' : 'distribution_review',
-          commandText: activeThread.topic,
-          payload: mode === 'slack' ? { channel, text } : {}
-        },
-        { maria: { schema: { riskLevel: governance.riskLevel, approvalRequired: governance.approvalRequired } } }
-      );
-      const summary = String(result?.summary || '').trim() || 'Marcus returned no summary.';
-      postThreadNote(
-        'marcus',
-        mode === 'review'
-          ? `Distribution review only, nothing was sent. ${summary}`
-          : summary
-      );
       if (mode === 'slack') setDistributeOpen(false);
     } catch (error) {
       postThreadNote('marcus', `Distribution failed, nothing was sent: ${error instanceof Error ? error.message : String(error)}`, 'failure');
@@ -451,17 +424,16 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
     if (!activeThreadId || !activeThread || threadAction) return;
     setThreadAction('brief');
     try {
-      const { createJoseCommandRoute } = await import('../services/joseCommandRouterService');
+      const { creativeBriefOnJose } = await import('../services/boardroomJoseService');
       const context = activeThread.governance?.summary || messages.slice(-5).map((m) => m.content).join(' ').slice(0, 800);
-      const route = await createJoseCommandRoute({
-        commandText: `ask miya: Generate a creative brief for: ${activeThread.topic}\nContext: ${context}`,
-        source: 'boardroom'
-      });
+      const result = await creativeBriefOnJose(activeThread.topic, context);
       postThreadNote(
-        'jose',
-        route
-          ? `Creative brief request sent to Miya (status: ${route.status}). Follow it in Orchestrator → Packets.`
-          : 'Jose could not route the creative brief request to Miya.'
+        'miya',
+        result.waiting
+          ? `Miya's creative brief is waiting for your approval. Follow it on the Orchestrator page, Requests tab.`
+          : result.summary
+            ? `Creative brief: ${result.summary}`
+            : `Miya's creative brief did not produce anything. Follow it on the Orchestrator page, Requests tab.`
       );
     } catch (error) {
       postThreadNote('jose', `The creative brief request failed: ${error instanceof Error ? error.message : String(error)}`, 'failure');

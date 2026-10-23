@@ -1997,7 +1997,9 @@ export async function runJoseCommandExecutionPipeline({
         resultState: result.resultState || 'pending_review',
         artifacts: result.artifacts || [],
         sources: result.sources || [],
-        contractAction: result.contractAction || assignment.actionType
+        contractAction: result.contractAction || assignment.actionType,
+        // An agent's structured result, such as Maria's review (phase 6a).
+        ...(result.schema && typeof result.schema === 'object' ? { schema: result.schema } : {})
       };
       // By agent (that agent's latest step, as before) and by step.
       setAgentOutput(command.id, assignment.agent, stepOutput);
