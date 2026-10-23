@@ -80,6 +80,17 @@ describe('submitToJose', () => {
     expect(result.planNote).toBe('Steps set by Boardroom.');
   });
 
+  it('given steps keep their content data and wait reason, and can skip Echo (phase 6b)', async () => {
+    const contentStep = { projectId: 'p1', step: 'scenes', task: 'x' };
+    await submitStepsToJose({
+      text: 'x', source: 'content-factory', label: 'Steps set by Miya Studio.', saveDecisions: false,
+      steps: [{ stepId: 'scenes', agent: 'miya', actionType: 'creative_scenes', effects: ['write_own_work'], needs: [], contentStep, waitFor: 'Approve the review in Miya Studio first.' }],
+    });
+    const args = pipeline.mock.calls[0][0];
+    expect(args.assignments[0]).toMatchObject({ contentStep, waitFor: 'Approve the review in Miya Studio first.' });
+    expect(args.saveDecisions).toBe(false);
+  });
+
   it('refuses given steps that break the rules', async () => {
     const result = await submitStepsToJose({ text: 'x', source: 'boardroom', label: 'x', steps: [{ stepId: 'a', agent: 'miya', actionType: 'creative_x', effects: ['run'], needs: [] }] });
     expect(result.ok).toBe(false);

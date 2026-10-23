@@ -67,6 +67,7 @@ export function getJoseTelegramSettings(): JoseTelegramSettings {
 }
 
 function stepText(request: JoseRequest, step: JoseRequest['steps'][number]): string {
+  if (step.waitFor) return `${agentName(step.agent)}'s next step waits for you: ${cut(step.waitFor, 300)}\nFor: ${cut(request.text, 200)}`;
   const effects = (step.effects || []).filter((e) => e !== 'read').map((e) => EFFECT_LABELS[e as JoseEffect].toLowerCase());
   const what = cut(step.instruction || step.actionType, 300);
   const cost = Number.isFinite(step.costEstimateUsd) ? ` (about $${Number(step.costEstimateUsd).toFixed(2)})` : '';

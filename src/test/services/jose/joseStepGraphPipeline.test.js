@@ -677,4 +677,16 @@ describe('Jose runs plans as step graphs', () => {
     const output = getStepOutput(result.commandId, 'maria');
     expect(output.schema.riskLevel).toBeTruthy();
   });
+
+  // Phase 6b: a step can wait for you for a reason of its own (Miya Studio's review approval).
+  it('a step with a wait reason waits for approval even when its effects do not', async () => {
+    const result = await run([
+      step('nova', 'analysis_x', { stepId: 'a', effects: ['read'] }),
+      step('miya', 'creative_y', { stepId: 'b', effects: ['write_own_work'], needs: ['a'], waitFor: 'Approve the review in Miya Studio first.' }),
+    ]);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.status).toBe('waiting_approval');
+    expect(request.steps.find((s) => s.stepId === 'a').status).toBe('done');
+    expect(request.steps.find((s) => s.stepId === 'b').status).toBe('waiting_approval');
+  });
 });

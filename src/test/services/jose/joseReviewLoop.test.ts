@@ -38,6 +38,14 @@ describe('planReviewRound', () => {
     expect(change.rewire).toEqual({ from: ['script', 'review_value', 'review_quality'], to: ['script-fix-1', 'review_value-r1', 'review_quality-r1'] });
   });
 
+  it('a revision and its re-reviews keep their content data (phase 6b)', () => {
+    const withContent = plan.map((s) => ({ ...s, contentStep: { projectId: 'p1', step: s.stepId === 'script' ? 'script' : 'review' } as never }));
+    const [change] = planReviewRound(withContent, judged(['review_value', 'review_quality'], ['fix', 'pass'], withContent)).changes;
+    expect(change.add[0].contentStep).toEqual({ projectId: 'p1', step: 'script' });
+    expect(change.add[1].contentStep).toEqual({ projectId: 'p1', step: 'review' });
+    expect(change.add[2].contentStep).toEqual({ projectId: 'p1', step: 'review' });
+  });
+
   it('changes nothing when every review passes', () => {
     expect(planReviewRound(plan, judged(['review_value', 'review_quality'], ['pass', 'pass']))).toEqual({ changes: [], notes: [] });
   });

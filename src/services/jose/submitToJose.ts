@@ -51,6 +51,8 @@ function toAssignments(steps: PlanStep[], planNote: string) {
     ...(step.model ? { model: step.model } : {}),
     ...(step.reviewOf ? { reviewOf: step.reviewOf } : {}),
     ...(step.payload ? { payload: step.payload } : {}),
+    ...(step.contentStep ? { contentStep: step.contentStep } : {}),
+    ...(step.waitFor ? { waitFor: step.waitFor } : {}),
     title: `${agentName(step.agent)} ${step.actionType}`,
     rationale: planNote,
     riskLevel: 'low',
@@ -108,6 +110,8 @@ export async function submitStepsToJose(input: {
   endpoint?: string;
   zeroCostMode?: boolean;
   allowPaidModels?: boolean;
+  /** False when the caller keeps its own record (the content factory, phase 6b). */
+  saveDecisions?: boolean;
   onProgress?: (event: any) => void;
 }): Promise<any> {
   const check = checkPlan(input.steps, { taskTypes: true });
@@ -122,6 +126,7 @@ export async function submitStepsToJose(input: {
     previewMode: false,
     onProgress: input.onProgress,
     allowPaidModels: input.allowPaidModels !== false,
+    saveDecisions: input.saveDecisions !== false,
     assignments: toAssignments(input.steps, planNote),
     requestKind: plan.kind,
     planInfo: { source: 'given', templateId: null, note: input.label },

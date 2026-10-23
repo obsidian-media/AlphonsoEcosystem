@@ -31,6 +31,14 @@ describe('collectJoseNotifications', () => {
     ]]);
   });
 
+  it('a step waiting for you says why (phase 6b)', () => {
+    const [n] = collectJoseNotifications([request({
+      status: 'waiting_approval',
+      steps: [{ stepId: 'scenes', agent: 'miya', actionType: 'creative_scenes', effects: ['write_own_work'], needs: [], instruction: 'Plan the scenes.', waitFor: 'Approve the review in Miya Studio first.', status: 'waiting_approval' }],
+    })], new Set(), ALL_ON);
+    expect(n.text).toBe("Miya's next step waits for you: Approve the review in Miya Studio first.\nFor: Post the launch video");
+  });
+
   it('shows what a paid step should cost', () => {
     const [n] = collectJoseNotifications([request({
       status: 'waiting_approval',
