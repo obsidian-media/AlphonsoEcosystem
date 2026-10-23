@@ -59,7 +59,9 @@ export function effectsNeedingApproval(
 /** Effects of the task types Jose and the content factory use today. */
 export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   research: ['read'],
-  external_publish_handoff: ['publish_or_send'],
+  // Hector checks whether something is ready to publish; he publishes nothing.
+  // It still asks first: its task sets requiresApproval.
+  external_publish_handoff: ['read'],
   creative_package: ['write_own_work'],
   local_operation: ['run'],
   governance_audit: ['read'],

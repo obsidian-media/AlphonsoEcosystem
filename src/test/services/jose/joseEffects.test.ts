@@ -42,7 +42,7 @@ describe('joseEffects', () => {
 
   it('infers effects for today\'s task types, merged types included', () => {
     expect(inferEffects('research')).toEqual(['read']);
-    expect(inferEffects('external_publish_handoff')).toEqual(['publish_or_send']);
+    expect(inferEffects('distribution_execution')).toEqual(['publish_or_send']);
     const merged = inferEffects('local_operation+research');
     expect(merged).toContain('run');
     expect(merged).toContain('read');

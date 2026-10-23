@@ -2,7 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, ChevronDown, ChevronRight, Compass, Download } from 'lucide-react';
 import { HECTOR_PROFILE } from '../../agents/hector/hectorProfile';
-import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../../agents/hector/hectorPermissions';
+import { describeAgentPermissions } from '../../services/jose/agentPermissionTable';
+
+// What Hector may do, from the one enforced permission table (2026-10-23).
+const HECTOR_TABLE = describeAgentPermissions('hector');
 import { HECTOR_SOURCE_TYPES } from '../../agents/hector/hectorResearchSchema';
 import {
   createHectorApprovalPacket,
@@ -219,11 +222,11 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
                 <div className="border-t border-(--border) px-4 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <div className="text-[10px] font-semibold uppercase tracking-widest text-(--success) mb-2">Allowed</div>
-                    <div className="space-y-1">{(HECTOR_ALLOWED_ACTIONS as string[]).map((row) => <div key={row} className="text-[11px] text-(--text-3)">{row.replace(/_/g, ' ')}</div>)}</div>
+                    <div className="space-y-1">{HECTOR_TABLE.allowed.map((row) => <div key={row} className="text-[11px] text-(--text-3)">{row}</div>)}</div>
                   </div>
                   <div>
                     <div className="text-[10px] font-semibold uppercase tracking-widest text-(--error) mb-2">Blocked</div>
-                    <div className="space-y-1">{(HECTOR_BLOCKED_ACTIONS as string[]).map((row) => <div key={row} className="text-[11px] text-(--text-3)">{row.replace(/_/g, ' ')}</div>)}</div>
+                    <div className="space-y-1">{HECTOR_TABLE.blocked.map((row) => <div key={row} className="text-[11px] text-(--text-3)">{row}</div>)}</div>
                   </div>
                 </div>
               )}

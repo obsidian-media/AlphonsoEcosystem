@@ -1,3 +1,6 @@
+import { AGENT_PERMISSION_TABLE, isEffectAllowed } from './jose/agentPermissionTable';
+import { EFFECT_LABELS, type JoseEffect } from './jose/joseEffects';
+
 const AGENTS: Record<string, string> = {
   ALPHONSO: 'alphonso',
   MIYA: 'miya',
@@ -18,53 +21,14 @@ export interface AgentExecutionContract {
   blockedActionPrefixes: string[];
 }
 
-export const AGENT_EXECUTION_CONTRACTS: Record<string, AgentExecutionContract> = {
-  [AGENTS.JOSE]: {
-    role: 'orchestrator',
-    allowedActionPrefixes: ['orchestration_', 'agent_report', 'research_review', 'remote_message_route', 'creative_package_review'],
-    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'purchase']
-  },
-  [AGENTS.ALPHONSO]: {
-    role: 'operator',
-    allowedActionPrefixes: ['local_operation', 'verification_', 'runtime_', 'orchestration_', 'agent_report', 'execute_command', 'filesystem_'],
-    blockedActionPrefixes: ['purchase']
-  },
-  [AGENTS.MIYA]: {
-    role: 'creator',
-    allowedActionPrefixes: ['creative_', 'orchestration_', 'agent_report'],
-    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'purchase']
-  },
-  [AGENTS.HECTOR]: {
-    role: 'research',
-    allowedActionPrefixes: ['research', 'research_', 'source_', 'citation_', 'agent_report', 'remote_message_route'],
-    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
-  },
-  [AGENTS.MARIA]: {
-    role: 'governance_audit',
-    allowedActionPrefixes: ['governance_', 'audit_', 'approval_', 'policy_', 'agent_report'],
-    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
-  },
-  [AGENTS.MARCUS]: {
-    role: 'distribution_execution',
-    allowedActionPrefixes: ['approved_', 'distribution_', 'engagement_', 'performance_', 'agent_report'],
-    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'purchase']
-  },
-  [AGENTS.ECHO]: {
-    role: 'memory_historian',
-    allowedActionPrefixes: ['memory_', 'retention_', 'knowledge_', 'timeline_', 'agent_report'],
-    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
-  },
-  [AGENTS.SENTINEL]: {
-    role: 'security_monitoring',
-    allowedActionPrefixes: ['security_', 'risk_', 'permission_', 'audit_', 'agent_report'],
-    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
-  },
-  [AGENTS.NOVA]: {
-    role: 'opportunity_intelligence',
-    allowedActionPrefixes: ['opportunity_', 'analysis_', 'prioritization_', 'strategy_', 'agent_report'],
-    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
-  }
-};
+// Built from the one permission table (src/services/jose/agentPermissionTable.ts,
+// 2026-10-23); same shape as before so every caller keeps working.
+export const AGENT_EXECUTION_CONTRACTS: Record<string, AgentExecutionContract> = Object.fromEntries(
+  Object.entries(AGENT_PERMISSION_TABLE).map(([agent, p]) => [
+    agent,
+    { role: p.role, allowedActionPrefixes: p.taskTypes, blockedActionPrefixes: p.blockedTaskTypes },
+  ]),
+);
 
 // Permission-tag prefixes each agent's skill packs are allowed to carry.
 // Distinct from allowedActionPrefixes above: those gate orchestration action
@@ -347,7 +311,8 @@ export function validateSkillPackAgainstContract(agentName: string | undefined, 
     if (startsWithAny(value, blockedPrefixes)) {
       return true;
     }
-    if (agentName !== AGENTS.ALPHONSO && startsWithAny(value, UNIVERSAL_BLOCKED_SKILL_PERMISSIONS)) {
+    // Only an agent allowed to run things (the table: Alphonso) may carry these.
+    if (!isEffectAllowed(agentName, 'run') && startsWithAny(value, UNIVERSAL_BLOCKED_SKILL_PERMISSIONS)) {
       return true;
     }
     return !startsWithAny(value, allowedPrefixes);
@@ -367,6 +332,8 @@ export interface AgentContractPacket {
   toAgent?: string;
   actionType?: string;
   commandPreview?: string;
+  /** Declared effects (Jose steps since 2026-10-23); checked against the table instead of guessing from words. */
+  effects?: JoseEffect[];
 }
 
 export interface ContractValidationResult {
@@ -393,8 +360,17 @@ export function validateAgentExecutionContract(packet: AgentContractPacket): Con
   }
 
   const blockedByPrefix = startsWithAny(action, contract.blockedActionPrefixes);
+  if (Array.isArray(packet.effects)) {
+    // A task that declares its effects is checked against the table, not its words.
+    const notAllowed = packet.effects.filter((effect) => !isEffectAllowed(toAgent, effect));
+    if (notAllowed.length > 0) {
+      return { ok: false, reason: `${toAgent} may not: ${notAllowed.map((e) => EFFECT_LABELS[e]).join(', ')}.` };
+    }
+  }
+  // Older tasks without declared effects keep the word check.
   const previewStatesDisabled = /disabled unless separately approved|requires shayan approval before|read-only|draft\/package only/i.test(preview);
-  const blockedByPreview = /execute|delete|remove|format|publish|upload|buy|purchase|post/.test(preview)
+  const blockedByPreview = !Array.isArray(packet.effects)
+    && /execute|delete|remove|format|publish|upload|buy|purchase|post/.test(preview)
     && !previewStatesDisabled
     && toAgent !== AGENTS.ALPHONSO;
   if (blockedByPrefix || blockedByPreview) {
