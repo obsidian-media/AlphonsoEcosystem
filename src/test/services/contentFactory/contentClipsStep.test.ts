@@ -6,19 +6,19 @@ vi.mock('../../../services/videoModelService', () => ({
   listVideoModels: vi.fn(async () => (globalThis as any).__videoModels),
   effectiveVideoModel: (info: any) => info.models.find((m: any) => m.id === info.suggested) || null,
 }));
-vi.mock('../../../services/contentFactory/comfyVideoClip', () => ({ makeComfyClip: vi.fn() }));
+vi.mock('../../../services/contentFactory/comfyVideoClip', () => ({ makeComfyClip: vi.fn(), checkComfyClip: vi.fn() }));
 vi.mock('../../../services/contentFactory/runwayClip', async () => {
   const actual = await vi.importActual<any>('../../../services/contentFactory/runwayClip');
   return { ...actual, runwayClipAvailable: vi.fn(() => (globalThis as any).__runway), makeRunwayClip: vi.fn() };
 });
 
-import { makeComfyClip } from '../../../services/contentFactory/comfyVideoClip';
+import { checkComfyClip, makeComfyClip } from '../../../services/contentFactory/comfyVideoClip';
 import { makeRunwayClip } from '../../../services/contentFactory/runwayClip';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import {
   createProject, emptyBrief, getProject, saveStepVersion, setMainMoment, setVersionOutputField, setVideoSettings,
 } from '../../../services/contentFactory/contentProjectService';
-import { executeMediaStep, MEDIA_ACTIONS, resolveProjectClipEngine } from '../../../services/contentFactory/contentMediaExecutor';
+import { checkPendingClips, executeMediaStep, MEDIA_ACTIONS, resolveProjectClipEngine } from '../../../services/contentFactory/contentMediaExecutor';
 import { CLIPS_WAIT, CLIPS_WAIT_PAID, contentProjectPlanSteps } from '../../../services/contentFactory/contentProjectPlan';
 import { getTemplate } from '../../../services/jose/joseTemplates';
 import { checkPlan } from '../../../services/jose/stepGraph';
@@ -180,5 +180,22 @@ describe('executeMediaStep: AI clips', () => {
     (globalThis as any).__videoModels = notInstalled;
     expect(data(await executeMediaStep(clipsAssignment(getProject(project.id)!, brand))).skipped)
       .toBe('Install a video model in Runtime Hub (ComfyUI), or add a Runway key in Connectors.');
+  });
+});
+
+describe('checkPendingClips', () => {
+  it('a clip ComfyUI finished later is saved into the step; one still running stays pending', async () => {
+    const { brand, project, dir } = setup();
+    vi.mocked(makeComfyClip).mockResolvedValue({ status: 'pending', jobId: 'job-1' });
+    const result = await executeMediaStep(clipsAssignment(project, brand));
+    expect(data(result).clips[0]).toMatchObject({ sceneId: 's1', status: 'pending', jobId: 'job-1', target: `${dir}/clips/v1-s1.mp4` });
+    saveStepVersion(project.id, 'clips', { output: { miya: data(result) }, summary: '', joseCommandId: null });
+    vi.mocked(checkComfyClip).mockResolvedValueOnce({ status: 'done', path: `${dir}/clips/v1-s1.mp4` }).mockResolvedValueOnce({ status: 'pending', jobId: 'job-1' });
+    const clips = await checkPendingClips(project.id);
+    expect(checkComfyClip).toHaveBeenCalledWith('job-1', `${dir}/clips/v1-s1.mp4`, 'D:\\Content');
+    expect(clips[0]).toMatchObject({ sceneId: 's1', status: 'done', path: `${dir}/clips/v1-s1.mp4`, seconds: 3 });
+    expect(clips[1]).toMatchObject({ status: 'pending' });
+    const saved = (getProject(project.id)!.steps.clips.versions[0].output as any).miya.clips;
+    expect(saved[0].status).toBe('done');
   });
 });

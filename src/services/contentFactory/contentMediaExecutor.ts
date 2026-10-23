@@ -11,9 +11,9 @@ import { configuredStockSources, searchStockClips } from '../connectors/stockFoo
 import { getBrand } from './contentBrandService';
 import { alignCaptions, captionsFromLines, toSrt } from './contentCaptions';
 import { isVerticalOnly } from './contentImages';
-import { chosenVersionOf, getProject, getVideoSettings } from './contentProjectService';
+import { chosenVersionOf, getProject, getVideoSettings, setVersionOutputField } from './contentProjectService';
 import { chosenScenes, resolveClipEngine } from './clipEngine';
-import { makeComfyClip } from './comfyVideoClip';
+import { checkComfyClip, makeComfyClip } from './comfyVideoClip';
 import { makeRunwayClip, runwayClipAvailable, runwayClipSeconds } from './runwayClip';
 import { effectiveVideoModel, listVideoModels } from '../videoModelService';
 import { projectRelativeDir, requireOutputRoot } from './contentProjectFiles';
@@ -253,7 +253,17 @@ export async function resolveProjectClipEngine(project: ContentProject): Promise
   return choice.engine === 'local' && model ? { engine: 'local', modelId: model.id, maxSeconds: model.maxSeconds } : choice;
 }
 
-export interface ClipOutcome { sceneId: string; status: 'done' | 'pending' | 'failed' | 'skipped'; path?: string; seconds?: number; costUsd?: number; jobId?: string; reason?: string }
+export interface ClipOutcome {
+  sceneId: string;
+  status: 'done' | 'pending' | 'failed' | 'skipped';
+  path?: string;
+  seconds?: number;
+  costUsd?: number;
+  jobId?: string;
+  /** Where a pending clip will be saved when ComfyUI finishes it. */
+  target?: string;
+  reason?: string;
+}
 
 async function runClips(assignment: MediaAssignment, ctx: Context): Promise<ContentStepResult> {
   const settings = getVideoSettings(ctx.project);
@@ -279,14 +289,14 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
     const prompt = [scene.description, scene.movement && `Camera: ${scene.movement}`, style].filter(Boolean).join('. ');
     if (engine.engine === 'local') {
       const seconds = Math.min(sceneSeconds, engine.maxSeconds || 5);
+      const outRel = `${ctx.dir}/clips/v${ctx.version}-${scene.id}.mp4`;
       const made = await makeComfyClip({
-        root: ctx.root, imageRel: picture, outRel: `${ctx.dir}/clips/v${ctx.version}-${scene.id}.mp4`,
-        prompt, seconds, vertical, modelId: engine.modelId as string,
+        root: ctx.root, imageRel: picture, outRel, prompt, seconds, vertical, modelId: engine.modelId as string,
       });
       clips.push(made.status === 'done'
         ? { sceneId: scene.id, status: 'done', path: made.path, seconds }
         : made.status === 'pending'
-          ? { sceneId: scene.id, status: 'pending', jobId: made.jobId, seconds }
+          ? { sceneId: scene.id, status: 'pending', jobId: made.jobId, seconds, target: outRel }
           : { sceneId: scene.id, status: 'failed', reason: made.error });
     } else {
       const seconds = Math.min(sceneSeconds, runwayClipSeconds(sceneSeconds));
@@ -314,6 +324,24 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
     },
     `AI clips: ${madeCount} of ${clips.length} scenes.`,
   );
+}
+
+/** Looks again for local clips ComfyUI had not finished, and saves them into the chosen AI clips version. */
+export async function checkPendingClips(projectId: string): Promise<ClipOutcome[]> {
+  const project = getProject(projectId);
+  const chosen = project ? chosenVersionOf(project, 'clips') : null;
+  const output = (chosen?.output as { miya?: { clips?: ClipOutcome[] } } | undefined)?.miya;
+  if (!project || !chosen || !output?.clips) return [];
+  const root = requireOutputRoot(contentAppSettings());
+  const clips = [...output.clips];
+  for (const [i, clip] of clips.entries()) {
+    if (clip.status !== 'pending' || !clip.jobId || !clip.target) continue;
+    const result = await checkComfyClip(clip.jobId, clip.target, root);
+    if (result.status === 'done') clips[i] = { sceneId: clip.sceneId, status: 'done', path: result.path, seconds: clip.seconds };
+    else if (result.status === 'failed') clips[i] = { sceneId: clip.sceneId, status: 'failed', reason: result.error };
+  }
+  setVersionOutputField(projectId, 'clips', chosen.version, 'miya', { ...output, clips });
+  return clips;
 }
 
 function hex(colour: string): string {
