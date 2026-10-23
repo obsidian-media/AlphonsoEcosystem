@@ -14,6 +14,24 @@ export const CHAT_ASSISTANT_PROMPT = [
   'Avoid filler, apologies, and open-ended commentary.'
 ].join('\n');
 
+const IMAGE_REQUEST = /(?:generate|create|make|draw|show me|give me|can you make|can you create|can you generate)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:photo|image|picture|illustration|artwork?|render|graphic|visual)/i;
+const QUESTION_OPENER = /^(what\s+is\b|what\s+are\b|what's\b|how\s+does\b|how\s+do\s+i\b|how\s+do\s+you\b|why\s+does\b|why\s+is\b|why\s+do\b|explain\b|describe\b|tell\s+me\s+about\b|tell\s+me\s+what\b|who\s+is\b|where\s+is\b|when\s+did\b|when\s+does\b|can\s+you\s+explain\b|could\s+you\s+explain\b|help\s+me\s+understand\b|what\s+do\s+you\s+think\b|summarize\b|compare\b|difference\s+between\b|give\s+me\s+an\s+overview\b|overview\s+of\b|thoughts\s+on\b|opinion\s+on\b)/i;
+
+function isImageRequest(lower) {
+  return IMAGE_REQUEST.test(lower);
+}
+
+/**
+ * A plain question (ends with "?", or opens like one), but not an image
+ * request phrased as a question. Jose answers these directly without asking
+ * his model whether to plan (joseDecision.ts, 2026-10-23).
+ */
+export function isPlainQuestion(text) {
+  const lower = String(text || '').toLowerCase().trim();
+  if (!lower || isImageRequest(lower)) return false;
+  return lower.endsWith('?') || QUESTION_OPENER.test(lower);
+}
+
 export function shouldRouteThroughJose(text) {
   const lower = String(text || '').toLowerCase().trim();
   if (!lower) return false;
@@ -22,14 +40,10 @@ export function shouldRouteThroughJose(text) {
   if (/^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(lower)) return true;
 
   // Image/creative generation requests always go through Jose even when phrased as questions
-  const isImageRequest = /(?:generate|create|make|draw|show me|give me|can you make|can you create|can you generate)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:photo|image|picture|illustration|artwork?|render|graphic|visual)/i.test(lower);
-  if (isImageRequest) return true;
+  if (isImageRequest(lower)) return true;
 
-  // Pure questions → direct to Ollama regardless of topic
-  if (lower.endsWith('?')) return false;
-
-  // Conversational openers that are information-seeking → Ollama
-  if (/^(what\s+is\b|what\s+are\b|what's\b|how\s+does\b|how\s+do\s+i\b|how\s+do\s+you\b|why\s+does\b|why\s+is\b|why\s+do\b|explain\b|describe\b|tell\s+me\s+about\b|tell\s+me\s+what\b|who\s+is\b|where\s+is\b|when\s+did\b|when\s+does\b|can\s+you\s+explain\b|could\s+you\s+explain\b|help\s+me\s+understand\b|what\s+do\s+you\s+think\b|summarize\b|compare\b|difference\s+between\b|give\s+me\s+an\s+overview\b|overview\s+of\b|thoughts\s+on\b|opinion\s+on\b)/i.test(lower)) return false;
+  // Pure questions and information-seeking openers → direct to Ollama
+  if (isPlainQuestion(lower)) return false;
 
   // Explicit task/action phrases — things the user wants DONE (not just discussed)
   return [
