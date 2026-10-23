@@ -4,7 +4,7 @@
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { runMultiSourceResearch } from '../hectorResearchService';
 import { buildStepPrompt, parseStepAnswer, CONTENT_ACTION_KEYS } from './contentStepPrompts';
-import type { ContentStepPayload } from './contentTypes';
+import { hasOwnKey, type ContentStepPayload } from './contentTypes';
 
 export const UNREADABLE_ANSWER = "The model's answer could not be read. Small models often cannot follow this format: choose a larger model for this agent in Settings → Connectors → Agent Providers, then Retry.";
 
@@ -87,7 +87,7 @@ export async function executeContentStepAssignment(assignment: ContentAssignment
     raw = await ask(`${system}\n\n${prompt}`);
     let data = parseStepAnswer(actionType, raw, { allowedUrls });
     if (data === null) {
-      raw = await ask(`${system}\n\n${prompt}\n\nYour last answer could not be read; return only JSON with keys ${CONTENT_ACTION_KEYS[actionType] || '{}'}.`);
+      raw = await ask(`${system}\n\n${prompt}\n\nYour last answer could not be read; return only JSON with keys ${(hasOwnKey(CONTENT_ACTION_KEYS, actionType) && CONTENT_ACTION_KEYS[actionType]) || '{}'}.`);
       data = parseStepAnswer(actionType, raw, { allowedUrls });
     }
     if (data === null) return failed(assignment, UNREADABLE_ANSWER, raw);
