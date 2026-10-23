@@ -26,6 +26,13 @@ describe('startContentProjectFromChat', () => {
     expect(result.note).toBe('Started the Miya Studio project "Make a YouTube video script about brewing coffee at home" for Coffee Corner. Jose runs it step by step and stops after the review for your approval.');
   });
 
+  it('leaves out an "Ask Jose:" at the start', async () => {
+    const result = await startContentProjectFromChat('Ask Jose: make a YouTube video about tea', { outputFolder: 'D:\Content' });
+    const project = getProject(result.projectId!)!;
+    expect(project.name).toBe('Make a YouTube video about tea');
+    expect(project.brief.idea).toBe('Make a YouTube video about tea');
+  });
+
   it('a long message gets a short project name, cut at a word', async () => {
     const text = 'Make a YouTube video about the history of coffee houses in Vienna and why they matter to writers today';
     const result = await startContentProjectFromChat(text, { outputFolder: 'D:\\Content' });

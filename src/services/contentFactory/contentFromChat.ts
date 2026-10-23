@@ -29,7 +29,9 @@ export async function startContentProjectFromChat(
   } catch {
     return { ok: false, note: NEEDS_OUTPUT_FOLDER };
   }
-  const idea = text.replace(/\s+/g, ' ').trim();
+  // "Ask Jose:" or "/jose" only says who to ask; the idea is the rest, capitalised.
+  const rest = text.replace(/\s+/g, ' ').trim().replace(/^(\/jose\b|ask\s+jose\b|jose\b)\s*:?\s*/i, '');
+  const idea = rest.charAt(0).toUpperCase() + rest.slice(1);
   const brand = ensureFirstBrand();
   const name = projectName(idea);
   const project = createProject(brand.id, name, { ...emptyBrief(), idea });
