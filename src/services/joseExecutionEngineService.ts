@@ -2346,7 +2346,8 @@ export async function resumeJoseRequest(requestId: string, options: any = {}) {
   const result = await runJoseCommandExecutionPipeline({
     resumeRequestId: requestId,
     source: request.source,
-    endpoint: options.endpoint ?? run.endpoint,
+    // The address in Settings when neither the caller nor the saved request names one.
+    endpoint: options.endpoint || run.endpoint || getConfiguredOllamaEndpoint(),
     zeroCostMode: run.zeroCostMode,
     previewMode: run.previewMode ?? true,
     onProgress: options.onProgress,

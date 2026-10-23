@@ -48,7 +48,7 @@ vi.mock('../../../lib/ollama', () => ({
     }
     return { response: JSON.stringify({ summary: 'done', title: 'x', hook: 'x', script: 'x', scenes: [], prompts: [] }) };
   }),
-  getConfiguredOllamaEndpoint: () => 'http://127.0.0.1:11434',
+  getConfiguredOllamaEndpoint: () => globalThis.__joseEndpoint || 'http://127.0.0.1:11434',
   // The per-step model in force, for the escalation tests (phase 4).
   withAgentModel: vi.fn(async (_agent, model, fn) => {
     globalThis.__joseStepModel = model;
@@ -109,6 +109,7 @@ vi.mock('../../../services/codingAgentService', () => ({
 
 import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep } from '../../../services/joseExecutionEngineService';
 import { createAgentPacket } from '../../../services/agentBusService';
+import { fetchOllamaModels } from '../../../lib/ollama';
 import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
@@ -470,6 +471,15 @@ describe('Jose runs plans as step graphs', () => {
       expect(ranSteps()).toEqual(['post', 'check']);
       expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('done');
       expect((await approveRequestStep(`jose-request-${first.commandId}`, 'nope')).ok).toBe(false);
+    });
+
+    it('uses the Ollama address from Settings when the board resumes a request', async () => {
+      const first = await waitingPlan();
+      globalThis.__joseEndpoint = 'http://192.168.1.5:11434';
+      vi.mocked(fetchOllamaModels).mockClear();
+      await approveRequestStep(`jose-request-${first.commandId}`, 'post');
+      globalThis.__joseEndpoint = undefined;
+      expect(vi.mocked(fetchOllamaModels).mock.calls.map((c) => c[0])).toContain('http://192.168.1.5:11434');
     });
 
     it('keeps the old one-packet path for a packet made outside a request', async () => {
