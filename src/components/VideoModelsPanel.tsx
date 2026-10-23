@@ -59,6 +59,11 @@ export function VideoModelsPanel() {
           ? 'No NVIDIA graphics card was found, so AI clips need Runway (Connectors). You can still install a model if your card is not detected.'
           : `Your card: ${Math.round(info.vramGb)} GB of video memory.`}
       </p>
+      <p className="text-(--text-3)">
+        {info.comfyuiDir
+          ? `Installs into: ${info.comfyuiDir}${info.comfyuiDir.includes('\\') ? '\\' : '/'}models`
+          : 'No ComfyUI was found. Install it above, or choose yours in Settings → Runtime → ComfyUI.'}
+      </p>
       <ul className="space-y-2">
         {info.models.map((m) => (
           <li key={m.id} className="space-y-1">

@@ -38,6 +38,7 @@ describe('VideoModelsPanel', () => {
     expect(screen.getByText(/needs 8 GB/)).toBeTruthy();
     expect(screen.getByText(/9\.4 GB download/)).toBeTruthy();
     expect(screen.getByText('Apache License 2.0')).toBeTruthy();
+    expect(screen.getByText('Installs into: D:\\ComfyUI\\models')).toBeTruthy();
   });
 
   it('installs a model, and choosing another one is remembered', async () => {
@@ -63,5 +64,11 @@ describe('VideoModelsPanel', () => {
     vi.mocked(listVideoModels).mockResolvedValue({ ...info, vramGb: null, suggested: null });
     render(<VideoModelsPanel />);
     await waitFor(() => expect(screen.getByText(/No NVIDIA graphics card was found/)).toBeTruthy());
+  });
+
+  it('says when no ComfyUI was found to install into', async () => {
+    vi.mocked(listVideoModels).mockResolvedValue({ ...info, comfyuiDir: null });
+    render(<VideoModelsPanel />);
+    await waitFor(() => expect(screen.getByText('No ComfyUI was found. Install it above, or choose yours in Settings → Runtime → ComfyUI.')).toBeTruthy());
   });
 });
