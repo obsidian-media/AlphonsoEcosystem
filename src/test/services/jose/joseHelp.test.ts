@@ -21,7 +21,9 @@ beforeEach(() => llm.mockReset());
 describe('findHelpRequest', () => {
   it('finds a HELP line in the summary or in an artifact', () => {
     expect(findHelpRequest({ summary: 'Draft done.\nHELP: facts about the launch date' })).toBe('facts about the launch date');
-    expect(findHelpRequest({ summary: 'ok', artifacts: [{ raw: 'text\n  help: the price of the product' }] })).toBe('the price of the product');
+    expect(findHelpRequest({ summary: 'ok', artifacts: [{ raw: 'text\n  HELP: the price of the product' }] })).toBe('the price of the product');
+    // Only the exact "HELP:" agents are told to write; a script line "Help: ..." is content.
+    expect(findHelpRequest({ summary: 'Help: our customers find us faster.' })).toBeNull();
     expect(findHelpRequest({ summary: 'All done, no help needed.' })).toBeNull();
     expect(findHelpRequest(null)).toBeNull();
   });

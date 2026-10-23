@@ -34,7 +34,8 @@ describe('planReviewRound', () => {
     expect(fix).toMatchObject({ agent: 'miya', actionType: 'creative_script', revises: 'script', round: 1, needs: ['script', 'review_value', 'review_quality'] });
     expect(fix.instruction).toMatch(/Write the script\.[\s\S]*Fix what the review found:[\s\S]*review_value found a problem/);
     expect(change.add[1]).toMatchObject({ agent: 'nova', reviewOf: 'script-fix-1', round: 1, needs: ['script-fix-1'] });
-    expect(change.rewire).toEqual({ from: ['review_value', 'review_quality'], to: ['review_value-r1', 'review_quality-r1'] });
+    // Later steps use the revised work and wait for its re-reviews.
+    expect(change.rewire).toEqual({ from: ['script', 'review_value', 'review_quality'], to: ['script-fix-1', 'review_value-r1', 'review_quality-r1'] });
   });
 
   it('changes nothing when every review passes', () => {

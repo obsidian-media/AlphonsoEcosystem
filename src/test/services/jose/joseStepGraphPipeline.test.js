@@ -377,14 +377,20 @@ describe('Jose runs plans as step graphs', () => {
       step('miya', 'creative_script', { stepId: 'script', effects: ['write_own_work'] }),
       step('nova', 'analysis_content_review', { stepId: 'review_value', effects: ['read'], needs: ['script'], reviewOf: 'script' }),
       step('miya', 'creative_campaign', { stepId: 'campaign', effects: ['write_own_work'], needs: ['review_value'] }),
+      step('nova', 'analysis_x', { stepId: 'uses_script', effects: ['read'], needs: ['script', 'campaign'] }),
     ]);
     globalThis.__joseVerdicts = [];
     const request = getJoseRequest(`jose-request-${result.commandId}`);
     const command = listJoseCommands().find((c) => c.id === result.commandId);
     const stepOf = Object.fromEntries(command.assignments.map((a) => [a.packetId, a.stepId]));
     const order = result.executionReceipts.map((r) => stepOf[r.packetId]);
-    expect(order).toEqual(['script', 'review_value', 'script-fix-1', 'review_value-r1', 'campaign']);
-    expect(request.steps.find((s) => s.stepId === 'campaign').needs).toEqual(['review_value-r1']);
+    expect(order[0]).toBe('script');
+    expect(order.indexOf('script-fix-1')).toBeGreaterThan(order.indexOf('review_value'));
+    expect(order.indexOf('review_value-r1')).toBeGreaterThan(order.indexOf('script-fix-1'));
+    expect(order.indexOf('campaign')).toBeGreaterThan(order.indexOf('review_value-r1'));
+    // Steps after the review use the revised work and wait for its re-review.
+    expect(request.steps.find((s) => s.stepId === 'campaign').needs).toEqual(['script-fix-1', 'review_value-r1']);
+    expect(request.steps.find((s) => s.stepId === 'uses_script').needs).toEqual(['campaign', 'script-fix-1', 'review_value-r1']);
     // Each review's verdict is recorded on its step and in the change log.
     expect(request.steps.find((s) => s.stepId === 'review_value').verdict).toBe('fix');
     expect(request.steps.find((s) => s.stepId === 'review_value-r1').verdict).toBe('pass');
@@ -549,5 +555,15 @@ describe('Jose runs plans as step graphs', () => {
       expect(request.steps.map((s) => s.stepId)).toEqual(['a', 'b']);
       expect(request.status).toBe('failed');
     });
+  });
+
+  it('does not have Echo save when the caller says so (the content factory saves its own lessons)', async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Content factory: script', source: 'content-factory', zeroCostMode: true, previewMode: false,
+      assignments: [step('nova', 'analysis_x', { stepId: 'a', effects: ['read'] })],
+      saveDecisions: false,
+    });
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect((request.changeLog || []).map((c) => c.text)).not.toContain('Echo saved what was decided.');
   });
 });

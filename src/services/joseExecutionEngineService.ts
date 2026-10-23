@@ -1396,7 +1396,9 @@ export async function runJoseCommandExecutionPipeline({
   requestKind = 'normal',
   planInfo = null,
   existingRequestId = null,
-  resumeRequestId = null
+  resumeRequestId = null,
+  // Echo saves what a request decided (phase 4); the content factory keeps its own lessons.
+  saveDecisions = true
 }: any) {
   // Resuming a saved request after an approval (phase 4): same loop, the saved
   // command and packets, the steps already done kept as they are.
@@ -2105,7 +2107,7 @@ export async function runJoseCommandExecutionPipeline({
     recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
     // Echo saves what was decided (phase 4). Never changes the outcome.
     const finished = getJoseRequest(joseRequestId);
-    if (finished && (finished.status === 'done' || finished.status === 'waiting_approval')) {
+    if (saveDecisions && finished && (finished.status === 'done' || finished.status === 'waiting_approval')) {
       const outputs = Object.fromEntries(finished.steps
         .filter((s) => s.status === 'done')
         .map((s) => [s.stepId, getStepOutput(command.id, s.stepId) || {}]));

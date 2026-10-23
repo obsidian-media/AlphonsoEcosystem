@@ -17,7 +17,7 @@ export interface Helper {
 }
 
 const SAFE_HELP_EFFECTS: JoseEffect[] = ['read', 'write_own_work'];
-const HELP_LINE = /^\s*HELP:\s*(.+?)\s*$/im;
+const HELP_LINE = /^\s*HELP:\s*(.+?)\s*$/m; // exactly "HELP:", as agents are told; "Help: …" in a script is content
 
 /** The line every planned step is told about (see stepCommandText). */
 export const HELP_INSTRUCTION = 'If you need something another agent could provide (facts, a check, an analysis), end with one line: HELP: <what you need>.';

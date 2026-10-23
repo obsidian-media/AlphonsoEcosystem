@@ -52,7 +52,7 @@ const sentences = (items: string[]) => items.map((f) => (/[.!?]$/.test(f) ? f : 
 /**
  * What a round of reviews changes. For each author with a `fix`: one revision
  * (same agent and task, the findings added) and a re-review per reviewer,
- * later steps moved to wait for the re-reviews. After maxRounds, a note.
+ * later steps moved to the revision and its re-reviews. After maxRounds, a note.
  */
 export function planReviewRound(
   steps: PlanStep[],
@@ -104,7 +104,8 @@ export function planReviewRound(
     }));
     changes.push({
       add: [revision, ...reReviews],
-      rewire: { from: reviewIds, to: reReviews.map((r) => r.stepId) },
+      // Later steps use the revised work and wait for its re-reviews.
+      rewire: { from: [reviewed.stepId, ...reviewIds], to: [revisionId, ...reReviews.map((r) => r.stepId)] },
       reason: `The review found problems, so ${original.agent} revises (round ${round}): ${sentences(findings)}`,
     });
   }
