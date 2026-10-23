@@ -116,7 +116,7 @@ describe('Alphonso desktop: AI clips', () => {
 
   it('runs the AI clips step: a real clip when a video model is installed, else says what to set up', async function () {
     this.timeout(2400000);
-    const info = await invoke('comfyui_video_models', { savedDir: null });
+    const info = (await invoke('comfyui_video_models', { savedDir: null })).value || { models: [] };
     const installed = (info.models || []).some((m) => m.installed);
     const run = await $('//section[@aria-label="AI clips"]//button[normalize-space(.)="Run" or normalize-space(.)="Run again" or normalize-space(.)="Retry"]');
     await run.waitForClickable({ timeout: 30000 });
@@ -146,6 +146,9 @@ describe('Alphonso desktop: AI clips', () => {
 
   it("shows Runtime Hub's video models with the card's memory", async function () {
     this.timeout(120000);
+    // The panel sits on the ComfyUI card once a ComfyUI is installed or found; CI has none.
+    const info = (await invoke('comfyui_video_models', { savedDir: null })).value || {};
+    if (!info.comfyuiDir) this.skip();
     await openPage('system', 'runtimes');
     await browser.waitUntil(async () => {
       const text = await browser.execute(() => document.querySelector('section[aria-label="Video models"]')?.innerText || '');

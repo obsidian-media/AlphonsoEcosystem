@@ -128,11 +128,14 @@ describe('Alphonso desktop: Miya makes the finished video', () => {
 
   it('Voice, Music and Stock clips say what they need when it is not installed or set', async function () {
     this.timeout(600000);
-    const status = await invoke('media_tools_status');
+    // The helper answers { ok, value }.
+    const status = (await invoke('media_tools_status')).value || {};
     await runStep('Voice-over');
     const voice = await waitForStep(projectId, 'voice', ['done', 'failed'], 300000);
+    // Say everything about the step when this fails: CI is the only place some of these runs happen.
+    const seen = JSON.stringify({ status: voice.status, error: voice.error, progress: (voice.progress || []).slice(-5), versions: (voice.versions || []).length, kokoro: status.kokoro });
     if (status.kokoro) expect(voice.status).toBe('done');
-    else expect(voice.error).toContain('Install Kokoro in Runtime Hub.');
+    else expect(`${voice.error} ${seen}`).toContain('Install Kokoro in Runtime Hub.');
 
     await runStep('Stock clips');
     const broll = await waitForStep(projectId, 'broll', ['done', 'failed'], 300000);
