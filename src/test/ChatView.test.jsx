@@ -821,6 +821,25 @@ describe('ChatView: everything goes to Jose', () => {
     expect(await screen.findByText(/The plan ran\./)).toBeTruthy();
   });
 
+  // Phase 4: the board link shows while a request runs.
+  it('shows "Open on the board" while a request runs', async () => {
+    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
+    let finish;
+    submitToJose.mockImplementationOnce(({ onProgress }) => {
+      onProgress?.({ stage: 'request_started', requestId: 'jose-request-live' });
+      onProgress?.({ stage: 'wave_start', wave: 0, agents: ['hector'], steps: ['facts'] });
+      return new Promise((resolve) => { finish = resolve; });
+    });
+    const onOpenJoseBoard = vi.fn();
+    render(<ChatView {...makeProps({ onOpenJoseBoard })} />);
+    send('Research the launch');
+    const link = await screen.findByRole('button', { name: 'Open on the board' });
+    fireEvent.click(link);
+    expect(onOpenJoseBoard).toHaveBeenCalledWith('jose-request-live');
+    finish({ ok: true, commandId: null, executionReceipts: [], plan: null, planNote: 'Done.' });
+    await waitFor(() => expect(screen.queryByText('Wave 1: hector')).toBeNull());
+  });
+
   it('passes the plan-first setting to Jose', async () => {
     decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
     render(<ChatView {...makeProps({ settings: { selectedModel: 'llama3.2:3b', colorScheme: 'dark', showPlanFirst: 'always' } })} />);

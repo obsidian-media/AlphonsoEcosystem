@@ -308,6 +308,8 @@ export function ChatView({
   const [pipelineCommandText, setPipelineCommandText] = useState('');
   const [pipelineStateChatId, setPipelineStateChatId] = useState<string | null>(null);
   const [liveProgress, setLiveProgress] = useState(null);
+  // The running request, for "Open on the board" while it runs (phase 4).
+  const [liveRequestId, setLiveRequestId] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState('');
   const [streamingTokens, setStreamingTokens] = useState(0);
   const [streamingStartTime, setStreamingStartTime] = useState(null);
@@ -391,6 +393,7 @@ export function ChatView({
       setExecutionReceipts([]);
       setPipelineStateChatId(null);
       setLiveProgress(null);
+      setLiveRequestId(null);
       const pipelineKey = getJosePipelineStorageKey(activeChatId);
       if (pipelineKey) {
         try { localStorage.removeItem(pipelineKey); } catch { /* storage */ }
@@ -659,6 +662,7 @@ export function ChatView({
       setStreamingStartTime(Date.now());
       streamControllerRef.current = new AbortController();
       const onProgress = (progress) => {
+          if (progress?.stage === 'request_started' && progress.requestId) setLiveRequestId(progress.requestId);
           setLiveProgress(progress);
           onJoseExecutionState?.(
             progress.stage === 'executed' ? 'task_complete'
@@ -705,6 +709,7 @@ export function ChatView({
       setStreamingStartTime(null);
 
       setLiveProgress(null);
+      setLiveRequestId(null);
 
       // A bigger request shows its plan first (phase 3): a card to run, edit or cancel it.
       if (result?.waitingForPlan) {
@@ -1051,6 +1056,7 @@ export function ChatView({
     setPipelineCommandText('');
     setPipelineStateChatId(null);
     setLiveProgress(null);
+    setLiveRequestId(null);
     localStorage.removeItem(`alphonso_messages_${activeChatId}`);
     const pipelineKey = getJosePipelineStorageKey(activeChatId);
     if (pipelineKey) {
@@ -1540,7 +1546,7 @@ export function ChatView({
                       const execResult = await executeApprovedPackets(approvedIds, {
                         endpoint: settings?.endpoint as string,
                         conversationHistory: messages.slice(-20).filter((m) => !m.isError && m.role && m.content).map((m) => ({ role: m.role, content: m.content })),
-                        onProgress: (progress) => { setLiveProgress(progress); },
+                        onProgress: (progress) => { if (progress?.stage === 'request_started' && progress.requestId) setLiveRequestId(progress.requestId); setLiveProgress(progress); },
                         onToken: (tokenData) => {
                           if (tokenData?.token) {
                             setMessages((current) => {
@@ -1561,6 +1567,7 @@ export function ChatView({
                     } finally {
                       setIsGenerating(false);
                       setLiveProgress(null);
+                      setLiveRequestId(null);
                       onTaskComplete();
                     }
                   }}
@@ -1613,6 +1620,15 @@ export function ChatView({
                   {liveProgress.stage === 'approval_required' && `${liveProgress.assignment?.agent || 'Agent'} needs approval`}
                   {!['wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
                 </span>
+                {liveRequestId && onOpenJoseBoard && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenJoseBoard(liveRequestId)}
+                    className="ml-auto text-xs font-medium text-(--accent) hover:underline"
+                  >
+                    Open on the board
+                  </button>
+                )}
               </div>
             </div>
           </div>

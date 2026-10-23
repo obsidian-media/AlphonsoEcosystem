@@ -1483,6 +1483,8 @@ export async function runJoseCommandExecutionPipeline({
   } catch {
     joseRequestId = null;
   }
+  // Chat shows "Open on the board" from here on (phase 4).
+  if (joseRequestId) onProgress?.({ stage: 'request_started', requestId: joseRequestId, commandId: command.id });
 
   // Loop-guard + budget: hard ceiling on a single pipeline run so a malformed
   // command graph or a stuck agent can never spin unbounded iterations or

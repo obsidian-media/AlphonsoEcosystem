@@ -461,4 +461,17 @@ describe('Jose runs plans as step graphs', () => {
       expect(ranSteps()).toEqual(['solo']);
     });
   });
+
+  it('reports the request id before the first step runs', async () => {
+    const events = [];
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Step graph test', source: 'test', zeroCostMode: true, previewMode: false,
+      assignments: [step('nova', 'analysis_x', { stepId: 'a', effects: ['read'] })],
+      onProgress: (event) => events.push(event),
+    });
+    const stages = events.map((e) => e.stage);
+    expect(stages.indexOf('request_started')).toBeGreaterThanOrEqual(0);
+    expect(stages.indexOf('request_started')).toBeLessThan(stages.indexOf('wave_start'));
+    expect(events.find((e) => e.stage === 'request_started').requestId).toBe(`jose-request-${result.commandId}`);
+  });
 });
