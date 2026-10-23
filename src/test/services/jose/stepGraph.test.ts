@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { JOSE_LIMITS, checkPlan, buildStepWaves, legacyNeeds, type PlanStep } from '../../../services/jose/stepGraph';
+import { JOSE_LIMITS, checkPlan, buildStepWaves, legacyNeeds, isPaidModelId, type PlanStep } from '../../../services/jose/stepGraph';
 
 const step = (stepId: string, agent: string, actionType: string, needs: string[] = [], effects: PlanStep['effects'] = ['read']): PlanStep =>
   ({ stepId, agent, actionType, needs, effects });
@@ -77,5 +77,12 @@ describe('stepGraph', () => {
     const paid: PlanStep = { ...step('a', 'miya', 'creative_script', [], ['write_own_work', 'spend']), model: 'claude:claude-haiku-5-5' };
     expect(checkPlan([paid]).ok).toBe(true);
     expect(checkPlan([{ ...paid, model: 'qwen2.5:7b' }]).problems.join(' ')).toMatch(/Miya may not spend money/);
+  });
+
+  it('knows a paid model id', () => {
+    expect(isPaidModelId('claude:claude-haiku-5-5')).toBe(true);
+    expect(isPaidModelId('chatgpt:')).toBe(true);
+    expect(isPaidModelId('qwen2.5:7b')).toBe(false);
+    expect(isPaidModelId(undefined)).toBe(false);
   });
 });

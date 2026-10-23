@@ -3,11 +3,11 @@
 // steps to wait for them. The runner checks every change with checkPlan()
 // and the limits before applying it, and logs the reason.
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.6–2.8
-import type { PlanStep } from './stepGraph';
+import { isPaidModelId, type PlanStep } from './stepGraph';
+import { agentName } from './agentNames';
 import { judgeReview, planReviewRound } from './joseReviewLoop';
 import { findHelpRequest, chooseHelper, planHelp } from './joseHelp';
 import { paidModelAvailable, paidModelId, estimateCostUsd, PAID_MAX_OUTPUT_TOKENS, PAID_PROMPT_ALLOWANCE_CHARS } from './joseSpend';
-const isPaidModel = (model?: string) => typeof model === 'string' && /^(claude|chatgpt):/.test(model);
 
 /**
  * A step that still failed after the local retries and the larger local
@@ -15,7 +15,7 @@ const isPaidModel = (model?: string) => typeof model === 'string' && /^(claude|c
  */
 function planPaidRetry(steps: PlanStep[], step: PlanStep, requestText: string): PlanChange | null {
   const paidId = `${step.stepId}-paid`;
-  if (step.replaces || isPaidModel(step.model) || steps.some((s) => s.stepId === paidId)) return null;
+  if (step.replaces || isPaidModelId(step.model) || steps.some((s) => s.stepId === paidId)) return null;
   if (!paidModelAvailable().ok) return null;
   const model = paidModelId();
   if (!model) return null;
@@ -51,10 +51,6 @@ export interface PlanChange {
   verdict?: { stepId: string; verdict: 'pass' | 'fix' };
 }
 
-const AGENT_NAMES: Record<string, string> = {
-  alphonso: 'Alphonso', jose: 'Jose', miya: 'Miya', hector: 'Hector', maria: 'Maria',
-  marcus: 'Marcus', echo: 'Echo', sentinel: 'Sentinel', nova: 'Nova',
-};
 
 export interface AdaptContext {
   steps: PlanStep[];
@@ -85,7 +81,7 @@ export async function adaptPlan(ctx: AdaptContext): Promise<PlanChange[]> {
     for (const review of reviews) {
       const judgement = await judgeReview(review, ctx.done[review.stepId]?.output);
       if (judgement.note) changes.push(note(judgement.note));
-      const who = AGENT_NAMES[review.agent] || review.agent;
+      const who = agentName(review.agent);
       changes.push({
         add: [],
         reason: `${who}'s review: ${judgement.verdict === 'fix' ? 'asked for changes' : 'no changes needed'}.`,

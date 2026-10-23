@@ -74,6 +74,11 @@ function findCycle(steps: PlanStep[]): string[] {
  * time, as for the rule-based splitter's plans, some of whose task types the
  * contracts never allowed (recorded in DEFERRED_WORK, 2026-10-23).
  */
+/** A paid model chosen for a step: "claude:<model>" or "chatgpt:<model>" (phase 4). */
+export function isPaidModelId(model?: unknown): boolean {
+  return typeof model === 'string' && /^(claude|chatgpt):/.test(model);
+}
+
 export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean } = {}): { ok: boolean; problems: string[] } {
   const checkTaskTypes = options.taskTypes !== false;
   const problems: string[] = [];
@@ -96,7 +101,7 @@ export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean } = 
       if (effect === 'run' && s.agent !== 'alphonso') problems.push(`Step "${s.stepId}": only Alphonso may run code and commands.`);
       else if (effect === 'publish_or_send' && s.agent !== 'marcus') problems.push(`Step "${s.stepId}": only Marcus may publish or send anything outside.`);
       // A paid-model step's spending is the model call Jose arranges; it always asks (phase 4).
-      else if (effect === 'spend' && typeof s.model === 'string' && /^(claude|chatgpt):/.test(s.model)) continue;
+      else if (effect === 'spend' && isPaidModelId(s.model)) continue;
       else if (!isEffectAllowed(s.agent, effect)) problems.push(`Step "${s.stepId}": ${name} may not ${EFFECT_LABELS[effect].toLowerCase()}.`);
     }
     for (const need of s.needs) {

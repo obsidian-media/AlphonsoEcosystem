@@ -7,12 +7,8 @@ import { AGENT_PERMISSION_TABLE } from '../../services/jose/agentPermissionTable
 import { addStep, changeStepAgent, removeStep, setStepInstruction, setStepNeeds } from '../../services/jose/josePlanEdits';
 import { replacePlanSteps, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { checkPlan, type PlanStep } from '../../services/jose/stepGraph';
+import { agentName } from '../../services/jose/agentNames';
 
-const AGENT_NAMES: Record<string, string> = {
-  alphonso: 'Alphonso', jose: 'Jose', miya: 'Miya', hector: 'Hector', maria: 'Maria',
-  marcus: 'Marcus', echo: 'Echo', sentinel: 'Sentinel', nova: 'Nova',
-};
-const agentName = (agent: string) => AGENT_NAMES[agent] || agent;
 const AGENTS = Object.keys(AGENT_PERMISSION_TABLE);
 
 const toPlanSteps = (request: JoseRequest): PlanStep[] =>

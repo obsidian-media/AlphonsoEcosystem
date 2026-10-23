@@ -5,15 +5,12 @@ import React from 'react';
 import { Badge } from '../ui';
 import { layoutPlan, DEFAULT_BOX } from '../../services/jose/josePlanLayout';
 import type { PlanStep } from '../../services/jose/stepGraph';
+import { agentName } from '../../services/jose/agentNames';
 
 type MapStep = PlanStep & { status?: string; startedAtMs?: number; endedAtMs?: number; verdict?: 'pass' | 'fix' };
 
 const VERDICT_LABELS = { pass: 'Passed', fix: 'Asked for changes' };
 
-const AGENT_NAMES: Record<string, string> = {
-  alphonso: 'Alphonso', jose: 'Jose', miya: 'Miya', hector: 'Hector', maria: 'Maria',
-  marcus: 'Marcus', echo: 'Echo', sentinel: 'Sentinel', nova: 'Nova',
-};
 
 const STATUS_LABELS: Record<string, string> = {
   waiting: 'Waiting', running: 'Working', done: 'Done', failed: 'Failed',
@@ -41,7 +38,7 @@ export function JosePlanMap({ steps, compact = false, selectedStepId, onSelectSt
   const layout = layoutPlan(steps, box);
   const byId = new Map(steps.map((s) => [s.stepId, s]));
   const position = new Map(layout.nodes.map((n) => [n.stepId, n]));
-  const summary = steps.map((s) => `${AGENT_NAMES[s.agent] || s.agent}: ${STATUS_LABELS[s.status || 'waiting'] || s.status}`).join(', ');
+  const summary = steps.map((s) => `${agentName(s.agent)}: ${STATUS_LABELS[s.status || 'waiting'] || s.status}`).join(', ');
 
   return (
     <div className="overflow-auto max-w-full rounded-lg bg-(--surface-2) p-3" role="img" aria-label={`Plan with ${steps.length} steps. ${summary}`}>
@@ -91,7 +88,7 @@ export function JosePlanMap({ steps, compact = false, selectedStepId, onSelectSt
               style={{ left: node.x, top: node.y, width: box.width, height: box.height, borderColor: `var(--agent-${step.agent}, var(--border))` }}
             >
               <div className="flex items-center justify-between gap-1 text-[11px] font-semibold text-(--text-1)">
-                <span>{AGENT_NAMES[step.agent] || step.agent}{step.round ? <span className="ml-1 font-normal text-(--text-3)">Round {step.round}</span> : null}</span>
+                <span>{agentName(step.agent)}{step.round ? <span className="ml-1 font-normal text-(--text-3)">Round {step.round}</span> : null}</span>
                 {status === 'waiting_approval'
                   ? <Badge variant="warning" className="px-1! py-0! text-[9px]!">Waiting for you</Badge>
                   : <span className="text-[9px] font-normal text-(--text-3)">{STATUS_LABELS[status] || status}{time ? ` · ${time}` : ''}</span>}

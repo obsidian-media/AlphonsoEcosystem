@@ -8,13 +8,10 @@ import { describePlanSource, planJoseRequest, type JosePlan } from './josePlanne
 import { needsPlanApproval, type PlanFirstSetting } from './josePlanApproval';
 import { cancelJoseRequest, claimPlanForRun, createWaitingPlanRequest, returnPlanToWaiting, type JoseRequest } from './joseRequestStore';
 import { checkPlan, type PlanStep } from './stepGraph';
+import { agentName } from './agentNames';
 
 export const CONTENT_VIDEO_STUDIO_NOTE = 'For the full project with pictures and a saved folder, open Miya Studio.';
 
-const AGENT_NAMES: Record<string, string> = {
-  alphonso: 'Alphonso', jose: 'Jose', miya: 'Miya', hector: 'Hector', maria: 'Maria',
-  marcus: 'Marcus', echo: 'Echo', sentinel: 'Sentinel', nova: 'Nova',
-};
 
 export interface SubmitToJoseInput {
   text: string;
@@ -51,7 +48,7 @@ function toAssignments(steps: PlanStep[], planNote: string) {
     instruction: step.instruction || '',
     ...(step.model ? { model: step.model } : {}),
     ...(step.reviewOf ? { reviewOf: step.reviewOf } : {}),
-    title: `${AGENT_NAMES[step.agent] || step.agent} ${step.actionType}`,
+    title: `${agentName(step.agent)} ${step.actionType}`,
     rationale: planNote,
     riskLevel: 'low',
     requiresApproval: false,
