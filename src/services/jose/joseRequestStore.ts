@@ -24,6 +24,8 @@ export interface JoseRequest {
   kind: 'normal' | 'project';
   status: JoseRequestStatus;
   steps: JoseRequestStep[];
+  /** How the plan was made (phase 2): fresh, from a template (as is or adapted), or by the rules. */
+  plan?: { source: string; templateId: string | null; note: string };
   createdAtMs: number;
   updatedAtMs: number;
 }
@@ -51,7 +53,7 @@ function update(id: string, change: (request: JoseRequest) => void): JoseRequest
   return request;
 }
 
-export function createJoseRequest(input: { commandId: string; source: string; text: string; kind: 'normal' | 'project'; steps: PlanStep[] }): JoseRequest {
+export function createJoseRequest(input: { commandId: string; source: string; text: string; kind: 'normal' | 'project'; steps: PlanStep[]; plan?: JoseRequest['plan'] }): JoseRequest {
   const now = Date.now();
   const request: JoseRequest = {
     id: `jose-request-${input.commandId}`,
@@ -61,6 +63,7 @@ export function createJoseRequest(input: { commandId: string; source: string; te
     kind: input.kind,
     status: 'running',
     steps: input.steps.map((s) => ({ ...s, status: 'waiting' })),
+    ...(input.plan ? { plan: input.plan } : {}),
     createdAtMs: now,
     updatedAtMs: now,
   };

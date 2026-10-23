@@ -38,7 +38,6 @@ import { runMariaGovernanceAudit } from './mariaAuditService';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
 import { runVisualWorkflow } from './workflowExecutionService';
-import { isCodingRequest, runCodingAgent } from './codingAgentService';
 import { runEchoPreservation } from './echoMemoryService';
 import { runMarcusDistribution } from './marcusExecutionService';
 import { runSentinelSecurityScan } from './sentinelSecurityService';
@@ -1212,7 +1211,23 @@ async function executeBoardroomAdvance(assignment: any, commandText: any, option
   }
 }
 
-async function executeAssignment(packet: any, assignment: any, commandText: any, options: any = {}) {
+/**
+ * The text a step's executor works from (phase 2, 2026-10-23): a planned
+ * step's instruction followed by the request. Alphonso always gets only the
+ * user's own words, because he reads build, test, install and run intents
+ * from them; a model-written instruction must never count as one.
+ */
+export function stepCommandText(assignment: any, commandText: string): string {
+  const instruction = typeof assignment?.instruction === 'string' ? assignment.instruction.trim() : '';
+  if (!instruction || assignment?.agent === AGENTS.ALPHONSO) return commandText;
+  return `${instruction}\n\nThe request: ${commandText}`;
+}
+
+async function executeAssignment(packet: any, assignment: any, requestText: any, options: any = {}) {
+  const commandText = stepCommandText(assignment, requestText);
+  if (assignment?.agent === AGENTS.ALPHONSO && assignment?.instruction) {
+    options = { ...options, stepInstruction: assignment.instruction };
+  }
   appendAgentActivity({ agent: assignment?.agent || 'jose', action: 'execute', detail: (commandText || '').slice(0, 80) });
   if (assignment?.contentStep) {
     return executeContentStepAssignment(assignment, options);
@@ -1262,22 +1277,13 @@ async function checkOllamaAvailable(endpoint: any) {
   }
 }
 
-export async function runJoseCommandExecutionPipeline({
-  commandText,
-  source = 'user',
-  endpoint,
-  zeroCostMode,
-  previewMode = true,
-  onProgress,
-  onToken,
-  conversationHistory,
-  assignments = undefined
-}: any) {
-  // Explicit assignments (the content factory) skip the shortcuts below: the
-  // caller already decided which agent does what.
-  const explicitAssignments = Array.isArray(assignments) && assignments.length > 0;
-  // Creative intent routing — detect image/video/audio and dispatch to running Runtime Hub tool
-  const creativeIntent = explicitAssignments ? null : detectCreativeIntent(commandText);
+/**
+ * The pipeline's shortcuts: an image request goes straight to ComfyUI, and a
+ * named workflow starts. Returns the result, or null when none applies.
+ * submitToJose() runs these before planning (phase 2, 2026-10-23).
+ */
+export async function runPipelineShortcuts({ commandText, onProgress }: { commandText: string; onProgress?: (event: any) => void }): Promise<any | null> {
+  const creativeIntent = detectCreativeIntent(commandText);
   if (creativeIntent) {
     const routing = await routeToCreativeTool(creativeIntent);
     if (routing && !routing.ok) {
@@ -1297,7 +1303,7 @@ export async function runJoseCommandExecutionPipeline({
   }
 
   // Workflow chat invocation — match "run/start/execute workflow [name]" or just command containing workflow name
-  const workflows = explicitAssignments ? [] : listWorkflows();
+  const workflows = listWorkflows();
   const lowerCommand = commandText.toLowerCase();
   const hasWorkflowKeyword = /\b(run|start|execute|trigger)\b.{0,20}\bworkflow\b/i.test(commandText);
   const workflowMatch = workflows.find(w =>
@@ -1311,13 +1317,32 @@ export async function runJoseCommandExecutionPipeline({
   }
 
   // Coding agent — only route if Claude connector is configured; return early with response
-  if (!explicitAssignments && isCodingRequest(commandText) && !creativeIntent) {
-    const codingResult = await runCodingAgent(commandText);
-    if (codingResult?.ok) {
-      onProgress?.({ stage: 'coding_agent_response', content: codingResult.content });
-      return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, codingResult, command: null };
-    }
-    // If coding agent fails (e.g. Claude not configured), fall through to normal pipeline
+  return null;
+}
+
+export async function runJoseCommandExecutionPipeline({
+  commandText,
+  source = 'user',
+  endpoint,
+  zeroCostMode,
+  previewMode = true,
+  onProgress,
+  onToken,
+  conversationHistory,
+  assignments = undefined,
+  requestKind = 'normal',
+  planInfo = null
+}: any) {
+  // Explicit assignments (the content factory) skip the shortcuts below: the
+  // caller already decided which agent does what.
+  const explicitAssignments = Array.isArray(assignments) && assignments.length > 0;
+  // Creative intent routing — detect image/video/audio and dispatch to running Runtime Hub tool
+  // Shortcuts (an image request, a named workflow) answer without a plan. The
+  // Claude coding shortcut was removed (owner, 2026-10-23): coding requests
+  // are planned like everything else.
+  if (!explicitAssignments) {
+    const shortcut = await runPipelineShortcuts({ commandText, onProgress });
+    if (shortcut) return shortcut;
   }
 
   const memoryItems = listMemoryItems();
@@ -1377,7 +1402,7 @@ export async function runJoseCommandExecutionPipeline({
   const assignmentMap: Record<string, any> = Object.fromEntries(planAssignments.map((a) => [a.stepId, a]));
   let joseRequestId: string | null = null;
   try {
-    joseRequestId = createJoseRequest({ commandId: command.id, source, text: commandText, kind: 'normal', steps: planSteps }).id;
+    joseRequestId = createJoseRequest({ commandId: command.id, source, text: commandText, kind: requestKind === 'project' ? 'project' : 'normal', steps: planSteps, ...(planInfo ? { plan: planInfo } : {}) }).id;
   } catch {
     joseRequestId = null;
   }
@@ -1386,6 +1411,8 @@ export async function runJoseCommandExecutionPipeline({
   // command graph or a stuck agent can never spin unbounded iterations or
   // wall-clock time. See ALPHONSOTOTHEMOON.md §3.1.
   const pipelineStartMs = timestampMs();
+  // A project-type request (Jose labels it in the plan) gets the longer limit.
+  const maxDurationMs = requestKind === 'project' ? JOSE_LIMITS.projectMs : PIPELINE_MAX_DURATION_MS;
   let processedAssignmentCount = 0;
   let budgetExceeded = false;
 
@@ -1394,7 +1421,7 @@ export async function runJoseCommandExecutionPipeline({
     const waveAssignments: any[] = wave.map((stepId) => assignmentMap[stepId]).filter(Boolean);
     onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: waveAssignments.map((a) => a.agent), steps: wave, commandId: command.id });
     for (const assignment of waveAssignments) {
-      if (processedAssignmentCount >= PIPELINE_MAX_ASSIGNMENTS || (timestampMs() - pipelineStartMs) >= PIPELINE_MAX_DURATION_MS) {
+      if (processedAssignmentCount >= PIPELINE_MAX_ASSIGNMENTS || (timestampMs() - pipelineStartMs) >= maxDurationMs) {
         budgetExceeded = true;
         break waveLoop;
       }
@@ -1870,7 +1897,7 @@ export async function runJoseCommandExecutionPipeline({
         processedAssignmentCount,
         elapsedMs: timestampMs() - pipelineStartMs,
         maxAssignments: PIPELINE_MAX_ASSIGNMENTS,
-        maxDurationMs: PIPELINE_MAX_DURATION_MS
+        maxDurationMs
       },
       confidence: TRUST_STATES.FAILED,
       verificationState: TRUST_STATES.FAILED
