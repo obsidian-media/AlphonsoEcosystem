@@ -4,10 +4,10 @@ import { checkPlan } from '../../../services/jose/stepGraph';
 import { STEP_AGENTS } from '../../../services/contentFactory/contentStepAgents';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief } from '../../../services/contentFactory/contentProjectService';
-import { CONTENT_TEMPLATE_STEPS, REVIEW_WAIT, contentProjectPlanSteps } from '../../../services/contentFactory/contentProjectPlan';
+import { CLIPS_WAIT, CONTENT_TEMPLATE_STEPS, REVIEW_WAIT, contentProjectPlanSteps } from '../../../services/contentFactory/contentProjectPlan';
 
-// Phase 2a added voice, music, broll and assemble: 15 steps.
-const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'assemble', 'campaign', 'timing', 'quality', 'security'];
+// Phase 2a added voice, music, broll and assemble; phase 2b clips: 16 steps.
+const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'campaign', 'timing', 'quality', 'security'];
 
 function newProject() {
   const brand = saveBrand({ name: 'My brand' });
@@ -42,7 +42,8 @@ describe('contentProjectPlanSteps', () => {
     expect(steps.map((s) => s.stepId)).toEqual(IDS);
     expect(steps.every((s) => s.contentStep?.projectId === project.id)).toBe(true);
     expect(steps.find((s) => s.stepId === 'research_market')!.contentStep!.step).toBe('research');
-    expect(steps.filter((s) => s.waitFor).map((s) => [s.stepId, s.waitFor])).toEqual([['scenes', REVIEW_WAIT]]);
+    // AI clips are on by default (main moments), so the clips step waits too (phase 2b).
+    expect(steps.filter((s) => s.waitFor).map((s) => [s.stepId, s.waitFor])).toEqual([['scenes', REVIEW_WAIT], ['clips', CLIPS_WAIT]]);
     expect(REVIEW_WAIT).toBe('Approve the review in Miya Studio first.');
     expect(checkPlan(steps, { taskTypes: true }).problems).toEqual([]);
   });
@@ -50,7 +51,7 @@ describe('contentProjectPlanSteps', () => {
   it('from a later step the plan starts there', () => {
     const { brand, project } = newProject();
     const steps = contentProjectPlanSteps(project, brand, 'scenes');
-    expect(steps.map((s) => s.stepId)).toEqual(['scenes', 'thumbnail', 'voice', 'music', 'broll', 'assemble', 'campaign', 'timing', 'quality', 'security']);
+    expect(steps.map((s) => s.stepId)).toEqual(['scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'campaign', 'timing', 'quality', 'security']);
     expect(steps[0]).toMatchObject({ needs: [] });
     expect(steps[0].waitFor).toBeUndefined();
     expect(checkPlan(steps, { taskTypes: true }).problems).toEqual([]);
@@ -60,11 +61,11 @@ describe('contentProjectPlanSteps', () => {
     const { brand, project } = newProject();
     const steps = contentProjectPlanSteps(project, brand);
     const byId = Object.fromEntries(steps.map((s) => [s.stepId, s]));
-    expect(byId.assemble).toMatchObject({ agent: 'alphonso', actionType: 'runtime_assemble_video', needs: ['voice', 'music', 'broll'] });
+    expect(byId.assemble).toMatchObject({ agent: 'alphonso', actionType: 'runtime_assemble_video', needs: ['voice', 'music', 'broll', 'clips'] });
     expect(byId.broll).toMatchObject({ agent: 'hector', actionType: 'research_broll' });
     expect(byId.campaign.needs).toEqual(['assemble']);
     expect(byId.assemble.effects).toEqual(['write_own_work']);
-    expect(steps.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes']);
+    expect(steps.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes', 'clips']);
   });
 
   it("a step's plan alone drops links to steps that are not in it", () => {

@@ -39,8 +39,18 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-23] **Miya content factory phase 2b (AI video clips): what it leaves open.**
+  - Two local video models (LTX-Video 2B, Wan 2.2 TI2V 5B). Wan 2.2 14B was ruled out: its image-to-video model is two 14 GB halves, beyond 16 GB cards on ComfyUI's own nodes. Revisit when a smaller build runs on core nodes.
+  - LTX-Video's license is free only for companies under $10M yearly revenue (Runtime Hub says so); Wan 2.2 is Apache-2.0.
+  - Local clips are slow on small cards: a real 3 s LTX-Video clip took about 14 minutes on the owner's 6 GB card (2026-10-23; the model is partly offloaded). The wait is 30 minutes; a clip still running after that is kept and picked up with Check again. Worth offering a lower resolution or shorter clips for small cards.
+  - The real-app AI clips test with a real clip could not run on the dev machine after its Windows Code Integrity policy began refusing unsigned builds (2026-10-23); the same workflow was proven against the real ComfyUI directly (the app's `buildVideoWorkflow()`, a 3 s clip of the right length). CI runs the desktop spec without a video model.
+  - A Runway clip that times out (30 minutes) is not picked up later: Runway's backend reports it as failed without its task id. It says Runway may still charge for it.
+  - Runway clips keep Runway's own file names in `<project>/clips/`.
+  - Runway was checked with unit tests only (no Runway key on the dev machine); the live check runs when the owner gives a key and the price.
+  - **Status:** OPEN.
+
 - [2026-10-23] **Miya content factory phase 2a (the finished video file): what it leaves open.**
-  - Phase 2b: AI video clips per scene (ComfyUI or Runway, owner's choice) in place of stock clips and pictures.
+  - ~~Phase 2b: AI video clips per scene~~ — CLOSED 2026-10-23 by phase 2b.
   - FFmpeg is bundled only in the Windows installer; macOS and Linux use an `ffmpeg`/`ffprobe` on the PATH (`media_tools_status` reports it). Bundle LGPL builds for both.
   - Kokoro's voices are English (American and British), and the captions' Whisper timing uses `tiny.en`; other languages need other voices and models.
   - MusicGen on a computer without an NVIDIA card is slow (minutes per clip); a new Coverr app is limited to 50 searches an hour.
@@ -62,7 +72,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
   - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
   - The board's "Approve and carry on" on Scenes approves the review too, but only when Scenes starts (Miya Studio shows it as waiting until then).
-  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file) done 2026-10-23; 2b, 3 and 4 next.
+  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file) and 2b (AI clips) done 2026-10-23; 3 and 4 next.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**

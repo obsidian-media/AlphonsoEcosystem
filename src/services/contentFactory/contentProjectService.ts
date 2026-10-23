@@ -11,6 +11,8 @@ import {
   type StepId,
   type StepState,
   type StepVersion,
+  type VideoSettings,
+  DEFAULT_VIDEO_SETTINGS,
 } from './contentTypes';
 
 const PROJECTS_KEY = 'alphonso_content_projects_v1';
@@ -200,6 +202,32 @@ export function markStepStatus(id: string, step: StepId, status: StepState['stat
 }
 
 /** Adds or replaces fields on a version's output (e.g. the pictures made for it). */
+/** The project's AI clip settings, with the defaults filled in. */
+export function getVideoSettings(project: ContentProject): VideoSettings {
+  const saved = project.videoSettings || {};
+  const aiClips = saved.aiClips === 'every' || saved.aiClips === 'none' ? saved.aiClips : 'main';
+  const clipEngine = saved.clipEngine === 'local' || saved.clipEngine === 'runway' ? saved.clipEngine : null;
+  const runwayModel = typeof saved.runwayModel === 'string' && saved.runwayModel.trim() ? saved.runwayModel.trim() : DEFAULT_VIDEO_SETTINGS.runwayModel;
+  return { aiClips, clipEngine, runwayModel };
+}
+
+export function setVideoSettings(id: string, patch: Partial<VideoSettings>): ContentProject {
+  return update(id, (p) => {
+    p.videoSettings = { ...getVideoSettings(p), ...patch };
+  });
+}
+
+/** Marks a scene of the chosen scene plan as a main moment, or not; changes no version's date. */
+export function setMainMoment(id: string, sceneId: string, on: boolean): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.scenes.versions.find((v) => v.version === p.steps.scenes.chosenVersion);
+    const scenes = (chosen?.output as { miya?: { scenes?: { id: string; mainMoment?: boolean }[] } } | undefined)?.miya?.scenes;
+    const scene = scenes?.find((s) => s.id === sceneId);
+    if (!scene) throw new Error(`No scene ${sceneId} in the chosen scene plan.`);
+    scene.mainMoment = on;
+  });
+}
+
 export function setVersionOutputField(id: string, step: StepId, version: number, field: string, value: unknown): ContentProject {
   return update(id, (p) => {
     const v = p.steps[step].versions.find((item) => item.version === version);

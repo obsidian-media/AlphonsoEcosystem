@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 250 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 254 services and 157 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -85,6 +85,7 @@ Source-backed inventory: 250 services and 155 components. Human purpose descript
 | component | `src/components/MicrophoneStatus.tsx` | `MicrophoneStatus` |
 | component | `src/components/MissionControlHome.tsx` | `MissionControlHome` |
 | component | `src/components/MissionRoom.tsx` | `MissionRoom` |
+| component | `src/components/miya/AiClipsPanel.tsx` | `AiClipsPanel`, `AiClipsPanelProps` |
 | component | `src/components/miya/BrandEditor.tsx` | `BrandEditor` |
 | component | `src/components/miya/BriefPanel.tsx` | `BriefPanel` |
 | component | `src/components/miya/CampaignStudioTab.tsx` | `CampaignStudioTab` |
@@ -151,6 +152,7 @@ Source-backed inventory: 250 services and 155 components. Human purpose descript
 | component | `src/components/ui/Tabs.tsx` | `TabItem`, `Tabs` |
 | component | `src/components/ui/Zone.tsx` | `Zone` |
 | component | `src/components/UpdaterNotification.tsx` | `UpdaterNotification` |
+| component | `src/components/VideoModelsPanel.tsx` | `VideoModelsPanel` |
 | component | `src/components/ViewErrorBoundary.tsx` | `ViewErrorBoundary` |
 | component | `src/components/ViewLoadingState.tsx` | `ViewLoadingState` |
 | component | `src/components/VoiceInputButton.tsx` | `VoiceInputButton` |
@@ -230,7 +232,7 @@ Source-backed inventory: 250 services and 155 components. Human purpose descript
 | service | `src/services/connectors/comfyUiEndpoint.js` | `COMFYUI_ENDPOINT_KEY`, `DEFAULT_COMFYUI_ENDPOINT`, `getComfyUiEndpoint`, `setComfyUiEndpoint` |
 | service | `src/services/connectors/connectorAuth.ts` | `authorizeConnectorRequest`, `ConnectorAuthProfile`, `ConnectorAuthProfiles`, `ConnectorCredentials`, `DEFAULT_AUTH_PROFILES`, `getConnectorCredential`, `getConnectorCredentials`, `hydrateConnectorAuthProfilesFromSqlite`, `hydrateConnectorCredentialsFromSqlite`, `isConnectorAuthenticated`, `listConnectorAuthProfiles`, `logUnauthenticatedConnectorRequest`, `LogUnauthenticatedOptions`, `normalizeAllowlist`, `readAuthProfiles`, `saveConnectorCredential`, `updateConnectorAuthProfile`, `writeAuthProfiles` |
 | service | `src/services/connectors/connectorConstants.ts` | `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE` |
-| service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_ENDPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `DEFAULT_COMFYUI_ENDPOINT`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiEndpoint`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setComfyUiEndpoint`, `setSelectedComfyUiCheckpoint` |
+| service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `comfyRequest`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_ENDPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `DEFAULT_COMFYUI_ENDPOINT`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiEndpoint`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setComfyUiEndpoint`, `setSelectedComfyUiCheckpoint` |
 | service | `src/services/connectors/connectorOutbound.js` | `proveTelegramConnectorPath`, `sendChatGptConnectorMessage`, `sendClaudeConnectorMessage`, `sendClickUpConnectorTask`, `sendGitHubAction`, `sendNotionConnectorEntry`, `sendQwenConnectorMessage`, `sendSlackMessage`, `sendTelegramConnectorMessage`, `sendWhatsAppConnectorMessage`, `uploadYouTubeConnectorVideo` |
 | service | `src/services/connectors/connectorPolling.js` | `createConnectorRoutePacket`, `normalizeWhatsAppCloudInboundPayload`, `parseInboundConnectorMessage`, `pollTelegramConnector`, `pollWhatsAppConnector`, `sendConnectorMessageToJose`, `simulateWhatsAppCloudInbound`, `verifyWhatsAppCloudWebhookChallenge`, `verifyWhatsAppCloudWebhookSignature` |
 | service | `src/services/connectors/connectorRegistry.js` | `appendConnectorAudit`, `CIRCUIT_BREAKER_RESET_MS`, `CIRCUIT_BREAKER_THRESHOLD`, `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE`, `DEFAULT_CONNECTORS`, `gateConnectorAction`, `getConnectorCircuitState`, `hydrateConnectorAuditFromSqlite`, `hydrateConnectorRegistryFromSqlite`, `initializeConnectorRegistryFromSqlite`, `listConnectorAudit`, `listConnectors`, `readRows`, `recordConnectorFailure`, `recordConnectorSuccess`, `requireConnectorApproval`, `requireConnectorReady`, `resetConnectorCircuitState`, `setConnectorStatus`, `verifyConnectorEnvironment`, `writeRows` |
@@ -246,21 +248,24 @@ Source-backed inventory: 250 services and 155 components. Human purpose descript
 | service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
+| service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
+| service | `src/services/contentFactory/comfyVideoClip.ts` | `buildVideoWorkflow`, `checkComfyClip`, `ClipResult`, `ComfyClipInput`, `framesFor`, `makeComfyClip`, `VideoWorkflowInput` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
 | service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `DEFAULT_QUALITY_THRESHOLD`, `ensureFirstBrand`, `getBrand`, `listBrands`, `saveBrand` |
 | service | `src/services/contentFactory/contentCaptions.ts` | `alignCaptions`, `captionsFromLines`, `TimedWord`, `toSrt` |
 | service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderScenePictures`, `renderThumbnails` |
-| service | `src/services/contentFactory/contentMediaExecutor.ts` | `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `VoiceLine`, `VoiceOutput` |
+| service | `src/services/contentFactory/contentMediaExecutor.ts` | `checkPendingClips`, `ClipOutcome`, `CLIPS_OFF`, `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `ProjectClipEngine`, `resolveProjectClipEngine`, `RUNWAY_NOT_APPROVED`, `VoiceLine`, `VoiceOutput` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
-| service | `src/services/contentFactory/contentProjectPlan.ts` | `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `REVIEW_WAIT` |
-| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `startStep`, `updateBrief` |
+| service | `src/services/contentFactory/contentProjectPlan.ts` | `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `REVIEW_WAIT` |
+| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
 | service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `parseStepAnswer` |
 | service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
 | service | `src/services/contentFactory/contentStepRunner.ts` | `approveContentStep`, `CONTENT_TASK_PREVIEW`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
-| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `hasOwnKey`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion` |
+| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
+| service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
 | service | `src/services/creativeRoutingService.ts` | `detectCreativeIntent`, `routeToCreativeTool` |
@@ -294,7 +299,7 @@ Source-backed inventory: 250 services and 155 components. Human purpose descript
 | service | `src/services/jose/josePlanner.ts` | `describePlanSource`, `JosePlan`, `planJoseRequest` |
 | service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `replacePlanSteps`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `updateJoseStep` |
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
-| service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend` |
+| service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd` |
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `priorOutputsForNeeds`, `setStepOutput` |
 | service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
@@ -391,6 +396,7 @@ Source-backed inventory: 250 services and 155 components. Human purpose descript
 | service | `src/services/trustModel.ts` | `timestampMs`, `TRUST_STATES`, `trustColor`, `TrustState` |
 | service | `src/services/unifiedMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getDurableMemoryStatus`, `getMemorySize`, `getMemorySummary`, `getNamespaceCount`, `hydrateFromDurable`, `hydrateMemoryFromDurable`, `importMemoryItems`, `listDurableMemoryRecords`, `listEcosystemMemoryItems`, `listMemory`, `listMemoryByNamespace`, `listMemoryItems`, `listMiyaMemory`, `listWorkflowMemory`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `normalizeMemoryRecord`, `pushMemory`, `pushMemoryItem`, `pushMiyaMemory`, `pushWorkflowMemory`, `resetMemoryServiceState`, `tickExpiry`, `upsertBrandKit`, `upsertDurableMemoryRecords` |
 | service | `src/services/verificationService.ts` | `appendVerificationLog`, `buildOllamaStartupGuide`, `getVerificationLogs`, `listOllamaModels`, `OllamaStartupGuide`, `readDurableAuditLog`, `VERIFICATION_SCOPE`, `VerificationLogEntry`, `VerificationLogInput`, `verifyCommandExecution`, `verifyDurableAuditChain`, `verifyOllamaRuntimeProof`, `verifyPathProof`, `verifyProcessProof` |
+| service | `src/services/videoModelService.ts` | `effectiveVideoModel`, `getSelectedVideoModel`, `installVideoModel`, `listVideoModels`, `setSelectedVideoModel`, `VideoModel`, `VideoModelsInfo` |
 | service | `src/services/voiceOsService.ts` | `checkVoiceWatchdog`, `getVoiceServerStatus`, `getVoiceToken`, `getVoiceWebSocketUrl`, `resetVoiceWatchdogState`, `startVoiceServer`, `startVoiceWatchdog`, `stopVoiceServer`, `stopVoiceWatchdog` |
 | service | `src/services/voiceService.ts` | `classifyVoiceError`, `getVoicePrivacyLabel`, `requestAudioStream`, `SpeechRecognitionOptions`, `startSpeechRecognition`, `stopAudioStream`, `supportsMicrophoneCapture`, `supportsSpeechRecognition`, `TRANSCRIPTION_PIPELINE_STATUS`, `VOICE_STATES`, `VoiceErrorClassification`, `VoiceState` |
 | service | `src/services/whatsappBrowserConnector.ts` | `browserPollWhatsAppGateway`, `browserSendWhatsApp`, `processWhatsAppWebhook`, `verifyWhatsAppWebhook` |

@@ -120,7 +120,7 @@ a finding.
 | Work | Projects (Project Execution) | E2E | `project-execution.e2e.mjs` | Setup/Agents/Execution tabs; Bug 5 (heading count, "unknown" owner) |
 | Work | Content (Content Studio) | E2E | `content.e2e.mjs`, `content-image.e2e.mjs` | video step (Runway: low priority), publish step, brief fallback label (Bug 9) |
 | Work | Automation | E2E (Builder) | `workflow-builder.e2e.mjs` | Overview, Schedules, Dead Letter tabs; toggling operations |
-| Work | Creative (Miya Studio) | E2E (package; the finished video since content factory phase 2a: `content-video.e2e.mjs` runs Voice, Stock clips and Music in the real app (each says what it needs when Kokoro, AudioCraft or a stock key is missing) and a real Finished video with the bundled ffmpeg: both MP4s at the voice's length, the captions file, and both videos loading in the Scene Builder's players) | `creative.e2e.mjs`, `content-video.e2e.mjs` | Miya Studio's own image and video buttons; a real Kokoro voice-over, MusicGen music and stock clips with keys (each needs an install or a key the test profile does not have) |
+| Work | Creative (Miya Studio) | E2E (package; the finished video since content factory phase 2a: `content-video.e2e.mjs` runs Voice, Stock clips and Music in the real app (each says what it needs when Kokoro, AudioCraft or a stock key is missing) and a real Finished video with the bundled ffmpeg: both MP4s at the voice's length, the captions file, and both videos loading in the Scene Builder's players) | `creative.e2e.mjs`, `content-video.e2e.mjs`, `content-clips.e2e.mjs` (phase 2b: the Main moment switch and AI clip settings are saved; the AI clips step makes a real clip with the installed local video model and it plays in the Scene Builder, or says what to set up; Runtime Hub's ComfyUI card shows the video models and the card's memory) | Miya Studio's own image and video buttons; a real Kokoro voice-over, MusicGen music and stock clips with keys (each needs an install or a key the test profile does not have) |
 | Research | Research Desk (Hector) | E2E | `research.e2e.mjs` | raw CSS in snippets (Bug 3), export Markdown/PDF/PowerPoint, re-synthesize, depth toggle, bookmarks |
 | Boardroom | Boardroom | E2E | `boardroom.e2e.mjs` | chained mentions, Stop, Retry, Acknowledge, Confirm-to-reveal, speaker name (Bug 7) |
 | System | Orchestrator | Visit | `smoke` | Command, Packets, Monitor tabs; WhatsApp status (Bug 8) |
@@ -193,6 +193,7 @@ needs the owner's account and is marked separately.
 | calle | — | low priority |
 | generic_webhook | — | — |
 | brave_search | — | — |
+| runway (AI clips, content factory phase 2b) | unit tests (estimate, the monthly limit, approval per run, a timeout) | a live clip with a real key and price |
 | pexels / pixabay / coverr (content factory phase 2a) | unit tests (search and download with the backend mocked; Rust tests for the hosts and the requests) | a live search and download with a real key |
 | perplexity | — | no key yet |
 | tavily | — | — |

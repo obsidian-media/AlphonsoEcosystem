@@ -107,6 +107,8 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   creative_music: ['write_own_work'],
   research_broll: ['read'],
   runtime_assemble_video: ['write_own_work'],
+  // AI clips (phase 2b): local clips write files; a Runway run adds `spend` in the plan.
+  creative_video_clips: ['write_own_work'],
   // Templates (phase 2, joseTemplates.ts).
   research_report: ['read'],
   analysis_findings: ['read'],

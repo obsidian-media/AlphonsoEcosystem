@@ -3,6 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn(async () => undefined) }));
+vi.mock('../../../services/contentFactory/contentMediaExecutor', () => ({
+  resolveProjectClipEngine: vi.fn(async () => ({ engine: 'local', modelId: 'ltx_video_2b', maxSeconds: 5 })),
+}));
 vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   const actual = await vi.importActual<typeof import('../../../services/contentFactory/contentProjectFiles')>('../../../services/contentFactory/contentProjectFiles');
   return {
@@ -73,5 +76,21 @@ describe('SceneBuilderTab: the finished video', () => {
   it('a skipped step shows why', () => {
     render(<SceneBuilderTab {...props(setup({ musicSkipped: true }))} />);
     expect(screen.getByText('AudioCraft is not installed. Install it in Runtime Hub to add music.')).toBeTruthy();
+  });
+});
+
+// Phase 2b: the main moments and the AI clips panel.
+describe('SceneBuilderTab: main moments', () => {
+  it('a switch on each scene marks it a main moment, and the AI clips panel is there', async () => {
+    const project = setup();
+    const onChange = vi.fn();
+    render(<SceneBuilderTab {...props(project)} onChange={onChange} />);
+    const box = screen.getByRole('checkbox', { name: 'Main moment: Scene 1' });
+    expect((box as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(box);
+    const { getProject } = await import('../../../services/contentFactory/contentProjectService');
+    expect(((getProject(project.id)!.steps.scenes.versions[0].output as any).miya.scenes[0]).mainMoment).toBe(true);
+    expect(onChange).toHaveBeenCalled();
+    expect(screen.getByRole('region', { name: 'AI clips' })).toBeTruthy();
   });
 });

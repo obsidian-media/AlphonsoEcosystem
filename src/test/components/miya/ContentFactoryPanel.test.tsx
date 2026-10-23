@@ -8,6 +8,10 @@ vi.mock('../../../services/contentFactory/contentStepRunner', async (importOrigi
   runContentProject: vi.fn(async () => ({ ok: true, requestId: 'jose-request-c1' })),
   approveContentStep: vi.fn(async () => undefined),
 }));
+vi.mock('../../../services/contentFactory/contentMediaExecutor', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  resolveProjectClipEngine: vi.fn(async () => ({ engine: 'local', modelId: 'ltx_video_2b', maxSeconds: 5 })),
+}));
 vi.mock('../../../services/jose/joseRequestStore', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../services/jose/joseRequestStore')>()),
   getJoseRequest: vi.fn(() => (globalThis as any).__request || null),
@@ -68,5 +72,17 @@ describe('ContentFactoryPanel and the project request', () => {
     render(<ContentFactoryPanel tab="script" settings={settings} />);
     fireEvent.click(screen.getAllByRole('button', { name: 'Approve' })[0]);
     await waitFor(() => expect(approveContentStep).toHaveBeenCalledWith(project.id, 'review'));
+  });
+});
+
+// Phase 2b: the run stops at AI clips until you check the main moments.
+describe('ContentFactoryPanel: AI clips', () => {
+  it('"Make AI clips" shows while the run waits at AI clips, and carries it on', async () => {
+    const { project } = setup();
+    setProjectRequest(project.id, 'jose-request-c1');
+    (globalThis as any).__request = { id: 'jose-request-c1', status: 'waiting_approval', steps: [{ stepId: 'clips', status: 'waiting_approval', waitFor: 'Check the main moments in Miya Studio first.' }] };
+    render(<ContentFactoryPanel tab="scene" settings={settings} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Make AI clips' }));
+    expect(approveContentStep).toHaveBeenCalledWith(project.id, 'clips');
   });
 });

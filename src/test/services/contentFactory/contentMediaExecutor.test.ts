@@ -63,8 +63,8 @@ beforeEach(() => {
 
 // Miya content factory phase 2a: the steps that make the finished video file.
 describe('executeMediaStep', () => {
-  it('handles the four media task types', () => {
-    expect([...MEDIA_ACTIONS].sort()).toEqual(['creative_music', 'creative_voice', 'research_broll', 'runtime_assemble_video']);
+  it('handles the media task types (AI clips since phase 2b)', () => {
+    expect([...MEDIA_ACTIONS].sort()).toEqual(['creative_music', 'creative_video_clips', 'creative_voice', 'research_broll', 'runtime_assemble_video']);
   });
 
   it('Voice speaks each scene\'s lines in the brand voice; a quiet scene keeps its planned seconds', async () => {
@@ -185,6 +185,25 @@ describe('executeMediaStep', () => {
     expect(data.outputs[0].frames).toEqual([`${dir}/output/v1-16x9-10.jpg`]);
     expect(data.captions).toBe('lines');
     expect(data.note).toMatch(/Whisper/);
+  });
+
+  // Phase 2b: an AI clip plays first in its scene; only clips that were made are sent.
+  it('Assemble sends each scene AI clip and its length, only for clips that were made', async () => {
+    const { brand, project, dir } = setup();
+    saveStepVersion(project.id, 'voice', { output: { miya: voiceOutput(dir) }, summary: '', joseCommandId: null });
+    saveStepVersion(project.id, 'clips', { output: { miya: { engine: 'local', clips: [
+      { sceneId: 's1', status: 'done', path: `${dir}/clips/v1-s1.mp4`, seconds: 2 },
+      { sceneId: 's2', status: 'pending', jobId: 'j', seconds: 2 },
+      { sceneId: 's3', status: 'failed', reason: 'x' },
+    ] } }, summary: '', joseCommandId: null });
+    backend.media_tools_status = () => ({ whisper: false });
+    backend.write_workspace_text_file = () => ({ ok: true });
+    backend.content_assemble_video = () => ({ ok: true, outputs: [] });
+    await executeMediaStep(assignment(project, brand, 'alphonso', 'runtime_assemble_video', 'assemble'));
+    const sent = vi.mocked(invoke).mock.calls.find((c) => c[0] === 'content_assemble_video')![1] as any;
+    expect(sent.spec.scenes[0]).toMatchObject({ aiClip: `${dir}/clips/v1-s1.mp4`, aiSeconds: 2 });
+    expect(sent.spec.scenes[1].aiClip).toBeUndefined();
+    expect(sent.spec.scenes[2].aiClip).toBeUndefined();
   });
 
   it('Assemble times the captions with Whisper when it is installed, keeping the script\'s words', async () => {

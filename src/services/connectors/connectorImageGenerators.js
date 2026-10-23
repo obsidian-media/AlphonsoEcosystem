@@ -95,7 +95,13 @@ function createComfyClientId() {
  * window never reached a current ComfyUI. In the desktop app the request goes
  * through the backend (`comfyui_request`, which sends no Origin) instead.
  */
-async function comfyRequest(endpoint, path, { method = 'GET', body, signal } = {}) {
+/**
+ * A ComfyUI call through the backend in the desktop app (ComfyUI refuses the window).
+ * @param {string} endpoint
+ * @param {string} path
+ * @param {{ method?: string, body?: string, signal?: AbortSignal }} [options]
+ */
+export async function comfyRequest(endpoint, path, { method = 'GET', body, signal } = {}) {
   if (isTauri()) {
     const result = await invoke('comfyui_request', { endpoint, method, path, body: body ?? null });
     const status = Number(result?.status) || 0;

@@ -160,7 +160,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery and a PIN-authenticated local WebSocket (off until you enable mobile pairing on the desktop). Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **255 Rust unit tests across 42 modules** — 148 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **264 Rust unit tests across 43 modules** — 152 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -343,7 +343,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~882 lines · 131 Tauri commands · 42 modules   │    │
+│  │  lib.rs ~887 lines · 131 Tauri commands · 43 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -434,7 +434,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 5,239 tests across 483 files (src + bridge)
+npm run test           # 5,239 tests across 490 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -516,13 +516,14 @@ blocker.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 250 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 254 services already exist.
 
 ## Third-party notices
 
 - **FFmpeg** (bundled in the Windows installer, for Miya's finished videos): an LGPL 2.1 build from BtbN/FFmpeg-Builds, used unmodified as separate programs; its license is installed beside it (`ffmpeg\LICENSE.txt`), and its source is at [ffmpeg.org](https://ffmpeg.org/legal.html).
 - **Kokoro** (installed from Runtime Hub, not bundled): `kokoro-onnx` and the Kokoro-82M model and voices, Apache License 2.0.
 - **MusicGen** (AudioCraft, installed from Runtime Hub, not bundled): the code is MIT; the model weights are CC-BY-NC 4.0 (non-commercial). Check that license before using generated music commercially.
+- **Video models for AI clips** (installed from Runtime Hub into your own ComfyUI, not bundled): LTX-Video 2B under the LTX-Video Open Weights License (free for companies under $10M yearly revenue; larger companies need Lightricks' paid license) with Google's T5 encoder (Apache-2.0); Wan 2.2 TI2V 5B, its VAE and the UMT5 encoder under Apache-2.0.
 - **Stock footage** (Pexels, Pixabay, Coverr): each clip is used under its site's license, with your own free key; the source, author and license page of every clip are kept in the project.
 
 ## Security

@@ -22,6 +22,7 @@ export const STEP_AGENTS: Record<StepId, StepAgent[]> = {
   voice: [{ agent: 'miya', actionType: 'creative_voice', title: 'Voice-over in the brand voice' }],
   music: [{ agent: 'miya', actionType: 'creative_music', title: 'Music bed' }],
   broll: [{ agent: 'hector', actionType: 'research_broll', title: 'Stock clips for the scenes' }],
+  clips: [{ agent: 'miya', actionType: 'creative_video_clips', title: 'AI clips for the main moments' }],
   assemble: [{ agent: 'alphonso', actionType: 'runtime_assemble_video', title: 'The finished video, 16:9 and 9:16' }],
   campaign: [
     { agent: 'miya', actionType: 'creative_campaign', title: 'Captions, ads and calendar' },

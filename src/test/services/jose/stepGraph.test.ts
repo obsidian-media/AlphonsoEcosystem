@@ -79,6 +79,13 @@ describe('stepGraph', () => {
     expect(checkPlan([{ ...paid, model: 'qwen2.5:7b' }]).problems.join(' ')).toMatch(/Miya may not spend money/);
   });
 
+  // Content factory phase 2b: a Runway run of AI clips spends through the gated Runway connector.
+  it("lets Miya's AI clips step spend (Runway), and no other Miya step without a paid model", () => {
+    expect(checkPlan([step('clips', 'miya', 'creative_video_clips', [], ['write_own_work', 'spend'])]).ok).toBe(true);
+    expect(checkPlan([step('s', 'miya', 'creative_scenes', [], ['write_own_work', 'spend'])]).problems.join(' ')).toMatch(/Miya may not spend money/);
+    expect(checkPlan([step('n', 'nova', 'creative_video_clips', [], ['read', 'spend'])]).problems.join(' ')).toMatch(/may not/);
+  });
+
   it('knows a paid model id', () => {
     expect(isPaidModelId('claude:claude-haiku-5-5')).toBe(true);
     expect(isPaidModelId('chatgpt:')).toBe(true);

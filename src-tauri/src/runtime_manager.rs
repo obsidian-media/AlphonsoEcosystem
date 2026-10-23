@@ -2090,13 +2090,22 @@ pub(crate) fn comfyui_has_checkpoint(dir: &Path) -> bool {
 
 /// Downloads to `<dest>.part`, checks size and SHA-256, then renames, so a
 /// broken or partial download never sits where ComfyUI looks for models.
-async fn download_verified(
+/// What a download is called on the progress bar, and the part of the bar
+/// (`from`, `span` percent) it fills.
+pub(crate) struct DownloadNote<'a> {
+  pub label: &'a str,
+  pub from: u8,
+  pub span: u8,
+}
+
+pub(crate) async fn download_verified(
   app: &AppHandle,
   tool: &str,
   url: &str,
   dest: &Path,
   expected_sha256: &str,
   expected_bytes: u64,
+  note: &DownloadNote<'_>,
 ) -> Result<(), String> {
   use sha2::{Digest, Sha256};
   use std::io::Write;
@@ -2132,8 +2141,8 @@ async fn download_verified(
     hasher.update(&chunk);
     file.write_all(&chunk).map_err(|e| e.to_string())?;
     written += chunk.len() as u64;
-    // 80..95 of the install's progress bar belongs to this download.
-    let pct = 80 + ((written.min(expected_bytes) * 15) / expected_bytes.max(1)) as u8;
+    let pct =
+      note.from + ((written.min(expected_bytes) * note.span as u64) / expected_bytes.max(1)) as u8;
     if pct != last_pct {
       last_pct = pct;
       emit_progress(
@@ -2141,7 +2150,8 @@ async fn download_verified(
         tool,
         "downloading_model",
         &format!(
-          "Downloading the starter image model… {} of {} MB",
+          "Downloading {}… {} of {} MB",
+          note.label,
           written / 1_000_000,
           expected_bytes / 1_000_000
         ),
@@ -2359,6 +2369,11 @@ pub async fn runtime_install_tool(
       &dest,
       COMFYUI_STARTER_MODEL_SHA256,
       COMFYUI_STARTER_MODEL_BYTES,
+      &DownloadNote {
+        label: "the starter image model",
+        from: 80,
+        span: 15,
+      },
     )
     .await
     .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
@@ -2375,6 +2390,11 @@ pub async fn runtime_install_tool(
         &models.join(file),
         sha256,
         *bytes,
+        &DownloadNote {
+          label: "Kokoro's voice model",
+          from: 80,
+          span: 15,
+        },
       )
       .await
       .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;

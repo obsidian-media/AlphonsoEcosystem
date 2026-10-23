@@ -3,6 +3,7 @@ import { ContentProjectBar } from './ContentProjectBar';
 import { BriefPanel } from './BriefPanel';
 import { ScriptStudioTab } from './ScriptStudioTab';
 import { SceneBuilderTab } from './SceneBuilderTab';
+import { checkPendingClips } from '../../services/contentFactory/contentMediaExecutor';
 import { ThumbnailStudioTab } from './ThumbnailStudioTab';
 import { CampaignStudioTab } from './CampaignStudioTab';
 import { ensureFirstBrand, getBrand, listBrands } from '../../services/contentFactory/contentBrandService';
@@ -135,7 +136,11 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
           {tab === 'script' && <ScriptStudioTab {...tabProps} />}
           {tab === 'scene' && (
             <SceneBuilderTab project={project} outputRoot={outputRoot} runStep={tabProps.runStep} chooseVersion={tabProps.chooseVersion}
-              checkAgain={() => { checkPendingPictures(project.id, 'scenes', settings).finally(refresh); }} />
+              checkAgain={() => { checkPendingPictures(project.id, 'scenes', settings).finally(refresh); }}
+              onChange={refresh}
+              clipsWaiting={request?.status === 'waiting_approval' && request.steps.some((s) => s.stepId === 'clips' && s.status === 'waiting_approval')}
+              approveClips={() => tabProps.approve('clips')}
+              checkClips={() => { checkPendingClips(project.id).catch(() => undefined).finally(refresh); }} />
           )}
           {tab === 'thumbnail' && (
             <ThumbnailStudioTab project={project} outputRoot={outputRoot} runStep={tabProps.runStep} chooseVersion={tabProps.chooseVersion}

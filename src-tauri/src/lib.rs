@@ -25,6 +25,7 @@ mod commands {
   pub(crate) mod updates;
   pub(crate) mod url;
 }
+mod comfyui_video_models;
 mod companion_auth;
 mod companion_discovery;
 mod companion_router;
@@ -762,6 +763,10 @@ pub fn run() {
       media_tools::content_assemble_video,
       media_tools::content_whisper_words,
       media_tools::content_allow_media_folder,
+      comfyui_video_models::comfyui_video_models,
+      comfyui_video_models::comfyui_install_video_model,
+      comfyui_proxy::comfyui_upload_image,
+      comfyui_proxy::comfyui_save_output,
       execute_command_verified,
       run_native_rc0_proof,
       runway_generate_video,

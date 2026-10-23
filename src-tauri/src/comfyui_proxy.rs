@@ -107,9 +107,185 @@ pub(crate) async fn comfyui_request(
   })
 }
 
+// ── AI clips (content factory phase 2b) ────────────────────────────────────
+
+/// A scene picture as a `multipart/form-data` body for ComfyUI's `/upload/image`.
+pub(crate) fn multipart_image_body(boundary: &str, filename: &str, bytes: &[u8]) -> Vec<u8> {
+  let mut body = Vec::with_capacity(bytes.len() + 512);
+  let head = format!(
+    "--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"{filename}\"\r\nContent-Type: image/png\r\n\r\n"
+  );
+  body.extend_from_slice(head.as_bytes());
+  body.extend_from_slice(bytes);
+  body.extend_from_slice(
+    format!("\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"overwrite\"\r\n\r\ntrue\r\n--{boundary}--\r\n").as_bytes(),
+  );
+  body
+}
+
+/// A name ComfyUI may use for a file: no folders, no `..`, nothing odd.
+pub(crate) fn safe_comfy_name(name: &str) -> bool {
+  !name.is_empty()
+    && name.len() <= 200
+    && !name.contains("..")
+    && name
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | ' '))
+}
+
+/// `/view?…` for one of ComfyUI's output files.
+pub(crate) fn view_path(filename: &str, subfolder: &str, kind: &str) -> Result<String, String> {
+  if !safe_comfy_name(filename)
+    || !(subfolder.is_empty() || subfolder.split('/').all(safe_comfy_name))
+    || !matches!(kind, "output" | "temp")
+  {
+    return Err("That is not a ComfyUI output file.".to_string());
+  }
+  let url = reqwest::Url::parse_with_params(
+    "http://x/view",
+    &[
+      ("filename", filename),
+      ("subfolder", subfolder),
+      ("type", kind),
+    ],
+  )
+  .map_err(|e| e.to_string())?;
+  Ok(format!("/view?{}", url.query().unwrap_or_default()))
+}
+
+const MAX_CLIP_BYTES: u64 = 500 * 1024 * 1024;
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UploadImageRequest {
+  endpoint: String,
+  workspace_root: String,
+  rel_path: String,
+}
+
+/// Sends a scene picture to ComfyUI's input folder; returns the name to use in a workflow.
+#[tauri::command]
+pub(crate) async fn comfyui_upload_image(
+  request: UploadImageRequest,
+  http_client: tauri::State<'_, reqwest::Client>,
+) -> Result<serde_json::Value, String> {
+  let base = loopback_base(&request.endpoint)
+    .ok_or_else(|| "ComfyUI endpoint must be an http address on this machine.".to_string())?;
+  let file = crate::media_tools::checked_file(
+    &request.workspace_root,
+    &request.rel_path,
+    &["png", "jpg", "jpeg", "webp"],
+  )?;
+  let bytes = std::fs::read(&file).map_err(|_| "The scene picture is missing.".to_string())?;
+  let name = format!(
+    "alphonso-{}",
+    file
+      .file_name()
+      .map(|n| n.to_string_lossy().to_string())
+      .unwrap_or_default()
+  );
+  if !safe_comfy_name(&name) {
+    return Err("The picture's file name cannot be sent to ComfyUI.".to_string());
+  }
+  let boundary = format!(
+    "alphonso{}",
+    std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_nanos())
+      .unwrap_or(0)
+  );
+  let response = http_client
+    .post(format!("{base}/upload/image"))
+    .header(
+      "Content-Type",
+      format!("multipart/form-data; boundary={boundary}"),
+    )
+    .body(multipart_image_body(&boundary, &name, &bytes))
+    .timeout(Duration::from_secs(60))
+    .send()
+    .await
+    .map_err(|error| format!("ComfyUI is not reachable at {base}: {error}"))?;
+  if !response.status().is_success() {
+    return Err(format!(
+      "ComfyUI refused the picture (HTTP {}).",
+      response.status().as_u16()
+    ));
+  }
+  let json: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+  let stored = json["name"].as_str().unwrap_or(&name).to_string();
+  let subfolder = json["subfolder"].as_str().unwrap_or("").to_string();
+  Ok(
+    serde_json::json!({ "name": if subfolder.is_empty() { stored } else { format!("{subfolder}/{stored}") } }),
+  )
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveOutputRequest {
+  endpoint: String,
+  filename: String,
+  subfolder: String,
+  kind: String,
+  workspace_root: String,
+  rel_path: String,
+}
+
+/// Saves one of ComfyUI's output videos into the project folder (500 MB at most;
+/// written as .part, then renamed; never over an existing file).
+#[tauri::command]
+pub(crate) async fn comfyui_save_output(
+  request: SaveOutputRequest,
+  http_client: tauri::State<'_, reqwest::Client>,
+) -> Result<serde_json::Value, String> {
+  use tokio::io::AsyncWriteExt;
+  let base = loopback_base(&request.endpoint)
+    .ok_or_else(|| "ComfyUI endpoint must be an http address on this machine.".to_string())?;
+  let path = view_path(&request.filename, &request.subfolder, &request.kind)?;
+  let dest =
+    crate::media_tools::checked_file(&request.workspace_root, &request.rel_path, &["mp4", "webm"])?;
+  if dest.exists() {
+    return Err("That clip already exists; nothing was overwritten.".to_string());
+  }
+  if let Some(parent) = dest.parent() {
+    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+  }
+  let mut response = http_client
+    .get(format!("{base}{path}"))
+    .timeout(Duration::from_secs(600))
+    .send()
+    .await
+    .map_err(|error| format!("ComfyUI is not reachable at {base}: {error}"))?;
+  if !response.status().is_success() {
+    return Err(format!(
+      "ComfyUI did not return the clip (HTTP {}).",
+      response.status().as_u16()
+    ));
+  }
+  let part = dest.with_extension("part");
+  let mut file = tokio::fs::File::create(&part)
+    .await
+    .map_err(|e| e.to_string())?;
+  let mut bytes: u64 = 0;
+  while let Some(chunk) = response.chunk().await.map_err(|e| e.to_string())? {
+    bytes += chunk.len() as u64;
+    if bytes > MAX_CLIP_BYTES {
+      drop(file);
+      let _ = tokio::fs::remove_file(&part).await;
+      return Err("The clip is larger than 500 MB.".to_string());
+    }
+    file.write_all(&chunk).await.map_err(|e| e.to_string())?;
+  }
+  file.flush().await.map_err(|e| e.to_string())?;
+  drop(file);
+  tokio::fs::rename(&part, &dest)
+    .await
+    .map_err(|e| e.to_string())?;
+  Ok(serde_json::json!({ "path": dest.to_string_lossy(), "bytes": bytes }))
+}
+
 #[cfg(test)]
 mod tests {
-  use super::{allowed_path, loopback_base};
+  use super::{allowed_path, loopback_base, multipart_image_body, safe_comfy_name, view_path};
 
   #[test]
   fn accepts_only_loopback_http_endpoints() {
@@ -157,5 +333,30 @@ mod tests {
     ] {
       assert!(!allowed_path(method, path), "{method} {path}");
     }
+  }
+
+  #[test]
+  fn builds_an_image_upload_body() {
+    let body = String::from_utf8(multipart_image_body("B", "alphonso-v1-s1.png", b"PNG")).unwrap();
+    assert!(body.starts_with("--B\r\nContent-Disposition: form-data; name=\"image\"; filename=\"alphonso-v1-s1.png\"\r\nContent-Type: image/png\r\n\r\nPNG\r\n--B\r\n"));
+    assert!(body.contains("name=\"overwrite\"\r\n\r\ntrue\r\n"));
+    assert!(body.ends_with("--B--\r\n"));
+  }
+
+  #[test]
+  fn only_plain_output_files_can_be_fetched() {
+    assert_eq!(
+      view_path("clip_00001_.mp4", "", "output").unwrap(),
+      "/view?filename=clip_00001_.mp4&subfolder=&type=output"
+    );
+    assert!(view_path("clip.mp4", "video/a b", "output")
+      .unwrap()
+      .contains("subfolder=video%2Fa+b"));
+    assert!(view_path("../secret.txt", "", "output").is_err());
+    assert!(view_path("clip.mp4", "..", "output").is_err());
+    assert!(view_path("clip.mp4", "", "input").is_err());
+    assert!(view_path("a\\b.mp4", "", "output").is_err());
+    assert!(safe_comfy_name("alphonso-v1-s1.png"));
+    assert!(!safe_comfy_name(""));
   }
 }

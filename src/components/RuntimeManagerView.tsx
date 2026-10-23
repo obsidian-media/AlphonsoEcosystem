@@ -44,6 +44,7 @@ import { loadPolicy, getPolicyRules, type PolicyRule } from '../services/policyD
 import { Tabs } from './ui/Tabs';
 import { openExternalUrl } from '../services/browserAutomationService';
 import { findComfyuiInstalls, type ComfyUiInstall } from '../services/comfyuiSettingsService';
+import { VideoModelsPanel } from './VideoModelsPanel';
 import { getStorage } from '../lib/appStorage';
 import { InstallLocationPicker } from './InstallLocationPicker';
 import type { InstallLocation } from '../services/runtimeManagerService';
@@ -444,6 +445,8 @@ function ToolCard({ tool, onAction, onAutostartToggle, existingInstall }: ToolCa
           {existingInstall.python ? '' : ' · its Python was not found; set it in Settings → Runtime → ComfyUI'}
         </p>
       )}
+
+      {tool.name === 'comfyui' && (tool.installed || usingExisting) && <VideoModelsPanel />}
 
       {installing && progress && (
         <div>

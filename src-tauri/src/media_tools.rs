@@ -560,6 +560,11 @@ pub struct AssemblyScene {
   /// The brand colour for a scene with neither (#rrggbb).
   card_color: Option<String>,
   seconds: f64,
+  /// An AI clip (phase 2b), relative to the workspace: plays first, for `ai_seconds`.
+  #[serde(default)]
+  ai_clip: Option<String>,
+  #[serde(default)]
+  ai_seconds: Option<f64>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -618,6 +623,70 @@ fn s(value: impl ToString) -> String {
   value.to_string()
 }
 
+pub(crate) enum SegmentSource<'a> {
+  Clip(&'a str),
+  Picture(&'a str),
+  Card(Option<&'a str>),
+}
+
+pub(crate) struct Segment<'a> {
+  pub(crate) name: String,
+  pub(crate) source: SegmentSource<'a>,
+  pub(crate) seconds: f64,
+}
+
+/// What each scene is made of, in order: an AI clip first (phase 2b) for its
+/// length, then the stock clip, picture or colour card for the rest.
+pub(crate) fn assembly_segments(spec: &AssemblySpec) -> Vec<Segment<'_>> {
+  let mut segments = Vec::new();
+  for (i, scene) in spec.scenes.iter().enumerate() {
+    let base = if let Some(clip) = &scene.clip {
+      SegmentSource::Clip(clip)
+    } else if let Some(picture) = &scene.picture {
+      SegmentSource::Picture(picture)
+    } else {
+      SegmentSource::Card(scene.card_color.as_deref())
+    };
+    let mut rest = scene.seconds;
+    if let (Some(ai), Some(ai_seconds)) = (&scene.ai_clip, scene.ai_seconds) {
+      if ai_seconds > 0.0 {
+        let first = ai_seconds.min(scene.seconds);
+        segments.push(Segment {
+          name: format!("seg-{i:03}-ai.mp4"),
+          source: SegmentSource::Clip(ai),
+          seconds: first,
+        });
+        rest = scene.seconds - first;
+      }
+    }
+    if rest >= 0.05 {
+      segments.push(Segment {
+        name: format!("seg-{i:03}.mp4"),
+        source: base,
+        seconds: rest,
+      });
+    }
+  }
+  segments
+}
+
+/// The first input that is not an existing file inside the workspace, if any.
+pub(crate) fn missing_input(root: &Path, spec: &AssemblySpec) -> Option<String> {
+  spec
+    .scenes
+    .iter()
+    .flat_map(|sc| [sc.clip.as_ref(), sc.picture.as_ref(), sc.ai_clip.as_ref()])
+    .flatten()
+    .chain([&spec.voice, &spec.srt])
+    .chain(spec.music.iter())
+    .find(|rel| {
+      let path = root.join(rel);
+      !path.is_file()
+        || !crate::workspace::resolve_through_existing_ancestor(&path).starts_with(root)
+    })
+    .cloned()
+}
+
 /// Every ffmpeg run for one output, in order: one segment per scene, the
 /// join, then the final mix with captions. Inputs are absolute paths (each
 /// its own argument, so spaces and accents are safe); the final run uses the
@@ -632,47 +701,45 @@ pub(crate) fn build_assembly_runs(
 ) -> Vec<FfmpegRun> {
   let size = format!("{width}x{height}");
   let mut runs = Vec::new();
-  let mut list = String::new();
-  for (i, scene) in spec.scenes.iter().enumerate() {
-    let seconds = format!("{:.3}", scene.seconds.max(0.5));
-    let segment = format!("seg-{i:03}.mp4");
+  for segment in assembly_segments(spec) {
+    let seconds = format!("{:.3}", segment.seconds.max(0.5));
     let mut args: Vec<String> = vec![s("-y"), s("-hide_banner"), s("-loglevel"), s("error")];
-    let filter;
-    if let Some(clip) = &scene.clip {
-      // Looped if shorter than the scene, then trimmed to it.
-      args.extend([
-        s("-stream_loop"),
-        s("-1"),
-        s("-i"),
-        root.join(clip).to_string_lossy().to_string(),
-      ]);
-      filter = format!("scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},fps={FPS},format=yuv420p");
-    } else if let Some(picture) = &scene.picture {
-      args.extend([
-        s("-loop"),
-        s("1"),
-        s("-i"),
-        root.join(picture).to_string_lossy().to_string(),
-      ]);
-      let frames = (scene.seconds.max(0.5) * FPS as f64).round() as u32;
-      // A slow zoom (about 12 % over the scene) on a picture twice the size.
-      filter = format!(
-        "scale={w2}:{h2}:force_original_aspect_ratio=increase,crop={w2}:{h2},zoompan=z='min(zoom+0.0008,1.12)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={size}:fps={FPS},format=yuv420p",
-        w2 = width * 2,
-        h2 = height * 2,
-      );
-    } else {
-      args.extend([
-        s("-f"),
-        s("lavfi"),
-        s("-i"),
+    let filter = match segment.source {
+      SegmentSource::Clip(clip) => {
+        // Looped if shorter than the segment, then trimmed to it.
+        args.extend([
+          s("-stream_loop"),
+          s("-1"),
+          s("-i"),
+          root.join(clip).to_string_lossy().to_string(),
+        ]);
+        format!("scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},fps={FPS},format=yuv420p")
+      }
+      SegmentSource::Picture(picture) => {
+        args.extend([
+          s("-loop"),
+          s("1"),
+          s("-i"),
+          root.join(picture).to_string_lossy().to_string(),
+        ]);
+        let frames = (segment.seconds.max(0.5) * FPS as f64).round() as u32;
+        // A slow zoom (about 12 % over the segment) on a picture twice the size.
         format!(
-          "color=c={}:s={size}:r={FPS}",
-          ffmpeg_color(scene.card_color.as_deref())
-        ),
-      ]);
-      filter = s("format=yuv420p");
-    }
+          "scale={w2}:{h2}:force_original_aspect_ratio=increase,crop={w2}:{h2},zoompan=z='min(zoom+0.0008,1.12)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={size}:fps={FPS},format=yuv420p",
+          w2 = width * 2,
+          h2 = height * 2,
+        )
+      }
+      SegmentSource::Card(color) => {
+        args.extend([
+          s("-f"),
+          s("lavfi"),
+          s("-i"),
+          format!("color=c={}:s={size}:r={FPS}", ffmpeg_color(color)),
+        ]);
+        s("format=yuv420p")
+      }
+    };
     args.extend([
       s("-t"),
       seconds,
@@ -683,15 +750,13 @@ pub(crate) fn build_assembly_runs(
       s("libopenh264"),
       s("-b:v"),
       s("6M"),
-      work.join(&segment).to_string_lossy().to_string(),
+      work.join(&segment.name).to_string_lossy().to_string(),
     ]);
     runs.push(FfmpegRun {
       cwd: work.to_path_buf(),
       args,
     });
-    list.push_str(&format!("file '{segment}'\n"));
   }
-  let _ = list; // written by the caller (`segments.txt`)
   runs.push(FfmpegRun {
     cwd: work.to_path_buf(),
     args: vec![
@@ -828,21 +893,9 @@ pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Va
   }
   let out = checked_dir(&spec.workspace_root, &spec.out_dir)?;
   let root = std::fs::canonicalize(&spec.workspace_root).map_err(|e| e.to_string())?;
-  for rel in spec
-    .scenes
-    .iter()
-    .flat_map(|sc| [sc.clip.as_ref(), sc.picture.as_ref()])
-    .flatten()
-    .chain([&spec.voice, &spec.srt])
-    .chain(spec.music.iter())
-  {
-    // Every input must be an existing file inside the workspace.
-    let path = root.join(rel);
-    if !path.is_file()
-      || !crate::workspace::resolve_through_existing_ancestor(&path).starts_with(&root)
-    {
-      return Err(format!("A file for the video is missing: {rel}"));
-    }
+  // Every input must be an existing file inside the workspace.
+  if let Some(rel) = missing_input(&root, &spec) {
+    return Err(format!("A file for the video is missing: {rel}"));
   }
   for (aspect, _, _) in ASPECTS {
     if out.join(format!("v{}-{aspect}.mp4", spec.version)).exists() {
@@ -877,8 +930,9 @@ async fn assemble_outputs(
     let work = out.join(format!(".work-v{}-{aspect}", spec.version));
     std::fs::create_dir_all(&work).map_err(|e| e.to_string())?;
     let runs = build_assembly_runs(root, &work, &name, spec, width, height);
-    let list: String = (0..spec.scenes.len())
-      .map(|i| format!("file 'seg-{i:03}.mp4'\n"))
+    let list: String = assembly_segments(spec)
+      .iter()
+      .map(|g| format!("file '{}'\n", g.name))
       .collect();
     std::fs::write(work.join("segments.txt"), list).map_err(|e| e.to_string())?;
     std::fs::copy(root.join(&spec.srt), work.join("captions.srt")).map_err(|e| e.to_string())?;
@@ -1180,6 +1234,8 @@ mod tests {
       picture: picture.map(Into::into),
       card_color: Some("#112233".into()),
       seconds,
+      ai_clip: None,
+      ai_seconds: None,
     }
   }
 
@@ -1344,6 +1400,21 @@ mod tests {
       "sine=f=220:d=10",
       "audio/music-v1.wav",
     ]);
+    std::fs::create_dir_all(project.join("clips")).unwrap();
+    make(&[
+      "-y",
+      "-loglevel",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc2=s=1280x720:d=2",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:v",
+      "libopenh264",
+      "clips/v1-s1.mp4",
+    ]);
     std::fs::write(
       project.join("audio").join("v1.srt"),
       "1\n00:00:00,000 --> 00:00:02,000\nNote: \"quoted\" café\n",
@@ -1359,12 +1430,17 @@ mod tests {
           picture: Some("My Brand/Café ideas/scenes/s1.png".into()),
           card_color: None,
           seconds: 3.0,
+          // An AI clip for the first 2 s, then the picture for the last second.
+          ai_clip: Some("My Brand/Café ideas/clips/v1-s1.mp4".into()),
+          ai_seconds: Some(2.0),
         },
         AssemblyScene {
           clip: None,
           picture: None,
           card_color: Some("#334455".into()),
           seconds: 3.0,
+          ai_clip: None,
+          ai_seconds: None,
         },
       ],
       voice: "My Brand/Café ideas/audio/voice-v1.wav".into(),
@@ -1434,6 +1510,71 @@ mod tests {
     assert!(!media_folder_ok(&root.join("missing")));
     let drive = root.ancestors().last().unwrap().to_path_buf();
     assert!(!media_folder_ok(&drive));
+    std::fs::remove_dir_all(&root).ok();
+  }
+
+  #[test]
+  fn an_ai_clip_plays_first_then_the_scene_continues() {
+    let mut sc = scene(Some("b/p/broll/s1.mp4"), None, 7.0);
+    sc.ai_clip = Some("b/p/clips/v1-s1.mp4".into());
+    sc.ai_seconds = Some(4.0);
+    let spec = spec(vec![sc, scene(None, Some("p.png"), 3.0)], false);
+    let names: Vec<String> = assembly_segments(&spec)
+      .into_iter()
+      .map(|g| g.name)
+      .collect();
+    assert_eq!(names, ["seg-000-ai.mp4", "seg-000.mp4", "seg-001.mp4"]);
+    let root = Path::new("R");
+    let runs = build_assembly_runs(root, Path::new("W"), "v1-16x9.mp4", &spec, 1920, 1080);
+    assert!(runs[0].args.contains(
+      &root
+        .join("b/p/clips/v1-s1.mp4")
+        .to_string_lossy()
+        .to_string()
+    ));
+    assert!(runs[0]
+      .args
+      .windows(2)
+      .any(|w| w[0] == "-t" && w[1] == "4.000"));
+    assert!(runs[1]
+      .args
+      .contains(&root.join("b/p/broll/s1.mp4").to_string_lossy().to_string()));
+    assert!(runs[1]
+      .args
+      .windows(2)
+      .any(|w| w[0] == "-t" && w[1] == "3.000"));
+    assert!(runs[2].args.iter().any(|x| x.contains("zoompan")));
+  }
+
+  #[test]
+  fn an_ai_clip_as_long_as_the_scene_is_the_whole_scene() {
+    let mut sc = scene(None, Some("p.png"), 5.0);
+    sc.ai_clip = Some("c.mp4".into());
+    sc.ai_seconds = Some(6.0);
+    let spec = spec(vec![sc], false);
+    let segments = assembly_segments(&spec);
+    assert_eq!(segments.len(), 1);
+    assert_eq!(segments[0].name, "seg-000-ai.mp4");
+    assert!((segments[0].seconds - 5.0).abs() < 1e-9);
+  }
+
+  #[test]
+  fn every_input_including_ai_clips_must_be_in_the_workspace() {
+    let root = temp_root("ai-inputs");
+    std::fs::create_dir_all(root.join("p")).unwrap();
+    for f in ["p/voice.wav", "p/v1.srt", "p/s1.png"] {
+      std::fs::write(root.join(f), b"x").unwrap();
+    }
+    let root = std::fs::canonicalize(&root).unwrap();
+    let mut sc = scene(None, Some("p/s1.png"), 3.0);
+    sc.ai_clip = Some("p/missing.mp4".into());
+    sc.ai_seconds = Some(2.0);
+    let mut sp = spec(vec![sc], false);
+    sp.voice = "p/voice.wav".into();
+    sp.srt = "p/v1.srt".into();
+    assert_eq!(missing_input(&root, &sp), Some("p/missing.mp4".to_string()));
+    std::fs::write(root.join("p/missing.mp4"), b"x").unwrap();
+    assert_eq!(missing_input(&root, &sp), None);
     std::fs::remove_dir_all(&root).ok();
   }
 }

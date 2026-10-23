@@ -11,7 +11,11 @@ import { configuredStockSources, searchStockClips } from '../connectors/stockFoo
 import { getBrand } from './contentBrandService';
 import { alignCaptions, captionsFromLines, toSrt } from './contentCaptions';
 import { isVerticalOnly } from './contentImages';
-import { chosenVersionOf, getProject } from './contentProjectService';
+import { chosenVersionOf, getProject, getVideoSettings, setVersionOutputField } from './contentProjectService';
+import { chosenScenes, resolveClipEngine } from './clipEngine';
+import { checkComfyClip, makeComfyClip } from './comfyVideoClip';
+import { makeRunwayClip, runwayClipAvailable, runwayClipSeconds } from './runwayClip';
+import { effectiveVideoModel, listVideoModels } from '../videoModelService';
 import { projectRelativeDir, requireOutputRoot } from './contentProjectFiles';
 import { priorOutputs } from './contentStepAgents';
 import { contentAppSettings } from './contentStepRecorder';
@@ -19,7 +23,7 @@ import { darkestColour, headlineColour } from './thumbnailRenderer';
 import type { ContentBrand, ContentProject, StepId } from './contentTypes';
 import type { ContentStepResult } from './contentAgentExecutor';
 
-export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'research_broll', 'runtime_assemble_video']);
+export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'research_broll', 'creative_video_clips', 'runtime_assemble_video']);
 
 export const NO_STOCK_KEYS = 'No stock footage keys are set. Add a free Pexels, Pixabay or Coverr key in Connectors → Content & Productivity to use stock clips; the scene pictures are used instead.';
 export const NO_VOICE = 'Run the Voice step first.';
@@ -30,10 +34,12 @@ interface MediaAssignment {
   agent: string;
   actionType: string;
   contentStep: { projectId: string; step: StepId };
+  /** The step's effects; a Runway run of AI clips needs `spend` (approved for this run). */
+  effects?: string[];
 }
 
 interface ScriptPart { startSec?: number; endSec?: number; spoken?: string; music?: string }
-interface Scene { id: string; startSec?: number; endSec?: number; description?: string }
+interface Scene { id: string; startSec?: number; endSec?: number; description?: string; camera?: string; movement?: string; mainMoment?: boolean }
 export interface VoiceLine { sceneId: string; text: string; startSec: number; endSec: number; path: string | null }
 export interface VoiceOutput { full: string; durationSec: number; lines: VoiceLine[] }
 
@@ -229,6 +235,115 @@ async function runBroll(assignment: MediaAssignment, ctx: Context): Promise<Cont
   return done(assignment, { clips }, `Stock clips for ${got} of ${clips.length} scenes.`);
 }
 
+export const CLIPS_OFF = 'AI clips are off for this project.';
+export const RUNWAY_NOT_APPROVED = 'Runway clips were not approved for this run. Run AI clips again to approve the cost.';
+const NO_PICTURE = 'This scene has no picture to start from.';
+const NONE_MADE = 'No AI clip was made; those scenes use their stock clip or picture.';
+
+export interface ProjectClipEngine { engine: 'local' | 'runway' | null; reason?: string; modelId?: string; maxSeconds?: number }
+
+/** The engine this project's AI clips use on this computer now. */
+export async function resolveProjectClipEngine(project: ContentProject): Promise<ProjectClipEngine> {
+  const info = await listVideoModels().catch(() => null);
+  const model = info ? effectiveVideoModel(info) : null;
+  const choice = resolveClipEngine(getVideoSettings(project), {
+    localModelInstalled: Boolean(model?.installed),
+    runway: runwayClipAvailable(),
+  });
+  return choice.engine === 'local' && model ? { engine: 'local', modelId: model.id, maxSeconds: model.maxSeconds } : choice;
+}
+
+export interface ClipOutcome {
+  sceneId: string;
+  status: 'done' | 'pending' | 'failed' | 'skipped';
+  path?: string;
+  seconds?: number;
+  costUsd?: number;
+  jobId?: string;
+  /** Where a pending clip will be saved when ComfyUI finishes it. */
+  target?: string;
+  reason?: string;
+}
+
+async function runClips(assignment: MediaAssignment, ctx: Context): Promise<ContentStepResult> {
+  const settings = getVideoSettings(ctx.project);
+  if (settings.aiClips === 'none') return done(assignment, { skipped: CLIPS_OFF }, CLIPS_OFF);
+  const engine = await resolveProjectClipEngine(ctx.project);
+  if (!engine.engine) return done(assignment, { skipped: engine.reason }, `AI clips skipped: ${engine.reason}`);
+  if (engine.engine === 'runway' && !(assignment.effects || []).includes('spend')) {
+    return done(assignment, { skipped: RUNWAY_NOT_APPROVED }, RUNWAY_NOT_APPROVED);
+  }
+  // The marks as they are now: the user may have changed them while the run waited.
+  const scenes = chosenScenes(scenesOf(ctx), settings.aiClips);
+  const style = part<{ style?: string }>(ctx.prior, 'scenes', 'miya')?.style;
+  const scenesVersion = chosenVersionOf(ctx.project, 'scenes');
+  const pictures = ((scenesVersion?.output as { pictures?: { sceneId: string; status: string; relativePath?: string }[] })?.pictures) || [];
+  const vertical = isVerticalOnly(ctx.project.brief);
+  const clips: ClipOutcome[] = [];
+  let stop: string | null = null;
+  for (const scene of scenes) {
+    if (stop) { clips.push({ sceneId: scene.id, status: 'skipped', reason: stop }); continue; }
+    const picture = pictures.find((p) => p.sceneId === scene.id && p.status === 'done' && p.relativePath)?.relativePath;
+    if (!picture) { clips.push({ sceneId: scene.id, status: 'skipped', reason: NO_PICTURE }); continue; }
+    const sceneSeconds = Math.max(1, (num(scene.endSec) ?? 0) - (num(scene.startSec) ?? 0));
+    const prompt = [scene.description, scene.movement && `Camera: ${scene.movement}`, style].filter(Boolean).join('. ');
+    if (engine.engine === 'local') {
+      const seconds = Math.min(sceneSeconds, engine.maxSeconds || 5);
+      const outRel = `${ctx.dir}/clips/v${ctx.version}-${scene.id}.mp4`;
+      const made = await makeComfyClip({
+        root: ctx.root, imageRel: picture, outRel, prompt, seconds, vertical, modelId: engine.modelId as string,
+      });
+      clips.push(made.status === 'done'
+        ? { sceneId: scene.id, status: 'done', path: made.path, seconds }
+        : made.status === 'pending'
+          ? { sceneId: scene.id, status: 'pending', jobId: made.jobId, seconds, target: outRel }
+          : { sceneId: scene.id, status: 'failed', reason: made.error });
+    } else {
+      const seconds = Math.min(sceneSeconds, runwayClipSeconds(sceneSeconds));
+      const made = await makeRunwayClip({
+        root: ctx.root, imageRel: picture, outDirRel: `${ctx.dir}/clips`, prompt, seconds: sceneSeconds, vertical, model: settings.runwayModel,
+      });
+      if (made.status === 'done') clips.push({ sceneId: scene.id, status: 'done', path: made.path, seconds, costUsd: made.costUsd });
+      else {
+        clips.push({ sceneId: scene.id, status: 'failed', reason: made.error });
+        // Past the monthly limit nothing more is sent.
+        if (/monthly cap/i.test(String(made.error || ''))) stop = made.error || null;
+      }
+    }
+  }
+  const madeCount = clips.filter((c) => c.status === 'done' || c.status === 'pending').length;
+  const totalUsd = clips.reduce((sum, c) => sum + (c.costUsd || 0), 0);
+  return done(
+    assignment,
+    {
+      engine: engine.engine,
+      model: engine.engine === 'local' ? engine.modelId : settings.runwayModel,
+      clips,
+      ...(engine.engine === 'runway' ? { totalUsd } : {}),
+      ...(madeCount === 0 && clips.length > 0 ? { note: NONE_MADE } : {}),
+    },
+    `AI clips: ${madeCount} of ${clips.length} scenes.`,
+  );
+}
+
+/** Looks again for local clips ComfyUI had not finished, and saves them into the chosen AI clips version. */
+export async function checkPendingClips(projectId: string): Promise<ClipOutcome[]> {
+  const project = getProject(projectId);
+  const chosen = project ? chosenVersionOf(project, 'clips') : null;
+  const output = (chosen?.output as { miya?: { clips?: ClipOutcome[] } } | undefined)?.miya;
+  if (!project || !chosen || !output?.clips) return [];
+  const root = requireOutputRoot(contentAppSettings());
+  const clips = [...output.clips];
+  for (const [i, clip] of clips.entries()) {
+    if (clip.status !== 'pending' || !clip.jobId || !clip.target) continue;
+    const result = await checkComfyClip(clip.jobId, clip.target, root);
+    if (result.status === 'done') clips[i] = { sceneId: clip.sceneId, status: 'done', path: result.path, seconds: clip.seconds };
+    else if (result.status === 'failed') clips[i] = { sceneId: clip.sceneId, status: 'failed', reason: result.error };
+  }
+  setVersionOutputField(projectId, 'clips', chosen.version, 'miya', { ...output, clips });
+  return clips;
+}
+
 function hex(colour: string): string {
   const c = colour.trim();
   return c.startsWith('#') ? c : `#${c}`;
@@ -260,13 +375,17 @@ async function runAssemble(assignment: MediaAssignment, ctx: Context): Promise<C
   const srt = `${outDir}/v${ctx.version}.srt`;
   await invoke('write_workspace_text_file', { workspaceRoot: ctx.root, relativePath: srt, content: toSrt(words, { maxWords: 6, maxSeconds: 2.5 }) });
 
+  // AI clips that were made (phase 2b) play first in their scene; the rest of the scene follows.
+  const aiClips = part<{ clips?: ClipOutcome[] }>(ctx.prior, 'clips', 'miya')?.clips || [];
   const scenes = voice.lines.map((line) => {
     const seconds = Math.max(0.5, line.endSec - line.startSec);
+    const ai = aiClips.find((c) => c.sceneId === line.sceneId && c.status === 'done' && c.path && (c.seconds || 0) > 0);
+    const first = ai ? { aiClip: ai.path as string, aiSeconds: ai.seconds as number } : {};
     const clip = clips.find((c) => c.sceneId === line.sceneId && c.path)?.path;
-    if (clip) return { clip, seconds };
+    if (clip) return { clip, seconds, ...first };
     const picture = pictures.find((p) => p.sceneId === line.sceneId && p.status === 'done' && p.relativePath)?.relativePath;
-    if (picture) return { picture, seconds };
-    return { cardColor: hex(darkestColour(palette)), seconds };
+    if (picture) return { picture, seconds, ...first };
+    return { cardColor: hex(darkestColour(palette)), seconds, ...first };
   });
   const result = await invoke<{ ok?: boolean; outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
     workspaceRoot: ctx.root, outDir, version: ctx.version, scenes,
@@ -292,6 +411,7 @@ export async function executeMediaStep(assignment: MediaAssignment): Promise<Con
       case 'creative_voice': return await runVoice(assignment, ctx);
       case 'creative_music': return await runMusic(assignment, ctx);
       case 'research_broll': return await runBroll(assignment, ctx);
+      case 'creative_video_clips': return await runClips(assignment, ctx);
       case 'runtime_assemble_video': return await runAssemble(assignment, ctx);
       default: return failed(assignment, `Unknown media step: ${assignment.actionType}`);
     }

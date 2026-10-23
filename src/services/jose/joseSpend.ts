@@ -24,6 +24,8 @@ export interface PaidModelSettings {
   inputPerMillionUsd: number | null;
   outputPerMillionUsd: number | null;
   monthlyCapUsd: number | null;
+  /** Runway's price per second of video, entered by you (content factory phase 2b). */
+  runwayPricePerSecondUsd: number | null;
 }
 
 const PROVIDER_NAMES: Record<PaidProvider, string> = { claude: 'Claude', chatgpt: 'ChatGPT' };
@@ -54,6 +56,7 @@ export function getPaidModelSettings(): PaidModelSettings {
     inputPerMillionUsd: amount(raw.inputPerMillionUsd),
     outputPerMillionUsd: amount(raw.outputPerMillionUsd),
     monthlyCapUsd: amount(raw.monthlyCapUsd),
+    runwayPricePerSecondUsd: amount(raw.runwayPricePerSecondUsd),
   };
 }
 
@@ -103,6 +106,13 @@ export function monthSpendUsd(): number {
 /** Add a paid call's cost from its reported usage; returns this month's total. */
 export function recordSpend(usage: { inputTokens: number; outputTokens: number }): number {
   const total = monthSpendUsd() + costOf(Number(usage.inputTokens) || 0, Number(usage.outputTokens) || 0);
+  try { localStorage.setItem(SPEND_KEY, JSON.stringify({ month: monthKey(), totalUsd: total })); } catch { /* storage full */ }
+  return total;
+}
+
+/** Add a paid call's known cost (a Runway clip); returns this month's total. */
+export function recordSpendUsd(costUsd: number): number {
+  const total = monthSpendUsd() + Math.max(0, Number(costUsd) || 0);
   try { localStorage.setItem(SPEND_KEY, JSON.stringify({ month: monthKey(), totalUsd: total })); } catch { /* storage full */ }
   return total;
 }

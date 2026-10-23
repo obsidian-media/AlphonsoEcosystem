@@ -10,7 +10,8 @@ import {
   addStepProgress, approveStep, failStep, getProject, markStepStatus, setProjectRequest, startStep,
 } from './contentProjectService';
 import { requireOutputRoot } from './contentProjectFiles';
-import { contentProjectPlanSteps, REVIEW_WAIT } from './contentProjectPlan';
+import { CLIPS_WAIT, CLIPS_WAIT_PAID, contentProjectPlanSteps, REVIEW_WAIT } from './contentProjectPlan';
+import { resolveProjectClipEngine } from './contentMediaExecutor';
 import { STEP_AGENTS } from './contentStepAgents';
 import { STEP_ORDER, type ContentProject, type StepId } from './contentTypes';
 
@@ -80,7 +81,8 @@ export async function runContentProject(projectId: string, options: RunStepOptio
     label: PROJECT_LABEL,
     // The factory saves its own lessons; Echo does not save each step.
     saveDecisions: false,
-    steps: contentProjectPlanSteps(project, brand),
+    // The plan knows which engine AI clips will use here, so a Runway run asks for its cost (phase 2b).
+    steps: contentProjectPlanSteps(project, brand, 'research', { clipEngine: (await resolveProjectClipEngine(project)).engine }),
   });
   const requestId: string | null = result?.requestId || null;
   if (requestId) setProjectRequest(projectId, requestId);
@@ -102,7 +104,8 @@ export async function runContentStep(projectId: string, step: StepId, options: R
     addStepProgress(projectId, step, message);
     options.onProgress?.(message);
   };
-  const steps = contentProjectPlanSteps(started, brand, step, { only: true }).map((s) => {
+  const clipEngine = step === 'clips' ? (await resolveProjectClipEngine(started)).engine : null;
+  const steps = contentProjectPlanSteps(started, brand, step, { only: true, clipEngine }).map((s) => {
     const task = [s.contentStep!.task, options.extraTask].filter(Boolean).join('. ');
     return { ...s, instruction: task, contentStep: { ...s.contentStep!, task } };
   });
@@ -147,6 +150,17 @@ export async function runContentStep(projectId: string, step: StepId, options: R
 
 /** Approve a step in Miya Studio; after the review this also carries the project's request on. */
 export async function approveContentStep(projectId: string, step: StepId): Promise<ContentProject> {
+  // "Make AI clips" (phase 2b): the request waits at the clips step; approving it carries the run
+  // on (and, for Runway, approves the cost). The step itself is not an approval step.
+  if (step === 'clips') {
+    const project = getProject(projectId);
+    const request = project?.joseRequestId ? getJoseRequest(project.joseRequestId) : null;
+    const waiting = request?.status === 'waiting_approval'
+      ? request.steps.find((s) => s.status === 'waiting_approval' && (s.waitFor === CLIPS_WAIT || s.waitFor === CLIPS_WAIT_PAID || s.stepId === 'clips'))
+      : null;
+    if (request && waiting) await approveRequestStep(request.id, waiting.stepId);
+    return getProject(projectId) as ContentProject;
+  }
   const approved = approveStep(projectId, step);
   const requestId = approved.joseRequestId;
   const request = requestId ? getJoseRequest(requestId) : null;

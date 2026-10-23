@@ -2,14 +2,15 @@ import React, { useEffect } from 'react';
 import { Button } from '../ui';
 import { StepPanel } from './StepPanel';
 import { ProjectPicture } from './ProjectPicture';
-import { chosenVersionOf } from '../../services/contentFactory/contentProjectService';
+import { chosenVersionOf, getVideoSettings, setMainMoment } from '../../services/contentFactory/contentProjectService';
+import { AiClipsPanel } from './AiClipsPanel';
 import { allowMediaFolder, mediaUrl } from '../../services/contentFactory/contentProjectFiles';
 import { openExternalUrl } from '../../services/browserAutomationService';
 import type { PictureResult } from '../../services/contentFactory/contentImages';
 import type { ContentProject, StepId } from '../../services/contentFactory/contentTypes';
 
 interface ScenesOutput {
-  miya?: { style?: string; scenes?: { id: string; startSec?: number; endSec?: number; description: string; camera?: string; movement?: string }[] };
+  miya?: { style?: string; scenes?: { id: string; startSec?: number; endSec?: number; description: string; camera?: string; movement?: string; mainMoment?: boolean }[] };
   pictures?: PictureResult[];
 }
 
@@ -19,6 +20,12 @@ export interface SceneBuilderTabProps {
   runStep(step: StepId): void;
   chooseVersion(step: StepId, version: number): void;
   checkAgain(): void;
+  /** Something in the project changed here (settings, main moments): show it. */
+  onChange?(): void;
+  /** The project's run waits at the AI clips step (phase 2b). */
+  clipsWaiting?: boolean;
+  approveClips?(): void;
+  checkClips?(): void;
 }
 
 interface Skipped { skipped?: string }
@@ -42,7 +49,11 @@ function SkippedNote({ text }: { text?: string }) {
 
 /** Storyboard and shot list, with a ComfyUI picture per scene in one shared look,
  *  then the voice-over, music, stock clips and the finished video (phase 2a). */
-export function SceneBuilderTab({ project, outputRoot, runStep, chooseVersion, checkAgain }: SceneBuilderTabProps) {
+export function SceneBuilderTab({
+  project, outputRoot, runStep, chooseVersion, checkAgain, onChange = () => undefined, clipsWaiting = false,
+  approveClips = () => undefined, checkClips = () => undefined,
+}: SceneBuilderTabProps) {
+  const marking = getVideoSettings(project).aiClips === 'main';
   const output = chosenVersionOf(project, 'scenes')?.output as ScenesOutput | undefined;
   const scenes = output?.miya?.scenes || [];
   const pictures = output?.pictures || [];
@@ -70,6 +81,13 @@ export function SceneBuilderTab({ project, outputRoot, runStep, chooseVersion, c
                 <div className="font-semibold text-(--text-1)">Scene {index + 1}</div>
                 <div className="text-(--text-2)">{scene.description}</div>
                 {(scene.camera || scene.movement) && <div className="text-(--text-3)">Camera: {[scene.camera, scene.movement].filter(Boolean).join(', ')}</div>}
+                {marking && (
+                  <label className="flex items-center gap-1 text-(--text-2)">
+                    <input type="checkbox" aria-label={`Main moment: Scene ${index + 1}`} checked={scene.mainMoment === true}
+                      onChange={(e) => { setMainMoment(project.id, scene.id, e.target.checked); onChange(); }} />
+                    Main moment (AI clip)
+                  </label>
+                )}
               </div>
             );
           })}
@@ -100,6 +118,8 @@ export function SceneBuilderTab({ project, outputRoot, runStep, chooseVersion, c
           ))}
         </ul>
       </>)}
+      <AiClipsPanel project={project} outputRoot={outputRoot} waiting={clipsWaiting} onRun={() => runStep('clips')}
+        onChooseVersion={(v) => chooseVersion('clips', v)} onApprove={approveClips} onCheckAgain={checkClips} onChange={onChange} />
       {panel('assemble', <>
         <div className="grid gap-3 md:grid-cols-2">
           {(video?.outputs || []).map((out) => (

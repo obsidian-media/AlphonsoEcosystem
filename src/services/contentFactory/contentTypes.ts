@@ -39,11 +39,11 @@ export function hasOwnKey(record: object, key: string): boolean {
 
 export type StepId =
   | 'brief' | 'research' | 'script' | 'review' | 'scenes' | 'thumbnail'
-  | 'voice' | 'music' | 'broll' | 'assemble' | 'campaign' | 'quality';
+  | 'voice' | 'music' | 'broll' | 'clips' | 'assemble' | 'campaign' | 'quality';
 
 /** Voice, Music, B-roll and Assemble make the finished video file (phase 2a). */
 export const STEP_ORDER: StepId[] = [
-  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'assemble', 'campaign', 'quality',
+  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'campaign', 'quality',
 ];
 
 export type StepStatus = 'not_started' | 'running' | 'done' | 'failed' | 'interrupted' | 'needs_approval' | 'approved' | 'sent_back';
@@ -102,6 +102,17 @@ export interface ContentBrief {
   showEverything: boolean;
 }
 
+/** AI clips for the finished video (phase 2b). */
+export interface VideoSettings {
+  /** Main moments (Miya marks them, you change them), every scene, or none. */
+  aiClips: 'main' | 'every' | 'none';
+  /** null = automatic: a local video model if installed, else Runway, else none. */
+  clipEngine: 'local' | 'runway' | null;
+  runwayModel: string;
+}
+
+export const DEFAULT_VIDEO_SETTINGS: VideoSettings = { aiClips: 'main', clipEngine: null, runwayModel: 'gen4_turbo' };
+
 export interface ContentProject {
   id: string;
   brandId: string;
@@ -112,6 +123,8 @@ export interface ContentProject {
   steps: Record<StepId, StepState>;
   /** The latest Jose request for this project (phase 6b). */
   joseRequestId?: string | null;
+  /** AI clips (phase 2b): kept beside the brief, so changing them puts nothing out of date. */
+  videoSettings?: Partial<VideoSettings>;
   createdAtMs: number;
   updatedAtMs: number;
 }
