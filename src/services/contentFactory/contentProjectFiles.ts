@@ -72,6 +72,11 @@ export async function saveProjectImage(
 const allowedMediaRoots = new Map<string, Promise<boolean>>();
 
 /** Lets the window play video and audio from the output folder (asked once per folder). */
+/** A file under the output folder as a full path on this computer (phase 3a: posting it). */
+export function outputPath(root: string, relativePath: string): string {
+  return joinFolder(root, relativePath);
+}
+
 export function allowMediaFolder(root: string): Promise<boolean> {
   const key = String(root || '').trim();
   if (!key) return Promise.resolve(false);
