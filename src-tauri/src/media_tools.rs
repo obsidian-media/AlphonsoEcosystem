@@ -260,6 +260,75 @@ pub async fn content_tts_kokoro(
   result
 }
 
+/// A file path inside the workspace with one of `extensions`; its folder is
+/// checked (and created) like `checked_dir`.
+pub(crate) fn checked_file(
+  workspace_root: &str,
+  relative: &str,
+  extensions: &[&str],
+) -> Result<PathBuf, String> {
+  let rel = Path::new(relative.trim());
+  let name = rel
+    .file_name()
+    .and_then(|n| n.to_str())
+    .ok_or_else(|| "A file name is required.".to_string())?;
+  let ext = Path::new(name)
+    .extension()
+    .and_then(|e| e.to_str())
+    .map(|e| e.to_ascii_lowercase())
+    .unwrap_or_default();
+  if !extensions.contains(&ext.as_str()) {
+    return Err(format!(
+      "Only {} files can be written here.",
+      extensions.join(", ")
+    ));
+  }
+  let parent = rel
+    .parent()
+    .filter(|p| !p.as_os_str().is_empty())
+    .ok_or_else(|| "A folder is required.".to_string())?;
+  Ok(checked_dir(workspace_root, &parent.to_string_lossy())?.join(name))
+}
+
+pub(crate) const AUDIOCRAFT_MISSING: &str =
+  "AudioCraft is not installed. Install it in Runtime Hub to add music.";
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MusicRequest {
+  workspace_root: String,
+  out_path: String,
+  prompt: String,
+  seconds: f64,
+}
+
+/// A music bed for the video (phase 2a), from MusicGen small in AudioCraft's
+/// Runtime Hub environment. The app frees Ollama's graphics memory first.
+#[tauri::command]
+pub async fn content_music_generate(
+  app: AppHandle,
+  request: MusicRequest,
+) -> Result<serde_json::Value, String> {
+  let python = venv_python_of("audiocraft");
+  if !python.is_file() {
+    return Ok(serde_json::json!({ "ok": false, "missing": true, "error": AUDIOCRAFT_MISSING }));
+  }
+  let out = checked_file(&request.workspace_root, &request.out_path, &["wav"])?;
+  let job = out.with_extension("job.json");
+  let prompt: String = request.prompt.chars().take(300).collect();
+  let body = serde_json::json!({ "prompt": prompt, "seconds": request.seconds.clamp(5.0, 300.0), "outPath": out.to_string_lossy() });
+  std::fs::write(&job, body.to_string()).map_err(|e| e.to_string())?;
+  let script = content_script(&app, "musicgen_generate.py")?;
+  let args = vec![
+    script.to_string_lossy().to_string(),
+    "--job".to_string(),
+    job.to_string_lossy().to_string(),
+  ];
+  let result = run_script(&python, &args, 1200).await;
+  let _ = std::fs::remove_file(&job);
+  result
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -332,5 +401,20 @@ mod tests {
     assert_eq!(args[1..3], ["--job".to_string(), "job.json".to_string()]);
     assert!(args.iter().all(|a| !a.contains("Hello")));
     assert!(args.last().unwrap().ends_with(KOKORO_VOICES_FILE));
+  }
+
+  #[test]
+  fn a_written_file_must_be_inside_the_workspace_and_of_the_right_kind() {
+    let root = temp_root("files");
+    let root_s = root.to_string_lossy().to_string();
+    assert!(
+      checked_file(&root_s, "brand/p/audio/music-v1.wav", &["wav"])
+        .unwrap()
+        .ends_with("music-v1.wav")
+    );
+    assert!(checked_file(&root_s, "brand/p/audio/music-v1.exe", &["wav"]).is_err());
+    assert!(checked_file(&root_s, "../music.wav", &["wav"]).is_err());
+    assert!(checked_file(&root_s, "music.wav", &["wav"]).is_err());
+    std::fs::remove_dir_all(&root).ok();
   }
 }

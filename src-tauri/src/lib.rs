@@ -756,6 +756,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       media_tools::media_tools_status,
       media_tools::content_tts_kokoro,
+      media_tools::content_music_generate,
       execute_command_verified,
       run_native_rc0_proof,
       runway_generate_video,
