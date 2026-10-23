@@ -24,6 +24,21 @@ export function getWaitingExpiryDays(): number {
   return days;
 }
 
+/** Reject every packet of a request's command still waiting for approval, so it leaves the queue. */
+export function rejectWaitingPackets(commandId: string | null | undefined, reason: string): number {
+  if (!commandId) return 0;
+  const command: any = listJoseCommands().find((c) => c.id === commandId);
+  let count = 0;
+  for (const assignment of command?.assignments || []) {
+    const packet: any = assignment.packetId ? getPacketById(assignment.packetId) : null;
+    if (packet?.status === 'pending_approval') {
+      rejectPacket(packet.id, reason);
+      count += 1;
+    }
+  }
+  return count;
+}
+
 /** Expire every request that has waited longer than the set days; returns how many. */
 export function expireWaitingRequests(nowMs: number = Date.now()): number {
   const days = getWaitingExpiryDays();
@@ -31,11 +46,7 @@ export function expireWaitingRequests(nowMs: number = Date.now()): number {
   let count = 0;
   for (const request of listJoseRequests()) {
     if (!WAITING.has(request.status) || nowMs - (request.updatedAtMs || request.createdAtMs) <= days * DAY_MS) continue;
-    const command: any = request.commandId ? listJoseCommands().find((c) => c.id === request.commandId) : null;
-    for (const assignment of command?.assignments || []) {
-      const packet: any = assignment.packetId ? getPacketById(assignment.packetId) : null;
-      if (packet?.status === 'pending_approval') rejectPacket(packet.id, 'The request expired while waiting.');
-    }
+    rejectWaitingPackets(request.commandId, 'The request expired while waiting.');
     setJoseRequestStatus(request.id, 'expired');
     appendRequestNote(request.id, `Expired after ${days} day${days === 1 ? '' : 's'} without your approval.`);
     if (getJoseRequest(request.id)?.status === 'expired') count += 1;

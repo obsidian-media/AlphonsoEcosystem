@@ -100,7 +100,8 @@ export function collectJoseNotifications(requests: JoseRequest[], sent: Set<stri
         ]],
       });
     }
-    if ((request.status === 'done' || request.status === 'failed') && settings.finished) {
+    // Not for each content-factory step: those are steps of a project, not your requests.
+    if ((request.status === 'done' || request.status === 'failed') && settings.finished && request.source !== 'content-factory') {
       const error = request.steps.find((s) => s.status === 'failed' && s.error)?.error;
       add({
         key: `${request.id}:finished:${request.status}`,

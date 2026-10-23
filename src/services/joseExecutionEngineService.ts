@@ -37,6 +37,7 @@ import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseS
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
 import { agentName } from './jose/agentNames';
+import { rejectWaitingPackets } from './jose/joseExpiry';
 import { saveRequestDecisions } from './jose/joseFinish';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
@@ -2376,6 +2377,8 @@ export function rejectRequestStep(requestId: string, stepId: string) {
   const command: any = listJoseCommands().find((item) => item.id === request.commandId);
   const packetId = command?.assignments?.find((a: any) => a.stepId === stepId)?.packetId;
   if (packetId) rejectPacket(packetId, 'Rejected by you.');
+  // The request is cancelled, so its other waiting steps leave the queue too.
+  rejectWaitingPackets(request.commandId, 'The request was cancelled.');
   updateJoseStep(requestId, stepId, { status: 'rejected', endedAtMs: timestampMs() });
   setJoseRequestStatus(requestId, 'cancelled');
   appendRequestNote(requestId, `You rejected ${agentName(step.agent)}'s step.`);

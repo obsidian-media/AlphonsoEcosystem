@@ -108,7 +108,7 @@ vi.mock('../../../services/codingAgentService', () => ({
 }));
 
 import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep, carryOnRequest, rejectRequestStep } from '../../../services/joseExecutionEngineService';
-import { createAgentPacket, updatePacketStatus, approvePacket } from '../../../services/agentBusService';
+import { createAgentPacket, updatePacketStatus, approvePacket, getPacketById } from '../../../services/agentBusService';
 import { fetchOllamaModels } from '../../../lib/ollama';
 import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
@@ -639,5 +639,16 @@ describe('Jose runs plans as step graphs', () => {
     expect(request.steps.find((s) => s.stepId === 'post').status).toBe('rejected');
     expect(request.changeLog.map((c) => c.text)).toContain("You rejected Marcus's step.");
     expect(rejectRequestStep(requestId, 'post').ok).toBe(false);
+  });
+
+  it("rejecting a step also clears the request's other waiting steps from the queue", async () => {
+    const first = await run([
+      step('marcus', 'distribution_execution', { stepId: 'post', effects: ['publish_or_send'] }),
+      step('marcus', 'distribution_execution', { stepId: 'post2', effects: ['publish_or_send'] }),
+    ]);
+    const requestId = `jose-request-${first.commandId}`;
+    const packetOf = (id) => listJoseCommands().find((c) => c.id === first.commandId).assignments.find((a) => a.stepId === id).packetId;
+    rejectRequestStep(requestId, 'post');
+    expect(getPacketById(packetOf('post2')).status).toBe('rejected');
   });
 });

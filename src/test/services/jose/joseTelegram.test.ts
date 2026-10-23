@@ -61,6 +61,10 @@ describe('collectJoseNotifications', () => {
     expect(list.every((n) => !n.buttons)).toBe(true);
   });
 
+  it('does not send a finished line for each content-factory step (they are steps of a project)', () => {
+    expect(collectJoseNotifications([request({ status: 'done', source: 'content-factory' })], new Set(), ALL_ON)).toEqual([]);
+  });
+
   it('passes on a review that asks you to decide', () => {
     const [n] = collectJoseNotifications([request({
       status: 'running',
