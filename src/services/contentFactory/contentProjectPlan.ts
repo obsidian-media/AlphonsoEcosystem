@@ -77,7 +77,9 @@ export function contentProjectPlanSteps(
     // but a Runway run still asks for its cost (spending always asks).
     if (factoryStep === 'clips' && getVideoSettings(project).aiClips !== 'none') {
       if (options.clipEngine === 'runway') step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
-      if (!options.only) step.waitFor = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : CLIPS_WAIT;
+      // No stop when nothing can make clips here (null); the step then says what to set up.
+      // An unknown engine (undefined) still stops, to be safe.
+      if (!options.only && options.clipEngine !== null) step.waitFor = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : CLIPS_WAIT;
     }
     return step;
   });

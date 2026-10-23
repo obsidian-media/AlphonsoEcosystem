@@ -84,6 +84,13 @@ describe('the clips step in the plan', () => {
     expect(off.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes']);
   });
 
+  it('no stop when nothing can make clips on this computer (no video model, no Runway)', () => {
+    const { brand, project } = setup();
+    const steps = contentProjectPlanSteps(project, brand, 'research', { clipEngine: null });
+    expect(steps.find((s) => s.stepId === 'clips')!.waitFor).toBeUndefined();
+    expect(steps.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes']);
+  });
+
   it('older projects gain the clips step, not started', () => {
     const { project } = setup();
     const saved = JSON.parse(localStorage.getItem('alphonso_content_projects_v1')!);
