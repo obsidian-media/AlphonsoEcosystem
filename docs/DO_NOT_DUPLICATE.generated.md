@@ -238,12 +238,12 @@ Source-backed inventory: 216 services and 150 components. Human purpose descript
 | service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `updateMessage`, `uploadFile` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
-| service | `src/services/contentFactory/contentAgentExecutor.ts` | `ContentStepResult`, `executeContentStepAssignment`, `UNREADABLE_ANSWER` |
+| service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
 | service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `DEFAULT_QUALITY_THRESHOLD`, `ensureFirstBrand`, `getBrand`, `listBrands`, `saveBrand` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderScenePictures`, `renderThumbnails` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `loadProjectFile`, `loadProjectImage`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
 | service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setVersionOutputField`, `startStep`, `updateBrief` |
-| service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `visiblePieces` |
+| service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `parseStepAnswer` |
 | service | `src/services/contentFactory/contentStepRunner.ts` | `CONTENT_TASK_PREVIEW`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `StepAgent`, `WAITING_FOR_APPROVAL` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion` |
