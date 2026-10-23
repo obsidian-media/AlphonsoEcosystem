@@ -73,7 +73,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~Only Chat goes through `submitToJose()` and the planner~~ — CLOSED 2026-10-23 by phase 6a: Telegram, WhatsApp, the phone companion, the message pollers, schedules, workflows, the batch orchestrator, the Orchestrator page and Boardroom actions go through `answerOrPlan()` or `submitStepsToJose()`. The content factory's per-step requests move in phase 6b.
   - ~~A Content video planned in Chat runs the template's steps without a Miya Studio project~~ — CLOSED 2026-10-23 by phase 6b: from Chat it starts a project for your default brand. Asked on Telegram or by a schedule it still runs the template's steps and points to Miya Studio.
   - ~~Giving Alphonso a planned step's instruction safely~~ — CLOSED 2026-10-23 by phase 4: it reaches his planning and code prompts as "Jose's note for this step:", after your request, and never his clarification, external-tool or intent checks.
-  - **Status:** OPEN.
+  - **Status:** CLOSED 2026-10-23 (every item above closed by a later phase).
 
 - [2026-10-23] **Jose redesign phase 1: what it leaves open.**
   - ~~The splitter's free-text plans still run a step after an earlier one failed~~ — CLOSED 2026-10-23 by phase 3 (the note said phase 2, which did not do it): every plan, the simple one included, runs as explicit steps.
@@ -81,7 +81,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~Task types the contracts never allowed (Jose's `boardroom_*` and `cost_policy_enforcement`, Hector's `external_publish_handoff`)~~ — CLOSED 2026-10-23 by phase 3: Jose's table has `boardroom_` and `cost_policy_`, and an exact entry wins over a blocked prefix (`taskTypePartAllowed()`), shared by the table and the contracts check.
   - ~~Marcus still owns the skill packs `pack.marcus-security-audit` and `pack.marcus-risk-detection`~~ — CLOSED 2026-10-23 by phase 4: removed; a copy saved before then is not shown.
   - ~~Settings shows Approval Mode off when the setting is unset~~ — CLOSED 2026-10-23 by phase 3: the switch reads it as the policy does.
-  - **Status:** OPEN.
+  - **Status:** CLOSED 2026-10-23 (every item above closed by a later phase).
 
 - [2026-10-22] **ACC accepts packets of any kind (QA Bug 66), parked by the owner.** ACC's receiver (`cloud/services/alphonsoBridgeService.js` in `github.com/Thatisshayan/ACC`) records a packet whose `kind` is not one of `content_job`, `task`, `result`, `approval`, `memory` (tested: `"nonsense"` was recorded). The fix belongs in ACC (refuse unknown kinds with a clear error), so it is parked beside the SessionGuard bridge and Coach Mode: more work on the ACC side than in Alphonso. Alphonso only sends the five known kinds. Status: OPEN, parked.
 
