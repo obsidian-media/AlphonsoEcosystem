@@ -1175,12 +1175,10 @@ mod tests {
     std::fs::create_dir_all(project.join("scenes")).unwrap();
     std::fs::create_dir_all(project.join("audio")).unwrap();
     let make = |args: &[&str]| {
-      let ok = std::process::Command::new(&ffmpeg)
-        .args(args)
-        .current_dir(&project)
-        .status()
-        .unwrap()
-        .success();
+      let mut cmd = std::process::Command::new(&ffmpeg);
+      cmd.args(args).current_dir(&project);
+      crate::utils::no_window(&mut cmd);
+      let ok = cmd.status().unwrap().success();
       assert!(ok, "{args:?}");
     };
     make(&[
