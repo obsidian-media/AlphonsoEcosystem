@@ -66,19 +66,25 @@ describe('MiyaStudio Generate Package empty-input guard', () => {
     localStorage.clear();
   });
 
-  it('disables Generate Package when every pipeline input field is empty', () => {
+  it('disables Generate Package when every pipeline input field is empty', async () => {
     render(<MiyaStudio {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick package' }));
+    await screen.findByRole('button', { name: /generate package/i });
     const button = screen.getByRole('button', { name: /generate package/i });
     expect(button).toBeDisabled();
   });
 
-  it('shows a validation hint instead of the "connect Ollama" message when the model is connected but inputs are empty', () => {
+  it('shows a validation hint instead of the "connect Ollama" message when the model is connected but inputs are empty', async () => {
     render(<MiyaStudio {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick package' }));
+    await screen.findByRole('button', { name: /generate package/i });
     expect(screen.getByText(/enter at least one field below first/i)).toBeInTheDocument();
   });
 
-  it('does not call the model at all when Generate Package is clicked with empty inputs', () => {
+  it('does not call the model at all when Generate Package is clicked with empty inputs', async () => {
     render(<MiyaStudio {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick package' }));
+    await screen.findByRole('button', { name: /generate package/i });
     const button = screen.getByRole('button', { name: /generate package/i });
     // Defensive: even a disabled button's onClick should short-circuit if
     // ever reached programmatically (fireEvent bypasses the disabled attr).
@@ -86,8 +92,10 @@ describe('MiyaStudio Generate Package empty-input guard', () => {
     expect(generateAgentLlmResponse).not.toHaveBeenCalled();
   });
 
-  it('enables Generate Package once any pipeline field has real content', () => {
+  it('enables Generate Package once any pipeline field has real content', async () => {
     render(<MiyaStudio {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick package' }));
+    await screen.findByRole('button', { name: /generate package/i });
     // The labels are linked to their inputs since 2026-10-22 (accessibility).
     const topicInput = screen.getByLabelText('Topic');
     fireEvent.change(topicInput, { target: { value: 'A real topic' } });

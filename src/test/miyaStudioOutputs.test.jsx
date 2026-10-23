@@ -45,6 +45,9 @@ describe('Miya Studio package and brand kit', () => {
       }),
     });
     render(<MiyaStudio {...props()} />);
+    // Generate Package lives in "Quick package" since the content factory (2026-10-22).
+    fireEvent.click(screen.getByRole('button', { name: 'Quick package' }));
+    await screen.findByRole('button', { name: /generate package/i });
     fireEvent.change(screen.getByLabelText('Idea'), { target: { value: 'Saving energy at home' } });
     fireEvent.click(screen.getByRole('button', { name: /generate package/i }));
     await waitFor(() => expect(screen.getByTestId('miya-output-hook').textContent).toContain('Small changes at home make a big difference!'));
@@ -60,6 +63,9 @@ describe('Miya Studio package and brand kit', () => {
     mockSavedMemory.push({ id: 'miya-brand-kit', content: { tone: 'Warm and plain-spoken', colors: 'Forest green' } });
     generateAgentLlmResponse.mockResolvedValue({ response: '{"hook":"Hi"}' });
     render(<MiyaStudio {...props()} />);
+    // Generate Package lives in "Quick package" since the content factory (2026-10-22).
+    fireEvent.click(screen.getByRole('button', { name: 'Quick package' }));
+    await screen.findByRole('button', { name: /generate package/i });
     fireEvent.change(screen.getByLabelText('Idea'), { target: { value: 'Saving energy' } });
     fireEvent.click(screen.getByRole('button', { name: /generate package/i }));
     await waitFor(() => expect(generateAgentLlmResponse).toHaveBeenCalled());
@@ -68,13 +74,15 @@ describe('Miya Studio package and brand kit', () => {
     expect(prompt).toContain('Warm and plain-spoken');
     expect(prompt).toContain('Forest green');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Brand Kit Memory' }));
+    // The Quick package brand kit is on the same tab.
     expect((await screen.findByLabelText('Tone')).value).toBe('Warm and plain-spoken');
   });
 
   it('says the brand kit was saved', async () => {
     render(<MiyaStudio {...props()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Brand Kit Memory' }));
+    // Generate Package lives in "Quick package" since the content factory (2026-10-22).
+    fireEvent.click(screen.getByRole('button', { name: 'Quick package' }));
+    await screen.findByRole('button', { name: /generate package/i });
     fireEvent.click(await screen.findByRole('button', { name: /save brand kit memory/i }));
     expect(screen.getByRole('status').textContent).toMatch(/^Saved /);
   });

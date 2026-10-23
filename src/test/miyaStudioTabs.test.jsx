@@ -52,20 +52,43 @@ function makeProps(overrides = {}) {
 describe('MiyaStudio — studio tabs', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('renders all 6 studio tab labels', () => {
+  it('renders all 7 studio tab labels', () => {
     render(<MiyaStudio {...makeProps()} />);
-    expect(screen.getByText('Script Studio')).toBeTruthy();
-    expect(screen.getByText('Scene Builder')).toBeTruthy();
-    expect(screen.getByText('Prompt Builder')).toBeTruthy();
-    expect(screen.getByText('Thumbnail Studio')).toBeTruthy();
-    expect(screen.getByText('Campaign Studio')).toBeTruthy();
-    expect(screen.getByText('Brand Kit Memory')).toBeTruthy();
+    for (const label of ['Script Studio', 'Scene Builder', 'Thumbnail Studio', 'Campaign Studio', 'Brands', 'Quick package', 'Prompt Builder']) {
+      expect(screen.getByRole('button', { name: label })).toBeTruthy();
+    }
   });
 
-  it('switches to the Brand Kit Memory tab and renders the Save Brand Kit button', async () => {
+  // Each content-factory tab has its own tool (owner, 2026-10-22): they used to
+  // show one identical view.
+  it('gives Script, Scene, Thumbnail and Campaign each their own tool', async () => {
+    render(<MiyaStudio {...makeProps({ settings: { selectedModel: 'llama3.2:3b', outputFolder: 'D:\\Content' } })} />);
+    fireEvent.change(screen.getByLabelText('New project name'), { target: { value: 'Launch video' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(await screen.findByRole('heading', { name: 'Script Studio' })).toBeTruthy();
+    for (const [tab, heading] of [['Scene Builder', 'Scene Builder'], ['Thumbnail Studio', 'Thumbnail Studio'], ['Campaign Studio', 'Campaign Studio']]) {
+      fireEvent.click(screen.getByRole('button', { name: tab }));
+      expect(await screen.findByRole('heading', { name: heading })).toBeTruthy();
+    }
+    expect(screen.queryByRole('button', { name: /generate package/i })).toBeNull();
+  });
+
+  it('asks for an output folder when none is chosen', () => {
     render(<MiyaStudio {...makeProps()} />);
-    fireEvent.click(screen.getByText('Brand Kit Memory'));
-    expect(await screen.findByText('Save Brand Kit Memory')).toBeTruthy();
+    expect(screen.getByText(/Choose an output folder in Settings first/)).toBeTruthy();
+  });
+
+  it('keeps the old package generator and its brand kit under Quick package', async () => {
+    render(<MiyaStudio {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick package' }));
+    expect(await screen.findByRole('button', { name: /generate package/i })).toBeTruthy();
+    expect(screen.getByText('Save Brand Kit Memory')).toBeTruthy();
+  });
+
+  it('opens the Brands editor', async () => {
+    render(<MiyaStudio {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Brands' }));
+    expect(await screen.findByRole('heading', { name: 'Brands' })).toBeTruthy();
   });
 
   it('switches to the Prompt Builder tab and renders the Local Media Generators panel', async () => {

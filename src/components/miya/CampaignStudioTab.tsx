@@ -1,0 +1,96 @@
+import React from 'react';
+import { Badge, Button } from '../ui';
+import { StepPanel } from './StepPanel';
+import { chosenVersionOf } from '../../services/contentFactory/contentProjectService';
+import { visiblePieces } from '../../services/contentFactory/contentQualityGate';
+import type { StepTabProps } from './ScriptStudioTab';
+import type { ContentBrand } from '../../services/contentFactory/contentTypes';
+
+interface CampaignOutput {
+  miya?: {
+    platforms?: { platform: string; caption: string; hashtags?: string[]; description?: string }[];
+    ads?: { network: string; headline: string; body: string }[];
+    calendar?: { platform: string; suggestedAt: string; reason: string }[];
+  };
+  nova?: { times?: { platform: string; dayOfWeek?: string; time: string; reason?: string }[] };
+}
+
+function copy(text: string) {
+  try { navigator.clipboard?.writeText(text); } catch { /* clipboard unavailable */ }
+}
+
+/** Captions, hashtags, ad copy and posting times, then Maria's quality gate. */
+export function CampaignStudioTab({ project, brand, runStep, chooseVersion, approve, sendBack }: StepTabProps & { brand: ContentBrand | null }) {
+  const campaign = chosenVersionOf(project, 'campaign')?.output as CampaignOutput | undefined;
+  const pieces = brand ? visiblePieces(project, brand) : [];
+  const hidden = pieces.filter((p) => !p.visible).length;
+  return (
+    <div className="space-y-4">
+      <h2 className="font-serif text-lg font-bold text-(--text-1)">Campaign Studio</h2>
+      <StepPanel project={project} step="campaign" onRun={() => runStep('campaign')} onChooseVersion={(v) => chooseVersion('campaign', v)}>
+        {campaign?.miya && (
+          <div className="space-y-3 text-[12px]">
+            {(campaign.miya.platforms || []).map((p) => {
+              const text = [p.caption, (p.hashtags || []).join(' ')].filter(Boolean).join('\n\n');
+              return (
+                <div key={p.platform} className="rounded-xl bg-(--surface-2) p-2 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="font-semibold text-(--text-1)">{p.platform}</div>
+                    <Button size="sm" variant="ghost" onClick={() => copy(text)}>Copy</Button>
+                  </div>
+                  <div className="whitespace-pre-wrap text-(--text-1)">{p.caption}</div>
+                  {(p.hashtags || []).length > 0 && <div className="text-(--text-3)">{p.hashtags!.join(' ')}</div>}
+                  {p.description && <div className="whitespace-pre-wrap text-(--text-2)">{p.description}</div>}
+                </div>
+              );
+            })}
+            {(campaign.miya.ads || []).length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Ad copy</div>
+                {campaign.miya.ads!.map((ad) => (
+                  <div key={`${ad.network}-${ad.headline}`} className="rounded-xl bg-(--surface-2) p-2">
+                    <Badge>{ad.network}</Badge> <span className="font-semibold text-(--text-1)">{ad.headline}</span>
+                    <div className="text-(--text-2)">{ad.body}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {((campaign.miya.calendar || []).length > 0 || (campaign.nova?.times || []).length > 0) && (
+              <div className="space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">When to post</div>
+                {(campaign.nova?.times || []).map((t) => (
+                  <div key={`${t.platform}-${t.time}`} className="text-(--text-2)">{t.platform}: {[t.dayOfWeek, t.time].filter(Boolean).join(' ')}{t.reason ? ` — ${t.reason}` : ''}</div>
+                ))}
+                {(campaign.miya.calendar || []).map((c) => (
+                  <div key={`${c.platform}-${c.suggestedAt}`} className="text-(--text-2)">{c.platform}: {c.suggestedAt} — {c.reason}</div>
+                ))}
+                {brand?.schedule && <div className="text-(--text-3)">Your schedule: {brand.schedule}</div>}
+              </div>
+            )}
+          </div>
+        )}
+      </StepPanel>
+
+      <StepPanel
+        project={project}
+        step="quality"
+        onRun={() => runStep('quality')}
+        onChooseVersion={(v) => chooseVersion('quality', v)}
+        onApprove={() => approve('quality')}
+        onSendBack={(reason) => sendBack('quality', reason)}
+      >
+        {pieces.length > 0 && (
+          <div className="space-y-1 text-[12px]">
+            <div className="text-[11px] text-(--text-3)">Scored by Maria against your references. Threshold: {brand?.qualityThreshold ?? 7}/10.</div>
+            {pieces.filter((p) => p.visible).map((p) => (
+              <div key={p.pieceId} className="text-(--text-1)">
+                {p.pieceId}: <strong>{p.score}/10</strong>{p.comparedTo ? ` (compared to ${p.comparedTo})` : ''}{p.weakPoints.length ? ` — ${p.weakPoints.join('; ')}` : ''}
+              </div>
+            ))}
+            {hidden > 0 && <div className="text-(--warning)">{hidden} piece{hidden === 1 ? '' : 's'} scored below {brand?.qualityThreshold}/10 and {hidden === 1 ? 'is' : 'are'} hidden. Turn on “Show everything” in the brief to see {hidden === 1 ? 'it' : 'them'}.</div>}
+          </div>
+        )}
+      </StepPanel>
+    </div>
+  );
+}
