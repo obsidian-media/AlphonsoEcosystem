@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { setAgentProvider } from '../services/modelSelectionService';
 
 // ── Core Tauri mock ───────────────────────────────────────────────────────────
@@ -56,7 +56,8 @@ vi.mock('../services/chatPersistenceService', () => ({
 // ── Jose execution engine mock ───────────────────────────────────────────────
 vi.mock('../services/joseExecutionEngineService', () => ({
   isJoseIntakeCommand: vi.fn().mockReturnValue(false),
-  runJoseCommandExecutionPipeline: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [] })
+  runJoseCommandExecutionPipeline: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [] }),
+  carryOnRequest: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 // ── Jose's decision and entry point (phase 2): direct by default ─────────────
@@ -182,7 +183,8 @@ import { loadChatMessages } from '../services/chatPersistenceService';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 import { decideJoseRoute } from '../services/jose/joseDecision';
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose';
-import { createWaitingPlanRequest } from '../services/jose/joseRequestStore';
+import { createWaitingPlanRequest, createJoseRequest, setJoseRequestStatus } from '../services/jose/joseRequestStore';
+import { carryOnRequest } from '../services/joseExecutionEngineService';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -838,6 +840,22 @@ describe('ChatView: everything goes to Jose', () => {
     expect(onOpenJoseBoard).toHaveBeenCalledWith('jose-request-live');
     finish({ ok: true, commandId: null, executionReceipts: [], plan: null, planNote: 'Done.' });
     await waitFor(() => expect(screen.queryByText('Wave 1: hector')).toBeNull());
+  });
+
+  // Phase 5: requests cut off when the app closed.
+  it('tells you about a request the app was closed on, with Carry on', async () => {
+    const request = createJoseRequest({
+      commandId: 'c-cut', source: 'user', text: 'Research the launch', kind: 'normal',
+      steps: [{ stepId: 'a', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [] }],
+    });
+    setJoseRequestStatus(request.id, 'interrupted');
+    const onOpenJoseBoard = vi.fn();
+    render(<ChatView {...makeProps({ onOpenJoseBoard })} />);
+    const notice = await screen.findByTestId('chat-interrupted-notice');
+    expect(notice.textContent).toMatch(/1 request was cut off when the app closed/);
+    expect(notice.textContent).toMatch(/Research the launch/);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Carry on' }));
+    await waitFor(() => expect(carryOnRequest).toHaveBeenCalledWith(request.id));
   });
 
   it('passes the plan-first setting to Jose', async () => {

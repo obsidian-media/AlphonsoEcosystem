@@ -23,7 +23,7 @@ import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughCalleMcp } from '..
 import { decideJoseRoute } from '../services/jose/joseDecision'
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
 import { JosePlanCard } from './jose/JosePlanCard'
-import { getJoseRequest } from '../services/jose/joseRequestStore'
+import { getJoseRequest, listJoseRequests } from '../services/jose/joseRequestStore'
 import type { PlanFirstSetting } from '../services/jose/josePlanApproval';
 import {
   getMcpOutreachRecord,
@@ -33,7 +33,7 @@ import {
   cancelMcpOutreachCall,
   markMcpOutreachDelivered
 } from '../services/calleMcpOutreachService';
-import { executeApprovedPackets } from '../services/joseExecutionEngineService';
+import { executeApprovedPackets, carryOnRequest } from '../services/joseExecutionEngineService';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
 import {
@@ -310,6 +310,9 @@ export function ChatView({
   const [liveProgress, setLiveProgress] = useState(null);
   // The running request, for "Open on the board" while it runs (phase 4).
   const [liveRequestId, setLiveRequestId] = useState<string | null>(null);
+  // Requests cut off when the app closed (phase 5), shown above the messages.
+  const [interruptedRequests, setInterruptedRequests] = useState(() => listJoseRequests().filter((r) => r.status === 'interrupted'));
+  const refreshInterrupted = () => setInterruptedRequests(listJoseRequests().filter((r) => r.status === 'interrupted'));
   const [streamingText, setStreamingText] = useState('');
   const [streamingTokens, setStreamingTokens] = useState(0);
   const [streamingStartTime, setStreamingStartTime] = useState(null);
@@ -1315,6 +1318,34 @@ export function ChatView({
             >
               Show {hiddenCount} older message{hiddenCount !== 1 ? 's' : ''}
             </button>
+          </div>
+        )}
+        {interruptedRequests.length > 0 && (
+          <div data-testid="chat-interrupted-notice" className="max-w-3xl mx-auto w-full rounded-xl border border-(--warning-border) bg-(--surface-1) px-3 py-2 text-xs text-(--text-2)">
+            <div className="font-medium text-(--text-1)">
+              {interruptedRequests.length === 1 ? '1 request was' : `${interruptedRequests.length} requests were`} cut off when the app closed.
+            </div>
+            <ul className="mt-1 space-y-1">
+              {interruptedRequests.map((request) => (
+                <li key={request.id} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{request.text}</span>
+                  <span className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      className="font-medium text-(--accent) hover:underline"
+                      onClick={async () => { await carryOnRequest(request.id); refreshInterrupted(); }}
+                    >
+                      Carry on
+                    </button>
+                    {onOpenJoseBoard && (
+                      <button type="button" className="text-(--text-3) hover:underline" onClick={() => onOpenJoseBoard(request.id)}>
+                        Open on the board
+                      </button>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
         <MessageListProfiler msgCount={visibleMessages.length}>

@@ -107,15 +107,15 @@ vi.mock('../../../services/codingAgentService', () => ({
   runCodingAgent: vi.fn(async () => ({ ok: true, content: 'code' })),
 }));
 
-import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep } from '../../../services/joseExecutionEngineService';
-import { createAgentPacket } from '../../../services/agentBusService';
+import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep, carryOnRequest } from '../../../services/joseExecutionEngineService';
+import { createAgentPacket, updatePacketStatus, approvePacket } from '../../../services/agentBusService';
 import { fetchOllamaModels } from '../../../lib/ollama';
 import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
 import { setPlanAdapterForTests } from '../../../services/jose/joseAdapt';
-import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests, setJoseRequestStatus, findRequestByPacket } from '../../../services/jose/joseRequestStore';
+import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests, setJoseRequestStatus, findRequestByPacket, updateJoseStep } from '../../../services/jose/joseRequestStore';
 
 function step(agent, actionType, extra = {}) {
   return {
@@ -565,5 +565,52 @@ describe('Jose runs plans as step graphs', () => {
     });
     const request = getJoseRequest(`jose-request-${result.commandId}`);
     expect((request.changeLog || []).map((c) => c.text)).not.toContain('Echo saved what was decided.');
+  });
+
+  // Phase 5: a request the app was closed on can be carried on.
+  describe('carrying on an interrupted request', () => {
+    const cutOff = (requestId, stepId) => {
+      updateJoseStep(requestId, stepId, { status: 'running' });
+      setJoseRequestStatus(requestId, 'interrupted');
+    };
+    const ran = () => vi.mocked(executeContentStepAssignment).mock.calls.map((c) => c[0].stepId);
+
+    it('runs the steps not done, keeps the done ones, and ends done', async () => {
+      const first = await run([
+        step('hector', 'research_report', { stepId: 'a', effects: ['read'] }),
+        step('nova', 'analysis_x', { stepId: 'b', effects: ['read'], needs: ['a'] }),
+      ]);
+      const requestId = `jose-request-${first.commandId}`;
+      cutOff(requestId, 'b');
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await carryOnRequest(requestId);
+      expect(result.ok).toBe(true);
+      expect(ran()).toEqual(['b']);
+      expect(getJoseRequest(requestId).status).toBe('done');
+    });
+
+    it('asks again for a step that needs approval', async () => {
+      const first = await run([
+        step('hector', 'research_report', { stepId: 'a', effects: ['read'] }),
+        step('marcus', 'distribution_execution', { stepId: 'post', effects: ['publish_or_send'], needs: ['a'] }),
+      ]);
+      const requestId = `jose-request-${first.commandId}`;
+      const packetId = listJoseCommands().find((c) => c.id === first.commandId).assignments.find((a) => a.stepId === 'post').packetId;
+      approvePacket(packetId, 'operator');
+      updatePacketStatus(packetId, 'interrupted');
+      cutOff(requestId, 'post');
+      vi.mocked(executeContentStepAssignment).mockClear();
+      await carryOnRequest(requestId);
+      expect(ran()).toEqual([]);
+      expect(getJoseRequest(requestId).status).toBe('waiting_approval');
+    });
+
+    it('does nothing for a request that is not interrupted', async () => {
+      const first = await run([step('hector', 'research_report', { stepId: 'a', effects: ['read'] })]);
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await carryOnRequest(`jose-request-${first.commandId}`);
+      expect(result.ok).toBe(false);
+      expect(ran()).toEqual([]);
+    });
   });
 });

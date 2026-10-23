@@ -144,8 +144,21 @@ const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then
 const AgentPerformanceView = lazy(() => import('./components/AgentPerformanceView').then((mod) => ({ default: mod.AgentPerformanceView })));
 const SessionHistoryView = lazy(() => import('./components/SessionHistoryView').then((mod) => ({ default: mod.SessionHistoryView })));
 
+import { markRunningRequestsInterrupted } from './services/jose/joseRequestStore';
+
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
+
+// A Jose request still "running" at start was cut off when the app closed
+// (phase 5): mark it Interrupted, once, during the first render so Chat's
+// notice sees it. Never from the Coach window, which shares storage with a
+// main window that may be running a request.
+let interruptedRequestsChecked = false;
+function markInterruptedRequestsOnce(): void {
+  if (interruptedRequestsChecked || IS_COACH_WINDOW) return;
+  interruptedRequestsChecked = true;
+  try { markRunningRequestsInterrupted(); } catch { /* display aid only */ }
+}
 const COACH_AGENT_FROM_QUERY = parsedSearchParams.get('coachAgent');
 
 // Context value types
@@ -173,6 +186,7 @@ const RequestApprovalBridge = React.createContext<RequestApprovalBridgeValue | n
 export function useRequestApprovalBridge() { return React.useContext(RequestApprovalBridge); }
 
 function AppShell() {
+  useState(() => { markInterruptedRequestsOnce(); return null; });
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;
   const { settings, setSettings, operatorMode, setOperatorMode } = useSettings();

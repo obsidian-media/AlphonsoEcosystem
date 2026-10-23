@@ -2340,7 +2340,8 @@ export async function retryDLQ(taskId) {
  */
 export async function resumeJoseRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
-  if (!request || request.status !== 'waiting_approval') {
+  // A waiting request, or one the app was closed on (phase 5).
+  if (!request || (request.status !== 'waiting_approval' && request.status !== 'interrupted')) {
     return { ok: false, reason: request ? `This request is ${String(request.status).replace(/_/g, ' ')}, not waiting for an approval.` : 'Request not found.', requestId };
   }
   setJoseRequestStatus(requestId, 'running');
@@ -2357,6 +2358,15 @@ export async function resumeJoseRequest(requestId: string, options: any = {}) {
     conversationHistory: options.history,
   });
   return { ...result, requestId };
+}
+
+/** Carry on a request the app was closed on (phase 5): steps already done are kept; a step that needs approval asks again. */
+export async function carryOnRequest(requestId: string, options: any = {}) {
+  const request: any = getJoseRequest(requestId);
+  if (!request || request.status !== 'interrupted') {
+    return { ok: false, reason: 'Only a request that was cut off when the app closed can be carried on.', requestId };
+  }
+  return resumeJoseRequest(requestId, options);
 }
 
 /** Approve one waiting step of a saved request, by its step id, and carry the request on (the board's button, phase 4). */

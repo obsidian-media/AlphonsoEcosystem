@@ -10,7 +10,7 @@ import { describePlanSource, type JosePlan } from '../../services/jose/josePlann
 import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
-import { approveRequestStep } from '../../services/joseExecutionEngineService';
+import { approveRequestStep, carryOnRequest } from '../../services/joseExecutionEngineService';
 
 const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
@@ -91,6 +91,22 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
       refresh();
     }
   };
+  // A request the app was closed on (phase 5): carry it on from where it was.
+  const carryOn = async () => {
+    if (!selected || runningRef.current) return;
+    runningRef.current = true;
+    setRunning(true);
+    setMessage('');
+    try {
+      setMessage(runResultText(await carryOnRequest(selected.id)));
+    } catch (error) {
+      setMessage(`It could not run: ${String(error)}`);
+    } finally {
+      runningRef.current = false;
+      setRunning(false);
+      refresh();
+    }
+  };
   const waitingSteps = selected?.status === 'waiting_approval' ? selected.steps.filter((s) => s.status === 'waiting_approval') : [];
 
   return (
@@ -130,6 +146,9 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button onClick={() => setEditing(true)}>Edit</Button>
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
+            )}
+            {selected.status === 'interrupted' && (
+              <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
             )}
             {waitingSteps.map((step) => (
               <Button key={step.stepId} variant="primary" disabled={running} onClick={() => approveStep(step.stepId)}>
