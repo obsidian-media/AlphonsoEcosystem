@@ -9,8 +9,9 @@
  * and writes docs/AGENT_SKILL_PERMISSION_MATRIX.md:
  *   - src/services/skillPackContent*.ts   (BASE_PACKS — id/name/permissions/ownerAgent)
  *   - src/services/skillPackWorkflowData.ts (AGENT_WORKFLOW_SKILL_DEFS)
- *   - src/services/agentContractService.ts (AGENT_EXECUTION_CONTRACTS,
- *     AGENT_SKILL_PACK_SCOPE_OVERRIDES)
+ *   - src/services/jose/agentPermissionTable.ts (AGENT_PERMISSION_TABLE: each
+ *     agent's role; AGENT_EXECUTION_CONTRACTS is built from it since 2026-10-23)
+ *   - src/services/agentContractService.ts (AGENT_SKILL_PACK_SCOPE_OVERRIDES)
  *
  * Uses regex extraction rather than importing the modules directly because
  * agentContractService.ts has type annotations plain Node ESM can't parse
@@ -43,6 +44,7 @@ const SKILL_PACK_CONTENT_PATHS = [
 }));
 const WORKFLOW_PACKS_PATH = join(PROJECT_ROOT, 'src/services/skillPackWorkflowData.ts');
 const AGENT_CONTRACT_SERVICE_PATH = join(PROJECT_ROOT, 'src/services/agentContractService.ts');
+const AGENT_PERMISSION_TABLE_PATH = join(PROJECT_ROOT, 'src/services/jose/agentPermissionTable.ts');
 const OUTPUT_PATH = join(PROJECT_ROOT, 'docs/AGENT_SKILL_PERMISSION_MATRIX.md');
 
 function parseStringArray(raw) {
@@ -91,15 +93,16 @@ function extractPacks(source, exportName) {
 }
 
 function extractContractAgents(source) {
-  const block = source.match(/AGENT_EXECUTION_CONTRACTS[^{]*=\s*\{([\s\S]*?)\n\};/);
+  // Since 2026-10-23 the contracts are built from the one permission table.
+  const block = source.match(/AGENT_PERMISSION_TABLE[^{]*=\s*\{([\s\S]*?)\n\};/);
   if (!block) {
     throw new Error(
-      'generate-skill-permission-matrix: AGENT_EXECUTION_CONTRACTS block regex ' +
-      'found no match in agentContractService.ts — source shape likely changed. ' +
+      'generate-skill-permission-matrix: AGENT_PERMISSION_TABLE block regex ' +
+      'found no match in jose/agentPermissionTable.ts — source shape likely changed. ' +
       'Fix the regex rather than silently publishing an empty agent list.'
     );
   }
-  const agentRe = /\[AGENTS\.(\w+)\]:\s*\{\s*role:\s*['"]([^'"]+)['"]/g;
+  const agentRe = /^ {2}(\w+):\s*\{\s*role:\s*['"]([^'"]+)['"]/gm;
   const agents = [];
   let m;
   while ((m = agentRe.exec(block[1]))) {
@@ -185,7 +188,10 @@ function buildMatrix() {
   const allExtractedPacks = packSources.flatMap(({ source, exportName }) => extractPacks(source, exportName));
   const packs = allExtractedPacks.filter((p) => p.category === 'agent_skill');
   const workflowPacks = extractWorkflowPacks(workflowSource);
-  const agents = extractContractAgents(contractSource);
+  const agents = extractContractAgents(readFileSync(AGENT_PERMISSION_TABLE_PATH, 'utf8'));
+  if (agents.length !== 9) {
+    throw new Error(`generate-skill-permission-matrix: expected 9 agents in the permission table, found ${agents.length}.`);
+  }
   const overrideIds = extractOverrideIds(contractSource);
   const blockedOverrides = extractBlockedOverrides(contractSource);
 
