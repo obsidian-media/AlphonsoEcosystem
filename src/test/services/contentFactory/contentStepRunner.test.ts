@@ -1,32 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../services/joseExecutionEngineService', () => ({
-  runJoseCommandExecutionPipeline: vi.fn(),
-}));
-vi.mock('../../../services/agentOutputStoreService', () => ({
-  getAllAgentOutputs: vi.fn(() => ({})),
-}));
-vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
-  const actual = await vi.importActual<typeof import('../../../services/contentFactory/contentProjectFiles')>('../../../services/contentFactory/contentProjectFiles');
-  return { ...actual, writeProjectFile: vi.fn(async () => undefined), writeStepText: vi.fn(async () => 'x/v1.md') };
-});
+// Phase 6b: a project runs as one Jose request (submitStepsToJose); each step's
+// version is saved by the recorder as it finishes (contentStepRecorder.test.ts).
+vi.mock('../../../services/jose/submitToJose', () => ({ submitStepsToJose: vi.fn() }));
+vi.mock('../../../services/joseExecutionEngineService', () => ({ approveRequestStep: vi.fn(async () => ({ ok: true })) }));
+vi.mock('../../../services/jose/joseRequestStore', () => ({ getJoseRequest: vi.fn(() => null) }));
 vi.mock('../../../services/miyaMemoryService', () => ({ listMiyaMemory: vi.fn(() => []) }));
-vi.mock('../../../services/contentFactory/contentImages', () => ({
-  renderScenePictures: vi.fn(async () => []),
-  renderThumbnails: vi.fn(async () => []),
-}));
 
-import { runJoseCommandExecutionPipeline } from '../../../services/joseExecutionEngineService';
-import { getAllAgentOutputs } from '../../../services/agentOutputStoreService';
-import { writeProjectFile } from '../../../services/contentFactory/contentProjectFiles';
+import { submitStepsToJose } from '../../../services/jose/submitToJose';
+import { approveRequestStep } from '../../../services/joseExecutionEngineService';
+import { getJoseRequest } from '../../../services/jose/joseRequestStore';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
-import { createProject, emptyBrief, getProject, saveStepVersion } from '../../../services/contentFactory/contentProjectService';
-import { runContentStep, STEP_AGENTS, CONTENT_TASK_PREVIEW } from '../../../services/contentFactory/contentStepRunner';
+import { createProject, emptyBrief, getProject, markStepStatus, startStep } from '../../../services/contentFactory/contentProjectService';
+import {
+  runContentStep, runContentProject, approveContentStep, STEP_AGENTS, CONTENT_TASK_PREVIEW, PROJECT_LABEL, WAITING_FOR_APPROVAL,
+} from '../../../services/contentFactory/contentStepRunner';
+import { REVIEW_WAIT } from '../../../services/contentFactory/contentProjectPlan';
 import { canExecutePacket } from '../../../services/agentBusService';
-import { renderScenePictures, renderThumbnails } from '../../../services/contentFactory/contentImages';
 
 const settings = { outputFolder: 'D:\\Content' };
-const output = (data: unknown) => ({ summary: 'ok', resultState: 'completed', artifacts: [{ type: 'content_step_output', data }] });
+const submitted = () => vi.mocked(submitStepsToJose).mock.calls[0][0] as any;
+const ok = (extra = {}) => ({ ok: true, commandId: 'c1', requestId: 'jose-request-c1', failedCount: 0, pendingApprovalCount: 0, executionReceipts: [], ...extra });
 
 function newProject() {
   const brand = saveBrand({ name: 'My brand' });
@@ -35,98 +29,93 @@ function newProject() {
 
 beforeEach(() => {
   localStorage.clear();
-  vi.mocked(runJoseCommandExecutionPipeline).mockReset();
-  vi.mocked(getAllAgentOutputs).mockReset();
-  vi.mocked(writeProjectFile).mockClear();
+  vi.clearAllMocks();
+});
+
+describe('runContentProject', () => {
+  it("submits the template's steps labelled, without Echo saving each step", async () => {
+    const p = newProject();
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok() as never);
+    const result = await runContentProject(p.id, { settings });
+    expect(result).toEqual({ ok: true, requestId: 'jose-request-c1' });
+    const args = submitted();
+    expect(args).toMatchObject({ source: 'content-factory', label: PROJECT_LABEL, saveDecisions: false });
+    expect(PROJECT_LABEL).toBe('Steps set by Miya Studio.');
+    expect(args.steps).toHaveLength(11);
+    expect(args.text).toContain('Why we wait');
+    expect(getProject(p.id)!.joseRequestId).toBe('jose-request-c1');
+  });
+
+  it('refuses while a step of the project is running', async () => {
+    const p = newProject();
+    startStep(p.id, 'script');
+    expect(await runContentProject(p.id, { settings })).toEqual({ ok: false, requestId: null, reason: 'A step of this project is already running.' });
+    expect(submitStepsToJose).not.toHaveBeenCalled();
+  });
+
+  it('needs the idea and the output folder', async () => {
+    const brand = saveBrand({ name: 'B2' });
+    const empty = createProject(brand.id, 'Empty', emptyBrief());
+    expect((await runContentProject(empty.id, { settings })).reason).toBe('Write the idea in the brief first.');
+    const p = newProject();
+    expect((await runContentProject(p.id, { settings: {} })).reason).toMatch(/output folder/i);
+    expect(submitStepsToJose).not.toHaveBeenCalled();
+  });
+
+  it('says why when Jose refuses the plan', async () => {
+    const p = newProject();
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce({ ok: false, reason: 'plan_rejected', problems: ['x is wrong.'] } as never);
+    expect(await runContentProject(p.id, { settings })).toEqual({ ok: false, requestId: null, reason: "Jose couldn't run it: x is wrong." });
+  });
 });
 
 describe('runContentStep', () => {
-  it('sends research to Hector and Nova through Jose with the exact task types', async () => {
+  it("submits just that step's agents, with the exact task types", async () => {
     const p = newProject();
-    vi.mocked(runJoseCommandExecutionPipeline).mockResolvedValue({ ok: true, commandId: 'c1', failedCount: 0, pendingApprovalCount: 0, executionReceipts: [] } as never);
-    vi.mocked(getAllAgentOutputs).mockReturnValue({ hector: output({ patterns: ['a'] }), nova: output({ angle: 'b' }) } as never);
-    const result = await runContentStep(p.id, 'research', { settings });
-    const args = vi.mocked(runJoseCommandExecutionPipeline).mock.calls[0][0] as { assignments: { agent: string; actionType: string; contentStep: { step: string } }[]; source: string };
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok() as never);
+    await runContentStep(p.id, 'research', { settings });
+    const args = submitted();
     expect(args.source).toBe('content-factory');
-    expect(args.assignments.map((a) => [a.agent, a.actionType])).toEqual([['hector', 'research_virality'], ['nova', 'analysis_market']]);
-    expect(args.assignments.every((a) => a.contentStep.step === 'research')).toBe(true);
-    const version = result.steps.research.versions[0];
-    expect(version.output).toEqual({ hector: { patterns: ['a'] }, nova: { angle: 'b' } });
-    expect(version.joseCommandId).toBe('c1');
-    expect(result.steps.research.status).toBe('done');
-    expect(writeProjectFile).toHaveBeenCalled();
+    expect(args.steps.map((s: any) => [s.agent, s.actionType])).toEqual([['hector', 'research_virality'], ['nova', 'analysis_market']]);
+    expect(args.steps.every((s: any) => s.contentStep.step === 'research' && !s.waitFor && s.needs.length === 0)).toBe(true);
+    expect(getProject(p.id)!.joseRequestId).toBe('jose-request-c1');
   });
 
-  it('fails the step with the agent\'s reason when one agent fails', async () => {
+  it('adds the reason the step was sent back with', async () => {
     const p = newProject();
-    vi.mocked(runJoseCommandExecutionPipeline).mockResolvedValue({
-      ok: true, commandId: 'c2', failedCount: 1, pendingApprovalCount: 0,
-      executionReceipts: [{ agent: 'nova', status: 'dead_letter', reason: "nova: The model's answer could not be read." }],
-    } as never);
-    vi.mocked(getAllAgentOutputs).mockReturnValue({ hector: output({ patterns: ['a'] }) } as never);
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok() as never);
+    await runContentStep(p.id, 'script', { settings, extraTask: 'The user sent the last version back: shorter' });
+    expect(submitted().steps[0].contentStep.task).toContain('shorter');
+  });
+
+  it("fails the step with the agent's reason when one agent fails", async () => {
+    const p = newProject();
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok({ failedCount: 1, executionReceipts: [{ agent: 'nova', status: 'failed', reason: 'Nova could not answer.' }] }) as never);
     const result = await runContentStep(p.id, 'research', { settings });
-    expect(result.steps.research.status).toBe('failed');
-    expect(result.steps.research.error).toBe("nova: The model's answer could not be read.");
+    expect(result.steps.research).toMatchObject({ status: 'failed', error: 'Nova could not answer.' });
   });
 
-  it('does not run without an output folder', async () => {
+  it('waits for approval when Jose holds a task for you', async () => {
     const p = newProject();
-    const result = await runContentStep(p.id, 'research', { settings: { outputFolder: '' } });
-    expect(result.steps.research.status).toBe('failed');
-    expect(result.steps.research.error).toBe('Choose an output folder in Settings first.');
-    expect(runJoseCommandExecutionPipeline).not.toHaveBeenCalled();
-  });
-
-  it('gives the script step the chosen research', async () => {
-    const p = newProject();
-    saveStepVersion(p.id, 'research', { output: { hector: { patterns: ['fast cuts'] } }, summary: 'r', joseCommandId: null });
-    vi.mocked(runJoseCommandExecutionPipeline).mockResolvedValue({ ok: true, commandId: 'c3', failedCount: 0, pendingApprovalCount: 0, executionReceipts: [] } as never);
-    vi.mocked(getAllAgentOutputs).mockReturnValue({ miya: output({ title: 'T' }) } as never);
-    await runContentStep(p.id, 'script', { settings });
-    const args = vi.mocked(runJoseCommandExecutionPipeline).mock.calls[0][0] as { assignments: { contentStep: { prior: Record<string, unknown> } }[] };
-    expect(args.assignments[0].contentStep.prior.research).toEqual({ hector: { patterns: ['fast cuts'] } });
-  });
-
-  it('turns Jose\'s progress into plain messages', async () => {
-    const p = newProject();
-    vi.mocked(runJoseCommandExecutionPipeline).mockImplementation(async ({ onProgress }: never) => {
-      (onProgress as (e: unknown) => void)({ stage: 'wave_start', wave: 0, agents: ['hector', 'nova'] });
-      return { ok: true, commandId: 'c4', failedCount: 0, pendingApprovalCount: 0, executionReceipts: [] } as never;
-    });
-    vi.mocked(getAllAgentOutputs).mockReturnValue({ hector: output({}), nova: output({}) } as never);
-    const onProgress = vi.fn();
-    await runContentStep(p.id, 'research', { settings, onProgress });
-    const messages = getProject(p.id)!.steps.research.progress.map((m) => m.message);
-    expect(messages).toContain('Hector is researching what goes viral…');
-    expect(messages).toContain('Nova is checking the market…');
-    expect(onProgress).toHaveBeenCalled();
-  });
-
-  it('waits for approval when Jose holds a task for the user', async () => {
-    const p = newProject();
-    vi.mocked(runJoseCommandExecutionPipeline).mockResolvedValue({ ok: true, commandId: 'c5', failedCount: 0, pendingApprovalCount: 1, executionReceipts: [] } as never);
-    vi.mocked(getAllAgentOutputs).mockReturnValue({} as never);
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok({ pendingApprovalCount: 1 }) as never);
     const result = await runContentStep(p.id, 'research', { settings });
-    expect(result.steps.research.status).toBe('needs_approval');
-    expect(result.steps.research.error).toBe('Waiting for your approval in the Approval panel.');
+    expect(result.steps.research).toMatchObject({ status: 'needs_approval', error: WAITING_FOR_APPROVAL });
+  });
+
+  it('does not run without an output folder, or without the idea', async () => {
+    const p = newProject();
+    expect((await runContentStep(p.id, 'research', { settings: {} })).steps.research.status).toBe('failed');
+    const brand = saveBrand({ name: 'B2' });
+    const empty = createProject(brand.id, 'Empty', emptyBrief());
+    expect((await runContentStep(empty.id, 'research', { settings })).steps.research.error).toBe('Write the idea in the brief first.');
+    expect(submitStepsToJose).not.toHaveBeenCalled();
   });
 
   it('every AI step has agents; the brief has none', () => {
     expect(STEP_AGENTS.brief).toEqual([]);
-    expect(STEP_AGENTS.quality.map((a) => a.agent)).toEqual(['maria', 'sentinel']);
-  });
-
-  it('makes the pictures after the scene and thumbnail plans', async () => {
-    vi.mocked(runJoseCommandExecutionPipeline).mockResolvedValue({ ok: true, commandId: 'c6', failedCount: 0, pendingApprovalCount: 0, executionReceipts: [] } as never);
-    vi.mocked(getAllAgentOutputs).mockReturnValue({ miya: output({ style: 's', scenes: [] }) } as never);
-    const p = newProject();
-    await runContentStep(p.id, 'scenes', { settings });
-    expect(renderScenePictures).toHaveBeenCalledWith(p.id, settings, expect.any(Function));
-    await runContentStep(p.id, 'thumbnail', { settings });
-    expect(renderThumbnails).toHaveBeenCalledWith(p.id, settings, expect.any(Function));
-    vi.mocked(renderScenePictures).mockClear();
-    await runContentStep(p.id, 'script', { settings });
-    expect(renderScenePictures).not.toHaveBeenCalled();
+    for (const step of ['research', 'script', 'review', 'scenes', 'thumbnail', 'campaign', 'quality'] as const) {
+      expect(STEP_AGENTS[step].length).toBeGreaterThan(0);
+    }
   });
 
   // Found in the real app (2026-10-22): Jose's bus refused every step, because
@@ -140,29 +129,25 @@ describe('runContentStep', () => {
       }
     }
   });
+});
 
-  // Review finding 2026-10-22: the step said "Done" while ComfyUI was still
-  // making the pictures, with no progress shown (a silent wait).
-  it('stays running, with progress, until the pictures are made', async () => {
-    vi.mocked(runJoseCommandExecutionPipeline).mockResolvedValue({ ok: true, commandId: 'c7', failedCount: 0, pendingApprovalCount: 0, executionReceipts: [] } as never);
-    vi.mocked(getAllAgentOutputs).mockReturnValue({ miya: output({ style: 's', scenes: [] }) } as never);
+describe('approveContentStep', () => {
+  it('approving the review carries the request on to Scenes', async () => {
     const p = newProject();
-    let statusDuringPictures = '';
-    vi.mocked(renderScenePictures).mockImplementationOnce(async () => {
-      statusDuringPictures = getProject(p.id)!.steps.scenes.status;
-      return [];
-    });
-    const result = await runContentStep(p.id, 'scenes', { settings });
-    expect(statusDuringPictures).toBe('running');
-    expect(result.steps.scenes.status).toBe('done');
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok({ pendingApprovalCount: 1 }) as never);
+    await runContentProject(p.id, { settings });
+    markStepStatus(p.id, 'review', 'needs_approval', null);
+    vi.mocked(getJoseRequest).mockReturnValue({ id: 'jose-request-c1', status: 'waiting_approval', steps: [{ stepId: 'scenes', status: 'waiting_approval', waitFor: REVIEW_WAIT }] } as never);
+    const result = await approveContentStep(p.id, 'review');
+    expect(result.steps.review.status).toBe('approved');
+    expect(approveRequestStep).toHaveBeenCalledWith('jose-request-c1', 'scenes');
   });
 
-  it('asks for the idea first when the brief has none', async () => {
-    const brand = saveBrand({ name: 'B2' });
-    const p = createProject(brand.id, 'Empty', emptyBrief());
-    const result = await runContentStep(p.id, 'research', { settings });
-    expect(result.steps.research.status).toBe('failed');
-    expect(result.steps.research.error).toBe('Write the idea in the brief first.');
-    expect(runJoseCommandExecutionPipeline).not.toHaveBeenCalled();
+  it('when nothing waits, only the status changes', async () => {
+    const p = newProject();
+    markStepStatus(p.id, 'quality', 'needs_approval', null);
+    const result = await approveContentStep(p.id, 'quality');
+    expect(result.steps.quality.status).toBe('approved');
+    expect(approveRequestStep).not.toHaveBeenCalled();
   });
 });

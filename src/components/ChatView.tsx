@@ -268,6 +268,8 @@ interface ChatViewProps {
   onPendingCountChange?: (count: number) => void;
   /** Open the Orchestrator page's Requests tab on a request (phase 3). */
   onOpenJoseBoard?: (requestId: string) => void;
+  /** Opens Miya Studio on a content project started from Chat (phase 6b). */
+  onOpenContentProject?: (projectId: string) => void;
 }
 
 export function ChatView({
@@ -288,6 +290,7 @@ export function ChatView({
   screenObserverLogs = [],
   setActiveTab,
   onOpenJoseBoard,
+  onOpenContentProject,
   onPendingCountChange
 }: ChatViewProps) {
   const [messages, setMessages] = useState([]);
@@ -724,6 +727,19 @@ export function ChatView({
           josePlanRequestId: result.requestId
         }]);
         onJoseExecutionState?.('approving', 'Jose is waiting for you to check his plan.');
+        return;
+      }
+
+      // A content video becomes a Miya Studio project (phase 6b): say so, with a way there.
+      if (result && 'contentProjectId' in result) {
+        setMessages((current) => [...current, {
+          id: nextMsgId(),
+          role: 'assistant',
+          agentId: 'jose',
+          content: String(result.planNote || result.reason || ''),
+          ...(result.contentProjectId ? { contentProjectId: result.contentProjectId } : {})
+        }]);
+        onJoseExecutionState?.(result.ok ? 'directing' : 'warning', result.ok ? 'Jose started a Miya Studio project.' : 'The project could not start.');
         return;
       }
 
@@ -1418,6 +1434,18 @@ export function ChatView({
                       onRun={(requestId) => { if (!isGenerating) void handleJoseCommand(getJoseRequest(requestId)?.text || '', { approvedRequestId: requestId }); }}
                       onOpenBoard={onOpenJoseBoard}
                     />
+                  )}
+                  {message.contentProjectId && onOpenContentProject && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => onOpenContentProject(message.contentProjectId)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-(--accent-dim) border border-(--accent-border) rounded-lg text-xs text-(--accent) hover:text-(--accent-hover) transition-colors"
+                      >
+                        <ArrowRight className="w-3 h-3" />
+                        Open in Miya Studio
+                      </button>
+                    </div>
                   )}
                   {message.joseRequestId && onOpenJoseBoard && (
                     <div className="mt-2">

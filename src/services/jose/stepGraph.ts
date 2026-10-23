@@ -3,6 +3,7 @@
 // Before 2026-10-23 a request could give each agent only one task, in a fixed
 // order (AGENT_DEPENDENCIES); now an agent can have several steps, and each
 // step waits only for the steps it needs.
+import type { ContentStepPayload } from '../contentFactory/contentTypes';
 import { AGENT_DEPENDENCIES } from './agentOrder';
 import { AGENT_PERMISSION_TABLE, isEffectAllowed, isTaskTypeAllowed } from './agentPermissionTable';
 import { EFFECT_LABELS, type JoseEffect } from './joseEffects';
@@ -38,6 +39,10 @@ export interface PlanStep {
   costEstimateUsd?: number;
   /** Data a given step's agent needs, such as Marcus's Slack channel and text (phase 6a). */
   payload?: Record<string, unknown>;
+  /** A content-factory step's data: the project, the factory step, the brief and brand (phase 6b). */
+  contentStep?: ContentStepPayload;
+  /** Wait for you before this step runs, saying why (phase 6b: "Approve the review in Miya Studio first."). */
+  waitFor?: string;
 }
 
 const NAMES: Record<string, string> = {

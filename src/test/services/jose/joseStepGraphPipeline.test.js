@@ -102,6 +102,10 @@ vi.mock('../../../services/contentFactory/contentAgentExecutor', () => ({
   })),
 }));
 
+vi.mock('../../../services/contentFactory/contentStepRecorder', () => ({
+  recordContentStepResult: vi.fn(async () => 'saved'),
+  beginContentStep: vi.fn(),
+}));
 vi.mock('../../../services/codingAgentService', () => ({
   isCodingRequest: vi.fn(() => true),
   runCodingAgent: vi.fn(async () => ({ ok: true, content: 'code' })),
@@ -114,6 +118,7 @@ import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
+import { recordContentStepResult } from '../../../services/contentFactory/contentStepRecorder';
 import { setPlanAdapterForTests } from '../../../services/jose/joseAdapt';
 import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests, setJoseRequestStatus, findRequestByPacket, updateJoseStep } from '../../../services/jose/joseRequestStore';
 
@@ -676,5 +681,42 @@ describe('Jose runs plans as step graphs', () => {
     });
     const output = getStepOutput(result.commandId, 'maria');
     expect(output.schema.riskLevel).toBeTruthy();
+  });
+
+  // Phase 6b: a step can wait for you for a reason of its own (Miya Studio's review approval).
+  it('a step with a wait reason waits for approval even when its effects do not', async () => {
+    const result = await run([
+      step('nova', 'analysis_x', { stepId: 'a', effects: ['read'] }),
+      step('miya', 'creative_y', { stepId: 'b', effects: ['write_own_work'], needs: ['a'], waitFor: 'Approve the review in Miya Studio first.' }),
+    ]);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.status).toBe('waiting_approval');
+    expect(request.steps.find((s) => s.stepId === 'a').status).toBe('done');
+    expect(request.steps.find((s) => s.stepId === 'b').status).toBe('waiting_approval');
+    // Saved on the request, so Miya Studio's Approve finds the step (real app, 2026-10-23).
+    expect(request.steps.find((s) => s.stepId === 'b').waitFor).toBe('Approve the review in Miya Studio first.');
+    // The content data stays on the command, not in every saved request.
+    expect(request.steps.find((s) => s.stepId === 'b').contentStep).toBeUndefined();
+  });
+
+  // Phase 6b: the factory saves each step as it finishes, however the request runs.
+  it('a finished content step is handed to the factory', async () => {
+    const result = await run([step('miya', 'creative_script', { stepId: 'script', effects: ['write_own_work'], contentStep: { projectId: 'p1', step: 'script', task: 'x', prior: {} } })]);
+    expect(recordContentStepResult).toHaveBeenCalledWith({ projectId: 'p1', step: 'script', agent: 'miya', data: { ok: true }, commandId: result.commandId });
+  });
+
+  // Real app (2026-10-23): a review-loop revision of a content step lost its
+  // content data, so Miya's rewrite ran without the project.
+  it("a review-loop revision of a content step keeps the step's content data", async () => {
+    globalThis.__joseVerdicts = ['fix'];
+    const contentStep = { projectId: 'p1', step: 'script', task: 'x', prior: {} };
+    const result = await run([
+      step('miya', 'creative_script', { stepId: 'script', effects: ['write_own_work'], contentStep }),
+      step('nova', 'analysis_content_review', { stepId: 'review_value', effects: ['read'], needs: ['script'], reviewOf: 'script', contentStep: { ...contentStep, step: 'review' } }),
+    ]);
+    globalThis.__joseVerdicts = [];
+    const command = listJoseCommands().find((c) => c.id === result.commandId);
+    expect(command.assignments.find((a) => a.stepId === 'script-fix-1').contentStep).toEqual(contentStep);
+    expect(command.assignments.find((a) => a.stepId === 'review_value-r1').contentStep).toEqual({ ...contentStep, step: 'review' });
   });
 });

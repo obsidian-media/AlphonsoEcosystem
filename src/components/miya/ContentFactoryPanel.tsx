@@ -7,9 +7,12 @@ import { ThumbnailStudioTab } from './ThumbnailStudioTab';
 import { CampaignStudioTab } from './CampaignStudioTab';
 import { ensureFirstBrand, getBrand, listBrands } from '../../services/contentFactory/contentBrandService';
 import {
-  approveStep, chooseVersion, createProject, emptyBrief, getProject, listProjects, recoverInterruptedSteps, updateBrief,
+  chooseVersion, createProject, emptyBrief, getProject, listProjects, recoverInterruptedSteps, updateBrief,
 } from '../../services/contentFactory/contentProjectService';
-import { runContentStep } from '../../services/contentFactory/contentStepRunner';
+import { approveContentStep, runContentProject, runContentStep } from '../../services/contentFactory/contentStepRunner';
+import { getJoseRequest } from '../../services/jose/joseRequestStore';
+import { STATUS_LABELS } from '../jose/JoseRequestsBoard';
+import { Button } from '../ui';
 import { checkPendingPictures } from '../../services/contentFactory/contentImages';
 import { rejectPiece, retryWithReason, sendBackTarget } from '../../services/contentFactory/contentQualityGate';
 import type { ContentProject, StepId } from '../../services/contentFactory/contentTypes';
@@ -22,16 +25,24 @@ function readLast(): { brandId?: string; projectId?: string } {
   try { return JSON.parse(localStorage.getItem(LAST_KEY) || '{}'); } catch { return {}; }
 }
 
+/** Opens Miya Studio on this project next time (Chat's "Open in Miya Studio", phase 6b). */
+export function selectContentProject(brandId: string, projectId: string): void {
+  try { localStorage.setItem(LAST_KEY, JSON.stringify({ brandId, projectId })); } catch { /* storage unavailable */ }
+}
+
 /** The content factory in Miya Studio: brand, project, brief, then this tab's tool. */
-export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onBrand }: {
+export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onBrand, onOpenJoseBoard }: {
   tab: ContentFactoryTab;
   settings: { outputFolder?: string | null };
   brandId?: string;
   onBrand?(id: string): void;
+  /** Opens a request on the Orchestrator's Requests tab (phase 6b). */
+  onOpenJoseBoard?(requestId: string): void;
 }) {
   const [brandId, setBrandId] = useState<string>(() => brandOverride || readLast().brandId || ensureFirstBrand().id);
   const [projectId, setProjectId] = useState<string | null>(() => readLast().projectId || null);
   const [version, setVersion] = useState(0);
+  const [projectMessage, setProjectMessage] = useState('');
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
   useEffect(() => { recoverInterruptedSteps(); refresh(); }, [refresh]);
@@ -47,7 +58,26 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
     try { localStorage.setItem(LAST_KEY, JSON.stringify({ brandId: brand?.id, projectId: project?.id })); } catch { /* storage unavailable */ }
   }, [brand?.id, project?.id]);
 
+  const request = project?.joseRequestId ? getJoseRequest(project.joseRequestId) : null;
+  // The request runs on (or is carried on from the board or Telegram); keep the panel current.
+  const live = request?.status === 'running' || Boolean(project && Object.values(project.steps).some((s) => s.status === 'running'));
+  useEffect(() => {
+    if (!live) return undefined;
+    const timer = window.setInterval(refresh, 2000);
+    return () => window.clearInterval(timer);
+  }, [live, refresh]);
+
   if (!brand) return null;
+
+  const runProject = () => {
+    if (!project) return;
+    setProjectMessage('');
+    runContentProject(project.id, { settings })
+      .then((result) => { if (!result.ok) setProjectMessage(result.reason || 'The project could not start.'); })
+      .catch((error) => setProjectMessage(String(error?.message || error)))
+      .finally(refresh);
+    refresh();
+  };
 
   // Long steps report progress; refresh on each message so the panel shows it.
   const run = (step: StepId, extra?: string) => {
@@ -63,7 +93,8 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
     project,
     runStep: (step: StepId) => run(step),
     chooseVersion: (step: StepId, v: number) => { chooseVersion(project.id, step, v); refresh(); },
-    approve: (step: StepId) => { approveStep(project.id, step); refresh(); },
+    // After the review this also carries the project's request on to Scenes (phase 6b).
+    approve: (step: StepId) => { approveContentStep(project.id, step).catch(() => undefined).finally(refresh); },
     sendBack: (step: StepId, reason: string) => {
       // Like a rejected thumbnail, the reason becomes a brand lesson (Echo).
       rejectPiece(project.id, step, step, reason);
@@ -89,6 +120,18 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
       {project && tabProps && (
         <>
           <BriefPanel brief={project.brief} onSave={(b) => { updateBrief(project.id, b); refresh(); }} />
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-(--surface-1) p-3 text-[12px] text-(--text-2)" data-testid="content-project-request">
+            <Button size="sm" onClick={runProject} disabled={live}>Run project</Button>
+            <span>
+              {request
+                ? `Jose request: ${STATUS_LABELS[request.status] || request.status}.`
+                : 'Run project runs every step through Jose and stops where you approve.'}
+            </span>
+            {request && onOpenJoseBoard && (
+              <Button size="sm" variant="ghost" onClick={() => onOpenJoseBoard(request.id)}>Open on the board</Button>
+            )}
+            {projectMessage && <span className="text-(--error)">{projectMessage}</span>}
+          </div>
           {tab === 'script' && <ScriptStudioTab {...tabProps} />}
           {tab === 'scene' && (
             <SceneBuilderTab project={project} outputRoot={outputRoot} runStep={tabProps.runStep} chooseVersion={tabProps.chooseVersion}

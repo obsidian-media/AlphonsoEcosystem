@@ -65,6 +65,8 @@ export interface StepState {
   progress: { message: string; atMs: number }[];
   /** Snapshot taken when the step started, so a run is judged against what it was given. */
   runBasedOn?: BasedOn | null;
+  /** Answers from a step's agents that have finished, while the others still work (phase 6b). */
+  pendingAgents?: Record<string, unknown>;
 }
 
 export type ContentFormat =
@@ -103,6 +105,8 @@ export interface ContentProject {
   brief: ContentBrief;
   briefRevision: number;
   steps: Record<StepId, StepState>;
+  /** The latest Jose request for this project (phase 6b). */
+  joseRequestId?: string | null;
   createdAtMs: number;
   updatedAtMs: number;
 }

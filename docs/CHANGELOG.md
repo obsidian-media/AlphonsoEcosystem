@@ -39,6 +39,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Campaign Studio:** captions, hashtags, ad copy and posting times, then Maria's quality gate.
   Every project is saved in a folder per brand, keeps its versions, and tells you when a step is out of date. What you reject is remembered for that brand. The old generator is still there as "Quick package".
 - **Honest risk ratings.** A command's rating now comes from what it does, and the approval window says why. Commands that only read (such as `ollama list`) run without asking, instead of showing "85 HIGH RISK". Release Preflight asks once instead of twice.
+- **A Miya Studio project is one Jose request (Jose redesign, phase 6b).**
+  - **Run project** runs research, the script, the two reviews, scenes, thumbnails, the campaign and the quality gate as one request on the Requests board. The reviews can send the script back to Miya (up to 2 rounds); then it stops for you: "Approve the review in Miya Studio first." Approve in Miya Studio (or on the board, or in Telegram) carries it on.
+  - Each Studio tab still has its own Run to redo that step; later steps show Out of date, and nothing reruns by itself.
+  - Each step is saved to the project as it finishes, however the request is carried on.
+  - **From Chat:** asking for a content video ("make a YouTube video script about…") starts a Miya Studio project for your default brand, with "Open in Miya Studio".
+  - Nothing outside Jose calls the old pipeline any more; a test fails if something does.
 - **Everything goes through Jose (Jose redesign, phase 6a).**
   - **Telegram, WhatsApp, the phone and the Orchestrator page** now get what Chat gets: a question is answered, a task is planned and run as a request on the Requests board, with approvals by what each step does. Telegram and WhatsApp reply "Jose is on it" at once; WhatsApp sends one line when the request ends. The Orchestrator's Send to Jose shows the answer, or opens the Requests tab on the new request. `/boardroom` on Telegram used to create work that nothing ran; it now goes to Jose.
   - **Schedules** run through Jose too, but never stop to show the plan and never use a paid model. A step that needs approval still waits, and Telegram asks.

@@ -145,6 +145,16 @@ const AgentPerformanceView = lazy(() => import('./components/AgentPerformanceVie
 const SessionHistoryView = lazy(() => import('./components/SessionHistoryView').then((mod) => ({ default: mod.SessionHistoryView })));
 
 import { handleCompanionCommand } from './services/companionCommandService';
+
+/** Miya Studio opens on this project (a content video started from Chat, phase 6b). */
+async function openContentProject(projectId: string): Promise<void> {
+  const [{ getProject }, { selectContentProject }] = await Promise.all([
+    import('./services/contentFactory/contentProjectService'),
+    import('./components/miya/ContentFactoryPanel'),
+  ]);
+  const project = getProject(projectId);
+  if (project) selectContentProject(project.brandId, project.id);
+}
 import { markRunningRequestsInterrupted } from './services/jose/joseRequestStore';
 import { expireWaitingRequests } from './services/jose/joseExpiry';
 
@@ -916,11 +926,11 @@ function AppShell() {
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState activeTab="Chat" />}>
-                    <ChatView onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} onProviderChange={(provider: string) => setSettings((current: any) => ({ ...current, selectedProvider: provider, selectedModel: '' }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} onPendingCountChange={setPendingApprovalCount} />
+                    <ChatView onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} onOpenContentProject={(projectId: string) => { void openContentProject(projectId).then(() => switchTab('miya')); }} activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} onProviderChange={(provider: string) => setSettings((current: any) => ({ ...current, selectedProvider: provider, selectedModel: '' }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} onPendingCountChange={setPendingApprovalCount} />
                   </Suspense>
                 )}
                 {activeTab === 'miya' && (
-                  <MiyaStudio settings={settings} ollamaStatus={ollamaStatus} onStudioStateChange={(state: string, message: string) => setMiyaCompanionState({ state, message })} onPacketCreated={() => { const log = appendVerificationLog({ type: 'miya_handoff_packet_created', source: 'miya-studio', trust: TRUST_STATES.TEMPORARY, payload: { selectedModel: settings.selectedModel || null } }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
+                  <MiyaStudio onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} settings={settings} ollamaStatus={ollamaStatus} onStudioStateChange={(state: string, message: string) => setMiyaCompanionState({ state, message })} onPacketCreated={() => { const log = appendVerificationLog({ type: 'miya_handoff_packet_created', source: 'miya-studio', trust: TRUST_STATES.TEMPORARY, payload: { selectedModel: settings.selectedModel || null } }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
                 )}
                 {activeTab === 'content' && (
                   <ContentCatalystWorkspace settings={settings} onJobChange={(job: any) => { if (!job) return; const log = appendVerificationLog({ type: 'content_catalyst_job_update', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: { jobId: job.id, status: job.status, currentStep: job.currentStep } }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} onApprovalRequest={(approval: any) => { if (!approval) return; const log = appendVerificationLog({ type: 'content_catalyst_publish_approval', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: approval }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />

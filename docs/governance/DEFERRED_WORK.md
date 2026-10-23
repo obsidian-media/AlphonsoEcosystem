@@ -39,6 +39,23 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-23] **Jose redesign phase 7 (planned by the owner, after all the Miya content-factory phases).** Add to this list when something comes up.
+  - **Stop a running request** from the board, Chat and Telegram. Today only a plan still waiting can be cancelled; a running request (a Miya project runs for many minutes) cannot be stopped.
+  - **One model-heavy request at a time:** nothing limits requests running together, so Run project and a Chat request compete for the same local model and graphics memory (on a 6 GB card both slow down or fail). Queue them, and show the queue on the board.
+  - The Workflows panel's Run and the phone's "run workflow" go through Jose (they use `executeWorkflowTasks()` today; phase 6a).
+  - A button in Boardroom's notes that opens the request on the board (phase 6a).
+  - Help requests ("HELP: …") for content-factory steps (phase 4).
+  - Optional: WhatsApp and phone-companion approvals (phase 5, deferred by the owner); the Agent Workshop's simulated planner onto Jose (design non-goal).
+  - Not a phase: the live paid-model check (`jose-paid-live.e2e.mjs`) runs when the owner gives a key and the prices.
+  - **Status:** OPEN (planned).
+
+- [2026-10-23] **Jose redesign phase 6b (the content factory as one request): what it leaves open.**
+  - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
+  - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
+  - The board's "Approve and carry on" on Scenes approves the review too, but only when Scenes starts (Miya Studio shows it as waiting until then).
+  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`) are next.
+  - **Status:** OPEN.
+
 - [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**
   - The Workflows panel's Run and the phone's "run workflow" call `executeWorkflowTasks()`, the workflow operations' own executors, not Jose. Only `runWorkflow()` (the agent chain) moved; the operations executors are a separate system (see `workflowExecutionService`).
   - Boardroom's notes say "Follow it on the Orchestrator page, Requests tab." in words; there is no button that opens the request.
@@ -64,9 +81,9 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~Saving a plan as a new template, and seeing or editing the plan before it runs~~ — CLOSED 2026-10-23 by phase 3.
   - ~~Jose choosing the model per step, with model escalation on failure~~ — CLOSED 2026-10-23 by phase 4 (installed models only; paid models only if you allow them).
   - ~~Only Chat goes through `submitToJose()` and the planner~~ — CLOSED 2026-10-23 by phase 6a: Telegram, WhatsApp, the phone companion, the message pollers, schedules, workflows, the batch orchestrator, the Orchestrator page and Boardroom actions go through `answerOrPlan()` or `submitStepsToJose()`. The content factory's per-step requests move in phase 6b.
-  - A Content video planned in Chat runs the template's steps without a Miya Studio project (no brand, folder or pictures) and points to Miya Studio: phase 6 moves the factory onto the template.
+  - ~~A Content video planned in Chat runs the template's steps without a Miya Studio project~~ — CLOSED 2026-10-23 by phase 6b: from Chat it starts a project for your default brand. Asked on Telegram or by a schedule it still runs the template's steps and points to Miya Studio.
   - ~~Giving Alphonso a planned step's instruction safely~~ — CLOSED 2026-10-23 by phase 4: it reaches his planning and code prompts as "Jose's note for this step:", after your request, and never his clarification, external-tool or intent checks.
-  - **Status:** OPEN.
+  - **Status:** CLOSED 2026-10-23 (every item above closed by a later phase).
 
 - [2026-10-23] **Jose redesign phase 1: what it leaves open.**
   - ~~The splitter's free-text plans still run a step after an earlier one failed~~ — CLOSED 2026-10-23 by phase 3 (the note said phase 2, which did not do it): every plan, the simple one included, runs as explicit steps.
@@ -74,7 +91,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~Task types the contracts never allowed (Jose's `boardroom_*` and `cost_policy_enforcement`, Hector's `external_publish_handoff`)~~ — CLOSED 2026-10-23 by phase 3: Jose's table has `boardroom_` and `cost_policy_`, and an exact entry wins over a blocked prefix (`taskTypePartAllowed()`), shared by the table and the contracts check.
   - ~~Marcus still owns the skill packs `pack.marcus-security-audit` and `pack.marcus-risk-detection`~~ — CLOSED 2026-10-23 by phase 4: removed; a copy saved before then is not shown.
   - ~~Settings shows Approval Mode off when the setting is unset~~ — CLOSED 2026-10-23 by phase 3: the switch reads it as the policy does.
-  - **Status:** OPEN.
+  - **Status:** CLOSED 2026-10-23 (every item above closed by a later phase).
 
 - [2026-10-22] **ACC accepts packets of any kind (QA Bug 66), parked by the owner.** ACC's receiver (`cloud/services/alphonsoBridgeService.js` in `github.com/Thatisshayan/ACC`) records a packet whose `kind` is not one of `content_job`, `task`, `result`, `approval`, `memory` (tested: `"nonsense"` was recorded). The fix belongs in ACC (refuse unknown kinds with a clear error), so it is parked beside the SessionGuard bridge and Coach Mode: more work on the ACC side than in Alphonso. Alphonso only sends the five known kinds. Status: OPEN, parked.
 

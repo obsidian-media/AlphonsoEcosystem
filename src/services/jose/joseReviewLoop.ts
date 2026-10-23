@@ -90,6 +90,7 @@ export function planReviewRound(
       revises: original.stepId,
       round,
       ...(original.model ? { model: original.model } : {}),
+      ...(original.contentStep ? { contentStep: original.contentStep } : {}),
     };
     const reReviews: PlanStep[] = reviews.map((r) => ({
       stepId: `${baseReviewId(r.review.stepId)}-r${round}`,
@@ -101,6 +102,7 @@ export function planReviewRound(
       reviewOf: revisionId,
       round,
       ...(r.review.model ? { model: r.review.model } : {}),
+      ...(r.review.contentStep ? { contentStep: r.review.contentStep } : {}),
     }));
     changes.push({
       add: [revision, ...reReviews],

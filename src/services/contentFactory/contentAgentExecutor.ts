@@ -5,6 +5,10 @@ import { generateAgentLlmResponse } from '../../lib/ollama';
 import { runMultiSourceResearch } from '../hectorResearchService';
 import { buildStepPrompt, parseStepAnswer, CONTENT_ACTION_KEYS } from './contentStepPrompts';
 import { hasOwnKey, type ContentStepPayload } from './contentTypes';
+import { getProject } from './contentProjectService';
+import { priorOutputs } from './contentStepAgents';
+import { failStep } from './contentProjectService';
+import { beginContentStep } from './contentStepRecorder';
 
 export const UNREADABLE_ANSWER = "The model's answer could not be read. Small models often cannot follow this format: choose a larger model for this agent in Settings → Connectors → Agent Providers, then Retry.";
 
@@ -43,6 +47,23 @@ interface ContentAssignment {
   agent: string;
   actionType: string;
   contentStep: ContentStepPayload;
+  /** Jose's instruction; a review-loop revision adds the findings after "Fix what the review found:". */
+  instruction?: string;
+}
+
+const FINDINGS_MARK = 'Fix what the review found:';
+
+/**
+ * The payload as the step should see it now (phase 6b): earlier steps' outputs
+ * read from the project when the step runs, and a revision's findings added.
+ */
+function livePayload(assignment: ContentAssignment): ContentStepPayload {
+  const payload = assignment.contentStep;
+  const project = getProject(payload.projectId);
+  const prior = project ? { ...payload.prior, ...priorOutputs(project, payload.step) } : payload.prior;
+  const at = String(assignment.instruction || '').indexOf(FINDINGS_MARK);
+  const findings = at >= 0 ? String(assignment.instruction).slice(at).trim() : '';
+  return { ...payload, prior, ...(findings ? { task: [payload.task, findings].filter(Boolean).join('\n\n') } : {}) };
 }
 
 export interface ContentStepResult {
@@ -66,8 +87,17 @@ function failed(assignment: ContentAssignment, reason: string, raw: string): Con
 }
 
 export async function executeContentStepAssignment(assignment: ContentAssignment, _options: unknown = {}): Promise<ContentStepResult> {
+  // Miya Studio shows the step running, and a failure with its reason (phase 6b).
+  const { projectId, step } = assignment.contentStep;
+  beginContentStep(projectId, step);
+  const result = await runContentAgent(assignment);
+  if (result.resultState === 'failed' && getProject(projectId)) failStep(projectId, step, String(result.failureReason || 'An agent could not finish this step.'));
+  return result;
+}
+
+async function runContentAgent(assignment: ContentAssignment): Promise<ContentStepResult> {
   const { agent, actionType } = assignment;
-  let contentStep = assignment.contentStep;
+  let contentStep = livePayload(assignment);
   let allowedUrls: string[] | undefined;
   if (SEARCH_ACTIONS.has(actionType)) {
     const sources = await searchOnce(contentStep);

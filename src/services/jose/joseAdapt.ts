@@ -33,6 +33,7 @@ function planPaidRetry(steps: PlanStep[], step: PlanStep, requestText: string): 
       ...(round ? { round } : {}),
       ...(revises ? { revises } : {}),
       ...(helpRound ? { helpRound } : {}),
+      ...(step.contentStep ? { contentStep: step.contentStep } : {}),
       model,
       replaces: step.stepId,
       costEstimateUsd,

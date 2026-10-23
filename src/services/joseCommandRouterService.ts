@@ -76,6 +76,8 @@ export interface JoseCommandPolicy {
 }
 
 export interface JoseCommandAssignment {
+  /** Wait for you before this step runs, saying why (phase 6b). */
+  waitFor?: string;
   agent: string;
   /** The step's id in the plan (2026-10-23): the agent, or agent-2, … for repeats, unless the caller names it. */
   stepId?: string;
@@ -698,7 +700,8 @@ export async function createJoseCommandRoute({ commandText, source = 'user', zer
     ...step,
     needs: Array.isArray(step.needs) ? step.needs : orderNeeds[step.stepId],
     // A step asks first if one of its effects needs approval, or its task already asked.
-    requiresApproval: stepEffectsToWaitFor(step.effects).length > 0 || Boolean(step.requiresApproval),
+    // A step with its own reason to wait (phase 6b) waits too.
+    requiresApproval: stepEffectsToWaitFor(step.effects).length > 0 || Boolean(step.requiresApproval) || Boolean(step.waitFor),
   }));
 
   const routed = stepped.map((assignment) => createStepPacket(command, assignment));

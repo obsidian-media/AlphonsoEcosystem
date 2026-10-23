@@ -9,6 +9,17 @@ import { needsPlanApproval, type PlanFirstSetting } from './josePlanApproval';
 import { cancelJoseRequest, claimPlanForRun, createWaitingPlanRequest, returnPlanToWaiting, type JoseRequest } from './joseRequestStore';
 import { checkPlan, type PlanStep } from './stepGraph';
 import { agentName } from './agentNames';
+import { scoreTemplateFit, TEMPLATE_FIT_THRESHOLD } from './joseTemplates';
+
+/** The output folder chosen in Settings, for a project started from Chat. */
+function savedOutputFolder(): { outputFolder?: string | null } {
+  try {
+    const saved = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
+    return { outputFolder: typeof saved?.outputFolder === 'string' ? saved.outputFolder : null };
+  } catch {
+    return {};
+  }
+}
 
 export const CONTENT_VIDEO_STUDIO_NOTE = 'For the full project with pictures and a saved folder, open Miya Studio.';
 
@@ -51,6 +62,8 @@ function toAssignments(steps: PlanStep[], planNote: string) {
     ...(step.model ? { model: step.model } : {}),
     ...(step.reviewOf ? { reviewOf: step.reviewOf } : {}),
     ...(step.payload ? { payload: step.payload } : {}),
+    ...(step.contentStep ? { contentStep: step.contentStep } : {}),
+    ...(step.waitFor ? { waitFor: step.waitFor } : {}),
     title: `${agentName(step.agent)} ${step.actionType}`,
     rationale: planNote,
     riskLevel: 'low',
@@ -62,6 +75,18 @@ function toAssignments(steps: PlanStep[], planNote: string) {
 
 export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const { text, source, history, planFresh, endpoint, zeroCostMode, previewMode, onProgress, onToken } = input;
+
+  // From Chat, a content video becomes a Miya Studio project run as one request
+  // (phase 6b, owner). "Plan this fresh" still plans it. Checked before the
+  // shortcuts: the creative one would answer "videos aren't available" first.
+  if (source === 'user' && !planFresh) {
+    const best = scoreTemplateFit(text)[0];
+    if (best?.templateId === 'content_video' && best.score >= TEMPLATE_FIT_THRESHOLD) {
+      const { startContentProjectFromChat } = await import('../contentFactory/contentFromChat');
+      const started = await startContentProjectFromChat(text, savedOutputFolder());
+      return { ok: started.ok, reason: started.ok ? undefined : started.note, contentProjectId: started.projectId || null, plan: null, planNote: started.note };
+    }
+  }
 
   const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });
   if (shortcut) return { ...shortcut, plan: null, planNote: '' };
@@ -108,6 +133,8 @@ export async function submitStepsToJose(input: {
   endpoint?: string;
   zeroCostMode?: boolean;
   allowPaidModels?: boolean;
+  /** False when the caller keeps its own record (the content factory, phase 6b). */
+  saveDecisions?: boolean;
   onProgress?: (event: any) => void;
 }): Promise<any> {
   const check = checkPlan(input.steps, { taskTypes: true });
@@ -122,6 +149,7 @@ export async function submitStepsToJose(input: {
     previewMode: false,
     onProgress: input.onProgress,
     allowPaidModels: input.allowPaidModels !== false,
+    saveDecisions: input.saveDecisions !== false,
     assignments: toAssignments(input.steps, planNote),
     requestKind: plan.kind,
     planInfo: { source: 'given', templateId: null, note: input.label },

@@ -1259,7 +1259,9 @@ async function executeBoardroomAdvance(assignment: any, commandText: any, option
   }
 }
 
-const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'replaces', 'costEstimateUsd'];
+// waitFor, contentStep and payload (phase 6b) so a saved request knows why a step waits and a
+// review-loop revision of a content step keeps the project's data.
+const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'replaces', 'costEstimateUsd', 'waitFor', 'contentStep', 'payload'];
 
 /** A routed assignment as a plan step, with every field Jose's adapters read (phase 4). */
 function toPlanStep(assignment: any): PlanStep {
@@ -1825,10 +1827,14 @@ export async function runJoseCommandExecutionPipeline({
       // A step whose effects need the user's approval waits for it; Jose never
       // approves those himself (2026-10-23). Resumed by executeApprovedPackets.
       const effectsToWaitFor = Array.isArray(assignment.effects) ? stepEffectsToWaitFor(assignment.effects) : [];
-      if (effectsToWaitFor.length > 0 && packet.status !== 'approved') {
+      // A step can also wait for a reason of its own (phase 6b: Miya Studio's review).
+      const waitFor = typeof assignment.waitFor === 'string' && assignment.waitFor.trim() ? assignment.waitFor.trim() : '';
+      if ((effectsToWaitFor.length > 0 || waitFor) && packet.status !== 'approved') {
         // A paid step says what it is expected to cost (phase 4).
         const cost = Number.isFinite(assignment.costEstimateUsd) ? ` (about $${Number(assignment.costEstimateUsd).toFixed(2)})` : '';
-        const reason = `Waiting for your approval: ${effectsToWaitFor.map((e) => EFFECT_LABELS[e]).join(', ')}${cost}.`;
+        const reason = waitFor
+          ? `Waiting for you: ${waitFor}`
+          : `Waiting for your approval: ${effectsToWaitFor.map((e) => EFFECT_LABELS[e]).join(', ')}${cost}.`;
         pendingApprovalCount += 1;
         updatePacketStatus(assignment.packetId, 'pending_approval', {
           policyReason: reason,
@@ -2004,6 +2010,22 @@ export async function runJoseCommandExecutionPipeline({
       // By agent (that agent's latest step, as before) and by step.
       setAgentOutput(command.id, assignment.agent, stepOutput);
       setStepOutput(command.id, assignment.stepId, assignment.agent, stepOutput);
+      // A content-factory step is saved to its Miya Studio project as it finishes (phase 6b),
+      // whichever way the request is run or carried on.
+      const contentData = assignment.contentStep
+        ? (result.artifacts || []).find((a: any) => a?.type === 'content_step_output')?.data
+        : undefined;
+      if (assignment.contentStep && contentData !== undefined && contentData !== null) {
+        try {
+          const { recordContentStepResult } = await import('./contentFactory/contentStepRecorder');
+          await recordContentStepResult({
+            projectId: assignment.contentStep.projectId, step: assignment.contentStep.step,
+            agent: assignment.agent, data: contentData, commandId: command.id,
+          });
+        } catch (error) {
+          console.warn('[jose] content step not saved to its project', error);
+        }
+      }
       if (assignment.agent === AGENTS.NOVA) {
         const novaScore = extractNovaScore(result);
         if (novaScore) {

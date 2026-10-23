@@ -61,6 +61,12 @@ function update(id: string, change: (request: JoseRequest) => void): JoseRequest
   return request;
 }
 
+/** A step as the board saves it: the content data (brief, brand) stays on the command (phase 6b). */
+function savedStep(step: PlanStep): PlanStep {
+  const { contentStep: _content, payload: _payload, ...rest } = step;
+  return rest;
+}
+
 export function createJoseRequest(input: { commandId: string; source: string; text: string; kind: 'normal' | 'project'; steps: PlanStep[]; plan?: JoseRequest['plan']; runOptions?: JoseRequest['runOptions'] }): JoseRequest {
   const now = Date.now();
   const request: JoseRequest = {
@@ -70,7 +76,7 @@ export function createJoseRequest(input: { commandId: string; source: string; te
     text: input.text,
     kind: input.kind,
     status: 'running',
-    steps: input.steps.map((s) => ({ ...s, status: 'waiting' })),
+    steps: input.steps.map((s) => ({ ...savedStep(s), status: 'waiting' })),
     ...(input.plan ? { plan: input.plan } : {}),
     ...(input.runOptions ? { runOptions: input.runOptions } : {}),
     createdAtMs: now,
@@ -166,7 +172,7 @@ export function attachRunToRequest(requestId: string, input: { commandId: string
 /** Steps Jose added while the request runs (phase 4), with the reason in the change log. */
 export function addRequestSteps(requestId: string, steps: PlanStep[], reason: string): JoseRequest {
   return update(requestId, (r) => {
-    r.steps = [...r.steps, ...steps.map((s) => ({ ...s, status: 'waiting' }))];
+    r.steps = [...r.steps, ...steps.map((s) => ({ ...savedStep(s), status: 'waiting' }))];
     r.changeLog = [...(r.changeLog || []), { atMs: Date.now(), text: reason }];
   });
 }

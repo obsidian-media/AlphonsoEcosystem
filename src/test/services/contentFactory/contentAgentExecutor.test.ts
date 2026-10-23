@@ -13,6 +13,8 @@ vi.mock('../../../services/hectorResearchService', () => ({
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { executeContentStepAssignment, clearContentSearches } from '../../../services/contentFactory/contentAgentExecutor';
 import { runMultiSourceResearch } from '../../../services/hectorResearchService';
+import { saveBrand } from '../../../services/contentFactory/contentBrandService';
+import { createProject, emptyBrief, saveStepVersion, getProject } from '../../../services/contentFactory/contentProjectService';
 
 const good = JSON.stringify({ hookScore: 8, scriptScore: 7, notes: ['clear'], mustFix: [] });
 
@@ -108,5 +110,26 @@ describe('executeContentStepAssignment', () => {
     vi.mocked(generateAgentLlmResponse).mockResolvedValue({ response: research, done: true });
     const result = await executeContentStepAssignment(assignment('research_virality', 'hector'));
     expect(result.resultState).toBe('failed');
+  });
+
+  // Phase 6b: a project's steps run in one request, so a step reads the
+  // project's outputs as they are when it runs, not when the plan was made.
+  it("uses the project's current outputs, not the ones from when the plan was made", async () => {
+    localStorage.clear();
+    const brand = saveBrand({ name: 'B' });
+    const project = createProject(brand.id, 'P', { ...emptyBrief(), idea: 'Idea' });
+    saveStepVersion(project.id, 'script', { output: { miya: { script: 'THE-LIVE-SCRIPT' } }, summary: 's', joseCommandId: null });
+    vi.mocked(generateAgentLlmResponse).mockResolvedValue({ response: good, done: true });
+    const a = assignment() as any;
+    a.contentStep = { ...a.contentStep, projectId: project.id, brand: getProject(project.id) && brand, prior: {} };
+    await executeContentStepAssignment(a);
+    expect(vi.mocked(generateAgentLlmResponse).mock.calls[0][1].prompt).toContain('THE-LIVE-SCRIPT');
+  });
+
+  it("a revision's findings reach the prompt", async () => {
+    vi.mocked(generateAgentLlmResponse).mockResolvedValue({ response: good, done: true });
+    const a = { ...(assignment() as any), instruction: ['Review it.', '', 'Fix what the review found:', '- Make the hook shorter'].join(String.fromCharCode(10)) };
+    await executeContentStepAssignment(a);
+    expect(vi.mocked(generateAgentLlmResponse).mock.calls[0][1].prompt).toContain('Make the hook shorter');
   });
 });
