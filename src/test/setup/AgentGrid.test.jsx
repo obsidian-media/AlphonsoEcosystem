@@ -25,6 +25,13 @@ const allPrereqsOk = { missing: [], installHint: 'ok', pythonFound: true, docker
 
 beforeEach(() => vi.clearAllMocks());
 
+// Install Selected stays disabled until the install folder has loaded (async).
+// Clicking earlier did nothing, which made these tests flaky in CI (2026-10-23).
+async function clickInstallWhenReady() {
+  await waitFor(() => expect(screen.getByText('Install Selected')).not.toBeDisabled());
+  fireEvent.click(screen.getByText('Install Selected'));
+}
+
 describe('AgentGrid', () => {
   it('renders all 9 real agents, not the 8-agent roster from the original draft', async () => {
     // The original draft included "Boardroom" (a feature, not an agent) and
@@ -65,7 +72,7 @@ describe('AgentGrid', () => {
     const miyaToggle = await waitFor(() => screen.getByRole('checkbox', { name: /miya/i }));
     expect(miyaToggle).not.toBeChecked();
     fireEvent.click(miyaToggle);
-    fireEvent.click(screen.getByText('Install Selected'));
+    await clickInstallWhenReady();
 
     const queued = onProceed.mock.calls[0][0];
     expect(queued.some((c) => c.id === 'comfyui')).toBe(true);
@@ -78,7 +85,7 @@ describe('AgentGrid', () => {
 
     fireEvent.click(await waitFor(() => screen.getByRole('checkbox', { name: /marcus/i })));
     fireEvent.click(screen.getByRole('checkbox', { name: /marcus/i })); // on, then off
-    fireEvent.click(screen.getByText('Install Selected'));
+    await clickInstallWhenReady();
 
     const queued = onProceed.mock.calls[0][0];
     expect(queued.some((c) => c.id === 'voice-os')).toBe(false);
@@ -111,7 +118,7 @@ describe('AgentGrid', () => {
     // queue (toInstall) still filters by installedNames regardless of the
     // checkbox's visual state, matching the existing "already installed
     // rather than re-queuing it" test above.
-    fireEvent.click(screen.getByText('Install Selected'));
+    await clickInstallWhenReady();
     const queued = onProceed.mock.calls[0][0];
     expect(queued.some((c) => c.id === 'comfyui')).toBe(false);
   });
@@ -124,7 +131,7 @@ describe('AgentGrid', () => {
 
     fireEvent.click(await waitFor(() => screen.getByRole('checkbox', { name: /miya/i })));
     await waitFor(() => expect(screen.getByText(/needs python/i)).toBeInTheDocument());
-    fireEvent.click(screen.getByText('Install Selected'));
+    await clickInstallWhenReady();
 
     const queued = onProceed.mock.calls[0][0];
     expect(queued.some((c) => c.id === 'comfyui')).toBe(false);
