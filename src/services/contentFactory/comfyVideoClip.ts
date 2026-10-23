@@ -94,12 +94,13 @@ export interface ComfyClipInput {
   seconds: number;
   vertical: boolean;
   modelId: string;
-  /** How long to wait before keeping the job for later (default 15 minutes, as for images). */
+  /** How long to wait before keeping the job for later (default 30 minutes). */
   timeoutMs?: number;
   intervalMs?: number;
 }
 
-const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000;
+// A 3 s LTX-Video clip took about 14 minutes on a 6 GB card (2026-10-23, part of the model offloaded).
+const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** The first video file in a prompt's history outputs. */

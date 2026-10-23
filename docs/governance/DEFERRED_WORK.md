@@ -42,6 +42,8 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 - [2026-10-23] **Miya content factory phase 2b (AI video clips): what it leaves open.**
   - Two local video models (LTX-Video 2B, Wan 2.2 TI2V 5B). Wan 2.2 14B was ruled out: its image-to-video model is two 14 GB halves, beyond 16 GB cards on ComfyUI's own nodes. Revisit when a smaller build runs on core nodes.
   - LTX-Video's license is free only for companies under $10M yearly revenue (Runtime Hub says so); Wan 2.2 is Apache-2.0.
+  - Local clips are slow on small cards: a real 3 s LTX-Video clip took about 14 minutes on the owner's 6 GB card (2026-10-23; the model is partly offloaded). The wait is 30 minutes; a clip still running after that is kept and picked up with Check again. Worth offering a lower resolution or shorter clips for small cards.
+  - The real-app AI clips test with a real clip could not run on the dev machine after its Windows Code Integrity policy began refusing unsigned builds (2026-10-23); the same workflow was proven against the real ComfyUI directly (the app's `buildVideoWorkflow()`, a 3 s clip of the right length). CI runs the desktop spec without a video model.
   - A Runway clip that times out (30 minutes) is not picked up later: Runway's backend reports it as failed without its task id. It says Runway may still charge for it.
   - Runway clips keep Runway's own file names in `<project>/clips/`.
   - Runway was checked with unit tests only (no Runway key on the dev machine); the live check runs when the owner gives a key and the price.
