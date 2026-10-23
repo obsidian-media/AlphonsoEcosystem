@@ -751,7 +751,10 @@ export async function uploadYouTubeConnectorVideo({
   title,
   description = '',
   tags = [],
-  privacyStatus = 'private'
+  privacyStatus = 'private',
+  // Phase 3a: RFC 3339 time YouTube publishes the (private) upload at, and a PNG/JPEG thumbnail.
+  publishAt = null,
+  thumbnailPath = null
 }, options = {}) {
   const auth = isConnectorAuthenticated('youtube');
   if (!auth.ok) {
@@ -816,7 +819,9 @@ export async function uploadYouTubeConnectorVideo({
         clientId: savedSecret('youtube', 'YOUTUBE_CLIENT_ID'),
         clientSecret: savedSecret('youtube', 'YOUTUBE_CLIENT_SECRET'),
         refreshToken: savedSecret('youtube', 'YOUTUBE_REFRESH_TOKEN')
-      }
+      },
+      publishAt,
+      thumbnailPath
     });
   } catch (error) {
     const errMsg = String(error || '');
