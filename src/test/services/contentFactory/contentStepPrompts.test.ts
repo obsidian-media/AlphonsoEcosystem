@@ -52,7 +52,7 @@ describe('parseStepAnswer', () => {
   });
 
   it('refuses a thumbnail headline longer than 6 words', () => {
-    const concepts = [1, 2, 3].map((n) => ({ id: `t${n}`, headline: n === 2 ? 'one two three four five six seven eight nine' : 'SHORT ONE', imagePrompt: 'x', layout: 'left' }));
+    const concepts = [1, 2, 3].map((n) => ({ id: `t${n}`, headline: n === 2 ? 'one two three four five six seven eight nine' : `SHORT ${n}`, imagePrompt: 'x', layout: 'left' }));
     expect(parseStepAnswer('creative_thumbnails', JSON.stringify({ concepts }))).toBeNull();
     concepts[1].headline = 'NOW IT FITS';
     expect(parseStepAnswer('creative_thumbnails', JSON.stringify({ concepts }))).not.toBeNull();
@@ -69,5 +69,61 @@ describe('parseStepAnswer', () => {
 
   it('refuses an unknown action type', () => {
     expect(parseStepAnswer('creative_mystery', '{}')).toBeNull();
+  });
+});
+
+// Real answers from llama3.2:3b in the desktop app (2026-10-22). The repairs
+// only reshape what the model wrote; the strict checks still apply after.
+describe('parseStepAnswer repairs small-model answers', () => {
+  it('keeps 3 different hooks when the model repeats them, and keeps the chosen one', () => {
+    const hooks = ['Why do we wait?', 'We all procrastinate.', 'One trick helps.'];
+    const answer = JSON.stringify({
+      hooks: [...hooks, ...hooks, ...hooks], chosenHook: 4, title: '',
+      script: [{ startSec: 0, endSec: 15, spoken: 'We all procrastinate.', onScreenText: '', bRoll: '', music: '' }],
+    });
+    const parsed = parseStepAnswer('creative_script', answer) as { hooks: string[]; chosenHook: number; title: string };
+    expect(parsed.hooks).toEqual(hooks);
+    expect(parsed.hooks[parsed.chosenHook]).toBe('We all procrastinate.');
+    expect(parsed.title).toBe('We all procrastinate.');
+  });
+
+  it('still refuses a script with fewer than 3 different hooks', () => {
+    const answer = JSON.stringify({ hooks: ['Same', 'Same', 'Same'], chosenHook: 0, title: 'T', script: [{ startSec: 0, endSec: 5, spoken: 'x' }] });
+    expect(parseStepAnswer('creative_script', answer)).toBeNull();
+  });
+
+  it('collects thumbnail concepts nested anywhere in the answer', () => {
+    const answer = '{"concepts":[{"id":"t1","headline":"Procrastination Hacks","imagePrompt":"abstract shapes","layout":"left"}],'
+      + '"concepts":[{"id":"t2","headline":"Learn English Easily","imagePrompt":"water","layout":"right"},'
+      + '{"concepts":[{"id":"t3","headline":"Unlock Your Potential","imagePrompt":"bold graphics","layout":"middle"}]}]}';
+    const parsed = parseStepAnswer('creative_thumbnails', answer) as { concepts: { id: string; headline: string; layout: string }[] };
+    expect(parsed.concepts.map((c) => c.headline).sort()).toEqual(['Learn English Easily', 'Procrastination Hacks', 'Unlock Your Potential']);
+    expect(parsed.concepts).toHaveLength(3);
+    expect(parsed.concepts.map((c) => c.id)).toEqual(['t1', 't2', 't3']);
+    expect(parsed.concepts.find((c) => c.headline === 'Unlock Your Potential')?.layout).toBe('center');
+  });
+});
+
+describe('step prompts describe each field instead of showing values to copy', () => {
+  it('shows no placeholder numbers or empty strings for the model to copy', () => {
+    for (const action of ['creative_script', 'analysis_content_review', 'audit_content_quality', 'creative_thumbnails', 'strategy_timing']) {
+      const { system } = buildStepPrompt({ projectId: 'p', step: 'script', task: '', prior: {}, brand: { name: 'B', palette: [], references: [], lessons: [], pastScripts: '' }, brief: { idea: 'i', platforms: [], outputs: [], format: 'story', lengthSec: 30, notes: '', writeInMyVoice: false, showEverything: false } } as never, 'miya', action);
+      expect(system, action).not.toMatch(/:\s*0|:\s*""/);
+    }
+  });
+
+  it('accepts numbers written as text', () => {
+    expect(parseStepAnswer('analysis_content_review', JSON.stringify({ hookScore: '8', scriptScore: '7', notes: [], mustFix: [] }))).toMatchObject({ hookScore: 8, scriptScore: 7 });
+  });
+});
+
+describe('scene ids', () => {
+  it('numbers the scenes s1, s2, ... whatever ids the model wrote', () => {
+    const answer = JSON.stringify({ style: 'warm', scenes: [
+      { id: 's1, s2, ...', description: 'a', imagePrompt: 'p1' },
+      { id: 's1, s2, ...', description: 'b', imagePrompt: 'p2' },
+    ] });
+    const parsed = parseStepAnswer('creative_scenes', answer) as { scenes: { id: string }[] };
+    expect(parsed.scenes.map((sc) => sc.id)).toEqual(['s1', 's2']);
   });
 });

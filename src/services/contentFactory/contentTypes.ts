@@ -104,4 +104,6 @@ export interface ContentStepPayload {
   prior: Partial<Record<StepId, unknown>>;
   /** The step's instruction, plus any reason the user sent it back with. */
   task: string;
+  /** Real web results Hector found (research steps): the only sources allowed. */
+  sources?: { url: string; title: string; snippet: string }[];
 }

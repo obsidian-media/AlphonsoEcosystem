@@ -9,6 +9,20 @@ import path from 'node:path';
 import { enterShell, invoke, mainText, buttonByText, openPage, ollamaHasModels } from '../helpers.mjs';
 
 const STEP_TIMEOUT = 15 * 60 * 1000;
+// The factory's answers need a model that follows a JSON format reliably;
+// measured 2026-10-22: qwen2.5:7b 20/20, llama3.2:3b 13/20. Use it when it is
+// installed (test profile only).
+const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
+
+async function installedModels() {
+  try {
+    const response = await fetch('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(3000) });
+    const data = await response.json();
+    return (data.models || []).map((m) => m.name);
+  } catch {
+    return [];
+  }
+}
 
 async function comfyRunning() {
   try {
@@ -49,12 +63,14 @@ describe('Alphonso desktop content factory', () => {
     // the folder is saved there too, as the Settings page does.
     const loaded = await invoke('load_settings');
     const saved = JSON.parse((loaded.ok && loaded.value) || '{}');
-    const stored = await invoke('save_settings', { settingsJson: JSON.stringify({ ...saved, outputFolder }) });
+    const model = (await installedModels()).includes(PREFERRED_TEST_MODEL) ? PREFERRED_TEST_MODEL : undefined;
+    const extra = { outputFolder, ...(model ? { selectedModel: model } : {}) };
+    const stored = await invoke('save_settings', { settingsJson: JSON.stringify({ ...saved, ...extra }) });
     expect(stored.ok).toBe(true);
-    await browser.execute((folder) => {
+    await browser.execute((values) => {
       const settings = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
-      localStorage.setItem('alphonso_settings', JSON.stringify({ ...settings, outputFolder: folder }));
-    }, outputFolder);
+      localStorage.setItem('alphonso_settings', JSON.stringify({ ...settings, ...values }));
+    }, extra);
     await browser.refresh();
     await $('[data-alphonso-shell-ready="true"]').waitForExist({ timeout: 60000 });
     await openPage('work', 'miya');
