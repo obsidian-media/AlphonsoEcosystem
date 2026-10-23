@@ -4,6 +4,7 @@ import { durableGet, durableSet } from '../../lib/durableStore.js';
 import { slugForFolder } from './contentProjectFiles';
 import {
   STEP_ORDER,
+  secureId,
   type BasedOn,
   type ContentBrief,
   type ContentProject,
@@ -82,7 +83,7 @@ export function createProject(brandId: string, name: string, brief: ContentBrief
   const now = Date.now();
   const steps = Object.fromEntries(STEP_ORDER.map((step) => [step, emptyStep()])) as Record<StepId, StepState>;
   const project: ContentProject = {
-    id: `content-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    id: secureId('content'),
     brandId,
     name,
     folderName: slugForFolder(name),

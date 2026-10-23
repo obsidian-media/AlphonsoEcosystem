@@ -24,6 +24,19 @@ export interface ContentBrand {
   updatedAtMs: number;
 }
 
+/** An id from secure random bytes (crypto.getRandomValues works in every
+ *  supported web view, including macOS 10.15's; randomUUID does not). */
+export function secureId(prefix: string): string {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return `${prefix}-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Own keys only, without Object.hasOwn (not in older Safari). */
+export function hasOwnKey(record: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key);
+}
+
 export type StepId = 'brief' | 'research' | 'script' | 'review' | 'scenes' | 'thumbnail' | 'campaign' | 'quality';
 
 export const STEP_ORDER: StepId[] = ['brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'campaign', 'quality'];
