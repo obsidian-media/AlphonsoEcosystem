@@ -77,6 +77,11 @@ describe('Alphonso desktop content factory', () => {
   });
 
   after(() => {
+    // ALPHONSO_E2E_KEEP_OUTPUT=1 keeps the project folder so the pictures can be looked at.
+    if (process.env.ALPHONSO_E2E_KEEP_OUTPUT === '1') {
+      console.log(`content-factory output kept in ${outputFolder}`);
+      return;
+    }
     if (outputFolder) fs.rmSync(outputFolder, { recursive: true, force: true });
   });
 
