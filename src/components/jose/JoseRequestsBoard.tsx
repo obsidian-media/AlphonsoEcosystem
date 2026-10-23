@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui';
 import { JosePlanMap } from './JosePlanMap';
 import { JosePlanEditor } from './JosePlanEditor';
+import { JoseStepOutput } from './JoseStepOutput';
 import { describePlanSource, type JosePlan } from '../../services/jose/josePlanner';
 import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
@@ -45,6 +46,8 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
   const [requests, setRequests] = useState<JoseRequest[]>(() => listJoseRequests());
   const [selectedId, setSelectedId] = useState<string | undefined>(selectedRequestId || listJoseRequests()[0]?.id);
   const [editing, setEditing] = useState(false);
+  // The step picked in the map, whose output shows below it (phase 6a).
+  const [stepId, setStepId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const runningRef = useRef(false);
   const [message, setMessage] = useState('');
@@ -119,7 +122,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
           <li key={request.id}>
             <button
               type="button"
-              onClick={() => { setSelectedId(request.id); setEditing(false); setMessage(''); }}
+              onClick={() => { setSelectedId(request.id); setEditing(false); setMessage(''); setStepId(null); }}
               className={`w-full rounded-md px-2 py-1.5 text-left text-xs ${request.id === selectedId ? 'bg-(--surface-3)' : 'bg-(--surface-2) hover:bg-(--surface-3)'}`}
             >
               <div className="truncate font-medium text-(--text-1)">{request.text}</div>
@@ -139,7 +142,17 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
 
           {editing && waiting
             ? <JosePlanEditor request={selected} onSaved={() => { setEditing(false); refresh(); }} />
-            : <JosePlanMap steps={selected.steps} />}
+            : (
+              <>
+                <JosePlanMap steps={selected.steps} selectedStepId={stepId || undefined} onSelectStep={(id) => setStepId(id === stepId ? null : id)} />
+                {stepId && selected.steps.some((s) => s.stepId === stepId) && (
+                  <div className="mt-2 rounded-xl bg-(--surface-2) p-3">
+                    <div className="mb-1 text-xs font-semibold text-(--text-2)">What {agentName(selected.steps.find((s) => s.stepId === stepId)!.agent)}'s step produced</div>
+                    <JoseStepOutput key={`${selected.commandId}-${stepId}-${selected.steps.find((s) => s.stepId === stepId)!.status}`} commandId={selected.commandId} stepId={stepId} />
+                  </div>
+                )}
+              </>
+            )}
 
           <div className="flex flex-wrap gap-2">
             {waiting && !editing && (

@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 243 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 243 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -73,6 +73,7 @@ Source-backed inventory: 243 services and 154 components. Human purpose descript
 | component | `src/components/jose/JosePlanEditor.tsx` | `JosePlanEditor` |
 | component | `src/components/jose/JosePlanMap.tsx` | `JosePlanMap`, `JosePlanMapProps` |
 | component | `src/components/jose/JoseRequestsBoard.tsx` | `JoseRequestsBoard`, `requestPlanLabel`, `runResultText` |
+| component | `src/components/jose/JoseStepOutput.tsx` | `JoseStepOutput` |
 | component | `src/components/JoseCompanionWidget.tsx` | `JoseCompanionWidget` |
 | component | `src/components/JoseTaskQueue.tsx` | `JoseTaskQueue` |
 | component | `src/components/KeyboardShortcutsModal.tsx` | `KeyboardShortcutsModal` |
