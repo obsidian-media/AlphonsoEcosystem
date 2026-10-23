@@ -13,4 +13,11 @@ describe('App: phone companion commands', () => {
     expect(handler).toContain('handleCompanionCommand(');
     expect(handler).not.toContain('runJoseCommandExecutionPipeline(');
   });
+
+  it('runs a schedule through runScheduledCommand (phase 6a)', () => {
+    const start = app.indexOf('runCommand: async (commandText)');
+    const block = app.slice(start, app.indexOf('onResult:', start));
+    expect(block).toContain('runScheduledCommand(');
+    expect(block).not.toContain('runJoseCommandExecutionPipeline(');
+  });
 });

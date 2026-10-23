@@ -504,45 +504,11 @@ function AppShell() {
         // A scheduled command now goes through Jose exactly like a typed one,
         // so Approval Mode still holds back anything high-risk.
         schedulerStop = startScheduler({
+          // Phase 6a: through Jose like a typed command, never plan-first, never paid.
           runCommand: async (commandText) => {
-            const { runJoseCommandExecutionPipeline, isJoseIntakeCommand } = await import('./services/joseExecutionEngineService');
-            const { shouldRouteThroughJose, CHAT_ASSISTANT_PROMPT } = await import('./lib/chatUtils');
+            const { runScheduledCommand } = await import('./services/scheduledCommandService');
             const current = schedulerSettingsRef.current;
-            // The same rule as Chat: a task goes to Jose, anything else gets a
-            // direct answer. Sending "write a note" through Jose's pipeline only
-            // produced "Jose completed orchestration review" and no note.
-            if (!isJoseIntakeCommand(commandText) && !shouldRouteThroughJose(commandText)) {
-              const { generateAgentLlmResponse, getConfiguredOllamaModel } = await import('./lib/ollama');
-              const reply = await generateAgentLlmResponse('alphonso', {
-                endpoint: current.endpoint,
-                model: current.selectedModel || getConfiguredOllamaModel(),
-                prompt: `${CHAT_ASSISTANT_PROMPT}\n\nUser: ${commandText}\nAlphonso:`
-              }) as { response?: string } | null;
-              const text = String(reply?.response || '').trim();
-              if (!text) return { ok: false, error: 'The model returned an empty reply.' };
-              return { ok: true, summary: text.split('\n')[0].slice(0, 200), details: text };
-            }
-            const result = await runJoseCommandExecutionPipeline({
-              commandText,
-              source: 'schedule',
-              endpoint: current.endpoint,
-              zeroCostMode: current.zeroCostMode,
-              previewMode: false,
-              conversationHistory: [],
-              onProgress: undefined,
-              onToken: undefined
-            });
-            const reports = (result?.command?.userReport?.assignmentSummaries || [])
-              .filter((a: { reportSummary?: string }) => a?.reportSummary)
-              .map((a: { agent?: string; reportSummary?: string }) => `${a.agent || 'agent'}: ${a.reportSummary}`)
-              .join('\n\n');
-            return {
-              ok: Boolean(result?.ok),
-              summary: result?.command?.userReport?.summary || '',
-              details: reports,
-              pendingApprovalCount: Number(result?.pendingApprovalCount || 0),
-              error: result?.ok ? undefined : String(result?.reason || 'Jose could not run the command.')
-            };
+            return runScheduledCommand(commandText, { endpoint: current.endpoint, zeroCostMode: current.zeroCostMode });
           },
           onResult: (schedule, outcome) => {
             const title = outcome.state === 'done' ? `Scheduled: ${schedule.name} finished`

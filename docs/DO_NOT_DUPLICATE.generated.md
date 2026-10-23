@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 241 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 242 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -347,6 +347,7 @@ Source-backed inventory: 241 services and 154 components. Human purpose descript
 | service | `src/services/runtimeManagerService.ts` | `checkPrerequisites`, `getAllStatus`, `getAutostartPrefs`, `getInstallLocation`, `InstallLocation`, `installPrerequisite`, `installTool`, `listTools`, `loadBundledStarterModel`, `LogEvent`, `onAnyProgress`, `onLogLine`, `PrereqStatus`, `ProgressEvent`, `saveAutostartPref`, `setInstallLocation`, `startTool`, `stopTool`, `TOOL_NAMES`, `ToolName`, `ToolResult`, `ToolStatus`, `waitForTool` |
 | service | `src/services/runwayService.ts` | `buildRunwayVideoRequest`, `generateRunwayVideo`, `listPendingRunwayJobs`, `resumeRunwayTask`, `RunwayResult` |
 | service | `src/services/scaffoldTemplatesService.js` | `default`, `detectStackTemplate`, `listScaffoldTemplates`, `scaffoldProject` |
+| service | `src/services/scheduledCommandService.ts` | `runScheduledCommand`, `ScheduledCommandResult` |
 | service | `src/services/screenIntelligenceService.ts` | `getScreenObserverLogs`, `getScreenObserverState`, `requestScreenNotificationPermission`, `ScreenEvent`, `ScreenObserverState`, `startScreenObserver`, `stopScreenObserver`, `updateScreenObserverState` |
 | service | `src/services/searchService.ts` | `getSearchSuggestions`, `searchMemory`, `searchProjects` |
 | service | `src/services/secureStorageService.ts` | `secureDelete`, `secureGet`, `secureSet` |
