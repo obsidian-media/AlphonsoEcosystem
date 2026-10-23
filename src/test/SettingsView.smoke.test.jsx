@@ -286,6 +286,10 @@ describe('SettingsView smoke', () => {
     for (const label of ['When a step waits for you', 'When a plan waits for you', 'When a request finishes or fails', 'When a review asks you to decide']) {
       expect(screen.getByRole('switch', { name: `Telegram: ${label}` }).getAttribute('aria-checked')).toBe('true');
     }
+    const older = screen.getByRole('switch', { name: 'Telegram: Agent activity summaries' });
+    expect(older.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(older);
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ joseTelegram: expect.objectContaining({ activitySummaries: true }) }));
     fireEvent.click(screen.getByRole('switch', { name: 'Telegram: When a request finishes or fails' }));
     expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ joseTelegram: expect.objectContaining({ finished: false }) }));
   });
