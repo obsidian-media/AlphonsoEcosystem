@@ -48,6 +48,16 @@ export function rejectPiece(projectId: string, step: StepId, pieceId: string, re
   return sendBackStep(projectId, step, reason.trim());
 }
 
-export function retryWithReason(projectId: string, step: StepId, reason: string, settings: { outputFolder?: string | null }) {
-  return runContentStep(projectId, step, { settings, extraTask: `The user sent the last version back: ${reason.trim()}` });
+export function retryWithReason(
+  projectId: string, step: StepId, reason: string, settings: { outputFolder?: string | null }, onProgress?: (message: string) => void,
+) {
+  return runContentStep(projectId, step, { settings, onProgress, extraTask: `The user sent the last version back: ${reason.trim()}` });
+}
+
+/** Which step a "Send back" reruns: a review is about the script; the quality
+ *  verdict covers every piece, so the user chooses what to redo. */
+export function sendBackTarget(step: StepId): StepId | null {
+  if (step === 'review') return 'script';
+  if (step === 'quality') return null;
+  return step;
 }

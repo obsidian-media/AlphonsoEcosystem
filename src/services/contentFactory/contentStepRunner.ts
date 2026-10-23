@@ -98,6 +98,7 @@ export async function runContentStep(projectId: string, step: StepId, options: R
 
   const agents = STEP_AGENTS[step];
   if (agents.length === 0) return project;
+  if (!project.brief.idea.trim()) return failStep(projectId, step, 'Write the idea in the brief first.');
   const started = startStep(projectId, step);
   const say = (message: string) => {
     addStepProgress(projectId, step, message);
@@ -168,12 +169,17 @@ export async function runContentStep(projectId: string, step: StepId, options: R
   } catch (error) {
     say(`Saved in the app, but the project folder could not be written: ${(error as Error).message}`);
   }
-  // The Scene Builder and Thumbnail Studio go on to make their pictures.
-  try {
-    if (step === 'scenes') await renderScenePictures(projectId, options.settings, say);
-    if (step === 'thumbnail') await renderThumbnails(projectId, options.settings, say);
-  } catch (error) {
-    say(`The pictures could not be made: ${(error as Error).message}`);
+  // The Scene Builder and Thumbnail Studio go on to make their pictures. The
+  // step stays "running" meanwhile, so its progress stays on screen.
+  if (step === 'scenes' || step === 'thumbnail') {
+    markStepStatus(projectId, step, 'running', null);
+    try {
+      if (step === 'scenes') await renderScenePictures(projectId, options.settings, say);
+      else await renderThumbnails(projectId, options.settings, say);
+    } catch (error) {
+      say(`The pictures could not be made: ${(error as Error).message}`);
+    }
+    markStepStatus(projectId, step, 'done', null);
   }
   return getProject(projectId) || saved;
 }

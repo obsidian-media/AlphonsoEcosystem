@@ -7,11 +7,11 @@ import { ThumbnailStudioTab } from './ThumbnailStudioTab';
 import { CampaignStudioTab } from './CampaignStudioTab';
 import { ensureFirstBrand, getBrand, listBrands } from '../../services/contentFactory/contentBrandService';
 import {
-  approveStep, chooseVersion, createProject, emptyBrief, getProject, listProjects, recoverInterruptedSteps, sendBackStep, updateBrief,
+  approveStep, chooseVersion, createProject, emptyBrief, getProject, listProjects, recoverInterruptedSteps, updateBrief,
 } from '../../services/contentFactory/contentProjectService';
 import { runContentStep } from '../../services/contentFactory/contentStepRunner';
 import { checkPendingPictures } from '../../services/contentFactory/contentImages';
-import { rejectPiece, retryWithReason } from '../../services/contentFactory/contentQualityGate';
+import { rejectPiece, retryWithReason, sendBackTarget } from '../../services/contentFactory/contentQualityGate';
 import type { ContentProject, StepId } from '../../services/contentFactory/contentTypes';
 
 export type ContentFactoryTab = 'script' | 'scene' | 'thumbnail' | 'campaign';
@@ -53,17 +53,24 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
   const run = (step: StepId, extra?: string) => {
     if (!project) return;
     const pending = extra
-      ? retryWithReason(project.id, step, extra, settings)
+      ? retryWithReason(project.id, step, extra, settings, refresh)
       : runContentStep(project.id, step, { settings, onProgress: refresh });
     refresh();
-    pending.finally(refresh);
+    // The step itself records any failure; this only keeps the window free of unhandled errors.
+    pending.catch(() => undefined).finally(refresh);
   };
   const tabProps = project && {
     project,
     runStep: (step: StepId) => run(step),
     chooseVersion: (step: StepId, v: number) => { chooseVersion(project.id, step, v); refresh(); },
     approve: (step: StepId) => { approveStep(project.id, step); refresh(); },
-    sendBack: (step: StepId, reason: string) => { sendBackStep(project.id, step, reason); refresh(); run(step, reason); },
+    sendBack: (step: StepId, reason: string) => {
+      // Like a rejected thumbnail, the reason becomes a brand lesson (Echo).
+      rejectPiece(project.id, step, step, reason);
+      refresh();
+      const target = sendBackTarget(step);
+      if (target) run(target, reason);
+    },
   };
 
   return (

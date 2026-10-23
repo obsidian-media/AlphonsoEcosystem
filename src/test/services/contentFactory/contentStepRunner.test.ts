@@ -140,4 +140,29 @@ describe('runContentStep', () => {
       }
     }
   });
+
+  // Review finding 2026-10-22: the step said "Done" while ComfyUI was still
+  // making the pictures, with no progress shown (a silent wait).
+  it('stays running, with progress, until the pictures are made', async () => {
+    vi.mocked(runJoseCommandExecutionPipeline).mockResolvedValue({ ok: true, commandId: 'c7', failedCount: 0, pendingApprovalCount: 0, executionReceipts: [] } as never);
+    vi.mocked(getAllAgentOutputs).mockReturnValue({ miya: output({ style: 's', scenes: [] }) } as never);
+    const p = newProject();
+    let statusDuringPictures = '';
+    vi.mocked(renderScenePictures).mockImplementationOnce(async () => {
+      statusDuringPictures = getProject(p.id)!.steps.scenes.status;
+      return [];
+    });
+    const result = await runContentStep(p.id, 'scenes', { settings });
+    expect(statusDuringPictures).toBe('running');
+    expect(result.steps.scenes.status).toBe('done');
+  });
+
+  it('asks for the idea first when the brief has none', async () => {
+    const brand = saveBrand({ name: 'B2' });
+    const p = createProject(brand.id, 'Empty', emptyBrief());
+    const result = await runContentStep(p.id, 'research', { settings });
+    expect(result.steps.research.status).toBe('failed');
+    expect(result.steps.research.error).toBe('Write the idea in the brief first.');
+    expect(runJoseCommandExecutionPipeline).not.toHaveBeenCalled();
+  });
 });
