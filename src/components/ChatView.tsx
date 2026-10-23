@@ -23,6 +23,7 @@ import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughCalleMcp } from '..
 import { decideJoseRoute } from '../services/jose/joseDecision'
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
 import { JosePlanCard } from './jose/JosePlanCard'
+import { getJoseRequest } from '../services/jose/joseRequestStore'
 import type { PlanFirstSetting } from '../services/jose/josePlanApproval';
 import {
   getMcpOutreachRecord,
@@ -1377,7 +1378,7 @@ export function ChatView({
                   {message.josePlanRequestId && (
                     <JosePlanCard
                       requestId={message.josePlanRequestId}
-                      onRun={(requestId) => { if (!isGenerating) void handleJoseCommand('', { approvedRequestId: requestId }); }}
+                      onRun={(requestId) => { if (!isGenerating) void handleJoseCommand(getJoseRequest(requestId)?.text || '', { approvedRequestId: requestId }); }}
                       onOpenBoard={onOpenJoseBoard}
                     />
                   )}

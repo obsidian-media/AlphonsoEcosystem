@@ -39,6 +39,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Campaign Studio:** captions, hashtags, ad copy and posting times, then Maria's quality gate.
   Every project is saved in a folder per brand, keeps its versions, and tells you when a step is out of date. What you reject is remembered for that brand. The old generator is still there as "Quick package".
 - **Honest risk ratings.** A command's rating now comes from what it does, and the approval window says why. Commands that only read (such as `ollama list`) run without asking, instead of showing "85 HIGH RISK". Release Preflight asks once instead of twice.
+- **See and steer Jose's plans (Jose redesign, phase 3).**
+  - **A live board:** the Orchestrator page has a Requests tab with every request, and its plan as boxes and arrows in the agents' colours, with each step's status and time, and a badge where a step waits for you.
+  - **Bigger requests show their plan first:** in Chat, a card with the plan and Run this plan / Edit on the board / Cancel. Settings → General → "Show Jose's plan first": Always, Bigger requests only (the default: 4 or more agents counting Jose and Maria, or a step that always asks), or Never.
+  - **Edit a plan before it runs:** remove or add a step, change a step's agent, what it needs or its instruction. A plan that breaks the rules can't be saved, and every change is listed.
+  - **Save a plan as a template:** Jose then offers it for requests like it.
+  - **Fixed:** the simple plan now runs as steps too, so a failed step stops the steps that need it; Jose's Boardroom and cost-policy tasks and Hector's publishing check no longer fail every time; Settings showed Approval Mode off when it had never been set, though it was on.
 - **Everything in Chat goes to Jose, and he plans with his model (Jose redesign, phase 2).**
   - **Answer or plan:** Jose decides for each message. Clear questions are answered straight away, as before; anything else is decided by his model, and if it is slow or unavailable the old rule decides.
   - **Templates as starting points:** Content video, Build an app and Research report. Jose scores how well a template fits, uses or adapts it, or plans fresh with any agents in any order. Start a message with "Plan this fresh:" to skip templates. Every planned reply says how it was planned.

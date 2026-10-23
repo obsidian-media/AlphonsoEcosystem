@@ -37,18 +37,18 @@ describe('Alphonso desktop: Jose plans', () => {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
     this.timeout(400000);
-    if ((await installedModels()).includes(PREFERRED_TEST_MODEL)) {
-      // Backend settings are merged in at start, so save there as Settings does.
-      const loaded = await invoke('load_settings');
-      const saved = JSON.parse((loaded.ok && loaded.value) || '{}');
-      await invoke('save_settings', { settingsJson: JSON.stringify({ ...saved, selectedModel: PREFERRED_TEST_MODEL }) });
-      await browser.execute((model) => {
-        const settings = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
-        localStorage.setItem('alphonso_settings', JSON.stringify({ ...settings, selectedModel: model }));
-      }, PREFERRED_TEST_MODEL);
-      await browser.refresh();
-      await $('[data-alphonso-shell-ready="true"]').waitForExist({ timeout: 60000 });
-    }
+    // Plans run straight away here (the plan card is jose-board.e2e.mjs's job).
+    // Backend settings are merged in at start, so save there as Settings does.
+    const extra = { showPlanFirst: 'never', ...((await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {}) };
+    const loaded = await invoke('load_settings');
+    const saved = JSON.parse((loaded.ok && loaded.value) || '{}');
+    await invoke('save_settings', { settingsJson: JSON.stringify({ ...saved, ...extra }) });
+    await browser.execute((values) => {
+      const settings = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
+      localStorage.setItem('alphonso_settings', JSON.stringify({ ...settings, ...values }));
+    }, extra);
+    await browser.refresh();
+    await $('[data-alphonso-shell-ready="true"]').waitForExist({ timeout: 60000 });
     await warmSelectedModel();
     await $('[data-testid="sidebar-chat-shortcut"]').click();
     await browser.waitUntil(
