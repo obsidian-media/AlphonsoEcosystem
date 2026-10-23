@@ -763,12 +763,25 @@ describe('ChatView: everything goes to Jose', () => {
     expect(generateOllamaChatStream).not.toHaveBeenCalled();
   });
 
-  it('"Plan this fresh:" asks Jose to skip templates', async () => {
-    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
+  it('"Plan this fresh:" asks Jose to skip templates, without a decision', async () => {
     render(<ChatView {...makeProps()} />);
     send('Plan this fresh: research our competitors');
     await waitFor(() => expect(submitToJose).toHaveBeenCalled());
     expect(submitToJose.mock.calls[0][0]).toMatchObject({ text: 'research our competitors', planFresh: true });
+    expect(decideJoseRoute).not.toHaveBeenCalled();
+  });
+
+  it('ignores a second send while Jose is still deciding', async () => {
+    let decide;
+    decideJoseRoute.mockImplementationOnce(() => new Promise((resolve) => { decide = resolve; }));
+    render(<ChatView {...makeProps()} />);
+    send('Make a launch video for my app');
+    await waitFor(() => expect(decideJoseRoute).toHaveBeenCalledTimes(1));
+    send('Make a launch video for my app');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(decideJoseRoute).toHaveBeenCalledTimes(1);
+    decide({ route: 'plan', source: 'model', reason: 'work' });
+    await waitFor(() => expect(submitToJose).toHaveBeenCalledTimes(1));
   });
 
   it('leaves Direct mode alone: no decision, no plan', async () => {

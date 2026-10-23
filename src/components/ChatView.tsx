@@ -315,6 +315,7 @@ export function ChatView({
   const [connectorBannerDismissed, setConnectorBannerDismissed] = useState(false);
   const [previewMode, setPreviewMode] = useState(() => getRuntimePolicySettings().previewMode);
   const [directMode, setDirectMode] = useState(false);
+  const decidingRef = useRef(false);
   const [directAgent, setDirectAgent] = useState('Alphonso');
   const [pinnedMessages, setPinnedMessages] = useState(() => {
     try { return JSON.parse(localStorage.getItem('alphonso_pinned_messages_v1') || '[]'); } catch { return []; }
@@ -824,7 +825,7 @@ export function ChatView({
 
   const handleSend = async (overrideInput?: string) => {
     const effectiveInput = typeof overrideInput === 'string' ? overrideInput : inputValue;
-    if (!effectiveInput.trim() || isGenerating) return;
+    if (!effectiveInput.trim() || isGenerating || decidingRef.current) return;
     setNovaInsight(null);
     const filesSuffix = attachedFiles.length
       ? `\n\n[Attached files: ${attachedFiles.map((f) => f.name).join(', ')}]`
@@ -857,9 +858,16 @@ export function ChatView({
         return;
       }
       onJoseExecutionState?.('thinking', 'Jose is deciding...');
-      const decision = await decideJoseRoute(cleanInput, {
-        history: messages.filter((m) => !m.isError && m.role && m.content).slice(-6).map((m) => ({ role: m.role, content: m.content })),
-      });
+      // A send while Jose decides would start the same request twice.
+      decidingRef.current = true;
+      let decision;
+      try {
+        decision = await decideJoseRoute(cleanInput, {
+          history: messages.filter((m) => !m.isError && m.role && m.content).slice(-6).map((m) => ({ role: m.role, content: m.content })),
+        });
+      } finally {
+        decidingRef.current = false;
+      }
       if (decision.route === 'plan') {
         await handleJoseCommand(cleanInput);
         return;
