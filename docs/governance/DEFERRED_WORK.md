@@ -39,6 +39,16 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-23] **Jose redesign phase 7 (planned by the owner, after all the Miya content-factory phases).** Add to this list when something comes up.
+  - **Stop a running request** from the board, Chat and Telegram. Today only a plan still waiting can be cancelled; a running request (a Miya project runs for many minutes) cannot be stopped.
+  - **One model-heavy request at a time:** nothing limits requests running together, so Run project and a Chat request compete for the same local model and graphics memory (on a 6 GB card both slow down or fail). Queue them, and show the queue on the board.
+  - The Workflows panel's Run and the phone's "run workflow" go through Jose (they use `executeWorkflowTasks()` today; phase 6a).
+  - A button in Boardroom's notes that opens the request on the board (phase 6a).
+  - Help requests ("HELP: …") for content-factory steps (phase 4).
+  - Optional: WhatsApp and phone-companion approvals (phase 5, deferred by the owner); the Agent Workshop's simulated planner onto Jose (design non-goal).
+  - Not a phase: the live paid-model check (`jose-paid-live.e2e.mjs`) runs when the owner gives a key and the prices.
+  - **Status:** OPEN (planned).
+
 - [2026-10-23] **Jose redesign phase 6b (the content factory as one request): what it leaves open.**
   - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
   - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
