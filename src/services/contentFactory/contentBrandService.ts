@@ -47,6 +47,7 @@ export function saveBrand(input: Partial<ContentBrand> & { name: string }): Cont
     voice: { ...DEFAULT_VOICE },
     platforms: [],
     schedule: '',
+    postingSlots: [],
     honestyRules: '',
     references: [],
     lessons: [],

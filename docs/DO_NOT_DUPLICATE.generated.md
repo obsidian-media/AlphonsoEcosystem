@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 254 services and 157 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 255 services and 157 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -256,15 +256,16 @@ Source-backed inventory: 254 services and 157 components. Human purpose descript
 | service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderScenePictures`, `renderThumbnails` |
 | service | `src/services/contentFactory/contentMediaExecutor.ts` | `checkPendingClips`, `ClipOutcome`, `CLIPS_OFF`, `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `ProjectClipEngine`, `resolveProjectClipEngine`, `RUNWAY_NOT_APPROVED`, `VoiceLine`, `VoiceOutput` |
+| service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `savePosts`, `updatePost` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
 | service | `src/services/contentFactory/contentProjectPlan.ts` | `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `REVIEW_WAIT` |
-| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
+| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
 | service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `parseStepAnswer` |
 | service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
 | service | `src/services/contentFactory/contentStepRunner.ts` | `approveContentStep`, `CONTENT_TASK_PREVIEW`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
-| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
+| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `PostingSlot`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
@@ -321,7 +322,7 @@ Source-backed inventory: 254 services and 157 components. Human purpose descript
 | service | `src/services/memoryGraphService.ts` | `addEdge`, `AddEdgeOptions`, `addNode`, `GraphEdge`, `GraphEdgeWithDepth`, `GraphNode`, `inferEdges`, `listAllEdges`, `listAllNodes`, `queryRelated`, `queryRelatedDeep`, `touchNodes`, `TraversalDirection` |
 | service | `src/services/memoryMonitorService.ts` | `checkThresholds`, `getAlphonsoKeys`, `getUsageStats`, `KeySize`, `pruneOldest`, `subscribe`, `ThresholdResult`, `UsageStats`, `WarningEvent` |
 | service | `src/services/memoryService.ts` | `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getDurableMemoryStatus`, `getMemorySize`, `getMemorySummary`, `hydrateFromDurable`, `hydrateMemoryFromDurable`, `importMemoryItems`, `listDurableMemoryRecords`, `listMemory`, `listMemoryByNamespace`, `listMemoryItems`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `normalizeMemoryRecord`, `pushMemory`, `pushMemoryItem`, `resetMemoryServiceState`, `tickExpiry`, `upsertDurableMemoryRecords` |
-| service | `src/services/metaPublishService.ts` | `buildMetaPublishRequest`, `publishMetaContent` |
+| service | `src/services/metaPublishService.ts` | `buildMetaPublishRequest`, `MetaVideoResult`, `publishMetaContent`, `publishMetaVideo`, `savedMetaCredentials` |
 | service | `src/services/missionRoomService.ts` | `addMissionMessage`, `addMissionTask`, `appendMissionSecurityEvent`, `classifyMissionRoomRisk`, `clearMissionMessages`, `createDefaultMissionRoom`, `createHermesHandoff`, `getMissionRoom`, `listMissionMessages`, `listMissionRooms`, `listMissionSecurityEvents`, `listMissionTasks`, `MISSION_ROOM_AGENTS`, `MISSION_ROOM_SECURITY_MODEL`, `MISSION_TASK_STATUSES`, `MissionTaskStatus`, `redactMissionRoomSecrets`, `saveMissionRoom`, `SecurityEvent`, `updateMissionTask` |
 | service | `src/services/miyaComfyWorkflowPresetService.ts` | `getMiyaComfyWorkflowPreset`, `listMiyaComfyWorkflowPresets`, `MIYA_COMFY_WORKFLOW_PRESETS` |
 | service | `src/services/miyaExportPacketService.ts` | `buildMiyaExportPacket`, `createMiyaExportHandoffPacket` |

@@ -58,8 +58,8 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
   },
   creative_campaign: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Write the campaign: for each platform a caption, hashtags and a description within that platform\'s limits; ad copy for Meta, Google and YouTube; and suggested publishing dates.',
-    keys: '{"platforms":[{"platform":"the platform","caption":"the caption","hashtags":["#a-hashtag"],"description":"the description"}],"ads":[{"network":"meta, google or youtube","headline":"the ad headline","body":"the ad text"}],"calendar":[{"platform":"the platform","suggestedAt":"day and time","reason":"why then"}]}',
+    ask: 'Write the campaign: for each platform a caption, hashtags and a description within that platform\'s limits; the YouTube Short\'s own title, caption and hashtags (it is a separate piece made from the 9:16 video); ad copy for Meta, Google and YouTube; and suggested publishing dates.',
+    keys: '{"platforms":[{"platform":"the platform","caption":"the caption","hashtags":["#a-hashtag"],"description":"the description"}],"ads":[{"network":"meta, google or youtube","headline":"the ad headline","body":"the ad text"}],"short":{"title":"the Short\'s title, at most 100 characters","caption":"the Short\'s description","hashtags":["#a-hashtag"]},"calendar":[{"platform":"the platform","suggestedAt":"day and time","reason":"why then"}]}',
     uses: ['research', 'script', 'thumbnail'],
   },
   strategy_timing: {

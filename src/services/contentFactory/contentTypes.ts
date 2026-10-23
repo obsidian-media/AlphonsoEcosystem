@@ -15,6 +15,8 @@ export interface ContentBrand {
   voice: { engine: 'kokoro'; voiceId: string };
   platforms: string[];
   schedule: string;
+  /** Fixed posting times (phase 3a); a post's time starts from the next free one. */
+  postingSlots?: PostingSlot[];
   honestyRules: string;
   references: { url: string; note: string }[];
   lessons: { atMs: number; text: string; source: 'rejection' | 'user' }[];
@@ -125,8 +127,44 @@ export interface ContentProject {
   joseRequestId?: string | null;
   /** AI clips (phase 2b): kept beside the brief, so changing them puts nothing out of date. */
   videoSettings?: Partial<VideoSettings>;
+  /** The project's posts (phase 3a), one per platform and piece. */
+  posts?: ProjectPost[];
   createdAtMs: number;
   updatedAtMs: number;
+}
+
+/** Where a post goes (phase 3a). */
+export type PostPlatform = 'youtube' | 'instagram' | 'facebook';
+
+/** A brand's fixed posting time: `day` 0 = Sunday … 6 = Saturday, `time` "HH:MM" local. */
+export interface PostingSlot {
+  platform: PostPlatform;
+  day: number;
+  time: string;
+}
+
+export type PostStatus =
+  | 'draft' | 'approved' | 'scheduled' | 'posting' | 'posted' | 'locked_private'
+  | 'waiting_app' | 'failed' | 'check' | 'cancelled' | 'ask';
+
+/** One post of a project (phase 3a). `file` and `thumbnail` are relative to the output folder. */
+export interface ProjectPost {
+  id: string;
+  platform: PostPlatform;
+  piece: 'video' | 'short' | 'reel';
+  file: string;
+  thumbnail?: string;
+  title: string;
+  caption: string;
+  hashtags: string[];
+  scheduledAtMs: number;
+  status: PostStatus;
+  /** The post on the platform, once there is one. */
+  link?: string;
+  /** The platform's own id (YouTube video, Facebook video, Instagram media). */
+  platformId?: string;
+  /** Why it failed, or what to do (a locked YouTube channel's Studio link). */
+  reason?: string;
 }
 
 /** What a content-factory step sends to an agent through Jose. */
