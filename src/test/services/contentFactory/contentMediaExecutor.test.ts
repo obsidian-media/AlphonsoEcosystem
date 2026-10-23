@@ -93,21 +93,26 @@ describe('executeMediaStep', () => {
 
   it('Music is skipped, with a note, when AudioCraft is not installed', async () => {
     const { brand, project, dir } = setup();
-    backend.content_music_generate = () => ({ ok: false, missing: true, error: 'AudioCraft is not installed. Install it in Runtime Hub to add music.' });
+    backend.media_tools_status = () => ({ audiocraft: false });
     const result = await executeMediaStep(assignment(project, brand, 'miya', 'creative_music', 'music'));
-    expect(generateAgentLlmResponse).toHaveBeenCalledWith('miya', expect.objectContaining({ format: 'json' }));
-    expect(freeOllamaGpuMemory).toHaveBeenCalled();
-    expect(invoke).toHaveBeenCalledWith('content_music_generate', { request: expect.objectContaining({
-      workspaceRoot: 'D:\\Content', outPath: `${dir}/audio/music-v1.wav`, prompt: 'calm lofi beat with soft piano',
-    }) });
+    // Checked before asking a model: no model call, nothing generated.
+    expect(generateAgentLlmResponse).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalledWith('content_music_generate', expect.anything());
+    expect(dir).toBeTruthy();
     expect(result.resultState).toBe('completed');
     expect(result.artifacts[0].data).toEqual({ skipped: 'AudioCraft is not installed. Install it in Runtime Hub to add music.' });
   });
 
   it('Music saves the bed and its prompt', async () => {
     const { brand, project, dir } = setup();
+    backend.media_tools_status = () => ({ audiocraft: true });
     backend.content_music_generate = () => ({ ok: true, path: 'abs', seconds: 8 });
     const result = await executeMediaStep(assignment(project, brand, 'miya', 'creative_music', 'music'));
+    expect(generateAgentLlmResponse).toHaveBeenCalledWith('miya', expect.objectContaining({ format: 'json' }));
+    expect(freeOllamaGpuMemory).toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledWith('content_music_generate', { request: expect.objectContaining({
+      workspaceRoot: 'D:\\Content', outPath: `${dir}/audio/music-v1.wav`, prompt: 'calm lofi beat with soft piano',
+    }) });
     expect(result.artifacts[0].data).toMatchObject({ path: `${dir}/audio/music-v1.wav`, prompt: 'calm lofi beat with soft piano' });
   });
 

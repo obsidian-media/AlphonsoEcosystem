@@ -171,7 +171,12 @@ async function moodPrompt(ctx: Context): Promise<string | null> {
   return null;
 }
 
+export const NO_AUDIOCRAFT = 'AudioCraft is not installed. Install it in Runtime Hub to add music.';
+
 async function runMusic(assignment: MediaAssignment, ctx: Context): Promise<ContentStepResult> {
+  // Checked first, so a computer without AudioCraft spends no model call on a mood.
+  const status = await invoke<{ audiocraft?: boolean }>('media_tools_status').catch(() => null);
+  if (status && status.audiocraft === false) return done(assignment, { skipped: NO_AUDIOCRAFT }, 'Music skipped: AudioCraft is not installed.');
   const prompt = await moodPrompt(ctx);
   if (!prompt) return failed(assignment, UNREADABLE_MOOD);
   const lastEnd = Math.max(0, ...scriptParts(ctx).map((p) => num(p.endSec) ?? 0));
