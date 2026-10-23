@@ -210,4 +210,13 @@ describe('the model for each step', () => {
     expect(plan.steps.find((s) => s.stepId === 'both')!.reviewOf).toBeUndefined();
     expect(plan.steps.find((s) => s.stepId === 'analysis')!.reviewOf).toBeUndefined();
   });
+
+  it('offers no paid model when the caller allows none (a schedule)', async () => {
+    (globalThis as any).__josePaid = { ok: true };
+    llm.mockResolvedValueOnce(answer([{ id: 'a', agent: 'miya', taskType: 'creative_script', instruction: 'x', effects: ['write_own_work'], model: 'claude:claude-haiku-5-5' }]));
+    const plan = await planJoseRequest(PARTY, { allowPaidModels: false });
+    (globalThis as any).__josePaid = undefined;
+    expect(promptOf(0)).not.toMatch(/claude:/);
+    expect(plan.steps[0].model).toBeUndefined();
+  });
 });

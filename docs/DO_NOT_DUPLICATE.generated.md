@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 239 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 240 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -276,6 +276,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets` |
 | service | `src/services/jose/joseFinish.ts` | `DECISIONS_SAVED`, `saveRequestDecisions` |
 | service | `src/services/jose/joseHelp.ts` | `chooseHelper`, `findHelpRequest`, `HELP_INSTRUCTION`, `Helper`, `planHelp` |
+| service | `src/services/jose/joseInbound.ts` | `answerOrPlan`, `AnswerOrPlanOptions`, `AnswerOrPlanResult` |
 | service | `src/services/jose/joseModels.ts` | `listInstalledModels`, `modelSize`, `pickLargerModel` |
 | service | `src/services/jose/josePlanApproval.ts` | `getPlanFirstSetting`, `needsPlanApproval`, `PlanFirstSetting` |
 | service | `src/services/jose/josePlanEdits.ts` | `addStep`, `changeStepAgent`, `removeStep`, `rewireNeeds`, `setStepInstruction`, `setStepNeeds` |
@@ -289,7 +290,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
 | service | `src/services/jose/joseUserTemplates.ts` | `deleteUserTemplate`, `listUserTemplates`, `saveUserTemplate` |
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
-| service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `runApprovedPlan`, `submitToJose`, `SubmitToJoseInput` |
+| service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals` |
 | service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `parseJsonResponse`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |

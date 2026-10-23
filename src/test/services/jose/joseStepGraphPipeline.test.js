@@ -651,4 +651,19 @@ describe('Jose runs plans as step graphs', () => {
     rejectRequestStep(requestId, 'post');
     expect(getPacketById(packetOf('post2')).status).toBe('rejected');
   });
+
+  // Phase 6a: a schedule never gets a paid retry, also after an approval.
+  it('adds no paid retry when the request allows no paid models', async () => {
+    globalThis.__josePaid = { ok: true };
+    localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'claude', model: 'm', inputPerMillionUsd: 3, outputPerMillionUsd: 15 } }));
+    vi.mocked(executeContentStepAssignment).mockImplementation(async () => { throw new Error('nothing usable'); });
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'x', source: 'schedule', zeroCostMode: true, previewMode: false, allowPaidModels: false,
+      assignments: [step('miya', 'creative_script', { stepId: 'a', effects: ['write_own_work'] })],
+    });
+    globalThis.__josePaid = undefined;
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.steps.map((s) => s.stepId)).toEqual(['a']);
+    expect(request.runOptions.allowPaidModels).toBe(false);
+  });
 });
