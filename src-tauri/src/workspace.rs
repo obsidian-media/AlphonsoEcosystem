@@ -1039,11 +1039,13 @@ pub(crate) fn build_workspace_symbol_index(
   })
 }
 
-#[tauri::command]
-pub(crate) fn read_workspace_file(
-  workspace_root: String,
-  relative_path: String,
-) -> Result<WorkspaceFileReadProof, String> {
+/// The existing file `relative_path` inside `workspace_root`, after the same
+/// checks every workspace read uses: no `..`, no absolute path, no symlink
+/// escape, nothing inside `.git`.
+fn resolve_workspace_read_path(
+  workspace_root: &str,
+  relative_path: &str,
+) -> Result<PathBuf, String> {
   let root = PathBuf::from(workspace_root.trim());
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
@@ -1081,6 +1083,42 @@ pub(crate) fn read_workspace_file(
   if !file_abs.is_file() {
     return Err("Path is not a file.".to_string());
   }
+  Ok(file_abs)
+}
+
+/// A picture inside the workspace as base64, for showing it in the app
+/// (content-factory scene pictures and thumbnails, 2026-10-22). Images only,
+/// at most 20 MB.
+#[tauri::command]
+pub(crate) fn read_workspace_image(
+  workspace_root: String,
+  relative_path: String,
+) -> Result<String, String> {
+  let file_abs = resolve_workspace_read_path(&workspace_root, &relative_path)?;
+  let ext = file_abs
+    .extension()
+    .and_then(|e| e.to_str())
+    .map(str::to_ascii_lowercase)
+    .unwrap_or_default();
+  if !matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "webp") {
+    return Err("Only PNG, JPEG or WebP pictures can be shown.".to_string());
+  }
+  let size = fs::metadata(&file_abs).map_err(|e| e.to_string())?.len();
+  if size > 20 * 1024 * 1024 {
+    return Err("The picture is larger than 20 MB.".to_string());
+  }
+  let bytes = fs::read(&file_abs).map_err(|e| e.to_string())?;
+  use base64::Engine as _;
+  Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
+}
+
+#[tauri::command]
+pub(crate) fn read_workspace_file(
+  workspace_root: String,
+  relative_path: String,
+) -> Result<WorkspaceFileReadProof, String> {
+  let rel = Path::new(relative_path.trim());
+  let file_abs = resolve_workspace_read_path(&workspace_root, &relative_path)?;
   let content = fs::read_to_string(&file_abs).map_err(|e| e.to_string())?;
   let bytes = content.len();
   Ok(WorkspaceFileReadProof {
@@ -2227,5 +2265,25 @@ mod tests {
   fn root_dir_component_detected() {
     let path = Path::new("/etc/passwd");
     assert!(path.components().any(|c| matches!(c, Component::RootDir)));
+  }
+
+  // Content-factory pictures are shown in the app from the output folder (2026-10-22).
+  #[test]
+  fn read_workspace_image_reads_a_png_inside_the_folder_only() {
+    let dir = std::env::temp_dir().join(format!("alphonso-readimg-{}", now_ms()));
+    fs::create_dir_all(dir.join("brand/project/thumbnail")).unwrap();
+    fs::write(
+      dir.join("brand/project/thumbnail/t1.png"),
+      [137u8, 80, 78, 71],
+    )
+    .unwrap();
+    fs::write(dir.join("notes.txt"), "hi").unwrap();
+    let root = dir.to_string_lossy().to_string();
+    let ok = read_workspace_image(root.clone(), "brand/project/thumbnail/t1.png".to_string());
+    assert_eq!(ok.as_deref(), Ok("iVBORw=="));
+    assert!(read_workspace_image(root.clone(), "../outside.png".to_string()).is_err());
+    assert!(read_workspace_image(root.clone(), "notes.txt".to_string()).is_err());
+    assert!(read_workspace_image(root, "missing.png".to_string()).is_err());
+    let _ = fs::remove_dir_all(&dir);
   }
 }

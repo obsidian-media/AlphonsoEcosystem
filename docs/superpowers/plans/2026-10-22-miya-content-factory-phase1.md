@@ -220,7 +220,7 @@ pictures go into new sub-folders.
   - `executeAssignment`: when `assignment.contentStep` is set, it returns `executeContentStepAssignment(assignment, options)` (Task 7) before the per-agent branches.
 - `actionType` values the factory uses. They already match `allowedActionPrefixes` in `agentContractService.ts`, so no contract change is needed:
   - Hector: `research_virality`
-  - Nova: `analysis_market`, `analysis_content_review`, `strategy_posting_times`
+  - Nova: `analysis_market`, `analysis_content_review`, `strategy_timing`
   - Miya: `creative_script`, `creative_scenes`, `creative_thumbnails`, `creative_campaign`
   - Maria: `audit_content_quality`
   - Sentinel: `security_content_check`
@@ -263,7 +263,7 @@ pictures go into new sub-folders.
   - `creative_scenes`: `{ style: string, scenes: { id: string; startSec; endSec; description; camera; movement; imagePrompt; negativePrompt }[] }`
   - `creative_thumbnails`: `{ concepts: { id: string; headline: string (≤6 words); imagePrompt: string; layout: 'left' | 'right' | 'center' }[] (exactly 3) }`
   - `creative_campaign`: `{ platforms: { platform: string; caption: string; hashtags: string[]; description: string }[], ads: { network: 'meta' | 'google' | 'youtube'; headline: string; body: string }[], calendar: { platform: string; suggestedAt: string; reason: string }[] }`
-  - `strategy_posting_times`: `{ times: { platform: string; dayOfWeek: string; time: string; reason: string }[] }`
+  - `strategy_timing`: `{ times: { platform: string; dayOfWeek: string; time: string; reason: string }[] }`
   - `security_content_check`: `{ ok: boolean, issues: string[] }`
 
 - [ ] **Step 1: Write failing tests:**
@@ -317,7 +317,7 @@ pictures go into new sub-folders.
     - `review`: nova `analysis_content_review`, maria `audit_content_quality`
     - `scenes`: miya `creative_scenes`
     - `thumbnail`: miya `creative_thumbnails`
-    - `campaign`: miya `creative_campaign`, nova `strategy_posting_times`
+    - `campaign`: miya `creative_campaign`, nova `strategy_timing`
     - `quality`: maria `audit_content_quality`, sentinel `security_content_check`
     - `brief`: none (user only)
   - `runContentStep(projectId, step, { settings, onProgress? }): Promise<ContentProject>`

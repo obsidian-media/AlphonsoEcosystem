@@ -161,6 +161,8 @@ pub(crate) fn save_image_to_folder(
     .trim_start_matches("data:image/png;base64,")
     .trim_start_matches("data:image/jpeg;base64,")
     .to_string();
+  // The folder may not exist yet (content-factory project folders).
+  std::fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
   let path = std::path::Path::new(&folder).join(&filename);
   let path_str = path.to_string_lossy().to_string();
   // Decode base64 in Rust — no shell involved, eliminates injection risk on all platforms.
@@ -224,5 +226,20 @@ mod tests {
     assert!(proof.path.ends_with("test.png"));
     assert!(std::path::Path::new(&proof.path).exists());
     std::fs::remove_file(&proof.path).unwrap();
+  }
+
+  // Content-factory project pictures go into new sub-folders (2026-10-22).
+  #[test]
+  fn save_image_to_folder_creates_missing_folder() {
+    let base = std::env::temp_dir().join(format!("alphonso-save-new-{}", now_ms()));
+    let folder = base.join("new").join("sub");
+    let result = save_image_to_folder(
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8=".to_string(),
+      "test.png".to_string(),
+      folder.to_string_lossy().to_string(),
+    );
+    assert!(result.is_ok(), "{:?}", result.as_ref().err());
+    assert!(folder.join("test.png").exists());
+    let _ = std::fs::remove_dir_all(&base);
   }
 }

@@ -15,7 +15,9 @@ describe('Alphonso desktop Creative Studio', () => {
   });
 
   it('generates a package from an idea', async () => {
-    // The view is lazy-loaded; wait for it before reading or typing.
+    // The one-shot generator is the "Quick package" tab since the content
+    // factory (2026-10-22). The view is lazy-loaded; wait for it first.
+    await (await buttonByText('quick package')).click();
     await browser.waitUntil(async () => (await mainText()).includes('No package generated yet.'), {
       timeoutMsg: 'Creative Studio never rendered',
     });

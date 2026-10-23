@@ -1,0 +1,109 @@
+// Types for Miya's content factory.
+// Design: docs/superpowers/specs/2026-10-22-miya-content-factory-design.md
+
+export interface ContentBrand {
+  id: string;
+  name: string;
+  folderName: string;
+  palette: string[];
+  fonts: string;
+  logo: string;
+  tone: string;
+  audience: string;
+  visualStyle: string;
+  characterRefs: string;
+  voice: { engine: 'kokoro'; voiceId: string };
+  platforms: string[];
+  schedule: string;
+  honestyRules: string;
+  references: { url: string; note: string }[];
+  lessons: { atMs: number; text: string; source: 'rejection' | 'user' }[];
+  pastScripts: string;
+  qualityThreshold: number;
+  createdAtMs: number;
+  updatedAtMs: number;
+}
+
+export type StepId = 'brief' | 'research' | 'script' | 'review' | 'scenes' | 'thumbnail' | 'campaign' | 'quality';
+
+export const STEP_ORDER: StepId[] = ['brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'campaign', 'quality'];
+
+export type StepStatus = 'not_started' | 'running' | 'done' | 'failed' | 'interrupted' | 'needs_approval' | 'approved' | 'sent_back';
+
+/** What each earlier step's chosen version was when a version was made. `brief` is the brief's revision. */
+export type BasedOn = Partial<Record<StepId, number>>;
+
+export interface StepVersion {
+  version: number;
+  createdAtMs: number;
+  output: unknown;
+  summary: string;
+  joseCommandId: string | null;
+  stale: boolean;
+  basedOn: BasedOn;
+}
+
+export interface StepState {
+  status: StepStatus;
+  versions: StepVersion[];
+  chosenVersion: number | null;
+  error: string | null;
+  startedAtMs: number | null;
+  progress: { message: string; atMs: number }[];
+  /** Snapshot taken when the step started, so a run is judged against what it was given. */
+  runBasedOn?: BasedOn | null;
+}
+
+export type ContentFormat =
+  | 'talking_head' | 'voiceover_broll' | 'tutorial' | 'story' | 'ad' | 'listicle'
+  | 'podcast_solo' | 'podcast_two_hosts' | 'carousel' | 'image_post';
+
+export const CONTENT_FORMATS: { id: ContentFormat; label: string }[] = [
+  { id: 'talking_head', label: 'Talking head' },
+  { id: 'voiceover_broll', label: 'Voice-over with B-roll' },
+  { id: 'tutorial', label: 'Tutorial' },
+  { id: 'story', label: 'Story' },
+  { id: 'ad', label: 'Ad' },
+  { id: 'listicle', label: 'List video' },
+  { id: 'podcast_solo', label: 'Podcast (one host)' },
+  { id: 'podcast_two_hosts', label: 'Podcast (two hosts)' },
+  { id: 'carousel', label: 'Carousel' },
+  { id: 'image_post', label: 'Image post' },
+];
+
+export interface ContentBrief {
+  idea: string;
+  platforms: string[];
+  outputs: string[];
+  format: ContentFormat;
+  lengthSec: number;
+  notes: string;
+  writeInMyVoice: boolean;
+  showEverything: boolean;
+}
+
+export interface ContentProject {
+  id: string;
+  brandId: string;
+  name: string;
+  folderName: string;
+  brief: ContentBrief;
+  briefRevision: number;
+  steps: Record<StepId, StepState>;
+  createdAtMs: number;
+  updatedAtMs: number;
+}
+
+/** What a content-factory step sends to an agent through Jose. */
+export interface ContentStepPayload {
+  projectId: string;
+  step: StepId;
+  brief: ContentBrief;
+  brand: ContentBrand;
+  /** The chosen output of each earlier step. */
+  prior: Partial<Record<StepId, unknown>>;
+  /** The step's instruction, plus any reason the user sent it back with. */
+  task: string;
+  /** Real web results Hector found (research steps): the only sources allowed. */
+  sources?: { url: string; title: string; snippet: string }[];
+}

@@ -21,6 +21,9 @@ import { generateComfyUiImage, getComfyUiVideoHistory, queueComfyUiVideo } from 
 import { generateRunwayVideo, listPendingRunwayJobs, resumeRunwayTask } from '../services/runwayService';
 import { sendNativeNotification } from '../services/notificationService';
 import { Tabs } from './ui/Tabs';
+import { ContentFactoryPanel, type ContentFactoryTab } from './miya/ContentFactoryPanel';
+import { BrandEditor } from './miya/BrandEditor';
+import { ensureFirstBrand } from '../services/contentFactory/contentBrandService';
 
 interface PipelineInput {
   idea: string;
@@ -171,6 +174,8 @@ interface MiyaExportPacket {
 interface MiyaStudioSettings {
   selectedModel?: string;
   endpoint?: string;
+  /** The content factory saves every project in a folder per brand inside this. */
+  outputFolder?: string;
 }
 
 interface MiyaStudioProps {
@@ -180,14 +185,19 @@ interface MiyaStudioProps {
   onPacketCreated?: (packet: AgentPacket) => void;
 }
 
+// Each content-factory tab has its own tool (owner, 2026-10-22); the older
+// one-shot package generator is kept as "Quick package".
 const studioTabs: Array<{ id: string; label: string; icon: typeof FileVideo }> = [
   { id: 'script', label: 'Script Studio', icon: FileVideo },
   { id: 'scene', label: 'Scene Builder', icon: Clapperboard },
-  { id: 'prompt', label: 'Prompt Builder', icon: Sparkles },
   { id: 'thumbnail', label: 'Thumbnail Studio', icon: Palette },
   { id: 'campaign', label: 'Campaign Studio', icon: Megaphone },
-  { id: 'brand', label: 'Brand Kit Memory', icon: Bot }
+  { id: 'brand', label: 'Brands', icon: Bot },
+  { id: 'package', label: 'Quick package', icon: Lightbulb },
+  { id: 'prompt', label: 'Prompt Builder', icon: Sparkles }
 ];
+
+const FACTORY_TABS: ContentFactoryTab[] = ['script', 'scene', 'thumbnail', 'campaign'];
 
 const defaultPipeline: PipelineInput = {
   idea: '',
@@ -251,6 +261,7 @@ export function MiyaStudio({
   onPacketCreated
 }: MiyaStudioProps) {
   const [activeTab, setActiveTab] = useState<string>('script');
+  const [factoryBrandId, setFactoryBrandId] = useState<string>(() => ensureFirstBrand().id);
   const [pipeline, setPipeline] = useState<PipelineInput>(defaultPipeline);
   // QA 2026-10-22: the saved brand kit was never loaded back, so it was empty again on every visit.
   const [brandKit, setBrandKit] = useState<BrandKit>(loadSavedBrandKit);
@@ -979,11 +990,14 @@ export function MiyaStudio({
         transition={{ duration: 0.15 }}
       >
 
-      {/* Brand Kit — full width */}
+      {/* Content factory: each tab has its own tool */}
+      {FACTORY_TABS.includes(activeTab as ContentFactoryTab) && (
+        <ContentFactoryPanel tab={activeTab as ContentFactoryTab} settings={settings} brandId={factoryBrandId} onBrand={setFactoryBrandId} />
+      )}
+
+      {/* Brands — one brand kit per channel or client */}
       {activeTab === 'brand' && (
-        <section className="card">
-          <BrandKitEditor brandKit={brandKit} setBrandKit={setBrandKit} onSave={saveBrandKit} />
-        </section>
+        <BrandEditor brandId={factoryBrandId} onBrand={setFactoryBrandId} />
       )}
 
       {/* Prompt/Media tab — visual generation focused */}
@@ -1022,8 +1036,8 @@ export function MiyaStudio({
         </div>
       )}
 
-      {/* All other tabs (script, scene, thumbnail, campaign) — script generation focused */}
-      {activeTab !== 'brand' && activeTab !== 'prompt' && (
+      {/* Quick package — the one-shot package generator */}
+      {activeTab === 'package' && (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
           <div className="space-y-4">
             <section className="card">
@@ -1065,6 +1079,10 @@ export function MiyaStudio({
                 />
               </>
             )}
+            {/* Quick package keeps its own simple brand kit; projects use the Brands tab. */}
+            <section className="card">
+              <BrandKitEditor brandKit={brandKit} setBrandKit={setBrandKit} onSave={saveBrandKit} />
+            </section>
           </div>
           <div className="space-y-4">
             <ExportPackageReadiness output={creativeOutput} canGenerate={canGenerate} checking={ollamaStatus.state === 'connecting'} />

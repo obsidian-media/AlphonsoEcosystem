@@ -847,6 +847,7 @@ pub fn run() {
       connector_hermes_agent_request,
       workspace::transcribe_audio_file,
       workspace::read_workspace_file,
+      workspace::read_workspace_image,
       write_temp_audio_file,
       pick_file,
       workspace::delete_workspace_file,

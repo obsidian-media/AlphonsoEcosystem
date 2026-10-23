@@ -1,3 +1,4 @@
+import type { ContentStepPayload } from './contentFactory/contentTypes';
 import { invoke } from '@tauri-apps/api/core';
 import {
   AGENTS,
@@ -85,6 +86,8 @@ export interface JoseCommandAssignment {
   costClass?: string;
   blockedByZeroCostMode?: boolean;
   packetId?: string;
+  /** A content-factory step (Miya Studio): run by executeContentStepAssignment. */
+  contentStep?: ContentStepPayload;
   status?: string;
   retries?: number;
   lastUpdatedAtMs?: number;
@@ -156,6 +159,9 @@ export interface CommandRouteOptions {
   commandText: string;
   source?: string;
   zeroCostMode?: boolean;
+  /** Callers that already know which agent does what (the content factory)
+   *  pass the assignments; Jose then skips splitting the text itself. */
+  assignments?: JoseCommandAssignment[];
 }
 
 export interface JoseCommandRouteResult {
@@ -552,12 +558,15 @@ async function decomposeViaBackend(parsed: ParsedJoseCommand): Promise<JoseComma
   }
 }
 
-export async function createJoseCommandRoute({ commandText, source = 'user', zeroCostMode = undefined }: CommandRouteOptions): Promise<JoseCommandRouteResult | null> {
+export async function createJoseCommandRoute({ commandText, source = 'user', zeroCostMode = undefined, assignments: givenAssignments }: CommandRouteOptions): Promise<JoseCommandRouteResult | null> {
   const parsed = parseJoseCommand(commandText);
   if (!parsed.clean) return null;
 
-  const backendAssignments = await decomposeViaBackend(parsed);
-  const assignments = backendAssignments || decomposeJoseCommand(parsed, { zeroCostMode });
+  const explicit = Array.isArray(givenAssignments) && givenAssignments.length > 0;
+  const backendAssignments = explicit ? null : await decomposeViaBackend(parsed);
+  const assignments = explicit
+    ? givenAssignments.map((assignment) => ({ ...assignment, fragments: assignment.fragments || [] }))
+    : backendAssignments || decomposeJoseCommand(parsed, { zeroCostMode });
   const effectiveZeroCostMode = resolveZeroCostMode(zeroCostMode);
   const command: JoseCommand = {
     id: newId('jose-command'),
