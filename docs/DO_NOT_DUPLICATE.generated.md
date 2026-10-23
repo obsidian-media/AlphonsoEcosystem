@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 222 services and 150 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 226 services and 150 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -265,12 +265,16 @@ Source-backed inventory: 222 services and 150 components. Human purpose descript
 | service | `src/services/hectorResearchService.js` | `buildHectorSynthesisPrompt`, `createHectorApprovalPacket`, `createResearchBrief`, `createResearchDraft`, `fetchRssSources`, `fetchSuppliedSourcesForReport`, `isBraveSearchConfigured`, `listHectorActivity`, `listHectorReports`, `parseHectorSynthesisResponse`, `parseRssItems`, `persistResearchResult`, `recordHectorActivity`, `resynthesizeHectorReport`, `RSS_FEED_CATALOG`, `runHectorLiveResearch`, `runMultiSourceResearch`, `scoreRssFeed`, `searchBrave`, `synthesizeHectorResearch` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `isEffectAllowed`, `isTaskTypeAllowed` |
+| service | `src/services/jose/joseDecision.ts` | `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision` |
 | service | `src/services/jose/joseEffects.ts` | `ACTION_EFFECTS`, `COMMAND_CHECKED_EFFECTS`, `DEFAULT_EFFECT_APPROVALS`, `EFFECT_LABELS`, `effectsNeedingApproval`, `getEffectApprovals`, `inferEffects`, `JOSE_EFFECTS`, `JoseEffect`, `LOCKED_EFFECTS`, `stepEffectsToWaitFor` |
+| service | `src/services/jose/josePlanner.ts` | `describePlanSource`, `JosePlan`, `planJoseRequest` |
 | service | `src/services/jose/joseRequestStore.ts` | `createJoseRequest`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `setJoseRequestStatus`, `updateJoseStep` |
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `priorOutputsForNeeds`, `setStepOutput` |
+| service | `src/services/jose/joseTemplates.ts` | `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
+| service | `src/services/jose/submitToJose.ts` | `CONTENT_VIDEO_STUDIO_NOTE`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals` |
-| service | `src/services/joseExecutionEngineService.ts` | `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `parseJsonResponse`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline` |
+| service | `src/services/joseExecutionEngineService.ts` | `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `parseJsonResponse`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
 | service | `src/services/licenseService.ts` | `__setTrustedPublicKeyForTests`, `activateLicense`, `canUseConnector`, `clearLicenseDenialLog`, `deactivateLicense`, `getLicenseDenialLog`, `getLicenseInfo`, `initLicense`, `isPremiumConnector`, `isPremiumGatingEnabled`, `LicenseDenialEntry`, `LicenseInfo`, `LicenseTier` |
 | service | `src/services/localMarketplaceService.ts` | `DEFAULT_CATALOGUE_URL`, `fetchRemoteCatalogue`, `getRemoteCatalogueUrl`, `listMarketplaceItems`, `setMarketplaceItemStatus`, `setRemoteCatalogueUrl` |
