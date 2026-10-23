@@ -149,6 +149,15 @@ export function returnPlanToWaiting(requestId: string, reason: string): JoseRequ
   });
 }
 
+/** Tie a run to a request saved earlier (an approved plan): its command, its steps reset to waiting. */
+export function attachRunToRequest(requestId: string, input: { commandId: string; steps: PlanStep[] }): JoseRequest {
+  return update(requestId, (r) => {
+    r.commandId = input.commandId;
+    r.status = 'running';
+    r.steps = input.steps.map((s) => ({ ...s, status: 'waiting' }));
+  });
+}
+
 export function updateJoseStep(requestId: string, stepId: string, patch: Partial<JoseRequestStep>): JoseRequest {
   return update(requestId, (r) => {
     const step = r.steps.find((s) => s.stepId === stepId);

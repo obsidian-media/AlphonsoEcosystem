@@ -29,7 +29,7 @@ import { recordOrchestrationQueueTransition } from './orchestrationQueueService'
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput } from './agentOutputStoreService';
 import { checkPlan, buildStepWaves, JOSE_LIMITS } from './jose/stepGraph';
-import { createJoseRequest, updateJoseStep, setJoseRequestStatus } from './jose/joseRequestStore';
+import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus } from './jose/joseRequestStore';
 import { setStepOutput, priorOutputsForNeeds } from './jose/joseStepOutputs';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
@@ -1331,7 +1331,8 @@ export async function runJoseCommandExecutionPipeline({
   conversationHistory,
   assignments = undefined,
   requestKind = 'normal',
-  planInfo = null
+  planInfo = null,
+  existingRequestId = null
 }: any) {
   // Explicit assignments (the content factory) skip the shortcuts below: the
   // caller already decided which agent does what.
@@ -1402,7 +1403,10 @@ export async function runJoseCommandExecutionPipeline({
   const assignmentMap: Record<string, any> = Object.fromEntries(planAssignments.map((a) => [a.stepId, a]));
   let joseRequestId: string | null = null;
   try {
-    joseRequestId = createJoseRequest({ commandId: command.id, source, text: commandText, kind: requestKind === 'project' ? 'project' : 'normal', steps: planSteps, ...(planInfo ? { plan: planInfo } : {}) }).id;
+    // An approved plan (phase 3) runs on the request it was saved as.
+    joseRequestId = existingRequestId
+      ? attachRunToRequest(existingRequestId, { commandId: command.id, steps: planSteps }).id
+      : createJoseRequest({ commandId: command.id, source, text: commandText, kind: requestKind === 'project' ? 'project' : 'normal', steps: planSteps, ...(planInfo ? { plan: planInfo } : {}) }).id;
   } catch {
     joseRequestId = null;
   }

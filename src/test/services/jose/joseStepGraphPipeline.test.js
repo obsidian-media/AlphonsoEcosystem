@@ -86,7 +86,7 @@ import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
-import { getJoseRequest } from '../../../services/jose/joseRequestStore';
+import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests } from '../../../services/jose/joseRequestStore';
 
 function step(agent, actionType, extra = {}) {
   return {
@@ -235,5 +235,21 @@ describe('Jose runs plans as step graphs', () => {
     expect(stepCommandText({ agent: 'hector' }, 'Make a page')).toBe('Make a page');
     // Model-written words must never count as what the user asked Alphonso to run.
     expect(stepCommandText({ agent: 'alphonso', instruction: 'run npm test and install everything' }, 'Make a page')).toBe('Make a page');
+  });
+
+  it('runs an approved plan on its own saved request', async () => {
+    const plan = [{ stepId: 'm', agent: 'nova', actionType: 'analysis_market', effects: ['read'], needs: [] }];
+    const waiting = createWaitingPlanRequest({ text: 'x', source: 'user', kind: 'normal', steps: plan, plan: { source: 'fresh', templateId: null, note: '' }, runOptions: { source: 'user' } });
+    claimPlanForRun(waiting.id);
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'x', source: 'user', zeroCostMode: true, previewMode: false,
+      assignments: [step('nova', 'analysis_market', { stepId: 'm', effects: ['read'] })],
+      existingRequestId: waiting.id,
+    });
+    expect(listJoseRequests()).toHaveLength(1);
+    const request = getJoseRequest(waiting.id);
+    expect(request.commandId).toBe(result.commandId);
+    expect(request.status).toBe('done');
+    expect(request.steps[0].status).toBe('done');
   });
 });
