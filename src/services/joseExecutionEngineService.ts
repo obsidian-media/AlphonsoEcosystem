@@ -79,6 +79,7 @@ const STEP_STATUS_BY_RECEIPT: Record<string, string> = {
   sentinel_blocked: 'failed',
   failed: 'failed',
   dead_letter: 'failed',
+  not_run: 'not_run',
 };
 
 /** Save each step's final status on the request (jose/joseRequestStore). Never breaks the run. */
@@ -1406,6 +1407,23 @@ export async function runJoseCommandExecutionPipeline({
       if (!packet) {
         failedCount += 1;
         continue;
+      }
+
+      // In an explicit plan a step runs only once every step it needs is done
+      // (2026-10-23). The splitter's plans keep today's behaviour (a step runs
+      // even if an earlier one failed) until the planner phase.
+      if (explicitAssignments) {
+        const unfinished = (assignment.needs || []).filter((need) => {
+          const needed = assignmentMap[need];
+          return !executionReceipts.some((r) => needed && r.packetId === needed.packetId && r.status === 'executed');
+        });
+        if (unfinished.length > 0) {
+          const reason = `Not run: waits for ${unfinished.map((n) => `"${n}"`).join(', ')}, which did not finish.`;
+          updatePacketStatus(assignment.packetId, 'failed', { failureReason: reason, retryable: false });
+          executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'not_run', reason });
+          onProgress?.({ stage: 'step_not_run', assignment, packetId: assignment.packetId, reason });
+          continue;
+        }
       }
 
       if (isBlockedByZeroCostMode(packet, assignment)) {

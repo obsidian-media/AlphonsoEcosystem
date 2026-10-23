@@ -100,6 +100,13 @@ describe('Jose runs plans as step graphs', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.mocked(executeContentStepAssignment).mockClear();
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => ({
+      summary: `${assignment.agent} did ${assignment.stepId}`,
+      resultState: 'completed',
+      artifacts: [{ type: 'content_step_output', actionType: assignment.actionType, data: { ok: true }, raw: '{}' }],
+      sources: [],
+      contractAction: assignment.actionType,
+    }));
   });
 
   it('gives each step an id, its effects and what it needs', async () => {
@@ -161,6 +168,33 @@ describe('Jose runs plans as step graphs', () => {
     const request = getJoseRequest(`jose-request-${result.commandId}`);
     expect(request.steps.map((s) => [s.stepId, s.status])).toEqual([['nova', 'done'], ['marcus', 'waiting_approval']]);
     expect(request.status).toBe('waiting_approval');
+  });
+
+  it('does not run a step whose needed step is still waiting for approval', async () => {
+    const result = await run([
+      step('marcus', 'distribution_execution', { stepId: 'post', effects: ['publish_or_send'] }),
+      step('nova', 'analysis_market', { stepId: 'measure', effects: ['read'], needs: ['post'] }),
+    ]);
+    expect(vi.mocked(executeContentStepAssignment)).not.toHaveBeenCalled();
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    const measure = request.steps.find((s) => s.stepId === 'measure');
+    expect(measure.status).toBe('not_run');
+    expect(measure.error).toMatch(/post/);
+  });
+
+  it('does not run a step whose needed step failed', async () => {
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+      if (assignment.stepId === 'script') throw new Error('model gave up');
+      return { summary: 'ok', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+    });
+    const result = await run([
+      step('miya', 'creative_script', { stepId: 'script' }),
+      step('miya', 'creative_script', { stepId: 'revise', needs: ['script'] }),
+    ]);
+    expect(vi.mocked(executeContentStepAssignment).mock.calls.map((c) => c[0].stepId).every((id) => id === 'script')).toBe(true);
+    expect(result.failedCount).toBe(1);
+    const revise = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'revise');
+    expect(revise.status).toBe('not_run');
   });
 
   it("keeps today's order for free-text requests (Hector before Miya)", async () => {
