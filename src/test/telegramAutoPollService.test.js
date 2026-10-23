@@ -231,6 +231,18 @@ describe('telegramAutoPollService', () => {
       expect(browserSendTelegram).toHaveBeenCalledWith(expect.objectContaining({ chatId: 'chat1', text: expect.stringContaining('Jose is on it') }));
     });
 
+    it('tells the chat when a started request fails later (phase 6a)', async () => {
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({ telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' } }));
+      browserPollTelegram.mockResolvedValue({ ok: true, messages: [{ from_id: 'user1', chat_id: 'chat1', text: 'hello world', update_id: 1 }], cursor: 100 });
+      createConnectorRoutePacket.mockReturnValue({ rejected: false, packet: { id: 'pkt_1' }, parsed: { originalText: 'hello world' } });
+      const { answerOrPlan } = await import('../services/jose/joseInbound');
+      answerOrPlan.mockResolvedValueOnce({ kind: 'started', done: Promise.reject(new Error('no model')) });
+      await service.runSingleTelegramPoll();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const { browserSendTelegram } = await import('../services/telegramBrowserConnector');
+      expect(browserSendTelegram).toHaveBeenCalledWith(expect.objectContaining({ chatId: 'chat1', text: "Jose couldn't finish that: no model" }));
+    });
+
     it('sends /ask to Jose once, not also to the reply-only handler', async () => {
       localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({ telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' } }));
       browserPollTelegram.mockResolvedValue({ ok: true, messages: [{ from_id: 'user1', chat_id: 'chat1', text: '/ask plan a launch', update_id: 2 }], cursor: 100 });

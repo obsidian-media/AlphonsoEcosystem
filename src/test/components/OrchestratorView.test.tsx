@@ -65,7 +65,7 @@ vi.mock('../../services/jose/joseRequestStore', () => ({
   listJoseRequests: vi.fn(() => (globalThis as any).__orchRequests || []),
 }));
 // Phase 6a: the Command tab goes through Jose's one entry.
-vi.mock('../../services/jose/joseInbound', () => ({ answerOrPlan: vi.fn() }));
+vi.mock('../../services/jose/joseInbound', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../services/jose/joseInbound')>()), answerOrPlan: vi.fn() }));
 vi.mock('../../services/joseExecutionEngineService', () => ({
   executeApprovedPackets: vi.fn(async () => ({ ok: true, summary: 'Marcus completed 1 approved task successfully.', results: [] })),
 }));
@@ -147,6 +147,16 @@ describe('OrchestratorView', () => {
     render(<OrchestratorView {...makeProps()} />);
     fireEvent.click(screen.getByRole('button', { name: /send to jose/i }));
     expect(await screen.findByText('Jose requests board r-new', {}, { timeout: 3000 })).toBeTruthy();
+    (globalThis as any).__orchRequests = undefined;
+  });
+
+  it('Send to Jose stops waiting and says why when no request was saved', async () => {
+    (globalThis as any).__orchRequests = [];
+    vi.mocked(answerOrPlan).mockResolvedValueOnce({ kind: 'started', done: Promise.resolve({ ok: false, reason: 'plan_rejected', problems: ['Only Alphonso may run commands.'] }) });
+    render(<OrchestratorView {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: /send to jose/i }));
+    expect((await screen.findByTestId('orch-command-answer', {}, { timeout: 3000 })).textContent).toBe("Jose couldn't run it: Only Alphonso may run commands.");
+    await waitFor(() => expect((screen.getByRole('button', { name: /send to jose/i }) as HTMLButtonElement).disabled).toBe(false));
     (globalThis as any).__orchRequests = undefined;
   });
 });

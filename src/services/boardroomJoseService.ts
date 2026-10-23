@@ -26,11 +26,13 @@ async function runOne(text: string, step: PlanStep) {
   };
 }
 
-export async function concludeOnJose(topic: string, transcript: string): Promise<{ requestId: string | null; review: BoardroomReview | null }> {
-  const { commandId, requestId } = await runOne(`Boardroom discussion: ${topic}\n\n${transcript}`, {
+export async function concludeOnJose(topic: string, transcript: string): Promise<{ requestId: string | null; review: BoardroomReview | null; waiting?: boolean }> {
+  const { commandId, requestId, waiting } = await runOne(`Boardroom discussion: ${topic}\n\n${transcript}`, {
     stepId: 'maria', agent: 'maria', actionType: 'audit_governance', effects: ['read'], needs: [],
     instruction: `Review this Boardroom discussion about "${topic}": its risk, and whether anything needs approval before it is sent out.`,
   });
+  // Reading can be set to ask first (Settings → Approvals); then her step waits.
+  if (waiting) return { requestId, review: null, waiting: true };
   const schema: any = commandId ? getStepOutput(commandId, 'maria')?.schema : null;
   if (!schema?.riskLevel) return { requestId, review: null };
   return {

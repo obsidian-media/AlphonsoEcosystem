@@ -54,4 +54,10 @@ describe('Boardroom thread actions through Jose (phase 6a)', () => {
     expect(stepsOf()[0].instruction).toContain('Launch plan');
     expect(result).toEqual({ requestId: 'jose-request-c4', waiting: false, summary: 'A brief.' });
   });
+
+  it("Conclude says when Maria's step is waiting for approval", async () => {
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce({ ok: true, commandId: 'c5', requestId: 'jose-request-c5', pendingApprovalCount: 1 });
+    expect(await concludeOnJose('t', 'x')).toEqual({ requestId: 'jose-request-c5', review: null, waiting: true });
+    expect(getStepOutput).not.toHaveBeenCalled();
+  });
 });

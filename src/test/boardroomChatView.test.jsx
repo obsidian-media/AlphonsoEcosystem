@@ -741,6 +741,15 @@ describe('BoardroomChatView thread actions', () => {
     expect(await screen.findByText(/Maria's review did not complete: Maria returned no review/)).toBeInTheDocument();
   });
 
+  it("says Maria's review is waiting for approval instead of calling it failed", async () => {
+    await openThread();
+    const { concludeOnJose } = await import('../services/boardroomJoseService');
+    concludeOnJose.mockResolvedValue({ requestId: 'r', review: null, waiting: true });
+    fireEvent.click(screen.getByRole('button', { name: /^conclude$/i }));
+    expect(await screen.findByText(/Maria's review is waiting for your approval\. Follow it on the Orchestrator page, Requests tab\./)).toBeInTheDocument();
+    expect(screen.queryByText(/did not complete/)).toBeNull();
+  });
+
   it('Distribute is unavailable until the thread is concluded', async () => {
     await openThread();
     expect(screen.getByRole('button', { name: /^distribute$/i })).toBeDisabled();

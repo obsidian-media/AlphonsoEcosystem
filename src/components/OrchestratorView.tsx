@@ -50,7 +50,7 @@ import {
 } from '../services/joseCommandRouterService';
 import { executeApprovedPacket } from '../services/packetExecutionService';
 import { findRequestByPacket, listJoseRequests } from '../services/jose/joseRequestStore';
-import { answerOrPlan } from '../services/jose/joseInbound';
+import { answerOrPlan, outcomeLine } from '../services/jose/joseInbound';
 import { TRUST_STATES } from '../services/trustModel';
 import { getConnectorCredential, isConnectorAuthenticated, listConnectorAudit, pollWhatsAppConnector } from '../services/connectorRegistryService';
 import { getOrchestrationQueueSnapshot, listOrchestrationQueueTransitions, replayPacketFromDeadLetter } from '../services/orchestrationQueueService';
@@ -565,7 +565,19 @@ export function OrchestratorView({
         return;
       }
       onJoseStateChange?.('directing', 'Jose is planning the request.');
-      if (result.kind === 'started') result.done.catch((error: unknown) => setCommandAnswer(`Jose couldn't finish that: ${error instanceof Error ? error.message : String(error)}`));
+      // Stop waiting if the request ends without being saved (refused, or failed at once).
+      let ended = false;
+      if (result.kind === 'started') {
+        result.done
+          .then((outcome: any) => {
+            ended = true;
+            if (!listJoseRequests().some((r) => !before.has(r.id))) setCommandAnswer(outcomeLine(outcome));
+          })
+          .catch((error: unknown) => {
+            ended = true;
+            setCommandAnswer(`Jose couldn't finish that: ${error instanceof Error ? error.message : String(error)}`);
+          });
+      }
       const started = Date.now();
       while (Date.now() - started < 10 * 60 * 1000) {
         const fresh = listJoseRequests().find((r) => !before.has(r.id));
@@ -574,6 +586,7 @@ export function OrchestratorView({
           setOrchTab('requests');
           break;
         }
+        if (ended) break;
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
     } catch (error) {

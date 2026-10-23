@@ -353,7 +353,11 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
         .slice(0, 6000);
       // Phase 6a: Maria's review is a step in a Jose request (shown on the board).
       const { concludeOnJose } = await import('../services/boardroomJoseService');
-      const { review } = await concludeOnJose(activeThread.topic, transcript);
+      const { review, waiting } = await concludeOnJose(activeThread.topic, transcript);
+      if (waiting) {
+        postThreadNote('maria', "Maria's review is waiting for your approval. Follow it on the Orchestrator page, Requests tab.");
+        return;
+      }
       if (!review?.riskLevel) throw new Error('Maria returned no review');
       // confidenceLevel 'temporary' means Maria's model review could not be
       // used and her rule-based check produced this verdict; say which.

@@ -1,6 +1,14 @@
 import { invoke } from '@tauri-apps/api/core';
 import { appendConnectorAudit, createConnectorRoutePacket } from './connectorRegistryService';
-import { answerOrPlan, inboundReply } from './jose/joseInbound';
+import { answerOrPlan, inboundReply, type AnswerOrPlanResult } from './jose/joseInbound';
+
+/** A request started in the background that fails later is told to the chat, not left unhandled. */
+function reportLaterFailure(result: AnswerOrPlanResult, token: string, chatId: string): void {
+  if (result.kind !== 'started') return;
+  result.done.catch((error: unknown) => {
+    browserSendTelegram({ botToken: token, chatId, text: `Jose couldn't finish that: ${error instanceof Error ? error.message : String(error)}` }).catch(() => {});
+  });
+}
 import { timestampMs } from './trustModel';
 import { browserPollTelegram, browserSendTelegram, handleTelegramBotCommand } from './telegramBrowserConnector';
 import { getConnectorCredential, getConnectorCredentials } from './connectors/connectorAuth';
@@ -103,6 +111,7 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}): Promise<PollRe
           // Jose answers or plans it (phase 6a); the reply-only handler would add a second message.
           const result = await answerOrPlan(args, { source: 'telegram', background: true });
           await browserSendTelegram({ botToken: token, chatId, text: inboundReply(result, 'telegram') }).catch(() => {});
+          reportLaterFailure(result, token, chatId);
         } else {
           await handleTelegramBotCommand({ text, chatId, botToken: token });
         }
@@ -133,6 +142,7 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}): Promise<PollRe
       try {
         const result = await answerOrPlan(route?.parsed?.originalText || text, { source: 'telegram', background: true });
         await browserSendTelegram({ botToken: token, chatId, text: inboundReply(result, 'telegram') }).catch(() => {});
+        reportLaterFailure(result, token, chatId);
       } catch (error) {
         appendConnectorAudit('telegram', 'jose_routing_failed', {
           packetId: route.packet?.id || null,
