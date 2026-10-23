@@ -2,7 +2,7 @@
 // checked. A reply that does not match is refused (null): the step then fails
 // and says so, it is never filled in with stock text.
 import { extractJsonObject } from '../../lib/jsonUtils.js';
-import type { ContentStepPayload, StepId } from './contentTypes';
+import { hasOwnKey, type ContentStepPayload, type StepId } from './contentTypes';
 
 type Json = Record<string, unknown>;
 
@@ -96,7 +96,7 @@ function brandText(payload: ContentStepPayload): string {
 }
 
 export function buildStepPrompt(payload: ContentStepPayload, agent: string, actionType: string): { system: string; prompt: string } {
-  const action = ACTIONS[actionType];
+  const action = hasOwnKey(ACTIONS, actionType) ? ACTIONS[actionType] : undefined;
   const brief = payload.brief;
   const system = `You are ${action?.role || agent}. ${HONEST_COPY} Return JSON only, with exactly these keys. Each value below describes what to write: replace it with your own content (numbers as numbers, true/false as booleans): ${action?.keys || '{}'}`;
   const parts = [
@@ -204,7 +204,8 @@ function repairThumbnails(j: Json, text: string): Json {
 
 /** The agent's answer as an object, or null when it is not usable. */
 export function parseStepAnswer(actionType: string, text: string, options: { allowedUrls?: string[] } = {}): unknown | null {
-  const validate = VALIDATORS[actionType];
+  // Own keys only: a name like "constructor" must not find Object's methods (CodeQL).
+  const validate = hasOwnKey(VALIDATORS, actionType) ? VALIDATORS[actionType] : undefined;
   if (!validate) return null;
   let parsed: unknown = null;
   try {

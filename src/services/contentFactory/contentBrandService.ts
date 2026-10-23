@@ -2,7 +2,7 @@
 import { durableGet, durableSet } from '../../lib/durableStore.js';
 import { listMiyaMemory } from '../miyaMemoryService';
 import { slugForFolder } from './contentProjectFiles';
-import type { ContentBrand } from './contentTypes';
+import { secureId, type ContentBrand } from './contentTypes';
 
 const BRANDS_KEY = 'alphonso_content_brands_v1';
 export const DEFAULT_QUALITY_THRESHOLD = 7;
@@ -34,7 +34,7 @@ export function saveBrand(input: Partial<ContentBrand> & { name: string }): Cont
   const now = Date.now();
   const existing = input.id ? brands.find((brand) => brand.id === input.id) : undefined;
   const base: ContentBrand = existing || {
-    id: `brand-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    id: secureId('brand'),
     name: input.name,
     folderName: slugForFolder(input.name),
     palette: [],
