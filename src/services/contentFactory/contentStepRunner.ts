@@ -1,19 +1,23 @@
-// Runs one content-factory step through Jose: the step's agents get explicit
-// assignments, Jose runs them (packets, approvals, receipts, budget), and the
-// result is saved as a new version of the step and written to the project
-// folder.
-import { runJoseCommandExecutionPipeline } from '../joseExecutionEngineService';
-import { getAllAgentOutputs } from '../agentOutputStoreService';
+// Runs a Miya Studio project, or one of its steps, as a Jose request (phase 6b).
+// The steps come from the Content video template (contentProjectPlan.ts); the
+// engine hands each finished step to contentStepRecorder.ts, which saves its
+// version, writes the project folder and makes the pictures.
+import { submitStepsToJose } from '../jose/submitToJose';
+import { approveRequestStep } from '../joseExecutionEngineService';
+import { getJoseRequest } from '../jose/joseRequestStore';
 import { getBrand } from './contentBrandService';
 import {
-  addStepProgress, chosenVersionOf, failStep, getProject, markStepStatus, saveStepVersion, startStep,
+  addStepProgress, approveStep, failStep, getProject, markStepStatus, setProjectRequest, startStep,
 } from './contentProjectService';
-import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
-import { renderScenePictures, renderThumbnails } from './contentImages';
-import { type ContentProject, type ContentStepPayload, type StepId } from './contentTypes';
-import { STEP_AGENTS, priorOutputs, stepMarkdown } from './contentStepAgents';
+import { requireOutputRoot } from './contentProjectFiles';
+import { contentProjectPlanSteps, REVIEW_WAIT } from './contentProjectPlan';
+import { STEP_AGENTS } from './contentStepAgents';
+import { STEP_ORDER, type ContentProject, type StepId } from './contentTypes';
 
 export { STEP_AGENTS, type StepAgent } from './contentStepAgents';
+
+/** How a project's request is labelled on the board. */
+export const PROJECT_LABEL = 'Steps set by Miya Studio.';
 
 /** What the user sees while an agent works. */
 const WORKING: Record<string, string> = {
@@ -44,50 +48,73 @@ export interface RunStepOptions {
   onProgress?: (message: string) => void;
 }
 
+/** Why the project can't run now, or null. */
+function cannotRun(project: ContentProject, settings: RunStepOptions['settings']): string | null {
+  if (!getBrand(project.brandId)) return 'This project\'s brand no longer exists.';
+  try {
+    requireOutputRoot(settings);
+  } catch (error) {
+    return (error as Error).message;
+  }
+  if (!project.brief.idea.trim()) return 'Write the idea in the brief first.';
+  return null;
+}
+
+function refusal(result: any): string {
+  if (result?.reason === 'plan_rejected') return `Jose couldn't run it: ${(result.problems || []).join(' ')}`;
+  return `Jose couldn't run it: ${result?.reason || 'it failed.'}`;
+}
+
+export async function runContentProject(projectId: string, options: RunStepOptions): Promise<{ ok: boolean; requestId: string | null; reason?: string }> {
+  const project = getProject(projectId);
+  if (!project) return { ok: false, requestId: null, reason: 'Content project not found.' };
+  if (STEP_ORDER.some((s) => project.steps[s].status === 'running')) {
+    return { ok: false, requestId: null, reason: 'A step of this project is already running.' };
+  }
+  const problem = cannotRun(project, options.settings);
+  if (problem) return { ok: false, requestId: null, reason: problem };
+  const brand = getBrand(project.brandId)!;
+  const result: any = await submitStepsToJose({
+    text: `Content project "${project.name}": ${project.brief.idea}`,
+    source: 'content-factory',
+    label: PROJECT_LABEL,
+    // The factory saves its own lessons; Echo does not save each step.
+    saveDecisions: false,
+    steps: contentProjectPlanSteps(project, brand),
+  });
+  const requestId: string | null = result?.requestId || null;
+  if (requestId) setProjectRequest(projectId, requestId);
+  if (!result?.ok && !requestId) return { ok: false, requestId: null, reason: refusal(result) };
+  return { ok: true, requestId };
+}
+
 export async function runContentStep(projectId: string, step: StepId, options: RunStepOptions): Promise<ContentProject> {
   const project = getProject(projectId);
   if (!project) throw new Error(`Content project not found: ${projectId}`);
-  const brand = getBrand(project.brandId);
-  if (!brand) return failStep(projectId, step, 'This project\'s brand no longer exists.');
-
-  let root: string;
-  try {
-    root = requireOutputRoot(options.settings);
-  } catch (error) {
-    return failStep(projectId, step, (error as Error).message);
-  }
-
+  const problem = cannotRun(project, options.settings);
+  if (problem) return failStep(projectId, step, problem);
   const agents = STEP_AGENTS[step];
   if (agents.length === 0) return project;
-  if (!project.brief.idea.trim()) return failStep(projectId, step, 'Write the idea in the brief first.');
+  const brand = getBrand(project.brandId)!;
+
   const started = startStep(projectId, step);
   const say = (message: string) => {
     addStepProgress(projectId, step, message);
     options.onProgress?.(message);
   };
-
-  const prior = priorOutputs(started, step);
-  const assignments = agents.map(({ agent, actionType, title }) => {
-    const contentStep: ContentStepPayload = {
-      projectId, step, brief: started.brief, brand, prior,
-      task: [title, options.extraTask].filter(Boolean).join('. '),
-    };
-    return {
-      agent, actionType, title: `${title}: ${started.name}`, rationale: 'Miya content factory step',
-      riskLevel: 'low', requiresApproval: false, commandPreview: CONTENT_TASK_PREVIEW,
-      fragments: [], contentStep,
-    };
+  const steps = contentProjectPlanSteps(started, brand, step, { only: true }).map((s) => {
+    const task = [s.contentStep!.task, options.extraTask].filter(Boolean).join('. ');
+    return { ...s, instruction: task, contentStep: { ...s.contentStep!, task } };
   });
 
-  let result: { commandId?: string; failedCount?: number; pendingApprovalCount?: number; executionReceipts?: { agent?: string; status?: string; reason?: string }[] };
+  let result: any;
   try {
-    result = await runJoseCommandExecutionPipeline({
-      commandText: `Content factory: ${step} for "${started.name}"`,
+    result = await submitStepsToJose({
+      text: `Content factory: ${step} for "${started.name}"`,
       source: 'content-factory',
-      previewMode: false,
-      // The factory saves its own lessons; Echo does not save each step.
+      label: PROJECT_LABEL,
       saveDecisions: false,
-      assignments,
+      steps,
       onProgress: (event: { stage?: string; agents?: string[] }) => {
         if (event?.stage === 'wave_start') {
           for (const agent of event.agents || []) {
@@ -100,49 +127,32 @@ export async function runContentStep(projectId: string, step: StepId, options: R
   } catch (error) {
     return failStep(projectId, step, `Jose could not run this step: ${(error as Error).message}`);
   }
+  if (result?.requestId) setProjectRequest(projectId, result.requestId);
+  if (result?.reason === 'plan_rejected') return failStep(projectId, step, refusal(result));
 
-  const failure = (result.executionReceipts || []).find((r) => r.status === 'dead_letter' || r.status === 'failed');
-  if ((result.failedCount || 0) > 0) {
+  const failure = (result?.executionReceipts || []).find((r: any) => r.status === 'dead_letter' || r.status === 'failed');
+  if ((result?.failedCount || 0) > 0) {
     return failStep(projectId, step, failure?.reason || 'An agent could not finish this step.');
   }
-  if ((result.pendingApprovalCount || 0) > 0) {
+  if ((result?.pendingApprovalCount || 0) > 0) {
     return markStepStatus(projectId, step, 'needs_approval', WAITING_FOR_APPROVAL);
   }
+  // The recorder saved the version as the agents finished.
+  const after = getProject(projectId)!;
+  if (after.steps[step].status === 'running' && !after.steps[step].versions.some((v) => v.joseCommandId === result?.commandId)) {
+    return failStep(projectId, step, 'No result was saved for this step.');
+  }
+  return after;
+}
 
-  const outputs = getAllAgentOutputs(result.commandId || '') as Record<string, { artifacts?: { type?: string; data?: unknown }[] }>;
-  const output: Record<string, unknown> = {};
-  for (const { agent } of agents) {
-    const artifact = (outputs[agent]?.artifacts || []).find((a) => a?.type === 'content_step_output');
-    if (!artifact || artifact.data === null || artifact.data === undefined) {
-      return failStep(projectId, step, `${agent} gave no result for this step.`);
-    }
-    output[agent] = artifact.data;
-  }
-
-  const saved = saveStepVersion(projectId, step, {
-    output,
-    summary: agents.map((a) => a.title).join(', '),
-    joseCommandId: result.commandId || null,
-  });
-  const version = saved.steps[step].chosenVersion as number;
-  say('Saving to the project folder…');
-  try {
-    await writeStepText(root, brand, saved, step, version, stepMarkdown(saved, step, version, output));
-    await writeProjectFile(root, brand, getProject(projectId) || saved);
-  } catch (error) {
-    say(`Saved in the app, but the project folder could not be written: ${(error as Error).message}`);
-  }
-  // The Scene Builder and Thumbnail Studio go on to make their pictures. The
-  // step stays "running" meanwhile, so its progress stays on screen.
-  if (step === 'scenes' || step === 'thumbnail') {
-    markStepStatus(projectId, step, 'running', null);
-    try {
-      if (step === 'scenes') await renderScenePictures(projectId, options.settings, say);
-      else await renderThumbnails(projectId, options.settings, say);
-    } catch (error) {
-      say(`The pictures could not be made: ${(error as Error).message}`);
-    }
-    markStepStatus(projectId, step, 'done', null);
-  }
-  return getProject(projectId) || saved;
+/** Approve a step in Miya Studio; after the review this also carries the project's request on. */
+export async function approveContentStep(projectId: string, step: StepId): Promise<ContentProject> {
+  const approved = approveStep(projectId, step);
+  const requestId = approved.joseRequestId;
+  const request = requestId ? getJoseRequest(requestId) : null;
+  const waiting = request?.status === 'waiting_approval'
+    ? request.steps.find((s) => s.status === 'waiting_approval' && s.waitFor === REVIEW_WAIT)
+    : null;
+  if (step === 'review' && requestId && waiting) await approveRequestStep(requestId, waiting.stepId);
+  return getProject(projectId) || approved;
 }

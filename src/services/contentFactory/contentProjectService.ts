@@ -161,6 +161,13 @@ export function saveStepVersion(
   });
 }
 
+/** Remembers the project's latest Jose request (phase 6b). */
+export function setProjectRequest(id: string, requestId: string): ContentProject {
+  return update(id, (p) => {
+    p.joseRequestId = requestId;
+  });
+}
+
 /** Keeps the answers of a step's agents that have finished (phase 6b). */
 export function setPendingAgents(id: string, step: StepId, pending: Record<string, unknown>): ContentProject {
   return update(id, (p) => {

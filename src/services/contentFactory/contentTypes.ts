@@ -105,6 +105,8 @@ export interface ContentProject {
   brief: ContentBrief;
   briefRevision: number;
   steps: Record<StepId, StepState>;
+  /** The latest Jose request for this project (phase 6b). */
+  joseRequestId?: string | null;
   createdAtMs: number;
   updatedAtMs: number;
 }
