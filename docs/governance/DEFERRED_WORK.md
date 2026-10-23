@@ -39,14 +39,21 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**
+  - The Workflows panel's Run and the phone's "run workflow" call `executeWorkflowTasks()`, the workflow operations' own executors, not Jose. Only `runWorkflow()` (the agent chain) moved; the operations executors are a separate system (see `workflowExecutionService`).
+  - Boardroom's notes say "Follow it on the Orchestrator page, Requests tab." in words; there is no button that opens the request.
+  - A batch task is planned by Jose's model, one planning call per task.
+  - `jose-paid-live.e2e.mjs` is written but not run (no paid key on the dev machine).
+  - **Status:** OPEN.
+
 - [2026-10-23] **Jose redesign phase 5 (away from the app): what it leaves open.**
-  - WhatsApp and the phone companion get Jose's notifications and approvals in phase 6 (owner chose Telegram only for phase 5).
+  - WhatsApp and the phone companion get Jose's notifications and approvals: not in phase 6 either (owner, 2026-10-23). Their messages go through Jose since phase 6a; WhatsApp sends one line when a request ends; approving still happens in the app or on Telegram.
   - ~~The older Telegram "N agent actions since your last check" notifier runs alongside Jose's messages~~ — CLOSED 2026-10-23: off by default (owner), switchable in Settings → Approvals → "Jose on Telegram".
   - Telegram buttons are short codes saved for 7 days; a button older than that answers "That button has expired." (use the app or `/approve`).
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 4 (loops and adaptation): what it leaves open.**
-  - **Paid models were checked with unit tests only:** there are no Claude or ChatGPT keys on the dev machine, so no real paid call, cost record or cap has been tried. The prices are yours to enter; nothing reads them from the providers.
+  - **Paid models were checked with unit tests only:** there are no Claude or ChatGPT keys on the dev machine, so no real paid call, cost record or cap has been tried. `e2e-desktop/specs/jose-paid-live.e2e.mjs` (phase 6a) does it when you give it a key and prices; not run yet. The prices are yours to enter; nothing reads them from the providers.
   - A paid step's cost is estimated from its instruction plus a fixed 4,000-character allowance for earlier steps' work; the real cost is recorded from the usage the provider reports.
   - The help request is a line the agent writes ("HELP: …"); content-factory steps build their own prompts and are not told about it.
   - ~~Echo saves a request's decisions twice when it waits and is approved~~ — CLOSED 2026-10-23 by phase 5 (saved once, when done).
@@ -56,7 +63,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 - [2026-10-23] **Jose redesign phase 2 (the planner): what it leaves open.**
   - ~~Saving a plan as a new template, and seeing or editing the plan before it runs~~ — CLOSED 2026-10-23 by phase 3.
   - ~~Jose choosing the model per step, with model escalation on failure~~ — CLOSED 2026-10-23 by phase 4 (installed models only; paid models only if you allow them).
-  - Only Chat goes through `submitToJose()` and the planner; Telegram, WhatsApp, the phone companion, schedules, workflows, the batch orchestrator, the Orchestrator page and Boardroom actions still call `runJoseCommandExecutionPipeline` with the old word rule: phase 6.
+  - ~~Only Chat goes through `submitToJose()` and the planner~~ — CLOSED 2026-10-23 by phase 6a: Telegram, WhatsApp, the phone companion, the message pollers, schedules, workflows, the batch orchestrator, the Orchestrator page and Boardroom actions go through `answerOrPlan()` or `submitStepsToJose()`. The content factory's per-step requests move in phase 6b.
   - A Content video planned in Chat runs the template's steps without a Miya Studio project (no brand, folder or pictures) and points to Miya Studio: phase 6 moves the factory onto the template.
   - ~~Giving Alphonso a planned step's instruction safely~~ — CLOSED 2026-10-23 by phase 4: it reaches his planning and code prompts as "Jose's note for this step:", after your request, and never his clarification, external-tool or intent checks.
   - **Status:** OPEN.
