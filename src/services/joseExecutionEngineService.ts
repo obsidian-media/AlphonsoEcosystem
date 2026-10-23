@@ -32,6 +32,7 @@ import { checkPlan, buildStepWaves, JOSE_LIMITS } from './jose/stepGraph';
 import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus } from './jose/joseRequestStore';
 import { setStepOutput, priorOutputsForNeeds } from './jose/joseStepOutputs';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
+import { listInstalledModels, pickLargerModel } from './jose/joseModels';
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
@@ -48,7 +49,7 @@ import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
 import { executeWithBrain } from './agentBrainService';
-import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint, withAgentModel } from '../lib/ollama';
 import { CHAT_ASSISTANT_PROMPT } from '../lib/chatUtils';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { getAgentProvider } from './modelSelectionService';
@@ -482,12 +483,23 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
   const instruction = getExecutionInstruction(commandText, assignment);
   let lastError = null;
 
+  // A step runs with the model Jose chose for it, if any (phase 4).
+  const runOnce = (model: string | null) => {
+    if (!model) return executeAssignment(packet, assignment, commandText, options);
+    return withAgentModel(assignment.agent, model, () => executeAssignment(packet, assignment, commandText, { ...options, model }));
+  };
+  const attemptWith = async (model: string | null) => {
+    const result = await runOnce(model);
+    if (isRetryableTaskFailure(result)) {
+      throw new Error(result.summary || `Task "${instruction}" returned a failed result.`);
+    }
+    return result;
+  };
+  const stepModel = typeof assignment?.model === 'string' && assignment.model ? assignment.model : null;
+
   for (let attempt = 1; attempt <= MAX_TASK_RETRIES + 1; attempt += 1) {
     try {
-      const result = await executeAssignment(packet, assignment, commandText, options);
-      if (isRetryableTaskFailure(result)) {
-        throw new Error(result.summary || `Task "${instruction}" returned a failed result.`);
-      }
+      const result = await attemptWith(stepModel);
       _resetEscalationCount(commandText);
       return {
         ok: true,
@@ -503,9 +515,30 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
       }
     }
   }
+
+  // Then the same agent with the next larger installed model (owner: Q15).
+  // Local Ollama models only; a step is never handed to another agent.
+  let escalatedTo: string | null = null;
+  if (getAgentProvider(assignment?.agent)?.provider === 'ollama') {
+    let current = stepModel;
+    if (!current) {
+      try { current = getConfiguredOllamaModel(); } catch { current = null; }
+    }
+    escalatedTo = current ? pickLargerModel(current, await listInstalledModels()) : null;
+  }
+  if (escalatedTo) {
+    try {
+      const result = await attemptWith(escalatedTo);
+      _resetEscalationCount(commandText);
+      return { ok: true, attempts: MAX_TASK_RETRIES + 2, result, taskId, instruction, escalatedTo };
+    } catch (error) {
+      lastError = error;
+    }
+  }
   _recordEscalationFailure(commandText);
 
-  const errorMessage = String(lastError?.message || lastError || `Task "${instruction}" failed.`);
+  const reason = String(lastError?.message || lastError || `Task "${instruction}" failed.`);
+  const errorMessage = `Tried ${MAX_TASK_RETRIES + 1} times${escalatedTo ? `, and with ${escalatedTo}` : ''}; it still failed: ${reason.replace(/\.$/, '')}. Tell me how to go on.`;
   const dlqEntry = upsertJoseExecutionDlqEntry({
     taskId,
     instruction,
@@ -1846,7 +1879,8 @@ export async function runJoseCommandExecutionPipeline({
         agent: assignment.agent,
         status: 'executed',
         resultState: result.resultState || 'pending_review',
-        attempts: taskResult.attempts
+        attempts: taskResult.attempts,
+        ...(taskResult.escalatedTo ? { escalatedTo: taskResult.escalatedTo } : {})
       });
       onProgress?.({
         stage: 'executed',

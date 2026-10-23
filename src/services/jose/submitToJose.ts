@@ -44,6 +44,7 @@ function toAssignments(steps: PlanStep[], planNote: string) {
     effects: step.effects,
     needs: step.needs,
     instruction: step.instruction || '',
+    ...(step.model ? { model: step.model } : {}),
     title: `${AGENT_NAMES[step.agent] || step.agent} ${step.actionType}`,
     rationale: planNote,
     riskLevel: 'low',

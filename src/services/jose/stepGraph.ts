@@ -22,6 +22,8 @@ export interface PlanStep {
   needs: string[];
   /** What the step should do, in plain words (planner and templates, phase 2). */
   instruction?: string;
+  /** The model Jose chose for this step (phase 4); an installed local model. */
+  model?: string;
 }
 
 const NAMES: Record<string, string> = {

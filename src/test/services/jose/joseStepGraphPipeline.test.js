@@ -38,7 +38,19 @@ vi.mock('../../../lib/ollama', () => ({
     response: JSON.stringify({ title: 'mock', hook: 'mock', script: 'mock', scenes: [], prompts: [] })
   })),
   fetchOllamaModels: vi.fn(async () => ({ models: [] })),
-  PREFERRED_MODEL: 'llama3.2:3b'
+  PREFERRED_MODEL: 'llama3.2:3b',
+  getConfiguredOllamaModel: () => 'llama3.2:3b',
+  getConfiguredOllamaEndpoint: () => 'http://127.0.0.1:11434',
+  // The per-step model in force, for the escalation tests (phase 4).
+  withAgentModel: vi.fn(async (_agent, model, fn) => {
+    globalThis.__joseStepModel = model;
+    try { return await fn(); } finally { globalThis.__joseStepModel = null; }
+  }),
+}));
+
+vi.mock('../../../services/jose/joseModels', async (importOriginal) => ({
+  ...(await importOriginal()),
+  listInstalledModels: vi.fn(async () => globalThis.__joseInstalledModels || []),
 }));
 
 vi.mock('../../../services/sentinelGateService', () => ({
@@ -251,5 +263,49 @@ describe('Jose runs plans as step graphs', () => {
     expect(request.commandId).toBe(result.commandId);
     expect(request.status).toBe('done');
     expect(request.steps[0].status).toBe('done');
+  });
+
+  // Phase 4: retry, then the same agent with a larger installed model.
+  it('tries a larger installed model when a step keeps failing', async () => {
+    globalThis.__joseInstalledModels = ['llama3.2:3b', 'qwen2.5:7b'];
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+      if (globalThis.__joseStepModel !== 'qwen2.5:7b') throw new Error('small model gave up');
+      return { summary: 'done with the larger model', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+    });
+    const result = await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'] })]);
+    globalThis.__joseInstalledModels = [];
+    expect(result.failedCount).toBe(0);
+    expect(result.executionReceipts[0]).toMatchObject({ status: 'executed', escalatedTo: 'qwen2.5:7b' });
+  });
+
+  it('says what it tried when no larger model helps', async () => {
+    globalThis.__joseInstalledModels = ['llama3.2:3b'];
+    vi.mocked(executeContentStepAssignment).mockImplementation(async () => { throw new Error('model gave up'); });
+    const result = await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'] })]);
+    globalThis.__joseInstalledModels = [];
+    expect(result.failedCount).toBe(1);
+    expect(String(result.executionReceipts[0].reason)).toMatch(/^Tried \d+ times; it still failed: model gave up\. Tell me how to go on\.$/);
+  });
+
+  it('runs a step with the model Jose chose for it', async () => {
+    const seen = [];
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+      seen.push(globalThis.__joseStepModel);
+      return { summary: 'ok', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+    });
+    await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'], model: 'qwen2.5:7b' })]);
+    expect(seen).toEqual(['qwen2.5:7b']);
+  });
+
+  it('does not escalate an agent that runs on a cloud provider', async () => {
+    const { setAgentProvider } = await import('../../../services/modelSelectionService');
+    setAgentProvider('nova', { provider: 'gemini' });
+    globalThis.__joseInstalledModels = ['llama3.2:3b', 'qwen2.5:7b'];
+    vi.mocked(executeContentStepAssignment).mockImplementation(async () => { throw new Error('model gave up'); });
+    const result = await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'] })]);
+    globalThis.__joseInstalledModels = [];
+    setAgentProvider('nova', { provider: 'ollama' });
+    expect(result.failedCount).toBe(1);
+    expect(String(result.executionReceipts[0].reason)).not.toMatch(/and with/);
   });
 });

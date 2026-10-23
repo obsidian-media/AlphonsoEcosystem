@@ -775,12 +775,32 @@ type AgentModelProviderLike = 'ollama' | 'nvidia_nim' | 'gemini' | 'hermes';
  * imports from this file (fetchOllamaModels/PREFERRED_MODEL), so a static
  * top-level import of it back here would be circular.
  */
+// A model chosen for one Jose step (phase 4, 2026-10-23), for one agent only,
+// while that step runs. Steps run one at a time, so this cannot leak into
+// another step; it is cleared even when the step throws.
+const agentModelOverrides = new Map<string, string>();
+
+export function getAgentModelOverride(agentId: string): string | null {
+  return agentModelOverrides.get(agentId) || null;
+}
+
+export async function withAgentModel<T>(agentId: string, model: string, fn: () => Promise<T>): Promise<T> {
+  const previous = agentModelOverrides.get(agentId);
+  agentModelOverrides.set(agentId, model);
+  try {
+    return await fn();
+  } finally {
+    if (previous) agentModelOverrides.set(agentId, previous);
+    else agentModelOverrides.delete(agentId);
+  }
+}
+
 export async function generateAgentLlmResponse(agentId: string, options: AgentGenerateOptions): Promise<AgentGenerateResult> {
   const { getAgentProvider } = await import('../services/modelSelectionService');
   const config = getAgentProvider(agentId);
 
   if (config.provider === 'ollama') {
-    const model = options.model || getConfiguredOllamaModel();
+    const model = options.model || getAgentModelOverride(agentId) || getConfiguredOllamaModel();
     const result = await generateOllamaResponse({
       // The address set in Settings when the caller passes none (QA
       // 2026-10-22): an empty address meant localhost:11434, so callers like
