@@ -54,10 +54,11 @@ describe('submitToJose', () => {
     expect(result.planNote).toBe('Planned fresh.');
   });
 
-  it('runs a rules plan through the old path, without explicit steps', async () => {
+  // Phase 3: the simple plan runs as steps too, so a failed step stops the steps that need it.
+  it('runs a rules plan as explicit steps too', async () => {
     planner.mockResolvedValueOnce({ ...freshPlan, source: 'rules', note: "Jose's model isn't available, so I used the simple plan." });
     const result = await submitToJose({ text: 'research pricing', source: 'user' });
-    expect(pipeline.mock.calls[0][0].assignments).toBeUndefined();
+    expect(pipeline.mock.calls[0][0].assignments.map((a) => a.stepId)).toEqual(['facts', 'value']);
     expect(result.planNote).toMatch(/isn't available/);
   });
 

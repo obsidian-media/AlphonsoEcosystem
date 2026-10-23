@@ -1232,12 +1232,13 @@ export function SettingsView({
             </div>
             <button
               role="switch"
-              aria-checked={!!settings.approvalMode}
+              // Unset counts as on, as the policy reads it (2026-10-23).
+              aria-checked={settings.approvalMode !== false}
               aria-label="Toggle approval mode"
-              onClick={() => setSettings({ ...settings, approvalMode: !settings.approvalMode })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.approvalMode ? 'bg-(--warning)' : 'bg-(--surface-3)'}`}
+              onClick={() => setSettings({ ...settings, approvalMode: settings.approvalMode === false })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.approvalMode !== false ? 'bg-(--warning)' : 'bg-(--surface-3)'}`}
             >
-              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.approvalMode ? 'right-1' : 'left-1'}`} />
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.approvalMode !== false ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
           <EffectApprovalsTable settings={settings} setSettings={setSettings} />

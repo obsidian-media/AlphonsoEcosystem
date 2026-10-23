@@ -245,6 +245,12 @@ describe('SettingsView smoke', () => {
     return setSettings;
   }
 
+  // The policy treats an unset Approval Mode as on; the switch must say so (2026-10-23).
+  it('shows Approval Mode on when the setting has never been set', () => {
+    renderApprovals({});
+    expect(screen.getByRole('switch', { name: 'Toggle approval mode' }).getAttribute('aria-checked')).toBe('true');
+  });
+
   it('locks spend, publish and delete to always ask', () => {
     renderApprovals({ ...minimalSettings, approvalMode: true });
     for (const label of ['Spend money', 'Publish or send anything outside', 'Delete anything']) {

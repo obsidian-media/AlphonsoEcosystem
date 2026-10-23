@@ -43,6 +43,28 @@ describe('agentPermissionTable', () => {
   });
 });
 
+// Phase 3 (2026-10-23): task types the splitter has always used, which the
+// contracts never allowed, so they failed every time.
+describe("the splitter's own task types are allowed", () => {
+  it('lets Jose run Boardroom and cost-policy tasks, and Hector check publishing readiness', () => {
+    expect(isTaskTypeAllowed('jose', 'boardroom_planning')).toBe(true);
+    expect(isTaskTypeAllowed('jose', 'cost_policy_enforcement')).toBe(true);
+    expect(isTaskTypeAllowed('hector', 'external_publish_handoff')).toBe(true);
+  });
+
+  it('still blocks what the blocked prefixes are for', () => {
+    expect(isTaskTypeAllowed('hector', 'external_publish')).toBe(false);
+    expect(isTaskTypeAllowed('hector', 'external_publish_now')).toBe(false);
+    expect(isTaskTypeAllowed('miya', 'execute_command')).toBe(false);
+  });
+
+  it('agrees with the contracts check', () => {
+    const gate = validateAgentExecutionContract({ toAgent: 'hector', actionType: 'external_publish_handoff', commandPreview: '', effects: ['read'] } as never);
+    expect(gate.ok).toBe(true);
+    expect(validateAgentExecutionContract({ toAgent: 'jose', actionType: 'boardroom_planning', commandPreview: '', effects: ['write_own_work'] } as never).ok).toBe(true);
+  });
+});
+
 describe('contracts check effects, not words, when a task declares them', () => {
   it('passes a read-only task whose text mentions publishing', () => {
     const gate = validateAgentExecutionContract({ toAgent: 'nova', actionType: 'analysis_x', commandPreview: 'nothing is published or posted', effects: ['read'] } as never);

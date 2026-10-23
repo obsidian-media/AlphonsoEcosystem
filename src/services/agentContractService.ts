@@ -1,4 +1,4 @@
-import { AGENT_PERMISSION_TABLE, isEffectAllowed } from './jose/agentPermissionTable';
+import { AGENT_PERMISSION_TABLE, isEffectAllowed, taskTypePartAllowed } from './jose/agentPermissionTable';
 import { EFFECT_LABELS, type JoseEffect } from './jose/joseEffects';
 
 const AGENTS: Record<string, string> = {
@@ -359,7 +359,10 @@ export function validateAgentExecutionContract(packet: AgentContractPacket): Con
     return { ok: true, reason: null };
   }
 
-  const blockedByPrefix = startsWithAny(action, contract.blockedActionPrefixes);
+  // Each part of a merged type (a+b) is checked with the permission table's rule,
+  // where an exact allowed entry wins over a blocked prefix (2026-10-23).
+  const parts = action.split('+').filter(Boolean);
+  const blockedByPrefix = parts.some((part) => !contract.allowedActionPrefixes.includes(part) && startsWithAny(part, contract.blockedActionPrefixes));
   if (Array.isArray(packet.effects)) {
     // A task that declares its effects is checked against the table, not its words.
     const notAllowed = packet.effects.filter((effect) => !isEffectAllowed(toAgent, effect));
@@ -380,7 +383,7 @@ export function validateAgentExecutionContract(packet: AgentContractPacket): Con
     };
   }
 
-  const allowed = startsWithAny(action, contract.allowedActionPrefixes);
+  const allowed = parts.every((part) => taskTypePartAllowed(part, contract.allowedActionPrefixes, contract.blockedActionPrefixes));
   if (!allowed && action) {
     return {
       ok: false,

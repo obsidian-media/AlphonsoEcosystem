@@ -38,12 +38,9 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const planNote = notes.filter(Boolean).join(' ');
   onProgress?.({ stage: 'planned', plan, planNote });
 
+  // Every plan, the simple one too, runs as explicit steps (phase 3), so a
+  // failed step stops the steps that need it.
   const common = { commandText: text, source, endpoint, zeroCostMode, previewMode, onProgress, onToken, conversationHistory: history };
-  if (plan.source === 'rules') {
-    const result = await runJoseCommandExecutionPipeline(common);
-    return { ...result, plan, planNote };
-  }
-
   const assignments = plan.steps.map((step) => ({
     agent: step.agent,
     stepId: step.stepId,
