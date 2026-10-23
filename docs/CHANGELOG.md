@@ -39,6 +39,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Campaign Studio:** captions, hashtags, ad copy and posting times, then Maria's quality gate.
   Every project is saved in a folder per brand, keeps its versions, and tells you when a step is out of date. What you reject is remembered for that brand. The old generator is still there as "Quick package".
 - **Honest risk ratings.** A command's rating now comes from what it does, and the approval window says why. Commands that only read (such as `ollama list`) run without asking, instead of showing "85 HIGH RISK". Release Preflight asks once instead of twice.
+- **Jose's plans change while they run (Jose redesign, phase 4).**
+  - **Reviews send work back:** when a review finds problems, the work goes back to its author with the findings and is reviewed again, at most 2 rounds; then Jose asks you. Each review's verdict is shown on the board, and revisions say "Round 1" or "Round 2".
+  - **Agents can ask for help:** an agent that needs something another agent could provide asks Jose, who picks a helper and runs the step again with the help, once per step. A helper can only read or write its own work; it can never run code, publish, spend or delete.
+  - **A model per step:** Jose may choose a larger installed model for a step that needs it. A step that keeps failing is tried once more with the next larger installed model, and the failure says so.
+  - **Paid models, only if you allow them:** Settings → Approvals → "Allow paid models" (off by default; Zero-Cost Mode must be off). A step that still fails may be given to Claude or ChatGPT, set up in Connectors, at the prices you enter. Each such step asks first and says what it should cost, and a monthly cap stops spending past it. Checked with tests only so far, not with a paid account.
+  - **Approving carries the request on:** approving a waiting step, in Chat, on the board ("Approve and carry on") or with Execute on the Orchestrator page, runs it and every step after it. Approving twice runs it once.
+  - **"Open on the board" while a request runs**, not only at the end.
+  - **Echo saves what was decided** when a request finishes.
+  - **Fixed:** Marcus no longer has security and risk skill packs (security is Sentinel's, risk review Maria's); Jose's instruction for an Alphonso step reaches the planning and code prompts as a note, and never decides what Alphonso does; a request resumed after an approval uses the Ollama address from Settings.
 - **See and steer Jose's plans (Jose redesign, phase 3).**
   - **A live board:** the Orchestrator page has a Requests tab with every request, and its plan as boxes and arrows in the agents' colours, with each step's status and time, and a badge where a step waits for you.
   - **Bigger requests show their plan first:** in Chat, a card with the plan and Run this plan / Edit on the board / Cancel. Settings → General → "Show Jose's plan first": Always, Bigger requests only (the default: 4 or more agents counting Jose and Maria, or a step that always asks), or Never.
