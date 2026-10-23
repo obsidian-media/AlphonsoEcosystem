@@ -197,4 +197,17 @@ describe('the model for each step', () => {
       expect(planned.reviewOf).toBe(step.reviewOf);
     }
   });
+
+  it('takes a review step that needs one step to review that step, when the model does not say', async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'facts', agent: 'hector', taskType: 'research_report', instruction: 'Find facts.', effects: ['read'], needs: [] },
+      { id: 'analysis', agent: 'nova', taskType: 'analysis_findings', instruction: 'Analyse.', effects: ['read'], needs: ['facts'] },
+      { id: 'check', agent: 'maria', taskType: 'audit_quality', instruction: 'Check it.', effects: ['read'], needs: ['analysis'] },
+      { id: 'both', agent: 'sentinel', taskType: 'security_review', instruction: 'Check both.', effects: ['read'], needs: ['facts', 'analysis'] },
+    ]));
+    const plan = await planJoseRequest(PARTY);
+    expect(plan.steps.find((s) => s.stepId === 'check')!.reviewOf).toBe('analysis');
+    expect(plan.steps.find((s) => s.stepId === 'both')!.reviewOf).toBeUndefined();
+    expect(plan.steps.find((s) => s.stepId === 'analysis')!.reviewOf).toBeUndefined();
+  });
 });

@@ -133,6 +133,22 @@ function fillFromTemplate(steps: PlanStep[], template: JoseTemplate): PlanStep[]
   });
 }
 
+const isReviewType = (actionType: string) => actionType.startsWith('audit_') || actionType.includes('review');
+
+/**
+ * A review step the model did not mark: if its task is a review and it needs
+ * exactly one step that is not itself a review, it reviews that step (so its
+ * findings can send the work back).
+ */
+function inferReviewOf(steps: PlanStep[]): PlanStep[] {
+  const byId = new Map(steps.map((s) => [s.stepId, s]));
+  return steps.map((step) => {
+    if (step.reviewOf || !isReviewType(step.actionType)) return step;
+    const reviewed = step.needs.filter((n) => byId.has(n) && !isReviewType(byId.get(n)!.actionType));
+    return reviewed.length === 1 ? { ...step, reviewOf: reviewed[0] } : step;
+  });
+}
+
 function sameShape(steps: PlanStep[], template: JoseTemplate): boolean {
   return steps.length === template.steps.length
     && steps.every((s, i) => s.agent === template.steps[i].agent && s.actionType === template.steps[i].actionType);
@@ -185,6 +201,7 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     }
     const basedOn = template && plan.basedOnTemplate === template.id ? template : null;
     if (basedOn) plan.steps = fillFromTemplate(plan.steps, basedOn);
+    plan.steps = inferReviewOf(plan.steps);
     const check = checkPlan(plan.steps);
     if (!check.ok) {
       problems = check.problems;
