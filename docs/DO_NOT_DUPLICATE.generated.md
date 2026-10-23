@@ -273,7 +273,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/jose/joseAdapt.ts` | `AdaptContext`, `adaptPlan`, `PlanChange`, `setPlanAdapterForTests` |
 | service | `src/services/jose/joseDecision.ts` | `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision` |
 | service | `src/services/jose/joseEffects.ts` | `ACTION_EFFECTS`, `COMMAND_CHECKED_EFFECTS`, `DEFAULT_EFFECT_APPROVALS`, `EFFECT_LABELS`, `effectsNeedingApproval`, `getEffectApprovals`, `inferEffects`, `JOSE_EFFECTS`, `JoseEffect`, `LOCKED_EFFECTS`, `stepEffectsToWaitFor` |
-| service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays` |
+| service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets` |
 | service | `src/services/jose/joseFinish.ts` | `DECISIONS_SAVED`, `saveRequestDecisions` |
 | service | `src/services/jose/joseHelp.ts` | `chooseHelper`, `findHelpRequest`, `HELP_INSTRUCTION`, `Helper`, `planHelp` |
 | service | `src/services/jose/joseModels.ts` | `listInstalledModels`, `modelSize`, `pickLargerModel` |
