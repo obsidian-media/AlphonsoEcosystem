@@ -524,6 +524,8 @@ interface AppSettings {
   approvalMode?: boolean;
   /** Settings → Approvals: which kinds of action ask first (jose/joseEffects.ts). */
   effectApprovals?: Partial<Record<JoseEffect, boolean>>;
+  /** When Jose shows his plan before running it (phase 3): always, bigger (default) or never. */
+  showPlanFirst?: string;
   safeMode?: boolean;
   privacyShieldActive?: boolean;
   miyaCompanionPinned?: boolean;
@@ -1242,6 +1244,22 @@ export function SettingsView({
             </button>
           </div>
           <EffectApprovalsTable settings={settings} setSettings={setSettings} />
+          <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
+            <div>
+              <div className="text-sm font-semibold text-(--text-1)">Show Jose's plan first</div>
+              <div className="text-[11px] text-(--text-3) mt-0.5">Bigger requests are those with 4 or more agents, counting Jose and Maria, or a step that always asks.</div>
+            </div>
+            <select
+              aria-label="Show Jose's plan first"
+              value={settings.showPlanFirst === 'always' || settings.showPlanFirst === 'never' ? settings.showPlanFirst : 'bigger'}
+              onChange={(e) => setSettings({ ...settings, showPlanFirst: e.target.value })}
+              className="rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+            >
+              <option value="always">Always</option>
+              <option value="bigger">Bigger requests only</option>
+              <option value="never">Never</option>
+            </select>
+          </div>
           <div className="flex items-center justify-between p-4 bg-(--surface-2) rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-(--text-1)">Safe Mode</div>

@@ -82,7 +82,7 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
     requestKind: plan.kind,
     planInfo: { source: plan.source, templateId: plan.templateId, note: plan.note },
   });
-  return { ...result, plan, planNote };
+  return { ...result, plan, planNote, requestId: result?.commandId ? `jose-request-${result.commandId}` : null };
 }
 
 function planOf(request: JoseRequest, steps: PlanStep[]): JosePlan {
@@ -123,7 +123,7 @@ export async function runApprovedPlan(requestId: string, options: { onProgress?:
     planInfo: request.plan || null,
     existingRequestId: requestId,
   });
-  return { ...result, plan, planNote };
+  return { ...result, plan, planNote, requestId };
 }
 
 /** Cancel a plan that is waiting. */

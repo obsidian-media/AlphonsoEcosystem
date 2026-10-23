@@ -64,7 +64,9 @@ vi.mock('../services/jose/joseDecision', () => ({
   decideJoseRoute: vi.fn().mockResolvedValue({ route: 'direct', source: 'rule', reason: 'test' })
 }));
 vi.mock('../services/jose/submitToJose', () => ({
-  submitToJose: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [], plan: null, planNote: 'Planned fresh.' })
+  submitToJose: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [], plan: null, planNote: 'Planned fresh.' }),
+  runApprovedPlan: vi.fn().mockResolvedValue({ ok: true, commandId: null, executionReceipts: [], requestId: 'r', command: { userReport: { summary: 'The plan ran.' } }, planNote: 'Planned fresh.' }),
+  cancelPlan: vi.fn()
 }));
 
 // ── Agent bus service mock ───────────────────────────────────────────────────
@@ -179,7 +181,8 @@ import { getMcpOutreachRecord, isAwaitingMcpOutreachInput, handleMcpOutreachMess
 import { loadChatMessages } from '../services/chatPersistenceService';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 import { decideJoseRoute } from '../services/jose/joseDecision';
-import { submitToJose } from '../services/jose/submitToJose';
+import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose';
+import { createWaitingPlanRequest } from '../services/jose/joseRequestStore';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -792,5 +795,37 @@ describe('ChatView: everything goes to Jose', () => {
     await waitFor(() => expect(generateOllamaChatStream).toHaveBeenCalled());
     expect(decideJoseRoute).not.toHaveBeenCalled();
     expect(submitToJose).not.toHaveBeenCalled();
+  });
+
+  // Phase 3 (2026-10-23): bigger requests show their plan first.
+  it('shows the plan card for a plan that waits, and runs it from Chat', async () => {
+    const waiting = createWaitingPlanRequest({
+      text: 'Research and judge', source: 'user', kind: 'normal',
+      steps: [
+        { stepId: 'facts', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [], instruction: 'Find the facts.' },
+        { stepId: 'value', agent: 'nova', actionType: 'analysis_findings', effects: ['read'], needs: ['facts'], instruction: 'Judge them.' },
+      ],
+      plan: { source: 'fresh', templateId: null, note: '' }, runOptions: { source: 'user' },
+    });
+    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
+    submitToJose.mockResolvedValueOnce({ ok: true, waitingForPlan: true, requestId: waiting.id, plan: null, planNote: 'Planned fresh.', executionReceipts: [] });
+    const onOpenJoseBoard = vi.fn();
+    render(<ChatView {...makeProps({ onOpenJoseBoard })} />);
+    send('Research and judge');
+    const card = await screen.findByTestId('jose-plan-card');
+    expect(card.querySelectorAll('[data-testid="jose-plan-step"]')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit on the board' }));
+    expect(onOpenJoseBoard).toHaveBeenCalledWith(waiting.id);
+    fireEvent.click(screen.getByRole('button', { name: 'Run this plan' }));
+    await waitFor(() => expect(runApprovedPlan).toHaveBeenCalledWith(waiting.id, expect.anything()));
+    expect(await screen.findByText(/The plan ran\./)).toBeTruthy();
+  });
+
+  it('passes the plan-first setting to Jose', async () => {
+    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
+    render(<ChatView {...makeProps({ settings: { selectedModel: 'llama3.2:3b', colorScheme: 'dark', showPlanFirst: 'always' } })} />);
+    send('Make a launch video for my app');
+    await waitFor(() => expect(submitToJose).toHaveBeenCalled());
+    expect(submitToJose.mock.calls[0][0].showPlanFirst).toBe('always');
   });
 });

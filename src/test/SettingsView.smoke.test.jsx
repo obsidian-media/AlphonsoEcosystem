@@ -246,6 +246,14 @@ describe('SettingsView smoke', () => {
   }
 
   // The policy treats an unset Approval Mode as on; the switch must say so (2026-10-23).
+  it("saves when Jose shows his plan first", () => {
+    const setSettings = renderApprovals({ ...minimalSettings });
+    const select = screen.getByLabelText("Show Jose's plan first");
+    expect(select.value).toBe('bigger');
+    fireEvent.change(select, { target: { value: 'never' } });
+    expect(setSettings).toHaveBeenCalledWith(expect.objectContaining({ showPlanFirst: 'never' }));
+  });
+
   it('shows Approval Mode on when the setting has never been set', () => {
     renderApprovals({});
     expect(screen.getByRole('switch', { name: 'Toggle approval mode' }).getAttribute('aria-checked')).toBe('true');

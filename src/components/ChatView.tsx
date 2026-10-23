@@ -21,7 +21,9 @@ import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughCalleMcp } from '../lib/chatUtils'
 import { decideJoseRoute } from '../services/jose/joseDecision'
-import { submitToJose } from '../services/jose/submitToJose';
+import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
+import { JosePlanCard } from './jose/JosePlanCard'
+import type { PlanFirstSetting } from '../services/jose/josePlanApproval';
 import {
   getMcpOutreachRecord,
   isAwaitingMcpOutreachInput,
@@ -263,6 +265,8 @@ interface ChatViewProps {
   screenObserverLogs?: unknown[];
   setActiveTab?: (tab: string) => void;
   onPendingCountChange?: (count: number) => void;
+  /** Open the Orchestrator page's Requests tab on a request (phase 3). */
+  onOpenJoseBoard?: (requestId: string) => void;
 }
 
 export function ChatView({
@@ -282,6 +286,7 @@ export function ChatView({
   onProviderChange,
   screenObserverLogs = [],
   setActiveTab,
+  onOpenJoseBoard,
   onPendingCountChange
 }: ChatViewProps) {
   const [messages, setMessages] = useState([]);
@@ -636,8 +641,8 @@ export function ChatView({
     if (files.length) setAttachedFiles((prev) => [...prev, ...files]);
   };
 
-  const handleJoseCommand = async (cleanInput: string, options: { planFresh?: boolean; shownText?: string } = {}) => {
-    const userMessage = { id: nextMsgId(), role: 'user', content: options.shownText || cleanInput };
+  const handleJoseCommand = async (cleanInput: string, options: { planFresh?: boolean; shownText?: string; approvedRequestId?: string } = {}) => {
+    const userMessage = { id: nextMsgId(), role: 'user', content: options.approvedRequestId ? 'Run this plan.' : (options.shownText || cleanInput) };
     setMessages((current) => [...current, userMessage]);
     setInputValue('');
     setAttachedFile(null);
@@ -652,16 +657,7 @@ export function ChatView({
       setStreamingTokens(0);
       setStreamingStartTime(Date.now());
       streamControllerRef.current = new AbortController();
-      // Everything goes to Jose (phase 2, 2026-10-23): he plans, then runs.
-      const result = await submitToJose({
-        text: cleanInput,
-        source: 'user',
-        endpoint: settings.endpoint as string,
-        zeroCostMode: settings.zeroCostMode as boolean,
-        previewMode,
-        history: conversationHistory,
-        planFresh: Boolean(options.planFresh),
-        onProgress: (progress) => {
+      const onProgress = (progress) => {
           setLiveProgress(progress);
           onJoseExecutionState?.(
             progress.stage === 'executed' ? 'task_complete'
@@ -680,21 +676,50 @@ export function ChatView({
                       ? 'Jose is planning...'
                       : 'Processing...'
           );
-        },
-        onToken: (tokenData) => {
+        };
+      const onToken = (tokenData) => {
           setStreamingText(tokenData.fullText || '');
           setStreamingTokens(tokenData.fullText?.length || 0);
           onJoseExecutionState?.('streaming', `Generating code... ${tokenData.fullText?.length || 0} tokens`);
-        }
-      });
+        };
+      // Everything goes to Jose (phase 2): he plans, then runs. An approved
+      // plan (phase 3) runs on the request it was saved as.
+      const result: any = options.approvedRequestId
+        ? await runApprovedPlan(options.approvedRequestId, { onProgress, onToken, history: conversationHistory })
+        : await submitToJose({
+          text: cleanInput,
+          source: 'user',
+          endpoint: settings.endpoint as string,
+          zeroCostMode: settings.zeroCostMode as boolean,
+          previewMode,
+          history: conversationHistory,
+          planFresh: Boolean(options.planFresh),
+          showPlanFirst: settings.showPlanFirst as PlanFirstSetting | undefined,
+          onProgress,
+          onToken
+        });
       streamControllerRef.current = null;
       setStreamingText('');
       setStreamingTokens(0);
       setStreamingStartTime(null);
 
+      setLiveProgress(null);
+
+      // A bigger request shows its plan first (phase 3): a card to run, edit or cancel it.
+      if (result?.waitingForPlan) {
+        setMessages((current) => [...current, {
+          id: nextMsgId(),
+          role: 'assistant',
+          agentId: 'jose',
+          content: `Here is my plan. ${result.planNote || ''} Run it, edit it on the board, or cancel it.`.replace(/\s+/g, ' ').trim(),
+          josePlanRequestId: result.requestId
+        }]);
+        onJoseExecutionState?.('approving', 'Jose is waiting for you to check his plan.');
+        return;
+      }
+
       setPipelineResult(result);
       setPipelineCommandText(cleanInput);
-      setLiveProgress(null);
 
       const command = result?.command || {};
       const userReport = command?.userReport || null;
@@ -703,7 +728,10 @@ export function ChatView({
       // report; show his reason. Until 2026-10-22 chat said "Jose processed the
       // command." instead, which was untrue (QA Bug 57).
       const stoppedEarly = result?.ok === false && !userReport && typeof result?.reason === 'string' && result.reason.trim();
-      const baseSummary = userReport?.summary || (stoppedEarly ? result.reason.trim() : 'Jose processed the command.');
+      const rejectedPlan = result?.reason === 'plan_rejected'
+        ? `The plan didn't pass the checks: ${(result.problems || []).join(' ')} It is still waiting on the board.`
+        : '';
+      const baseSummary = userReport?.summary || rejectedPlan || (stoppedEarly ? result.reason.trim() : 'Jose processed the command.');
       const hintLine = (result?.pendingApprovalCount || 0) > 0
         ? '\nApprove the pending tasks below to continue.'
         : '';
@@ -722,7 +750,8 @@ export function ChatView({
         // How Jose planned it: fresh, from a template, or the simple plan and why.
         content: displaySummary + (result?.planNote ? `\n\n${result.planNote}` : '') + hintLine,
         isNew: true,
-        ...(needsRuntimeHub ? { actionType: 'open_runtime_hub' } : {})
+        ...(needsRuntimeHub ? { actionType: 'open_runtime_hub' } : {}),
+        ...(result?.requestId ? { joseRequestId: result.requestId } : {})
       }]);
 
       if ((result?.pendingApprovalCount || 0) > 0 && Array.isArray(result?.executionReceipts)) {
@@ -1341,6 +1370,26 @@ export function ChatView({
                       >
                         <ArrowRight className="w-3 h-3" />
                         Open Runtime Hub to install ComfyUI or AUTOMATIC1111
+                      </button>
+                    </div>
+                  )}
+                  {/* A Jose plan waiting for you (phase 3) */}
+                  {message.josePlanRequestId && (
+                    <JosePlanCard
+                      requestId={message.josePlanRequestId}
+                      onRun={(requestId) => { if (!isGenerating) void handleJoseCommand('', { approvedRequestId: requestId }); }}
+                      onOpenBoard={onOpenJoseBoard}
+                    />
+                  )}
+                  {message.joseRequestId && onOpenJoseBoard && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => onOpenJoseBoard(message.joseRequestId)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-(--accent-dim) border border-(--accent-border) rounded-lg text-xs text-(--accent) hover:text-(--accent-hover) transition-colors"
+                      >
+                        <ArrowRight className="w-3 h-3" />
+                        Open on the board
                       </button>
                     </div>
                   )}
