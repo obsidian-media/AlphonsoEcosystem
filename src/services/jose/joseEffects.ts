@@ -102,6 +102,13 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   creative_scenes: ['write_own_work'],
   creative_thumbnails: ['write_own_work'],
   creative_campaign: ['write_own_work'],
+  // Templates (phase 2, joseTemplates.ts).
+  research_report: ['read'],
+  analysis_findings: ['read'],
+  audit_quality: ['read'],
+  security_review: ['read'],
+  creative_ui_design: ['write_own_work'],
+  orchestration_summary: ['write_own_work'],
 };
 
 /** Effects of a task type; `a+b` (merged tasks) is the union. Unknown counts as running code, so it asks. */
