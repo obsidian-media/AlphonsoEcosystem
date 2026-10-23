@@ -39,6 +39,13 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-23] **Jose redesign phase 6b (the content factory as one request): what it leaves open.**
+  - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
+  - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
+  - The board's "Approve and carry on" on Scenes approves the review too, but only when Scenes starts (Miya Studio shows it as waiting until then).
+  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`) are next.
+  - **Status:** OPEN.
+
 - [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**
   - The Workflows panel's Run and the phone's "run workflow" call `executeWorkflowTasks()`, the workflow operations' own executors, not Jose. Only `runWorkflow()` (the agent chain) moved; the operations executors are a separate system (see `workflowExecutionService`).
   - Boardroom's notes say "Follow it on the Orchestrator page, Requests tab." in words; there is no button that opens the request.
@@ -64,7 +71,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~Saving a plan as a new template, and seeing or editing the plan before it runs~~ — CLOSED 2026-10-23 by phase 3.
   - ~~Jose choosing the model per step, with model escalation on failure~~ — CLOSED 2026-10-23 by phase 4 (installed models only; paid models only if you allow them).
   - ~~Only Chat goes through `submitToJose()` and the planner~~ — CLOSED 2026-10-23 by phase 6a: Telegram, WhatsApp, the phone companion, the message pollers, schedules, workflows, the batch orchestrator, the Orchestrator page and Boardroom actions go through `answerOrPlan()` or `submitStepsToJose()`. The content factory's per-step requests move in phase 6b.
-  - A Content video planned in Chat runs the template's steps without a Miya Studio project (no brand, folder or pictures) and points to Miya Studio: phase 6 moves the factory onto the template.
+  - ~~A Content video planned in Chat runs the template's steps without a Miya Studio project~~ — CLOSED 2026-10-23 by phase 6b: from Chat it starts a project for your default brand. Asked on Telegram or by a schedule it still runs the template's steps and points to Miya Studio.
   - ~~Giving Alphonso a planned step's instruction safely~~ — CLOSED 2026-10-23 by phase 4: it reaches his planning and code prompts as "Jose's note for this step:", after your request, and never his clarification, external-tool or intent checks.
   - **Status:** OPEN.
 

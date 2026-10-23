@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 243 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 247 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -72,7 +72,7 @@ Source-backed inventory: 243 services and 155 components. Human purpose descript
 | component | `src/components/jose/JosePlanCard.tsx` | `JosePlanCard`, `JosePlanCardProps` |
 | component | `src/components/jose/JosePlanEditor.tsx` | `JosePlanEditor` |
 | component | `src/components/jose/JosePlanMap.tsx` | `JosePlanMap`, `JosePlanMapProps` |
-| component | `src/components/jose/JoseRequestsBoard.tsx` | `JoseRequestsBoard`, `requestPlanLabel`, `runResultText` |
+| component | `src/components/jose/JoseRequestsBoard.tsx` | `JoseRequestsBoard`, `requestPlanLabel`, `runResultText`, `STATUS_LABELS` |
 | component | `src/components/jose/JoseStepOutput.tsx` | `JoseStepOutput` |
 | component | `src/components/JoseCompanionWidget.tsx` | `JoseCompanionWidget` |
 | component | `src/components/JoseTaskQueue.tsx` | `JoseTaskQueue` |
@@ -88,7 +88,7 @@ Source-backed inventory: 243 services and 155 components. Human purpose descript
 | component | `src/components/miya/BrandEditor.tsx` | `BrandEditor` |
 | component | `src/components/miya/BriefPanel.tsx` | `BriefPanel` |
 | component | `src/components/miya/CampaignStudioTab.tsx` | `CampaignStudioTab` |
-| component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab` |
+| component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab`, `selectContentProject` |
 | component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
 | component | `src/components/miya/ProjectPicture.tsx` | `ProjectPicture` |
 | component | `src/components/miya/SceneBuilderTab.tsx` | `SceneBuilderTab`, `SceneBuilderTabProps` |
@@ -247,12 +247,16 @@ Source-backed inventory: 243 services and 155 components. Human purpose descript
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
 | service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `DEFAULT_QUALITY_THRESHOLD`, `ensureFirstBrand`, `getBrand`, `listBrands`, `saveBrand` |
+| service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderScenePictures`, `renderThumbnails` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `loadProjectFile`, `loadProjectImage`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
-| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setVersionOutputField`, `startStep`, `updateBrief` |
+| service | `src/services/contentFactory/contentProjectPlan.ts` | `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `REVIEW_WAIT` |
+| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
+| service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
 | service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `parseStepAnswer` |
-| service | `src/services/contentFactory/contentStepRunner.ts` | `CONTENT_TASK_PREVIEW`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `StepAgent`, `WAITING_FOR_APPROVAL` |
+| service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `recordContentStepResult` |
+| service | `src/services/contentFactory/contentStepRunner.ts` | `approveContentStep`, `CONTENT_TASK_PREVIEW`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `hasOwnKey`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
