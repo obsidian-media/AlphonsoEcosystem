@@ -59,6 +59,12 @@ describe('submitToJose', () => {
   });
 
   // Phase 3: the simple plan runs as steps too, so a failed step stops the steps that need it.
+  it('passes on which step a review reviews (phase 4)', async () => {
+    planner.mockResolvedValueOnce({ ...freshPlan, steps: [freshPlan.steps[0], { ...freshPlan.steps[1], reviewOf: 'facts' }] });
+    await submitToJose({ text: 'Plan a party', source: 'user' });
+    expect(pipeline.mock.calls[0][0].assignments[1].reviewOf).toBe('facts');
+  });
+
   it('runs a rules plan as explicit steps too', async () => {
     planner.mockResolvedValueOnce({ ...freshPlan, source: 'rules', note: "Jose's model isn't available, so I used the simple plan." });
     const result = await submitToJose({ text: 'research pricing', source: 'user' });

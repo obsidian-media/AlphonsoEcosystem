@@ -185,4 +185,16 @@ describe('the model for each step', () => {
     expect(on.steps[0].effects).toEqual(expect.arrayContaining(['write_own_work', 'spend']));
     expect(on.steps[0].costEstimateUsd).toBeGreaterThanOrEqual(0);
   });
+
+  it("fills a template step's needs and review from the template when the model leaves them out", async () => {
+    const research = getTemplate('research_report')!;
+    const bare = research.steps.map((step) => ({ id: step.stepId, agent: step.agent, taskType: step.actionType, instruction: step.instruction || '', effects: step.effects }));
+    llm.mockResolvedValueOnce(answer(bare, 'research_report'));
+    const plan = await planJoseRequest('Research what the IANA example domain is used for and write a short report.');
+    for (const step of research.steps) {
+      const planned = plan.steps.find((s) => s.stepId === step.stepId)!;
+      expect(planned.needs).toEqual(step.needs);
+      expect(planned.reviewOf).toBe(step.reviewOf);
+    }
+  });
 });

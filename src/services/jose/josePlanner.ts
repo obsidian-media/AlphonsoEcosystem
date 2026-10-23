@@ -117,6 +117,22 @@ function readModelPlan(raw: string, installed: string[] = [], paidModel: string 
   };
 }
 
+/**
+ * A plan based on a template: a step with a template step's id keeps the
+ * template's needs and review when the model left them out (a small model
+ * often does, and then every step runs at once). Only ids in the plan.
+ */
+function fillFromTemplate(steps: PlanStep[], template: JoseTemplate): PlanStep[] {
+  const ids = new Set(steps.map((s) => s.stepId));
+  return steps.map((step) => {
+    const source = template.steps.find((t) => t.stepId === step.stepId);
+    if (!source) return step;
+    const needs = step.needs.length === 0 ? source.needs.filter((n) => ids.has(n)) : step.needs;
+    const reviewOf = step.reviewOf || (source.reviewOf && ids.has(source.reviewOf) ? source.reviewOf : undefined);
+    return { ...step, needs, ...(reviewOf ? { reviewOf } : {}) };
+  });
+}
+
 function sameShape(steps: PlanStep[], template: JoseTemplate): boolean {
   return steps.length === template.steps.length
     && steps.every((s, i) => s.agent === template.steps[i].agent && s.actionType === template.steps[i].actionType);
@@ -167,6 +183,8 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
       problems = ['The answer could not be read as a plan with at least one step.'];
       continue;
     }
+    const basedOn = template && plan.basedOnTemplate === template.id ? template : null;
+    if (basedOn) plan.steps = fillFromTemplate(plan.steps, basedOn);
     const check = checkPlan(plan.steps);
     if (!check.ok) {
       problems = check.problems;
