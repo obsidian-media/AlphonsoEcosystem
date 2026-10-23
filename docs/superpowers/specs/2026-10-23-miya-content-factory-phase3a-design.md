@@ -37,6 +37,27 @@ users, so nothing assumes one person's accounts, channels or schedule.
    gets a reminder (in the app and on Telegram) with a direct YouTube Studio
    link to make the video public. A short guide explains the audit.
 
+9. **One publishing path** (after checking what exists): 3a builds the shared
+   publishing (the posts list, the scheduler, YouTube and Meta), and Content
+   Studio's Publish switches to it, so posts go out one way. Content Studio's
+   own calendar (`ContentCalendar.jsx`) becomes the 3b month calendar showing
+   both. Whether Content Studio folds into Miya Studio is decided later.
+10. **One scheduler for posts:** Marcus's scheduled-publish store and runner
+    (`marcusExecutionService.ts`), which exists but was never started and
+    handled text only, is extended to carry video posts, started with the app,
+    and given "post at next start". Not Jose's scheduler.
+
+## What exists (checked 2026-10-23) and what 3a does with it
+
+| Exists | Where | 3a |
+|---|---|---|
+| YouTube upload, sign-in, approval gate, audit | `youtube.rs` `connector_upload_youtube`; `uploadYouTubeConnectorVideo()` in `connectorOutbound.js` | extend: `publishAt`, thumbnail, status read-back, resumable upload |
+| Facebook / Instagram posting | `meta_publish.rs` `meta_publish_content`; `metaPublishService.ts` | extend: resumable upload for local Reels, Facebook scheduled posts |
+| Marcus's publish packets | `marcusPublishService.ts` | reuse for approval and audit |
+| Marcus's scheduled posts and runner | `marcusExecutionService.ts` `schedulePublish()` / `startScheduler()` | extend (decision 10) |
+| Content Studio's publish and calendar | `src/features/content-catalyst/` (`publishContent()`, `ContentCalendar.jsx`) | its Publish uses the shared path (decision 9); the calendar is 3b |
+| Jose's scheduler | `joseSchedulerService.ts` | not used for posts |
+
 ## Goals
 
 - A **Posts** list per project (Campaign Studio): one row per platform and
