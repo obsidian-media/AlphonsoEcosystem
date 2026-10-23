@@ -667,6 +667,7 @@ const JOSE_TELEGRAM_KINDS = [
   { key: 'planWaiting', label: 'When a plan waits for you', note: 'With Run this plan and Cancel.' },
   { key: 'finished', label: 'When a request finishes or fails', note: 'One line.' },
   { key: 'reviewDecision', label: 'When a review asks you to decide', note: 'After 2 rounds of changes.' },
+  { key: 'activitySummaries', label: 'Agent activity summaries', note: 'The older "N agent actions since your last check" messages. Off to start.', defaultOn: false },
 ] as const;
 
 function JoseTelegramPanel({ settings, setSettings }: { settings: AppSettings; setSettings: (s: AppSettings) => void }) {
@@ -676,8 +677,9 @@ function JoseTelegramPanel({ settings, setSettings }: { settings: AppSettings; s
       <div className="text-sm font-semibold text-(--text-1)">Jose on Telegram</div>
       <div className="text-[11px] text-(--text-3) mt-0.5">Sent to your paired Telegram chat (Connectors → Telegram). A request cut off when the app closed is always sent, with Carry on.</div>
       <div className="mt-3 space-y-2">
-        {JOSE_TELEGRAM_KINDS.map(({ key, label, note }) => {
-          const on = saved[key] !== false;
+        {JOSE_TELEGRAM_KINDS.map((kind) => {
+          const { key, label, note } = kind;
+          const on = 'defaultOn' in kind ? saved[key] === true : saved[key] !== false;
           return (
             <div key={key} className="flex items-center justify-between gap-3">
               <div>

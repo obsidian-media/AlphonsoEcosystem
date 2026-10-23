@@ -5,7 +5,7 @@ import {
 } from '../../../services/jose/joseTelegram';
 import type { JoseRequest } from '../../../services/jose/joseRequestStore';
 
-const ALL_ON = { stepWaiting: true, planWaiting: true, finished: true, reviewDecision: true };
+const ALL_ON = { stepWaiting: true, planWaiting: true, finished: true, reviewDecision: true, activitySummaries: false };
 
 function request(patch: Partial<JoseRequest>): JoseRequest {
   return {
@@ -110,7 +110,7 @@ describe('the sent log', () => {
 });
 
 describe('getJoseTelegramSettings', () => {
-  it('has every kind on by default and reads what you switched off', () => {
+  it('has every Jose kind on and the old activity summaries off by default, and reads what you changed', () => {
     expect(getJoseTelegramSettings()).toEqual(ALL_ON);
     localStorage.setItem('alphonso_settings', JSON.stringify({ joseTelegram: { finished: false } }));
     expect(getJoseTelegramSettings()).toEqual({ ...ALL_ON, finished: false });

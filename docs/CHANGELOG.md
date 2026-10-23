@@ -44,6 +44,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Carry on:** a request cut off when the app closed is shown as Interrupted, with Carry on on the board, in Chat and on Telegram. Nothing runs by itself; a step that needs approval asks again.
   - **Waiting requests expire** after the days set in Settings (7 to start; blank or 0 = never). Echo saves a request's decisions once, when it is done.
   - **Reject** on the board and in Telegram cancels the request, with a note.
+  - **Quieter Telegram:** the older "N agent actions since your last check" messages are off unless you switch them on, and the older "Jose completed a task" message no longer repeats Jose's own Done line.
   - **Fixed:** saved connector keys looked missing for a minute after start when something read one early, so the Telegram and WhatsApp companions never started; a plan you approved first lost its reviews and chosen models; Telegram's `/approve` didn't carry the request on; requests left running were never marked interrupted.
 - **Jose's plans change while they run (Jose redesign, phase 4).**
   - **Reviews send work back:** when a review finds problems, the work goes back to its author with the findings and is reviewed again, at most 2 rounds; then Jose asks you. Each review's verdict is shown on the board, and revisions say "Round 1" or "Round 2".

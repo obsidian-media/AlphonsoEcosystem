@@ -41,7 +41,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 - [2026-10-23] **Jose redesign phase 5 (away from the app): what it leaves open.**
   - WhatsApp and the phone companion get Jose's notifications and approvals in phase 6 (owner chose Telegram only for phase 5).
-  - The older Telegram "N agent actions since your last check" notifier still runs alongside Jose's messages and reports connector checks every few minutes; whether to switch it off by default is the owner's call (asked 2026-10-23).
+  - ~~The older Telegram "N agent actions since your last check" notifier runs alongside Jose's messages~~ — CLOSED 2026-10-23: off by default (owner), switchable in Settings → Approvals → "Jose on Telegram".
   - Telegram buttons are short codes saved for 7 days; a button older than that answers "That button has expired." (use the app or `/approve`).
   - **Status:** OPEN.
 

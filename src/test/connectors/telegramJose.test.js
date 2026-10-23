@@ -16,9 +16,9 @@ vi.mock('../../services/agentBusService', () => ({
   getPacketById: vi.fn((id) => (globalThis.__tgQueue || []).find((p) => p.id === id) || null),
   AGENTS: { JOSE: 'jose' },
 }));
-vi.mock('../../services/joseCommandRouterService', () => ({ createJoseCommandRoute: vi.fn(), listJoseCommands: vi.fn(() => []) }));
+vi.mock('../../services/joseCommandRouterService', () => ({ createJoseCommandRoute: vi.fn(), listJoseCommands: vi.fn(() => globalThis.__tgCommands || []) }));
 vi.mock('../../services/memoryService', () => ({ listMemoryItems: vi.fn(() => []) }));
-vi.mock('../../services/agentActivityService', () => ({ listAgentActivity: vi.fn(() => []) }));
+vi.mock('../../services/agentActivityService', () => ({ listAgentActivity: vi.fn(() => globalThis.__tgActivity || []) }));
 vi.mock('../../services/sentinelSecurityService', () => ({ scanForThreats: vi.fn() }));
 vi.mock('../../services/novaAnalysisService', () => ({ getOpportunityHistory: vi.fn(() => []) }));
 vi.mock('../../services/orchestrationReceiptService', () => ({ listOrchestrationReceipts: vi.fn(() => []) }));
@@ -54,6 +54,8 @@ beforeEach(() => {
   localStorage.setItem('alphonso_jose_telegram_sent_v1', '[]'); // not the first run
   vi.clearAllMocks();
   globalThis.__tgQueue = [];
+  globalThis.__tgActivity = [];
+  globalThis.__tgCommands = [];
   stopTelegramCompanion();
 });
 
@@ -152,5 +154,30 @@ describe('/approve and /reject for a request\'s step', () => {
     globalThis.__tgQueue = [{ id: 'p1', title: 'Post', payload: { joseCommandId: 'c1', assignment: { stepId: 'post' } } }];
     await handleRejectCommand('tok', '42', 'p1');
     expect(rejectRequestStep).toHaveBeenCalledWith(id, 'post');
+  });
+});
+
+describe('the older notifier', () => {
+  const activity = () => [1, 2, 3].map((i) => ({ agent: 'connector', action: `check ${i}` }));
+
+  it('sends no agent-activity summaries unless you switch them on', async () => {
+    globalThis.__tgActivity = activity();
+    await runPushWatcher('tok');
+    expect(sends().some((s) => /agent actions since your last check/.test(s.text))).toBe(false);
+  });
+
+  it('sends them when switched on in Settings', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ joseTelegram: { activitySummaries: true } }));
+    globalThis.__tgActivity = activity();
+    await runPushWatcher('tok');
+    expect(sends().some((s) => /agent actions since your last check/.test(s.text))).toBe(true);
+  });
+
+  it("doesn't repeat Jose's Done line with an old 'completed a task' message", async () => {
+    const request = createJoseRequest({ commandId: 'c9', source: 'user', text: 'x', kind: 'normal', steps: [] });
+    setJoseRequestStatus(request.id, 'done');
+    globalThis.__tgCommands = [{ id: 'c9', status: 'reported_to_user', commandText: 'x', userReport: { summary: 'ok' } }];
+    await runPushWatcher('tok');
+    expect(sends().some((s) => /Jose completed a task/.test(s.text))).toBe(false);
   });
 });

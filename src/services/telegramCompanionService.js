@@ -843,9 +843,11 @@ export async function runPushWatcher(token) {
   if (!ownerChatId) return;
 
   const commands = listJoseCommands();
+  // A command that belongs to a Jose request gets Jose's own Done/Failed line (phase 5).
+  const requestCommandIds = new Set(listJoseRequests().map((request) => request.commandId).filter(Boolean));
   
   for (const command of commands) {
-    if (command.status === 'reported_to_user' && !pushedCommandIds.has(command.id)) {
+    if (command.status === 'reported_to_user' && !pushedCommandIds.has(command.id) && !requestCommandIds.has(command.id)) {
       pushedCommandIds.add(command.id);
       
       const input = command.commandText || '';
@@ -891,8 +893,11 @@ Reply /approve ${shortId} or /reject ${shortId}`;
     }
   }
 
+  // The older "agent actions" summaries: off unless switched on in Settings (owner, 2026-10-23).
   const activity = listAgentActivity();
-  if (activity.length >= 3 + lastActivityPushCount) {
+  if (!getJoseTelegramSettings().activitySummaries) {
+    lastActivityPushCount = activity.length;
+  } else if (activity.length >= 3 + lastActivityPushCount) {
     const newEntries = activity.slice(-(activity.length - lastActivityPushCount)).slice(-3);
     const lines = newEntries.map(a => {
       const agent = a.agent || 'unknown';

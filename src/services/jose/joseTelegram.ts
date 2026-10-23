@@ -29,6 +29,8 @@ export interface JoseTelegramSettings {
   planWaiting: boolean;
   finished: boolean;
   reviewDecision: boolean;
+  /** The older "N agent actions since your last check" summaries; off unless you switch them on (owner, 2026-10-23). */
+  activitySummaries: boolean;
 }
 
 const SENT_KEY = 'alphonso_jose_telegram_sent_v1';
@@ -60,6 +62,7 @@ export function getJoseTelegramSettings(): JoseTelegramSettings {
     planWaiting: saved.planWaiting !== false,
     finished: saved.finished !== false,
     reviewDecision: saved.reviewDecision !== false,
+    activitySummaries: saved.activitySummaries === true,
   };
 }
 
@@ -148,7 +151,7 @@ export function markSent(key: string): void {
  */
 export function seedSentLog(requests: JoseRequest[]): boolean {
   if (localStorage.getItem(SENT_KEY) !== null) return false;
-  const all = { stepWaiting: true, planWaiting: true, finished: true, reviewDecision: true };
+  const all = { stepWaiting: true, planWaiting: true, finished: true, reviewDecision: true, activitySummaries: false };
   writeJson(SENT_KEY, collectJoseNotifications(requests, new Set(), all).map((n) => n.key).slice(-SENT_KEPT));
   return true;
 }
