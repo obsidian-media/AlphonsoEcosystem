@@ -39,3 +39,17 @@ export function setStepNeeds(steps: PlanStep[], stepId: string, needs: string[])
 export function setStepInstruction(steps: PlanStep[], stepId: string, instruction: string): PlanStep[] {
   return replace(steps, stepId, (s) => ({ ...s, instruction }));
 }
+
+/**
+ * Steps that need any id in `from` need all of `to` instead (phase 4: a
+ * review round or a help request). Steps in `except` (already run) and the
+ * `to` steps themselves are left alone.
+ */
+export function rewireNeeds(steps: PlanStep[], from: string[], to: string[], except: string[] = []): PlanStep[] {
+  const skip = new Set([...except, ...to]);
+  return steps.map((s) => {
+    if (skip.has(s.stepId) || !s.needs.some((need) => from.includes(need))) return s;
+    const kept = s.needs.filter((need) => !from.includes(need));
+    return { ...s, needs: [...new Set([...kept, ...to])] };
+  });
+}

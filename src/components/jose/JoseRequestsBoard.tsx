@@ -10,6 +10,7 @@ import { describePlanSource, type JosePlan } from '../../services/jose/josePlann
 import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
+import { approveRequestStep } from '../../services/joseExecutionEngineService';
 
 const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
@@ -73,6 +74,25 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
     }
   };
 
+  // A step waiting for your approval (phase 4): approving it here carries the request on.
+  const approveStep = async (stepId: string) => {
+    if (!selected || runningRef.current) return;
+    runningRef.current = true;
+    setRunning(true);
+    setMessage('');
+    try {
+      const result: any = await approveRequestStep(selected.id, stepId);
+      setMessage(result?.summary || (result?.ok ? 'Done.' : 'It could not run.'));
+    } catch (error) {
+      setMessage(`It could not run: ${String(error)}`);
+    } finally {
+      runningRef.current = false;
+      setRunning(false);
+      refresh();
+    }
+  };
+  const waitingSteps = selected?.status === 'waiting_approval' ? selected.steps.filter((s) => s.status === 'waiting_approval') : [];
+
   return (
     <div className="grid gap-4 md:grid-cols-[260px_1fr]">
       <ul className="space-y-1" aria-label="Jose requests">
@@ -111,6 +131,11 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
             )}
+            {waitingSteps.map((step) => (
+              <Button key={step.stepId} variant="primary" disabled={running} onClick={() => approveStep(step.stepId)}>
+                {`Approve and carry on: ${step.agent.charAt(0).toUpperCase()}${step.agent.slice(1)} ${step.actionType}`}
+              </Button>
+            ))}
             {editing && <Button variant="ghost" onClick={() => setEditing(false)}>Stop editing</Button>}
             <Button variant="ghost" onClick={() => setTemplateName(templateName === null ? '' : null)}>Save as template</Button>
           </div>

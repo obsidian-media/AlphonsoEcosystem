@@ -27,7 +27,7 @@ additionally carry its own narrower denylist in
 `AGENT_SKILL_PACK_BLOCKED_OVERRIDES`, applied even to Alphonso, shown per
 pack below when present.
 
-Total exclusive `agent_skill` category packs: **167**
+Total exclusive `agent_skill` category packs: **165**
 Total shared `agent_workflow` category packs: **20**
 
 ## Exclusive packs (owned by one agent)
@@ -154,9 +154,7 @@ Role: `distribution_execution`
 | `pack.marcus-notification-routing` | Marcus Notification Routing | per-pack override | `distribution.routing`, `engagement.notify`, `approved_dispatch` | — |
 | `pack.marcus-release-readiness` | Marcus Release Readiness | per-pack override | `distribution.readiness`, `performance.check`, `approved_dispatch` | — |
 | `pack.marcus-release-reporting` | Marcus Release Reporting | per-pack override | `distribution.reporting`, `performance.report`, `approved_dispatch` | — |
-| `pack.marcus-risk-detection` | Marcus Risk Detection | per-pack override | `distribution.risk`, `performance.assessment`, `approved_dispatch` | — |
 | `pack.marcus-rollback-execution` | Marcus Rollback Execution | per-pack override | `distribution.rollback`, `approved_dispatch`, `performance.verify` | — |
-| `pack.marcus-security-audit` | Marcus Security Audit | per-pack override | `distribution.security`, `performance.audit`, `approved_dispatch` | — |
 | `pack.marcus-slack-notifications` | Marcus Slack Notifications | per-pack override | `distribution.slack`, `engagement.notify`, `approved_dispatch` | — |
 | `pack.marcus-team-communication` | Marcus Team Communication | per-pack override | `distribution.communication`, `engagement.notify`, `approved_dispatch` | — |
 | `pack.marcus-version-management` | Marcus Version Management | per-pack override | `distribution.versioning`, `approved_dispatch`, `performance.track` | — |

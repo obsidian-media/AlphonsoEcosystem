@@ -71,4 +71,11 @@ describe('stepGraph', () => {
     expect(needs.echo.sort()).toEqual(['hector', 'miya']);
     expect(needs.hector).toEqual([]);
   });
+
+  // Phase 4: the spending on a paid-model step is the model call, which always asks.
+  it('lets a step with a paid model spend, and no other step', () => {
+    const paid: PlanStep = { ...step('a', 'miya', 'creative_script', [], ['write_own_work', 'spend']), model: 'claude:claude-haiku-5-5' };
+    expect(checkPlan([paid]).ok).toBe(true);
+    expect(checkPlan([{ ...paid, model: 'qwen2.5:7b' }]).problems.join(' ')).toMatch(/Miya may not spend money/);
+  });
 });

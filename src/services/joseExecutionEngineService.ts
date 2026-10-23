@@ -13,6 +13,8 @@ import {
   confirmJoseCommand,
   createAgentReportToJose,
   createJoseCommandRoute,
+  createStepPacket,
+  appendCommandAssignments,
   listJoseCommands
 } from './joseCommandRouterService';
 import { pushMemoryItem, listMemoryItems } from './memoryService';
@@ -28,10 +30,17 @@ import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput } from './agentOutputStoreService';
-import { checkPlan, buildStepWaves, JOSE_LIMITS } from './jose/stepGraph';
-import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus } from './jose/joseRequestStore';
-import { setStepOutput, priorOutputsForNeeds } from './jose/joseStepOutputs';
+import { checkPlan, JOSE_LIMITS } from './jose/stepGraph';
+import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus, getJoseRequest, findRequestByPacket } from './jose/joseRequestStore';
+import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
+import { adaptPlan, type PlanChange } from './jose/joseAdapt';
+import { HELP_INSTRUCTION } from './jose/joseHelp';
+import { saveRequestDecisions } from './jose/joseFinish';
+import { rewireNeeds } from './jose/josePlanEdits';
+import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
+import type { PlanStep } from './jose/stepGraph';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
+import { listInstalledModels, pickLargerModel } from './jose/joseModels';
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
@@ -48,7 +57,7 @@ import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
 import { executeWithBrain } from './agentBrainService';
-import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint, withAgentModel } from '../lib/ollama';
 import { CHAT_ASSISTANT_PROMPT } from '../lib/chatUtils';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { getAgentProvider } from './modelSelectionService';
@@ -85,10 +94,12 @@ const STEP_STATUS_BY_RECEIPT: Record<string, string> = {
 function recordStepOutcomes(requestId: string, assignments: any[], receipts: any[], cutShort: boolean): void {
   try {
     const statuses: string[] = [];
+    // A failed step a paid retry took over does not fail the request (phase 4).
+    const replaced = new Set(assignments.map((a) => a.replaces).filter(Boolean));
     for (const assignment of assignments) {
       const receipt = receipts.find((r) => r.packetId && r.packetId === assignment.packetId);
       const status = receipt ? (STEP_STATUS_BY_RECEIPT[receipt.status] || 'failed') : 'not_run';
-      statuses.push(status);
+      if (!replaced.has(assignment.stepId)) statuses.push(status);
       updateJoseStep(requestId, assignment.stepId, {
         status,
         endedAtMs: timestampMs(),
@@ -482,12 +493,23 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
   const instruction = getExecutionInstruction(commandText, assignment);
   let lastError = null;
 
+  // A step runs with the model Jose chose for it, if any (phase 4).
+  const runOnce = (model: string | null) => {
+    if (!model) return executeAssignment(packet, assignment, commandText, options);
+    return withAgentModel(assignment.agent, model, () => executeAssignment(packet, assignment, commandText, { ...options, model }));
+  };
+  const attemptWith = async (model: string | null) => {
+    const result = await runOnce(model);
+    if (isRetryableTaskFailure(result)) {
+      throw new Error(result.summary || `Task "${instruction}" returned a failed result.`);
+    }
+    return result;
+  };
+  const stepModel = typeof assignment?.model === 'string' && assignment.model ? assignment.model : null;
+
   for (let attempt = 1; attempt <= MAX_TASK_RETRIES + 1; attempt += 1) {
     try {
-      const result = await executeAssignment(packet, assignment, commandText, options);
-      if (isRetryableTaskFailure(result)) {
-        throw new Error(result.summary || `Task "${instruction}" returned a failed result.`);
-      }
+      const result = await attemptWith(stepModel);
       _resetEscalationCount(commandText);
       return {
         ok: true,
@@ -503,9 +525,30 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
       }
     }
   }
+
+  // Then the same agent with the next larger installed model (owner: Q15).
+  // Local Ollama models only; a step is never handed to another agent.
+  let escalatedTo: string | null = null;
+  if (getAgentProvider(assignment?.agent)?.provider === 'ollama') {
+    let current = stepModel;
+    if (!current) {
+      try { current = getConfiguredOllamaModel(); } catch { current = null; }
+    }
+    escalatedTo = current ? pickLargerModel(current, await listInstalledModels()) : null;
+  }
+  if (escalatedTo) {
+    try {
+      const result = await attemptWith(escalatedTo);
+      _resetEscalationCount(commandText);
+      return { ok: true, attempts: MAX_TASK_RETRIES + 2, result, taskId, instruction, escalatedTo };
+    } catch (error) {
+      lastError = error;
+    }
+  }
   _recordEscalationFailure(commandText);
 
-  const errorMessage = String(lastError?.message || lastError || `Task "${instruction}" failed.`);
+  const reason = String(lastError?.message || lastError || `Task "${instruction}" failed.`);
+  const errorMessage = `Tried ${MAX_TASK_RETRIES + 1} times${escalatedTo ? `, and with ${escalatedTo}` : ''}; it still failed: ${reason.replace(/\.$/, '')}. Tell me how to go on.`;
   const dlqEntry = upsertJoseExecutionDlqEntry({
     taskId,
     instruction,
@@ -699,6 +742,8 @@ async function executeAlphonsoAssignment(commandText: any, assignment: any, opti
     // 3b. Use brain-based execution: context → plan → generate → validate → fix
     const brainResult = await executeWithBrain(commandText, {
       endpoint: options.endpoint,
+      // Jose's instruction for this step, as a note only (phase 4).
+      stepInstruction: options.stepInstruction,
       projectDirectory: projectDir,
       onProgress: options.onProgress,
       onToken: options.onToken,
@@ -1211,6 +1256,23 @@ async function executeBoardroomAdvance(assignment: any, commandText: any, option
   }
 }
 
+const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'replaces', 'costEstimateUsd'];
+
+/** A routed assignment as a plan step, with every field Jose's adapters read (phase 4). */
+function toPlanStep(assignment: any): PlanStep {
+  const step: any = {
+    stepId: assignment.stepId,
+    agent: assignment.agent,
+    actionType: assignment.actionType,
+    effects: assignment.effects || [],
+    needs: assignment.needs || [],
+  };
+  for (const field of PLAN_STEP_FIELDS) {
+    if (assignment[field] !== undefined) step[field] = assignment[field];
+  }
+  return step as PlanStep;
+}
+
 /**
  * The text a step's executor works from (phase 2, 2026-10-23): a planned
  * step's instruction followed by the request. Alphonso always gets only the
@@ -1220,7 +1282,8 @@ async function executeBoardroomAdvance(assignment: any, commandText: any, option
 export function stepCommandText(assignment: any, commandText: string): string {
   const instruction = typeof assignment?.instruction === 'string' ? assignment.instruction.trim() : '';
   if (!instruction || assignment?.agent === AGENTS.ALPHONSO) return commandText;
-  return `${instruction}\n\nThe request: ${commandText}`;
+  const help = assignment?.helpRound ? '' : `\n\n${HELP_INSTRUCTION}`;
+  return `${instruction}\n\nThe request: ${commandText}${help}`;
 }
 
 async function executeAssignment(packet: any, assignment: any, requestText: any, options: any = {}) {
@@ -1332,11 +1395,23 @@ export async function runJoseCommandExecutionPipeline({
   assignments = undefined,
   requestKind = 'normal',
   planInfo = null,
-  existingRequestId = null
+  existingRequestId = null,
+  resumeRequestId = null,
+  // Echo saves what a request decided (phase 4); the content factory keeps its own lessons.
+  saveDecisions = true
 }: any) {
+  // Resuming a saved request after an approval (phase 4): same loop, the saved
+  // command and packets, the steps already done kept as they are.
+  const resumeRequest: any = resumeRequestId ? getJoseRequest(resumeRequestId) : null;
+  const resumeCommand: any = resumeRequest ? listJoseCommands().find((item) => item.id === resumeRequest.commandId) : null;
+  if (resumeRequestId && !resumeCommand) {
+    if (resumeRequest) setJoseRequestStatus(resumeRequestId, 'failed');
+    return { ok: false, reason: 'The saved request could not be found.', command: null };
+  }
+  if (resumeCommand) commandText = resumeCommand.commandText || resumeRequest.text;
   // Explicit assignments (the content factory) skip the shortcuts below: the
-  // caller already decided which agent does what.
-  const explicitAssignments = Array.isArray(assignments) && assignments.length > 0;
+  // caller already decided which agent does what. A resumed request is a step graph.
+  const explicitAssignments = Boolean(resumeCommand) || (Array.isArray(assignments) && assignments.length > 0);
   // Creative intent routing — detect image/video/audio and dispatch to running Runtime Hub tool
   // Shortcuts (an image request, a named workflow) answer without a plan. The
   // Claude coding shortcut was removed (owner, 2026-10-23): coding requests
@@ -1349,7 +1424,7 @@ export async function runJoseCommandExecutionPipeline({
   const memoryItems = listMemoryItems();
   const retrievedContext = retrieveRelevantContext(commandText, memoryItems);
 
-  const command: any = await createJoseCommandRoute({ commandText, source, zeroCostMode, assignments });
+  const command: any = resumeCommand || await createJoseCommandRoute({ commandText, source, zeroCostMode, assignments });
   if (!command) {
     return {
       ok: false,
@@ -1372,10 +1447,16 @@ export async function runJoseCommandExecutionPipeline({
   // soon as the steps it needs are done. The splitter's plans leave task types
   // to the per-step contract check below, as before.
   const planAssignments: any[] = command.assignments || [];
-  const planSteps = planAssignments.map((a) => ({
-    stepId: a.stepId, agent: a.agent, actionType: a.actionType, effects: a.effects || [], needs: a.needs || [],
-  }));
-  const planCheck = checkPlan(planSteps, { taskTypes: explicitAssignments });
+  if (resumeRequest) {
+    // The request holds the needs as they are now (a review or help request may have moved them).
+    for (const assignment of planAssignments) {
+      const saved = resumeRequest.steps.find((step: any) => step.stepId === assignment.stepId);
+      if (saved) assignment.needs = saved.needs;
+    }
+  }
+  const planSteps: PlanStep[] = planAssignments.map(toPlanStep);
+  // A resumed plan was checked when it first ran, and every step added since was checked when added.
+  const planCheck = resumeRequest ? { ok: true, problems: [] as string[] } : checkPlan(planSteps, { taskTypes: explicitAssignments });
   if (!planCheck.ok) {
     for (const a of planAssignments) {
       if (a.packetId) updatePacketStatus(a.packetId, 'failed', { failureReason: `Plan refused: ${planCheck.problems.join(' ')}` });
@@ -1399,17 +1480,18 @@ export async function runJoseCommandExecutionPipeline({
     onProgress?.({ stage: 'plan_rejected', problems: planCheck.problems, commandId: command.id });
     return { ok: false, reason: 'plan_rejected', problems: planCheck.problems, commandId: command.id, executedCount: 0, pendingApprovalCount: 0, failedCount: 0, executionReceipts: [], command };
   }
-  const waves = buildStepWaves(planSteps);
   const assignmentMap: Record<string, any> = Object.fromEntries(planAssignments.map((a) => [a.stepId, a]));
   let joseRequestId: string | null = null;
   try {
     // An approved plan (phase 3) runs on the request it was saved as.
-    joseRequestId = existingRequestId
+    joseRequestId = resumeRequest ? resumeRequestId : existingRequestId
       ? attachRunToRequest(existingRequestId, { commandId: command.id, steps: planSteps }).id
       : createJoseRequest({ commandId: command.id, source, text: commandText, kind: requestKind === 'project' ? 'project' : 'normal', steps: planSteps, ...(planInfo ? { plan: planInfo } : {}) }).id;
   } catch {
     joseRequestId = null;
   }
+  // Chat shows "Open on the board" from here on (phase 4).
+  if (joseRequestId) onProgress?.({ stage: 'request_started', requestId: joseRequestId, commandId: command.id });
 
   // Loop-guard + budget: hard ceiling on a single pipeline run so a malformed
   // command graph or a stuck agent can never spin unbounded iterations or
@@ -1420,8 +1502,92 @@ export async function runJoseCommandExecutionPipeline({
   let processedAssignmentCount = 0;
   let budgetExceeded = false;
 
+  // Run every step whose needs are done, then let Jose adapt the plan, and
+  // again until nothing is left (phase 4: the plan can grow while it runs).
+  const processedSteps = new Set<string>();
+  if (resumeRequest) {
+    // Steps that finished (or failed) before the approval stay as they are.
+    for (const saved of resumeRequest.steps) {
+      if (saved.status !== 'done' && saved.status !== 'failed') continue;
+      const assignment = assignmentMap[saved.stepId];
+      if (!assignment) continue;
+      processedSteps.add(saved.stepId);
+      executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: saved.status === 'done' ? 'executed' : 'failed', resumed: true });
+    }
+  }
+  // Notes from adapting the plan (a review that still found problems), for the final reply.
+  const adaptNotes: string[] = [];
+  const statusOf = (stepId: string) => {
+    const packetId = assignmentMap[stepId]?.packetId;
+    return executionReceipts.find((r) => packetId && r.packetId === packetId)?.status || 'not_run';
+  };
+  const noteOnRequest = (text: string) => {
+    if (!joseRequestId) return;
+    try { appendRequestNote(joseRequestId, text); } catch { /* display aid only */ }
+  };
+  const applyPlanChange = (change: PlanChange) => {
+    let next: PlanStep[] = [...planSteps, ...change.add.map((step) => ({ ...step, needs: [...step.needs] }))];
+    // A rewire never changes steps already run, or the steps being added (a
+    // revision needs the old reviews, not its own re-reviews).
+    const keep = [...processedSteps, ...change.add.map((step) => step.stepId)];
+    if (change.verdict) {
+      // A review's verdict: on its step and in the change log only.
+      if (joseRequestId) {
+        try { updateJoseStep(joseRequestId, change.verdict.stepId, { verdict: change.verdict.verdict }); } catch { /* display aid only */ }
+      }
+      noteOnRequest(change.reason);
+      return;
+    }
+    if (change.add.length === 0) {
+      adaptNotes.push(change.reason);
+      noteOnRequest(change.reason);
+      return;
+    }
+    if (change.rewire) next = rewireNeeds(next, change.rewire.from, change.rewire.to, keep);
+    if (next.length > JOSE_LIMITS.maxSteps) {
+      noteOnRequest(`Not added: the plan would have ${next.length} steps; the limit is ${JOSE_LIMITS.maxSteps}.`);
+      return;
+    }
+    const check = checkPlan(next, { taskTypes: explicitAssignments });
+    if (!check.ok) {
+      noteOnRequest(`Not added: ${check.problems[0]}`);
+      return;
+    }
+    const added = change.add.map((step) => createStepPacket(command, {
+      ...step,
+      title: `${step.agent} ${step.actionType}`,
+      rationale: change.reason,
+      riskLevel: 'low',
+      requiresApproval: stepEffectsToWaitFor(step.effects).length > 0,
+      commandPreview: step.instruction || '',
+      fragments: [],
+    } as any));
+    for (const assignment of added) {
+      planAssignments.push(assignment);
+      assignmentMap[assignment.stepId] = assignment;
+    }
+    appendCommandAssignments(command.id, added);
+    for (const step of next) {
+      if (assignmentMap[step.stepId]) assignmentMap[step.stepId].needs = step.needs;
+    }
+    planSteps.splice(0, planSteps.length, ...next);
+    if (joseRequestId) {
+      try {
+        addRequestSteps(joseRequestId, change.add, change.reason);
+        if (change.rewire) rewireRequestNeeds(joseRequestId, change.rewire.from, change.rewire.to, keep);
+      } catch { /* display aid only */ }
+    }
+  };
+  let waveIndex = 0;
+
   waveLoop:
-  for (const [waveIndex, wave] of waves.entries()) {
+  while (true) {
+    const knownIds = new Set(planSteps.map((step) => step.stepId));
+    const wave = planSteps
+      .filter((step) => !processedSteps.has(step.stepId) && step.needs.every((need) => processedSteps.has(need) || !knownIds.has(need)))
+      .map((step) => step.stepId);
+    if (wave.length === 0) break;
+    for (const stepId of wave) processedSteps.add(stepId);
     const waveAssignments: any[] = wave.map((stepId) => assignmentMap[stepId]).filter(Boolean);
     onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: waveAssignments.map((a) => a.agent), steps: wave, commandId: command.id });
     for (const assignment of waveAssignments) {
@@ -1605,7 +1771,8 @@ export async function runJoseCommandExecutionPipeline({
         continue;
       }
 
-      if (isRiskyAssignment(assignment) && previewMode) {
+      // A packet you approved has been previewed already.
+      if (isRiskyAssignment(assignment) && previewMode && packet.status !== 'approved') {
         const previewPriorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
         const previewContent = buildPreviewContent(previewPriorOutputs);
         pendingApprovalCount += 1;
@@ -1654,7 +1821,9 @@ export async function runJoseCommandExecutionPipeline({
       // approves those himself (2026-10-23). Resumed by executeApprovedPackets.
       const effectsToWaitFor = Array.isArray(assignment.effects) ? stepEffectsToWaitFor(assignment.effects) : [];
       if (effectsToWaitFor.length > 0 && packet.status !== 'approved') {
-        const reason = `Waiting for your approval: ${effectsToWaitFor.map((e) => EFFECT_LABELS[e]).join(', ')}.`;
+        // A paid step says what it is expected to cost (phase 4).
+        const cost = Number.isFinite(assignment.costEstimateUsd) ? ` (about $${Number(assignment.costEstimateUsd).toFixed(2)})` : '';
+        const reason = `Waiting for your approval: ${effectsToWaitFor.map((e) => EFFECT_LABELS[e]).join(', ')}${cost}.`;
         pendingApprovalCount += 1;
         updatePacketStatus(assignment.packetId, 'pending_approval', {
           policyReason: reason,
@@ -1687,12 +1856,15 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       const beforeQueueStatus = packet.status || 'unknown';
-      approvePacket(assignment.packetId, 'jose-auto-safe');
-      updatePacketStatus(assignment.packetId, 'queued', {
-        routedBy: AGENTS.JOSE,
-        routedAtMs: timestampMs(),
-        verificationState: TRUST_STATES.PENDING
-      });
+      // A step you approved keeps that approval: the execution gate checks it (phase 4).
+      if (beforeQueueStatus !== 'approved') {
+        approvePacket(assignment.packetId, 'jose-auto-safe');
+        updatePacketStatus(assignment.packetId, 'queued', {
+          routedBy: AGENTS.JOSE,
+          routedAtMs: timestampMs(),
+          verificationState: TRUST_STATES.PENDING
+        });
+      }
       recordOrchestrationQueueTransition({
         commandId: command.id,
         packetId: assignment.packetId,
@@ -1846,7 +2018,8 @@ export async function runJoseCommandExecutionPipeline({
         agent: assignment.agent,
         status: 'executed',
         resultState: result.resultState || 'pending_review',
-        attempts: taskResult.attempts
+        attempts: taskResult.attempts,
+        ...(taskResult.escalatedTo ? { escalatedTo: taskResult.escalatedTo } : {})
       });
       onProgress?.({
         stage: 'executed',
@@ -1882,6 +2055,17 @@ export async function runJoseCommandExecutionPipeline({
         verificationState: TRUST_STATES.VERIFIED
       });
     }
+
+    // Jose adapts the plan between waves (phase 4). A failing adapter never stops the run.
+    let changes: PlanChange[] = [];
+    try {
+      const done = Object.fromEntries([...processedSteps].map((stepId) => [stepId, { status: statusOf(stepId), output: getStepOutput(command.id, stepId) }]));
+      changes = await adaptPlan({ steps: [...planSteps], done, justRan: wave, requestText: commandText });
+    } catch {
+      changes = [];
+    }
+    for (const change of changes) applyPlanChange(change);
+    waveIndex += 1;
   }
 
   if (budgetExceeded) {
@@ -1919,7 +2103,17 @@ export async function runJoseCommandExecutionPipeline({
     };
   }
 
-  if (joseRequestId) recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
+  if (joseRequestId) {
+    recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
+    // Echo saves what was decided (phase 4). Never changes the outcome.
+    const finished = getJoseRequest(joseRequestId);
+    if (saveDecisions && finished && (finished.status === 'done' || finished.status === 'waiting_approval')) {
+      const outputs = Object.fromEntries(finished.steps
+        .filter((s) => s.status === 'done')
+        .map((s) => [s.stepId, getStepOutput(command.id, s.stepId) || {}]));
+      await saveRequestDecisions(finished, outputs, { draftDisabled, endpoint });
+    }
+  }
 
   const confirmationText = pendingApprovalCount > 0
     ? `Jose executed ${executedCount} task(s); ${pendingApprovalCount} task(s) are waiting for approval.`
@@ -1969,7 +2163,8 @@ export async function runJoseCommandExecutionPipeline({
     pendingApprovalCount,
     failedCount,
     executionReceipts,
-    novaFeedback: novaHints
+    novaFeedback: novaHints,
+    adaptNotes
   };
 }
 
@@ -2137,13 +2332,76 @@ export async function retryDLQ(taskId) {
  * @param {{ endpoint?: string, onProgress?: Function, onToken?: Function, conversationHistory?: any[] }} options
  * @returns {Promise<{ ok: boolean, summary: string, results: object[] }>}
  */
+/**
+ * Carry a saved request on after you approved one of its steps (phase 4): the
+ * approved step runs, then every step that needed it. Does nothing unless the
+ * request is waiting for an approval; it is claimed before anything awaits, so
+ * approving twice runs it once.
+ */
+export async function resumeJoseRequest(requestId: string, options: any = {}) {
+  const request: any = getJoseRequest(requestId);
+  if (!request || request.status !== 'waiting_approval') {
+    return { ok: false, reason: request ? `This request is ${String(request.status).replace(/_/g, ' ')}, not waiting for an approval.` : 'Request not found.', requestId };
+  }
+  setJoseRequestStatus(requestId, 'running');
+  const run = request.runOptions || {};
+  const result = await runJoseCommandExecutionPipeline({
+    resumeRequestId: requestId,
+    source: request.source,
+    // The address in Settings when neither the caller nor the saved request names one.
+    endpoint: options.endpoint || run.endpoint || getConfiguredOllamaEndpoint(),
+    zeroCostMode: run.zeroCostMode,
+    previewMode: run.previewMode ?? true,
+    onProgress: options.onProgress,
+    onToken: options.onToken,
+    conversationHistory: options.history,
+  });
+  return { ...result, requestId };
+}
+
+/** Approve one waiting step of a saved request, by its step id, and carry the request on (the board's button, phase 4). */
+export async function approveRequestStep(requestId: string, stepId: string, options: any = {}) {
+  const request: any = getJoseRequest(requestId);
+  const command: any = request ? listJoseCommands().find((item) => item.id === request.commandId) : null;
+  const packetId = command?.assignments?.find((a: any) => a.stepId === stepId)?.packetId;
+  if (!packetId) return { ok: false, summary: 'That step was not found.', results: [] };
+  return executeApprovedPackets([packetId], options);
+}
+
 export async function executeApprovedPackets(packetIds: any, options: any = {}) {
   const { endpoint, onProgress, onToken, conversationHistory } = options;
   const results = [];
   let succeeded = 0;
   let failed = 0;
 
+  // Packets that belong to a saved request carry the whole request on.
+  const byRequest = new Map<string, string[]>();
+  const loosePackets: string[] = [];
   for (const packetId of packetIds) {
+    const request = findRequestByPacket(packetId);
+    if (request) byRequest.set(request.id, [...(byRequest.get(request.id) || []), packetId]);
+    else loosePackets.push(packetId);
+  }
+  for (const [requestId, ids] of byRequest) {
+    const request: any = getJoseRequest(requestId);
+    if (request?.status === 'waiting_approval') {
+      for (const id of ids) approvePacket(id, 'operator');
+    }
+    const resumed: any = await resumeJoseRequest(requestId, { endpoint, onProgress, onToken, history: conversationHistory });
+    for (const id of ids) {
+      const receipt = (resumed.executionReceipts || []).find((r: any) => r.packetId === id && !r.resumed);
+      const agent = (getPacketById(id) as any)?.payload?.assignment?.agent;
+      if (receipt?.status === 'executed') {
+        succeeded += 1;
+        results.push({ packetId: id, ok: true, agent, summary: 'Done.' });
+      } else {
+        failed += 1;
+        results.push({ packetId: id, ok: false, agent, error: receipt?.reason || resumed.reason || 'It did not run.' });
+      }
+    }
+  }
+
+  for (const packetId of loosePackets) {
     const packet: any = getPacketById(packetId);
     if (!packet) {
       results.push({ packetId, ok: false, error: 'Packet not found' });

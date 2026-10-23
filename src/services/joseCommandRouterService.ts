@@ -290,6 +290,15 @@ function dedupeAssignments(assignments: JoseCommandAssignment[]): JoseCommandAss
   return [...byAgent.values()];
 }
 
+/** Add steps Jose created while a command runs to its saved record (phase 4). */
+export function appendCommandAssignments(commandId: string, assignments: JoseCommandAssignment[]): void {
+  const rows = readCommands();
+  const row = rows.find((r) => r.id === commandId);
+  if (!row) return;
+  row.assignments = [...(row.assignments || []), ...assignments];
+  writeCommands(rows);
+}
+
 export function listJoseCommands(): JoseCommand[] {
   return readCommands();
 }
@@ -566,6 +575,78 @@ async function decomposeViaBackend(parsed: ParsedJoseCommand): Promise<JoseComma
   }
 }
 
+/**
+ * Create the packet for one step and return the routed assignment. Used when
+ * a command is routed, and when Jose adds a step while it runs (phase 4).
+ */
+export function createStepPacket(command: JoseCommand, assignment: JoseCommandAssignment): JoseCommandAssignment {
+  const packet = createAgentPacket({
+    fromAgent: AGENTS.JOSE,
+    toAgent: assignment.agent,
+    title: assignment.title,
+    packetType: 'jose_assigned_work',
+    payload: {
+      joseCommandId: command.id,
+      originalCommand: command.commandText,
+      assignment,
+      contract: AGENT_CONTRACTS[assignment.agent],
+      policy: {
+        zeroCostMode: Boolean(command.policy?.zeroCostMode),
+        blockedByZeroCostMode: Boolean(assignment.blockedByZeroCostMode),
+        costClass: assignment.costClass || command.parser?.connectorCost?.class || 'unknown'
+      }
+    },
+    source: 'jose-command-router',
+    confidence: TRUST_STATES.TEMPORARY,
+    verificationState: TRUST_STATES.UNVERIFIED,
+    requiresApproval: assignment.requiresApproval,
+    riskLevel: assignment.riskLevel,
+    actionType: assignment.actionType,
+    commandPreview: assignment.commandPreview,
+    fileChangePreview: 'No file changes are executed by routing. Agent must report back to Jose.',
+    rollbackAvailable: false,
+    effects: assignment.effects
+  });
+  recordOrchestrationQueueTransition({
+    commandId: command.id,
+    packetId: packet.id,
+    agent: AGENTS.JOSE,
+    fromStatus: 'new',
+    toStatus: packet.status,
+    reason: 'Jose decomposition created assignment packet.',
+    retryCount: 0,
+    confidence: TRUST_STATES.TEMPORARY,
+    verificationState: TRUST_STATES.UNVERIFIED
+  });
+  appendOrchestrationReceipt({
+    workflowId: 'jose_command_router',
+    commandId: command.id,
+    packetId: packet.id,
+    eventType: 'assignment_created',
+    status: packet.status,
+    agent: AGENTS.JOSE,
+    actionType: assignment.actionType,
+    riskLevel: assignment.riskLevel,
+    approved: packet.status === 'approved',
+    blocked: packet.status === 'pending_approval',
+    setupRequired: false,
+    details: {
+      title: assignment.title,
+      rationale: assignment.rationale,
+      source: command.source
+    },
+    confidence: TRUST_STATES.TEMPORARY,
+    verificationState: TRUST_STATES.UNVERIFIED
+  });
+  return {
+    ...assignment,
+    packetId: packet.id,
+    status: packet.status,
+    retries: 0,
+    lastUpdatedAtMs: packet.updatedAtMs
+  };
+}
+
 export async function createJoseCommandRoute({ commandText, source = 'user', zeroCostMode = undefined, assignments: givenAssignments }: CommandRouteOptions): Promise<JoseCommandRouteResult | null> {
   const parsed = parseJoseCommand(commandText);
   if (!parsed.clean) return null;
@@ -620,73 +701,7 @@ export async function createJoseCommandRoute({ commandText, source = 'user', zer
     requiresApproval: stepEffectsToWaitFor(step.effects).length > 0 || Boolean(step.requiresApproval),
   }));
 
-  const routed = stepped.map((assignment) => {
-    const packet = createAgentPacket({
-      fromAgent: AGENTS.JOSE,
-      toAgent: assignment.agent,
-      title: assignment.title,
-      packetType: 'jose_assigned_work',
-      payload: {
-        joseCommandId: command.id,
-        originalCommand: parsed.clean,
-        assignment,
-        contract: AGENT_CONTRACTS[assignment.agent],
-        policy: {
-          zeroCostMode: effectiveZeroCostMode,
-          blockedByZeroCostMode: Boolean(assignment.blockedByZeroCostMode),
-          costClass: assignment.costClass || parsed.connectorCost?.class || 'unknown'
-        }
-      },
-      source: 'jose-command-router',
-      confidence: TRUST_STATES.TEMPORARY,
-      verificationState: TRUST_STATES.UNVERIFIED,
-      requiresApproval: assignment.requiresApproval,
-      riskLevel: assignment.riskLevel,
-      actionType: assignment.actionType,
-      commandPreview: assignment.commandPreview,
-      fileChangePreview: 'No file changes are executed by routing. Agent must report back to Jose.',
-      rollbackAvailable: false,
-      effects: assignment.effects
-    });
-    recordOrchestrationQueueTransition({
-      commandId: command.id,
-      packetId: packet.id,
-      agent: AGENTS.JOSE,
-      fromStatus: 'new',
-      toStatus: packet.status,
-      reason: 'Jose decomposition created assignment packet.',
-      retryCount: 0,
-      confidence: TRUST_STATES.TEMPORARY,
-      verificationState: TRUST_STATES.UNVERIFIED
-    });
-    appendOrchestrationReceipt({
-      workflowId: 'jose_command_router',
-      commandId: command.id,
-      packetId: packet.id,
-      eventType: 'assignment_created',
-      status: packet.status,
-      agent: AGENTS.JOSE,
-      actionType: assignment.actionType,
-      riskLevel: assignment.riskLevel,
-      approved: packet.status === 'approved',
-      blocked: packet.status === 'pending_approval',
-      setupRequired: false,
-      details: {
-        title: assignment.title,
-        rationale: assignment.rationale,
-        source
-      },
-      confidence: TRUST_STATES.TEMPORARY,
-      verificationState: TRUST_STATES.UNVERIFIED
-    });
-    return {
-      ...assignment,
-      packetId: packet.id,
-      status: packet.status,
-      retries: 0,
-      lastUpdatedAtMs: packet.updatedAtMs
-    };
-  });
+  const routed = stepped.map((assignment) => createStepPacket(command, assignment));
 
   command.assignments = routed;
   // Flag parallel dispatch when there are multiple distinct agent tasks

@@ -2,7 +2,7 @@
 
 **Version**: 2.6.0
 **Last Updated**: 2026-07-19
-**Total Skill Packs**: 20 (4 existing + 16 new)
+**Total Skill Packs**: 16 (15 owned by Marcus + 1 shared). Security audit and risk detection were removed 2026-10-23: security is Sentinel's, risk review Maria's.
 
 ## Overview
 
@@ -28,11 +28,10 @@ Marcus is the **Distribution & Release Manager** — responsible for release rea
 | `pack.marcus-version-management` | Version Management | `distribution.versioning`, `approved_dispatch`, `performance.track` | Manage semantic versioning for release candidates |
 | `pack.marcus-release-readiness` | Release Readiness | `distribution.readiness`, `performance.check`, `approved_dispatch` | Run release readiness checklist before version promotion |
 
-### Security & Compliance Packs (3)
+### Compliance Packs (2)
 
 | Pack ID | Name | Permissions | Example Tasks |
 |---------|------|-------------|---------------|
-| `pack.marcus-security-audit` | Security Audit | `distribution.security`, `performance.audit`, `approved_dispatch` | Audit build artifacts for security vulnerabilities |
 | `pack.marcus-compliance-distribution` | Compliance Distribution | `distribution.compliance`, `performance.audit`, `approved_dispatch` | Verify license compliance before distributing packages |
 | `pack.marcus-approval-gatekeeping` | Approval Gatekeeping | `distribution.gate`, `approved_dispatch`, `performance.verify` | Enforce approval gates before production deployment |
 
@@ -53,11 +52,10 @@ Marcus is the **Distribution & Release Manager** — responsible for release rea
 | `pack.marcus-release-reporting` | Release Reporting | `distribution.reporting`, `performance.report`, `approved_dispatch` | Generate post-release metrics report |
 | `pack.marcus-team-communication` | Team Communication | `distribution.communication`, `engagement.notify`, `approved_dispatch` | Send release status updates to stakeholders |
 
-### Risk & Asset Packs (2)
+### Asset Packs (1)
 
 | Pack ID | Name | Permissions | Example Tasks |
 |---------|------|-------------|---------------|
-| `pack.marcus-risk-detection` | Risk Detection | `distribution.risk`, `performance.assessment`, `approved_dispatch` | Identify deployment risks in release candidate |
 | `pack.marcus-asset-distribution` | Asset Distribution | `distribution.assets`, `approved_dispatch`, `performance.track` | Upload build artifacts to distribution channels |
 
 ## Permission Model

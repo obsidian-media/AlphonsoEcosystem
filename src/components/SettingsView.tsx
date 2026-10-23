@@ -54,6 +54,7 @@ import { ComfyUiModelPicker } from './ComfyUiModelPicker';
 import { ComfyUiInstallPicker } from './ComfyUiInstallPicker';
 import { BridgesPanel } from './BridgesPanel';
 import { DEFAULT_EFFECT_APPROVALS, EFFECT_LABELS, JOSE_EFFECTS, LOCKED_EFFECTS, type JoseEffect } from '../services/jose/joseEffects';
+import { monthSpendUsd } from '../services/jose/joseSpend';
 import { getComfyUiEndpoint, setComfyUiEndpoint, DEFAULT_COMFYUI_ENDPOINT } from '../services/connectors/comfyUiEndpoint.js';
 
 interface MemoryItem {
@@ -587,6 +588,72 @@ function EffectApprovalsTable({ settings, setSettings }: { settings: AppSettings
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Settings → Approvals → Paid models (phase 4): off by default. When on (and
+ * Zero-Cost Mode is off), Jose may give a hard step to Claude or ChatGPT; each
+ * such step asks first and says what it should cost. The prices are yours to
+ * enter (they change), and the monthly cap stops spending past it.
+ */
+function PaidModelsPanel({ settings, setSettings }: { settings: AppSettings; setSettings: (s: AppSettings) => void }) {
+  const saved = (settings.paidModels && typeof settings.paidModels === 'object' ? settings.paidModels : {}) as Record<string, unknown>;
+  const provider = saved.provider === 'chatgpt' ? 'chatgpt' : 'claude';
+  // The provider shown is the one saved, also before you change it.
+  const save = (patch: Record<string, unknown>) => setSettings({ ...settings, paidModels: { ...saved, provider, ...patch } });
+  const amountOf = (value: string) => (value.trim() === '' || !Number.isFinite(Number(value)) || Number(value) < 0 ? null : Number(value));
+  const shown = (value: unknown) => (typeof value === 'number' ? String(value) : '');
+  const allowed = saved.allowed === true;
+  const inputClass = 'w-24 rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)';
+  return (
+    <div className="p-4 bg-(--surface-2) rounded-2xl">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-(--text-1)">Allow paid models</div>
+          <div className="text-[11px] text-(--text-3) mt-0.5">Jose may give a step that keeps failing to Claude or ChatGPT. Each one asks first and says what it should cost. Zero-Cost Mode must be off, and the model must be set up in Connectors.</div>
+        </div>
+        <button
+          role="switch"
+          aria-checked={allowed}
+          aria-label="Allow paid models"
+          onClick={() => save({ allowed: !allowed })}
+          className={`w-10 h-5 shrink-0 rounded-full transition-colors relative ${allowed ? 'bg-(--warning)' : 'bg-(--surface-3)'}`}
+        >
+          <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${allowed ? 'right-1' : 'left-1'}`} />
+        </button>
+      </div>
+      {settings.zeroCostMode !== false && (
+        <div className="text-[11px] text-(--warning) mt-2">Zero-Cost Mode is on, so no paid model is used.</div>
+      )}
+      <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-2 text-xs text-(--text-2)">
+        <label htmlFor="paid-provider">Paid model</label>
+        <select
+          id="paid-provider"
+          aria-label="Paid model provider"
+          value={provider}
+          onChange={(e) => save({ provider: e.target.value })}
+          className="rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+        >
+          <option value="claude">Claude</option>
+          <option value="chatgpt">ChatGPT</option>
+        </select>
+        <label htmlFor="paid-model-name">Model name (blank: the one chosen in Connectors)</label>
+        <input
+          id="paid-model-name"
+          value={typeof saved.model === 'string' ? saved.model : ''}
+          onChange={(e) => save({ model: e.target.value.trim() || null })}
+          className="w-40 rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+        />
+        <label htmlFor="paid-input-price">Price per million input tokens (USD)</label>
+        <input id="paid-input-price" inputMode="decimal" value={shown(saved.inputPerMillionUsd)} onChange={(e) => save({ inputPerMillionUsd: amountOf(e.target.value) })} className={inputClass} />
+        <label htmlFor="paid-output-price">Price per million output tokens (USD)</label>
+        <input id="paid-output-price" inputMode="decimal" value={shown(saved.outputPerMillionUsd)} onChange={(e) => save({ outputPerMillionUsd: amountOf(e.target.value) })} className={inputClass} />
+        <label htmlFor="paid-cap">Monthly spending cap (USD)</label>
+        <input id="paid-cap" inputMode="decimal" placeholder="No cap" value={shown(saved.monthlyCapUsd)} onChange={(e) => save({ monthlyCapUsd: amountOf(e.target.value) })} className={inputClass} />
+      </div>
+      <div className="text-[11px] text-(--text-3) mt-2">Spent this month: ${monthSpendUsd().toFixed(2)}</div>
     </div>
   );
 }
@@ -1244,6 +1311,7 @@ export function SettingsView({
             </button>
           </div>
           <EffectApprovalsTable settings={settings} setSettings={setSettings} />
+          <PaidModelsPanel settings={settings} setSettings={setSettings} />
           <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-(--text-1)">Show Jose's plan first</div>

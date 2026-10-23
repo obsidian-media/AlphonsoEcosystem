@@ -13,7 +13,13 @@ vi.mock('../../../services/jose/submitToJose', async () => {
   };
 });
 
+vi.mock('../../../services/joseExecutionEngineService', () => ({
+  approveRequestStep: vi.fn(async () => ({ ok: true, summary: 'Marcus did it; the request carried on.' })),
+}));
+
 import { JoseRequestsBoard } from '../../../components/jose/JoseRequestsBoard';
+import { approveRequestStep } from '../../../services/joseExecutionEngineService';
+import { createJoseRequest, setJoseRequestStatus, updateJoseStep } from '../../../services/jose/joseRequestStore';
 import { JosePlanEditor } from '../../../components/jose/JosePlanEditor';
 import { runApprovedPlan } from '../../../services/jose/submitToJose';
 import { createWaitingPlanRequest, getJoseRequest } from '../../../services/jose/joseRequestStore';
@@ -106,5 +112,19 @@ describe('JosePlanEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add step' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(getJoseRequest(request.id)!.steps.some((s) => s.agent === 'maria')).toBe(true);
+  });
+
+  // Phase 4: a step waiting for approval can be approved here, and the request carries on.
+  it('approves a waiting step and carries the request on', async () => {
+    const request = createJoseRequest({
+      commandId: 'c-wait', source: 'user', text: 'Post the launch', kind: 'normal',
+      steps: [{ stepId: 'post', agent: 'marcus', actionType: 'distribution_execution', effects: ['publish_or_send'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'post', { status: 'waiting_approval' });
+    setJoseRequestStatus(request.id, 'waiting_approval');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Approve and carry on: Marcus distribution_execution' }));
+    await waitFor(() => expect(approveRequestStep).toHaveBeenCalledWith(request.id, 'post'));
+    expect(await screen.findByText('Marcus did it; the request carried on.')).toBeTruthy();
   });
 });

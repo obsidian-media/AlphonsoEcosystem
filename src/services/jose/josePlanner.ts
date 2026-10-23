@@ -10,6 +10,9 @@ import { AGENT_PERMISSION_TABLE, describeAgentPermissions } from './agentPermiss
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
 import { TEMPLATE_FIT_THRESHOLD, getTemplate, scoreTemplateFit, type JoseTemplate } from './joseTemplates';
 import { JOSE_LIMITS, checkPlan, legacyNeeds, type PlanStep } from './stepGraph';
+import { listInstalledModels } from './joseModels';
+import { paidModelAvailable, paidModelId, estimateCostUsd, PAID_MAX_OUTPUT_TOKENS, PAID_PROMPT_ALLOWANCE_CHARS } from './joseSpend';
+import { getAgentProvider } from '../modelSelectionService';
 
 export interface JosePlan {
   steps: PlanStep[];
@@ -37,18 +40,21 @@ function templateForPrompt(template: JoseTemplate): string {
   return `Starting point: ${template.name} (template "${template.id}"). Adapt it to the request, or ignore it if it does not fit:\n${JSON.stringify(steps, null, 2)}`;
 }
 
-function buildPrompt(text: string, template: JoseTemplate | null, history: PlanOptions['history'], problems: string[]): string {
+function buildPrompt(text: string, template: JoseTemplate | null, history: PlanOptions['history'], problems: string[], installed: string[] = [], paidModel: string | null = null): string {
   const recent = (history || []).slice(-6).map((m) => `${m.role}: ${String(m.content).slice(0, 400)}`).join('\n');
   return [
     'You are Jose, the orchestrator. Plan the request as steps for the agents below. You never do the work yourself.',
     `Agents:\n${agentsForPrompt()}`,
     `Effects a step can have: ${JOSE_EFFECTS.map((e) => `${e} (${EFFECT_LABELS[e]})`).join(', ')}. Only alphonso may run; only marcus may publish_or_send.`,
+    `A review step names the step it reviews ("reviewOf"); if it finds problems the work goes back for at most ${JOSE_LIMITS.maxFixRounds} rounds, so plan one review, not several.`,
     `Limits: at most ${JOSE_LIMITS.maxSteps} steps. Use "kind": "project" for long work such as building an app, otherwise "normal".`,
+    installed.length ? `Installed models you may choose for a step ("model"; leave it out to use the agent's own): ${installed.join(', ')}. Use a larger one only where the step needs it.` : '',
+    paidModel ? `A paid model is also allowed: ${paidModel}. Use it only where no local model would do; a step given it costs money and waits for approval.` : '',
     template ? templateForPrompt(template) : '',
     recent ? `Recent conversation:\n${recent}` : '',
     `Request: ${text}`,
     problems.length ? `Your last plan did not pass the checks:\n- ${problems.join('\n- ')}\nFix these problems.` : '',
-    'Answer with JSON only: {"basedOnTemplate": "<template id>" or null, "kind": "normal" or "project", "steps": [{"id": "short_id", "agent": "<agent>", "taskType": "<task type>", "instruction": "<what to do>", "effects": ["<effect>"], "needs": ["<step id>"]}]}',
+    'Answer with JSON only: {"basedOnTemplate": "<template id>" or null, "kind": "normal" or "project", "steps": [{"id": "short_id", "agent": "<agent>", "taskType": "<task type>", "instruction": "<what to do>", "effects": ["<effect>"], "needs": ["<step id>"], "model": "<installed model, optional>", "reviewOf": "<step id this step reviews, for a review step>"}]}',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -75,7 +81,7 @@ function extractJson(raw: string): unknown {
 }
 
 /** The model's answer as steps, or null when it is not a usable plan. */
-function readModelPlan(raw: string): ModelPlan | null {
+function readModelPlan(raw: string, installed: string[] = [], paidModel: string | null = null): ModelPlan | null {
   const parsed = extractJson(raw) as { basedOnTemplate?: unknown; kind?: unknown; steps?: unknown } | null;
   if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.steps) || parsed.steps.length === 0) return null;
   const steps: PlanStep[] = [];
@@ -84,13 +90,24 @@ function readModelPlan(raw: string): ModelPlan | null {
     const declared = Array.isArray(item.effects) ? item.effects.filter((e): e is JoseEffect => JOSE_EFFECTS.includes(e as JoseEffect)) : [];
     // The union with the inferred effects: a step cannot dodge approval by under-declaring.
     const effects = [...new Set([...declared, ...inferEffects(item.taskType)])];
+    // A model only if it is installed and the agent runs on Ollama (phase 4).
+    const agent = item.agent.toLowerCase();
+    const localModel = typeof item.model === 'string' && installed.includes(item.model) && getAgentProvider(agent)?.provider === 'ollama' ? item.model : undefined;
+    // The paid model only when you allow it; such a step spends, so it asks (phase 4).
+    const paid = Boolean(paidModel) && item.model === paidModel;
+    const model = localModel || (paid ? paidModel! : undefined);
+    const instruction = typeof item.instruction === 'string' ? item.instruction : '';
+    if (paid && !effects.includes('spend')) effects.push('spend');
     steps.push({
+      ...(model ? { model } : {}),
+      ...(paid ? { costEstimateUsd: estimateCostUsd(instruction.length + PAID_PROMPT_ALLOWANCE_CHARS, PAID_MAX_OUTPUT_TOKENS) } : {}),
       stepId: item.id,
-      agent: item.agent.toLowerCase(),
+      agent,
       actionType: item.taskType,
-      instruction: typeof item.instruction === 'string' ? item.instruction : '',
+      instruction,
       effects,
       needs: Array.isArray(item.needs) ? item.needs.filter((n): n is string => typeof n === 'string') : [],
+      ...(typeof item.reviewOf === 'string' && item.reviewOf ? { reviewOf: item.reviewOf } : {}),
     });
   }
   return {
@@ -98,6 +115,38 @@ function readModelPlan(raw: string): ModelPlan | null {
     kind: parsed.kind === 'project' || parsed.kind === 'normal' ? parsed.kind : null,
     steps,
   };
+}
+
+/**
+ * A plan based on a template: a step with a template step's id keeps the
+ * template's needs and review when the model left them out (a small model
+ * often does, and then every step runs at once). Only ids in the plan.
+ */
+function fillFromTemplate(steps: PlanStep[], template: JoseTemplate): PlanStep[] {
+  const ids = new Set(steps.map((s) => s.stepId));
+  return steps.map((step) => {
+    const source = template.steps.find((t) => t.stepId === step.stepId);
+    if (!source) return step;
+    const needs = step.needs.length === 0 ? source.needs.filter((n) => ids.has(n)) : step.needs;
+    const reviewOf = step.reviewOf || (source.reviewOf && ids.has(source.reviewOf) ? source.reviewOf : undefined);
+    return { ...step, needs, ...(reviewOf ? { reviewOf } : {}) };
+  });
+}
+
+const isReviewType = (actionType: string) => actionType.startsWith('audit_') || actionType.includes('review');
+
+/**
+ * A review step the model did not mark: if its task is a review and it needs
+ * exactly one step that is not itself a review, it reviews that step (so its
+ * findings can send the work back).
+ */
+function inferReviewOf(steps: PlanStep[]): PlanStep[] {
+  const byId = new Map(steps.map((s) => [s.stepId, s]));
+  return steps.map((step) => {
+    if (step.reviewOf || !isReviewType(step.actionType)) return step;
+    const reviewed = step.needs.filter((n) => byId.has(n) && !isReviewType(byId.get(n)!.actionType));
+    return reviewed.length === 1 ? { ...step, reviewOf: reviewed[0] } : step;
+  });
 }
 
 function sameShape(steps: PlanStep[], template: JoseTemplate): boolean {
@@ -135,19 +184,24 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
   const best = options.planFresh ? null : scoreTemplateFit(text).find((s) => s.score >= TEMPLATE_FIT_THRESHOLD);
   const template = best ? getTemplate(best.templateId) : null;
   let problems: string[] = [];
+  const installed = await listInstalledModels();
+  const paidModel = paidModelAvailable().ok ? paidModelId() : null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let raw: string;
     try {
-      const result = await generateAgentLlmResponse('jose', { prompt: buildPrompt(text, template, options.history, problems), format: 'json', signal: options.signal });
+      const result = await generateAgentLlmResponse('jose', { prompt: buildPrompt(text, template, options.history, problems, installed, paidModel), format: 'json', signal: options.signal });
       raw = String(result?.response || '');
     } catch {
       return fallback(text, template, "Jose's model isn't available, so I used the simple plan.");
     }
-    const plan = readModelPlan(raw);
+    const plan = readModelPlan(raw, installed, paidModel);
     if (!plan) {
       problems = ['The answer could not be read as a plan with at least one step.'];
       continue;
     }
+    const basedOn = template && plan.basedOnTemplate === template.id ? template : null;
+    if (basedOn) plan.steps = fillFromTemplate(plan.steps, basedOn);
+    plan.steps = inferReviewOf(plan.steps);
     const check = checkPlan(plan.steps);
     if (!check.ok) {
       problems = check.problems;

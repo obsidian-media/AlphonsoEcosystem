@@ -34,24 +34,32 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 - [2026-10-23] **Jose redesign phase 3 (seeing and steering): what it leaves open.**
   - A plan waiting for you is not sent to Telegram, and can't be approved there: phase 5.
-  - The map has no model per step (steps carry none until phase 4), no review-loop arrows, and the plan can't change while it runs: phase 4.
-  - Chat's "Open on the board" is on Jose's final reply and on the plan card, not on the progress line while a request runs; the board itself shows it live.
-  - After you approve a single step that waited, the saved request is not updated (phase 1's note): phase 5.
+  - ~~The map has no model per step, no review loops, and the plan can't change while it runs~~ — CLOSED 2026-10-23 by phase 4: steps carry a model, reviews send work back (revisions and re-reviews show "Round n" and each review's verdict), and Jose adds steps while a request runs (`adaptPlan()`). The map draws a revision as its own box, not as an arrow back.
+  - ~~Chat's "Open on the board" is not on the progress line while a request runs~~ — CLOSED 2026-10-23 by phase 4.
+  - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
+  - **Status:** OPEN (Telegram, phase 5).
+
+- [2026-10-23] **Jose redesign phase 4 (loops and adaptation): what it leaves open.**
+  - **Paid models were checked with unit tests only:** there are no Claude or ChatGPT keys on the dev machine, so no real paid call, cost record or cap has been tried. The prices are yours to enter; nothing reads them from the providers.
+  - A paid step's cost is estimated from its instruction plus a fixed 4,000-character allowance for earlier steps' work; the real cost is recorded from the usage the provider reports.
+  - The help request is a line the agent writes ("HELP: …"); content-factory steps build their own prompts and are not told about it.
+  - Echo saves a request's decisions when it ends `done` and again when it ends waiting for approval, so a request that waits and is approved can be saved twice.
+  - Resuming at app start (a request left running when the app closed) and approvals from Telegram: phase 5.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 2 (the planner): what it leaves open.**
   - ~~Saving a plan as a new template, and seeing or editing the plan before it runs~~ — CLOSED 2026-10-23 by phase 3.
-  - Jose choosing the model per step: phase 4, with model escalation on failure.
+  - ~~Jose choosing the model per step, with model escalation on failure~~ — CLOSED 2026-10-23 by phase 4 (installed models only; paid models only if you allow them).
   - Only Chat goes through `submitToJose()` and the planner; Telegram, WhatsApp, the phone companion, schedules, workflows, the batch orchestrator, the Orchestrator page and Boardroom actions still call `runJoseCommandExecutionPipeline` with the old word rule: phase 6.
   - A Content video planned in Chat runs the template's steps without a Miya Studio project (no brand, folder or pictures) and points to Miya Studio: phase 6 moves the factory onto the template.
-  - Alphonso gets the user's own words, not a planned step's instruction (`stepCommandText()`), so a planned Alphonso step does what the request says; giving him the instruction safely (without counting it as user intent): **phase 4** (owner, 2026-10-23), since review loops need Alphonso to act on findings.
+  - ~~Giving Alphonso a planned step's instruction safely~~ — CLOSED 2026-10-23 by phase 4: it reaches his planning and code prompts as "Jose's note for this step:", after your request, and never his clarification, external-tool or intent checks.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 1: what it leaves open.**
   - ~~The splitter's free-text plans still run a step after an earlier one failed~~ — CLOSED 2026-10-23 by phase 3 (the note said phase 2, which did not do it): every plan, the simple one included, runs as explicit steps.
-  - `executeApprovedPackets` does not update the saved request's step status or store step outputs after an approval, and a step skipped because a step it needs was waiting is not resumed: phase 5 (resume).
+  - ~~`executeApprovedPackets` does not update the saved request after an approval, and a step skipped because a step it needs was waiting is not resumed~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): a packet of a saved request resumes the request.
   - ~~Task types the contracts never allowed (Jose's `boardroom_*` and `cost_policy_enforcement`, Hector's `external_publish_handoff`)~~ — CLOSED 2026-10-23 by phase 3: Jose's table has `boardroom_` and `cost_policy_`, and an exact entry wins over a blocked prefix (`taskTypePartAllowed()`), shared by the table and the contracts check.
-  - Marcus still owns the skill packs `pack.marcus-security-audit` and `pack.marcus-risk-detection` (security is Sentinel's, risk review Maria's): **phase 4** (owner, 2026-10-23).
+  - ~~Marcus still owns the skill packs `pack.marcus-security-audit` and `pack.marcus-risk-detection`~~ — CLOSED 2026-10-23 by phase 4: removed; a copy saved before then is not shown.
   - ~~Settings shows Approval Mode off when the setting is unset~~ — CLOSED 2026-10-23 by phase 3: the switch reads it as the policy does.
   - **Status:** OPEN.
 

@@ -5,7 +5,7 @@ import { MARCUS_PROFILE } from '../agents/marcus/marcusProfile';
 
 const MARCUS_NEW_PACK_IDS = [
   'pack.marcus-github-releases', 'pack.marcus-slack-notifications', 'pack.marcus-release-readiness',
-  'pack.marcus-security-audit', 'pack.marcus-risk-detection', 'pack.marcus-integration-validation',
+  'pack.marcus-integration-validation',
   'pack.marcus-deployment-execution', 'pack.marcus-changelog-generation', 'pack.marcus-asset-distribution',
   'pack.marcus-notification-routing', 'pack.marcus-approval-gatekeeping', 'pack.marcus-version-management',
   'pack.marcus-rollback-execution', 'pack.marcus-release-reporting', 'pack.marcus-compliance-distribution',
@@ -15,7 +15,7 @@ const MARCUS_NEW_PACK_IDS = [
 beforeEach(() => { localStorage.clear(); });
 
 describe('Marcus skill pack contract validation', () => {
-  it('all 16 new packs pass contract validation for marcus', () => {
+  it('all 14 new packs pass contract validation for marcus', () => {
     const packs = listSkillPacks();
     MARCUS_NEW_PACK_IDS.forEach((id) => {
       const pack = packs.find((p) => p.id === id);
@@ -31,7 +31,7 @@ describe('Marcus skill guidance loading', () => {
   it('loadAgentSkillGuidance returns all Marcus packs', () => {
     const result = loadAgentSkillGuidance('marcus');
     expect(result.agent).toBe('marcus');
-    expect(result.activeSkills).toHaveLength(18);
+    expect(result.activeSkills).toHaveLength(16);
   });
 
   it('includes guidance for all new packs', () => {

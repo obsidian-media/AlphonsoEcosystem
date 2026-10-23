@@ -89,6 +89,13 @@ const mockMemoryItems = [
 const mockShouldBlock = vi.fn(() => ({ blocked: false, reason: '' }));
 const mockCheckSentinelAlerts = vi.fn(() => ({ found: false, alerts: [], output: null }));
 
+// Echo writes to ChromaDB when a request finishes (phase 4); no real server in tests.
+vi.mock('../services/chromaDbService', () => ({
+  addMemoryToChroma: vi.fn(async () => undefined),
+  semanticSearchMemory: vi.fn(async () => []),
+  isChromaHealthy: vi.fn(async () => false),
+}));
+
 vi.mock('../services/sentinelGateService', () => ({
   shouldBlock: (...args) => mockShouldBlock(...args),
   checkSentinelAlerts: (...args) => mockCheckSentinelAlerts(...args)

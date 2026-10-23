@@ -210,14 +210,6 @@ export const SKILL_WORKFLOW_GUIDANCE = {
     guidance: 'Validate all release gates pass before version promotion to production.',
     steps: ['Run readiness checklist', 'Verify test suite passes', 'Check security audit clear', 'Generate readiness report']
   },
-  'pack.marcus-security-audit': {
-    guidance: 'Audit build artifacts and dependencies for security vulnerabilities before distribution.',
-    steps: ['Run dependency audit', 'Scan build artifacts', 'Verify signing integrity', 'Document findings and remediations']
-  },
-  'pack.marcus-risk-detection': {
-    guidance: 'Identify and assess deployment risks in release candidates before distribution.',
-    steps: ['Analyze change scope', 'Identify breaking changes', 'Assess impact on consumers', 'Flag high-risk items for review']
-  },
   'pack.marcus-integration-validation': {
     guidance: 'Validate connector and API integrations function correctly against release candidate.',
     steps: ['Run integration test suite', 'Verify API contracts', 'Test connector dispatch paths', 'Document validation results']

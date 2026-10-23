@@ -124,6 +124,8 @@ export async function runContentStep(projectId: string, step: StepId, options: R
       commandText: `Content factory: ${step} for "${started.name}"`,
       source: 'content-factory',
       previewMode: false,
+      // The factory saves its own lessons; Echo does not save each step.
+      saveDecisions: false,
       assignments,
       onProgress: (event: { stage?: string; agents?: string[] }) => {
         if (event?.stage === 'wave_start') {

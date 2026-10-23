@@ -43,6 +43,8 @@ vi.mock('../../services/toolRegistryService', () => ({
 }));
 
 import { executeWithBrain, sanitizeRelativePath } from '../../services/agentBrainService';
+import { isComposioEnabled, executeViaComposio } from '../../services/composioService';
+import { generateAgentLlmResponse } from '../../lib/ollama';
 import { verifyCommandExecution } from '../../services/verificationService';
 import { setCommandApprovalHandler } from '../../services/commandApprovalService';
 
@@ -96,5 +98,28 @@ describe('sanitizeRelativePath: .git is off-limits', () => {
     expect(sanitizeRelativePath('sub/.GIT/config')).toBeNull();
     expect(sanitizeRelativePath('.gitignore')).toBe('.gitignore');
     expect(sanitizeRelativePath('.github/workflows/ci.yml')).toBe('.github/workflows/ci.yml');
+  });
+});
+
+// Phase 4: Jose's instruction for an Alphonso step is a note in the planning
+// and code prompts only; it never picks a path (it is model output).
+describe("executeWithBrain: Jose's note for the step", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    setCommandApprovalHandler(null);
+  });
+
+  it('puts the note in the planning prompt but never takes the external-tool path for it', async () => {
+    isComposioEnabled.mockReturnValue(true);
+    await executeWithBrain('create a react dashboard with login page and charts for sales', {
+      endpoint: 'http://localhost:11434',
+      projectDirectory: '/proj',
+      stepInstruction: 'Then send it by email through Gmail.',
+    });
+    isComposioEnabled.mockReturnValue(false);
+    expect(executeViaComposio).not.toHaveBeenCalled();
+    const prompts = generateAgentLlmResponse.mock.calls.map(([, o]) => String(o?.prompt || ''));
+    expect(prompts.some((p) => p.includes("Jose's note for this step: Then send it by email through Gmail."))).toBe(true);
   });
 });

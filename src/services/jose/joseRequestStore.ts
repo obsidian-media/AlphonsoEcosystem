@@ -3,6 +3,8 @@
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §5
 import { durableGet, durableSet } from '../../lib/durableStore.js';
 import type { PlanStep } from './stepGraph';
+import { rewireNeeds } from './josePlanEdits';
+import { getPacketById } from '../agentBusService';
 
 const REQUESTS_KEY = 'alphonso_jose_requests_v1';
 const MAX_REQUESTS = 200;
@@ -11,6 +13,8 @@ export type JoseRequestStatus = 'waiting_plan_approval' | 'running' | 'waiting_a
 
 export interface JoseRequestStep extends PlanStep {
   status: string;
+  /** For a review step: what it found (phase 4). */
+  verdict?: 'pass' | 'fix';
   error?: string;
   startedAtMs?: number;
   endedAtMs?: number;
@@ -158,6 +162,29 @@ export function attachRunToRequest(requestId: string, input: { commandId: string
   });
 }
 
+/** Steps Jose added while the request runs (phase 4), with the reason in the change log. */
+export function addRequestSteps(requestId: string, steps: PlanStep[], reason: string): JoseRequest {
+  return update(requestId, (r) => {
+    r.steps = [...r.steps, ...steps.map((s) => ({ ...s, status: 'waiting' }))];
+    r.changeLog = [...(r.changeLog || []), { atMs: Date.now(), text: reason }];
+  });
+}
+
+/** Later steps that needed `from` now need `to` (phase 4). */
+export function rewireRequestNeeds(requestId: string, from: string[], to: string[], except: string[] = []): JoseRequest {
+  return update(requestId, (r) => {
+    const rewired = rewireNeeds(r.steps, from, to, except);
+    r.steps = r.steps.map((s, i) => ({ ...s, needs: rewired[i].needs }));
+  });
+}
+
+/** A plain note in the change log (a change that was not made, a review that still found problems). */
+export function appendRequestNote(requestId: string, text: string): JoseRequest {
+  return update(requestId, (r) => {
+    r.changeLog = [...(r.changeLog || []), { atMs: Date.now(), text }];
+  });
+}
+
 export function updateJoseStep(requestId: string, stepId: string, patch: Partial<JoseRequestStep>): JoseRequest {
   return update(requestId, (r) => {
     const step = r.steps.find((s) => s.stepId === stepId);
@@ -171,6 +198,15 @@ export function setJoseRequestStatus(requestId: string, status: JoseRequestStatu
 
 export function getJoseRequest(id: string): JoseRequest | null {
   return readAll().find((r) => r.id === id) || null;
+}
+
+/** The request a packet's step belongs to (phase 4), or null for a packet made outside Jose's requests. */
+export function findRequestByPacket(packetId: string): JoseRequest | null {
+  const packet: any = getPacketById(packetId);
+  const commandId = packet?.payload?.joseCommandId;
+  const stepId = packet?.payload?.assignment?.stepId;
+  if (!commandId || !stepId) return null;
+  return readAll().find((r) => r.commandId === commandId && r.steps.some((step) => step.stepId === stepId)) || null;
 }
 
 export function listJoseRequests(): JoseRequest[] {

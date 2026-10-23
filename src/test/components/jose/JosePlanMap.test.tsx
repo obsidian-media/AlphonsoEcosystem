@@ -33,4 +33,19 @@ describe('JosePlanMap', () => {
     expect(screen.queryByText('Find the facts.')).toBeNull();
     expect(screen.getByText('Hector')).toBeTruthy();
   });
+
+  it('shows the model Jose chose for a step', () => {
+    render(<JosePlanMap steps={[{ ...steps[0], model: 'qwen2.5:7b' }]} />);
+    expect(screen.getByText(/qwen2\.5:7b/)).toBeTruthy();
+  });
+
+  it('marks a revision or re-review with its round', () => {
+    render(<JosePlanMap steps={[{ ...steps[0], stepId: 'facts-fix-1', round: 1 }]} />);
+    expect(screen.getByText('Round 1')).toBeTruthy();
+  });
+
+  it("shows a review's verdict", () => {
+    render(<JosePlanMap steps={[{ ...steps[0], stepId: 'r', reviewOf: 'x', verdict: 'fix' }]} />);
+    expect(screen.getByText(/Asked for changes/)).toBeTruthy();
+  });
 });

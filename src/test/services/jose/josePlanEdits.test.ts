@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { removeStep, addStep, changeStepAgent, setStepNeeds, setStepInstruction } from '../../../services/jose/josePlanEdits';
+import { removeStep, addStep, changeStepAgent, setStepNeeds, setStepInstruction, rewireNeeds } from '../../../services/jose/josePlanEdits';
 import { checkPlan, type PlanStep } from '../../../services/jose/stepGraph';
 
 const plan: PlanStep[] = [
@@ -34,5 +34,18 @@ describe('josePlanEdits', () => {
 
   it('changes a step’s instruction', () => {
     expect(setStepInstruction(plan, 'value', 'Rank them.')[1].instruction).toBe('Rank them.');
+  });
+
+  it('moves later steps from needing one step to needing others (not the steps already run)', () => {
+    const steps: PlanStep[] = [
+      { stepId: 'r', agent: 'nova', actionType: 'analysis_x', effects: ['read'], needs: [] },
+      { stepId: 'r2', agent: 'nova', actionType: 'analysis_x', effects: ['read'], needs: [] },
+      { stepId: 'done', agent: 'maria', actionType: 'audit_x', effects: ['read'], needs: ['r'] },
+      { stepId: 'later', agent: 'miya', actionType: 'creative_x', effects: ['write_own_work'], needs: ['r', 'other'] },
+    ];
+    const rewired = rewireNeeds(steps, ['r'], ['r2'], ['done']);
+    expect(rewired.find((s) => s.stepId === 'later')!.needs).toEqual(['other', 'r2']);
+    expect(rewired.find((s) => s.stepId === 'done')!.needs).toEqual(['r']);
+    expect(rewired.find((s) => s.stepId === 'r2')!.needs).toEqual([]);
   });
 });

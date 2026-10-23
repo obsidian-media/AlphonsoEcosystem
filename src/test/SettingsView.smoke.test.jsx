@@ -254,6 +254,23 @@ describe('SettingsView smoke', () => {
     expect(setSettings).toHaveBeenCalledWith(expect.objectContaining({ showPlanFirst: 'never' }));
   });
 
+  // Phase 4: paid models, which you allow, with prices you enter and a monthly cap.
+  it('saves the paid-model settings', () => {
+    const setSettings = renderApprovals({ ...minimalSettings, zeroCostMode: true, paidModels: { monthlyCapUsd: 5 } });
+    expect(screen.getByText(/Zero-Cost Mode must be off/)).toBeTruthy();
+    expect(screen.getByText('Spent this month: $0.00')).toBeTruthy();
+    const allow = screen.getByRole('switch', { name: 'Allow paid models' });
+    expect(allow.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(allow);
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ paidModels: expect.objectContaining({ allowed: true, provider: 'claude' }) }));
+    fireEvent.change(screen.getByLabelText('Paid model provider'), { target: { value: 'chatgpt' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ paidModels: expect.objectContaining({ provider: 'chatgpt' }) }));
+    fireEvent.change(screen.getByLabelText('Price per million input tokens (USD)'), { target: { value: '3' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ paidModels: expect.objectContaining({ inputPerMillionUsd: 3 }) }));
+    fireEvent.change(screen.getByLabelText('Monthly spending cap (USD)'), { target: { value: '' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ paidModels: expect.objectContaining({ monthlyCapUsd: null }) }));
+  });
+
   it('shows Approval Mode on when the setting has never been set', () => {
     renderApprovals({});
     expect(screen.getByRole('switch', { name: 'Toggle approval mode' }).getAttribute('aria-checked')).toBe('true');

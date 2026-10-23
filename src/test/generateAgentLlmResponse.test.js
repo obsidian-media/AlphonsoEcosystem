@@ -14,7 +14,7 @@ vi.mock('../services/connectors/geminiConnector', () => ({ sendGeminiMessage }))
 const sendHermesAgentMessage = vi.fn();
 vi.mock('../services/connectors/hermesAgentConnector', () => ({ sendHermesAgentMessage }));
 
-const { generateAgentLlmResponse } = await import('../lib/ollama');
+const { generateAgentLlmResponse, withAgentModel, getAgentModelOverride } = await import('../lib/ollama');
 
 describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () => {
   beforeEach(() => {
@@ -97,5 +97,23 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     await generateAgentLlmResponse('alphonso', { prompt: 'hello' });
     expect(fetch.mock.calls[0][0]).toBe('http://192.168.1.50:11434/api/generate');
     localStorage.removeItem('alphonso_settings');
+  });
+
+  // Jose redesign phase 4: a model chosen for one step, for one agent only.
+  it('uses a per-step model for that agent only, and nothing is left over', async () => {
+    fetch.mockResolvedValue({ ok: true, json: async () => ({ response: 'ok', done: true }) });
+    await withAgentModel('nova', 'qwen2.5:7b', async () => {
+      await generateAgentLlmResponse('nova', { prompt: 'judge' });
+      await generateAgentLlmResponse('hector', { prompt: 'find' });
+    });
+    const bodies = fetch.mock.calls.map((c) => JSON.parse(c[1].body).model);
+    expect(bodies[0]).toBe('qwen2.5:7b');
+    expect(bodies[1]).not.toBe('qwen2.5:7b');
+    expect(getAgentModelOverride('nova')).toBeNull();
+  });
+
+  it('clears the per-step model even when the step throws', async () => {
+    await expect(withAgentModel('nova', 'qwen2.5:7b', async () => { throw new Error('boom'); })).rejects.toThrow('boom');
+    expect(getAgentModelOverride('nova')).toBeNull();
   });
 });

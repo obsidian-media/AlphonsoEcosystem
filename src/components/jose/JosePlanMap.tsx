@@ -6,7 +6,9 @@ import { Badge } from '../ui';
 import { layoutPlan, DEFAULT_BOX } from '../../services/jose/josePlanLayout';
 import type { PlanStep } from '../../services/jose/stepGraph';
 
-type MapStep = PlanStep & { status?: string; startedAtMs?: number; endedAtMs?: number };
+type MapStep = PlanStep & { status?: string; startedAtMs?: number; endedAtMs?: number; verdict?: 'pass' | 'fix' };
+
+const VERDICT_LABELS = { pass: 'Passed', fix: 'Asked for changes' };
 
 const AGENT_NAMES: Record<string, string> = {
   alphonso: 'Alphonso', jose: 'Jose', miya: 'Miya', hector: 'Hector', maria: 'Maria',
@@ -89,14 +91,14 @@ export function JosePlanMap({ steps, compact = false, selectedStepId, onSelectSt
               style={{ left: node.x, top: node.y, width: box.width, height: box.height, borderColor: `var(--agent-${step.agent}, var(--border))` }}
             >
               <div className="flex items-center justify-between gap-1 text-[11px] font-semibold text-(--text-1)">
-                <span>{AGENT_NAMES[step.agent] || step.agent}</span>
+                <span>{AGENT_NAMES[step.agent] || step.agent}{step.round ? <span className="ml-1 font-normal text-(--text-3)">Round {step.round}</span> : null}</span>
                 {status === 'waiting_approval'
                   ? <Badge variant="warning" className="px-1! py-0! text-[9px]!">Waiting for you</Badge>
                   : <span className="text-[9px] font-normal text-(--text-3)">{STATUS_LABELS[status] || status}{time ? ` · ${time}` : ''}</span>}
               </div>
               {!compact && (
                 <>
-                  <div className="text-[9px] text-(--text-3) truncate">{step.actionType}</div>
+                  <div className="text-[9px] text-(--text-3) truncate">{step.actionType}{step.model ? ` · ${step.model}` : ''}{step.verdict ? ` · ${VERDICT_LABELS[step.verdict]}` : ''}</div>
                   <div className="text-[10px] leading-tight text-(--text-2) line-clamp-2" title={instruction}>{short}</div>
                 </>
               )}

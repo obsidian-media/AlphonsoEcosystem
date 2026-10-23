@@ -4,6 +4,17 @@ vi.mock('../../../lib/ollama', () => ({
   generateAgentLlmResponse: vi.fn(),
 }));
 
+vi.mock('../../../services/jose/joseModels', async (importOriginal) => ({
+  ...(await importOriginal()),
+  listInstalledModels: vi.fn(async () => ['llama3.2:3b', 'qwen2.5:7b']),
+}));
+
+vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
+  ...(await importOriginal()),
+  paidModelAvailable: vi.fn(() => (globalThis as any).__josePaid || { ok: false, reason: 'off' }),
+  paidModelId: vi.fn(() => 'claude:claude-haiku-5-5'),
+}));
+
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { planJoseRequest, describePlanSource } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
@@ -11,7 +22,7 @@ import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCo
 
 const llm = vi.mocked(generateAgentLlmResponse);
 
-type ModelStep = { id: string; agent: string; taskType: string; instruction: string; effects?: string[]; needs?: string[] };
+type ModelStep = { id: string; agent: string; taskType: string; instruction: string; effects?: string[]; needs?: string[]; model?: string };
 const answer = (steps: ModelStep[], basedOnTemplate: string | null = null, kind = 'normal') =>
   ({ response: JSON.stringify({ basedOnTemplate, kind, steps }) }) as never;
 const promptOf = (call: number) => String((llm.mock.calls[call][1] as { prompt: string }).prompt);
@@ -139,5 +150,64 @@ describe('the rules check every plan, with one fix and then a fallback', () => {
     const plan = await planJoseRequest(PARTY);
     expect(promptOf(1)).toMatch(/only Alphonso/);
     expect(plan.source).toBe('rules');
+  });
+});
+
+// Phase 4: Jose picks the model for each step, from installed models only.
+describe('the model for each step', () => {
+  it('names the installed models in the prompt and keeps an installed choice', async () => {
+    llm.mockResolvedValueOnce(answer([{ id: 'a', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'], model: 'qwen2.5:7b' }]));
+    const plan = await planJoseRequest(PARTY);
+    expect(promptOf(0)).toMatch(/qwen2\.5:7b/);
+    expect(plan.steps[0].model).toBe('qwen2.5:7b');
+  });
+
+  it('drops a model that is not installed', async () => {
+    llm.mockResolvedValueOnce(answer([{ id: 'a', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'], model: 'gpt-imaginary:70b' }]));
+    const plan = await planJoseRequest(PARTY);
+    expect(plan.steps[0].model).toBeUndefined();
+  });
+
+  it('offers the paid model only when you allow it; a step given it spends and has a cost', async () => {
+    const paidStep = { id: 'a', agent: 'miya', taskType: 'creative_script', instruction: 'Write it.', effects: ['write_own_work'], model: 'claude:claude-haiku-5-5' };
+    llm.mockResolvedValueOnce(answer([paidStep]));
+    const off = await planJoseRequest(PARTY);
+    expect(promptOf(0)).not.toMatch(/claude:/);
+    expect(off.steps[0].model).toBeUndefined();
+    expect(off.steps[0].effects).not.toContain('spend');
+
+    (globalThis as any).__josePaid = { ok: true };
+    llm.mockResolvedValueOnce(answer([paidStep]));
+    const on = await planJoseRequest(PARTY);
+    (globalThis as any).__josePaid = undefined;
+    expect(promptOf(1)).toMatch(/claude:claude-haiku-5-5/);
+    expect(on.steps[0]).toMatchObject({ model: 'claude:claude-haiku-5-5' });
+    expect(on.steps[0].effects).toEqual(expect.arrayContaining(['write_own_work', 'spend']));
+    expect(on.steps[0].costEstimateUsd).toBeGreaterThanOrEqual(0);
+  });
+
+  it("fills a template step's needs and review from the template when the model leaves them out", async () => {
+    const research = getTemplate('research_report')!;
+    const bare = research.steps.map((step) => ({ id: step.stepId, agent: step.agent, taskType: step.actionType, instruction: step.instruction || '', effects: step.effects }));
+    llm.mockResolvedValueOnce(answer(bare, 'research_report'));
+    const plan = await planJoseRequest('Research what the IANA example domain is used for and write a short report.');
+    for (const step of research.steps) {
+      const planned = plan.steps.find((s) => s.stepId === step.stepId)!;
+      expect(planned.needs).toEqual(step.needs);
+      expect(planned.reviewOf).toBe(step.reviewOf);
+    }
+  });
+
+  it('takes a review step that needs one step to review that step, when the model does not say', async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'facts', agent: 'hector', taskType: 'research_report', instruction: 'Find facts.', effects: ['read'], needs: [] },
+      { id: 'analysis', agent: 'nova', taskType: 'analysis_findings', instruction: 'Analyse.', effects: ['read'], needs: ['facts'] },
+      { id: 'check', agent: 'maria', taskType: 'audit_quality', instruction: 'Check it.', effects: ['read'], needs: ['analysis'] },
+      { id: 'both', agent: 'sentinel', taskType: 'security_review', instruction: 'Check both.', effects: ['read'], needs: ['facts', 'analysis'] },
+    ]));
+    const plan = await planJoseRequest(PARTY);
+    expect(plan.steps.find((s) => s.stepId === 'check')!.reviewOf).toBe('analysis');
+    expect(plan.steps.find((s) => s.stepId === 'both')!.reviewOf).toBeUndefined();
+    expect(plan.steps.find((s) => s.stepId === 'analysis')!.reviewOf).toBeUndefined();
   });
 });

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Jose runs plans as step graphs (2026-10-23): several steps per agent, each
 // waiting only for the steps it needs, approval decided by declared effects.
@@ -38,7 +38,33 @@ vi.mock('../../../lib/ollama', () => ({
     response: JSON.stringify({ title: 'mock', hook: 'mock', script: 'mock', scenes: [], prompts: [] })
   })),
   fetchOllamaModels: vi.fn(async () => ({ models: [] })),
-  PREFERRED_MODEL: 'llama3.2:3b'
+  PREFERRED_MODEL: 'llama3.2:3b',
+  getConfiguredOllamaModel: () => 'llama3.2:3b',
+  // Review verdicts (phase 4): a queue the tests fill; anything else gets a plain answer.
+  generateAgentLlmResponse: vi.fn(async (_agent, { prompt }) => {
+    if (/Did your review ask for changes/.test(prompt)) {
+      const verdict = (globalThis.__joseVerdicts || []).shift() || 'pass';
+      return { response: JSON.stringify({ verdict, findings: verdict === 'fix' ? ['The hook is weak.'] : [] }) };
+    }
+    return { response: JSON.stringify({ summary: 'done', title: 'x', hook: 'x', script: 'x', scenes: [], prompts: [] }) };
+  }),
+  getConfiguredOllamaEndpoint: () => globalThis.__joseEndpoint || 'http://127.0.0.1:11434',
+  // The per-step model in force, for the escalation tests (phase 4).
+  withAgentModel: vi.fn(async (_agent, model, fn) => {
+    globalThis.__joseStepModel = model;
+    try { return await fn(); } finally { globalThis.__joseStepModel = null; }
+  }),
+}));
+
+vi.mock('../../../services/jose/joseModels', async (importOriginal) => ({
+  ...(await importOriginal()),
+  listInstalledModels: vi.fn(async () => globalThis.__joseInstalledModels || []),
+}));
+
+// Paid models (phase 4): whether one is available is set per test.
+vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
+  ...(await importOriginal()),
+  paidModelAvailable: () => globalThis.__josePaid || { ok: false, reason: 'Paid models are off in Settings.' },
 }));
 
 vi.mock('../../../services/sentinelGateService', () => ({
@@ -81,12 +107,15 @@ vi.mock('../../../services/codingAgentService', () => ({
   runCodingAgent: vi.fn(async () => ({ ok: true, content: 'code' })),
 }));
 
-import { runJoseCommandExecutionPipeline, stepCommandText } from '../../../services/joseExecutionEngineService';
+import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep } from '../../../services/joseExecutionEngineService';
+import { createAgentPacket } from '../../../services/agentBusService';
+import { fetchOllamaModels } from '../../../lib/ollama';
 import { runCodingAgent } from '../../../services/codingAgentService';
-import { createJoseCommandRoute } from '../../../services/joseCommandRouterService';
+import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
-import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests } from '../../../services/jose/joseRequestStore';
+import { setPlanAdapterForTests } from '../../../services/jose/joseAdapt';
+import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests, setJoseRequestStatus, findRequestByPacket } from '../../../services/jose/joseRequestStore';
 
 function step(agent, actionType, extra = {}) {
   return {
@@ -231,7 +260,10 @@ describe('Jose runs plans as step graphs', () => {
   });
 
   it("gives a step its instruction, but Alphonso only the user's own words", () => {
-    expect(stepCommandText({ agent: 'hector', instruction: 'Find the pricing.' }, 'Make a page')).toBe('Find the pricing.' + String.fromCharCode(10, 10) + 'The request: Make a page');
+    const text = stepCommandText({ agent: 'hector', instruction: 'Find the pricing.' }, 'Make a page');
+    expect(text.startsWith('Find the pricing.' + String.fromCharCode(10, 10) + 'The request: Make a page')).toBe(true);
+    // Phase 4: a planned step is told how to ask for help.
+    expect(text).toMatch(/HELP:/);
     expect(stepCommandText({ agent: 'hector' }, 'Make a page')).toBe('Make a page');
     // Model-written words must never count as what the user asked Alphonso to run.
     expect(stepCommandText({ agent: 'alphonso', instruction: 'run npm test and install everything' }, 'Make a page')).toBe('Make a page');
@@ -251,5 +283,287 @@ describe('Jose runs plans as step graphs', () => {
     expect(request.commandId).toBe(result.commandId);
     expect(request.status).toBe('done');
     expect(request.steps[0].status).toBe('done');
+  });
+
+  // Phase 4: retry, then the same agent with a larger installed model.
+  it('tries a larger installed model when a step keeps failing', async () => {
+    globalThis.__joseInstalledModels = ['llama3.2:3b', 'qwen2.5:7b'];
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+      if (globalThis.__joseStepModel !== 'qwen2.5:7b') throw new Error('small model gave up');
+      return { summary: 'done with the larger model', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+    });
+    const result = await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'] })]);
+    globalThis.__joseInstalledModels = [];
+    expect(result.failedCount).toBe(0);
+    expect(result.executionReceipts[0]).toMatchObject({ status: 'executed', escalatedTo: 'qwen2.5:7b' });
+  });
+
+  it('says what it tried when no larger model helps', async () => {
+    globalThis.__joseInstalledModels = ['llama3.2:3b'];
+    vi.mocked(executeContentStepAssignment).mockImplementation(async () => { throw new Error('model gave up'); });
+    const result = await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'] })]);
+    globalThis.__joseInstalledModels = [];
+    expect(result.failedCount).toBe(1);
+    expect(String(result.executionReceipts[0].reason)).toMatch(/^Tried \d+ times; it still failed: model gave up\. Tell me how to go on\.$/);
+  });
+
+  it('runs a step with the model Jose chose for it', async () => {
+    const seen = [];
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+      seen.push(globalThis.__joseStepModel);
+      return { summary: 'ok', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+    });
+    await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'], model: 'qwen2.5:7b' })]);
+    expect(seen).toEqual(['qwen2.5:7b']);
+  });
+
+  it('does not escalate an agent that runs on a cloud provider', async () => {
+    const { setAgentProvider } = await import('../../../services/modelSelectionService');
+    setAgentProvider('nova', { provider: 'gemini' });
+    globalThis.__joseInstalledModels = ['llama3.2:3b', 'qwen2.5:7b'];
+    vi.mocked(executeContentStepAssignment).mockImplementation(async () => { throw new Error('model gave up'); });
+    const result = await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'] })]);
+    globalThis.__joseInstalledModels = [];
+    setAgentProvider('nova', { provider: 'ollama' });
+    expect(result.failedCount).toBe(1);
+    expect(String(result.executionReceipts[0].reason)).not.toMatch(/and with/);
+  });
+
+  // Phase 4: the plan can grow while it runs.
+  describe('a plan that grows while it runs', () => {
+    afterEach(() => setPlanAdapterForTests(null));
+
+    it('runs a step added after another step finished, and logs why', async () => {
+      let added = false;
+      setPlanAdapterForTests(async ({ justRan }) => {
+        if (added || !justRan.includes('a')) return [];
+        added = true;
+        return [{ add: [{ stepId: 'extra', agent: 'nova', actionType: 'analysis_extra', effects: ['read'], needs: ['a'], instruction: 'Check one more thing.' }], reason: 'Nova checks one more thing.' }];
+      });
+      const result = await run([step('hector', 'research_report', { stepId: 'a', effects: ['read'] })]);
+      // The added step has no content-factory payload, so Nova's own executor runs it.
+      expect(result.executionReceipts.map((r) => [r.agent, r.status])).toEqual([['hector', 'executed'], ['nova', 'executed']]);
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      expect(request.steps.map((s) => [s.stepId, s.status])).toEqual([['a', 'done'], ['extra', 'done']]);
+      expect(request.changeLog.map((c) => c.text)).toContain('Nova checks one more thing.');
+    });
+
+    it('refuses a change that breaks the rules, and still finishes', async () => {
+      setPlanAdapterForTests(async ({ justRan }) => (justRan.includes('a')
+        ? [{ add: [{ stepId: 'bad', agent: 'miya', actionType: 'creative_x', effects: ['run'], needs: ['a'] }], reason: 'Miya runs something.' }]
+        : []));
+      const result = await run([step('hector', 'research_report', { stepId: 'a', effects: ['read'] })]);
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      expect(request.steps.map((s) => s.stepId)).toEqual(['a']);
+      expect(request.changeLog.map((c) => c.text).join(' ')).toMatch(/^Not added: .*only Alphonso/);
+      expect(request.status).toBe('done');
+    });
+
+    it('refuses growth past the step limit', async () => {
+      setPlanAdapterForTests(async ({ justRan }) => (justRan.includes('a')
+        ? [{ add: Array.from({ length: 50 }, (_, i) => ({ stepId: `n${i}`, agent: 'nova', actionType: 'analysis_x', effects: ['read'], needs: ['a'] })), reason: 'Too many.' }]
+        : []));
+      const result = await run([step('hector', 'research_report', { stepId: 'a', effects: ['read'] })]);
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      expect(request.steps).toHaveLength(1);
+      expect(request.changeLog.map((c) => c.text).join(' ')).toMatch(/Not added: .*50/);
+    });
+  });
+
+  // Phase 4: a review that finds problems sends the work back.
+  it('runs the revision and the re-review before the steps after the review', async () => {
+    globalThis.__joseVerdicts = ['fix', 'pass'];
+    const result = await run([
+      step('miya', 'creative_script', { stepId: 'script', effects: ['write_own_work'] }),
+      step('nova', 'analysis_content_review', { stepId: 'review_value', effects: ['read'], needs: ['script'], reviewOf: 'script' }),
+      step('miya', 'creative_campaign', { stepId: 'campaign', effects: ['write_own_work'], needs: ['review_value'] }),
+      step('nova', 'analysis_x', { stepId: 'uses_script', effects: ['read'], needs: ['script', 'campaign'] }),
+    ]);
+    globalThis.__joseVerdicts = [];
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    const command = listJoseCommands().find((c) => c.id === result.commandId);
+    const stepOf = Object.fromEntries(command.assignments.map((a) => [a.packetId, a.stepId]));
+    const order = result.executionReceipts.map((r) => stepOf[r.packetId]);
+    expect(order[0]).toBe('script');
+    expect(order.indexOf('script-fix-1')).toBeGreaterThan(order.indexOf('review_value'));
+    expect(order.indexOf('review_value-r1')).toBeGreaterThan(order.indexOf('script-fix-1'));
+    expect(order.indexOf('campaign')).toBeGreaterThan(order.indexOf('review_value-r1'));
+    // Steps after the review use the revised work and wait for its re-review.
+    expect(request.steps.find((s) => s.stepId === 'campaign').needs).toEqual(['script-fix-1', 'review_value-r1']);
+    expect(request.steps.find((s) => s.stepId === 'uses_script').needs).toEqual(['campaign', 'script-fix-1', 'review_value-r1']);
+    // Each review's verdict is recorded on its step and in the change log.
+    expect(request.steps.find((s) => s.stepId === 'review_value').verdict).toBe('fix');
+    expect(request.steps.find((s) => s.stepId === 'review_value-r1').verdict).toBe('pass');
+    const log = request.changeLog.map((c) => c.text);
+    expect(log).toContain("Nova's review: asked for changes.");
+    expect(log).toContain("Nova's review: no changes needed.");
+    expect(result.planNote || '').not.toMatch(/review: no changes needed/);
+  });
+
+  // Phase 4: an agent asks for help through Jose.
+  it('adds a helper and runs the asking step again before the steps after it', async () => {
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => ({
+      summary: assignment.stepId === 'script' ? 'Draft done.' + String.fromCharCode(10) + 'HELP: facts about the launch date' : 'ok',
+      resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType,
+    }));
+    const result = await run([
+      step('miya', 'creative_script', { stepId: 'script', effects: ['write_own_work'] }),
+      step('miya', 'creative_campaign', { stepId: 'campaign', effects: ['write_own_work'], needs: ['script'] }),
+    ]);
+    const command = listJoseCommands().find((c) => c.id === result.commandId);
+    const stepOf = Object.fromEntries(command.assignments.map((a) => [a.packetId, a.stepId]));
+    expect(result.executionReceipts.map((r) => stepOf[r.packetId])).toEqual(['script', 'script-help', 'script-again', 'campaign']);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.steps.find((s) => s.stepId === 'script-help').agent).toBe('hector');
+    expect(request.steps.find((s) => s.stepId === 'campaign').needs).toEqual(['script-again']);
+  });
+
+  // Phase 4: approving a waiting step carries the request on.
+  describe('after you approve a step', () => {
+    const waitingPlan = () => run([
+      step('nova', 'analysis_x', { stepId: 'facts', effects: ['read'] }),
+      step('marcus', 'distribution_execution', { stepId: 'post', effects: ['publish_or_send'], needs: ['facts'] }),
+      step('maria', 'audit_quality', { stepId: 'check', effects: ['read'], needs: ['post'] }),
+    ]);
+    const packetOf = (commandId, stepId) => listJoseCommands().find((c) => c.id === commandId).assignments.find((a) => a.stepId === stepId).packetId;
+    const ranSteps = () => vi.mocked(executeContentStepAssignment).mock.calls.map((c) => c[0].stepId);
+
+    it('runs the approved step, then the steps that needed it, and the request ends done', async () => {
+      const first = await waitingPlan();
+      const requestId = `jose-request-${first.commandId}`;
+      expect(getJoseRequest(requestId).status).toBe('waiting_approval');
+      expect(findRequestByPacket(packetOf(first.commandId, 'post')).id).toBe(requestId);
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await executeApprovedPackets([packetOf(first.commandId, 'post')]);
+      expect(result.ok).toBe(true);
+      expect(ranSteps()).toEqual(['post', 'check']);
+      const request = getJoseRequest(requestId);
+      expect(request.steps.map((s) => [s.stepId, s.status])).toEqual([['facts', 'done'], ['post', 'done'], ['check', 'done']]);
+      expect(request.status).toBe('done');
+    });
+
+    it('runs an approved step once when it is approved twice', async () => {
+      const first = await waitingPlan();
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const packetId = packetOf(first.commandId, 'post');
+      const [a, b] = await Promise.all([executeApprovedPackets([packetId]), executeApprovedPackets([packetId])]);
+      expect(ranSteps().filter((id) => id === 'post')).toHaveLength(1);
+      expect([a.ok, b.ok].sort()).toEqual([false, true]);
+      expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('done');
+      await executeApprovedPackets([packetId]);
+      expect(ranSteps().filter((id) => id === 'post')).toHaveLength(1);
+    });
+
+    it('does not resume a cancelled or finished request', async () => {
+      const done = await waitingPlan();
+      setJoseRequestStatus(`jose-request-${done.commandId}`, 'done');
+      vi.mocked(executeContentStepAssignment).mockClear();
+      expect((await executeApprovedPackets([packetOf(done.commandId, 'post')])).ok).toBe(false);
+      expect(ranSteps()).toEqual([]);
+      const first = await waitingPlan();
+      setJoseRequestStatus(`jose-request-${first.commandId}`, 'cancelled');
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await executeApprovedPackets([packetOf(first.commandId, 'post')]);
+      expect(ranSteps()).toEqual([]);
+      expect(result.ok).toBe(false);
+      expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('cancelled');
+    });
+
+    it('approves a waiting step by request and step (the board button)', async () => {
+      const first = await waitingPlan();
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await approveRequestStep(`jose-request-${first.commandId}`, 'post');
+      expect(result.ok).toBe(true);
+      expect(ranSteps()).toEqual(['post', 'check']);
+      expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('done');
+      expect((await approveRequestStep(`jose-request-${first.commandId}`, 'nope')).ok).toBe(false);
+    });
+
+    it('uses the Ollama address from Settings when the board resumes a request', async () => {
+      const first = await waitingPlan();
+      globalThis.__joseEndpoint = 'http://192.168.1.5:11434';
+      vi.mocked(fetchOllamaModels).mockClear();
+      await approveRequestStep(`jose-request-${first.commandId}`, 'post');
+      globalThis.__joseEndpoint = undefined;
+      expect(vi.mocked(fetchOllamaModels).mock.calls.map((c) => c[0])).toContain('http://192.168.1.5:11434');
+    });
+
+    it('keeps the old one-packet path for a packet made outside a request', async () => {
+      const packet = createAgentPacket({
+        fromAgent: 'jose', toAgent: 'nova', title: 'x', packetType: 'assignment', source: 'test',
+        payload: { originalCommand: 'x', assignment: step('nova', 'analysis_x', { stepId: 'solo', effects: ['read'] }) },
+      });
+      expect(findRequestByPacket(packet.id)).toBeNull();
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await executeApprovedPackets([packet.id]);
+      expect(result.ok).toBe(true);
+      expect(ranSteps()).toEqual(['solo']);
+    });
+  });
+
+  it('reports the request id before the first step runs', async () => {
+    const events = [];
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Step graph test', source: 'test', zeroCostMode: true, previewMode: false,
+      assignments: [step('nova', 'analysis_x', { stepId: 'a', effects: ['read'] })],
+      onProgress: (event) => events.push(event),
+    });
+    const stages = events.map((e) => e.stage);
+    expect(stages.indexOf('request_started')).toBeGreaterThanOrEqual(0);
+    expect(stages.indexOf('request_started')).toBeLessThan(stages.indexOf('wave_start'));
+    expect(events.find((e) => e.stage === 'request_started').requestId).toBe(`jose-request-${result.commandId}`);
+  });
+
+  it('has Echo save what a finished request decided', async () => {
+    const result = await run([step('nova', 'analysis_x', { stepId: 'a', effects: ['read'] })]);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.status).toBe('done');
+    expect((request.changeLog || []).map((c) => c.text)).toContain('Echo saved what was decided.');
+  });
+
+  // Phase 4: a step that keeps failing can be tried by a paid model you approve.
+  describe('a paid retry', () => {
+    afterEach(() => { globalThis.__josePaid = undefined; });
+    const failingPlan = () => {
+      vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+        if (assignment.stepId === 'a') throw new Error('the model gave nothing usable');
+        return { summary: 'ok', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+      });
+      return run([
+        step('miya', 'creative_script', { stepId: 'a', effects: ['write_own_work'] }),
+        step('nova', 'analysis_x', { stepId: 'b', effects: ['read'], needs: ['a'] }),
+      ]);
+    };
+
+    it('adds a paid step that waits for approval, with what it would cost', async () => {
+      globalThis.__josePaid = { ok: true };
+      localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'claude', model: 'claude-haiku-5-5', inputPerMillionUsd: 3, outputPerMillionUsd: 15 } }));
+      const result = await failingPlan();
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      const paid = request.steps.find((s) => s.stepId === 'a-paid');
+      expect(paid).toMatchObject({ agent: 'miya', actionType: 'creative_script', model: 'claude:claude-haiku-5-5', replaces: 'a', status: 'waiting_approval' });
+      expect(paid.effects).toEqual(expect.arrayContaining(['write_own_work', 'spend']));
+      expect(request.steps.find((s) => s.stepId === 'b').needs).toEqual(['a-paid']);
+      const waiting = result.executionReceipts.find((r) => r.status === 'approval_required');
+      expect(waiting.reason).toMatch(/Spend money \(about \$\d+\.\d\d\)/);
+      expect(request.status).toBe('waiting_approval');
+    });
+
+    it('adds nothing when paid models are not available', async () => {
+      const result = await failingPlan();
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      expect(request.steps.map((s) => s.stepId)).toEqual(['a', 'b']);
+      expect(request.status).toBe('failed');
+    });
+  });
+
+  it('does not have Echo save when the caller says so (the content factory saves its own lessons)', async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Content factory: script', source: 'content-factory', zeroCostMode: true, previewMode: false,
+      assignments: [step('nova', 'analysis_x', { stepId: 'a', effects: ['read'] })],
+      saveDecisions: false,
+    });
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect((request.changeLog || []).map((c) => c.text)).not.toContain('Echo saved what was decided.');
   });
 });
