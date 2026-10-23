@@ -3,9 +3,7 @@ export const HECTOR_PROFILE = {
   name: 'Hector',
   title: 'Cloud Scout / Research Agent',
   role: 'research_agent',
-  runtime: 'OpenFang AI',
-  runtimeName: 'OpenFang',
-  purpose: 'Research official docs, APIs, market signals, and compliance inputs with source-backed structure.',
+  purpose: 'Find facts and sources: official docs, APIs, market signals, competitors\' public material and compliance inputs, with source-backed structure.',
   accentColor: 'teal',
   visualIdentity: 'teal_green_cloud_scout',
   personality: 'careful source-first methodical',
@@ -21,7 +19,8 @@ export const HECTOR_PROFILE = {
     'technical documentation lookup'
   ],
   limitations: [
-    'research backend may be not wired',
+    'does not run code or commands (Alphonso does)',
+    'reports only what its sources say, with confidence labels',
     'no destructive or execution actions'
   ],
   allowedActions: [
@@ -43,7 +42,7 @@ export const HECTOR_PROFILE = {
   ],
   outputTypes: ['ResearchReport', 'RiskReport', 'AgentTaskPacket', 'GitHubRepoAnalysis', 'GitHubTrendReport'],
   requiresApprovalFor: ['external_api_connection', 'external_posting_uploading'],
-  defaultPrompt: 'Act as Hector via OpenFang. Produce source requirements and research checklists with confidence labels.',
+  defaultPrompt: 'Act as Hector. Find facts and sources, and produce source-backed findings with confidence labels.',
   skillPackIds: [
     'pack.hector-professional-marketing',
     'pack.hector-market-research',

@@ -1,12 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { listAgentProfiles } from '../../agents/agentRegistry';
-import { JOSE_PERMISSIONS } from '../../agents/jose/josePermissions';
-import { ALPHONSO_PERMISSIONS } from '../../agents/alphonso/alphonsoPermissions';
-import { MIYA_PERMISSIONS } from '../../agents/miya/miyaPermissions';
-import { HECTOR_PERMISSIONS } from '../../agents/hector/hectorPermissions';
-import { MARCUS_PERMISSIONS } from '../../agents/marcus/marcusPermissions';
-import { MARIA_PERMISSIONS } from '../../agents/maria/mariaPermissions';
+import { AGENT_PERMISSION_TABLE, describeAgentPermissions } from '../../services/jose/agentPermissionTable';
 import { auditProjectPlan } from '../../services/audit/marcusAuditService';
 import { createResearchBrief } from '../../services/hectorResearchService';
 import { runProjectWorkshop } from '../../services/agentWorkshop/agentRunnerService';
@@ -155,10 +150,10 @@ export function ProjectExecutionMode(): React.JSX.Element {
   const allProfiles = useMemo(() => (listAgentProfiles() as { id: string }[]).filter((a) => ALL_AGENT_IDS.includes(a.id)), []);
   const selectedAgent = useMemo(() => allProfiles.find((a) => a.id === selectedAgentId) ?? null, [allProfiles, selectedAgentId]);
   const agentProfileMap = useMemo(() => allProfiles.reduce<Record<string, unknown>>((acc, a) => ({ ...acc, [a.id]: a }), {}), [allProfiles]);
-  const permissions = useMemo(() => ({
-    jose: JOSE_PERMISSIONS, alphonso: ALPHONSO_PERMISSIONS, miya: MIYA_PERMISSIONS,
-    hector: HECTOR_PERMISSIONS, marcus: MARCUS_PERMISSIONS, maria: MARIA_PERMISSIONS
-  }), []);
+  // The one enforced permission table (2026-10-23), for all 9 agents.
+  const permissions = useMemo(() => Object.fromEntries(
+    Object.keys(AGENT_PERMISSION_TABLE).map((agentId) => [agentId, { agentId, ...describeAgentPermissions(agentId) }]),
+  ), []);
 
   const runWorkshop = () => {
     const projectInput = {

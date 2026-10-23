@@ -92,6 +92,30 @@ describe('requestWorkspaceCommandApproval', () => {
     expect((await requestWorkspaceCommandApproval(cmds)).approved).toBe(false);
   });
 
+  // Settings → Approvals (2026-10-23): "Run code and commands" decides whether
+  // code-running commands ask; deleting is locked and always asks.
+  it('does not ask for code-running commands when Settings says not to', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ effectApprovals: { run: false } }));
+    const handler = vi.fn(async () => true);
+    setCommandApprovalHandler(handler);
+    const out = await requestWorkspaceCommandApproval([{ program: 'npm', args: ['run', 'build'] }]);
+    expect(out).toMatchObject({ approved: true, reason: 'not_required_by_settings' });
+    expect(handler).not.toHaveBeenCalled();
+    localStorage.removeItem('alphonso_settings');
+  });
+
+  it('always asks before a command that deletes, as a locked question', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ effectApprovals: { run: false } }));
+    const handler = vi.fn(async () => false);
+    setCommandApprovalHandler(handler);
+    const out = await requestWorkspaceCommandApproval([{ program: 'git', args: ['reset', '--hard'] }, { program: 'npm', args: ['test'] }]);
+    expect(out).toMatchObject({ approved: false, reason: 'denied' });
+    expect(out.gated.map((c) => c.program)).toEqual(['git']);
+    expect(handler.mock.calls[0][0]).toMatchObject({ alwaysAsk: true, requireApproval: true });
+    expect(handler.mock.calls[0][0].actionLabel).toContain('git reset --hard');
+    localStorage.removeItem('alphonso_settings');
+  });
+
   it('reuses a cached decision for an identical command set within one run', async () => {
     const handler = vi.fn(async () => true);
     setCommandApprovalHandler(handler);

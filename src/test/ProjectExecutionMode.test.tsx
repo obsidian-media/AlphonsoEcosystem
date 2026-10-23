@@ -43,7 +43,13 @@ vi.mock('../services/agentWorkshop/executionModeService', () => ({
 
 vi.mock('../components/agents/AgentDock', () => ({ AgentDock: () => <div data-testid="agent-dock" /> }));
 vi.mock('../components/agents/AgentProfilePanel', () => ({ AgentProfilePanel: () => <div data-testid="agent-profile" /> }));
-vi.mock('../components/agents/AgentCapabilityMatrix', () => ({ AgentCapabilityMatrix: () => <div data-testid="agent-matrix" /> }));
+const matrixProps: { agentPermissions?: Record<string, { allowed: string[]; blocked: string[] }> } = {};
+vi.mock('../components/agents/AgentCapabilityMatrix', () => ({
+  AgentCapabilityMatrix: (props: { agentPermissions: Record<string, { allowed: string[]; blocked: string[] }> }) => {
+    matrixProps.agentPermissions = props.agentPermissions;
+    return <div data-testid="agent-matrix" />;
+  },
+}));
 vi.mock('../components/agentWorkshop/ProjectIntakePanel', () => ({
   ProjectIntakePanel: ({ intake, setIntake }) => (
     <input
@@ -180,5 +186,18 @@ describe('ProjectExecutionMode — approval gate', () => {
 
     expect(await screen.findByTestId('final-packet')).toBeTruthy();
     expect(screen.queryByText('Approval Gates')).toBeNull();
+  });
+
+  // The capability matrix shows the one enforced permission table (2026-10-23),
+  // not the old display-only permission files.
+  it("shows every agent's permissions from the enforced table", async () => {
+    render(<ProjectExecutionMode />);
+    fireEvent.click(screen.getByRole('button', { name: 'Agents' }));
+    await screen.findByTestId('agent-matrix');
+    const perms = matrixProps.agentPermissions || {};
+    expect(Object.keys(perms).sort()).toEqual(['alphonso', 'echo', 'hector', 'jose', 'marcus', 'maria', 'miya', 'nova', 'sentinel']);
+    expect(perms.miya.allowed).toContain('Create new files in the project folder');
+    expect(perms.miya.blocked).toContain('Run code and commands');
+    expect(perms.alphonso.allowed).toContain('Run code and commands');
   });
 });

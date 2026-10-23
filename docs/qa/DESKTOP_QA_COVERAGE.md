@@ -205,7 +205,7 @@ needs the owner's account and is marked separately.
 
 | Flow | Today | Still to test |
 |---|---|---|
-| Chat → Jose → approval → execution | E2E for the approval states (`jose-approval.e2e.mjs`) | what an executed packet produces (Bug 4) |
+| Chat → Jose → approval → execution | E2E for the approval states (`jose-approval.e2e.mjs`); unit tests for step graphs, approval by effect and Settings → Approvals (2026-10-23) | what an executed packet produces (Bug 4); a multi-step explicit plan and the Approvals table in the real app |
 | Workflow Builder: create, add steps, save, run | E2E | schedules firing; dead-letter retry |
 | Content Studio job: draft → image → publish | E2E up to image | publish (needs accounts) |
 | Hector research → report → export | E2E up to report | export formats |

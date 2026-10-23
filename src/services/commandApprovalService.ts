@@ -14,7 +14,12 @@
  * When the user has turned Approval Mode off in Settings, the registered
  * handler (App's `requestApproval`) approves immediately -- the same explicit,
  * user-owned opt-out every other high-risk action honors.
+ *
+ * Settings → Approvals (2026-10-23): the "Run code and commands" row decides
+ * whether code-running commands ask. A command that deletes always asks,
+ * even with Approval Mode off (`alwaysAsk`), because delete is locked.
  */
+import { getEffectApprovals } from './jose/joseEffects';
 
 export interface PlannedCommand {
   program: string;
@@ -30,6 +35,8 @@ export interface CommandApprovalRequest {
   /** Why the command got that rating, in plain words (shown in the approval window). */
   riskReasons?: string[];
   requireApproval?: boolean;
+  /** A locked question (delete): asked even with Approval Mode off. */
+  alwaysAsk?: boolean;
 }
 
 export type CommandApprovalHandler = (request: CommandApprovalRequest) => Promise<boolean>;
@@ -38,7 +45,7 @@ export type CommandApprovalOutcome = {
   approved: boolean;
   /** Commands that were subject to approval (empty when none needed it). */
   gated: PlannedCommand[];
-  reason: 'not_required' | 'approved' | 'denied' | 'no_handler';
+  reason: 'not_required' | 'not_required_by_settings' | 'approved' | 'denied' | 'no_handler';
 };
 
 let handler: CommandApprovalHandler | null = null;
@@ -245,10 +252,15 @@ export async function requestWorkspaceCommandApproval(
   commands: PlannedCommand[],
   context: { source: string; projectDir?: string; cache?: Map<string, boolean> } = { source: 'AI-planned' }
 ): Promise<CommandApprovalOutcome> {
-  const gated = (commands || []).filter(
-    (c) => c && typeof c.program === 'string' && isWorkspaceCodeExecuting(c.program, Array.isArray(c.args) ? c.args : [])
-  );
-  if (gated.length === 0) return { approved: true, gated, reason: 'not_required' };
+  const valid = (commands || []).filter((c) => c && typeof c.program === 'string');
+  const argsOf = (c: PlannedCommand) => (Array.isArray(c.args) ? c.args : []);
+  const deleting = valid.filter((c) => deletesThings(baseProgram(c.program), argsOf(c)));
+  const runsCode = valid.filter((c) => !deleting.includes(c) && isWorkspaceCodeExecuting(c.program, argsOf(c)));
+  const askForRun = getEffectApprovals().run !== false;
+  const gated = valid.filter((c) => deleting.includes(c) || (askForRun && runsCode.includes(c)));
+  if (gated.length === 0) {
+    return { approved: true, gated, reason: runsCode.length > 0 ? 'not_required_by_settings' : 'not_required' };
+  }
 
   const key = gated.map(describe).join('\n');
   const cached = context.cache?.get(key);
@@ -267,7 +279,7 @@ export async function requestWorkspaceCommandApproval(
     const ratings = gated.map((c) => assessCommandRisk(c.program, c.args || []));
     const riskLevel: CommandRiskLevel = ratings.some((r) => r.level === 'high') ? 'high' : ratings.some((r) => r.level === 'medium') ? 'medium' : 'low';
     const riskReasons = [...new Set(ratings.flatMap((r) => r.reasons))];
-    approved = (await handler({ actionLabel, agent: 'alphonso', riskLevel, riskReasons, requireApproval: true })) === true;
+    approved = (await handler({ actionLabel, agent: 'alphonso', riskLevel, riskReasons, requireApproval: true, alwaysAsk: deleting.length > 0 })) === true;
   } catch {
     approved = false; // a failing approval UI must never read as consent
   }

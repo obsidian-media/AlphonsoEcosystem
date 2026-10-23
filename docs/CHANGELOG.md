@@ -39,6 +39,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Campaign Studio:** captions, hashtags, ad copy and posting times, then Maria's quality gate.
   Every project is saved in a folder per brand, keeps its versions, and tells you when a step is out of date. What you reject is remembered for that brand. The old generator is still there as "Quick package".
 - **Honest risk ratings.** A command's rating now comes from what it does, and the approval window says why. Commands that only read (such as `ollama list`) run without asking, instead of showing "85 HIGH RISK". Release Preflight asks once instead of twice.
+- **Jose plans as steps, and asks by what a step does (Jose redesign, phase 1).**
+  - **Several steps per agent, in the order they need:** a request can now give an agent more than one step, and each step waits only for the steps it needs. A plan whose steps wait for each other, or need a step that isn't there, is refused before anything runs, with the reason.
+  - **Approval by effect, not by words:** each step says what it does (read, create new files, change project files, run code, spend, publish or send, delete). Jose no longer holds a task because its description contains "publish" or "post", and no longer approves a risky step himself.
+  - **Settings → General → What asks first:** a switch per kind of action. Spend, publish and delete always ask, even with Approval Mode off.
+  - **Commands that delete now always ask.** AI-planned commands such as `git reset --hard` or `ollama rm` used to run without asking.
+  - **One permission table for all 9 agents**, which Project Execution's capability matrix and the Hector desk now show (they used to show unenforced lists, for 6 agents).
+  - **Agent profiles say what each agent really does:** Marcus distributes, Maria reviews governance, risk and quality, Miya also creates content and front-end drafts, Hector finds facts and sources, Sentinel covers security only; the "Hermes" and "OpenFang" runtime labels are gone.
 - **The Operator Dashboard is a developer tool.** It is hidden unless you turn on Settings → Desktop & UI → Developer mode.
 - **Local Voice OS answers.** It used to cut what you said into 1.5-second pieces, and the silence after a question cancelled its answer, so it never replied. It now waits for you to finish speaking, answers once, uses the model and Ollama address you chose, and shows which agent answered.
 - **Download models from Chat's picker with your own Ollama.** Pulling a model failed when Ollama was started outside Alphonso; it now goes through the app's backend, with progress.

@@ -1,3 +1,6 @@
+// Descriptive vocabulary only. What this agent may really do is enforced by
+// the one permission table, src/services/jose/agentPermissionTable.ts
+// (2026-10-23); the screens show that table.
 export const NOVA_ALLOWED_ACTIONS = [
   'opportunity_scoring',
   'risk_value_analysis',

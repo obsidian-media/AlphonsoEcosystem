@@ -15,6 +15,8 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
+import { inferEffects, stepEffectsToWaitFor, type JoseEffect } from './jose/joseEffects';
+import { legacyNeeds } from './jose/stepGraph';
 
 const COMMAND_KEY = 'alphonso_jose_command_routes_v2';
 const SETTINGS_KEY = 'alphonso_settings';
@@ -75,6 +77,12 @@ export interface JoseCommandPolicy {
 
 export interface JoseCommandAssignment {
   agent: string;
+  /** The step's id in the plan (2026-10-23): the agent, or agent-2, … for repeats, unless the caller names it. */
+  stepId?: string;
+  /** What the step does; decides approval. Inferred from actionType unless given. */
+  effects?: JoseEffect[];
+  /** Step ids this step waits for. The splitter's fixed agent order unless given. */
+  needs?: string[];
   title: string;
   rationale: string;
   actionType: string;
@@ -596,7 +604,23 @@ export async function createJoseCommandRoute({ commandText, source = 'user', zer
     trust: TRUST_STATES.TEMPORARY
   };
 
-  const routed = assignments.map((assignment) => {
+  // Every assignment becomes a step: an id, its effects and what it needs (2026-10-23).
+  const seen: Record<string, number> = {};
+  const steps = assignments.map((assignment) => {
+    seen[assignment.agent] = (seen[assignment.agent] || 0) + 1;
+    const stepId = assignment.stepId || (seen[assignment.agent] === 1 ? assignment.agent : `${assignment.agent}-${seen[assignment.agent]}`);
+    const effects = Array.isArray(assignment.effects) && assignment.effects.length > 0 ? assignment.effects : inferEffects(assignment.actionType);
+    return { ...assignment, stepId, effects };
+  });
+  const orderNeeds = legacyNeeds(steps.map((step) => ({ agent: step.agent, stepId: step.stepId })));
+  const stepped: JoseCommandAssignment[] = steps.map((step) => ({
+    ...step,
+    needs: Array.isArray(step.needs) ? step.needs : orderNeeds[step.stepId],
+    // A step asks first if one of its effects needs approval, or its task already asked.
+    requiresApproval: stepEffectsToWaitFor(step.effects).length > 0 || Boolean(step.requiresApproval),
+  }));
+
+  const routed = stepped.map((assignment) => {
     const packet = createAgentPacket({
       fromAgent: AGENTS.JOSE,
       toAgent: assignment.agent,
@@ -621,7 +645,8 @@ export async function createJoseCommandRoute({ commandText, source = 'user', zer
       actionType: assignment.actionType,
       commandPreview: assignment.commandPreview,
       fileChangePreview: 'No file changes are executed by routing. Agent must report back to Jose.',
-      rollbackAvailable: false
+      rollbackAvailable: false,
+      effects: assignment.effects
     });
     recordOrchestrationQueueTransition({
       commandId: command.id,

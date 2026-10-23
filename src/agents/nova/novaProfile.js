@@ -5,7 +5,7 @@ export const NOVA_PROFILE = {
   name: 'Nova',
   title: 'Opportunity Analysis Agent',
   role: 'opportunity',
-  purpose: 'Score opportunities for value, timing, effort, and risk to prioritize work.',
+  purpose: 'Judge value, priority and timing: score opportunities for value, effort and risk to decide what to do first and when.',
   accentColor: 'violet',
   visualIdentity: 'opportunity_intelligence',
   personality: 'analytical optimistic prioritization-focused',
@@ -19,6 +19,7 @@ export const NOVA_PROFILE = {
     'timing estimation'
   ],
   limitations: [
+    'does not run code or commands (Alphonso does)',
     'cannot execute actions directly',
     'cannot bypass approval controls',
     'cannot publish or send externally'

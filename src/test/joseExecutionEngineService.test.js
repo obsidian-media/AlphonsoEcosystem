@@ -462,9 +462,9 @@ describe('dependency-aware execution', () => {
     expect(lastCall[2]).toHaveProperty('summary');
   });
 
-  it('passes priorOutputs to executeAssignmentWithRetries', async () => {
-    mockGetPriorOutputs.mockReturnValue({ hector: { summary: 'research context' } });
-
+  // Since 2026-10-23 the plan is a step graph: each step gets the outputs of
+  // the steps it needs (jose/joseStepOutputs), not getPriorOutputs/buildExecutionPlan.
+  it('stores each step’s output for the steps that need it', async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: create a creative package about space exploration',
       source: 'user',
@@ -473,28 +473,24 @@ describe('dependency-aware execution', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(mockGetPriorOutputs).toHaveBeenCalled();
+    const executed = result.executionReceipts.filter((r) => r.status === 'executed');
+    expect(executed.length).toBeGreaterThan(0);
+    const stepOutputs = JSON.parse(localStorage.getItem('alphonso_jose_step_outputs_v1') || '{}');
+    expect(Object.keys(stepOutputs[result.commandId]?.steps || {}).length).toBe(executed.length);
   });
 
-  it('uses buildExecutionPlan to determine execution order', async () => {
-    const planSpy = vi.fn((assignments) => {
-      if (!Array.isArray(assignments) || assignments.length === 0) return { waves: [], assignmentMap: {} };
-      const assignmentMap = {};
-      for (const a of assignments) {
-        if (a.agent) assignmentMap[a.agent] = a;
-      }
-      return { waves: [Object.keys(assignmentMap)], assignmentMap };
-    });
-    mockBuildExecutionPlan.mockImplementation(planSpy);
-
+  it('runs steps in the order of the step graph', async () => {
+    const waves = [];
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: verify local runtime package',
       source: 'user',
-      zeroCostMode: true
+      zeroCostMode: true,
+      onProgress: (event) => { if (event.stage === 'wave_start') waves.push(event.steps); }
     });
 
     expect(result.ok).toBe(true);
-    expect(planSpy).toHaveBeenCalled();
+    expect(waves.length).toBeGreaterThan(0);
+    expect(waves.flat().length).toBe(result.command.assignments.length);
   });
 
   it('Miya executor receives Hector research as context when priorOutputs available', async () => {

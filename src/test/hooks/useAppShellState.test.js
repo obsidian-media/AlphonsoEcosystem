@@ -520,6 +520,18 @@ describe('useAppShellState', () => {
       expect(result.current.approvalPending).toBeNull();
     });
 
+    // Spend, publish and delete are locked: they ask even with Approval Mode off (2026-10-23).
+    it('asks a locked question even with Approval Mode off', async () => {
+      const { result } = renderHook(() => useAppShellState(withApprovalMode(false)));
+      let pending;
+      act(() => {
+        pending = result.current.requestApproval({ actionLabel: 'Delete: git reset --hard', requireApproval: true, alwaysAsk: true });
+      });
+      expect(result.current.approvalPending).toEqual(expect.objectContaining({ actionLabel: 'Delete: git reset --hard' }));
+      act(() => { result.current.approvalResolveRef.current(false); });
+      await expect(pending).resolves.toBe(false);
+    });
+
     it('honors Approval Mode off even when requireApproval is true', async () => {
       const { result } = renderHook(() => useAppShellState(withApprovalMode(false)));
       await expect(result.current.requestApproval({ actionLabel: 'x', requireApproval: true })).resolves.toBe(true);

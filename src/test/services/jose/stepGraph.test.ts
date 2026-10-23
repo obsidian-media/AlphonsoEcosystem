@@ -1,0 +1,74 @@
+import { describe, it, expect } from 'vitest';
+import { JOSE_LIMITS, checkPlan, buildStepWaves, legacyNeeds, type PlanStep } from '../../../services/jose/stepGraph';
+
+const step = (stepId: string, agent: string, actionType: string, needs: string[] = [], effects: PlanStep['effects'] = ['read']): PlanStep =>
+  ({ stepId, agent, actionType, needs, effects });
+
+describe('stepGraph', () => {
+  it('has the limits from the design', () => {
+    expect(JOSE_LIMITS).toEqual({ maxSteps: 50, normalMs: 1_800_000, projectMs: 7_200_000, maxFixRounds: 2 });
+  });
+
+  it('lets one agent have several steps, in order', () => {
+    const steps = [step('script', 'miya', 'creative_script', [], ['write_own_work']), step('revise', 'miya', 'creative_script', ['script'], ['write_own_work'])];
+    expect(checkPlan(steps)).toEqual({ ok: true, problems: [] });
+    expect(buildStepWaves(steps)).toEqual([['script'], ['revise']]);
+  });
+
+  it('runs steps as soon as what they need is done', () => {
+    const steps = [
+      step('a', 'hector', 'research'),
+      step('b', 'nova', 'analysis_x', ['a']),
+      step('c', 'maria', 'audit_x', ['a']),
+      step('d', 'jose', 'orchestration_review', ['b', 'c']),
+    ];
+    expect(buildStepWaves(steps)).toEqual([['a'], ['b', 'c'], ['d']]);
+  });
+
+  it('rejects steps that wait for each other', () => {
+    const result = checkPlan([step('a', 'hector', 'research', ['b']), step('b', 'nova', 'analysis_x', ['a'])]);
+    expect(result.ok).toBe(false);
+    expect(result.problems.join(' ')).toMatch(/cycle/i);
+    expect(() => buildStepWaves([step('a', 'hector', 'research', ['b']), step('b', 'nova', 'analysis_x', ['a'])])).toThrow();
+  });
+
+  it('rejects a step that needs a missing step, naming it', () => {
+    const result = checkPlan([step('a', 'hector', 'research', ['ghost'])]);
+    expect(result.problems.join(' ')).toMatch(/ghost/);
+  });
+
+  it('rejects running code by anyone but Alphonso', () => {
+    const result = checkPlan([step('a', 'miya', 'creative_x', [], ['run'])]);
+    expect(result.problems.join(' ')).toMatch(/only Alphonso/);
+  });
+
+  it('rejects publishing by anyone but Marcus', () => {
+    const result = checkPlan([step('a', 'hector', 'research', [], ['publish_or_send'])]);
+    expect(result.problems.join(' ')).toMatch(/only Marcus/);
+  });
+
+  it('rejects unknown agents, task types an agent may not do, and duplicate ids', () => {
+    expect(checkPlan([step('a', 'ghost', 'research')]).problems.join(' ')).toMatch(/unknown agent/i);
+    expect(checkPlan([step('a', 'miya', 'research')]).problems.join(' ')).toMatch(/may not do "research"/);
+    expect(checkPlan([step('a', 'hector', 'research'), step('a', 'nova', 'analysis_x')]).problems.join(' ')).toMatch(/twice/);
+  });
+
+  it("can leave task types to the run-time check (the splitter's plans)", () => {
+    const plan = [step('a', 'jose', 'boardroom_planning', [], ['write_own_work'])];
+    expect(checkPlan(plan).ok).toBe(false);
+    expect(checkPlan(plan, { taskTypes: false })).toEqual({ ok: true, problems: [] });
+    expect(checkPlan([step('a', 'miya', 'creative_x', [], ['run'])], { taskTypes: false }).ok).toBe(false);
+  });
+
+  it('rejects more than 50 steps', () => {
+    const many = Array.from({ length: 51 }, (_, i) => step(`s${i}`, 'hector', 'research'));
+    expect(checkPlan(many).problems.join(' ')).toMatch(/50/);
+  });
+
+  it("keeps today's order for the splitter's tasks", () => {
+    const needs = legacyNeeds([{ agent: 'hector', stepId: 'hector' }, { agent: 'miya', stepId: 'miya' }, { agent: 'echo', stepId: 'echo' }]);
+    expect(needs.miya).toEqual(['hector']);
+    expect(needs.echo.sort()).toEqual(['hector', 'miya']);
+    expect(needs.hector).toEqual([]);
+  });
+});

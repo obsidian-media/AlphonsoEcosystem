@@ -27,7 +27,11 @@ import { classifyMissionRoomRisk, redactMissionRoomSecrets } from './missionRoom
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { persistScopeRows } from './runtimeLedgerService';
-import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutputStoreService';
+import { setAgentOutput } from './agentOutputStoreService';
+import { checkPlan, buildStepWaves, JOSE_LIMITS } from './jose/stepGraph';
+import { createJoseRequest, updateJoseStep, setJoseRequestStatus } from './jose/joseRequestStore';
+import { setStepOutput, priorOutputsForNeeds } from './jose/joseStepOutputs';
+import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
@@ -64,8 +68,42 @@ import { agentCache } from './cacheService';
 // Loop-guard / execution budget ceilings for a single pipeline run.
 // See ALPHONSOTOTHEMOON.md §3.1 — prevents a malformed command graph or a
 // stuck agent from spinning unbounded iterations or wall-clock time.
-const PIPELINE_MAX_ASSIGNMENTS = 50;
-const PIPELINE_MAX_DURATION_MS = 5 * 60 * 1000;
+// Since 2026-10-23 the limits are Jose's plan limits (jose/stepGraph.ts):
+// 50 steps, 30 minutes for a normal request.
+const PIPELINE_MAX_ASSIGNMENTS = JOSE_LIMITS.maxSteps;
+const PIPELINE_MAX_DURATION_MS = JOSE_LIMITS.normalMs;
+
+const STEP_STATUS_BY_RECEIPT: Record<string, string> = {
+  executed: 'done',
+  approval_required: 'waiting_approval',
+  sentinel_blocked: 'failed',
+  failed: 'failed',
+  dead_letter: 'failed',
+  not_run: 'not_run',
+};
+
+/** Save each step's final status on the request (jose/joseRequestStore). Never breaks the run. */
+function recordStepOutcomes(requestId: string, assignments: any[], receipts: any[], cutShort: boolean): void {
+  try {
+    const statuses: string[] = [];
+    for (const assignment of assignments) {
+      const receipt = receipts.find((r) => r.packetId && r.packetId === assignment.packetId);
+      const status = receipt ? (STEP_STATUS_BY_RECEIPT[receipt.status] || 'failed') : 'not_run';
+      statuses.push(status);
+      updateJoseStep(requestId, assignment.stepId, {
+        status,
+        endedAtMs: timestampMs(),
+        ...(receipt?.reason ? { error: String(receipt.reason) } : {}),
+      });
+    }
+    const requestStatus = cutShort || statuses.includes('failed')
+      ? 'failed'
+      : statuses.includes('waiting_approval') ? 'waiting_approval' : 'done';
+    setJoseRequestStatus(requestId, requestStatus);
+  } catch {
+    // The request record is a display aid; the run's own result stands.
+  }
+}
 
 export function isJoseIntakeCommand(text) {
   return /^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(String(text || '').trim());
@@ -1304,7 +1342,45 @@ export async function runJoseCommandExecutionPipeline({
 
   const novaHints = getDecompositionHints(command.id);
 
-  const { waves, assignmentMap }: any = buildExecutionPlan(command.assignments || []);
+  // The plan as a step graph (2026-10-23): check it, then run each step as
+  // soon as the steps it needs are done. The splitter's plans leave task types
+  // to the per-step contract check below, as before.
+  const planAssignments: any[] = command.assignments || [];
+  const planSteps = planAssignments.map((a) => ({
+    stepId: a.stepId, agent: a.agent, actionType: a.actionType, effects: a.effects || [], needs: a.needs || [],
+  }));
+  const planCheck = checkPlan(planSteps, { taskTypes: explicitAssignments });
+  if (!planCheck.ok) {
+    for (const a of planAssignments) {
+      if (a.packetId) updatePacketStatus(a.packetId, 'failed', { failureReason: `Plan refused: ${planCheck.problems.join(' ')}` });
+    }
+    appendOrchestrationReceipt({
+      workflowId: 'jose_execution_pipeline',
+      commandId: command.id,
+      packetId: null,
+      eventType: 'plan_rejected',
+      status: 'plan_rejected',
+      agent: AGENTS.JOSE,
+      actionType: 'orchestration_plan_check',
+      riskLevel: 'medium',
+      approved: false,
+      blocked: true,
+      setupRequired: false,
+      details: { problems: planCheck.problems },
+      confidence: TRUST_STATES.FAILED,
+      verificationState: TRUST_STATES.FAILED
+    });
+    onProgress?.({ stage: 'plan_rejected', problems: planCheck.problems, commandId: command.id });
+    return { ok: false, reason: 'plan_rejected', problems: planCheck.problems, commandId: command.id, executedCount: 0, pendingApprovalCount: 0, failedCount: 0, executionReceipts: [], command };
+  }
+  const waves = buildStepWaves(planSteps);
+  const assignmentMap: Record<string, any> = Object.fromEntries(planAssignments.map((a) => [a.stepId, a]));
+  let joseRequestId: string | null = null;
+  try {
+    joseRequestId = createJoseRequest({ commandId: command.id, source, text: commandText, kind: 'normal', steps: planSteps }).id;
+  } catch {
+    joseRequestId = null;
+  }
 
   // Loop-guard + budget: hard ceiling on a single pipeline run so a malformed
   // command graph or a stuck agent can never spin unbounded iterations or
@@ -1315,19 +1391,39 @@ export async function runJoseCommandExecutionPipeline({
 
   waveLoop:
   for (const [waveIndex, wave] of waves.entries()) {
-    const waveAssignments: any[] = wave.map((agent) => assignmentMap[agent]).filter(Boolean);
-    onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: wave, commandId: command.id });
+    const waveAssignments: any[] = wave.map((stepId) => assignmentMap[stepId]).filter(Boolean);
+    onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: waveAssignments.map((a) => a.agent), steps: wave, commandId: command.id });
     for (const assignment of waveAssignments) {
       if (processedAssignmentCount >= PIPELINE_MAX_ASSIGNMENTS || (timestampMs() - pipelineStartMs) >= PIPELINE_MAX_DURATION_MS) {
         budgetExceeded = true;
         break waveLoop;
       }
       processedAssignmentCount += 1;
+      if (joseRequestId) {
+        try { updateJoseStep(joseRequestId, assignment.stepId, { status: 'running', startedAtMs: timestampMs() }); } catch { /* display aid only */ }
+      }
 
       const packet: any = getPacketById(assignment.packetId);
       if (!packet) {
         failedCount += 1;
         continue;
+      }
+
+      // In an explicit plan a step runs only once every step it needs is done
+      // (2026-10-23). The splitter's plans keep today's behaviour (a step runs
+      // even if an earlier one failed) until the planner phase.
+      if (explicitAssignments) {
+        const unfinished = (assignment.needs || []).filter((need) => {
+          const needed = assignmentMap[need];
+          return !executionReceipts.some((r) => needed && r.packetId === needed.packetId && r.status === 'executed');
+        });
+        if (unfinished.length > 0) {
+          const reason = `Not run: waits for ${unfinished.map((n) => `"${n}"`).join(', ')}, which did not finish.`;
+          updatePacketStatus(assignment.packetId, 'failed', { failureReason: reason, retryable: false });
+          executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'not_run', reason });
+          onProgress?.({ stage: 'step_not_run', assignment, packetId: assignment.packetId, reason });
+          continue;
+        }
       }
 
       if (isBlockedByZeroCostMode(packet, assignment)) {
@@ -1479,7 +1575,7 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       if (isRiskyAssignment(assignment) && previewMode) {
-        const previewPriorOutputs = getPriorOutputs(command.id, assignment.agent);
+        const previewPriorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
         const previewContent = buildPreviewContent(previewPriorOutputs);
         pendingApprovalCount += 1;
         executionReceipts.push({
@@ -1517,6 +1613,42 @@ export async function runJoseCommandExecutionPipeline({
           blocked: true,
           setupRequired: false,
           details: { reason: 'risky_assignment' },
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        continue;
+      }
+
+      // A step whose effects need the user's approval waits for it; Jose never
+      // approves those himself (2026-10-23). Resumed by executeApprovedPackets.
+      const effectsToWaitFor = Array.isArray(assignment.effects) ? stepEffectsToWaitFor(assignment.effects) : [];
+      if (effectsToWaitFor.length > 0 && packet.status !== 'approved') {
+        const reason = `Waiting for your approval: ${effectsToWaitFor.map((e) => EFFECT_LABELS[e]).join(', ')}.`;
+        pendingApprovalCount += 1;
+        updatePacketStatus(assignment.packetId, 'pending_approval', {
+          policyReason: reason,
+          verificationState: TRUST_STATES.PENDING
+        });
+        executionReceipts.push({
+          packetId: assignment.packetId,
+          agent: assignment.agent,
+          status: 'approval_required',
+          reason
+        });
+        onProgress?.({ stage: 'approval_required', assignment, packetId: assignment.packetId, reason });
+        appendOrchestrationReceipt({
+          workflowId: 'jose_execution_pipeline',
+          commandId: command.id,
+          packetId: assignment.packetId,
+          eventType: 'assignment_pending_approval',
+          status: 'pending_approval',
+          agent: AGENTS.JOSE,
+          actionType: assignment.actionType,
+          riskLevel: assignment.riskLevel || 'high',
+          approved: false,
+          blocked: true,
+          setupRequired: false,
+          details: { reason: 'effect_approval', effects: effectsToWaitFor },
           confidence: TRUST_STATES.VERIFIED,
           verificationState: TRUST_STATES.PENDING
         });
@@ -1600,7 +1732,8 @@ export async function runJoseCommandExecutionPipeline({
         continue;
       }
 
-      const priorOutputs = getPriorOutputs(command.id, assignment.agent);
+      // The outputs of the steps this step needs, keyed by agent as agents read them.
+      const priorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
       const taskResult: any = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory });
 
       if (!taskResult.ok) {
@@ -1651,13 +1784,16 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       const result: any = taskResult.result;
-      setAgentOutput(command.id, assignment.agent, {
+      const stepOutput = {
         summary: result.summary,
         resultState: result.resultState || 'pending_review',
         artifacts: result.artifacts || [],
         sources: result.sources || [],
         contractAction: result.contractAction || assignment.actionType
-      });
+      };
+      // By agent (that agent's latest step, as before) and by step.
+      setAgentOutput(command.id, assignment.agent, stepOutput);
+      setStepOutput(command.id, assignment.stepId, assignment.agent, stepOutput);
       if (assignment.agent === AGENTS.NOVA) {
         const novaScore = extractNovaScore(result);
         if (novaScore) {
@@ -1740,6 +1876,7 @@ export async function runJoseCommandExecutionPipeline({
       verificationState: TRUST_STATES.FAILED
     });
     onProgress?.({ stage: 'pipeline_budget_exceeded', processedAssignmentCount, commandId: command.id });
+    if (joseRequestId) recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, true);
     return {
       ok: false,
       reason: 'budget_exceeded',
@@ -1750,6 +1887,8 @@ export async function runJoseCommandExecutionPipeline({
       command
     };
   }
+
+  if (joseRequestId) recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
 
   const confirmationText = pendingApprovalCount > 0
     ? `Jose executed ${executedCount} task(s); ${pendingApprovalCount} task(s) are waiting for approval.`

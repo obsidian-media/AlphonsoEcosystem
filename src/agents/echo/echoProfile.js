@@ -20,6 +20,7 @@ export const ECHO_PROFILE = {
     'audit trail maintenance'
   ],
   limitations: [
+    'does not run code or commands (Alphonso does)',
     'cannot execute external actions',
     'cannot publish or message externally',
     'cannot bypass approval controls',

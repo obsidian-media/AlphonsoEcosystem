@@ -53,6 +53,7 @@ import { openExternalUrl } from '../services/browserAutomationService';
 import { ComfyUiModelPicker } from './ComfyUiModelPicker';
 import { ComfyUiInstallPicker } from './ComfyUiInstallPicker';
 import { BridgesPanel } from './BridgesPanel';
+import { DEFAULT_EFFECT_APPROVALS, EFFECT_LABELS, JOSE_EFFECTS, LOCKED_EFFECTS, type JoseEffect } from '../services/jose/joseEffects';
 import { getComfyUiEndpoint, setComfyUiEndpoint, DEFAULT_COMFYUI_ENDPOINT } from '../services/connectors/comfyUiEndpoint.js';
 
 interface MemoryItem {
@@ -521,6 +522,8 @@ interface AppSettings {
   localOnlyMode?: boolean;
   zeroCostMode?: boolean;
   approvalMode?: boolean;
+  /** Settings → Approvals: which kinds of action ask first (jose/joseEffects.ts). */
+  effectApprovals?: Partial<Record<JoseEffect, boolean>>;
   safeMode?: boolean;
   privacyShieldActive?: boolean;
   miyaCompanionPinned?: boolean;
@@ -533,6 +536,57 @@ interface AppSettings {
   colorScheme?: string;
   idleTimeoutMinutes?: number;
   [key: string]: unknown;
+}
+
+/**
+ * Settings → Approvals (Jose redesign, 2026-10-23): one row per kind of action.
+ * Steps whose effects ask wait for you before they start; running code is
+ * asked per command (read-only commands never ask). Spend, publish and delete
+ * are locked to always ask, even with Approval Mode off.
+ */
+const EFFECT_NOTES: Partial<Record<JoseEffect, string>> = {
+  run: 'Asked per command; read-only commands never ask.',
+  write_own_work: 'New files only, inside the project folder.',
+};
+
+function EffectApprovalsTable({ settings, setSettings }: { settings: AppSettings; setSettings: (s: AppSettings) => void }) {
+  const saved = (settings.effectApprovals && typeof settings.effectApprovals === 'object' ? settings.effectApprovals : {}) as Partial<Record<JoseEffect, boolean>>;
+  const approvalMode = settings.approvalMode !== false;
+  return (
+    <div className="p-4 bg-(--surface-2) rounded-2xl">
+      <div className="text-sm font-semibold text-(--text-1)">What asks first</div>
+      <div className="text-[11px] text-(--text-3) mt-0.5">Jose and the agents wait for you before doing these.</div>
+      {!approvalMode && (
+        <div className="text-[11px] text-(--warning) mt-2">Approval Mode is off: only the locked ones ask.</div>
+      )}
+      <div className="mt-3 space-y-2">
+        {JOSE_EFFECTS.map((effect) => {
+          const locked = LOCKED_EFFECTS.includes(effect);
+          const on = locked ? true : (typeof saved[effect] === 'boolean' ? Boolean(saved[effect]) : DEFAULT_EFFECT_APPROVALS[effect]);
+          const disabled = locked || !approvalMode;
+          const note = locked ? 'Always asks' : EFFECT_NOTES[effect];
+          return (
+            <div key={effect} className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs text-(--text-1)">{EFFECT_LABELS[effect]}</div>
+                {note && <div className="text-[10px] text-(--text-3)">{note}</div>}
+              </div>
+              <button
+                role="switch"
+                aria-checked={on}
+                aria-label={`Ask before: ${EFFECT_LABELS[effect]}`}
+                disabled={disabled}
+                onClick={() => setSettings({ ...settings, effectApprovals: { ...saved, [effect]: !on } })}
+                className={`w-10 h-5 shrink-0 rounded-full transition-colors relative ${on ? 'bg-(--warning)' : 'bg-(--surface-3)'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${on ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 const SETTINGS_SECTIONS = [
@@ -1186,6 +1240,7 @@ export function SettingsView({
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.approvalMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
+          <EffectApprovalsTable settings={settings} setSettings={setSettings} />
           <div className="flex items-center justify-between p-4 bg-(--surface-2) rounded-2xl">
             <div>
               <div className="text-sm font-semibold text-(--text-1)">Safe Mode</div>
