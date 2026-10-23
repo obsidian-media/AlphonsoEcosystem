@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Jose runs plans as step graphs (2026-10-23): several steps per agent, each
 // waiting only for the steps it needs, approval decided by declared effects.
@@ -98,6 +98,7 @@ import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
+import { setPlanAdapterForTests } from '../../../services/jose/joseAdapt';
 import { getJoseRequest, createWaitingPlanRequest, claimPlanForRun, listJoseRequests } from '../../../services/jose/joseRequestStore';
 
 function step(agent, actionType, extra = {}) {
@@ -307,5 +308,46 @@ describe('Jose runs plans as step graphs', () => {
     setAgentProvider('nova', { provider: 'ollama' });
     expect(result.failedCount).toBe(1);
     expect(String(result.executionReceipts[0].reason)).not.toMatch(/and with/);
+  });
+
+  // Phase 4: the plan can grow while it runs.
+  describe('a plan that grows while it runs', () => {
+    afterEach(() => setPlanAdapterForTests(null));
+
+    it('runs a step added after another step finished, and logs why', async () => {
+      let added = false;
+      setPlanAdapterForTests(async ({ justRan }) => {
+        if (added || !justRan.includes('a')) return [];
+        added = true;
+        return [{ add: [{ stepId: 'extra', agent: 'nova', actionType: 'analysis_extra', effects: ['read'], needs: ['a'], instruction: 'Check one more thing.' }], reason: 'Nova checks one more thing.' }];
+      });
+      const result = await run([step('hector', 'research_report', { stepId: 'a', effects: ['read'] })]);
+      // The added step has no content-factory payload, so Nova's own executor runs it.
+      expect(result.executionReceipts.map((r) => [r.agent, r.status])).toEqual([['hector', 'executed'], ['nova', 'executed']]);
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      expect(request.steps.map((s) => [s.stepId, s.status])).toEqual([['a', 'done'], ['extra', 'done']]);
+      expect(request.changeLog.map((c) => c.text)).toContain('Nova checks one more thing.');
+    });
+
+    it('refuses a change that breaks the rules, and still finishes', async () => {
+      setPlanAdapterForTests(async ({ justRan }) => (justRan.includes('a')
+        ? [{ add: [{ stepId: 'bad', agent: 'miya', actionType: 'creative_x', effects: ['run'], needs: ['a'] }], reason: 'Miya runs something.' }]
+        : []));
+      const result = await run([step('hector', 'research_report', { stepId: 'a', effects: ['read'] })]);
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      expect(request.steps.map((s) => s.stepId)).toEqual(['a']);
+      expect(request.changeLog.map((c) => c.text).join(' ')).toMatch(/^Not added: .*only Alphonso/);
+      expect(request.status).toBe('done');
+    });
+
+    it('refuses growth past the step limit', async () => {
+      setPlanAdapterForTests(async ({ justRan }) => (justRan.includes('a')
+        ? [{ add: Array.from({ length: 50 }, (_, i) => ({ stepId: `n${i}`, agent: 'nova', actionType: 'analysis_x', effects: ['read'], needs: ['a'] })), reason: 'Too many.' }]
+        : []));
+      const result = await run([step('hector', 'research_report', { stepId: 'a', effects: ['read'] })]);
+      const request = getJoseRequest(`jose-request-${result.commandId}`);
+      expect(request.steps).toHaveLength(1);
+      expect(request.changeLog.map((c) => c.text).join(' ')).toMatch(/Not added: .*50/);
+    });
   });
 });

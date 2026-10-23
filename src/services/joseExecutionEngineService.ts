@@ -13,6 +13,8 @@ import {
   confirmJoseCommand,
   createAgentReportToJose,
   createJoseCommandRoute,
+  createStepPacket,
+  appendCommandAssignments,
   listJoseCommands
 } from './joseCommandRouterService';
 import { pushMemoryItem, listMemoryItems } from './memoryService';
@@ -28,9 +30,13 @@ import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput } from './agentOutputStoreService';
-import { checkPlan, buildStepWaves, JOSE_LIMITS } from './jose/stepGraph';
+import { checkPlan, JOSE_LIMITS } from './jose/stepGraph';
 import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus } from './jose/joseRequestStore';
-import { setStepOutput, priorOutputsForNeeds } from './jose/joseStepOutputs';
+import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
+import { adaptPlan, type PlanChange } from './jose/joseAdapt';
+import { rewireNeeds } from './jose/josePlanEdits';
+import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
+import type { PlanStep } from './jose/stepGraph';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
 import { listInstalledModels, pickLargerModel } from './jose/joseModels';
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
@@ -1244,6 +1250,23 @@ async function executeBoardroomAdvance(assignment: any, commandText: any, option
   }
 }
 
+const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'costEstimateUsd'];
+
+/** A routed assignment as a plan step, with every field Jose's adapters read (phase 4). */
+function toPlanStep(assignment: any): PlanStep {
+  const step: any = {
+    stepId: assignment.stepId,
+    agent: assignment.agent,
+    actionType: assignment.actionType,
+    effects: assignment.effects || [],
+    needs: assignment.needs || [],
+  };
+  for (const field of PLAN_STEP_FIELDS) {
+    if (assignment[field] !== undefined) step[field] = assignment[field];
+  }
+  return step as PlanStep;
+}
+
 /**
  * The text a step's executor works from (phase 2, 2026-10-23): a planned
  * step's instruction followed by the request. Alphonso always gets only the
@@ -1405,9 +1428,7 @@ export async function runJoseCommandExecutionPipeline({
   // soon as the steps it needs are done. The splitter's plans leave task types
   // to the per-step contract check below, as before.
   const planAssignments: any[] = command.assignments || [];
-  const planSteps = planAssignments.map((a) => ({
-    stepId: a.stepId, agent: a.agent, actionType: a.actionType, effects: a.effects || [], needs: a.needs || [],
-  }));
+  const planSteps: PlanStep[] = planAssignments.map(toPlanStep);
   const planCheck = checkPlan(planSteps, { taskTypes: explicitAssignments });
   if (!planCheck.ok) {
     for (const a of planAssignments) {
@@ -1432,7 +1453,6 @@ export async function runJoseCommandExecutionPipeline({
     onProgress?.({ stage: 'plan_rejected', problems: planCheck.problems, commandId: command.id });
     return { ok: false, reason: 'plan_rejected', problems: planCheck.problems, commandId: command.id, executedCount: 0, pendingApprovalCount: 0, failedCount: 0, executionReceipts: [], command };
   }
-  const waves = buildStepWaves(planSteps);
   const assignmentMap: Record<string, any> = Object.fromEntries(planAssignments.map((a) => [a.stepId, a]));
   let joseRequestId: string | null = null;
   try {
@@ -1453,8 +1473,64 @@ export async function runJoseCommandExecutionPipeline({
   let processedAssignmentCount = 0;
   let budgetExceeded = false;
 
+  // Run every step whose needs are done, then let Jose adapt the plan, and
+  // again until nothing is left (phase 4: the plan can grow while it runs).
+  const processedSteps = new Set<string>();
+  const statusOf = (stepId: string) => {
+    const packetId = assignmentMap[stepId]?.packetId;
+    return executionReceipts.find((r) => packetId && r.packetId === packetId)?.status || 'not_run';
+  };
+  const noteOnRequest = (text: string) => {
+    if (!joseRequestId) return;
+    try { appendRequestNote(joseRequestId, text); } catch { /* display aid only */ }
+  };
+  const applyPlanChange = (change: PlanChange) => {
+    let next: PlanStep[] = [...planSteps, ...change.add.map((step) => ({ ...step, needs: [...step.needs] }))];
+    if (change.rewire) next = rewireNeeds(next, change.rewire.from, change.rewire.to, [...processedSteps]);
+    if (next.length > JOSE_LIMITS.maxSteps) {
+      noteOnRequest(`Not added: the plan would have ${next.length} steps; the limit is ${JOSE_LIMITS.maxSteps}.`);
+      return;
+    }
+    const check = checkPlan(next, { taskTypes: explicitAssignments });
+    if (!check.ok) {
+      noteOnRequest(`Not added: ${check.problems[0]}`);
+      return;
+    }
+    const added = change.add.map((step) => createStepPacket(command, {
+      ...step,
+      title: `${step.agent} ${step.actionType}`,
+      rationale: change.reason,
+      riskLevel: 'low',
+      requiresApproval: stepEffectsToWaitFor(step.effects).length > 0,
+      commandPreview: step.instruction || '',
+      fragments: [],
+    } as any));
+    for (const assignment of added) {
+      planAssignments.push(assignment);
+      assignmentMap[assignment.stepId] = assignment;
+    }
+    appendCommandAssignments(command.id, added);
+    for (const step of next) {
+      if (assignmentMap[step.stepId]) assignmentMap[step.stepId].needs = step.needs;
+    }
+    planSteps.splice(0, planSteps.length, ...next);
+    if (joseRequestId) {
+      try {
+        addRequestSteps(joseRequestId, change.add, change.reason);
+        if (change.rewire) rewireRequestNeeds(joseRequestId, change.rewire.from, change.rewire.to, [...processedSteps]);
+      } catch { /* display aid only */ }
+    }
+  };
+  let waveIndex = 0;
+
   waveLoop:
-  for (const [waveIndex, wave] of waves.entries()) {
+  while (true) {
+    const knownIds = new Set(planSteps.map((step) => step.stepId));
+    const wave = planSteps
+      .filter((step) => !processedSteps.has(step.stepId) && step.needs.every((need) => processedSteps.has(need) || !knownIds.has(need)))
+      .map((step) => step.stepId);
+    if (wave.length === 0) break;
+    for (const stepId of wave) processedSteps.add(stepId);
     const waveAssignments: any[] = wave.map((stepId) => assignmentMap[stepId]).filter(Boolean);
     onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: waveAssignments.map((a) => a.agent), steps: wave, commandId: command.id });
     for (const assignment of waveAssignments) {
@@ -1916,6 +1992,17 @@ export async function runJoseCommandExecutionPipeline({
         verificationState: TRUST_STATES.VERIFIED
       });
     }
+
+    // Jose adapts the plan between waves (phase 4). A failing adapter never stops the run.
+    let changes: PlanChange[] = [];
+    try {
+      const done = Object.fromEntries([...processedSteps].map((stepId) => [stepId, { status: statusOf(stepId), output: getStepOutput(command.id, stepId) }]));
+      changes = await adaptPlan({ steps: [...planSteps], done, justRan: wave, requestText: commandText });
+    } catch {
+      changes = [];
+    }
+    for (const change of changes) applyPlanChange(change);
+    waveIndex += 1;
   }
 
   if (budgetExceeded) {
