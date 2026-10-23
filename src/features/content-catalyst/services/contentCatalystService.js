@@ -1,6 +1,6 @@
 import { generateOllamaResponse, getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../../../lib/ollama';
 import { checkComfyUiImage, generateComfyUiImage } from '../../../services/connectorRegistryService';
-import { publishMetaContent } from '../../../services/metaPublishService';
+import { publishPost } from '../../../services/contentFactory/publishPost';
 import { generateRunwayVideo } from '../../../services/runwayService';
 import { requireApproval } from '../../../services/approval/approvalService';
 import { getAccBridgeStatus, receiveACCResult, syncApprovalState, syncContentCatalystJob, syncProjectMemory } from '../../../services/agentWorkshop/accBridgeService';
@@ -691,30 +691,37 @@ export async function publishContent(job, { approved = false } = {}) {
     }, 'warning', 'Publish blocked pending approval.', { approval });
   }
 
-  const result = await publishMetaContent(job, {
-    approved: true,
-    platform: job.request?.platform || 'instagram',
-    caption: job.draft?.caption || job.draft?.hook || job.request?.idea || '',
-    message: job.draft?.caption || job.draft?.hook || job.request?.idea || '',
+  // Phase 3a: Content Studio posts through the same path as Miya Studio (publishPost):
+  // a local video file as a Reel, or a public image/video address.
+  const platform = ['youtube', 'instagram', 'facebook'].includes(job.request?.platform) ? job.request.platform : 'instagram';
+  const localFile = job.assets?.local_file_path || job.assets?.file_path || '';
+  const mediaUrl = job.assets?.video_url || job.assets?.image_url || '';
+  const posted = await publishPost({
+    id: job.id,
+    platform,
+    piece: 'reel',
+    file: localFile,
+    ...(localFile ? {} : { mediaUrl, mediaType: job.assets?.video_url ? 'video' : 'image' }),
     title: job.request?.idea || '',
-    imageUrl: job.assets?.image_url || '',
-    videoUrl: job.assets?.video_url || '',
-    localFilePath: job.assets?.local_file_path || job.assets?.file_path || '',
-    mediaType: job.request?.format || '',
-    requestId: job.request?.request_id || job.request_id || null,
-    jobId: job.id
-  });
+    caption: job.draft?.caption || job.draft?.hook || job.request?.idea || '',
+    hashtags: [],
+    scheduledAtMs: Date.now(),
+    status: 'approved'
+  }, {});
 
-  const postIds = Array.isArray(result?.postIds)
-    ? result.postIds
-    : Array.isArray(result?.post_ids)
-      ? result.post_ids
-      : [];
+  const published = posted.status === 'posted' || posted.status === 'scheduled';
   const normalizedResult = {
-    ...result,
-    postIds,
-    setup_required: Boolean(result?.setupRequired ?? result?.setup_required),
-    failureDetails: result?.failureDetails || result?.error || null
+    connectorId: platform === 'youtube' ? 'youtube' : 'meta',
+    platform,
+    ok: published || Boolean(posted.setupRequired),
+    published,
+    status: posted.status,
+    postIds: posted.platformId ? [posted.platformId] : [],
+    url: posted.link || null,
+    message: posted.reason || (published ? 'Posted.' : ''),
+    setup_required: Boolean(posted.setupRequired),
+    error: published ? null : posted.reason || null,
+    failureDetails: published ? null : posted.reason || null
   };
 
   await receiveACCResult({

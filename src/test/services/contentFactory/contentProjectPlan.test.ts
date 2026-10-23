@@ -4,10 +4,10 @@ import { checkPlan } from '../../../services/jose/stepGraph';
 import { STEP_AGENTS } from '../../../services/contentFactory/contentStepAgents';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief } from '../../../services/contentFactory/contentProjectService';
-import { CLIPS_WAIT, CONTENT_TEMPLATE_STEPS, REVIEW_WAIT, contentProjectPlanSteps } from '../../../services/contentFactory/contentProjectPlan';
+import { CLIPS_WAIT, CONTENT_TEMPLATE_STEPS, PUBLISH_WAIT, REVIEW_WAIT, contentProjectPlanSteps } from '../../../services/contentFactory/contentProjectPlan';
 
-// Phase 2a added voice, music, broll and assemble; phase 2b clips: 16 steps.
-const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'campaign', 'timing', 'quality', 'security'];
+// Phase 2a added voice, music, broll and assemble; phase 2b clips; phase 3a publish: 17 steps.
+const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'campaign', 'timing', 'quality', 'security', 'publish'];
 
 function newProject() {
   const brand = saveBrand({ name: 'My brand' });
@@ -36,6 +36,15 @@ describe('the Content video template', () => {
 });
 
 describe('contentProjectPlanSteps', () => {
+  // Phase 3a: Publish waits for you to approve the posts in Campaign Studio.
+  it('waits before publishing, pointing at the Posts list', () => {
+    const { brand, project } = newProject();
+    const publish = contentProjectPlanSteps(project, brand).find((s) => s.stepId === 'publish')!;
+    expect(publish.waitFor).toBe(PUBLISH_WAIT);
+    expect(PUBLISH_WAIT).toContain('Campaign Studio');
+    expect(publish.effects).toEqual(['publish_or_send']);
+  });
+
   it('carries the project and waits before scenes', () => {
     const { brand, project } = newProject();
     const steps = contentProjectPlanSteps(project, brand);
@@ -43,7 +52,7 @@ describe('contentProjectPlanSteps', () => {
     expect(steps.every((s) => s.contentStep?.projectId === project.id)).toBe(true);
     expect(steps.find((s) => s.stepId === 'research_market')!.contentStep!.step).toBe('research');
     // AI clips are on by default (main moments), so the clips step waits too (phase 2b).
-    expect(steps.filter((s) => s.waitFor).map((s) => [s.stepId, s.waitFor])).toEqual([['scenes', REVIEW_WAIT], ['clips', CLIPS_WAIT]]);
+    expect(steps.filter((s) => s.waitFor).map((s) => [s.stepId, s.waitFor])).toEqual([['scenes', REVIEW_WAIT], ['clips', CLIPS_WAIT], ['publish', PUBLISH_WAIT]]);
     expect(REVIEW_WAIT).toBe('Approve the review in Miya Studio first.');
     expect(checkPlan(steps, { taskTypes: true }).problems).toEqual([]);
   });
@@ -51,7 +60,7 @@ describe('contentProjectPlanSteps', () => {
   it('from a later step the plan starts there', () => {
     const { brand, project } = newProject();
     const steps = contentProjectPlanSteps(project, brand, 'scenes');
-    expect(steps.map((s) => s.stepId)).toEqual(['scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'campaign', 'timing', 'quality', 'security']);
+    expect(steps.map((s) => s.stepId)).toEqual(['scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'campaign', 'timing', 'quality', 'security', 'publish']);
     expect(steps[0]).toMatchObject({ needs: [] });
     expect(steps[0].waitFor).toBeUndefined();
     expect(checkPlan(steps, { taskTypes: true }).problems).toEqual([]);
@@ -65,7 +74,7 @@ describe('contentProjectPlanSteps', () => {
     expect(byId.broll).toMatchObject({ agent: 'hector', actionType: 'research_broll' });
     expect(byId.campaign.needs).toEqual(['assemble']);
     expect(byId.assemble.effects).toEqual(['write_own_work']);
-    expect(steps.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes', 'clips']);
+    expect(steps.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes', 'clips', 'publish']);
   });
 
   it("a step's plan alone drops links to steps that are not in it", () => {

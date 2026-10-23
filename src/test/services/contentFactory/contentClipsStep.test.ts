@@ -59,10 +59,10 @@ beforeEach(() => {
 
 // Miya content factory phase 2b: the AI clips step.
 describe('the clips step in the plan', () => {
-  it('sits after Stock clips, before the finished video; 16 template steps', () => {
+  it('sits after Stock clips, before the finished video; 17 template steps (with Publish, phase 3a)', () => {
     expect(STEP_ORDER.slice(STEP_ORDER.indexOf('broll'), STEP_ORDER.indexOf('assemble') + 1)).toEqual(['broll', 'clips', 'assemble']);
     const steps = getTemplate('content_video')!.steps;
-    expect(steps).toHaveLength(16);
+    expect(steps).toHaveLength(17);
     const byId = Object.fromEntries(steps.map((s) => [s.stepId, s]));
     expect(byId.clips).toMatchObject({ agent: 'miya', actionType: 'creative_video_clips', needs: ['scenes', 'broll'] });
     expect(byId.assemble.needs).toEqual(['voice', 'music', 'broll', 'clips']);
@@ -81,14 +81,14 @@ describe('the clips step in the plan', () => {
     setVideoSettings(project.id, { aiClips: 'none' });
     const off = contentProjectPlanSteps(getProject(project.id)!, brand, 'research', { clipEngine: 'local' });
     expect(off.find((s) => s.stepId === 'clips')!.waitFor).toBeUndefined();
-    expect(off.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes']);
+    expect(off.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes', 'publish']);
   });
 
   it('no stop when nothing can make clips on this computer (no video model, no Runway)', () => {
     const { brand, project } = setup();
     const steps = contentProjectPlanSteps(project, brand, 'research', { clipEngine: null });
     expect(steps.find((s) => s.stepId === 'clips')!.waitFor).toBeUndefined();
-    expect(steps.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes']);
+    expect(steps.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes', 'publish']);
   });
 
   it('older projects gain the clips step, not started', () => {

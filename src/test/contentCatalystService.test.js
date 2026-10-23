@@ -49,6 +49,7 @@ vi.mock('../services/runwayService', () => ({
 }));
 
 vi.mock('../services/metaPublishService', () => ({
+  publishMetaVideo: vi.fn(async () => ({ ok: true, status: 'posted', postId: 'reel_1', url: 'https://www.instagram.com/reel/r1' })),
   publishMetaContent: vi.fn(async () => ({
     ok: true,
     published: false,
@@ -67,7 +68,7 @@ vi.mock('../services/workspaceArtifactService', () => ({
 }));
 
 import { requireApproval } from '../services/approval/approvalService';
-import { publishMetaContent } from '../services/metaPublishService';
+import { publishMetaContent, publishMetaVideo } from '../services/metaPublishService';
 import { checkComfyUiImage, generateComfyUiImage } from '../services/connectorRegistryService';
 import { generateRunwayVideo } from '../services/runwayService';
 import { generateOllamaResponse, getConfiguredOllamaModel } from '../lib/ollama';
@@ -651,6 +652,20 @@ describe('publishContent', () => {
     const result = await publishContent(job, { approved: true });
     expect(result.status).toBe('failed');
     expect(result.error).toBe('Auth expired');
+  });
+
+  // Phase 3a: Content Studio posts through the same path as Miya Studio (publishPost).
+  it('posts a local video file as a Reel through the shared publishing path', async () => {
+    requireApproval.mockResolvedValueOnce({ ok: true });
+    const job = createContentJobFromBridgeRequest({ idea: 'Local reel', platform: 'instagram' });
+    job.assets = { local_file_path: 'D:/Videos/reel.mp4' };
+    job.draft = { caption: 'My caption' };
+    const result = await publishContent(job, { approved: true });
+    expect(publishMetaVideo).toHaveBeenCalledWith(expect.objectContaining({
+      platform: 'instagram', localFilePath: 'D:/Videos/reel.mp4', caption: 'My caption', approved: true,
+    }));
+    expect(result.status).toBe('published');
+    expect(result.publish).toMatchObject({ ok: true, published: true, postIds: ['reel_1'], url: 'https://www.instagram.com/reel/r1' });
   });
 });
 

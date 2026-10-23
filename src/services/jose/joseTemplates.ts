@@ -48,6 +48,8 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
       step('timing', 'nova', 'strategy_timing', 'Choose the best times to put the video out on each platform.', ['assemble']),
       step('quality', 'maria', 'audit_content_quality', 'Score every piece against the references before anything goes out.', ['campaign', 'timing']),
       step('security', 'sentinel', 'security_content_check', 'Check the text and links for anything unsafe or misleading.', ['campaign', 'timing']),
+      // Publishing (Miya content factory phase 3a): only the posts you approved in Campaign Studio.
+      step('publish', 'marcus', 'distribution_schedule_posts', 'Post or schedule the approved posts on YouTube, Instagram and Facebook at their times.', ['quality', 'security'], ['publish_or_send']),
     ],
   },
   {

@@ -86,6 +86,7 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   memory_preservation: ['write_own_work'],
   opportunity_analysis: ['read'],
   distribution_execution: ['publish_or_send'],
+  distribution_schedule_posts: ['publish_or_send'],
   orchestration_review: ['read'],
   boardroom_planning: ['write_own_work'],
   boardroom_execute: ['write_own_work'],

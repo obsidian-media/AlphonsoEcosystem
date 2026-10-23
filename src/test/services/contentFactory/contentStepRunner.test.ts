@@ -46,7 +46,7 @@ describe('runContentProject', () => {
     const args = submitted();
     expect(args).toMatchObject({ source: 'content-factory', label: PROJECT_LABEL, saveDecisions: false });
     expect(PROJECT_LABEL).toBe('Steps set by Miya Studio.');
-    expect(args.steps).toHaveLength(16);
+    expect(args.steps).toHaveLength(17);
     expect(args.text).toContain('Why we wait');
     expect(getProject(p.id)!.joseRequestId).toBe('jose-request-c1');
   });
@@ -129,10 +129,17 @@ describe('runContentStep', () => {
   it("every factory task passes Jose's execution gates", () => {
     for (const [step, agents] of Object.entries(STEP_AGENTS)) {
       for (const { agent, actionType } of agents) {
-        const gate = canExecutePacket({ toAgent: agent, actionType, commandPreview: CONTENT_TASK_PREVIEW, status: 'queued', requiresApproval: false } as never);
+        // Publishing (phase 3a) runs only once approved; every other task runs as queued.
+        const status = step === 'publish' ? 'approved' : 'queued';
+        const gate = canExecutePacket({ toAgent: agent, actionType, commandPreview: CONTENT_TASK_PREVIEW, status, requiresApproval: step === 'publish' } as never);
         expect(gate, `${step} ${agent} ${actionType}`).toEqual({ ok: true, reason: null });
       }
     }
+  });
+
+  it('publishing is refused until it is approved', () => {
+    const gate = canExecutePacket({ toAgent: 'marcus', actionType: 'distribution_schedule_posts', commandPreview: CONTENT_TASK_PREVIEW, status: 'queued', requiresApproval: false } as never);
+    expect(gate.ok).toBe(false);
   });
 });
 

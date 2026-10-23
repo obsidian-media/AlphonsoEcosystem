@@ -3,22 +3,26 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const uploadYouTube = vi.fn();
 const publishMetaVideo = vi.fn();
+const publishMetaContent = vi.fn();
 vi.mock('../../../services/connectors/connectorOutbound', () => ({ uploadYouTubeConnectorVideo: (...a: unknown[]) => uploadYouTube(...a) }));
-vi.mock('../../../services/metaPublishService', () => ({ publishMetaVideo: (...a: unknown[]) => publishMetaVideo(...a) }));
+vi.mock('../../../services/metaPublishService', () => ({
+  publishMetaVideo: (...a: unknown[]) => publishMetaVideo(...a),
+  publishMetaContent: (...a: unknown[]) => publishMetaContent(...a),
+}));
 
-import { publishPost } from '../../../services/contentFactory/publishPost';
+import { publishPost, type PublishablePost } from '../../../services/contentFactory/publishPost';
 import type { ProjectPost } from '../../../services/contentFactory/contentTypes';
 
 const NOW = new Date(2026, 9, 26, 10, 0).getTime();
 const HOUR = 3_600_000;
-const post = (patch: Partial<ProjectPost> = {}): ProjectPost => ({
+const post = (patch: Partial<PublishablePost> = {}): PublishablePost => ({
   id: 'post-1', platform: 'youtube', piece: 'video', file: 'acme/launch/output/video-16x9-v1.mp4',
   thumbnail: 'acme/launch/thumbnail/t2.png', title: 'Launch', caption: 'Watch this', hashtags: ['#ai', '#tools'],
   scheduledAtMs: NOW + 5 * HOUR, status: 'approved', ...patch,
 });
 const settings = { outputFolder: 'D:\\Content' };
 
-beforeEach(() => { uploadYouTube.mockReset(); publishMetaVideo.mockReset(); });
+beforeEach(() => { uploadYouTube.mockReset(); publishMetaVideo.mockReset(); publishMetaContent.mockReset(); });
 
 describe('publishPost: YouTube', () => {
   it('uploads with the scheduled time and thumbnail, already approved', async () => {
@@ -85,7 +89,7 @@ describe('publishPost: Meta', () => {
 
   it('missing keys or a refusal fail with the reason', async () => {
     publishMetaVideo.mockResolvedValue({ ok: false, status: 'setup_required', message: 'Add the Meta access token…' });
-    expect(await publishPost(post({ platform: 'instagram', piece: 'reel' }), settings, NOW)).toEqual({ status: 'failed', reason: 'Add the Meta access token…' });
+    expect(await publishPost(post({ platform: 'instagram', piece: 'reel' }), settings, NOW)).toEqual({ status: 'failed', reason: 'Add the Meta access token…', setupRequired: true });
   });
 });
 
@@ -94,4 +98,26 @@ it('without an output folder nothing is sent', async () => {
   expect(result.status).toBe('failed');
   expect(result.reason).toContain('output folder');
   expect(uploadYouTube).not.toHaveBeenCalled();
+});
+
+// Content Studio's posts (phase 3a): a full path on this computer, or a public media address.
+describe('publishPost: Content Studio', () => {
+  it('a full path is used as it is, with no output folder needed', async () => {
+    publishMetaVideo.mockResolvedValue({ ok: true, status: 'posted', postId: 'm1' });
+    await publishPost(post({ platform: 'instagram', piece: 'reel', file: 'D:/Videos/reel.mp4', scheduledAtMs: NOW }), { outputFolder: '' }, NOW);
+    expect(publishMetaVideo.mock.calls[0][0].localFilePath).toBe('D:/Videos/reel.mp4');
+  });
+
+  it('a public image or video address goes through the address path', async () => {
+    publishMetaContent.mockResolvedValue({ ok: true, published: true, postIds: ['p9'], url: 'https://www.instagram.com/p/9' });
+    const result = await publishPost(post({ platform: 'instagram', piece: 'reel', file: '', mediaUrl: 'https://cdn.example/x.jpg', mediaType: 'image', caption: 'Hi', hashtags: [] }), { outputFolder: '' }, NOW);
+    expect(publishMetaContent).toHaveBeenCalledWith({}, expect.objectContaining({ approved: true, platform: 'instagram', caption: 'Hi', imageUrl: 'https://cdn.example/x.jpg', videoUrl: '' }));
+    expect(result).toEqual({ status: 'posted', link: 'https://www.instagram.com/p/9', platformId: 'p9' });
+  });
+
+  it('says when Meta needs setting up', async () => {
+    publishMetaContent.mockResolvedValue({ ok: true, published: false, setupRequired: true, message: 'Add the keys.' });
+    const result = await publishPost(post({ platform: 'facebook', piece: 'reel', file: '', mediaUrl: '' }), { outputFolder: '' }, NOW);
+    expect(result).toEqual({ status: 'failed', reason: 'Add the keys.', setupRequired: true });
+  });
 });

@@ -18,6 +18,7 @@ const STEP_LABELS: Record<StepId, string> = {
   assemble: 'Finished video',
   campaign: 'Campaign',
   quality: 'Quality gate',
+  publish: 'Publish',
 };
 
 const STATUS_TEXT: Record<StepStatus, string> = {

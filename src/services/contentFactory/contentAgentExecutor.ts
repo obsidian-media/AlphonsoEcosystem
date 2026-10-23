@@ -10,6 +10,7 @@ import { priorOutputs } from './contentStepAgents';
 import { failStep } from './contentProjectService';
 import { beginContentStep } from './contentStepRecorder';
 import { MEDIA_ACTIONS, executeMediaStep } from './contentMediaExecutor';
+import { executePublishStep } from './contentPublishExecutor';
 
 export const UNREADABLE_ANSWER = "The model's answer could not be read. Small models often cannot follow this format: choose a larger model for this agent in Settings → Connectors → Agent Providers, then Retry.";
 
@@ -92,7 +93,9 @@ export async function executeContentStepAssignment(assignment: ContentAssignment
   const { projectId, step } = assignment.contentStep;
   beginContentStep(projectId, step);
   // Voice, Music, B-roll and Assemble make files rather than asking a model for text (phase 2a).
-  const result = MEDIA_ACTIONS.has(assignment.actionType) ? await executeMediaStep(assignment) : await runContentAgent(assignment);
+  const result = assignment.actionType === 'distribution_schedule_posts'
+    ? await executePublishStep(assignment)
+    : MEDIA_ACTIONS.has(assignment.actionType) ? await executeMediaStep(assignment) : await runContentAgent(assignment);
   if (result.resultState === 'failed' && getProject(projectId)) failStep(projectId, step, String(result.failureReason || 'An agent could not finish this step.'));
   return result;
 }
