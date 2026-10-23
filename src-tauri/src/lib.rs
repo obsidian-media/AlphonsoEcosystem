@@ -765,6 +765,8 @@ pub fn run() {
       media_tools::content_allow_media_folder,
       comfyui_video_models::comfyui_video_models,
       comfyui_video_models::comfyui_install_video_model,
+      comfyui_proxy::comfyui_upload_image,
+      comfyui_proxy::comfyui_save_output,
       execute_command_verified,
       run_native_rc0_proof,
       runway_generate_video,

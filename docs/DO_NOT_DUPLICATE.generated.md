@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 251 services and 156 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 252 services and 156 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -231,7 +231,7 @@ Source-backed inventory: 251 services and 156 components. Human purpose descript
 | service | `src/services/connectors/comfyUiEndpoint.js` | `COMFYUI_ENDPOINT_KEY`, `DEFAULT_COMFYUI_ENDPOINT`, `getComfyUiEndpoint`, `setComfyUiEndpoint` |
 | service | `src/services/connectors/connectorAuth.ts` | `authorizeConnectorRequest`, `ConnectorAuthProfile`, `ConnectorAuthProfiles`, `ConnectorCredentials`, `DEFAULT_AUTH_PROFILES`, `getConnectorCredential`, `getConnectorCredentials`, `hydrateConnectorAuthProfilesFromSqlite`, `hydrateConnectorCredentialsFromSqlite`, `isConnectorAuthenticated`, `listConnectorAuthProfiles`, `logUnauthenticatedConnectorRequest`, `LogUnauthenticatedOptions`, `normalizeAllowlist`, `readAuthProfiles`, `saveConnectorCredential`, `updateConnectorAuthProfile`, `writeAuthProfiles` |
 | service | `src/services/connectors/connectorConstants.ts` | `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE` |
-| service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_ENDPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `DEFAULT_COMFYUI_ENDPOINT`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiEndpoint`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setComfyUiEndpoint`, `setSelectedComfyUiCheckpoint` |
+| service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `comfyRequest`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_ENDPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `DEFAULT_COMFYUI_ENDPOINT`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiEndpoint`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setComfyUiEndpoint`, `setSelectedComfyUiCheckpoint` |
 | service | `src/services/connectors/connectorOutbound.js` | `proveTelegramConnectorPath`, `sendChatGptConnectorMessage`, `sendClaudeConnectorMessage`, `sendClickUpConnectorTask`, `sendGitHubAction`, `sendNotionConnectorEntry`, `sendQwenConnectorMessage`, `sendSlackMessage`, `sendTelegramConnectorMessage`, `sendWhatsAppConnectorMessage`, `uploadYouTubeConnectorVideo` |
 | service | `src/services/connectors/connectorPolling.js` | `createConnectorRoutePacket`, `normalizeWhatsAppCloudInboundPayload`, `parseInboundConnectorMessage`, `pollTelegramConnector`, `pollWhatsAppConnector`, `sendConnectorMessageToJose`, `simulateWhatsAppCloudInbound`, `verifyWhatsAppCloudWebhookChallenge`, `verifyWhatsAppCloudWebhookSignature` |
 | service | `src/services/connectors/connectorRegistry.js` | `appendConnectorAudit`, `CIRCUIT_BREAKER_RESET_MS`, `CIRCUIT_BREAKER_THRESHOLD`, `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE`, `DEFAULT_CONNECTORS`, `gateConnectorAction`, `getConnectorCircuitState`, `hydrateConnectorAuditFromSqlite`, `hydrateConnectorRegistryFromSqlite`, `initializeConnectorRegistryFromSqlite`, `listConnectorAudit`, `listConnectors`, `readRows`, `recordConnectorFailure`, `recordConnectorSuccess`, `requireConnectorApproval`, `requireConnectorReady`, `resetConnectorCircuitState`, `setConnectorStatus`, `verifyConnectorEnvironment`, `writeRows` |
@@ -247,6 +247,7 @@ Source-backed inventory: 251 services and 156 components. Human purpose descript
 | service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
+| service | `src/services/contentFactory/comfyVideoClip.ts` | `buildVideoWorkflow`, `checkComfyClip`, `ClipResult`, `ComfyClipInput`, `framesFor`, `makeComfyClip`, `VideoWorkflowInput` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
 | service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `DEFAULT_QUALITY_THRESHOLD`, `ensureFirstBrand`, `getBrand`, `listBrands`, `saveBrand` |
 | service | `src/services/contentFactory/contentCaptions.ts` | `alignCaptions`, `captionsFromLines`, `TimedWord`, `toSrt` |
