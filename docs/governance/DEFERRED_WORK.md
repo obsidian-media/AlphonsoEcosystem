@@ -33,19 +33,25 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - **Status:** PARTLY CLOSED 2026-10-23 by Jose redesign phase 1 (design `docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md`, plan `docs/superpowers/plans/2026-10-23-jose-redesign-phase1.md`): problems 1 and 2 (step graphs with several steps per agent and per-step `needs`; the fixed order now only gives the rule-based splitter's tasks their `needs`) and 4 (approval by declared effect, `src/services/jose/joseEffects.ts`). Problem 3 (review/revise loops) is phase 4. The content factory still sends one request per step until phase 6 moves it onto a template.
 
 - [2026-10-23] **Jose redesign phase 3 (seeing and steering): what it leaves open.**
-  - A plan waiting for you is not sent to Telegram, and can't be approved there: phase 5.
+  - ~~A plan waiting for you is not sent to Telegram, and can't be approved there~~ — CLOSED 2026-10-23 by phase 5.
   - ~~The map has no model per step, no review loops, and the plan can't change while it runs~~ — CLOSED 2026-10-23 by phase 4: steps carry a model, reviews send work back (revisions and re-reviews show "Round n" and each review's verdict), and Jose adds steps while a request runs (`adaptPlan()`). The map draws a revision as its own box, not as an arrow back.
   - ~~Chat's "Open on the board" is not on the progress line while a request runs~~ — CLOSED 2026-10-23 by phase 4.
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
-  - **Status:** OPEN (Telegram, phase 5).
+  - **Status:** CLOSED 2026-10-23.
+
+- [2026-10-23] **Jose redesign phase 5 (away from the app): what it leaves open.**
+  - WhatsApp and the phone companion get Jose's notifications and approvals in phase 6 (owner chose Telegram only for phase 5).
+  - The older Telegram "N agent actions since your last check" notifier still runs alongside Jose's messages and reports connector checks every few minutes; whether to switch it off by default is the owner's call (asked 2026-10-23).
+  - Telegram buttons are short codes saved for 7 days; a button older than that answers "That button has expired." (use the app or `/approve`).
+  - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 4 (loops and adaptation): what it leaves open.**
   - **Paid models were checked with unit tests only:** there are no Claude or ChatGPT keys on the dev machine, so no real paid call, cost record or cap has been tried. The prices are yours to enter; nothing reads them from the providers.
   - A paid step's cost is estimated from its instruction plus a fixed 4,000-character allowance for earlier steps' work; the real cost is recorded from the usage the provider reports.
   - The help request is a line the agent writes ("HELP: …"); content-factory steps build their own prompts and are not told about it.
-  - Echo saves a request's decisions when it ends `done` and again when it ends waiting for approval, so a request that waits and is approved can be saved twice.
-  - Resuming at app start (a request left running when the app closed) and approvals from Telegram: phase 5.
-  - **Status:** OPEN.
+  - ~~Echo saves a request's decisions twice when it waits and is approved~~ — CLOSED 2026-10-23 by phase 5 (saved once, when done).
+  - ~~Resuming at app start and approvals from Telegram~~ — CLOSED 2026-10-23 by phase 5.
+  - **Status:** OPEN (paid models live, help in content-factory steps).
 
 - [2026-10-23] **Jose redesign phase 2 (the planner): what it leaves open.**
   - ~~Saving a plan as a new template, and seeing or editing the plan before it runs~~ — CLOSED 2026-10-23 by phase 3.

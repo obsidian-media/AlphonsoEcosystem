@@ -30,7 +30,7 @@ src/                   React frontend (132 .tsx, 39 .jsx — .jsx being migrated
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                462 test files, 5,614 tests (Vitest; see ground truth for current verification status)
+  test/                463 test files, 5,614 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -74,7 +74,7 @@ gateway/               WhatsApp Cloud gateway (Railway-deployed, live)
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 5,239 tests (462 files; also runs bridge/)
+npm run test             # 5,239 tests (463 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command

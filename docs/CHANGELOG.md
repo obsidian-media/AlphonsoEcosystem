@@ -39,6 +39,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Campaign Studio:** captions, hashtags, ad copy and posting times, then Maria's quality gate.
   Every project is saved in a folder per brand, keeps its versions, and tells you when a step is out of date. What you reject is remembered for that brand. The old generator is still there as "Quick package".
 - **Honest risk ratings.** A command's rating now comes from what it does, and the approval window says why. Commands that only read (such as `ollama list`) run without asking, instead of showing "85 HIGH RISK". Release Preflight asks once instead of twice.
+- **Jose while you are away (Jose redesign, phase 5).**
+  - **Telegram:** Jose tells your paired Telegram chat when a step waits for you (Approve / Reject), when a plan waits (Run / Cancel, with the steps), when a request finishes or fails, and when a review asks you to decide. Each kind can be switched off in Settings → Approvals → "Jose on Telegram". Approving from Telegram carries the request on, also with `/approve`; a button pressed twice runs once. Checked live with a real bot.
+  - **Carry on:** a request cut off when the app closed is shown as Interrupted, with Carry on on the board, in Chat and on Telegram. Nothing runs by itself; a step that needs approval asks again.
+  - **Waiting requests expire** after the days set in Settings (7 to start; blank or 0 = never). Echo saves a request's decisions once, when it is done.
+  - **Reject** on the board and in Telegram cancels the request, with a note.
+  - **Fixed:** saved connector keys looked missing for a minute after start when something read one early, so the Telegram and WhatsApp companions never started; a plan you approved first lost its reviews and chosen models; Telegram's `/approve` didn't carry the request on; requests left running were never marked interrupted.
 - **Jose's plans change while they run (Jose redesign, phase 4).**
   - **Reviews send work back:** when a review finds problems, the work goes back to its author with the findings and is reviewed again, at most 2 rounds; then Jose asks you. Each review's verdict is shown on the board, and revisions say "Round 1" or "Round 2".
   - **Agents can ask for help:** an agent that needs something another agent could provide asks Jose, who picks a helper and runs the step again with the help, once per step. A helper can only read or write its own work; it can never run code, publish, spend or delete.
