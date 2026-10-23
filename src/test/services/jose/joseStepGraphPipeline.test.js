@@ -107,7 +107,7 @@ vi.mock('../../../services/codingAgentService', () => ({
   runCodingAgent: vi.fn(async () => ({ ok: true, content: 'code' })),
 }));
 
-import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep, carryOnRequest } from '../../../services/joseExecutionEngineService';
+import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep, carryOnRequest, rejectRequestStep } from '../../../services/joseExecutionEngineService';
 import { createAgentPacket, updatePacketStatus, approvePacket } from '../../../services/agentBusService';
 import { fetchOllamaModels } from '../../../lib/ollama';
 import { runCodingAgent } from '../../../services/codingAgentService';
@@ -623,5 +623,21 @@ describe('Jose runs plans as step graphs', () => {
     const request = getJoseRequest(`jose-request-${result.commandId}`);
     expect(request.status).toBe('waiting_approval');
     expect((request.changeLog || []).map((c) => c.text)).not.toContain('Echo saved what was decided.');
+  });
+
+  // Phase 5: rejecting a waiting step cancels its request.
+  it('rejecting a waiting step cancels the request, with a note', async () => {
+    const first = await run([
+      step('hector', 'research_report', { stepId: 'a', effects: ['read'] }),
+      step('marcus', 'distribution_execution', { stepId: 'post', effects: ['publish_or_send'], needs: ['a'] }),
+    ]);
+    const requestId = `jose-request-${first.commandId}`;
+    const result = rejectRequestStep(requestId, 'post');
+    expect(result.ok).toBe(true);
+    const request = getJoseRequest(requestId);
+    expect(request.status).toBe('cancelled');
+    expect(request.steps.find((s) => s.stepId === 'post').status).toBe('rejected');
+    expect(request.changeLog.map((c) => c.text)).toContain("You rejected Marcus's step.");
+    expect(rejectRequestStep(requestId, 'post').ok).toBe(false);
   });
 });

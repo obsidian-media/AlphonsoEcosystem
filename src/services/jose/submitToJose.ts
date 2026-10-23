@@ -106,7 +106,9 @@ function planOf(request: JoseRequest, steps: PlanStep[]): JosePlan {
 export async function runApprovedPlan(requestId: string, options: { onProgress?: (event: any) => void; onToken?: (tokenData: any) => void; history?: { role: string; content: string }[] } = {}): Promise<any> {
   const request = claimPlanForRun(requestId);
   if (!request) return { ok: false, reason: 'This plan is no longer waiting.' };
-  const steps: PlanStep[] = request.steps.map(({ stepId, agent, actionType, effects, needs, instruction }) => ({ stepId, agent, actionType, effects, needs, instruction }));
+  // Every plan field (model, reviewOf, …), not the step's run state (phase 5:
+  // a plan you approved first lost its reviews and models).
+  const steps: PlanStep[] = request.steps.map(({ status: _status, error: _error, startedAtMs: _started, endedAtMs: _ended, verdict: _verdict, ...step }) => step);
   const plan = planOf(request, steps);
   const edited = (request.changeLog || []).some((entry) => entry.text !== 'Cancelled.');
   const planNote = [noteFor(plan), edited ? 'You edited the plan.' : ''].filter(Boolean).join(' ');

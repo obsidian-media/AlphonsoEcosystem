@@ -7,7 +7,8 @@ import {
   attemptPacketExecution,
   getPacketById,
   requestPacketRetry,
-  updatePacketStatus
+  updatePacketStatus,
+  rejectPacket
 } from './agentBusService';
 import {
   confirmJoseCommand,
@@ -35,6 +36,7 @@ import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestSt
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
+import { agentName } from './jose/agentNames';
 import { saveRequestDecisions } from './jose/joseFinish';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
@@ -2359,6 +2361,25 @@ export async function resumeJoseRequest(requestId: string, options: any = {}) {
     conversationHistory: options.history,
   });
   return { ...result, requestId };
+}
+
+/**
+ * Reject one waiting step of a saved request (phase 5): the step is not run,
+ * and the request is cancelled with a note (owner may overrule).
+ */
+export function rejectRequestStep(requestId: string, stepId: string) {
+  const request: any = getJoseRequest(requestId);
+  const step = request?.steps?.find((s: any) => s.stepId === stepId);
+  if (!request || request.status !== 'waiting_approval' || step?.status !== 'waiting_approval') {
+    return { ok: false, summary: 'That step is no longer waiting.' };
+  }
+  const command: any = listJoseCommands().find((item) => item.id === request.commandId);
+  const packetId = command?.assignments?.find((a: any) => a.stepId === stepId)?.packetId;
+  if (packetId) rejectPacket(packetId, 'Rejected by you.');
+  updateJoseStep(requestId, stepId, { status: 'rejected', endedAtMs: timestampMs() });
+  setJoseRequestStatus(requestId, 'cancelled');
+  appendRequestNote(requestId, `You rejected ${agentName(step.agent)}'s step.`);
+  return { ok: true, summary: 'Rejected. The request was cancelled.' };
 }
 
 /** Carry on a request the app was closed on (phase 5): steps already done are kept; a step that needs approval asks again. */

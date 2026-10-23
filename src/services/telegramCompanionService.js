@@ -1,6 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getConnectorCredential, getConnectorCredentials } from './connectors/connectorAuth';
-import { listApprovalQueue, approvePacket, rejectPacket } from './agentBusService';
+import { listApprovalQueue, approvePacket, rejectPacket, getPacketById } from './agentBusService';
+import { collectJoseNotifications, getJoseTelegramSettings, sentKeys, markSent, seedSentLog, buttonToken, readButtonToken } from './jose/joseTelegram';
+import { getJoseRequest, listJoseRequests, findRequestByPacket } from './jose/joseRequestStore';
+import { agentName } from './jose/agentNames';
 import { listAgentActivity } from './agentActivityService';
 import { listMemoryItems } from './memoryService';
 import { createJoseCommandRoute, listJoseCommands } from './joseCommandRouterService';
@@ -69,7 +72,7 @@ async function telegramInvoke(command, payload) {
   }
 }
 
-async function sendTelegramMessageInternal({ token, chatId, text }) {
+async function sendTelegramMessageInternal({ token, chatId, text, buttons }) {
   if (!token || !chatId) return { ok: false, error: 'missing_token_or_chatid' };
   
   const now = Date.now();
@@ -83,11 +86,13 @@ async function sendTelegramMessageInternal({ token, chatId, text }) {
     ? [text.slice(0, MAX_MESSAGE_LENGTH), text.slice(MAX_MESSAGE_LENGTH)]
     : [text];
 
-  for (const chunk of chunks) {
+  for (const [index, chunk] of chunks.entries()) {
     await telegramInvoke('connector_send_telegram', {
       token,
       chatId,
-      text: chunk
+      text: chunk,
+      // Buttons go on the first part (phase 5).
+      ...(buttons && index === 0 ? { buttons } : {})
     });
   }
 
@@ -222,6 +227,13 @@ export async function handleApproveCommand(token, chatId, id) {
     return sendTelegramMessageInternal({ token, chatId, text: '❌ Packet not found.' });
   }
 
+  // A step of a saved Jose request: approving carries the request on (phase 5).
+  if (findRequestByPacket(packetId)) {
+    const { executeApprovedPackets } = await import('./joseExecutionEngineService');
+    executeApprovedPackets([packetId]).catch(() => { /* the request shows what happened */ });
+    return sendTelegramMessageInternal({ token, chatId, text: '✅ Approved. Jose carries on.' });
+  }
+
   approvePacket(packetId, 'telegram_operator');
   return sendTelegramMessageInternal({ token, chatId, text: '✅ Approved. Jose will proceed.' });
 }
@@ -237,6 +249,15 @@ export async function handleRejectCommand(token, chatId, id) {
 
   if (!packetId) {
     return sendTelegramMessageInternal({ token, chatId, text: '❌ Packet not found.' });
+  }
+
+  // A step of a saved Jose request: rejecting cancels the request (phase 5).
+  const request = findRequestByPacket(packetId);
+  const stepId = getPacketById(packetId)?.payload?.assignment?.stepId;
+  if (request && stepId) {
+    const { rejectRequestStep } = await import('./joseExecutionEngineService');
+    const result = rejectRequestStep(request.id, stepId);
+    return sendTelegramMessageInternal({ token, chatId, text: result.ok ? '🚫 Rejected. The request was cancelled.' : result.summary });
   }
 
   rejectPacket(packetId, 'Rejected via Telegram companion');
@@ -538,6 +559,48 @@ async function handleReadFileCommand(token, chatId, filename) {
   }
 }
 
+/**
+ * A Jose button pressed on Telegram (phase 5). Only the paired chat may press;
+ * the work is claimed at once (so a second press finds it taken) and runs on,
+ * and the returned text answers the press.
+ */
+export async function handleJoseButton(token, update) {
+  const ownerChatId = getOwnerChatId();
+  if (!ownerChatId || String(update?.chatId || '') !== String(ownerChatId)) return 'Unauthorized.';
+  const button = readButtonToken(update?.callbackData);
+  if (!button) return 'That button has expired.';
+  const request = getJoseRequest(button.requestId);
+  if (!request) return 'That button has expired.';
+  const engine = await import('./joseExecutionEngineService');
+  const quietly = (promise) => { Promise.resolve(promise).catch(() => { /* the request shows what happened */ }); };
+  if (button.action === 'approve' || button.action === 'reject') {
+    const step = request.steps.find((s) => s.stepId === button.stepId);
+    if (request.status !== 'waiting_approval' || step?.status !== 'waiting_approval') return 'Already done.';
+    if (button.action === 'reject') {
+      const result = engine.rejectRequestStep(request.id, button.stepId);
+      return result.ok ? 'Rejected. The request was cancelled.' : result.summary;
+    }
+    quietly(engine.approveRequestStep(request.id, button.stepId));
+    return `Approved. ${agentName(step.agent)} carries on.`;
+  }
+  if (button.action === 'run' || button.action === 'cancel') {
+    if (request.status !== 'waiting_plan_approval') return 'Already done.';
+    const plans = await import('./jose/submitToJose');
+    if (button.action === 'cancel') {
+      plans.cancelPlan(request.id);
+      return 'Cancelled.';
+    }
+    quietly(plans.runApprovedPlan(request.id));
+    return 'Running the plan.';
+  }
+  if (button.action === 'carry_on') {
+    if (request.status !== 'interrupted') return 'Already done.';
+    quietly(engine.carryOnRequest(request.id));
+    return 'Carrying on.';
+  }
+  return 'That button has expired.';
+}
+
 export async function processInboundCommands(token, updates) {
   if (!updates || !updates.ok) return;
 
@@ -550,6 +613,14 @@ export async function processInboundCommands(token, updates) {
 
     if (updateId && (!lastUpdateId || updateId > lastUpdateId)) {
       lastUpdateId = updateId;
+    }
+
+    // A button press (phase 5): answer it, whatever chat it came from.
+    if (update?.callbackId) {
+      let answer = 'Something went wrong.';
+      try { answer = await handleJoseButton(token, update); } catch { /* answered below */ }
+      await telegramInvoke('connector_answer_telegram_callback', { token, callbackId: update.callbackId, text: answer });
+      continue;
     }
 
     const ownerChatId = getOwnerChatId();
@@ -791,8 +862,20 @@ Assignments: ${assignmentsCompleted} completed`;
     }
   }
 
+  // Jose's requests (phase 5): waiting steps and plans with buttons, results,
+  // reviews that ask you, and requests cut off when the app closed.
+  const requests = listJoseRequests();
+  seedSentLog(requests);
+  for (const notification of collectJoseNotifications(requests, sentKeys(), getJoseTelegramSettings())) {
+    const buttons = notification.buttons?.map((row) => row.map((button) => ({ text: button.text, data: buttonToken(button) })));
+    await sendTelegramMessageInternal({ token, chatId: ownerChatId, text: notification.text, ...(buttons ? { buttons } : {}) });
+    markSent(notification.key);
+  }
+
   const queue = listApprovalQueue();
   for (const packet of queue) {
+    // A request's step is sent above, with buttons.
+    if (findRequestByPacket(packet.id)) continue;
     if (!pushedApprovalIds.has(packet.id)) {
       pushedApprovalIds.add(packet.id);
       

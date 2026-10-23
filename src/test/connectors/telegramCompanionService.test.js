@@ -17,6 +17,7 @@ vi.mock('../../services/agentBusService', () => ({
   listApprovalQueue: vi.fn().mockReturnValue([]),
   approvePacket: vi.fn(),
   rejectPacket: vi.fn(),
+  getPacketById: vi.fn(() => null),
   updatePacketStatus: vi.fn(),
   AGENTS: {
     ALPHONSO: 'alphonso', JOSE: 'jose', MIYA: 'miya', HECTOR: 'hector',

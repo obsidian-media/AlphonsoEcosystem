@@ -11,7 +11,7 @@ vi.mock('../../../services/joseExecutionEngineService', () => ({
 }));
 
 import { submitToJose, runApprovedPlan, cancelPlan, CONTENT_VIDEO_STUDIO_NOTE } from '../../../services/jose/submitToJose';
-import { getJoseRequest, replacePlanSteps } from '../../../services/jose/joseRequestStore';
+import { getJoseRequest, replacePlanSteps, createWaitingPlanRequest } from '../../../services/jose/joseRequestStore';
 import { planJoseRequest } from '../../../services/jose/josePlanner';
 import { runPipelineShortcuts, runJoseCommandExecutionPipeline } from '../../../services/joseExecutionEngineService';
 import { getTemplate } from '../../../services/jose/joseTemplates';
@@ -110,6 +110,21 @@ describe('showing the plan first', () => {
     const result = await submitToJose({ text: 'x', source: 'user', showPlanFirst: 'never' });
     expect(result.waitingForPlan).toBeUndefined();
     expect(pipeline).toHaveBeenCalledTimes(1);
+  });
+
+  it("an approved plan keeps each step's review and model", async () => {
+    const waiting = createWaitingPlanRequest({
+      text: 'Research and judge', source: 'user', kind: 'normal',
+      steps: [
+        { stepId: 'facts', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [], instruction: 'Find.', model: 'qwen2.5:7b' },
+        { stepId: 'check', agent: 'maria', actionType: 'audit_quality', effects: ['read'], needs: ['facts'], instruction: 'Check.', reviewOf: 'facts' },
+      ],
+      plan: { source: 'fresh', templateId: null, note: '' }, runOptions: { source: 'user' },
+    });
+    await runApprovedPlan(waiting.id);
+    const [facts, check] = pipeline.mock.calls[0][0].assignments;
+    expect(facts.model).toBe('qwen2.5:7b');
+    expect(check.reviewOf).toBe('facts');
   });
 
   it('runs an approved plan once, on the same saved request', async () => {
