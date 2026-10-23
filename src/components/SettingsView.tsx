@@ -658,6 +658,49 @@ function PaidModelsPanel({ settings, setSettings }: { settings: AppSettings; set
   );
 }
 
+/**
+ * Settings → Approvals → Jose on Telegram (phase 5): which messages Jose
+ * sends to your paired Telegram chat. All on to start.
+ */
+const JOSE_TELEGRAM_KINDS = [
+  { key: 'stepWaiting', label: 'When a step waits for you', note: 'With Approve and Reject.' },
+  { key: 'planWaiting', label: 'When a plan waits for you', note: 'With Run this plan and Cancel.' },
+  { key: 'finished', label: 'When a request finishes or fails', note: 'One line.' },
+  { key: 'reviewDecision', label: 'When a review asks you to decide', note: 'After 2 rounds of changes.' },
+] as const;
+
+function JoseTelegramPanel({ settings, setSettings }: { settings: AppSettings; setSettings: (s: AppSettings) => void }) {
+  const saved = (settings.joseTelegram && typeof settings.joseTelegram === 'object' ? settings.joseTelegram : {}) as Record<string, unknown>;
+  return (
+    <div className="p-4 bg-(--surface-2) rounded-2xl">
+      <div className="text-sm font-semibold text-(--text-1)">Jose on Telegram</div>
+      <div className="text-[11px] text-(--text-3) mt-0.5">Sent to your paired Telegram chat (Connectors → Telegram). A request cut off when the app closed is always sent, with Carry on.</div>
+      <div className="mt-3 space-y-2">
+        {JOSE_TELEGRAM_KINDS.map(({ key, label, note }) => {
+          const on = saved[key] !== false;
+          return (
+            <div key={key} className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs text-(--text-1)">{label}</div>
+                <div className="text-[10px] text-(--text-3)">{note}</div>
+              </div>
+              <button
+                role="switch"
+                aria-checked={on}
+                aria-label={`Telegram: ${label}`}
+                onClick={() => setSettings({ ...settings, joseTelegram: { ...saved, [key]: !on } })}
+                className={`w-10 h-5 shrink-0 rounded-full transition-colors relative ${on ? 'bg-(--accent)' : 'bg-(--surface-3)'}`}
+              >
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${on ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const SETTINGS_SECTIONS = [
   { id: 'general',     label: 'General',      Icon: Settings2 },
   { id: 'connectors',  label: 'Connectors',   Icon: Plug },
@@ -1312,6 +1355,7 @@ export function SettingsView({
           </div>
           <EffectApprovalsTable settings={settings} setSettings={setSettings} />
           <PaidModelsPanel settings={settings} setSettings={setSettings} />
+          <JoseTelegramPanel settings={settings} setSettings={setSettings} />
           <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
             <div>
               <label htmlFor="jose-waiting-expiry" className="text-sm font-semibold text-(--text-1)">Waiting requests expire after (days)</label>

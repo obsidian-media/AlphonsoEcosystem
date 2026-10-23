@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 237 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 239 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -267,6 +267,7 @@ Source-backed inventory: 237 services and 154 components. Human purpose descript
 | service | `src/services/hectorBookmarkService.ts` | `deleteBookmark`, `exportBookmarks`, `getBookmarks`, `getStats`, `saveBookmark` |
 | service | `src/services/hectorExportService.ts` | `buildHectorReportMarkdown`, `exportHectorReportAsMarkdown`, `exportHectorReportAsPdf`, `exportHectorReportAsPowerPoint` |
 | service | `src/services/hectorResearchService.js` | `buildHectorSynthesisPrompt`, `createHectorApprovalPacket`, `createResearchBrief`, `createResearchDraft`, `fetchRssSources`, `fetchSuppliedSourcesForReport`, `isBraveSearchConfigured`, `listHectorActivity`, `listHectorReports`, `parseHectorSynthesisResponse`, `parseRssItems`, `persistResearchResult`, `recordHectorActivity`, `resynthesizeHectorReport`, `RSS_FEED_CATALOG`, `runHectorLiveResearch`, `runMultiSourceResearch`, `scoreRssFeed`, `searchBrave`, `synthesizeHectorResearch` |
+| service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `isEffectAllowed`, `isTaskTypeAllowed`, `taskTypePartAllowed` |
 | service | `src/services/jose/joseAdapt.ts` | `AdaptContext`, `adaptPlan`, `PlanChange`, `setPlanAdapterForTests` |
@@ -284,6 +285,7 @@ Source-backed inventory: 237 services and 154 components. Human purpose descript
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
 | service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend` |
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `priorOutputsForNeeds`, `setStepOutput` |
+| service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
 | service | `src/services/jose/joseUserTemplates.ts` | `deleteUserTemplate`, `listUserTemplates`, `saveUserTemplate` |
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
