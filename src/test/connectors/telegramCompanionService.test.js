@@ -283,6 +283,18 @@ describe('telegramCompanionService', () => {
       expect(mockJose.createJoseCommandRoute).not.toHaveBeenCalled();
     });
 
+    it('/boardroom goes to Jose by name, not to a bare route (phase 6a)', async () => {
+      await service.processInboundCommands('test-token', {
+        ok: true,
+        messages: [{ chatId: 'owner-chat', text: '/boardroom pricing for the launch', updateId: 1 }]
+      });
+      const { answerOrPlan } = await import('../../services/jose/joseInbound');
+      expect(answerOrPlan).toHaveBeenCalledWith(expect.stringMatching(/^Ask Jose: .*pricing for the launch/), expect.objectContaining({ source: 'telegram', background: true }));
+      expect(mockJose.createJoseCommandRoute).not.toHaveBeenCalled();
+      const said = mockInvoke.mock.calls.filter((c) => c[0] === 'connector_send_telegram').map((c) => String(c[1]?.text));
+      expect(said.some((t) => /deliberating/.test(t))).toBe(false);
+    });
+
     it('routes plain text to jose command router', async () => {
       await service.processInboundCommands('test-token', {
         ok: true,

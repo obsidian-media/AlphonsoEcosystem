@@ -540,18 +540,10 @@ async function handleReceiptsCommand(token, chatId) {
 }
 
 async function handleBoardroomCommand(token, chatId, topic) {
-  await sendTelegramMessageInternal({ token, chatId, text: `🏛 Convening boardroom session on: "${topic}"…` });
-  try {
-    const { createJoseCommandRoute } = await import('./joseCommandRouterService.js');
-    await createJoseCommandRoute({ commandText: `boardroom: ${topic}`, source: 'telegram', boardroom: true });
-    return sendTelegramMessageInternal({
-      token,
-      chatId,
-      text: `✅ Boardroom session for "${topic}" started. Agents are deliberating — check the Boardroom view for the conclusion.`
-    });
-  } catch (e) {
-    return sendTelegramMessageInternal({ token, chatId, text: `❌ Boardroom session failed: ${e.message}` });
-  }
+  // Phase 6a: Jose plans the discussion and runs it; his Telegram messages
+  // say when it waits for you and how it ended. (This used to create packets
+  // that nothing ran, and said the agents were deliberating.)
+  return sendToJose(token, chatId, `Ask Jose: hold a Boardroom discussion on ${topic} and report the conclusion.`);
 }
 
 async function handleReadFileCommand(token, chatId, filename) {
