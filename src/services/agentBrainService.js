@@ -566,6 +566,13 @@ export async function executeWithBrain(commandText, options = {}) {
   // join a Hermes session. Jose resolves the id via resolveSecureSessionId at its own call site to
   // keep it out of CodeQL's insecure-randomness taint flow; it is used as-is here.
   const { sessionId } = options;
+  // Jose's instruction for this step (phase 4): a note in the planning and code
+  // prompts only, after the user's request. It is model output, so it never
+  // decides a path: clarification, the external-tool check and every intent
+  // check look at the user's own words (commandText) alone.
+  const stepNote = typeof options.stepInstruction === 'string' && options.stepInstruction.trim()
+    ? `\n\nJose's note for this step: ${options.stepInstruction.trim()}`
+    : '';
   const results = [];
   const filesWritten = [];
   const artifacts = [];
@@ -595,7 +602,7 @@ export async function executeWithBrain(commandText, options = {}) {
   }
 
   onProgress?.({ stage: 'planning', agent: 'alphonso', detail: 'Generating execution plan' });
-  const planPreview = await generatePlanPreview(commandText, projectContext, endpoint, sessionId);
+  const planPreview = await generatePlanPreview(`${commandText}${stepNote}`, projectContext, endpoint, sessionId);
   if (planPreview) {
     artifacts.push({
       type: 'plan_preview',
@@ -684,7 +691,7 @@ export async function executeWithBrain(commandText, options = {}) {
     while (iteration < MAX_ITERATIONS && !stepSuccess) {
       iteration++;
       const stepPrompt = buildThinkingPrompt(
-        `${commandText}\n\nSub-task: ${step}`,
+        `${commandText}${stepNote}\n\nSub-task: ${step}`,
         planPreview,
         projectContext,
         patterns,

@@ -7,6 +7,10 @@ const SKILL_PACK_KEY = 'alphonso_skill_packs_v1';
 const SKILL_AUDIT_KEY = 'alphonso_skill_pack_audit_v1';
 const SKILL_PACK_INVOCATION_KEY = 'alphonso_skill_pack_invocation_v1';
 
+// Packs that were removed; a copy saved before then is not shown (2026-10-23:
+// security is Sentinel's and risk review Maria's, not Marcus's).
+const RETIRED_SKILL_PACK_IDS = new Set(['pack.marcus-security-audit', 'pack.marcus-risk-detection']);
+
 function read(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -39,7 +43,7 @@ export function listSkillPacks() {
     write(SKILL_PACK_KEY, DEFAULT_PACKS);
     return DEFAULT_PACKS;
   }
-  return packs;
+  return packs.filter((pack) => !RETIRED_SKILL_PACK_IDS.has(pack?.id));
 }
 
 export function listSkillPackAudit() {

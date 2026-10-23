@@ -47,36 +47,6 @@ export const MARCUS_BASE_PACKS = [
     ]
   },
   {
-    id: 'pack.marcus-security-audit',
-    name: 'Marcus Security Audit',
-    version: '1.0.0',
-    enabled: true,
-    permissions: ['distribution.security', 'performance.audit', 'approved_dispatch'],
-    category: 'agent_skill',
-    ownerAgent: 'marcus',
-    trust: TRUST_STATES.VERIFIED,
-    exampleTasks: [
-      'Audit build artifacts for security vulnerabilities',
-      'Verify dependency audit passes before release',
-      'Check signing and integrity of distributed packages'
-    ]
-  },
-  {
-    id: 'pack.marcus-risk-detection',
-    name: 'Marcus Risk Detection',
-    version: '1.0.0',
-    enabled: true,
-    permissions: ['distribution.risk', 'performance.assessment', 'approved_dispatch'],
-    category: 'agent_skill',
-    ownerAgent: 'marcus',
-    trust: TRUST_STATES.VERIFIED,
-    exampleTasks: [
-      'Identify deployment risks in release candidate',
-      'Assess breaking change impact on downstream consumers',
-      'Flag version compatibility issues before distribution'
-    ]
-  },
-  {
     id: 'pack.marcus-integration-validation',
     name: 'Marcus Integration Validation',
     version: '1.0.0',

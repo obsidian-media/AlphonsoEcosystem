@@ -742,6 +742,8 @@ async function executeAlphonsoAssignment(commandText: any, assignment: any, opti
     // 3b. Use brain-based execution: context → plan → generate → validate → fix
     const brainResult = await executeWithBrain(commandText, {
       endpoint: options.endpoint,
+      // Jose's instruction for this step, as a note only (phase 4).
+      stepInstruction: options.stepInstruction,
       projectDirectory: projectDir,
       onProgress: options.onProgress,
       onToken: options.onToken,

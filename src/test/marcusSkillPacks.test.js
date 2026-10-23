@@ -8,8 +8,6 @@ const MARCUS_PACK_IDS = [
   'pack.marcus-github-releases',
   'pack.marcus-slack-notifications',
   'pack.marcus-release-readiness',
-  'pack.marcus-security-audit',
-  'pack.marcus-risk-detection',
   'pack.marcus-integration-validation',
   'pack.marcus-deployment-execution',
   'pack.marcus-changelog-generation',
@@ -34,10 +32,10 @@ describe('Marcus skill packs', () => {
     MARCUS_PACK_IDS.forEach((id) => { expect(ids).toContain(id); });
   });
 
-  it('seeds exactly 17 Marcus-owned packs plus one shared pack', () => {
+  it('seeds exactly 15 Marcus-owned packs plus one shared pack', () => {
     const packs = listSkillPacks();
     const marcusPacks = packs.filter((pack) => pack.ownerAgent === 'marcus');
-    expect(marcusPacks).toHaveLength(17);
+    expect(marcusPacks).toHaveLength(15);
   });
 
   it('has valid manifest structure for all new Marcus packs', () => {
@@ -68,8 +66,8 @@ describe('Marcus skill packs', () => {
     MARCUS_PACK_IDS.forEach((id) => { expect(MARCUS_PROFILE.skillPackIds).toContain(id); });
   });
 
-  it('profile skillPackIds has exactly 20 entries', () => {
-    expect(MARCUS_PROFILE.skillPackIds).toHaveLength(18);
+  it('profile skillPackIds has exactly 16 entries', () => {
+    expect(MARCUS_PROFILE.skillPackIds).toHaveLength(16);
   });
 
   it('has no duplicate pack IDs', () => {
@@ -91,5 +89,17 @@ describe('Marcus skill pack permissions', () => {
         expect(allowedPrefixes.some((prefix) => permission.startsWith(prefix))).toBe(true);
       });
     });
+  });
+});
+
+// Security is Sentinel's and risk review Maria's (owner, 2026-10-23).
+describe('Marcus has no security or risk packs', () => {
+  it('lists neither pack, and a stale saved install of one is not shown', () => {
+    localStorage.setItem('alphonso_skill_packs_v1', JSON.stringify([{ id: 'pack.marcus-security-audit', ownerAgent: 'marcus', enabled: true, permissions: [] }]));
+    const ids = listSkillPacks().map((p) => p.id);
+    for (const id of ['pack.marcus-security-audit', 'pack.marcus-risk-detection']) {
+      expect(ids).not.toContain(id);
+      expect(MARCUS_PROFILE.skillPackIds).not.toContain(id);
+    }
   });
 });

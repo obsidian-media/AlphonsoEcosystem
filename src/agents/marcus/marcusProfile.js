@@ -53,8 +53,6 @@ export const MARCUS_PROFILE = {
     'pack.marcus-github-releases',
     'pack.marcus-slack-notifications',
     'pack.marcus-release-readiness',
-    'pack.marcus-security-audit',
-    'pack.marcus-risk-detection',
     'pack.marcus-integration-validation',
     'pack.marcus-deployment-execution',
     'pack.marcus-changelog-generation',

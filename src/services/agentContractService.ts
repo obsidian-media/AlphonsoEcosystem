@@ -81,8 +81,6 @@ const AGENT_SKILL_PACK_SCOPE_OVERRIDES: Record<string, string[]> = {
   'pack.marcus-github-releases': ['distribution.github', 'approved_dispatch', 'engagement.track'],
   'pack.marcus-slack-notifications': ['distribution.slack', 'engagement.notify', 'approved_dispatch'],
   'pack.marcus-release-readiness': ['distribution.readiness', 'performance.check', 'approved_dispatch'],
-  'pack.marcus-security-audit': ['distribution.security', 'performance.audit', 'approved_dispatch'],
-  'pack.marcus-risk-detection': ['distribution.risk', 'performance.assessment', 'approved_dispatch'],
   'pack.marcus-integration-validation': ['distribution.validation', 'performance.integration', 'approved_dispatch'],
   'pack.marcus-deployment-execution': ['distribution.deploy', 'approved_dispatch', 'performance.verify'],
   'pack.marcus-changelog-generation': ['distribution.changelog', 'approved_dispatch', 'engagement.track'],
