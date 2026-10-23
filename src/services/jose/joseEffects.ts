@@ -111,14 +111,49 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   orchestration_summary: ['write_own_work'],
 };
 
-/** Effects of a task type; `a+b` (merged tasks) is the union. Unknown counts as running code, so it asks. */
+/**
+ * A task type the planner writes (phase 2) is judged by its family prefix,
+ * the same families the permission table uses. Families that can change the
+ * project or run things (local_, execute_, runtime_, verification_,
+ * filesystem_) are deliberately absent: they stay "running code".
+ */
+const FAMILY_EFFECTS: [string, JoseEffect[]][] = [
+  ['research', ['read']],
+  ['source_', ['read']],
+  ['citation_', ['read']],
+  ['analysis_', ['read']],
+  ['opportunity_', ['read']],
+  ['prioritization_', ['read']],
+  ['strategy_', ['read']],
+  ['audit_', ['read']],
+  ['governance_', ['read']],
+  ['policy_', ['read']],
+  ['security_', ['read']],
+  ['risk_', ['read']],
+  ['permission_', ['read']],
+  ['orchestration_', ['read']],
+  ['creative_', ['write_own_work']],
+  ['memory_', ['write_own_work']],
+  ['retention_', ['write_own_work']],
+  ['knowledge_', ['write_own_work']],
+  ['timeline_', ['write_own_work']],
+  ['distribution_', ['publish_or_send']],
+  ['engagement_', ['publish_or_send']],
+];
+
+function familyEffects(part: string): JoseEffect[] | null {
+  const family = FAMILY_EFFECTS.find(([prefix]) => part.startsWith(prefix));
+  return family ? family[1] : null;
+}
+
+/** Effects of a task type; `a+b` (merged tasks) is the union. An unknown family counts as running code, so it asks. */
 export function inferEffects(actionType: string): JoseEffect[] {
   const parts = String(actionType || '').split('+').map((p) => p.trim()).filter(Boolean);
   if (parts.length === 0) return ['run'];
   const effects = new Set<JoseEffect>();
   for (const part of parts) {
     const known = Object.prototype.hasOwnProperty.call(ACTION_EFFECTS, part) ? ACTION_EFFECTS[part] : null;
-    for (const effect of known || (['run'] as JoseEffect[])) effects.add(effect);
+    for (const effect of known || familyEffects(part) || (['run'] as JoseEffect[])) effects.add(effect);
   }
   return [...effects];
 }
