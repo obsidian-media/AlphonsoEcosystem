@@ -1,6 +1,6 @@
 // Folders and files for content-factory projects:
 // <output folder>/<brand>/<project>/...
-import { invoke } from '@tauri-apps/api/core';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import type { ContentBrand, ContentProject, StepId } from './contentTypes';
 
 const WINDOWS_RESERVED = new Set([
@@ -67,6 +67,26 @@ export async function saveProjectImage(
   const folder = joinFolder(root, projectRelativeDir(brand, project), subfolder);
   const proof = await invoke<{ path?: string }>('save_image_to_folder', { base64Data: base64, filename, folder });
   return proof?.path || joinFolder(folder, filename);
+}
+
+const allowedMediaRoots = new Map<string, Promise<boolean>>();
+
+/** Lets the window play video and audio from the output folder (asked once per folder). */
+export function allowMediaFolder(root: string): Promise<boolean> {
+  const key = String(root || '').trim();
+  if (!key) return Promise.resolve(false);
+  if (!allowedMediaRoots.has(key)) {
+    allowedMediaRoots.set(key, invoke('content_allow_media_folder', { folder: key }).then(() => true, () => {
+      allowedMediaRoots.delete(key);
+      return false;
+    }));
+  }
+  return allowedMediaRoots.get(key) as Promise<boolean>;
+}
+
+/** A video or audio file in the output folder, as an address the app's players can load. */
+export function mediaUrl(root: string, relativePath: string): string {
+  return convertFileSrc(joinFolder(root, relativePath));
 }
 
 /** A saved picture, as a data URL to show in the app, or null. */

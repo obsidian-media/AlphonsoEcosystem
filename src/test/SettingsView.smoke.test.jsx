@@ -171,6 +171,15 @@ describe('SettingsView smoke', () => {
     expect(screen.getByText('General', { exact: true })).toBeTruthy();
   });
 
+  // Miya content factory phase 2a: the installer includes an LGPL FFmpeg build.
+  it('names the FFmpeg license (LGPL) for the finished videos', async () => {
+    const { invoke } = await import('@tauri-apps/api/core');
+    render(<SettingsView settings={minimalSettings} setSettings={vi.fn()} ollamaStatus={{ state: 'running', label: 'Running' }} installedModels={[]} onCheckOllama={vi.fn()} onCopyTroubleshootingCommand={vi.fn()} />);
+    expect(screen.getByTestId('ffmpeg-license-notice').textContent).toContain('GNU LGPL 2.1');
+    fireEvent.click(screen.getByRole('button', { name: 'FFmpeg license and source' }));
+    expect(invoke).toHaveBeenCalledWith('open_url', { url: 'https://ffmpeg.org/legal.html' });
+  });
+
   it('renders with empty settings', () => {
     render(
       <SettingsView

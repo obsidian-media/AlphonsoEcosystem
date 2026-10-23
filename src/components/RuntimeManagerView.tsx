@@ -140,7 +140,7 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   whisper: {
     icon: Mic,
     category: 'Audio',
-    usedBy: 'Echo: Settings → Knowledge → meeting transcription',
+    usedBy: 'Echo: Settings → Knowledge → meeting transcription; Miya: word timing for the finished video\'s captions',
     difference: 'Turns recorded audio files into text. Voice OS uses its own faster copy for live talking.',
     docsUrl: 'https://github.com/openai/whisper',
     color: 'text-(--agent-maria)',
@@ -149,8 +149,8 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   audiocraft: {
     icon: Music,
     category: 'Audio',
-    usedBy: null,
-    difference: 'Makes music and sound effects from a text description. Agents can\'t use it yet.',
+    usedBy: 'Miya: the Music step in Miya Studio (a music bed for the finished video)',
+    difference: 'Makes music and sound effects from a text description.',
     webUi: true,
     docsUrl: 'https://github.com/facebookresearch/audiocraft',
     color: 'text-(--agent-marcus)',
