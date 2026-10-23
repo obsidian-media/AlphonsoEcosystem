@@ -96,7 +96,7 @@ export function JosePlanMap({ steps, compact = false, selectedStepId, onSelectSt
               </div>
               {!compact && (
                 <>
-                  <div className="text-[9px] text-(--text-3) truncate">{step.actionType}</div>
+                  <div className="text-[9px] text-(--text-3) truncate">{step.actionType}{step.model ? ` · ${step.model}` : ''}</div>
                   <div className="text-[10px] leading-tight text-(--text-2) line-clamp-2" title={instruction}>{short}</div>
                 </>
               )}

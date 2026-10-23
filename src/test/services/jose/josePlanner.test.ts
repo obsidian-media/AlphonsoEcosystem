@@ -4,6 +4,11 @@ vi.mock('../../../lib/ollama', () => ({
   generateAgentLlmResponse: vi.fn(),
 }));
 
+vi.mock('../../../services/jose/joseModels', async (importOriginal) => ({
+  ...(await importOriginal()),
+  listInstalledModels: vi.fn(async () => ['llama3.2:3b', 'qwen2.5:7b']),
+}));
+
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { planJoseRequest, describePlanSource } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
@@ -11,7 +16,7 @@ import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCo
 
 const llm = vi.mocked(generateAgentLlmResponse);
 
-type ModelStep = { id: string; agent: string; taskType: string; instruction: string; effects?: string[]; needs?: string[] };
+type ModelStep = { id: string; agent: string; taskType: string; instruction: string; effects?: string[]; needs?: string[]; model?: string };
 const answer = (steps: ModelStep[], basedOnTemplate: string | null = null, kind = 'normal') =>
   ({ response: JSON.stringify({ basedOnTemplate, kind, steps }) }) as never;
 const promptOf = (call: number) => String((llm.mock.calls[call][1] as { prompt: string }).prompt);
@@ -139,5 +144,21 @@ describe('the rules check every plan, with one fix and then a fallback', () => {
     const plan = await planJoseRequest(PARTY);
     expect(promptOf(1)).toMatch(/only Alphonso/);
     expect(plan.source).toBe('rules');
+  });
+});
+
+// Phase 4: Jose picks the model for each step, from installed models only.
+describe('the model for each step', () => {
+  it('names the installed models in the prompt and keeps an installed choice', async () => {
+    llm.mockResolvedValueOnce(answer([{ id: 'a', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'], model: 'qwen2.5:7b' }]));
+    const plan = await planJoseRequest(PARTY);
+    expect(promptOf(0)).toMatch(/qwen2\.5:7b/);
+    expect(plan.steps[0].model).toBe('qwen2.5:7b');
+  });
+
+  it('drops a model that is not installed', async () => {
+    llm.mockResolvedValueOnce(answer([{ id: 'a', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'], model: 'gpt-imaginary:70b' }]));
+    const plan = await planJoseRequest(PARTY);
+    expect(plan.steps[0].model).toBeUndefined();
   });
 });

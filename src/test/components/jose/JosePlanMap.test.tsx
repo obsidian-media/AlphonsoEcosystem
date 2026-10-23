@@ -33,4 +33,9 @@ describe('JosePlanMap', () => {
     expect(screen.queryByText('Find the facts.')).toBeNull();
     expect(screen.getByText('Hector')).toBeTruthy();
   });
+
+  it('shows the model Jose chose for a step', () => {
+    render(<JosePlanMap steps={[{ ...steps[0], model: 'qwen2.5:7b' }]} />);
+    expect(screen.getByText(/qwen2\.5:7b/)).toBeTruthy();
+  });
 });

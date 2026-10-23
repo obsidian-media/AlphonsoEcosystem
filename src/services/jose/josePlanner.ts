@@ -10,6 +10,8 @@ import { AGENT_PERMISSION_TABLE, describeAgentPermissions } from './agentPermiss
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
 import { TEMPLATE_FIT_THRESHOLD, getTemplate, scoreTemplateFit, type JoseTemplate } from './joseTemplates';
 import { JOSE_LIMITS, checkPlan, legacyNeeds, type PlanStep } from './stepGraph';
+import { listInstalledModels } from './joseModels';
+import { getAgentProvider } from '../modelSelectionService';
 
 export interface JosePlan {
   steps: PlanStep[];
@@ -37,18 +39,19 @@ function templateForPrompt(template: JoseTemplate): string {
   return `Starting point: ${template.name} (template "${template.id}"). Adapt it to the request, or ignore it if it does not fit:\n${JSON.stringify(steps, null, 2)}`;
 }
 
-function buildPrompt(text: string, template: JoseTemplate | null, history: PlanOptions['history'], problems: string[]): string {
+function buildPrompt(text: string, template: JoseTemplate | null, history: PlanOptions['history'], problems: string[], installed: string[] = []): string {
   const recent = (history || []).slice(-6).map((m) => `${m.role}: ${String(m.content).slice(0, 400)}`).join('\n');
   return [
     'You are Jose, the orchestrator. Plan the request as steps for the agents below. You never do the work yourself.',
     `Agents:\n${agentsForPrompt()}`,
     `Effects a step can have: ${JOSE_EFFECTS.map((e) => `${e} (${EFFECT_LABELS[e]})`).join(', ')}. Only alphonso may run; only marcus may publish_or_send.`,
     `Limits: at most ${JOSE_LIMITS.maxSteps} steps. Use "kind": "project" for long work such as building an app, otherwise "normal".`,
+    installed.length ? `Installed models you may choose for a step ("model"; leave it out to use the agent's own): ${installed.join(', ')}. Use a larger one only where the step needs it.` : '',
     template ? templateForPrompt(template) : '',
     recent ? `Recent conversation:\n${recent}` : '',
     `Request: ${text}`,
     problems.length ? `Your last plan did not pass the checks:\n- ${problems.join('\n- ')}\nFix these problems.` : '',
-    'Answer with JSON only: {"basedOnTemplate": "<template id>" or null, "kind": "normal" or "project", "steps": [{"id": "short_id", "agent": "<agent>", "taskType": "<task type>", "instruction": "<what to do>", "effects": ["<effect>"], "needs": ["<step id>"]}]}',
+    'Answer with JSON only: {"basedOnTemplate": "<template id>" or null, "kind": "normal" or "project", "steps": [{"id": "short_id", "agent": "<agent>", "taskType": "<task type>", "instruction": "<what to do>", "effects": ["<effect>"], "needs": ["<step id>"], "model": "<installed model, optional>"}]}',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -75,7 +78,7 @@ function extractJson(raw: string): unknown {
 }
 
 /** The model's answer as steps, or null when it is not a usable plan. */
-function readModelPlan(raw: string): ModelPlan | null {
+function readModelPlan(raw: string, installed: string[] = []): ModelPlan | null {
   const parsed = extractJson(raw) as { basedOnTemplate?: unknown; kind?: unknown; steps?: unknown } | null;
   if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.steps) || parsed.steps.length === 0) return null;
   const steps: PlanStep[] = [];
@@ -84,9 +87,13 @@ function readModelPlan(raw: string): ModelPlan | null {
     const declared = Array.isArray(item.effects) ? item.effects.filter((e): e is JoseEffect => JOSE_EFFECTS.includes(e as JoseEffect)) : [];
     // The union with the inferred effects: a step cannot dodge approval by under-declaring.
     const effects = [...new Set([...declared, ...inferEffects(item.taskType)])];
+    // A model only if it is installed and the agent runs on Ollama (phase 4).
+    const agent = item.agent.toLowerCase();
+    const model = typeof item.model === 'string' && installed.includes(item.model) && getAgentProvider(agent)?.provider === 'ollama' ? item.model : undefined;
     steps.push({
+      ...(model ? { model } : {}),
       stepId: item.id,
-      agent: item.agent.toLowerCase(),
+      agent,
       actionType: item.taskType,
       instruction: typeof item.instruction === 'string' ? item.instruction : '',
       effects,
@@ -135,15 +142,16 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
   const best = options.planFresh ? null : scoreTemplateFit(text).find((s) => s.score >= TEMPLATE_FIT_THRESHOLD);
   const template = best ? getTemplate(best.templateId) : null;
   let problems: string[] = [];
+  const installed = await listInstalledModels();
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let raw: string;
     try {
-      const result = await generateAgentLlmResponse('jose', { prompt: buildPrompt(text, template, options.history, problems), format: 'json', signal: options.signal });
+      const result = await generateAgentLlmResponse('jose', { prompt: buildPrompt(text, template, options.history, problems, installed), format: 'json', signal: options.signal });
       raw = String(result?.response || '');
     } catch {
       return fallback(text, template, "Jose's model isn't available, so I used the simple plan.");
     }
-    const plan = readModelPlan(raw);
+    const plan = readModelPlan(raw, installed);
     if (!plan) {
       problems = ['The answer could not be read as a plan with at least one step.'];
       continue;
