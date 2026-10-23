@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 250 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 251 services and 156 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -151,6 +151,7 @@ Source-backed inventory: 250 services and 155 components. Human purpose descript
 | component | `src/components/ui/Tabs.tsx` | `TabItem`, `Tabs` |
 | component | `src/components/ui/Zone.tsx` | `Zone` |
 | component | `src/components/UpdaterNotification.tsx` | `UpdaterNotification` |
+| component | `src/components/VideoModelsPanel.tsx` | `VideoModelsPanel` |
 | component | `src/components/ViewErrorBoundary.tsx` | `ViewErrorBoundary` |
 | component | `src/components/ViewLoadingState.tsx` | `ViewLoadingState` |
 | component | `src/components/VoiceInputButton.tsx` | `VoiceInputButton` |
@@ -391,6 +392,7 @@ Source-backed inventory: 250 services and 155 components. Human purpose descript
 | service | `src/services/trustModel.ts` | `timestampMs`, `TRUST_STATES`, `trustColor`, `TrustState` |
 | service | `src/services/unifiedMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getDurableMemoryStatus`, `getMemorySize`, `getMemorySummary`, `getNamespaceCount`, `hydrateFromDurable`, `hydrateMemoryFromDurable`, `importMemoryItems`, `listDurableMemoryRecords`, `listEcosystemMemoryItems`, `listMemory`, `listMemoryByNamespace`, `listMemoryItems`, `listMiyaMemory`, `listWorkflowMemory`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `normalizeMemoryRecord`, `pushMemory`, `pushMemoryItem`, `pushMiyaMemory`, `pushWorkflowMemory`, `resetMemoryServiceState`, `tickExpiry`, `upsertBrandKit`, `upsertDurableMemoryRecords` |
 | service | `src/services/verificationService.ts` | `appendVerificationLog`, `buildOllamaStartupGuide`, `getVerificationLogs`, `listOllamaModels`, `OllamaStartupGuide`, `readDurableAuditLog`, `VERIFICATION_SCOPE`, `VerificationLogEntry`, `VerificationLogInput`, `verifyCommandExecution`, `verifyDurableAuditChain`, `verifyOllamaRuntimeProof`, `verifyPathProof`, `verifyProcessProof` |
+| service | `src/services/videoModelService.ts` | `effectiveVideoModel`, `getSelectedVideoModel`, `installVideoModel`, `listVideoModels`, `setSelectedVideoModel`, `VideoModel`, `VideoModelsInfo` |
 | service | `src/services/voiceOsService.ts` | `checkVoiceWatchdog`, `getVoiceServerStatus`, `getVoiceToken`, `getVoiceWebSocketUrl`, `resetVoiceWatchdogState`, `startVoiceServer`, `startVoiceWatchdog`, `stopVoiceServer`, `stopVoiceWatchdog` |
 | service | `src/services/voiceService.ts` | `classifyVoiceError`, `getVoicePrivacyLabel`, `requestAudioStream`, `SpeechRecognitionOptions`, `startSpeechRecognition`, `stopAudioStream`, `supportsMicrophoneCapture`, `supportsSpeechRecognition`, `TRANSCRIPTION_PIPELINE_STATUS`, `VOICE_STATES`, `VoiceErrorClassification`, `VoiceState` |
 | service | `src/services/whatsappBrowserConnector.ts` | `browserPollWhatsAppGateway`, `browserSendWhatsApp`, `processWhatsAppWebhook`, `verifyWhatsAppWebhook` |
