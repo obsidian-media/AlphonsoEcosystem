@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   createProject,
   listProjects,
@@ -99,5 +99,12 @@ describe('contentProjectService', () => {
     startStep(p.id, 'script');
     expect(recoverInterruptedSteps()).toBe(2);
     expect(getProject(p.id)!.steps.research.status).toBe('interrupted');
+  });
+
+  it('uses unpredictable ids (crypto.getRandomValues)', () => {
+    const spy = vi.spyOn(globalThis.crypto, 'getRandomValues');
+    createProject('b', 'P', emptyBrief());
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

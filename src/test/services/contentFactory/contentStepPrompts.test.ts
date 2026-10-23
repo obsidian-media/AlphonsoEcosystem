@@ -127,3 +127,13 @@ describe('scene ids', () => {
     expect(parsed.scenes.map((sc) => sc.id)).toEqual(['s1', 's2']);
   });
 });
+
+// CodeQL (PR 332): a task type such as "constructor" found Object's built-in
+// method instead of no checker, and the answer passed.
+describe('unknown task types', () => {
+  it('refuses names that exist on every JavaScript object', () => {
+    for (const name of ['constructor', 'toString', 'hasOwnProperty', '__proto__']) {
+      expect(parseStepAnswer(name, '{"a":1}'), name).toBeNull();
+    }
+  });
+});
