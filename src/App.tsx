@@ -145,6 +145,7 @@ const AgentPerformanceView = lazy(() => import('./components/AgentPerformanceVie
 const SessionHistoryView = lazy(() => import('./components/SessionHistoryView').then((mod) => ({ default: mod.SessionHistoryView })));
 
 import { markRunningRequestsInterrupted } from './services/jose/joseRequestStore';
+import { expireWaitingRequests } from './services/jose/joseExpiry';
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
@@ -158,6 +159,7 @@ function markInterruptedRequestsOnce(): void {
   if (interruptedRequestsChecked || IS_COACH_WINDOW) return;
   interruptedRequestsChecked = true;
   try { markRunningRequestsInterrupted(); } catch { /* display aid only */ }
+  try { expireWaitingRequests(); } catch { /* checked again every hour */ }
 }
 const COACH_AGENT_FROM_QUERY = parsedSearchParams.get('coachAgent');
 
@@ -187,6 +189,12 @@ export function useRequestApprovalBridge() { return React.useContext(RequestAppr
 
 function AppShell() {
   useState(() => { markInterruptedRequestsOnce(); return null; });
+  // Waiting requests expire after the days set in Settings (phase 5); checked every hour.
+  useEffect(() => {
+    if (IS_COACH_WINDOW) return undefined;
+    const timer = setInterval(() => { try { expireWaitingRequests(); } catch { /* next hour */ } }, 60 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;
   const { settings, setSettings, operatorMode, setOperatorMode } = useSettings();

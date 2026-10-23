@@ -20,6 +20,7 @@ const STATUS_LABELS: Record<string, string> = {
   failed: 'Failed',
   interrupted: 'Interrupted',
   cancelled: 'Cancelled',
+  expired: 'Expired',
 };
 
 export function requestPlanLabel(request: JoseRequest): string {

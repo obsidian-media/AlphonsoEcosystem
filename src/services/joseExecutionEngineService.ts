@@ -2107,7 +2107,8 @@ export async function runJoseCommandExecutionPipeline({
     recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
     // Echo saves what was decided (phase 4). Never changes the outcome.
     const finished = getJoseRequest(joseRequestId);
-    if (saveDecisions && finished && (finished.status === 'done' || finished.status === 'waiting_approval')) {
+    // Once, when the request is done (phase 5), not again after an approval.
+    if (saveDecisions && finished && finished.status === 'done') {
       const outputs = Object.fromEntries(finished.steps
         .filter((s) => s.status === 'done')
         .map((s) => [s.stepId, getStepOutput(command.id, s.stepId) || {}]));

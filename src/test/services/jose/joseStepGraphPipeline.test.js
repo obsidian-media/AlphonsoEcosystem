@@ -613,4 +613,15 @@ describe('Jose runs plans as step graphs', () => {
       expect(ran()).toEqual([]);
     });
   });
+
+  // Phase 5: Echo saves once, when a request is done (not while it waits).
+  it('does not have Echo save while a request waits for approval', async () => {
+    const result = await run([
+      step('hector', 'research_report', { stepId: 'a', effects: ['read'] }),
+      step('marcus', 'distribution_execution', { stepId: 'post', effects: ['publish_or_send'], needs: ['a'] }),
+    ]);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.status).toBe('waiting_approval');
+    expect((request.changeLog || []).map((c) => c.text)).not.toContain('Echo saved what was decided.');
+  });
 });

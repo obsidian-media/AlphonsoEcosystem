@@ -271,6 +271,16 @@ describe('SettingsView smoke', () => {
     expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ paidModels: expect.objectContaining({ monthlyCapUsd: null }) }));
   });
 
+  it('saves how long waiting requests wait before they expire', () => {
+    const setSettings = renderApprovals({ ...minimalSettings });
+    const field = screen.getByLabelText('Waiting requests expire after (days)');
+    expect(field.value).toBe('7');
+    fireEvent.change(field, { target: { value: '14' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ joseWaitingExpiryDays: 14 }));
+    fireEvent.change(field, { target: { value: '' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ joseWaitingExpiryDays: 0 }));
+  });
+
   it('shows Approval Mode on when the setting has never been set', () => {
     renderApprovals({});
     expect(screen.getByRole('switch', { name: 'Toggle approval mode' }).getAttribute('aria-checked')).toBe('true');

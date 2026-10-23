@@ -8,4 +8,9 @@ describe('App start', () => {
     const source = readFileSync(resolve(__dirname, '../App.tsx'), 'utf8');
     expect(source).toMatch(/markRunningRequestsInterrupted\(\)/);
   });
+
+  it('expires waiting requests at start and every hour', () => {
+    const source = readFileSync(resolve(__dirname, '../App.tsx'), 'utf8');
+    expect((source.match(/expireWaitingRequests\(\)/g) || []).length).toBeGreaterThanOrEqual(2);
+  });
 });

@@ -1314,6 +1314,23 @@ export function SettingsView({
           <PaidModelsPanel settings={settings} setSettings={setSettings} />
           <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
             <div>
+              <label htmlFor="jose-waiting-expiry" className="text-sm font-semibold text-(--text-1)">Waiting requests expire after (days)</label>
+              <div className="text-[11px] text-(--text-3) mt-0.5">A request still waiting for your approval after this many days is cancelled, with a note. Blank or 0: never.</div>
+            </div>
+            <input
+              id="jose-waiting-expiry"
+              inputMode="numeric"
+              placeholder="Never"
+              value={settings.joseWaitingExpiryDays === undefined ? '7' : Number(settings.joseWaitingExpiryDays) > 0 ? String(settings.joseWaitingExpiryDays) : ''}
+              onChange={(e) => {
+                const days = Number(e.target.value);
+                setSettings({ ...settings, joseWaitingExpiryDays: e.target.value.trim() === '' || !Number.isFinite(days) || days < 0 ? 0 : Math.round(days) });
+              }}
+              className="w-20 rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
+            <div>
               <div className="text-sm font-semibold text-(--text-1)">Show Jose's plan first</div>
               <div className="text-[11px] text-(--text-3) mt-0.5">Bigger requests are those with 4 or more agents, counting Jose and Maria, or a step that always asks.</div>
             </div>
