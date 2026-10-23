@@ -29,7 +29,7 @@ export const STEP_AGENTS: Record<StepId, StepAgent[]> = {
   thumbnail: [{ agent: 'miya', actionType: 'creative_thumbnails', title: 'Three thumbnail concepts' }],
   campaign: [
     { agent: 'miya', actionType: 'creative_campaign', title: 'Captions, ads and calendar' },
-    { agent: 'nova', actionType: 'strategy_posting_times', title: 'Posting times' },
+    { agent: 'nova', actionType: 'strategy_timing', title: 'Posting times' },
   ],
   quality: [
     { agent: 'maria', actionType: 'audit_content_quality', title: 'Quality gate' },
@@ -47,11 +47,17 @@ const WORKING: Record<string, string> = {
   creative_scenes: 'Miya is planning the scenes…',
   creative_thumbnails: 'Miya is designing three thumbnails…',
   creative_campaign: 'Miya is writing the campaign…',
-  strategy_posting_times: 'Nova is choosing posting times…',
+  strategy_timing: 'Nova is choosing posting times…',
   security_content_check: 'Sentinel is checking the text and links…',
 };
 
 export const WAITING_FOR_APPROVAL = 'Waiting for your approval in the Approval panel.';
+
+/** What each factory task says it does. Jose's bus and the agent contracts
+ *  scan this text and the task type for words such as "publish", "post",
+ *  "send" or "execute" and then hold the task as a risky outside action, so
+ *  it must not contain them, even to say the opposite (found 2026-10-22). */
+export const CONTENT_TASK_PREVIEW = 'Writes text and pictures for a content project. Nothing leaves this computer.';
 
 export interface RunStepOptions {
   settings: { outputFolder?: string | null };
@@ -106,7 +112,7 @@ export async function runContentStep(projectId: string, step: StepId, options: R
     };
     return {
       agent, actionType, title: `${title}: ${started.name}`, rationale: 'Miya content factory step',
-      riskLevel: 'low', requiresApproval: false, commandPreview: 'Writes text only; nothing is sent or published.',
+      riskLevel: 'low', requiresApproval: false, commandPreview: CONTENT_TASK_PREVIEW,
       fragments: [], contentStep,
     };
   });

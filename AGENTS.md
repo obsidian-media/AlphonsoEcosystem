@@ -26,11 +26,11 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (132 .tsx, 39 .jsx — .jsx being migrated)
   agents/              9 agent profiles, permissions, schemas
   components/          118 UI components (.tsx + .tsx subdirs)
-  services/            206 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
+  services/            216 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                421 test files, 5,614 tests (Vitest; see ground truth for current verification status)
+  test/                434 test files, 5,614 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -39,7 +39,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
   src-tauri/             Rust backend
-  src/lib.rs           ~865 lines, 138 Tauri commands (across 41 modules)
+  src/lib.rs           ~866 lines, 139 Tauri commands (across 41 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -66,7 +66,7 @@ ios/                   iOS companion app (SwiftUI)
   src/companion_router.rs Companion command routing
 scripts/               Build, release, auth, verification scripts
 e2e/                   Playwright E2E tests (smoke.spec.js, boot.spec.js) — web build, Tauri bridge mocked
-e2e-desktop/           Desktop E2E suite — real built app via tauri-driver, isolated test data (16 spec files)
+e2e-desktop/           Desktop E2E suite — real built app via tauri-driver, isolated test data (17 spec files)
 gateway/               WhatsApp Cloud gateway (Railway-deployed, live)
   docs/                  56 documentation .md files (65 markdown docs total incl. 11 root-level .md)
 ```
@@ -74,7 +74,7 @@ gateway/               WhatsApp Cloud gateway (Railway-deployed, live)
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 5,239 tests (421 files; also runs bridge/)
+npm run test             # 5,239 tests (434 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command

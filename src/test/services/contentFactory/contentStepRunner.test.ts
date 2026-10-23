@@ -21,7 +21,8 @@ import { getAllAgentOutputs } from '../../../services/agentOutputStoreService';
 import { writeProjectFile } from '../../../services/contentFactory/contentProjectFiles';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief, getProject, saveStepVersion } from '../../../services/contentFactory/contentProjectService';
-import { runContentStep, STEP_AGENTS } from '../../../services/contentFactory/contentStepRunner';
+import { runContentStep, STEP_AGENTS, CONTENT_TASK_PREVIEW } from '../../../services/contentFactory/contentStepRunner';
+import { canExecutePacket } from '../../../services/agentBusService';
 import { renderScenePictures, renderThumbnails } from '../../../services/contentFactory/contentImages';
 
 const settings = { outputFolder: 'D:\\Content' };
@@ -126,5 +127,17 @@ describe('runContentStep', () => {
     vi.mocked(renderScenePictures).mockClear();
     await runContentStep(p.id, 'script', { settings });
     expect(renderScenePictures).not.toHaveBeenCalled();
+  });
+
+  // Found in the real app (2026-10-22): Jose's bus refused every step, because
+  // the task text said "nothing is published" and one task type contained
+  // "post". Every factory task must pass the real gates.
+  it("every factory task passes Jose's execution gates", () => {
+    for (const [step, agents] of Object.entries(STEP_AGENTS)) {
+      for (const { agent, actionType } of agents) {
+        const gate = canExecutePacket({ toAgent: agent, actionType, commandPreview: CONTENT_TASK_PREVIEW, status: 'queued', requiresApproval: false } as never);
+        expect(gate, `${step} ${agent} ${actionType}`).toEqual({ ok: true, reason: null });
+      }
+    }
   });
 });

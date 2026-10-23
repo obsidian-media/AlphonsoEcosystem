@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 206 services and 140 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 216 services and 150 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -80,6 +80,16 @@ Source-backed inventory: 206 services and 140 components. Human purpose descript
 | component | `src/components/MicrophoneStatus.tsx` | `MicrophoneStatus` |
 | component | `src/components/MissionControlHome.tsx` | `MissionControlHome` |
 | component | `src/components/MissionRoom.tsx` | `MissionRoom` |
+| component | `src/components/miya/BrandEditor.tsx` | `BrandEditor` |
+| component | `src/components/miya/BriefPanel.tsx` | `BriefPanel` |
+| component | `src/components/miya/CampaignStudioTab.tsx` | `CampaignStudioTab` |
+| component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab` |
+| component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
+| component | `src/components/miya/ProjectPicture.tsx` | `ProjectPicture` |
+| component | `src/components/miya/SceneBuilderTab.tsx` | `SceneBuilderTab`, `SceneBuilderTabProps` |
+| component | `src/components/miya/ScriptStudioTab.tsx` | `ScriptStudioTab`, `StepTabProps` |
+| component | `src/components/miya/StepPanel.tsx` | `StepPanel`, `StepPanelProps` |
+| component | `src/components/miya/ThumbnailStudioTab.tsx` | `ThumbnailStudioTab`, `ThumbnailStudioTabProps` |
 | component | `src/components/MiyaCompanionWidget.tsx` | `MiyaCompanionWidget` |
 | component | `src/components/MiyaStudio.tsx` | `brandKitPrompt`, `MiyaStudio` |
 | component | `src/components/ModelSwitcher.tsx` | `CloudModelPicker`, `CloudProvider`, `HermesModelPicker`, `ModelProviderId`, `ModelProviderPicker`, `ModelSwitcher`, `OllamaModelPicker` |
@@ -228,6 +238,16 @@ Source-backed inventory: 206 services and 140 components. Human purpose descript
 | service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `updateMessage`, `uploadFile` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
+| service | `src/services/contentFactory/contentAgentExecutor.ts` | `ContentStepResult`, `executeContentStepAssignment`, `UNREADABLE_ANSWER` |
+| service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `DEFAULT_QUALITY_THRESHOLD`, `ensureFirstBrand`, `getBrand`, `listBrands`, `saveBrand` |
+| service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderScenePictures`, `renderThumbnails` |
+| service | `src/services/contentFactory/contentProjectFiles.ts` | `loadProjectFile`, `loadProjectImage`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
+| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setVersionOutputField`, `startStep`, `updateBrief` |
+| service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `visiblePieces` |
+| service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `parseStepAnswer` |
+| service | `src/services/contentFactory/contentStepRunner.ts` | `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `StepAgent`, `WAITING_FOR_APPROVAL` |
+| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion` |
+| service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
 | service | `src/services/creativeRoutingService.ts` | `detectCreativeIntent`, `routeToCreativeTool` |
 | service | `src/services/devPacketService.ts` | `AuditReport`, `buildDevPackets`, `DEV_PACKET_SCOPE`, `DevPacket`, `DevPacketFinding`, `DevPacketGroup`, `DevPacketPatchSuggestion`, `DevPacketSummary`, `getLastDevPacket`, `listDevPackets`, `ReadinessReport`, `saveDevPackets`, `summarizeDevPackets` |

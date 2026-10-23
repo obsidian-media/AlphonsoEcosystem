@@ -62,7 +62,7 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
     keys: '{"platforms":[{"platform":"","caption":"","hashtags":[""],"description":""}],"ads":[{"network":"meta|google|youtube","headline":"","body":""}],"calendar":[{"platform":"","suggestedAt":"","reason":""}]}',
     uses: ['research', 'script', 'thumbnail'],
   },
-  strategy_posting_times: {
+  strategy_timing: {
     role: 'Nova, Alphonso\'s opportunity analyst',
     ask: 'Suggest when to post on each platform for this audience, with a reason from the research.',
     keys: '{"times":[{"platform":"","dayOfWeek":"","time":"","reason":""}]}',
@@ -135,7 +135,7 @@ const VALIDATORS: Record<string, (j: Json) => boolean> = {
   creative_thumbnails: (j) => list(j.concepts, 3) && (j.concepts as unknown[]).length === 3
     && every(j.concepts, 3, (c) => isText(c.headline) && words(c.headline) <= 6 && isText(c.imagePrompt) && ['left', 'right', 'center'].includes(String(c.layout))),
   creative_campaign: (j) => every(j.platforms, 1, (p) => isText(p.platform) && isText(p.caption) && Array.isArray(p.hashtags)) && Array.isArray(j.ads) && Array.isArray(j.calendar),
-  strategy_posting_times: (j) => every(j.times, 1, (t) => isText(t.platform) && isText(t.time)),
+  strategy_timing: (j) => every(j.times, 1, (t) => isText(t.platform) && isText(t.time)),
   security_content_check: (j) => typeof j.ok === 'boolean' && Array.isArray(j.issues),
 };
 
