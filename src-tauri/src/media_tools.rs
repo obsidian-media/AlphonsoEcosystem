@@ -214,9 +214,13 @@ async fn run_script(
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SpeakLine {
   id: String,
   text: String,
+  /// A scene with nothing to say: this much silence in the full track.
+  #[serde(default)]
+  pause_sec: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -242,7 +246,7 @@ pub async fn content_tts_kokoro(
   let models = crate::runtime_manager::tool_dir("kokoro").join("models");
   if !python.is_file() || !models.join(KOKORO_MODEL_FILE).is_file() {
     return Ok(
-      serde_json::json!({ "ok": false, "error": "Kokoro is not installed. Install it in Runtime Hub." }),
+      serde_json::json!({ "ok": false, "error": "Kokoro is not installed. Install Kokoro in Runtime Hub." }),
     );
   }
   let out = checked_dir(&request.workspace_root, &request.out_dir)?;
@@ -910,6 +914,110 @@ pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Va
   Ok(serde_json::json!({ "ok": true, "outputs": outputs }))
 }
 
+// ── Word timings for the captions (phase 2a) ────────────────────────────────
+
+/// The words Whisper heard, with their times, from its JSON output.
+pub(crate) fn whisper_words(json: &serde_json::Value) -> Vec<serde_json::Value> {
+  json["segments"]
+    .as_array()
+    .into_iter()
+    .flatten()
+    .flat_map(|seg| seg["words"].as_array().cloned().unwrap_or_default())
+    .filter_map(|w| {
+      let word = w["word"].as_str()?.trim().to_string();
+      let (start, end) = (w["start"].as_f64()?, w["end"].as_f64()?);
+      (!word.is_empty()).then(|| serde_json::json!({ "word": word, "start": start, "end": end }))
+    })
+    .collect()
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WordTimesRequest {
+  workspace_root: String,
+  /// The voice track, relative to the workspace.
+  audio_path: String,
+}
+
+/// Whisper's word times on the voice track (the words shown always come from
+/// the script). Not installed → `{ ok: false, missing: true }`.
+#[tauri::command]
+pub async fn content_whisper_words(request: WordTimesRequest) -> Result<serde_json::Value, String> {
+  let dir = crate::runtime_manager::tool_dir("whisper");
+  let exe = if cfg!(target_os = "windows") {
+    dir.join("venv").join("Scripts").join("whisper.exe")
+  } else {
+    dir.join("venv").join("bin").join("whisper")
+  };
+  if !exe.is_file() {
+    return Ok(serde_json::json!({ "ok": false, "missing": true }));
+  }
+  let audio = checked_file(&request.workspace_root, &request.audio_path, &["wav"])?;
+  if !audio.is_file() {
+    return Err("The voice track is missing.".to_string());
+  }
+  let out = audio.with_file_name(".whisper-words");
+  std::fs::create_dir_all(&out).map_err(|e| e.to_string())?;
+  let mut cmd = tokio::process::Command::new(&exe);
+  cmd
+    .arg(&audio)
+    .args([
+      "--model",
+      "tiny.en",
+      "--language",
+      "en",
+      "--word_timestamps",
+      "True",
+      "--output_format",
+      "json",
+      "--output_dir",
+    ])
+    .arg(&out)
+    .kill_on_drop(true);
+  crate::utils::no_window_async(&mut cmd);
+  let result = tokio::time::timeout(std::time::Duration::from_secs(900), cmd.output()).await;
+  let json_path = out.join(format!(
+    "{}.json",
+    audio
+      .file_stem()
+      .map(|s| s.to_string_lossy().to_string())
+      .unwrap_or_default()
+  ));
+  let parsed = std::fs::read_to_string(&json_path)
+    .ok()
+    .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok());
+  let _ = std::fs::remove_dir_all(&out);
+  match (result, parsed) {
+    (Ok(Ok(_)), Some(json)) => Ok(serde_json::json!({ "ok": true, "words": whisper_words(&json) })),
+    (Err(_), _) => {
+      Ok(serde_json::json!({ "ok": false, "error": "Whisper took longer than 15 minutes." }))
+    }
+    _ => Ok(serde_json::json!({ "ok": false, "error": "Whisper could not time the voice track." })),
+  }
+}
+
+// ── Playing the finished video in the app (phase 2a) ───────────────────────
+
+/// A folder the window may play media from: it exists and is not a drive's root.
+pub(crate) fn media_folder_ok(path: &Path) -> bool {
+  path.is_dir() && path.parent().is_some()
+}
+
+/// Lets the app window play files from the Settings output folder (the asset
+/// protocol's scope starts empty). Only that folder, never a drive root.
+#[tauri::command]
+pub fn content_allow_media_folder(app: AppHandle, folder: String) -> Result<(), String> {
+  let path =
+    std::fs::canonicalize(folder.trim()).map_err(|_| "That folder does not exist.".to_string())?;
+  if !media_folder_ok(&path) {
+    return Err("Choose a folder, not a whole drive, as the output folder.".to_string());
+  }
+  app
+    .asset_protocol_scope()
+    .allow_directory(&path, true)
+    .map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -1258,6 +1366,40 @@ mod tests {
       .await
       .unwrap_err()
       .contains("already exists"));
+    std::fs::remove_dir_all(&root).ok();
+  }
+
+  #[test]
+  fn whisper_words_are_read_from_every_segment() {
+    let json = serde_json::json!({ "segments": [
+      { "words": [{ "word": " Their", "start": 0.0, "end": 0.3 }, { "word": " coffee", "start": 0.3, "end": 0.7 }] },
+      { "words": [{ "word": " ", "start": 0.7, "end": 0.8 }, { "word": "great.", "start": 0.8, "end": 1.2 }] },
+      { "text": "no words here" }
+    ] });
+    let words = whisper_words(&json);
+    assert_eq!(words.len(), 3);
+    assert_eq!(words[0]["word"], "Their");
+    assert_eq!(words[2]["end"], 1.2);
+  }
+
+  #[test]
+  fn a_speak_line_reads_its_pause() {
+    let line: SpeakLine = serde_json::from_str(r#"{"id":"s2","text":"","pauseSec":1.5}"#).unwrap();
+    assert_eq!(line.pause_sec, Some(1.5));
+    let plain: SpeakLine = serde_json::from_str(r#"{"id":"s1","text":"Hi"}"#).unwrap();
+    assert_eq!(
+      serde_json::to_value(&plain).unwrap()["pauseSec"],
+      serde_json::Value::Null
+    );
+  }
+
+  #[test]
+  fn media_can_play_from_a_folder_but_not_a_drive_root() {
+    let root = temp_root("media-folder");
+    assert!(media_folder_ok(&root));
+    assert!(!media_folder_ok(&root.join("missing")));
+    let drive = root.ancestors().last().unwrap().to_path_buf();
+    assert!(!media_folder_ok(&drive));
     std::fs::remove_dir_all(&root).ok();
   }
 }

@@ -6,10 +6,12 @@ command line, so no text can be read as an argument:
 
     python kokoro_speak.py --job job.json --model kokoro-v1.0.onnx --voices voices-v1.0.bin
 
-job.json: {"voice": "af_heart", "speed": 1.0, "outDir": "...", "lines": [{"id": "s1", "text": "..."}]}
+job.json: {"voice": "af_heart", "speed": 1.0, "outDir": "...",
+           "lines": [{"id": "s1", "text": "...", "pauseSec": 0}]}
 
-Prints one JSON line: {"ok": true, "files": [{"id", "path", "durationSec"}]}.
-A line with no words gets no file and a duration of 0.
+Prints one JSON line: {"ok": true, "files": [{"id", "path", "durationSec", "startSec"}],
+"full": {"path", "durationSec"}}. A line with no words gets no file and lasts its
+pauseSec (silence in the full track). "full" is null when nothing was spoken.
 """
 import argparse
 import json
@@ -49,19 +51,37 @@ def run(job_path, model, voices, make_kokoro=default_kokoro):
     out_dir.mkdir(parents=True, exist_ok=True)
     kokoro = None
     files = []
+    # Each part of the full track: spoken samples, or seconds of silence.
+    parts = []
+    rate = 24000
+    start = 0.0
     for line in job['lines']:
         text = str(line.get('text') or '').strip()
         line_id = str(line['id'])
         if not text:
-            files.append({'id': line_id, 'path': None, 'durationSec': 0.0})
+            pause = max(0.0, float(line.get('pauseSec') or 0.0))
+            files.append({'id': line_id, 'path': None, 'durationSec': round(pause, 3), 'startSec': round(start, 3)})
+            parts.append(pause)
+            start += pause
             continue
         if kokoro is None:
             kokoro = make_kokoro(model, voices)
         samples, rate = kokoro.create(text, voice=voice, speed=speed, lang=lang_for_voice(voice))
         path = out_dir / f'{line_id}.wav'
         write_wav(path, samples, rate)
-        files.append({'id': line_id, 'path': str(path), 'durationSec': round(len(samples) / rate, 3)})
-    return {'ok': True, 'files': files}
+        duration = len(samples) / rate
+        files.append({'id': line_id, 'path': str(path), 'durationSec': round(duration, 3), 'startSec': round(start, 3)})
+        parts.append(samples)
+        start += duration
+    full = None
+    if kokoro is not None:
+        track = []
+        for part in parts:
+            track.extend([0.0] * int(round(part * rate)) if isinstance(part, float) else part)
+        full_path = out_dir / 'full.wav'
+        write_wav(full_path, track, rate)
+        full = {'path': str(full_path), 'durationSec': round(len(track) / rate, 3)}
+    return {'ok': True, 'files': files, 'full': full}
 
 
 def main(argv=None):

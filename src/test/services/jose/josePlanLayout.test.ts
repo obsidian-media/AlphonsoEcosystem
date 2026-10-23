@@ -8,15 +8,17 @@ describe('layoutPlan', () => {
     const steps = getTemplate('content_video')!.steps;
     const layout = layoutPlan(steps);
     const col = (id: string) => layout.nodes.find((n) => n.stepId === id)!.col;
-    // The content factory's 11 steps (phase 6b) in 7 columns.
-    expect(new Set(layout.nodes.map((n) => n.col)).size).toBe(7);
+    // The content factory's 15 steps (phase 2a) in 9 columns.
+    expect(new Set(layout.nodes.map((n) => n.col)).size).toBe(9);
     expect([col('research_trends'), col('research_market')]).toEqual([0, 0]);
     expect(col('script')).toBe(1);
     expect([col('review_value'), col('review_quality')]).toEqual([2, 2]);
     expect(col('scenes')).toBe(3);
     expect(col('thumbnail')).toBe(4);
-    expect([col('campaign'), col('timing')]).toEqual([5, 5]);
-    expect([col('quality'), col('security')]).toEqual([6, 6]);
+    expect([col('voice'), col('music'), col('broll')]).toEqual([5, 5, 5]);
+    expect(col('assemble')).toBe(6);
+    expect([col('campaign'), col('timing')]).toEqual([7, 7]);
+    expect([col('quality'), col('security')]).toEqual([8, 8]);
     const expected = steps.flatMap((s) => s.needs.map((n) => `${n}->${s.stepId}`)).sort();
     expect(layout.edges.map((e) => `${e.from}->${e.to}`).sort()).toEqual(expected);
     expect(layout.width).toBeGreaterThan(0);

@@ -48,4 +48,21 @@ def test_an_empty_line_gets_no_file(tmp_path):
     job.write_text(json.dumps({'voice': 'af_heart', 'speed': 1.0, 'outDir': str(tmp_path / 'out'),
                                'lines': [{'id': 's1', 'text': '   '}]}), encoding='utf-8')
     result = kokoro_speak.run(str(job), 'm', 'v', make_kokoro=FakeKokoro)
-    assert result == {'ok': True, 'files': [{'id': 's1', 'path': None, 'durationSec': 0.0}]}
+    assert result['files'] == [{'id': 's1', 'path': None, 'durationSec': 0.0, 'startSec': 0.0}]
+    assert result['full'] is None
+
+
+def test_one_full_track_with_each_line_start_and_silence_for_a_quiet_scene(tmp_path):
+    job = tmp_path / 'job.json'
+    job.write_text(json.dumps({'voice': 'af_heart', 'speed': 1.0, 'outDir': str(tmp_path / 'out'), 'lines': [
+        {'id': 's1', 'text': 'Hello.'},
+        {'id': 's2', 'text': '', 'pauseSec': 1.5},
+        {'id': 's3', 'text': 'Bye.'},
+    ]}), encoding='utf-8')
+    result = kokoro_speak.run(str(job), 'm', 'v', make_kokoro=FakeKokoro)
+    assert [(f['id'], f['startSec'], f['durationSec']) for f in result['files']] == [
+        ('s1', 0.0, 0.5), ('s2', 0.5, 1.5), ('s3', 2.0, 0.5)]
+    assert result['files'][1]['path'] is None
+    assert abs(result['full']['durationSec'] - 2.5) < 0.01
+    with wave.open(result['full']['path']) as w:
+        assert w.getnframes() == 60000 and w.getframerate() == 24000

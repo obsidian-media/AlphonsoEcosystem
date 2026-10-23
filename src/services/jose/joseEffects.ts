@@ -102,6 +102,11 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   creative_scenes: ['write_own_work'],
   creative_thumbnails: ['write_own_work'],
   creative_campaign: ['write_own_work'],
+  // The finished video (phase 2a): files in the project folder only.
+  creative_voice: ['write_own_work'],
+  creative_music: ['write_own_work'],
+  research_broll: ['read'],
+  runtime_assemble_video: ['write_own_work'],
   // Templates (phase 2, joseTemplates.ts).
   research_report: ['read'],
   analysis_findings: ['read'],

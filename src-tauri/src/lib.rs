@@ -760,6 +760,8 @@ pub fn run() {
       media_tools::content_stock_search,
       media_tools::content_download_media,
       media_tools::content_assemble_video,
+      media_tools::content_whisper_words,
+      media_tools::content_allow_media_folder,
       execute_command_verified,
       run_native_rc0_proof,
       runway_generate_video,

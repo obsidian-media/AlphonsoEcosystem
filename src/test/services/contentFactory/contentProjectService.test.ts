@@ -29,6 +29,15 @@ describe('contentProjectService', () => {
     expect(listProjects('other')).toEqual([]);
   });
 
+  it('a project saved before phase 2a gains Voice, Music, B-roll and Assemble, not started', () => {
+    const p = createProject('brand-1', 'Old', { ...emptyBrief(), idea: 'x' });
+    const saved = JSON.parse(localStorage.getItem('alphonso_content_projects_v1') || '[]');
+    for (const step of ['voice', 'music', 'broll', 'assemble']) delete saved[0].steps[step];
+    localStorage.setItem('alphonso_content_projects_v1', JSON.stringify(saved));
+    const loaded = getProject(p.id)!;
+    for (const step of ['voice', 'music', 'broll', 'assemble'] as const) expect(loaded.steps[step]).toMatchObject({ status: 'not_started', versions: [] });
+  });
+
   it('versions count up and are capped at 20', () => {
     const p = createProject('b', 'P', emptyBrief());
     for (let i = 0; i < 22; i += 1) saveStepVersion(p.id, 'script', out(`v${i}`));
