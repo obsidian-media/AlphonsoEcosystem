@@ -347,13 +347,17 @@ async function runAssemble(assignment: MediaAssignment, ctx: Context): Promise<C
   const srt = `${outDir}/v${ctx.version}.srt`;
   await invoke('write_workspace_text_file', { workspaceRoot: ctx.root, relativePath: srt, content: toSrt(words, { maxWords: 6, maxSeconds: 2.5 }) });
 
+  // AI clips that were made (phase 2b) play first in their scene; the rest of the scene follows.
+  const aiClips = part<{ clips?: ClipOutcome[] }>(ctx.prior, 'clips', 'miya')?.clips || [];
   const scenes = voice.lines.map((line) => {
     const seconds = Math.max(0.5, line.endSec - line.startSec);
+    const ai = aiClips.find((c) => c.sceneId === line.sceneId && c.status === 'done' && c.path && (c.seconds || 0) > 0);
+    const first = ai ? { aiClip: ai.path as string, aiSeconds: ai.seconds as number } : {};
     const clip = clips.find((c) => c.sceneId === line.sceneId && c.path)?.path;
-    if (clip) return { clip, seconds };
+    if (clip) return { clip, seconds, ...first };
     const picture = pictures.find((p) => p.sceneId === line.sceneId && p.status === 'done' && p.relativePath)?.relativePath;
-    if (picture) return { picture, seconds };
-    return { cardColor: hex(darkestColour(palette)), seconds };
+    if (picture) return { picture, seconds, ...first };
+    return { cardColor: hex(darkestColour(palette)), seconds, ...first };
   });
   const result = await invoke<{ ok?: boolean; outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
     workspaceRoot: ctx.root, outDir, version: ctx.version, scenes,
