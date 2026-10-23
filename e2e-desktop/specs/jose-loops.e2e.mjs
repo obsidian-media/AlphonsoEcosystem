@@ -67,8 +67,9 @@ describe('Alphonso desktop: Jose plans that change while they run', () => {
     if (!(await ollamaHasModels())) this.skip();
     this.timeout(400000);
     baseSettings = (await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {};
-    // Every step's own work asks first, so this request waits for approval.
-    await useSettings({ ...baseSettings, showPlanFirst: 'never', approvalMode: true, effectApprovals: { read: true, write_own_work: true } });
+    // Nothing but the locked kinds asks, so the first request runs (and the
+    // board link shows while it does).
+    await useSettings({ ...baseSettings, showPlanFirst: 'never', approvalMode: true, effectApprovals: {} });
     await warmSelectedModel();
     await openChat();
   });
@@ -76,15 +77,31 @@ describe('Alphonso desktop: Jose plans that change while they run', () => {
   it('links to the board while a request runs', async function () {
     this.timeout(900000);
     const before = (await savedRequests()).length;
+    // Watch for the link from before sending rather than polling.
+    await browser.execute(() => {
+      window.__sawLiveBoardLink = false;
+      const observer = new MutationObserver(() => {
+        if (document.querySelector('[data-testid="chat-live-open-board"]')) window.__sawLiveBoardLink = true;
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
     await send('Plan this fresh: write a one-line tagline for a small coffee shop.');
-    const live = await $('[data-testid="chat-live-open-board"]');
-    await live.waitForExist({ timeout: 600000, timeoutMsg: 'Chat never showed the board link while the request ran' });
+    await browser.waitUntil(async () => browser.execute(() => window.__sawLiveBoardLink === true), {
+      timeout: 600000, interval: 500, timeoutMsg: 'Chat never showed the board link while the request ran',
+    });
     await browser.waitUntil(async () => (await savedRequests()).length > before, { timeout: 60000, timeoutMsg: 'no request was saved' });
     await browser.waitUntil(async () => settled(await latest()), { timeout: 300000, interval: 2000, timeoutMsg: 'the request never stopped running' });
   });
 
   it('carries the request on when its waiting steps are approved on the board', async function () {
-    this.timeout(1800000);
+    this.timeout(2400000);
+    // Now every step's own work asks first, so this request waits for approval.
+    await useSettings({ ...baseSettings, showPlanFirst: 'never', approvalMode: true, effectApprovals: { read: true, write_own_work: true } });
+    await openChat();
+    const before = (await savedRequests()).length;
+    await send('Plan this fresh: write a one-line tagline for a small coffee shop.');
+    await browser.waitUntil(async () => (await savedRequests()).length > before, { timeout: 600000, interval: 2000, timeoutMsg: 'no request was saved' });
+    await browser.waitUntil(async () => settled(await latest()), { timeout: 300000, interval: 2000, timeoutMsg: 'the request never stopped running' });
     const request = await latest();
     expect(request.status).toBe('waiting_approval');
     await openLatestOnBoard();
@@ -113,12 +130,19 @@ describe('Alphonso desktop: Jose plans that change while they run', () => {
     this.timeout(2400000);
     await useSettings({ ...baseSettings, showPlanFirst: 'never', effectApprovals: {} });
     await openChat();
-    const before = (await savedRequests()).length;
-    await send('Research what the IANA example domain is used for and write a short report.');
-    await browser.waitUntil(async () => (await savedRequests()).length > before, { timeout: 600000, interval: 2000, timeoutMsg: 'no request was saved' });
-    await browser.waitUntil(async () => settled(await latest()), { timeout: 2300000, interval: 5000, timeoutMsg: 'the research report never finished' });
-    const request = await latest();
-    const reviews = request.steps.filter((s) => s.reviewOf && s.status === 'done');
+    // Jose's model decides the plan; it may plan no review. Try twice.
+    let request;
+    let reviews = [];
+    for (let attempt = 0; attempt < 2 && reviews.length === 0; attempt += 1) {
+      const before = (await savedRequests()).length;
+      // Asked by name, so Jose plans it (his model may otherwise answer directly).
+      await send('Ask Jose: research what the IANA example domain is used for and write a short report.');
+      await browser.waitUntil(async () => (await savedRequests()).length > before, { timeout: 600000, interval: 2000, timeoutMsg: 'no request was saved' });
+      await browser.waitUntil(async () => settled(await latest()), { timeout: 1100000, interval: 5000, timeoutMsg: 'the research report never finished' });
+      request = await latest();
+      reviews = request.steps.filter((s) => s.reviewOf && s.status === 'done');
+      if (reviews.length === 0) console.log('jose-loops: no finished review in plan', JSON.stringify(request.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status])));
+    }
     expect(reviews.length).toBeGreaterThan(0);
     for (const review of reviews) expect(['pass', 'fix']).toContain(review.verdict);
     for (const review of reviews.filter((r) => r.verdict === 'fix' && (r.round || 0) < 2)) {
