@@ -2348,6 +2348,15 @@ export async function resumeJoseRequest(requestId: string, options: any = {}) {
   return { ...result, requestId };
 }
 
+/** Approve one waiting step of a saved request, by its step id, and carry the request on (the board's button, phase 4). */
+export async function approveRequestStep(requestId: string, stepId: string, options: any = {}) {
+  const request: any = getJoseRequest(requestId);
+  const command: any = request ? listJoseCommands().find((item) => item.id === request.commandId) : null;
+  const packetId = command?.assignments?.find((a: any) => a.stepId === stepId)?.packetId;
+  if (!packetId) return { ok: false, summary: 'That step was not found.', results: [] };
+  return executeApprovedPackets([packetId], options);
+}
+
 export async function executeApprovedPackets(packetIds: any, options: any = {}) {
   const { endpoint, onProgress, onToken, conversationHistory } = options;
   const results = [];

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('../../services/agentBusService', () => ({
   AGENTS: { ALPHONSO: 'alphonso', JOSE: 'jose' },
   approvePacket: vi.fn(),
   canExecutePacket: vi.fn(() => false),
   createAgentPacket: vi.fn(),
-  listAgentPackets: vi.fn(() => []),
+  listAgentPackets: vi.fn(() => (globalThis as any).__orchPackets || []),
   listApprovalQueue: vi.fn(() => []),
   rejectPacket: vi.fn(),
   updatePacketStatus: vi.fn()
@@ -59,12 +59,22 @@ vi.mock('../OrchestratorQueueView', () => ({ OrchestratorQueueView: vi.fn(() => 
 vi.mock('../../components/jose/JoseRequestsBoard', () => ({
   JoseRequestsBoard: vi.fn(({ selectedRequestId }: { selectedRequestId?: string }) => <div>Jose requests board {selectedRequestId}</div>),
 }));
+// Phase 4: an approved step of a saved Jose request carries the request on.
+vi.mock('../../services/jose/joseRequestStore', () => ({
+  findRequestByPacket: vi.fn((id: string) => (id === 'p-request' ? { id: 'r1', status: 'waiting_approval' } : null)),
+}));
+vi.mock('../../services/joseExecutionEngineService', () => ({
+  executeApprovedPackets: vi.fn(async () => ({ ok: true, summary: 'Marcus completed 1 approved task successfully.', results: [] })),
+}));
+
 vi.mock('framer-motion', () => ({
   motion: { div: 'div', span: 'span', section: 'section', p: 'p', li: 'li', button: 'button' },
   AnimatePresence: vi.fn(({ children }) => children)
 }));
 
 import { OrchestratorView } from '../../components/OrchestratorView';
+import { executeApprovedPackets } from '../../services/joseExecutionEngineService';
+import { executeApprovedPacket } from '../../services/packetExecutionService';
 
 function makeProps(overrides = {}) {
   return {
@@ -103,5 +113,16 @@ describe('OrchestratorView', () => {
   it('opens on the Requests tab with the request Chat asked for', () => {
     render(<OrchestratorView settings={{} as never} ollamaStatus={{ state: 'connected', label: 'Connected' } as never} initialTab="requests" selectedRequestId="r1" />);
     expect(screen.getByText('Jose requests board r1')).toBeTruthy();
+  });
+
+  it("runs an approved step of a Jose request through the request, other packets as before", async () => {
+    (globalThis as any).__orchPackets = [
+      { id: 'p-request', title: 'Post the launch', status: 'approved', fromAgent: 'jose', toAgent: 'marcus', packetType: 'agent_assignment' },
+    ];
+    render(<OrchestratorView {...makeProps()} initialTab="packets" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Execute' }));
+    await waitFor(() => expect(executeApprovedPackets).toHaveBeenCalledWith(['p-request']));
+    expect(executeApprovedPacket).not.toHaveBeenCalled();
+    (globalThis as any).__orchPackets = undefined;
   });
 });

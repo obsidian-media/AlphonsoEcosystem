@@ -107,7 +107,7 @@ vi.mock('../../../services/codingAgentService', () => ({
   runCodingAgent: vi.fn(async () => ({ ok: true, content: 'code' })),
 }));
 
-import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets } from '../../../services/joseExecutionEngineService';
+import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep } from '../../../services/joseExecutionEngineService';
 import { createAgentPacket } from '../../../services/agentBusService';
 import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
@@ -453,6 +453,16 @@ describe('Jose runs plans as step graphs', () => {
       expect(ranSteps()).toEqual([]);
       expect(result.ok).toBe(false);
       expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('cancelled');
+    });
+
+    it('approves a waiting step by request and step (the board button)', async () => {
+      const first = await waitingPlan();
+      vi.mocked(executeContentStepAssignment).mockClear();
+      const result = await approveRequestStep(`jose-request-${first.commandId}`, 'post');
+      expect(result.ok).toBe(true);
+      expect(ranSteps()).toEqual(['post', 'check']);
+      expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('done');
+      expect((await approveRequestStep(`jose-request-${first.commandId}`, 'nope')).ok).toBe(false);
     });
 
     it('keeps the old one-packet path for a packet made outside a request', async () => {

@@ -50,6 +50,7 @@ import {
   runJoseRetrySweep
 } from '../services/joseCommandRouterService';
 import { executeApprovedPacket } from '../services/packetExecutionService';
+import { findRequestByPacket } from '../services/jose/joseRequestStore';
 import { TRUST_STATES } from '../services/trustModel';
 import { getConnectorCredential, isConnectorAuthenticated, listConnectorAudit, pollWhatsAppConnector } from '../services/connectorRegistryService';
 import { getOrchestrationQueueSnapshot, listOrchestrationQueueTransitions, replayPacketFromDeadLetter } from '../services/orchestrationQueueService';
@@ -612,7 +613,15 @@ export function OrchestratorView({
       },
       ...prev.filter((item) => item.id !== packetId).slice(0, 9)
     ]);
-    const result = await executeApprovedPacket(packet as AgentPacket);
+    // An approved step of a saved Jose request carries the request on (phase 4);
+    // a step still waiting for approval, and any other packet, run as before.
+    const result: any = packet.status === 'approved' && findRequestByPacket(packetId)
+      ? await (async () => {
+        const { executeApprovedPackets } = await import('../services/joseExecutionEngineService');
+        const resumed = await executeApprovedPackets([packetId]);
+        return { ok: resumed.ok, result: { message: resumed.summary }, ...(resumed.ok ? {} : { error: resumed.summary }) };
+      })()
+      : await executeApprovedPacket(packet as AgentPacket);
     setExecutingPacketIds((prev) => { const next = new Set(prev); next.delete(packetId); return next; });
     appendSessionEvent({
       category: 'task',
