@@ -32,20 +32,27 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - **Resume hint:** design per-request dependencies (a step graph with several tasks per agent and review/revise loops), keep packets, approvals, receipts and the budget, and check every current caller of `runJoseCommandExecutionPipeline`.
   - **Status:** PARTLY CLOSED 2026-10-23 by Jose redesign phase 1 (design `docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md`, plan `docs/superpowers/plans/2026-10-23-jose-redesign-phase1.md`): problems 1 and 2 (step graphs with several steps per agent and per-step `needs`; the fixed order now only gives the rule-based splitter's tasks their `needs`) and 4 (approval by declared effect, `src/services/jose/joseEffects.ts`). Problem 3 (review/revise loops) is phase 4. The content factory still sends one request per step until phase 6 moves it onto a template.
 
+- [2026-10-23] **Jose redesign phase 3 (seeing and steering): what it leaves open.**
+  - A plan waiting for you is not sent to Telegram, and can't be approved there: phase 5.
+  - The map has no model per step (steps carry none until phase 4), no review-loop arrows, and the plan can't change while it runs: phase 4.
+  - Chat's "Open on the board" is on Jose's final reply and on the plan card, not on the progress line while a request runs; the board itself shows it live.
+  - After you approve a single step that waited, the saved request is not updated (phase 1's note): phase 5.
+  - **Status:** OPEN.
+
 - [2026-10-23] **Jose redesign phase 2 (the planner): what it leaves open.**
-  - Saving a plan as a new template, and seeing or editing the plan before it runs: phase 3 (the live board).
+  - ~~Saving a plan as a new template, and seeing or editing the plan before it runs~~ — CLOSED 2026-10-23 by phase 3.
   - Jose choosing the model per step: phase 4, with model escalation on failure.
   - Only Chat goes through `submitToJose()` and the planner; Telegram, WhatsApp, the phone companion, schedules, workflows, the batch orchestrator, the Orchestrator page and Boardroom actions still call `runJoseCommandExecutionPipeline` with the old word rule: phase 6.
   - A Content video planned in Chat runs the template's steps without a Miya Studio project (no brand, folder or pictures) and points to Miya Studio: phase 6 moves the factory onto the template.
-  - Alphonso gets the user's own words, not a planned step's instruction (`stepCommandText()`), so a planned Alphonso step does what the request says; giving him the instruction safely (without counting it as user intent) is open.
+  - Alphonso gets the user's own words, not a planned step's instruction (`stepCommandText()`), so a planned Alphonso step does what the request says; giving him the instruction safely (without counting it as user intent): **phase 4** (owner, 2026-10-23), since review loops need Alphonso to act on findings.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 1: what it leaves open.**
-  - The splitter's free-text plans still run a step after an earlier one failed (an explicit plan does not); unify in the planner phase (2).
+  - ~~The splitter's free-text plans still run a step after an earlier one failed~~ — CLOSED 2026-10-23 by phase 3 (the note said phase 2, which did not do it): every plan, the simple one included, runs as explicit steps.
   - `executeApprovedPackets` does not update the saved request's step status or store step outputs after an approval, and a step skipped because a step it needs was waiting is not resumed: phase 5 (resume).
-  - Task types the contracts never allowed: Jose's `boardroom_*` and `cost_policy_enforcement`, Hector's `external_publish_handoff` (blocked by his own `external_publish` rule). They fail per step, as before; fix in the planner phase.
-  - Marcus still owns the skill packs `pack.marcus-security-audit` and `pack.marcus-risk-detection` (security is Sentinel's, risk review Maria's); moving skill packs was outside phase 1.
-  - Settings shows Approval Mode off when the setting is unset, while the policy treats unset as on (pre-existing); the new Approvals table follows the policy.
+  - ~~Task types the contracts never allowed (Jose's `boardroom_*` and `cost_policy_enforcement`, Hector's `external_publish_handoff`)~~ — CLOSED 2026-10-23 by phase 3: Jose's table has `boardroom_` and `cost_policy_`, and an exact entry wins over a blocked prefix (`taskTypePartAllowed()`), shared by the table and the contracts check.
+  - Marcus still owns the skill packs `pack.marcus-security-audit` and `pack.marcus-risk-detection` (security is Sentinel's, risk review Maria's): **phase 4** (owner, 2026-10-23).
+  - ~~Settings shows Approval Mode off when the setting is unset~~ — CLOSED 2026-10-23 by phase 3: the switch reads it as the policy does.
   - **Status:** OPEN.
 
 - [2026-10-22] **ACC accepts packets of any kind (QA Bug 66), parked by the owner.** ACC's receiver (`cloud/services/alphonsoBridgeService.js` in `github.com/Thatisshayan/ACC`) records a packet whose `kind` is not one of `content_job`, `task`, `result`, `approval`, `memory` (tested: `"nonsense"` was recorded). The fix belongs in ACC (refuse unknown kinds with a clear error), so it is parked beside the SessionGuard bridge and Coach Mode: more work on the ACC side than in Alphonso. Alphonso only sends the five known kinds. Status: OPEN, parked.

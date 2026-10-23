@@ -54,7 +54,7 @@ describe('stepGraph', () => {
   });
 
   it("can leave task types to the run-time check (the splitter's plans)", () => {
-    const plan = [step('a', 'jose', 'boardroom_planning', [], ['write_own_work'])];
+    const plan = [step('a', 'miya', 'research', [], ['read'])];
     expect(checkPlan(plan).ok).toBe(false);
     expect(checkPlan(plan, { taskTypes: false })).toEqual({ ok: true, problems: [] });
     expect(checkPlan([step('a', 'miya', 'creative_x', [], ['run'])], { taskTypes: false }).ok).toBe(false);

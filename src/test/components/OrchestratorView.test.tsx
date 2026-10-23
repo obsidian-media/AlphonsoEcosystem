@@ -56,6 +56,9 @@ vi.mock('../AgentAvatar', () => ({ AgentAvatar: vi.fn(() => null) }));
 vi.mock('../JoseTaskQueue', () => ({ JoseTaskQueue: vi.fn(() => null) }));
 vi.mock('../WhatsAppInboxPanel', () => ({ WhatsAppInboxPanel: vi.fn(() => null) }));
 vi.mock('../OrchestratorQueueView', () => ({ OrchestratorQueueView: vi.fn(() => null) }));
+vi.mock('../../components/jose/JoseRequestsBoard', () => ({
+  JoseRequestsBoard: vi.fn(({ selectedRequestId }: { selectedRequestId?: string }) => <div>Jose requests board {selectedRequestId}</div>),
+}));
 vi.mock('framer-motion', () => ({
   motion: { div: 'div', span: 'span', section: 'section', p: 'p', li: 'li', button: 'button' },
   AnimatePresence: vi.fn(({ children }) => children)
@@ -95,5 +98,10 @@ describe('OrchestratorView', () => {
   it('reports WhatsApp as not configured when authentication is unavailable', () => {
     render(<OrchestratorView {...makeProps()} />);
     expect(screen.getByTestId('whatsapp-inbound-status').textContent).toMatch(/^Not configured — add the access token and gateway drain URL/);
+  });
+
+  it('opens on the Requests tab with the request Chat asked for', () => {
+    render(<OrchestratorView settings={{} as never} ollamaStatus={{ state: 'connected', label: 'Connected' } as never} initialTab="requests" selectedRequestId="r1" />);
+    expect(screen.getByText('Jose requests board r1')).toBeTruthy();
   });
 });

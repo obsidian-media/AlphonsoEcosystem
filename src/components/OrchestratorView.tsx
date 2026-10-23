@@ -54,6 +54,7 @@ import { TRUST_STATES } from '../services/trustModel';
 import { getConnectorCredential, isConnectorAuthenticated, listConnectorAudit, pollWhatsAppConnector } from '../services/connectorRegistryService';
 import { getOrchestrationQueueSnapshot, listOrchestrationQueueTransitions, replayPacketFromDeadLetter } from '../services/orchestrationQueueService';
 import { Tabs } from './ui/Tabs';
+import { JoseRequestsBoard } from './jose/JoseRequestsBoard';
 import { AgentAvatar } from './AgentAvatar';
 import { JoseTaskQueue } from './JoseTaskQueue';
 import { WhatsAppInboxPanel } from './WhatsAppInboxPanel';
@@ -249,6 +250,10 @@ interface OrchestratorViewProps {
   settings: Settings;
   ollamaStatus: OllamaStatus;
   onJoseStateChange?: (state: string, message: string) => void;
+  /** Open on this tab, e.g. "requests" from Chat's "Open on the board" (phase 3). */
+  initialTab?: string;
+  /** The request to show on the Requests tab. */
+  selectedRequestId?: string;
 }
 
 interface OCardProps {
@@ -347,6 +352,8 @@ function formatPercent(part: number, total: number): string {
 export function OrchestratorView({
   settings,
   ollamaStatus,
+  initialTab,
+  selectedRequestId,
   onJoseStateChange
 }: OrchestratorViewProps) {
   const [packets, setPackets] = useState<Packet[]>(() => listAgentPackets() as Packet[]);
@@ -641,8 +648,10 @@ export function OrchestratorView({
     refreshAll();
   };
 
-  const [orchTab, setOrchTab] = useState<string>('command');
+  const [orchTab, setOrchTab] = useState<string>(initialTab || 'command');
   const orchTabs = [
+    // Jose's requests as plans, live (phase 3, 2026-10-23).
+    { id: 'requests', label: 'Requests' },
     { id: 'command', label: 'Command' },
     { id: 'approvals', label: `Approvals${approvalQueue.length ? ` (${approvalQueue.length})` : ''}` },
     { id: 'packets', label: 'Packets' },
@@ -707,6 +716,11 @@ export function OrchestratorView({
         exit={{ opacity: 0, y: -4 }}
         transition={{ duration: 0.15 }}
       >
+
+      {/* Requests Tab: every Jose request with its plan as a map */}
+      {orchTab === 'requests' && (
+        <JoseRequestsBoard selectedRequestId={selectedRequestId} />
+      )}
 
       {/* Command Tab */}
       {orchTab === 'command' && (

@@ -6,6 +6,10 @@ import {
   getJoseRequest,
   listJoseRequests,
   markRunningRequestsInterrupted,
+  createWaitingPlanRequest,
+  replacePlanSteps,
+  claimPlanForRun,
+  cancelJoseRequest,
 } from '../../../services/jose/joseRequestStore';
 
 const steps = [
@@ -55,5 +59,50 @@ describe('joseRequestStore', () => {
     expect(markRunningRequestsInterrupted()).toBe(1);
     expect(getJoseRequest(a.id)!.status).toBe('interrupted');
     expect(getJoseRequest(b.id)!.status).toBe('done');
+  });
+
+});
+
+// Phase 3 (2026-10-23): a plan can wait for the user before it runs.
+describe('requests waiting for plan approval', () => {
+  const waiting = () => createWaitingPlanRequest({
+    text: 'Make a video', source: 'user', kind: 'normal', steps,
+    plan: { source: 'fresh', templateId: null, note: '' }, runOptions: { source: 'user', previewMode: true },
+  });
+
+  it('saves the plan as waiting, with its run options and an empty change log', () => {
+    const r = waiting();
+    expect(r.status).toBe('waiting_plan_approval');
+    expect(r.id).toMatch(/^jose-request-plan-/);
+    expect(r.changeLog).toEqual([]);
+    expect(getJoseRequest(r.id)?.runOptions).toEqual({ source: 'user', previewMode: true });
+  });
+
+  it('is still waiting after a restart', () => {
+    const r = waiting();
+    markRunningRequestsInterrupted();
+    expect(getJoseRequest(r.id)!.status).toBe('waiting_plan_approval');
+  });
+
+  it('runs only once: the second claim gets nothing', () => {
+    const r = waiting();
+    expect(claimPlanForRun(r.id)?.status).toBe('running');
+    expect(claimPlanForRun(r.id)).toBeNull();
+  });
+
+  it('cannot run once cancelled', () => {
+    const r = waiting();
+    expect(cancelJoseRequest(r.id).status).toBe('cancelled');
+    expect(claimPlanForRun(r.id)).toBeNull();
+  });
+
+  it('records an edit in the change log, and refuses edits once running', () => {
+    const r = waiting();
+    const edited = replacePlanSteps(r.id, [steps[0]], "Removed Miya's step");
+    expect(edited.steps.map((s) => s.stepId)).toEqual(['hector']);
+    expect(edited.steps[0].status).toBe('waiting');
+    expect(edited.changeLog.map((c) => c.text)).toEqual(["Removed Miya's step"]);
+    claimPlanForRun(r.id);
+    expect(() => replacePlanSteps(r.id, steps, 'again')).toThrow();
   });
 });

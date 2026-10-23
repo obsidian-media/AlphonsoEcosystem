@@ -8,7 +8,7 @@ import { generateAgentLlmResponse } from '../../lib/ollama';
 import { decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { AGENT_PERMISSION_TABLE, describeAgentPermissions } from './agentPermissionTable';
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
-import { JOSE_TEMPLATES, TEMPLATE_FIT_THRESHOLD, getTemplate, scoreTemplateFit, type JoseTemplate } from './joseTemplates';
+import { TEMPLATE_FIT_THRESHOLD, getTemplate, scoreTemplateFit, type JoseTemplate } from './joseTemplates';
 import { JOSE_LIMITS, checkPlan, legacyNeeds, type PlanStep } from './stepGraph';
 
 export interface JosePlan {
@@ -167,7 +167,7 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
 
 /** How the plan was made, for Chat and the map. */
 export function describePlanSource(plan: JosePlan): string {
-  const name = plan.templateId ? JOSE_TEMPLATES.find((t) => t.id === plan.templateId)?.name || plan.templateId : '';
+  const name = plan.templateId ? getTemplate(plan.templateId)?.name || plan.templateId : '';
   const label = plan.source === 'fresh' ? 'Planned fresh.'
     : plan.source === 'template' ? `Based on template ${name}.`
       : plan.source === 'adapted' ? `Based on template ${name} (adapted).`

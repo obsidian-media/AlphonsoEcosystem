@@ -22,7 +22,9 @@ const OWN_WORK: JoseEffect[] = ['read', 'write_own_work'];
 export const AGENT_PERMISSION_TABLE: Record<string, AgentPermissions> = {
   jose: {
     role: 'orchestrator',
-    taskTypes: ['orchestration_', 'agent_report', 'research_review', 'remote_message_route', 'creative_package_review'],
+    // boardroom_ and cost_policy_ are the splitter's own Jose tasks; the old
+    // contracts never allowed them, so they failed every time (fixed 2026-10-23).
+    taskTypes: ['orchestration_', 'agent_report', 'research_review', 'remote_message_route', 'creative_package_review', 'boardroom_', 'cost_policy_'],
     blockedTaskTypes: ['execute_command', 'filesystem_write', 'external_publish', 'purchase'],
     effects: [...OWN_WORK, 'spend'],
   },
@@ -40,7 +42,9 @@ export const AGENT_PERMISSION_TABLE: Record<string, AgentPermissions> = {
   },
   hector: {
     role: 'research',
-    taskTypes: ['research', 'research_', 'source_', 'citation_', 'agent_report', 'remote_message_route'],
+    // external_publish_handoff checks readiness only; listed exactly, it wins over
+    // the external_publish block (2026-10-23).
+    taskTypes: ['research', 'research_', 'source_', 'citation_', 'agent_report', 'remote_message_route', 'external_publish_handoff'],
     blockedTaskTypes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase'],
     effects: OWN_WORK,
   },
@@ -85,12 +89,22 @@ function entry(agent: string): AgentPermissions | null {
   return Object.prototype.hasOwnProperty.call(AGENT_PERMISSION_TABLE, agent) ? AGENT_PERMISSION_TABLE[agent] : null;
 }
 
+/**
+ * May an agent with these lists do this one task type? An exact entry in
+ * `taskTypes` wins over a blocked prefix; otherwise a blocked prefix refuses
+ * it and an allowed prefix allows it. Shared with the contracts check.
+ */
+export function taskTypePartAllowed(part: string, taskTypes: string[], blockedTaskTypes: string[]): boolean {
+  if (taskTypes.includes(part)) return true;
+  return !startsWithAny(part, blockedTaskTypes) && startsWithAny(part, taskTypes);
+}
+
 /** May `agent` do this task type? Every part of a merged type (`a+b`) must be allowed. */
 export function isTaskTypeAllowed(agent: string, taskType: string): boolean {
   const permissions = entry(agent);
   if (!permissions) return false;
   const parts = String(taskType || '').toLowerCase().split('+').filter(Boolean);
-  return parts.length > 0 && parts.every((part) => !startsWithAny(part, permissions.blockedTaskTypes) && startsWithAny(part, permissions.taskTypes));
+  return parts.length > 0 && parts.every((part) => taskTypePartAllowed(part, permissions.taskTypes, permissions.blockedTaskTypes));
 }
 
 export function isEffectAllowed(agent: string, effect: JoseEffect): boolean {

@@ -3,6 +3,7 @@
 // he plans fresh, and a partly fitting one he adapts (josePlanner.ts).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.4
 import type { PlanStep } from './stepGraph';
+import { listUserTemplates } from './joseUserTemplates';
 
 export interface JoseTemplate {
   id: string;
@@ -76,9 +77,14 @@ function hasWord(text: string, word: string): boolean {
 }
 
 /** How well each template fits `text` (matched groups ÷ groups), best first. */
+/** The built-in templates and the ones the user saved (phase 3). */
+export function allTemplates(): JoseTemplate[] {
+  return [...JOSE_TEMPLATES, ...listUserTemplates()];
+}
+
 export function scoreTemplateFit(text: string): { templateId: string; score: number }[] {
   const value = String(text || '');
-  return JOSE_TEMPLATES
+  return allTemplates()
     .map((template) => {
       const matched = template.matchWords.filter((group) => group.some((word) => hasWord(value, word))).length;
       return { templateId: template.id, score: template.matchWords.length ? matched / template.matchWords.length : 0 };
@@ -87,5 +93,5 @@ export function scoreTemplateFit(text: string): { templateId: string; score: num
 }
 
 export function getTemplate(id: string): JoseTemplate | null {
-  return JOSE_TEMPLATES.find((template) => template.id === id) || null;
+  return allTemplates().find((template) => template.id === id) || null;
 }
