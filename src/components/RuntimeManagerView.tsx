@@ -128,6 +128,15 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
     color: 'text-(--agent-hector)',
     bg: 'bg-(--agent-hector-glow)',
   },
+  kokoro: {
+    icon: Mic,
+    category: 'Audio',
+    usedBy: 'Miya: the Voice step in Miya Studio (voice-overs)',
+    difference: 'Reads a script aloud in a chosen voice, locally and free (Apache-2.0). Voice OS uses Piper for live talking.',
+    docsUrl: 'https://github.com/thewh1teagle/kokoro-onnx',
+    color: 'text-(--agent-miya)',
+    bg: 'bg-(--agent-miya-glow)',
+  },
   whisper: {
     icon: Mic,
     category: 'Audio',

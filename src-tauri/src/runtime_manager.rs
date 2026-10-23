@@ -121,6 +121,20 @@ const TOOLS: &[ToolDef] = &[
     exe: "invokeai-web",
     args: &["--host", "127.0.0.1", "--port", "9090"],
   },
+  // Miya content factory phase 2a: the voice-over. Run one-shot by the
+  // backend (media_tools::content_tts_kokoro); its model is fetched at install.
+  ToolDef {
+    name: "kokoro",
+    display_name: "Kokoro voice",
+    description: "Kokoro — local text-to-speech (Apache-2.0) for Miya's voice-overs",
+    repo_url: None,
+    pip_packages: &["kokoro-onnx==0.6.1"],
+    requirements_file: None,
+    port: None,
+    health_path: None,
+    exe: "python",
+    args: &[],
+  },
   ToolDef {
     name: "whisper",
     display_name: "Whisper",
@@ -1998,6 +2012,23 @@ pub async fn runtime_get_all_status(
 /// Stable Diffusion 1.5 (fp16) from Comfy-Org's archive, pinned to one commit
 /// and checked by SHA-256. It is the checkpoint the image generator expects
 /// (`DEFAULT_COMFYUI_CHECKPOINT` in connectorImageGenerators.js).
+/// Kokoro v1.0's model files (thewh1teagle/kokoro-onnx, release model-files-v1.0),
+/// SHA-256 and size measured from the real downloads on 2026-10-23.
+const KOKORO_MODEL_BASE: &str =
+  "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0";
+const KOKORO_MODEL_FILES: &[(&str, &str, u64)] = &[
+  (
+    crate::media_tools::KOKORO_MODEL_FILE,
+    "7d5df8ecf7d4b1878015a32686053fd0eebe2bc377234608764cc0ef3636a6c5",
+    325_532_387,
+  ),
+  (
+    crate::media_tools::KOKORO_VOICES_FILE,
+    "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d",
+    28_214_398,
+  ),
+];
+
 const COMFYUI_STARTER_MODEL_FILE: &str = "v1-5-pruned-emaonly-fp16.safetensors";
 const COMFYUI_STARTER_MODEL_URL: &str = "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/9cfd069101959ca3828bf9c04a4419870832b74f/v1-5-pruned-emaonly-fp16.safetensors";
 const COMFYUI_STARTER_MODEL_SHA256: &str =
@@ -2331,6 +2362,23 @@ pub async fn runtime_install_tool(
     )
     .await
     .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+  }
+
+  // Kokoro speaks from its model files; fetch both, checked (phase 2a).
+  if name == "kokoro" {
+    let models = dir.join("models");
+    for (file, sha256, bytes) in KOKORO_MODEL_FILES {
+      download_verified(
+        &app,
+        &name,
+        &format!("{KOKORO_MODEL_BASE}/{file}"),
+        &models.join(file),
+        sha256,
+        *bytes,
+      )
+      .await
+      .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+    }
   }
 
   if name == "voice-os" {

@@ -5,8 +5,9 @@
 //! scripts/fetch-ffmpeg.mjs into the "ffmpeg" resource folder, installed next
 //! to the app's .exe like the bundled Ollama). Elsewhere, or in a dev build
 //! without it, ffmpeg is found on the PATH.
-use serde::Serialize;
-use std::path::{Path, PathBuf};
+use serde::{Deserialize, Serialize};
+use std::path::{Component, Path, PathBuf};
+use tauri::{AppHandle, Manager};
 
 fn exe_name(name: &str) -> String {
   if cfg!(target_os = "windows") {
@@ -86,6 +87,179 @@ pub fn media_tools_status() -> MediaToolsStatus {
   }
 }
 
+/// A folder inside the workspace (created if needed). Refuses absolute paths,
+/// `..`, and anything under `.git`; symlinks cannot lead outside.
+pub(crate) fn checked_dir(workspace_root: &str, relative: &str) -> Result<PathBuf, String> {
+  let root = PathBuf::from(workspace_root.trim());
+  if root.as_os_str().is_empty() {
+    return Err("Workspace root is required.".to_string());
+  }
+  let root_abs = std::fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let rel = Path::new(relative.trim());
+  if rel.as_os_str().is_empty()
+    || rel.is_absolute()
+    || rel.components().any(|c| {
+      matches!(
+        c,
+        Component::ParentDir | Component::Prefix(_) | Component::RootDir
+      )
+    })
+  {
+    return Err("Unsafe relative path rejected.".to_string());
+  }
+  if crate::workspace::rel_touches_git_dir(rel) {
+    return Err("Writes inside .git are not allowed.".to_string());
+  }
+  let dir = root_abs.join(rel);
+  let resolved = crate::workspace::resolve_through_existing_ancestor(&dir);
+  if !resolved.starts_with(&root_abs) {
+    return Err("Path traversal detected: resolved path escapes workspace sandbox.".to_string());
+  }
+  std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+  Ok(dir)
+}
+
+/// A Kokoro voice id: two letters (accent and gender), an underscore, a name.
+pub(crate) fn valid_voice_id(voice: &str) -> bool {
+  let mut parts = voice.splitn(2, '_');
+  let prefix = parts.next().unwrap_or("");
+  let name = parts.next().unwrap_or("");
+  prefix.len() == 2
+    && prefix.chars().all(|c| c.is_ascii_lowercase())
+    && !name.is_empty()
+    && name.len() <= 32
+    && name.chars().all(|c| c.is_ascii_lowercase())
+}
+
+/// Kokoro's model files, downloaded by Runtime Hub's install (phase 2a).
+pub(crate) const KOKORO_MODEL_FILE: &str = "kokoro-v1.0.onnx";
+pub(crate) const KOKORO_VOICES_FILE: &str = "voices-v1.0.bin";
+
+/// The arguments for the speak script. The lines are in the job file, never here.
+fn kokoro_args(script: &Path, job: &Path, models: &Path) -> Vec<String> {
+  vec![
+    script.to_string_lossy().to_string(),
+    "--job".to_string(),
+    job.to_string_lossy().to_string(),
+    "--model".to_string(),
+    models.join(KOKORO_MODEL_FILE).to_string_lossy().to_string(),
+    "--voices".to_string(),
+    models
+      .join(KOKORO_VOICES_FILE)
+      .to_string_lossy()
+      .to_string(),
+  ]
+}
+
+fn venv_python_of(tool: &str) -> PathBuf {
+  let dir = crate::runtime_manager::tool_dir(tool);
+  if cfg!(target_os = "windows") {
+    dir.join("venv").join("Scripts").join("python.exe")
+  } else {
+    dir.join("venv").join("bin").join("python3")
+  }
+}
+
+/// A bundled helper script (`voice/content/<name>`) next to Voice OS's backend.
+fn content_script(app: &AppHandle, name: &str) -> Result<PathBuf, String> {
+  let path = app
+    .path()
+    .resource_dir()
+    .map_err(|e| format!("Failed to resolve resource dir: {e}"))?
+    .join("voice")
+    .join("content")
+    .join(name);
+  if path.is_file() {
+    return Ok(path);
+  }
+  // A dev build runs from the repository.
+  let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    .join("..")
+    .join("voice")
+    .join("content")
+    .join(name);
+  if dev.is_file() {
+    Ok(dev)
+  } else {
+    Err(format!(
+      "The helper script {name} is missing from this install."
+    ))
+  }
+}
+
+/// Runs a helper script with a tool's Python and reads its one JSON line.
+async fn run_script(
+  python: &Path,
+  args: &[String],
+  limit_secs: u64,
+) -> Result<serde_json::Value, String> {
+  let mut cmd = tokio::process::Command::new(python);
+  cmd.args(args).kill_on_drop(true);
+  crate::utils::no_window_async(&mut cmd);
+  let output = tokio::time::timeout(std::time::Duration::from_secs(limit_secs), cmd.output())
+    .await
+    .map_err(|_| format!("Stopped after {} minutes.", limit_secs / 60))?
+    .map_err(|e| e.to_string())?;
+  let stdout = String::from_utf8_lossy(&output.stdout);
+  let last = stdout
+    .lines()
+    .rev()
+    .find(|l| l.trim_start().starts_with('{'))
+    .unwrap_or("");
+  serde_json::from_str(last).map_err(|_| {
+    let err = String::from_utf8_lossy(&output.stderr);
+    let tail: String = err.lines().rev().take(3).collect::<Vec<_>>().join(" | ");
+    format!("The helper script gave no result. {tail}")
+  })
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct SpeakLine {
+  id: String,
+  text: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeakRequest {
+  workspace_root: String,
+  out_dir: String,
+  voice_id: String,
+  speed: Option<f64>,
+  lines: Vec<SpeakLine>,
+}
+
+/// The project's voice-over (phase 2a): one WAV per line, read by Kokoro.
+#[tauri::command]
+pub async fn content_tts_kokoro(
+  app: AppHandle,
+  request: SpeakRequest,
+) -> Result<serde_json::Value, String> {
+  if !valid_voice_id(&request.voice_id) {
+    return Err("That is not a Kokoro voice name.".to_string());
+  }
+  let python = venv_python_of("kokoro");
+  let models = crate::runtime_manager::tool_dir("kokoro").join("models");
+  if !python.is_file() || !models.join(KOKORO_MODEL_FILE).is_file() {
+    return Ok(
+      serde_json::json!({ "ok": false, "error": "Kokoro is not installed. Install it in Runtime Hub." }),
+    );
+  }
+  let out = checked_dir(&request.workspace_root, &request.out_dir)?;
+  let job = out.join(".kokoro-job.json");
+  let body = serde_json::json!({
+    "voice": request.voice_id,
+    "speed": request.speed.unwrap_or(1.0).clamp(0.5, 2.0),
+    "outDir": out.to_string_lossy(),
+    "lines": request.lines,
+  });
+  std::fs::write(&job, body.to_string()).map_err(|e| e.to_string())?;
+  let script = content_script(&app, "kokoro_speak.py")?;
+  let result = run_script(&python, &kokoro_args(&script, &job, &models), 600).await;
+  let _ = std::fs::remove_file(&job);
+  result
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -113,5 +287,50 @@ mod tests {
   #[test]
   fn none_when_neither_has_it() {
     assert_eq!(resolve_media_tool(None, "ffmpeg", |_| None), None);
+  }
+
+  fn temp_root(tag: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("alphonso-media-{tag}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+  }
+
+  #[test]
+  fn refuses_a_folder_outside_the_workspace() {
+    let root = temp_root("outside");
+    let root_s = root.to_string_lossy().to_string();
+    assert!(checked_dir(&root_s, "../elsewhere").is_err());
+    assert!(checked_dir(&root_s, "C:\\Windows").is_err() || cfg!(not(windows)));
+    assert!(checked_dir(&root_s, ".git/hooks").is_err());
+    std::fs::remove_dir_all(&root).ok();
+  }
+
+  #[test]
+  fn makes_a_folder_with_spaces_and_accents() {
+    let root = temp_root("accents");
+    let dir = checked_dir(&root.to_string_lossy(), "My Brand/Café ideas/audio").unwrap();
+    assert!(dir.is_dir());
+    std::fs::remove_dir_all(&root).ok();
+  }
+
+  #[test]
+  fn accepts_only_plain_voice_names() {
+    assert!(valid_voice_id("af_heart"));
+    assert!(valid_voice_id("bm_george"));
+    assert!(!valid_voice_id("af_heart --model x"));
+    assert!(!valid_voice_id("../af"));
+    assert!(!valid_voice_id("heart"));
+  }
+
+  #[test]
+  fn the_line_text_is_never_an_argument() {
+    let args = kokoro_args(
+      Path::new("speak.py"),
+      Path::new("job.json"),
+      Path::new("models"),
+    );
+    assert_eq!(args[1..3], ["--job".to_string(), "job.json".to_string()]);
+    assert!(args.iter().all(|a| !a.contains("Hello")));
+    assert!(args.last().unwrap().ends_with(KOKORO_VOICES_FILE));
   }
 }

@@ -52,6 +52,7 @@
     "resources": {
       "../voice/backend/*.py": "voice/backend/",
       "../voice/backend/requirements.txt": "voice/backend/requirements.txt",
+      "../voice/content/*.py": "voice/content/",
       "../NOTICE": "NOTICE",
       "../legal/EULA.txt": "EULA.txt",
       "vendor/ollama": "ollama",
