@@ -82,7 +82,7 @@ pub(crate) fn resolve_meta_credentials(passed: Option<MetaCredentials>) -> Resol
   }
 }
 
-fn meta_graph_api_version() -> String {
+pub(crate) fn meta_graph_api_version() -> String {
   std::env::var("META_GRAPH_API_VERSION")
     .map(|value| {
       let clean = value.trim();
@@ -96,7 +96,7 @@ fn meta_graph_api_version() -> String {
 }
 
 /// `appsecret_proof` for a token with this app secret (none without a secret).
-fn meta_appsecret_proof_with(app_secret: &str, access_token: &str) -> Option<String> {
+pub(crate) fn meta_appsecret_proof_with(app_secret: &str, access_token: &str) -> Option<String> {
   let secret = app_secret.trim();
   if secret.is_empty() {
     return None;
@@ -112,7 +112,7 @@ fn meta_appsecret_proof_with(app_secret: &str, access_token: &str) -> Option<Str
   Some(out)
 }
 
-fn graph_error_message(body: &Value, fallback: &str) -> String {
+pub(crate) fn graph_error_message(body: &Value, fallback: &str) -> String {
   body
     .get("error")
     .and_then(|value| value.get("message"))

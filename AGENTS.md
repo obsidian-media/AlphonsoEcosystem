@@ -39,7 +39,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
   src-tauri/             Rust backend
-  src/lib.rs           ~887 lines, 152 Tauri commands (across 43 modules)
+  src/lib.rs           ~889 lines, 153 Tauri commands (across 44 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module

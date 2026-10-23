@@ -38,6 +38,7 @@ mod memory_graph;
 mod memory_graph_prune;
 mod memory_store;
 mod meta_publish;
+mod meta_video;
 mod native_proof;
 mod ollama;
 mod os_keychain_store;
@@ -855,6 +856,7 @@ pub fn run() {
       connector_send_clickup,
       connector_upload_youtube,
       meta_publish_content,
+      meta_video::meta_publish_video,
       tool_connection_post_webhook,
       connector_generate_sdwebui_image,
       connector_queue_comfyui_video,

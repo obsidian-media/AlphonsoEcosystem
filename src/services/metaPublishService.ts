@@ -35,3 +35,44 @@ export async function publishMetaContent(job: Record<string, any> = {}, options:
   const request = buildMetaPublishRequest(job, options);
   return invoke('meta_publish_content', { request: { ...request, credentials: savedMetaCredentials() } });
 }
+
+/** What Meta did with a video post (phase 3a). */
+export interface MetaVideoResult {
+  ok: boolean;
+  platform?: string;
+  status: 'posted' | 'scheduled' | 'failed' | 'setup_required';
+  postId?: string | null;
+  url?: string | null;
+  publishAtMs?: number | null;
+  message?: string;
+}
+
+/**
+ * Posts a video on this computer as an Instagram Reel (now) or a Facebook Reel (now, or
+ * scheduled on Meta when `scheduledAtMs` is more than 10 minutes ahead). Waits for Meta and
+ * returns what Meta actually did. Only approved calls post.
+ */
+export async function publishMetaVideo(post: {
+  platform: 'instagram' | 'facebook';
+  localFilePath: string;
+  caption: string;
+  title?: string;
+  scheduledAtMs?: number | null;
+  approved?: boolean;
+}): Promise<MetaVideoResult> {
+  try {
+    return await invoke<MetaVideoResult>('meta_publish_video', {
+      request: {
+        approved: post.approved === true,
+        platform: post.platform,
+        localFilePath: post.localFilePath,
+        caption: post.caption,
+        title: post.title || '',
+        scheduledAtMs: post.scheduledAtMs ?? null,
+        credentials: savedMetaCredentials(),
+      },
+    });
+  } catch (error) {
+    return { ok: false, platform: post.platform, status: 'failed', message: error instanceof Error ? error.message : String(error) };
+  }
+}

@@ -8,7 +8,7 @@ vi.mock('../services/connectors/connectorAuth', () => ({
 }));
 
 import { invoke } from '@tauri-apps/api/core';
-import { buildMetaPublishRequest, publishMetaContent } from '../services/metaPublishService';
+import { buildMetaPublishRequest, publishMetaContent, publishMetaVideo } from '../services/metaPublishService';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -96,5 +96,33 @@ describe('saved Meta keys', () => {
     expect(request.credentials).toEqual({
       accessToken: 'saved-token', pageAccessToken: null, pageId: '42', instagramBusinessAccountId: null, appSecret: null,
     });
+  });
+});
+
+// Phase 3a: a video file on this computer posted as a Reel (meta_publish_video).
+describe('publishMetaVideo', () => {
+  it('sends the file, caption, time and saved keys, and returns what Meta did', async () => {
+    invoke.mockResolvedValue({ ok: true, status: 'scheduled', postId: '9', url: 'https://www.facebook.com/reel/9', publishAtMs: 1800000000000 });
+    const result = await publishMetaVideo({ platform: 'facebook', localFilePath: 'D:/out/v.mp4', caption: 'Hi #a', title: 'T', scheduledAtMs: 1800000000000, approved: true });
+    expect(invoke).toHaveBeenCalledWith('meta_publish_video', {
+      request: {
+        approved: true, platform: 'facebook', localFilePath: 'D:/out/v.mp4', caption: 'Hi #a', title: 'T', scheduledAtMs: 1800000000000,
+        credentials: expect.objectContaining({ accessToken: 'saved-token', pageId: '42' }),
+      },
+    });
+    expect(result.status).toBe('scheduled');
+  });
+
+  it('is never approved unless the caller says so', async () => {
+    invoke.mockResolvedValue({ ok: false, status: 'failed' });
+    await publishMetaVideo({ platform: 'instagram', localFilePath: 'v.mp4', caption: '' });
+    expect(invoke.mock.calls[0][1].request.approved).toBe(false);
+    expect(invoke.mock.calls[0][1].request.scheduledAtMs).toBeNull();
+  });
+
+  it('says it failed when the backend cannot be reached', async () => {
+    invoke.mockRejectedValue(new Error('no backend'));
+    const result = await publishMetaVideo({ platform: 'instagram', localFilePath: 'v.mp4', caption: '', approved: true });
+    expect(result).toEqual(expect.objectContaining({ ok: false, status: 'failed', message: 'no backend' }));
   });
 });
