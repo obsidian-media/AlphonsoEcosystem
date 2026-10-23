@@ -69,6 +69,16 @@ export async function saveProjectImage(
   return proof?.path || joinFolder(folder, filename);
 }
 
+/** A saved picture, as a data URL to show in the app, or null. */
+export async function loadProjectImage(root: string, relativePath: string): Promise<string | null> {
+  try {
+    const base64 = await invoke<string>('read_workspace_image', { workspaceRoot: root, relativePath });
+    return base64 ? `data:image/png;base64,${base64}` : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadProjectFile(root: string, brand: BrandRef, folderName: string): Promise<ContentProject | null> {
   try {
     const proof = await invoke<{ content?: string }>('read_workspace_file', {

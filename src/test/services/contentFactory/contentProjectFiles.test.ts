@@ -10,6 +10,7 @@ import {
   writeStepText,
   saveProjectImage,
   loadProjectFile,
+  loadProjectImage,
 } from '../../../services/contentFactory/contentProjectFiles';
 
 const brand = { folderName: 'my-brand' } as never;
@@ -51,6 +52,14 @@ describe('contentProjectFiles', () => {
     expect(args.folder).toMatch(/launch-video[\\/]scenes$/);
     expect(args.filename).toBe('s1.png');
     expect(path).toBe('D:\\Content\\my-brand\\launch-video\\scenes\\s1.png');
+  });
+
+  it('loads a saved picture as a data URL, or null', async () => {
+    vi.mocked(invoke).mockResolvedValueOnce('AAAA');
+    expect(await loadProjectImage('D:\Content', 'my-brand/launch-video/thumbnail/t1.png')).toBe('data:image/png;base64,AAAA');
+    expect(vi.mocked(invoke).mock.calls[0]).toEqual(['read_workspace_image', { workspaceRoot: 'D:\Content', relativePath: 'my-brand/launch-video/thumbnail/t1.png' }]);
+    vi.mocked(invoke).mockRejectedValueOnce(new Error('missing'));
+    expect(await loadProjectImage('D:\Content', 'x.png')).toBeNull();
   });
 
   it('loads project.json, or null when it is missing or broken', async () => {

@@ -4,7 +4,7 @@
 import { generateComfyUiImage, checkComfyUiImage, getComfyUiEndpoint } from '../connectors/connectorImageGenerators';
 import { getBrand } from './contentBrandService';
 import { addStepProgress, chosenVersionOf, getProject, setVersionOutputField } from './contentProjectService';
-import { requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
+import { projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
 import { drawHeadline, type HeadlineSide } from './thumbnailRenderer';
 import type { ContentBrief, StepId } from './contentTypes';
 
@@ -12,6 +12,8 @@ export interface PictureResult {
   sceneId: string;
   status: 'done' | 'pending' | 'failed';
   path?: string;
+  /** Relative to the output folder, for showing it (read_workspace_image). */
+  relativePath?: string;
   jobId?: string;
   error?: string;
   /** Thumbnails: the headline drawn on, and its side. */
@@ -40,13 +42,17 @@ function context(projectId: string, step: StepId, settings: Settings) {
 }
 
 async function toPicture(
-  result: ImageResult, save: (base64: string) => Promise<string>, base: Omit<PictureResult, 'status'>,
+  result: ImageResult, save: (base64: string) => Promise<string>, base: Omit<PictureResult, 'status'>, relativePath: string,
 ): Promise<PictureResult> {
   if (result?.pending && result.jobId) return { ...base, status: 'pending', jobId: result.jobId };
   if (!result?.ok || !result.previewBase64) {
     return { ...base, status: 'failed', error: result?.error || 'ComfyUI returned no picture.' };
   }
-  return { ...base, status: 'done', path: await save(result.previewBase64) };
+  try {
+    return { ...base, status: 'done', path: await save(result.previewBase64), relativePath };
+  } catch (error) {
+    return { ...base, status: 'failed', error: `The picture could not be saved: ${(error as Error).message}` };
+  }
 }
 
 export async function renderScenePictures(projectId: string, settings: Settings, onProgress?: (m: string) => void): Promise<PictureResult[]> {
@@ -69,7 +75,8 @@ export async function renderScenePictures(projectId: string, settings: Settings,
     } catch (error) {
       result = { ok: false, error: (error as Error).message };
     }
-    results.push(await toPicture(result, (b64) => saveProjectImage(root, brand, project, 'scenes', `v${version.version}-${scene.id}.png`, b64), { sceneId: scene.id }));
+    const file = `v${version.version}-${scene.id}.png`;
+    results.push(await toPicture(result, (b64) => saveProjectImage(root, brand, project, 'scenes', file, b64), { sceneId: scene.id }, `${projectRelativeDir(brand, project)}/scenes/${file}`));
   }
   const saved = setVersionOutputField(projectId, 'scenes', version.version, 'pictures', results);
   await writeProjectFile(root, brand, saved).catch(() => undefined);
@@ -95,10 +102,11 @@ export async function renderThumbnails(projectId: string, settings: Settings, on
     } catch (error) {
       result = { ok: false, error: (error as Error).message };
     }
+    const file = `v${version.version}-${concept.id}.png`;
     const save = async (b64: string) => saveProjectImage(
-      root, brand, project, 'thumbnail', `v${version.version}-${concept.id}.png`, await drawHeadline(b64, concept.headline, brand, concept.layout),
+      root, brand, project, 'thumbnail', file, await drawHeadline(b64, concept.headline, brand, concept.layout),
     );
-    results.push(await toPicture(result, save, { sceneId: concept.id, headline: concept.headline, layout: concept.layout }));
+    results.push(await toPicture(result, save, { sceneId: concept.id, headline: concept.headline, layout: concept.layout }, `${projectRelativeDir(brand, project)}/thumbnail/${file}`));
   }
   const saved = setVersionOutputField(projectId, 'thumbnail', version.version, 'pictures', results);
   await writeProjectFile(root, brand, saved).catch(() => undefined);
@@ -112,11 +120,12 @@ export async function checkPendingPictures(projectId: string, step: 'scenes' | '
   for (const [i, picture] of pictures.entries()) {
     if (picture.status !== 'pending' || !picture.jobId) continue;
     const result = await checkComfyUiImage(picture.jobId) as ImageResult;
+    const file = `v${version.version}-${picture.sceneId}.png`;
     const save = async (b64: string) => saveProjectImage(
-      root, brand, project, step, `v${version.version}-${picture.sceneId}.png`,
+      root, brand, project, step, file,
       step === 'thumbnail' && picture.headline ? await drawHeadline(b64, picture.headline, brand, picture.layout || 'left') : b64,
     );
-    pictures[i] = await toPicture(result, save, { sceneId: picture.sceneId, headline: picture.headline, layout: picture.layout });
+    pictures[i] = await toPicture(result, save, { sceneId: picture.sceneId, headline: picture.headline, layout: picture.layout }, `${projectRelativeDir(brand, project)}/${step}/${file}`);
   }
   const saved = setVersionOutputField(projectId, step, version.version, 'pictures', pictures);
   await writeProjectFile(root, brand, saved).catch(() => undefined);

@@ -53,7 +53,10 @@ describe('renderScenePictures', () => {
     expect(first.prompt).toContain('warm film');
     expect(first.prompt).toContain('cinematic');
     expect([first.width, first.height]).toEqual([832, 480]);
-    expect(getProject(p.id)!.steps.scenes.versions[0].output).toMatchObject({ pictures: [{ sceneId: 's1', status: 'done' }, { sceneId: 's2', status: 'done' }] });
+    expect(getProject(p.id)!.steps.scenes.versions[0].output).toMatchObject({ pictures: [
+      { sceneId: 's1', status: 'done', relativePath: `${'b'}/p/scenes/v1-s1.png` },
+      { sceneId: 's2', status: 'done' },
+    ] });
   });
 
   it('uses portrait pictures when every output is vertical', async () => {
