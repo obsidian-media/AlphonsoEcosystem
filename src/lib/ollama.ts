@@ -7,6 +7,7 @@ import type { NvidiaSendResult } from '../services/connectors/nvidiaNimConnector
 import type { GeminiSendResult } from '../services/connectors/geminiConnector';
 import type { HermesSendResult } from '../services/connectors/hermesAgentConnector';
 import { getStorage } from './appStorage';
+import { isPaidModelId } from '../services/jose/stepGraph';
 
 export const DEFAULT_OLLAMA_ENDPOINT = 'http://localhost:11434';
 // The model to fall back on when the user has not picked one (or the one
@@ -822,7 +823,7 @@ async function generatePaidResponse(paidModel: string, options: AgentGenerateOpt
   return { response: result.text || '', done: true, backend: 'chatgpt', model: result.model || model };
 }
 
-const isPaidModel = (model: unknown): model is string => typeof model === 'string' && /^(claude|chatgpt):/.test(model);
+const isPaidModel = (model: unknown): model is string => isPaidModelId(model);
 
 export async function generateAgentLlmResponse(agentId: string, options: AgentGenerateOptions): Promise<AgentGenerateResult> {
   // A paid model Jose chose for this step goes first, whatever the agent's own provider.

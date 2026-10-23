@@ -10,7 +10,8 @@ import { describePlanSource, type JosePlan } from '../../services/jose/josePlann
 import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
-import { approveRequestStep } from '../../services/joseExecutionEngineService';
+import { agentName } from '../../services/jose/agentNames';
+import { approveRequestStep, carryOnRequest, rejectRequestStep } from '../../services/joseExecutionEngineService';
 
 const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
@@ -20,6 +21,7 @@ const STATUS_LABELS: Record<string, string> = {
   failed: 'Failed',
   interrupted: 'Interrupted',
   cancelled: 'Cancelled',
+  expired: 'Expired',
 };
 
 export function requestPlanLabel(request: JoseRequest): string {
@@ -91,6 +93,22 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
       refresh();
     }
   };
+  // A request the app was closed on (phase 5): carry it on from where it was.
+  const carryOn = async () => {
+    if (!selected || runningRef.current) return;
+    runningRef.current = true;
+    setRunning(true);
+    setMessage('');
+    try {
+      setMessage(runResultText(await carryOnRequest(selected.id)));
+    } catch (error) {
+      setMessage(`It could not run: ${String(error)}`);
+    } finally {
+      runningRef.current = false;
+      setRunning(false);
+      refresh();
+    }
+  };
   const waitingSteps = selected?.status === 'waiting_approval' ? selected.steps.filter((s) => s.status === 'waiting_approval') : [];
 
   return (
@@ -131,10 +149,22 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
             )}
+            {selected.status === 'interrupted' && (
+              <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
+            )}
             {waitingSteps.map((step) => (
-              <Button key={step.stepId} variant="primary" disabled={running} onClick={() => approveStep(step.stepId)}>
-                {`Approve and carry on: ${step.agent.charAt(0).toUpperCase()}${step.agent.slice(1)} ${step.actionType}`}
-              </Button>
+              <React.Fragment key={step.stepId}>
+                <Button variant="primary" disabled={running} onClick={() => approveStep(step.stepId)}>
+                  {`Approve and carry on: ${agentName(step.agent)} ${step.actionType}`}
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={running}
+                  onClick={() => { setMessage(rejectRequestStep(selected.id, step.stepId).summary); refresh(); }}
+                >
+                  {`Reject: ${agentName(step.agent)} ${step.actionType}`}
+                </Button>
+              </React.Fragment>
             ))}
             {editing && <Button variant="ghost" onClick={() => setEditing(false)}>Stop editing</Button>}
             <Button variant="ghost" onClick={() => setTemplateName(templateName === null ? '' : null)}>Save as template</Button>

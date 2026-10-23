@@ -98,8 +98,13 @@ export async function hydrateConnectorCredentialsFromSqlite(force = false): Prom
           await invoke('kv_delete', { key: CREDS_KEY }).catch(() => {});
           localStorage.removeItem(CREDS_KEY);
         }
+        return;
       }
     }
+    // Nothing saved anywhere: that counts as loaded (a fresh install), so
+    // reads don't keep asking the keychain.
+    if (_credCache === null) _credCache = {};
+    _credCacheHydratedAt = Date.now();
   } catch {
     // ignore — in-memory cache fallback already in place (e.g. running
     // outside Tauri, where none of these invoke() calls resolve)
@@ -108,8 +113,13 @@ export async function hydrateConnectorCredentialsFromSqlite(force = false): Prom
 
 function readAllCredentials(): ConnectorCredentials {
   if (_credCache === null) {
+    // An empty placeholder for a read before the saved credentials have
+    // loaded. It must not count as loaded (2026-10-23: it did, so the load
+    // that follows skipped itself and every credential looked missing for
+    // 60 s — the Telegram companion then never started). Load now.
     _credCache = {};
-    _credCacheHydratedAt = Date.now();
+    _credCacheHydratedAt = 0;
+    hydrateConnectorCredentialsFromSqlite(true).catch(() => {});
   } else if ((Date.now() - _credCacheHydratedAt) >= CRED_CACHE_TTL_MS) {
     // Stale beyond TTL — trigger an async re-hydrate from the durable store so a
     // credential update made elsewhere (e.g. app restart racing a write) is

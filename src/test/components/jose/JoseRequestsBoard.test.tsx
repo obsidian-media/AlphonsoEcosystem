@@ -15,10 +15,12 @@ vi.mock('../../../services/jose/submitToJose', async () => {
 
 vi.mock('../../../services/joseExecutionEngineService', () => ({
   approveRequestStep: vi.fn(async () => ({ ok: true, summary: 'Marcus did it; the request carried on.' })),
+  carryOnRequest: vi.fn(async () => ({ ok: true, command: { userReport: { summary: 'Carried on to the end.' } } })),
+  rejectRequestStep: vi.fn(() => ({ ok: true, summary: 'Rejected. The request was cancelled.' })),
 }));
 
 import { JoseRequestsBoard } from '../../../components/jose/JoseRequestsBoard';
-import { approveRequestStep } from '../../../services/joseExecutionEngineService';
+import { approveRequestStep, carryOnRequest, rejectRequestStep } from '../../../services/joseExecutionEngineService';
 import { createJoseRequest, setJoseRequestStatus, updateJoseStep } from '../../../services/jose/joseRequestStore';
 import { JosePlanEditor } from '../../../components/jose/JosePlanEditor';
 import { runApprovedPlan } from '../../../services/jose/submitToJose';
@@ -126,5 +128,30 @@ describe('JosePlanEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approve and carry on: Marcus distribution_execution' }));
     await waitFor(() => expect(approveRequestStep).toHaveBeenCalledWith(request.id, 'post'));
     expect(await screen.findByText('Marcus did it; the request carried on.')).toBeTruthy();
+  });
+
+  it('offers Carry on for a request the app was closed on', async () => {
+    const request = createJoseRequest({
+      commandId: 'c-cut', source: 'user', text: 'Research the launch', kind: 'normal',
+      steps: [{ stepId: 'a', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [] }],
+    });
+    setJoseRequestStatus(request.id, 'interrupted');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Carry on' }));
+    await waitFor(() => expect(carryOnRequest).toHaveBeenCalledWith(request.id));
+    expect(await screen.findByText('Carried on to the end.')).toBeTruthy();
+  });
+
+  it('rejects a waiting step', async () => {
+    const request = createJoseRequest({
+      commandId: 'c-rej', source: 'user', text: 'Post', kind: 'normal',
+      steps: [{ stepId: 'post', agent: 'marcus', actionType: 'distribution_execution', effects: ['publish_or_send'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'post', { status: 'waiting_approval' });
+    setJoseRequestStatus(request.id, 'waiting_approval');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Reject: Marcus distribution_execution' }));
+    expect(rejectRequestStep).toHaveBeenCalledWith(request.id, 'post');
+    expect(await screen.findByText('Rejected. The request was cancelled.')).toBeTruthy();
   });
 });

@@ -7,7 +7,8 @@ import {
   attemptPacketExecution,
   getPacketById,
   requestPacketRetry,
-  updatePacketStatus
+  updatePacketStatus,
+  rejectPacket
 } from './agentBusService';
 import {
   confirmJoseCommand,
@@ -35,6 +36,8 @@ import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestSt
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
+import { agentName } from './jose/agentNames';
+import { rejectWaitingPackets } from './jose/joseExpiry';
 import { saveRequestDecisions } from './jose/joseFinish';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
@@ -2107,7 +2110,8 @@ export async function runJoseCommandExecutionPipeline({
     recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
     // Echo saves what was decided (phase 4). Never changes the outcome.
     const finished = getJoseRequest(joseRequestId);
-    if (saveDecisions && finished && (finished.status === 'done' || finished.status === 'waiting_approval')) {
+    // Once, when the request is done (phase 5), not again after an approval.
+    if (saveDecisions && finished && finished.status === 'done') {
       const outputs = Object.fromEntries(finished.steps
         .filter((s) => s.status === 'done')
         .map((s) => [s.stepId, getStepOutput(command.id, s.stepId) || {}]));
@@ -2340,7 +2344,8 @@ export async function retryDLQ(taskId) {
  */
 export async function resumeJoseRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
-  if (!request || request.status !== 'waiting_approval') {
+  // A waiting request, or one the app was closed on (phase 5).
+  if (!request || (request.status !== 'waiting_approval' && request.status !== 'interrupted')) {
     return { ok: false, reason: request ? `This request is ${String(request.status).replace(/_/g, ' ')}, not waiting for an approval.` : 'Request not found.', requestId };
   }
   setJoseRequestStatus(requestId, 'running');
@@ -2357,6 +2362,36 @@ export async function resumeJoseRequest(requestId: string, options: any = {}) {
     conversationHistory: options.history,
   });
   return { ...result, requestId };
+}
+
+/**
+ * Reject one waiting step of a saved request (phase 5): the step is not run,
+ * and the request is cancelled with a note (owner may overrule).
+ */
+export function rejectRequestStep(requestId: string, stepId: string) {
+  const request: any = getJoseRequest(requestId);
+  const step = request?.steps?.find((s: any) => s.stepId === stepId);
+  if (!request || request.status !== 'waiting_approval' || step?.status !== 'waiting_approval') {
+    return { ok: false, summary: 'That step is no longer waiting.' };
+  }
+  const command: any = listJoseCommands().find((item) => item.id === request.commandId);
+  const packetId = command?.assignments?.find((a: any) => a.stepId === stepId)?.packetId;
+  if (packetId) rejectPacket(packetId, 'Rejected by you.');
+  // The request is cancelled, so its other waiting steps leave the queue too.
+  rejectWaitingPackets(request.commandId, 'The request was cancelled.');
+  updateJoseStep(requestId, stepId, { status: 'rejected', endedAtMs: timestampMs() });
+  setJoseRequestStatus(requestId, 'cancelled');
+  appendRequestNote(requestId, `You rejected ${agentName(step.agent)}'s step.`);
+  return { ok: true, summary: 'Rejected. The request was cancelled.' };
+}
+
+/** Carry on a request the app was closed on (phase 5): steps already done are kept; a step that needs approval asks again. */
+export async function carryOnRequest(requestId: string, options: any = {}) {
+  const request: any = getJoseRequest(requestId);
+  if (!request || request.status !== 'interrupted') {
+    return { ok: false, reason: 'Only a request that was cut off when the app closed can be carried on.', requestId };
+  }
+  return resumeJoseRequest(requestId, options);
 }
 
 /** Approve one waiting step of a saved request, by its step id, and carry the request on (the board's button, phase 4). */

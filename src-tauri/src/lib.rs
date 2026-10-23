@@ -123,6 +123,12 @@ pub(crate) struct ConnectorInboundMessage {
   pub(crate) text: String,
   pub(crate) date_unix: Option<i64>,
   pub(crate) received_at_ms: u64,
+  /// A Telegram button press (phase 5): the callback's id, to answer it.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub(crate) callback_id: Option<String>,
+  /// The pressed button's data.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub(crate) callback_data: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -824,6 +830,7 @@ pub fn run() {
       whatsapp_webhook::verify_whatsapp_cloud_webhook_signature,
       whatsapp_webhook::normalize_whatsapp_cloud_inbound,
       telegram::connector_send_telegram,
+      telegram::connector_answer_telegram_callback,
       connector_send_whatsapp,
       connector_github_action,
       connector_slack_send,
