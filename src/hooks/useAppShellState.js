@@ -121,10 +121,11 @@ export function useAppShellState({
   // high-risk (e.g. a Hermes-backed Boardroom reply) and its label carries no
   // keyword that needsHighRiskApproval() would match -- without it the label
   // filter below silently auto-approves. Approval Mode off is still the user's
-  // explicit opt-out and always wins.
-  const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null, requireApproval = false, riskReasons = null } = {}) => {
+  // explicit opt-out and always wins, except for `alwaysAsk`: spend, publish
+  // and delete are locked to always ask (Settings → Approvals, 2026-10-23).
+  const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null, requireApproval = false, riskReasons = null, alwaysAsk = false } = {}) => {
     // Logic from App.jsx
-    if (!settings.approvalMode) return Promise.resolve(true);
+    if (!settings.approvalMode && !alwaysAsk) return Promise.resolve(true);
     if (!requireApproval && !needsHighRiskApproval(actionLabel)) return Promise.resolve(true);
     // The shell shows one approval modal and keeps one resolver, so a request
     // that arrives while another is open (Boardroom bridge, command approval,

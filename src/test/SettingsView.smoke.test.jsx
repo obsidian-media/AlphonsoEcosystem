@@ -228,4 +228,44 @@ describe('SettingsView smoke', () => {
     fireEvent.click(toggle);
     expect(setDeveloperMode).toHaveBeenCalledWith(true);
   });
+
+  // Settings → Approvals: one switch per kind of action (Jose redesign, 2026-10-23).
+  function renderApprovals(settings, setSettings = vi.fn()) {
+    render(
+      <SettingsView
+        settings={settings}
+        setSettings={setSettings}
+        ollamaStatus={{ state: 'running', label: 'Running' }}
+        installedModels={[]}
+        onCheckOllama={vi.fn()}
+        onCopyTroubleshootingCommand={vi.fn()}
+        copyState=""
+      />
+    );
+    return setSettings;
+  }
+
+  it('locks spend, publish and delete to always ask', () => {
+    renderApprovals({ ...minimalSettings, approvalMode: true });
+    for (const label of ['Spend money', 'Publish or send anything outside', 'Delete anything']) {
+      const row = screen.getByRole('switch', { name: `Ask before: ${label}` });
+      expect(row.getAttribute('aria-checked')).toBe('true');
+      expect(row.disabled).toBe(true);
+    }
+    expect(screen.getAllByText('Always asks').length).toBe(3);
+  });
+
+  it('saves a change to an unlocked row', () => {
+    const setSettings = renderApprovals({ ...minimalSettings, approvalMode: true });
+    const run = screen.getByRole('switch', { name: 'Ask before: Run code and commands' });
+    expect(run.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(run);
+    expect(setSettings).toHaveBeenCalledWith(expect.objectContaining({ effectApprovals: expect.objectContaining({ run: false }) }));
+  });
+
+  it('greys out the unlocked rows while Approval Mode is off', () => {
+    renderApprovals({ ...minimalSettings, approvalMode: false });
+    expect(screen.getByRole('switch', { name: 'Ask before: Run code and commands' }).disabled).toBe(true);
+    expect(screen.getByText(/Approval Mode is off: only the locked ones ask/)).toBeTruthy();
+  });
 });
