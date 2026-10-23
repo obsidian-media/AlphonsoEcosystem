@@ -144,6 +144,7 @@ const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then
 const AgentPerformanceView = lazy(() => import('./components/AgentPerformanceView').then((mod) => ({ default: mod.AgentPerformanceView })));
 const SessionHistoryView = lazy(() => import('./components/SessionHistoryView').then((mod) => ({ default: mod.SessionHistoryView })));
 
+import { handleCompanionCommand } from './services/companionCommandService';
 import { markRunningRequestsInterrupted } from './services/jose/joseRequestStore';
 import { expireWaitingRequests } from './services/jose/joseExpiry';
 
@@ -503,45 +504,11 @@ function AppShell() {
         // A scheduled command now goes through Jose exactly like a typed one,
         // so Approval Mode still holds back anything high-risk.
         schedulerStop = startScheduler({
+          // Phase 6a: through Jose like a typed command, never plan-first, never paid.
           runCommand: async (commandText) => {
-            const { runJoseCommandExecutionPipeline, isJoseIntakeCommand } = await import('./services/joseExecutionEngineService');
-            const { shouldRouteThroughJose, CHAT_ASSISTANT_PROMPT } = await import('./lib/chatUtils');
+            const { runScheduledCommand } = await import('./services/scheduledCommandService');
             const current = schedulerSettingsRef.current;
-            // The same rule as Chat: a task goes to Jose, anything else gets a
-            // direct answer. Sending "write a note" through Jose's pipeline only
-            // produced "Jose completed orchestration review" and no note.
-            if (!isJoseIntakeCommand(commandText) && !shouldRouteThroughJose(commandText)) {
-              const { generateAgentLlmResponse, getConfiguredOllamaModel } = await import('./lib/ollama');
-              const reply = await generateAgentLlmResponse('alphonso', {
-                endpoint: current.endpoint,
-                model: current.selectedModel || getConfiguredOllamaModel(),
-                prompt: `${CHAT_ASSISTANT_PROMPT}\n\nUser: ${commandText}\nAlphonso:`
-              }) as { response?: string } | null;
-              const text = String(reply?.response || '').trim();
-              if (!text) return { ok: false, error: 'The model returned an empty reply.' };
-              return { ok: true, summary: text.split('\n')[0].slice(0, 200), details: text };
-            }
-            const result = await runJoseCommandExecutionPipeline({
-              commandText,
-              source: 'schedule',
-              endpoint: current.endpoint,
-              zeroCostMode: current.zeroCostMode,
-              previewMode: false,
-              conversationHistory: [],
-              onProgress: undefined,
-              onToken: undefined
-            });
-            const reports = (result?.command?.userReport?.assignmentSummaries || [])
-              .filter((a: { reportSummary?: string }) => a?.reportSummary)
-              .map((a: { agent?: string; reportSummary?: string }) => `${a.agent || 'agent'}: ${a.reportSummary}`)
-              .join('\n\n');
-            return {
-              ok: Boolean(result?.ok),
-              summary: result?.command?.userReport?.summary || '',
-              details: reports,
-              pendingApprovalCount: Number(result?.pendingApprovalCount || 0),
-              error: result?.ok ? undefined : String(result?.reason || 'Jose could not run the command.')
-            };
+            return runScheduledCommand(commandText, { endpoint: current.endpoint, zeroCostMode: current.zeroCostMode });
           },
           onResult: (schedule, outcome) => {
             const title = outcome.state === 'done' ? `Scheduled: ${schedule.name} finished`
@@ -684,7 +651,6 @@ function AppShell() {
       try {
         const { listen } = await import('@tauri-apps/api/event');
         const { invoke } = await import('@tauri-apps/api/core');
-        const { runJoseCommandExecutionPipeline } = await import('./services/joseExecutionEngineService');
 
         // Track active pipeline AbortControllers by commandId for abort_command
         const activeAborts = new Map<string, AbortController>();
@@ -699,89 +665,14 @@ function AppShell() {
           const abortCtrl = new AbortController();
           activeAborts.set(commandId, abortCtrl);
           try {
-            if (voiceConversation) {
-              const [{ generateOllamaResponse, PREFERRED_MODEL }, { getAgentProfile }] = await Promise.all([
-                import('./lib/ollama'),
-                import('./agents/agentRegistry')
-              ]);
-              const profile = getAgentProfile(agentId) || getAgentProfile('alphonso');
-              const reply = await generateOllamaResponse({
-                endpoint: settings.endpoint,
-                model: settings.selectedModel || PREFERRED_MODEL,
-                prompt: [
-                  `You are ${profile.name}, the Alphonso ${profile.title}.`,
-                  profile.defaultPrompt,
-                  `Your permitted focus: ${profile.allowedSummary || profile.purpose}.`,
-                  `Hard boundary: ${profile.blockedSummary || 'Do not claim external or destructive work was completed.'}`,
-                  `Reply naturally and concisely in ${language}. Never say you are just a language model.`,
-                  'This is a spoken conversation. Do not claim an action was executed; explain any required approval or handoff instead.',
-                  `User: ${text}`
-                ].filter(Boolean).join('\n\n')
-              });
-              if (!abortCtrl.signal.aborted) {
-                await invoke('companion_broadcast', {
-                  event: 'done',
-                  payload: { commandId, summary: reply?.response || 'I could not prepare a reply.' }
-                });
-              }
-              return;
-            }
-            // isJoseIntakeCommand/shouldRouteThroughJose decide, within ChatView,
-            // between "run the Jose multi-agent pipeline" vs. "answer directly via
-            // Ollama" — they return false for plenty of ordinary messages (a
-            // greeting, a statement, anything not phrased as an explicit command
-            // or creative request). This companion channel has no plain-chat
-            // fallback, so treating a false result as an outright rejection meant
-            // nearly everything typed from the phone bounced with "Command not
-            // recognized as a Jose command." instead of getting a real response.
-            // Every companion command should route through Jose, per this
-            // effect's own stated purpose.
-            const result = await runJoseCommandExecutionPipeline({
-              commandText: text,
-              source: 'ios_companion',
+            // Phase 6a: through Jose's one entry (a spoken conversation stays a direct agent reply).
+            await handleCompanionCommand({ commandId, text, agentId, language, voiceConversation }, {
+              broadcast: (eventName, payload) => invoke('companion_broadcast', { event: eventName, payload }),
               endpoint: settings.endpoint,
+              model: settings.selectedModel,
               zeroCostMode: settings.zeroCostMode,
-              previewMode: false,
-              conversationHistory: [],
-              onProgress: (progress) => {
-                if (abortCtrl.signal.aborted) return;
-                invoke('companion_broadcast', {
-                  event: 'agent_status',
-                  payload: {
-                    commandId,
-                    agent: progress.assignment?.agent || 'jose',
-                    status: progress.stage,
-                    detail: progress.stage === 'wave_start'
-                      ? `Wave ${(progress as any).wave + 1}: ${(progress as any).agents?.join(', ')}`
-                      : progress.stage === 'executed'
-                        ? `${(progress as any).assignment?.agent || 'Agent'} completed`
-                        : 'Processing...'
-                  }
-                }).catch(() => {});
-              },
-              onToken: (tokenData) => {
-                if (abortCtrl.signal.aborted) return;
-                invoke('companion_broadcast', {
-                  event: 'token',
-                  payload: { commandId, token: tokenData.fullText || '' }
-                }).catch(() => {});
-              }
+              signal: abortCtrl.signal,
             });
-
-            if (!abortCtrl.signal.aborted) {
-              const summary = result?.command?.userReport?.summary || 'Command processed.';
-              await invoke('companion_broadcast', {
-                event: 'done',
-                payload: { commandId, summary }
-              });
-            }
-          } catch (err) {
-            if (!abortCtrl.signal.aborted) {
-              await invoke('companion_broadcast', {
-                event: 'done',
-                payload: { commandId, error: String(err) }
-              }).catch(() => {});
-            }
           } finally {
             activeAborts.delete(commandId);
           }

@@ -27,6 +27,7 @@ import { runApprovedPlan } from '../../../services/jose/submitToJose';
 import { createWaitingPlanRequest, getJoseRequest } from '../../../services/jose/joseRequestStore';
 import { listUserTemplates } from '../../../services/jose/joseUserTemplates';
 import type { PlanStep } from '../../../services/jose/stepGraph';
+import { setStepOutput } from '../../../services/jose/joseStepOutputs';
 
 const steps: PlanStep[] = [
   { stepId: 'facts', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [], instruction: 'Find the facts.' },
@@ -128,6 +129,17 @@ describe('JosePlanEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approve and carry on: Marcus distribution_execution' }));
     await waitFor(() => expect(approveRequestStep).toHaveBeenCalledWith(request.id, 'post'));
     expect(await screen.findByText('Marcus did it; the request carried on.')).toBeTruthy();
+  });
+
+  it('shows what a step produced when you pick it in the map (phase 6a)', () => {
+    const request = createJoseRequest({ commandId: 'c-out', source: 'user', text: 'Research the launch', kind: 'normal', steps });
+    setStepOutput('c-out', 'value', 'nova', { summary: 'Worth doing: strong demand.' });
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    expect(screen.queryByText('Worth doing: strong demand.')).toBeNull();
+    fireEvent.click(screen.getAllByTestId('jose-plan-step')[1]);
+    expect(screen.getByText('Worth doing: strong demand.')).toBeTruthy();
+    fireEvent.click(screen.getAllByTestId('jose-plan-step')[0]);
+    expect(screen.getByText('Nothing was saved for this step.')).toBeTruthy();
   });
 
   it('offers Carry on for a request the app was closed on', async () => {

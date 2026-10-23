@@ -14,7 +14,9 @@
  */
 
 import { AGENTS, createAgentPacket } from './agentBusService';
-import { createJoseCommandRoute } from './joseCommandRouterService';
+import { submitStepsToJose } from './jose/submitToJose';
+import { inferEffects } from './jose/joseEffects';
+import type { PlanStep } from './jose/stepGraph';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendConnectorAudit } from './connectorRegistryService';
@@ -39,17 +41,12 @@ interface WorkflowContext {
   [key: string]: unknown;
 }
 
-interface JoseRoute {
-  id: string;
-  assignments?: Array<Record<string, unknown>>;
-  [key: string]: unknown;
-}
-
 interface WorkflowRunResult {
   ok: boolean;
   workflowId?: string;
   workflow?: string;
   commandId?: string;
+  requestId?: string | null;
   assignments?: Array<Record<string, unknown>>;
   chain?: string[];
   outputTarget?: string;
@@ -483,57 +480,90 @@ function lastInChain(chain: string[]): string {
   return chain[chain.length - 1];
 }
 
+export const WORKFLOW_LABEL = 'Steps set by a workflow.';
+
+/**
+ * The task type each agent does in a workflow step (phase 6a), from its family
+ * in the permission table. Marcus reviews where things could go and sends
+ * nothing: a workflow never publishes on its own.
+ */
+const WORKFLOW_STEP_TASK: Record<string, string> = {
+  alphonso: 'verification_workflow_step',
+  miya: 'creative_workflow_step',
+  hector: 'research_workflow_step',
+  maria: 'audit_workflow_step',
+  marcus: 'distribution_review',
+  echo: 'memory_workflow_step',
+  sentinel: 'security_workflow_step',
+  nova: 'analysis_workflow_step',
+};
+
+/** A workflow's agent chain as given steps, each after the one before. Jose plans, so he has no step. */
+export function workflowSteps(workflow: WorkflowDefinition, text: string): PlanStep[] {
+  const agents = (workflow.chain || []).filter((agent) => agent !== AGENTS.JOSE);
+  return agents.map((agent, index) => {
+    const actionType = WORKFLOW_STEP_TASK[agent] || 'agent_report';
+    return {
+      stepId: agent,
+      agent,
+      actionType,
+      effects: agent === AGENTS.MARCUS ? ['read'] : inferEffects(actionType),
+      needs: index === 0 ? [] : [agents[index - 1]],
+      instruction: `${workflow.name} (${workflow.purpose}) Your part as ${agent}: ${(workflow.tasks || []).join(', ')}. Request: ${text}`,
+    };
+  });
+}
+
 export async function runWorkflow(workflowId: string, context: WorkflowContext = {}): Promise<WorkflowRunResult> {
   if (!workflowId || typeof workflowId !== 'string') return { ok: false, error: 'Invalid workflowId.' };
   const workflow = getWorkflow(workflowId);
   if (!workflow) return { ok: false, error: 'Unknown workflow.' };
 
   const commandText = String(context.prompt || context.command || `Run workflow: ${workflow.name}`).trim();
-  let route: JoseRoute;
+  let run: any;
   try {
-    route = (await createJoseCommandRoute({
-      commandText,
+    // Phase 6a: the chain runs as a Jose request (approvals by effect, shown on the board).
+    run = await submitStepsToJose({
+      text: commandText,
       source: context.source || 'workflow_engine',
-      zeroCostMode: context.zeroCostMode
-    })) as unknown as JoseRoute;
-  } catch (error: unknown) {
-    appendConnectorAudit('workflow', 'jose_route_failed', {
-      workflowId,
-      error: String(error)
+      label: WORKFLOW_LABEL,
+      steps: workflowSteps(workflow, commandText),
+      zeroCostMode: context.zeroCostMode,
     });
+  } catch (error: unknown) {
+    appendConnectorAudit('workflow', 'jose_route_failed', { workflowId, error: String(error) });
     return { ok: false, workflowId, error: String(error) };
   }
 
-  if (!route) {
-    return { ok: false, workflowId, error: 'Jose route creation returned empty.' };
+  if (!run?.ok && run?.reason === 'plan_rejected') {
+    return { ok: false, workflowId, error: (run.problems || []).join(' ') };
+  }
+  if (!run?.commandId) {
+    return { ok: false, workflowId, error: String(run?.reason || 'Jose could not run the workflow.') };
   }
 
   appendSessionEvent({
     category: 'workflow',
     title: `Workflow activated: ${workflow.name}`,
-    details: {
-      workflowId,
-      commandId: route.id,
-      assignmentCount: route.assignments?.length || 0
-    },
+    details: { workflowId, commandId: run.commandId, assignmentCount: workflowSteps(workflow, commandText).length },
     agent: AGENTS.JOSE,
     confidence: TRUST_STATES.TEMPORARY,
     verificationState: TRUST_STATES.UNVERIFIED
   });
-
   appendConnectorAudit('workflow', 'activated', {
     workflowId,
-    commandId: route.id,
+    commandId: run.commandId,
     chain: workflow.chain,
     outputTarget: lastInChain(workflow.chain)
   });
 
   return {
-    ok: true,
+    ok: Boolean(run.ok),
     workflowId,
     workflow: workflow.name,
-    commandId: route.id,
-    assignments: route.assignments || [],
+    commandId: run.commandId,
+    requestId: run.requestId || null,
+    assignments: run.command?.assignments || [],
     chain: workflow.chain,
     outputTarget: lastInChain(workflow.chain)
   };

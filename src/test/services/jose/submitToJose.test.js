@@ -10,7 +10,7 @@ vi.mock('../../../services/joseExecutionEngineService', () => ({
   runJoseCommandExecutionPipeline: vi.fn(async () => ({ ok: true, commandId: 'c1', executedCount: 1, pendingApprovalCount: 0, failedCount: 0, executionReceipts: [] })),
 }));
 
-import { submitToJose, runApprovedPlan, cancelPlan, CONTENT_VIDEO_STUDIO_NOTE } from '../../../services/jose/submitToJose';
+import { submitToJose, submitStepsToJose, runApprovedPlan, cancelPlan, CONTENT_VIDEO_STUDIO_NOTE } from '../../../services/jose/submitToJose';
 import { getJoseRequest, replacePlanSteps, createWaitingPlanRequest } from '../../../services/jose/joseRequestStore';
 import { planJoseRequest } from '../../../services/jose/josePlanner';
 import { runPipelineShortcuts, runJoseCommandExecutionPipeline } from '../../../services/joseExecutionEngineService';
@@ -63,6 +63,28 @@ describe('submitToJose', () => {
     planner.mockResolvedValueOnce({ ...freshPlan, steps: [freshPlan.steps[0], { ...freshPlan.steps[1], reviewOf: 'facts' }] });
     await submitToJose({ text: 'Plan a party', source: 'user' });
     expect(pipeline.mock.calls[0][0].assignments[1].reviewOf).toBe('facts');
+  });
+
+  it('passes allowPaidModels to the planner and the run, and saves it on a waiting plan', async () => {
+    planner.mockResolvedValueOnce(freshPlan);
+    await submitToJose({ text: 'Plan a party', source: 'schedule', allowPaidModels: false });
+    expect(planner).toHaveBeenCalledWith('Plan a party', expect.objectContaining({ allowPaidModels: false }));
+    expect(pipeline.mock.calls[0][0].allowPaidModels).toBe(false);
+  });
+
+  it('runs given steps as a plan, labelled', async () => {
+    const result = await submitStepsToJose({ text: 'Brief for the launch', source: 'boardroom', label: 'Steps set by Boardroom.', steps: freshPlan.steps });
+    const args = pipeline.mock.calls[0][0];
+    expect(args.assignments.map((a) => a.stepId)).toEqual(['facts', 'value']);
+    expect(args.planInfo).toEqual({ source: 'given', templateId: null, note: 'Steps set by Boardroom.' });
+    expect(result.planNote).toBe('Steps set by Boardroom.');
+  });
+
+  it('refuses given steps that break the rules', async () => {
+    const result = await submitStepsToJose({ text: 'x', source: 'boardroom', label: 'x', steps: [{ stepId: 'a', agent: 'miya', actionType: 'creative_x', effects: ['run'], needs: [] }] });
+    expect(result.ok).toBe(false);
+    expect(result.problems.join(' ')).toMatch(/only Alphonso/);
+    expect(pipeline).not.toHaveBeenCalled();
   });
 
   it('runs a rules plan as explicit steps too', async () => {

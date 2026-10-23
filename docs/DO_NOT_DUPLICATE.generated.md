@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 239 services and 154 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 243 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -73,6 +73,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | component | `src/components/jose/JosePlanEditor.tsx` | `JosePlanEditor` |
 | component | `src/components/jose/JosePlanMap.tsx` | `JosePlanMap`, `JosePlanMapProps` |
 | component | `src/components/jose/JoseRequestsBoard.tsx` | `JoseRequestsBoard`, `requestPlanLabel`, `runResultText` |
+| component | `src/components/jose/JoseStepOutput.tsx` | `JoseStepOutput` |
 | component | `src/components/JoseCompanionWidget.tsx` | `JoseCompanionWidget` |
 | component | `src/components/JoseTaskQueue.tsx` | `JoseTaskQueue` |
 | component | `src/components/KeyboardShortcutsModal.tsx` | `KeyboardShortcutsModal` |
@@ -195,6 +196,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/backupService.ts` | `BackupSizeEstimate`, `createBackup`, `exportBackupToFile`, `getBackupSizeEstimate`, `importBackupFromFile`, `restoreBackup` |
 | service | `src/services/batchOrchestratorService.js` | `advanceToNextBatch`, `completeGoal`, `createProjectGoal`, `executeBatch`, `generateBatch`, `generateBatchRuleBased`, `generateBatchViaLLM`, `getActiveBatch`, `getActiveGoal`, `getBatch`, `getBatchById`, `getBatchProgress`, `getGoalById`, `getGoalProgress`, `getTaskById`, `isBatchComplete`, `listBatches`, `listGoals`, `updateBatchStatus`, `updateGoal`, `updateTaskStatus` |
 | service | `src/services/boardroomFacilitatorService.ts` | `buildFacilitatorPrompt`, `detectLowConfidence`, `FacilitatorResult`, `generateAgentResponse`, `generateAlphonsoResponse` |
+| service | `src/services/boardroomJoseService.ts` | `BOARDROOM_LABEL`, `BoardroomReview`, `concludeOnJose`, `creativeBriefOnJose`, `distributeOnJose` |
 | service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BoardroomGovernance`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `setThreadGovernance`, `THREADS_KEY`, `updateThreadStatus` |
 | service | `src/services/browserAutomationService.ts` | `fetchUrlContent`, `openAndScrape`, `openExternalUrl`, `openUrl`, `readClipboard`, `scrapeWebPage`, `writeClipboard` |
 | service | `src/services/cacheService.ts` | `agentCache`, `cached`, `CacheEntry`, `CacheOptions`, `connectorCache`, `createCacheKey`, `globalCache`, `MemoryCache` |
@@ -214,6 +216,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/codingAgentService.ts` | `isCodingRequest`, `runCodingAgent` |
 | service | `src/services/comfyuiSettingsService.ts` | `ComfyUiInstall`, `ComfyUiSearchResult`, `findComfyuiInstalls`, `resolveComfyuiDirectory`, `resolveComfyuiPython`, `searchComputerForComfyui` |
 | service | `src/services/commandApprovalService.ts` | `assessCommandRisk`, `CommandApprovalHandler`, `CommandApprovalOutcome`, `CommandApprovalRequest`, `CommandRiskAssessment`, `CommandRiskLevel`, `isWorkspaceCodeExecuting`, `PlannedCommand`, `requestWorkspaceCommandApproval`, `setCommandApprovalHandler` |
+| service | `src/services/companionCommandService.ts` | `CompanionCommand`, `CompanionDeps`, `handleCompanionCommand` |
 | service | `src/services/companionGreetingsService.ts` | `COMPANION_CONTENT`, `CompanionAgentContent`, `getCompanionContent` |
 | service | `src/services/composioService.ts` | `__resetComposioApiKeyCacheForTests`, `checkComposioHealth`, `ComposioActionResult`, `ComposioConfig`, `ComposioHealthResult`, `ComposioStatusResult`, `ComposioTool`, `ComposioToolkit`, `executeComposioAction`, `executeViaComposio`, `fetchComposioToolkits`, `getCachedToolkits`, `getComposioConfig`, `getComposioStatus`, `getComposioToolsForAgent`, `hydrateComposioApiKeyFromKeychain`, `isComposioEnabled`, `setComposioConfig` |
 | service | `src/services/connectorAuditLogService.ts` | `appendConnectorAuditEntry`, `ConnectorAuditEntry`, `getConnectorAuditLog`, `getLastEntryForConnector` |
@@ -229,7 +232,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/connectors/connectorConstants.ts` | `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE` |
 | service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_ENDPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `DEFAULT_COMFYUI_ENDPOINT`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiEndpoint`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setComfyUiEndpoint`, `setSelectedComfyUiCheckpoint` |
 | service | `src/services/connectors/connectorOutbound.js` | `proveTelegramConnectorPath`, `sendChatGptConnectorMessage`, `sendClaudeConnectorMessage`, `sendClickUpConnectorTask`, `sendGitHubAction`, `sendNotionConnectorEntry`, `sendQwenConnectorMessage`, `sendSlackMessage`, `sendTelegramConnectorMessage`, `sendWhatsAppConnectorMessage`, `uploadYouTubeConnectorVideo` |
-| service | `src/services/connectors/connectorPolling.js` | `createConnectorRoutePacket`, `normalizeWhatsAppCloudInboundPayload`, `parseInboundConnectorMessage`, `pollTelegramConnector`, `pollWhatsAppConnector`, `simulateWhatsAppCloudInbound`, `verifyWhatsAppCloudWebhookChallenge`, `verifyWhatsAppCloudWebhookSignature` |
+| service | `src/services/connectors/connectorPolling.js` | `createConnectorRoutePacket`, `normalizeWhatsAppCloudInboundPayload`, `parseInboundConnectorMessage`, `pollTelegramConnector`, `pollWhatsAppConnector`, `sendConnectorMessageToJose`, `simulateWhatsAppCloudInbound`, `verifyWhatsAppCloudWebhookChallenge`, `verifyWhatsAppCloudWebhookSignature` |
 | service | `src/services/connectors/connectorRegistry.js` | `appendConnectorAudit`, `CIRCUIT_BREAKER_RESET_MS`, `CIRCUIT_BREAKER_THRESHOLD`, `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE`, `DEFAULT_CONNECTORS`, `gateConnectorAction`, `getConnectorCircuitState`, `hydrateConnectorAuditFromSqlite`, `hydrateConnectorRegistryFromSqlite`, `initializeConnectorRegistryFromSqlite`, `listConnectorAudit`, `listConnectors`, `readRows`, `recordConnectorFailure`, `recordConnectorSuccess`, `requireConnectorApproval`, `requireConnectorReady`, `resetConnectorCircuitState`, `setConnectorStatus`, `verifyConnectorEnvironment`, `writeRows` |
 | service | `src/services/connectors/deepseekConnector.ts` | `DeepSeekChatOptions`, `DeepSeekChatResult`, `DeepSeekMessage`, `DeepSeekSearchResult`, `isDeepSeekConfigured`, `searchWithDeepSeek`, `sendDeepSeekMessage` |
 | service | `src/services/connectors/discordConnector.ts` | `addReaction`, `deleteMessage`, `DiscordChannel`, `DiscordConfig`, `DiscordMessage`, `editMessage`, `getChannelHistory`, `listGuildChannels`, `sendMessage`, `sendWebhookMessage` |
@@ -276,6 +279,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets` |
 | service | `src/services/jose/joseFinish.ts` | `DECISIONS_SAVED`, `saveRequestDecisions` |
 | service | `src/services/jose/joseHelp.ts` | `chooseHelper`, `findHelpRequest`, `HELP_INSTRUCTION`, `Helper`, `planHelp` |
+| service | `src/services/jose/joseInbound.ts` | `answerOrPlan`, `AnswerOrPlanOptions`, `AnswerOrPlanResult`, `inboundReply`, `outcomeLine` |
 | service | `src/services/jose/joseModels.ts` | `listInstalledModels`, `modelSize`, `pickLargerModel` |
 | service | `src/services/jose/josePlanApproval.ts` | `getPlanFirstSetting`, `needsPlanApproval`, `PlanFirstSetting` |
 | service | `src/services/jose/josePlanEdits.ts` | `addStep`, `changeStepAgent`, `removeStep`, `rewireNeeds`, `setStepInstruction`, `setStepNeeds` |
@@ -289,7 +293,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
 | service | `src/services/jose/joseUserTemplates.ts` | `deleteUserTemplate`, `listUserTemplates`, `saveUserTemplate` |
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
-| service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `runApprovedPlan`, `submitToJose`, `SubmitToJoseInput` |
+| service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals` |
 | service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `parseJsonResponse`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
@@ -345,6 +349,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/runtimeManagerService.ts` | `checkPrerequisites`, `getAllStatus`, `getAutostartPrefs`, `getInstallLocation`, `InstallLocation`, `installPrerequisite`, `installTool`, `listTools`, `loadBundledStarterModel`, `LogEvent`, `onAnyProgress`, `onLogLine`, `PrereqStatus`, `ProgressEvent`, `saveAutostartPref`, `setInstallLocation`, `startTool`, `stopTool`, `TOOL_NAMES`, `ToolName`, `ToolResult`, `ToolStatus`, `waitForTool` |
 | service | `src/services/runwayService.ts` | `buildRunwayVideoRequest`, `generateRunwayVideo`, `listPendingRunwayJobs`, `resumeRunwayTask`, `RunwayResult` |
 | service | `src/services/scaffoldTemplatesService.js` | `default`, `detectStackTemplate`, `listScaffoldTemplates`, `scaffoldProject` |
+| service | `src/services/scheduledCommandService.ts` | `runScheduledCommand`, `ScheduledCommandResult` |
 | service | `src/services/screenIntelligenceService.ts` | `getScreenObserverLogs`, `getScreenObserverState`, `requestScreenNotificationPermission`, `ScreenEvent`, `ScreenObserverState`, `startScreenObserver`, `stopScreenObserver`, `updateScreenObserverState` |
 | service | `src/services/searchService.ts` | `getSearchSuggestions`, `searchMemory`, `searchProjects` |
 | service | `src/services/secureStorageService.ts` | `secureDelete`, `secureGet`, `secureSet` |
@@ -391,7 +396,7 @@ Source-backed inventory: 239 services and 154 components. Human purpose descript
 | service | `src/services/workflowMemoryService.ts` | `appendWorkflowMemory`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getMemorySize`, `importMemoryItems`, `listMemory`, `listWorkflowMemory`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `pushMemory`, `tickExpiry`, `WORKFLOW_MEMORY_CATEGORIES` |
 | service | `src/services/workflowOperationsRegistryService.ts` | `getWorkflowOperation`, `listWorkflowOperations`, `updateWorkflowOperationStatus`, `WORKFLOW_OPS_SCOPE`, `WorkflowOperation` |
 | service | `src/services/workflowReceiptService.ts` | `appendWorkflowReceipt`, `listWorkflowReceipts`, `WORKFLOW_RECEIPT_SCOPE`, `WORKFLOW_RECEIPT_STATUSES` |
-| service | `src/services/workflowRegistryService.ts` | `executeWorkflowTasks`, `getWorkflow`, `listWorkflows`, `runWorkflow`, `runWorkflowChain`, `WORKFLOW_EXECUTION_SCOPE`, `WORKFLOWS` |
+| service | `src/services/workflowRegistryService.ts` | `executeWorkflowTasks`, `getWorkflow`, `listWorkflows`, `runWorkflow`, `runWorkflowChain`, `WORKFLOW_EXECUTION_SCOPE`, `WORKFLOW_LABEL`, `WORKFLOWS`, `workflowSteps` |
 | service | `src/services/workflowTelemetryService.ts` | `appendWorkflowTelemetryEvent`, `listWorkflowTelemetry`, `summarizeWorkflowTelemetry`, `WORKFLOW_TELEMETRY_SCOPE` |
 | service | `src/services/workspaceArtifactService.ts` | `writeHandoffArtifact`, `WriteHandoffArtifactOptions`, `writeWorkspaceArtifact`, `WriteWorkspaceArtifactOptions` |
 | service | `src/services/workspaceExportService.ts` | `collectExportableStorage`, `exportWorkspace`, `importWorkspace`, `isSecretStorageKey`, `stripSecretFields` |

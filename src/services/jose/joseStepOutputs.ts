@@ -3,9 +3,12 @@
 // callers that read by agent keep working; this keeps every step, so an agent
 // with two steps loses neither.
 import { durableGet, durableSet } from '../../lib/durableStore.js';
+import { listJoseRequests } from './joseRequestStore';
 
 const STEP_OUTPUTS_KEY = 'alphonso_jose_step_outputs_v1';
 const MAX_COMMANDS = 50;
+/** A request in one of these still needs its steps' work, however old (phase 6a). */
+const UNFINISHED = new Set(['waiting_approval', 'waiting_plan_approval', 'interrupted', 'running']);
 
 interface StepOutput {
   [key: string]: unknown;
@@ -28,13 +31,17 @@ function readAll(): AllStepOutputs {
 export function setStepOutput(commandId: string, stepId: string, agent: string, output: Record<string, unknown>): void {
   if (!commandId || !stepId || !output) return;
   const all = readAll();
-  const entry = Object.prototype.hasOwnProperty.call(all, commandId) ? all[commandId] : { savedAtMs: Date.now(), steps: {} };
-  entry.steps[stepId] = { ...output, stepId, agent, storedAtMs: Date.now() };
-  entry.savedAtMs = Date.now();
+  // Always later than anything saved, so two saves in one millisecond keep their order.
+  const now = Math.max(Date.now(), ...Object.values(all).map((e) => e.savedAtMs + 1));
+  const entry = Object.prototype.hasOwnProperty.call(all, commandId) ? all[commandId] : { savedAtMs: now, steps: {} };
+  entry.steps[stepId] = { ...output, stepId, agent, storedAtMs: now };
+  entry.savedAtMs = now;
   all[commandId] = entry;
-  const kept = Object.entries(all)
-    .sort((a, b) => b[1].savedAtMs - a[1].savedAtMs)
-    .slice(0, MAX_COMMANDS);
+  // The last 50 commands, plus any whose request is not finished yet.
+  const unfinished = new Set(listJoseRequests().filter((r) => UNFINISHED.has(r.status)).map((r) => r.commandId));
+  const entries = Object.entries(all).sort((a, b) => b[1].savedAtMs - a[1].savedAtMs);
+  const latest = entries.filter(([id]) => !unfinished.has(id)).slice(0, MAX_COMMANDS);
+  const kept = [...entries.filter(([id]) => unfinished.has(id)), ...latest];
   durableSet(STEP_OUTPUTS_KEY, JSON.stringify(Object.fromEntries(kept)));
 }
 

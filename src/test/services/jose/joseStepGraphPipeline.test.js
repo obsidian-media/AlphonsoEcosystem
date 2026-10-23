@@ -651,4 +651,30 @@ describe('Jose runs plans as step graphs', () => {
     rejectRequestStep(requestId, 'post');
     expect(getPacketById(packetOf('post2')).status).toBe('rejected');
   });
+
+  // Phase 6a: a schedule never gets a paid retry, also after an approval.
+  it('adds no paid retry when the request allows no paid models', async () => {
+    globalThis.__josePaid = { ok: true };
+    localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'claude', model: 'm', inputPerMillionUsd: 3, outputPerMillionUsd: 15 } }));
+    vi.mocked(executeContentStepAssignment).mockImplementation(async () => { throw new Error('nothing usable'); });
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'x', source: 'schedule', zeroCostMode: true, previewMode: false, allowPaidModels: false,
+      assignments: [step('miya', 'creative_script', { stepId: 'a', effects: ['write_own_work'] })],
+    });
+    globalThis.__josePaid = undefined;
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.steps.map((s) => s.stepId)).toEqual(['a']);
+    expect(request.runOptions.allowPaidModels).toBe(false);
+  });
+
+  // Phase 6a: Boardroom's Conclude reads Maria's verdict from her step's output.
+  it("keeps a step's structured result (Maria's review) in its output", async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Boardroom discussion: launch plan', source: 'boardroom', zeroCostMode: true, previewMode: false,
+      // Maria's own executor (no contentStep), with her model mocked away: her rule-based review.
+      assignments: [step('maria', 'audit_governance', { stepId: 'maria', effects: ['read'], contentStep: undefined })],
+    });
+    const output = getStepOutput(result.commandId, 'maria');
+    expect(output.schema.riskLevel).toBeTruthy();
+  });
 });

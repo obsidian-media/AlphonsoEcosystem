@@ -25,6 +25,8 @@ export interface SubmitToJoseInput {
   onToken?: (tokenData: any) => void;
   /** Whether to show the plan first; the saved setting when not given (phase 3). */
   showPlanFirst?: PlanFirstSetting;
+  /** False for a caller that may never spend (a schedule, phase 6a). */
+  allowPaidModels?: boolean;
 }
 
 /** The plan note, plus what changed while it ran (a review that still found problems). */
@@ -48,6 +50,7 @@ function toAssignments(steps: PlanStep[], planNote: string) {
     instruction: step.instruction || '',
     ...(step.model ? { model: step.model } : {}),
     ...(step.reviewOf ? { reviewOf: step.reviewOf } : {}),
+    ...(step.payload ? { payload: step.payload } : {}),
     title: `${agentName(step.agent)} ${step.actionType}`,
     rationale: planNote,
     riskLevel: 'low',
@@ -64,7 +67,8 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   if (shortcut) return { ...shortcut, plan: null, planNote: '' };
 
   onProgress?.({ stage: 'planning' });
-  const plan: JosePlan = await planJoseRequest(text, { planFresh, history });
+  const allowPaidModels = input.allowPaidModels !== false;
+  const plan: JosePlan = await planJoseRequest(text, { planFresh, history, allowPaidModels });
   const planNote = noteFor(plan);
   onProgress?.({ stage: 'planned', plan, planNote });
 
@@ -73,7 +77,7 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
     const request = createWaitingPlanRequest({
       text, source, kind: plan.kind, steps: plan.steps,
       plan: { source: plan.source, templateId: plan.templateId, note: plan.note },
-      runOptions: { source, previewMode, zeroCostMode, endpoint },
+      runOptions: { source, previewMode, zeroCostMode, endpoint, allowPaidModels },
     });
     return { ok: true, waitingForPlan: true, requestId: request.id, plan, planNote, executedCount: 0, pendingApprovalCount: 0, failedCount: 0, executionReceipts: [] };
   }
@@ -82,9 +86,45 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   // failed step stops the steps that need it.
   const result = await runJoseCommandExecutionPipeline({
     commandText: text, source, endpoint, zeroCostMode, previewMode, onProgress, onToken, conversationHistory: history,
+    allowPaidModels,
     assignments: toAssignments(plan.steps, planNote),
     requestKind: plan.kind,
     planInfo: { source: plan.source, templateId: plan.templateId, note: plan.note },
+  });
+  return { ...result, plan, planNote: withNotes(planNote, result), requestId: result?.commandId ? `jose-request-${result.commandId}` : null };
+}
+
+/**
+ * Run steps a caller already decided (Boardroom, a workflow, the batch
+ * orchestrator; phase 6a) as a request like any other: checked against the
+ * rules first, saved, approvals by effect, shown on the board with the label.
+ */
+export async function submitStepsToJose(input: {
+  text: string;
+  source: string;
+  steps: PlanStep[];
+  label: string;
+  kind?: 'normal' | 'project';
+  endpoint?: string;
+  zeroCostMode?: boolean;
+  allowPaidModels?: boolean;
+  onProgress?: (event: any) => void;
+}): Promise<any> {
+  const check = checkPlan(input.steps, { taskTypes: true });
+  if (!check.ok) return { ok: false, reason: 'plan_rejected', problems: check.problems, plan: null, planNote: '' };
+  const plan: JosePlan = { steps: input.steps, source: 'given', templateId: null, kind: input.kind || 'normal', note: input.label };
+  const planNote = input.label;
+  const result = await runJoseCommandExecutionPipeline({
+    commandText: input.text,
+    source: input.source,
+    endpoint: input.endpoint,
+    zeroCostMode: input.zeroCostMode,
+    previewMode: false,
+    onProgress: input.onProgress,
+    allowPaidModels: input.allowPaidModels !== false,
+    assignments: toAssignments(input.steps, planNote),
+    requestKind: plan.kind,
+    planInfo: { source: 'given', templateId: null, note: input.label },
   });
   return { ...result, plan, planNote: withNotes(planNote, result), requestId: result?.commandId ? `jose-request-${result.commandId}` : null };
 }
@@ -124,6 +164,7 @@ export async function runApprovedPlan(requestId: string, options: { onProgress?:
     onProgress: options.onProgress,
     onToken: options.onToken,
     conversationHistory: options.history,
+    allowPaidModels: run.allowPaidModels !== false,
     assignments: toAssignments(steps, planNote),
     requestKind: request.kind,
     planInfo: request.plan || null,

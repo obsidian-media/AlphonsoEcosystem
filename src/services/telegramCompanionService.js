@@ -4,9 +4,10 @@ import { listApprovalQueue, approvePacket, rejectPacket, getPacketById } from '.
 import { collectJoseNotifications, getJoseTelegramSettings, sentKeys, markSent, seedSentLog, buttonToken, readButtonToken } from './jose/joseTelegram';
 import { getJoseRequest, listJoseRequests, findRequestByPacket } from './jose/joseRequestStore';
 import { agentName } from './jose/agentNames';
+import { answerOrPlan, inboundReply } from './jose/joseInbound';
 import { listAgentActivity } from './agentActivityService';
 import { listMemoryItems } from './memoryService';
-import { createJoseCommandRoute, listJoseCommands } from './joseCommandRouterService';
+import { listJoseCommands } from './joseCommandRouterService';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { scanForThreats } from './sentinelSecurityService';
@@ -468,18 +469,29 @@ ${lines.join('\n')}`;
   return sendTelegramMessageInternal({ token, chatId, text: filesText });
 }
 
+/**
+ * A message for Jose (phase 6a): he answers it, or plans and runs it in the
+ * background. Jose's own Telegram messages then tell you when a plan or a
+ * step waits for you and how it ended.
+ */
+async function sendToJose(token, chatId, text) {
+  try {
+    const result = await answerOrPlan(text, { source: 'telegram', background: true });
+    await sendTelegramMessageInternal({ token, chatId, text: inboundReply(result, 'telegram') });
+    if (result.kind === 'started') {
+      result.done.catch((error) => sendTelegramMessageInternal({ token, chatId, text: `Jose couldn't finish that: ${error?.message || error}` }));
+    }
+  } catch (error) {
+    await sendTelegramMessageInternal({ token, chatId, text: `Jose couldn't take that: ${error?.message || error}` });
+  }
+}
+
 async function handleResearchCommand(token, chatId, query) {
   if (!query) {
     return sendTelegramMessageInternal({ token, chatId, text: 'Usage: /research <topic>' });
   }
-  await sendTelegramMessageInternal({ token, chatId, text: `🔍 Hector researching: "${query}"…` });
-  try {
-    // Route through Jose as a research command so the full pipeline runs
-    await createJoseCommandRoute({ commandText: `ask hector: research ${query}`, source: 'telegram' });
-    return sendTelegramMessageInternal({ token, chatId, text: "📋 Research task queued. I'll push results when Hector is done." });
-  } catch (e) {
-    return sendTelegramMessageInternal({ token, chatId, text: `❌ Research failed: ${e.message}` });
-  }
+  // Asked by name, so Jose plans it (phase 6a).
+  return sendToJose(token, chatId, `Ask Jose: research ${query}`);
 }
 
 async function handleMemorySearchCommand(token, chatId, query) {
@@ -528,18 +540,10 @@ async function handleReceiptsCommand(token, chatId) {
 }
 
 async function handleBoardroomCommand(token, chatId, topic) {
-  await sendTelegramMessageInternal({ token, chatId, text: `🏛 Convening boardroom session on: "${topic}"…` });
-  try {
-    const { createJoseCommandRoute } = await import('./joseCommandRouterService.js');
-    await createJoseCommandRoute({ commandText: `boardroom: ${topic}`, source: 'telegram', boardroom: true });
-    return sendTelegramMessageInternal({
-      token,
-      chatId,
-      text: `✅ Boardroom session for "${topic}" started. Agents are deliberating — check the Boardroom view for the conclusion.`
-    });
-  } catch (e) {
-    return sendTelegramMessageInternal({ token, chatId, text: `❌ Boardroom session failed: ${e.message}` });
-  }
+  // Phase 6a: Jose plans the discussion and runs it; his Telegram messages
+  // say when it waits for you and how it ended. (This used to create packets
+  // that nothing ran, and said the agents were deliberating.)
+  return sendToJose(token, chatId, `Ask Jose: hold a Boardroom discussion on ${topic} and report the conclusion.`);
 }
 
 async function handleReadFileCommand(token, chatId, filename) {
@@ -816,21 +820,11 @@ export async function processInboundCommands(token, updates) {
       }
 
       if (cmd === 'ask' && argument) {
-        await createJoseCommandRoute({ commandText: argument, source: 'telegram' });
-        await sendTelegramMessageInternal({
-          token,
-          chatId,
-          text: "📋 Sent to Jose. I'll message you when it's done."
-        });
+        await sendToJose(token, chatId, argument);
         continue;
       }
     } else {
-      await createJoseCommandRoute({ commandText: text, source: 'telegram' });
-      await sendTelegramMessageInternal({
-        token,
-        chatId,
-        text: "📋 Sent to Jose. I'll message you when it's done."
-      });
+      await sendToJose(token, chatId, text);
       continue;
     }
   }

@@ -2,7 +2,8 @@ import { getConnectorCredential } from './connectors/connectorAuth';
 import { browserSendWhatsApp, browserPollWhatsAppGateway } from './whatsappBrowserConnector';
 import { listApprovalQueue, approvePacket, rejectPacket } from './agentBusService';
 import { listAgentActivity } from './agentActivityService';
-import { listJoseCommands, createJoseCommandRoute } from './joseCommandRouterService';
+import { listJoseCommands } from './joseCommandRouterService';
+import { answerOrPlan, inboundReply, outcomeLine } from './jose/joseInbound';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { getConfiguredOllamaEndpoint } from '../lib/ollama';
@@ -247,16 +248,33 @@ export async function processInboundWhatsAppMessages(messages: Array<{ chatId?: 
       if (cmd === 'ping') { await handlePingCommand(from); continue; }
       if (cmd === 'help') { await handleHelpCommand(from); continue; }
       if (cmd === 'ask' && argument) {
-        await createJoseCommandRoute({ commandText: argument, source: 'whatsapp' });
-        await reply(from, "📋 Sent to Jose. I'll message you when it's done.");
+        await sendToJose(from, argument);
         continue;
       }
       await reply(from, `Unknown command "/${cmd}". Send /help for the list.`);
       continue;
     }
 
-    await createJoseCommandRoute({ commandText: text, source: 'whatsapp' });
-    await reply(from, "📋 Sent to Jose. I'll message you when it's done.");
+    await sendToJose(from, text);
+  }
+}
+
+/**
+ * A message for Jose (phase 6a): he answers it, or plans and runs it in the
+ * background, and one line follows when it ends (WhatsApp has no Jose
+ * notifications of its own).
+ */
+async function sendToJose(from: string, text: string): Promise<void> {
+  try {
+    const result = await answerOrPlan(text, { source: 'whatsapp', background: true });
+    await reply(from, inboundReply(result, 'whatsapp'));
+    if (result.kind === 'started') {
+      result.done
+        .then((outcome: unknown) => reply(from, outcomeLine(outcome)))
+        .catch((error: unknown) => reply(from, `Jose couldn't finish that: ${error instanceof Error ? error.message : String(error)}`));
+    }
+  } catch (error) {
+    await reply(from, `Jose couldn't take that: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

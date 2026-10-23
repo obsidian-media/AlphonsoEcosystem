@@ -16,7 +16,8 @@ import { getAgentProvider } from '../modelSelectionService';
 
 export interface JosePlan {
   steps: PlanStep[];
-  source: 'template' | 'adapted' | 'fresh' | 'rules';
+  /** 'given': the caller set the steps (Boardroom, a workflow); the note says who (phase 6a). */
+  source: 'template' | 'adapted' | 'fresh' | 'rules' | 'given';
   templateId: string | null;
   kind: 'normal' | 'project';
   /** Why the simple plan (or a template unchanged) was used; empty when Jose's plan passed. */
@@ -25,6 +26,8 @@ export interface JosePlan {
 
 interface PlanOptions {
   planFresh?: boolean;
+  /** False for a caller that may never spend (a schedule); paid models are then not offered (phase 6a). */
+  allowPaidModels?: boolean;
   history?: { role: string; content: string }[];
   signal?: AbortSignal;
 }
@@ -185,7 +188,7 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
   const template = best ? getTemplate(best.templateId) : null;
   let problems: string[] = [];
   const installed = await listInstalledModels();
-  const paidModel = paidModelAvailable().ok ? paidModelId() : null;
+  const paidModel = options.allowPaidModels !== false && paidModelAvailable().ok ? paidModelId() : null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let raw: string;
     try {

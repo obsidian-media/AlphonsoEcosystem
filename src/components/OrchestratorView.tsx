@@ -43,14 +43,14 @@ import {
 import {
   confirmJoseCommand,
   createAgentReportToJose,
-  createJoseCommandRoute,
   getJoseWorkflowObservability,
   listJoseCommands,
   listJoseDeadLetters,
   runJoseRetrySweep
 } from '../services/joseCommandRouterService';
 import { executeApprovedPacket } from '../services/packetExecutionService';
-import { findRequestByPacket } from '../services/jose/joseRequestStore';
+import { findRequestByPacket, listJoseRequests } from '../services/jose/joseRequestStore';
+import { answerOrPlan, outcomeLine } from '../services/jose/joseInbound';
 import { TRUST_STATES } from '../services/trustModel';
 import { getConnectorCredential, isConnectorAuthenticated, listConnectorAudit, pollWhatsAppConnector } from '../services/connectorRegistryService';
 import { getOrchestrationQueueSnapshot, listOrchestrationQueueTransitions, replayPacketFromDeadLetter } from '../services/orchestrationQueueService';
@@ -548,16 +548,53 @@ export function OrchestratorView({
     refreshAll();
   };
 
+  // Phase 6a: through Jose's one entry. A direct answer shows here; a request
+  // runs on, and the Requests tab opens on it once Jose has saved it.
+  const [commandAnswer, setCommandAnswer] = useState('');
+  const [commandSending, setCommandSending] = useState(false);
+  const [boardRequestId, setBoardRequestId] = useState<string | undefined>(undefined);
   const distributeUserCommand = async (): Promise<void> => {
-    const command = await createJoseCommandRoute({
-      commandText: joseCommandText,
-      source: 'user',
-      zeroCostMode: settings?.zeroCostMode
-    });
-    if (command) {
-      onJoseStateChange?.('directing', `Jose distributed ${command.assignments.length} task${command.assignments.length === 1 ? '' : 's'}.`);
+    if (commandSending) return;
+    setCommandSending(true);
+    setCommandAnswer('');
+    const before = new Set(listJoseRequests().map((r) => r.id));
+    try {
+      const result = await answerOrPlan(joseCommandText, { source: 'user', zeroCostMode: settings?.zeroCostMode, background: true });
+      if (result.kind === 'answer') {
+        setCommandAnswer(result.text);
+        return;
+      }
+      onJoseStateChange?.('directing', 'Jose is planning the request.');
+      // Stop waiting if the request ends without being saved (refused, or failed at once).
+      let ended = false;
+      if (result.kind === 'started') {
+        result.done
+          .then((outcome: any) => {
+            ended = true;
+            if (!listJoseRequests().some((r) => !before.has(r.id))) setCommandAnswer(outcomeLine(outcome));
+          })
+          .catch((error: unknown) => {
+            ended = true;
+            setCommandAnswer(`Jose couldn't finish that: ${error instanceof Error ? error.message : String(error)}`);
+          });
+      }
+      const started = Date.now();
+      while (Date.now() - started < 10 * 60 * 1000) {
+        const fresh = listJoseRequests().find((r) => !before.has(r.id));
+        if (fresh) {
+          setBoardRequestId(fresh.id);
+          setOrchTab('requests');
+          break;
+        }
+        if (ended) break;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    } catch (error) {
+      setCommandAnswer(`Jose couldn't take that: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setCommandSending(false);
+      refreshAll();
     }
-    refreshAll();
   };
 
   const reportToJose = (packet: Packet): void => {
@@ -728,7 +765,7 @@ export function OrchestratorView({
 
       {/* Requests Tab: every Jose request with its plan as a map */}
       {orchTab === 'requests' && (
-        <JoseRequestsBoard selectedRequestId={selectedRequestId} />
+        <JoseRequestsBoard key={boardRequestId || selectedRequestId || 'board'} selectedRequestId={boardRequestId || selectedRequestId} />
       )}
 
       {/* Command Tab */}
@@ -750,12 +787,16 @@ export function OrchestratorView({
                 />
                 <button
                   onClick={distributeUserCommand}
+                  disabled={commandSending}
                   className="rounded-xl bg-(--warning-dim) px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-(--warning) hover:opacity-90 transition-colors"
                 >
-                  Send to Jose
+                  {commandSending ? 'Jose is on it…' : 'Send to Jose'}
                 </button>
+                {commandAnswer && (
+                  <p data-testid="orch-command-answer" className="whitespace-pre-wrap rounded-xl bg-(--surface-1) px-3 py-2 text-sm text-(--text-1)">{commandAnswer}</p>
+                )}
                 <p className="text-[11px] text-(--text-4) leading-relaxed">
-                  Creates local packets from Jose to selected agents. No system commands, browsing, or file writes.
+                  Jose answers it, or plans it and opens it on the Requests tab. Steps that change things ask you first.
                 </p>
               </div>
             </OCard>

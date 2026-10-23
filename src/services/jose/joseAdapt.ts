@@ -57,6 +57,8 @@ export interface AdaptContext {
   done: Record<string, { status: string; output?: any }>;
   justRan: string[];
   requestText: string;
+  /** False for a request that may never spend (a schedule, phase 6a): no paid retry. */
+  allowPaidModels?: boolean;
 }
 
 type Adapter = (ctx: AdaptContext) => Promise<PlanChange[]>;
@@ -106,6 +108,7 @@ export async function adaptPlan(ctx: AdaptContext): Promise<PlanChange[]> {
   // Paid retries: a step that just failed, when you allow paid models.
   for (const step of ctx.steps) {
     const status = ctx.done[step.stepId]?.status;
+    if (ctx.allowPaidModels === false) break;
     if (!ctx.justRan.includes(step.stepId) || (status !== 'failed' && status !== 'dead_letter')) continue;
     const change = planPaidRetry(ctx.steps, step, ctx.requestText);
     if (change) changes.push(change);

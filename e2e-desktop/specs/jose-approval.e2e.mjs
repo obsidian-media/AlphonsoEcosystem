@@ -1,78 +1,79 @@
-// Orchestrator: a command given to Jose becomes a packet that waits for
-// approval, and only moves on when a person approves and then executes it.
-// This checks the approval state machine (pending -> approved -> executed)
-// and the visible execution result produced by the packet executor.
-import { enterShell, mainText, buttonByText, openPage } from '../helpers.mjs';
+// Orchestrator's Command tab goes through Jose's one entry (Jose redesign
+// phase 6a, 2026-10-23): a command becomes a saved request, the Requests tab
+// opens on it, its step waits for approval because of what it does, and
+// approving it on the board carries the request to the end. Skipped without
+// a local model.
+import { enterShell, invoke, mainText, ollamaHasModels, openPage, warmSelectedModel } from '../helpers.mjs';
 
-const COMMAND = 'Research what the IANA example domain is used for.';
-const exact = (label) => $(`//main//button[normalize-space(.)="${label}"]`);
+const COMMAND = 'Ask Jose: research what the IANA example domain is used for.';
+
+async function useSettings(values) {
+  const loaded = await invoke('load_settings');
+  const saved = JSON.parse((loaded.ok && loaded.value) || '{}');
+  await invoke('save_settings', { settingsJson: JSON.stringify({ ...saved, ...values }) });
+  await browser.execute((extra) => {
+    const settings = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
+    localStorage.setItem('alphonso_settings', JSON.stringify({ ...settings, ...extra }));
+  }, values);
+  await browser.refresh();
+  await $('[data-alphonso-shell-ready="true"]').waitForExist({ timeout: 60000 });
+}
+
+const savedRequests = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
 
 describe('Alphonso desktop Jose approvals', () => {
-  before(async () => {
+  let requestId = null;
+
+  before(async function () {
     await enterShell();
+    if (!(await ollamaHasModels())) this.skip();
+    this.timeout(400000);
+    // Reading asks first, so the research step waits for approval.
+    await useSettings({ showPlanFirst: 'never', approvalMode: true, effectApprovals: { read: true } });
+    await warmSelectedModel();
     await openPage('system', 'orchestrator');
   });
 
-  it('holds a new command for approval instead of running it', async () => {
+  it('turns a command into a request that waits for approval, and opens it on the board', async function () {
+    this.timeout(900000);
+    const before = new Set((await savedRequests()).map((r) => r.id));
+    const commandTab = await $('//main//button[normalize-space(.)="Command"]');
+    await commandTab.click();
     const command = await $('main textarea');
     await command.waitForDisplayed();
     await command.setValue(COMMAND);
-    await buttonByText('send to jose').click();
-    await browser.waitUntil(async () => (await mainText()).includes('APPROVALS (1)'), {
-      timeoutMsg: 'the command never produced a pending approval',
+    await (await $('//main//button[normalize-space(.)="Send to Jose"]')).click();
+    await browser.waitUntil(async () => (await savedRequests()).some((r) => !before.has(r.id)), {
+      timeout: 600000, interval: 2000, timeoutMsg: 'the command never became a saved request',
     });
-    const text = await mainText();
-    expect(text).toContain('PENDING 1');
-    expect(text).not.toContain('executed');
+    requestId = (await savedRequests()).find((r) => !before.has(r.id)).id;
+    await browser.waitUntil(async () => (await savedRequests()).find((r) => r.id === requestId).status === 'waiting_approval', {
+      timeout: 300000, interval: 2000, timeoutMsg: 'the request never waited for approval',
+    });
+    await browser.waitUntil(async () => (await mainText()).includes('Waiting for your approval'), {
+      timeout: 30000, timeoutMsg: 'the Requests tab did not open on the waiting request',
+    });
+    const request = (await savedRequests()).find((r) => r.id === requestId);
+    expect(request.source).toBe('user');
+    expect(request.steps.some((s) => s.agent === 'hector')).toBe(true);
   });
 
-  it('clears the approval queue when the packet is approved', async () => {
-    await buttonByText('approvals').click();
-    const approve = await exact('Approve');
-    await approve.waitForClickable();
-    await approve.click();
-    await browser.waitUntil(async () => (await mainText()).includes('No pending approvals.'), {
-      timeoutMsg: 'the packet was still pending after Approve',
-    });
-    expect(await mainText()).toContain('PENDING 0');
-  });
-
-  it('executes the approved packet only on request', async () => {
-    await buttonByText('packets').click();
-    await browser.waitUntil(async () => (await mainText()).includes('ACTIVE HANDOFFS'));
-    expect(await mainText()).toMatch(/used for\. approved jose → hector/);
-    const execute = await $('//main//div[div[contains(normalize-space(.), "Research what the IANA example domain is used for.")] and .//span[normalize-space(.)="approved"]]//button[normalize-space(.)="Execute"]');
-    await execute.waitForClickable();
-    await execute.click();
-    await browser.waitUntil(async () => /used for\. executed jose → hector/.test(await mainText()), {
-      timeout: 60000,
-      timeoutMsg: 'the packet never reached "executed"',
-    });
-    // Execution Results is rendered below the approval queue, so switch back
-    // to the Approvals tab after executing from Packets.
-    const approvalsTab = await $('//main//button[normalize-space(.)="Approvals"]');
-    await approvalsTab.waitForClickable();
-    await approvalsTab.click();
-    await browser.waitUntil(async () => (await approvalsTab.getAttribute('aria-pressed')) === 'true', {
-      timeout: 10000,
-      timeoutMsg: 'the Approvals tab did not become active after packet execution',
-    });
-    try {
-      await browser.waitUntil(async () => /execution results/i.test(await mainText()), {
-        timeout: 60000,
-        timeoutMsg: 'the executed packet did not produce a visible result panel',
-      });
-    } catch (error) {
-      const visibleText = await mainText();
-      const activeTab = await approvalsTab.getAttribute('aria-pressed');
-      throw new Error(`${error.message}; approvalsTab=${activeTab}; visibleMain=${visibleText.slice(-2000)}`);
+  it('runs the request to the end once its steps are approved on the board', async function () {
+    this.timeout(1800000);
+    for (let round = 0; round < 10; round += 1) {
+      const current = (await savedRequests()).find((r) => r.id === requestId);
+      if (current.status !== 'waiting_approval') break;
+      const waitingBefore = current.steps.filter((s) => s.status === 'waiting_approval').map((s) => s.stepId).join(',');
+      const approve = await $('//main//button[starts-with(normalize-space(.), "Approve and carry on")]');
+      await approve.waitForClickable({ timeout: 30000 });
+      await approve.click();
+      await browser.waitUntil(async () => {
+        const now = (await savedRequests()).find((r) => r.id === requestId);
+        return now.status !== 'running' && now.steps.filter((s) => s.status === 'waiting_approval').map((s) => s.stepId).join(',') !== waitingBefore;
+      }, { timeout: 900000, interval: 3000, timeoutMsg: 'approving a step did not carry the request on' });
     }
-    await browser.waitUntil(async () => (await mainText()).includes('Task queued — no live runtime adapter'), {
-      timeout: 60000,
-      timeoutMsg: 'the execution result panel did not settle with the queued result',
-    });
-    const output = await mainText();
-    expect(output).toMatch(/execution results/i);
-    expect(output).toContain('Task queued — no live runtime adapter');
+    const finished = (await savedRequests()).find((r) => r.id === requestId);
+    expect(finished.status).toBe('done');
+    expect(finished.steps.find((s) => s.agent === 'hector').status).toBe('done');
   });
 });

@@ -18,6 +18,11 @@ vi.mock('../services/joseCommandRouterService', () => ({
   createJoseCommandRoute: vi.fn().mockResolvedValue({ ok: true })
 }));
 
+vi.mock('../services/jose/joseInbound', () => ({
+  answerOrPlan: vi.fn(async () => ({ kind: 'started', done: Promise.resolve({ ok: true }) })),
+  inboundReply: vi.fn((result) => (result.kind === 'answer' ? result.text : "Jose is on it. I'll tell you when it's done, or when something needs you.")),
+}));
+
 vi.mock('../services/trustModel', () => ({
   timestampMs: vi.fn(() => Date.now())
 }));
@@ -213,6 +218,39 @@ describe('telegramAutoPollService', () => {
         chatId: 'chat1',
         updateId: 1
       });
+    });
+
+    it('hands a message to Jose and says he is on it (phase 6a)', async () => {
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({ telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' } }));
+      browserPollTelegram.mockResolvedValue({ ok: true, messages: [{ from_id: 'user1', chat_id: 'chat1', text: 'hello world', update_id: 1 }], cursor: 100 });
+      createConnectorRoutePacket.mockReturnValue({ rejected: false, packet: { id: 'pkt_1' }, parsed: { originalText: 'hello world' } });
+      await service.runSingleTelegramPoll();
+      const { answerOrPlan } = await import('../services/jose/joseInbound');
+      const { browserSendTelegram } = await import('../services/telegramBrowserConnector');
+      expect(answerOrPlan).toHaveBeenCalledWith('hello world', { source: 'telegram', background: true });
+      expect(browserSendTelegram).toHaveBeenCalledWith(expect.objectContaining({ chatId: 'chat1', text: expect.stringContaining('Jose is on it') }));
+    });
+
+    it('tells the chat when a started request fails later (phase 6a)', async () => {
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({ telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' } }));
+      browserPollTelegram.mockResolvedValue({ ok: true, messages: [{ from_id: 'user1', chat_id: 'chat1', text: 'hello world', update_id: 1 }], cursor: 100 });
+      createConnectorRoutePacket.mockReturnValue({ rejected: false, packet: { id: 'pkt_1' }, parsed: { originalText: 'hello world' } });
+      const { answerOrPlan } = await import('../services/jose/joseInbound');
+      answerOrPlan.mockResolvedValueOnce({ kind: 'started', done: Promise.reject(new Error('no model')) });
+      await service.runSingleTelegramPoll();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const { browserSendTelegram } = await import('../services/telegramBrowserConnector');
+      expect(browserSendTelegram).toHaveBeenCalledWith(expect.objectContaining({ chatId: 'chat1', text: "Jose couldn't finish that: no model" }));
+    });
+
+    it('sends /ask to Jose once, not also to the reply-only handler', async () => {
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({ telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' } }));
+      browserPollTelegram.mockResolvedValue({ ok: true, messages: [{ from_id: 'user1', chat_id: 'chat1', text: '/ask plan a launch', update_id: 2 }], cursor: 100 });
+      await service.runSingleTelegramPoll();
+      const { answerOrPlan } = await import('../services/jose/joseInbound');
+      const { handleTelegramBotCommand } = await import('../services/telegramBrowserConnector');
+      expect(answerOrPlan).toHaveBeenCalledWith('plan a launch', { source: 'telegram', background: true });
+      expect(handleTelegramBotCommand).not.toHaveBeenCalled();
     });
 
     it('counts rejected messages', async () => {

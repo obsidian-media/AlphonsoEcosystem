@@ -33,7 +33,7 @@ export interface JoseRequest {
   /** Plain-language record of changes to the plan (phase 3), oldest first. */
   changeLog?: { atMs: number; text: string }[];
   /** How to run a plan that waits for approval (phase 3). */
-  runOptions?: { source: string; previewMode?: boolean; zeroCostMode?: boolean; endpoint?: string };
+  runOptions?: { source: string; previewMode?: boolean; zeroCostMode?: boolean; endpoint?: string; allowPaidModels?: boolean };
   createdAtMs: number;
   updatedAtMs: number;
 }
@@ -61,7 +61,7 @@ function update(id: string, change: (request: JoseRequest) => void): JoseRequest
   return request;
 }
 
-export function createJoseRequest(input: { commandId: string; source: string; text: string; kind: 'normal' | 'project'; steps: PlanStep[]; plan?: JoseRequest['plan'] }): JoseRequest {
+export function createJoseRequest(input: { commandId: string; source: string; text: string; kind: 'normal' | 'project'; steps: PlanStep[]; plan?: JoseRequest['plan']; runOptions?: JoseRequest['runOptions'] }): JoseRequest {
   const now = Date.now();
   const request: JoseRequest = {
     id: `jose-request-${input.commandId}`,
@@ -72,6 +72,7 @@ export function createJoseRequest(input: { commandId: string; source: string; te
     status: 'running',
     steps: input.steps.map((s) => ({ ...s, status: 'waiting' })),
     ...(input.plan ? { plan: input.plan } : {}),
+    ...(input.runOptions ? { runOptions: input.runOptions } : {}),
     createdAtMs: now,
     updatedAtMs: now,
   };
