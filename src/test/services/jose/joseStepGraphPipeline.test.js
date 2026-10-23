@@ -474,4 +474,11 @@ describe('Jose runs plans as step graphs', () => {
     expect(stages.indexOf('request_started')).toBeLessThan(stages.indexOf('wave_start'));
     expect(events.find((e) => e.stage === 'request_started').requestId).toBe(`jose-request-${result.commandId}`);
   });
+
+  it('has Echo save what a finished request decided', async () => {
+    const result = await run([step('nova', 'analysis_x', { stepId: 'a', effects: ['read'] })]);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.status).toBe('done');
+    expect((request.changeLog || []).map((c) => c.text)).toContain('Echo saved what was decided.');
+  });
 });

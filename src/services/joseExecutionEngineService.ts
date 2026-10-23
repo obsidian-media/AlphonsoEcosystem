@@ -35,6 +35,7 @@ import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestSt
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
+import { saveRequestDecisions } from './jose/joseFinish';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
 import type { PlanStep } from './jose/stepGraph';
@@ -2086,7 +2087,17 @@ export async function runJoseCommandExecutionPipeline({
     };
   }
 
-  if (joseRequestId) recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
+  if (joseRequestId) {
+    recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
+    // Echo saves what was decided (phase 4). Never changes the outcome.
+    const finished = getJoseRequest(joseRequestId);
+    if (finished && (finished.status === 'done' || finished.status === 'waiting_approval')) {
+      const outputs = Object.fromEntries(finished.steps
+        .filter((s) => s.status === 'done')
+        .map((s) => [s.stepId, getStepOutput(command.id, s.stepId) || {}]));
+      await saveRequestDecisions(finished, outputs, { draftDisabled, endpoint });
+    }
+  }
 
   const confirmationText = pendingApprovalCount > 0
     ? `Jose executed ${executedCount} task(s); ${pendingApprovalCount} task(s) are waiting for approval.`
