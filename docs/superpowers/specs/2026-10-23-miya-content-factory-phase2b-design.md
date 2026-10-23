@@ -26,7 +26,11 @@ that user has, and the user can change it.
 5. **Runway spending:** one approval per run, showing the estimated total
    ("4 clips, about $1.00"), plus a monthly limit in Settings; a clip that
    would go over the limit is refused.
-6. **Length:** each AI clip is as long as its scene allows (the engine's
+6. **Checking the marks:** when the project uses AI clips (Main moments or
+   Every scene), Run project stops after Scenes so the user confirms the main
+   moments in the Scene Builder before any clip is made; Runway runs then also
+   stop for the cost approval. With AI clips set to None there is no extra stop.
+7. **Length:** each AI clip is as long as its scene allows (the engine's
    longest clip at most); the rest of the scene continues on its stock clip or
    picture. No looping, no slowing down.
 
@@ -54,8 +58,7 @@ interpolation, other paid video services, editing a clip by hand.
 ## Anti-goals
 
 - A slow or paid clip made for a scene the user didn't want: clips are made
-  only after the main moments are settled (the step runs after the Scene
-  Builder's choices, and Run project stops before a paid run).
+  only after the user confirms the main moments (decision 6).
 - A hidden fallback: a clip that fails leaves that scene on its stock clip or
   picture, and the step names which scenes and why.
 - Hardcoding one person's setup: no fixed folders, models or prices.
