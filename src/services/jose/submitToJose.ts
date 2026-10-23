@@ -22,7 +22,7 @@ export interface SubmitToJoseInput {
   zeroCostMode?: boolean;
   previewMode?: boolean;
   onProgress?: (event: any) => void;
-  onToken?: (token: string, full?: string) => void;
+  onToken?: (tokenData: any) => void;
 }
 
 export async function submitToJose(input: SubmitToJoseInput): Promise<any> {

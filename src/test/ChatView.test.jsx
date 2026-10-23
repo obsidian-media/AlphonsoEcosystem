@@ -59,6 +59,14 @@ vi.mock('../services/joseExecutionEngineService', () => ({
   runJoseCommandExecutionPipeline: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [] })
 }));
 
+// ── Jose's decision and entry point (phase 2): direct by default ─────────────
+vi.mock('../services/jose/joseDecision', () => ({
+  decideJoseRoute: vi.fn().mockResolvedValue({ route: 'direct', source: 'rule', reason: 'test' })
+}));
+vi.mock('../services/jose/submitToJose', () => ({
+  submitToJose: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [], plan: null, planNote: 'Planned fresh.' })
+}));
+
 // ── Agent bus service mock ───────────────────────────────────────────────────
 vi.mock('../services/agentBusService', () => ({
   approvePacket: vi.fn(),
@@ -160,7 +168,6 @@ vi.mock('../components/ConnectorStatusIndicators', () => ({
 // ── Component under test ──────────────────────────────────────────────────────
 import { ChatView } from '../components/ChatView';
 import { generateOllamaChatStream } from '../lib/ollama';
-import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
 import { approvePacket, rejectPacket, getPacketById } from '../services/agentBusService';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { sendNvidiaMessage } from '../services/connectors/nvidiaNimConnector';
@@ -171,6 +178,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { getMcpOutreachRecord, isAwaitingMcpOutreachInput, handleMcpOutreachMessage } from '../services/calleMcpOutreachService';
 import { loadChatMessages } from '../services/chatPersistenceService';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
+import { decideJoseRoute } from '../services/jose/joseDecision';
+import { submitToJose } from '../services/jose/submitToJose';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -509,8 +518,8 @@ describe('ChatView', () => {
   });
 
   it('maps pendingApprovals to itemId and wires approve/reject/detail callbacks for ApprovalPanel', async () => {
-    isJoseIntakeCommand.mockReturnValueOnce(true);
-    runJoseCommandExecutionPipeline.mockResolvedValueOnce({
+    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'test' });
+    submitToJose.mockResolvedValueOnce({
       commandId: 'cmd-1',
       pendingApprovalCount: 1,
       executionReceipts: [
@@ -557,17 +566,17 @@ describe('ChatView', () => {
 
     beforeEach(() => {
       localStorage.clear();
-      isJoseIntakeCommand.mockReturnValue(true);
+      decideJoseRoute.mockResolvedValue({ route: 'plan', source: 'model', reason: 'test' });
     });
 
     afterEach(() => {
-      isJoseIntakeCommand.mockReturnValue(false);
+      decideJoseRoute.mockResolvedValue({ route: 'direct', source: 'rule', reason: 'test' });
       listOrchestrationReceipts.mockReturnValue([]);
     });
 
     it('shows an error reply and a warning state when the pipeline throws', async () => {
       nextMsgId.mockReturnValueOnce('jose-err-user').mockReturnValueOnce('jose-err-reply');
-      runJoseCommandExecutionPipeline.mockRejectedValueOnce(new Error('pipeline exploded'));
+      submitToJose.mockRejectedValueOnce(new Error('pipeline exploded'));
       const props = makeProps();
       render(<ChatView {...props} />);
       await screen.findByText('What can I help you build?');
@@ -582,7 +591,7 @@ describe('ChatView', () => {
 
     it('loads receipts for the command, reports completion and shows Hector sources', async () => {
       nextMsgId.mockReturnValueOnce('jose-ok-user').mockReturnValueOnce('jose-ok-reply');
-      runJoseCommandExecutionPipeline.mockResolvedValueOnce({
+      submitToJose.mockResolvedValueOnce({
         commandId: 'cmd-ok',
         pendingApprovalCount: 0,
         executionReceipts: [],
@@ -610,7 +619,7 @@ describe('ChatView', () => {
     // processed the command." and dropped his reason.
     it("shows Jose's reason when he stops before doing anything", async () => {
       nextMsgId.mockReturnValueOnce('jose-stop-user').mockReturnValueOnce('jose-stop-reply');
-      runJoseCommandExecutionPipeline.mockResolvedValueOnce({
+      submitToJose.mockResolvedValueOnce({
         ok: false,
         reason: "Making videos from chat isn't available yet. Nothing was started.",
         needsRuntime: false,
@@ -624,7 +633,7 @@ describe('ChatView', () => {
 
     it('still saves the run and completes when the pipeline returns no command id', async () => {
       nextMsgId.mockReturnValueOnce('jose-none-user').mockReturnValueOnce('jose-none-reply');
-      runJoseCommandExecutionPipeline.mockResolvedValueOnce({ commandId: null, executionReceipts: [] });
+      submitToJose.mockResolvedValueOnce({ commandId: null, executionReceipts: [] });
       await sendJoseCommand('do a quick thing');
 
       await waitFor(() => {
@@ -716,5 +725,59 @@ describe('ChatView', () => {
       });
       expect(handleMcpOutreachMessage).not.toHaveBeenCalled();
     });
+  });
+
+});
+
+// Phase 2 of the Jose redesign (2026-10-23): everything goes to Jose, who
+// decides whether to answer directly or plan.
+describe('ChatView: everything goes to Jose', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setAgentProvider('alphonso', { provider: 'ollama' });
+  });
+
+  const send = (text) => {
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: text } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+  };
+
+  it('streams a direct answer when Jose decides to answer', async () => {
+    decideJoseRoute.mockResolvedValueOnce({ route: 'direct', source: 'model', reason: 'chat' });
+    generateOllamaChatStream.mockImplementationOnce(({ onToken }) => { onToken?.('Hi!', 'Hi!'); return Promise.resolve('Hi!'); });
+    render(<ChatView {...makeProps()} />);
+    send('Thanks, that helps');
+    await waitFor(() => expect(generateOllamaChatStream).toHaveBeenCalled());
+    expect(decideJoseRoute).toHaveBeenCalledWith('Thanks, that helps', expect.anything());
+    expect(submitToJose).not.toHaveBeenCalled();
+  });
+
+  it('hands the request to Jose when he decides to plan, and shows how he planned', async () => {
+    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
+    render(<ChatView {...makeProps()} />);
+    send('Make a launch video for my app');
+    await waitFor(() => expect(submitToJose).toHaveBeenCalled());
+    expect(submitToJose.mock.calls[0][0]).toMatchObject({ text: 'Make a launch video for my app', source: 'user', planFresh: false });
+    expect(Array.isArray(submitToJose.mock.calls[0][0].history)).toBe(true);
+    expect(await screen.findByText(/Planned fresh\./)).toBeTruthy();
+    expect(generateOllamaChatStream).not.toHaveBeenCalled();
+  });
+
+  it('"Plan this fresh:" asks Jose to skip templates', async () => {
+    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
+    render(<ChatView {...makeProps()} />);
+    send('Plan this fresh: research our competitors');
+    await waitFor(() => expect(submitToJose).toHaveBeenCalled());
+    expect(submitToJose.mock.calls[0][0]).toMatchObject({ text: 'research our competitors', planFresh: true });
+  });
+
+  it('leaves Direct mode alone: no decision, no plan', async () => {
+    generateOllamaChatStream.mockImplementationOnce(({ onToken }) => { onToken?.('Ok', 'Ok'); return Promise.resolve('Ok'); });
+    render(<ChatView {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: /direct mode off/i }));
+    send('Make a launch video for my app');
+    await waitFor(() => expect(generateOllamaChatStream).toHaveBeenCalled());
+    expect(decideJoseRoute).not.toHaveBeenCalled();
+    expect(submitToJose).not.toHaveBeenCalled();
   });
 });

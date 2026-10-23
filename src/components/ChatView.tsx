@@ -19,7 +19,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Mic, MicOff, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
 import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
-import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose, shouldRouteThroughCalleMcp } from '../lib/chatUtils';
+import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughCalleMcp } from '../lib/chatUtils'
+import { decideJoseRoute } from '../services/jose/joseDecision'
+import { submitToJose } from '../services/jose/submitToJose';
 import {
   getMcpOutreachRecord,
   isAwaitingMcpOutreachInput,
@@ -28,7 +30,7 @@ import {
   cancelMcpOutreachCall,
   markMcpOutreachDelivered
 } from '../services/calleMcpOutreachService';
-import { isJoseIntakeCommand, runJoseCommandExecutionPipeline, executeApprovedPackets } from '../services/joseExecutionEngineService';
+import { executeApprovedPackets } from '../services/joseExecutionEngineService';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
 import {
@@ -633,8 +635,8 @@ export function ChatView({
     if (files.length) setAttachedFiles((prev) => [...prev, ...files]);
   };
 
-  const handleJoseCommand = async (cleanInput: string) => {
-    const userMessage = { id: nextMsgId(), role: 'user', content: cleanInput };
+  const handleJoseCommand = async (cleanInput: string, options: { planFresh?: boolean; shownText?: string } = {}) => {
+    const userMessage = { id: nextMsgId(), role: 'user', content: options.shownText || cleanInput };
     setMessages((current) => [...current, userMessage]);
     setInputValue('');
     setAttachedFile(null);
@@ -649,13 +651,15 @@ export function ChatView({
       setStreamingTokens(0);
       setStreamingStartTime(Date.now());
       streamControllerRef.current = new AbortController();
-      const result = await runJoseCommandExecutionPipeline({
-        commandText: cleanInput,
+      // Everything goes to Jose (phase 2, 2026-10-23): he plans, then runs.
+      const result = await submitToJose({
+        text: cleanInput,
         source: 'user',
-        endpoint: settings.endpoint,
-        zeroCostMode: settings.zeroCostMode,
+        endpoint: settings.endpoint as string,
+        zeroCostMode: settings.zeroCostMode as boolean,
         previewMode,
-        conversationHistory,
+        history: conversationHistory,
+        planFresh: Boolean(options.planFresh),
         onProgress: (progress) => {
           setLiveProgress(progress);
           onJoseExecutionState?.(
@@ -671,7 +675,9 @@ export function ChatView({
                   ? `Generating ${progress.promptCount || 0} image(s)...`
                   : progress.stage === 'approval_required'
                     ? `${progress.assignment?.agent || 'Agent'} needs approval`
-                    : 'Processing...'
+                    : progress.stage === 'planning'
+                      ? 'Jose is planning...'
+                      : 'Processing...'
           );
         },
         onToken: (tokenData) => {
@@ -712,7 +718,8 @@ export function ChatView({
         id: newMsgId,
         role: 'assistant',
         agentId: 'jose',
-        content: displaySummary + hintLine,
+        // How Jose planned it: fresh, from a template, or the simple plan and why.
+        content: displaySummary + (result?.planNote ? `\n\n${result.planNote}` : '') + hintLine,
         isNew: true,
         ...(needsRuntimeHub ? { actionType: 'open_runtime_hub' } : {})
       }]);
@@ -840,11 +847,23 @@ export function ChatView({
       return;
     }
 
-    const joseCommand = !directMode && (isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput));
-
-    if (joseCommand) {
-      await handleJoseCommand(cleanInput);
-      return;
+    // Everything goes to Jose (owner; phase 2, 2026-10-23): he decides whether
+    // to answer directly or plan. "Plan this fresh:" asks him to plan without
+    // templates. Direct mode (an agent picked) bypasses Jose, as before.
+    if (!directMode) {
+      const fresh = cleanInput.match(/^plan this fresh:\s*/i);
+      if (fresh) {
+        await handleJoseCommand(cleanInput.slice(fresh[0].length).trim(), { planFresh: true, shownText: cleanInput });
+        return;
+      }
+      onJoseExecutionState?.('thinking', 'Jose is deciding...');
+      const decision = await decideJoseRoute(cleanInput, {
+        history: messages.filter((m) => !m.isError && m.role && m.content).slice(-6).map((m) => ({ role: m.role, content: m.content })),
+      });
+      if (decision.route === 'plan') {
+        await handleJoseCommand(cleanInput);
+        return;
+      }
     }
 
     if (!modelReady) {
