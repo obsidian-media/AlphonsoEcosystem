@@ -14,7 +14,7 @@ import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
 import { agentName } from '../../services/jose/agentNames';
 import { approveRequestStep, carryOnRequest, rejectRequestStep } from '../../services/joseExecutionEngineService';
 
-const STATUS_LABELS: Record<string, string> = {
+export const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
   running: 'Running',
   waiting_approval: 'Waiting for your approval',

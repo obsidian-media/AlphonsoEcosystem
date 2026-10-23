@@ -183,6 +183,8 @@ interface MiyaStudioProps {
   ollamaStatus: { state: string; label?: string };
   onStudioStateChange?: (state: string, message: string) => void;
   onPacketCreated?: (packet: AgentPacket) => void;
+  /** Opens a Jose request on the Orchestrator's Requests tab (phase 6b). */
+  onOpenJoseBoard?: (requestId: string) => void;
 }
 
 // Each content-factory tab has its own tool (owner, 2026-10-22); the older
@@ -258,7 +260,8 @@ export function MiyaStudio({
   settings,
   ollamaStatus,
   onStudioStateChange,
-  onPacketCreated
+  onPacketCreated,
+  onOpenJoseBoard
 }: MiyaStudioProps) {
   const [activeTab, setActiveTab] = useState<string>('script');
   const [factoryBrandId, setFactoryBrandId] = useState<string>(() => ensureFirstBrand().id);
@@ -992,7 +995,7 @@ export function MiyaStudio({
 
       {/* Content factory: each tab has its own tool */}
       {FACTORY_TABS.includes(activeTab as ContentFactoryTab) && (
-        <ContentFactoryPanel tab={activeTab as ContentFactoryTab} settings={settings} brandId={factoryBrandId} onBrand={setFactoryBrandId} />
+        <ContentFactoryPanel tab={activeTab as ContentFactoryTab} settings={settings} brandId={factoryBrandId} onBrand={setFactoryBrandId} onOpenJoseBoard={onOpenJoseBoard} />
       )}
 
       {/* Brands — one brand kit per channel or client */}
