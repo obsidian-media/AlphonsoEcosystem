@@ -506,6 +506,12 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [youtubeClientSecret, setYoutubeClientSecret] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CLIENT_SECRET'));
   const [youtubeRefreshToken, setYoutubeRefreshToken] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_REFRESH_TOKEN'));
   const [youtubeChannelId, setYoutubeChannelId] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CHANNEL_ID'));
+  // Meta (Facebook and Instagram), phase 3a: the backend used to read these only from the environment.
+  const [metaAccessToken, setMetaAccessToken] = useState(() => getConnectorCredential('meta', 'META_ACCESS_TOKEN') || '');
+  const [metaPageAccessToken, setMetaPageAccessToken] = useState(() => getConnectorCredential('meta', 'META_PAGE_ACCESS_TOKEN') || '');
+  const [metaPageId, setMetaPageId] = useState(() => getConnectorCredential('meta', 'META_PAGE_ID') || '');
+  const [metaIgId, setMetaIgId] = useState(() => getConnectorCredential('meta', 'INSTAGRAM_BUSINESS_ACCOUNT_ID') || '');
+  const [metaAppSecret, setMetaAppSecret] = useState(() => getConnectorCredential('meta', 'META_APP_SECRET') || '');
   const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
   const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
@@ -1113,6 +1119,18 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId })}
             hint="Create OAuth 2.0 credentials in Google Cloud Console with the YouTube Data API v3 enabled. Then run npm run auth:youtube in a terminal to generate your Refresh Token."
             savedLabel="YouTube credentials saved" />
+
+          <CredentialSection title="Meta (Facebook and Instagram)" icon={Video} borderColor="border-blue-300/20" bgColor="bg-blue-500/8" accentColor="text-blue-400"
+            fields={[
+              { label: 'Access Token', placeholder: 'Run: npm run auth:meta', value: metaAccessToken, onChange: setMetaAccessToken, key: 'META_ACCESS_TOKEN' },
+              { label: 'Page Access Token', placeholder: 'For Facebook Page posts (optional)', value: metaPageAccessToken, onChange: setMetaPageAccessToken, key: 'META_PAGE_ACCESS_TOKEN' },
+              { label: 'Page ID', placeholder: 'Your Facebook Page', value: metaPageId, onChange: setMetaPageId, key: 'META_PAGE_ID', secret: false },
+              { label: 'Instagram Business Account ID', placeholder: 'Linked to the Page', value: metaIgId, onChange: setMetaIgId, key: 'INSTAGRAM_BUSINESS_ACCOUNT_ID', secret: false },
+              { label: 'App Secret', placeholder: 'From your Meta app (optional, adds appsecret_proof)', value: metaAppSecret, onChange: setMetaAppSecret, key: 'META_APP_SECRET' },
+            ]}
+            onSave={() => saveConnectorApiKey('meta', { META_ACCESS_TOKEN: metaAccessToken, META_PAGE_ACCESS_TOKEN: metaPageAccessToken, META_PAGE_ID: metaPageId, INSTAGRAM_BUSINESS_ACCOUNT_ID: metaIgId, META_APP_SECRET: metaAppSecret })}
+            hint="Use your own Meta app with Facebook Login for Business. Run npm run auth:meta in a terminal to get the tokens and IDs, then paste them here. Instagram needs a Business or Creator account linked to the Page."
+            savedLabel="Meta credentials saved" />
 
           <CredentialSection title="Runway ML (Video Generation)" icon={Video} borderColor="border-fuchsia-300/20" bgColor="bg-fuchsia-500/8" accentColor="text-fuchsia-400"
             fields={[{ label: 'API Secret', placeholder: 'key_...', value: runwayApiKey, onChange: setRunwayApiKey, key: 'RUNWAYML_API_SECRET' }]}

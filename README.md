@@ -4,7 +4,7 @@
 
 # Alphonso
 
-> **v2.10.0** — Local-first AI desktop companion with 9 agents, 26 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.10.0** — Local-first AI desktop companion with 9 agents, 30 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.10.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-5645%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
@@ -160,7 +160,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery and a PIN-authenticated local WebSocket (off until you enable mobile pairing on the desktop). Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **264 Rust unit tests across 43 modules** — 152 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **267 Rust unit tests across 43 modules** — 152 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -423,7 +423,7 @@ All connectors are policy-gated through `connectorRegistryService.js`. See [docs
 
 ## License Tiers
 
-**Free at launch: every agent and all 26 connectors, no license key.** Paid tiers are not on sale. The licensing code (`licenseService.ts`) stays dormant until a vendor signing key is configured. Third-party services you connect bill you directly through your own API keys, and Zero-Cost Mode blocks paid calls until you approve them.
+**Free at launch: every agent and all 30 connectors, no license key.** Paid tiers are not on sale. The licensing code (`licenseService.ts`) stays dormant until a vendor signing key is configured. Third-party services you connect bill you directly through your own API keys, and Zero-Cost Mode blocks paid calls until you approve them.
 
 See [docs/PRICING.md](docs/PRICING.md) for details.
 

@@ -1,4 +1,17 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getConnectorCredential } from './connectors/connectorAuth';
+
+/** Keys saved in Settings → Connectors → Meta; a key not saved is left for the environment (QA Bug 32). */
+export function savedMetaCredentials() {
+  const saved = (key: string) => getConnectorCredential('meta', key) || null;
+  return {
+    accessToken: saved('META_ACCESS_TOKEN'),
+    pageAccessToken: saved('META_PAGE_ACCESS_TOKEN'),
+    pageId: saved('META_PAGE_ID'),
+    instagramBusinessAccountId: saved('INSTAGRAM_BUSINESS_ACCOUNT_ID'),
+    appSecret: saved('META_APP_SECRET'),
+  };
+}
 
 export function buildMetaPublishRequest(job: Record<string, any> = {}, options: Record<string, any> = {}) {
   const platform = String(options.platform || job.request?.platform || 'instagram').trim().toLowerCase() || 'instagram';
@@ -20,5 +33,5 @@ export function buildMetaPublishRequest(job: Record<string, any> = {}, options: 
 
 export async function publishMetaContent(job: Record<string, any> = {}, options: Record<string, any> = {}) {
   const request = buildMetaPublishRequest(job, options);
-  return invoke('meta_publish_content', { request });
+  return invoke('meta_publish_content', { request: { ...request, credentials: savedMetaCredentials() } });
 }

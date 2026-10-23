@@ -3,6 +3,9 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn()
 }));
+vi.mock('../services/connectors/connectorAuth', () => ({
+  getConnectorCredential: vi.fn((id, key) => (id === 'meta' ? ({ META_ACCESS_TOKEN: 'saved-token', META_PAGE_ID: '42' })[key] || '' : '')),
+}));
 
 import { invoke } from '@tauri-apps/api/core';
 import { buildMetaPublishRequest, publishMetaContent } from '../services/metaPublishService';
@@ -81,5 +84,17 @@ describe('publishMetaContent', () => {
     invoke.mockResolvedValue({ ok: true, published_id: '999' });
     const result = await publishMetaContent({}, {});
     expect(result.published_id).toBe('999');
+  });
+});
+
+// Phase 3a: keys saved in Settings → Connectors → Meta reach the backend (QA Bug 32's rule).
+describe('saved Meta keys', () => {
+  it('passes the saved keys with every request; a key not saved is left for the environment', async () => {
+    invoke.mockResolvedValue({ ok: true });
+    await publishMetaContent({}, { platform: 'facebook', approved: true });
+    const { request } = invoke.mock.calls[0][1];
+    expect(request.credentials).toEqual({
+      accessToken: 'saved-token', pageAccessToken: null, pageId: '42', instagramBusinessAccountId: null, appSecret: null,
+    });
   });
 });
