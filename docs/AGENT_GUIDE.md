@@ -31,7 +31,7 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 - Communication: `pack.jose-stakeholder-communication`
 
 ### Hector — Researcher
-**Role:** Research with citations, source scanning
+**Role:** Finds facts and sources (including competitors' public material), with citations
 **Runtime:** `src/services/hectorResearchService.js` — Brave Search + RSS + Ollama-powered
 **Can do:** Web search, document analysis, source verification, API docs research, compliance research, competitive analysis
 **Cannot:** Execute terminal commands, filesystem operations, posting, or purchases
@@ -46,9 +46,9 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 - Documentation: `pack.hector-documentation-audit`, `pack.hector-research-briefing`
 
 ### Miya — Creative
-**Role:** Strategy, scripting, storyboarding, export
-**Can do:** Generate creative content, scripts, storyboards, video concepts
-**Cannot:** Execute system commands or unapproved publishing
+**Role:** UI/UX and creative systems, content creation, and front-end design and code drafts
+**Can do:** Write scripts, scenes, thumbnails and campaigns (Miya Studio's content factory), plan UI/UX and brand direction, and draft front-end designs and code for Alphonso to build
+**Cannot:** Run code or commands (only Alphonso does), or publish without approval
 **When to use:** "Write a YouTube script about X", "Create a marketing strategy", "Design a storyboard".
 
 ### Maria — Governance Auditor
