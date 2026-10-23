@@ -6,7 +6,8 @@ import { saveBrand } from '../../../services/contentFactory/contentBrandService'
 import { createProject, emptyBrief } from '../../../services/contentFactory/contentProjectService';
 import { CONTENT_TEMPLATE_STEPS, REVIEW_WAIT, contentProjectPlanSteps } from '../../../services/contentFactory/contentProjectPlan';
 
-const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'campaign', 'timing', 'quality', 'security'];
+// Phase 2a added voice, music, broll and assemble: 15 steps.
+const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'assemble', 'campaign', 'timing', 'quality', 'security'];
 
 function newProject() {
   const brand = saveBrand({ name: 'My brand' });
@@ -49,10 +50,21 @@ describe('contentProjectPlanSteps', () => {
   it('from a later step the plan starts there', () => {
     const { brand, project } = newProject();
     const steps = contentProjectPlanSteps(project, brand, 'scenes');
-    expect(steps.map((s) => s.stepId)).toEqual(['scenes', 'thumbnail', 'campaign', 'timing', 'quality', 'security']);
+    expect(steps.map((s) => s.stepId)).toEqual(['scenes', 'thumbnail', 'voice', 'music', 'broll', 'assemble', 'campaign', 'timing', 'quality', 'security']);
     expect(steps[0]).toMatchObject({ needs: [] });
     expect(steps[0].waitFor).toBeUndefined();
     expect(checkPlan(steps, { taskTypes: true }).problems).toEqual([]);
+  });
+
+  it('the finished video comes before the campaign: voice, music and B-roll, then assemble', () => {
+    const { brand, project } = newProject();
+    const steps = contentProjectPlanSteps(project, brand);
+    const byId = Object.fromEntries(steps.map((s) => [s.stepId, s]));
+    expect(byId.assemble).toMatchObject({ agent: 'alphonso', actionType: 'runtime_assemble_video', needs: ['voice', 'music', 'broll'] });
+    expect(byId.broll).toMatchObject({ agent: 'hector', actionType: 'research_broll' });
+    expect(byId.campaign.needs).toEqual(['assemble']);
+    expect(byId.assemble.effects).toEqual(['write_own_work']);
+    expect(steps.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes']);
   });
 
   it("a step's plan alone drops links to steps that are not in it", () => {

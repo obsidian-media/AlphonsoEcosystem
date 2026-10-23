@@ -730,7 +730,7 @@ fn readiness_keyword_match(
 
 /// Canonicalizes `path`, or, when it does not exist yet, its deepest existing
 /// ancestor with the not-yet-created remainder appended.
-fn resolve_through_existing_ancestor(path: &Path) -> PathBuf {
+pub(crate) fn resolve_through_existing_ancestor(path: &Path) -> PathBuf {
   let mut remainder: Vec<std::ffi::OsString> = vec![];
   let mut current = path.to_path_buf();
   loop {
@@ -756,7 +756,7 @@ fn resolve_through_existing_ancestor(path: &Path) -> PathBuf {
 
 /// True when any component of a workspace-relative path is a `.git` directory
 /// (case-insensitive: Windows and default macOS volumes are case-insensitive).
-fn rel_touches_git_dir(rel: &Path) -> bool {
+pub(crate) fn rel_touches_git_dir(rel: &Path) -> bool {
   rel.components().any(|component| match component {
     Component::Normal(name) => name.to_string_lossy().eq_ignore_ascii_case(".git"),
     _ => false,

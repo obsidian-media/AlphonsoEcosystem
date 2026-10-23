@@ -134,6 +134,17 @@ describe('ConnectorSetupPanel', () => {
     expect(screen.getByText('Personal Access Token')).toBeTruthy();
   });
 
+  // Miya content factory phase 2a: free stock footage keys for the B-roll step.
+  it('has a key field for each stock footage source', () => {
+    // The category's open state is remembered; start closed.
+    localStorage.clear();
+    render(<ConnectorSetupPanel />);
+    fireEvent.click(screen.getByTestId('connector-category-content'));
+    for (const title of ['Pexels (stock footage)', 'Pixabay (stock footage)', 'Coverr (stock footage)']) {
+      expect(screen.getByText(title)).toBeInTheDocument();
+    }
+  });
+
   it('save credential button exists in GitHub section', () => {
     render(<ConnectorSetupPanel />);
     // Multiple "Save & Enable" buttons exist (one per CredentialSection)

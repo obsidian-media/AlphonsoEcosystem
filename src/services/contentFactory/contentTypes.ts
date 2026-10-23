@@ -37,9 +37,14 @@ export function hasOwnKey(record: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, key);
 }
 
-export type StepId = 'brief' | 'research' | 'script' | 'review' | 'scenes' | 'thumbnail' | 'campaign' | 'quality';
+export type StepId =
+  | 'brief' | 'research' | 'script' | 'review' | 'scenes' | 'thumbnail'
+  | 'voice' | 'music' | 'broll' | 'assemble' | 'campaign' | 'quality';
 
-export const STEP_ORDER: StepId[] = ['brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'campaign', 'quality'];
+/** Voice, Music, B-roll and Assemble make the finished video file (phase 2a). */
+export const STEP_ORDER: StepId[] = [
+  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'assemble', 'campaign', 'quality',
+];
 
 export type StepStatus = 'not_started' | 'running' | 'done' | 'failed' | 'interrupted' | 'needs_approval' | 'approved' | 'sent_back';
 

@@ -116,3 +116,6 @@ src-tauri/vendor/ollama/*
 # convention, so wiring it in later doesn't also require a .gitignore change.
 src-tauri/vendor/starter-model/*
 !src-tauri/vendor/starter-model/.gitkeep
+# The bundled LGPL ffmpeg build (scripts/fetch-ffmpeg.mjs, content factory phase 2a).
+src-tauri/vendor/ffmpeg/*
+!src-tauri/vendor/ffmpeg/.gitkeep

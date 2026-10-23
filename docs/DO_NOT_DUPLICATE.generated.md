@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 247 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 250 services and 155 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -243,19 +243,22 @@ Source-backed inventory: 247 services and 155 components. Human purpose descript
 | service | `src/services/connectors/nvidiaNimConnector.ts` | `DEFAULT_MODEL`, `isNvidiaConfigured`, `listNvidiaModels`, `NvidiaChatOptions`, `NvidiaChatSuccess`, `NvidiaMessage`, `NvidiaRateLimited`, `NvidiaSendResult`, `sendNvidiaMessage` |
 | service | `src/services/connectors/perplexityConnector.ts` | `isPerplexityConfigured`, `PerplexitySearchOptions`, `PerplexitySearchResult`, `PerplexitySource`, `searchPerplexity` |
 | service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `updateMessage`, `uploadFile` |
+| service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
 | service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `DEFAULT_QUALITY_THRESHOLD`, `ensureFirstBrand`, `getBrand`, `listBrands`, `saveBrand` |
+| service | `src/services/contentFactory/contentCaptions.ts` | `alignCaptions`, `captionsFromLines`, `TimedWord`, `toSrt` |
 | service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderScenePictures`, `renderThumbnails` |
-| service | `src/services/contentFactory/contentProjectFiles.ts` | `loadProjectFile`, `loadProjectImage`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
+| service | `src/services/contentFactory/contentMediaExecutor.ts` | `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `VoiceLine`, `VoiceOutput` |
+| service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
 | service | `src/services/contentFactory/contentProjectPlan.ts` | `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `REVIEW_WAIT` |
 | service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
 | service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `parseStepAnswer` |
-| service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `recordContentStepResult` |
+| service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
 | service | `src/services/contentFactory/contentStepRunner.ts` | `approveContentStep`, `CONTENT_TASK_PREVIEW`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `hasOwnKey`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline` |

@@ -11,7 +11,8 @@ import { renderScenePictures, renderThumbnails } from './contentImages';
 import { STEP_AGENTS, stepMarkdown } from './contentStepAgents';
 import { hasOwnKey, type StepId } from './contentTypes';
 
-function appSettings(): { outputFolder?: string | null } {
+/** The app's saved settings (the output folder). */
+export function contentAppSettings(): { outputFolder?: string | null } {
   try {
     const saved = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
     return saved && typeof saved === 'object' ? saved : {};
@@ -52,7 +53,7 @@ export async function recordContentStepResult(input: {
     joseCommandId: input.commandId,
   });
   const say = (message: string) => { addStepProgress(input.projectId, input.step, message); };
-  const settings = appSettings();
+  const settings = contentAppSettings();
   const brand = getBrand(saved.brandId);
   if (brand) {
     try {

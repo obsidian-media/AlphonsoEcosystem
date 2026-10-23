@@ -39,6 +39,15 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-23] **Miya content factory phase 2a (the finished video file): what it leaves open.**
+  - Phase 2b: AI video clips per scene (ComfyUI or Runway, owner's choice) in place of stock clips and pictures.
+  - FFmpeg is bundled only in the Windows installer; macOS and Linux use an `ffmpeg`/`ffprobe` on the PATH (`media_tools_status` reports it). Bundle LGPL builds for both.
+  - Kokoro's voices are English (American and British), and the captions' Whisper timing uses `tiny.en`; other languages need other voices and models.
+  - MusicGen on a computer without an NVIDIA card is slow (minutes per clip); a new Coverr app is limited to 50 searches an hour.
+  - The asset protocol lets the window play files only from the output folder chosen when Miya Studio opens; changing the folder in Settings needs Miya Studio to be opened again.
+  - The new Rust tests (stock search, downloads, assembly, Whisper words, media folder) could not run on the dev machine (Windows Application Control blocks freshly built programs); CI runs them. A real assembly with the bundled ffmpeg passed on 2026-10-23 before the block started.
+  - **Status:** OPEN.
+
 - [2026-10-23] **Jose redesign phase 7 (planned by the owner, after all the Miya content-factory phases).** Add to this list when something comes up.
   - **Stop a running request** from the board, Chat and Telegram. Today only a plan still waiting can be cancelled; a running request (a Miya project runs for many minutes) cannot be stopped.
   - **One model-heavy request at a time:** nothing limits requests running together, so Run project and a Chat request compete for the same local model and graphics memory (on a 6 GB card both slow down or fail). Queue them, and show the queue on the board.
@@ -53,7 +62,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
   - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
   - The board's "Approve and carry on" on Scenes approves the review too, but only when Scenes starts (Miya Studio shows it as waiting until then).
-  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`) are next.
+  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file) done 2026-10-23; 2b, 3 and 4 next.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**

@@ -35,6 +35,13 @@ function assignment(actionType = 'analysis_content_review', agent = 'nova'): nev
 beforeEach(() => { vi.mocked(generateAgentLlmResponse).mockReset(); clearContentSearches(); });
 
 describe('executeContentStepAssignment', () => {
+  it('sends the four media task types to the media steps, not to a model', async () => {
+    const result = await executeContentStepAssignment(assignment('creative_voice', 'miya'));
+    expect(result.resultState).toBe('failed');
+    expect(result.failureReason).toContain('Content project not found');
+    expect(generateAgentLlmResponse).not.toHaveBeenCalled();
+  });
+
   it('asks the assignment\'s own agent for JSON and returns the parsed answer', async () => {
     vi.mocked(generateAgentLlmResponse).mockResolvedValue({ response: good, done: true });
     const result = await executeContentStepAssignment(assignment());

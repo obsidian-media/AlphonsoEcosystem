@@ -509,6 +509,9 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
   const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
+  const [pexelsApiKey, setPexelsApiKey] = useState(() => getConnectorCredential('pexels', 'PEXELS_API_KEY') || '');
+  const [pixabayApiKey, setPixabayApiKey] = useState(() => getConnectorCredential('pixabay', 'PIXABAY_API_KEY') || '');
+  const [coverrApiKey, setCoverrApiKey] = useState(() => getConnectorCredential('coverr', 'COVERR_API_KEY') || '');
   const [perplexityApiKey, setPerplexityApiKey] = useState(() => getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY') || '');
   const [runwayApiKey, setRunwayApiKey] = useState(() => getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
   const [n8nBaseUrl, setN8nBaseUrl] = useState(() => getConnectorCredential('n8n', 'N8N_BASE_URL') || 'http://localhost:5678');
@@ -552,6 +555,9 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setQwenApiKey((prev) => prev || getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
       setBraveApiKey((prev) => prev || getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
       setTavilyApiKey((prev) => prev || getConnectorCredential('tavily', 'TAVILY_API_KEY'));
+      setPexelsApiKey((prev) => prev || getConnectorCredential('pexels', 'PEXELS_API_KEY'));
+      setPixabayApiKey((prev) => prev || getConnectorCredential('pixabay', 'PIXABAY_API_KEY'));
+      setCoverrApiKey((prev) => prev || getConnectorCredential('coverr', 'COVERR_API_KEY'));
       setPerplexityApiKey((prev) => prev || getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY'));
       setRunwayApiKey((prev) => prev || getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
       setDeepseekApiKey((prev) => prev || getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
@@ -1053,6 +1059,25 @@ export function ConnectorSetupPanel(): React.JSX.Element {
         </CollapsibleCategory>
 
         <CollapsibleCategory id="content" label="Content & Productivity" icon={FileText} defaultOpen={false}>
+
+          {/* Stock footage for Miya's B-roll step (content factory phase 2a): each key is a free sign-up. */}
+          <CredentialSection title="Pexels (stock footage)" icon={FileText} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"
+            fields={[{ label: 'API Key', placeholder: 'Your Pexels API key', value: pexelsApiKey, onChange: setPexelsApiKey, key: 'PEXELS_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('pexels', { PEXELS_API_KEY: pexelsApiKey })}
+            hint="Free. Get a key at pexels.com/api. Miya's B-roll step searches it for stock clips for each scene. Pexels asks that you link back to Pexels; each clip's page is kept in the project."
+            savedLabel="Pexels key saved" />
+
+          <CredentialSection title="Pixabay (stock footage)" icon={FileText} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"
+            fields={[{ label: 'API Key', placeholder: 'Your Pixabay API key', value: pixabayApiKey, onChange: setPixabayApiKey, key: 'PIXABAY_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('pixabay', { PIXABAY_API_KEY: pixabayApiKey })}
+            hint="Free. Your key is on pixabay.com/api/docs once you have an account. Miya's B-roll step searches it for stock clips."
+            savedLabel="Pixabay key saved" />
+
+          <CredentialSection title="Coverr (stock footage)" icon={FileText} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"
+            fields={[{ label: 'API Key', placeholder: 'Your Coverr API key', value: coverrApiKey, onChange: setCoverrApiKey, key: 'COVERR_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('coverr', { COVERR_API_KEY: coverrApiKey })}
+            hint="Free. Create an app at coverr.co/developers for a key (a new app is limited to 50 searches an hour). Miya's B-roll step searches it for stock clips."
+            savedLabel="Coverr key saved" />
 
           <CredentialSection title="GitHub" icon={GitBranch} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
             fields={[{ label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }]}

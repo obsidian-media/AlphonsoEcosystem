@@ -11,6 +11,10 @@ const STEP_LABELS: Record<StepId, string> = {
   review: 'Review',
   scenes: 'Scenes',
   thumbnail: 'Thumbnails',
+  voice: 'Voice-over',
+  music: 'Music',
+  broll: 'Stock clips',
+  assemble: 'Finished video',
   campaign: 'Campaign',
   quality: 'Quality gate',
 };

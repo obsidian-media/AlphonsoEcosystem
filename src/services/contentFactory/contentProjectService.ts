@@ -39,7 +39,13 @@ function emptyStep(): StepState {
 function readProjects(): ContentProject[] {
   try {
     const parsed = JSON.parse(durableGet(PROJECTS_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    // Projects made before a step existed (Voice, Music, B-roll, Assemble: phase 2a) gain it, not started.
+    for (const project of parsed as ContentProject[]) {
+      if (!project?.steps) continue;
+      for (const step of STEP_ORDER) if (!project.steps[step]) project.steps[step] = emptyStep();
+    }
+    return parsed;
   } catch {
     return [];
   }

@@ -1292,6 +1292,11 @@ export function SettingsView({
               <div>Current: {updateCheckState?.currentVersion || 'n/a'} | Latest: {updateCheckState?.latestVersion || 'none'}</div>
               <div className="mt-1">Status: {updateCheckState?.error ? updateCheckState.error : (updateCheckState?.available ? 'New version detected.' : 'No update available.')}</div>
             </div>
+            {/* The installer includes an LGPL FFmpeg build for Miya's finished videos (content factory phase 2a). */}
+            <div className="rounded-xl bg-(--surface-2) p-3 text-[11px] text-(--text-2)" data-testid="ffmpeg-license-notice">
+              Finished videos are made with FFmpeg, included under the GNU LGPL 2.1 (its license is in the install folder, ffmpeg\LICENSE.txt).{' '}
+              <button type="button" className="underline" onClick={() => { void openExternalUrl('https://ffmpeg.org/legal.html'); }}>FFmpeg license and source</button>
+            </div>
           </div>
           <div className="flex items-center justify-between p-4 bg-(--surface-2) rounded-2xl">
             <div>

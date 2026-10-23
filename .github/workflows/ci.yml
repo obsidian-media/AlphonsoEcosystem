@@ -211,6 +211,9 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs windows-amd64
 
+      - name: Fetch bundled ffmpeg (LGPL)
+        run: node scripts/fetch-ffmpeg.mjs
+
       # Deliberately NOT fetching the starter model here -- matches release.yml's
       # Windows job. Ollama's CUDA runtime plus the ~1.9GB model pushes the NSIS
       # payload past makensis's ~2GB mmap ceiling ("error mmapping file ... out of
@@ -253,6 +256,10 @@ jobs:
           # The real executable is tens of MB; anything far smaller is a stub.
           if ($binary.Size -lt 10000000) { throw "Bundled ollama.exe is only $($binary.Size) bytes -- likely not the real executable" }
           Write-Host "Found bundled $($binary.Path) ($($binary.Size) bytes)"
+          # The bundled ffmpeg (content factory phase 2a) must be there too.
+          $ffmpeg = $entries | Where-Object { $_.Path -match '(^|[\\/])ffmpeg[\\/]ffmpeg\.exe$' } | Select-Object -First 1
+          if (-not $ffmpeg) { throw 'Bundled ffmpeg.exe not found inside the NSIS installer' }
+          Write-Host "Found bundled $($ffmpeg.Path) ($($ffmpeg.Size) bytes)"
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -332,6 +339,10 @@ jobs:
       - name: Install tauri-driver
         shell: pwsh
         run: cargo install tauri-driver --locked --version "^2"
+
+      # content-video.e2e.mjs assembles a real video with the bundled ffmpeg.
+      - name: Fetch bundled ffmpeg (LGPL)
+        run: node scripts/fetch-ffmpeg.mjs
 
       - name: Build debug Tauri binary
         run: npm run tauri build -- --debug --no-bundle
