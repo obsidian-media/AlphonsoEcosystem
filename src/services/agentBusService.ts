@@ -2,6 +2,7 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 import { validateAgentExecutionContract } from './agentContractService';
 import { durableGet, durableSet } from '../lib/durableStore';
+import { EFFECT_LABELS, effectsNeedingApproval, type JoseEffect } from './jose/joseEffects';
 
 export const PACKET_KEY = 'alphonso_agent_bus_packets_v1';
 export const PACKET_SCOPE = 'agent_bus_packets_v1';
@@ -37,6 +38,8 @@ export interface AgentPacket {
   retryRequestedAtMs?: number;
   deadLetterReason?: string;
   deadLetterAtMs?: number;
+  /** What the step does (Jose steps since 2026-10-23); approval is decided from these. */
+  effects?: JoseEffect[];
 }
 
 export interface AgentPacketInput {
@@ -54,6 +57,7 @@ export interface AgentPacketInput {
   commandPreview?: string;
   fileChangePreview?: string;
   rollbackAvailable?: boolean;
+  effects?: JoseEffect[];
 }
 
 export interface PacketStatusUpdate {
@@ -136,7 +140,8 @@ export function createAgentPacket({
   actionType = 'agent_handoff',
   commandPreview = '',
   fileChangePreview = '',
-  rollbackAvailable = false
+  rollbackAvailable = false,
+  effects
 }: AgentPacketInput): AgentPacket {
   const packets = readPackets();
   const packet: AgentPacket = {
@@ -159,7 +164,8 @@ export function createAgentPacket({
     createdAtMs: timestampMs(),
     updatedAtMs: timestampMs(),
     references: [],
-    executionResult: null
+    executionResult: null,
+    ...(Array.isArray(effects) ? { effects } : {})
   };
   packets.push(packet);
   writePackets(packets);
@@ -251,7 +257,14 @@ export function canExecutePacket(packet: AgentPacket | null): ExecutionGate {
   if (packet.requiresApproval && packet.status !== 'approved' && packet.status !== 'queued') {
     return { ok: false, reason: 'Approval is required before execution.' };
   }
-  if (isExternalRiskAction(packet) && packet.status !== 'approved') {
+  if (Array.isArray(packet.effects)) {
+    // Declared effects decide approval (Settings → Approvals), not words.
+    const waiting = effectsNeedingApproval(packet.effects);
+    if (waiting.length > 0 && packet.status !== 'approved') {
+      return { ok: false, reason: `Waiting for your approval: ${waiting.map((e) => EFFECT_LABELS[e]).join(', ')}.` };
+    }
+  } else if (isExternalRiskAction(packet) && packet.status !== 'approved') {
+    // Older packets without declared effects keep the word check.
     return { ok: false, reason: 'Risky external action requires explicit approved status.' };
   }
   const contractGate = validateAgentExecutionContract(packet);
