@@ -7,7 +7,7 @@ import type { PlanStep } from './stepGraph';
 const REQUESTS_KEY = 'alphonso_jose_requests_v1';
 const MAX_REQUESTS = 200;
 
-export type JoseRequestStatus = 'running' | 'waiting_approval' | 'done' | 'failed' | 'interrupted';
+export type JoseRequestStatus = 'waiting_plan_approval' | 'running' | 'waiting_approval' | 'done' | 'failed' | 'interrupted' | 'cancelled';
 
 export interface JoseRequestStep extends PlanStep {
   status: string;
@@ -26,6 +26,10 @@ export interface JoseRequest {
   steps: JoseRequestStep[];
   /** How the plan was made (phase 2): fresh, from a template (as is or adapted), or by the rules. */
   plan?: { source: string; templateId: string | null; note: string };
+  /** Plain-language record of changes to the plan (phase 3), oldest first. */
+  changeLog?: { atMs: number; text: string }[];
+  /** How to run a plan that waits for approval (phase 3). */
+  runOptions?: { source: string; previewMode?: boolean; zeroCostMode?: boolean; endpoint?: string };
   createdAtMs: number;
   updatedAtMs: number;
 }
@@ -72,6 +76,77 @@ export function createJoseRequest(input: { commandId: string; source: string; te
     .slice(-MAX_REQUESTS);
   writeAll(all);
   return request;
+}
+
+function saveNew(request: JoseRequest): JoseRequest {
+  const all = [...readAll().filter((r) => r.id !== request.id), request]
+    .sort((a, b) => a.createdAtMs - b.createdAtMs)
+    .slice(-MAX_REQUESTS);
+  writeAll(all);
+  return request;
+}
+
+/** A plan saved to wait for the user before it runs (phase 3). */
+export function createWaitingPlanRequest(input: {
+  text: string;
+  source: string;
+  kind: 'normal' | 'project';
+  steps: PlanStep[];
+  plan: NonNullable<JoseRequest['plan']>;
+  runOptions: NonNullable<JoseRequest['runOptions']>;
+}): JoseRequest {
+  const now = Date.now();
+  return saveNew({
+    id: `jose-request-plan-${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    commandId: '',
+    source: input.source,
+    text: input.text,
+    kind: input.kind,
+    status: 'waiting_plan_approval',
+    steps: input.steps.map((s) => ({ ...s, status: 'waiting' })),
+    plan: input.plan,
+    changeLog: [],
+    runOptions: input.runOptions,
+    createdAtMs: now,
+    updatedAtMs: now,
+  });
+}
+
+/** Replace a waiting plan's steps (an edit), with a plain reason for the change log. */
+export function replacePlanSteps(requestId: string, steps: PlanStep[], reason: string): JoseRequest {
+  return update(requestId, (r) => {
+    if (r.status !== 'waiting_plan_approval') throw new Error('Only a plan that is waiting can be changed.');
+    r.steps = steps.map((s) => ({ ...s, status: 'waiting' }));
+    r.changeLog = [...(r.changeLog || []), { atMs: Date.now(), text: reason }];
+  });
+}
+
+/** Take a waiting plan to run it. Returns null if it is not waiting (already run, or cancelled). */
+export function claimPlanForRun(requestId: string): JoseRequest | null {
+  const all = readAll();
+  const request = all.find((r) => r.id === requestId);
+  if (!request || request.status !== 'waiting_plan_approval') return null;
+  request.status = 'running';
+  request.updatedAtMs = Date.now();
+  writeAll(all);
+  return request;
+}
+
+/** Cancel a plan that is waiting. */
+export function cancelJoseRequest(requestId: string): JoseRequest {
+  return update(requestId, (r) => {
+    if (r.status !== 'waiting_plan_approval') throw new Error('Only a plan that is waiting can be cancelled.');
+    r.status = 'cancelled';
+    r.changeLog = [...(r.changeLog || []), { atMs: Date.now(), text: 'Cancelled.' }];
+  });
+}
+
+/** Put a claimed plan back to waiting (its edited steps failed the rule check). */
+export function returnPlanToWaiting(requestId: string, reason: string): JoseRequest {
+  return update(requestId, (r) => {
+    r.status = 'waiting_plan_approval';
+    r.changeLog = [...(r.changeLog || []), { atMs: Date.now(), text: reason }];
+  });
 }
 
 export function updateJoseStep(requestId: string, stepId: string, patch: Partial<JoseRequestStep>): JoseRequest {
