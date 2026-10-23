@@ -844,18 +844,39 @@ pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Va
       return Err(format!("A file for the video is missing: {rel}"));
     }
   }
-  let mut outputs = Vec::new();
-  for (aspect, width, height) in ASPECTS {
-    let name = format!("v{}-{aspect}.mp4", spec.version);
-    if out.join(&name).exists() {
+  for (aspect, _, _) in ASPECTS {
+    if out.join(format!("v{}-{aspect}.mp4", spec.version)).exists() {
       return Err(format!(
         "Version {} already exists; nothing was overwritten.",
         spec.version
       ));
     }
+  }
+  // Every file this run writes; a failure removes them, so Retry can use the same version.
+  let mut written: Vec<PathBuf> = Vec::new();
+  let result = assemble_outputs(&spec, &ffmpeg, &ffprobe, &root, &out, &mut written).await;
+  if result.is_err() {
+    for file in &written {
+      let _ = std::fs::remove_file(file);
+    }
+  }
+  Ok(serde_json::json!({ "ok": true, "outputs": result? }))
+}
+
+async fn assemble_outputs(
+  spec: &AssemblySpec,
+  ffmpeg: &Path,
+  ffprobe: &Path,
+  root: &Path,
+  out: &Path,
+  written: &mut Vec<PathBuf>,
+) -> Result<Vec<serde_json::Value>, String> {
+  let mut outputs = Vec::new();
+  for (aspect, width, height) in ASPECTS {
+    let name = format!("v{}-{aspect}.mp4", spec.version);
     let work = out.join(format!(".work-v{}-{aspect}", spec.version));
     std::fs::create_dir_all(&work).map_err(|e| e.to_string())?;
-    let runs = build_assembly_runs(&root, &work, &name, &spec, width, height);
+    let runs = build_assembly_runs(root, &work, &name, spec, width, height);
     let list: String = (0..spec.scenes.len())
       .map(|i| format!("file 'seg-{i:03}.mp4'\n"))
       .collect();
@@ -863,7 +884,7 @@ pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Va
     std::fs::copy(root.join(&spec.srt), work.join("captions.srt")).map_err(|e| e.to_string())?;
     let result = async {
       for run in &runs {
-        run_ffmpeg(&ffmpeg, run).await?;
+        run_ffmpeg(ffmpeg, run).await?;
       }
       std::fs::rename(work.join(&name), out.join(&name)).map_err(|e| e.to_string())
     }
@@ -871,7 +892,8 @@ pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Va
     let _ = std::fs::remove_dir_all(&work);
     result?;
     let file = out.join(&name);
-    let (duration, has_video, has_audio) = probe(&ffprobe, &file).await?;
+    written.push(file.clone());
+    let (duration, has_video, has_audio) = probe(ffprobe, &file).await?;
     if !has_video || !has_audio {
       return Err(format!(
         "The {aspect} video is missing its {}.",
@@ -889,7 +911,7 @@ pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Va
       let frame = format!("v{}-{aspect}-{pct}.jpg", spec.version);
       let at = format!("{:.2}", duration * pct as f64 / 100.0);
       let grab = FfmpegRun {
-        cwd: out.clone(),
+        cwd: out.to_path_buf(),
         args: vec![
           s("-y"),
           s("-hide_banner"),
@@ -906,12 +928,13 @@ pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Va
           frame.clone(),
         ],
       };
-      run_ffmpeg(&ffmpeg, &grab).await?;
+      run_ffmpeg(ffmpeg, &grab).await?;
+      written.push(out.join(&frame));
       frames.push(frame);
     }
     outputs.push(serde_json::json!({ "aspect": aspect, "path": name, "durationSec": duration, "frames": frames }));
   }
-  Ok(serde_json::json!({ "ok": true, "outputs": outputs }))
+  Ok(outputs)
 }
 
 // ── Word timings for the captions (phase 2a) ────────────────────────────────
@@ -1351,6 +1374,17 @@ mod tests {
       caption_color: Some("#ffffff".into()),
       outline_color: Some("#000000".into()),
     };
+    // A run that fails its check (the voice is said to be 20 s) leaves no file behind...
+    let wrong = AssemblySpec {
+      voice_seconds: 20.0,
+      ..spec.clone()
+    };
+    assert!(content_assemble_video(wrong)
+      .await
+      .unwrap_err()
+      .contains("long"));
+    assert!(!project.join("output").join("v1-16x9.mp4").exists());
+    // ...so the retry with the same version works.
     let result = content_assemble_video(spec.clone())
       .await
       .expect("assembled");
