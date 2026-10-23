@@ -473,17 +473,22 @@ export async function executeBatch(batchId, { endpoint, zeroCostMode, onProgress
     onProgress?.({ stage: 'task_start', task, batchId, goalId: batch.goalId });
 
     const dirContext = projectDir ? ` Work in directory: ${projectDir}.` : '';
-    const commandText = `${task.agent}: ${task.title} — ${task.description}${dirContext}`;
+    // Phase 6a: asked of Jose by name, so he plans it with the right agent (a
+    // batch names a suggested agent, not always one that may do the task).
+    // The batch runs unattended, so the plan is not shown first.
+    const commandText = `Ask Jose: ${task.title} — ${task.description}${dirContext} Suggested agent: ${task.agent}.`;
 
     try {
-      const { runJoseCommandExecutionPipeline } = await import('./joseExecutionEngineService');
-      const result = await runJoseCommandExecutionPipeline({
-        commandText,
-        source: 'boardroom',
+      const { answerOrPlan } = await import('./jose/joseInbound');
+      const outcome = await answerOrPlan(commandText, {
+        source: 'batch',
         endpoint,
         zeroCostMode,
+        showPlanFirst: 'never',
         onProgress
       });
+      // Only a request that ran counts; a direct answer did no work.
+      const result = outcome.kind === 'request' ? outcome.result : null;
 
       if (result?.ok) {
         updateTaskStatus(task.id, 'completed', result.executionReceipts || []);

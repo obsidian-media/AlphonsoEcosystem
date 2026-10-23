@@ -62,7 +62,10 @@ vi.mock('../../components/jose/JoseRequestsBoard', () => ({
 // Phase 4: an approved step of a saved Jose request carries the request on.
 vi.mock('../../services/jose/joseRequestStore', () => ({
   findRequestByPacket: vi.fn((id: string) => (id === 'p-request' ? { id: 'r1', status: 'waiting_approval' } : null)),
+  listJoseRequests: vi.fn(() => (globalThis as any).__orchRequests || []),
 }));
+// Phase 6a: the Command tab goes through Jose's one entry.
+vi.mock('../../services/jose/joseInbound', () => ({ answerOrPlan: vi.fn() }));
 vi.mock('../../services/joseExecutionEngineService', () => ({
   executeApprovedPackets: vi.fn(async () => ({ ok: true, summary: 'Marcus completed 1 approved task successfully.', results: [] })),
 }));
@@ -75,6 +78,7 @@ vi.mock('framer-motion', () => ({
 import { OrchestratorView } from '../../components/OrchestratorView';
 import { executeApprovedPackets } from '../../services/joseExecutionEngineService';
 import { executeApprovedPacket } from '../../services/packetExecutionService';
+import { answerOrPlan } from '../../services/jose/joseInbound';
 
 function makeProps(overrides = {}) {
   return {
@@ -124,5 +128,25 @@ describe('OrchestratorView', () => {
     await waitFor(() => expect(executeApprovedPackets).toHaveBeenCalledWith(['p-request']));
     expect(executeApprovedPacket).not.toHaveBeenCalled();
     (globalThis as any).__orchPackets = undefined;
+  });
+
+  it('Send to Jose shows a direct answer', async () => {
+    vi.mocked(answerOrPlan).mockResolvedValueOnce({ kind: 'answer', text: 'Paris.' });
+    render(<OrchestratorView {...makeProps({ settings: { zeroCostMode: true } })} />);
+    fireEvent.click(screen.getByRole('button', { name: /send to jose/i }));
+    expect((await screen.findByTestId('orch-command-answer')).textContent).toBe('Paris.');
+    expect(answerOrPlan).toHaveBeenCalledWith(expect.any(String), { source: 'user', zeroCostMode: true, background: true });
+  });
+
+  it('Send to Jose opens the Requests tab on the new request', async () => {
+    (globalThis as any).__orchRequests = [{ id: 'r-old' }];
+    vi.mocked(answerOrPlan).mockImplementationOnce(async () => {
+      (globalThis as any).__orchRequests = [{ id: 'r-new' }, { id: 'r-old' }];
+      return { kind: 'started', done: new Promise(() => {}) };
+    });
+    render(<OrchestratorView {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: /send to jose/i }));
+    expect(await screen.findByText('Jose requests board r-new', {}, { timeout: 3000 })).toBeTruthy();
+    (globalThis as any).__orchRequests = undefined;
   });
 });

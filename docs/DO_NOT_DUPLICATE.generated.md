@@ -395,7 +395,7 @@ Source-backed inventory: 243 services and 154 components. Human purpose descript
 | service | `src/services/workflowMemoryService.ts` | `appendWorkflowMemory`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getMemorySize`, `importMemoryItems`, `listMemory`, `listWorkflowMemory`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `pushMemory`, `tickExpiry`, `WORKFLOW_MEMORY_CATEGORIES` |
 | service | `src/services/workflowOperationsRegistryService.ts` | `getWorkflowOperation`, `listWorkflowOperations`, `updateWorkflowOperationStatus`, `WORKFLOW_OPS_SCOPE`, `WorkflowOperation` |
 | service | `src/services/workflowReceiptService.ts` | `appendWorkflowReceipt`, `listWorkflowReceipts`, `WORKFLOW_RECEIPT_SCOPE`, `WORKFLOW_RECEIPT_STATUSES` |
-| service | `src/services/workflowRegistryService.ts` | `executeWorkflowTasks`, `getWorkflow`, `listWorkflows`, `runWorkflow`, `runWorkflowChain`, `WORKFLOW_EXECUTION_SCOPE`, `WORKFLOWS` |
+| service | `src/services/workflowRegistryService.ts` | `executeWorkflowTasks`, `getWorkflow`, `listWorkflows`, `runWorkflow`, `runWorkflowChain`, `WORKFLOW_EXECUTION_SCOPE`, `WORKFLOW_LABEL`, `WORKFLOWS`, `workflowSteps` |
 | service | `src/services/workflowTelemetryService.ts` | `appendWorkflowTelemetryEvent`, `listWorkflowTelemetry`, `summarizeWorkflowTelemetry`, `WORKFLOW_TELEMETRY_SCOPE` |
 | service | `src/services/workspaceArtifactService.ts` | `writeHandoffArtifact`, `WriteHandoffArtifactOptions`, `writeWorkspaceArtifact`, `WriteWorkspaceArtifactOptions` |
 | service | `src/services/workspaceExportService.ts` | `collectExportableStorage`, `exportWorkspace`, `importWorkspace`, `isSecretStorageKey`, `stripSecretFields` |
