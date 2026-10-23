@@ -30,12 +30,18 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
       ['script', 'content', 'campaign', 'channel', 'thumbnail', 'thumbnails', 'post', 'upload', 'launch', 'promo'],
     ],
     steps: [
+      // The Miya content factory's own steps (phase 6b); a project runs them as one request.
       step('research_trends', 'hector', 'research_virality', 'Find what makes videos on this topic do well: real examples, hooks and formats, with sources.'),
       step('research_market', 'nova', 'analysis_market', 'Judge the audience and the opportunity for this video: who it is for and why now.'),
       step('script', 'miya', 'creative_script', 'Write three hooks and a timed script for the video, using the research.', ['research_trends', 'research_market'], ['write_own_work']),
-      step('review_value', 'nova', 'analysis_content_review', 'Review the script for value to the audience and say what to improve.', ['script'], ['read'], 'script'),
-      step('review_quality', 'maria', 'audit_content_quality', 'Check the script for accuracy, honest claims and quality against the research.', ['script'], ['read'], 'script'),
-      step('campaign', 'miya', 'creative_campaign', 'Write the captions, hashtags and ad copy for the video, using the reviews.', ['review_value', 'review_quality'], ['write_own_work']),
+      step('review_value', 'nova', 'analysis_content_review', 'Review the hook and the script for value to the audience and say what must change.', ['script'], ['read'], 'script'),
+      step('review_quality', 'maria', 'audit_content_quality', 'Score the script against the references and check its claims are honest.', ['script'], ['read'], 'script'),
+      step('scenes', 'miya', 'creative_scenes', 'Plan the storyboard and shot list for the script, with a picture for each scene.', ['review_value', 'review_quality'], ['write_own_work']),
+      step('thumbnail', 'miya', 'creative_thumbnails', 'Design three thumbnails with a short headline in the brand colours.', ['scenes'], ['write_own_work']),
+      step('campaign', 'miya', 'creative_campaign', 'Write the captions, hashtags, ad copy and a posting calendar.', ['thumbnail'], ['write_own_work']),
+      step('timing', 'nova', 'strategy_timing', 'Choose the best times to put the video out on each platform.', ['thumbnail']),
+      step('quality', 'maria', 'audit_content_quality', 'Score every piece against the references before anything goes out.', ['campaign', 'timing']),
+      step('security', 'sentinel', 'security_content_check', 'Check the text and links for anything unsafe or misleading.', ['campaign', 'timing']),
     ],
   },
   {
