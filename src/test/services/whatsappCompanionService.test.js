@@ -22,6 +22,10 @@ vi.mock('../../services/agentActivityService', () => ({
   listAgentActivity: vi.fn().mockReturnValue([])
 }));
 
+vi.mock('../../services/jose/joseInbound', async (importOriginal) => ({
+  ...(await importOriginal()),
+  answerOrPlan: vi.fn(async () => ({ kind: 'started', done: Promise.resolve({ ok: true, executedCount: 1 }) })),
+}));
 vi.mock('../../services/joseCommandRouterService', () => ({
   listJoseCommands: vi.fn().mockReturnValue([]),
   createJoseCommandRoute: vi.fn().mockResolvedValue({ id: 'cmd-1', status: 'distributed' })
@@ -152,10 +156,12 @@ describe('whatsappCompanionService', () => {
 
     it('routes plain text to the real Jose command router', async () => {
       await service.processInboundWhatsAppMessages([{ fromId: '15551234567', text: 'what is the status', messageId: 'm1' }]);
-      expect(mockJose.createJoseCommandRoute).toHaveBeenCalledWith(expect.objectContaining({
-        commandText: 'what is the status',
-        source: 'whatsapp'
-      }));
+      const { answerOrPlan } = await import('../../services/jose/joseInbound');
+      expect(answerOrPlan).toHaveBeenCalledWith('what is the status', expect.objectContaining({ source: 'whatsapp', background: true }));
+      expect(mockJose.createJoseCommandRoute).not.toHaveBeenCalled();
+      // A one-line result follows when the request ends.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(mockSend.mock.calls.some((c) => String(c[0]?.text || '') === 'Done.')).toBe(true);
     });
 
     it('processes every message in a batch, not just the first', async () => {
@@ -166,7 +172,8 @@ describe('whatsappCompanionService', () => {
         { fromId: '15551234567', text: 'route this', messageId: 'm3' }
       ]);
       expect(mockBus.listApprovalQueue).toHaveBeenCalled();
-      expect(mockJose.createJoseCommandRoute).toHaveBeenCalledWith(expect.objectContaining({ commandText: 'route this' }));
+      const { answerOrPlan } = await import('../../services/jose/joseInbound');
+      expect(answerOrPlan).toHaveBeenCalledWith('route this', expect.anything());
       const pingReply = mockSend.mock.calls.find((c) => String(c[0]?.text || '').includes('Pong'));
       expect(pingReply).toBeTruthy();
     });

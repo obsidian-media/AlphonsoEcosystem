@@ -30,6 +30,10 @@ vi.mock('../services/agentBusService', () => ({
   }
 }));
 
+vi.mock('../services/jose/joseInbound', async (importOriginal) => ({
+  ...(await importOriginal()),
+  answerOrPlan: vi.fn(async () => ({ kind: 'started', done: Promise.resolve({ ok: true, executedCount: 1 }) })),
+}));
 vi.mock('../services/joseCommandRouterService', () => ({
   createJoseCommandRoute: vi.fn().mockResolvedValue({ id: 'cmd-1', status: 'distributed' }),
   listJoseCommands: vi.fn()
@@ -335,7 +339,8 @@ describe('telegramCompanionService', () => {
         }]
       });
 
-      expect(mockJose.createJoseCommandRoute).toHaveBeenCalled();
+      const { answerOrPlan } = await import('../services/jose/joseInbound');
+      expect(answerOrPlan).toHaveBeenCalledWith('what is the weather', expect.objectContaining({ source: 'telegram' }));
     });
   });
 

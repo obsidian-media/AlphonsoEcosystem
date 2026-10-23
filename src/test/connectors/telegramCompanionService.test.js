@@ -30,6 +30,10 @@ vi.mock('../../services/joseCommandRouterService', () => ({
   listJoseCommands: vi.fn().mockReturnValue([])
 }));
 
+vi.mock('../../services/jose/joseInbound', async (importOriginal) => ({
+  ...(await importOriginal()),
+  answerOrPlan: vi.fn(async () => ({ kind: 'started', done: Promise.resolve({ ok: true, executedCount: 1 }) })),
+}));
 vi.mock('../../services/memoryService', () => ({
   listMemoryItems: vi.fn().mockReturnValue([])
 }));
@@ -274,7 +278,9 @@ describe('telegramCompanionService', () => {
         messages: [{ chatId: 'owner-chat', text: '/ask what is the status', updateId: 1 }]
       });
 
-      expect(mockJose.createJoseCommandRoute).toHaveBeenCalled();
+      const { answerOrPlan } = await import('../../services/jose/joseInbound');
+      expect(answerOrPlan).toHaveBeenCalledWith('what is the status', expect.objectContaining({ source: 'telegram', background: true }));
+      expect(mockJose.createJoseCommandRoute).not.toHaveBeenCalled();
     });
 
     it('routes plain text to jose command router', async () => {
@@ -283,7 +289,10 @@ describe('telegramCompanionService', () => {
         messages: [{ chatId: 'owner-chat', text: 'hello there', updateId: 1 }]
       });
 
-      expect(mockJose.createJoseCommandRoute).toHaveBeenCalled();
+      const { answerOrPlan } = await import('../../services/jose/joseInbound');
+      expect(answerOrPlan).toHaveBeenCalledWith('hello there', expect.objectContaining({ source: 'telegram', background: true }));
+      const reply = mockInvoke.mock.calls.find((c) => c[0] === 'connector_send_telegram' && /Jose is on it/.test(String(c[1]?.text)));
+      expect(reply).toBeTruthy();
     });
 
     it('processes every message in a batch, not just the first (regression)', async () => {
@@ -300,9 +309,8 @@ describe('telegramCompanionService', () => {
       });
 
       expect(mockBus.listApprovalQueue).toHaveBeenCalled();
-      expect(mockJose.createJoseCommandRoute).toHaveBeenCalledWith(
-        expect.objectContaining({ commandText: 'route this to jose' })
-      );
+      const { answerOrPlan } = await import('../../services/jose/joseInbound');
+      expect(answerOrPlan).toHaveBeenCalledWith('route this to jose', expect.anything());
       const pingReply = mockInvoke.mock.calls.find(
         c => c[0] === 'connector_send_telegram' && String(c[1]?.text || '').includes('Pong')
       );

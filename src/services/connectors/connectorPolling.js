@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { AGENTS, createAgentPacket, requestPacketRetry, sendPacketToDeadLetter, updatePacketStatus } from '../agentBusService';
 import { appendSessionEvent } from '../sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from '../trustModel';
-import { createJoseCommandRoute } from '../joseCommandRouterService';
+import { answerOrPlan } from '../jose/joseInbound';
 import { browserPollTelegram } from '../telegramBrowserConnector';
 import { browserPollWhatsAppGateway } from '../whatsappBrowserConnector';
 import {
@@ -101,6 +101,33 @@ export function createConnectorRoutePacket(connectorId, text, senderId = '') {
   return { packet, rejected: false, reason: null, parsed };
 }
 
+/**
+ * A polled message for Jose (phase 6a): he answers it (kept on the packet) or
+ * starts a request in the background; the request's command is recorded on
+ * the packet when it ends. A failure reaches the caller, which retries.
+ */
+export async function sendConnectorMessageToJose(connectorId, packetId, text) {
+  const result = await answerOrPlan(text, { source: connectorId, background: true });
+  if (result.kind === 'answer') {
+    updatePacketStatus(packetId, 'answered', { answer: result.text, answeredAtMs: timestampMs() });
+    appendConnectorAudit(connectorId, 'jose_answered', { packetId });
+    return 'answered';
+  }
+  updatePacketStatus(packetId, 'reported_to_jose', {
+    commandDistributedAtMs: timestampMs(),
+    verificationState: TRUST_STATES.VERIFIED,
+    confidence: TRUST_STATES.VERIFIED
+  });
+  Promise.resolve(result.done)
+    .then((outcome) => {
+      if (!outcome?.commandId) return;
+      updatePacketStatus(packetId, 'reported_to_jose', { joseCommandId: outcome.commandId, joseRequestId: outcome.requestId || null });
+      appendConnectorAudit(connectorId, 'jose_command_distributed', { packetId, commandId: outcome.commandId });
+    })
+    .catch((error) => appendConnectorAudit(connectorId, 'jose_request_failed', { packetId, error: String(error) }));
+  return 'started';
+}
+
 export async function pollTelegramConnector(limit = 12) {
   const readiness = await requireConnectorReady('telegram', 'inbound_poll', `poll limit ${limit}`);
   if (!readiness.ok) {
@@ -161,24 +188,8 @@ export async function pollTelegramConnector(limit = 12) {
         chatId: message?.chatId ?? null
       });
       try {
-        const command = await createJoseCommandRoute({
-          commandText: route?.parsed?.originalText || message?.text || '',
-          source: 'telegram'
-        });
-        if (command?.id) {
-          joseDistributed += 1;
-          updatePacketStatus(route.packet.id, 'reported_to_jose', {
-            joseCommandId: command.id,
-            commandDistributedAtMs: timestampMs(),
-            verificationState: TRUST_STATES.VERIFIED,
-            confidence: TRUST_STATES.VERIFIED
-          });
-          appendConnectorAudit('telegram', 'jose_command_distributed', {
-            packetId: route.packet.id,
-            commandId: command.id,
-            assignmentCount: command.assignments?.length || 0
-          });
-        }
+        await sendConnectorMessageToJose('telegram', route.packet.id, route?.parsed?.originalText || message?.text || '');
+        joseDistributed += 1;
       } catch (error) {
         joseFailures += 1;
         const retried = requestPacketRetry(route.packet.id, `Jose distribution failed: ${String(error)}`);
@@ -269,24 +280,8 @@ export async function pollWhatsAppConnector(limit = 12) {
         chatId: message?.chatId ?? null
       });
       try {
-        const command = await createJoseCommandRoute({
-          commandText: route?.parsed?.originalText || message?.text || '',
-          source: 'whatsapp'
-        });
-        if (command?.id) {
-          joseDistributed += 1;
-          updatePacketStatus(route.packet.id, 'reported_to_jose', {
-            joseCommandId: command.id,
-            commandDistributedAtMs: timestampMs(),
-            verificationState: TRUST_STATES.VERIFIED,
-            confidence: TRUST_STATES.VERIFIED
-          });
-          appendConnectorAudit('whatsapp', 'jose_command_distributed', {
-            packetId: route.packet.id,
-            commandId: command.id,
-            assignmentCount: command.assignments?.length || 0
-          });
-        }
+        await sendConnectorMessageToJose('whatsapp', route.packet.id, route?.parsed?.originalText || message?.text || '');
+        joseDistributed += 1;
       } catch (error) {
         joseFailures += 1;
         const retried = requestPacketRetry(route.packet.id, `Jose distribution failed: ${String(error)}`);

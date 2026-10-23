@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { appendConnectorAudit, createConnectorRoutePacket } from './connectorRegistryService';
-import { createJoseCommandRoute } from './joseCommandRouterService';
+import { answerOrPlan, inboundReply } from './jose/joseInbound';
 import { timestampMs } from './trustModel';
 import { browserPollTelegram, browserSendTelegram, handleTelegramBotCommand } from './telegramBrowserConnector';
 import { getConnectorCredential, getConnectorCredentials } from './connectors/connectorAuth';
@@ -100,9 +100,12 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}): Promise<PollRe
         const cmd = text.split(/\s+/)[0].slice(1).toLowerCase().replace(/@\w+$/, '');
         const args = text.split(/\s+/).slice(1).join(' ');
         if (cmd === 'ask' && args) {
-          await createJoseCommandRoute({ commandText: args, source: 'telegram' }).catch(() => {});
+          // Jose answers or plans it (phase 6a); the reply-only handler would add a second message.
+          const result = await answerOrPlan(args, { source: 'telegram', background: true });
+          await browserSendTelegram({ botToken: token, chatId, text: inboundReply(result, 'telegram') }).catch(() => {});
+        } else {
+          await handleTelegramBotCommand({ text, chatId, botToken: token });
         }
-        await handleTelegramBotCommand({ text, chatId, botToken: token });
         commandReplies += 1;
         appendConnectorAudit('telegram', 'bot_command_handled', { cmd, chatId, updateId: message?.update_id || null });
       } catch (error) {
@@ -128,11 +131,8 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}): Promise<PollRe
         updateId: message?.update_id || null
       });
       try {
-        await createJoseCommandRoute({
-          commandText: route?.parsed?.originalText || text,
-          source: 'telegram'
-        });
-        await browserSendTelegram({ botToken: token, chatId, text: '📨 Received. Jose is processing your request.' }).catch(() => {});
+        const result = await answerOrPlan(route?.parsed?.originalText || text, { source: 'telegram', background: true });
+        await browserSendTelegram({ botToken: token, chatId, text: inboundReply(result, 'telegram') }).catch(() => {});
       } catch (error) {
         appendConnectorAudit('telegram', 'jose_routing_failed', {
           packetId: route.packet?.id || null,
