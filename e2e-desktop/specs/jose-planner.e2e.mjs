@@ -72,7 +72,13 @@ describe('Alphonso desktop: Jose plans', () => {
     await browser.waitUntil(
       async () => (await $$('[data-testid="chat-message-assistant"]')).length > before && PLAN_NOTE.test(await lastReplyText()),
       { timeout: 1100000, interval: 2000, timeoutMsg: 'Jose never replied with how he planned the request' }
-    );
+    ).catch(async (e) => {
+      const reqs = JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
+      const last = reqs.slice(-1)[0];
+      console.log('PLANNER-DIAG reply', JSON.stringify(await lastReplyText()).slice(0, 1500));
+      console.log('PLANNER-DIAG request', JSON.stringify(last && { status: last.status, plan: last.plan, steps: last.steps.map((s) => [s.stepId, s.agent, s.status, s.error]), log: last.changeLog }).slice(0, 2500));
+      throw e;
+    });
     // Hector did the research: the plan ran, not just a chat reply.
     const receipts = await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]');
     const requests = JSON.parse(receipts);
