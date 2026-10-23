@@ -45,6 +45,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Each step is saved to the project as it finishes, however the request is carried on.
   - **From Chat:** asking for a content video ("make a YouTube video script about…") starts a Miya Studio project for your default brand, with "Open in Miya Studio".
   - Nothing outside Jose calls the old pipeline any more; a test fails if something does.
+- **Miya makes the finished video (content factory phase 2a).** A project now ends with real video files: Run project goes on after the thumbnails to four new steps.
+  - **Voice-over:** Kokoro reads the script in your brand's voice, one line per scene. Install Kokoro in Runtime Hub (its model is downloaded and checked there).
+  - **Music:** Miya describes the mood and MusicGen (AudioCraft, from Runtime Hub) makes a music bed. Without AudioCraft the step is skipped and says so.
+  - **Stock clips:** Hector finds a clip for each scene on Pexels, Pixabay or Coverr, with whichever free keys you add in Connectors → Content & Productivity, and keeps each clip's source, author and license. With no keys, the scene pictures are used.
+  - **Finished video:** a 16:9 and a 9:16 MP4 with the voice on top, the music under it (quieter while the voice speaks), and captions that use only the script's words (timed word by word when Whisper is installed). Each scene is its stock clip, else its picture with a slow zoom, else a card in your brand colour. Both files are checked after they are made, and a new version never overwrites an older one.
+  - The Scene Builder plays the voice-over, the music and both videos, and shows three frames of each. The installer now includes FFmpeg (LGPL build, Windows); Settings names its license.
 - **Everything goes through Jose (Jose redesign, phase 6a).**
   - **Telegram, WhatsApp, the phone and the Orchestrator page** now get what Chat gets: a question is answered, a task is planned and run as a request on the Requests board, with approvals by what each step does. Telegram and WhatsApp reply "Jose is on it" at once; WhatsApp sends one line when the request ends. The Orchestrator's Send to Jose shows the answer, or opens the Requests tab on the new request. `/boardroom` on Telegram used to create work that nothing ran; it now goes to Jose.
   - **Schedules** run through Jose too, but never stop to show the plan and never use a paid model. A step that needs approval still waits, and Telegram asks.

@@ -340,6 +340,10 @@ jobs:
         shell: pwsh
         run: cargo install tauri-driver --locked --version "^2"
 
+      # content-video.e2e.mjs assembles a real video with the bundled ffmpeg.
+      - name: Fetch bundled ffmpeg (LGPL)
+        run: node scripts/fetch-ffmpeg.mjs
+
       - name: Build debug Tauri binary
         run: npm run tauri build -- --debug --no-bundle
 

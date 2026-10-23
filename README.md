@@ -518,6 +518,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR g
 
 Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 250 services already exist.
 
+## Third-party notices
+
+- **FFmpeg** (bundled in the Windows installer, for Miya's finished videos): an LGPL 2.1 build from BtbN/FFmpeg-Builds, used unmodified as separate programs; its license is installed beside it (`ffmpeg\LICENSE.txt`), and its source is at [ffmpeg.org](https://ffmpeg.org/legal.html).
+- **Kokoro** (installed from Runtime Hub, not bundled): `kokoro-onnx` and the Kokoro-82M model and voices, Apache License 2.0.
+- **MusicGen** (AudioCraft, installed from Runtime Hub, not bundled): the code is MIT; the model weights are CC-BY-NC 4.0 (non-commercial). Check that license before using generated music commercially.
+- **Stock footage** (Pexels, Pixabay, Coverr): each clip is used under its site's license, with your own free key; the source, author and license page of every clip are kept in the project.
+
 ## Security
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting policy and scope.  
