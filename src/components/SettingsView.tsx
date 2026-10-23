@@ -652,7 +652,10 @@ function PaidModelsPanel({ settings, setSettings }: { settings: AppSettings; set
         <input id="paid-output-price" inputMode="decimal" value={shown(saved.outputPerMillionUsd)} onChange={(e) => save({ outputPerMillionUsd: amountOf(e.target.value) })} className={inputClass} />
         <label htmlFor="paid-cap">Monthly spending cap (USD)</label>
         <input id="paid-cap" inputMode="decimal" placeholder="No cap" value={shown(saved.monthlyCapUsd)} onChange={(e) => save({ monthlyCapUsd: amountOf(e.target.value) })} className={inputClass} />
+        <label htmlFor="runway-price">Runway price per second of video (USD)</label>
+        <input id="runway-price" inputMode="decimal" value={shown(saved.runwayPricePerSecondUsd)} onChange={(e) => save({ runwayPricePerSecondUsd: amountOf(e.target.value) })} className={inputClass} />
       </div>
+      <div className="text-[11px] text-(--text-3) mt-2">Runway makes Miya's AI clips when a project chooses it; each run asks first with the estimate. The monthly cap covers the paid models and Runway together.</div>
       <div className="text-[11px] text-(--text-3) mt-2">Spent this month: ${monthSpendUsd().toFixed(2)}</div>
     </div>
   );

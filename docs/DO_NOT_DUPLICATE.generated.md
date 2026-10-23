@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 252 services and 156 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 253 services and 156 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -263,6 +263,7 @@ Source-backed inventory: 252 services and 156 components. Human purpose descript
 | service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
 | service | `src/services/contentFactory/contentStepRunner.ts` | `approveContentStep`, `CONTENT_TASK_PREVIEW`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `hasOwnKey`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion` |
+| service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
 | service | `src/services/creativeRoutingService.ts` | `detectCreativeIntent`, `routeToCreativeTool` |
@@ -296,7 +297,7 @@ Source-backed inventory: 252 services and 156 components. Human purpose descript
 | service | `src/services/jose/josePlanner.ts` | `describePlanSource`, `JosePlan`, `planJoseRequest` |
 | service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `replacePlanSteps`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `updateJoseStep` |
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
-| service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend` |
+| service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd` |
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `priorOutputsForNeeds`, `setStepOutput` |
 | service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |

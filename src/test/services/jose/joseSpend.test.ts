@@ -5,7 +5,7 @@ vi.mock('../../../services/connectors/connectorAuth', () => ({
 }));
 
 import {
-  getPaidModelSettings, paidModelAvailable, estimateCostUsd, recordSpend, monthSpendUsd, canSpend,
+  getPaidModelSettings, paidModelAvailable, estimateCostUsd, recordSpend, monthSpendUsd, canSpend, recordSpendUsd,
 } from '../../../services/jose/joseSpend';
 
 const paid = { allowed: true, provider: 'claude', model: 'claude-haiku-5-5', inputPerMillionUsd: 3, outputPerMillionUsd: 15, monthlyCapUsd: 1 };
@@ -51,7 +51,7 @@ describe('paidModelAvailable', () => {
 
   it('reads nothing usable from an empty or broken setting', () => {
     localStorage.setItem('alphonso_settings', '{not json');
-    expect(getPaidModelSettings()).toEqual({ allowed: false, provider: null, model: null, inputPerMillionUsd: null, outputPerMillionUsd: null, monthlyCapUsd: null });
+    expect(getPaidModelSettings()).toEqual({ allowed: false, provider: null, model: null, inputPerMillionUsd: null, outputPerMillionUsd: null, monthlyCapUsd: null, runwayPricePerSecondUsd: null });
   });
 });
 
@@ -83,5 +83,25 @@ describe('costs', () => {
   it('has no cap when the cap is blank', () => {
     setSettings({}, { monthlyCapUsd: null });
     expect(canSpend(1000)).toEqual({ ok: true });
+  });
+});
+
+// Miya content factory phase 2b: Runway clips share the monthly total and cap.
+describe('Runway spending', () => {
+  it('reads the price per second you entered, blank when not entered', () => {
+    setSettings({}, { runwayPricePerSecondUsd: 0.05 });
+    expect(getPaidModelSettings().runwayPricePerSecondUsd).toBe(0.05);
+    setSettings({}, { runwayPricePerSecondUsd: '' });
+    expect(getPaidModelSettings().runwayPricePerSecondUsd).toBeNull();
+  });
+
+  it('adds a Runway clip to the same month total that the cap checks', () => {
+    setSettings();
+    recordSpendUsd(0.5);
+    expect(monthSpendUsd()).toBeCloseTo(0.5);
+    recordSpend({ inputTokens: 0, outputTokens: 0 });
+    expect(recordSpendUsd(0.25)).toBeCloseTo(0.75);
+    expect(canSpend(0.3).ok).toBe(false);
+    expect(recordSpendUsd(-1)).toBeCloseTo(0.75);
   });
 });
