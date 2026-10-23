@@ -7,6 +7,22 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-23] **Miya content factory phases 2, 3 and 4: not started; do them after the Jose redesign (owner, 2026-10-23).** Phase 1 shipped in PR #332 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`, plan `docs/superpowers/plans/2026-10-22-miya-content-factory-phase1.md`). Order agreed: Jose redesign first, so the remaining phases are built on it instead of on the one-request-per-step workaround.
+  - **Phase 2, video, audio and the finished file:**
+    - scene pictures become clips through Runway or ComfyUI (chosen per project; Runway is paid and asks first), on a stock B-roll base (Pexels, Pixabay, Coverr);
+    - Kokoro voice-over by default; AudioCraft music and sound effects through Runtime Hub;
+    - word-timed captions (Whisper aligned to the script text); assembly into one file per output, 16:9 and 9:16, checked with ffprobe and frame grabs.
+  - **Phase 3, publishing:**
+    - Marcus publishes after approval, or hands to Content Studio, exports, or adds to the calendar (Jose scheduler);
+    - suggested times plus the brand's fixed schedule;
+    - ad copy handed to Meta, Google and YouTube Ads;
+    - Shorts written as their own complete mini-scripts from the long video.
+  - **Phase 4, learning and outside tools:**
+    - real performance numbers (views, saves, sends) feed the brand lessons;
+    - a CapCut export or bridge; a Mint bridge only if the owner revisits keeping Mint separate;
+    - Higgsfield and ElevenLabs connectors (paid, ask first).
+  - **Resume hint:** each phase gets its own plan from the design document's section 8. Status: OPEN.
+
 - [2026-10-22] **Jose's orchestration design needs fixing (owner: "it does look broken").** Found while designing the Miya content factory (`docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`).
   - **Problem 1, one task per agent.** `buildExecutionPlan()` (`agentOutputStoreService.ts`) keys assignments by agent, so a request can give each agent only one task. A second assignment for the same agent replaces the first.
   - **Problem 2, a fixed order.** `AGENT_DEPENDENCIES` fixes the order for every request: Hector, Maria, Sentinel, Nova and Jose first; Miya after Hector; Alphonso after Miya; Marcus after Maria; Echo last. So Nova and Maria can never review work made in the same request; Maria's audit runs before the work it should audit.
