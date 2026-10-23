@@ -13,6 +13,8 @@ export type JoseRequestStatus = 'waiting_plan_approval' | 'running' | 'waiting_a
 
 export interface JoseRequestStep extends PlanStep {
   status: string;
+  /** For a review step: what it found (phase 4). */
+  verdict?: 'pass' | 'fix';
   error?: string;
   startedAtMs?: number;
   endedAtMs?: number;

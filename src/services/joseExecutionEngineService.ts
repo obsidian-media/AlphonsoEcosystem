@@ -1528,6 +1528,14 @@ export async function runJoseCommandExecutionPipeline({
     // A rewire never changes steps already run, or the steps being added (a
     // revision needs the old reviews, not its own re-reviews).
     const keep = [...processedSteps, ...change.add.map((step) => step.stepId)];
+    if (change.verdict) {
+      // A review's verdict: on its step and in the change log only.
+      if (joseRequestId) {
+        try { updateJoseStep(joseRequestId, change.verdict.stepId, { verdict: change.verdict.verdict }); } catch { /* display aid only */ }
+      }
+      noteOnRequest(change.reason);
+      return;
+    }
     if (change.add.length === 0) {
       adaptNotes.push(change.reason);
       noteOnRequest(change.reason);

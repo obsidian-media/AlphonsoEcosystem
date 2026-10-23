@@ -384,6 +384,13 @@ describe('Jose runs plans as step graphs', () => {
     const order = result.executionReceipts.map((r) => stepOf[r.packetId]);
     expect(order).toEqual(['script', 'review_value', 'script-fix-1', 'review_value-r1', 'campaign']);
     expect(request.steps.find((s) => s.stepId === 'campaign').needs).toEqual(['review_value-r1']);
+    // Each review's verdict is recorded on its step and in the change log.
+    expect(request.steps.find((s) => s.stepId === 'review_value').verdict).toBe('fix');
+    expect(request.steps.find((s) => s.stepId === 'review_value-r1').verdict).toBe('pass');
+    const log = request.changeLog.map((c) => c.text);
+    expect(log).toContain("Nova's review: asked for changes.");
+    expect(log).toContain("Nova's review: no changes needed.");
+    expect(result.planNote || '').not.toMatch(/review: no changes needed/);
   });
 
   // Phase 4: an agent asks for help through Jose.

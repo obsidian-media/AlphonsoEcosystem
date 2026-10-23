@@ -43,4 +43,9 @@ describe('JosePlanMap', () => {
     render(<JosePlanMap steps={[{ ...steps[0], stepId: 'facts-fix-1', round: 1 }]} />);
     expect(screen.getByText('Round 1')).toBeTruthy();
   });
+
+  it("shows a review's verdict", () => {
+    render(<JosePlanMap steps={[{ ...steps[0], stepId: 'r', reviewOf: 'x', verdict: 'fix' }]} />);
+    expect(screen.getByText(/Asked for changes/)).toBeTruthy();
+  });
 });

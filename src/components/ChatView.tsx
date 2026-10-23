@@ -1623,6 +1623,7 @@ export function ChatView({
                 {liveRequestId && onOpenJoseBoard && (
                   <button
                     type="button"
+                    data-testid="chat-live-open-board"
                     onClick={() => onOpenJoseBoard(liveRequestId)}
                     className="ml-auto text-xs font-medium text-(--accent) hover:underline"
                   >

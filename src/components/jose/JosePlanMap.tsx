@@ -6,7 +6,9 @@ import { Badge } from '../ui';
 import { layoutPlan, DEFAULT_BOX } from '../../services/jose/josePlanLayout';
 import type { PlanStep } from '../../services/jose/stepGraph';
 
-type MapStep = PlanStep & { status?: string; startedAtMs?: number; endedAtMs?: number };
+type MapStep = PlanStep & { status?: string; startedAtMs?: number; endedAtMs?: number; verdict?: 'pass' | 'fix' };
+
+const VERDICT_LABELS = { pass: 'Passed', fix: 'Asked for changes' };
 
 const AGENT_NAMES: Record<string, string> = {
   alphonso: 'Alphonso', jose: 'Jose', miya: 'Miya', hector: 'Hector', maria: 'Maria',
@@ -96,7 +98,7 @@ export function JosePlanMap({ steps, compact = false, selectedStepId, onSelectSt
               </div>
               {!compact && (
                 <>
-                  <div className="text-[9px] text-(--text-3) truncate">{step.actionType}{step.model ? ` · ${step.model}` : ''}</div>
+                  <div className="text-[9px] text-(--text-3) truncate">{step.actionType}{step.model ? ` · ${step.model}` : ''}{step.verdict ? ` · ${VERDICT_LABELS[step.verdict]}` : ''}</div>
                   <div className="text-[10px] leading-tight text-(--text-2) line-clamp-2" title={instruction}>{short}</div>
                 </>
               )}

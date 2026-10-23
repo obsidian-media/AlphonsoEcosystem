@@ -47,7 +47,14 @@ export interface PlanChange {
   /** Later steps that need any of `from` need all of `to` instead. */
   rewire?: { from: string[]; to: string[] };
   reason: string;
+  /** A review's verdict, saved on its step and in the change log (not in the reply). */
+  verdict?: { stepId: string; verdict: 'pass' | 'fix' };
 }
+
+const AGENT_NAMES: Record<string, string> = {
+  alphonso: 'Alphonso', jose: 'Jose', miya: 'Miya', hector: 'Hector', maria: 'Maria',
+  marcus: 'Marcus', echo: 'Echo', sentinel: 'Sentinel', nova: 'Nova',
+};
 
 export interface AdaptContext {
   steps: PlanStep[];
@@ -78,6 +85,12 @@ export async function adaptPlan(ctx: AdaptContext): Promise<PlanChange[]> {
     for (const review of reviews) {
       const judgement = await judgeReview(review, ctx.done[review.stepId]?.output);
       if (judgement.note) changes.push(note(judgement.note));
+      const who = AGENT_NAMES[review.agent] || review.agent;
+      changes.push({
+        add: [],
+        reason: `${who}'s review: ${judgement.verdict === 'fix' ? 'asked for changes' : 'no changes needed'}.`,
+        verdict: { stepId: review.stepId, verdict: judgement.verdict },
+      });
       judged.push({ review, verdict: judgement.verdict, findings: judgement.findings });
     }
     const round = planReviewRound(ctx.steps, judged);
