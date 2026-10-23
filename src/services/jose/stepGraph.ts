@@ -30,6 +30,8 @@ export interface PlanStep {
   round?: number;
   /** For a revision: the original step it revises (phase 4). */
   revises?: string;
+  /** Set on a step re-run after a help request; it may not ask again (phase 4). */
+  helpRound?: number;
 }
 
 const NAMES: Record<string, string> = {

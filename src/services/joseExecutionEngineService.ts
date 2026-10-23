@@ -34,6 +34,7 @@ import { checkPlan, JOSE_LIMITS } from './jose/stepGraph';
 import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus } from './jose/joseRequestStore';
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
+import { HELP_INSTRUCTION } from './jose/joseHelp';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
 import type { PlanStep } from './jose/stepGraph';
@@ -1276,7 +1277,8 @@ function toPlanStep(assignment: any): PlanStep {
 export function stepCommandText(assignment: any, commandText: string): string {
   const instruction = typeof assignment?.instruction === 'string' ? assignment.instruction.trim() : '';
   if (!instruction || assignment?.agent === AGENTS.ALPHONSO) return commandText;
-  return `${instruction}\n\nThe request: ${commandText}`;
+  const help = assignment?.helpRound ? '' : `\n\n${HELP_INSTRUCTION}`;
+  return `${instruction}\n\nThe request: ${commandText}${help}`;
 }
 
 async function executeAssignment(packet: any, assignment: any, requestText: any, options: any = {}) {

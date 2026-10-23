@@ -5,6 +5,7 @@
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.6–2.8
 import type { PlanStep } from './stepGraph';
 import { judgeReview, planReviewRound } from './joseReviewLoop';
+import { findHelpRequest, chooseHelper, planHelp } from './joseHelp';
 
 export interface PlanChange {
   add: PlanStep[];
@@ -46,6 +47,16 @@ export async function adaptPlan(ctx: AdaptContext): Promise<PlanChange[]> {
     }
     const round = planReviewRound(ctx.steps, judged);
     changes.push(...round.changes, ...round.notes.map(note));
+  }
+
+  // Help requests: a step that just ran and ends with "HELP: ...".
+  for (const step of ctx.steps) {
+    if (!ctx.justRan.includes(step.stepId) || ctx.done[step.stepId]?.status !== 'executed' || step.helpRound) continue;
+    const request = findHelpRequest(ctx.done[step.stepId]?.output);
+    if (!request) continue;
+    const helper = await chooseHelper(request, step.agent);
+    const change = helper ? planHelp(ctx.steps, step, request, helper) : null;
+    changes.push(change || note(`${step.agent} asked for help (${request}), but no agent can safely help with that here.`));
   }
   return changes;
 }

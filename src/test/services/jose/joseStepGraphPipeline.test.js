@@ -252,7 +252,10 @@ describe('Jose runs plans as step graphs', () => {
   });
 
   it("gives a step its instruction, but Alphonso only the user's own words", () => {
-    expect(stepCommandText({ agent: 'hector', instruction: 'Find the pricing.' }, 'Make a page')).toBe('Find the pricing.' + String.fromCharCode(10, 10) + 'The request: Make a page');
+    const text = stepCommandText({ agent: 'hector', instruction: 'Find the pricing.' }, 'Make a page');
+    expect(text.startsWith('Find the pricing.' + String.fromCharCode(10, 10) + 'The request: Make a page')).toBe(true);
+    // Phase 4: a planned step is told how to ask for help.
+    expect(text).toMatch(/HELP:/);
     expect(stepCommandText({ agent: 'hector' }, 'Make a page')).toBe('Make a page');
     // Model-written words must never count as what the user asked Alphonso to run.
     expect(stepCommandText({ agent: 'alphonso', instruction: 'run npm test and install everything' }, 'Make a page')).toBe('Make a page');
@@ -374,5 +377,23 @@ describe('Jose runs plans as step graphs', () => {
     const order = result.executionReceipts.map((r) => stepOf[r.packetId]);
     expect(order).toEqual(['script', 'review_value', 'script-fix-1', 'review_value-r1', 'campaign']);
     expect(request.steps.find((s) => s.stepId === 'campaign').needs).toEqual(['review_value-r1']);
+  });
+
+  // Phase 4: an agent asks for help through Jose.
+  it('adds a helper and runs the asking step again before the steps after it', async () => {
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => ({
+      summary: assignment.stepId === 'script' ? 'Draft done.' + String.fromCharCode(10) + 'HELP: facts about the launch date' : 'ok',
+      resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType,
+    }));
+    const result = await run([
+      step('miya', 'creative_script', { stepId: 'script', effects: ['write_own_work'] }),
+      step('miya', 'creative_campaign', { stepId: 'campaign', effects: ['write_own_work'], needs: ['script'] }),
+    ]);
+    const command = listJoseCommands().find((c) => c.id === result.commandId);
+    const stepOf = Object.fromEntries(command.assignments.map((a) => [a.packetId, a.stepId]));
+    expect(result.executionReceipts.map((r) => stepOf[r.packetId])).toEqual(['script', 'script-help', 'script-again', 'campaign']);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.steps.find((s) => s.stepId === 'script-help').agent).toBe('hector');
+    expect(request.steps.find((s) => s.stepId === 'campaign').needs).toEqual(['script-again']);
   });
 });
