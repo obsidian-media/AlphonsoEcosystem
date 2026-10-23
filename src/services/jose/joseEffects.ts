@@ -56,6 +56,23 @@ export function effectsNeedingApproval(
   return unique.filter((effect) => (LOCKED_EFFECTS.includes(effect) ? true : approvalMode && approvals[effect] === true));
 }
 
+/**
+ * Asked per command, not per step: the command check (commandApprovalService,
+ * assessCommandRisk) decides which of a step's commands ask, so the whole
+ * step does not wait as well (design §7: run asks "per assessCommandRisk()
+ * and Settings"). Otherwise the user would be asked twice.
+ */
+export const COMMAND_CHECKED_EFFECTS: JoseEffect[] = ['run'];
+
+/** The effects a whole step waits on before it starts. */
+export function stepEffectsToWaitFor(
+  effects: JoseEffect[],
+  approvals: Record<JoseEffect, boolean> = getEffectApprovals(),
+  approvalMode: boolean = getRuntimePolicySettings().approvalMode,
+): JoseEffect[] {
+  return effectsNeedingApproval(effects, approvals, approvalMode).filter((effect) => !COMMAND_CHECKED_EFFECTS.includes(effect));
+}
+
 /** Effects of the task types Jose and the content factory use today. */
 export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   research: ['read'],

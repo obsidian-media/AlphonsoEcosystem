@@ -53,6 +53,13 @@ describe('stepGraph', () => {
     expect(checkPlan([step('a', 'hector', 'research'), step('a', 'nova', 'analysis_x')]).problems.join(' ')).toMatch(/twice/);
   });
 
+  it("can leave task types to the run-time check (the splitter's plans)", () => {
+    const plan = [step('a', 'jose', 'boardroom_planning', [], ['write_own_work'])];
+    expect(checkPlan(plan).ok).toBe(false);
+    expect(checkPlan(plan, { taskTypes: false })).toEqual({ ok: true, problems: [] });
+    expect(checkPlan([step('a', 'miya', 'creative_x', [], ['run'])], { taskTypes: false }).ok).toBe(false);
+  });
+
   it('rejects more than 50 steps', () => {
     const many = Array.from({ length: 51 }, (_, i) => step(`s${i}`, 'hector', 'research'));
     expect(checkPlan(many).problems.join(' ')).toMatch(/50/);

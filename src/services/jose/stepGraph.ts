@@ -3,7 +3,7 @@
 // Before 2026-10-23 a request could give each agent only one task, in a fixed
 // order (AGENT_DEPENDENCIES); now an agent can have several steps, and each
 // step waits only for the steps it needs.
-import { AGENT_DEPENDENCIES } from '../agentOutputStoreService';
+import { AGENT_DEPENDENCIES } from './agentOrder';
 import { AGENT_PERMISSION_TABLE, isEffectAllowed, isTaskTypeAllowed } from './agentPermissionTable';
 import { EFFECT_LABELS, type JoseEffect } from './joseEffects';
 
@@ -52,8 +52,14 @@ function findCycle(steps: PlanStep[]): string[] {
   return cycle;
 }
 
-/** Every rule a plan must pass before it runs; problems in plain words. */
-export function checkPlan(steps: PlanStep[]): { ok: boolean; problems: string[] } {
+/**
+ * Every rule a plan must pass before it runs; problems in plain words.
+ * `taskTypes: false` leaves task types to the per-step contract check at run
+ * time, as for the rule-based splitter's plans, some of whose task types the
+ * contracts never allowed (recorded in DEFERRED_WORK, 2026-10-23).
+ */
+export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean } = {}): { ok: boolean; problems: string[] } {
+  const checkTaskTypes = options.taskTypes !== false;
   const problems: string[] = [];
   if (steps.length > JOSE_LIMITS.maxSteps) {
     problems.push(`The plan has ${steps.length} steps; the limit is ${JOSE_LIMITS.maxSteps}.`);
@@ -69,7 +75,7 @@ export function checkPlan(steps: PlanStep[]): { ok: boolean; problems: string[] 
       problems.push(`Step "${s.stepId}" is for an unknown agent "${s.agent}".`);
       continue;
     }
-    if (!isTaskTypeAllowed(s.agent, s.actionType)) problems.push(`${name} may not do "${s.actionType}" (step "${s.stepId}").`);
+    if (checkTaskTypes && !isTaskTypeAllowed(s.agent, s.actionType)) problems.push(`${name} may not do "${s.actionType}" (step "${s.stepId}").`);
     for (const effect of s.effects) {
       if (effect === 'run' && s.agent !== 'alphonso') problems.push(`Step "${s.stepId}": only Alphonso may run code and commands.`);
       else if (effect === 'publish_or_send' && s.agent !== 'marcus') problems.push(`Step "${s.stepId}": only Marcus may publish or send anything outside.`);

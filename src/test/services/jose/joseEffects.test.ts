@@ -6,8 +6,7 @@ import {
   DEFAULT_EFFECT_APPROVALS,
   getEffectApprovals,
   effectsNeedingApproval,
-  inferEffects,
-} from '../../../services/jose/joseEffects';
+  inferEffects, stepEffectsToWaitFor } from '../../../services/jose/joseEffects';
 
 beforeEach(() => localStorage.clear());
 
@@ -46,6 +45,13 @@ describe('joseEffects', () => {
     const merged = inferEffects('local_operation+research');
     expect(merged).toContain('run');
     expect(merged).toContain('read');
+  });
+
+  it('leaves running code to the per-command check, so a step is never asked twice', () => {
+    expect(stepEffectsToWaitFor(['run'], undefined, true)).toEqual([]);
+    expect(stepEffectsToWaitFor(['run', 'publish_or_send'], undefined, true)).toEqual(['publish_or_send']);
+    expect(stepEffectsToWaitFor(['change_project'], undefined, true)).toEqual(['change_project']);
+    expect(stepEffectsToWaitFor(['change_project'], undefined, false)).toEqual([]);
   });
 
   it('treats an unknown task type as running code (fail closed)', () => {

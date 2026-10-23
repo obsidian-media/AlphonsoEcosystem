@@ -2,7 +2,7 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 import { validateAgentExecutionContract } from './agentContractService';
 import { durableGet, durableSet } from '../lib/durableStore';
-import { EFFECT_LABELS, effectsNeedingApproval, type JoseEffect } from './jose/joseEffects';
+import { EFFECT_LABELS, stepEffectsToWaitFor, type JoseEffect } from './jose/joseEffects';
 
 export const PACKET_KEY = 'alphonso_agent_bus_packets_v1';
 export const PACKET_SCOPE = 'agent_bus_packets_v1';
@@ -259,7 +259,7 @@ export function canExecutePacket(packet: AgentPacket | null): ExecutionGate {
   }
   if (Array.isArray(packet.effects)) {
     // Declared effects decide approval (Settings → Approvals), not words.
-    const waiting = effectsNeedingApproval(packet.effects);
+    const waiting = stepEffectsToWaitFor(packet.effects);
     if (waiting.length > 0 && packet.status !== 'approved') {
       return { ok: false, reason: `Waiting for your approval: ${waiting.map((e) => EFFECT_LABELS[e]).join(', ')}.` };
     }

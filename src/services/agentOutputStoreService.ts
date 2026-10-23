@@ -5,17 +5,10 @@ import { persistScopeRows } from './runtimeLedgerService';
 const STORE_KEY = 'alphonso_agent_outputs_v1';
 export const AGENT_OUTPUT_SCOPE = 'agent_outputs_v1';
 
-export const AGENT_DEPENDENCIES: Record<string, string[]> = Object.freeze({
-  hector: [],
-  maria: [],
-  sentinel: [],
-  nova: [],
-  jose: [],
-  miya: ['hector'],
-  alphonso: ['miya'],
-  marcus: ['maria'],
-  echo: ['hector', 'miya', 'maria', 'marcus', 'nova', 'sentinel', 'alphonso']
-}) as Record<string, string[]>;
+import { AGENT_DEPENDENCIES } from './jose/agentOrder';
+
+// Kept here for existing importers; the table lives in jose/agentOrder.ts.
+export { AGENT_DEPENDENCIES };
 
 interface AgentOutput {
   [key: string]: unknown;
