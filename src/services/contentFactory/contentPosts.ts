@@ -5,8 +5,15 @@
 import { changeProjectPosts, chosenVersionOf, getProject } from './contentProjectService';
 import {
   secureId,
-  type ContentBrand, type ContentProject, type PostPlatform, type PostingSlot, type ProjectPost,
+  type ContentBrand, type ContentProject, type PostPlatform, type PostStatus, type PostingSlot, type ProjectPost,
 } from './contentTypes';
+
+/** What each post status says on screen (the Posts list and the Calendar). */
+export const POST_STATUS_LABEL: Record<PostStatus, string> = {
+  draft: 'Not approved yet', approved: 'Approved', scheduled: 'Scheduled', posting: 'Posting…', posted: 'Posted',
+  locked_private: 'Kept private by YouTube', waiting_app: 'Waiting for the app', failed: 'Failed', check: 'Check it',
+  cancelled: 'Cancelled', ask: 'Waiting for you',
+};
 
 const PLATFORMS: PostPlatform[] = ['youtube', 'instagram', 'facebook'];
 const MINUTE = 60_000;

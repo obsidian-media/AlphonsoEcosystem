@@ -586,6 +586,16 @@ export function cancelScheduledContentPost(postId: string): boolean {
   return changed;
 }
 
+/** Moves a pending item (a text send, phase 3b) to a new time; false when it is not pending. */
+export function rescheduleScheduledPublish(id: string, scheduledAt: number): boolean {
+  const items = _loadSchedule();
+  const item = items.find((i) => i.id === id && i.status === 'pending');
+  if (!item) return false;
+  item.scheduledAt = scheduledAt;
+  _saveSchedule(items);
+  return true;
+}
+
 /** "Post it now" for a post that waited because it was more than 7 days late. */
 export function postOverdueNow(postId: string, nowMs = Date.now()): boolean {
   const items = _loadSchedule();

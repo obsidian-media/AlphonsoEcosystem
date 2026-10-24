@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 259 services and 158 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 260 services and 158 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -250,6 +250,7 @@ Source-backed inventory: 259 services and 158 components. Human purpose descript
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
 | service | `src/services/contentFactory/adCopyExport.ts` | `AD_NETWORKS`, `AdCopy`, `adCsv`, `AdNetwork`, `adsForNetwork`, `writeAdCsv` |
+| service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
 | service | `src/services/contentFactory/comfyVideoClip.ts` | `buildVideoWorkflow`, `checkComfyClip`, `ClipResult`, `ComfyClipInput`, `framesFor`, `makeComfyClip`, `VideoWorkflowInput` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
@@ -259,7 +260,7 @@ Source-backed inventory: 259 services and 158 components. Human purpose descript
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderScenePictures`, `renderThumbnails` |
 | service | `src/services/contentFactory/contentMediaExecutor.ts` | `checkPendingClips`, `ClipOutcome`, `CLIPS_OFF`, `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `ProjectClipEngine`, `resolveProjectClipEngine`, `RUNWAY_NOT_APPROVED`, `VoiceLine`, `VoiceOutput` |
 | service | `src/services/contentFactory/contentPostMoves.ts` | `cancelProjectPost`, `movePost`, `MoveResult`, `moveToDay`, `moveToSlot` |
-| service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `savePosts`, `updatePost` |
+| service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `POST_STATUS_LABEL`, `savePosts`, `updatePost` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `outputPath`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
 | service | `src/services/contentFactory/contentProjectPlan.ts` | `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `PUBLISH_WAIT`, `REVIEW_WAIT` |
 | service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
@@ -317,7 +318,7 @@ Source-backed inventory: 259 services and 158 components. Human purpose descript
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
 | service | `src/services/licenseService.ts` | `__setTrustedPublicKeyForTests`, `activateLicense`, `canUseConnector`, `clearLicenseDenialLog`, `deactivateLicense`, `getLicenseDenialLog`, `getLicenseInfo`, `initLicense`, `isPremiumConnector`, `isPremiumGatingEnabled`, `LicenseDenialEntry`, `LicenseInfo`, `LicenseTier` |
 | service | `src/services/localMarketplaceService.ts` | `DEFAULT_CATALOGUE_URL`, `fetchRemoteCatalogue`, `getRemoteCatalogueUrl`, `listMarketplaceItems`, `setMarketplaceItemStatus`, `setRemoteCatalogueUrl` |
-| service | `src/services/marcusExecutionService.ts` | `buildMarcusExecutionRecord`, `cancelScheduledContentPost`, `cancelScheduledPublish`, `executeMarcusGitHubAction`, `executeMarcusN8nAction`, `executeMarcusSlackAction`, `getScheduledPublishes`, `postOverdueNow`, `recoverScheduledPublishes`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `selectDistributionTarget`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
+| service | `src/services/marcusExecutionService.ts` | `buildMarcusExecutionRecord`, `cancelScheduledContentPost`, `cancelScheduledPublish`, `executeMarcusGitHubAction`, `executeMarcusN8nAction`, `executeMarcusSlackAction`, `getScheduledPublishes`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `selectDistributionTarget`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
 | service | `src/services/marcusPublishService.ts` | `buildMarcusPublishPacket`, `executeMarcusPublish`, `MARCUS_PUBLISH_PLATFORMS` |
 | service | `src/services/mariaAuditService.ts` | `buildMariaAuditPrompt`, `buildMariaFallbackAudit`, `MariaAuditAssignment`, `MariaAuditOptions`, `MariaAuditResponse`, `MariaAuditResult`, `parseMariaAuditResponse`, `runMariaGovernanceAudit` |
 | service | `src/services/mariaWeeklyReportService.ts` | `generateWeeklyReport`, `getLatestReport`, `getReports`, `saveReport`, `scheduleWeeklyGeneration` |

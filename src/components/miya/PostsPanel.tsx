@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Badge, Button } from '../ui';
-import { buildPosts, savePosts, updatePost } from '../../services/contentFactory/contentPosts';
+import { buildPosts, POST_STATUS_LABEL, savePosts, updatePost } from '../../services/contentFactory/contentPosts';
 import { cancelProjectPost, movePost, type MoveResult } from '../../services/contentFactory/contentPostMoves';
 import { postOverdueNow } from '../../services/marcusExecutionService';
 import { openExternalUrl } from '../../services/browserAutomationService';
@@ -8,11 +8,6 @@ import type { ContentBrand, ContentProject, PostStatus, ProjectPost } from '../.
 
 const PLATFORM: Record<ProjectPost['platform'], string> = { youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook' };
 const PIECE: Record<ProjectPost['piece'], string> = { video: 'video', short: 'Short', reel: 'Reel' };
-const STATUS: Record<PostStatus, string> = {
-  draft: 'Not approved yet', approved: 'Approved', scheduled: 'Scheduled', posting: 'Posting…', posted: 'Posted',
-  locked_private: 'Kept private by YouTube', waiting_app: 'Waiting for the app', failed: 'Failed', check: 'Check it',
-  cancelled: 'Cancelled', ask: 'Waiting for you',
-};
 const VARIANT: Partial<Record<PostStatus, 'success' | 'warning' | 'error' | 'info'>> = {
   posted: 'success', scheduled: 'info', approved: 'info', failed: 'error', check: 'warning', locked_private: 'warning', ask: 'warning',
 };
@@ -91,7 +86,7 @@ export function PostsPanel({ project, brand, approvePosts, onChange }: {
           <div key={post.id} className="space-y-2 rounded-xl bg-(--surface-2) p-3" aria-label={label}>
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-(--text-1)">{label}</span>
-              <Badge variant={VARIANT[post.status] || 'default'}>{STATUS[post.status]}</Badge>
+              <Badge variant={VARIANT[post.status] || 'default'}>{POST_STATUS_LABEL[post.status]}</Badge>
               {post.link && <Button size="sm" variant="ghost" aria-label={`Open ${label}`} onClick={() => { void openExternalUrl(post.link as string); }}>Open</Button>}
               {post.status === 'ask' && <Button size="sm" aria-label={`Post ${label} now`} onClick={() => { postOverdueNow(post.id); onChange(); }}>Post it now</Button>}
               {!onPlatform && !['posting', 'posted', 'locked_private', 'check', 'cancelled'].includes(post.status) && (
