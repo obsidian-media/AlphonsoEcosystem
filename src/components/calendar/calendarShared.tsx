@@ -35,6 +35,7 @@ export function CalendarChip({ item, selected, onSelect, onDragStart }: {
       style={{ background }}
     >
       <span className="rounded-sm bg-black/35 px-1 text-[8px] font-extrabold" style={{ borderLeft: `3px solid ${item.brandColor}` }}>{item.initials}</span>
+      {item.isShort && <span className="rounded-sm bg-black/35 px-1 text-[8px] font-bold">Short</span>}
       <span className="truncate">{item.hasTime ? `${timeLabel(item.atMs)} ${item.title}` : item.title}</span>
     </button>
   );

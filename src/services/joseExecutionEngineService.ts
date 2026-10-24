@@ -2022,6 +2022,9 @@ export async function runJoseCommandExecutionPipeline({
           await recordContentStepResult({
             projectId: assignment.contentStep.projectId, step: assignment.contentStep.step,
             agent: assignment.agent, data: contentData, commandId: command.id,
+            ...(assignment.contentStep.appendShort ? { appendShort: true } : {}),
+            ...(assignment.contentStep.purpose ? { purpose: assignment.contentStep.purpose, postRef: assignment.contentStep.postRef } : {}),
+            ...(assignment.contentStep.step === 'shorts' && (assignment.effects || []).includes('spend') ? { runwayApproved: true } : {}),
           });
         } catch (error) {
           console.warn('[jose] content step not saved to its project', error);

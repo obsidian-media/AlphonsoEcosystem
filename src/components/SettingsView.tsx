@@ -670,6 +670,8 @@ const JOSE_TELEGRAM_KINDS = [
   { key: 'planWaiting', label: 'When a plan waits for you', note: 'With Run this plan and Cancel.' },
   { key: 'finished', label: 'When a request finishes or fails', note: 'One line.' },
   { key: 'reviewDecision', label: 'When a review asks you to decide', note: 'After 2 rounds of changes.' },
+  { key: 'performanceSummaries', label: 'Your posts after 7 days', note: 'Once a day: their numbers, with the lessons to keep or drop.' },
+  { key: 'contentIdeas', label: 'New ideas from good posts', note: 'With Start project and Dismiss.' },
   { key: 'activitySummaries', label: 'Agent activity summaries', note: 'The older "N agent actions since your last check" messages. Off to start.', defaultOn: false },
 ] as const;
 

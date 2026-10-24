@@ -39,6 +39,17 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-24] **Miya content factory phase 4a (learning from real results): what it leaves open.**
+  - Not checked with real accounts yet: reading numbers from YouTube Analytics, Instagram insights (both routes) and Facebook Reel and photo-post insights; the new sign-in permissions; the Telegram summary. In the combined live check in `docs/qa/DESKTOP_QA_COVERAGE.md`.
+  - Instagram carousel albums may give fewer numbers than Reels (Meta: no insights for media inside an album); missing ones show "—".
+  - A reading uses the Instagram route chosen now; posts sent on the other route may be refused after switching.
+  - Content Studio posts made before 4a have no sent time and get no numbers.
+  - The Runway cost for Shorts is estimated before the Shorts are written (2 clips per Short for main moments, 6 for every part); the real spend stays within the monthly cap.
+  - Post-time suggestions are counted from the brand's results; they don't weigh topics or seasons.
+  - Closed from 3d: Runway clips for Shorts, the brand's caption font, Shorts on the Calendar, the honest Shorts summary, Add a Short's kind, Redo waiting, and CodeQL 26, 33, 34 and 36 (any alert still pointing at the loopback bridge path is dismissed with that reason after the PR's scan).
+  - Next: phase 4b (ElevenLabs and Higgsfield).
+  - **Status:** OPEN.
+
 - [2026-10-24] **Miya content factory phase 3d (Shorts as their own pieces): what it leaves open.**
   - Not checked with real accounts or a real model yet: making a mini-script Short end to end (pictures, Kokoro, AI clips), a highlight's hook over the finished video, and posting Shorts. In the combined live check in `docs/qa/DESKTOP_QA_COVERAGE.md`.
   - Runway clips are not used for Shorts yet: a Shorts setting of Runway makes the Short with pictures and says so (a Runway run must ask for its cost, and Shorts are made after their step).
@@ -48,8 +59,8 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - The Calendar shows Shorts as ordinary posts, with their titles; nothing marks them as Shorts.
   - CodeQL alerts still open, not in this phase: 26 (Boardroom thread storage), 33 and 34 (the ACC bridge to a local address), 36 (contentStepPrompts' prompt lookup).
   - Closed by this phase from 3c's list: a post with no Instagram route is now saved to post by hand.
-  - Next: phase 4.
-  - **Status:** OPEN.
+  - Next: phase 4 (4a done 2026-10-24: these items closed, see above).
+  - **Status:** CLOSED 2026-10-24.
 
 - [2026-10-24] **Miya content factory phase 3c (storage, carousels, Instagram Login, in-app sign-in): what it leaves open.**
   - Not checked with real accounts yet (no keys on the dev machine): the in-app sign-ins, storage uploads and links, Instagram carousels and Reels by link, Facebook photo posts and moving or cancelling them. All are in the combined live check in `docs/qa/DESKTOP_QA_COVERAGE.md`.
@@ -117,7 +128,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
   - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
   - The board's "Approve and carry on" on Scenes approves the review too, but only when Scenes starts (Miya Studio shows it as waiting until then).
-  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file), 2b (AI clips), 3a (publishing) and 3b (the Calendar) done 2026-10-23, 3c (storage, carousels, Instagram Login, in-app sign-in) and 3d (Shorts as their own pieces) 2026-10-24; 4 next.
+  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file), 2b (AI clips), 3a (publishing) and 3b (the Calendar) done 2026-10-23, 3c (storage, carousels, Instagram Login, in-app sign-in), 3d (Shorts as their own pieces) and 4a (learning from real results) 2026-10-24; 4b next.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**

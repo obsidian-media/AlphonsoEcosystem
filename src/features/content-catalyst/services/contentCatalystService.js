@@ -718,6 +718,8 @@ export async function publishContent(job, { approved = false } = {}) {
     published,
     status: posted.status,
     postIds: posted.platformId ? [posted.platformId] : [],
+    // When it went out (phase 4a), so its numbers can be read at their checkpoints.
+    ...(published ? { sentAtMs: Date.now() } : {}),
     url: posted.link || null,
     message: posted.reason || (published ? 'Posted.' : ''),
     setup_required: Boolean(posted.setupRequired),

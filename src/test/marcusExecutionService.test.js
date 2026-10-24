@@ -16,6 +16,7 @@ import {
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 vi.mock('../services/memoryService', () => ({ pushMemoryItem: vi.fn() }));
+vi.mock('../services/contentFactory/postMetrics', () => ({ readDueMetrics: vi.fn(async () => 0) }));
 vi.mock('../services/sessionIntelligenceService', () => ({ appendSessionEvent: vi.fn() }));
 vi.mock('../services/orchestrationReceiptService', () => ({ appendOrchestrationReceipt: vi.fn() }));
 vi.mock('../services/audit/marcusAuditService', () => ({
@@ -301,5 +302,21 @@ describe('startScheduler / stopScheduler', () => {
   it('stopScheduler can be called after startScheduler', () => {
     startScheduler(100);
     expect(() => stopScheduler()).not.toThrow();
+  });
+});
+
+// Phase 4a: the runner reads the posts' numbers that are due.
+describe('post numbers in the runner', () => {
+  it('reads due numbers at start and every minute', async () => {
+    vi.useFakeTimers();
+    const { readDueMetrics } = await import('../services/contentFactory/postMetrics');
+    const { startPostScheduler, stopScheduler } = await import('../services/marcusExecutionService');
+    vi.mocked(readDueMetrics).mockClear();
+    startPostScheduler();
+    expect(readDueMetrics).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(readDueMetrics).toHaveBeenCalledTimes(2);
+    stopScheduler();
+    vi.useRealTimers();
   });
 });

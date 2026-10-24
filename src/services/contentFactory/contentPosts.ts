@@ -209,7 +209,7 @@ export function updatePost(projectId: string, postId: string, patch: Partial<Pro
   let result: { ok: boolean; reason?: string } = { ok: false, reason: 'That post was not found.' };
   changeProjectPosts(projectId, (posts) => posts.map((post) => {
     if (post.id !== postId) return post;
-    const statusOnly = Object.keys(patch).every((k) => ['status', 'link', 'platformId', 'reason', 'sentAtMs', 'folder'].includes(k));
+    const statusOnly = Object.keys(patch).every((k) => ['status', 'link', 'platformId', 'reason', 'sentAtMs', 'folder', 'metrics'].includes(k));
     if (!statusOnly) {
       if (GONE.includes(post.status)) {
         result = { ok: false, reason: `This post has already ${post.status === 'cancelled' ? 'been cancelled' : 'gone out'}.` };

@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 268 services and 167 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 275 services and 170 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -93,11 +93,14 @@ Source-backed inventory: 268 services and 167 components. Human purpose descript
 | component | `src/components/MissionRoom.tsx` | `MissionRoom` |
 | component | `src/components/miya/AiClipsPanel.tsx` | `AiClipsPanel`, `AiClipsPanelProps` |
 | component | `src/components/miya/BrandEditor.tsx` | `BrandEditor` |
+| component | `src/components/miya/BrandResults.tsx` | `BrandResults` |
 | component | `src/components/miya/BriefPanel.tsx` | `BriefPanel` |
 | component | `src/components/miya/CampaignStudioTab.tsx` | `CampaignStudioTab` |
 | component | `src/components/miya/CarouselStudioTab.tsx` | `CarouselStudioTab`, `CarouselStudioTabProps` |
 | component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab`, `selectContentProject` |
 | component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
+| component | `src/components/miya/IdeasList.tsx` | `IdeasList` |
+| component | `src/components/miya/PostNumbers.tsx` | `PostNumbers` |
 | component | `src/components/miya/PostsPanel.tsx` | `PostsPanel` |
 | component | `src/components/miya/ProjectPicture.tsx` | `ProjectPicture` |
 | component | `src/components/miya/SceneBuilderTab.tsx` | `SceneBuilderTab`, `SceneBuilderTabProps` |
@@ -259,36 +262,43 @@ Source-backed inventory: 268 services and 167 components. Human purpose descript
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
 | service | `src/services/contentFactory/adCopyExport.ts` | `AD_NETWORKS`, `AdCopy`, `adCsv`, `AdNetwork`, `adsForNetwork`, `writeAdCsv` |
+| service | `src/services/contentFactory/brandResults.ts` | `Band`, `BANDS`, `brandMedian`, `BrandResultRow`, `brandResultRows`, `FIRST_POSTS`, `MAIN_METRIC`, `MIN_POSTS_TO_COMPARE`, `permissionBanners`, `postBand` |
 | service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
 | service | `src/services/contentFactory/comfyVideoClip.ts` | `buildVideoWorkflow`, `checkComfyClip`, `ClipResult`, `ComfyClipInput`, `framesFor`, `makeComfyClip`, `VideoWorkflowInput` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
-| service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `DEFAULT_QUALITY_THRESHOLD`, `ensureFirstBrand`, `getBrand`, `listBrands`, `saveBrand` |
+| service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `addProposedLessons`, `DEFAULT_QUALITY_THRESHOLD`, `dropLesson`, `editLesson`, `ensureFirstBrand`, `getBrand`, `keepLesson`, `listBrands`, `proposedLessons`, `saveBrand` |
 | service | `src/services/contentFactory/contentCaptions.ts` | `alignCaptions`, `captionsFromLines`, `TimedWord`, `toSrt` |
 | service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
+| service | `src/services/contentFactory/contentIdeas.ts` | `dismissIdea`, `getIdea`, `IDEAS_TASK_MARK`, `listIdeas`, `proposeIdeas`, `saveIdeas`, `startProjectFromIdea` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderCarouselSlides`, `renderScenePictures`, `renderThumbnails` |
+| service | `src/services/contentFactory/contentLearning.ts` | `startContentLearning` |
 | service | `src/services/contentFactory/contentMediaExecutor.ts` | `checkPendingClips`, `ClipOutcome`, `CLIPS_OFF`, `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `ProjectClipEngine`, `resolveProjectClipEngine`, `RUNWAY_NOT_APPROVED`, `SMALL_CARD_NOTE`, `VoiceLine`, `VoiceOutput` |
 | service | `src/services/contentFactory/contentPostMoves.ts` | `cancelProjectPost`, `movePost`, `MoveResult`, `moveToDay`, `moveToSlot` |
 | service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `POST_STATUS_LABEL`, `savePosts`, `updatePost` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `outputPath`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
-| service | `src/services/contentFactory/contentProjectPlan.ts` | `briefWantsCarousel`, `briefWantsShorts`, `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `PUBLISH_WAIT`, `REVIEW_WAIT`, `runwayEstimate`, `shortsCount` |
-| service | `src/services/contentFactory/contentProjectService.ts` | `addShortPlan`, `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getShortsSettings`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setShortKind`, `setShortOutput`, `setShortPlatforms`, `setShortsSettings`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
+| service | `src/services/contentFactory/contentProjectPlan.ts` | `briefWantsCarousel`, `briefWantsShorts`, `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `PUBLISH_WAIT`, `REVIEW_WAIT`, `runwayEstimate`, `SHORTS_WAIT_PAID`, `shortsCount`, `shortsRunwayEstimate` |
+| service | `src/services/contentFactory/contentProjectService.ts` | `addShortPlan`, `addStepProgress`, `appendShortPlan`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getShortsSettings`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setShortKind`, `setShortOutput`, `setShortPlatforms`, `setShortsSettings`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentPublishExecutor.ts` | `executePublishStep`, `NO_APPROVED_POSTS` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
 | service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `parseStepAnswer` |
 | service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
-| service | `src/services/contentFactory/contentStepRunner.ts` | `approveContentStep`, `CONTENT_TASK_PREVIEW`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
-| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CarouselShape`, `CarouselSlide`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `PostingSlot`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
+| service | `src/services/contentFactory/contentStepRunner.ts` | `addMiniShort`, `approveContentStep`, `CONTENT_TASK_PREVIEW`, `ONE_MORE_SHORT`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
+| service | `src/services/contentFactory/contentTelegram.ts` | `collectContentNotifications`, `ContentButton`, `ContentButtonAction`, `contentButtonToken`, `ContentNotification`, `ContentTelegramSettings`, `getContentTelegramSettings`, `handleContentButton`, `readContentButtonToken` |
+| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `BrandLesson`, `CarouselShape`, `CarouselSlide`, `Checkpoint`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentIdea`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `MetricsReading`, `PostingSlot`, `PostMetrics`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
 | service | `src/services/contentFactory/instagramRoute.ts` | `getInstagramRoute`, `instagramLoginSetUp`, `InstagramRoute`, `pageRouteSetUp`, `savedInstagramRoute`, `setInstagramRoute` |
+| service | `src/services/contentFactory/performanceLessons.ts` | `LESSONS_TASK_MARK`, `proposeLessons` |
 | service | `src/services/contentFactory/platformLimits.ts` | `fitsPlatform`, `formatSeconds`, `PLATFORM_LIMITS`, `PlatformFit` |
+| service | `src/services/contentFactory/postMetrics.ts` | `CHECKPOINT_MS`, `clearNeedsPermission`, `contentStudioMetrics`, `dueCheckpoint`, `markNeedsPermission`, `MeasurablePost`, `measurablePosts`, `MetricsService`, `needsPermission`, `onSevenDays`, `readDueMetrics`, `REFRESH_WAIT_MS`, `REFRESHED_RECENTLY`, `refreshPostMetrics` |
+| service | `src/services/contentFactory/postTimeSuggestions.ts` | `acceptSuggestedSlot`, `MIN_POSTS_FOR_TIMES`, `SuggestedSlot`, `suggestPostTimes` |
 | service | `src/services/contentFactory/publishPost.ts` | `PostResult`, `PublishablePost`, `publishPost` |
 | service | `src/services/contentFactory/readyToPost.ts` | `BY_HAND_REMINDER`, `exportForHand`, `handFolderFor` |
 | service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
-| service | `src/services/contentFactory/shortMaker.ts` | `makeShorts`, `MAKING_ANOTHER`, `NEEDS_FINISHED_VIDEO`, `NEEDS_SCRIPT`, `redoShort`, `RUNWAY_SHORTS_NOTE`, `ShortOutput` |
+| service | `src/services/contentFactory/shortMaker.ts` | `MakeOptions`, `makeShorts`, `MAKING_ANOTHER`, `NEEDS_FINISHED_VIDEO`, `NEEDS_SCRIPT`, `redoShort`, `RUNWAY_SHORTS_NOTE`, `ShortOutput`, `shortsSummary` |
 | service | `src/services/contentFactory/signInExpiry.ts` | `getSignInExpiry`, `isYoutubeProjectPublished`, `plainSignInReason`, `recordSignIn`, `setYoutubeProjectPublished`, `SIGN_IN_NAME`, `signedInAt`, `SignInService`, `SignInWarning`, `signInWarnings` |
-| service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `drawSlide`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline`, `layoutSlideText`, `slideSize`, `SlideTextLayout` |
+| service | `src/services/contentFactory/thumbnailRenderer.ts` | `brandFontName`, `darkestColour`, `drawHeadline`, `drawSlide`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline`, `layoutSlideText`, `slideSize`, `SlideTextLayout` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
 | service | `src/services/creativeRoutingService.ts` | `detectCreativeIntent`, `routeToCreativeTool` |
 | service | `src/services/devPacketService.ts` | `AuditReport`, `buildDevPackets`, `DEV_PACKET_SCOPE`, `DevPacket`, `DevPacketFinding`, `DevPacketGroup`, `DevPacketPatchSuggestion`, `DevPacketSummary`, `getLastDevPacket`, `listDevPackets`, `ReadinessReport`, `saveDevPackets`, `summarizeDevPackets` |

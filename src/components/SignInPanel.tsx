@@ -14,18 +14,18 @@ const LABEL: Record<SignInService, { button: string; name: string }> = {
 /** Step-by-step: what the user sets up in their own Google project or Meta app first. */
 const STEPS: Record<SignInService, string[]> = {
   youtube: [
-    'In Google Cloud Console, create a project and turn on the YouTube Data API v3.',
+    "In Google Cloud Console, create a project and turn on the YouTube Data API v3 and the YouTube Analytics API (to read your posts' numbers).",
     'Under Credentials, create an OAuth client ID of type "Web application".',
     'Add this as an authorised redirect URI: http://localhost:8085/callback',
     'Paste the Client ID and Client Secret above and save, then sign in here.',
   ],
   meta: [
-    'In Meta for Developers, create an app with Facebook Login for Business.',
+    "In Meta for Developers, create an app with Facebook Login for Business. To read your posts' numbers it also needs instagram_manage_insights, read_insights and pages_manage_engagement.",
     'Add this as a valid OAuth redirect URI: http://localhost:8086/callback',
     'Paste the App ID and App Secret above and save, then sign in here and choose your Page.',
   ],
   instagram: [
-    'In your Meta app, add the Instagram product ("API setup with Instagram login").',
+    "In your Meta app, add the Instagram product (\"API setup with Instagram login\"), with instagram_business_manage_insights to read your posts' numbers.",
     'Add this as a redirect URL: http://localhost:8087/callback',
     'Paste the Instagram App ID and App Secret below and save, then sign in here.',
   ],

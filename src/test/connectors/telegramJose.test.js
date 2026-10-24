@@ -181,3 +181,28 @@ describe('the older notifier', () => {
     expect(sends().some((s) => /Jose completed a task/.test(s.text))).toBe(false);
   });
 });
+
+// Phase 4a: the content factory's 7-day summaries and ideas, with their own buttons.
+describe('content notifications on Telegram', () => {
+  it('sends a new idea with Start project and Dismiss, once, and a press starts the project', async () => {
+    const { saveBrand } = await import('../../services/contentFactory/contentBrandService');
+    const { saveIdeas } = await import('../../services/contentFactory/contentIdeas');
+    const { listProjects } = await import('../../services/contentFactory/contentProjectService');
+    const brand = saveBrand({ name: 'Acme' });
+    saveIdeas(brand.id, ['Part two'], { projectId: 'p', postId: 'a' });
+    await runPushWatcher('tok');
+    await runPushWatcher('tok');
+    const sent = sends().filter((s) => /New idea for Acme/.test(s.text));
+    expect(sent).toHaveLength(1);
+    expect(sent[0].buttons[0].map((b) => b.text)).toEqual(['Start project', 'Dismiss']);
+    expect(sent[0].buttons[0][0].data).toMatch(/^c:[A-Za-z0-9]{8}$/);
+    expect(await press(sent[0].buttons[0][0].data)).toBe('Project started: Part two.');
+    expect(listProjects(brand.id).map((p) => p.name)).toEqual(['Part two']);
+  });
+
+  it('a content button from another chat does nothing', async () => {
+    const { contentButtonToken } = await import('../../services/contentFactory/contentTelegram');
+    expect(await press(contentButtonToken({ action: 'dismiss', ref: 'x' }), '999')).toBe('Unauthorized.');
+  });
+});
+

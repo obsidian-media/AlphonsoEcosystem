@@ -1,4 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
+import { readDueMetrics } from './contentFactory/postMetrics';
 import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
@@ -748,6 +749,7 @@ export function startScheduler(intervalMs: number = 60_000): void {
   _schedulerInterval = setInterval(() => {
     void runScheduledPublishes();
     void checkSignIns().catch(() => undefined);
+    void readDueMetrics().catch(() => undefined);
   }, intervalMs);
 }
 
@@ -777,6 +779,10 @@ export function startPostScheduler(): void {
   recoverScheduledPublishes();
   void runScheduledPublishes();
   void checkSignIns().catch(() => undefined);
+  // The posts' numbers at their checkpoints (phase 4a); a missed one is read once now.
+  void readDueMetrics().catch(() => undefined);
+  // Lessons after each 7-day reading (phase 4a); loaded lazily to keep the runner light.
+  void import('./contentFactory/contentLearning').then((m) => m.startContentLearning()).catch(() => undefined);
   startScheduler();
 }
 

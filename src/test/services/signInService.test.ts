@@ -38,6 +38,14 @@ describe('signIn', () => {
     expect(signIns().youtube.savedAtMs).toBe(NOW);
   });
 
+  it('a new sign-in clears the "sign in again to see numbers" flag', async () => {
+    localStorage.setItem('alphonso_metrics_permissions_v1', JSON.stringify({ youtube: true, meta: true }));
+    saved.youtube = { YOUTUBE_CLIENT_ID: 'cid', YOUTUBE_CLIENT_SECRET: 'sec' };
+    invoke.mockResolvedValue({ ok: true, tokens: { YOUTUBE_REFRESH_TOKEN: 'rt' }, pages: [] });
+    await signIn('youtube', NOW);
+    expect(JSON.parse(localStorage.getItem('alphonso_metrics_permissions_v1') || '{}')).toEqual({ meta: true });
+  });
+
   it('a refusal is passed on and nothing is saved', async () => {
     saved.youtube = { YOUTUBE_CLIENT_ID: 'cid', YOUTUBE_CLIENT_SECRET: 'sec' };
     invoke.mockResolvedValue({ ok: false, reason: 'The sign-in was cancelled or refused.', tokens: {}, pages: [] });

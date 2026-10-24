@@ -135,3 +135,18 @@ it('a post to post by hand needs you', () => {
   savePosts(p.id, [{ id: 'hand', platform: 'instagram', piece: 'carousel', file: 'f', title: 'Slides', caption: '', hashtags: [], scheduledAtMs: at(29, 9), status: 'by_hand', folder: 'h/ready-to-post/x' }]);
   expect(listCalendarItems(NOW).find((i) => i.postId === 'hand')).toMatchObject({ needsYou: true, draggable: false });
 });
+
+// Phase 4a: a Short's post is marked on the Calendar.
+describe('Shorts on the Calendar', () => {
+  it("a Short's post is marked", () => {
+    const b = saveBrand({ name: 'Acme' });
+    const pr = createProject(b.id, 'P', emptyBrief());
+    savePosts(pr.id, [
+      { id: 's', platform: 'instagram', piece: 'reel', file: 'f', title: 'Short one', caption: '', hashtags: [], scheduledAtMs: Date.now() + 3600e3, status: 'scheduled', shortId: 'sh1' },
+      { id: 'v', platform: 'youtube', piece: 'video', file: 'g', title: 'Long', caption: '', hashtags: [], scheduledAtMs: Date.now() + 7200e3, status: 'scheduled' },
+    ] as any);
+    const items = listCalendarItems(Date.now());
+    expect(items.find((i) => i.postId === 's')?.isShort).toBe(true);
+    expect(items.find((i) => i.postId === 'v')?.isShort).toBe(false);
+  });
+});

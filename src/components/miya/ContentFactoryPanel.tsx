@@ -13,7 +13,7 @@ import { ensureFirstBrand, getBrand, listBrands } from '../../services/contentFa
 import {
   addShortPlan, chooseVersion, createProject, emptyBrief, getProject, listProjects, recoverInterruptedSteps, reorderSlides, updateBrief,
 } from '../../services/contentFactory/contentProjectService';
-import { approveContentStep, runContentProject, runContentStep } from '../../services/contentFactory/contentStepRunner';
+import { addMiniShort, approveContentStep, runContentProject, runContentStep } from '../../services/contentFactory/contentStepRunner';
 import { getJoseRequest } from '../../services/jose/joseRequestStore';
 import { STATUS_LABELS } from '../jose/JoseRequestsBoard';
 import { Button } from '../ui';
@@ -149,7 +149,10 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
             <ShortsStudioTab project={project} outputRoot={outputRoot} runStep={tabProps.runStep} chooseVersion={tabProps.chooseVersion}
               redo={(shortId) => { redoShort(project.id, shortId, settings).catch(() => undefined).finally(refresh); }}
               reject={(pieceId, reason) => { rejectPiece(project.id, 'shorts', pieceId, reason); refresh(); run('shorts', reason); }}
-              addShort={() => { try { addShortPlan(project.id); } finally { refresh(); } }}
+              addShort={(kind) => {
+                if (kind === 'mini') { void addMiniShort(project.id, settings).finally(refresh); return; }
+                try { addShortPlan(project.id, kind); } finally { refresh(); }
+              }}
               onChange={refresh} />
           )}
           {tab === 'thumbnail' && (

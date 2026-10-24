@@ -571,6 +571,11 @@ async function handleReadFileCommand(token, chatId, filename) {
 export async function handleJoseButton(token, update) {
   const ownerChatId = getOwnerChatId();
   if (!ownerChatId || String(update?.chatId || '') !== String(ownerChatId)) return 'Unauthorized.';
+  // The content factory's buttons (phase 4a): lessons to keep or drop, ideas to start or dismiss.
+  if (String(update?.callbackData || '').startsWith('c:')) {
+    const content = await import('./contentFactory/contentTelegram');
+    return content.handleContentButton(update.callbackData);
+  }
   const button = readButtonToken(update?.callbackData);
   if (!button) return 'That button has expired.';
   const request = getJoseRequest(button.requestId);
@@ -867,6 +872,16 @@ Assignments: ${assignmentsCompleted} completed`;
     await sendTelegramMessageInternal({ token, chatId: ownerChatId, text: notification.text, ...(buttons ? { buttons } : {}) });
     markSent(notification.key);
   }
+
+  // The content factory (phase 4a): the day's 7-day summary and new ideas, each sent once.
+  try {
+    const content = await import('./contentFactory/contentTelegram');
+    for (const notification of content.collectContentNotifications(Date.now(), sentKeys(), content.getContentTelegramSettings())) {
+      const buttons = notification.buttons?.map((row) => row.map((button) => ({ text: button.text, data: content.contentButtonToken(button) })));
+      await sendTelegramMessageInternal({ token, chatId: ownerChatId, text: notification.text, ...(buttons ? { buttons } : {}) });
+      markSent(notification.key);
+    }
+  } catch { /* the next pass tries again */ }
 
   const queue = listApprovalQueue();
   for (const packet of queue) {

@@ -47,6 +47,7 @@ mod ollama;
 mod os_keychain_store;
 mod plugin_runtime;
 mod policy_gate;
+mod post_metrics;
 mod runtime_manager;
 mod runway;
 mod search;
@@ -776,6 +777,7 @@ pub fn run() {
       media_tools::content_allow_media_folder,
       media_tools::content_ready_to_post,
       media_tools::content_cut_short,
+      post_metrics::content_read_metrics,
       media_storage::storage_put_file,
       media_storage::storage_delete,
       media_storage::storage_list_staged,

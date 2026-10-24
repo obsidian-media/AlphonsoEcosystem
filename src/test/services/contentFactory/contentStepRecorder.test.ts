@@ -4,7 +4,11 @@ vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   const actual = await vi.importActual<typeof import('../../../services/contentFactory/contentProjectFiles')>('../../../services/contentFactory/contentProjectFiles');
   return { ...actual, writeProjectFile: vi.fn(async () => undefined), writeStepText: vi.fn(async () => 'x/v1.md') };
 });
-vi.mock('../../../services/contentFactory/shortMaker', () => ({ makeShorts: vi.fn(async () => []) }));
+vi.mock('../../../services/contentFactory/shortMaker', async () => ({
+  ...(await vi.importActual<typeof import('../../../services/contentFactory/shortMaker')>('../../../services/contentFactory/shortMaker')),
+  makeShorts: vi.fn(async () => []),
+  redoShort: vi.fn(async () => ({ shortId: 'x', status: 'done' })),
+}));
 vi.mock('../../../services/contentFactory/contentImages', () => ({
   renderScenePictures: vi.fn(async () => []),
   renderThumbnails: vi.fn(async () => []),
@@ -112,3 +116,35 @@ it('the Shorts step makes each Short after it saves its plan', async () => {
   expect(makeShorts).toHaveBeenCalledWith(p.id, expect.objectContaining({ outputFolder: expect.stringContaining('Content') }), expect.any(Function));
   expect(getProject(p.id)!.steps.shorts.status).toBe('done');
 });
+
+it('the Shorts step ends saying how many Shorts failed', async () => {
+  const { makeShorts } = await import('../../../services/contentFactory/shortMaker');
+  vi.mocked(makeShorts).mockResolvedValueOnce([{ shortId: 'sh1', status: 'done' }, { shortId: 'sh2', status: 'failed', reason: 'x' }, { shortId: 'sh3', status: 'done' }] as any);
+  const p = newProject();
+  await recordContentStepResult({ projectId: p.id, step: 'shorts', agent: 'miya', data: { shorts: [] }, commandId: 'c1' });
+  expect(getProject(p.id)!.steps.shorts.progress.map((x: { message: string }) => x.message)).toContain('done, 1 of 3 failed');
+});
+
+it("an added mini-script Short is appended to the chosen Shorts and made, without a new version", async () => {
+  const { redoShort } = await import('../../../services/contentFactory/shortMaker');
+  const { saveStepVersion } = await import('../../../services/contentFactory/contentProjectService');
+  const p = newProject();
+  saveStepVersion(p.id, 'shorts', { output: { miya: { shorts: [{ id: 'sh1', kind: 'cut', moment: { startSec: 0, endSec: 30 } }] } }, summary: '', joseCommandId: null });
+  const res = await recordContentStepResult({ projectId: p.id, step: 'shorts', agent: 'miya', appendShort: true, commandId: 'c2',
+    data: { shorts: [{ id: 'sh1', kind: 'mini', title: 'New', hook: 'h', seconds: 40, platforms: [], copy: [], parts: [{ spoken: 'a', imagePrompt: 'b', seconds: 5 }] }] } });
+  expect(res).toBe('saved');
+  const versions = getProject(p.id)!.steps.shorts.versions;
+  expect(versions).toHaveLength(1);
+  const shorts = (versions[0].output as { miya: { shorts: Record<string, unknown>[] } }).miya.shorts;
+  expect(shorts.map((x) => x.id)).toEqual(['sh1', 'sh2']);
+  expect(shorts[1]).toMatchObject({ kind: 'mini', title: 'New' });
+  expect(redoShort).toHaveBeenCalledWith(p.id, 'sh2', expect.anything());
+});
+
+it('an approved Runway Shorts run is made with Runway', async () => {
+  const { makeShorts } = await import('../../../services/contentFactory/shortMaker');
+  const p = newProject();
+  await recordContentStepResult({ projectId: p.id, step: 'shorts', agent: 'miya', data: { shorts: [] }, commandId: 'c1', runwayApproved: true });
+  expect(makeShorts).toHaveBeenLastCalledWith(p.id, expect.anything(), expect.any(Function), { runwayApproved: true });
+});
+

@@ -2,7 +2,7 @@
 // checked. A reply that does not match is refused (null): the step then fails
 // and says so, it is never filled in with stock text.
 import { extractJsonObject } from '../../lib/jsonUtils.js';
-import { hasOwnKey, type ContentStepPayload, type StepId } from './contentTypes';
+import { type ContentStepPayload, type StepId } from './contentTypes';
 
 type Json = Record<string, unknown>;
 
@@ -62,6 +62,24 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
     keys: '{"shorts":[{"kind":"mini, highlight or cut","title":"the Short\'s title","hook":"at most 12 words","seconds":"30 to 60","platforms":["youtube, instagram or facebook"],"copy":[{"platform":"youtube, instagram or facebook","title":"the title (YouTube)","caption":"the caption","hashtags":["#a-hashtag"]}],"parts":[{"spoken":"the words said (mini only)","imagePrompt":"what the picture shows, no text","seconds":"how long"}],"moment":{"startSec":"start in the finished video (highlight or cut)","endSec":"end"}}]}',
     uses: ['research', 'script', 'assemble'],
   },
+  analysis_performance: {
+    role: 'Nova, Alphonso\'s analyst',
+    ask: 'Look at how this post did against the brand\'s usual numbers (given below) and at its script, hook, thumbnail and posting time. Write up to 3 short lessons about what worked and up to 3 about what didn\'t, each one sentence about something the brand controls next time (the hook, the topic, the length, the thumbnail, the caption, the posting time). No made-up numbers.',
+    keys: '{"worked":["one sentence"],"didnt":["one sentence"]}',
+    uses: ['script', 'thumbnail', 'campaign'],
+  },
+  analysis_ideas: {
+    role: 'Nova, Alphonso\'s analyst',
+    ask: 'Suggest up to 3 follow-up videos for this brand from the post described below and its script: a sequel, the same hook on another topic, or a Short from it. One line each, ready to be a new project\'s idea. No made-up numbers.',
+    keys: '{"ideas":["one line"]}',
+    uses: ['research', 'script'],
+  },
+  creative_lessons: {
+    role: 'Miya, Alphonso\'s creative director',
+    ask: 'Look at how this post did against the brand\'s usual numbers (given below) and at its script, hook, thumbnail and caption. Write up to 3 short lessons about what worked and up to 3 about what didn\'t, each one sentence about something you can do differently in the next video. No made-up numbers.',
+    keys: '{"worked":["one sentence"],"didnt":["one sentence"]}',
+    uses: ['script', 'thumbnail', 'campaign'],
+  },
   creative_carousel: {
     role: 'Miya, Alphonso\'s creative director',
     ask: 'Write a carousel of 5 to 10 slides from the research and the script: slide 1 is the cover with the hook, then one idea per slide, and the last slide is the call to action. Each slide has a headline of at most 8 words, a body of at most 25 words, and an image prompt for its picture (no text in the picture).',
@@ -102,13 +120,14 @@ function brandText(payload: ContentStepPayload): string {
   if (b.references.length > 0) {
     lines.push('Reference posts:', ...b.references.map((r) => `- ${r.url}${r.note ? ` (${r.note})` : ''}`));
   }
-  const lessons = b.lessons.slice(-10);
+  // Only kept lessons (phase 4a: lessons from real numbers wait until you keep them).
+  const lessons = b.lessons.filter((l) => l.status !== 'proposed').slice(-10);
   if (lessons.length > 0) lines.push('Lessons from earlier feedback:', ...lessons.map((l) => `- ${l.text}`));
   return lines.join('\n');
 }
 
 export function buildStepPrompt(payload: ContentStepPayload, agent: string, actionType: string): { system: string; prompt: string } {
-  const action = hasOwnKey(ACTIONS, actionType) ? ACTIONS[actionType] : undefined;
+  const action = ACTION_MAP.get(actionType);
   const brief = payload.brief;
   const system = `You are ${action?.role || agent}. ${HONEST_COPY} Return JSON only, with exactly these keys. Each value below describes what to write: replace it with your own content (numbers as numbers, true/false as booleans): ${action?.keys || '{}'}`;
   const parts = [
@@ -166,6 +185,9 @@ const VALIDATORS: Record<string, (j: Json) => boolean> = {
   creative_thumbnails: (j) => list(j.concepts, 3) && (j.concepts as unknown[]).length === 3
     && every(j.concepts, 3, (c) => isText(c.headline) && words(c.headline) <= 6 && isText(c.imagePrompt) && ['left', 'right', 'center'].includes(String(c.layout))),
   creative_shorts: (j) => list(j.shorts, 1),
+  analysis_performance: (j) => texts(j.worked) && texts(j.didnt) && (j.worked as unknown[]).length + (j.didnt as unknown[]).length > 0,
+  analysis_ideas: (j) => texts(j.ideas, 1),
+  creative_lessons: (j) => texts(j.worked) && texts(j.didnt) && (j.worked as unknown[]).length + (j.didnt as unknown[]).length > 0,
   creative_carousel: (j) => list(j.slides, 5) && (j.slides as unknown[]).length <= 10
     && every(j.slides, 5, (sl) => isText(sl.headline) && isText(sl.body) && isText(sl.imagePrompt) && words(sl.headline) <= 8 && words(sl.body) <= 25),
   creative_campaign: (j) => every(j.platforms, 1, (p) => isText(p.platform) && isText(p.caption) && Array.isArray(p.hashtags)) && Array.isArray(j.ads) && Array.isArray(j.calendar),
@@ -252,7 +274,7 @@ function repairShorts(shorts: Json[], defaultPlatforms: string[]): Json[] {
 /** The agent's answer as an object, or null when it is not usable. */
 export function parseStepAnswer(actionType: string, text: string, options: { allowedUrls?: string[]; defaultPlatforms?: string[] } = {}): unknown | null {
   // Own keys only: a name like "constructor" must not find Object's methods (CodeQL).
-  const validate = hasOwnKey(VALIDATORS, actionType) ? VALIDATORS[actionType] : undefined;
+  const validate = VALIDATOR_MAP.get(actionType);
   if (!validate) return null;
   let parsed: unknown = null;
   try {
@@ -271,6 +293,14 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
     // Only links Hector actually found; a model without internet invents them.
     const allowed = new Set(options.allowedUrls.map((u) => u.trim()));
     answer = { ...answer, references: (answer.references as Json[]).filter((r) => allowed.has(String(r?.url || '').trim())) };
+  }
+  if (actionType === 'analysis_ideas') {
+    answer = { ideas: (Array.isArray(answer.ideas) ? answer.ideas : []).map((t) => String(t ?? '').trim().slice(0, 160)).filter(Boolean).slice(0, 3) };
+  }
+  if (actionType === 'analysis_performance' || actionType === 'creative_lessons') {
+    // Up to 3 a side, one sentence each (phase 4a).
+    const clean = (v: unknown) => (Array.isArray(v) ? v : []).map((t) => String(t ?? '').trim().slice(0, 240)).filter(Boolean).slice(0, 3);
+    answer = { worked: clean(answer.worked), didnt: clean(answer.didnt) };
   }
   if (actionType === 'creative_shorts' && Array.isArray(answer.shorts)) {
     answer = { ...answer, shorts: repairShorts(answer.shorts as Json[], options.defaultPlatforms || []) };
@@ -292,5 +322,9 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
   }
   return validate(answer) ? answer : null;
 }
+
+// Looked up through Maps so an unknown name can never reach another object's method (CodeQL 36).
+const ACTION_MAP = new Map(Object.entries(ACTIONS));
+const VALIDATOR_MAP = new Map(Object.entries(VALIDATORS));
 
 export const CONTENT_ACTION_KEYS: Record<string, string> = Object.fromEntries(Object.entries(ACTIONS).map(([id, a]) => [id, a.keys]));

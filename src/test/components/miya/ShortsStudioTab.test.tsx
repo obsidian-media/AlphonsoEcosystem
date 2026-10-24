@@ -14,7 +14,7 @@ vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
 });
 
 import { ShortsStudioTab } from '../../../components/miya/ShortsStudioTab';
-import { createProject, emptyBrief, getProject, getShortsSettings, saveStepVersion } from '../../../services/contentFactory/contentProjectService';
+import { createProject, emptyBrief, getProject, getShortsSettings, saveStepVersion, setShortsSettings } from '../../../services/contentFactory/contentProjectService';
 
 beforeEach(() => localStorage.clear());
 
@@ -82,7 +82,11 @@ describe('ShortsStudioTab', () => {
     const pr = props();
     render(<ShortsStudioTab project={p} {...pr} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add a Short' }));
-    expect(pr.addShort).toHaveBeenCalled();
+    expect(pr.addShort).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Its own mini-script' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'A highlight with its own hook' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'A plain cut of the video' }));
+    expect(pr.addShort).toHaveBeenCalledWith('cut');
     fireEvent.change(screen.getByLabelText('AI clips for Shorts'), { target: { value: 'every' } });
     expect(getShortsSettings(getProject(p.id)!).aiClips).toBe('every');
   });
@@ -91,4 +95,19 @@ describe('ShortsStudioTab', () => {
     render(<ShortsStudioTab project={createProject('b', 'P', emptyBrief())} {...props()} />);
     expect(screen.getByText(/add .Shorts. to What to make/i)).toBeTruthy();
   });
+
+  it('a failed Short is flagged', () => {
+    render(<ShortsStudioTab project={setup()} {...props()} />);
+    expect(screen.getByTestId('short-failed-sh2')).toBeTruthy();
+    expect(screen.queryByTestId('short-failed-sh1')).toBeNull();
+  });
+
+  it('the Shorts can use Runway for their clips', () => {
+    const p = setup();
+    setShortsSettings(p.id, { aiClips: 'main', clipEngine: 'local' });
+    render(<ShortsStudioTab project={getProject(p.id)!} {...props()} />);
+    fireEvent.change(screen.getByLabelText('Clip engine for Shorts'), { target: { value: 'runway' } });
+    expect(getShortsSettings(getProject(p.id)!)).toEqual({ aiClips: 'main', clipEngine: 'runway' });
+  });
 });
+

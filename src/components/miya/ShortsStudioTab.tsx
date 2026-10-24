@@ -25,7 +25,7 @@ export interface ShortsStudioTabProps {
   chooseVersion(step: StepId, version: number): void;
   redo(shortId: string): void;
   reject(pieceId: string, reason: string): void;
-  addShort(): void;
+  addShort(kind: ShortKind): void;
   onChange(): void;
 }
 
@@ -45,6 +45,7 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
   const made = output?.made || {};
   const clipSetting = getShortsSettings(project);
   const [rejecting, setRejecting] = useState<string | null>(null);
+  const [choosingKind, setChoosingKind] = useState(false);
   const [reason, setReason] = useState('');
   // The players wait until the output folder may be played from (as in the Scene Builder).
   const [allowedRoot, setAllowedRoot] = useState<string | null>(null);
@@ -63,12 +64,26 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
         <label className="block text-[11px] text-(--text-3)">
           AI clips for Shorts
           <select aria-label="AI clips for Shorts" className={`${field} ml-2`} value={clipSetting.aiClips}
-            onChange={(e) => { setShortsSettings(project.id, { aiClips: e.target.value as 'main' | 'every' | 'none', clipEngine: e.target.value === 'none' ? null : 'local' }); onChange(); }}>
+            onChange={(e) => {
+              const aiClips = e.target.value as 'main' | 'every' | 'none';
+              setShortsSettings(project.id, { aiClips, clipEngine: aiClips === 'none' ? null : clipSetting.clipEngine || 'local' });
+              onChange();
+            }}>
             <option value="none">None (pictures only, fast and free)</option>
             <option value="main">The hook and the ending</option>
             <option value="every">Every part</option>
           </select>
         </label>
+        {clipSetting.aiClips !== 'none' && (
+          <label className="block text-[11px] text-(--text-3)">
+            Clip engine for Shorts
+            <select aria-label="Clip engine for Shorts" className={`${field} ml-2`} value={clipSetting.clipEngine || 'local'}
+              onChange={(e) => { setShortsSettings(project.id, { aiClips: clipSetting.aiClips, clipEngine: e.target.value as 'local' | 'runway' }); onChange(); }}>
+              <option value="local">This computer (free)</option>
+              <option value="runway">Runway (paid, asks first with the cost)</option>
+            </select>
+          </label>
+        )}
         {shorts.length === 0 && (
           <p className="text-[12px] text-(--text-3)">
             No Shorts yet. To make them with the project, add "Shorts" to What to make in the brief ("3 Shorts" for three); or run this step now.
@@ -115,7 +130,7 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
                 {result?.status === 'done' && result.path && mediaReady && (
                   <video key={outputRoot} controls preload="metadata" src={mediaUrl(outputRoot, result.path)} className="max-h-96 w-full rounded-xl bg-black" />
                 )}
-                {result?.status === 'failed' && <p className="text-[11px] text-(--error)">{result.reason}</p>}
+                {result?.status === 'failed' && <p data-testid={`short-failed-${short.id}`} className="text-[11px] text-(--error)">{result.reason}</p>}
                 {!result && <p className="text-[11px] text-(--text-3)">Not made yet.</p>}
                 {result?.note && <p className="text-[11px] text-(--text-3)">{result.note}</p>}
                 <div className="flex flex-wrap gap-1">
@@ -135,7 +150,14 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
             );
           })}
         </div>
-        <Button size="sm" variant="secondary" onClick={addShort}>Add a Short</Button>
+        <Button size="sm" variant="secondary" onClick={() => setChoosingKind((open) => !open)}>Add a Short</Button>
+        {choosingKind && (
+          <div className="flex flex-wrap gap-1">
+            {KINDS.map((k) => (
+              <Button key={k.id} size="sm" variant="ghost" onClick={() => { setChoosingKind(false); addShort(k.id); }}>{k.label}</Button>
+            ))}
+          </div>
+        )}
       </StepPanel>
     </div>
   );

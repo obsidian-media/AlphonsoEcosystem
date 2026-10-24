@@ -9,6 +9,8 @@ vi.mock('../../../services/connectors/connectorImageGenerators', () => ({
   generateComfyUiImage: (...a: unknown[]) => generateComfyUiImage(...a),
   getComfyUiEndpoint: () => 'http://127.0.0.1:8188',
 }));
+const makeRunwayClip = vi.fn();
+vi.mock('../../../services/contentFactory/runwayClip', () => ({ makeRunwayClip: (...a: unknown[]) => makeRunwayClip(...a) }));
 vi.mock('../../../services/contentFactory/comfyVideoClip', () => ({ makeComfyClip: (...a: unknown[]) => makeComfyClip(...a) }));
 vi.mock('../../../services/videoModelService', () => ({
   listVideoModels: vi.fn(async () => ({ vramGb: 12, smallCard: false, suggested: 'ltx_video_2b', comfyuiDir: 'C', models: [{ id: 'ltx_video_2b', maxSeconds: 5, installed: true }] })),
@@ -20,7 +22,7 @@ vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   return { ...actual, saveProjectImage: vi.fn(async (_r, _b, _p, sub, file) => `D:/Content/${sub}/${file}`), writeProjectFile: vi.fn(async () => undefined) };
 });
 
-import { makeShorts, redoShort, MAKING_ANOTHER, NEEDS_FINISHED_VIDEO } from '../../../services/contentFactory/shortMaker';
+import { makeShorts, redoShort, shortsSummary, NEEDS_FINISHED_VIDEO } from '../../../services/contentFactory/shortMaker';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief, getProject, saveStepVersion, setShortsSettings } from '../../../services/contentFactory/contentProjectService';
 
@@ -43,7 +45,7 @@ const calls = (cmd: string) => invoke.mock.calls.filter((c) => c[0] === cmd).map
 
 beforeEach(() => {
   localStorage.clear();
-  [invoke, generateComfyUiImage, makeComfyClip].forEach((f) => f.mockReset());
+  [invoke, generateComfyUiImage, makeComfyClip, makeRunwayClip].forEach((f) => f.mockReset());
   generateComfyUiImage.mockResolvedValue({ ok: true, previewBase64: 'PIC' });
   invoke.mockImplementation(async (cmd: string, args: { request?: { lines?: { id: string }[] }; spec?: { outPath?: string; outDir?: string; outputStem?: string } }) => {
     if (cmd === 'content_tts_kokoro') {
@@ -100,7 +102,12 @@ describe('makeShorts', () => {
 
   it('one Short failing does not stop the others', async () => {
     const p = setup([highlight, cut]);
-    invoke.mockImplementationOnce(async () => { throw new Error('Kokoro is not installed'); });
+    const base = invoke.getMockImplementation()!;
+    let thrown = false;
+    invoke.mockImplementation(async (cmd: string, args: unknown) => {
+      if (cmd === 'content_tts_kokoro' && !thrown) { thrown = true; throw new Error('Kokoro is not installed'); }
+      return base(cmd, args as never);
+    });
     const outs = await makeShorts(p.id, settings);
     expect(outs.map((o) => o.status)).toEqual(['failed', 'done']);
     expect(outs[0].reason).toContain('Kokoro');
@@ -128,6 +135,41 @@ it('a highlight or cut with no part chosen (switched from a mini Short) uses the
   expect(calls('content_cut_short')[0].spec).toMatchObject({ startSec: 40, endSec: 80 });
 });
 
+it("a Short's hook text and captions use the brand font", async () => {
+  const p = setup([highlight, mini]);
+  const { saveBrand: save, getBrand } = await import('../../../services/contentFactory/contentBrandService');
+  save({ ...getBrand(p.brandId)!, fonts: 'Montserrat, Inter' });
+  const base = invoke.getMockImplementation()!;
+  invoke.mockImplementation(async (cmd: string, args: { spec?: { outPath?: string } }) => (cmd === 'content_cut_short'
+    ? { ok: true, path: args.spec?.outPath, durationSec: 40, frames: [], fontNote: "The brand font Montserrat isn't installed" }
+    : base(cmd, args)));
+  const [first] = await makeShorts(p.id, settings);
+  expect(first.note).toContain("isn't installed");
+  expect(calls('content_cut_short')[0].spec.font).toBe('Montserrat');
+  expect(calls('content_assemble_video')[0].spec.font).toBe('Montserrat');
+});
+
+it('approved Runway Shorts make Runway clips for the hook and the ending', async () => {
+  const p = setup([{ ...mini, parts: [...mini.parts, { spoken: 'Three.', imagePrompt: 'c', seconds: 10 }] }]);
+  setShortsSettings(p.id, { aiClips: 'main', clipEngine: 'runway' });
+  makeRunwayClip.mockResolvedValue({ status: 'done', path: 'rw.mp4', costUsd: 0.5 });
+  await makeShorts(p.id, settings, undefined, { runwayApproved: true });
+  expect(makeRunwayClip).toHaveBeenCalledTimes(2);
+  expect(makeRunwayClip.mock.calls[0][0]).toMatchObject({ vertical: true, outDirRel: 'acme/launch/shorts/sh1/clips' });
+  const scenes = calls('content_assemble_video')[0].spec.scenes;
+  expect(scenes[0]).toMatchObject({ aiClip: 'rw.mp4' });
+  expect(scenes[1].aiClip).toBeUndefined();
+  expect(scenes[2]).toMatchObject({ aiClip: 'rw.mp4' });
+});
+
+it('Runway Shorts that were not approved use pictures and say so', async () => {
+  const p = setup([mini]);
+  setShortsSettings(p.id, { aiClips: 'main', clipEngine: 'runway' });
+  const [out] = await makeShorts(p.id, settings);
+  expect(makeRunwayClip).not.toHaveBeenCalled();
+  expect(out.note).toContain('not approved');
+});
+
 describe('redoShort', () => {
   it('makes that Short again as a new version file', async () => {
     const p = setup([cut]);
@@ -137,13 +179,42 @@ describe('redoShort', () => {
     expect(made(p.id).sh3).toMatchObject({ fileVersion: 2 });
   });
 
-  it('Redo while another Short is being made is refused', async () => {
+  it('Redo waits for the Short being made, then runs', async () => {
     const p = setup([cut, highlight]);
-    let release: (v: unknown) => void = () => undefined;
-    invoke.mockImplementationOnce(() => new Promise((r) => { release = r; }));
+    const base = invoke.getMockImplementation()!;
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((r) => { release = r; });
+    const order: string[] = [];
+    invoke.mockImplementation(async (cmd: string, args: { spec?: { outPath?: string } }) => {
+      if (cmd === 'content_cut_short') {
+        order.push(`start ${args.spec?.outPath}`);
+        if (order.length === 1) await held;
+        order.push(`end ${args.spec?.outPath}`);
+      }
+      return base(cmd, args);
+    });
     const first = makeShorts(p.id, settings);
-    expect(await redoShort(p.id, 'sh2', settings)).toEqual({ ok: false, reason: MAKING_ANOTHER });
-    release({ ok: true, path: 'acme/launch/shorts/sh3/v1.mp4', durationSec: 30, frames: [] });
-    await first;
+    const again = redoShort(p.id, 'sh3', settings);
+    await new Promise((r) => setTimeout(r, 0));
+    release();
+    const [outs, redo] = await Promise.all([first, again]);
+    expect(outs.map((o) => o.status)).toEqual(['done', 'done']);
+    expect(redo).toMatchObject({ status: 'done', path: 'acme/launch/shorts/sh3/v2.mp4' });
+    // Never two cuts at once.
+    for (let i = 0; i < order.length; i += 2) {
+      expect(order[i].startsWith('start')).toBe(true);
+      expect(order[i + 1].startsWith('end')).toBe(true);
+    }
   });
 });
+
+describe('shortsSummary', () => {
+  it('the Shorts step says how many failed', () => {
+    const d = { shortId: 'a', status: 'done' } as const;
+    const f = { shortId: 'b', status: 'failed' } as const;
+    expect(shortsSummary([d, f, d])).toBe('done, 1 of 3 failed');
+    expect(shortsSummary([d, d])).toBe('done');
+    expect(shortsSummary([])).toBe('done');
+  });
+});
+

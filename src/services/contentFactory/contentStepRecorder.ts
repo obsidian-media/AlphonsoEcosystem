@@ -2,14 +2,16 @@
 // A project runs as one Jose request and may be carried on from the board,
 // Telegram or Carry on, so the saving happens here, reached from the engine,
 // not in Miya Studio's own run call.
-import { getBrand } from './contentBrandService';
+import { saveIdeas } from './contentIdeas';
+import { addProposedLessons, getBrand } from './contentBrandService';
 import {
+  appendShortPlan,
   addStepProgress, approveStep, getProject, markStepStatus, saveStepVersion, setPendingAgents, startStep,
 } from './contentProjectService';
 import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
 import { getJoseRequest, updateJoseStep } from '../jose/joseRequestStore';
 import { runwayEstimate } from './contentProjectPlan';
-import { makeShorts } from './shortMaker';
+import { makeShorts, redoShort, shortsSummary } from './shortMaker';
 import { renderCarouselSlides, renderScenePictures, renderThumbnails } from './contentImages';
 import { STEP_AGENTS, stepMarkdown } from './contentStepAgents';
 import { hasOwnKey, type StepId } from './contentTypes';
@@ -38,10 +40,38 @@ export async function recordContentStepResult(input: {
   agent: string;
   data: unknown;
   commandId: string | null;
+  /** Add a Short as a mini-script (phase 4a): add it to the chosen Shorts, then make it. */
+  appendShort?: boolean;
+  /** The run's Runway clips for its Shorts were approved (phase 4a). */
+  runwayApproved?: boolean;
+  /** Lessons or ideas from a post's numbers (phase 4a), not a factory step. */
+  purpose?: 'lessons' | 'ideas';
+  postRef?: { projectId: string; postId: string };
 }): Promise<'partial' | 'saved' | 'ignored'> {
   const project = getProject(input.projectId);
+  if (input.purpose === 'lessons' && project && input.postRef) {
+    const answer = (input.data || {}) as { worked?: string[]; didnt?: string[] };
+    const items = [
+      ...(answer.worked || []).map((text) => ({ text, kind: 'worked' as const })),
+      ...(answer.didnt || []).map((text) => ({ text, kind: 'didnt' as const })),
+    ];
+    addProposedLessons(project.brandId, items, input.postRef);
+    return 'saved';
+  }
+  if (input.purpose === 'ideas' && project && input.postRef) {
+    saveIdeas(project.brandId, ((input.data || {}) as { ideas?: string[] }).ideas || [], input.postRef);
+    return 'saved';
+  }
+  if (input.purpose) return 'ignored';
   const agents = STEP_AGENTS[input.step] || [];
   if (!project || !agents.some((a) => a.agent === input.agent)) return 'ignored';
+  if (input.appendShort && input.step === 'shorts') {
+    const plan = (input.data as { shorts?: Record<string, unknown>[] } | null)?.shorts?.[0];
+    if (!plan) return 'ignored';
+    const shortId = appendShortPlan(input.projectId, plan);
+    await redoShort(input.projectId, shortId, contentAppSettings());
+    return 'saved';
+  }
 
   const pending = { ...(project.steps[input.step].pendingAgents || {}), [input.agent]: input.data };
   if (!agents.every((a) => hasOwnKey(pending, a.agent))) {
@@ -74,7 +104,10 @@ export async function recordContentStepResult(input: {
   if (input.step === 'shorts') {
     markStepStatus(input.projectId, 'shorts', 'running', null);
     try {
-      await makeShorts(input.projectId, settings, say);
+      const outputs = input.runwayApproved
+        ? await makeShorts(input.projectId, settings, say, { runwayApproved: true })
+        : await makeShorts(input.projectId, settings, say);
+      say(shortsSummary(outputs));
     } catch (error) {
       say(`The Shorts could not be made: ${(error as Error).message}`);
     }

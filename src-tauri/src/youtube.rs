@@ -7,7 +7,7 @@ use std::time::Duration;
 
 /// Saved OAuth values passed from the app; any that are missing fall back to
 /// the environment (see `secret_or_env`).
-#[derive(Default, serde::Deserialize)]
+#[derive(Default, Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct YouTubeOAuth {
   pub(crate) client_id: Option<String>,

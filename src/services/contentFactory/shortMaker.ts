@@ -12,15 +12,16 @@ import { generateComfyUiImage, getComfyUiEndpoint } from '../connectors/connecto
 import { clipSizeFor, effectiveVideoModel, listVideoModels } from '../videoModelService';
 import { getBrand } from './contentBrandService';
 import { captionsFromLines, toSrt, alignCaptions } from './contentCaptions';
-import { chosenVersionOf, getProject, getShortsSettings, setShortOutput } from './contentProjectService';
+import { chosenVersionOf, getProject, getShortsSettings, getVideoSettings, setShortOutput } from './contentProjectService';
 import { projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
 import { makeComfyClip } from './comfyVideoClip';
-import { darkestColour, headlineColour } from './thumbnailRenderer';
+import { makeRunwayClip } from './runwayClip';
+import { brandFontName, darkestColour, headlineColour } from './thumbnailRenderer';
 import type { ContentBrand, ContentProject, ShortPlan } from './contentTypes';
 
 export const MAKING_ANOTHER = 'Making another Short…';
 export const NEEDS_FINISHED_VIDEO = 'Make the finished video first: a highlight or a cut is taken from it.';
-export const RUNWAY_SHORTS_NOTE = 'Runway clips are not used for Shorts yet; these were made with pictures only.';
+export const RUNWAY_SHORTS_NOTE = 'Runway clips were not approved; these were made with pictures only.';
 
 export interface ShortOutput {
   shortId: string;
@@ -35,9 +36,22 @@ export interface ShortOutput {
 }
 
 type Settings = { outputFolder?: string | null };
-interface Ctx { project: ContentProject; brand: ContentBrand; root: string; dir: string; n: number }
+interface Ctx { project: ContentProject; brand: ContentBrand; root: string; dir: string; n: number; runwayApproved: boolean }
+export interface MakeOptions { runwayApproved?: boolean }
 
-let busy = false;
+// Every make waits for the one before it, so Redo never runs beside another Short (phase 4a).
+let queue: Promise<unknown> = Promise.resolve();
+function inTurn<T>(work: () => Promise<T>): Promise<T> {
+  const run = queue.then(work, work);
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+/** "done", or "done, N of M failed" when some Shorts failed (phase 4a). */
+export function shortsSummary(outputs: Pick<ShortOutput, 'status'>[]): string {
+  const failed = outputs.filter((o) => o.status === 'failed').length;
+  return failed ? `done, ${failed} of ${outputs.length} failed` : 'done';
+}
 
 const hex = (c: string) => (c.trim().startsWith('#') ? c.trim() : `#${c.trim()}`);
 
@@ -95,8 +109,21 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
   const clips: (string | null)[] = parts.map(() => null);
   let note: string | undefined;
   if (shortsSettings.aiClips !== 'none') {
-    if (shortsSettings.clipEngine === 'runway') note = RUNWAY_SHORTS_NOTE;
-    else {
+    if (shortsSettings.clipEngine === 'runway') {
+      // Approved once for the run (phase 4a), within the one monthly cap.
+      if (!ctx.runwayApproved) note = RUNWAY_SHORTS_NOTE;
+      else {
+        const chosen = shortsSettings.aiClips === 'every' ? parts.map((_, i) => i) : [...new Set([0, parts.length - 1])];
+        for (const i of chosen) {
+          if (!pictures[i]) continue;
+          const made = await makeRunwayClip({
+            root: ctx.root, imageRel: pictures[i] as string, outDirRel: `${ctx.dir}/clips`, prompt: parts[i].imagePrompt,
+            seconds: Math.min(lineSeconds[i] || 5, 10), vertical: true, model: getVideoSettings(ctx.project).runwayModel,
+          }).catch(() => null);
+          if (made?.status === 'done' && made.path) clips[i] = made.path;
+        }
+      }
+    } else {
       const info = await listVideoModels().catch(() => null);
       const model = info ? effectiveVideoModel(info) : null;
       if (model?.installed) {
@@ -136,16 +163,18 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
     return pictures[i] ? { picture: pictures[i] as string, seconds, ...first } : { cardColor: hex(darkestColour(palette)), seconds, ...first };
   });
   const music = musicOf(ctx.project);
-  const result = await invoke<{ outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
+  const result = await invoke<{ fontNote?: string | null; outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
     workspaceRoot: ctx.root, outDir: ctx.dir, version: ctx.n, scenes, voice: voice.full, voiceSeconds: voice.durationSec,
     ...(music ? { music } : {}), srt, captionColor: hex(headlineColour(palette)), outlineColor: hex(darkestColour(palette)),
     aspects: ['9x16'], outputStem: `v${ctx.n}`,
+    ...(brandFontName(ctx.brand) ? { font: brandFontName(ctx.brand) } : {}),
   } });
   const out = result?.outputs?.[0];
   if (!out) throw new Error('The Short could not be put together.');
   return {
     shortId: plan.id, status: 'done', path: `${ctx.dir}/${out.path}`, seconds: out.durationSec,
-    frames: (out.frames || []).map((f) => `${ctx.dir}/${f}`), fileVersion: ctx.n, ...(note ? { note } : {}),
+    frames: (out.frames || []).map((f) => `${ctx.dir}/${f}`), fileVersion: ctx.n,
+    ...(note || result?.fontNote ? { note: [note, result?.fontNote].filter(Boolean).join(' ') } : {}),
   };
 }
 
@@ -165,25 +194,27 @@ async function makeFromVideo(ctx: Ctx, plan: ShortPlan, withHook: boolean): Prom
     await writeText(ctx, hookSrt, toSrt(captionsFromLines([{ text: plan.hook, start: 0, end: voice.durationSec }]), { maxWords: 12, maxSeconds: 60 }));
     hook = { hookVoice: voice.full, hookSeconds: voice.durationSec, hookSrt };
   }
-  const result = await invoke<{ ok?: boolean; path?: string; durationSec?: number; frames?: string[] }>('content_cut_short', { spec: {
+  const result = await invoke<{ ok?: boolean; path?: string; durationSec?: number; frames?: string[]; fontNote?: string | null }>('content_cut_short', { spec: {
     workspaceRoot: ctx.root, source: video.path, sourceSeconds: video.durationSec, startSec: moment.startSec, endSec: moment.endSec,
     outPath, captionColor: hex(headlineColour(palette)), outlineColor: hex(darkestColour(palette)), ...hook,
+    ...(brandFontName(ctx.brand) ? { font: brandFontName(ctx.brand) } : {}),
   } });
   if (!result?.ok) throw new Error('The Short could not be cut from the finished video.');
   return {
     shortId: plan.id, status: 'done', path: outPath, seconds: result.durationSec,
     frames: (result.frames || []).map((f) => `${ctx.dir}/${f}`), fileVersion: ctx.n,
+    ...(result.fontNote ? { note: result.fontNote } : {}),
   };
 }
 
-async function makeOne(projectId: string, plan: ShortPlan, settings: Settings): Promise<ShortOutput> {
+async function makeOne(projectId: string, plan: ShortPlan, settings: Settings, options: MakeOptions = {}): Promise<ShortOutput> {
   const project = getProject(projectId);
   if (!project) throw new Error(`Content project not found: ${projectId}`);
   const brand = getBrand(project.brandId);
   if (!brand) throw new Error("This project's brand no longer exists.");
   const root = requireOutputRoot(settings);
   const previous = planOf(project).made[plan.id];
-  const ctx: Ctx = { project, brand, root, dir: `${projectRelativeDir(brand, project)}/shorts/${plan.id}`, n: (previous?.fileVersion || 0) + 1 };
+  const ctx: Ctx = { project, brand, root, dir: `${projectRelativeDir(brand, project)}/shorts/${plan.id}`, n: (previous?.fileVersion || 0) + 1, runwayApproved: options.runwayApproved === true };
   let output: ShortOutput;
   try {
     output = plan.kind === 'mini' ? await makeMini(ctx, plan) : await makeFromVideo(ctx, plan, plan.kind === 'highlight');
@@ -196,33 +227,26 @@ async function makeOne(projectId: string, plan: ShortPlan, settings: Settings): 
 }
 
 /** Makes every planned Short in turn; one failing does not stop the others. */
-export async function makeShorts(projectId: string, settings: Settings, onProgress?: (m: string) => void): Promise<ShortOutput[]> {
+export async function makeShorts(projectId: string, settings: Settings, onProgress?: (m: string) => void, options: MakeOptions = {}): Promise<ShortOutput[]> {
   const project = getProject(projectId);
   if (!project) throw new Error(`Content project not found: ${projectId}`);
   const { shorts } = planOf(project);
-  busy = true;
-  try {
+  return inTurn(async () => {
     const outputs: ShortOutput[] = [];
     for (const [i, plan] of shorts.entries()) {
       onProgress?.(`Making Short ${i + 1} of ${shorts.length}…`);
-      outputs.push(await makeOne(projectId, plan, settings));
+      outputs.push(await makeOne(projectId, plan, settings, options));
     }
     return outputs;
-  } finally {
-    busy = false;
-  }
+  });
 }
 
-/** Makes one Short again (a new `v<n>` file); refused while another is being made. */
+/** Makes one Short again (a new `v<n>` file), after any Short being made now. */
 export async function redoShort(projectId: string, shortId: string, settings: Settings): Promise<ShortOutput | { ok: false; reason: string }> {
-  if (busy) return { ok: false, reason: MAKING_ANOTHER };
-  const project = getProject(projectId);
-  const plan = project ? planOf(project).shorts.find((s) => s.id === shortId) : undefined;
-  if (!plan) return { ok: false, reason: 'That Short is not in the chosen Shorts.' };
-  busy = true;
-  try {
-    return await makeOne(projectId, plan, settings);
-  } finally {
-    busy = false;
-  }
+  return inTurn(async () => {
+    const project = getProject(projectId);
+    const plan = project ? planOf(project).shorts.find((s) => s.id === shortId) : undefined;
+    if (!plan) return { ok: false as const, reason: 'That Short is not in the chosen Shorts.' };
+    return makeOne(projectId, plan, settings);
+  });
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PostNumbers } from './PostNumbers';
 import { Badge, Button } from '../ui';
 import { buildPosts, POST_STATUS_LABEL, savePosts, updatePost } from '../../services/contentFactory/contentPosts';
 import { cancelProjectPost, movePost, type MoveResult } from '../../services/contentFactory/contentPostMoves';
@@ -94,6 +95,7 @@ export function PostsPanel({ project, brand, approvePosts, onChange }: {
               )}
             </div>
             {post.reason && <p className="text-(--text-2)">{post.reason}</p>}
+            {post.platformId && ['posted', 'scheduled'].includes(post.status) && <PostNumbers projectId={project.id} brandId={project.brandId} post={post} />}
             {onPlatform && <p className="text-(--text-3)">Scheduled on {PLATFORM[post.platform]}: move or cancel it on the Calendar, which asks before changing it there.</p>}
             <div className="grid gap-2 md:grid-cols-2">
               {post.platform === 'youtube' && (

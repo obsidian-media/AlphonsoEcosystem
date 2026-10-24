@@ -3,6 +3,12 @@
 // gradient behind the text, not a box; big bold type with an outline.
 import type { ContentBrand } from './contentTypes';
 
+/** The brand's font for burned-in text (phase 4a): the first family it names, or null. */
+export function brandFontName(brand: Pick<ContentBrand, 'fonts'>): string | null {
+  const first = String(brand.fonts || '').split(',')[0].replace(/["']/g, '').trim();
+  return first || null;
+}
+
 export type HeadlineSide = 'left' | 'right' | 'center';
 
 export interface HeadlineLayout {

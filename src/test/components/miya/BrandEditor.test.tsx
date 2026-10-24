@@ -40,3 +40,22 @@ it('saves the carousel shape, 4:5 by default', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Save brand' }));
   expect(getBrand(brand.id)!.carouselShape).toBe('1:1');
 });
+
+// Phase 4a: the brand's results.
+it("shows the brand's results", () => {
+  const brand = saveBrand({ name: 'Acme' });
+  render(<BrandEditor brandId={brand.id} onBrand={() => undefined} />);
+  expect(screen.getByRole('region', { name: 'Results' })).toBeTruthy();
+});
+
+it('lists only kept lessons as lessons', () => {
+  const brand = saveBrand({ name: 'Acme', lessons: [
+    { id: 'l1', atMs: 1, text: 'WAITING-LESSON', source: 'performance', status: 'proposed', kind: 'worked' },
+    { atMs: 2, text: 'An older lesson', source: 'rejection' },
+  ] } as any);
+  render(<BrandEditor brandId={brand.id} onBrand={() => undefined} />);
+  const lessons = screen.getByText('Lessons from your feedback').parentElement!;
+  expect(lessons.textContent).toContain('An older lesson');
+  expect(lessons.textContent).not.toContain('WAITING-LESSON');
+});
+

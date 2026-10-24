@@ -80,6 +80,8 @@ impl BridgeSettings {
       Some("ACC's address is not set (Settings, or ALPHONSO_BRIDGE_URL).".to_string())
     } else if self.token.is_empty() {
       Some("The ACC bridge token is not set (Settings, or ALPHONSO_BRIDGE_TOKEN).".to_string())
+    } else if !secure_or_local(&self.base_url) {
+      Some("ACC's address must start with https:// unless ACC runs on this computer, so the bridge token is never sent unencrypted.".to_string())
     } else {
       None
     }
@@ -393,9 +395,48 @@ pub(crate) fn bridge_acc_stop() -> Value {
   }
 }
 
+/// https anywhere, plain http only to this computer (CodeQL 33, 34).
+fn secure_or_local(url: &str) -> bool {
+  match reqwest::Url::parse(url) {
+    Ok(parsed) if parsed.scheme() == "https" => true,
+    Ok(parsed) if parsed.scheme() == "http" => {
+      matches!(
+        parsed.host_str(),
+        Some("localhost") | Some("127.0.0.1") | Some("[::1]")
+      )
+    }
+    _ => false,
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  fn settings_at(url: &str) -> BridgeSettings {
+    BridgeSettings {
+      base_url: url.to_string(),
+      token: "t".to_string(),
+      path_prefix: String::new(),
+      timeout_ms: 5000,
+    }
+  }
+
+  #[test]
+  fn a_bridge_address_off_this_computer_must_use_https() {
+    assert!(settings_at("http://10.0.0.5:3000")
+      .missing()
+      .unwrap()
+      .contains("https"));
+    assert!(settings_at("http://acc.example.com")
+      .missing()
+      .unwrap()
+      .contains("https"));
+    assert_eq!(settings_at("http://127.0.0.1:3000").missing(), None);
+    assert_eq!(settings_at("http://localhost:3000").missing(), None);
+    assert_eq!(settings_at("http://[::1]:3000").missing(), None);
+    assert_eq!(settings_at("https://acc.example.com").missing(), None);
+  }
 
   #[test]
   fn trim_trailing_slashes_removes_trailing_slashes() {

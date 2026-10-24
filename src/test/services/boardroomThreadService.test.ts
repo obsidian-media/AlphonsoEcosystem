@@ -389,3 +389,18 @@ describe('parseMentions', () => {
     });
   });
 });
+
+// Phase 4a (CodeQL 26): a message with a secret is stored only redacted.
+describe('secrets in Boardroom messages', () => {
+  it('a message with a secret is stored only redacted', async () => {
+    localStorage.clear();
+    const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+    const thread = createThread({ topic: 'Keys', participants: ['jose'] });
+    const secret = 'sk-ant-api03-' + 'a'.repeat(40);
+    const msg = addThreadMessage({ threadId: thread.id, speaker: 'shayan', content: `Use ${secret} for this` });
+    expect(msg?.secretRedacted).toBe(true);
+    const everything = Object.keys(localStorage).map((k) => localStorage.getItem(k) || '').join('\n');
+    expect(everything).not.toContain(secret);
+  });
+});
+

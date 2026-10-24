@@ -144,3 +144,13 @@ describe('unknown task types', () => {
     }
   });
 });
+
+// Phase 4a (CodeQL 36): only the step's own table is consulted.
+describe('unknown action types', () => {
+  it('an unknown action type is refused, not looked up', () => {
+    for (const name of ['toString', '__proto__', 'constructor', 'hasOwnProperty']) {
+      expect(parseStepAnswer(name, '{}')).toBeNull();
+    }
+  });
+});
+
