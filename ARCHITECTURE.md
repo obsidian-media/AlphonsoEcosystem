@@ -25,7 +25,7 @@ Alphonso is a local-first AI companion desktop application built with Tauri v2 (
 | Media (local) | FFmpeg (bundled on Windows), Kokoro voice-overs, MusicGen music, Whisper captions, ComfyUI pictures, AI clips (LTX-Video, Wan 2.2), the character reference model and motion transfer (Wan 2.1 VACE) — installed from Runtime Hub |
 | Media (paid, optional) | Runway clips, ElevenLabs voices and sound effects, Higgsfield pictures, clips, characters and motion — each run asks first with the cost |
 | Storage | SQLite via rusqlite (bundled), the OS keychain for connector keys and other secrets, localStorage (session/UI state), and project folders under the user's output folder (`<brand>/<project>/`) for the content factory |
-| Deployment | Windows NSIS + MSI installer, macOS DMG (Apple Silicon), Linux AppImage; Railway for the WhatsApp gateway; AWS for Cloud Voice (iOS); Tauri updater with signed manifest |
+| Deployment | Windows NSIS + MSI installer, macOS DMG (Apple Silicon), Linux AppImage; Railway for the WhatsApp gateway and the Farsi voice; AWS ECS for Cloud Voice compute (iOS); Tauri updater with signed manifest |
 
 ---
 
@@ -245,7 +245,7 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 | Installers | `release.yml` on a tag: Windows NSIS + MSI (with the bundled Ollama runtime and FFmpeg), macOS DMG, Linux AppImage; `npm run release:updater` locally |
 | Auto-updater | Tauri updater with signed manifest; keys generated via `npm run updater:keygen` |
 | Gateway (WhatsApp Cloud inbound) | Railway static serve; service root `gateway/whatsapp-cloud/`; healthcheck at `/health` |
-| Cloud Voice (iOS companion) | AWS ECS behind `voice.obsidianmedia.online`; deployed by `deploy-cloud-voice.yml` |
+| Cloud Voice (iOS companion) | AWS ECS behind `voice.obsidianmedia.online`, deployed by `deploy-cloud-voice.yml`; Farsi Piper on Railway; Railway kept as the rollback. The address did not resolve on 2026-10-20 (see `docs/deployment/AWS_VOICE_MIGRATION.md`) |
 | Dev server | `npm run dev` (Vite, port 5173) or `npm run tauri dev` (full Tauri with Rust) |
 
 ---

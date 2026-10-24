@@ -2,7 +2,10 @@
 
 Tracks confirmed, not-forgotten deferred work. For general historical
 narrative and completed-work records, see `docs/ALPHONSO_GROUND_TRUTH.md`
-and `docs/CHANGELOG.md`. This file is for what's still open.
+and `docs/CHANGELOG.md`. This file is for what's still open. The main
+register of open work is now `docs/governance/DEFERRED_WORK.md` (Rule 12);
+this file keeps the Boardroom and UI items listed below. Checked against the
+code on 2026-10-25.
 
 ---
 
@@ -42,8 +45,9 @@ Not necessarily "must build," but every phase's plan doc stated these as
 conscious scope cuts. Listed here so a future session doesn't have to
 re-derive them from 12 separate plan docs:
 
-- [ ] **Real fetch cancellation for Stop (Phase 8).** `generateOllamaResponse`
-  in `src/lib/ollama.ts` has no `AbortController` wiring. Stop currently
+- [x] **Real fetch cancellation for Stop (Phase 8).** Done: `generateOllamaResponse`
+  takes a `signal`, and `BoardroomChatView.tsx` aborts the reply in flight
+  (`generationAbortControllerRef`). Originally: it had no `AbortController` wiring. Stop currently
   only prevents the *next* hop from starting; an in-flight hop always
   finishes. Fixing this properly means touching the shared Ollama client
   used by every other caller in the app (ChatView, all agent services) —
@@ -93,19 +97,21 @@ re-derive them from 12 separate plan docs:
   release — confirmed working end-to-end (install succeeded, app
   relaunched on the new version). See
   `docs/governance/DEFERRED_WORK.md`'s 2026-09-04/09-05 entries.
-- [ ] macOS support — deferred until Windows reaches full maturity (see
-  `docs/ALPHONSO_GROUND_TRUTH.md` §11 "Gap 5" for the full checklist of
-  what's needed when the time comes).
-- [ ] Branch protection required-check list only covers `Test & Build`
-  and `Rust Tests & Clippy` — `Playwright E2E Smoke Test` currently fails
+- [x] macOS support — an Apple Silicon DMG has shipped since v2.8.0 (missing
+  from 2.9.0, back in 2.10.0). Still open: Apple Developer ID signing and
+  notarization (`docs/MACOS_SIGNING.md`).
+- [x] Branch protection required-check list — closed 2026-08-22: Secrets Scan,
+  Doc Count Freshness, gate and Playwright E2E Smoke Test are required too
+  (the desktop E2E job is not). Originally: `Playwright E2E Smoke Test` failed
   on a pre-existing, unrelated issue (`test.describe.slow is not a
   function` in `e2e/multiagent.spec.js`, a Playwright API version
   mismatch) and isn't gating merges. Worth fixing so E2E coverage isn't
   silently broken.
 
-- [ ] `src/test/tauri-mock.ts` + `src/test/test-mocks.ts` (added 2026-07-12,
-  see `docs/ALPHONSO_GROUND_TRUTH.md` §11.18) — Tauri API + service-layer
-  mock scaffolding, imported by zero test files today. Either write the
+- [x] `src/test/tauri-mock.ts` + `src/test/test-mocks.ts` (added 2026-07-12,
+  see `docs/ALPHONSO_GROUND_TRUTH.md` §11.18) — now used by the hook tests
+  (`useDataHydration`, `useOllamaHealth`, `useTrayEffects`). Originally:
+  imported by zero test files. Either write the
   hook tests it was intended for, or reconsider keeping unconsumed test
   infrastructure around.
 
@@ -116,34 +122,35 @@ unimported-symbol scan of `src/services/` and `src/components/`. Each
 needs a decision: wire it in, or delete it — "written but disconnected"
 is worse than either extreme.
 
-- [ ] `src/components/BoardroomView.tsx` (452 lines) — the pre-rebuild
-  Boardroom component, confirmed fully superseded by
-  `BoardroomChatView.tsx` (this session's rebuild). Safe to delete.
-- [ ] `src/services/whatsappWebhookService.ts` (476 lines) — the largest
-  orphan. Looks like a complete webhook-ingestion feature (routing,
+- [x] `src/components/BoardroomView.tsx` — deleted (with the Boardroom
+  Legacy tab, 2026-10-21; source kept in `archive/MIGHTBEUSEDLATER/`).
+- [x] `src/services/whatsappWebhookService.ts` — now imported by production
+  code (checked 2026-10-25). Originally the largest orphan. Looks like a complete webhook-ingestion feature (routing,
   audit, orchestration receipts) that was built but never connected to
   anything.
-- [ ] `src/services/pluginSigningService.ts` (277 lines) — ECDSA plugin
-  signing/verification, a real security feature sitting unused. Worth
+- [x] `src/services/pluginSigningService.ts` — now used by `pluginRegistryService.ts`
+  (checked 2026-10-25). Originally: ECDSA plugin signing/verification sitting unused. Worth
   checking whether `pluginRegistryService.ts` should be calling into it.
-- [ ] `src/components/AgentPerformanceView.tsx` (138 lines) — dead-letter
-  queue stats/retry UI, real implementation, no nav entry anywhere.
-- [ ] `src/components/CompanionWidget.tsx`,
-  `HectorCompanionWidget.tsx`, `JoseCompanionWidget.tsx`,
-  `MiyaCompanionWidget.tsx` — a matched set of per-agent companion avatar
-  widgets, none wired in anywhere. Looks like an older companion-UI
+- [x] `src/components/AgentPerformanceView.tsx` — in the sidebar since then
+  (System → Agent Performance).
+- [ ] `HectorCompanionWidget.tsx`, `JoseCompanionWidget.tsx`,
+  `MiyaCompanionWidget.tsx` — still imported by nothing (2026-10-25);
+  `CompanionWidget.tsx` is now used. A matched set of per-agent companion
+  avatar widgets. Looks like an older companion-UI
   concept superseded by the current agent dock.
-- [ ] `src/components/ErrorBoundary.tsx` (104 lines) — `App.tsx` uses
-  `ViewErrorBoundary.tsx` instead; this one is dead.
-- [ ] Other orphaned services worth a look: `agentPerformanceService.ts`,
-  `agentPairingExecutionService.ts`, `a2aProtocolService.ts`,
-  `connectorCircuitBreakerService.ts`, `connectorRateLimiterService.ts`,
-  `hectorBookmarkService.ts`, `runtimeApiService.ts`,
-  `streamingService.ts`, `whisperTranscriptionService.ts`.
+- [x] `src/components/ErrorBoundary.tsx` — used again (checked 2026-10-25);
+  `App.tsx` uses `ViewErrorBoundary.tsx` per view.
+- [ ] Other orphaned services worth a look, still imported only by tests on
+  2026-10-25: `agentPairingExecutionService.ts`, `a2aProtocolService.ts`,
+  `hectorBookmarkService.ts`, `runtimeApiService.ts`, `streamingService.ts`,
+  `whisperTranscriptionService.ts`. (`agentPerformanceService.ts`,
+  `connectorCircuitBreakerService.ts` and `connectorRateLimiterService.ts`
+  are used now.)
 
 ## UI/UX — surfaced during a 2026-07-10 codebase review
 
-- [ ] **Simple/Advanced mode split.** Sidebar has 11 top-level
+- [x] **Simple/Advanced mode split.** Done: `ModeToggle.tsx` + `useUxMode.ts`
+  (Simple mode is Companion Mode); Operator Dashboard is a developer tool. Sidebar has 11 top-level
   destinations across 4 groups, plus Coach Mode, Operator Dashboard,
   Agent Pairing, Ecosystem Maturity, Self-Development, Plugin
   Marketplace only reachable via Settings or a quick-launch card. A
@@ -151,7 +158,9 @@ is worse than either extreme.
   explicit Advanced toggle for everything else would match how OBS
   (Basic/Advanced output) and VS Code (basic/full settings) handle the
   same problem — no capability removed, just not required on day one.
-- [ ] **Unified home/digest view.** Status is fragmented across
+- [x] **Unified home/digest view.** Done: `DigestPanel.tsx` and the
+  Dashboard's attention items (`attentionAggregatorService.ts`); Jose's
+  requests are on the Requests board. Status is fragmented across
   Notification Center, Agent Activity Log, Nova opportunity history,
   Sentinel scan results, and (as of this session) Boardroom escalations
   — none surface proactively in one place. A single "what happened since
@@ -161,12 +170,13 @@ is worse than either extreme.
   explicit prior instruction) — the Packets tab embeds
   `OrchestratorQueueView` while the Monitor tab separately re-implements
   the same dead-letter/queue data on a different refresh cadence.
-- [ ] **No first-launch guided tour** beyond the onboarding wizard's
+- [x] **No first-launch guided tour** — done: `GuidedTour.tsx`, after the
+  Setup flow (which replaced the onboarding wizard). Originally: none beyond the onboarding wizard's
   connector step — Coach Mode, Boardroom, and Runtime Hub have zero
   in-app explanation of what they're for or when to use them.
 
 ---
 
-_Last updated: 2026-07-10, alongside the Boardroom rebuild + PR #98 merge.
+_Last updated: 2026-10-25 (every item checked against the code); first written 2026-07-10, alongside the Boardroom rebuild + PR #98 merge.
 When you close an item here, move the detail to `docs/CHANGELOG.md` and
 `docs/ALPHONSO_GROUND_TRUTH.md` rather than just deleting the line._

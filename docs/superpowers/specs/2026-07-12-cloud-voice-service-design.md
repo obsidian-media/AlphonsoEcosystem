@@ -1,6 +1,6 @@
 # Cloud Voice Service Design
 
-> **Status (2026-10-25):** built and deployed in July 2026; since September 2026 the service runs on AWS ECS behind `voice.obsidianmedia.online` (not Railway), and it is invite-only with per-account limits (2026-09-30). A paired-iPhone acceptance test is still open.
+> **Status (2026-10-25):** built and deployed in July 2026; Cloud Voice compute moved to AWS ECS (`voice.obsidianmedia.online`, the iOS app's built-in address) in September 2026; the Farsi Piper voice is still on Railway, and Railway is kept as the rollback. On 2026-10-20 the AWS address did not resolve (`audits/2026-10-20_Codex_CloudVoice_Production_Recheck_Audit.md`), so it needs the infrastructure owner before a device test. It is invite-only with per-account limits (2026-09-30). A paired-iPhone acceptance test is still open.
 
 ## Status
 

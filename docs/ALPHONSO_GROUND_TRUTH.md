@@ -138,7 +138,7 @@ the same change; no task is complete without the plan's stated verification.
 | AI layer | Ollama local (`llama3.2:3b` starter model, or the model you choose), NVIDIA NIM and Gemini (free tiers), Hermes Agents (self-hosted), Claude and ChatGPT (paid; used for Jose's steps only when you allow paid models) |
 | Media | FFmpeg (bundled on Windows), Kokoro, MusicGen, Whisper, ComfyUI (pictures, AI clips, the character reference model, motion transfer); paid and optional: Runway, ElevenLabs, Higgsfield |
 | Voice OS | FastAPI + Python microservice in `voice/` — STT (faster-whisper), LLM (Ollama `/api/chat`), TTS (piper), VAD (webrtcvad), barge-in cancellation. Launched as Tauri sidecar via `voice_sidecar.rs`. |
-| Deployment | Windows NSIS + MSI installers, macOS DMG and Linux AppImage (`release.yml`), Railway (WhatsApp gateway), AWS ECS (Cloud Voice) |
+| Deployment | Windows NSIS + MSI installers, macOS DMG and Linux AppImage (`release.yml`), Railway (WhatsApp gateway, Farsi Piper), AWS ECS (Cloud Voice compute; did not resolve on 2026-10-20) |
 
 ---
 
@@ -257,7 +257,7 @@ Key services that past audits missed or underestimated:
 - `voice/frontend/src/useJarvisVoice.ts` — Standalone frontend hook (AudioWorklet, all exports)
 - `voice/frontend/src/pcm-processor.worklet.ts` — AudioWorklet processor (PCM float32→int16)
 - `src/hooks/pcm-processor.worklet.ts` — **copy required by `useJarvisVoice.ts`** (the hook imports from `./pcm-processor.worklet`; the voice/frontend version is a separate package). Do NOT remove this file.
-- `voice/cloud-backend/` — Cloud Voice FastAPI service (on Railway at first; on AWS ECS behind `voice.obsidianmedia.online` since September 2026). It validates bearer-authenticated requests, applies one of nine voice personas, uses NVIDIA NIM for replies, NVIDIA TTS for non-Farsi replies, and private Railway Piper for `fa-IR` (`mana`/`manta`). `/health` and `/ready` were verified live on 2026-07-13.
+- `voice/cloud-backend/` — Cloud Voice FastAPI service (on Railway at first). Cloud Voice compute moved to AWS ECS (`voice.obsidianmedia.online`, the iOS app's built-in address) in September 2026; the Farsi Piper voice is still on Railway, and Railway is kept as the rollback. On 2026-10-20 the AWS address did not resolve (`audits/2026-10-20_Codex_CloudVoice_Production_Recheck_Audit.md`), so it needs the infrastructure owner before a device test. It validates bearer-authenticated requests, applies one of nine voice personas, uses NVIDIA NIM for replies, NVIDIA TTS for non-Farsi replies, and private Railway Piper for `fa-IR` (`mana`/`manta`). `/health` and `/ready` were verified live on 2026-07-13.
 - `voice/piper-farsi/` — token-protected Railway Piper service with a persistent `/data` model cache. `/health` was verified live on 2026-07-13 and reports `mana` and `manta`.
 - **Cloud Voice access truth: PARTIAL.** The iOS Voice UI no longer exposes provider credentials, carries selected agent/language metadata, uses Supabase email OTP with a Keychain session, and enrolls a stable device UUID. Cloud Voice validates the Supabase user session plus active device on each request. The server and migration were deployed on 2026-07-13; physical iPhone sign-in, English speech, and Farsi speech acceptance still require verification before public-ready status.
 

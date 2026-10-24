@@ -91,14 +91,14 @@ desktop app and the iOS companion:
   of always collapsing into a generic reply path.
 - **Cloud voice gained multilingual routing, including Persian/Farsi.**
   English replies use NVIDIA TTS; `fa-IR` uses Piper voices (`Mana` / `Manta`)
-  with playback retry handling. (Since September 2026 the cloud service runs on
-  AWS at `voice.obsidianmedia.online`, not Railway.)
+  with playback retry handling. (Since September 2026 the cloud service's compute
+  is on AWS at `voice.obsidianmedia.online`; the Farsi voices are still on Railway.)
 - **Cloud voice access is now device-gated.**
   The iOS app signs in via Supabase one-time-code auth, stores the session in
   Keychain, enrolls a generated device UUID, and sends voice requests only as an
   authenticated enrolled device. The service-role key remains server-only.
 - **Cloud voice is now a standalone service, not just an extension of local Voice OS.**
-  The repo now contains a dedicated `voice/cloud-backend/` service (first on Railway, now on AWS) with
+  The repo now contains a dedicated `voice/cloud-backend/` service (first on Railway; its compute moved to AWS in September 2026, with Railway kept as the rollback) with
   its own contracts, auth, tests, deployment config, and provider policy layer.
 - **Local and cloud voice responsibilities were explicitly separated.**
   The desktop `voice/backend/` path remains the local Ollama/Voice OS runtime,
