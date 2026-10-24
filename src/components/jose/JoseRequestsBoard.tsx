@@ -149,6 +149,9 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 {stepId && selected.steps.some((s) => s.stepId === stepId) && (
                   <div className="mt-2 rounded-xl bg-(--surface-2) p-3">
                     <div className="mb-1 text-xs font-semibold text-(--text-2)">What {agentName(selected.steps.find((s) => s.stepId === stepId)!.agent)}'s step produced</div>
+                    {selected.steps.find((s) => s.stepId === stepId)?.note && (
+                      <p className="text-xs text-(--text-secondary) mb-2" data-testid="jose-step-note">{selected.steps.find((s) => s.stepId === stepId)!.note}</p>
+                    )}
                     <JoseStepOutput key={`${selected.commandId}-${stepId}-${selected.steps.find((s) => s.stepId === stepId)!.status}`} commandId={selected.commandId} stepId={stepId} />
                   </div>
                 )}

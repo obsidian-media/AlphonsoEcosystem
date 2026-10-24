@@ -44,6 +44,7 @@ import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/j
 import { moveToOwner } from './jose/movedTaskTypes';
 import { buildStepInput, stepInputText } from './jose/stepInput';
 import { runReviewStep } from './jose/reviewStep';
+import { isEffectAllowed } from './jose/agentPermissionTable';
 import type { PlanStep } from './jose/stepGraph';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
 import { listInstalledModels, pickLargerModel } from './jose/joseModels';
@@ -1689,7 +1690,11 @@ export async function runJoseCommandExecutionPipeline({
       }
       processedAssignmentCount += 1;
       if (joseRequestId) {
-        try { updateJoseStep(joseRequestId, assignment.stepId, { status: 'running', startedAtMs: timestampMs() }); } catch { /* display aid only */ }
+        try {
+          // Alphonso can't see inside Hermes: say so on the board (agent roles Part A).
+          const onHermes = getAgentProvider(assignment.agent)?.provider === 'hermes' && !isEffectAllowed(assignment.agent, 'run');
+          updateJoseStep(joseRequestId, assignment.stepId, { status: 'running', startedAtMs: timestampMs(), ...(onHermes ? { note: 'Runs on Hermes, which can use its own tools.' } : {}) } as any);
+        } catch { /* display aid only */ }
       }
 
       const packet: any = getPacketById(assignment.packetId);

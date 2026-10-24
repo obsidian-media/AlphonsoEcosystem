@@ -780,3 +780,19 @@ describe('the closing summary (agent roles Part A)', () => {
     expect(command.userReport.summary).toBe('Miya: script finished.\nMiya: scenes finished.\nOpen on the board.');
   });
 });
+
+describe('a step that runs on Hermes (agent roles Part A)', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('is marked on the board when the agent may not run things', async () => {
+    localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider: 'hermes' } }));
+    const result = await run([{ agent: 'hector', actionType: 'research_report', stepId: 'facts', title: 'Facts', rationale: 'test', riskLevel: 'low', requiresApproval: false, commandPreview: 'Reads.', fragments: [] }]);
+    const facts = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'facts');
+    expect(facts.note).toBe('Runs on Hermes, which can use its own tools.');
+  });
+
+  it('is not marked on Ollama', async () => {
+    const result = await run([{ agent: 'hector', actionType: 'research_report', stepId: 'facts', title: 'Facts', rationale: 'test', riskLevel: 'low', requiresApproval: false, commandPreview: 'Reads.', fragments: [] }]);
+    expect(getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'facts').note).toBeUndefined();
+  });
+});

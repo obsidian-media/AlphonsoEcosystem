@@ -19,6 +19,8 @@ export interface JoseRequestStep extends PlanStep {
   error?: string;
   startedAtMs?: number;
   endedAtMs?: number;
+  /** A plain note shown with the step, e.g. that it runs on Hermes (agent roles Part A). */
+  note?: string;
 }
 
 export interface JoseRequest {

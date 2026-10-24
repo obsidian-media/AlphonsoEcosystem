@@ -867,7 +867,14 @@ export async function generateAgentLlmResponse(agentId: string, options: AgentGe
 
   if (config.provider === 'hermes') {
     const { sendHermesAgentMessage } = await import('../services/connectors/hermesAgentConnector');
-    const result: HermesSendResult = await sendHermesAgentMessage(agentId, messages, {
+    // Hermes can use its own tools, so it is told the agent's job and what it may do (agent roles Part A).
+    const { describeResponsibility, describeAgentPermissions } = await import('../services/jose/agentPermissionTable');
+    const duty = describeResponsibility(agentId);
+    const may = describeAgentPermissions(agentId).allowed;
+    const role = duty
+      ? [{ role: 'system', content: `You are ${agentId.charAt(0).toUpperCase()}${agentId.slice(1)}. You own: ${duty.owns} You never: ${duty.never} You may: ${may.join('; ')}. Do nothing else.` }]
+      : [];
+    const result: HermesSendResult = await sendHermesAgentMessage(agentId, [...role, ...messages], {
       model: config.model,
       sessionId: options.sessionId,
       approved: options.approved
