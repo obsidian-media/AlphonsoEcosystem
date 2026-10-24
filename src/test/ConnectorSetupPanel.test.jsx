@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 
 // ── Tauri mock ────────────────────────────────────────────────────────────────
 vi.mock('@tauri-apps/api/core', () => ({
@@ -151,9 +151,22 @@ describe('ConnectorSetupPanel', () => {
     render(<ConnectorSetupPanel />);
     fireEvent.click(screen.getByTestId('connector-category-content'));
     expect(screen.getByText('Meta (Facebook and Instagram)')).toBeInTheDocument();
-    for (const label of ['Access Token', 'Page Access Token', 'Page ID', 'Instagram Business Account ID', 'App Secret']) {
+    for (const label of ['Access Token', 'Page Access Token', 'Page ID', 'Instagram Business Account ID', 'App ID', 'App Secret']) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
+  });
+
+  // Phase 3b: saving the YouTube keys records when (for the 7-day sign-in warning); a Published project has no limit.
+  it('saving the YouTube keys records the sign-in time; the Published box turns the count off', () => {
+    localStorage.clear();
+    render(<ConnectorSetupPanel />);
+    fireEvent.click(screen.getByTestId('connector-category-content'));
+    const section = screen.getByText('YouTube').closest('div.rounded-2xl');
+    fireEvent.change(within(section).getAllByRole('textbox')[0], { target: { value: 'client-id' } });
+    fireEvent.click(within(section).getByRole('button', { name: /save/i }));
+    expect(JSON.parse(localStorage.getItem('alphonso_sign_ins_v1')).youtube.savedAtMs).toEqual(expect.any(Number));
+    fireEvent.click(screen.getByLabelText(/My Google project is Published/));
+    expect(JSON.parse(localStorage.getItem('alphonso_sign_ins_v1')).youtubePublished).toBe(true);
   });
 
   it('save credential button exists in GitHub section', () => {

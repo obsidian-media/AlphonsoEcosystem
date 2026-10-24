@@ -30,7 +30,8 @@ import {
   Terminal,
   Trash2,
   Users,
-  Activity
+  Activity,
+  CalendarDays,
 } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-app-icon.png';
 import { ConnectorStatusStrip, ConnectorStatusDot } from './ConnectorStatusIndicators';
@@ -139,6 +140,7 @@ const SPACES: Space[] = [
       { id: 'content', icon: FileText, label: 'Content' },
       { id: 'automation', icon: GitBranch, label: 'Automation' },
       { id: 'miya', icon: Palette, label: 'Creative' },
+      { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
     ]
   },
   {

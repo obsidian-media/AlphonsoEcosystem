@@ -132,6 +132,7 @@ const FilesView = lazy(() => import('./components/FilesView').then((mod) => ({ d
 const EcosystemHub = lazy(() => import('./components/EcosystemHub').then((mod) => ({ default: mod.EcosystemHub })));
 const HectorResearchDesk = lazy(() => import('./components/dashboard/HectorResearchDesk').then((mod) => ({ default: mod.HectorResearchDesk })));
 const MiyaStudio = lazy(() => import('./components/MiyaStudio').then((mod) => ({ default: mod.MiyaStudio })));
+const CalendarPage = lazy(() => import('./components/calendar/CalendarPage').then((mod) => ({ default: mod.CalendarPage })));
 const ContentCatalystWorkspace = lazy(() => import('./features/content-catalyst').then((mod) => ({ default: mod.ContentCatalystWorkspace })));
 const OperatorDashboard = lazy(() => import('./components/OperatorDashboard').then((mod) => ({ default: mod.OperatorDashboard })));
 const OrchestratorView = lazy(() => import('./components/OrchestratorView').then((mod) => ({ default: mod.OrchestratorView })));
@@ -940,8 +941,11 @@ function AppShell() {
                 {activeTab === 'miya' && (
                   <MiyaStudio onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} settings={settings} ollamaStatus={ollamaStatus} onStudioStateChange={(state: string, message: string) => setMiyaCompanionState({ state, message })} onPacketCreated={() => { const log = appendVerificationLog({ type: 'miya_handoff_packet_created', source: 'miya-studio', trust: TRUST_STATES.TEMPORARY, payload: { selectedModel: settings.selectedModel || null } }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
                 )}
+                {activeTab === 'calendar' && (
+                  <CalendarPage onOpenProject={(projectId: string) => { void openContentProject(projectId).then(() => switchTab('miya')); }} />
+                )}
                 {activeTab === 'content' && (
-                  <ContentCatalystWorkspace settings={settings} onJobChange={(job: any) => { if (!job) return; const log = appendVerificationLog({ type: 'content_catalyst_job_update', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: { jobId: job.id, status: job.status, currentStep: job.currentStep } }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} onApprovalRequest={(approval: any) => { if (!approval) return; const log = appendVerificationLog({ type: 'content_catalyst_publish_approval', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: approval }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
+                  <ContentCatalystWorkspace onOpenCalendar={() => switchTab('calendar')} settings={settings} onJobChange={(job: any) => { if (!job) return; const log = appendVerificationLog({ type: 'content_catalyst_job_update', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: { jobId: job.id, status: job.status, currentStep: job.currentStep } }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} onApprovalRequest={(approval: any) => { if (!approval) return; const log = appendVerificationLog({ type: 'content_catalyst_publish_approval', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: approval }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
                 )}
                 {activeTab === 'hector' && (
                   <HectorResearchDesk onHectorStateChange={(payload: any) => { if (!payload) return; setHectorCompanionState((current: any) => ({ ...current, ...payload })); }} />

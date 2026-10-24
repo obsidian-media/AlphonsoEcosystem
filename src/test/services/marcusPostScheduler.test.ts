@@ -4,17 +4,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 const publishPost = vi.fn();
 const appendNotification = vi.fn();
 const sendTelegramMessage = vi.fn();
+const checkDailyLimit = vi.fn();
+vi.mock('../../services/contentFactory/dailyLimits', () => ({ checkDailyLimit: (...a: unknown[]) => checkDailyLimit(...a) }));
 vi.mock('../../services/contentFactory/publishPost', () => ({ publishPost: (...a: unknown[]) => publishPost(...a) }));
 vi.mock('../../services/notificationService', () => ({ appendNotification: (...a: unknown[]) => appendNotification(...a), sendNativeNotification: vi.fn() }));
 vi.mock('../../services/telegramCompanionService', () => ({ sendTelegramMessage: (...a: unknown[]) => sendTelegramMessage(...a) }));
 
 import {
   scheduleContentPost, scheduleContentReminder, getScheduledPublishes, runScheduledPublishes, recoverScheduledPublishes,
-  postOverdueNow, cancelScheduledContentPost, schedulePublish,
+  postOverdueNow, cancelScheduledContentPost, schedulePublish, checkSignIns,
 } from '../../services/marcusExecutionService';
 import { createProject, emptyBrief, getProject } from '../../services/contentFactory/contentProjectService';
 import { savePosts } from '../../services/contentFactory/contentPosts';
 import type { ProjectPost } from '../../services/contentFactory/contentTypes';
+import { recordSignIn } from '../../services/contentFactory/signInExpiry';
 
 const NOW = new Date(2026, 9, 26, 10, 0).getTime();
 const HOUR = 3_600_000;
@@ -37,6 +40,7 @@ beforeEach(() => {
   publishPost.mockReset();
   appendNotification.mockReset();
   sendTelegramMessage.mockReset().mockResolvedValue({ ok: true });
+  checkDailyLimit.mockReset().mockResolvedValue({ ok: true });
 });
 
 describe('content posts in the runner', () => {
@@ -157,4 +161,31 @@ it('keeps every post still waiting when the store is trimmed', () => {
   const kept = getScheduledPublishes();
   expect(kept.find((i) => i.postId === postId)?.status).toBe('pending');
   expect(kept.length).toBeLessThanOrEqual(101);
+});
+
+// Phase 3b: a sign-in running out is told once a day, in the app and on Telegram.
+it('warns about a sign-in running out once a day', async () => {
+  recordSignIn('youtube', NOW - 6 * DAY);
+  await checkSignIns(NOW);
+  await checkSignIns(NOW + HOUR);
+  expect(appendNotification).toHaveBeenCalledTimes(1);
+  expect(appendNotification).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('YouTube sign-in') }));
+  expect(sendTelegramMessage).toHaveBeenCalledTimes(1);
+  await checkSignIns(NOW + DAY);
+  expect(appendNotification).toHaveBeenCalledTimes(2);
+});
+
+// Phase 3b: over the daily limit, a post waits and goes when there is room.
+it('a post over the daily limit waits, then goes at its retry time', async () => {
+  const { projectId, postId } = project();
+  scheduleContentPost({ projectId, postId, platform: 'instagram', scheduledAt: NOW - 60_000 });
+  checkDailyLimit.mockResolvedValueOnce({ ok: false, retryAtMs: NOW + HOUR, reason: "Instagram's daily limit is reached" });
+  await runScheduledPublishes(NOW);
+  expect(publishPost).not.toHaveBeenCalled();
+  expect(postOf(projectId)).toMatchObject({ status: 'over_limit', reason: expect.stringContaining('daily limit') });
+  expect(getScheduledPublishes()[0]).toMatchObject({ status: 'pending', scheduledAt: NOW + HOUR });
+  publishPost.mockResolvedValue({ status: 'posted' });
+  await runScheduledPublishes(NOW + HOUR);
+  expect(publishPost).toHaveBeenCalledTimes(1);
+  expect(postOf(projectId)).toMatchObject({ status: 'posted', sentAtMs: NOW + HOUR });
 });

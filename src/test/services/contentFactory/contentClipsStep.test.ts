@@ -69,6 +69,17 @@ describe('the clips step in the plan', () => {
     expect(MEDIA_ACTIONS.has('creative_video_clips')).toBe(true);
   });
 
+  // Phase 3b: the Runway estimate travels with the step, so Telegram and the board show "(about $X.XX)".
+  it('a Runway run carries its estimate when the scenes are known; none without a price', () => {
+    const { brand, project } = setup();
+    localStorage.setItem('alphonso_settings', JSON.stringify({ paidModels: { runwayPricePerSecondUsd: 0.05 } }));
+    const paid = contentProjectPlanSteps(project, brand, 'research', { clipEngine: 'runway' });
+    expect(paid.find((s) => s.stepId === 'clips')!.costEstimateUsd).toBeCloseTo(0.75);
+    localStorage.setItem('alphonso_settings', JSON.stringify({ paidModels: {} }));
+    expect(contentProjectPlanSteps(project, brand, 'research', { clipEngine: 'runway' }).find((s) => s.stepId === 'clips')!.costEstimateUsd).toBeUndefined();
+    expect(contentProjectPlanSteps(project, brand, 'research', { clipEngine: 'local' }).find((s) => s.stepId === 'clips')!.costEstimateUsd).toBeUndefined();
+  });
+
   it('waits for the main moments when AI clips are on; a Runway run also has the spend effect', () => {
     const { brand, project } = setup();
     const local = contentProjectPlanSteps(project, brand, 'research', { clipEngine: 'local' });

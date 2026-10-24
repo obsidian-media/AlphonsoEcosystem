@@ -50,7 +50,8 @@ test.describe('Content Studio pipeline E2E', () => {
 
   test('Content Studio calendar renders after its tab is selected', async ({ page }) => {
     await openContentStudio(page);
-    await page.getByRole('button', { name: 'Calendar' }).click();
+    // The sidebar has a Calendar page too (phase 3b): click Content Studio's own tab.
+    await page.locator('main').getByRole('button', { name: 'Calendar' }).click();
 
     await expect(page.getByText('Schedule', { exact: true })).toBeVisible();
     await expect(page.getByText('Su', { exact: true })).toBeVisible();

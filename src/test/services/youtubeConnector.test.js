@@ -134,4 +134,24 @@ describe('connectorOutbound youtube bridge', () => {
       thumbnailPath: 'C:/tmp/thumb.png'
     }));
   });
+
+  // Phase 3b: move a scheduled video, or cancel its schedule (it stays private).
+  it('moves a scheduled video with the saved sign-in, and records it', async () => {
+    const { rescheduleYouTubeVideo } = await import('../../services/connectors/connectorOutbound');
+    mockInvoke.mockImplementation(async (command) => (command === 'connector_reschedule_youtube'
+      ? { ok: true, publishAt: '2026-11-03T09:30:00Z', privacyStatus: 'private' } : {}));
+    const result = await rescheduleYouTubeVideo({ videoId: 'v1', publishAt: '2026-11-03T09:30:00.000Z' });
+    expect(mockInvoke).toHaveBeenCalledWith('connector_reschedule_youtube', {
+      videoId: 'v1', publishAt: '2026-11-03T09:30:00.000Z',
+      oauth: { clientId: 'unused', clientSecret: 'unused', refreshToken: 'unused' },
+    });
+    expect(result.ok).toBe(true);
+    expect(mockAppendConnectorAudit).toHaveBeenCalledWith('youtube', 'schedule_changed', expect.objectContaining({ videoId: 'v1', ok: true }));
+  });
+
+  it('a failed call comes back as a reason, never thrown', async () => {
+    const { rescheduleYouTubeVideo } = await import('../../services/connectors/connectorOutbound');
+    mockInvoke.mockRejectedValueOnce(new Error('offline'));
+    expect(await rescheduleYouTubeVideo({ videoId: 'v1', publishAt: null })).toEqual({ ok: false, reason: 'offline' });
+  });
 });

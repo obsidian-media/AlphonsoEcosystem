@@ -1,7 +1,7 @@
 // Phase 3a: Campaign Studio's Posts list (review, edit, approve once, see what happened).
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 const cancelScheduledContentPost = vi.fn();
 const postOverdueNow = vi.fn();
@@ -66,28 +66,34 @@ describe('PostsPanel', () => {
     expect(screen.getAllByText(/no 9:16 version/).length).toBe(2);
   });
 
-  it('edits a post before it is approved', () => {
+  it('edits a post before it is approved', async () => {
     const { brand, project } = withPost({});
     renderPanel(project, brand);
     fireEvent.change(screen.getByLabelText('Instagram Reel caption'), { target: { value: 'New caption' } });
     fireEvent.change(screen.getByLabelText('Instagram Reel time'), { target: { value: '2026-11-03T09:30' } });
-    const post = getProject(project.id)!.posts![0];
-    expect(post.caption).toBe('New caption');
-    expect(post.scheduledAtMs).toBe(new Date(2026, 10, 3, 9, 30).getTime());
+    expect(getProject(project.id)!.posts![0].caption).toBe('New caption');
+    await waitFor(() => expect(getProject(project.id)!.posts![0].scheduledAtMs).toBe(new Date(2026, 10, 3, 9, 30).getTime()));
   });
 
-  it('moves a scheduled Instagram post in the runner when its time changes', () => {
+  it('moves a scheduled Instagram post in the runner when its time changes', async () => {
     const { brand, project } = withPost({ status: 'scheduled' });
     renderPanel(project, brand);
     fireEvent.change(screen.getByLabelText('Instagram Reel time'), { target: { value: '2026-11-04T12:00' } });
-    expect(scheduleContentPost).toHaveBeenCalledWith({ projectId: project.id, postId: 'p1', platform: 'instagram', scheduledAt: new Date(2026, 10, 4, 12, 0).getTime() });
+    await waitFor(() => expect(scheduleContentPost).toHaveBeenCalledWith({ projectId: project.id, postId: 'p1', platform: 'instagram', scheduledAt: new Date(2026, 10, 4, 12, 0).getTime() }));
   });
 
-  it('cancels a post and its scheduled send', () => {
+  it('a post already scheduled on YouTube is changed on the Calendar, which asks first', () => {
+    const { brand, project } = withPost({ platform: 'youtube', piece: 'video', status: 'scheduled', platformId: 'v1' });
+    renderPanel(project, brand);
+    expect((screen.getByLabelText('YouTube video time') as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByText(/on the Calendar/)).toBeInTheDocument();
+  });
+
+  it('cancels a post and its scheduled send', async () => {
     const { brand, project } = withPost({ status: 'scheduled' });
     renderPanel(project, brand);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel Instagram Reel' }));
-    expect(getProject(project.id)!.posts![0].status).toBe('cancelled');
+    await waitFor(() => expect(getProject(project.id)!.posts![0].status).toBe('cancelled'));
     expect(cancelScheduledContentPost).toHaveBeenCalledWith('p1');
   });
 

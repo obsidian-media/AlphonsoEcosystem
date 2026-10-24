@@ -8,7 +8,7 @@ import { enterShell } from '../helpers.mjs';
 
 const SPACES = [
   { id: 'home', items: ['mission', 'session_history'] },
-  { id: 'work', items: ['project_execution', 'content', 'automation', 'miya'] },
+  { id: 'work', items: ['project_execution', 'content', 'automation', 'miya', 'calendar'] },
   { id: 'research', items: ['hector'] },
   { id: 'boardroom', items: ['mission_room'] },
   {

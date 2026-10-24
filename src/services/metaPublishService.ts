@@ -10,6 +10,7 @@ export function savedMetaCredentials() {
     pageId: saved('META_PAGE_ID'),
     instagramBusinessAccountId: saved('INSTAGRAM_BUSINESS_ACCOUNT_ID'),
     appSecret: saved('META_APP_SECRET'),
+    appId: saved('META_APP_ID'),
   };
 }
 
@@ -75,4 +76,44 @@ export async function publishMetaVideo(post: {
   } catch (error) {
     return { ok: false, platform: post.platform, status: 'failed', message: error instanceof Error ? error.message : String(error) };
   }
+}
+
+/** What Meta did with a change, or why not, with where to do it by hand (phase 3b). */
+export interface MetaChangeResult {
+  ok: boolean;
+  scheduledAtMs?: number | null;
+  postsLeft?: number | null;
+  expiresAtMs?: number | null;
+  reason?: string | null;
+  manageUrl?: string | null;
+}
+
+async function metaChange(command: string, request: Record<string, unknown>): Promise<MetaChangeResult> {
+  try {
+    return await invoke<MetaChangeResult>(command, { request: { ...request, credentials: savedMetaCredentials() } });
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/** Moves a Facebook Reel scheduled on Meta to `scheduledAtMs`; the result is what Meta kept. */
+export function rescheduleMetaVideo({ videoId, scheduledAtMs }: { videoId: string; scheduledAtMs: number }): Promise<MetaChangeResult> {
+  return metaChange('meta_reschedule_video', { videoId, scheduledAtMs });
+}
+
+/** Cancels (deletes) a Facebook Reel that is still scheduled on Meta. */
+export function cancelMetaVideo({ videoId }: { videoId: string }): Promise<MetaChangeResult> {
+  return metaChange('meta_cancel_video', { videoId });
+}
+
+/** Posts left in Instagram's 24-hour limit, or null when Meta does not say. */
+export async function instagramPublishingLimit(): Promise<number | null> {
+  const result = await metaChange('meta_instagram_limit', {});
+  return result.ok && typeof result.postsLeft === 'number' ? result.postsLeft : null;
+}
+
+/** When the saved Meta sign-in expires (needs the App ID and App Secret), or null. */
+export async function metaTokenExpiry(): Promise<number | null> {
+  const result = await metaChange('meta_token_expiry', {});
+  return result.ok && typeof result.expiresAtMs === 'number' ? result.expiresAtMs : null;
 }

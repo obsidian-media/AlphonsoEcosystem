@@ -5,8 +5,15 @@
 import { changeProjectPosts, chosenVersionOf, getProject } from './contentProjectService';
 import {
   secureId,
-  type ContentBrand, type ContentProject, type PostPlatform, type PostingSlot, type ProjectPost,
+  type ContentBrand, type ContentProject, type PostPlatform, type PostStatus, type PostingSlot, type ProjectPost,
 } from './contentTypes';
+
+/** What each post status says on screen (the Posts list and the Calendar). */
+export const POST_STATUS_LABEL: Record<PostStatus, string> = {
+  draft: 'Not approved yet', approved: 'Approved', scheduled: 'Scheduled', posting: 'Posting…', posted: 'Posted',
+  locked_private: 'Kept private by YouTube', waiting_app: 'Waiting for the app', failed: 'Failed', check: 'Check it',
+  cancelled: 'Cancelled', ask: 'Waiting for you', over_limit: 'Waiting: daily limit',
+};
 
 const PLATFORMS: PostPlatform[] = ['youtube', 'instagram', 'facebook'];
 const MINUTE = 60_000;
@@ -145,17 +152,18 @@ function onPlatformOnly(post: ProjectPost): string | null {
 }
 
 /** Changes a post that has not gone out yet. */
-export function updatePost(projectId: string, postId: string, patch: Partial<ProjectPost>): { ok: boolean; reason?: string } {
+/** `onPlatform`: the platform already made this change (phase 3b), so a post scheduled there may change. */
+export function updatePost(projectId: string, postId: string, patch: Partial<ProjectPost>, options: { onPlatform?: boolean } = {}): { ok: boolean; reason?: string } {
   let result: { ok: boolean; reason?: string } = { ok: false, reason: 'That post was not found.' };
   changeProjectPosts(projectId, (posts) => posts.map((post) => {
     if (post.id !== postId) return post;
-    const statusOnly = Object.keys(patch).every((k) => ['status', 'link', 'platformId', 'reason'].includes(k));
+    const statusOnly = Object.keys(patch).every((k) => ['status', 'link', 'platformId', 'reason', 'sentAtMs'].includes(k));
     if (!statusOnly) {
       if (GONE.includes(post.status)) {
         result = { ok: false, reason: `This post has already ${post.status === 'cancelled' ? 'been cancelled' : 'gone out'}.` };
         return post;
       }
-      const locked = onPlatformOnly(post);
+      const locked = options.onPlatform ? null : onPlatformOnly(post);
       if (locked) {
         result = { ok: false, reason: locked };
         return post;
@@ -168,11 +176,11 @@ export function updatePost(projectId: string, postId: string, patch: Partial<Pro
 }
 
 /** Cancels a post before it goes out. */
-export function cancelPost(projectId: string, postId: string): { ok: boolean; reason?: string } {
+export function cancelPost(projectId: string, postId: string, options: { onPlatform?: boolean } = {}): { ok: boolean; reason?: string } {
   const post = getProject(projectId)?.posts?.find((p) => p.id === postId);
   if (!post) return { ok: false, reason: 'That post was not found.' };
   if (GONE.includes(post.status)) return { ok: false, reason: `This post has already ${post.status === 'cancelled' ? 'been cancelled' : 'gone out'}.` };
-  const locked = onPlatformOnly(post);
+  const locked = options.onPlatform ? null : onPlatformOnly(post);
   if (locked) return { ok: false, reason: locked.replace('change it', 'cancel it') };
-  return updatePost(projectId, postId, { status: 'cancelled' });
+  return updatePost(projectId, postId, { status: 'cancelled' }, options);
 }

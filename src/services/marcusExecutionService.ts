@@ -11,6 +11,9 @@ import { contentAppSettings } from './contentFactory/contentStepRecorder';
 import { getProject } from './contentFactory/contentProjectService';
 import { updatePost } from './contentFactory/contentPosts';
 import { appendNotification } from './notificationService';
+import { listProjects } from './contentFactory/contentProjectService';
+import { signInWarnings } from './contentFactory/signInExpiry';
+import { checkDailyLimit } from './contentFactory/dailyLimits';
 import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -586,6 +589,16 @@ export function cancelScheduledContentPost(postId: string): boolean {
   return changed;
 }
 
+/** Moves a pending item (a text send, phase 3b) to a new time; false when it is not pending. */
+export function rescheduleScheduledPublish(id: string, scheduledAt: number): boolean {
+  const items = _loadSchedule();
+  const item = items.find((i) => i.id === id && i.status === 'pending');
+  if (!item) return false;
+  item.scheduledAt = scheduledAt;
+  _saveSchedule(items);
+  return true;
+}
+
 /** "Post it now" for a post that waited because it was more than 7 days late. */
 export function postOverdueNow(postId: string, nowMs = Date.now()): boolean {
   const items = _loadSchedule();
@@ -607,7 +620,7 @@ async function tell(type: 'success' | 'error' | 'info', title: string, message: 
   } catch { /* not set up, or offline */ }
 }
 
-function setPost(item: ScheduledPublish, patch: { status: PostStatus; link?: string; platformId?: string; reason?: string }): void {
+function setPost(item: ScheduledPublish, patch: { status: PostStatus; link?: string; platformId?: string; reason?: string; sentAtMs?: number }): void {
   if (!item.projectId || !item.postId) return;
   try { updatePost(item.projectId, item.postId, patch); } catch { /* the project was deleted */ }
 }
@@ -648,8 +661,17 @@ async function sendContentPost(item: ScheduledPublish, nowMs: number): Promise<v
     return;
   }
   const late = nowMs - item.scheduledAt > LATE_NOTE_AFTER_MS;
+  // Over the platform's daily limit (phase 3b): wait, and try again when there is room.
+  const limit = await checkDailyLimit(post, nowMs);
+  if (!limit.ok) {
+    setPost(item, { status: 'over_limit', reason: limit.reason });
+    const later = _loadSchedule();
+    const again = later.find((i) => i.id === item.id);
+    if (again) { again.status = 'pending'; again.scheduledAt = limit.retryAtMs as number; _saveSchedule(later); }
+    return;
+  }
   const result = await publishPost(post, contentAppSettings(), nowMs);
-  setPost(item, result);
+  setPost(item, { ...result, ...(result.status === 'posted' || result.status === 'scheduled' ? { sentAtMs: nowMs } : {}) });
   const after = _loadSchedule();
   const done = after.find((i) => i.id === item.id);
   if (done) {
@@ -714,13 +736,33 @@ let _schedulerInterval: ReturnType<typeof setInterval> | null = null;
  */
 export function startScheduler(intervalMs: number = 60_000): void {
   stopScheduler();
-  _schedulerInterval = setInterval(() => { void runScheduledPublishes(); }, intervalMs);
+  _schedulerInterval = setInterval(() => {
+    void runScheduledPublishes();
+    void checkSignIns().catch(() => undefined);
+  }, intervalMs);
+}
+
+const SIGN_IN_CHECKED_KEY = 'alphonso_sign_in_checked_v1';
+
+/**
+ * Once a day (phase 3b): warns when the YouTube or Meta sign-in runs out soon, has run out,
+ * or posts are due after it, in the app and on Telegram.
+ */
+export async function checkSignIns(nowMs = Date.now()): Promise<void> {
+  const d = new Date(nowMs);
+  const today = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  try { if (localStorage.getItem(SIGN_IN_CHECKED_KEY) === today) return; localStorage.setItem(SIGN_IN_CHECKED_KEY, today); } catch { return; }
+  const posts = listProjects().flatMap((p) => p.posts || []);
+  for (const warning of await signInWarnings(nowMs, posts)) {
+    await tell(warning.expiresAtMs <= nowMs ? 'error' : 'info', `${warning.service === 'youtube' ? 'YouTube' : 'Meta'} sign-in`, warning.message);
+  }
 }
 
 /** At app start (phase 3a): recover, send what is due now, then check every minute. */
 export function startPostScheduler(): void {
   recoverScheduledPublishes();
   void runScheduledPublishes();
+  void checkSignIns().catch(() => undefined);
   startScheduler();
 }
 

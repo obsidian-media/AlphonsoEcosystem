@@ -46,7 +46,7 @@ import { getAllStatus, startTool, waitForTool } from '../../../services/runtimeM
 
 const DEFAULT_FORM = createDefaultContentRequest();
 
-export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequest }) {
+export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequest, onOpenCalendar }) {
   const [form, setForm] = useState(DEFAULT_FORM);
   const [jobs, setJobs] = useState(() => listContentJobs());
   const contentHydratedRef = useRef(false);
@@ -366,6 +366,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
         <ContentCalendar
           drafts={drafts}
           onAssignDay={handleAssignDay}
+          onOpenCalendar={onOpenCalendar}
           onSelectDraft={(id) => { setActiveJobId(id); setContentTab('drafts'); }}
           onPublish={(draft, type) => {
             const selected = drafts.find((item) => item.id === draft.id);

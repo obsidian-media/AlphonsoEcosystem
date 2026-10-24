@@ -844,6 +844,29 @@ export async function uploadYouTubeConnectorVideo({
   return result;
 }
 
+/**
+ * Phase 3b: moves a scheduled (private) YouTube video to a new time (RFC 3339), or cancels its
+ * schedule (`publishAt: null`, it stays private). The user confirmed it on the calendar; the
+ * result is what YouTube kept. Never throws.
+ */
+export async function rescheduleYouTubeVideo({ videoId, publishAt = null }) {
+  try {
+    const result = await invoke('connector_reschedule_youtube', {
+      videoId,
+      publishAt,
+      oauth: {
+        clientId: savedSecret('youtube', 'YOUTUBE_CLIENT_ID'),
+        clientSecret: savedSecret('youtube', 'YOUTUBE_CLIENT_SECRET'),
+        refreshToken: savedSecret('youtube', 'YOUTUBE_REFRESH_TOKEN')
+      }
+    });
+    appendConnectorAudit('youtube', 'schedule_changed', { videoId, publishAt, ok: Boolean(result?.ok), reason: result?.reason || null });
+    return result;
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export async function sendGitHubAction(action, payload, options = {}) {
   const auth = isConnectorAuthenticated('github');
   if (!auth.ok) {

@@ -50,6 +50,8 @@ pub(crate) struct MetaCredentials {
   page_id: Option<String>,
   instagram_business_account_id: Option<String>,
   app_secret: Option<String>,
+  #[serde(default)]
+  app_id: Option<String>,
 }
 
 /// The Meta keys to use: what the app passed (saved in Settings), else the environment.
@@ -60,6 +62,7 @@ pub(crate) struct ResolvedMeta {
   pub page_id: String,
   pub ig_user_id: String,
   pub app_secret: String,
+  pub app_id: String,
 }
 
 pub(crate) fn resolve_meta_credentials(passed: Option<MetaCredentials>) -> ResolvedMeta {
@@ -79,6 +82,7 @@ pub(crate) fn resolve_meta_credentials(passed: Option<MetaCredentials>) -> Resol
       "INSTAGRAM_BUSINESS_ACCOUNT_ID",
     ),
     app_secret: secret_or_env(c.app_secret, "META_APP_SECRET"),
+    app_id: secret_or_env(c.app_id, "META_APP_ID"),
   }
 }
 

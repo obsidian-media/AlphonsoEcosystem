@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 258 services and 158 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 262 services and 163 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -30,6 +30,11 @@ Source-backed inventory: 258 services and 158 components. Human purpose descript
 | component | `src/components/BoardroomChatView.tsx` | `BoardroomApprovalRequest`, `BoardroomChatView`, `BoardroomRequestApproval` |
 | component | `src/components/BootStatusBanner.tsx` | `BootStatusBanner` |
 | component | `src/components/BridgesPanel.tsx` | `BridgesPanel` |
+| component | `src/components/calendar/CalendarPage.tsx` | `CalendarPage` |
+| component | `src/components/calendar/calendarShared.tsx` | `addDays`, `CalendarChip`, `dayKey`, `PLATFORM_COLOR`, `PLATFORM_LABEL`, `startOfDay`, `startOfWeek`, `timeLabel`, `whenLabel` |
+| component | `src/components/calendar/CalendarSidePanel.tsx` | `CalendarSidePanel` |
+| component | `src/components/calendar/MonthGrid.tsx` | `MonthGrid` |
+| component | `src/components/calendar/WeekGrid.tsx` | `WeekGrid` |
 | component | `src/components/calle/CalleOutreachPanel.tsx` | `CalleOutreachPanel` |
 | component | `src/components/calle/EscalationCallPanel.tsx` | `EscalationCallPanel` |
 | component | `src/components/ChatView.tsx` | `ChatView` |
@@ -234,7 +239,7 @@ Source-backed inventory: 258 services and 158 components. Human purpose descript
 | service | `src/services/connectors/connectorAuth.ts` | `authorizeConnectorRequest`, `ConnectorAuthProfile`, `ConnectorAuthProfiles`, `ConnectorCredentials`, `DEFAULT_AUTH_PROFILES`, `getConnectorCredential`, `getConnectorCredentials`, `hydrateConnectorAuthProfilesFromSqlite`, `hydrateConnectorCredentialsFromSqlite`, `isConnectorAuthenticated`, `listConnectorAuthProfiles`, `logUnauthenticatedConnectorRequest`, `LogUnauthenticatedOptions`, `normalizeAllowlist`, `readAuthProfiles`, `saveConnectorCredential`, `updateConnectorAuthProfile`, `writeAuthProfiles` |
 | service | `src/services/connectors/connectorConstants.ts` | `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE` |
 | service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `comfyRequest`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_ENDPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `DEFAULT_COMFYUI_ENDPOINT`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiEndpoint`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setComfyUiEndpoint`, `setSelectedComfyUiCheckpoint` |
-| service | `src/services/connectors/connectorOutbound.js` | `proveTelegramConnectorPath`, `sendChatGptConnectorMessage`, `sendClaudeConnectorMessage`, `sendClickUpConnectorTask`, `sendGitHubAction`, `sendNotionConnectorEntry`, `sendQwenConnectorMessage`, `sendSlackMessage`, `sendTelegramConnectorMessage`, `sendWhatsAppConnectorMessage`, `uploadYouTubeConnectorVideo` |
+| service | `src/services/connectors/connectorOutbound.js` | `proveTelegramConnectorPath`, `rescheduleYouTubeVideo`, `sendChatGptConnectorMessage`, `sendClaudeConnectorMessage`, `sendClickUpConnectorTask`, `sendGitHubAction`, `sendNotionConnectorEntry`, `sendQwenConnectorMessage`, `sendSlackMessage`, `sendTelegramConnectorMessage`, `sendWhatsAppConnectorMessage`, `uploadYouTubeConnectorVideo` |
 | service | `src/services/connectors/connectorPolling.js` | `createConnectorRoutePacket`, `normalizeWhatsAppCloudInboundPayload`, `parseInboundConnectorMessage`, `pollTelegramConnector`, `pollWhatsAppConnector`, `sendConnectorMessageToJose`, `simulateWhatsAppCloudInbound`, `verifyWhatsAppCloudWebhookChallenge`, `verifyWhatsAppCloudWebhookSignature` |
 | service | `src/services/connectors/connectorRegistry.js` | `appendConnectorAudit`, `CIRCUIT_BREAKER_RESET_MS`, `CIRCUIT_BREAKER_THRESHOLD`, `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE`, `DEFAULT_CONNECTORS`, `gateConnectorAction`, `getConnectorCircuitState`, `hydrateConnectorAuditFromSqlite`, `hydrateConnectorRegistryFromSqlite`, `initializeConnectorRegistryFromSqlite`, `listConnectorAudit`, `listConnectors`, `readRows`, `recordConnectorFailure`, `recordConnectorSuccess`, `requireConnectorApproval`, `requireConnectorReady`, `resetConnectorCircuitState`, `setConnectorStatus`, `verifyConnectorEnvironment`, `writeRows` |
 | service | `src/services/connectors/deepseekConnector.ts` | `DeepSeekChatOptions`, `DeepSeekChatResult`, `DeepSeekMessage`, `DeepSeekSearchResult`, `isDeepSeekConfigured`, `searchWithDeepSeek`, `sendDeepSeekMessage` |
@@ -250,6 +255,7 @@ Source-backed inventory: 258 services and 158 components. Human purpose descript
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
 | service | `src/services/contentFactory/adCopyExport.ts` | `AD_NETWORKS`, `AdCopy`, `adCsv`, `AdNetwork`, `adsForNetwork`, `writeAdCsv` |
+| service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
 | service | `src/services/contentFactory/comfyVideoClip.ts` | `buildVideoWorkflow`, `checkComfyClip`, `ClipResult`, `ComfyClipInput`, `framesFor`, `makeComfyClip`, `VideoWorkflowInput` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
@@ -258,7 +264,8 @@ Source-backed inventory: 258 services and 158 components. Human purpose descript
 | service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderScenePictures`, `renderThumbnails` |
 | service | `src/services/contentFactory/contentMediaExecutor.ts` | `checkPendingClips`, `ClipOutcome`, `CLIPS_OFF`, `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `ProjectClipEngine`, `resolveProjectClipEngine`, `RUNWAY_NOT_APPROVED`, `VoiceLine`, `VoiceOutput` |
-| service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `savePosts`, `updatePost` |
+| service | `src/services/contentFactory/contentPostMoves.ts` | `cancelProjectPost`, `movePost`, `MoveResult`, `moveToDay`, `moveToSlot` |
+| service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `POST_STATUS_LABEL`, `savePosts`, `updatePost` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `outputPath`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
 | service | `src/services/contentFactory/contentProjectPlan.ts` | `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `PUBLISH_WAIT`, `REVIEW_WAIT` |
 | service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
@@ -269,8 +276,10 @@ Source-backed inventory: 258 services and 158 components. Human purpose descript
 | service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
 | service | `src/services/contentFactory/contentStepRunner.ts` | `approveContentStep`, `CONTENT_TASK_PREVIEW`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `PostingSlot`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
+| service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
 | service | `src/services/contentFactory/publishPost.ts` | `PostResult`, `PublishablePost`, `publishPost` |
 | service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
+| service | `src/services/contentFactory/signInExpiry.ts` | `getSignInExpiry`, `isYoutubeProjectPublished`, `plainSignInReason`, `recordSignIn`, `setYoutubeProjectPublished`, `SignInService`, `SignInWarning`, `signInWarnings` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
 | service | `src/services/creativeRoutingService.ts` | `detectCreativeIntent`, `routeToCreativeTool` |
@@ -316,7 +325,7 @@ Source-backed inventory: 258 services and 158 components. Human purpose descript
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
 | service | `src/services/licenseService.ts` | `__setTrustedPublicKeyForTests`, `activateLicense`, `canUseConnector`, `clearLicenseDenialLog`, `deactivateLicense`, `getLicenseDenialLog`, `getLicenseInfo`, `initLicense`, `isPremiumConnector`, `isPremiumGatingEnabled`, `LicenseDenialEntry`, `LicenseInfo`, `LicenseTier` |
 | service | `src/services/localMarketplaceService.ts` | `DEFAULT_CATALOGUE_URL`, `fetchRemoteCatalogue`, `getRemoteCatalogueUrl`, `listMarketplaceItems`, `setMarketplaceItemStatus`, `setRemoteCatalogueUrl` |
-| service | `src/services/marcusExecutionService.ts` | `buildMarcusExecutionRecord`, `cancelScheduledContentPost`, `cancelScheduledPublish`, `executeMarcusGitHubAction`, `executeMarcusN8nAction`, `executeMarcusSlackAction`, `getScheduledPublishes`, `postOverdueNow`, `recoverScheduledPublishes`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `selectDistributionTarget`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
+| service | `src/services/marcusExecutionService.ts` | `buildMarcusExecutionRecord`, `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `executeMarcusGitHubAction`, `executeMarcusN8nAction`, `executeMarcusSlackAction`, `getScheduledPublishes`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `selectDistributionTarget`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
 | service | `src/services/marcusPublishService.ts` | `buildMarcusPublishPacket`, `executeMarcusPublish`, `MARCUS_PUBLISH_PLATFORMS` |
 | service | `src/services/mariaAuditService.ts` | `buildMariaAuditPrompt`, `buildMariaFallbackAudit`, `MariaAuditAssignment`, `MariaAuditOptions`, `MariaAuditResponse`, `MariaAuditResult`, `parseMariaAuditResponse`, `runMariaGovernanceAudit` |
 | service | `src/services/mariaWeeklyReportService.ts` | `generateWeeklyReport`, `getLatestReport`, `getReports`, `saveReport`, `scheduleWeeklyGeneration` |
@@ -326,7 +335,7 @@ Source-backed inventory: 258 services and 158 components. Human purpose descript
 | service | `src/services/memoryGraphService.ts` | `addEdge`, `AddEdgeOptions`, `addNode`, `GraphEdge`, `GraphEdgeWithDepth`, `GraphNode`, `inferEdges`, `listAllEdges`, `listAllNodes`, `queryRelated`, `queryRelatedDeep`, `touchNodes`, `TraversalDirection` |
 | service | `src/services/memoryMonitorService.ts` | `checkThresholds`, `getAlphonsoKeys`, `getUsageStats`, `KeySize`, `pruneOldest`, `subscribe`, `ThresholdResult`, `UsageStats`, `WarningEvent` |
 | service | `src/services/memoryService.ts` | `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getDurableMemoryStatus`, `getMemorySize`, `getMemorySummary`, `hydrateFromDurable`, `hydrateMemoryFromDurable`, `importMemoryItems`, `listDurableMemoryRecords`, `listMemory`, `listMemoryByNamespace`, `listMemoryItems`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `normalizeMemoryRecord`, `pushMemory`, `pushMemoryItem`, `resetMemoryServiceState`, `tickExpiry`, `upsertDurableMemoryRecords` |
-| service | `src/services/metaPublishService.ts` | `buildMetaPublishRequest`, `MetaVideoResult`, `publishMetaContent`, `publishMetaVideo`, `savedMetaCredentials` |
+| service | `src/services/metaPublishService.ts` | `buildMetaPublishRequest`, `cancelMetaVideo`, `instagramPublishingLimit`, `MetaChangeResult`, `metaTokenExpiry`, `MetaVideoResult`, `publishMetaContent`, `publishMetaVideo`, `rescheduleMetaVideo`, `savedMetaCredentials` |
 | service | `src/services/missionRoomService.ts` | `addMissionMessage`, `addMissionTask`, `appendMissionSecurityEvent`, `classifyMissionRoomRisk`, `clearMissionMessages`, `createDefaultMissionRoom`, `createHermesHandoff`, `getMissionRoom`, `listMissionMessages`, `listMissionRooms`, `listMissionSecurityEvents`, `listMissionTasks`, `MISSION_ROOM_AGENTS`, `MISSION_ROOM_SECURITY_MODEL`, `MISSION_TASK_STATUSES`, `MissionTaskStatus`, `redactMissionRoomSecrets`, `saveMissionRoom`, `SecurityEvent`, `updateMissionTask` |
 | service | `src/services/miyaComfyWorkflowPresetService.ts` | `getMiyaComfyWorkflowPreset`, `listMiyaComfyWorkflowPresets`, `MIYA_COMFY_WORKFLOW_PRESETS` |
 | service | `src/services/miyaExportPacketService.ts` | `buildMiyaExportPacket`, `createMiyaExportHandoffPacket` |

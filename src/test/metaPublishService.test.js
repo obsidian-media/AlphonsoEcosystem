@@ -8,7 +8,7 @@ vi.mock('../services/connectors/connectorAuth', () => ({
 }));
 
 import { invoke } from '@tauri-apps/api/core';
-import { buildMetaPublishRequest, publishMetaContent, publishMetaVideo } from '../services/metaPublishService';
+import { buildMetaPublishRequest, publishMetaContent, publishMetaVideo, rescheduleMetaVideo, cancelMetaVideo, instagramPublishingLimit, metaTokenExpiry } from '../services/metaPublishService';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -94,7 +94,7 @@ describe('saved Meta keys', () => {
     await publishMetaContent({}, { platform: 'facebook', approved: true });
     const { request } = invoke.mock.calls[0][1];
     expect(request.credentials).toEqual({
-      accessToken: 'saved-token', pageAccessToken: null, pageId: '42', instagramBusinessAccountId: null, appSecret: null,
+      accessToken: 'saved-token', pageAccessToken: null, pageId: '42', instagramBusinessAccountId: null, appSecret: null, appId: null,
     });
   });
 });
@@ -124,5 +124,38 @@ describe('publishMetaVideo', () => {
     invoke.mockRejectedValue(new Error('no backend'));
     const result = await publishMetaVideo({ platform: 'instagram', localFilePath: 'v.mp4', caption: '', approved: true });
     expect(result).toEqual(expect.objectContaining({ ok: false, status: 'failed', message: 'no backend' }));
+  });
+});
+
+// Phase 3b: move or cancel a scheduled Reel, Instagram's daily limit, the Meta sign-in's expiry.
+describe('Meta changes and limits', () => {
+  it('moves a scheduled Reel with the saved keys', async () => {
+    invoke.mockResolvedValue({ ok: true, scheduledAtMs: 1800000000000 });
+    const result = await rescheduleMetaVideo({ videoId: '123', scheduledAtMs: 1800000000000 });
+    expect(invoke).toHaveBeenCalledWith('meta_reschedule_video', { request: expect.objectContaining({ videoId: '123', scheduledAtMs: 1800000000000, credentials: expect.objectContaining({ accessToken: 'saved-token' }) }) });
+    expect(result.ok).toBe(true);
+  });
+
+  it('cancels a scheduled Reel', async () => {
+    invoke.mockResolvedValue({ ok: false, reason: 'This has already gone out on Facebook.', manageUrl: 'https://business.facebook.com/latest/content_calendar' });
+    const result = await cancelMetaVideo({ videoId: '123' });
+    expect(invoke.mock.calls[0][0]).toBe('meta_cancel_video');
+    expect(result).toMatchObject({ ok: false, manageUrl: expect.stringContaining('business.facebook.com') });
+  });
+
+  it("reads Instagram's posts left; null when Meta does not say", async () => {
+    invoke.mockResolvedValueOnce({ ok: true, postsLeft: 97 });
+    expect(await instagramPublishingLimit()).toBe(97);
+    invoke.mockResolvedValueOnce({ ok: false, reason: 'x' });
+    expect(await instagramPublishingLimit()).toBeNull();
+    invoke.mockRejectedValueOnce(new Error('offline'));
+    expect(await instagramPublishingLimit()).toBeNull();
+  });
+
+  it("reads the Meta sign-in's expiry; null when it can't", async () => {
+    invoke.mockResolvedValueOnce({ ok: true, expiresAtMs: 1800000000000 });
+    expect(await metaTokenExpiry()).toBe(1800000000000);
+    invoke.mockResolvedValueOnce({ ok: false });
+    expect(await metaTokenExpiry()).toBeNull();
   });
 });

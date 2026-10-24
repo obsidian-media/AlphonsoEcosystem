@@ -39,13 +39,24 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-23] **Miya content factory phase 3b (the Calendar, moving posts, sign-in expiry, limits): what it leaves open.**
+  - Moving or cancelling a Reel scheduled on Facebook uses `POST /<video-id>` with `scheduled_publish_time` and `DELETE /<video-id>`, which Meta's reference does not clearly document for Reels; a refusal is shown with Meta Business Suite's link. Check live with the owner's Page.
+  - Moving a scheduled YouTube video (`videos.update`) is checked with unit tests only; check live with the owner's channel.
+  - YouTube does not report when its sign-in ends: the 7 days (Testing projects) are counted from when the keys were saved. A sign-in renewed outside Alphonso (e.g. the owner's own `youtube_auth.py`) is only noticed when the keys are saved again in Settings.
+  - Run project plans the AI clips step before the scenes exist, so a full run has no Runway estimate on Telegram or the board (Miya Studio's Make AI clips button shows it); runs started from Scenes or AI clips have it.
+  - The output-folder fix follows the cause found by reading the code (players loaded before the folder was allowed, and a refused player never retries); not yet seen in the real app.
+  - An Instagram post held by the daily limit is tried again every hour (Instagram does not say when the limit resets).
+  - The calendar's drag uses the browser's drag and drop; with a keyboard, use the side panel's Change.
+  - Next: phase 3c (the owner's S3-compatible storage, carousels for Instagram and Facebook, Instagram Login, Shorts as their own pieces).
+  - **Status:** OPEN.
+
 - [2026-10-23] **Miya content factory phase 3a (publishing): what it leaves open.**
   - Nothing was posted for real: YouTube, Instagram and Facebook are checked with unit tests (mocked platforms) and a desktop spec that only schedules an Instagram post. The live check (a real upload, a Facebook schedule, an Instagram Reel, a channel YouTube keeps private) runs when the owner gives their accounts.
   - The ad CSV columns (Meta: Campaign Name, Ad Set Name, Ad Name, Title, Body; Google Ads Editor: Campaign, Ad group, Headline 1, Description 1) were not checked against a template downloaded from an ad account.
   - The four new YouTube Rust tests (`youtube_metadata`, `youtube_lock_check`, `use_resumable`, `thumbnail_mime`) were never seen failing: Windows Code Integrity blocked every run of the stub build. They pass now; CI reruns them.
-  - A post already scheduled on YouTube or Facebook can't be moved or cancelled from Alphonso: the Posts list says to do it in YouTube Studio or Meta Business Suite.
-  - Meta's Reels API allows 30 posts per 24 hours per Page; Alphonso does not count them.
-  - Next: 3b, the carousel and the full month calendar page (Content Studio's `ContentCalendar.jsx` is the starting point).
+  - ~~A post already scheduled on YouTube or Facebook can't be moved or cancelled from Alphonso~~ — CLOSED 2026-10-23 by phase 3b (the Calendar).
+  - ~~Meta's Reels API allows 30 posts per 24 hours per Page; Alphonso does not count them~~ — CLOSED 2026-10-23 by phase 3b (daily limits).
+  - Next: 3b (done 2026-10-23, the Calendar) and 3c (storage, carousels, Instagram Login, Shorts).
   - **Status:** OPEN.
 
 - [2026-10-23] **Miya content factory phase 2b (AI video clips): what it leaves open.**
@@ -63,7 +74,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - FFmpeg is bundled only in the Windows installer; macOS and Linux use an `ffmpeg`/`ffprobe` on the PATH (`media_tools_status` reports it). Bundle LGPL builds for both.
   - Kokoro's voices are English (American and British), and the captions' Whisper timing uses `tiny.en`; other languages need other voices and models.
   - MusicGen on a computer without an NVIDIA card is slow (minutes per clip); a new Coverr app is limited to 50 searches an hour.
-  - The asset protocol lets the window play files only from the output folder chosen when Miya Studio opens; changing the folder in Settings needs Miya Studio to be opened again.
+  - ~~The asset protocol lets the window play files only from the output folder chosen when Miya Studio opens~~ — CLOSED 2026-10-23 by phase 3b (the players wait for the folder to be allowed; not yet seen live).
   - The new Rust tests (stock search, downloads, assembly, Whisper words, media folder) could not run on the dev machine (Windows Application Control blocks freshly built programs); CI runs them. A real assembly with the bundled ffmpeg passed on 2026-10-23 before the block started.
   - **Status:** OPEN.
 
@@ -81,7 +92,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
   - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
   - The board's "Approve and carry on" on Scenes approves the review too, but only when Scenes starts (Miya Studio shows it as waiting until then).
-  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file), 2b (AI clips) and 3a (publishing) done 2026-10-23; 3b and 4 next.
+  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file), 2b (AI clips), 3a (publishing) and 3b (the Calendar) done 2026-10-23; 3c and 4 next.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**

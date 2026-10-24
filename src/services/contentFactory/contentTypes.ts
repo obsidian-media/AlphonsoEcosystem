@@ -145,7 +145,7 @@ export interface PostingSlot {
 
 export type PostStatus =
   | 'draft' | 'approved' | 'scheduled' | 'posting' | 'posted' | 'locked_private'
-  | 'waiting_app' | 'failed' | 'check' | 'cancelled' | 'ask';
+  | 'waiting_app' | 'failed' | 'check' | 'cancelled' | 'ask' | 'over_limit';
 
 /** One post of a project (phase 3a). `file` and `thumbnail` are relative to the output folder. */
 export interface ProjectPost {
@@ -165,6 +165,8 @@ export interface ProjectPost {
   platformId?: string;
   /** Why it failed, or what to do (a locked YouTube channel's Studio link). */
   reason?: string;
+  /** When Alphonso sent it to the platform (phase 3b: counts toward the daily limit). */
+  sentAtMs?: number;
 }
 
 /** What a content-factory step sends to an agent through Jose. */

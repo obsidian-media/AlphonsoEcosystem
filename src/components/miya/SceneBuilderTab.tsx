@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../ui';
 import { StepPanel } from './StepPanel';
 import { ProjectPicture } from './ProjectPicture';
@@ -61,7 +61,16 @@ export function SceneBuilderTab({
   const music = agentOutput<MusicOut>(project, 'music', 'miya');
   const broll = agentOutput<BrollOut>(project, 'broll', 'hector');
   const video = agentOutput<AssembleOut>(project, 'assemble', 'alphonso');
-  useEffect(() => { if (outputRoot) void allowMediaFolder(outputRoot); }, [outputRoot]);
+  // A video or audio player refused its first load never tries again, so the players wait
+  // until the current output folder is allowed (phase 3b: a new folder works without reopening).
+  const [allowedRoot, setAllowedRoot] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setAllowedRoot(null);
+    if (outputRoot) void allowMediaFolder(outputRoot).then((ok) => { if (alive && ok) setAllowedRoot(outputRoot); });
+    return () => { alive = false; };
+  }, [outputRoot]);
+  const mediaReady = !!outputRoot && allowedRoot === outputRoot;
   const panel = (step: StepId, children: React.ReactNode) => (
     <StepPanel project={project} step={step} onRun={() => runStep(step)} onChooseVersion={(v) => chooseVersion(step, v)}>{children}</StepPanel>
   );
@@ -96,12 +105,12 @@ export function SceneBuilderTab({
       </StepPanel>
       {panel('voice', <>
         <SkippedNote text={voice?.skipped} />
-        {voice?.full && <audio controls preload="none" src={mediaUrl(outputRoot, voice.full)} className="w-full" />}
+        {mediaReady && voice?.full && <audio key={outputRoot} controls preload="none" src={mediaUrl(outputRoot, voice.full)} className="w-full" />}
         {typeof voice?.durationSec === 'number' && <div className="text-[11px] text-(--text-3)">{voice.durationSec.toFixed(1)} s</div>}
       </>)}
       {panel('music', <>
         <SkippedNote text={music?.skipped} />
-        {music?.path && <audio controls preload="none" src={mediaUrl(outputRoot, music.path)} className="w-full" />}
+        {mediaReady && music?.path && <audio key={outputRoot} controls preload="none" src={mediaUrl(outputRoot, music.path)} className="w-full" />}
         {music?.prompt && <div className="text-[11px] text-(--text-3)">{music.prompt}</div>}
       </>)}
       {panel('broll', <>
@@ -118,14 +127,14 @@ export function SceneBuilderTab({
           ))}
         </ul>
       </>)}
-      <AiClipsPanel project={project} outputRoot={outputRoot} waiting={clipsWaiting} onRun={() => runStep('clips')}
+      <AiClipsPanel project={project} outputRoot={outputRoot} mediaReady={mediaReady} waiting={clipsWaiting} onRun={() => runStep('clips')}
         onChooseVersion={(v) => chooseVersion('clips', v)} onApprove={approveClips} onCheckAgain={checkClips} onChange={onChange} />
       {panel('assemble', <>
         <div className="grid gap-3 md:grid-cols-2">
           {(video?.outputs || []).map((out) => (
             <div key={out.path} className="space-y-1 rounded-xl bg-(--surface-2) p-2 text-[12px]">
               <div className="font-semibold text-(--text-1)">{out.aspect.replace('x', ':')}{typeof out.durationSec === 'number' ? `, ${out.durationSec.toFixed(1)} s` : ''}</div>
-              <video controls preload="metadata" src={mediaUrl(outputRoot, out.path)} className="max-h-96 w-full rounded-xl bg-black" />
+              {mediaReady && <video key={outputRoot} controls preload="metadata" src={mediaUrl(outputRoot, out.path)} className="max-h-96 w-full rounded-xl bg-black" />}
               <div className="grid grid-cols-3 gap-1">
                 {(out.frames || []).map((frame, i) => (
                   <ProjectPicture key={frame} outputRoot={outputRoot} relativePath={frame} alt={`Frame ${i + 1} of the ${out.aspect.replace('x', ':')} video`} className="aspect-video w-full" />
