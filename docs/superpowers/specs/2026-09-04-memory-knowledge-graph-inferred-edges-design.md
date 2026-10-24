@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Inferred Edges (Phase 3, second half)
 
+> **Status (2026-10-25):** built (PR #217, v2.7.0).
+
 ## Context
 
 Phases 1 (Foundation), 2 (Expansion), and Phase 3's visual viewer are all

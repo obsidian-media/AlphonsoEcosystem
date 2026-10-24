@@ -1,5 +1,7 @@
 # Miya content factory phase 3c Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #350 (phase 3c); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Any user can post carousels and Instagram Reels however their accounts are set up, with optional own storage, a hand-posting fallback, Instagram Login, and in-app sign-in.

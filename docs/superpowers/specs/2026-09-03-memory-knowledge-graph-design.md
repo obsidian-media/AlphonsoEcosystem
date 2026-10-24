@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Design Spec
 
+> **Status (2026-10-25):** Phase 1 built (PR #210), Phase 2 (PR #213), Phase 3 viewer and inferred edges (PRs #215, #217; v2.7.0), Phase 4 governance (PR #282, 2026-10-11).
+
 **Date:** 2026-09-03
 **Status:** Approved for planning (pending user sign-off on this doc)
 **Owner:** Echo (schema + service maintenance)

@@ -1,5 +1,7 @@
 # Miya content factory phase 4a — learning from real results — Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #352 (phase 4a); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Read each post's real numbers at fixed checkpoints, compare them within the brand, turn them into lessons the user keeps, follow-up ideas and better post times (in the app and on Telegram), and close the phase 3d leftovers and CodeQL alerts 26/33/34/36.

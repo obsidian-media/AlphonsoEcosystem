@@ -1,5 +1,7 @@
 # Hector Research Synthesis — Design Spec
 
+> **Status (2026-10-25):** built in September 2026 (synthesis with a depth toggle, Re-synthesize, and Markdown/PDF/PowerPoint export). Hector's RSS feeds load in the desktop app since 2026-10-22; Perplexity uses its Search API since 2026-10-21.
+
 ## Problem
 
 Hector's research pipeline aggregates and truncates; it never synthesizes. Confirmed directly

@@ -1,5 +1,7 @@
 # Miya content factory phase 2a: the finished video file — Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #343 (phase 2a); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A Miya Studio project ends with a voice-over, music, stock footage and the scene pictures cut together with captions into a checked 16:9 and 9:16 MP4 in the project folder.

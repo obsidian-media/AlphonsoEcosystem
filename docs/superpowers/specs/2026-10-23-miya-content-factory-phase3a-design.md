@@ -1,5 +1,7 @@
 # Miya content factory, phase 3a: publishing
 
+> **Status (2026-10-25):** built and merged in PR #348 (phase 3a); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 Date: 2026-10-23. Builds on phases 1, 2a and 2b (`2026-10-22-miya-content-factory-design.md`
 §8 phase 3; owner decisions Q19, Q20, Q21). Phase 3b (later): the carousel and
 the full month calendar page with drag to reschedule.

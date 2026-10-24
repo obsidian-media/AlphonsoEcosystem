@@ -1,5 +1,7 @@
 # Jose Redesign, Phase 1 (Foundation) Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #336 (phase 1); on `main`, not released yet. The current behaviour is in `CLAUDE.md`'s Jose rows and `docs/USER_MANUAL.md` section 5.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give Jose the foundation of the redesign, behind today's entry point

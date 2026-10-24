@@ -1,5 +1,7 @@
 # Project Execution Mode: Real Approval Gate Implementation Plan
 
+> **Status (2026-10-25):** built in September 2026.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace Project Execution Mode's three dead approval widgets with one real gate: a generalized `ApprovalPanel` shared with the real Jose pipeline, wired into a new "Approval" tab that actually blocks the Results tab until every gate for the current run is resolved.

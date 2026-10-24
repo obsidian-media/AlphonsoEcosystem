@@ -1,5 +1,7 @@
 # Release-Confidence Recovery Implementation Plan
 
+> **Status (2026-10-25):** carried out (see `docs/RELEASE_VERIFICATION_2026-07-22.md`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Restore a Node 22-based, blocking E2E release pipeline whose documentation and policy-coverage evidence are demonstrably current.

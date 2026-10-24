@@ -1,5 +1,7 @@
 # Free-Tier Cloud AI Providers (NVIDIA NIM + Gemini) — Implementation Plan
 
+> **Status (2026-10-25):** built (PR #122, 2026-07-25). Gemini's default models were updated on 2026-09-04 after Google retired the first ones.
+
 **Status:** Ready for implementation
 **Author:** Claude Code (planning pass), 2026-07-23
 **Scope:** App-wide (not Coach-Mode-specific — see `docs/superpowers/plans/2026-07-23-alphonso-session-coach.md` §11 for how Coach Mode's optional narrative layer can consume this as one of several callers, once this plan lands)

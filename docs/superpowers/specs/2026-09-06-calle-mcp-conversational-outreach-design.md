@@ -1,5 +1,7 @@
 # CALL-E MCP Conversational Outreach — Design (Phase 2)
 
+> **Status (2026-10-25):** built (PR #230), v2.8.0; schema checked live 2026-09-07. A login through the app itself and a real placed call are still not checked.
+
 > **RESOLVED (2026-09-07):** This document's `plan_call`/`run_call`/`get_call_run` argument
 > shapes below (search for `conversation_history`, `phone_number`) were written from CALL-E's
 > docs prose alone and explicitly flagged throughout as unverified (see the "Open Questions"

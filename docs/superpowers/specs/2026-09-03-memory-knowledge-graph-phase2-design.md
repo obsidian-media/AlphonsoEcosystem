@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Phase 2 (Expansion) Design Spec
 
+> **Status (2026-10-25):** built (PR #213, v2.7.0).
+
 **Date:** 2026-09-03
 **Status:** Approved for planning (pending user sign-off on this doc)
 **Owner:** Echo (schema + service maintenance), per-writer changes owned by Hector/Jose/Maria's existing services

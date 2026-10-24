@@ -1,5 +1,7 @@
 # Miya content factory phase 4b — ElevenLabs and Higgsfield — Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #353 (phase 4b); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** ElevenLabs voices (incl. the user's cloned voice), ElevenLabs-timed captions and sound effects; Higgsfield pictures, AI clips and requests by name — all optional, asked first, with the free tools as the fallback.

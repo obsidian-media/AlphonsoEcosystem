@@ -1,5 +1,7 @@
 # Cloud Voice Service Implementation Plan
 
+> **Status (2026-10-25):** built and deployed in July 2026; since September 2026 the service runs on AWS ECS behind `voice.obsidianmedia.online` (not Railway), and it is invite-only with per-account limits (2026-09-30).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Deliver a stateless, Railway-deployable NVIDIA NIM voice service for iOS Cloud Voice while restoring an explicitly local-only Local Voice Gateway.

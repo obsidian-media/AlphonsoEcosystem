@@ -1,5 +1,7 @@
 # Alphonso Session Coach — Implementation Plan
 
+> **Status (2026-10-25):** built, phases 1 to 5 (July 2026); Coach's message rewriting uses the model you chose since 2026-10-22.
+
 **Status:** Ready for implementation — full spec, 6 phases (not v1-only)
 **Author:** Claude Code (planning pass), 2026-07-23 — expanded same day from an initial v1-only draft after explicit direction to make it comprehensive
 **Implementer:** OpenCode (this document is the handoff)

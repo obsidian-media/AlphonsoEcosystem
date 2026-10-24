@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Inferred Edges Implementation Plan
 
+> **Status (2026-10-25):** built (PR #217, v2.7.0).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add automated, structural edge-suggestion to the memory knowledge graph — the last deferred piece of the project (Phases 1, 2, and the visual viewer are already merged to `main`).

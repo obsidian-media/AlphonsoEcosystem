@@ -1,5 +1,7 @@
 # Project Execution Mode: Real Approval Gate — Design Spec
 
+> **Status (2026-10-25):** built in September 2026. Project Execution's capability matrix now shows the one permission table for all 9 agents (Jose redesign phase 1, PR #336), and each gate names its real owner (2026-10-21).
+
 ## Problem
 
 Project Execution Mode (`src/components/projectExecution/ProjectExecutionMode.tsx`) presents

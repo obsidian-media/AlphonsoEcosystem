@@ -1,5 +1,7 @@
 # Miya content factory, phase 4c: consistent characters and motion transfer
 
+> **Status (2026-10-25):** built and merged in PR #354 (phase 4c); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 Date: 2026-10-24. Builds on phases 1–4b (`2026-10-24-miya-content-factory-phase4b-design.md`). Phase 4 is split
 three ways: 4a (learning from real results), 4b (ElevenLabs and Higgsfield as paid extras), and **4c** (this
 document). After 4c, before Jose phase 7, the owner has a topic to discuss (ask them).

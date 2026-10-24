@@ -1,5 +1,7 @@
 # Fix Remaining Test Failures — Implementation Plan
 
+> **Status (2026-10-25):** done on 2026-06-16; the test suite has since grown to 546 files and 6,777 tests, all passing.
+
 > **For agentic workers:** Each task is self-contained. Tasks are ordered by difficulty (quick wins first). Each step shows exact code changes.
 
 **Goal:** Fix all 72 remaining test failures across 19 test files.

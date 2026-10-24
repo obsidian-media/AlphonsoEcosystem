@@ -1,5 +1,7 @@
 # Miya content factory, phase 2b: AI video clips
 
+> **Status (2026-10-25):** built and merged in PR #344 (phase 2b); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 Date: 2026-10-23. Builds on phase 2a (the finished video file, PR #343) and the
 content factory design (`2026-10-22-miya-content-factory-design.md`, owner
 decisions Q4, Q13, Q14).

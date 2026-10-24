@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Phase 1 (Foundation) Implementation Plan
 
+> **Status (2026-10-25):** built (PR #210, v2.7.0).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a relationship layer over Alphonso's memory — a new `memoryGraphService.ts` backed by two real SQLite tables, with exactly two writers (`unifiedMemoryService.js`, `boardroomThreadService.ts`) and read access open to every agent, per `docs/superpowers/specs/2026-09-03-memory-knowledge-graph-design.md`.

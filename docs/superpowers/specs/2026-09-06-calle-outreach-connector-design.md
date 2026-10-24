@@ -1,5 +1,7 @@
 # CALL-E Outreach Connector — Design Spec
 
+> **Status (2026-10-25):** built (PR #230) and surfaced in Settings → Connectors (PR #234), v2.8.0. A real placed call is still not checked.
+
 ## Context
 
 The owner is considering entering the "CALL-E: Your Code Is Calling" Devpost

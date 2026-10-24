@@ -1,5 +1,7 @@
 # Voice Conversation Design
 
+> **Status (2026-10-25):** built in July 2026. Desktop Voice OS was reworked on 2026-10-22: it waits for you to finish speaking, answers once, and uses the model and Ollama address chosen in Settings.
+
 ## Goal
 
 Make Alphonso's iOS Voice tab a dependable push-to-talk conversation for both

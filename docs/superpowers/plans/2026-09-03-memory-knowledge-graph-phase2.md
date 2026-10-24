@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Phase 2 (Expansion) Implementation Plan
 
+> **Status (2026-10-25):** built (PR #213, v2.7.0).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add multi-hop graph traversal (`queryRelatedDeep`) and wire three more real writers (Hector, Jose, Maria) into the memory knowledge graph shipped in Phase 1, per `docs/superpowers/specs/2026-09-03-memory-knowledge-graph-phase2-design.md`.

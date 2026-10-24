@@ -1,5 +1,7 @@
 # Jose redesign, phase 6a: every caller goes through Jose — Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #341 (phase 6a); on `main`, not released yet. The current behaviour is in `CLAUDE.md`'s Jose rows and `docs/USER_MANUAL.md` section 5.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Every place that sends work to Jose (Telegram, WhatsApp, the phone, schedules, Boardroom, workflows, the batch orchestrator, the Orchestrator page) goes through Jose's decision and planner, as Chat does; plus the three items folded in by the owner.

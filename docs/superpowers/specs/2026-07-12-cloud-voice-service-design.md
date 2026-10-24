@@ -1,5 +1,7 @@
 # Cloud Voice Service Design
 
+> **Status (2026-10-25):** built and deployed in July 2026; since September 2026 the service runs on AWS ECS behind `voice.obsidianmedia.online` (not Railway), and it is invite-only with per-account limits (2026-09-30). A paired-iPhone acceptance test is still open.
+
 ## Status
 
 Approved for implementation on 2026-07-12. This specification defines a new,
