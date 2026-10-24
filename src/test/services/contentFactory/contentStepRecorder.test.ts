@@ -67,7 +67,7 @@ describe('recordContentStepResult', () => {
   it('scenes make their pictures after saving, then the step is done', async () => {
     const p = newProject();
     await recordContentStepResult({ projectId: p.id, step: 'scenes', agent: 'miya', data: { scenes: [] }, commandId: 'c1' });
-    expect(renderScenePictures).toHaveBeenCalledWith(p.id, { outputFolder: 'D:\\Content' }, expect.any(Function));
+    expect(renderScenePictures).toHaveBeenCalledWith(p.id, { outputFolder: 'D:\\Content' }, expect.any(Function), { paidApproved: false });
     expect(getProject(p.id)!.steps.scenes.status).toBe('done');
   });
 

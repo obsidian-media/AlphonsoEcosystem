@@ -48,7 +48,8 @@ describe('paid engines that are not available', () => {
     creds.HIGGSFIELD_KEY_ID = 'id';
     creds.HIGGSFIELD_KEY_SECRET = 'secret';
     expect(resolveVoice(project, brand)).toEqual({ engine: 'elevenlabs', voiceId: 'v2' });
-    expect(resolvePictures(project, brand)).toEqual({ engine: 'higgsfield' });
+    // Higgsfield pictures also need a model id and its estimate (phase 4b, Task 6).
+    expect(resolvePictures(project, brand)).toEqual({ engine: 'comfyui', note: 'Paste a picture model id in Settings → Connectors → Higgsfield; made with ComfyUI.' });
 
     settings({ zeroCostMode: true });
     expect(resolveVoice(project, brand).note).toBe('ElevenLabs is off while Zero-Cost Mode is on; read by Kokoro.');

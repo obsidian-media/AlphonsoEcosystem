@@ -3,7 +3,7 @@
 // the free ones. A paid engine that isn't available (no key, Zero-Cost Mode on, over the
 // monthly cap) is replaced by the free one with a note saying why — never silently.
 import { getConnectorCredential } from '../connectors/connectorAuth';
-import { isHiggsfieldConfigured } from '../connectors/higgsfieldConnector';
+import { cachedHiggsfieldEstimate, higgsfieldAvailable, higgsfieldModels, isHiggsfieldConfigured, refreshHiggsfieldEstimate } from '../connectors/higgsfieldConnector';
 import { canSpend, getPaidModelSettings } from '../jose/joseSpend';
 import { getVideoSettings } from './contentProjectService';
 import type { ContentBrand, ContentProject } from './contentTypes';
@@ -68,10 +68,31 @@ export function resolveVoice(project: ContentProject, brand: ContentBrand): Voic
   return can.ok ? voice : { ...kokoroVoice(brand), note: `${can.reason}; read by Kokoro.` };
 }
 
-/** The picture engine to use now; ComfyUI with a note when Higgsfield can't be used. */
-export function resolvePictures(project: ContentProject, brand: ContentBrand): { engine: 'comfyui' | 'higgsfield'; note?: string } {
+/** The picture engine to use now, with Higgsfield's estimate per picture; ComfyUI with a note when Higgsfield can't be used. */
+export function resolvePictures(project: ContentProject, brand: ContentBrand): { engine: 'comfyui' | 'higgsfield'; note?: string; usd?: number } {
   const { pictures } = projectEngines(project, brand);
   if (pictures !== 'higgsfield') return { engine: 'comfyui' };
   const can = paidEngineAvailable('higgsfield');
-  return can.ok ? { engine: 'higgsfield' } : { engine: 'comfyui', note: `${can.reason}; made with ComfyUI.` };
+  if (!can.ok) return { engine: 'comfyui', note: `${can.reason}; made with ComfyUI.` };
+  const models = higgsfieldModels();
+  if (!models.picture) return { engine: 'comfyui', note: 'Paste a picture model id in Settings → Connectors → Higgsfield; made with ComfyUI.' };
+  if (models.pictureExtraProblem) return { engine: 'comfyui', note: `${models.pictureExtraProblem} Made with ComfyUI.` };
+  const estimate = cachedHiggsfieldEstimate('picture');
+  if (!estimate) return { engine: 'comfyui', note: "Higgsfield's estimate isn't known yet; made with ComfyUI." };
+  if (typeof estimate.usd !== 'number') return { engine: 'comfyui', note: `${estimate.reason || 'Higgsfield gave no estimate.'} Made with ComfyUI.` };
+  return { engine: 'higgsfield', usd: estimate.usd };
+}
+
+/** The most pictures one approval covers for a step (Scenes: one per 5 s of the video). */
+export function higgsfieldPictureLimit(project: ContentProject, step: 'scenes' | 'thumbnail' | 'carousel'): number {
+  if (step === 'thumbnail') return 3;
+  if (step === 'carousel') return 10;
+  return Math.max(1, Math.ceil((Number(project.brief.lengthSec) || 60) / 5));
+}
+
+/** Before a run is planned: asks Higgsfield's estimates the plan will show (the plan can't wait on the network). */
+export async function prepareEngineEstimates(project: ContentProject, brand: ContentBrand): Promise<void> {
+  if (!higgsfieldAvailable().ok) return;
+  const engines = projectEngines(project, brand);
+  if (engines.pictures === 'higgsfield') await refreshHiggsfieldEstimate('picture');
 }

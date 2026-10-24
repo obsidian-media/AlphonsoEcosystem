@@ -128,4 +128,17 @@ describe('a new output folder', () => {
     expect(screen.getByText('s1: a coffee pour')).toBeTruthy();
     expect(screen.getByText('ElevenLabs says the account is over its limit for now.')).toBeTruthy();
   });
+
+  // Phase 4b: a picture still being made at Higgsfield, and the note saying which engine made them.
+  it('says a picture is waiting for Higgsfield and why ComfyUI made the others', () => {
+    const p = createProject('b', 'P', emptyBrief());
+    saveStepVersion(p.id, 'scenes', { output: {
+      miya: { style: 'warm', scenes: [{ id: 's1', description: 'A pour' }] },
+      pictures: [{ sceneId: 's1', status: 'pending', requestId: 'req-1' }],
+      pictureNote: 'More pictures than this run approved; the rest were made with ComfyUI.',
+    }, summary: '', joseCommandId: null });
+    render(<SceneBuilderTab {...props(getProject(p.id)!)} />);
+    expect(screen.getByText('Waiting for Higgsfield…')).toBeTruthy();
+    expect(screen.getByText('More pictures than this run approved; the rest were made with ComfyUI.')).toBeTruthy();
+  });
 });

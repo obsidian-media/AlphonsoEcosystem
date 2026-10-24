@@ -80,9 +80,10 @@ describe('stepGraph', () => {
   });
 
   // Content factory phase 2b: a Runway run of AI clips spends through the gated Runway connector.
-  it("lets Miya's AI clips step spend (Runway), and no other Miya step without a paid model", () => {
+  it("lets Miya's paid media steps spend (AI clips; Higgsfield pictures since 4b), and no other Miya step without a paid model", () => {
     expect(checkPlan([step('clips', 'miya', 'creative_video_clips', [], ['write_own_work', 'spend'])]).ok).toBe(true);
-    expect(checkPlan([step('s', 'miya', 'creative_scenes', [], ['write_own_work', 'spend'])]).problems.join(' ')).toMatch(/Miya may not spend money/);
+    expect(checkPlan([step('s', 'miya', 'creative_scenes', [], ['write_own_work', 'spend'])]).ok).toBe(true);
+    expect(checkPlan([step('s', 'miya', 'creative_script', [], ['write_own_work', 'spend'])]).problems.join(' ')).toMatch(/Miya may not spend money/);
     expect(checkPlan([step('n', 'nova', 'creative_video_clips', [], ['read', 'spend'])]).problems.join(' ')).toMatch(/may not/);
   });
 

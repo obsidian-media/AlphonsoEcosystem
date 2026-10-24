@@ -86,7 +86,7 @@ export function SceneBuilderTab({
             return (
               <div key={scene.id} className="space-y-1 rounded-xl bg-(--surface-2) p-2 text-[12px]">
                 {picture?.status === 'done' && <ProjectPicture outputRoot={outputRoot} relativePath={picture.relativePath} alt={`Scene ${index + 1}`} className="aspect-video w-full" />}
-                {picture?.status === 'pending' && <div className="flex aspect-video items-center justify-center rounded-xl bg-(--surface-1) text-[11px] text-(--text-3)">Waiting for ComfyUI…</div>}
+                {picture?.status === 'pending' && <div className="flex aspect-video items-center justify-center rounded-xl bg-(--surface-1) text-[11px] text-(--text-3)">{picture.requestId ? 'Waiting for Higgsfield…' : 'Waiting for ComfyUI…'}</div>}
                 {picture?.status === 'failed' && <div className="flex aspect-video items-center justify-center rounded-xl bg-(--error-dim) p-2 text-center text-[11px] text-(--error)">{picture.error}</div>}
                 <div className="font-semibold text-(--text-1)">Scene {index + 1}</div>
                 <div className="text-(--text-2)">{scene.description}</div>
@@ -102,6 +102,7 @@ export function SceneBuilderTab({
             );
           })}
         </div>
+        {(output as { pictureNote?: string } | undefined)?.pictureNote && <div className="text-[11px] text-(--text-3)">{(output as { pictureNote?: string }).pictureNote}</div>}
         {pictures.some((p) => p.status === 'pending') && <Button size="sm" variant="secondary" onClick={checkAgain}>Check again</Button>}
       </StepPanel>
       {panel('voice', <>

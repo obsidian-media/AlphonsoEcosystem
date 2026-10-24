@@ -7,7 +7,7 @@ import { chosenVersionOf, getShortsSettings, getVideoSettings } from './contentP
 import { chosenScenes } from './clipEngine';
 import { estimateRunwayUsd, runwayClipAvailable } from './runwayClip';
 import { estimateEffectsUsd, estimateElevenLabsUsd } from '../jose/joseSpend';
-import { paidEngineAvailable, resolveVoice } from './engineChoice';
+import { higgsfieldPictureLimit, paidEngineAvailable, resolvePictures, resolveVoice } from './engineChoice';
 
 /** Which content-factory step each template step belongs to. */
 export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
@@ -42,6 +42,9 @@ export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Mi
 
 /** Why Publish waits (phase 3a): you approve the exact posts in Campaign Studio's Posts list. */
 export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
+
+/** Why a full run waits for Higgsfield pictures (phase 4b): once per step, with the most they could cost. */
+export const PICTURES_WAIT_PAID = (max: number, usd: number): string => `Make up to ${max} pictures with Higgsfield, about $${usd.toFixed(2)} at most.`;
 
 /** Why a full run waits at Sound effects (phase 4b): once, with the most they could cost. */
 export const SFX_WAIT_PAID = (max: number, usd: number): string => `Make up to ${max} sound effects, about $${usd.toFixed(2)} at most.`;
@@ -156,6 +159,17 @@ export function contentProjectPlanSteps(
     // AI clips stop once for the main moments; a Runway run is that same stop plus its cost.
     // Run on its own from Miya Studio, the user is already looking at the marks: no extra stop,
     // but a Runway run still asks for its cost (spending always asks).
+    // Higgsfield pictures (phase 4b): the step spends, asked once with Higgsfield's estimate × the most pictures.
+    if (factoryStep === 'scenes' || factoryStep === 'thumbnail' || factoryStep === 'carousel') {
+      const pictures = resolvePictures(project, brand);
+      if (pictures.engine === 'higgsfield' && pictures.usd !== undefined) {
+        const max = higgsfieldPictureLimit(project, factoryStep);
+        const usd = Math.round(max * pictures.usd * 10000) / 10000;
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        step.costEstimateUsd = usd;
+        if (!options.only) step.waitFor = step.waitFor ? `${step.waitFor} ${PICTURES_WAIT_PAID(max, usd)}` : PICTURES_WAIT_PAID(max, usd);
+      }
+    }
     if (factoryStep === 'clips' && getVideoSettings(project).aiClips !== 'none') {
       if (options.clipEngine === 'runway') {
         step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];

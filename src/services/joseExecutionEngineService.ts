@@ -2025,6 +2025,7 @@ export async function runJoseCommandExecutionPipeline({
             ...(assignment.contentStep.appendShort ? { appendShort: true } : {}),
             ...(assignment.contentStep.purpose ? { purpose: assignment.contentStep.purpose, postRef: assignment.contentStep.postRef } : {}),
             ...(assignment.contentStep.step === 'shorts' && (assignment.effects || []).includes('spend') ? { runwayApproved: true } : {}),
+            ...((assignment.effects || []).includes('spend') ? { spendApproved: true } : {}),
           });
         } catch (error) {
           console.warn('[jose] content step not saved to its project', error);

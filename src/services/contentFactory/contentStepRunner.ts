@@ -12,6 +12,7 @@ import {
 import { requireOutputRoot } from './contentProjectFiles';
 import { CLIPS_WAIT, CLIPS_WAIT_PAID, contentProjectPlanSteps, PUBLISH_WAIT, REVIEW_WAIT } from './contentProjectPlan';
 import { resolveProjectClipEngine } from './contentMediaExecutor';
+import { prepareEngineEstimates } from './engineChoice';
 import { STEP_AGENTS } from './contentStepAgents';
 import { STEP_ORDER, type ContentProject, type StepId } from './contentTypes';
 
@@ -75,6 +76,8 @@ export async function runContentProject(projectId: string, options: RunStepOptio
   const problem = cannotRun(project, options.settings);
   if (problem) return { ok: false, requestId: null, reason: problem };
   const brand = getBrand(project.brandId)!;
+  // Higgsfield's estimates first: the plan shows them in its approvals (phase 4b).
+  await prepareEngineEstimates(project, brand);
   const result: any = await submitStepsToJose({
     text: `Content project "${project.name}": ${project.brief.idea}`,
     source: 'content-factory',
@@ -104,6 +107,7 @@ export async function runContentStep(projectId: string, step: StepId, options: R
     addStepProgress(projectId, step, message);
     options.onProgress?.(message);
   };
+  await prepareEngineEstimates(started, brand);
   const clipEngine = step === 'clips' ? (await resolveProjectClipEngine(started)).engine : null;
   const steps = contentProjectPlanSteps(started, brand, step, { only: true, clipEngine }).map((s) => {
     const task = [s.contentStep!.task, options.extraTask].filter(Boolean).join('. ');

@@ -77,3 +77,57 @@ export async function testHiggsfieldModel(model: string, extra?: Record<string, 
     return { ok: false, reason: 'Higgsfield could not be reached.' };
   }
 }
+
+const ESTIMATES_KEY = 'alphonso_higgsfield_estimates_v1';
+type Kind = 'picture' | 'clip';
+interface StoredEstimate { model: string; extra: string; usd?: number; reason?: string; atMs: number }
+
+function current(kind: Kind): { model?: string; extra?: Record<string, unknown>; problem?: string } {
+  const m = higgsfieldModels();
+  return kind === 'picture'
+    ? { model: m.picture, extra: m.pictureExtra, problem: m.pictureExtraProblem }
+    : { model: m.clip, extra: m.clipExtra, problem: m.clipExtraProblem };
+}
+
+function readEstimates(): Partial<Record<Kind, StoredEstimate>> {
+  try {
+    return JSON.parse(localStorage.getItem(ESTIMATES_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Asks Higgsfield's estimate for one picture or clip with the saved model id and extra
+ * settings, and keeps it for the plan (which can't wait on the network). Nothing is made.
+ */
+export async function refreshHiggsfieldEstimate(kind: Kind, job: { seconds?: number; aspect?: string } = {}): Promise<{ ok: boolean; usd?: number; reason?: string }> {
+  const { model, extra, problem } = current(kind);
+  if (!model) return { ok: false, reason: `Paste a ${kind} model id in Settings → Connectors → Higgsfield.` };
+  if (problem) return { ok: false, reason: problem };
+  if (!isHiggsfieldConfigured()) return { ok: false, reason: HIGGSFIELD_NOT_SET_UP };
+  let answer: { ok: boolean; usd?: number; reason?: string };
+  try {
+    answer = (await invoke('higgsfield_estimate', {
+      job: { model, prompt: kind === 'picture' ? 'A picture for a video' : 'A short clip for a video', extra: extra ?? null, ...job },
+      keys: higgsfieldKeys(),
+    })) as { ok: boolean; usd?: number; reason?: string };
+  } catch {
+    answer = { ok: false, reason: 'Higgsfield could not be reached.' };
+  }
+  const stored: StoredEstimate = { model, extra: JSON.stringify(extra ?? null), atMs: Date.now(), ...(answer.ok && typeof answer.usd === 'number' ? { usd: answer.usd } : { reason: answer.reason || 'Higgsfield gave no estimate.' }) };
+  try {
+    localStorage.setItem(ESTIMATES_KEY, JSON.stringify({ ...readEstimates(), [kind]: stored }));
+  } catch {
+    // The plan then says the estimate isn't known.
+  }
+  return answer;
+}
+
+/** The kept estimate, only while the model id and extra settings are the ones it was asked for. */
+export function cachedHiggsfieldEstimate(kind: Kind): { usd?: number; reason?: string } | null {
+  const stored = readEstimates()[kind];
+  const { model, extra } = current(kind);
+  if (!stored || stored.model !== model || stored.extra !== JSON.stringify(extra ?? null)) return null;
+  return typeof stored.usd === 'number' ? { usd: stored.usd } : { reason: stored.reason };
+}
