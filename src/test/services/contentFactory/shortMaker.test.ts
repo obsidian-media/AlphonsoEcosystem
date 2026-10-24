@@ -128,6 +128,20 @@ it('a highlight or cut with no part chosen (switched from a mini Short) uses the
   expect(calls('content_cut_short')[0].spec).toMatchObject({ startSec: 40, endSec: 80 });
 });
 
+it("a Short's hook text and captions use the brand font", async () => {
+  const p = setup([highlight, mini]);
+  const { saveBrand: save, getBrand } = await import('../../../services/contentFactory/contentBrandService');
+  save({ ...getBrand(p.brandId)!, fonts: 'Montserrat, Inter' });
+  const base = invoke.getMockImplementation()!;
+  invoke.mockImplementation(async (cmd: string, args: { spec?: { outPath?: string } }) => (cmd === 'content_cut_short'
+    ? { ok: true, path: args.spec?.outPath, durationSec: 40, frames: [], fontNote: "The brand font Montserrat isn't installed" }
+    : base(cmd, args)));
+  const [first] = await makeShorts(p.id, settings);
+  expect(first.note).toContain("isn't installed");
+  expect(calls('content_cut_short')[0].spec.font).toBe('Montserrat');
+  expect(calls('content_assemble_video')[0].spec.font).toBe('Montserrat');
+});
+
 describe('redoShort', () => {
   it('makes that Short again as a new version file', async () => {
     const p = setup([cut]);

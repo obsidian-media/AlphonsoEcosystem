@@ -228,4 +228,19 @@ describe('executeMediaStep', () => {
     expect(spec.spec.scenes[0]).toEqual({ cardColor: '#112233', seconds: 2.5 });
     expect(getProject(project.id)).toBeTruthy();
   });
+
+  // Phase 4a: the brand's font reaches the burned-in captions.
+  it("Assemble uses the brand's font and says when it isn't installed", async () => {
+    const { brand, project, dir } = setup();
+    const withFont = saveBrand({ ...brand, fonts: '"Montserrat", Inter' } as any);
+    saveStepVersion(project.id, 'voice', { output: { miya: voiceOutput(dir) }, summary: '', joseCommandId: null });
+    backend.media_tools_status = () => ({ whisper: false });
+    backend.write_workspace_text_file = () => ({ ok: true });
+    backend.content_assemble_video = () => ({ ok: true, outputs: [], fontNote: "The brand font Montserrat isn't installed on this computer; the captions use Arial." });
+    const result = await executeMediaStep(assignment(project, withFont, 'alphonso', 'runtime_assemble_video', 'assemble'));
+    const sent = vi.mocked(invoke).mock.calls.find((c) => c[0] === 'content_assemble_video')![1] as any;
+    expect(sent.spec.font).toBe('Montserrat');
+    expect(String((result.artifacts[0].data as any).note)).toContain("isn't installed");
+  });
 });
+

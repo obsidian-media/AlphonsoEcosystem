@@ -348,6 +348,12 @@ export async function checkPendingClips(projectId: string): Promise<ClipOutcome[
   return clips;
 }
 
+/** The brand's font for burned-in text (phase 4a): the first family it names, or null. */
+export function brandFontName(brand: Pick<ContentBrand, 'fonts'>): string | null {
+  const first = String(brand.fonts || '').split(',')[0].replace(/["']/g, '').trim();
+  return first || null;
+}
+
 function hex(colour: string): string {
   const c = colour.trim();
   return c.startsWith('#') ? c : `#${c}`;
@@ -391,19 +397,22 @@ async function runAssemble(assignment: MediaAssignment, ctx: Context): Promise<C
     if (picture) return { picture, seconds, ...first };
     return { cardColor: hex(darkestColour(palette)), seconds, ...first };
   });
-  const result = await invoke<{ ok?: boolean; outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
+  const font = brandFontName(ctx.brand);
+  const result = await invoke<{ ok?: boolean; fontNote?: string | null; outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
     workspaceRoot: ctx.root, outDir, version: ctx.version, scenes,
     voice: voice.full, voiceSeconds: voice.durationSec,
     ...(music ? { music } : {}),
     srt, captionColor: hex(headlineColour(palette)), outlineColor: hex(darkestColour(palette)),
+    ...(font ? { font } : {}),
   } });
+  const notes = [captions === 'lines' ? NO_WHISPER_NOTE : '', result?.fontNote || ''].filter(Boolean);
   const outputs = (result?.outputs || []).map((o) => ({
     aspect: o.aspect, durationSec: o.durationSec,
     path: `${outDir}/${o.path}`, frames: (o.frames || []).map((f) => `${outDir}/${f}`),
   }));
   return done(
     assignment,
-    { outputs, srt, captions, ...(captions === 'lines' ? { note: NO_WHISPER_NOTE } : {}) },
+    { outputs, srt, captions, ...(notes.length ? { note: notes.join(' ') } : {}) },
     `Finished video: ${outputs.map((o) => o.aspect.replace('x', ':')).join(' and ') || 'none'}.`,
   );
 }

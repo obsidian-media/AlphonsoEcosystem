@@ -15,6 +15,7 @@ import { captionsFromLines, toSrt, alignCaptions } from './contentCaptions';
 import { chosenVersionOf, getProject, getShortsSettings, setShortOutput } from './contentProjectService';
 import { projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
 import { makeComfyClip } from './comfyVideoClip';
+import { brandFontName } from './contentMediaExecutor';
 import { darkestColour, headlineColour } from './thumbnailRenderer';
 import type { ContentBrand, ContentProject, ShortPlan } from './contentTypes';
 
@@ -136,16 +137,18 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
     return pictures[i] ? { picture: pictures[i] as string, seconds, ...first } : { cardColor: hex(darkestColour(palette)), seconds, ...first };
   });
   const music = musicOf(ctx.project);
-  const result = await invoke<{ outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
+  const result = await invoke<{ fontNote?: string | null; outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
     workspaceRoot: ctx.root, outDir: ctx.dir, version: ctx.n, scenes, voice: voice.full, voiceSeconds: voice.durationSec,
     ...(music ? { music } : {}), srt, captionColor: hex(headlineColour(palette)), outlineColor: hex(darkestColour(palette)),
     aspects: ['9x16'], outputStem: `v${ctx.n}`,
+    ...(brandFontName(ctx.brand) ? { font: brandFontName(ctx.brand) } : {}),
   } });
   const out = result?.outputs?.[0];
   if (!out) throw new Error('The Short could not be put together.');
   return {
     shortId: plan.id, status: 'done', path: `${ctx.dir}/${out.path}`, seconds: out.durationSec,
-    frames: (out.frames || []).map((f) => `${ctx.dir}/${f}`), fileVersion: ctx.n, ...(note ? { note } : {}),
+    frames: (out.frames || []).map((f) => `${ctx.dir}/${f}`), fileVersion: ctx.n,
+    ...(note || result?.fontNote ? { note: [note, result?.fontNote].filter(Boolean).join(' ') } : {}),
   };
 }
 
@@ -165,14 +168,16 @@ async function makeFromVideo(ctx: Ctx, plan: ShortPlan, withHook: boolean): Prom
     await writeText(ctx, hookSrt, toSrt(captionsFromLines([{ text: plan.hook, start: 0, end: voice.durationSec }]), { maxWords: 12, maxSeconds: 60 }));
     hook = { hookVoice: voice.full, hookSeconds: voice.durationSec, hookSrt };
   }
-  const result = await invoke<{ ok?: boolean; path?: string; durationSec?: number; frames?: string[] }>('content_cut_short', { spec: {
+  const result = await invoke<{ ok?: boolean; path?: string; durationSec?: number; frames?: string[]; fontNote?: string | null }>('content_cut_short', { spec: {
     workspaceRoot: ctx.root, source: video.path, sourceSeconds: video.durationSec, startSec: moment.startSec, endSec: moment.endSec,
     outPath, captionColor: hex(headlineColour(palette)), outlineColor: hex(darkestColour(palette)), ...hook,
+    ...(brandFontName(ctx.brand) ? { font: brandFontName(ctx.brand) } : {}),
   } });
   if (!result?.ok) throw new Error('The Short could not be cut from the finished video.');
   return {
     shortId: plan.id, status: 'done', path: outPath, seconds: result.durationSec,
     frames: (result.frames || []).map((f) => `${ctx.dir}/${f}`), fileVersion: ctx.n,
+    ...(result.fontNote ? { note: result.fontNote } : {}),
   };
 }
 

@@ -589,6 +589,9 @@ pub struct AssemblySpec {
   /// A Short's file name without the shape (`v1` → `v1.mp4`) when one shape is made.
   #[serde(default)]
   output_stem: Option<String>,
+  /// The brand's font for the captions (phase 4a); Arial when not set or not installed.
+  #[serde(default)]
+  font: Option<String>,
 }
 
 /// The shapes this assembly makes, in the usual order.
@@ -811,7 +814,8 @@ pub(crate) fn build_assembly_runs(
     ],
   });
   let caption_style = format!(
-    "FontName=Arial,FontSize={},PrimaryColour={},OutlineColour={},BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV={}",
+    "FontName={},FontSize={},PrimaryColour={},OutlineColour={},BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV={}",
+    caption_font(spec.font.as_deref()),
     if width > height { 18 } else { 14 },
     ass_color(spec.caption_color.as_deref(), "&H00FFFFFF"),
     ass_color(spec.outline_color.as_deref(), "&H00000000"),
@@ -919,7 +923,8 @@ async fn probe(ffprobe: &Path, file: &Path) -> Result<(f64, bool, bool), String>
 /// Builds the finished video (16:9 and 9:16), checks each with ffprobe, and
 /// grabs three frames. A new version never overwrites an older one.
 #[tauri::command]
-pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Value, String> {
+pub async fn content_assemble_video(mut spec: AssemblySpec) -> Result<serde_json::Value, String> {
+  let font_note = resolve_font(&mut spec.font);
   let ffmpeg = ffmpeg_path().ok_or_else(|| "ffmpeg is missing from this install.".to_string())?;
   let ffprobe =
     ffprobe_path().ok_or_else(|| "ffprobe is missing from this install.".to_string())?;
@@ -954,7 +959,7 @@ pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Va
       let _ = std::fs::remove_file(file);
     }
   }
-  Ok(serde_json::json!({ "ok": true, "outputs": result? }))
+  Ok(serde_json::json!({ "ok": true, "outputs": result?, "fontNote": font_note }))
 }
 
 async fn assemble_outputs(
@@ -1033,6 +1038,81 @@ async fn assemble_outputs(
   Ok(outputs)
 }
 
+// ── The brand's font in burned-in text (phase 4a) ───────────────────────────
+
+/// The first font family named, with only letters, digits, spaces and `-`
+/// (so nothing can break out of ffmpeg's filter text), at most 64 characters;
+/// Arial when nothing usable is left.
+pub(crate) fn caption_font(name: Option<&str>) -> String {
+  let first = name.unwrap_or("").split(',').next().unwrap_or("");
+  let cleaned: String = first
+    .chars()
+    .filter(|c| c.is_ascii_alphanumeric() || *c == ' ' || *c == '-')
+    .collect::<String>()
+    .split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ");
+  if cleaned.is_empty() {
+    "Arial".to_string()
+  } else {
+    cleaned.chars().take(64).collect()
+  }
+}
+
+/// Whether Windows' fonts list (`reg query` output) has this family:
+/// a value name that is the family, then a space or "(".
+pub(crate) fn font_listed(reg_output: &str, family: &str) -> bool {
+  let want = family.trim().to_lowercase();
+  if want.is_empty() {
+    return false;
+  }
+  reg_output.lines().any(|line| {
+    let name = line.trim_start().to_lowercase();
+    name
+      .strip_prefix(&want)
+      .is_some_and(|rest| rest.starts_with(' ') || rest.starts_with('('))
+  })
+}
+
+/// Whether a font is installed (Windows: the machine's and the user's fonts lists).
+fn font_installed(family: &str) -> bool {
+  #[cfg(windows)]
+  {
+    let mut listed = String::new();
+    for hive in ["HKLM", "HKCU"] {
+      let mut cmd = std::process::Command::new("reg");
+      cmd.args([
+        "query",
+        &format!("{hive}\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"),
+      ]);
+      crate::utils::no_window(&mut cmd);
+      if let Ok(out) = cmd.output() {
+        listed.push_str(&String::from_utf8_lossy(&out.stdout));
+      }
+    }
+    font_listed(&listed, family)
+  }
+  #[cfg(not(windows))]
+  {
+    let _ = family;
+    true
+  }
+}
+
+/// Keeps the brand font when it is installed; otherwise Arial, with a note.
+fn resolve_font(font: &mut Option<String>) -> Option<String> {
+  let wanted = font.as_deref().map(|f| caption_font(Some(f)))?;
+  if wanted == "Arial" || font_installed(&wanted) {
+    *font = Some(wanted);
+    None
+  } else {
+    *font = None;
+    Some(format!(
+      "The brand font {wanted} isn't installed on this computer; the captions use Arial."
+    ))
+  }
+}
+
 // ── Highlight and cut Shorts (phase 3d) ─────────────────────────────────────
 
 #[derive(Deserialize, Clone)]
@@ -1058,6 +1138,9 @@ pub struct CutShortSpec {
   caption_color: Option<String>,
   #[serde(default)]
   outline_color: Option<String>,
+  /// The brand's font for the hook text (phase 4a).
+  #[serde(default)]
+  font: Option<String>,
 }
 
 /// The part of the video to use, kept inside it; under 3 seconds is refused.
@@ -1102,7 +1185,8 @@ pub(crate) fn build_cut_runs(
     (Some(voice), Some(hook)) => {
       args.extend([s("-i"), root.join(voice).to_string_lossy().to_string()]);
       let style = format!(
-        "FontName=Arial,FontSize=22,PrimaryColour={},OutlineColour={},BorderStyle=1,Outline=3,Shadow=0,Alignment=8,MarginV=260",
+        "FontName={},FontSize=22,PrimaryColour={},OutlineColour={},BorderStyle=1,Outline=3,Shadow=0,Alignment=8,MarginV=260",
+        caption_font(spec.font.as_deref()),
         ass_color(spec.caption_color.as_deref(), "&H00FFFFFF"),
         ass_color(spec.outline_color.as_deref(), "&H00000000"),
       );
@@ -1145,7 +1229,8 @@ pub(crate) fn build_cut_runs(
 
 /// Makes a highlight or a cut Short from the finished 9:16 video.
 #[tauri::command]
-pub async fn content_cut_short(spec: CutShortSpec) -> Result<serde_json::Value, String> {
+pub async fn content_cut_short(mut spec: CutShortSpec) -> Result<serde_json::Value, String> {
+  let font_note = resolve_font(&mut spec.font);
   let out_file = checked_file(&spec.workspace_root, &spec.out_path, &["mp4"])?;
   if out_file.exists() {
     return Err("That Short's file already exists; nothing was overwritten.".to_string());
@@ -1236,7 +1321,7 @@ pub async fn content_cut_short(spec: CutShortSpec) -> Result<serde_json::Value, 
   .await;
   match checked {
     Ok(frames) => Ok(
-      serde_json::json!({ "ok": true, "path": spec.out_path, "durationSec": duration, "frames": frames }),
+      serde_json::json!({ "ok": true, "path": spec.out_path, "durationSec": duration, "frames": frames, "fontNote": font_note }),
     ),
     Err(reason) => {
       for file in &written {
@@ -1438,6 +1523,44 @@ pub(crate) async fn content_ready_to_post(
 mod tests {
   use super::*;
 
+  #[test]
+  fn a_brand_font_name_is_cleaned_before_it_reaches_the_filter() {
+    assert_eq!(caption_font(Some("\"Montserrat\", Inter")), "Montserrat");
+    assert_eq!(caption_font(Some("Bad:Name,'x'\\")), "BadName");
+    assert_eq!(caption_font(Some("Open Sans")), "Open Sans");
+    assert_eq!(caption_font(Some("")), "Arial");
+    assert_eq!(caption_font(None), "Arial");
+    assert_eq!(caption_font(Some(&"A".repeat(90))).len(), 64);
+  }
+
+  #[test]
+  fn an_installed_font_is_found_in_the_fonts_list() {
+    let listed = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts\r\n    Montserrat Bold (TrueType)    REG_SZ    Montserrat-Bold.ttf\r\n    Arial (TrueType)    REG_SZ    arial.ttf\r\n";
+    assert!(font_listed(listed, "Montserrat"));
+    assert!(font_listed(listed, "arial"));
+    assert!(!font_listed(listed, "Mont"));
+    assert!(!font_listed(listed, "Inter"));
+  }
+
+  #[test]
+  fn captions_use_the_brand_font() {
+    let filter = |args: &[String]| {
+      args
+        .iter()
+        .skip_while(|a| *a != "-filter_complex")
+        .nth(1)
+        .cloned()
+        .unwrap_or_default()
+    };
+    let mut spec = cut_spec(true);
+    spec.font = Some("Montserrat".into());
+    let runs = build_cut_runs(Path::new("R"), Path::new("W"), &spec, 10.0, 50.0);
+    assert!(filter(&runs[0].args).contains("FontName=Montserrat,"));
+    spec.font = None;
+    let runs = build_cut_runs(Path::new("R"), Path::new("W"), &spec, 10.0, 50.0);
+    assert!(filter(&runs[0].args).contains("FontName=Arial,"));
+  }
+
   fn cut_spec(hook: bool) -> CutShortSpec {
     CutShortSpec {
       workspace_root: "R".into(),
@@ -1451,6 +1574,7 @@ mod tests {
       hook_srt: hook.then(|| "b/p/shorts/sh1/hook.srt".into()),
       caption_color: None,
       outline_color: None,
+      font: None,
     }
   }
 
@@ -1660,6 +1784,7 @@ mod tests {
       outline_color: None,
       aspects: None,
       output_stem: None,
+      font: None,
     }
   }
 
@@ -1924,6 +2049,7 @@ mod tests {
       outline_color: Some("#000000".into()),
       aspects: None,
       output_stem: None,
+      font: None,
     };
     // A run that fails its check (the voice is said to be 20 s) leaves no file behind...
     let wrong = AssemblySpec {
