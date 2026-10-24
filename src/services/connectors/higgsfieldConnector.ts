@@ -17,6 +17,10 @@ export interface HiggsfieldModels {
   clip?: string;
   clipExtra?: Record<string, unknown>;
   clipExtraProblem?: string;
+  /** Phase 4c: the model id that trains a consistent character, and its extras. */
+  character?: string;
+  characterExtra?: Record<string, unknown>;
+  characterExtraProblem?: string;
 }
 
 const read = (key: string): string => String(getConnectorCredential('higgsfield', key) || '').trim();
@@ -64,6 +68,13 @@ export function higgsfieldModels(): HiggsfieldModels {
     const c = parseExtra(read('HIGGSFIELD_CLIP_EXTRA'), 'clip');
     if (c.extra) out.clipExtra = c.extra;
     if (c.problem) out.clipExtraProblem = c.problem;
+  }
+  const character = read('HIGGSFIELD_CHARACTER_MODEL');
+  if (character) {
+    out.character = character;
+    const t = parseExtra(read('HIGGSFIELD_CHARACTER_EXTRA'), 'character');
+    if (t.extra) out.characterExtra = t.extra;
+    if (t.problem) out.characterExtraProblem = t.problem;
   }
   return out;
 }

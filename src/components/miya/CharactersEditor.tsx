@@ -7,6 +7,7 @@ import {
   setMainCharacter, setPermission, updateCharacter,
 } from '../../services/contentFactory/contentCharacters';
 import { contentAppSettings } from '../../services/contentFactory/contentStepRecorder';
+import { checkCharacterTraining, trainCharacter } from '../../services/contentFactory/contentCharacterTraining';
 import type { BrandCharacter } from '../../services/contentFactory/contentTypes';
 
 const field = 'rounded-lg bg-(--surface-2) px-2 py-1 text-[12px] text-(--text-1)';
@@ -94,6 +95,19 @@ export function CharactersEditor({ brandId, children }: { brandId: string; child
                   });
                 }}>Make pictures with Miya</Button>
               )}
+              {c.higgsfield?.status !== 'ready' && c.higgsfield?.status !== 'training' && (
+                <Button size="sm" variant="secondary" disabled={!usable.ok} onClick={() => {
+                  void run(c.id, async () => { await trainCharacter(brandId, c.id, settings); return 'Training asks first with its cost (see the Requests board or Telegram).'; });
+                }}>Train on Higgsfield</Button>
+              )}
+              {c.higgsfield?.status === 'training' && (
+                <>
+                  <span className="text-[11px] text-(--text-3)">Training on Higgsfield…</span>
+                  <Button size="sm" variant="secondary" onClick={() => { void run(c.id, async () => { await checkCharacterTraining(brandId, c.id); return ''; }); }}>Check again</Button>
+                </>
+              )}
+              {c.higgsfield?.status === 'ready' && <span className="text-[11px] text-(--success)">Trained on Higgsfield</span>}
+              {c.higgsfield?.status === 'failed' && <span className="text-[11px] text-(--warning)">{c.higgsfield.reason}</span>}
               {!usable.ok && <span className="text-[11px] text-(--warning)">{usable.reason}</span>}
               {notes[c.id] && <span className="text-[11px] text-(--text-3)">{notes[c.id]}</span>}
             </div>

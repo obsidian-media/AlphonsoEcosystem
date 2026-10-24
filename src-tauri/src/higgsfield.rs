@@ -653,6 +653,279 @@ pub(crate) async fn higgsfield_test(
   higgsfield_estimate(job, keys).await
 }
 
+// ---- Characters (content factory phase 4c) ----
+// Higgsfield's character training endpoint is not in its public docs; the model id is pasted
+// in Settings like the others, and the fields below were chosen from third-party descriptions
+// (a name and the pictures' addresses in; an id and a training status out). Confirm live.
+
+pub(crate) const TRAINING_EXTRA_REFUSED: &str =
+  "Extra settings must be a JSON object and can't replace the name or pictures.";
+
+/// The training request: the character's name and its pictures' addresses, with the user's extras.
+pub(crate) fn training_body(
+  name: &str,
+  image_urls: &[String],
+  extra: Option<&Value>,
+) -> Result<Value, String> {
+  let mut body = serde_json::json!({ "name": name.chars().take(80).collect::<String>(), "image_urls": image_urls });
+  match extra {
+    None | Some(Value::Null) => {}
+    Some(Value::Object(map)) => {
+      if map.contains_key("name") || map.contains_key("image_urls") || map.contains_key("prompt") {
+        return Err(TRAINING_EXTRA_REFUSED.to_string());
+      }
+      for (k, v) in map {
+        body[k] = v.clone();
+      }
+    }
+    Some(_) => return Err(TRAINING_EXTRA_REFUSED.to_string()),
+  }
+  Ok(body)
+}
+
+/// What a training answer says: ready with the character's id, failed, or still training.
+#[derive(Debug, PartialEq)]
+pub(crate) enum Training {
+  Ready(String),
+  Failed(String),
+  InProgress,
+}
+
+pub(crate) fn training_of(body: &Value) -> Training {
+  let id = [
+    "soul_id",
+    "character_id",
+    "reference_id",
+    "custom_reference_id",
+  ]
+  .iter()
+  .find_map(|k| body[*k].as_str().map(str::to_string))
+  .or_else(|| body["result"]["id"].as_str().map(str::to_string));
+  match body["status"].as_str().unwrap_or("") {
+    "completed" | "ready" => match id {
+      Some(id) if !id.is_empty() => Training::Ready(id),
+      _ => Training::Failed("Higgsfield finished training but sent no character id.".to_string()),
+    },
+    "failed" => {
+      Training::Failed("Higgsfield could not train this character (not charged).".to_string())
+    }
+    "nsfw" => Training::Failed(
+      "Higgsfield refused these pictures as not safe for work (not charged).".to_string(),
+    ),
+    "canceled" => Training::Failed("The training was cancelled.".to_string()),
+    _ => Training::InProgress,
+  }
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TrainRequest {
+  model: String,
+  name: String,
+  image_paths: Vec<String>,
+  #[serde(default)]
+  extra: Option<Value>,
+}
+
+#[derive(Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TrainResult {
+  ok: bool,
+  status: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  character_id: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  request_id: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  reason: Option<String>,
+}
+
+fn train_failed(reason: impl Into<String>) -> TrainResult {
+  TrainResult {
+    ok: false,
+    status: "failed".into(),
+    reason: Some(reason.into()),
+    ..Default::default()
+  }
+}
+
+fn train_outcome(answer: &Value, request_id: Option<String>) -> TrainResult {
+  match training_of(answer) {
+    Training::Ready(id) => TrainResult {
+      ok: true,
+      status: "ready".into(),
+      character_id: Some(id),
+      request_id,
+      reason: None,
+    },
+    Training::Failed(r) => TrainResult {
+      request_id,
+      ..train_failed(r)
+    },
+    Training::InProgress => TrainResult {
+      ok: true,
+      status: "training".into(),
+      request_id,
+      ..Default::default()
+    },
+  }
+}
+
+/// Higgsfield's cost for training, before anything is sent (the pictures aren't uploaded).
+#[tauri::command]
+pub(crate) async fn higgsfield_estimate_training(
+  request: TrainRequest,
+  keys: Option<HiggsfieldKeys>,
+) -> Value {
+  let fail = |r: String| serde_json::json!({ "ok": false, "reason": r });
+  let authz = match auth(&keys.unwrap_or_default()) {
+    Ok(a) => a,
+    Err(r) => return fail(r),
+  };
+  if !valid_model(&request.model) {
+    return fail("That is not a Higgsfield model id.".into());
+  }
+  let body = match training_body(&request.name, &[], request.extra.as_ref()) {
+    Ok(b) => b,
+    Err(r) => return fail(r),
+  };
+  let Ok(http) = client() else {
+    return fail("Could not start the request.".into());
+  };
+  match send_json(
+    http
+      .post(format!("{BASE}/estimate/{}", request.model.trim()))
+      .header("Authorization", &authz)
+      .json(&body),
+  )
+  .await
+  {
+    Ok(answer) => match parse_estimate(&answer) {
+      Some(usd) => serde_json::json!({ "ok": true, "usd": usd }),
+      None => fail("Higgsfield gave no estimate for training.".into()),
+    },
+    Err(r) => fail(r),
+  }
+}
+
+/// Uploads the character's pictures through Higgsfield's own upload and starts the training.
+#[tauri::command]
+pub(crate) async fn higgsfield_train_character(
+  request: TrainRequest,
+  workspace_root: String,
+  keys: Option<HiggsfieldKeys>,
+) -> TrainResult {
+  let authz = match auth(&keys.unwrap_or_default()) {
+    Ok(a) => a,
+    Err(r) => return train_failed(r),
+  };
+  if !valid_model(&request.model) {
+    return train_failed("That is not a Higgsfield model id.");
+  }
+  if request.image_paths.is_empty() {
+    return train_failed("The character has no pictures.");
+  }
+  // Checked before anything is uploaded.
+  if let Err(r) = training_body(&request.name, &[], request.extra.as_ref()) {
+    return train_failed(r);
+  }
+  let Ok(http) = client() else {
+    return train_failed("Could not start the request.");
+  };
+  let mut urls = Vec::new();
+  for rel in &request.image_paths {
+    match upload(&http, &authz, &workspace_root, rel).await {
+      Ok(url) => urls.push(url),
+      Err(r) => return train_failed(r),
+    }
+  }
+  let body = match training_body(&request.name, &urls, request.extra.as_ref()) {
+    Ok(b) => b,
+    Err(r) => return train_failed(r),
+  };
+  match send_json(
+    http
+      .post(format!("{BASE}/{}", request.model.trim()))
+      .header("Authorization", &authz)
+      .header("Idempotency-Key", random_key())
+      .json(&body),
+  )
+  .await
+  {
+    Ok(answer) => {
+      let request_id = answer["request_id"].as_str().map(str::to_string);
+      train_outcome(&answer, request_id)
+    }
+    Err(r) => train_failed(r),
+  }
+}
+
+/// One look at a training still running; never starts it again.
+#[tauri::command]
+pub(crate) async fn higgsfield_character_status(
+  request_id: String,
+  keys: Option<HiggsfieldKeys>,
+) -> TrainResult {
+  let authz = match auth(&keys.unwrap_or_default()) {
+    Ok(a) => a,
+    Err(r) => return train_failed(r),
+  };
+  if request_id.is_empty()
+    || !request_id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || c == '-')
+  {
+    return train_failed("That is not a Higgsfield request id.");
+  }
+  let Ok(http) = client() else {
+    return train_failed("Could not start the request.");
+  };
+  match send_json(
+    http
+      .get(format!("{BASE}/requests/{request_id}/status"))
+      .header("Authorization", &authz),
+  )
+  .await
+  {
+    Ok(answer) => train_outcome(&answer, Some(request_id)),
+    Err(_) => TrainResult {
+      ok: true,
+      status: "training".into(),
+      request_id: Some(request_id),
+      ..Default::default()
+    },
+  }
+}
+
+/// Asks Higgsfield to delete a request's data (the character's training) when a character is deleted.
+#[tauri::command]
+pub(crate) async fn higgsfield_delete_request(
+  request_id: String,
+  keys: Option<HiggsfieldKeys>,
+) -> Value {
+  let Ok(authz) = auth(&keys.unwrap_or_default()) else {
+    return serde_json::json!({ "ok": false });
+  };
+  if request_id.is_empty()
+    || !request_id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || c == '-')
+  {
+    return serde_json::json!({ "ok": false });
+  }
+  let Ok(http) = client() else {
+    return serde_json::json!({ "ok": false });
+  };
+  let ok = http
+    .delete(format!("{BASE}/requests/{request_id}"))
+    .header("Authorization", &authz)
+    .send()
+    .await
+    .map(|r| r.status().is_success())
+    .unwrap_or(false);
+  serde_json::json!({ "ok": ok })
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -933,6 +1206,58 @@ mod tests {
     assert!(
       seen.lock().unwrap().is_empty(),
       "nothing is fetched from a private address"
+    );
+  }
+
+  #[test]
+  fn the_training_request_has_the_name_and_pictures_and_merges_extras() {
+    let body = training_body(
+      "Ana",
+      &["https://cdn/a.png".to_string()],
+      Some(&json!({ "quality": "high" })),
+    )
+    .unwrap();
+    assert_eq!(
+      body,
+      json!({ "name": "Ana", "image_urls": ["https://cdn/a.png"], "quality": "high" })
+    );
+    for extra in [
+      json!({ "name": "x" }),
+      json!({ "image_urls": [] }),
+      json!({ "prompt": "x" }),
+      json!([1]),
+    ] {
+      assert_eq!(
+        training_body("Ana", &[], Some(&extra)).unwrap_err(),
+        TRAINING_EXTRA_REFUSED
+      );
+    }
+  }
+
+  #[test]
+  fn a_training_answer_reads_as_ready_failed_or_training() {
+    assert_eq!(
+      training_of(&json!({ "status": "completed", "soul_id": "s-1" })),
+      Training::Ready("s-1".into())
+    );
+    assert_eq!(
+      training_of(&json!({ "status": "ready", "id": "x", "character_id": "c-2" })),
+      Training::Ready("c-2".into())
+    );
+    assert!(matches!(
+      training_of(&json!({ "status": "completed" })),
+      Training::Failed(_)
+    ));
+    assert!(
+      matches!(training_of(&json!({ "status": "failed" })), Training::Failed(r) if r.contains("not charged"))
+    );
+    assert_eq!(
+      training_of(&json!({ "status": "in_progress" })),
+      Training::InProgress
+    );
+    assert_eq!(
+      training_of(&json!({ "status": "queued", "request_id": "r" })),
+      Training::InProgress
     );
   }
 }

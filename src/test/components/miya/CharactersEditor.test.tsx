@@ -12,9 +12,15 @@ vi.mock('../../../services/contentFactory/contentCharacters', async () => {
   return { ...actual, makeCharacterPictures: vi.fn(async () => ({ made: 8, failed: 0 })) };
 });
 
+vi.mock('../../../services/contentFactory/contentCharacterTraining', () => ({
+  trainCharacter: vi.fn(async () => ({ ok: true, requestId: 'jose-request-1' })),
+  checkCharacterTraining: vi.fn(async () => null),
+}));
+
 import { CharactersEditor } from '../../../components/miya/CharactersEditor';
+import { trainCharacter, checkCharacterTraining } from '../../../services/contentFactory/contentCharacterTraining';
 import { getBrand, saveBrand } from '../../../services/contentFactory/contentBrandService';
-import { addCharacter, makeCharacterPictures } from '../../../services/contentFactory/contentCharacters';
+import { addCharacter, makeCharacterPictures, updateCharacter } from '../../../services/contentFactory/contentCharacters';
 
 beforeEach(() => {
   localStorage.clear();
@@ -48,5 +54,22 @@ describe('CharactersEditor', () => {
     expect(await screen.findByText('Miya made 8 pictures.')).toBeTruthy();
     fireEvent.click(screen.getByLabelText('Main character: Bo'));
     expect(getBrand(brand.id)!.mainCharacterId).toBe(b.id);
+  });
+
+  it('trains on Higgsfield once usable, and checks a training still running', async () => {
+    const brand = saveBrand({ name: 'Learn' });
+    const c = addCharacter(brand.id, { name: 'Ana', kind: 'made_up', description: 'a teacher' });
+    const { rerender } = render(<CharactersEditor brandId={brand.id} />);
+    expect((screen.getByRole('button', { name: 'Train on Higgsfield' }) as HTMLButtonElement).disabled).toBe(true);
+    updateCharacter(brand.id, c.id, { pictures: ['a', 'b', 'c', 'd', 'e'] });
+    rerender(<CharactersEditor brandId={brand.id} key="2" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Train on Higgsfield' }));
+    await waitFor(() => expect(trainCharacter).toHaveBeenCalledWith(brand.id, c.id, { outputFolder: 'D:\\Content' }));
+    expect(await screen.findByText('Training asks first with its cost (see the Requests board or Telegram).')).toBeTruthy();
+    updateCharacter(brand.id, c.id, { higgsfield: { status: 'training', requestId: 'r' } });
+    rerender(<CharactersEditor brandId={brand.id} key="3" />);
+    expect(screen.getByText('Training on Higgsfield…')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    await waitFor(() => expect(checkCharacterTraining).toHaveBeenCalledWith(brand.id, c.id));
   });
 });

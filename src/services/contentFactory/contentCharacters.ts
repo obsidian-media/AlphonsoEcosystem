@@ -4,6 +4,7 @@
 // Higgsfield training request (contentCharacterTraining.ts).
 import { invoke } from '@tauri-apps/api/core';
 import { generateComfyUiImage, getComfyUiEndpoint } from '../connectors/connectorImageGenerators';
+import { higgsfieldKeys } from '../connectors/higgsfieldConnector';
 import { randomHex, randomId } from '../../lib/randomId';
 import { getBrand, saveBrand } from './contentBrandService';
 import { outputPath, requireOutputRoot } from './contentProjectFiles';
@@ -154,7 +155,7 @@ export async function makeCharacterPictures(brandId: string, id: string, setting
   return { made, failed };
 }
 
-/** Deletes the character and its pictures on this computer (Higgsfield's copy: contentCharacterTraining.ts). */
+/** Deletes the character, its pictures on this computer and its training on Higgsfield. */
 export async function deleteCharacter(brandId: string, id: string, settings: Settings): Promise<void> {
   const brand = brandOrThrow(brandId);
   const character = getCharacter(brand, id);
@@ -162,6 +163,10 @@ export async function deleteCharacter(brandId: string, id: string, settings: Set
   const root = requireOutputRoot(settings);
   for (const path of character.pictures) {
     await invoke('delete_workspace_file', { workspaceRoot: root, relativePath: path }).catch(() => undefined);
+  }
+  // Higgsfield's copy of the training goes too, where it allows.
+  if (character.higgsfield?.requestId) {
+    await invoke('higgsfield_delete_request', { requestId: character.higgsfield.requestId, keys: higgsfieldKeys() }).catch(() => undefined);
   }
   changeCharacters(brandId, (list, b) => {
     const i = list.findIndex((c) => c.id === id);

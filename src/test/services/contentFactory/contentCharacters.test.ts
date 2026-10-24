@@ -6,7 +6,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(async (cmd: string, args: any) => {
     if (cmd === 'kv_set' || cmd === 'kv_get') return null;
     if (cmd === 'save_image_to_folder') { saved[`${args.folder}\\${args.filename}`] = args.base64Data; return { path: `${args.folder}\\${args.filename}` }; }
-    if (cmd === 'delete_workspace_file') return null;
+    if (cmd === 'delete_workspace_file' || cmd === 'higgsfield_delete_request') return { ok: true };
     throw new Error(`unexpected command ${cmd}`);
   }),
 }));
@@ -48,6 +48,14 @@ describe('characters on the brand', () => {
     expect(getBrand(brand.id)!.characters).toEqual([]);
     expect(getBrand(brand.id)!.mainCharacterId).toBeUndefined();
     expect(vi.mocked(invoke).mock.calls.filter((call) => call[0] === 'delete_workspace_file')).toHaveLength(2);
+  });
+
+  it('deleting a trained character asks Higgsfield to delete it too', async () => {
+    const brand = saveBrand({ name: 'Learn' });
+    const c = addCharacter(brand.id, { name: 'Ana', kind: 'made_up', description: 'x' });
+    updateCharacter(brand.id, c.id, { higgsfield: { status: 'ready', characterId: 's-1', requestId: 'req-t' } });
+    await deleteCharacter(brand.id, c.id, settings);
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith('higgsfield_delete_request', expect.objectContaining({ requestId: 'req-t' }));
   });
 
   it('pictures are never saved over each other', async () => {

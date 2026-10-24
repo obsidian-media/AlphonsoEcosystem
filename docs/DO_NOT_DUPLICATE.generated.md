@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 281 services and 173 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 282 services and 173 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -275,6 +275,7 @@ Source-backed inventory: 281 services and 173 components. Human purpose descript
 | service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `addProposedLessons`, `DEFAULT_QUALITY_THRESHOLD`, `dropLesson`, `editLesson`, `ensureFirstBrand`, `getBrand`, `keepLesson`, `listBrands`, `proposedLessons`, `saveBrand` |
 | service | `src/services/contentFactory/contentCaptions.ts` | `alignCaptions`, `captionsFromLines`, `TimedWord`, `toSrt` |
 | service | `src/services/contentFactory/contentCharacters.ts` | `addCharacter`, `addCharacterPictures`, `characterUsable`, `deleteCharacter`, `getCharacter`, `listCharacters`, `makeCharacterPictures`, `MAX_CHARACTER_PICTURES`, `MIN_CHARACTER_PICTURES`, `MIYA_CHARACTER_PICTURES`, `NEEDS_PERMISSION`, `NEEDS_PICTURES`, `REAL_PERSON_OWN_PHOTOS`, `removeCharacterPicture`, `setMainCharacter`, `setPermission`, `updateCharacter` |
+| service | `src/services/contentFactory/contentCharacterTraining.ts` | `checkCharacterTraining`, `estimateCharacterTraining`, `executeCharacterTraining`, `NO_TRAINING_MODEL`, `trainCharacter`, `TRAINING_LABEL` |
 | service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentIdeas.ts` | `dismissIdea`, `getIdea`, `IDEAS_TASK_MARK`, `listIdeas`, `proposeIdeas`, `saveIdeas`, `startProjectFromIdea` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureOptions`, `PictureResult`, `renderCarouselSlides`, `renderScenePictures`, `renderThumbnails` |
