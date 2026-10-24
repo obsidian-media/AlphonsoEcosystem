@@ -8,7 +8,7 @@ import { chosenScenes } from './clipEngine';
 import { estimateRunwayUsd, runwayClipAvailable } from './runwayClip';
 import { estimateEffectsUsd, estimateElevenLabsUsd } from '../jose/joseSpend';
 import { higgsfieldPictureLimit, paidEngineAvailable, resolvePictures, resolveVoice } from './engineChoice';
-import { estimateHiggsfieldClipsUsd } from './higgsfieldClip';
+import { estimateHiggsfieldClipsUsd, estimateHiggsfieldMotionUsd } from './higgsfieldClip';
 
 /** Which content-factory step each template step belongs to. */
 export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
@@ -42,6 +42,10 @@ export const CLIPS_WAIT = 'Check the main moments in Miya Studio first.';
 /** The paid engine's name in the wait (phase 4b: Runway or Higgsfield). */
 export const clipsWaitPaid = (engine: string): string => `Check the main moments and the ${engine} cost in Miya Studio first.`;
 export const CLIPS_WAIT_PAID = clipsWaitPaid('Runway');
+/** Why a run waits for the Shorts' motion clips (phase 4c): once, with the cost. */
+export const SHORTS_MOTION_WAIT = (n: number, usd: number): string => `Make ${n} Higgsfield motion clip${n === 1 ? '' : 's'} for the Shorts, about $${usd.toFixed(2)}.`;
+/** Added to the clips wait when scenes have a motion (phase 4c). */
+export const motionIncluded = (n: number): string => ` Includes ${n} motion clip${n === 1 ? '' : 's'}.`;
 
 /** Why Publish waits (phase 3a): you approve the exact posts in Campaign Studio's Posts list. */
 export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
@@ -186,7 +190,12 @@ export function contentProjectPlanSteps(
         if (!options.only) step.waitFor = step.waitFor ? `${step.waitFor} ${PICTURES_WAIT_PAID(max, usd)}` : PICTURES_WAIT_PAID(max, usd);
       }
     }
-    if (factoryStep === 'clips' && getVideoSettings(project).aiClips !== 'none') {
+    // Motion clips (phase 4c): Higgsfield, inside the clips step's one approval.
+    const motionScenes = factoryStep === 'clips'
+      ? ((chosenVersionOf(project, 'scenes')?.output as { miya?: { scenes?: { motion?: unknown }[] } } | undefined)?.miya?.scenes || []).filter((sc) => sc.motion).length
+      : 0;
+    const motionUsd = motionScenes > 0 ? estimateHiggsfieldMotionUsd(motionScenes) : null;
+    if (factoryStep === 'clips' && (getVideoSettings(project).aiClips !== 'none' || motionUsd !== null)) {
       if (options.clipEngine === 'runway' || options.clipEngine === 'higgsfield') {
         step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
         // The estimate travels with the step (phase 3b), so Telegram and the board say "(about $X.XX)".
@@ -197,6 +206,14 @@ export function contentProjectPlanSteps(
       // An unknown engine (undefined) still stops, to be safe.
       if (!options.only && options.clipEngine !== null) {
         step.waitFor = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : options.clipEngine === 'higgsfield' ? clipsWaitPaid('Higgsfield') : CLIPS_WAIT;
+      }
+      if (motionUsd !== null) {
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        step.costEstimateUsd = Math.round(((step.costEstimateUsd || 0) + motionUsd) * 10000) / 10000;
+        if (!options.only) {
+          const base = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : clipsWaitPaid('Higgsfield');
+          step.waitFor = `${base}${motionIncluded(motionScenes)}`;
+        }
       }
     }
     // An ElevenLabs voice (phase 4b): spending always asks; a full run stops once at Voice with the cost.
@@ -226,6 +243,15 @@ export function contentProjectPlanSteps(
         step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
         step.costEstimateUsd = estimate.usd;
         if (!options.only) step.waitFor = SHORTS_WAIT_PAID(estimate.clips, estimate.shorts, estimate.usd, estimate.engine);
+      }
+      // Motion clips on mini Short parts (phase 4c): inside the same one approval.
+      const shorts = (chosenVersionOf(project, 'shorts')?.output as { miya?: { shorts?: { parts?: { motion?: unknown }[] }[] } } | undefined)?.miya?.shorts || [];
+      const parts = shorts.reduce((n, sh) => n + (sh.parts || []).filter((p) => p.motion).length, 0);
+      const usd = parts > 0 ? estimateHiggsfieldMotionUsd(parts) : null;
+      if (usd !== null) {
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        step.costEstimateUsd = Math.round(((step.costEstimateUsd || 0) + usd) * 10000) / 10000;
+        if (!options.only) step.waitFor = [step.waitFor, SHORTS_MOTION_WAIT(parts, usd)].filter(Boolean).join(' ');
       }
     }
     return step;

@@ -121,7 +121,7 @@ function videoOutput(history: any, jobId: string): { filename: string; subfolder
   return null;
 }
 
-async function saveIfDone(endpoint: string, jobId: string, outRel: string, root: string): Promise<ClipResult | null> {
+export async function saveIfDone(endpoint: string, jobId: string, outRel: string, root: string): Promise<ClipResult | null> {
   const response = await comfyRequest(endpoint, `/history/${encodeURIComponent(jobId)}`);
   if (!response.ok) return null;
   const file = videoOutput(await response.json(), jobId);

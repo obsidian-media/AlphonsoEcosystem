@@ -84,6 +84,18 @@ describe('Higgsfield pictures', () => {
     expect(monthSpendUsd()).toBeCloseTo(0.1, 6);
   });
 
+  // Phase 4c (4b leftover): a picture Higgsfield couldn't make is remade with ComfyUI.
+  it('a Higgsfield picture that fails is remade with ComfyUI and the note says why', async () => {
+    const { project } = projectWith('scenes', { miya: { style: '', scenes: [SCENES.miya.scenes[0]] } });
+    backend.higgsfield_run = () => ({ ok: false, status: 'failed', reason: 'Higgsfield refused it as not safe for work (not charged).' });
+    const results = await renderScenePictures(project.id, settings, undefined, { paidApproved: true });
+    expect(generateComfyUiImage).toHaveBeenCalledTimes(1);
+    expect(results[0].status).toBe('done');
+    expect((chosenVersionOf(getProject(project.id)!, 'scenes')!.output as any).pictureNote)
+      .toContain("Higgsfield couldn't make picture 1 (Higgsfield refused it as not safe for work (not charged).); made with ComfyUI.");
+    expect(monthSpendUsd()).toBe(0);
+  });
+
   it('the headline is still drawn by Alphonso on the Higgsfield picture', async () => {
     const { project, dir } = projectWith('thumbnail', THUMBS);
     backend.higgsfield_run = (a) => ({ ok: true, status: 'done', path: a.outPath });

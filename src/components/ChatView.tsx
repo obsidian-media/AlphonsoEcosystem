@@ -34,7 +34,7 @@ import {
   markMcpOutreachDelivered
 } from '../services/calleMcpOutreachService';
 import { executeApprovedPackets, carryOnRequest } from '../services/joseExecutionEngineService';
-import { higgsfieldResultsFor, type HiggsfieldResult } from '../services/contentFactory/higgsfieldByName';
+import { higgsfieldResultsDoneSince, higgsfieldResultsFor, markShownInChat, type HiggsfieldResult } from '../services/contentFactory/higgsfieldByName';
 import { HiggsfieldMedia } from './miya/HiggsfieldResults';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
@@ -343,6 +343,26 @@ export function ChatView({
   const streamControllerRef = useRef(null);
   const inputRef = useRef(null);
   const approvalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Higgsfield results asked by name and approved on the board or Telegram (phase 4c): shown here once.
+  const chatOpenedAtRef = useRef(Date.now());
+  const generatingRef = useRef(false);
+  generatingRef.current = isGenerating;
+  useEffect(() => {
+    const showNew = () => {
+      if (generatingRef.current) return; // An approval in Chat attaches its own result.
+      const found = higgsfieldResultsDoneSince(chatOpenedAtRef.current);
+      if (found.length === 0) return;
+      found.forEach((r) => markShownInChat(r.id));
+      setMessages((current) => [...current, ...found.map((r) => ({
+        id: nextMsgId(), role: 'assistant', content: `Higgsfield made a ${r.kind}: ${r.prompt}`, media: [r],
+      }))]);
+    };
+    // First look just after the chat's history has loaded (loading clears the list).
+    const first = setTimeout(showNew, 300);
+    const timer = setInterval(showNew, 5000);
+    return () => { clearTimeout(first); clearInterval(timer); };
+  }, []);
 
   // Wire live voice transcript into the chat input
   useEffect(() => {
@@ -1628,6 +1648,7 @@ export function ChatView({
                       setMessages((current) => current.map((m) => (m as unknown as { streaming?: boolean }).streaming ? { ...m, streaming: false } : m));
                       // What Higgsfield made for this request, under the reply (phase 4b).
                       const made = higgsfieldResultsFor(cmdId as string);
+                      made.forEach((r) => markShownInChat(r.id));
                       setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: (execResult as unknown as { summary?: string }).summary || 'Approved tasks completed.', ...(made.length ? { media: made } : {}) }]);
                       onJoseExecutionState?.('task_complete', 'Approved tasks completed.');
                     } catch (err) {

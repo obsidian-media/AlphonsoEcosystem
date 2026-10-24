@@ -46,8 +46,8 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
   },
   creative_scenes: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Turn the script into a storyboard: one scene per script part, with the camera angle, the movement, and an image prompt. Give one shared style so every scene has the same look. Mark the main moments (the hook, the turning points and the call to action) with mainMoment true; they may become AI video clips.',
-    keys: '{"style":"the one look every scene shares","scenes":[{"id":"s1, s2, ...","startSec":"start, in seconds","endSec":"end, in seconds","description":"what happens in the scene","camera":"the camera angle","movement":"how the camera moves","imagePrompt":"what the picture shows, in detail","negativePrompt":"what the picture must not show","mainMoment":"true for a main moment, else false"}]}',
+    ask: 'Turn the script into a storyboard: one scene per script part, with the camera angle, the movement, and an image prompt. Give one shared style so every scene has the same look. Mark the main moments (the hook, the turning points and the call to action) with mainMoment true; they may become AI video clips. Mark with character true each scene that shows the brand\'s presenter or mascot (a scene with no person: false). Mark with motionSuggested true a scene where a real movement (a wave, a gesture, a dance) would help more than a camera move.',
+    keys: '{"style":"the one look every scene shares","scenes":[{"id":"s1, s2, ...","startSec":"start, in seconds","endSec":"end, in seconds","description":"what happens in the scene","camera":"the camera angle","movement":"how the camera moves","imagePrompt":"what the picture shows, in detail","negativePrompt":"what the picture must not show","mainMoment":"true for a main moment, else false","character":"true when the brand character is in the scene, else false","motionSuggested":"true when a real movement would help, else false"}]}',
     uses: ['script'],
   },
   creative_thumbnails: {
@@ -338,7 +338,7 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
   if (actionType === 'creative_scenes' && Array.isArray(answer.scenes)) {
     // Pictures are matched to scenes by id, so ids must be unique.
     // A main moment is only an explicit true (phase 2b).
-    answer = { ...answer, scenes: (answer.scenes as Json[]).map((scene, i) => ({ ...scene, id: `s${i + 1}`, mainMoment: scene?.mainMoment === true })) };
+    answer = { ...answer, scenes: (answer.scenes as Json[]).map((scene, i) => ({ ...scene, id: `s${i + 1}`, mainMoment: scene?.mainMoment === true, character: scene?.character !== false, motionSuggested: scene?.motionSuggested === true })) };
   }
   return validate(answer) ? answer : null;
 }

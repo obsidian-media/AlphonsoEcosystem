@@ -2,7 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '../ui';
 import { StepPanel } from './StepPanel';
 import { ProjectPicture } from './ProjectPicture';
-import { chosenVersionOf, getVideoSettings, setMainMoment } from '../../services/contentFactory/contentProjectService';
+import { chosenVersionOf, getVideoSettings, setMainMoment, setMotionSuggested, setSceneCharacter, setSceneMotion } from '../../services/contentFactory/contentProjectService';
+import { saveMotionClip } from '../../services/contentFactory/contentMotion';
+import { contentAppSettings } from '../../services/contentFactory/contentStepRecorder';
+import { MotionPicker } from './MotionPicker';
+import type { SceneMotion } from '../../services/contentFactory/contentTypes';
+import { getBrand } from '../../services/contentFactory/contentBrandService';
 import { AiClipsPanel } from './AiClipsPanel';
 import { allowMediaFolder, mediaUrl } from '../../services/contentFactory/contentProjectFiles';
 import { openExternalUrl } from '../../services/browserAutomationService';
@@ -56,6 +61,10 @@ export function SceneBuilderTab({
   const marking = getVideoSettings(project).aiClips === 'main';
   const output = chosenVersionOf(project, 'scenes')?.output as ScenesOutput | undefined;
   const scenes = output?.miya?.scenes || [];
+  // The brand's characters (phase 4c): each scene shows the project's, another, or nobody.
+  const characters = getBrand(project.brandId)?.characters || [];
+  const projectCharacterId = getVideoSettings(project).characterId || getBrand(project.brandId)?.mainCharacterId;
+  const projectCharacter = characters.find((c) => c.id === projectCharacterId);
   const pictures = output?.pictures || [];
   const voice = agentOutput<VoiceOut>(project, 'voice', 'miya');
   const music = agentOutput<MusicOut>(project, 'music', 'miya');
@@ -91,6 +100,23 @@ export function SceneBuilderTab({
                 <div className="font-semibold text-(--text-1)">Scene {index + 1}</div>
                 <div className="text-(--text-2)">{scene.description}</div>
                 {(scene.camera || scene.movement) && <div className="text-(--text-3)">Camera: {[scene.camera, scene.movement].filter(Boolean).join(', ')}</div>}
+                {characters.length > 0 && (
+                  <label className="flex items-center gap-1 text-(--text-2)">
+                    Character
+                    <select aria-label={`Character: Scene ${index + 1}`} className="rounded-lg bg-(--surface-1) px-2 py-0.5 text-[11px]"
+                      value={(scene as { characterId?: string }).characterId || ''}
+                      onChange={(e) => { setSceneCharacter(project.id, scene.id, e.target.value || null); onChange(); }}>
+                      <option value="">{`The project's (${projectCharacter?.name || 'nobody'})`}</option>
+                      {characters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      <option value="none">Nobody</option>
+                    </select>
+                  </label>
+                )}
+                <MotionPicker label={`Scene ${index + 1}`} motion={(scene as { motion?: SceneMotion }).motion || null}
+                  suggested={(scene as { motionSuggested?: boolean }).motionSuggested === true}
+                  onSet={(motion) => { setSceneMotion(project.id, scene.id, motion); onChange(); }}
+                  onClip={async (input) => { const saved = await saveMotionClip(project.id, scene.id, input, contentAppSettings()); onChange(); return saved; }}
+                  onDismissSuggestion={() => { setMotionSuggested(project.id, scene.id, false); onChange(); }} />
                 {marking && (
                   <label className="flex items-center gap-1 text-(--text-2)">
                     <input type="checkbox" aria-label={`Main moment: Scene ${index + 1}`} checked={scene.mainMoment === true}

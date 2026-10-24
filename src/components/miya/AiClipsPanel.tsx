@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '../ui';
 import { StepPanel } from './StepPanel';
 import { chosenVersionOf, getVideoSettings, setVideoSettings } from '../../services/contentFactory/contentProjectService';
+import { getBrand } from '../../services/contentFactory/contentBrandService';
 import { mediaUrl } from '../../services/contentFactory/contentProjectFiles';
 import { resolveProjectClipEngine, type ClipOutcome, type ProjectClipEngine } from '../../services/contentFactory/contentMediaExecutor';
 import { chosenScenes } from '../../services/contentFactory/clipEngine';
@@ -85,6 +86,15 @@ export function AiClipsPanel({ project, outputRoot, mediaReady = true, waiting, 
               <option value="elevenlabs">The brand's ElevenLabs voice</option>
             </select>
           </label>
+          {(getBrand(project.brandId)?.characters || []).length > 0 && (
+            <label className="flex items-center gap-1">Character
+              <select aria-label="Character for this project" className={field} value={settings.characterId || ''} onChange={(e) => save({ characterId: e.target.value || undefined })}>
+                <option value="">{`The brand's main (${getBrand(project.brandId)?.characters?.find((c) => c.id === getBrand(project.brandId)?.mainCharacterId)?.name || 'nobody'})`}</option>
+                {(getBrand(project.brandId)?.characters || []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                <option value="none">Nobody</option>
+              </select>
+            </label>
+          )}
           <label className="flex items-center gap-1">Pictures
             <select aria-label="Pictures for this project" className={field} value={settings.pictures || ''} onChange={(e) => save({ pictures: (e.target.value || undefined) as VideoSettings['pictures'] })}>
               <option value="">The brand's</option>

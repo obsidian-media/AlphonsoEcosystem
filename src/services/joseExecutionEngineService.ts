@@ -1302,6 +1302,11 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
     return executeContentStepAssignment(assignment, options);
   }
   // Asked for Higgsfield by name (phase 4b).
+  // Training a brand's character on Higgsfield (phase 4c).
+  if (assignment?.actionType === 'creative_character_train') {
+    const { executeCharacterTraining } = await import('./contentFactory/contentCharacterTraining');
+    return executeCharacterTraining(assignment);
+  }
   if (assignment?.actionType === 'creative_higgsfield') {
     const { executeHiggsfieldByName } = await import('./contentFactory/higgsfieldByName');
     return executeHiggsfieldByName(assignment, packet);

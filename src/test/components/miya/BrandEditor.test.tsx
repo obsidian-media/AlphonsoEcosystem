@@ -87,3 +87,13 @@ it('sound effects can be switched on for the brand', () => {
   expect(getBrand(brand.id)!.engines?.soundEffects).toBe(true);
 });
 
+// Phase 4c: characters are saved as they change; Save brand never wipes them.
+it('keeps characters added since the tab opened when the brand is saved', () => {
+  const brand = saveBrand({ name: 'Acme' });
+  render(<BrandEditor brandId={brand.id} onBrand={() => undefined} />);
+  fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Ana' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add character' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save brand' }));
+  expect(getBrand(brand.id)!.characters!.map((c) => c.name)).toEqual(['Ana']);
+  expect(getBrand(brand.id)!.mainCharacterId).toBe(getBrand(brand.id)!.characters![0].id);
+});

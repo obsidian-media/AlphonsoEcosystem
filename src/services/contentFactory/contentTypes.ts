@@ -23,6 +23,23 @@ export interface ContentIdea {
   status: 'new' | 'started' | 'dismissed';
 }
 
+/** A scene's (or a Short part's) motion (phase 4c): a Higgsfield preset, a recording or a chosen clip. */
+export interface SceneMotion { source: 'preset' | 'recorded' | 'file'; presetId?: string; path?: string }
+
+/** A brand's character (phase 4c). Pictures are paths relative to the output folder. */
+export interface BrandCharacter {
+  id: string;
+  name: string;
+  kind: 'made_up' | 'real_person';
+  description: string;
+  pictures: string[];
+  /** A real person only: "This is me, or I have this person's permission", with when it was ticked. */
+  permission?: { atMs: number };
+  higgsfield?: { characterId?: string; requestId?: string; status: 'not_trained' | 'training' | 'ready' | 'failed'; reason?: string; usd?: number };
+  /** The pictures ComfyUI keeps the character from (default: the first ones). */
+  comfyPictures?: string[];
+}
+
 export interface ContentBrand {
   id: string;
   name: string;
@@ -54,6 +71,10 @@ export interface ContentBrand {
     /** Sound effects from ElevenLabs in the long video (phase 4b); off unless switched on. */
     soundEffects?: boolean;
   };
+  /** Consistent characters (phase 4c): made-up, or a real person with permission. */
+  characters?: BrandCharacter[];
+  /** The character scenes use unless a project or scene chooses another. */
+  mainCharacterId?: string;
   createdAtMs: number;
   updatedAtMs: number;
 }
@@ -194,6 +215,8 @@ export interface VideoSettings {
   /** This project's voice and pictures, over the brand's (phase 4b); unset = the brand's. */
   voiceEngine?: 'kokoro' | 'elevenlabs';
   pictures?: 'comfyui' | 'higgsfield';
+  /** The character this project uses (phase 4c): a brand character's id, or 'none'; the brand's main one when not set. */
+  characterId?: string;
 }
 
 export const DEFAULT_VIDEO_SETTINGS: VideoSettings = { aiClips: 'main', clipEngine: null, runwayModel: 'gen4_turbo' };

@@ -167,6 +167,10 @@ function HiggsfieldSection({ onSave }: { onSave: (fields: Record<string, string>
   const [pictureExtra, setPictureExtra] = useState(() => get('HIGGSFIELD_PICTURE_EXTRA'));
   const [clip, setClip] = useState(() => get('HIGGSFIELD_CLIP_MODEL'));
   const [clipExtra, setClipExtra] = useState(() => get('HIGGSFIELD_CLIP_EXTRA'));
+  const [character, setCharacter] = useState(() => get('HIGGSFIELD_CHARACTER_MODEL'));
+  const [characterExtra, setCharacterExtra] = useState(() => get('HIGGSFIELD_CHARACTER_EXTRA'));
+  const [motion, setMotion] = useState(() => get('HIGGSFIELD_MOTION_MODEL'));
+  const [motionExtra, setMotionExtra] = useState(() => get('HIGGSFIELD_MOTION_EXTRA'));
   const [result, setResult] = useState('');
   const test = async (what: 'picture' | 'clip') => {
     const model = (what === 'picture' ? picture : clip).trim();
@@ -191,8 +195,12 @@ function HiggsfieldSection({ onSave }: { onSave: (fields: Record<string, string>
           text('Picture model extra settings (JSON)', 'HIGGSFIELD_PICTURE_EXTRA', pictureExtra, setPictureExtra, 'Optional, e.g. {"quality": "high"}'),
           text('Clip model id', 'HIGGSFIELD_CLIP_MODEL', clip, setClip, 'e.g. kling-video/v2.1/pro/image-to-video'),
           text('Clip model extra settings (JSON)', 'HIGGSFIELD_CLIP_EXTRA', clipExtra, setClipExtra, 'Optional, e.g. {"duration": 5}'),
+          text('Character training model id', 'HIGGSFIELD_CHARACTER_MODEL', character, setCharacter, 'The model id that trains a character (from the Console)'),
+          text('Character training extra settings (JSON)', 'HIGGSFIELD_CHARACTER_EXTRA', characterExtra, setCharacterExtra, 'Optional'),
+          text('Motion model id', 'HIGGSFIELD_MOTION_MODEL', motion, setMotion, 'The model id that copies a movement (from the Console)'),
+          text('Motion model extra settings (JSON)', 'HIGGSFIELD_MOTION_EXTRA', motionExtra, setMotionExtra, 'Optional'),
         ]}
-        onSave={() => onSave({ HIGGSFIELD_KEY_ID: keyId, HIGGSFIELD_KEY_SECRET: keySecret, HIGGSFIELD_PICTURE_MODEL: picture, HIGGSFIELD_PICTURE_EXTRA: pictureExtra, HIGGSFIELD_CLIP_MODEL: clip, HIGGSFIELD_CLIP_EXTRA: clipExtra })}
+        onSave={() => onSave({ HIGGSFIELD_KEY_ID: keyId, HIGGSFIELD_KEY_SECRET: keySecret, HIGGSFIELD_PICTURE_MODEL: picture, HIGGSFIELD_PICTURE_EXTRA: pictureExtra, HIGGSFIELD_CLIP_MODEL: clip, HIGGSFIELD_CLIP_EXTRA: clipExtra, HIGGSFIELD_CHARACTER_MODEL: character, HIGGSFIELD_CHARACTER_EXTRA: characterExtra, HIGGSFIELD_MOTION_MODEL: motion, HIGGSFIELD_MOTION_EXTRA: motionExtra })}
         hint="Paid, your own account. Copy a model id from the Higgsfield Console; prompt, picture, length and shape are filled in by Miya, and anything else that model takes goes in its extra settings. Every run asks first with Higgsfield's own estimate."
         savedLabel="Higgsfield settings saved" />
       <div className="-mt-2 flex flex-wrap items-center gap-2 px-1 text-[12px] text-(--text-2)">

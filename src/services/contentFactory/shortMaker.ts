@@ -15,14 +15,18 @@ import { captionsFromLines, toSrt, alignCaptions } from './contentCaptions';
 import { chosenVersionOf, getProject, getShortsSettings, getVideoSettings, setShortOutput } from './contentProjectService';
 import { projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
 import { makeComfyClip } from './comfyVideoClip';
+import { resolveCharacter } from './engineChoice';
+import { withCharacterPrompt } from './comfyCharacter';
 import { makeRunwayClip } from './runwayClip';
-import { makeHiggsfieldClip } from './higgsfieldClip';
+import { localMotionAvailable, makeComfyMotionClip } from './comfyMotionClip';
+import { higgsfieldMotionAvailable, makeHiggsfieldClip, makeHiggsfieldMotionClip } from './higgsfieldClip';
 import { brandFontName, darkestColour, headlineColour } from './thumbnailRenderer';
-import type { ContentBrand, ContentProject, ShortPlan } from './contentTypes';
+import type { ContentBrand, ContentProject, ShortPlan, SceneMotion } from './contentTypes';
 
 export const MAKING_ANOTHER = 'Making another Short…';
 export const NEEDS_FINISHED_VIDEO = 'Make the finished video first: a highlight or a cut is taken from it.';
 export const RUNWAY_SHORTS_NOTE = 'Runway clips were not approved; these were made with pictures only.';
+export const MOTION_NOT_APPROVED_SHORTS = "Motion clips weren't approved for this run; those parts use their pictures.";
 export const HIGGSFIELD_SHORTS_NOTE = 'Higgsfield clips were not approved; these were made with pictures only.';
 
 export interface ShortOutput {
@@ -91,11 +95,13 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
   const parts = plan.parts || [];
   if (!parts.length) return { shortId: plan.id, status: 'failed', reason: NEEDS_SCRIPT };
   const look = [ctx.brand.visualStyle, ctx.brand.characterRefs].filter(Boolean).join(', ');
+  // The project's (else the brand's main) character in the Short's pictures (phase 4c).
+  const who = resolveCharacter(ctx.project, ctx.brand, undefined, 'comfyui');
   const pictures: (string | null)[] = [];
   for (const [i, part] of parts.entries()) {
     const file = `v${ctx.n}-p${i + 1}.png`;
     const result = await generateComfyUiImage(
-      { prompt: [part.imagePrompt, look, 'no text, no letters, no words'].filter(Boolean).join('. '), width: 480, height: 832 },
+      { prompt: withCharacterPrompt([part.imagePrompt, look, 'no text, no letters, no words'].filter(Boolean).join('. '), who.use === 'none' ? null : who.character), width: 480, height: 832 },
       { endpoint: getComfyUiEndpoint() },
     ).catch(() => null) as { ok?: boolean; previewBase64?: string } | null;
     if (result?.ok && result.previewBase64) {
@@ -110,6 +116,26 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
   const shortsSettings = getShortsSettings(ctx.project);
   const clips: (string | null)[] = parts.map(() => null);
   let note: string | undefined;
+  // A part with a motion (phase 4c): Higgsfield, when the run's spending was approved.
+  for (const [i, part] of parts.entries()) {
+    const motion = (part as { motion?: SceneMotion }).motion;
+    if (!motion || !pictures[i]) continue;
+    const outRel = `${ctx.dir}/clips/v${ctx.n}-p${i + 1}.mp4`;
+    if (ctx.runwayApproved && higgsfieldMotionAvailable().ok) {
+      const made = await makeHiggsfieldMotionClip({
+        root: ctx.root, imageRel: pictures[i] as string, motion, outRel, prompt: part.imagePrompt, seconds: Math.min(lineSeconds[i] || 5, 10), vertical: true,
+      }).catch(() => null);
+      if (made?.status === 'done' && made.path) { clips[i] = made.path; continue; }
+    }
+    // Otherwise this computer, for free, when it can.
+    if (motion.path && (await localMotionAvailable()).ok) {
+      const made = await makeComfyMotionClip({
+        root: ctx.root, imageRel: pictures[i] as string, motionRel: motion.path, outRel, prompt: part.imagePrompt, seconds: Math.min(lineSeconds[i] || 5, 5), vertical: true,
+      }).catch(() => null);
+      if (made?.status === 'done' && made.path) { clips[i] = made.path; continue; }
+    }
+    if (!ctx.runwayApproved) note = MOTION_NOT_APPROVED_SHORTS;
+  }
   if (shortsSettings.aiClips !== 'none') {
     if (shortsSettings.clipEngine === 'higgsfield') {
       // Approved once for the run with Higgsfield's estimate (phase 4b), within the one monthly cap.
@@ -117,7 +143,7 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
       else {
         const chosen = shortsSettings.aiClips === 'every' ? parts.map((_, i) => i) : [...new Set([0, parts.length - 1])];
         for (const i of chosen) {
-          if (!pictures[i]) continue;
+          if (!pictures[i] || clips[i]) continue;
           const made = await makeHiggsfieldClip({
             root: ctx.root, imageRel: pictures[i] as string, outRel: `${ctx.dir}/clips/v${ctx.n}-p${i + 1}.mp4`, prompt: parts[i].imagePrompt,
             seconds: Math.min(lineSeconds[i] || 5, 10), vertical: true,
@@ -132,7 +158,7 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
       else {
         const chosen = shortsSettings.aiClips === 'every' ? parts.map((_, i) => i) : [...new Set([0, parts.length - 1])];
         for (const i of chosen) {
-          if (!pictures[i]) continue;
+          if (!pictures[i] || clips[i]) continue;
           const made = await makeRunwayClip({
             root: ctx.root, imageRel: pictures[i] as string, outDirRel: `${ctx.dir}/clips`, prompt: parts[i].imagePrompt,
             seconds: Math.min(lineSeconds[i] || 5, 10), vertical: true, model: getVideoSettings(ctx.project).runwayModel,
@@ -147,7 +173,7 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
         const size = clipSizeFor(info);
         const chosen = shortsSettings.aiClips === 'every' ? parts.map((_, i) => i) : [...new Set([0, parts.length - 1])];
         for (const i of chosen) {
-          if (!pictures[i]) continue;
+          if (!pictures[i] || clips[i]) continue;
           const seconds = Math.min(lineSeconds[i] || 3, model.maxSeconds, size.maxSeconds);
           const made = await makeComfyClip({
             root: ctx.root, imageRel: pictures[i] as string, outRel: `${ctx.dir}/clips/v${ctx.n}-p${i + 1}.mp4`,

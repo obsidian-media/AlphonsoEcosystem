@@ -15,6 +15,7 @@ import {
   type ContentBrief,
   type ContentProject,
   type ProjectPost,
+  type SceneMotion,
   type StepId,
   type StepState,
   type StepVersion,
@@ -226,7 +227,8 @@ export function getVideoSettings(project: ContentProject): VideoSettings {
   const runwayModel = typeof saved.runwayModel === 'string' && saved.runwayModel.trim() ? saved.runwayModel.trim() : DEFAULT_VIDEO_SETTINGS.runwayModel;
   const voiceEngine = saved.voiceEngine === 'kokoro' || saved.voiceEngine === 'elevenlabs' ? saved.voiceEngine : undefined;
   const pictures = saved.pictures === 'comfyui' || saved.pictures === 'higgsfield' ? saved.pictures : undefined;
-  return { aiClips, clipEngine, runwayModel, ...(voiceEngine ? { voiceEngine } : {}), ...(pictures ? { pictures } : {}) };
+  const characterId = typeof saved.characterId === 'string' && saved.characterId.trim() ? saved.characterId.trim() : undefined;
+  return { aiClips, clipEngine, runwayModel, ...(voiceEngine ? { voiceEngine } : {}), ...(pictures ? { pictures } : {}), ...(characterId ? { characterId } : {}) };
 }
 
 export function setVideoSettings(id: string, patch: Partial<VideoSettings>): ContentProject {
@@ -243,6 +245,53 @@ export function setMainMoment(id: string, sceneId: string, on: boolean): Content
     const scene = scenes?.find((s) => s.id === sceneId);
     if (!scene) throw new Error(`No scene ${sceneId} in the chosen scene plan.`);
     scene.mainMoment = on;
+  });
+}
+
+/** A scene's motion (phase 4c), or null for none. */
+export function setSceneMotion(id: string, sceneId: string, motion: SceneMotion | null): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.scenes.versions.find((v) => v.version === p.steps.scenes.chosenVersion);
+    const scenes = (chosen?.output as { miya?: { scenes?: { id: string; motion?: SceneMotion }[] } } | undefined)?.miya?.scenes;
+    const scene = scenes?.find((s) => s.id === sceneId);
+    if (!scene) throw new Error(`No scene ${sceneId} in the chosen scene plan.`);
+    if (motion) scene.motion = motion;
+    else delete scene.motion;
+  });
+}
+
+/** Turns Miya's motion suggestion on a scene on or off (phase 4c). */
+export function setMotionSuggested(id: string, sceneId: string, on: boolean): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.scenes.versions.find((v) => v.version === p.steps.scenes.chosenVersion);
+    const scenes = (chosen?.output as { miya?: { scenes?: { id: string; motionSuggested?: boolean }[] } } | undefined)?.miya?.scenes;
+    const scene = scenes?.find((s) => s.id === sceneId);
+    if (!scene) throw new Error(`No scene ${sceneId} in the chosen scene plan.`);
+    scene.motionSuggested = on;
+  });
+}
+
+/** A mini Short part's motion (phase 4c), or null for none. */
+export function setShortPartMotion(id: string, shortId: string, partIndex: number, motion: SceneMotion | null): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.shorts.versions.find((v) => v.version === p.steps.shorts.chosenVersion);
+    const shorts = (chosen?.output as { miya?: { shorts?: { id: string; parts?: { motion?: SceneMotion }[] }[] } } | undefined)?.miya?.shorts;
+    const part = shorts?.find((s) => s.id === shortId)?.parts?.[partIndex];
+    if (!part) throw new Error(`No part ${partIndex + 1} in Short ${shortId}.`);
+    if (motion) part.motion = motion;
+    else delete part.motion;
+  });
+}
+
+/** A scene's character (phase 4c): a brand character's id, 'none', or null for the project's. */
+export function setSceneCharacter(id: string, sceneId: string, characterId: string | null): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.scenes.versions.find((v) => v.version === p.steps.scenes.chosenVersion);
+    const scenes = (chosen?.output as { miya?: { scenes?: { id: string; characterId?: string }[] } } | undefined)?.miya?.scenes;
+    const scene = scenes?.find((s) => s.id === sceneId);
+    if (!scene) throw new Error(`No scene ${sceneId} in the chosen scene plan.`);
+    if (characterId) scene.characterId = characterId;
+    else delete scene.characterId;
   });
 }
 

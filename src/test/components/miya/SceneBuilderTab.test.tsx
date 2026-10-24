@@ -141,4 +141,36 @@ describe('a new output folder', () => {
     expect(screen.getByText('Waiting for Higgsfield…')).toBeTruthy();
     expect(screen.getByText('More pictures than this run approved; the rest were made with ComfyUI.')).toBeTruthy();
   });
+
+  // Phase 4c: each scene can show the brand's main character, another one, or none.
+  it("a scene can choose which of the brand's characters it shows", async () => {
+    const { saveBrand } = await import('../../../services/contentFactory/contentBrandService');
+    const { addCharacter } = await import('../../../services/contentFactory/contentCharacters');
+    const brand = saveBrand({ name: 'B' });
+    const ana = addCharacter(brand.id, { name: 'Ana', kind: 'made_up', description: 'x' });
+    addCharacter(brand.id, { name: 'Bo', kind: 'made_up', description: 'y' });
+    const p = createProject(brand.id, 'P', emptyBrief());
+    saveStepVersion(p.id, 'scenes', { output: { miya: { style: 'warm', scenes: [{ id: 's1', description: 'A pour' }] } }, summary: '', joseCommandId: null });
+    render(<SceneBuilderTab {...props(getProject(p.id)!)} />);
+    const pick = screen.getByLabelText('Character: Scene 1') as HTMLSelectElement;
+    expect(pick.value).toBe('');
+    expect([...pick.options].map((o) => o.text)).toEqual(["The project's (Ana)", "Ana", "Bo", "Nobody"]);
+    fireEvent.change(pick, { target: { value: 'none' } });
+    const scene = ((getProject(p.id)!.steps.scenes.versions[0].output as any).miya.scenes[0]);
+    expect(scene.characterId).toBe('none');
+    expect(ana.id).toBeTruthy();
+  });
+
+  // Phase 4c: each scene can get a motion instead of a normal AI clip.
+  it('a scene can get a motion, with Miya suggesting where', () => {
+    const p = createProject('b', 'P', emptyBrief());
+    saveStepVersion(p.id, 'scenes', { output: { miya: { style: 'warm', scenes: [{ id: 's1', description: 'A wave', motionSuggested: true }] } }, summary: '', joseCommandId: null });
+    render(<SceneBuilderTab {...props(getProject(p.id)!)} />);
+    expect(screen.getByText('Miya suggests a move here.')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Motion: Scene 1'), { target: { value: 'preset' } });
+    fireEvent.change(screen.getByLabelText('Preset id: Scene 1'), { target: { value: 'wave-01' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Use this preset' }));
+    const scene = (getProject(p.id)!.steps.scenes.versions[0].output as any).miya.scenes[0];
+    expect(scene.motion).toEqual({ source: 'preset', presetId: 'wave-01' });
+  });
 });

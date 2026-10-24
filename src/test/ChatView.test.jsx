@@ -168,6 +168,16 @@ vi.mock('../components/ConnectorStatusIndicators', () => ({
   ConnectorStatusStrip: () => <span data-testid="connector-status-strip" />
 }));
 
+// Phase 4c: by-name Higgsfield results approved on the board or Telegram reach Chat.
+vi.mock('../services/contentFactory/higgsfieldByName', () => ({
+  higgsfieldResultsFor: vi.fn(() => []),
+  higgsfieldResultsDoneSince: vi.fn(() => []),
+  markShownInChat: vi.fn(),
+}));
+vi.mock('../components/miya/HiggsfieldResults', () => ({
+  HiggsfieldMedia: ({ result }) => <span data-testid="higgsfield-media">{result.path}</span>,
+}));
+
 // ── Component under test ──────────────────────────────────────────────────────
 import { ChatView } from '../components/ChatView';
 import { generateOllamaChatStream } from '../lib/ollama';
@@ -185,6 +195,7 @@ import { decideJoseRoute } from '../services/jose/joseDecision';
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose';
 import { createWaitingPlanRequest, createJoseRequest, setJoseRequestStatus } from '../services/jose/joseRequestStore';
 import { carryOnRequest } from '../services/joseExecutionEngineService';
+import { higgsfieldResultsDoneSince, markShownInChat } from '../services/contentFactory/higgsfieldByName';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -217,6 +228,15 @@ describe('ChatView', () => {
     // settings.selectedProvider can't leak its choice into a later test
     // that uses makeProps()'s default (undefined) selectedProvider.
     setAgentProvider('alphonso', { provider: 'ollama' });
+  });
+
+  it('shows a Higgsfield result that was approved on the board or Telegram, once', async () => {
+    const made = { id: 'h1', kind: 'picture', prompt: 'a cat', path: 'Higgsfield/2026-10-24/picture-1.png', status: 'done', atMs: Date.now() };
+    vi.mocked(higgsfieldResultsDoneSince).mockReturnValueOnce([made]).mockReturnValue([]);
+    render(<ChatView {...makeProps()} />);
+    expect(await screen.findByText('Higgsfield made a picture: a cat')).toBeInTheDocument();
+    expect(screen.getByTestId('higgsfield-media').textContent).toBe('Higgsfield/2026-10-24/picture-1.png');
+    expect(markShownInChat).toHaveBeenCalledWith('h1');
   });
 
   it('renders without crashing', () => {

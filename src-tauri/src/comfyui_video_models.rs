@@ -241,6 +241,188 @@ pub async fn comfyui_install_video_model(
   Ok(())
 }
 
+/// A model that isn't a video model but is installed the same way (phase 4c): the character
+/// reference model, and later the local motion model.
+pub(crate) struct ExtraModel {
+  pub id: &'static str,
+  pub name: &'static str,
+  pub min_vram_gb: f64,
+  pub license: &'static str,
+  pub files: &'static [ModelFile],
+}
+
+/// Keeps a brand's character with ComfyUI (phase 4c): Stable Diffusion 2.1 unCLIP (the smaller
+/// ViT-L one) runs on ComfyUI's own nodes (unCLIPCheckpointLoader, CLIPVisionEncode,
+/// unCLIPConditioning) from reference pictures. Pinned 2026-10-24 from the Hugging Face API
+/// (Comfy-Org/stable-diffusion-2.1-unclip at a fixed commit, size and LFS SHA-256).
+pub(crate) const CHARACTER_REFERENCE_MODEL: ExtraModel = ExtraModel {
+  id: "sd21_unclip_l",
+  name: "Character reference (Stable Diffusion 2.1 unCLIP)",
+  min_vram_gb: 4.0,
+  license: "CreativeML Open RAIL++-M",
+  files: &[ModelFile {
+    url: "https://huggingface.co/Comfy-Org/stable-diffusion-2.1-unclip/resolve/e1d3c1d908a938cafccd1c915b76c11f0d6639e7/sd21-unclip-l.ckpt",
+    sha256: "ed12098385701c1850defd3d2bc20905c7c64dad3ccad895a7f13b406aab7602",
+    size: 6_161_550_731,
+    subfolder: "checkpoints",
+    filename: "sd21-unclip-l.ckpt",
+  }],
+};
+
+fn files_installed(root: &Path, files: &[ModelFile]) -> bool {
+  files.iter().all(|f| {
+    std::fs::metadata(model_path(root, f))
+      .map(|m| m.len() == f.size)
+      .unwrap_or(false)
+  })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExtraModelInfo {
+  id: &'static str,
+  name: &'static str,
+  min_vram_gb: f64,
+  license: &'static str,
+  size_bytes: u64,
+  installed: bool,
+  vram_gb: Option<f64>,
+  comfyui_dir: Option<String>,
+}
+
+pub(crate) async fn extra_model_info(
+  model: &ExtraModel,
+  saved_dir: Option<String>,
+) -> ExtraModelInfo {
+  let root = comfyui_root(saved_dir);
+  ExtraModelInfo {
+    id: model.id,
+    name: model.name,
+    min_vram_gb: model.min_vram_gb,
+    license: model.license,
+    size_bytes: model.files.iter().map(|f| f.size).sum(),
+    installed: root
+      .as_ref()
+      .map(|r| files_installed(r, model.files))
+      .unwrap_or(false),
+    vram_gb: gpu_memory_gb().await,
+    comfyui_dir: root.as_ref().map(|r| r.to_string_lossy().to_string()),
+  }
+}
+
+/// Downloads a model's files into the user's ComfyUI (skips files already there with the pinned size).
+pub(crate) async fn install_files(
+  app: &AppHandle,
+  saved_dir: Option<String>,
+  tool: &str,
+  name: &str,
+  files: &[ModelFile],
+) -> Result<(), String> {
+  let root = comfyui_root(saved_dir).ok_or_else(|| {
+    "No ComfyUI was found. Install it in Runtime Hub or choose yours in Settings.".to_string()
+  })?;
+  let count = files.len();
+  for (index, file) in files.iter().enumerate() {
+    let dest = model_path(&root, file);
+    if std::fs::metadata(&dest)
+      .map(|m| m.len() == file.size)
+      .unwrap_or(false)
+    {
+      continue;
+    }
+    crate::runtime_manager::download_verified(
+      app,
+      tool,
+      file.url,
+      &dest,
+      file.sha256,
+      file.size,
+      &crate::runtime_manager::DownloadNote {
+        label: &format!("{name} (file {} of {count})", index + 1),
+        from: (index * 100 / count) as u8,
+        span: (100 / count) as u8,
+      },
+    )
+    .await?;
+  }
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn comfyui_reference_model(saved_dir: Option<String>) -> ExtraModelInfo {
+  extra_model_info(&CHARACTER_REFERENCE_MODEL, saved_dir).await
+}
+
+#[tauri::command]
+pub async fn comfyui_install_reference_model(
+  app: AppHandle,
+  saved_dir: Option<String>,
+) -> Result<(), String> {
+  install_files(
+    &app,
+    saved_dir,
+    "comfyui-reference",
+    CHARACTER_REFERENCE_MODEL.name,
+    CHARACTER_REFERENCE_MODEL.files,
+  )
+  .await
+}
+
+/// Motion transfer on this computer (phase 4c): Wan 2.1 VACE 1.3B follows a control video
+/// (the motion clip's edges, from ComfyUI's own Canny node) with the scene picture as its
+/// reference, on ComfyUI's own nodes (WanVaceToVideo). Pinned 2026-10-24 from the Hugging Face
+/// API (Comfy-Org/Wan-2.1, the Wan_2.1_ComfyUI_repackaged files at a fixed commit, Apache-2.0);
+/// the text encoder is the same file the Wan 2.2 clip model uses.
+pub(crate) const LOCAL_MOTION_MODEL: ExtraModel = ExtraModel {
+  id: "wan21_vace_1_3b",
+  name: "Motion transfer (Wan 2.1 VACE 1.3B)",
+  min_vram_gb: 8.0,
+  license: "Apache-2.0",
+  files: &[
+    ModelFile {
+      url: "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/diffusion_models/wan2.1_vace_1.3B_fp16.safetensors",
+      sha256: "640ccc0577e6a5d4bb15cd91b11b699ef914fc55f126c5a1c544e152130784f2",
+      size: 4_309_519_800,
+      subfolder: "diffusion_models",
+      filename: "wan2.1_vace_1.3B_fp16.safetensors",
+    },
+    ModelFile {
+      url: "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      sha256: "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      size: 6_735_906_897,
+      subfolder: "text_encoders",
+      filename: "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    },
+    ModelFile {
+      url: "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/vae/wan_2.1_vae.safetensors",
+      sha256: "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+      size: 253_815_318,
+      subfolder: "vae",
+      filename: "wan_2.1_vae.safetensors",
+    },
+  ],
+};
+
+#[tauri::command]
+pub async fn comfyui_motion_model(saved_dir: Option<String>) -> ExtraModelInfo {
+  extra_model_info(&LOCAL_MOTION_MODEL, saved_dir).await
+}
+
+#[tauri::command]
+pub async fn comfyui_install_motion_model(
+  app: AppHandle,
+  saved_dir: Option<String>,
+) -> Result<(), String> {
+  install_files(
+    &app,
+    saved_dir,
+    "comfyui-motion",
+    LOCAL_MOTION_MODEL.name,
+    LOCAL_MOTION_MODEL.files,
+  )
+  .await
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -295,5 +477,52 @@ mod tests {
     assert!(small_card(Some(7.9)));
     assert!(!small_card(Some(8.0)));
     assert!(!small_card(None));
+  }
+
+  #[test]
+  fn the_character_reference_model_is_pinned() {
+    let m = &CHARACTER_REFERENCE_MODEL;
+    assert_eq!(m.files.len(), 1);
+    for f in m.files {
+      assert_eq!(f.sha256.len(), 64);
+      assert!(f.sha256.chars().all(|c| c.is_ascii_hexdigit()));
+      assert!(f.size > 1_000_000_000);
+      assert!(
+        f.url.starts_with("https://huggingface.co/")
+          && f
+            .url
+            .contains("/resolve/e1d3c1d908a938cafccd1c915b76c11f0d6639e7/")
+      );
+      assert!(f.url.ends_with(f.filename));
+      assert_eq!(f.subfolder, "checkpoints");
+    }
+  }
+
+  #[test]
+  fn the_local_motion_model_is_pinned_and_shares_the_text_encoder() {
+    let m = &LOCAL_MOTION_MODEL;
+    assert_eq!(m.files.len(), 3);
+    for f in m.files {
+      assert_eq!(f.sha256.len(), 64);
+      assert!(
+        f.url
+          .contains("/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/")
+          && f.url.ends_with(f.filename)
+      );
+    }
+    let shared = VIDEO_MODELS
+      .iter()
+      .flat_map(|v| v.files.iter())
+      .find(|f| f.filename == "umt5_xxl_fp8_e4m3fn_scaled.safetensors")
+      .unwrap();
+    let ours = m
+      .files
+      .iter()
+      .find(|f| f.filename == shared.filename)
+      .unwrap();
+    assert_eq!(
+      (ours.sha256, ours.size, ours.subfolder),
+      (shared.sha256, shared.size, shared.subfolder)
+    );
   }
 }

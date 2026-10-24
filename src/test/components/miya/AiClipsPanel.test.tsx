@@ -75,6 +75,19 @@ describe('AiClipsPanel', () => {
     expect(screen.getByRole('button', { name: 'Make AI clips (about $0.80)' })).toBeTruthy();
   });
 
+  // Phase 4c: a project can use another of the brand's characters, or none.
+  it("a project can choose which of the brand's characters it uses", async () => {
+    const { saveBrand } = await import('../../../services/contentFactory/contentBrandService');
+    const { addCharacter } = await import('../../../services/contentFactory/contentCharacters');
+    const brand = saveBrand({ name: 'B' });
+    addCharacter(brand.id, { name: 'Ana', kind: 'made_up', description: 'x' });
+    const bo = addCharacter(brand.id, { name: 'Bo', kind: 'made_up', description: 'y' });
+    const p = createProject(brand.id, 'P', emptyBrief());
+    render(<AiClipsPanel {...props(getProject(p.id)!)} />);
+    fireEvent.change(screen.getByLabelText('Character for this project'), { target: { value: bo.id } });
+    expect(getVideoSettings(getProject(p.id)!).characterId).toBe(bo.id);
+  });
+
   it('plays each clip that was made, says why the others were not, and checks a pending one again', async () => {
     const project = setup({ engine: 'local', model: 'ltx_video_2b', clips: [
       { sceneId: 's1', status: 'done', path: 'b/p/clips/v1-s1.mp4', seconds: 3 },

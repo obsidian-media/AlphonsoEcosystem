@@ -39,7 +39,23 @@ pub(crate) struct HiggsfieldJob {
   /// The user's "Extra settings (JSON)" for this model id.
   #[serde(default)]
   extra: Option<Value>,
+  /// A brand character trained on Higgsfield (phase 4c).
+  #[serde(default)]
+  character_id: Option<String>,
+  /// Motion transfer (phase 4c): a clip in the workspace whose movement is copied (uploaded first)…
+  #[serde(default)]
+  motion_path: Option<String>,
+  /// …or one of Higgsfield's own motion presets.
+  #[serde(default)]
+  preset_id: Option<String>,
 }
+
+/// Motion transfer request fields (phase 4c; not in Higgsfield's public docs, confirm live).
+pub(crate) const MOTION_PRESET_FIELD: &str = "motion_id";
+pub(crate) const MOTION_VIDEO_FIELD: &str = "video_url";
+
+/// The request field for a trained character (phase 4c; Higgsfield's "Soul ID", confirm live).
+pub(crate) const CHARACTER_FIELD: &str = "soul_id";
 
 pub(crate) const EXTRA_REFUSED: &str =
   "Extra settings must be a JSON object and can't replace the prompt or picture.";
@@ -58,6 +74,15 @@ pub(crate) fn valid_model(model: &str) -> bool {
 
 /// The common fields, with the user's extra settings merged over them.
 pub(crate) fn request_body(job: &HiggsfieldJob, image_url: Option<&str>) -> Result<Value, String> {
+  request_body_with_motion(job, image_url, None)
+}
+
+/// The request with a motion (phase 4c): the uploaded clip's address, or a preset id.
+pub(crate) fn request_body_with_motion(
+  job: &HiggsfieldJob,
+  image_url: Option<&str>,
+  motion_url: Option<&str>,
+) -> Result<Value, String> {
   let mut body = serde_json::json!({ "prompt": job.prompt.chars().take(2000).collect::<String>() });
   if let Some(url) = image_url {
     body["image_url"] = Value::String(url.to_string());
@@ -71,6 +96,37 @@ pub(crate) fn request_body(job: &HiggsfieldJob, image_url: Option<&str>) -> Resu
     .filter(|a| ["16:9", "9:16", "1:1", "4:5"].contains(a))
   {
     body["aspect_ratio"] = Value::String(aspect.to_string());
+  }
+  if let Some(url) = motion_url {
+    body[MOTION_VIDEO_FIELD] = Value::String(url.to_string());
+  }
+  if let Some(id) = job
+    .preset_id
+    .as_deref()
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+  {
+    if !id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+    {
+      return Err("That is not a Higgsfield preset id.".to_string());
+    }
+    body[MOTION_PRESET_FIELD] = Value::String(id.to_string());
+  }
+  if let Some(id) = job
+    .character_id
+    .as_deref()
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+  {
+    if !id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
+    {
+      return Err("That is not a Higgsfield character id.".to_string());
+    }
+    body[CHARACTER_FIELD] = Value::String(id.to_string());
   }
   match &job.extra {
     None | Some(Value::Null) => {}
@@ -285,7 +341,65 @@ async fn body_for(
     Some(rel) => Some(upload(http, authz, workspace_root, rel).await?),
     None => None,
   };
-  request_body(job, image_url.as_deref())
+  let motion_url = match &job.motion_path {
+    Some(rel) => Some(upload(http, authz, workspace_root, rel).await?),
+    None => None,
+  };
+  request_body_with_motion(job, image_url.as_deref(), motion_url.as_deref())
+}
+
+/// Higgsfield's motion presets, from whichever list shape it answers with: `(id, name)`.
+pub(crate) fn parse_presets(body: &Value) -> Vec<(String, String)> {
+  let list = body
+    .as_array()
+    .or_else(|| body["items"].as_array())
+    .or_else(|| body["motions"].as_array())
+    .or_else(|| body["data"].as_array());
+  list
+    .into_iter()
+    .flatten()
+    .filter_map(|m| {
+      let id = m["id"].as_str()?.to_string();
+      let name = m["name"]
+        .as_str()
+        .or_else(|| m["title"].as_str())
+        .unwrap_or(&id)
+        .to_string();
+      Some((id, name))
+    })
+    .collect()
+}
+
+/// The motion presets Higgsfield offers, when its API lists them; otherwise the user pastes an id.
+#[tauri::command]
+pub(crate) async fn higgsfield_presets(keys: Option<HiggsfieldKeys>) -> Value {
+  let fail = |r: &str| serde_json::json!({ "ok": false, "reason": r });
+  let Ok(authz) = auth(&keys.unwrap_or_default()) else {
+    return fail("Add your Higgsfield key id and secret in Settings → Connectors → Higgsfield.");
+  };
+  let Ok(http) = client() else {
+    return fail("Could not start the request.");
+  };
+  match send_json(
+    http
+      .get(format!("{BASE}/motions"))
+      .header("Authorization", &authz),
+  )
+  .await
+  {
+    Ok(answer) => {
+      let presets: Vec<Value> = parse_presets(&answer)
+        .into_iter()
+        .map(|(id, name)| serde_json::json!({ "id": id, "name": name }))
+        .collect();
+      if presets.is_empty() {
+        fail("Higgsfield gave no preset list; paste a preset id instead.")
+      } else {
+        serde_json::json!({ "ok": true, "presets": presets })
+      }
+    }
+    Err(_) => fail("Higgsfield gave no preset list; paste a preset id instead."),
+  }
 }
 
 fn random_key() -> String {
@@ -316,8 +430,62 @@ fn failed(reason: impl Into<String>) -> RunResult {
   }
 }
 
+/// The result address and every redirect are checked as research fetches are (phase 4c):
+/// never this computer or a private network.
+async fn guarded_download(url: &str) -> Result<reqwest::Response, String> {
+  const PRIVATE: &str =
+    "Higgsfield's result address is on a private network; nothing was downloaded.";
+  let parsed = reqwest::Url::parse(url)
+    .map_err(|_| "Higgsfield sent an address that can't be used.".to_string())?;
+  if let Some(host) = parsed.host_str() {
+    if crate::search::is_private_host(host).await {
+      return Err(PRIVATE.to_string());
+    }
+  }
+  let http = reqwest::Client::builder()
+    .timeout(Duration::from_secs(600))
+    .redirect(reqwest::redirect::Policy::none())
+    .user_agent("Alphonso-Higgsfield/0.1")
+    .build()
+    .map_err(|_| "Could not start the download.".to_string())?;
+  crate::search::fetch_with_ssrf_guard(&http, parsed)
+    .await
+    .map_err(|e| {
+      if e.contains("SSRF") {
+        PRIVATE.to_string()
+      } else {
+        "The result could not be downloaded from Higgsfield.".to_string()
+      }
+    })
+}
+
 /// Downloads the result to `out_rel` (never over an existing file), then deletes it on Higgsfield.
 async fn fetch_result(
+  base: &str,
+  http: &reqwest::Client,
+  authz: &str,
+  workspace_root: &str,
+  out_rel: &str,
+  url: &str,
+  request_id: &str,
+) -> RunResult {
+  fetch_result_with(
+    true,
+    base,
+    http,
+    authz,
+    workspace_root,
+    out_rel,
+    url,
+    request_id,
+  )
+  .await
+}
+
+/// `guard`: the result address must not be on this computer or a private network (tests turn it off).
+#[allow(clippy::too_many_arguments)]
+async fn fetch_result_with(
+  guard: bool,
   base: &str,
   http: &reqwest::Client,
   authz: &str,
@@ -340,9 +508,16 @@ async fn fetch_result(
   if let Some(dir) = out.parent() {
     let _ = std::fs::create_dir_all(dir);
   }
-  let response = match http.get(url).timeout(Duration::from_secs(600)).send().await {
-    Ok(r) => r,
-    Err(_) => return failed("The result could not be downloaded from Higgsfield."),
+  let response = if guard {
+    match guarded_download(url).await {
+      Ok(r) => r,
+      Err(reason) => return failed(reason),
+    }
+  } else {
+    match http.get(url).timeout(Duration::from_secs(600)).send().await {
+      Ok(r) => r,
+      Err(_) => return failed("The result could not be downloaded from Higgsfield."),
+    }
   };
   if response.content_length().unwrap_or(0) > MAX_BYTES {
     return failed("The result is too large.");
@@ -588,8 +763,284 @@ pub(crate) async fn higgsfield_test(
     seconds: None,
     aspect: None,
     extra,
+    character_id: None,
+    motion_path: None,
+    preset_id: None,
   };
   higgsfield_estimate(job, keys).await
+}
+
+// ---- Characters (content factory phase 4c) ----
+// Higgsfield's character training endpoint is not in its public docs; the model id is pasted
+// in Settings like the others, and the fields below were chosen from third-party descriptions
+// (a name and the pictures' addresses in; an id and a training status out). Confirm live.
+
+pub(crate) const TRAINING_EXTRA_REFUSED: &str =
+  "Extra settings must be a JSON object and can't replace the name or pictures.";
+
+/// The training request: the character's name and its pictures' addresses, with the user's extras.
+pub(crate) fn training_body(
+  name: &str,
+  image_urls: &[String],
+  extra: Option<&Value>,
+) -> Result<Value, String> {
+  let mut body = serde_json::json!({ "name": name.chars().take(80).collect::<String>(), "image_urls": image_urls });
+  match extra {
+    None | Some(Value::Null) => {}
+    Some(Value::Object(map)) => {
+      if map.contains_key("name") || map.contains_key("image_urls") || map.contains_key("prompt") {
+        return Err(TRAINING_EXTRA_REFUSED.to_string());
+      }
+      for (k, v) in map {
+        body[k] = v.clone();
+      }
+    }
+    Some(_) => return Err(TRAINING_EXTRA_REFUSED.to_string()),
+  }
+  Ok(body)
+}
+
+/// What a training answer says: ready with the character's id, failed, or still training.
+#[derive(Debug, PartialEq)]
+pub(crate) enum Training {
+  Ready(String),
+  Failed(String),
+  InProgress,
+}
+
+pub(crate) fn training_of(body: &Value) -> Training {
+  let id = [
+    "soul_id",
+    "character_id",
+    "reference_id",
+    "custom_reference_id",
+  ]
+  .iter()
+  .find_map(|k| body[*k].as_str().map(str::to_string))
+  .or_else(|| body["result"]["id"].as_str().map(str::to_string));
+  match body["status"].as_str().unwrap_or("") {
+    "completed" | "ready" => match id {
+      Some(id) if !id.is_empty() => Training::Ready(id),
+      _ => Training::Failed("Higgsfield finished training but sent no character id.".to_string()),
+    },
+    "failed" => {
+      Training::Failed("Higgsfield could not train this character (not charged).".to_string())
+    }
+    "nsfw" => Training::Failed(
+      "Higgsfield refused these pictures as not safe for work (not charged).".to_string(),
+    ),
+    "canceled" => Training::Failed("The training was cancelled.".to_string()),
+    _ => Training::InProgress,
+  }
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TrainRequest {
+  model: String,
+  name: String,
+  image_paths: Vec<String>,
+  #[serde(default)]
+  extra: Option<Value>,
+}
+
+#[derive(Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TrainResult {
+  ok: bool,
+  status: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  character_id: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  request_id: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  reason: Option<String>,
+}
+
+fn train_failed(reason: impl Into<String>) -> TrainResult {
+  TrainResult {
+    ok: false,
+    status: "failed".into(),
+    reason: Some(reason.into()),
+    ..Default::default()
+  }
+}
+
+fn train_outcome(answer: &Value, request_id: Option<String>) -> TrainResult {
+  match training_of(answer) {
+    Training::Ready(id) => TrainResult {
+      ok: true,
+      status: "ready".into(),
+      character_id: Some(id),
+      request_id,
+      reason: None,
+    },
+    Training::Failed(r) => TrainResult {
+      request_id,
+      ..train_failed(r)
+    },
+    Training::InProgress => TrainResult {
+      ok: true,
+      status: "training".into(),
+      request_id,
+      ..Default::default()
+    },
+  }
+}
+
+/// Higgsfield's cost for training, before anything is sent (the pictures aren't uploaded).
+#[tauri::command]
+pub(crate) async fn higgsfield_estimate_training(
+  request: TrainRequest,
+  keys: Option<HiggsfieldKeys>,
+) -> Value {
+  let fail = |r: String| serde_json::json!({ "ok": false, "reason": r });
+  let authz = match auth(&keys.unwrap_or_default()) {
+    Ok(a) => a,
+    Err(r) => return fail(r),
+  };
+  if !valid_model(&request.model) {
+    return fail("That is not a Higgsfield model id.".into());
+  }
+  let body = match training_body(&request.name, &[], request.extra.as_ref()) {
+    Ok(b) => b,
+    Err(r) => return fail(r),
+  };
+  let Ok(http) = client() else {
+    return fail("Could not start the request.".into());
+  };
+  match send_json(
+    http
+      .post(format!("{BASE}/estimate/{}", request.model.trim()))
+      .header("Authorization", &authz)
+      .json(&body),
+  )
+  .await
+  {
+    Ok(answer) => match parse_estimate(&answer) {
+      Some(usd) => serde_json::json!({ "ok": true, "usd": usd }),
+      None => fail("Higgsfield gave no estimate for training.".into()),
+    },
+    Err(r) => fail(r),
+  }
+}
+
+/// Uploads the character's pictures through Higgsfield's own upload and starts the training.
+#[tauri::command]
+pub(crate) async fn higgsfield_train_character(
+  request: TrainRequest,
+  workspace_root: String,
+  keys: Option<HiggsfieldKeys>,
+) -> TrainResult {
+  let authz = match auth(&keys.unwrap_or_default()) {
+    Ok(a) => a,
+    Err(r) => return train_failed(r),
+  };
+  if !valid_model(&request.model) {
+    return train_failed("That is not a Higgsfield model id.");
+  }
+  if request.image_paths.is_empty() {
+    return train_failed("The character has no pictures.");
+  }
+  // Checked before anything is uploaded.
+  if let Err(r) = training_body(&request.name, &[], request.extra.as_ref()) {
+    return train_failed(r);
+  }
+  let Ok(http) = client() else {
+    return train_failed("Could not start the request.");
+  };
+  let mut urls = Vec::new();
+  for rel in &request.image_paths {
+    match upload(&http, &authz, &workspace_root, rel).await {
+      Ok(url) => urls.push(url),
+      Err(r) => return train_failed(r),
+    }
+  }
+  let body = match training_body(&request.name, &urls, request.extra.as_ref()) {
+    Ok(b) => b,
+    Err(r) => return train_failed(r),
+  };
+  match send_json(
+    http
+      .post(format!("{BASE}/{}", request.model.trim()))
+      .header("Authorization", &authz)
+      .header("Idempotency-Key", random_key())
+      .json(&body),
+  )
+  .await
+  {
+    Ok(answer) => {
+      let request_id = answer["request_id"].as_str().map(str::to_string);
+      train_outcome(&answer, request_id)
+    }
+    Err(r) => train_failed(r),
+  }
+}
+
+/// One look at a training still running; never starts it again.
+#[tauri::command]
+pub(crate) async fn higgsfield_character_status(
+  request_id: String,
+  keys: Option<HiggsfieldKeys>,
+) -> TrainResult {
+  let authz = match auth(&keys.unwrap_or_default()) {
+    Ok(a) => a,
+    Err(r) => return train_failed(r),
+  };
+  if request_id.is_empty()
+    || !request_id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || c == '-')
+  {
+    return train_failed("That is not a Higgsfield request id.");
+  }
+  let Ok(http) = client() else {
+    return train_failed("Could not start the request.");
+  };
+  match send_json(
+    http
+      .get(format!("{BASE}/requests/{request_id}/status"))
+      .header("Authorization", &authz),
+  )
+  .await
+  {
+    Ok(answer) => train_outcome(&answer, Some(request_id)),
+    Err(_) => TrainResult {
+      ok: true,
+      status: "training".into(),
+      request_id: Some(request_id),
+      ..Default::default()
+    },
+  }
+}
+
+/// Asks Higgsfield to delete a request's data (the character's training) when a character is deleted.
+#[tauri::command]
+pub(crate) async fn higgsfield_delete_request(
+  request_id: String,
+  keys: Option<HiggsfieldKeys>,
+) -> Value {
+  let Ok(authz) = auth(&keys.unwrap_or_default()) else {
+    return serde_json::json!({ "ok": false });
+  };
+  if request_id.is_empty()
+    || !request_id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || c == '-')
+  {
+    return serde_json::json!({ "ok": false });
+  }
+  let Ok(http) = client() else {
+    return serde_json::json!({ "ok": false });
+  };
+  let ok = http
+    .delete(format!("{BASE}/requests/{request_id}"))
+    .header("Authorization", &authz)
+    .send()
+    .await
+    .map(|r| r.status().is_success())
+    .unwrap_or(false);
+  serde_json::json!({ "ok": ok })
 }
 
 #[cfg(test)]
@@ -605,6 +1056,9 @@ mod tests {
       seconds: Some(5.2),
       aspect: Some("9:16".into()),
       extra,
+      character_id: None,
+      motion_path: None,
+      preset_id: None,
     }
   }
 
@@ -759,7 +1213,8 @@ mod tests {
     .await;
     let base = format!("http://127.0.0.1:{port}");
     let http = client().unwrap();
-    let done = fetch_result(
+    let done = fetch_result_with(
+      false,
       &base,
       &http,
       "Key a:b",
@@ -783,7 +1238,8 @@ mod tests {
       ]
     );
     // A second result for the same file is refused, and the first stays.
-    let again = fetch_result(
+    let again = fetch_result_with(
+      false,
       &base,
       &http,
       "Key a:b",
@@ -844,5 +1300,135 @@ mod tests {
       seen.lock().unwrap().clone(),
       vec!["GET /requests/req-9/status HTTP/1.1".to_string(); 2]
     );
+  }
+
+  #[tokio::test]
+  async fn a_result_on_a_private_address_is_refused() {
+    let root = workspace("private");
+    let (port, seen) = serve(vec![http_ok(b"PNGDATA", "image/png")]).await;
+    let base = format!("http://127.0.0.1:{port}");
+    let http = client().unwrap();
+    let out = fetch_result(
+      &base,
+      &http,
+      "Key a:b",
+      &root,
+      "b/p/scenes/v1-s1.png",
+      &format!("{base}/out.png"),
+      "req-1",
+    )
+    .await;
+    assert!(!out.ok, "a private address must be refused");
+    assert!(out.reason.unwrap().contains("private"));
+    assert!(!std::path::Path::new(&root)
+      .join("b/p/scenes/v1-s1.png")
+      .exists());
+    assert!(
+      seen.lock().unwrap().is_empty(),
+      "nothing is fetched from a private address"
+    );
+  }
+
+  #[test]
+  fn the_training_request_has_the_name_and_pictures_and_merges_extras() {
+    let body = training_body(
+      "Ana",
+      &["https://cdn/a.png".to_string()],
+      Some(&json!({ "quality": "high" })),
+    )
+    .unwrap();
+    assert_eq!(
+      body,
+      json!({ "name": "Ana", "image_urls": ["https://cdn/a.png"], "quality": "high" })
+    );
+    for extra in [
+      json!({ "name": "x" }),
+      json!({ "image_urls": [] }),
+      json!({ "prompt": "x" }),
+      json!([1]),
+    ] {
+      assert_eq!(
+        training_body("Ana", &[], Some(&extra)).unwrap_err(),
+        TRAINING_EXTRA_REFUSED
+      );
+    }
+  }
+
+  #[test]
+  fn a_training_answer_reads_as_ready_failed_or_training() {
+    assert_eq!(
+      training_of(&json!({ "status": "completed", "soul_id": "s-1" })),
+      Training::Ready("s-1".into())
+    );
+    assert_eq!(
+      training_of(&json!({ "status": "ready", "id": "x", "character_id": "c-2" })),
+      Training::Ready("c-2".into())
+    );
+    assert!(matches!(
+      training_of(&json!({ "status": "completed" })),
+      Training::Failed(_)
+    ));
+    assert!(
+      matches!(training_of(&json!({ "status": "failed" })), Training::Failed(r) if r.contains("not charged"))
+    );
+    assert_eq!(
+      training_of(&json!({ "status": "in_progress" })),
+      Training::InProgress
+    );
+    assert_eq!(
+      training_of(&json!({ "status": "queued", "request_id": "r" })),
+      Training::InProgress
+    );
+  }
+
+  #[test]
+  fn a_trained_character_goes_with_the_request() {
+    let mut with = job(None);
+    with.character_id = Some("soul-9".into());
+    assert_eq!(
+      request_body(&with, None).unwrap()[CHARACTER_FIELD],
+      json!("soul-9")
+    );
+    assert!(request_body(&job(None), None)
+      .unwrap()
+      .get(CHARACTER_FIELD)
+      .is_none());
+    // A character id that isn't one is refused before anything is sent.
+    with.character_id = Some("../x".into());
+    assert!(request_body(&with, None).is_err());
+  }
+
+  #[test]
+  fn a_motion_goes_with_the_request() {
+    let mut with = job(None);
+    with.preset_id = Some("wave-01".into());
+    assert_eq!(
+      request_body(&with, None).unwrap()[MOTION_PRESET_FIELD],
+      json!("wave-01")
+    );
+    with.preset_id = Some("a b".into());
+    assert!(request_body(&with, None).is_err());
+    let plain = job(None);
+    let body = request_body_with_motion(&plain, None, Some("https://cdn/m.mp4")).unwrap();
+    assert_eq!(body[MOTION_VIDEO_FIELD], json!("https://cdn/m.mp4"));
+  }
+
+  #[test]
+  fn the_preset_list_is_read_from_its_items() {
+    let list = parse_presets(
+      &json!({ "items": [{ "id": "m1", "name": "Wave" }, { "id": "m2", "title": "Nod" }, { "name": "no id" }] }),
+    );
+    assert_eq!(
+      list,
+      vec![
+        ("m1".to_string(), "Wave".to_string()),
+        ("m2".to_string(), "Nod".to_string())
+      ]
+    );
+    assert_eq!(
+      parse_presets(&json!([{ "id": "x", "name": "X" }])),
+      vec![("x".to_string(), "X".to_string())]
+    );
+    assert!(parse_presets(&json!({ "detail": "nope" })).is_empty());
   }
 }
