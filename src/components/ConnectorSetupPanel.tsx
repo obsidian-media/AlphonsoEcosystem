@@ -43,6 +43,7 @@ import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnect
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { getHermesAgentEndpoint, saveHermesAgentEndpoint, getHermesAgentHealth } from '../services/connectors/hermesAgentConnector';
 import { CloudModelSelect } from './CloudModelSelect';
+import { MediaStorageSection } from './MediaStorageSection';
 import { isYoutubeProjectPublished, recordSignIn, setYoutubeProjectPublished } from '../services/contentFactory/signInExpiry';
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number | string }>;
@@ -1087,6 +1088,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('coverr', { COVERR_API_KEY: coverrApiKey })}
             hint="Free. Create an app at coverr.co/developers for a key (a new app is limited to 50 searches an hour). Miya's B-roll step searches it for stock clips."
             savedLabel="Coverr key saved" />
+
+          <MediaStorageSection />
 
           <CredentialSection title="GitHub" icon={GitBranch} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
             fields={[{ label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }]}

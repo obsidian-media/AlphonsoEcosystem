@@ -69,8 +69,8 @@ describe('connectorRegistry - GitHub and Slack', () => {
       }
     });
 
-    it("has 29 connectors total (Pexels, Pixabay and Coverr added in content factory phase 2a)", () => {
-      expect(DEFAULT_CONNECTORS.length).toBe(30);
+    it("has 31 connectors total (Meta added in phase 3a, your storage in phase 3c)", () => {
+      expect(DEFAULT_CONNECTORS.length).toBe(31);
     });
 
     it('github connector has not_configured status by default', () => {

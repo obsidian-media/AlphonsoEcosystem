@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 262 services and 163 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 263 services and 164 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -84,6 +84,7 @@ Source-backed inventory: 262 services and 163 components. Human purpose descript
 | component | `src/components/KeyboardShortcutsModal.tsx` | `KeyboardShortcutsModal` |
 | component | `src/components/MarkdownMessage.tsx` | `MarkdownMessage` |
 | component | `src/components/MarketingLandingPage.tsx` | `default` |
+| component | `src/components/MediaStorageSection.tsx` | `MediaStorageSection` |
 | component | `src/components/MemoryGraphCleanupPanel.tsx` | `MemoryGraphCleanupPanel` |
 | component | `src/components/MemoryGraphViewer.tsx` | `MemoryGraphViewer`, `NODE_TYPE_COLORS` |
 | component | `src/components/MemorySearch.tsx` | `MemorySearch` |
@@ -329,6 +330,7 @@ Source-backed inventory: 262 services and 163 components. Human purpose descript
 | service | `src/services/marcusPublishService.ts` | `buildMarcusPublishPacket`, `executeMarcusPublish`, `MARCUS_PUBLISH_PLATFORMS` |
 | service | `src/services/mariaAuditService.ts` | `buildMariaAuditPrompt`, `buildMariaFallbackAudit`, `MariaAuditAssignment`, `MariaAuditOptions`, `MariaAuditResponse`, `MariaAuditResult`, `parseMariaAuditResponse`, `runMariaGovernanceAudit` |
 | service | `src/services/mariaWeeklyReportService.ts` | `generateWeeklyReport`, `getLatestReport`, `getReports`, `saveReport`, `scheduleWeeklyGeneration` |
+| service | `src/services/mediaStorageService.ts` | `cleanOldStaged`, `NO_STORAGE`, `removeStaged`, `STAGED_PREFIX`, `stagedKey`, `stageFile`, `StageResult`, `STORAGE_CONNECTOR`, `storageConfig`, `StorageConfig`, `storageConfigured`, `StoragePart`, `StorageTestResult`, `testStorage` |
 | service | `src/services/memory/ecosystemMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `ECOSYSTEM_MEMORY_CATEGORIES`, `exportMemoryItems`, `getAllMemorySizes`, `getMemorySize`, `importMemoryItems`, `listMemory`, `listMemoryItems`, `MEMORY_CONFIDENCE`, `MEMORY_NAMESPACES`, `pushMemory`, `tickExpiry` |
 | service | `src/services/memoryGraphInferenceService.ts` | `runScheduledInferencePass`, `startMemoryGraphInferenceScheduler`, `stopMemoryGraphInferenceScheduler` |
 | service | `src/services/memoryGraphRetentionService.ts` | `CleanupRefusal`, `GRAPH_RETENTION`, `isAutoCleanupEnabled`, `previewMemoryGraphCleanup`, `protectedBoardroomMessageIds`, `PruneReport`, `resolveItemRetentionDays`, `runMemoryGraphCleanup`, `runScheduledCleanupIfDue`, `setAutoCleanupEnabled` |
