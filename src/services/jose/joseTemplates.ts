@@ -44,7 +44,9 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
       step('broll', 'hector', 'research_broll', 'Find a stock clip for each scene from the sources that have keys.', ['thumbnail']),
       step('clips', 'miya', 'creative_video_clips', 'Make an AI video clip for each main moment, from its scene picture.', ['scenes', 'broll'], ['write_own_work']),
       step('assemble', 'alphonso', 'runtime_assemble_video', 'Cut the finished video in 16:9 and 9:16 with the voice, music, AI clips and captions.', ['voice', 'music', 'broll', 'clips'], ['write_own_work']),
-      step('campaign', 'miya', 'creative_campaign', 'Write the captions, hashtags, ad copy and a posting calendar.', ['assemble'], ['write_own_work']),
+      // A carousel (phase 3c), only when the brief asks for one: 5 to 10 slides, a picture each.
+      step('carousel', 'miya', 'creative_carousel', 'Write 5 to 10 carousel slides from the research and script, with a picture for each.', ['thumbnail'], ['write_own_work']),
+      step('campaign', 'miya', 'creative_campaign', 'Write the captions, hashtags, ad copy and a posting calendar.', ['assemble', 'carousel'], ['write_own_work']),
       step('timing', 'nova', 'strategy_timing', 'Choose the best times to put the video out on each platform.', ['assemble']),
       step('quality', 'maria', 'audit_content_quality', 'Score every piece against the references before anything goes out.', ['campaign', 'timing']),
       step('security', 'sentinel', 'security_content_check', 'Check the text and links for anything unsafe or misleading.', ['campaign', 'timing']),

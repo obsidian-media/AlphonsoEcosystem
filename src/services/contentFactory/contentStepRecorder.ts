@@ -7,7 +7,7 @@ import {
   addStepProgress, approveStep, getProject, markStepStatus, saveStepVersion, setPendingAgents, startStep,
 } from './contentProjectService';
 import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
-import { renderScenePictures, renderThumbnails } from './contentImages';
+import { renderCarouselSlides, renderScenePictures, renderThumbnails } from './contentImages';
 import { STEP_AGENTS, stepMarkdown } from './contentStepAgents';
 import { hasOwnKey, type StepId } from './contentTypes';
 
@@ -65,11 +65,12 @@ export async function recordContentStepResult(input: {
       say(`Saved in the app, but the project folder could not be written: ${(error as Error).message}`);
     }
   }
-  // Scenes and thumbnails go on to make their pictures; the step stays "running" meanwhile.
-  if (input.step === 'scenes' || input.step === 'thumbnail') {
+  // Scenes, thumbnails and carousel slides go on to make their pictures; the step stays "running" meanwhile.
+  if (input.step === 'scenes' || input.step === 'thumbnail' || input.step === 'carousel') {
     markStepStatus(input.projectId, input.step, 'running', null);
     try {
       if (input.step === 'scenes') await renderScenePictures(input.projectId, settings, say);
+      else if (input.step === 'carousel') await renderCarouselSlides(input.projectId, settings, say);
       else await renderThumbnails(input.projectId, settings, say);
     } catch (error) {
       say(`The pictures could not be made: ${(error as Error).message}`);

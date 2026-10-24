@@ -5,8 +5,8 @@ import { generateComfyUiImage, checkComfyUiImage, getComfyUiEndpoint } from '../
 import { getBrand } from './contentBrandService';
 import { addStepProgress, chosenVersionOf, getProject, setVersionOutputField } from './contentProjectService';
 import { projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
-import { drawHeadline, type HeadlineSide } from './thumbnailRenderer';
-import type { ContentBrief, StepId } from './contentTypes';
+import { drawHeadline, drawSlide, slideSize, type HeadlineSide } from './thumbnailRenderer';
+import type { CarouselSlide, ContentBrand, ContentBrief, StepId } from './contentTypes';
 
 export interface PictureResult {
   sceneId: string;
@@ -113,17 +113,68 @@ export async function renderThumbnails(projectId: string, settings: Settings, on
   return results;
 }
 
+function slidesOf(output: unknown): CarouselSlide[] {
+  return (output as { miya?: { slides?: CarouselSlide[] } })?.miya?.slides || [];
+}
+
+/** A slide's picture with its text drawn on, at the brand's shape. */
+function drawnSlide(b64: string, slide: CarouselSlide | undefined, brand: ContentBrand): Promise<string> {
+  return slide ? drawSlide(b64, slide, brand, slideSize(brand.carouselShape)) : Promise.resolve(b64);
+}
+
+/**
+ * Carousel slides (phase 3c): one picture per slide at the brand's shape, one at a time,
+ * with the headline and body drawn on. With `only` (a slide's position) just that slide
+ * is made again and the others are kept.
+ */
+export async function renderCarouselSlides(projectId: string, settings: Settings, onProgress?: (m: string) => void, only?: number): Promise<PictureResult[]> {
+  const { project, brand, version, root } = context(projectId, 'carousel', settings);
+  const slides = slidesOf(version.output);
+  const kept = (version.output as { pictures?: PictureResult[] })?.pictures || [];
+  const size = slideSize(brand.carouselShape);
+  const look = [brand.visualStyle, brand.characterRefs].filter(Boolean).join(', ');
+  const results: PictureResult[] = [];
+  for (const [index, slide] of slides.entries()) {
+    if (only !== undefined && index !== only) {
+      results.push(kept.find((k) => k.sceneId === slide.id) || { sceneId: slide.id, status: 'failed', error: 'Not made yet.' });
+      continue;
+    }
+    const message = `Making carousel slide ${index + 1} of ${slides.length}…`;
+    addStepProgress(projectId, 'carousel', message);
+    onProgress?.(message);
+    let result: ImageResult;
+    try {
+      result = await generateComfyUiImage(
+        // The text is drawn by Alphonso afterwards: models misspell text.
+        { prompt: [slide.imagePrompt, look, 'no text, no letters, no words'].filter(Boolean).join('. '), width: size.width, height: size.height },
+        { endpoint: getComfyUiEndpoint() },
+      ) as ImageResult;
+    } catch (error) {
+      result = { ok: false, error: (error as Error).message };
+    }
+    const file = `v${version.version}-${slide.id}.png`;
+    const save = async (b64: string) => saveProjectImage(root, brand, project, 'carousel', file, await drawnSlide(b64, slide, brand));
+    results.push(await toPicture(result, save, { sceneId: slide.id, headline: slide.headline }, `${projectRelativeDir(brand, project)}/carousel/${file}`));
+  }
+  const saved = setVersionOutputField(projectId, 'carousel', version.version, 'pictures', results);
+  await writeProjectFile(root, brand, saved).catch(() => undefined);
+  return results;
+}
+
 /** Looks again for pictures ComfyUI had not finished. */
-export async function checkPendingPictures(projectId: string, step: 'scenes' | 'thumbnail', settings: Settings): Promise<PictureResult[]> {
+export async function checkPendingPictures(projectId: string, step: 'scenes' | 'thumbnail' | 'carousel', settings: Settings): Promise<PictureResult[]> {
   const { project, brand, version, root } = context(projectId, step, settings);
   const pictures = ((version.output as { pictures?: PictureResult[] })?.pictures || []).slice();
+  const slides = slidesOf(version.output);
   for (const [i, picture] of pictures.entries()) {
     if (picture.status !== 'pending' || !picture.jobId) continue;
     const result = await checkComfyUiImage(picture.jobId) as ImageResult;
     const file = `v${version.version}-${picture.sceneId}.png`;
     const save = async (b64: string) => saveProjectImage(
       root, brand, project, step, file,
-      step === 'thumbnail' && picture.headline ? await drawHeadline(b64, picture.headline, brand, picture.layout || 'left') : b64,
+      step === 'carousel'
+        ? await drawnSlide(b64, slides.find((sl) => sl.id === picture.sceneId), brand)
+        : step === 'thumbnail' && picture.headline ? await drawHeadline(b64, picture.headline, brand, picture.layout || 'left') : b64,
     );
     pictures[i] = await toPicture(result, save, { sceneId: picture.sceneId, headline: picture.headline, layout: picture.layout }, `${projectRelativeDir(brand, project)}/${step}/${file}`);
   }

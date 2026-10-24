@@ -24,7 +24,12 @@ const LEAD_MS = 15 * MINUTE;
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 interface CampaignCopy { platform?: string; caption?: string; hashtags?: string[]; description?: string; title?: string }
-interface Campaign { platforms?: CampaignCopy[]; short?: { title?: string; caption?: string; hashtags?: string[] } }
+interface Campaign {
+  platforms?: CampaignCopy[];
+  short?: { title?: string; caption?: string; hashtags?: string[] };
+  /** The carousel's own copy (phase 3c). */
+  carousel?: { caption?: string; hashtags?: string[] };
+}
 export interface NovaTime { platform?: string; dayOfWeek?: string; time?: string }
 
 function platformOf(name: string): PostPlatform | null {
@@ -127,6 +132,23 @@ export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: 
       rows.push({ platform, piece: 'reel', file: tall, title: project.name, caption: copy.caption || '', hashtags: copy.hashtags || [] });
     } else {
       notes.push(`No ${platform === 'instagram' ? 'Instagram' : 'Facebook'} Reel: the finished video has no 9:16 version.`);
+    }
+  }
+  // A carousel (phase 3c): an Instagram carousel and a Facebook photo post, with its own copy.
+  const carouselOutput = chosenVersionOf(project, 'carousel')?.output as { pictures?: { status: string; relativePath?: string }[] } | undefined;
+  if (carouselOutput) {
+    const pictures = carouselOutput.pictures || [];
+    const files = pictures.map((p) => (p.status === 'done' ? p.relativePath || '' : ''));
+    if (!pictures.length || files.some((f) => !f)) {
+      notes.push('No carousel posts yet: some slides have no picture. Check them in Carousel Studio.');
+    } else {
+      for (const platform of platforms.filter((p) => p !== 'youtube')) {
+        const copy = copyFor(platform);
+        rows.push({
+          platform, piece: 'carousel', file: files[0], files, title: project.name,
+          caption: campaign.carousel?.caption || copy.caption || '', hashtags: campaign.carousel?.hashtags || copy.hashtags || [],
+        });
+      }
     }
   }
   const taken: number[] = [];
