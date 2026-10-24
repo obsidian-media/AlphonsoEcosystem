@@ -9,8 +9,8 @@ before marking any hardening work complete.
 
 ## Reporting a Vulnerability
 
-Alphonso is closed-source (SHALAUDE v1.0 license) with a small maintainer
-team. To report a suspected vulnerability:
+Alphonso is source-visible but not open source (SHALAUDE v1.0 license, all
+rights reserved) with a small maintainer team. To report a suspected vulnerability:
 
 1. **Do not open a public GitHub issue.** Email the maintainer directly (see
    the contact address in the repository owner's GitHub profile, or the
@@ -39,6 +39,21 @@ team. To report a suspected vulnerability:
   `test-and-build` jobs) against known CVE advisories in dependencies.
 - **CodeQL** runs static analysis across JS/TS, Rust, Python, Swift, and GitHub
   Actions workflows.
+- **Weekly audit** (`.github/workflows/security-audit.yml`) re-runs the npm and
+  cargo audits; the one cargo-audit ignore list is `.cargo/audit.toml`.
+
+## Security model, briefly
+
+- Connector keys and other secrets are kept in the OS keychain, never in
+  localStorage, backups or workspace exports.
+- Every outbound connector call goes through the fail-closed policy gate.
+- Every agent plan is checked against one permission table; spending,
+  publishing or sending, and deleting always ask, even with Approval Mode off.
+- AI-planned commands reach `policy_gate.rs`, which has an explicit, fail-closed
+  argument rule for each allowed program.
+- Research and media downloads refuse private network addresses and check every
+  redirect; local servers (Ollama, ComfyUI) are reached through narrow backend
+  routes; sign-in callbacks listen on `127.0.0.1` only, for 5 minutes.
 
 ## Fix history
 

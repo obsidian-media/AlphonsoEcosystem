@@ -15,9 +15,9 @@ has been recorded.
 
 ### Prerequisites
 - **Node.js** 22 LTS (run `nvm use` to select the repository-pinned version)
-- **Rust** 1.77+ (with `cargo`, `clippy`, `rustfmt`)
+- **Rust** 1.77.2+ (with `cargo`, `clippy`, `rustfmt`)
 - **Ollama** running locally with a model (e.g., `ollama pull llama3.2:3b`)
-- **Windows** (primary target platform)
+- **Windows** (primary target platform; macOS and Linux build too)
 
 ### Getting Started
 
@@ -35,7 +35,8 @@ has been recorded.
 3. **Set up environment**
    ```bash
     cp .env.example .env
-    # Edit .env with your API keys (optional — app works in zero-cost mode)
+    # Optional, development runs only: an installed app never reads .env.
+    # Users enter keys in Settings → Connectors (kept in the system keychain).
     ```
 
 4. **Start development**
@@ -56,14 +57,16 @@ has been recorded.
 
 ```
 src/                   React frontend (new UI work is .tsx; legacy .jsx remains)
-  agents/              9 agent profiles, permissions, schemas
+  agents/              9 agent profiles and schemas (permissions: src/services/jose/agentPermissionTable.ts)
   components/          UI components and legacy feature workspaces
   services/            policy-gated services (exact count verified by npm run verify:docs)
-  hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
-  lib/                 Utilities (ollama.js, chatUtils.js)
+    jose/              Jose's planner, step graphs, effects, requests
+    contentFactory/    Miya Studio's content factory
+  hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
+  lib/                 Utilities (ollama.ts, chatUtils.js, randomId.ts)
   test/                Vitest test files (exact count verified by npm run verify:docs)
 src-tauri/             Rust backend
-  src/lib.rs           ~1,455 lines, 76 Tauri commands (across 16 modules)
+  src/lib.rs           ~938 lines; 189 Tauri commands across 50 modules (AGENTS.md lists them)
   src/utils.rs         Shared utilities
   src/kv_store.rs      SQLite-backed KV store
   src/ollama.rs        Ollama backend
@@ -71,8 +74,8 @@ src-tauri/             Rust backend
 scripts/               Build, release, auth scripts
 e2e/                   Playwright E2E tests (web build, Tauri bridge mocked)
 e2e-desktop/           Desktop E2E tests (real built app via tauri-driver)
-gateway/               WhatsApp Cloud gateway
-docs/                  120+ documentation files
+gateway/               WhatsApp Cloud gateway, generic webhook gateway
+docs/                  about 195 documentation files (index: docs/README.md)
 ```
 
 ## Development Workflow
@@ -114,7 +117,9 @@ git commit -m "type: description"
 - [ ] New components are `.tsx` with exported prop interfaces
 - [ ] New services have a test file in `src/test/`
 - [ ] No `.env`, `.tauri-updater-key`, or secret files committed
-- [ ] Coverage has not dropped below 35%
+- [ ] Coverage stays above the enforced floors (48% lines / 38% branches / 30% functions / 48% statements)
+- [ ] A new service or component has a row in `CLAUDE.md`'s Do Not Duplicate table (`npm run verify:dnd-coverage`, `npm run verify:dnd-map`)
+- [ ] Docs updated in the same PR (`npm run verify:docs`)
 
 **Commit message format:** `feat(scope): description` / `fix(scope): description` / `docs(scope): description`
 
@@ -139,7 +144,7 @@ git commit -m "type: description"
 
 - **Unit tests**: `src/test/` (Vitest)
 - **E2E tests**: `e2e/` (Playwright, web build with the Tauri bridge mocked)
-- **Desktop E2E tests**: `e2e-desktop/` (WebdriverIO + tauri-driver against the real built app; `npm run test:e2e:desktop`). Use these for anything that depends on the Rust backend, the real window origin, spawned processes or stored data. They run on isolated test data and are not in CI yet; prerequisites are listed at the top of `e2e-desktop/wdio.conf.mjs`.
+- **Desktop E2E tests**: `e2e-desktop/` (WebdriverIO + tauri-driver against the real built app; `npm run test:e2e:desktop`). Use these for anything that depends on the Rust backend, the real window origin, spawned processes or stored data. They run on isolated test data, and in CI as `Desktop E2E (real Tauri binary)` on every PR (not a required check); prerequisites are listed at the top of `e2e-desktop/wdio.conf.mjs`.
 - **Rust tests**: `src-tauri/src/` (cargo test)
 
 Run tests before and after changes:
@@ -152,7 +157,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 1. **Never commit secrets** — `.env`, `.tauri-updater-key` are in `.gitignore`
 2. **Never fake readiness** — use truth labels: COMPLETE / PARTIAL / PLACEHOLDER / FAKE
-3. **Check for duplicates** — 89+ services exist; don't create a second version
+3. **Check for duplicates** — 285 services exist; check `CLAUDE.md`'s Do Not Duplicate table before creating a second version
 4. **Follow the ground truth** — `docs/ALPHONSO_GROUND_TRUTH.md` is the source of truth
 5. **Run CI checks** — all tests must pass before merging
 

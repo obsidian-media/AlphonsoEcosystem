@@ -68,3 +68,5 @@ base64 -i profile.mobileprovision | pbcopy
 3. Open Alphonso app
 4. Enter desktop IP (or wait for auto-discovery)
 5. Enter the 6-digit PIN shown in desktop Settings → Remote Access
+
+Commands sent from the phone go through Jose like any other message (Jose redesign phase 6a): a question is answered, a task is planned, and progress comes back as status updates. Cloud Voice (optional, invite-only) needs an email sign-in and enrolls the iPhone; see `ios/AlphonsoCompanion/AlphonsoCompanion/README.md`.

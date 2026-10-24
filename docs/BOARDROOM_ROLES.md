@@ -2,7 +2,8 @@
 
 > **CORRECTED 2026-07-10:** This document describes an early, aspirational
 > 11-seat Boardroom design and does **not** reflect the shipped product.
-> The actual Boardroom feature (`src/components/BoardroomView.tsx`) only
+> The actual Boardroom feature (`src/components/BoardroomChatView.tsx` since the
+> 2026-07-10 rebuild; the old `BoardroomView.tsx` was removed on 2026-10-21) only
 > supports the real 9-agent roster: Alphonso, Jose, Hector, Miya, Maria,
 > Marcus, Echo, Sentinel, Nova (see `src/agents/agentRegistry.js`).
 >

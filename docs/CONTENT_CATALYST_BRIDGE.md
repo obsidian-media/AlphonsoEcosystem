@@ -10,7 +10,7 @@ This bridge is real but honest:
 
 ## Bridge Configuration
 
-The bridge settings live in Alphonso local storage and are editable from the Content Catalyst workspace:
+The bridge settings are edited in **Settings → Bridges → ACC** (since 2026-10-22; they used to sit under Backup and never turned the bridge on). The card has the address, the bridge token (required), an **On** switch, Save, and **Test**, which asks ACC itself whether it accepts the token. If ACC is on this computer, choose its folder once and **Start** / **Stop** run it. The saved values are:
 
 - `enabled`
 - `baseUrl`
@@ -21,12 +21,12 @@ The bridge settings live in Alphonso local storage and are editable from the Con
 Runtime transport:
 
 - The desktop frontend can still preview bridge state locally.
-- Actual packet delivery is handled by Alphonso Tauri backend env config:
+- Actual packet delivery is handled by the Tauri backend (`src-tauri/src/commands/bridge.rs`), which takes the saved settings and falls back to these environment variables (until 2026-10-22 it read only the environment, so a bridge set up in Settings always failed):
   - `ALPHONSO_BRIDGE_URL`
   - `ALPHONSO_BRIDGE_TOKEN`
   - `ALPHONSO_BRIDGE_PATH_PREFIX`
   - `ALPHONSO_BRIDGE_TIMEOUT_MS`
-- That keeps the shared secret out of the browser bundle while still allowing local/offline inspection.
+- The token is sent only over https, or plain http to this computer; any other address is refused (2026-10-24).
 
 Recommended path prefix:
 

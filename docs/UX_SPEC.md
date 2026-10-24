@@ -1,5 +1,7 @@
 # Alphonso UX Specification
 
+> **Status (2026-10-25):** built (Day 1, PR #199): Simple/Advanced mode (`ModeToggle.tsx`, `useUxMode.ts`; Simple mode is Companion Mode), the guided tour (`GuidedTour.tsx`) and the digest (`DigestPanel.tsx`). Since then the sidebar gained Calendar, Agent Pairing and Maturity, Miya Studio is the content factory, and the Operator Dashboard shows only in developer mode.
+
 **Version:** 1.0  
 **Date:** 2026-09-01  
 **Author:** Miya (Creative Agent)  
@@ -109,7 +111,7 @@ The Advanced sidebar restores the full sectioned navigation from the current `NA
 
 The guided tour launches when **all** of the following are true:
 - `localStorage.getItem('alphonso_guided_tour_complete_v1')` is not `'true'`
-- The onboarding wizard (`OnboardingWizard`) has been completed
+- First-run Setup (`SetupFlow`, which replaced the onboarding wizard in v2.8.0) has been completed
 - The user has landed on the Dashboard (`mission` tab)
 
 ### 3.2 Tour Architecture

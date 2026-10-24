@@ -19,6 +19,8 @@ This script (`scripts/verify-doc-counts.mjs`):
 - Matches them against numeric claims in AGENTS.md, README.md, ARCHITECTURE.md
 - Exits 1 on any mismatch — fails CI
 
+Each claim's pattern must match the line that states the current number. A pattern that matches the first number in a file can hit a historical line instead (until 2026-10-25 the README's v2.4.4 release note was rewritten with current numbers on every PR this way), so anchor patterns on wording that only the current line has (for example `lib.rs ~N lines · N Tauri commands`).
+
 If CI fails, run locally, fix the stale lines, and re-push.
 
 ## How to Verify Locally
@@ -56,3 +58,10 @@ If you add new file categories to count, update `getAllCounts()` in `counters.mj
 | Tauri commands | Count of `#[tauri::command]` across all `.rs` files |
 | Rust source files | Count of `.rs` files in `src-tauri/src/` |
 | Rust unit tests | Count of `#[test]` across all `.rs` files |
+
+## Other checks that keep docs honest
+
+- `npm run verify:dnd-coverage` — every service and component has a row in `CLAUDE.md`'s Do Not Duplicate table (blocking in CI).
+- `npm run verify:dnd-map` — `docs/DO_NOT_DUPLICATE.generated.md` is fresh (`npm run generate:dnd-map` refreshes it).
+- `npm run verify:skill-matrix` — `docs/AGENT_SKILL_PERMISSION_MATRIX.md` matches the skill packs.
+- Documents describing the app now are kept current; dated records (audits, reports, specs, plans) carry a status line at the top saying what changed since.
