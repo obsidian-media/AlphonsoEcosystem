@@ -1,18 +1,16 @@
 # Alphonso Connectors Reference
 
-All outbound connector calls run through `policyEnforcementService.js` before any external API is contacted. The gate fails closed: missing credentials, zero-cost mode, or unauthorized senders all result in a blocked result with an audit receipt. No raw stubs — every listed path is wired through the policy gate.
+Alphonso has **33 connectors** (`DEFAULT_CONNECTORS` in `src/services/connectors/connectorRegistry.js`). All outbound connector calls run through `policyEnforcementService.ts` before any external API is contacted. The gate fails closed: missing credentials, zero-cost mode, or unauthorized senders all result in a blocked result with an audit receipt. No raw stubs — every listed path is wired through the policy gate.
 
 **Setup flow for every connector:**
 
-> **Important:** Alphonso is a desktop app (Tauri). Environment variables in `.env` are NOT read by the running app — they only apply to the Railway gateway service. **All credentials must be entered through the in-app Connector Setup panel.** They are stored securely in localStorage/SQLite on your device.
+> **Important:** enter credentials in the app (**Settings → Connectors**). They are kept in your system's keychain (Windows Credential Manager, macOS Keychain, the Linux secret service), never in localStorage, backups or exports. A variable set in the app's own environment still works as a fallback; a `.env` file is read only in development runs, never by an installed app. The variable names below are the names of the fields.
 
-1. Open the app → Settings → Connector Setup
-2. Select the connector from the dropdown
-3. Enter credentials in the credential input fields that appear below the connector status
-4. Click **Save & Enable** — the connector is immediately activated
-5. Verify the connector status dot turns green
-6. Run a supervised test action (approval-gated) to confirm end-to-end connectivity
-7. The connector stays `setup_required` until a verified test result is produced
+1. Open **Settings → Connectors**; connectors are grouped (Messaging, AI Models, Search & Research, Content & Productivity, Automation)
+2. Enter the credentials and click **Save** (or **Save & Enable**)
+3. Use **Test** in the Connector Health Monitor: "Live check passed" means the service itself answered; "key found" means only that a key is saved (nothing was sent). Each key shows as "saved", "environment only" or "missing"
+4. YouTube, Facebook and Instagram have **Sign in** buttons instead of pasted tokens (see their sections)
+5. Paid connectors stay blocked while Zero-Cost Mode is on, and every publish, send or spend asks first
 
 ---
 
@@ -86,64 +84,34 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ---
 
-## 3. WhatsApp — Twilio
+## 3. WhatsApp — Twilio (removed)
 
-**Status:** Outbound send + inbound polling wired.
-
-**Required env vars:**
-| Variable | Description |
-|---|---|
-| `WHATSAPP_PROVIDER` | Set to `twilio` |
-| `WHATSAPP_TWILIO_ACCOUNT_SID` | Twilio account SID |
-| `WHATSAPP_TWILIO_AUTH_TOKEN` | Twilio auth token |
-| `WHATSAPP_TWILIO_FROM` | Your Twilio WhatsApp-enabled phone number |
-| `WHATSAPP_ALLOWED_NUMBERS` | Allowlisted sender numbers |
-
-**How to get credentials:**
-1. Create a Twilio account at `twilio.com`
-2. Enable WhatsApp on a Twilio number (Sandbox or production)
-3. Copy Account SID and Auth Token from the Twilio Console dashboard
-4. Set `WHATSAPP_TWILIO_FROM` to your Twilio WhatsApp number (e.g., `+14155238886`)
-
-**How to test:**
-- Connector Setup panel → supervised outbound send test
-- Inbound: `connector_poll_whatsapp` command polls Twilio for inbound messages and routes to Jose
-
-**Known limitations:**
-- Twilio Sandbox requires recipients to opt in with a join keyword before receiving messages
-- Full two-way sync not wired
-
-**Setup docs:** `docs/WHATSAPP_BRIDGE_SETUP.md`, `docs/RAILWAY_WHATSAPP_GATEWAY.md`
+Twilio was never supported for setup, and its leftover code and fields were removed on 2026-10-21. WhatsApp is Meta Cloud API only (section 2).
 
 ---
 
 ## 4. YouTube
 
-**Status:** Outbound upload wired (YouTube Data API v3). Inbound webhooks not wired.
+**Status:** Upload, scheduling (private with a publish time), moving and cancelling scheduled videos, thumbnails, and reading each video's numbers (YouTube Analytics and the Data API). Used by Miya Studio's Publish step and the Calendar. *Not checked with a real account yet.*
 
-**Required env vars:**
-| Variable | Description |
+**Credentials:**
+| Field | Description |
 |---|---|
-| `YOUTUBE_CLIENT_ID` | OAuth client ID from Google Cloud Console |
+| `YOUTUBE_CLIENT_ID` | OAuth client ID from your own Google Cloud project |
 | `YOUTUBE_CLIENT_SECRET` | OAuth client secret |
-| `YOUTUBE_REFRESH_TOKEN` | Long-lived refresh token (obtained via OAuth flow) |
+| `YOUTUBE_REFRESH_TOKEN` | Saved for you by **Sign in to YouTube** |
 | `YOUTUBE_CHANNEL_ID` | Target YouTube channel ID |
 
 **How to get credentials:**
 1. Go to `console.cloud.google.com` → APIs & Services → Credentials
-2. Create an OAuth 2.0 Client ID (Desktop application type)
-3. Enable the YouTube Data API v3 for your project
-4. Run `npm run auth:youtube` to complete the OAuth flow and capture the refresh token
-5. Copy the channel ID from your YouTube channel URL
-
-**How to test:**
-- Requires a short local video file
-- Connector Setup panel → supervised upload test (approval-gated)
-- Successful upload returns `videoId` and a `youtube.com/watch?v=<id>` URL
+2. Create an OAuth 2.0 Client ID (Desktop application type) and enable the YouTube Data API v3 and YouTube Analytics API
+3. Paste the client ID and secret in Settings → Connectors → YouTube
+4. Press **Sign in to YouTube**: the browser opens, and Alphonso receives the sign-in itself on `127.0.0.1:8085` (for 5 minutes). If the browser can't come back, paste the address it ended on. (`npm run auth:youtube` is still there for developers.)
+5. While the Google project is in **Testing**, Google ends the sign-in after about 7 days and keeps uploads private; Alphonso warns 2 days before. Publish the project and tick **My Google project is Published**.
 
 **Known limitations:**
-- Uploads are approval-gated (supervised/manual — not autonomous posting)
-- Upload progress callbacks and chunked resume not wired
+- Every upload asks first (publish always asks)
+- A channel whose uploads YouTube keeps private gets a reminder at the time, with a link to make the video public in YouTube Studio
 - Inbound event ingestion not wired
 
 **Setup doc:** `docs/YOUTUBE_CONNECTOR_SETUP.md`
@@ -152,7 +120,7 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ## 5. Claude (Anthropic)
 
-**Status:** Outbound prompt exchange wired. Runs through `connector_send_claude` Rust command.
+**Status:** Outbound prompt exchange wired through the `connector_send_claude` Rust command. Pick the model in the connector's **Model** list (loaded live from Anthropic; the default is Claude Haiku 5.5). Paid: blocked in Zero-Cost Mode; Jose uses it for a step only when Settings → Approvals → Allow paid models is on.
 
 **Required env vars:**
 | Variable | Description |
@@ -171,7 +139,7 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 - Response returns a supervised connector proof: `{ ok, external_id, target, error }`
 
 **Known limitations:**
-- Blocked by default in zero-cost mode (`policyEnforcementService.js`)
+- Blocked by default in zero-cost mode (`policyEnforcementService.ts`)
 - Inbound webhooks not wired
 - Auto-sync of responses into Jose task decomposition not wired
 
@@ -181,7 +149,7 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ## 6. ChatGPT (OpenAI)
 
-**Status:** Outbound prompt exchange wired. Runs through `connector_send_chatgpt` Rust command.
+**Status:** Outbound prompt exchange wired through the `connector_send_chatgpt` Rust command. Pick the model in the connector's **Model** list (loaded live from OpenAI; the default is GPT-6 Luna). Paid: blocked in Zero-Cost Mode; Jose uses it for a step only when paid models are allowed.
 
 **Required env vars:**
 | Variable | Description |
@@ -294,19 +262,18 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ## 10. ComfyUI
 
-**Status:** Outbound video queue wired via `connector_queue_comfyui`. Local service required.
+**Status:** The agents' one image tool, and the local engine for AI clips, the character reference and motion transfer. The desktop app reaches it through a narrow backend route (`comfyui_request`, `comfyui_upload_image`, `comfyui_save_output`), since ComfyUI refuses the app window. Before each job Alphonso frees the graphics card from Ollama.
 
-**Required env vars:**
-| Variable | Description |
+**Settings (Settings → Runtime → ComfyUI):**
+| Setting | Description |
 |---|---|
-| `COMFYUI_ENDPOINT` | Default: `http://127.0.0.1:8188` |
+| ComfyUI address | Default `http://127.0.0.1:8188` |
+| Your ComfyUI | Every install found on this computer (running ones, the one you chose, usual places); **Search this computer** looks through your drives |
+| Image model | The checkpoints ComfyUI has; Automatic = the starter model |
 
-**How to get credentials:** No cloud credentials needed — local service only.
-
-**How to start ComfyUI:**
-1. Install ComfyUI from its GitHub repo
-2. Start with `python main.py` (or the provided launcher)
-3. Verify `http://127.0.0.1:8188` is reachable
+**How to get it:**
+1. **Runtimes → ComfyUI → Install** installs it with the PyTorch build for your NVIDIA driver and the Stable Diffusion 1.5 starter model, or Alphonso uses your own ComfyUI
+2. On the ComfyUI card: **Video models** (LTX-Video 2B for 6 GB and up, Wan 2.2 5B for 8 GB and up), **Characters** (the character reference model) and **Motion transfer** (Wan 2.1 VACE 1.3B, about 8 GB), each pinned and checked
 
 **How to test:**
 - Provide a valid ComfyUI API workflow JSON in Miya Studio
@@ -323,34 +290,29 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ## 11. Meta / Instagram
 
-**Status:** Outbound publish wired via `metaPublishService.js` and `connector_send_meta` (Marcus-governed). Inbound not wired.
+**Status:** Facebook Reels (now, or scheduled on the Page 11 minutes to 29 days ahead) and photo posts (carousels), Instagram Reels and carousels, moving and cancelling scheduled posts, daily-limit checks, and reading each post's numbers. Videos on this computer are uploaded straight to Meta (resumable upload). Instagram can go through your Facebook Page or through **Instagram Login** (an Instagram professional account without a Page). *Not checked with a real account yet.*
 
-**Required env vars:**
-| Variable | Description |
+**Credentials (Settings → Connectors → Meta):**
+| Field | Description |
 |---|---|
-| `META_ACCESS_TOKEN` | Long-lived page/system user token from Meta for Developers |
-| `META_APP_ID` | Meta app ID |
-| `META_APP_SECRET` | Meta app secret |
-| `META_PAGE_ID` | Facebook Page ID |
-| `INSTAGRAM_BUSINESS_ACCOUNT_ID` | Instagram Business Account ID linked to the Page |
+| `META_APP_ID`, `META_APP_SECRET` | Your Meta app (the secret stays in the backend) |
+| `META_ACCESS_TOKEN` | Saved for you by **Sign in to Facebook** (long-lived) |
+| `META_PAGE_ID`, `META_PAGE_ACCESS_TOKEN` | The Page you choose after signing in |
+| `INSTAGRAM_BUSINESS_ACCOUNT_ID` | The Instagram account linked to the Page |
+| `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` | For Instagram Login |
+| `INSTAGRAM_LOGIN_TOKEN`, `INSTAGRAM_LOGIN_USER_ID` | Saved for you by **Sign in with Instagram** (60 days; renewed by itself under 10 days left) |
 | `META_GRAPH_API_VERSION` | Default: `v20.0` |
 
 **How to get credentials:**
-1. Create a Meta for Developers app at `developers.facebook.com`
-2. Add Instagram and Facebook Pages products
-3. Run `npm run auth:meta` to complete the OAuth flow and exchange for a long-lived token
-4. Find `META_PAGE_ID` in your Facebook Page settings
-5. Find `INSTAGRAM_BUSINESS_ACCOUNT_ID` via Graph API: `GET /{page-id}?fields=instagram_business_account`
-
-**How to test:**
-- All Meta/Instagram publish actions are Marcus-governed (require explicit approval)
-- Connector Setup panel → verify env keys
-- Submit a publish action; it will require approval before reaching the API
+1. Create a Meta for Developers app at `developers.facebook.com` and add Facebook Login, Pages and Instagram
+2. Paste the App ID and App Secret, then press **Sign in to Facebook** (callback `127.0.0.1:8086`) and choose your Page; or **Sign in with Instagram** (callback `127.0.0.1:8087`). Each button lists the steps and the address to register. (`npm run auth:meta` is still there for developers.)
+3. **Post to Instagram** chooses the route: whichever is set up, through my Facebook Page, or through Instagram Login
+4. Instagram carousels (and Reels through Instagram Login) need a public link: connect **Your storage** (section 30), or the post is saved to post by hand
 
 **Known limitations:**
-- All publishing is approval-gated and requires Marcus to be the executing agent
+- Every publish asks first, and only Marcus publishes
+- Instagram posts are sent by Marcus's runner at their time (Meta can't schedule them)
 - Inbound webhooks not wired
-- `META_APP_SECRET` must never appear in the frontend — backend-only
 
 **Setup doc:** `docs/EXTERNAL_CONNECTOR_SETUP.md`
 
@@ -358,7 +320,7 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ## 12. Runway (Miya creative cloud draft)
 
-**Status:** Cloud video draft wired via Tauri backend. Backend-only secret.
+**Status:** AI clips for the main moments in Miya Studio (and Content Studio's video step), through the Tauri backend. Paid: enter your price per second in Settings → Approvals → Allow paid models; each run asks once with the estimate, inside the monthly cap. *Not checked with a real account yet.*
 
 **Required env vars:**
 | Variable | Description |
@@ -372,10 +334,9 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 2. Go to Account Settings → API → Generate API Key → `RUNWAYML_API_SECRET`
 
 **Known limitations:**
-- Text-to-video only (default)
-- Outputs are ephemeral until saved locally
-- Missing secret shows as `setup_required` in Miya Studio
-- Secret must remain in `.env` — never exposed in the frontend WebView
+- Clips are 5 or 10 seconds, from the scene's picture (`gen4_turbo` by default)
+- A clip that times out (30 minutes) says Runway may still charge
+- The secret is used by the backend only
 
 **Setup doc:** `docs/MIYA_LOCAL_MEDIA_SETUP.md`
 
@@ -585,7 +546,7 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ## 21. Brave Search
 
-**Status:** Frontend-only (`hectorResearchService.js`'s `searchBrave`/`isBraveSearchConfigured`), used as Hector's primary web-search provider.
+**Status:** `braveSearchConnector.ts` (`searchBrave`, `isBraveSearchConfigured`), policy-gated since 2026-09-21; Hector's first web-search provider.
 
 **Required env vars:**
 | Variable | Description |
@@ -598,7 +559,7 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 **How to test:**
 - Connector Setup panel → verify key is present
-- Ask Hector a research question; without this key it silently falls back to DuckDuckGo HTML scraping instead
+- Ask Hector a research question; without this key he falls back to Tavily, Perplexity, DuckDuckGo and the RSS feeds
 
 **Known limitations:**
 - Without a key, Hector's fallback (DuckDuckGo scraping) is noticeably lower quality — this key is a strong recommendation, not just a nice-to-have
@@ -607,15 +568,15 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ## 22. Perplexity
 
-**Status:** Connector registered (`perplexityConnector.ts` — `isPerplexityConfigured`, `searchPerplexity`) and listed in the Connectors status panel, **but has no credential-entry UI** in `ConnectorSetupPanel.tsx` as of this writing — grepped and confirmed absent, not assumed. There is currently no in-app way to actually save `PERPLEXITY_API_KEY`.
+**Status:** `perplexityConnector.ts` (`isPerplexityConfigured`, `searchPerplexity`), on Perplexity's Search API (`POST /search`) since 2026-10-21; Hector uses it after Tavily. *Not checked with a real key yet.*
 
-**Required env vars:**
-| Variable | Description |
+**Credentials:**
+| Field | Description |
 |---|---|
-| `PERPLEXITY_API_KEY` | API key from `perplexity.ai` (no in-app save path yet — see below) |
+| `PERPLEXITY_API_KEY` | API key from `perplexity.ai`, entered in Settings → Connectors → Search & Research |
 
 **Known limitations:**
-- **Real, current gap, not a doc omission**: no `CredentialSection` for Perplexity exists in `ConnectorSetupPanel.tsx`, so this connector cannot be configured through the UI at all right now, only via a raw OS environment variable (which the app does not read either — see this doc's top-level "Important" note on `.env` not being read). Logged in `docs/governance/DEFERRED_WORK.md`.
+- The old `/chat/completions` call and its model were retired by Perplexity; only the Search API is used
 
 ---
 
@@ -753,3 +714,51 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 **Known limitations:**
 - Requires Docker running locally — no cloud-hosted n8n fallback documented here
 - All endpoint calls have AbortController timeouts (15s/10s/5s) — a slow n8n instance can time out before completing
+
+---
+
+## 29. Pexels, Pixabay and Coverr (stock footage)
+
+**Status:** Three free stock-clip sources, searched by Hector for each scene in Miya Studio (`stockFootageConnector.ts`; backend `content_stock_search` and `content_download_media`: https only, the stock hosts only, every redirect checked, 300 MB at most). Each clip keeps its source, author, page and license.
+
+**Credentials (Settings → Connectors → Content & Productivity):**
+| Field | Where |
+|---|---|
+| `PEXELS_API_KEY` | `pexels.com/api` |
+| `PIXABAY_API_KEY` | `pixabay.com/api/docs` |
+| `COVERR_API_KEY` | `coverr.co` (API) |
+
+Any one is enough; with none, the scene pictures are used.
+
+---
+
+## 30. Your storage (S3-compatible)
+
+**Status:** Optional. Your own bucket (Cloudflare R2, Amazon S3, Supabase Storage, Backblaze B2, Wasabi) for posts that need a public link (Instagram carousels, Reels through Instagram Login). The bucket stays private: Instagram gets a link that works for an hour, and the file is deleted once posted; leftovers older than a day are removed at start. Used only inside an already-approved post, so it has no approval of its own (`media_storage.rs`, `mediaStorageService.ts`).
+
+**Credentials (Settings → Connectors → Content & Productivity → Your storage):** `STORAGE_ENDPOINT`, `STORAGE_REGION`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, and "The address includes the bucket in its path" (path-style). **Test** uploads, links and deletes a small file and says how each part went.
+
+Without storage, such a post is saved in the project's `ready-to-post` folder with its caption and marked **Post by hand**.
+
+---
+
+## 31. ElevenLabs
+
+**Status:** Paid, high risk. Voice-overs with one of your ElevenLabs voices (including clones), with ElevenLabs' own word timing for the captions, and sound effects (`elevenlabs.rs`, `elevenLabsConnector.ts`). Chosen per brand (Brands tab) or project; never chosen for you. Each run asks first with the cost, from your prices (Settings → Approvals → Allow paid models: per 1,000 characters, per sound effect). *Not checked with a real account yet.*
+
+**Credentials:** `ELEVENLABS_API_KEY`. **Test** lists your voices.
+
+---
+
+## 32. Higgsfield
+
+**Status:** Paid, high risk. Pictures, AI clips, character training and motion clips for Miya Studio, and one-off "Make a Higgsfield picture (or video) of …" requests from Chat, Telegram or the board (`higgsfield.rs`, `higgsfieldConnector.ts`). Everything goes through Higgsfield's own estimate first, asks with the cost, and is downloaded into your project, then deleted on Higgsfield. Something still being made is fetched by **Check again**, never run twice. *Not checked with a real account yet; the character and motion request fields come from third-party descriptions and need a live check.*
+
+**Credentials and settings (Settings → Connectors → Content & Productivity → Higgsfield):**
+| Field | Description |
+|---|---|
+| `HIGGSFIELD_KEY_ID`, `HIGGSFIELD_KEY_SECRET` | Your API key |
+| Picture / clip / character training / motion model id | Pasted from the Higgsfield Console; no model list is built in |
+| Extra settings (JSON) for each | Optional; must be a JSON object, and can't set the prompt or the input picture |
+
+**Test picture / clip model** gives Higgsfield's estimate without making anything. **Open the Higgsfield Console** opens it in your browser.

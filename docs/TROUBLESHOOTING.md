@@ -53,7 +53,12 @@ In plain-browser dev mode (`npm run dev`) the window still calls ComfyUI directl
 
 ### "Timed out waiting for ComfyUI image output"
 
-The first image after ComfyUI starts has to load the model, which can take several minutes on a small GPU that is also holding an Ollama model. The app waits 5 minutes (3 before v2.9.0). Retry the Image step; later images are much faster.
+The first image after ComfyUI starts has to load the model, which can take several minutes on a small GPU. Before every image Alphonso asks Ollama to free the graphics card, and it waits 15 minutes (5 in v2.9.0). A picture still being made after that is kept: retry the Image step, or press **Check again** in Miya Studio, and the finished picture is picked up instead of starting again.
+
+### ComfyUI makes no image, or Alphonso can't find it
+
+- Settings → Runtime → ComfyUI lists every ComfyUI found on this computer; **Search this computer** looks through your drives. Choose yours there, and set **ComfyUI address** if it isn't `http://127.0.0.1:8188`.
+- A ComfyUI installed by Runtime Hub gets the PyTorch build for your NVIDIA driver and the starter image model. One without an image model can't make a picture: pick or add a model in Settings → Runtime → ComfyUI → Image model.
 
 ### Content Studio or Creative Studio shows a "built-in template" notice
 
@@ -63,7 +68,7 @@ The model's reply could not be used, and the notice says why. Check that Ollama 
 
 ### Desktop build fails with "Found version mismatched Tauri packages"
 
-The `tauri` crate in `src-tauri/Cargo.lock` and the `@tauri-apps/api` / `@tauri-apps/cli` npm packages must be on the same major.minor. Bump whichever is behind. This check runs only in the desktop build, which CI runs on `main` and release tags, not on PRs.
+The `tauri` crate in `src-tauri/Cargo.lock` and the `@tauri-apps/api` / `@tauri-apps/cli` npm packages must be on the same major.minor. Bump whichever is behind. Since 2026-10-21 PRs check this too (`npm run verify:tauri-versions` in Test & Build), so it should fail before the desktop build does.
 
 
 ### `npm install` fails
@@ -97,9 +102,9 @@ NODE_OPTIONS="--max-old-space-size=4096" npm run build
 ## Runtime Issues
 
 ### App freezes on startup
-- This was fixed in v1.0.3 — ensure you're on the latest version (v2.2.3)
-- Heavy startup work is now deferred to prevent UI freeze
-- The auto-updater will notify you of new versions automatically (requires v2.0.2+ installed)
+- This was fixed in v1.0.3 — make sure you're on the latest release
+- Heavy startup work is deferred to prevent a UI freeze
+- Installed copies check for updates at launch and install them in the app
 
 ### WebView2 zombie process (Windows)
 - Fixed in v1.0.2 — window close now calls `std::process::exit(0)`
@@ -111,14 +116,13 @@ NODE_OPTIONS="--max-old-space-size=4096" npm run build
 3. Try switching models in Settings
 4. Check browser console (F12) for errors
 
-### Connectors showing "setup_required" or failing verification (v2.2.3+)
-1. Go to **Settings → Connectors** and enter your credentials in the input fields
-2. Click **Save** — credentials are auto-verified immediately after saving
-3. A green "saved & verified ✓" notice confirms success
-4. If you still see "Not set up", double-check the credential values (no extra spaces)
-5. See [CONNECTORS.md](./CONNECTORS.md) for per-connector credential names
+### Connectors showing "setup_required" or failing verification
+1. Go to **Settings → Connectors** and enter your credentials in the input fields, then **Save**
+2. Use **Test** in the Connector Health Monitor. "Live check passed" means the service itself answered; "key found" means only that a key is saved (nothing was sent). Each key shows as "saved", "environment only" or "missing".
+3. If it still fails, the reason says what is missing or what the service said; double-check the values (no extra spaces)
+4. See [CONNECTORS.md](./CONNECTORS.md) for per-connector credential names
 
-> **Note**: In v2.2.3+ you do NOT need to set OS environment variables. Credentials entered in the UI are used directly.
+> **Note**: you do NOT need to set OS environment variables. Keys saved in Settings are kept in the system keychain and used directly (since 2026-10-21 for every connector; before that, a few still needed an environment variable).
 
 ### Connector shows "Not set up" after saving credentials (pre-v2.2.3)
 In older versions, the connector verification checked OS environment variables instead of the UI credential store. Upgrade to v2.2.3+ to fix this permanently. Workaround: add credentials to the OS environment and restart the app.
@@ -134,8 +138,8 @@ In older versions, the connector verification checked OS environment variables i
 
 ### Approval modal keeps appearing
 - This is by design — Approval Mode is on by default
-- Disable in Settings → Approval Mode (not recommended for production use)
-- Or approve the action and it won't ask again for that specific action type
+- Settings → General → **What asks first** has a switch per kind of step. Spending, publishing or sending, and deleting always ask, even with Approval Mode off
+- Commands that only read (such as `ollama list`) never ask
 
 ## Test Issues
 
@@ -162,11 +166,61 @@ cargo clippy -- -D warnings
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `credentials are missing` | Connector env vars not set | Add to `.env` and restart |
+| `credentials are missing` | Connector key not saved | Add it in Settings → Connectors |
 | `action blocked by policy` | Zero-cost or approval mode blocking | Check Settings |
 | `agent not allowed` | Agent contract violation | Check AGENT_GUIDE.md |
-| `dead_letter` state | Orchestration packet failed | Check Activity tab for details |
+| `dead_letter` state | Orchestration packet failed | Check Runtimes → Activity, or the request on the Requests board |
+| `plan_rejected` | Jose's plan broke the rules (a step waiting for itself, a missing step, an agent doing what it may not) | The reason lists each problem; Jose usually falls back to the simple plan, or edit the plan on the board |
+| `budget_exceeded` | A request went over 50 steps or its time limit | Split the request, or plan it again |
 | `WAL mode` errors | SQLite concurrent access | Restart the app |
+
+## Jose and the Requests Board
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| A request shows a plan card and does nothing | Bigger requests show their plan first | Press **Run this plan** (Chat or the board), or change Settings → General → Show Jose's plan first |
+| A request stops with "Waiting for you" | A step asks first (spend, publish or send, delete, or what you switched on in What asks first) | Approve it in Chat, on the board (**Approve and carry on**) or on Telegram |
+| A request shows **Interrupted** | The app closed while it ran | Press **Carry on** on the board, in Chat or on Telegram; finished steps are kept, a step that asks asks again |
+| A waiting request shows **Expired** | It waited longer than Settings → Approvals → Waiting requests expire after (7 days to start) | Ask again, or set 0 for never |
+| A paid model is never used | Allow paid models is off, Zero-Cost Mode is on, the connector isn't set up, or the prices aren't entered | Settings → Approvals → Allow paid models says which one |
+| Telegram doesn't pair | `TELEGRAM_ALLOWED_CHAT_IDS` is empty | Add your chat id in Settings → Connectors → Telegram, then send `/start` |
+| A Telegram button says "That button has expired." | It was older than 7 days, or the request ended | Open the request on the board |
+
+## Miya Studio (content factory)
+
+| Message or symptom | Fix |
+|---------|-----|
+| "Choose an output folder in Settings first, then ask again." | Set **Settings → Output folder**; projects are saved in `<output folder>/<brand>/<project>/` |
+| "Approve the review in Miya Studio first." | The run waits after the script's reviews: approve them in Script Studio (or on the board or Telegram) |
+| Voice-over: "Install Kokoro in Runtime Hub." | Runtimes → Kokoro → Install |
+| Music step skipped | AudioCraft isn't installed: Runtimes → AudioCraft → Install (optional) |
+| "No stock footage keys are set…" | Add a free Pexels, Pixabay or Coverr key in Connectors → Content & Productivity, or leave it: scene pictures are used |
+| "Install a video model in Runtime Hub (ComfyUI), or add a Runway key in Connectors." | Runtimes → ComfyUI → Video models suggests one for your graphics card |
+| "This graphics card has under 8 GB, so AI clips are made smaller and at most 3 seconds…" | Expected on small cards; choose full size in Runtime Hub → ComfyUI → Video models if you want to try |
+| "Runway clips were not approved for this run…" / "Higgsfield clips weren't approved for this run." | Run AI clips again and approve the cost |
+| A clip or picture says "Waiting for Higgsfield…" or is still in ComfyUI | Press **Check again**; it is fetched, never made twice |
+| Characters: "Tick that this is you or that you have permission first." / "Add at least 5 pictures." | A real person needs the permission tick; every character needs 5–20 pictures |
+| "Add your own photos for a real person." | Make pictures with Miya works only for made-up characters |
+| "Install the character reference model in Runtime Hub to keep the character." | Runtimes → ComfyUI → Characters → Install (about 6 GB), or train the character on Higgsfield |
+| Motion: "The clip is longer than 10 seconds." | Trim it, or record a move (it stops by itself at 10 s) |
+| "Alphonso couldn't use the camera…" | Allow the camera in Windows Settings → Privacy → Camera, or choose a file |
+| "This graphics card can't run local motion transfer; Higgsfield can." | Local motion needs about 8 GB of graphics memory |
+| A Short: "Make the finished video first: a highlight or a cut is taken from it." | Run the Finished video step first |
+| A step shows **Out of date** | An earlier step changed; run it again when you want (nothing reruns by itself) |
+| "Higgsfield isn't set up: add your keys and a model id…" | Settings → Connectors → Higgsfield; paste the model ids from the Higgsfield Console |
+
+## Publishing and the Calendar
+
+| Message or symptom | Fix |
+|---------|-----|
+| "No posts are approved…" | Campaign Studio → Posts → **Approve and schedule** |
+| "Sign in to YouTube again in Settings → Connectors: the sign-in has run out." | Press **Sign in to YouTube**. While your Google project is in Testing, Google ends the sign-in after about 7 days; publish the project and tick "My Google project is Published" |
+| A YouTube video shows **Kept private by YouTube** | YouTube keeps uploads private for a Google project that hasn't passed its audit; Alphonso reminds you at the time with a link to make it public in YouTube Studio |
+| A post shows **Post by hand** | It needs a public link (an Instagram carousel, or a Reel through Instagram Login) and no storage is set up. Its files and caption are in the project's `ready-to-post` folder; or set up Connectors → Your storage |
+| A post shows **Waiting: daily limit** | Instagram's daily limit or Facebook's 30 Reels a day; it goes when there is room |
+| A post shows **Check it** | It was cut off while sending; check the platform, then retry or cancel. It is never sent again blindly |
+| Numbers show "Sign in again to see … numbers" | The account was signed in before reading numbers was asked for; sign in again (posting keeps working) |
+| Moving a post asks first | It is already scheduled on YouTube or Facebook, and moving it changes it there |
 
 ## WhatsApp Issues
 
@@ -200,7 +254,7 @@ WhatsApp sends numbers without a `+` prefix (e.g. `16474842752`). Your `WHATSAPP
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| "Connection failed" in voice UI | Voice server not running | Start from Runtime Manager → Voice OS → Start, or set `VOICE_OS_TOKEN` and run `python -m uvicorn main:app --host 127.0.0.1 --port 8766 --no-access-log` in `voice/backend/` |
+| "Connection failed" in voice UI | Voice server not running | Start from Runtimes → Voice OS → Start (or the Voice page), or set `VOICE_OS_TOKEN` and run `python -m uvicorn main:app --host 127.0.0.1 --port 8766 --no-access-log` in `voice/backend/` |
 | No transcription produced | Ollama not running or no model pulled | Ensure `ollama serve` is running and `ollama pull llama3.2:3b` completed |
 | `ModuleNotFoundError: faster_whisper` | Python deps not installed | Run `pip install -r voice/backend/requirements.txt` in the voice venv |
 | `ModuleNotFoundError: piper` | piper-tts not installed | Run `pip install piper-tts` |
@@ -224,7 +278,7 @@ WhatsApp sends numbers without a `+` prefix (e.g. `16474842752`). Your `WHATSAPP
 
 ## Getting Help
 
-1. Check the [Activity tab](./AGENT_GUIDE.md#viewing-agent-activity) for audit logs
-2. Export diagnostics from Operator Dashboard → Export Diagnostics
+1. Check [Runtimes → Activity](./AGENT_GUIDE.md#viewing-agent-activity) for audit logs, and the Requests board for a request's steps
+2. Export diagnostics from Operator Dashboard → Export Diagnostics (turn on Settings → Desktop & UI → Developer mode to see the Operator Dashboard)
 3. Check `docs/ALPHONSO_GROUND_TRUTH.md` for verified system state
 4. Open an issue at https://github.com/obsidian-media/AlphonsoEcosystem/issues
