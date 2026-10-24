@@ -59,3 +59,8 @@ def test_market_research_goes_to_hector():
 
 def test_timing_goes_to_nova():
     assert detect_agent("when should I post this") == "nova"
+
+
+def test_sending_a_post_goes_to_marcus():
+    assert detect_agent("send the post to slack") == "marcus"
+    assert detect_agent("write a blog post") == "miya"

@@ -61,14 +61,15 @@ ROUTING_PATTERNS = {
         r'\b(opportunit\w*|growth|score|prioriti\w*|timing|nova)\b',
         r'\bwhen (should|to)\b',
     ],
+    # Sending (even a post) is Marcus's, so he is checked before Miya's content words.
+    'marcus': [
+        r'\b(publish|release|deploy|send|distribute|marcus|github|slack|call)\b'
+    ],
     'miya': [
         r'\b(design|ui|creative|campaign|storyboard|visual|miya|brand|layout|write|blog|post|draft|copy|script|video|thumbnail)\b'
     ],
     'maria': [
         r'\b(audit|risk|compliance|governance|maria|check|review|policy)\b'
-    ],
-    'marcus': [
-        r'\b(publish|release|deploy|send|distribute|marcus|github|slack|call)\b'
     ],
     'echo': [
         r'\b(memory|remember|save|store|recall|archive|echo|histor|bookmark)\b'
