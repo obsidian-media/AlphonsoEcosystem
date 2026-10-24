@@ -91,6 +91,13 @@ describe('PostsPanel', () => {
     expect(cancelScheduledContentPost).toHaveBeenCalledWith('p1');
   });
 
+  it('a failed post can be approved again', () => {
+    const { brand, project } = withPost({ status: 'failed', reason: 'Add the Meta access token.' });
+    const { approvePosts } = renderPanel(project, brand);
+    fireEvent.click(screen.getByRole('button', { name: 'Approve and schedule' }));
+    expect(approvePosts).toHaveBeenCalledTimes(1);
+  });
+
   it('approves the list once', () => {
     const { brand, project } = withPost({});
     const { approvePosts } = renderPanel(project, brand);

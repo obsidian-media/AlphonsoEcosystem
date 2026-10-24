@@ -183,6 +183,16 @@ describe('approveContentStep', () => {
     expect(approveRequestStep).toHaveBeenCalledWith('jose-request-c1', 'publish');
   });
 
+  // Final review: a post that failed (a key was missing) can be approved again once fixed.
+  it('approving Publish again retries a failed post', async () => {
+    const p = newProject();
+    savePosts(p.id, [{ id: 'f', platform: 'youtube', piece: 'video', file: 'f', title: 't', caption: 'c', hashtags: [], scheduledAtMs: 1, status: 'failed', reason: 'No key' }]);
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok() as never);
+    await approveContentStep(p.id, 'publish', settings);
+    expect(getProject(p.id)!.posts![0].status).toBe('approved');
+    expect(submitStepsToJose).toHaveBeenCalledTimes(1);
+  });
+
   it('with no drafts left, nothing is run', async () => {
     const p = newProject();
     await approveContentStep(p.id, 'publish', settings);

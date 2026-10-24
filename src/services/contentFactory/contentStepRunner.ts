@@ -153,9 +153,11 @@ export async function approveContentStep(projectId: string, step: StepId, settin
   // "Approve and schedule" (phase 3a): approves the draft posts you see, then carries the
   // request on at Publish, or runs Publish through Jose when no request is waiting there.
   if (step === 'publish') {
-    const drafts = (getProject(projectId)?.posts || []).filter((p) => p.status === 'draft');
+    // A failed post (say, a key was missing) is approved again with the drafts, so it is retried.
+    const waitingForYou = (status: string) => status === 'draft' || status === 'failed';
+    const drafts = (getProject(projectId)?.posts || []).filter((p) => waitingForYou(p.status));
     if (!drafts.length) return getProject(projectId) as ContentProject;
-    changeProjectPosts(projectId, (posts) => posts.map((p) => (p.status === 'draft' ? { ...p, status: 'approved' } : p)));
+    changeProjectPosts(projectId, (posts) => posts.map((p) => (waitingForYou(p.status) ? { ...p, status: 'approved', reason: undefined } : p)));
     const project = getProject(projectId);
     const request = project?.joseRequestId ? getJoseRequest(project.joseRequestId) : null;
     const waiting = request?.status === 'waiting_approval'

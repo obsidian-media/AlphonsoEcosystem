@@ -41,7 +41,8 @@ export function PostsPanel({ project, brand, approvePosts, onChange }: {
   const [notes, setNotes] = useState<string[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const posts = project.posts || [];
-  const drafts = posts.filter((p) => p.status === 'draft');
+  // Drafts, and posts that failed (approved again, they are retried).
+  const drafts = posts.filter((p) => p.status === 'draft' || p.status === 'failed');
 
   const make = () => {
     if (!brand) return;

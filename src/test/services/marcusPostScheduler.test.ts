@@ -145,3 +145,16 @@ it('text items still go through executeMarcusPublish as before', async () => {
   expect(getScheduledPublishes()[0].status).toBe('executed');
   expect(publishPost).not.toHaveBeenCalled();
 });
+
+// Final review: the store keeps 100 items; trimming must never drop a post still to go out.
+it('keeps every post still waiting when the store is trimmed', () => {
+  const { projectId, postId } = project('instagram', NOW + 30 * DAY);
+  scheduleContentPost({ projectId, postId, platform: 'instagram', scheduledAt: NOW + 30 * DAY });
+  const items = getScheduledPublishes();
+  for (let i = 0; i < 150; i += 1) items.push({ ...items[0], id: `old-${i}`, kind: 'text', postId: undefined, status: 'executed' });
+  localStorage.setItem('alphonso_marcus_schedule_v1', JSON.stringify(items));
+  schedulePublish({ content: 'Hello', platform: 'telegram', scheduledAt: NOW, agentId: 'marcus' });
+  const kept = getScheduledPublishes();
+  expect(kept.find((i) => i.postId === postId)?.status).toBe('pending');
+  expect(kept.length).toBeLessThanOrEqual(101);
+});

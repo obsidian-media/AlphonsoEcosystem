@@ -482,7 +482,12 @@ function _loadSchedule(): ScheduledPublish[] {
 
 function _saveSchedule(items: ScheduledPublish[]): void {
   try {
-    localStorage.setItem(MARCUS_SCHEDULE_KEY, JSON.stringify(items.slice(-MARCUS_SCHEDULE_MAX)));
+    // Keep every item still to go out (or being sent, or waiting for you); trim only finished ones.
+    const open = (i: ScheduledPublish) => i.status === 'pending' || i.status === 'posting' || i.status === 'ask';
+    const finishedRoom = Math.max(0, MARCUS_SCHEDULE_MAX - items.filter(open).length);
+    const finished = items.filter((i) => !open(i));
+    const keep = new Set(finished.slice(finished.length - finishedRoom));
+    localStorage.setItem(MARCUS_SCHEDULE_KEY, JSON.stringify(items.filter((i) => open(i) || keep.has(i))));
   } catch { /* ignore */ }
 }
 
