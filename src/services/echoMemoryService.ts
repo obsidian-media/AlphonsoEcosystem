@@ -1,3 +1,4 @@
+import { stepInputText, type StepInput } from './jose/stepInput';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { generateAgentLlmResponse, getConfiguredOllamaModel } from '../lib/ollama';
 import { pushMemoryItem, listMemoryItems } from './memoryService';
@@ -88,8 +89,8 @@ export function classifyMemoryCategory(commandText: string, priorOutputs: Record
   return 'project_memory';
 }
 
-export function buildEchoSynthesisPrompt(commandText: string, priorOutputs: Record<string, { summary?: string }>): string {
-  const outputLines = Object.entries(priorOutputs || {})
+export function buildEchoSynthesisPrompt(commandText: string, priorOutputs: Record<string, { summary?: string }>, stepInput: StepInput | null = null): string {
+  const outputLines = stepInput ? stepInputText(stepInput) : Object.entries(priorOutputs || {})
     .map(([agent, output]) => `[${agent}] ${String(output?.summary || 'no summary').slice(0, 400)}`)
     .join('\n');
 
@@ -188,7 +189,7 @@ export async function runEchoPreservation(commandText: string, assignment: EchoA
 
   if (!options.draftDisabled) {
     try {
-      const prompt = buildEchoSynthesisPrompt(commandText, priorOutputs);
+      const prompt = buildEchoSynthesisPrompt(commandText, priorOutputs, (options as { stepInput?: StepInput | null }).stepInput || null);
       const response = await generateAgentLlmResponse('echo', {
         endpoint: options.endpoint,
         model: options.model || getConfiguredOllamaModel(),

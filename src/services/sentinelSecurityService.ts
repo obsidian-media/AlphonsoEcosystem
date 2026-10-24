@@ -1,3 +1,4 @@
+import { stepInputText, type StepInput } from './jose/stepInput';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { generateAgentLlmResponse, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
@@ -148,8 +149,8 @@ export function scanForThreats(commandText: string, priorOutputs: Record<string,
   return { riskScore, severity, findings, blocked: riskScore >= 70 || missionClassification.secretDetected, redactedText: redacted };
 }
 
-export function buildSentinelThreatPrompt(commandText: string, priorOutputs: Record<string, { summary?: string; resultState?: string }>, scanResult: ScanResult): string {
-  const agentContext = Object.entries(priorOutputs || {})
+export function buildSentinelThreatPrompt(commandText: string, priorOutputs: Record<string, { summary?: string; resultState?: string }>, scanResult: ScanResult, stepInput: StepInput | null = null): string {
+  const agentContext = stepInput ? stepInputText(stepInput) : Object.entries(priorOutputs || {})
     .map(([agent, o]) => `[${agent}] ${String(o?.summary || 'no output').slice(0, 200)}`)
     .join('\n');
 
@@ -219,7 +220,7 @@ export async function runSentinelSecurityScan(commandText: string, assignment: S
   const shouldRunOllama = scanResult.findings.length > 0 || String(commandText || '').length > 80;
   if (shouldRunOllama) {
     try {
-      const prompt = buildSentinelThreatPrompt(commandText, priorOutputs, scanResult);
+      const prompt = buildSentinelThreatPrompt(commandText, priorOutputs, scanResult, (options as { stepInput?: StepInput | null }).stepInput || null);
       const response = await generateAgentLlmResponse('sentinel', { endpoint: getConfiguredOllamaEndpoint(), model: getConfiguredOllamaModel(), prompt, sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined });
       ollamaResult = parseSentinelThreatResponse(response?.response || '');
     } catch {

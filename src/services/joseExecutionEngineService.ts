@@ -42,6 +42,7 @@ import { saveRequestDecisions } from './jose/joseFinish';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
 import { moveToOwner } from './jose/movedTaskTypes';
+import { buildStepInput, stepInputText } from './jose/stepInput';
 import type { PlanStep } from './jose/stepGraph';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
 import { listInstalledModels, pickLargerModel } from './jose/joseModels';
@@ -986,9 +987,11 @@ async function executeMiyaAssignment(commandText: any, assignment: any, options:
   };
 }
 
-async function executeHectorAssignment(commandText: any, assignment: any) {
+async function executeHectorAssignment(commandText: any, assignment: any, options: any = {}) {
+  // Earlier steps' work (agent roles Part A): Hector researches with it in view.
+  const context = options.stepInput?.needs?.length ? stepInputText({ ...options.stepInput, others: [], memory: '' }) : '';
   const draft = createResearchDraft({
-    researchQuestion: commandText,
+    researchQuestion: context ? `${commandText}\n\n${context.slice(0, 1500)}` : commandText,
     sourceUrls: [],
     sourceType: 'official_docs',
     riskLevel: assignment?.riskLevel || 'medium'
@@ -1295,8 +1298,27 @@ export function stepCommandText(assignment: any, commandText: string): string {
   return `${instruction}\n\nThe request: ${commandText}${help}`;
 }
 
+/** A paid or cloud model gets the larger hand-over budget. */
+function usesLargeModel(assignment: any): boolean {
+  const model = String(assignment?.model || '');
+  if (model.startsWith('claude:') || model.startsWith('chatgpt:')) return true;
+  const provider = getAgentProvider(assignment?.agent)?.provider;
+  return Boolean(provider && provider !== 'ollama');
+}
+
 async function executeAssignment(packet: any, assignment: any, requestText: any, options: any = {}) {
   const commandText = stepCommandText(assignment, requestText);
+  // One input for every step, by step id (agent roles Part A, 2026-10-24).
+  const commandId = packet?.payload?.joseCommandId;
+  if (!options.stepInput && commandId && assignment?.stepId) {
+    options = {
+      ...options,
+      stepInput: buildStepInput(commandId, assignment, String(requestText || ''), {
+        memory: options.retrievedContext?.snippet,
+        large: usesLargeModel(assignment),
+      }),
+    };
+  }
   if (assignment?.agent === AGENTS.ALPHONSO && assignment?.instruction) {
     options = { ...options, stepInstruction: assignment.instruction };
   }
@@ -1333,22 +1355,22 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
     return executeMiyaAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.HECTOR) {
-    return executeHectorAssignment(commandText, assignment);
+    return executeHectorAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.MARIA) {
-    return executeMariaAssignment(commandText, assignment);
+    return executeMariaAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.ECHO) {
-    return executeEchoAssignment(commandText, assignment);
+    return executeEchoAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.SENTINEL) {
-    return executeSentinelAssignment(commandText, assignment);
+    return executeSentinelAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.NOVA) {
-    return executeNovaAssignment(commandText, assignment);
+    return executeNovaAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.MARCUS) {
-    return executeMarcusAssignment(commandText, assignment);
+    return executeMarcusAssignment(commandText, assignment, options);
   }
   return executeJoseStep(assignment);
 }

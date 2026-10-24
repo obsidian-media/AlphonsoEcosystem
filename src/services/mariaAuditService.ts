@@ -1,3 +1,4 @@
+import { stepInputText, type StepInput } from './jose/stepInput';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { generateAgentLlmResponse, getConfiguredOllamaModel } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
@@ -45,8 +46,9 @@ export interface MariaAuditResponse {
 
 // ── Prompt ────────────────────────────────────────────────────────────────────
 
-export function buildMariaAuditPrompt(commandText: string, priorOutputs: Record<string, { summary?: string }> = {}): string {
-  const agentSummary = Object.entries(priorOutputs || {})
+export function buildMariaAuditPrompt(commandText: string, priorOutputs: Record<string, { summary?: string }> = {}, stepInput: StepInput | null = null): string {
+  // The full work of the steps this one needs (agent roles Part A), else the old short summaries.
+  const agentSummary = stepInput ? stepInputText(stepInput) : Object.entries(priorOutputs || {})
     .map(([agent, output]) => `[${agent}] ${String(output?.summary || 'no output').slice(0, 300)}`)
     .join('\n');
 
@@ -177,7 +179,7 @@ export async function runMariaGovernanceAudit(commandText: string, assignment: M
 
   if (!options.draftDisabled) {
     try {
-      const prompt = buildMariaAuditPrompt(commandText, priorOutputs);
+      const prompt = buildMariaAuditPrompt(commandText, priorOutputs, (options as { stepInput?: StepInput | null }).stepInput || null);
       const response = await generateAgentLlmResponse('maria', {
         endpoint: options.endpoint,
         model: options.model || getConfiguredOllamaModel(),
