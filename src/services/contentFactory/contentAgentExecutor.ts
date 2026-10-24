@@ -75,7 +75,8 @@ function livePayload(assignment: ContentAssignment): ContentStepPayload {
 
 export interface ContentStepResult {
   summary: string;
-  resultState: 'completed' | 'failed';
+  /** setup_required: the owner can't work until something is installed (agent roles Part A). */
+  resultState: 'completed' | 'failed' | 'setup_required';
   artifacts: { type: 'content_step_output'; actionType: string; data: unknown; raw: string }[];
   sources: string[];
   contractAction: string;
@@ -103,7 +104,7 @@ export async function executeContentStepAssignment(assignment: ContentAssignment
   const result = assignment.actionType === 'distribution_schedule_posts'
     ? await executePublishStep(assignment)
     : MEDIA_ACTIONS.has(assignment.actionType) ? await executeMediaStep(assignment) : await runContentAgent(assignment);
-  if (result.resultState === 'failed' && getProject(projectId)) failStep(projectId, step, String(result.failureReason || 'An agent could not finish this step.'));
+  if ((result.resultState === 'failed' || result.resultState === 'setup_required') && getProject(projectId)) failStep(projectId, step, String(result.failureReason || 'An agent could not finish this step.'));
   return result;
 }
 

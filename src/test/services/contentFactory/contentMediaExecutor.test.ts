@@ -83,11 +83,12 @@ describe('executeMediaStep', () => {
     expect(result.artifacts[0].data).toEqual(voiceOutput(dir));
   });
 
-  it('Voice fails with the way to fix it when Kokoro is missing', async () => {
+  it('Voice waits for setup, with the way to fix it, when Kokoro is missing (agent roles Part A)', async () => {
     const { brand, project } = setup();
     backend.content_tts_kokoro = () => ({ ok: false, error: 'Kokoro is not installed. Install Kokoro in Runtime Hub.' });
     const result = await executeMediaStep(assignment(project, brand, 'miya', 'creative_voice', 'voice'));
-    expect(result.resultState).toBe('failed');
+    expect(result.resultState).toBe('setup_required');
+    expect(result.summary).toBe('Kokoro is not installed. Install Kokoro in Runtime Hub.');
     expect(result.failureReason).toContain('Install Kokoro in Runtime Hub.');
   });
 

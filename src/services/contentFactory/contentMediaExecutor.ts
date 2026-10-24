@@ -85,6 +85,11 @@ function failed(assignment: MediaAssignment, reason: string): ContentStepResult 
   };
 }
 
+/** The step can't run until a tool is installed: the request waits for setup, nothing is handed on. */
+function setupNeeded(assignment: MediaAssignment, reason: string): ContentStepResult {
+  return { ...failed(assignment, reason), resultState: 'setup_required', summary: reason };
+}
+
 interface Context {
   project: ContentProject;
   brand: ContentBrand;
@@ -191,6 +196,8 @@ async function runVoice(assignment: MediaAssignment, ctx: Context): Promise<Cont
       lines: lines.map((l) => (l.text ? { id: l.id, text: l.text } : { id: l.id, text: '', pauseSec: l.seconds })),
     } },
   );
+  // Kokoro not installed: the request waits until it is (the backend says "is not installed").
+  if (!result?.ok && /is not installed/i.test(String(result?.error || ''))) return setupNeeded(assignment, String(result?.error));
   if (!result?.ok || !result.full) return failed(assignment, result?.error || 'Kokoro made no voice-over.');
   const output: VoiceOutput = {
     full: `${outDir}/full.wav`,

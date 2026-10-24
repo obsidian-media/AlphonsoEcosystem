@@ -18,6 +18,7 @@ export const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
   running: 'Running',
   waiting_approval: 'Waiting for your approval',
+  waiting_setup: 'Waiting for something to be set up',
   done: 'Done',
   failed: 'Failed',
   interrupted: 'Interrupted',
@@ -162,7 +163,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
             )}
-            {selected.status === 'interrupted' && (
+            {(selected.status === 'interrupted' || selected.status === 'waiting_setup') && (
               <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
             )}
             {waitingSteps.map((step) => (

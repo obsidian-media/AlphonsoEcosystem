@@ -136,3 +136,16 @@ describe('button tokens', () => {
     expect(readButtonToken(token, Date.now() + 8 * 24 * 60 * 60 * 1000)).toBeNull();
   });
 });
+
+describe('a request waiting for setup (agent roles Part A)', () => {
+  it('says what to set up, with Carry on', () => {
+    const request: any = {
+      id: 'r-setup', text: 'Make the video', status: 'waiting_setup', updatedAtMs: 5, changeLog: [],
+      steps: [{ stepId: 'voice', agent: 'miya', actionType: 'creative_voice', needs: [], effects: ['write_own_work'], status: 'setup_needed', error: 'Install Kokoro in Runtime Hub.' }],
+    };
+    const out = collectJoseNotifications([request], new Set(), getJoseTelegramSettings());
+    const note = out.find((n) => n.kind === 'setup_needed');
+    expect(note?.text).toBe('Miya needs something set up: Install Kokoro in Runtime Hub.');
+    expect(note?.buttons?.[0]?.[0]).toMatchObject({ text: 'Carry on', action: 'carry_on', requestId: 'r-setup' });
+  });
+});

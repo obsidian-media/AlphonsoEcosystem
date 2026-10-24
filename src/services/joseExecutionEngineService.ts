@@ -95,6 +95,7 @@ const STEP_STATUS_BY_RECEIPT: Record<string, string> = {
   failed: 'failed',
   dead_letter: 'failed',
   not_run: 'not_run',
+  setup_needed: 'setup_needed',
 };
 
 /** Save each step's final status on the request (jose/joseRequestStore). Never breaks the run. */
@@ -113,9 +114,11 @@ function recordStepOutcomes(requestId: string, assignments: any[], receipts: any
         ...(receipt?.reason ? { error: String(receipt.reason) } : {}),
       });
     }
+    // A step whose owner can't work yet waits for setup (agent roles Part A).
     const requestStatus = cutShort || statuses.includes('failed')
       ? 'failed'
-      : statuses.includes('waiting_approval') ? 'waiting_approval' : 'done';
+      : statuses.includes('waiting_approval') ? 'waiting_approval'
+        : statuses.includes('setup_needed') ? 'waiting_setup' : 'done';
     setJoseRequestStatus(requestId, requestStatus);
   } catch {
     // The request record is a display aid; the run's own result stands.
@@ -2055,6 +2058,14 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       const result: any = taskResult.result;
+      // The owner can't work until something is set up: no retry, no other agent,
+      // nothing saved for later steps; Carry on runs it again (agent roles Part A).
+      if (result?.resultState === 'setup_required') {
+        updatePacketStatus(assignment.packetId, 'queued', { failureReason: result.summary });
+        executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'setup_needed', reason: String(result.summary || 'Something needs setting up.') });
+        onProgress?.({ stage: 'setup_needed', assignment, packetId: assignment.packetId, reason: result.summary });
+        continue;
+      }
       const stepOutput = {
         summary: result.summary,
         resultState: result.resultState || 'pending_review',
@@ -2432,7 +2443,7 @@ export async function retryDLQ(taskId) {
 export async function resumeJoseRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
   // A waiting request, or one the app was closed on (phase 5).
-  if (!request || (request.status !== 'waiting_approval' && request.status !== 'interrupted')) {
+  if (!request || !['waiting_approval', 'interrupted', 'waiting_setup'].includes(request.status)) {
     return { ok: false, reason: request ? `This request is ${String(request.status).replace(/_/g, ' ')}, not waiting for an approval.` : 'Request not found.', requestId };
   }
   setJoseRequestStatus(requestId, 'running');
@@ -2476,8 +2487,8 @@ export function rejectRequestStep(requestId: string, stepId: string) {
 /** Carry on a request the app was closed on (phase 5): steps already done are kept; a step that needs approval asks again. */
 export async function carryOnRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
-  if (!request || request.status !== 'interrupted') {
-    return { ok: false, reason: 'Only a request that was cut off when the app closed can be carried on.', requestId };
+  if (!request || (request.status !== 'interrupted' && request.status !== 'waiting_setup')) {
+    return { ok: false, reason: 'Only a request that was cut off, or that waits for something to be set up, can be carried on.', requestId };
   }
   return resumeJoseRequest(requestId, options);
 }

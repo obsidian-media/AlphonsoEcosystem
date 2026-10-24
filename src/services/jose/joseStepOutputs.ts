@@ -8,7 +8,7 @@ import { listJoseRequests } from './joseRequestStore';
 const STEP_OUTPUTS_KEY = 'alphonso_jose_step_outputs_v1';
 const MAX_COMMANDS = 50;
 /** A request in one of these still needs its steps' work, however old (phase 6a). */
-const UNFINISHED = new Set(['waiting_approval', 'waiting_plan_approval', 'interrupted', 'running']);
+const UNFINISHED = new Set(['waiting_approval', 'waiting_plan_approval', 'waiting_setup', 'interrupted', 'running']);
 
 export interface StepOutput {
   [key: string]: unknown;

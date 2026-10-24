@@ -19,7 +19,7 @@ export interface JoseButton {
 
 export interface JoseNotification {
   key: string;
-  kind: 'step_waiting' | 'plan_waiting' | 'finished' | 'review_decision' | 'interrupted';
+  kind: 'step_waiting' | 'plan_waiting' | 'finished' | 'review_decision' | 'interrupted' | 'setup_needed';
   text: string;
   buttons?: JoseButton[][];
 }
@@ -118,6 +118,16 @@ export function collectJoseNotifications(requests: JoseRequest[], sent: Set<stri
     if (settings.reviewDecision) {
       for (const entry of (request.changeLog || []).filter((c) => REVIEW_DECISION.test(c.text))) {
         add({ key: `${request.id}:review:${entry.atMs}`, kind: 'review_decision', text: `${cut(request.text, 120)}: ${cut(entry.text, 600)}` });
+      }
+    }
+    if (request.status === 'waiting_setup') {
+      for (const s of request.steps.filter((x) => x.status === 'setup_needed')) {
+        add({
+          key: `${request.id}:setup:${s.stepId}:${request.updatedAtMs}`,
+          kind: 'setup_needed',
+          text: `${agentName(s.agent)} needs something set up: ${cut(String(s.error || ''), 300)}`,
+          buttons: [[{ text: 'Carry on', action: 'carry_on', requestId: request.id }]],
+        });
       }
     }
     if (request.status === 'interrupted') {

@@ -720,3 +720,47 @@ describe('Jose runs plans as step graphs', () => {
     expect(command.assignments.find((a) => a.stepId === 'review_value-r1').contentStep).toEqual({ ...contentStep, step: 'review' });
   });
 });
+
+// Agent roles Part A (2026-10-24): a step whose owner can't work waits for setup.
+describe('a step whose owner needs setting up', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(executeContentStepAssignment).mockClear();
+  });
+
+  it('is tried once, waits with the reason, and is never handed to another agent', async () => {
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => (
+      assignment.stepId === 'voice'
+        ? { summary: 'Install Kokoro in Runtime Hub.', resultState: 'setup_required', artifacts: [], sources: [], contractAction: assignment.actionType }
+        : { summary: 'ok', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType }
+    ));
+    const result = await run([
+      step('miya', 'creative_voice', { stepId: 'voice' }),
+      step('miya', 'creative_music', { stepId: 'mix', needs: ['voice'] }),
+    ]);
+    const calls = vi.mocked(executeContentStepAssignment).mock.calls.map((c) => c[0].stepId);
+    expect(calls).toEqual(['voice']);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.status).toBe('waiting_setup');
+    const voice = request.steps.find((s) => s.stepId === 'voice');
+    expect(voice.status).toBe('setup_needed');
+    expect(voice.error).toBe('Install Kokoro in Runtime Hub.');
+    expect(request.steps.find((s) => s.stepId === 'mix').status).toBe('not_run');
+    expect(request.steps.map((s) => s.stepId)).toEqual(['voice', 'mix']);
+  });
+
+  it('carries on once it is set up', async () => {
+    let ready = false;
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => (
+      assignment.stepId === 'voice' && !ready
+        ? { summary: 'Install Kokoro in Runtime Hub.', resultState: 'setup_required', artifacts: [], sources: [], contractAction: assignment.actionType }
+        : { summary: 'ok', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType }
+    ));
+    const result = await run([step('miya', 'creative_voice', { stepId: 'voice' }), step('miya', 'creative_music', { stepId: 'mix', needs: ['voice'] })]);
+    ready = true;
+    await carryOnRequest(`jose-request-${result.commandId}`);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.status).toBe('done');
+    expect(request.steps.every((s) => s.status === 'done')).toBe(true);
+  });
+});
