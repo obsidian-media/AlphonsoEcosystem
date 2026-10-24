@@ -24,6 +24,8 @@ export interface CalendarItem {
   piece: string;
   /** One of the project's Shorts (phase 4a: marked on the Calendar). */
   isShort: boolean;
+  /** The project's post itself (phase 4a: its numbers in the side panel). */
+  post?: ProjectPost;
   title: string;
   caption: string;
   atMs: number;
@@ -96,6 +98,7 @@ export function listCalendarItems(
           platform: post.platform,
           piece: PIECE[post.piece],
           isShort: Boolean(post.shortId),
+          post,
           title: post.title,
           caption: post.caption,
           atMs: post.scheduledAtMs,

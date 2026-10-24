@@ -40,3 +40,10 @@ it('saves the carousel shape, 4:5 by default', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Save brand' }));
   expect(getBrand(brand.id)!.carouselShape).toBe('1:1');
 });
+
+// Phase 4a: the brand's results.
+it("shows the brand's results", () => {
+  const brand = saveBrand({ name: 'Acme' });
+  render(<BrandEditor brandId={brand.id} onBrand={() => undefined} />);
+  expect(screen.getByRole('region', { name: 'Results' })).toBeTruthy();
+});

@@ -125,4 +125,11 @@ describe('PostsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Post Instagram Reel now' }));
     expect(postOverdueNow).toHaveBeenCalledWith('p1');
   });
+
+  // Phase 4a: a post that went out shows its numbers.
+  it('a post that went out shows its numbers', () => {
+    const { brand, project } = withPost({ status: 'posted', platformId: '1', sentAtMs: Date.now(), metrics: { readings: { '1d': { readAtMs: Date.now(), values: { views: 4321 }, unavailable: [] } } } });
+    renderPanel(project, brand);
+    expect(screen.getByText('4,321')).toBeTruthy();
+  });
 });

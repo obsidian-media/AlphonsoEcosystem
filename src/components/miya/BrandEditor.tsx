@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BrandResults } from './BrandResults';
 import { Button } from '../ui';
 import { listBrands, saveBrand } from '../../services/contentFactory/contentBrandService';
 import type { ContentBrand, PostingSlot, PostPlatform } from '../../services/contentFactory/contentTypes';
@@ -144,6 +145,7 @@ export function BrandEditor({ brandId, onBrand }: { brandId: string; onBrand(id:
           <ul className="list-disc pl-4 text-[12px] text-(--text-2)">{draft.lessons.slice(-20).map((l) => <li key={`${l.atMs}-${l.text}`}>{l.text}</li>)}</ul>
         </div>
       )}
+      <BrandResults brandId={draft.id} />
       <div className="flex items-center gap-3">
         <Button size="sm" onClick={save}>Save brand</Button>
         {saved && <span className="text-[12px] text-(--success)">{saved}</span>}

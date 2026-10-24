@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { PostNumbers } from '../miya/PostNumbers';
 import { Badge, Button } from '../ui';
 import { openExternalUrl } from '../../services/browserAutomationService';
 import type { CalendarItem } from '../../services/contentFactory/calendarItems';
@@ -35,6 +36,7 @@ export function CalendarSidePanel({ item, message, onChange, onCancel, onOpenPro
           <div className="text-(--text-3)">{item.hasTime ? whenLabel(item.atMs) : new Date(item.atMs).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
           <Badge variant={item.needsYou ? 'warning' : 'info'}>{item.statusLabel}</Badge>
           {item.reason && <p className="text-(--text-2)">{item.reason}</p>}
+          {item.post && item.projectId && item.post.platformId && <PostNumbers projectId={item.projectId} brandId={item.brandId} post={item.post} />}
           {item.link && <Button size="sm" variant="ghost" onClick={() => { void openExternalUrl(item.link as string); }}>Open the post</Button>}
           {item.caption && <p className="whitespace-pre-wrap text-(--text-2)">{item.caption}</p>}
           {item.draggable && (

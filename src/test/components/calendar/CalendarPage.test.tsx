@@ -150,5 +150,21 @@ describe('CalendarPage', () => {
     fireEvent.click(chip);
     expect(within(screen.getByRole('region', { name: 'Selected post' })).getByText(/Short/)).toBeInTheDocument();
   });
-});
 
+  // Phase 4a: numbers in the side panel; a banner when a service needs a new sign-in.
+  it('the side panel shows the post\'s numbers', () => {
+    const post = { id: 'n', platform: 'instagram', piece: 'reel', file: 'f', title: 'Numbers reel', caption: '', hashtags: [], scheduledAtMs: at(28, 12), status: 'posted', platformId: '9', sentAtMs: at(27, 12),
+      metrics: { readings: { '1d': { readAtMs: at(28, 12), values: { views: 777 }, unavailable: [] } } } };
+    listCalendarItems.mockReturnValue([...ITEMS, item({ id: 'post:n', postId: 'n', title: 'Numbers reel', atMs: at(28, 12), post } as any)]);
+    renderPage();
+    fireEvent.click(screen.getByTestId('calendar-item-post:n'));
+    expect(within(screen.getByRole('region', { name: 'Selected post' })).getByText('777')).toBeInTheDocument();
+  });
+
+  it('a banner says which service needs a new sign-in to show numbers', () => {
+    localStorage.setItem('alphonso_metrics_permissions_v1', JSON.stringify({ meta: true }));
+    renderPage();
+    expect(screen.getByText('Sign in again to see Facebook and Instagram numbers')).toBeInTheDocument();
+    localStorage.removeItem('alphonso_metrics_permissions_v1');
+  });
+});

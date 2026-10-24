@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { permissionBanners } from '../../services/contentFactory/brandResults';
 import { Button, Modal } from '../ui';
 import { listBrands } from '../../services/contentFactory/contentBrandService';
 import {
@@ -123,6 +124,9 @@ export function CalendarPage({ initialDateMs, onOpenProject, expiries }: {
           </select>
         </label>
       </div>
+      {permissionBanners().map((banner) => (
+        <p key={banner} role="status" className="rounded-xl bg-(--surface-2) px-3 py-2 text-[12px] text-(--warning)">{banner}</p>
+      ))}
       {warnings.map((w) => (
         <p key={w.service} role="status" className="rounded-xl bg-(--surface-2) px-3 py-2 text-[12px] text-(--warning)">{w.message}</p>
       ))}
