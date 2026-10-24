@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 282 services and 173 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 283 services and 173 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -270,6 +270,7 @@ Source-backed inventory: 282 services and 173 components. Human purpose descript
 | service | `src/services/contentFactory/brandResults.ts` | `Band`, `BANDS`, `brandMedian`, `BrandResultRow`, `brandResultRows`, `FIRST_POSTS`, `MAIN_METRIC`, `MIN_POSTS_TO_COMPARE`, `permissionBanners`, `postBand` |
 | service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
+| service | `src/services/contentFactory/comfyCharacter.ts` | `CHARACTER_REFERENCE_MISSING`, `characterReferenceAvailable`, `withCharacterPrompt` |
 | service | `src/services/contentFactory/comfyVideoClip.ts` | `buildVideoWorkflow`, `checkComfyClip`, `ClipResult`, `ComfyClipInput`, `framesFor`, `makeComfyClip`, `VideoWorkflowInput` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
 | service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `addProposedLessons`, `DEFAULT_QUALITY_THRESHOLD`, `dropLesson`, `editLesson`, `ensureFirstBrand`, `getBrand`, `keepLesson`, `listBrands`, `proposedLessons`, `saveBrand` |
@@ -285,7 +286,7 @@ Source-backed inventory: 282 services and 173 components. Human purpose descript
 | service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `POST_STATUS_LABEL`, `savePosts`, `updatePost` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `outputPath`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
 | service | `src/services/contentFactory/contentProjectPlan.ts` | `briefWantsCarousel`, `briefWantsShorts`, `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `clipsWaitPaid`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `higgsfieldClipsEstimate`, `PICTURES_WAIT_PAID`, `PUBLISH_WAIT`, `REVIEW_WAIT`, `runwayEstimate`, `SFX_WAIT_PAID`, `SHORTS_WAIT_PAID`, `shortsCount`, `shortsRunwayEstimate`, `VOICE_WAIT_PAID` |
-| service | `src/services/contentFactory/contentProjectService.ts` | `addShortPlan`, `addStepProgress`, `appendShortPlan`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getShortsSettings`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setShortKind`, `setShortOutput`, `setShortPlatforms`, `setShortsSettings`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
+| service | `src/services/contentFactory/contentProjectService.ts` | `addShortPlan`, `addStepProgress`, `appendShortPlan`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getShortsSettings`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setSceneCharacter`, `setShortKind`, `setShortOutput`, `setShortPlatforms`, `setShortsSettings`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentPublishExecutor.ts` | `executePublishStep`, `NO_APPROVED_POSTS` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
@@ -295,7 +296,7 @@ Source-backed inventory: 282 services and 173 components. Human purpose descript
 | service | `src/services/contentFactory/contentTelegram.ts` | `collectContentNotifications`, `ContentButton`, `ContentButtonAction`, `contentButtonToken`, `ContentNotification`, `ContentTelegramSettings`, `getContentTelegramSettings`, `handleContentButton`, `readContentButtonToken` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `BrandCharacter`, `BrandLesson`, `CarouselShape`, `CarouselSlide`, `Checkpoint`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentIdea`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `MetricsReading`, `PostingSlot`, `PostMetrics`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
-| service | `src/services/contentFactory/engineChoice.ts` | `EngineChoices`, `higgsfieldPictureLimit`, `PaidEngine`, `paidEngineAvailable`, `prepareEngineEstimates`, `projectEngines`, `resolvePictures`, `resolveVoice`, `VoiceChoice` |
+| service | `src/services/contentFactory/engineChoice.ts` | `CHARACTER_DELETED`, `EngineChoices`, `higgsfieldPictureLimit`, `PaidEngine`, `paidEngineAvailable`, `prepareEngineEstimates`, `projectEngines`, `resolveCharacter`, `resolvePictures`, `resolveVoice`, `VoiceChoice` |
 | service | `src/services/contentFactory/higgsfieldByName.ts` | `askHiggsfieldByName`, `checkHiggsfieldResult`, `executeHiggsfieldByName`, `HIGGSFIELD_BY_NAME_NOT_SET_UP`, `HIGGSFIELD_LABEL`, `HIGGSFIELD_NOT_FROM_SCHEDULE`, `HiggsfieldKind`, `higgsfieldKindOf`, `higgsfieldPromptOf`, `HiggsfieldResult`, `higgsfieldResultsDoneSince`, `higgsfieldResultsFor`, `listHiggsfieldResults`, `markShownInChat` |
 | service | `src/services/contentFactory/higgsfieldClip.ts` | `checkHiggsfieldClip`, `estimateHiggsfieldClipsUsd`, `higgsfieldClipAvailable`, `HiggsfieldClipResult`, `makeHiggsfieldClip` |
 | service | `src/services/contentFactory/instagramRoute.ts` | `getInstagramRoute`, `instagramLoginSetUp`, `InstagramRoute`, `pageRouteSetUp`, `savedInstagramRoute`, `setInstagramRoute` |

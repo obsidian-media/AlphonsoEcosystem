@@ -5,8 +5,9 @@
 import { getConnectorCredential } from '../connectors/connectorAuth';
 import { cachedHiggsfieldEstimate, higgsfieldAvailable, higgsfieldModels, isHiggsfieldConfigured, refreshHiggsfieldEstimate } from '../connectors/higgsfieldConnector';
 import { canSpend, getPaidModelSettings } from '../jose/joseSpend';
-import { getVideoSettings } from './contentProjectService';
-import type { ContentBrand, ContentProject } from './contentTypes';
+import { chosenVersionOf, getVideoSettings } from './contentProjectService';
+import { characterUsable } from './contentCharacters';
+import type { BrandCharacter, ContentBrand, ContentProject } from './contentTypes';
 
 export type PaidEngine = 'elevenlabs' | 'higgsfield';
 export interface VoiceChoice { engine: 'kokoro' | 'elevenlabs'; voiceId: string; modelId?: string }
@@ -81,6 +82,32 @@ export function resolvePictures(project: ContentProject, brand: ContentBrand): {
   if (!estimate) return { engine: 'comfyui', note: "Higgsfield's estimate isn't known yet; made with ComfyUI." };
   if (typeof estimate.usd !== 'number') return { engine: 'comfyui', note: `${estimate.reason || 'Higgsfield gave no estimate.'} Made with ComfyUI.` };
   return { engine: 'higgsfield', usd: estimate.usd };
+}
+
+export const CHARACTER_DELETED = 'That character was deleted.';
+
+/**
+ * Who appears in a picture (phase 4c), and which engine keeps them: the scene's choice, else the
+ * project's, else the brand's main character; a scene Miya marked without a person shows none.
+ * Higgsfield needs the character trained; otherwise ComfyUI keeps it, with the reason.
+ */
+export function resolveCharacter(
+  project: ContentProject, brand: ContentBrand, sceneId: string | undefined, engine: 'higgsfield' | 'comfyui',
+): { character: BrandCharacter | null; use: 'higgsfield' | 'comfyui' | 'none'; note?: string } {
+  const scenes = (chosenVersionOf(project, 'scenes')?.output as { miya?: { scenes?: { id: string; character?: boolean; characterId?: string }[] } } | undefined)?.miya?.scenes;
+  const scene = sceneId ? scenes?.find((s) => s.id === sceneId) : undefined;
+  const id = scene?.characterId || getVideoSettings(project).characterId || brand.mainCharacterId;
+  if (!id || id === 'none') return { character: null, use: 'none' };
+  if (scene && !scene.characterId && scene.character === false) return { character: null, use: 'none' };
+  const character = brand.characters?.find((c) => c.id === id) || null;
+  if (!character) return { character: null, use: 'none', note: CHARACTER_DELETED };
+  const usable = characterUsable(character);
+  if (!usable.ok) return { character: null, use: 'none', note: `${character.name}: ${usable.reason}` };
+  if (engine === 'higgsfield') {
+    if (character.higgsfield?.status === 'ready' && character.higgsfield.characterId) return { character, use: 'higgsfield' };
+    return { character, use: 'comfyui', note: `${character.name} isn't trained on Higgsfield yet; kept with ComfyUI.` };
+  }
+  return { character, use: 'comfyui' };
 }
 
 /** The most pictures one approval covers for a step (Scenes: one per 5 s of the video). */

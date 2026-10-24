@@ -81,6 +81,18 @@ describe('makeShorts', () => {
     expect(calls('content_assemble_video')[0].spec.scenes[0]).toMatchObject({ aiClip: 'clip.mp4' });
   });
 
+  // Phase 4c: a mini Short's pictures show the brand's character.
+  it("a mini Short's pictures show the brand's main character", async () => {
+    const { addCharacter, updateCharacter } = await import('../../../services/contentFactory/contentCharacters');
+    const { listBrands } = await import('../../../services/contentFactory/contentBrandService');
+    const p = setup([mini]);
+    const brand = listBrands()[0];
+    const c = addCharacter(brand.id, { name: 'Ana', kind: 'made_up', description: 'a teacher with red glasses' });
+    updateCharacter(brand.id, c.id, { pictures: ['a', 'b', 'c', 'd', 'e'] });
+    await makeShorts(p.id, settings);
+    expect(generateComfyUiImage.mock.calls[0][0].prompt).toContain('a teacher with red glasses');
+  });
+
   it('a highlight speaks the hook and cuts the moment', async () => {
     const p = setup([highlight]);
     const [out] = await makeShorts(p.id, settings);

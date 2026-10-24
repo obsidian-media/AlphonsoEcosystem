@@ -5,7 +5,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { generateComfyUiImage, checkComfyUiImage, getComfyUiEndpoint } from '../connectors/connectorImageGenerators';
 import { higgsfieldKeys, higgsfieldModels } from '../connectors/higgsfieldConnector';
 import { canSpend, recordSpendUsd } from '../jose/joseSpend';
-import { higgsfieldPictureLimit, resolvePictures } from './engineChoice';
+import { higgsfieldPictureLimit, resolveCharacter, resolvePictures } from './engineChoice';
+import { CHARACTER_REFERENCE_MISSING, characterReferenceAvailable, withCharacterPrompt } from './comfyCharacter';
 import { getBrand } from './contentBrandService';
 import { addStepProgress, chosenVersionOf, getProject, setVersionOutputField } from './contentProjectService';
 import { loadProjectImage, outputPath, projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
@@ -69,9 +70,17 @@ function stripDataUrl(value: string | null): string {
  * One picture: from Higgsfield (within the approval and the monthly cap; saved at `higgsfieldRel`,
  * read back when text is drawn on it) or ComfyUI.
  */
+type Who = ReturnType<typeof resolveCharacter>;
+
+function addNote(choice: Choice, text: string | undefined): void {
+  if (text && !choice.notes.includes(text)) choice.notes.push(text);
+}
+
 async function makePicture(
   rootDir: string, choice: Choice, index: number, comfy: Parameters<typeof generateComfyUiImage>[0], aspect: string, higgsfieldRel: string, readBack: boolean,
+  who?: Who,
 ): Promise<ImageResult> {
+  addNote(choice, who?.note);
   if (choice.engine === 'higgsfield' && choice.usd !== undefined) {
     const cap = canSpend(choice.usd);
     if (index >= choice.limit) {
@@ -82,7 +91,10 @@ async function makePicture(
     } else {
       const models = higgsfieldModels();
       const answer = await invoke<{ ok?: boolean; status?: string; requestId?: string; reason?: string }>('higgsfield_run', {
-        job: { model: models.picture, prompt: comfy.prompt, aspect, extra: models.pictureExtra ?? null },
+        job: {
+          model: models.picture, prompt: comfy.prompt, aspect, extra: models.pictureExtra ?? null,
+          ...(who?.use === 'higgsfield' && who.character?.higgsfield?.characterId ? { characterId: who.character.higgsfield.characterId } : {}),
+        },
         workspaceRoot: rootDir, outPath: higgsfieldRel, keys: higgsfieldKeys(),
       }).catch(() => ({ ok: false, reason: 'Higgsfield could not be reached.' }));
       const made = await higgsfieldResult(rootDir, answer, choice.usd, higgsfieldRel, readBack);
@@ -91,8 +103,14 @@ async function makePicture(
       choice.notes.push(`Higgsfield couldn't make picture ${index + 1} (${made.error || 'no reason given'}); made with ComfyUI.`);
     }
   }
+  // ComfyUI keeps the character from its reference pictures when that model is installed (phase 4c).
+  let prompt = comfy.prompt;
+  if (who?.character && who.use !== 'none') {
+    prompt = withCharacterPrompt(prompt, who.character);
+    if (!(await characterReferenceAvailable())) addNote(choice, CHARACTER_REFERENCE_MISSING);
+  }
   try {
-    return await generateComfyUiImage(comfy, { endpoint: getComfyUiEndpoint() }) as ImageResult;
+    return await generateComfyUiImage({ ...comfy, prompt }, { endpoint: getComfyUiEndpoint() }) as ImageResult;
   } catch (error) {
     return { ok: false, error: (error as Error).message };
   }
@@ -157,6 +175,7 @@ export async function renderScenePictures(projectId: string, settings: Settings,
       root, choice, index,
       { prompt: [scene.imagePrompt, look].filter(Boolean).join('. '), negativePrompt: scene.negativePrompt || '', width: vertical ? 480 : 832, height: vertical ? 832 : 480 },
       vertical ? '9:16' : '16:9', `${projectRelativeDir(brand, project)}/scenes/${file}`, false,
+      resolveCharacter(project, brand, scene.id, choice.engine),
     );
     results.push(await toPicture(result, (b64) => saveProjectImage(root, brand, project, 'scenes', file, b64), { sceneId: scene.id }, `${projectRelativeDir(brand, project)}/scenes/${file}`));
   }
@@ -181,6 +200,7 @@ export async function renderThumbnails(projectId: string, settings: Settings, on
       // The headline is drawn by Alphonso afterwards: models misspell text.
       root, choice, index, { prompt: [concept.imagePrompt, look, 'no text, no letters, no words'].filter(Boolean).join('. '), width: 1280, height: 720 },
       '16:9', `${projectRelativeDir(brand, project)}/thumbnail/v${version.version}-${concept.id}-hf.png`, true,
+      resolveCharacter(project, brand, undefined, choice.engine),
     );
     const save = async (b64: string) => saveProjectImage(
       root, brand, project, 'thumbnail', file, await drawHeadline(b64, concept.headline, brand, concept.layout),
@@ -228,6 +248,7 @@ export async function renderCarouselSlides(projectId: string, settings: Settings
       // The text is drawn by Alphonso afterwards: models misspell text.
       root, choice, index, { prompt: [slide.imagePrompt, look, 'no text, no letters, no words'].filter(Boolean).join('. '), width: size.width, height: size.height },
       aspectOf(size.width, size.height), `${projectRelativeDir(brand, project)}/carousel/v${version.version}-${slide.id}-hf.png`, true,
+      resolveCharacter(project, brand, undefined, choice.engine),
     );
     const save = async (b64: string) => saveProjectImage(root, brand, project, 'carousel', file, await drawnSlide(b64, slide, brand));
     results.push(await toPicture(result, save, { sceneId: slide.id, headline: slide.headline }, `${projectRelativeDir(brand, project)}/carousel/${file}`));

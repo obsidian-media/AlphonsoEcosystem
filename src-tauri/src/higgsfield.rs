@@ -39,7 +39,13 @@ pub(crate) struct HiggsfieldJob {
   /// The user's "Extra settings (JSON)" for this model id.
   #[serde(default)]
   extra: Option<Value>,
+  /// A brand character trained on Higgsfield (phase 4c).
+  #[serde(default)]
+  character_id: Option<String>,
 }
+
+/// The request field for a trained character (phase 4c; Higgsfield's "Soul ID", confirm live).
+pub(crate) const CHARACTER_FIELD: &str = "soul_id";
 
 pub(crate) const EXTRA_REFUSED: &str =
   "Extra settings must be a JSON object and can't replace the prompt or picture.";
@@ -71,6 +77,20 @@ pub(crate) fn request_body(job: &HiggsfieldJob, image_url: Option<&str>) -> Resu
     .filter(|a| ["16:9", "9:16", "1:1", "4:5"].contains(a))
   {
     body["aspect_ratio"] = Value::String(aspect.to_string());
+  }
+  if let Some(id) = job
+    .character_id
+    .as_deref()
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+  {
+    if !id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
+    {
+      return Err("That is not a Higgsfield character id.".to_string());
+    }
+    body[CHARACTER_FIELD] = Value::String(id.to_string());
   }
   match &job.extra {
     None | Some(Value::Null) => {}
@@ -649,6 +669,7 @@ pub(crate) async fn higgsfield_test(
     seconds: None,
     aspect: None,
     extra,
+    character_id: None,
   };
   higgsfield_estimate(job, keys).await
 }
@@ -939,6 +960,7 @@ mod tests {
       seconds: Some(5.2),
       aspect: Some("9:16".into()),
       extra,
+      character_id: None,
     }
   }
 
@@ -1259,5 +1281,22 @@ mod tests {
       training_of(&json!({ "status": "queued", "request_id": "r" })),
       Training::InProgress
     );
+  }
+
+  #[test]
+  fn a_trained_character_goes_with_the_request() {
+    let mut with = job(None);
+    with.character_id = Some("soul-9".into());
+    assert_eq!(
+      request_body(&with, None).unwrap()[CHARACTER_FIELD],
+      json!("soul-9")
+    );
+    assert!(request_body(&job(None), None)
+      .unwrap()
+      .get(CHARACTER_FIELD)
+      .is_none());
+    // A character id that isn't one is refused before anything is sent.
+    with.character_id = Some("../x".into());
+    assert!(request_body(&with, None).is_err());
   }
 }

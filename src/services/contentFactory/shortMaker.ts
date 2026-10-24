@@ -15,6 +15,8 @@ import { captionsFromLines, toSrt, alignCaptions } from './contentCaptions';
 import { chosenVersionOf, getProject, getShortsSettings, getVideoSettings, setShortOutput } from './contentProjectService';
 import { projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
 import { makeComfyClip } from './comfyVideoClip';
+import { resolveCharacter } from './engineChoice';
+import { withCharacterPrompt } from './comfyCharacter';
 import { makeRunwayClip } from './runwayClip';
 import { makeHiggsfieldClip } from './higgsfieldClip';
 import { brandFontName, darkestColour, headlineColour } from './thumbnailRenderer';
@@ -91,11 +93,13 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
   const parts = plan.parts || [];
   if (!parts.length) return { shortId: plan.id, status: 'failed', reason: NEEDS_SCRIPT };
   const look = [ctx.brand.visualStyle, ctx.brand.characterRefs].filter(Boolean).join(', ');
+  // The project's (else the brand's main) character in the Short's pictures (phase 4c).
+  const who = resolveCharacter(ctx.project, ctx.brand, undefined, 'comfyui');
   const pictures: (string | null)[] = [];
   for (const [i, part] of parts.entries()) {
     const file = `v${ctx.n}-p${i + 1}.png`;
     const result = await generateComfyUiImage(
-      { prompt: [part.imagePrompt, look, 'no text, no letters, no words'].filter(Boolean).join('. '), width: 480, height: 832 },
+      { prompt: withCharacterPrompt([part.imagePrompt, look, 'no text, no letters, no words'].filter(Boolean).join('. '), who.use === 'none' ? null : who.character), width: 480, height: 832 },
       { endpoint: getComfyUiEndpoint() },
     ).catch(() => null) as { ok?: boolean; previewBase64?: string } | null;
     if (result?.ok && result.previewBase64) {

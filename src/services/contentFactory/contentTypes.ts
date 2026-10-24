@@ -212,6 +212,8 @@ export interface VideoSettings {
   /** This project's voice and pictures, over the brand's (phase 4b); unset = the brand's. */
   voiceEngine?: 'kokoro' | 'elevenlabs';
   pictures?: 'comfyui' | 'higgsfield';
+  /** The character this project uses (phase 4c): a brand character's id, or 'none'; the brand's main one when not set. */
+  characterId?: string;
 }
 
 export const DEFAULT_VIDEO_SETTINGS: VideoSettings = { aiClips: 'main', clipEngine: null, runwayModel: 'gen4_turbo' };
