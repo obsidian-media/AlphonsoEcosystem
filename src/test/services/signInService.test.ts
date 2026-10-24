@@ -59,6 +59,16 @@ describe('signIn', () => {
     expect(saved.meta).toMatchObject({ META_PAGE_ID: '3', META_PAGE_ACCESS_TOKEN: 'pt3', INSTAGRAM_BUSINESS_ACCOUNT_ID: 'ig3' });
   });
 
+  // Final review: no Page means Facebook posts can't work; say so instead of a plain "signed in".
+  it('Meta with no Page says so', async () => {
+    saved.meta = { META_APP_ID: 'app', META_APP_SECRET: 'sec' };
+    invoke.mockResolvedValue({ ok: true, tokens: { META_ACCESS_TOKEN: 'long' }, pages: [] });
+    const result = await signIn('meta', NOW);
+    expect(result.ok).toBe(true);
+    expect(result.note).toMatch(/no Facebook Page/);
+    expect(saved.meta.META_ACCESS_TOKEN).toBe('long');
+  });
+
   it('Instagram saves the token and account and records the sign-in', async () => {
     saved.meta = { INSTAGRAM_APP_ID: 'iga', INSTAGRAM_APP_SECRET: 'igs' };
     invoke.mockResolvedValue({ ok: true, tokens: { INSTAGRAM_LOGIN_TOKEN: 'lt', INSTAGRAM_LOGIN_USER_ID: 'u1' }, pages: [], expiresInSecs: 5_184_000 });

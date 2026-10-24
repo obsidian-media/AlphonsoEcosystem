@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from './ui';
 import { chooseMetaPage, finishPastedSignIn, signIn, type MetaPage } from '../services/signInService';
 import { getConnectorCredential, saveConnectorCredential } from '../services/connectors/connectorAuth';
@@ -42,8 +42,14 @@ export function SignInButton({ service }: { service: SignInService }): React.JSX
   const [pages, setPages] = useState<MetaPage[]>([]);
   const [pageId, setPageId] = useState('');
   const label = LABEL[service];
+  // Which sign-in attempt is current: once one finishes (by the browser or a pasted
+  // address), a later answer from the same attempt is ignored.
+  const attempt = useRef(0);
+  const settled = useRef(0);
 
-  const done = (outcome: { ok: boolean; reason?: string; pages?: MetaPage[] }) => {
+  const done = (outcome: { ok: boolean; reason?: string; pages?: MetaPage[]; note?: string }, which: number) => {
+    if (which !== attempt.current || settled.current === which) return;
+    settled.current = which;
     setWaiting(false);
     if (!outcome.ok) { setMessage(outcome.reason || 'The sign-in did not finish.'); return; }
     if (outcome.pages?.length) {
@@ -52,16 +58,24 @@ export function SignInButton({ service }: { service: SignInService }): React.JSX
       setMessage('Signed in. Choose the Facebook Page to post to.');
       return;
     }
-    setMessage(`Signed in to ${label.name}.`);
+    setMessage(outcome.note || `Signed in to ${label.name}.`);
   };
   const start = () => {
+    attempt.current += 1;
+    const which = attempt.current;
     setWaiting(true);
     setMessage('Waiting for the browser (5 minutes at most)…');
     setPages([]);
-    signIn(service).then(done, () => done({ ok: false }));
+    signIn(service).then((o) => done(o, which), () => done({ ok: false }, which));
   };
   const finish = () => {
-    finishPastedSignIn(service, pasted).then(done, () => done({ ok: false }));
+    const which = attempt.current;
+    // A wrong address says why; the browser can still come back, so the attempt goes on.
+    const pastedDone = (o: { ok: boolean; reason?: string; pages?: MetaPage[]; note?: string }) => {
+      if (o.ok) done(o, which);
+      else if (which === attempt.current && settled.current !== which) setMessage(o.reason || 'That address did not finish the sign-in.');
+    };
+    finishPastedSignIn(service, pasted).then(pastedDone, () => pastedDone({ ok: false }));
   };
 
   return (

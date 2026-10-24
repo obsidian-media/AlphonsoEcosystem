@@ -71,6 +71,42 @@ describe('SignInButton', () => {
   });
 });
 
+// Final review: the first wait ending later must not undo a sign-in finished by pasting.
+it('a pasted sign-in stays signed in when the browser wait ends later', async () => {
+  let endWait: (v: unknown) => void = () => undefined;
+  signIn.mockImplementation(() => new Promise((r) => { endWait = r; }));
+  finishPastedSignIn.mockResolvedValue({ ok: true });
+  render(<SignInButton service="instagram" />);
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in with Instagram' }));
+  fireEvent.change(await screen.findByLabelText('The address the browser ended on'), { target: { value: 'http://localhost:8087/callback?code=x&state=y' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Finish signing in' }));
+  expect(await screen.findByText('Signed in to Instagram.')).toBeTruthy();
+  endWait({ ok: false, reason: 'No answer from the browser within 5 minutes.' });
+  await new Promise((r) => setTimeout(r, 0));
+  expect(screen.getByRole('status').textContent).toBe('Signed in to Instagram.');
+});
+
+it('a wrong pasted address says why and still waits for the browser', async () => {
+  let endWait: (v: unknown) => void = () => undefined;
+  signIn.mockImplementation(() => new Promise((r) => { endWait = r; }));
+  finishPastedSignIn.mockResolvedValue({ ok: false, reason: 'That is not the address the browser ended on.' });
+  render(<SignInButton service="youtube" />);
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in to YouTube' }));
+  fireEvent.change(await screen.findByLabelText('The address the browser ended on'), { target: { value: 'nonsense' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Finish signing in' }));
+  expect(await screen.findByText('That is not the address the browser ended on.')).toBeTruthy();
+  expect(screen.getByLabelText('The address the browser ended on')).toBeTruthy();
+  endWait({ ok: true });
+  expect(await screen.findByText('Signed in to YouTube.')).toBeTruthy();
+});
+
+it('a note with the sign-in is shown', async () => {
+  signIn.mockResolvedValue({ ok: true, note: 'Signed in, but this account has no Facebook Page.' });
+  render(<SignInButton service="meta" />);
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in to Facebook' }));
+  expect(await screen.findByText('Signed in, but this account has no Facebook Page.')).toBeTruthy();
+});
+
 describe('InstagramLoginSection', () => {
   it('saves the Instagram app keys and has the route choice', () => {
     render(<InstagramLoginSection />);

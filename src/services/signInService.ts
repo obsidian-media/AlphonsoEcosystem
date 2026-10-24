@@ -8,7 +8,7 @@ import { getConnectorCredential, saveConnectorCredential } from './connectors/co
 import { recordSignIn, signedInAt, type SignInService } from './contentFactory/signInExpiry';
 
 export interface MetaPage { id: string; name: string; accessToken: string; instagramBusinessAccountId?: string | null }
-export interface SignInOutcome { ok: boolean; reason?: string; pages?: MetaPage[] }
+export interface SignInOutcome { ok: boolean; reason?: string; pages?: MetaPage[]; /** Something to know about a sign-in that worked. */ note?: string }
 
 interface BackendResult { ok: boolean; tokens?: Record<string, string>; pages?: MetaPage[]; expiresInSecs?: number | null; reason?: string | null }
 
@@ -49,6 +49,7 @@ function finish(service: SignInService, result: BackendResult | null, nowMs: num
     const pages = result.pages || [];
     if (pages.length === 1) chooseMetaPage(pages[0]);
     else if (pages.length > 1) return { ok: true, pages };
+    else return { ok: true, note: 'Signed in, but this account has no Facebook Page: Facebook posts (and Instagram through a Page) need one. Create a Page, then sign in again, or use Instagram Login.' };
   }
   return { ok: true };
 }
