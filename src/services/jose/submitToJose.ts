@@ -78,6 +78,12 @@ function toAssignments(steps: PlanStep[], planNote: string) {
 export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const { text, source, history, planFresh, endpoint, zeroCostMode, previewMode, onProgress, onToken } = input;
 
+  // Asked for Higgsfield by name (phase 4b): one Miya step that asks with the estimate. Checked first:
+  // "a Higgsfield video for my channel" also fits the content video template.
+  const { askHiggsfieldByName } = await import('../contentFactory/higgsfieldByName');
+  const higgsfield = await askHiggsfieldByName({ text, source, onProgress, allowPaidModels: input.allowPaidModels });
+  if (higgsfield) return higgsfield;
+
   // From Chat, a content video becomes a Miya Studio project run as one request
   // (phase 6b, owner). "Plan this fresh" still plans it. Checked before the
   // shortcuts: the creative one would answer "videos aren't available" first.
@@ -89,11 +95,6 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
       return { ok: started.ok, reason: started.ok ? undefined : started.note, contentProjectId: started.projectId || null, plan: null, planNote: started.note };
     }
   }
-
-  // Asked for Higgsfield by name (phase 4b): one Miya step that asks with the estimate.
-  const { askHiggsfieldByName } = await import('../contentFactory/higgsfieldByName');
-  const higgsfield = await askHiggsfieldByName({ text, source, onProgress });
-  if (higgsfield) return higgsfield;
 
   const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });
   if (shortcut) return { ...shortcut, plan: null, planNote: '' };

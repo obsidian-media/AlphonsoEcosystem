@@ -23,7 +23,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { runJoseCommandExecutionPipeline } from '../../../services/joseExecutionEngineService';
 import { detectCreativeIntent } from '../../../services/creativeRoutingService';
 import { submitToJose } from '../../../services/jose/submitToJose';
-import { executeHiggsfieldByName, listHiggsfieldResults, HIGGSFIELD_BY_NAME_NOT_SET_UP, HIGGSFIELD_LABEL } from '../../../services/contentFactory/higgsfieldByName';
+import { executeHiggsfieldByName, listHiggsfieldResults, HIGGSFIELD_BY_NAME_NOT_SET_UP, HIGGSFIELD_LABEL, HIGGSFIELD_NOT_FROM_SCHEDULE } from '../../../services/contentFactory/higgsfieldByName';
 import { sendTelegramFileOrFolder } from '../../../services/telegramCompanionService';
 import { setStorage } from '../../../lib/appStorage';
 import { monthSpendUsd } from '../../../services/jose/joseSpend';
@@ -54,6 +54,19 @@ describe('asking for Higgsfield by name', () => {
     });
     expect(args.assignments[0].effects).toContain('spend');
     expect(result.planNote).toContain(HIGGSFIELD_LABEL);
+  });
+
+  it('is asked of Higgsfield even when the wording also fits a content video', async () => {
+    await submitToJose({ text: 'make a Higgsfield video for my channel of a pour', source: 'user' });
+    const args = vi.mocked(runJoseCommandExecutionPipeline).mock.calls[0]?.[0] as any;
+    expect(args?.assignments?.[0]).toMatchObject({ actionType: 'creative_higgsfield', payload: { kind: 'video' } });
+  });
+
+  it('a schedule never asks Higgsfield: it costs money', async () => {
+    const result = await submitToJose({ text: 'make a Higgsfield picture of a sunrise', source: 'schedule', allowPaidModels: false });
+    expect(result).toMatchObject({ ok: false, planNote: HIGGSFIELD_NOT_FROM_SCHEDULE });
+    expect(HIGGSFIELD_NOT_FROM_SCHEDULE).toBe("Higgsfield costs money, so a schedule doesn't use it. Nothing was started.");
+    expect(runJoseCommandExecutionPipeline).not.toHaveBeenCalled();
   });
 
   it('not set up → the plain reply and nothing started', async () => {

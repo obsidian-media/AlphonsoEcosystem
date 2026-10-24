@@ -15,6 +15,7 @@ import { contentAppSettings } from './contentStepRecorder';
 
 export const HIGGSFIELD_BY_NAME_NOT_SET_UP = "Higgsfield isn't set up: add your keys and a model id in Settings → Connectors → Higgsfield. Nothing was started.";
 export const HIGGSFIELD_LABEL = 'Asked for Higgsfield by name.';
+export const HIGGSFIELD_NOT_FROM_SCHEDULE = "Higgsfield costs money, so a schedule doesn't use it. Nothing was started.";
 const RESULTS_KEY = 'alphonso_higgsfield_results_v1';
 const KEEP = 100;
 
@@ -51,9 +52,11 @@ function modelFor(kind: HiggsfieldKind): string | undefined {
 }
 
 /** Plans the request as one Miya step with the estimate, or says what to set up; nothing starts without it. */
-export async function askHiggsfieldByName(input: { text: string; source: string; onProgress?: (event: unknown) => void }): Promise<any> {
+export async function askHiggsfieldByName(input: { text: string; source: string; allowPaidModels?: boolean; onProgress?: (event: unknown) => void }): Promise<any> {
   const kind = higgsfieldKindOf(input.text);
   if (!kind) return null;
+  // A caller that may never spend (a schedule; owner, 2026-10-23).
+  if (input.allowPaidModels === false) return { ok: false, reason: HIGGSFIELD_NOT_FROM_SCHEDULE, plan: null, planNote: HIGGSFIELD_NOT_FROM_SCHEDULE };
   if (!higgsfieldAvailable().ok || !modelFor(kind)) return { ok: false, reason: HIGGSFIELD_BY_NAME_NOT_SET_UP, plan: null, planNote: HIGGSFIELD_BY_NAME_NOT_SET_UP };
   const estimate = await refreshHiggsfieldEstimate(kind === 'picture' ? 'picture' : 'clip', kind === 'video' ? { seconds: 5 } : {});
   if (!estimate.ok || typeof estimate.usd !== 'number') {
