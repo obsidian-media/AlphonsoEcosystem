@@ -4,6 +4,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 const publishPost = vi.fn();
 const scheduleContentPost = vi.fn();
 const scheduleContentReminder = vi.fn();
+const checkDailyLimit = vi.fn();
+vi.mock('../../../services/contentFactory/dailyLimits', () => ({ checkDailyLimit: (...a: unknown[]) => checkDailyLimit(...a) }));
 vi.mock('../../../services/contentFactory/publishPost', () => ({ publishPost: (...a: unknown[]) => publishPost(...a) }));
 vi.mock('../../../services/marcusExecutionService', () => ({
   scheduleContentPost: (...a: unknown[]) => scheduleContentPost(...a),
@@ -35,6 +37,7 @@ beforeEach(() => {
   publishPost.mockReset();
   scheduleContentPost.mockReset();
   scheduleContentReminder.mockReset();
+  checkDailyLimit.mockReset().mockResolvedValue({ ok: true });
 });
 
 describe('executePublishStep', () => {
@@ -95,6 +98,20 @@ describe('executePublishStep', () => {
     expect(result.resultState).toBe('failed');
     expect(result.failureReason).toContain('quota');
     expect(result.failureReason).toContain('token');
+  });
+});
+
+describe('executePublishStep and the daily limits', () => {
+  it('a Facebook Reel over the limit waits for its time in the runner; sent posts record when', async () => {
+    const id = setup([{ platform: 'facebook', piece: 'reel' }, { platform: 'youtube' }]);
+    checkDailyLimit.mockImplementation(async (p: ProjectPost) => (p.platform === 'facebook'
+      ? { ok: false, retryAtMs: NOW + 5 * HOUR, reason: 'Facebook allows 30 Reels in 24 hours' } : { ok: true }));
+    publishPost.mockResolvedValue({ status: 'scheduled', platformId: 'v1' });
+    const result = await executePublishStep(assignmentFor(id), NOW);
+    expect(result.resultState).toBe('completed');
+    expect(posts(id)[0]).toMatchObject({ status: 'over_limit', reason: expect.stringContaining('30 Reels') });
+    expect(scheduleContentPost).toHaveBeenCalledWith({ projectId: id, postId: 'post-0', platform: 'facebook', scheduledAt: NOW + 5 * HOUR });
+    expect(posts(id)[1]).toMatchObject({ status: 'scheduled', sentAtMs: NOW });
   });
 });
 

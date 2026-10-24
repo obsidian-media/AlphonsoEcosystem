@@ -51,8 +51,9 @@ export async function movePost(projectId: string, postId: string, atMs: number, 
   if (moving.has(postId)) return { ok: false, reason: 'Moving…' };
   if (!onPlatform(post)) {
     const result = updatePost(projectId, postId, { scheduledAtMs: atMs });
-    if (result.ok && post.platform === 'instagram' && post.status === 'scheduled') {
-      scheduleContentPost({ projectId, postId, platform: 'instagram', scheduledAt: atMs });
+    // A send waiting in Marcus's runner moves with it: an Instagram post, or one held by a daily limit.
+    if (result.ok && ((post.platform === 'instagram' && post.status === 'scheduled') || post.status === 'over_limit')) {
+      scheduleContentPost({ projectId, postId, platform: post.platform, scheduledAt: atMs });
     }
     return result.ok ? { ok: true } : { ok: false, reason: result.reason };
   }

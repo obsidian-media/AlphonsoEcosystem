@@ -11,7 +11,7 @@ const PIECE: Record<ProjectPost['piece'], string> = { video: 'video', short: 'Sh
 const VARIANT: Partial<Record<PostStatus, 'success' | 'warning' | 'error' | 'info'>> = {
   posted: 'success', scheduled: 'info', approved: 'info', failed: 'error', check: 'warning', locked_private: 'warning', ask: 'warning',
 };
-const EDITABLE: PostStatus[] = ['draft', 'approved', 'failed', 'scheduled'];
+const EDITABLE: PostStatus[] = ['draft', 'approved', 'failed', 'scheduled', 'over_limit'];
 
 /** A local time for <input type="datetime-local">, and back. */
 function toLocalInput(ms: number): string {

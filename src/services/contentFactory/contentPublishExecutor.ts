@@ -11,6 +11,7 @@ import { updatePost } from './contentPosts';
 import { contentAppSettings } from './contentStepRecorder';
 import type { StepId } from './contentTypes';
 import { publishPost, type PostResult } from './publishPost';
+import { checkDailyLimit } from './dailyLimits';
 
 export const NO_APPROVED_POSTS = 'No posts are approved. Check the Posts list in Campaign Studio and choose "Approve and schedule".';
 
@@ -44,6 +45,14 @@ export async function executePublishStep(assignment: PublishAssignment, nowMs = 
       scheduleContentPost({ projectId, postId: post.id, platform: 'instagram', scheduledAt: post.scheduledAtMs });
       outcome = { status: 'scheduled', reason: 'Alphonso posts this at its time (Meta cannot schedule Instagram); it goes out at the next start if the app is closed then.' };
     } else {
+      const limit = await checkDailyLimit(post, nowMs);
+      if (!limit.ok) {
+        // Over the daily limit (phase 3b): Marcus's runner sends it when there is room.
+        scheduleContentPost({ projectId, postId: post.id, platform: post.platform, scheduledAt: limit.retryAtMs as number });
+        updatePost(projectId, post.id, { status: 'over_limit', reason: limit.reason });
+        outcomes.push({ id: post.id, platform: post.platform, piece: post.piece, status: 'over_limit', reason: limit.reason });
+        continue;
+      }
       outcome = await publishPost(post, settings, nowMs);
       if (outcome.status === 'locked_private' && post.scheduledAtMs > nowMs && outcome.platformId) {
         scheduleContentReminder({
@@ -52,7 +61,8 @@ export async function executePublishStep(assignment: PublishAssignment, nowMs = 
         });
       }
     }
-    updatePost(projectId, post.id, { status: outcome.status, link: outcome.link, platformId: outcome.platformId, reason: outcome.reason });
+    const sent = (outcome.status === 'posted' || outcome.status === 'scheduled') && !(post.platform === 'instagram' && post.scheduledAtMs > nowMs + 60_000);
+    updatePost(projectId, post.id, { status: outcome.status, link: outcome.link, platformId: outcome.platformId, reason: outcome.reason, ...(sent ? { sentAtMs: nowMs } : {}) });
     outcomes.push({ id: post.id, platform: post.platform, piece: post.piece, status: outcome.status, link: outcome.link, reason: outcome.reason });
   }
 
@@ -62,6 +72,7 @@ export async function executePublishStep(assignment: PublishAssignment, nowMs = 
     count('posted') && `${count('posted')} posted`,
     count('locked_private') && `${count('locked_private')} kept private by YouTube (a reminder comes at the time)`,
     count('check') && `${count('check')} to check`,
+    count('over_limit') && `${count('over_limit')} waiting for the daily limit`,
     count('failed') && `${count('failed')} failed`,
   ].filter(Boolean);
   const summary = `Posts: ${parts.join(', ')}.`;

@@ -55,6 +55,12 @@ describe('movePost', () => {
     expect(scheduleContentPost).toHaveBeenCalledWith({ projectId, postId, platform: 'instagram', scheduledAt: NOW + 3 * DAY });
   });
 
+  it('a post waiting for the daily limit moves, and so does its send', async () => {
+    const { projectId, postId } = withPost({ platform: 'facebook', status: 'over_limit' });
+    expect(await movePost(projectId, postId, NOW + 3 * DAY, NOW)).toEqual({ ok: true });
+    expect(scheduleContentPost).toHaveBeenCalledWith({ projectId, postId, platform: 'facebook', scheduledAt: NOW + 3 * DAY });
+  });
+
   it('a YouTube post scheduled on YouTube moves only after YouTube keeps the new time, and is recorded', async () => {
     const { projectId, postId } = withPost({ platform: 'youtube', piece: 'video', status: 'scheduled', platformId: 'v1' });
     rescheduleYouTubeVideo.mockResolvedValue({ ok: true, publishAt: new Date(NOW + 3 * DAY).toISOString() });

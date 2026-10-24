@@ -13,6 +13,7 @@ import { updatePost } from './contentFactory/contentPosts';
 import { appendNotification } from './notificationService';
 import { listProjects } from './contentFactory/contentProjectService';
 import { signInWarnings } from './contentFactory/signInExpiry';
+import { checkDailyLimit } from './contentFactory/dailyLimits';
 import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -619,7 +620,7 @@ async function tell(type: 'success' | 'error' | 'info', title: string, message: 
   } catch { /* not set up, or offline */ }
 }
 
-function setPost(item: ScheduledPublish, patch: { status: PostStatus; link?: string; platformId?: string; reason?: string }): void {
+function setPost(item: ScheduledPublish, patch: { status: PostStatus; link?: string; platformId?: string; reason?: string; sentAtMs?: number }): void {
   if (!item.projectId || !item.postId) return;
   try { updatePost(item.projectId, item.postId, patch); } catch { /* the project was deleted */ }
 }
@@ -660,8 +661,17 @@ async function sendContentPost(item: ScheduledPublish, nowMs: number): Promise<v
     return;
   }
   const late = nowMs - item.scheduledAt > LATE_NOTE_AFTER_MS;
+  // Over the platform's daily limit (phase 3b): wait, and try again when there is room.
+  const limit = await checkDailyLimit(post, nowMs);
+  if (!limit.ok) {
+    setPost(item, { status: 'over_limit', reason: limit.reason });
+    const later = _loadSchedule();
+    const again = later.find((i) => i.id === item.id);
+    if (again) { again.status = 'pending'; again.scheduledAt = limit.retryAtMs as number; _saveSchedule(later); }
+    return;
+  }
   const result = await publishPost(post, contentAppSettings(), nowMs);
-  setPost(item, result);
+  setPost(item, { ...result, ...(result.status === 'posted' || result.status === 'scheduled' ? { sentAtMs: nowMs } : {}) });
   const after = _loadSchedule();
   const done = after.find((i) => i.id === item.id);
   if (done) {
