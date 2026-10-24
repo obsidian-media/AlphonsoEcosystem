@@ -1061,6 +1061,8 @@ pub(crate) fn caption_font(name: Option<&str>) -> String {
 
 /// Whether Windows' fonts list (`reg query` output) has this family:
 /// a value name that is the family, then a space or "(".
+// Used by the Windows font check; other systems only test it.
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn font_listed(reg_output: &str, family: &str) -> bool {
   let want = family.trim().to_lowercase();
   if want.is_empty() {
