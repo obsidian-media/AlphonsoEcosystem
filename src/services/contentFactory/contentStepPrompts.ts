@@ -2,7 +2,7 @@
 // checked. A reply that does not match is refused (null): the step then fails
 // and says so, it is never filled in with stock text.
 import { extractJsonObject } from '../../lib/jsonUtils.js';
-import { hasOwnKey, type ContentStepPayload, type StepId } from './contentTypes';
+import { type ContentStepPayload, type StepId } from './contentTypes';
 
 type Json = Record<string, unknown>;
 
@@ -108,7 +108,7 @@ function brandText(payload: ContentStepPayload): string {
 }
 
 export function buildStepPrompt(payload: ContentStepPayload, agent: string, actionType: string): { system: string; prompt: string } {
-  const action = hasOwnKey(ACTIONS, actionType) ? ACTIONS[actionType] : undefined;
+  const action = ACTION_MAP.get(actionType);
   const brief = payload.brief;
   const system = `You are ${action?.role || agent}. ${HONEST_COPY} Return JSON only, with exactly these keys. Each value below describes what to write: replace it with your own content (numbers as numbers, true/false as booleans): ${action?.keys || '{}'}`;
   const parts = [
@@ -252,7 +252,7 @@ function repairShorts(shorts: Json[], defaultPlatforms: string[]): Json[] {
 /** The agent's answer as an object, or null when it is not usable. */
 export function parseStepAnswer(actionType: string, text: string, options: { allowedUrls?: string[]; defaultPlatforms?: string[] } = {}): unknown | null {
   // Own keys only: a name like "constructor" must not find Object's methods (CodeQL).
-  const validate = hasOwnKey(VALIDATORS, actionType) ? VALIDATORS[actionType] : undefined;
+  const validate = VALIDATOR_MAP.get(actionType);
   if (!validate) return null;
   let parsed: unknown = null;
   try {
@@ -292,5 +292,9 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
   }
   return validate(answer) ? answer : null;
 }
+
+// Looked up through Maps so an unknown name can never reach another object's method (CodeQL 36).
+const ACTION_MAP = new Map(Object.entries(ACTIONS));
+const VALIDATOR_MAP = new Map(Object.entries(VALIDATORS));
 
 export const CONTENT_ACTION_KEYS: Record<string, string> = Object.fromEntries(Object.entries(ACTIONS).map(([id, a]) => [id, a.keys]));

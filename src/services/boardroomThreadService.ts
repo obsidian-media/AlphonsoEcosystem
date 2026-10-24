@@ -250,7 +250,8 @@ export function addThreadMessage({
     kind,
     riskLevel: risk.riskLevel,
     approvalRequired: risk.approvalRequired,
-    secretRedacted: risk.secretDetected,
+    // Read off the stored text, so nothing derived from the secret check is stored (CodeQL 26).
+    secretRedacted: text === '[REDACTED_SECRET]',
     mentionedAgents,
     retryContext,
     model,
