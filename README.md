@@ -4,7 +4,7 @@
 
 # Alphonso
 
-> **v2.10.0** — Local-first AI desktop companion with 9 agents, 31 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.10.0** — Local-first AI desktop companion with 9 agents, 33 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.10.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-5645%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
@@ -423,7 +423,7 @@ All connectors are policy-gated through `connectorRegistryService.js`. See [docs
 
 ## License Tiers
 
-**Free at launch: every agent and all 31 connectors, no license key.** Paid tiers are not on sale. The licensing code (`licenseService.ts`) stays dormant until a vendor signing key is configured. Third-party services you connect bill you directly through your own API keys, and Zero-Cost Mode blocks paid calls until you approve them.
+**Free at launch: every agent and all 33 connectors, no license key.** Paid tiers are not on sale. The licensing code (`licenseService.ts`) stays dormant until a vendor signing key is configured. Third-party services you connect bill you directly through your own API keys, and Zero-Cost Mode blocks paid calls until you approve them.
 
 See [docs/PRICING.md](docs/PRICING.md) for details.
 

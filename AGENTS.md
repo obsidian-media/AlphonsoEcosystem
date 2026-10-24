@@ -108,7 +108,7 @@ cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 - **parallelExecutionService.ts** — parallel task execution with concurrency control and retry
 - **cacheService.ts** — memory caching with TTL and LRU eviction
 - **orchestrationQueueService.js** manages durable queue with dead-letter replay
-- All 31 connectors (Telegram, WhatsApp Cloud, YouTube, Meta (Facebook and Instagram), mobile_bridge, ChatGPT, Claude, Qwen, Notion, ClickUp, SD WebUI, ComfyUI Video, Runway, GitHub, Slack, Discord, Generic Webhook, Ollama, Brave Search, Perplexity, Tavily, DeepSeek, NVIDIA NIM, Gemini, n8n, Hermes Agents, CALL-E, Pexels, Pixabay, Coverr, Your storage) are policy-gated
+- All 33 connectors (ElevenLabs and Higgsfield since content factory phase 4b; Telegram, WhatsApp Cloud, YouTube, Meta (Facebook and Instagram), mobile_bridge, ChatGPT, Claude, Qwen, Notion, ClickUp, SD WebUI, ComfyUI Video, Runway, GitHub, Slack, Discord, Generic Webhook, Ollama, Brave Search, Perplexity, Tavily, DeepSeek, NVIDIA NIM, Gemini, n8n, Hermes Agents, CALL-E, Pexels, Pixabay, Coverr, Your storage) are policy-gated
 - `externalAgentAdapter.js` is the only intentional placeholder — returns `not_wired` for `acc` and `gemini` providers only; real implementations exist for deepseek/openai/claude/ollama
 - Window close now calls `std::process::exit(0)` to prevent WebView2 zombie process leak
 
