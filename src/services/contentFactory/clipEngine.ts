@@ -6,14 +6,16 @@ import type { VideoSettings } from './contentTypes';
 export const NO_CLIP_ENGINE = 'Install a video model in Runtime Hub (ComfyUI), or add a Runway key in Connectors.';
 const NO_LOCAL_MODEL = 'No video model is installed. Install one in Runtime Hub (ComfyUI).';
 
-export interface ClipEngineChoice { engine: 'local' | 'runway' | null; reason?: string }
+export interface ClipEngineChoice { engine: 'local' | 'runway' | 'higgsfield' | null; reason?: string }
 
 export function resolveClipEngine(
   settings: VideoSettings,
-  have: { localModelInstalled: boolean; runway: { ok: boolean; reason?: string } },
+  have: { localModelInstalled: boolean; runway: { ok: boolean; reason?: string }; higgsfield?: { ok: boolean; reason?: string } },
 ): ClipEngineChoice {
   if (settings.clipEngine === 'local') return have.localModelInstalled ? { engine: 'local' } : { engine: null, reason: NO_LOCAL_MODEL };
   if (settings.clipEngine === 'runway') return have.runway.ok ? { engine: 'runway' } : { engine: null, reason: have.runway.reason };
+  // Higgsfield (phase 4b) only when chosen; never picked automatically.
+  if (settings.clipEngine === 'higgsfield') return have.higgsfield?.ok ? { engine: 'higgsfield' } : { engine: null, reason: `${have.higgsfield?.reason || "Higgsfield isn't set up"}.` };
   if (have.localModelInstalled) return { engine: 'local' };
   if (have.runway.ok) return { engine: 'runway' };
   return { engine: null, reason: NO_CLIP_ENGINE };

@@ -111,7 +111,7 @@ export interface ShortPlan {
 /** The Shorts' own AI clip setting (phase 3d), separate from the long video's. */
 export interface ShortsSettings {
   aiClips: 'main' | 'every' | 'none';
-  clipEngine: 'local' | 'runway' | null;
+  clipEngine: 'local' | 'runway' | 'higgsfield' | null;
 }
 
 export const DEFAULT_SHORTS_SETTINGS: ShortsSettings = { aiClips: 'none', clipEngine: null };

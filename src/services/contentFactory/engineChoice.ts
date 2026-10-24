@@ -95,4 +95,5 @@ export async function prepareEngineEstimates(project: ContentProject, brand: Con
   if (!higgsfieldAvailable().ok) return;
   const engines = projectEngines(project, brand);
   if (engines.pictures === 'higgsfield') await refreshHiggsfieldEstimate('picture');
+  if (engines.clips === 'higgsfield' || project.shortsSettings?.clipEngine === 'higgsfield') await refreshHiggsfieldEstimate('clip', { seconds: 5 });
 }

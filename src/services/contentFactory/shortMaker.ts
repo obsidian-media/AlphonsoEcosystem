@@ -16,12 +16,14 @@ import { chosenVersionOf, getProject, getShortsSettings, getVideoSettings, setSh
 import { projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
 import { makeComfyClip } from './comfyVideoClip';
 import { makeRunwayClip } from './runwayClip';
+import { makeHiggsfieldClip } from './higgsfieldClip';
 import { brandFontName, darkestColour, headlineColour } from './thumbnailRenderer';
 import type { ContentBrand, ContentProject, ShortPlan } from './contentTypes';
 
 export const MAKING_ANOTHER = 'Making another Short…';
 export const NEEDS_FINISHED_VIDEO = 'Make the finished video first: a highlight or a cut is taken from it.';
 export const RUNWAY_SHORTS_NOTE = 'Runway clips were not approved; these were made with pictures only.';
+export const HIGGSFIELD_SHORTS_NOTE = 'Higgsfield clips were not approved; these were made with pictures only.';
 
 export interface ShortOutput {
   shortId: string;
@@ -109,7 +111,22 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
   const clips: (string | null)[] = parts.map(() => null);
   let note: string | undefined;
   if (shortsSettings.aiClips !== 'none') {
-    if (shortsSettings.clipEngine === 'runway') {
+    if (shortsSettings.clipEngine === 'higgsfield') {
+      // Approved once for the run with Higgsfield's estimate (phase 4b), within the one monthly cap.
+      if (!ctx.runwayApproved) note = HIGGSFIELD_SHORTS_NOTE;
+      else {
+        const chosen = shortsSettings.aiClips === 'every' ? parts.map((_, i) => i) : [...new Set([0, parts.length - 1])];
+        for (const i of chosen) {
+          if (!pictures[i]) continue;
+          const made = await makeHiggsfieldClip({
+            root: ctx.root, imageRel: pictures[i] as string, outRel: `${ctx.dir}/clips/v${ctx.n}-p${i + 1}.mp4`, prompt: parts[i].imagePrompt,
+            seconds: Math.min(lineSeconds[i] || 5, 10), vertical: true,
+          }).catch(() => null);
+          if (made?.status === 'done' && made.path) clips[i] = made.path;
+          if (made?.capped) break;
+        }
+      }
+    } else if (shortsSettings.clipEngine === 'runway') {
       // Approved once for the run (phase 4a), within the one monthly cap.
       if (!ctx.runwayApproved) note = RUNWAY_SHORTS_NOTE;
       else {

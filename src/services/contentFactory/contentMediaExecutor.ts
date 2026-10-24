@@ -4,7 +4,9 @@
 // the recorder saves as the step's version. Every file goes in the project
 // folder; nothing is overwritten, since each version has its own names.
 // Design: docs/superpowers/specs/2026-10-23-miya-content-factory-phase2a-design.md
-import { paidEngineAvailable, resolveVoice } from './engineChoice';
+import { paidEngineAvailable, projectEngines, resolveVoice } from './engineChoice';
+import { checkHiggsfieldClip, higgsfieldClipAvailable, makeHiggsfieldClip } from './higgsfieldClip';
+import { higgsfieldModels } from '../connectors/higgsfieldConnector';
 import { parseStepAnswer } from './contentStepPrompts';
 import { elevenLabsKey } from '../connectors/elevenLabsConnector';
 import { canSpend, estimateEffectsUsd, estimateElevenLabsUsd, recordSpendUsd } from '../jose/joseSpend';
@@ -30,6 +32,7 @@ import type { ContentStepResult } from './contentAgentExecutor';
 export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'creative_sfx', 'research_broll', 'creative_video_clips', 'runtime_assemble_video']);
 
 export const SFX_OFF = 'Sound effects are off for this brand (Brands tab).';
+export const HIGGSFIELD_NOT_APPROVED = "Higgsfield clips weren't approved for this run.";
 export const SFX_NOT_APPROVED = "Sound effects weren't approved for this run.";
 
 export const NO_STOCK_KEYS = 'No stock footage keys are set. Add a free Pexels, Pixabay or Coverr key in Connectors → Content & Productivity to use stock clips; the scene pictures are used instead.';
@@ -321,7 +324,7 @@ export const RUNWAY_NOT_APPROVED = 'Runway clips were not approved for this run.
 const NO_PICTURE = 'This scene has no picture to start from.';
 const NONE_MADE = 'No AI clip was made; those scenes use their stock clip or picture.';
 
-export interface ProjectClipEngine { engine: 'local' | 'runway' | null; reason?: string; modelId?: string; maxSeconds?: number; lowRes?: boolean }
+export interface ProjectClipEngine { engine: 'local' | 'runway' | 'higgsfield' | null; reason?: string; modelId?: string; maxSeconds?: number; lowRes?: boolean }
 
 export const SMALL_CARD_NOTE = 'This graphics card has under 8 GB, so AI clips are made smaller and at most 3 seconds. Choose full size in Runtime Hub → ComfyUI → Video models.';
 
@@ -329,9 +332,13 @@ export const SMALL_CARD_NOTE = 'This graphics card has under 8 GB, so AI clips a
 export async function resolveProjectClipEngine(project: ContentProject): Promise<ProjectClipEngine> {
   const info = await listVideoModels().catch(() => null);
   const model = info ? effectiveVideoModel(info) : null;
-  const choice = resolveClipEngine(getVideoSettings(project), {
+  // The project's engine, else the brand's (Brands tab, phase 4b).
+  const brand = getBrand(project.brandId);
+  const settings = getVideoSettings(project);
+  const choice = resolveClipEngine({ ...settings, clipEngine: brand ? projectEngines(project, brand).clips : settings.clipEngine }, {
     localModelInstalled: Boolean(model?.installed),
     runway: runwayClipAvailable(),
+    higgsfield: higgsfieldClipAvailable(),
   });
   if (choice.engine !== 'local' || !model) return choice;
   const size = clipSizeFor(info);
@@ -345,6 +352,8 @@ export interface ClipOutcome {
   seconds?: number;
   costUsd?: number;
   jobId?: string;
+  /** A clip still being made at Higgsfield (phase 4b), fetched by Check again. */
+  requestId?: string;
   /** Where a pending clip will be saved when ComfyUI finishes it. */
   target?: string;
   reason?: string;
@@ -357,6 +366,9 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
   if (!engine.engine) return done(assignment, { skipped: engine.reason }, `AI clips skipped: ${engine.reason}`);
   if (engine.engine === 'runway' && !(assignment.effects || []).includes('spend')) {
     return done(assignment, { skipped: RUNWAY_NOT_APPROVED }, RUNWAY_NOT_APPROVED);
+  }
+  if (engine.engine === 'higgsfield' && !(assignment.effects || []).includes('spend')) {
+    return done(assignment, { skipped: HIGGSFIELD_NOT_APPROVED }, HIGGSFIELD_NOT_APPROVED);
   }
   // The marks as they are now: the user may have changed them while the run waited.
   const scenes = chosenScenes(scenesOf(ctx), settings.aiClips);
@@ -383,6 +395,16 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
         : made.status === 'pending'
           ? { sceneId: scene.id, status: 'pending', jobId: made.jobId, seconds, target: outRel }
           : { sceneId: scene.id, status: 'failed', reason: made.error });
+    } else if (engine.engine === 'higgsfield') {
+      const seconds = Math.min(sceneSeconds, 10);
+      const outRel = `${ctx.dir}/clips/v${ctx.version}-${scene.id}.mp4`;
+      const made = await makeHiggsfieldClip({ root: ctx.root, imageRel: picture, outRel, prompt, seconds, vertical });
+      if (made.status === 'done') clips.push({ sceneId: scene.id, status: 'done', path: made.path, seconds, costUsd: made.costUsd });
+      else if (made.status === 'pending') clips.push({ sceneId: scene.id, status: 'pending', requestId: made.requestId, seconds, target: outRel, costUsd: made.costUsd });
+      else {
+        clips.push({ sceneId: scene.id, status: 'failed', reason: made.error });
+        if (made.capped) stop = made.error || null;
+      }
     } else {
       const seconds = Math.min(sceneSeconds, runwayClipSeconds(sceneSeconds));
       const made = await makeRunwayClip({
@@ -397,14 +419,14 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
     }
   }
   const madeCount = clips.filter((c) => c.status === 'done' || c.status === 'pending').length;
-  const totalUsd = clips.reduce((sum, c) => sum + (c.costUsd || 0), 0);
+  const totalUsd = clips.reduce((sum, c) => sum + (c.status === 'done' ? c.costUsd || 0 : 0), 0);
   return done(
     assignment,
     {
       engine: engine.engine,
-      model: engine.engine === 'local' ? engine.modelId : settings.runwayModel,
+      model: engine.engine === 'local' ? engine.modelId : engine.engine === 'higgsfield' ? higgsfieldModels().clip : settings.runwayModel,
       clips,
-      ...(engine.engine === 'runway' ? { totalUsd } : {}),
+      ...(engine.engine === 'runway' || engine.engine === 'higgsfield' ? { totalUsd } : {}),
       ...(madeCount === 0 && clips.length > 0 ? { note: NONE_MADE } : engine.lowRes ? { note: SMALL_CARD_NOTE } : {}),
     },
     `AI clips: ${madeCount} of ${clips.length} scenes.`,
@@ -420,9 +442,12 @@ export async function checkPendingClips(projectId: string): Promise<ClipOutcome[
   const root = requireOutputRoot(contentAppSettings());
   const clips = [...output.clips];
   for (const [i, clip] of clips.entries()) {
-    if (clip.status !== 'pending' || !clip.jobId || !clip.target) continue;
-    const result = await checkComfyClip(clip.jobId, clip.target, root);
-    if (result.status === 'done') clips[i] = { sceneId: clip.sceneId, status: 'done', path: result.path, seconds: clip.seconds };
+    if (clip.status !== 'pending' || (!clip.jobId && !clip.requestId) || !clip.target) continue;
+    // Higgsfield (phase 4b): one look at the request; never a new run.
+    const result = clip.requestId
+      ? await checkHiggsfieldClip(clip.requestId, clip.target, root, clip.costUsd || 0).then((r) => ({ status: r.status, path: r.path, error: r.error }))
+      : await checkComfyClip(clip.jobId as string, clip.target, root);
+    if (result.status === 'done') clips[i] = { sceneId: clip.sceneId, status: 'done', path: result.path, seconds: clip.seconds, ...(clip.requestId ? { costUsd: clip.costUsd } : {}) };
     else if (result.status === 'failed') clips[i] = { sceneId: clip.sceneId, status: 'failed', reason: result.error };
   }
   setVersionOutputField(projectId, 'clips', chosen.version, 'miya', { ...output, clips });

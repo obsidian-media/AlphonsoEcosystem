@@ -6,6 +6,7 @@ import { mediaUrl } from '../../services/contentFactory/contentProjectFiles';
 import { resolveProjectClipEngine, type ClipOutcome, type ProjectClipEngine } from '../../services/contentFactory/contentMediaExecutor';
 import { chosenScenes } from '../../services/contentFactory/clipEngine';
 import { estimateRunwayUsd } from '../../services/contentFactory/runwayClip';
+import { estimateHiggsfieldClipsUsd } from '../../services/contentFactory/higgsfieldClip';
 import type { ContentProject, VideoSettings } from '../../services/contentFactory/contentTypes';
 
 interface Scene { id: string; startSec?: number; endSec?: number; mainMoment?: boolean }
@@ -41,9 +42,10 @@ export function AiClipsPanel({ project, outputRoot, mediaReady = true, waiting, 
   const save = (patch: Partial<VideoSettings>) => { setVideoSettings(project.id, patch); onChange(); };
   const scenes = ((chosenVersionOf(project, 'scenes')?.output as { miya?: { scenes?: Scene[] } } | undefined)?.miya?.scenes) || [];
   const chosen = chosenScenes(scenes, settings.aiClips);
+  const paid = engine?.engine === 'runway' || engine?.engine === 'higgsfield';
   const estimate = engine?.engine === 'runway'
     ? estimateRunwayUsd(chosen.map((s) => Math.max(1, (s.endSec ?? 0) - (s.startSec ?? 0))))
-    : null;
+    : engine?.engine === 'higgsfield' && chosen.length ? estimateHiggsfieldClipsUsd(chosen.length) : null;
   const cost = estimate === null ? '' : `about $${estimate.toFixed(2)}`;
   const output = (chosenVersionOf(project, 'clips')?.output as { miya?: ClipsOutput } | undefined)?.miya;
 
@@ -53,7 +55,9 @@ export function AiClipsPanel({ project, outputRoot, mediaReady = true, waiting, 
       ? `Uses your ComfyUI (${engine.modelId}), up to ${engine.maxSeconds} s a clip.`
       : engine.engine === 'runway'
         ? `Uses Runway (${settings.runwayModel}); each run asks first with the cost.`
-        : engine.reason || '';
+        : engine.engine === 'higgsfield'
+          ? "Uses Higgsfield; each run asks first with Higgsfield's estimate."
+          : engine.reason || '';
 
   return (
     <div className="space-y-2">
@@ -101,11 +105,11 @@ export function AiClipsPanel({ project, outputRoot, mediaReady = true, waiting, 
             {engine.engine === 'runway' && estimate === null && " Enter Runway's price per second in Settings to see the cost."}
           </p>
         )}
-        {settings.aiClips !== 'none' && engine?.engine === 'runway' && estimate !== null && (
+        {settings.aiClips !== 'none' && paid && estimate !== null && (
           <p className="text-xs font-semibold text-(--text-1)">{`${chosen.length} clip${chosen.length === 1 ? '' : 's'}, ${cost}`}</p>
         )}
         {waiting && (
-          <Button size="sm" onClick={onApprove}>{engine?.engine === 'runway' && cost ? `Make AI clips (${cost})` : 'Make AI clips'}</Button>
+          <Button size="sm" onClick={onApprove}>{paid && cost ? `Make AI clips (${cost})` : 'Make AI clips'}</Button>
         )}
         {output?.skipped && <p className="rounded-xl bg-(--surface-2) p-2 text-[12px] text-(--text-2)">{output.skipped}</p>}
         <div className="grid gap-3 md:grid-cols-2">

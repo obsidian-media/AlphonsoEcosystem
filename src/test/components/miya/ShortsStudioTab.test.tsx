@@ -108,6 +108,8 @@ describe('ShortsStudioTab', () => {
     render(<ShortsStudioTab project={getProject(p.id)!} {...props()} />);
     fireEvent.change(screen.getByLabelText('Clip engine for Shorts'), { target: { value: 'runway' } });
     expect(getShortsSettings(getProject(p.id)!)).toEqual({ aiClips: 'main', clipEngine: 'runway' });
+    fireEvent.change(screen.getByLabelText('Clip engine for Shorts'), { target: { value: 'higgsfield' } });
+    expect(getShortsSettings(getProject(p.id)!)).toEqual({ aiClips: 'main', clipEngine: 'higgsfield' });
   });
 });
 

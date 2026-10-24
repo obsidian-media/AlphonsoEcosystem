@@ -26,8 +26,8 @@ function project(aiClips: 'main' | 'every' | 'none', engine: 'runway' | 'local' 
 
 describe('Runway clips in Shorts', () => {
   it('estimates the clips for the Shorts asked for', () => {
-    expect(shortsRunwayEstimate(project('main', 'runway').p)).toEqual({ clips: 4, shorts: 2, usd: 2 });
-    expect(shortsRunwayEstimate(project('every', 'runway').p)).toEqual({ clips: 12, shorts: 2, usd: 6 });
+    expect(shortsRunwayEstimate(project('main', 'runway').p)).toEqual({ clips: 4, shorts: 2, usd: 2, engine: 'Runway' });
+    expect(shortsRunwayEstimate(project('every', 'runway').p)).toEqual({ clips: 12, shorts: 2, usd: 6, engine: 'Runway' });
     expect(shortsRunwayEstimate(project('main', 'local').p)).toBeNull();
     expect(shortsRunwayEstimate(project('none', 'runway').p)).toBeNull();
   });

@@ -6,6 +6,7 @@ vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   const actual = await vi.importActual<typeof import('../../../services/contentFactory/contentProjectFiles')>('../../../services/contentFactory/contentProjectFiles');
   return { ...actual, mediaUrl: vi.fn((root: string, rel: string) => `asset-test://${rel}`), allowMediaFolder: vi.fn(async () => true), loadProjectImage: vi.fn(async () => null) };
 });
+vi.mock('../../../services/contentFactory/higgsfieldClip', () => ({ estimateHiggsfieldClipsUsd: (n: number) => n * 0.4 }));
 vi.mock('../../../services/contentFactory/contentMediaExecutor', () => ({
   resolveProjectClipEngine: vi.fn(async () => (globalThis as any).__engine),
 }));
@@ -62,6 +63,16 @@ describe('AiClipsPanel', () => {
     await waitFor(() => expect(screen.getByText('2 clips, about $0.50')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: 'Make AI clips (about $0.50)' }));
     expect(p.onApprove).toHaveBeenCalled();
+  });
+
+  // Phase 4b: Higgsfield's estimate per clip, from the kept estimate.
+  it('shows the Higgsfield estimate for the main moments', async () => {
+    (globalThis as any).__engine = { engine: 'higgsfield' };
+    const p = props(setup(), { waiting: true });
+    render(<AiClipsPanel {...p} />);
+    await waitFor(() => expect(screen.getByText('2 clips, about $0.80')).toBeTruthy());
+    expect(screen.getByText("Uses Higgsfield; each run asks first with Higgsfield's estimate.")).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Make AI clips (about $0.80)' })).toBeTruthy();
   });
 
   it('plays each clip that was made, says why the others were not, and checks a pending one again', async () => {
