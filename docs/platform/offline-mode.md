@@ -1,5 +1,7 @@
 # Offline Mode — Current Capabilities & Gaps
 
+> **Status (2026-10-25):** the audit still describes the design. Since then: the starter model is bundled with the Windows installer (v2.8.0), and a reply that can't stream is still delivered through the backend (2026-10-21).
+
 ## Current State Audit
 
 Alphonso is a **local-first** application. The desktop app already has significant offline capability by design. This document verifies current offline behavior and identifies gaps.

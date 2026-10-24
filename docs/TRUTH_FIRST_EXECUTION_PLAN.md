@@ -354,6 +354,9 @@ authenticated voice and physical-device acceptance can proceed.
     crate, warning type, and dependency chain, so any NEW/different advisory
     against these same crates still fails CI immediately. Expiry: re-check on
     the next `tauri`/`tray-icon` release, or by 2026-10-25 regardless.
+    (Since 2026-10-21 the one ignore list is `.cargo/audit.toml`, read by
+    `scripts/cargo-audit.sh` for CI and the weekly `security-audit.yml`; the
+    weekly run is where an expired or new advisory now shows up first.)
     Verified locally with the exact CI command before committing: 17 findings
     → 0, exit 0, `cargo audit --file src-tauri/Cargo.lock --deny warnings`
     plus all 17 `--ignore` flags.
@@ -1750,6 +1753,22 @@ dropped.
     agents, an inbound-call path, and any Devpost submission work — those are
     separate tasks, not preconditions for calling this integration verified.
 
+### K. Jose redesign and Miya's content factory (built 2026-10-22 to 2026-10-25; live checks open)
+
+The code is merged and tested (Jose: PRs #336–#342; content factory: PRs #332, #343–#354; unit tests and desktop specs with Zero-Cost Mode on and seeded data). None of the items below may be checked without the live evidence each names. The step-by-step live check is in `docs/qa/DESKTOP_QA_COVERAGE.md` (steps 1–15); what each phase leaves open is in `docs/governance/DEFERRED_WORK.md`.
+
+- [x] **K0 — Jose's Telegram approvals live.** Verified 2026-10-23 with the owner's bot (`e2e-desktop/specs/jose-telegram-live.e2e.mjs`, run by hand).
+- [ ] **K1 — Paid models for Jose's steps.** Claude or ChatGPT on a real key: a paid step asks with its estimate, runs, and the spend is recorded; a step past the cap is refused before anything is sent (`jose-paid-live.e2e.mjs`). Evidence: the run's output and the recorded month total.
+- [ ] **K2 — Sign in from Settings.** YouTube, Facebook (Page chosen) and Instagram Login each save their keys with no terminal (live check step 1).
+- [ ] **K3 — Publishing.** A test Reel to YouTube, Instagram and Facebook with one approval, each with its link; a carousel to Instagram (by link, through storage) and Facebook (photos); Post by hand without storage (steps 2–7, 10).
+- [ ] **K4 — Calendar moves on the platform.** Moving and cancelling a scheduled YouTube video and Facebook Reel changes them on the platform (step 4).
+- [ ] **K5 — Reading results.** Each test post's numbers at 1 hour, 1 day and 7 days; lessons and ideas after 7 days (step 9).
+- [ ] **K6 — ElevenLabs.** A cloned-voice voice-over with ElevenLabs' caption timing, and sound effects (step 11).
+- [ ] **K7 — Higgsfield.** Pictures, clips and by-name requests with the estimate; character training and motion clips, recording which request fields Higgsfield really uses (`training_of()`, `soul_id`, `video_url`, `motion_id`, `GET /motions` are from third-party descriptions) (steps 12–14).
+- [ ] **K8 — Local character reference and motion transfer.** A real ComfyUI run of `buildCharacterWorkflow()` and `buildMotionWorkflow()` (node input names unconfirmed) (steps 13–14).
+- [ ] **K9 — Runway clips.** One approved Runway clip run with the cost recorded.
+- [ ] **K10 — The 4b leftovers.** A failed Higgsfield picture remade with ComfyUI; a by-name result approved on the board showing in Chat (step 15).
+
 ## Operating procedure for every task
 
 1. Read Ground Truth and this plan; select one unchecked task or a scoped
@@ -1766,6 +1785,7 @@ dropped.
 
 | Date | Change | Evidence |
 |---|---|---|
+| 2026-10-25 | Added Section K (Jose redesign and Miya's content factory: K0 verified, K1–K10 open live checks). Every document in the repo reconciled with the code the same day (Ground Truth §11.38). | PRs #336–#342, #332, #343–#354; `docs/qa/DESKTOP_QA_COVERAGE.md` live check steps 1–15. |
 | 2026-07-21 | Created as the repository-wide remediation and truth-tracking backlog. | Initial baseline recorded above. |
 | 2026-07-25 | Closed C2 and C3 — per-pack least-privilege enforcement fixed and verified; generated permission matrix + CI-enforced contract regression test added. | See C2/C3 evidence above; `agentContractService.ts`, `docs/AGENT_SKILL_PERMISSION_MATRIX.md`, `scripts/generate-skill-permission-matrix.mjs`, `src/test/services/skillPackContractMatrix.test.ts`. |
 | 2026-07-26 (Part 1) | Added Section F (3 audit-sourced Cloud Voice hardening items, independently re-verified against live code, not just copied from the source audit) and Section G (production-readiness T11–T20 carried forward into this file's tracked queue, with T13/T15/T16 cross-referenced as already closed by B3/D1/D2 rather than duplicated, plus 5 other previously-untracked open items). | User request, following an external "Hermes" audit report + its own Codex verification addendum; see Section F/G entries for per-item evidence and status notes. |

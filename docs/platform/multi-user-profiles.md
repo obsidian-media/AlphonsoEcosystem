@@ -1,5 +1,7 @@
 # Multi-User Profiles — User Switching
 
+> **Status (2026-10-25):** a proposal; not built. Alphonso has one user per installation.
+
 ## Overview
 
 Add multi-user profile support to Alphonso, allowing multiple people to use the same desktop installation with isolated conversations, agent permissions, and settings. Profiles are local-only (no cloud accounts).

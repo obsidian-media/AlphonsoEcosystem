@@ -1,5 +1,7 @@
 # Web Interface — Browser-Based Access
 
+> **Status (2026-10-25):** a proposal; not built as a product. `npm run dev` serves the same UI in a browser for development, with the desktop backend unavailable.
+
 ## Overview
 
 Provide browser-based access to Alphonso for users who cannot or prefer not to use the Tauri desktop app. The web interface runs alongside the desktop server, exposing core chat, agent, and boardroom functionality via HTTP/WebSocket.

@@ -1,5 +1,7 @@
 # Alphonso Full-Mobile Foundation
 
+> **Status (2026-10-25):** Atlas exists in the iOS app as an opt-in preview only: since PR #200 (2026-09-02) the classic companion is the default, and Atlas stays a preview until it is wired to real desktop task execution instead of its demo backend (`ContentView.swift`). The statement below that Atlas is the default shell is no longer true.
+
 ## Purpose
 
 The iOS application now has a new default product shell named **Atlas**. Atlas is the first implementation of Alphonso as a full mobile ecosystem client. It replaces the legacy companion-first navigation with **Home, Work, Inbox, Chat, and More** while the existing companion remains available as a reversible compatibility mode. Selecting a Work ledger entry—or an active-work record from Home—opens the same native **Work record** with the run’s purpose, owner, phase, verified update time, accountable next step, immutable trace, and—only when the authoritative briefing relates one—the decision/evidence checkpoint. The Work **Library** tab renders verified workspace outcomes and opens an outcome record with its result, completed time, and immutable trace; Home’s latest verified outcome links to that same record. These records are workspace evidence, not authorization or final external-action receipts.
