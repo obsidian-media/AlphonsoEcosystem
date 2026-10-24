@@ -141,3 +141,10 @@ it("an added mini-script Short is appended to the chosen Shorts and made, withou
   expect(redoShort).toHaveBeenCalledWith(p.id, 'sh2', expect.anything());
 });
 
+it('an approved Runway Shorts run is made with Runway', async () => {
+  const { makeShorts } = await import('../../../services/contentFactory/shortMaker');
+  const p = newProject();
+  await recordContentStepResult({ projectId: p.id, step: 'shorts', agent: 'miya', data: { shorts: [] }, commandId: 'c1', runwayApproved: true });
+  expect(makeShorts).toHaveBeenLastCalledWith(p.id, expect.anything(), expect.any(Function), { runwayApproved: true });
+});
+

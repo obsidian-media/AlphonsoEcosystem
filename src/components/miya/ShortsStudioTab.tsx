@@ -64,12 +64,26 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
         <label className="block text-[11px] text-(--text-3)">
           AI clips for Shorts
           <select aria-label="AI clips for Shorts" className={`${field} ml-2`} value={clipSetting.aiClips}
-            onChange={(e) => { setShortsSettings(project.id, { aiClips: e.target.value as 'main' | 'every' | 'none', clipEngine: e.target.value === 'none' ? null : 'local' }); onChange(); }}>
+            onChange={(e) => {
+              const aiClips = e.target.value as 'main' | 'every' | 'none';
+              setShortsSettings(project.id, { aiClips, clipEngine: aiClips === 'none' ? null : clipSetting.clipEngine || 'local' });
+              onChange();
+            }}>
             <option value="none">None (pictures only, fast and free)</option>
             <option value="main">The hook and the ending</option>
             <option value="every">Every part</option>
           </select>
         </label>
+        {clipSetting.aiClips !== 'none' && (
+          <label className="block text-[11px] text-(--text-3)">
+            Clip engine for Shorts
+            <select aria-label="Clip engine for Shorts" className={`${field} ml-2`} value={clipSetting.clipEngine || 'local'}
+              onChange={(e) => { setShortsSettings(project.id, { aiClips: clipSetting.aiClips, clipEngine: e.target.value as 'local' | 'runway' }); onChange(); }}>
+              <option value="local">This computer (free)</option>
+              <option value="runway">Runway (paid, asks first with the cost)</option>
+            </select>
+          </label>
+        )}
         {shorts.length === 0 && (
           <p className="text-[12px] text-(--text-3)">
             No Shorts yet. To make them with the project, add "Shorts" to What to make in the brief ("3 Shorts" for three); or run this step now.

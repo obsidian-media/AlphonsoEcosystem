@@ -14,7 +14,7 @@ vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
 });
 
 import { ShortsStudioTab } from '../../../components/miya/ShortsStudioTab';
-import { createProject, emptyBrief, getProject, getShortsSettings, saveStepVersion } from '../../../services/contentFactory/contentProjectService';
+import { createProject, emptyBrief, getProject, getShortsSettings, saveStepVersion, setShortsSettings } from '../../../services/contentFactory/contentProjectService';
 
 beforeEach(() => localStorage.clear());
 
@@ -100,6 +100,14 @@ describe('ShortsStudioTab', () => {
     render(<ShortsStudioTab project={setup()} {...props()} />);
     expect(screen.getByTestId('short-failed-sh2')).toBeTruthy();
     expect(screen.queryByTestId('short-failed-sh1')).toBeNull();
+  });
+
+  it('the Shorts can use Runway for their clips', () => {
+    const p = setup();
+    setShortsSettings(p.id, { aiClips: 'main', clipEngine: 'local' });
+    render(<ShortsStudioTab project={getProject(p.id)!} {...props()} />);
+    fireEvent.change(screen.getByLabelText('Clip engine for Shorts'), { target: { value: 'runway' } });
+    expect(getShortsSettings(getProject(p.id)!)).toEqual({ aiClips: 'main', clipEngine: 'runway' });
   });
 });
 

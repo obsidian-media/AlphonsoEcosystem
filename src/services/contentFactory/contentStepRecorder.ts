@@ -41,6 +41,8 @@ export async function recordContentStepResult(input: {
   commandId: string | null;
   /** Add a Short as a mini-script (phase 4a): add it to the chosen Shorts, then make it. */
   appendShort?: boolean;
+  /** The run's Runway clips for its Shorts were approved (phase 4a). */
+  runwayApproved?: boolean;
 }): Promise<'partial' | 'saved' | 'ignored'> {
   const project = getProject(input.projectId);
   const agents = STEP_AGENTS[input.step] || [];
@@ -84,7 +86,10 @@ export async function recordContentStepResult(input: {
   if (input.step === 'shorts') {
     markStepStatus(input.projectId, 'shorts', 'running', null);
     try {
-      say(shortsSummary(await makeShorts(input.projectId, settings, say)));
+      const outputs = input.runwayApproved
+        ? await makeShorts(input.projectId, settings, say, { runwayApproved: true })
+        : await makeShorts(input.projectId, settings, say);
+      say(shortsSummary(outputs));
     } catch (error) {
       say(`The Shorts could not be made: ${(error as Error).message}`);
     }

@@ -9,6 +9,8 @@ vi.mock('../../../services/connectors/connectorImageGenerators', () => ({
   generateComfyUiImage: (...a: unknown[]) => generateComfyUiImage(...a),
   getComfyUiEndpoint: () => 'http://127.0.0.1:8188',
 }));
+const makeRunwayClip = vi.fn();
+vi.mock('../../../services/contentFactory/runwayClip', () => ({ makeRunwayClip: (...a: unknown[]) => makeRunwayClip(...a) }));
 vi.mock('../../../services/contentFactory/comfyVideoClip', () => ({ makeComfyClip: (...a: unknown[]) => makeComfyClip(...a) }));
 vi.mock('../../../services/videoModelService', () => ({
   listVideoModels: vi.fn(async () => ({ vramGb: 12, smallCard: false, suggested: 'ltx_video_2b', comfyuiDir: 'C', models: [{ id: 'ltx_video_2b', maxSeconds: 5, installed: true }] })),
@@ -43,7 +45,7 @@ const calls = (cmd: string) => invoke.mock.calls.filter((c) => c[0] === cmd).map
 
 beforeEach(() => {
   localStorage.clear();
-  [invoke, generateComfyUiImage, makeComfyClip].forEach((f) => f.mockReset());
+  [invoke, generateComfyUiImage, makeComfyClip, makeRunwayClip].forEach((f) => f.mockReset());
   generateComfyUiImage.mockResolvedValue({ ok: true, previewBase64: 'PIC' });
   invoke.mockImplementation(async (cmd: string, args: { request?: { lines?: { id: string }[] }; spec?: { outPath?: string; outDir?: string; outputStem?: string } }) => {
     if (cmd === 'content_tts_kokoro') {
@@ -145,6 +147,27 @@ it("a Short's hook text and captions use the brand font", async () => {
   expect(first.note).toContain("isn't installed");
   expect(calls('content_cut_short')[0].spec.font).toBe('Montserrat');
   expect(calls('content_assemble_video')[0].spec.font).toBe('Montserrat');
+});
+
+it('approved Runway Shorts make Runway clips for the hook and the ending', async () => {
+  const p = setup([{ ...mini, parts: [...mini.parts, { spoken: 'Three.', imagePrompt: 'c', seconds: 10 }] }]);
+  setShortsSettings(p.id, { aiClips: 'main', clipEngine: 'runway' });
+  makeRunwayClip.mockResolvedValue({ status: 'done', path: 'rw.mp4', costUsd: 0.5 });
+  await makeShorts(p.id, settings, undefined, { runwayApproved: true });
+  expect(makeRunwayClip).toHaveBeenCalledTimes(2);
+  expect(makeRunwayClip.mock.calls[0][0]).toMatchObject({ vertical: true, outDirRel: 'acme/launch/shorts/sh1/clips' });
+  const scenes = calls('content_assemble_video')[0].spec.scenes;
+  expect(scenes[0]).toMatchObject({ aiClip: 'rw.mp4' });
+  expect(scenes[1].aiClip).toBeUndefined();
+  expect(scenes[2]).toMatchObject({ aiClip: 'rw.mp4' });
+});
+
+it('Runway Shorts that were not approved use pictures and say so', async () => {
+  const p = setup([mini]);
+  setShortsSettings(p.id, { aiClips: 'main', clipEngine: 'runway' });
+  const [out] = await makeShorts(p.id, settings);
+  expect(makeRunwayClip).not.toHaveBeenCalled();
+  expect(out.note).toContain('not approved');
 });
 
 describe('redoShort', () => {

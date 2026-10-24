@@ -3,9 +3,9 @@
 import { getTemplate } from '../jose/joseTemplates';
 import type { PlanStep } from '../jose/stepGraph';
 import { STEP_ORDER, type ContentBrand, type ContentProject, type StepId } from './contentTypes';
-import { chosenVersionOf, getVideoSettings } from './contentProjectService';
+import { chosenVersionOf, getShortsSettings, getVideoSettings } from './contentProjectService';
 import { chosenScenes } from './clipEngine';
-import { estimateRunwayUsd } from './runwayClip';
+import { estimateRunwayUsd, runwayClipAvailable } from './runwayClip';
 
 /** Which content-factory step each template step belongs to. */
 export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
@@ -39,6 +39,24 @@ export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Mi
 
 /** Why Publish waits (phase 3a): you approve the exact posts in Campaign Studio's Posts list. */
 export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
+
+/** Why a run with Runway clips in its Shorts waits (phase 4a): once, with the cost. */
+export const SHORTS_WAIT_PAID = (clips: number, shorts: number, usd: number): string =>
+  `Make ${clips} Runway clips for ${shorts} Shorts, about $${usd.toFixed(2)}.`;
+
+/** Clips per Short before the Shorts are written: the hook and the ending, or about six parts for every part. */
+const SHORT_CLIPS_GUESS = { main: 2, every: 6 } as const;
+
+/** What Runway clips in the Shorts would cost, before the Shorts are written (phase 4a); null when Runway isn't used. */
+export function shortsRunwayEstimate(project: ContentProject): { clips: number; shorts: number; usd: number } | null {
+  const settings = getShortsSettings(project);
+  if (settings.clipEngine !== 'runway' || settings.aiClips === 'none') return null;
+  if (!runwayClipAvailable().ok) return null;
+  const shorts = shortsCount(project.brief);
+  const clips = shorts * SHORT_CLIPS_GUESS[settings.aiClips];
+  const usd = estimateRunwayUsd(Array.from({ length: clips }, () => 5));
+  return usd === null ? null : { clips, shorts, usd };
+}
 
 /** Runway's estimate for the scenes AI clips would be made for, when the scene plan is known. */
 export function runwayEstimate(project: ContentProject): number | null {
@@ -132,6 +150,15 @@ export function contentProjectPlanSteps(
       // No stop when nothing can make clips here (null); the step then says what to set up.
       // An unknown engine (undefined) still stops, to be safe.
       if (!options.only && options.clipEngine !== null) step.waitFor = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : CLIPS_WAIT;
+    }
+    // Runway clips in the Shorts (phase 4a): spending always asks; a full run stops once with the cost.
+    if (factoryStep === 'shorts') {
+      const estimate = shortsRunwayEstimate(project);
+      if (estimate) {
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        step.costEstimateUsd = estimate.usd;
+        if (!options.only) step.waitFor = SHORTS_WAIT_PAID(estimate.clips, estimate.shorts, estimate.usd);
+      }
     }
     return step;
   });
