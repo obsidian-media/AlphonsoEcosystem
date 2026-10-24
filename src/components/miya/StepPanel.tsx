@@ -16,6 +16,7 @@ const STEP_LABELS: Record<StepId, string> = {
   broll: 'Stock clips',
   clips: 'AI clips',
   assemble: 'Finished video',
+  shorts: 'Shorts',
   carousel: 'Carousel',
   campaign: 'Campaign',
   quality: 'Quality gate',

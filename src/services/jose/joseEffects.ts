@@ -103,6 +103,7 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   creative_scenes: ['write_own_work'],
   creative_thumbnails: ['write_own_work'],
   creative_carousel: ['write_own_work'],
+  creative_shorts: ['write_own_work'],
   creative_campaign: ['write_own_work'],
   // The finished video (phase 2a): files in the project folder only.
   creative_voice: ['write_own_work'],

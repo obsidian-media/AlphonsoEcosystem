@@ -4,6 +4,11 @@ import { durableGet, durableSet } from '../../lib/durableStore.js';
 import { slugForFolder } from './contentProjectFiles';
 import {
   STEP_ORDER,
+  SIDE_STEPS,
+  DEFAULT_SHORTS_SETTINGS,
+  type PostPlatform,
+  type ShortKind,
+  type ShortsSettings,
   secureId,
   type BasedOn,
   type ContentBrief,
@@ -69,7 +74,9 @@ function update(id: string, change: (project: ContentProject) => void): ContentP
 }
 
 function earlierSteps(step: StepId): StepId[] {
-  return STEP_ORDER.slice(0, STEP_ORDER.indexOf(step));
+  const earlier = STEP_ORDER.slice(0, STEP_ORDER.indexOf(step));
+  // Side pieces don't feed each other (phase 3d): the carousel doesn't put Shorts out of date.
+  return SIDE_STEPS.includes(step) ? earlier.filter((s) => !SIDE_STEPS.includes(s)) : earlier;
 }
 
 /** What `step` is based on right now: the brief's revision and each earlier step's chosen version. */
@@ -254,6 +261,35 @@ export function reorderSlides(id: string, from: number, to: number): ContentProj
       output.pictures.sort((a, b) => order.indexOf(a.sceneId) - order.indexOf(b.sceneId));
     }
   });
+}
+
+/** The Shorts' own AI clip setting (phase 3d); off until chosen. */
+export function getShortsSettings(project: ContentProject): ShortsSettings {
+  return { ...DEFAULT_SHORTS_SETTINGS, ...(project.shortsSettings || {}) };
+}
+
+export function setShortsSettings(id: string, settings: Partial<ShortsSettings>): ContentProject {
+  return update(id, (p) => { p.shortsSettings = { ...getShortsSettings(p), ...settings }; });
+}
+
+function editShort(id: string, shortId: string, change: (short: { kind?: ShortKind; platforms?: PostPlatform[] }) => void): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.shorts.versions.find((v) => v.version === p.steps.shorts.chosenVersion);
+    const shorts = (chosen?.output as { miya?: { shorts?: { id: string; kind?: ShortKind; platforms?: PostPlatform[] }[] } } | undefined)?.miya?.shorts;
+    const short = shorts?.find((s) => s.id === shortId);
+    if (!short) throw new Error(`No Short ${shortId} in the chosen Shorts.`);
+    change(short);
+  });
+}
+
+/** Which platforms a Short goes to (Shorts Studio); nothing goes out of date. */
+export function setShortPlatforms(id: string, shortId: string, platforms: PostPlatform[]): ContentProject {
+  return editShort(id, shortId, (s) => { s.platforms = [...new Set(platforms)]; });
+}
+
+/** A Short's kind (Shorts Studio); it is made again with Redo. */
+export function setShortKind(id: string, shortId: string, kind: ShortKind): ContentProject {
+  return editShort(id, shortId, (s) => { s.kind = kind; });
 }
 
 export function setVersionOutputField(id: string, step: StepId, version: number, field: string, value: unknown): ContentProject {

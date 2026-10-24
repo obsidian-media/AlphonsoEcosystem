@@ -117,13 +117,16 @@ async function runContentAgent(assignment: ContentAssignment): Promise<ContentSt
     return String(reply?.response || '');
   };
 
+  // A Short's platforms start as the project's (else the brand's; phase 3d).
+  const platformsWanted = contentStep.brief.platforms.length ? contentStep.brief.platforms : contentStep.brand.platforms || [];
+  const defaultPlatforms = platformsWanted.map((p) => String(p).trim().toLowerCase());
   let raw = '';
   try {
     raw = await ask(`${system}\n\n${prompt}`);
-    let data = parseStepAnswer(actionType, raw, { allowedUrls });
+    let data = parseStepAnswer(actionType, raw, { allowedUrls, defaultPlatforms });
     if (data === null) {
       raw = await ask(`${system}\n\n${prompt}\n\nYour last answer could not be read; return only JSON with keys ${(hasOwnKey(CONTENT_ACTION_KEYS, actionType) && CONTENT_ACTION_KEYS[actionType]) || '{}'}.`);
-      data = parseStepAnswer(actionType, raw, { allowedUrls });
+      data = parseStepAnswer(actionType, raw, { allowedUrls, defaultPlatforms });
     }
     if (data === null) return failed(assignment, UNREADABLE_ANSWER, raw);
     const references = (data as { references?: { url?: string }[] }).references;
