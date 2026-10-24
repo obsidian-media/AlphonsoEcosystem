@@ -39,6 +39,15 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-23] **Miya content factory phase 3a (publishing): what it leaves open.**
+  - Nothing was posted for real: YouTube, Instagram and Facebook are checked with unit tests (mocked platforms) and a desktop spec that only schedules an Instagram post. The live check (a real upload, a Facebook schedule, an Instagram Reel, a channel YouTube keeps private) runs when the owner gives their accounts.
+  - The ad CSV columns (Meta: Campaign Name, Ad Set Name, Ad Name, Title, Body; Google Ads Editor: Campaign, Ad group, Headline 1, Description 1) were not checked against a template downloaded from an ad account.
+  - The four new YouTube Rust tests (`youtube_metadata`, `youtube_lock_check`, `use_resumable`, `thumbnail_mime`) were never seen failing: Windows Code Integrity blocked every run of the stub build. They pass now; CI reruns them.
+  - A post already scheduled on YouTube or Facebook can't be moved or cancelled from Alphonso: the Posts list says to do it in YouTube Studio or Meta Business Suite.
+  - Meta's Reels API allows 30 posts per 24 hours per Page; Alphonso does not count them.
+  - Next: 3b, the carousel and the full month calendar page (Content Studio's `ContentCalendar.jsx` is the starting point).
+  - **Status:** OPEN.
+
 - [2026-10-23] **Miya content factory phase 2b (AI video clips): what it leaves open.**
   - Two local video models (LTX-Video 2B, Wan 2.2 TI2V 5B). Wan 2.2 14B was ruled out: its image-to-video model is two 14 GB halves, beyond 16 GB cards on ComfyUI's own nodes. Revisit when a smaller build runs on core nodes.
   - LTX-Video's license is free only for companies under $10M yearly revenue (Runtime Hub says so); Wan 2.2 is Apache-2.0.
@@ -72,7 +81,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
   - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
   - The board's "Approve and carry on" on Scenes approves the review too, but only when Scenes starts (Miya Studio shows it as waiting until then).
-  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file) and 2b (AI clips) done 2026-10-23; 3 and 4 next.
+  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file), 2b (AI clips) and 3a (publishing) done 2026-10-23; 3b and 4 next.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**
