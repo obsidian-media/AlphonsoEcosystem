@@ -1,5 +1,7 @@
 # Alphonso UI/UX Overhaul — Agent Handoff
 
+> **Status (2026-10-25):** a dated handoff (2026-06-24); the UI was redesigned since (PR #237, v2.8.0; `docs/ui-redesign/`). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Branch:** `feat/ui-ux-overhaul`
 **Assigned to:** OpenCode (or equivalent UI-capable agent)
 **Maturity target:** Current state → 90 / 100 UI/UX quality

@@ -1,5 +1,7 @@
 # Alphonso Mobile Companion — Kilo CLI Sprint Instructions
 
+> **Status (2026-10-25):** the sprint was carried out (Rust companion server, pairing UI, iOS app). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Purpose:** Complete instructions for Kilo CLI (or any agent) to implement the Alphonso iOS/mobile companion from scratch in parallel with other development work.
 
 **Status as of 2026-06-22:** Phases 1–2 complete, Phase 3–5 pending. Desktop WebSocket server (Rust) + CompanionPairingPanel UI (React) built and tested. See `docs/IOS_COMPANION_HANDOFF.md` for full handoff details.

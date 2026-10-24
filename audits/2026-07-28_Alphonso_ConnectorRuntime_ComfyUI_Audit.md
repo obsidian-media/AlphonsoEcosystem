@@ -1,5 +1,7 @@
 # Connector / Runtime / ComfyUI Audit Report
 
+> **Status (2026-10-25):** since then ComfyUI is reached through the backend (`comfyui_proxy.rs`), your own install is found and used, and its address and image model are chosen in Settings (2026-10-22). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Auditor:** Alphonso (Agent)  
 **Date:** 2026-07-28  
 **Scope:** ComfyUI settings state, connector registry coverage, runtime inventory, targeted smoke tests, and E2E verification on the local Alphonso desktop app

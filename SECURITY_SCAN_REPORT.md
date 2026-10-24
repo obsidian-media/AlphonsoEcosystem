@@ -1,5 +1,7 @@
 # AlphonsoEcosystem Security Scan Report
 
+> **Status (2026-10-25):** a dated scan, kept as written. Since then: connector keys moved to the OS keychain, the command policy became fail-closed per program (2026-09-30), downloads check every redirect for private addresses, and CodeQL findings on the content factory were fixed (2026-10-22, 2026-10-24). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Repository:** `D:\AgentDevWork\repos\AlphonsoEcosystem`  
 **Scope:** Source code only (excludes docs, `.md`, READMEs, test files, `.json`)  
 **Files Scanned:** ~544 source files across `src/`, `src-tauri/src/`, `gateway/`, `bridge/`, `mcp-server/`

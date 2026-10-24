@@ -1,5 +1,7 @@
 # Railway Cloud Voice Deployment
 
+> **Status (2026-10-25):** superseded for compute: Cloud Voice moved to AWS ECS (`docs/deployment/AWS_VOICE_MIGRATION.md`); Railway is kept as the rollback and still hosts the Farsi Piper voice. On 2026-10-20 the AWS address did not resolve.
+
 Create a new Railway service in the existing Alphonso project with the service
 root set to `voice/cloud-backend`. Railway reads the service-local
 `railway.json`, builds with Railpack, starts Uvicorn, and checks `/ready`.

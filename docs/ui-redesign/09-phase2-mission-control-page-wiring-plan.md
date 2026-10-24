@@ -1,5 +1,7 @@
 # Mission Control — Functional Swap Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (inline, per this session's standing "no subagents" instruction). Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace `MissionControlHome.tsx`'s existing ad-hoc, approvals-only "Review approvals" summary line with real, individual rows sourced from `attentionAggregatorService.ts` (its 3 real sources: chat/Jose approvals, Project Execution approvals, tripped connector circuits). Visual treatment (bordered rows, current layout) is explicitly **unchanged** this pass — that's the separate, later visual rewrite. No inline approve/reject buttons yet — clicking a row still just navigates, matching today's exact interaction model.

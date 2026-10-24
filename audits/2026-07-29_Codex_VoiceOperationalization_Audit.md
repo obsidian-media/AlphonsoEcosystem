@@ -1,5 +1,7 @@
 # Voice Operationalization Audit
 
+> **Status (2026-10-25):** desktop Voice OS was reworked on 2026-10-22 (whole utterances, the chosen model and address). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Date:** 2026-07-29
 **Scope:** Windows-executable Local Voice lifecycle and Cloud Voice contract hardening.
 **Status:** PARTIAL — Local Windows dependency, model, and synthesis evidence is complete; hardware/Ollama playback and deployed-cloud validation remain unverified.

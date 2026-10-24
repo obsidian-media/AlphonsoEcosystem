@@ -1,5 +1,7 @@
 # Alphonso iOS Companion — Handoff Plan
 
+> **Status (2026-10-25):** built; pairing confirmed on a real device (PR #121, 2026-07-25). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Prepared by:** Kilo CLI agent (2026-06-22)
 **Branch:** `feat/kilo-mobile-companion` (merged to `main`); iOS work continues on `feat/ios-companion`
 **Status:** Phases 1–4 core complete; Phase 5 polish + final release pending

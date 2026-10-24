@@ -1,5 +1,7 @@
 # Release Verification Evidence — 2026-07-22
 
+> **Status (2026-10-25):** the last full release-verification record; releases since: v2.7.0 to v2.9.0. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Commit verified:** `431a2e0`  
 **Overall status:** PARTIAL — application verification passes on the supported
 Windows target; Rust dependency audit remains a release blocker.

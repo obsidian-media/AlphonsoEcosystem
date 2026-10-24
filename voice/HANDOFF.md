@@ -1,5 +1,7 @@
 # Alphonso Voice OS — Agent Handoff Brief
 
+> **Status (2026-10-25):** the Voice OS described here was built, rewritten on 2026-07-10, and reworked on 2026-10-22 (whole utterances, the chosen model and address). See `voice/README.md`. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Branch:** `feat/voice-os`
 **Assigned to:** OpenCode (or equivalent autonomous coding agent)
 **Maturity target:** 10 → 90 / 100

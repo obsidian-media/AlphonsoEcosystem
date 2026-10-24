@@ -2,7 +2,8 @@
 
 > Drafted: 2026-09-01
 > Target subreddits: r/SideProject, r/LocalLLaMA, r/Tauri, r/selfhosted
-> Product: Alphonso v2.6.5 — Local-first AI desktop companion
+> Product: Alphonso v2.10.0 — Local-first AI desktop companion
+> Facts updated 2026-10-25 to match the app on `main` (2.10.0, not released yet); re-check on launch day.
 
 ---
 
@@ -37,11 +38,13 @@ some things that actually work:
 - telegram + whatsapp companion bots
 - iOS companion app with voice tab
 - auto-update (download + install + relaunch)
-- 25 connectors (brave search, youtube, github, slack, claude API, chatgpt, etc.)
+- jose plans every request as steps, with approval by what each step does and a live plan board
+- miya studio: from an idea to finished videos, shorts and carousels, posted to youtube/instagram/facebook
+- 33 connectors (brave search, youtube, meta, github, slack, claude API, chatgpt, etc.)
 - sqlite memory on-device
 - approval workflows for risky actions
 
-the whole thing is source-visible under the SHALAUDE license (not OSI-approved open source — being transparent about that). free for local use. pro tier adds cloud fallback and premium connectors.
+the whole thing is source-visible under the SHALAUDE license (not OSI-approved open source — being transparent about that). free at launch, every agent and connector. paid services (claude, chatgpt, elevenlabs, higgsfield, runway) are optional, use your own account, and always ask first with the cost.
 
 i built this because i wanted an AI assistant that didn't phone home, didn't have API bills, and could actually do things instead of just talking.
 

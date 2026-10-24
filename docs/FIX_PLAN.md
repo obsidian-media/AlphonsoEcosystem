@@ -1,4 +1,6 @@
 # Alphonso Fix Plan — Prioritized Remediation
+
+> **Status (2026-10-25):** a dated plan (2026-06-24); worked through in the June and July passes. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
 **Based on:** `docs/BUG_REPORT.md` — full codebase audit 2026-06-24  
 **Version:** v2.2.3
 

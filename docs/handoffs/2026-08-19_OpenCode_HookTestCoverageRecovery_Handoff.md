@@ -1,5 +1,7 @@
 # Hook Test Coverage Recovery — Handoff to OpenCode
 
+> **Status (2026-10-25):** resolved: PR #151 merged on 2026-08-20. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **RESOLVED 2026-08-20** (Claude Code session): all 5 originally-flagged files
 (`useAppShellState`, `useBootEffects`, `usePersistenceEffects`,
 `useSessionEffects`, `useTrayEffects`) fixed, plus `useKeyboardShortcuts`

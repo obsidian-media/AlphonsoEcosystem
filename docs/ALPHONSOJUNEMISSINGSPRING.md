@@ -1,4 +1,6 @@
 # ALPHONSO — June Missing Spring
+
+> **Status (2026-10-25):** a dated record, kept as written. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
 **Prepared:** 2026-06-27  
 **Version at time of writing:** v2.3.3  
 **Purpose:** Exhaustive backlog of everything that is incomplete, cut, untested, or deferred across the entire codebase. Nothing softened. Use this as the task board for the next sprint.

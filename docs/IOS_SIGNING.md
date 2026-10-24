@@ -1,5 +1,7 @@
 # iOS Signing — Quick Start (No Mac Required)
 
+> **Status (2026-10-25):** still the iOS signing guide; the TestFlight workflow is `.github/workflows/ios-build.yml`, which also runs the iOS tests. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 All scripts are in `scripts/` — run them in order from PowerShell.
 
 ## Prerequisites

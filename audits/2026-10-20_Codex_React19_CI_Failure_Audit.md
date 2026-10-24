@@ -1,5 +1,7 @@
 # React 19 CI Failure and Correction Audit
 
+> **Status (2026-10-25):** React 19 is in use on `main`. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Date: 2026-10-20  
 Branch: `agent/Codex-priority-hardening`  
 Failed run: [39498405745](https://github.com/obsidian-media/AlphonsoEcosystem/actions/runs/39498405745)

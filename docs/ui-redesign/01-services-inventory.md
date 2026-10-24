@@ -1,5 +1,7 @@
 # Full Services Inventory
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Compiled by cross-checking the real file system (`src/services/` — 190 files, 155 root + 35 across 7 subdirectories) against CLAUDE.md's "Do Not Duplicate" table, which the repo's own `verify:dnd-coverage` script confirms is currently 100% complete (every file documented, zero drift, checked live this session — not assumed). Grouped by domain for readability; nothing here is invented, every description traces to a verified source.
 
 Purpose: this is the master reference for "what already exists and must not be silently duplicated or orphaned" while redesigning pages. If a page redesign needs new backing logic, check here first.

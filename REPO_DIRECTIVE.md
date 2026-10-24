@@ -1,5 +1,7 @@
 # AlphonsoEcosystem — REPO_DIRECTIVE
 
+> **Status (2026-10-25):** still in force alongside `REPO_RULES.md`. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > Goal-layer constitution. `REPO_RULES.md` is the law; this is the mission. Every task
 > MUST carry `traces-to:`. Orphan tasks rejected by CI (scripts/verify.sh → directive-lint) + Sentinel.
 

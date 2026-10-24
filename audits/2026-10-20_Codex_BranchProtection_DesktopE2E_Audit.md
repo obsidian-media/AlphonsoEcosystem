@@ -1,5 +1,7 @@
 # Desktop E2E Branch-Protection Audit
 
+> **Status (2026-10-25):** the desktop E2E job runs on every PR and is still not a required check; the suite has 34 spec files now. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Date: 2026-10-20  
 Branch: `agent/Codex-priority-hardening`  
 Scope: current `main` required checks and desktop E2E recommendation

@@ -1,5 +1,7 @@
 # Research / Hector Desk Re-skin Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (inline, per this session's standing "no subagents" instruction). Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Execute `14-phase2-hector-research-desk-spec.md` — re-skin `HectorResearchDesk.tsx` and its 5 sub-panels onto the real design-token system (`Zone mood="hector"`, `--surface-*`/`--text-*`/`--agent-hector`/`--success`/`--error`/`--warning-dim`), add the synthesis-gap honesty notice, relabel `SourceBoard`/`CitationPanel`, and add test coverage (currently zero) to all 6 components.

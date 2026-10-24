@@ -1,4 +1,6 @@
 # ALPHONSO — COMPREHENSIVE AUDIT REPORT
+
+> **Status (2026-10-25):** a dated record, kept as written. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
 **Date:** 2026-07-08 | **Scope:** All 8 layers (Agent System, Service Layer, Frontend, Rust Backend, Tests, Infrastructure, Security, Documentation) | **Method:** Read-only inspection + executed verification commands
 **Source of truth used:** `docs/ALPHONSO_GROUND_TRUTH.md` (v2.5.18, verified 2026-07-03) + `CLAUDE.md` + real code. `AGENTS.md` was found STALE and was NOT trusted (see Direction H).
 

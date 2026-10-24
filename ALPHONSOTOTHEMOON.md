@@ -1,5 +1,7 @@
 # ALPHONSOTOTHEMOON
 
+> **Status (2026-10-25):** the sprint roadmap's last entry is 2026-10-06. Since then the work has moved to the Jose redesign (phases 1–6b) and Miya's content factory (phases 1–4c), tracked in `docs/TRUTH_FIRST_EXECUTION_PLAN.md` section K and `docs/governance/DEFERRED_WORK.md`. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 10 of N, v2.5.18): 6 more root-level services migrated to TypeScript (novaAnalysisService, missionRoomService, eventsService, workflowRegistryService, marcusExecutionService, workflowOperationsRegistryService). Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`

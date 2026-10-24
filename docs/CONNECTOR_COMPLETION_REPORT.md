@@ -1,4 +1,6 @@
 # Connector Completion Report
+
+> **Status (2026-10-25):** a dated report (2026-05-31, 14 connectors then; 33 now). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
 **Date:** 2026-05-31
 **Agent:** Parallel subagent — connector error handling, Brave Search, ModelSwitcher
 

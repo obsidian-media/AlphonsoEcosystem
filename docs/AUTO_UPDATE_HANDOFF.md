@@ -1,5 +1,7 @@
 # Alphonso In-App Auto-Update — Handoff Plan
 
+> **Status (2026-10-25):** done: merged in v2.6.0 (PR #98) and confirmed against a real signed release on 2026-09-05 (v2.7.0 → v2.7.1, after the fix that stops Runtime Hub tools first). The Rust process plugin was added on 2026-10-21 so restarting works on macOS and Linux too. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Prepared by:** Claude Code (2026-07-10)
 **Branch:** `feat/in-app-auto-update` (merged into `main` via PR #98 on 2026-07-10)
 **Status:** CLOSED — implemented (`UpdaterNotification.tsx` real `check()` →

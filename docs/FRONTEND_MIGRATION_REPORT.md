@@ -1,5 +1,7 @@
 # Frontend Migration Report — TypeScript Incremental Migration
 
+> **Status (2026-10-25):** components are all `.tsx`; services are 250 `.ts` / 35 `.js`. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Date:** 2026-05-31  
 **Agent:** Claude (Sonnet 4.6)  
 **Scope:** TypeScript setup, serviceScopes documentation, memoryService model migration

@@ -1,5 +1,7 @@
 # Cloud Voice Production Recheck Audit
 
+> **Status (2026-10-25):** unchanged: the AWS address has not been restored in this repo's records; still needs the infrastructure owner. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Date: 2026-10-20  
 Branch: `agent/Codex-priority-hardening`  
 Scope: production readiness endpoint and DNS reachability

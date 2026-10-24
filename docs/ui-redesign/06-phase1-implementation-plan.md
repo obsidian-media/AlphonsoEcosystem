@@ -1,5 +1,7 @@
 # Phase 1 Foundation Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Lay the smallest real, independently-shippable slice of Phase 1's design-system foundation: fix a found nav bug, resolve a found naming collision, add the accent-theme mechanism, and build the `Zone` primitive that replaces `Card` for the new no-shadow visual language — all four verified against the real, already-live codebase (`tokens.css`, `tailwind.config.js`, `App.tsx`), not invented from the brainstorming mockups alone.

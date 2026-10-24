@@ -1,5 +1,7 @@
 # Phase 2 — Mission Room Re-skin Spec
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 ## Scope
 
 Re-skin `MissionRoom.tsx` (520 lines, 65 real hardcoded color refs). Existing test coverage (`src/test/components/MissionRoomKanbanStatus.test.tsx`) reused as the regression guard. Same recipe as the previous 10 re-skins, with a real per-agent-palette carve-out (a third one this session) — plus a genuine, previously-undiscovered bug found and fixed along the way.

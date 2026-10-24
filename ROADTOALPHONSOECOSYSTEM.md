@@ -1,5 +1,7 @@
 # ROAD TO ALPHONSO ECOSYSTEM — 10/10
 
+> **Status (2026-10-25):** a roadmap written 2026-07-02. Many items shipped since (Smart Installer, in-app updates, memory graph, macOS and Linux builds, the Jose redesign, the content factory). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Version baseline:** v2.4.4 | **Date:** 2026-06-29  
 **Goal:** Production-grade, secure, fully-tested, 10/10 maturity  
 **Strategy:** Two parallel agent batches working on separate branches, each committing after every phase.

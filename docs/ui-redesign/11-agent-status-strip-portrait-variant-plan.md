@@ -1,5 +1,7 @@
 # AgentStatusStrip Portrait Variant Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (inline, per this session's standing "no subagents" instruction). Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Extend the real, already-working `AgentStatusStrip.tsx` (currently dot-pill only, used today in `Sidebar.tsx`) with a `variant="portraits"` mode — all 9 agents shown via their real portrait (`getAgentMascotPath`), idle agents dimmed, active agents get a breathing-glow animation (Framer Motion, per Phase 1's convention) — reusing the component's existing, real 30-second activity-detection logic rather than building a separate system. Default behavior (`variant="dots"`, the current unnamed default) is unchanged for every existing caller.

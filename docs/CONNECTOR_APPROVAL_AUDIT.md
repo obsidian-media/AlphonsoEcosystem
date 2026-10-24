@@ -1,5 +1,7 @@
 # Connector Approval & Policy Audit
 
+> **Status (2026-10-25):** approval is by effect since 2026-10-23: spending, publishing or sending, and deleting always ask (`jose/joseEffects.ts`). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 ## Policy engine
 - `src/services/policyEnforcementService.ts`
 - Enforces:

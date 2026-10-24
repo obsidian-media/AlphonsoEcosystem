@@ -1,5 +1,7 @@
 # Atlas Control-Plane Demo
 
+> **Status (2026-10-25):** a demo of Atlas, which is an opt-in preview in the iOS app (the classic companion is the default since PR #200).
+
 ## Purpose
 
 This module is a **non-production mobile integration surface** for Atlas. It exists to validate the iOS typed repository and mobile information architecture against a real HTTP contract without exposing desktop controls, connector credentials, local files, worker dispatch, or final approval execution.

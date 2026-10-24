@@ -1,5 +1,7 @@
 # Native Ollama Verification Audit
 
+> **Status (2026-10-25):** since then a model folder chosen in the Ollama desktop app is found, chat works with an Ollama you started (through the backend), and pulling a model goes through the backend (2026-10-21/22). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Date: 2026-10-21
 Agent: Codex
 Branch: `agent/Codex-priority-hardening`

@@ -1,5 +1,7 @@
 # Phase 2 — Orchestrator View Re-skin Spec
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 ## Scope
 
 Re-skin `OrchestratorView.tsx` (1177 lines, 84 real hardcoded color-class occurrences, verified via direct grep including the `red-*`/`pink-*` families this session's earlier grep pattern initially missed — see bug-log.md #12). This is the "Orchestrator" page (Agents space), the real governance/approval hub embedding `OrchestratorQueueView`. 61 refs live in the main render body, 23 in a dozen small reusable helper components at the bottom of the file (`OCard`, `ApproveBtn`, `RejectBtn`, `NeutralBtn`, `Panel`, `CollapsiblePanel`, `Metric`, `MiniStat`, `RuntimeRow`, `TrustBadge`, `GovernanceRow`, `FlowStep`). Same direct spec-and-build recipe as the previous 5 re-skins this session.
