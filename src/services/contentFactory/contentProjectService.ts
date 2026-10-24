@@ -292,6 +292,17 @@ export function setShortKind(id: string, shortId: string, kind: ShortKind): Cont
   return editShort(id, shortId, (s) => { s.kind = kind; });
 }
 
+/** A made Short's file and state, kept in the chosen Shorts version (phase 3d). */
+export function setShortOutput(id: string, shortId: string, output: unknown): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.shorts.versions.find((v) => v.version === p.steps.shorts.chosenVersion);
+    if (!chosen) throw new Error('Run the Shorts step first.');
+    const current = (chosen.output as Record<string, unknown>) || {};
+    const made = { ...((current.made as Record<string, unknown>) || {}), [shortId]: output };
+    chosen.output = { ...current, made };
+  });
+}
+
 export function setVersionOutputField(id: string, step: StepId, version: number, field: string, value: unknown): ContentProject {
   return update(id, (p) => {
     const v = p.steps[step].versions.find((item) => item.version === version);

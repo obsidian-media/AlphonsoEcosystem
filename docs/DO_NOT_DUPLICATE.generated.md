@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 267 services and 166 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 268 services and 166 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -271,7 +271,7 @@ Source-backed inventory: 267 services and 166 components. Human purpose descript
 | service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `POST_STATUS_LABEL`, `savePosts`, `updatePost` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `outputPath`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
 | service | `src/services/contentFactory/contentProjectPlan.ts` | `briefWantsCarousel`, `briefWantsShorts`, `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `PUBLISH_WAIT`, `REVIEW_WAIT`, `runwayEstimate`, `shortsCount` |
-| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getShortsSettings`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setShortKind`, `setShortPlatforms`, `setShortsSettings`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
+| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getShortsSettings`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setShortKind`, `setShortOutput`, `setShortPlatforms`, `setShortsSettings`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentPublishExecutor.ts` | `executePublishStep`, `NO_APPROVED_POSTS` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
@@ -285,6 +285,7 @@ Source-backed inventory: 267 services and 166 components. Human purpose descript
 | service | `src/services/contentFactory/publishPost.ts` | `PostResult`, `PublishablePost`, `publishPost` |
 | service | `src/services/contentFactory/readyToPost.ts` | `BY_HAND_REMINDER`, `exportForHand`, `handFolderFor` |
 | service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
+| service | `src/services/contentFactory/shortMaker.ts` | `makeShorts`, `MAKING_ANOTHER`, `NEEDS_FINISHED_VIDEO`, `redoShort`, `RUNWAY_SHORTS_NOTE`, `ShortOutput` |
 | service | `src/services/contentFactory/signInExpiry.ts` | `getSignInExpiry`, `isYoutubeProjectPublished`, `plainSignInReason`, `recordSignIn`, `setYoutubeProjectPublished`, `SIGN_IN_NAME`, `signedInAt`, `SignInService`, `SignInWarning`, `signInWarnings` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `drawSlide`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline`, `layoutSlideText`, `slideSize`, `SlideTextLayout` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
