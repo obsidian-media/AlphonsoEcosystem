@@ -5,6 +5,8 @@ vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: vi.fn(), freeO
 vi.mock('../../../services/videoModelService', () => ({
   listVideoModels: vi.fn(async () => (globalThis as any).__videoModels),
   effectiveVideoModel: (info: any) => info.models.find((m: any) => m.id === info.suggested) || null,
+  // A card with 8 GB or more (phase 3d): clips at full size and length.
+  clipSizeFor: () => ({ lowRes: false, maxSeconds: Infinity }),
 }));
 vi.mock('../../../services/contentFactory/comfyVideoClip', () => ({ makeComfyClip: vi.fn(), checkComfyClip: vi.fn() }));
 vi.mock('../../../services/contentFactory/runwayClip', async () => {
