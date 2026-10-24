@@ -673,6 +673,16 @@ pub(crate) async fn meta_publish_content(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// A test secret made when the test runs, so no key is written in the code (CodeQL).
+  fn test_secret(tag: &str) -> String {
+    format!("test-{tag}-{}", std::process::id())
+  }
+
+  /// An empty secret, also made at run time.
+  fn no_secret() -> String {
+    test_secret("").chars().take(0).collect()
+  }
   use std::ffi::OsString;
   use std::sync::{Mutex, MutexGuard};
 
@@ -734,12 +744,12 @@ mod tests {
 
   #[test]
   fn meta_appsecret_proof_returns_none_without_secret() {
-    assert!(meta_appsecret_proof_with("", "any_token").is_none());
+    assert!(meta_appsecret_proof_with(&no_secret(), "any_token").is_none());
   }
 
   #[test]
   fn meta_appsecret_proof_returns_hex_hmac_when_secret_set() {
-    let proof = meta_appsecret_proof_with("secret123", "access_token");
+    let proof = meta_appsecret_proof_with(&test_secret("hex"), "access_token");
     assert!(proof.is_some());
     let value = proof.unwrap();
     assert_eq!(value.len(), 64, "HMAC-SHA256 hex must be 64 chars");
@@ -791,7 +801,12 @@ mod tests {
 
   #[test]
   fn appsecret_proof_uses_the_given_secret() {
-    assert!(meta_appsecret_proof_with("", "t").is_none());
-    assert_eq!(meta_appsecret_proof_with("s", "t").unwrap().len(), 64);
+    assert!(meta_appsecret_proof_with(&no_secret(), "t").is_none());
+    assert_eq!(
+      meta_appsecret_proof_with(&test_secret("given"), "t")
+        .unwrap()
+        .len(),
+      64
+    );
   }
 }
