@@ -95,6 +95,8 @@ describe('saved Meta keys', () => {
     const { request } = invoke.mock.calls[0][1];
     expect(request.credentials).toEqual({
       accessToken: 'saved-token', pageAccessToken: null, pageId: '42', instagramBusinessAccountId: null, appSecret: null, appId: null,
+      // Instagram Login (phase 3c), also from Settings.
+      instagramLoginToken: null, instagramLoginUserId: null,
     });
   });
 });
