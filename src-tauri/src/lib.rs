@@ -804,6 +804,8 @@ pub fn run() {
       oauth_signin::instagram_refresh_token,
       comfyui_video_models::comfyui_video_models,
       comfyui_video_models::comfyui_install_video_model,
+      comfyui_video_models::comfyui_reference_model,
+      comfyui_video_models::comfyui_install_reference_model,
       comfyui_proxy::comfyui_upload_image,
       comfyui_proxy::comfyui_save_output,
       execute_command_verified,

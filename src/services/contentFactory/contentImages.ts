@@ -6,7 +6,7 @@ import { generateComfyUiImage, checkComfyUiImage, getComfyUiEndpoint } from '../
 import { higgsfieldKeys, higgsfieldModels } from '../connectors/higgsfieldConnector';
 import { canSpend, recordSpendUsd } from '../jose/joseSpend';
 import { higgsfieldPictureLimit, resolveCharacter, resolvePictures } from './engineChoice';
-import { CHARACTER_REFERENCE_MISSING, characterReferenceAvailable, withCharacterPrompt } from './comfyCharacter';
+import { CHARACTER_REFERENCE_MISSING, characterReferenceAvailable, makeCharacterPicture, withCharacterPrompt } from './comfyCharacter';
 import { getBrand } from './contentBrandService';
 import { addStepProgress, chosenVersionOf, getProject, setVersionOutputField } from './contentProjectService';
 import { loadProjectImage, outputPath, projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
@@ -107,7 +107,10 @@ async function makePicture(
   let prompt = comfy.prompt;
   if (who?.character && who.use !== 'none') {
     prompt = withCharacterPrompt(prompt, who.character);
-    if (!(await characterReferenceAvailable())) addNote(choice, CHARACTER_REFERENCE_MISSING);
+    if (await characterReferenceAvailable()) {
+      return makeCharacterPicture({ root: rootDir, prompt, negativePrompt: comfy.negativePrompt, width: comfy.width, height: comfy.height, character: who.character });
+    }
+    addNote(choice, CHARACTER_REFERENCE_MISSING);
   }
   try {
     return await generateComfyUiImage({ ...comfy, prompt }, { endpoint: getComfyUiEndpoint() }) as ImageResult;

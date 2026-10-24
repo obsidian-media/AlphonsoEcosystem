@@ -15,7 +15,10 @@ vi.mock('../../../services/connectors/connectorImageGenerators', () => ({
   generateComfyUiImage: vi.fn(async () => ({ ok: true, previewBase64: 'COMFY' })),
   checkComfyUiImage: vi.fn(),
   getComfyUiEndpoint: vi.fn(() => 'http://127.0.0.1:8188'),
+  comfyRequest: vi.fn(async () => ({ ok: true, json: async () => ({ prompt_id: 'pid-1' }) })),
+  pollComfyUiHistory: vi.fn(async () => ({ ok: true, previewBase64: 'CHAR' })),
 }));
+vi.mock('../../../lib/ollama', () => ({ freeOllamaGpuMemory: vi.fn(async () => ({ ok: true })) }));
 vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   const actual = await vi.importActual<typeof import('../../../services/contentFactory/contentProjectFiles')>('../../../services/contentFactory/contentProjectFiles');
   return { ...actual, saveProjectImage: vi.fn(async (_r, _b, _p, sub, file) => `D:\\Content\\${sub}\\${file}`), writeProjectFile: vi.fn(async () => undefined), loadProjectImage: vi.fn(async () => 'data:image/png;base64,HF') };
@@ -27,7 +30,8 @@ vi.mock('../../../services/contentFactory/thumbnailRenderer', async () => {
 vi.mock('../../../services/miyaMemoryService', () => ({ listMiyaMemory: vi.fn(() => []) }));
 
 import { invoke } from '@tauri-apps/api/core';
-import { generateComfyUiImage } from '../../../services/connectors/connectorImageGenerators';
+import { comfyRequest, generateComfyUiImage } from '../../../services/connectors/connectorImageGenerators';
+import { resetReferenceCacheForTests } from '../../../services/contentFactory/comfyCharacter';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { addCharacter, updateCharacter, setPermission, deleteCharacter } from '../../../services/contentFactory/contentCharacters';
 import { createProject, emptyBrief, getProject, saveStepVersion, chosenVersionOf, setVideoSettings, setSceneCharacter } from '../../../services/contentFactory/contentProjectService';
@@ -62,6 +66,7 @@ beforeEach(async () => {
   backend.higgsfield_run = (a) => ({ ok: true, status: 'done', path: a.outPath });
   backend.delete_workspace_file = () => null;
   vi.clearAllMocks();
+  resetReferenceCacheForTests();
   await refreshHiggsfieldEstimate('picture');
 });
 
@@ -112,6 +117,16 @@ describe('the character in pictures', () => {
     expect(prompts[0]).toContain('a teacher with red glasses');
     expect(prompts[1]).not.toContain('a teacher with red glasses');
     expect(note(project.id)).toContain('Install the character reference model in Runtime Hub to keep the character.');
+  });
+
+  it("with the reference model installed, ComfyUI makes the picture from the character's pictures", async () => {
+    backend.comfyui_reference_model = () => ({ installed: true });
+    backend.comfyui_upload_image = (a) => ({ name: a.request.relPath });
+    const { project } = setup({ engine: 'comfyui', trained: false });
+    await renderScenePictures(project.id, settings);
+    expect(comfyRequest).toHaveBeenCalledTimes(1);
+    expect(generateComfyUiImage).toHaveBeenCalledTimes(1);
+    expect(note(project.id) || '').not.toContain('Install the character reference model');
   });
 
   it('thumbnails show the character too', async () => {

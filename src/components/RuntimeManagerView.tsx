@@ -45,6 +45,7 @@ import { Tabs } from './ui/Tabs';
 import { openExternalUrl } from '../services/browserAutomationService';
 import { findComfyuiInstalls, type ComfyUiInstall } from '../services/comfyuiSettingsService';
 import { VideoModelsPanel } from './VideoModelsPanel';
+import { CharacterReferencePanel } from './CharacterReferencePanel';
 import { getStorage } from '../lib/appStorage';
 import { InstallLocationPicker } from './InstallLocationPicker';
 import type { InstallLocation } from '../services/runtimeManagerService';
@@ -447,6 +448,7 @@ function ToolCard({ tool, onAction, onAutostartToggle, existingInstall }: ToolCa
       )}
 
       {tool.name === 'comfyui' && (tool.installed || usingExisting) && <VideoModelsPanel />}
+      {tool.name === 'comfyui' && (tool.installed || usingExisting) && <CharacterReferencePanel />}
 
       {installing && progress && (
         <div>

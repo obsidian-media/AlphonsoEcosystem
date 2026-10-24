@@ -60,6 +60,17 @@ export function installVideoModel(id: string): Promise<void> {
 }
 
 /** The model the user picked, or null for the suggested one. */
+/** The character reference model (phase 4c): installed in the user's ComfyUI or not. */
+export interface ExtraModelInfo { id: string; name: string; minVramGb: number; license: string; sizeBytes: number; installed: boolean; vramGb: number | null; comfyuiDir: string | null }
+
+export function getCharacterReferenceModel(): Promise<ExtraModelInfo> {
+  return invoke<ExtraModelInfo>('comfyui_reference_model', { savedDir: savedComfyDir() });
+}
+
+export function installCharacterReferenceModel(): Promise<void> {
+  return invoke<void>('comfyui_install_reference_model', { savedDir: savedComfyDir() });
+}
+
 export function getSelectedVideoModel(): string | null {
   try {
     return localStorage.getItem(SELECTED_KEY) || null;
