@@ -46,7 +46,7 @@ const TRUTH_PATTERNS = [
 // not a local count. Earlier comments/commits referenced 3,831 and 5,147 --
 // both stale as of this reconciliation; this is the one number to trust going
 // forward until the next materially-different `npm test` run.
-const CURRENT_TOTAL_TESTS = '5,239';
+const CURRENT_TOTAL_TESTS = '6,777';
 
 // Each entry defines a claim to verify:
 //   file        — relative path from project root
@@ -81,7 +81,7 @@ const CLAIMS = [
   {
     file: 'README.md',
     label: 'architecture Tauri commands',
-    pattern: /(\d+) Tauri commands/,
+    pattern: /lib\.rs ~[\d,]+ lines · (\d+) Tauri commands/,
     actualFn: () => getAllCounts().tauriCommands
   },
   {
@@ -112,14 +112,14 @@ const CLAIMS = [
 
   {
     file: 'README.md',
-    label: 'What\'s New Rust unit tests',
-    pattern: /(\d+) Rust unit tests across (\d+) modules/,
+    label: 'Rust unit tests (Development section)',
+    pattern: /# (\d+) Rust unit tests across (\d+) modules/,
     actualFn: () => getAllCounts().rustTests
   },
   {
     file: 'README.md',
-    label: "What's New modules count",
-    pattern: /(\d+) Rust unit tests across (\d+) modules/,
+    label: 'Rust modules (Development section)',
+    pattern: /# (\d+) Rust unit tests across (\d+) modules/,
     actualFn: () => getAllCounts().rustSource.modules.length,
     group: 2
   },
