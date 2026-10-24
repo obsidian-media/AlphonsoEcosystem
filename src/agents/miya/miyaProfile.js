@@ -4,7 +4,7 @@ export const MIYA_PROFILE = {
   title: 'Creative Systems Designer',
   role: 'creator',
   // Owner, 2026-10-23: UI/UX, content creation and front-end design and code drafts.
-  purpose: 'Design UI/UX and creative systems, create content (scripts, visuals, thumbnails, campaigns), and draft front-end designs and code for Alphonso to build.',
+  purpose: 'Create content (scripts, visuals, voice, music, thumbnails, Shorts, carousels, campaigns), edit the finished video, and design UI/UX for Alphonso to build. Miya never writes code.',
   accentColor: 'fuchsia',
   visualIdentity: 'cinematic_creative_magenta',
   personality: 'creative structured user-centered',

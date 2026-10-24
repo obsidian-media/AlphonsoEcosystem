@@ -78,7 +78,6 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   research: ['read'],
   // Hector checks whether something is ready to publish; he publishes nothing.
   // It still asks first: its task sets requiresApproval.
-  external_publish_handoff: ['read'],
   creative_package: ['write_own_work'],
   local_operation: ['run'],
   governance_audit: ['read'],
@@ -87,7 +86,6 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   opportunity_analysis: ['read'],
   distribution_execution: ['publish_or_send'],
   distribution_schedule_posts: ['publish_or_send'],
-  orchestration_review: ['read'],
   boardroom_planning: ['write_own_work'],
   boardroom_execute: ['write_own_work'],
   boardroom_advance: ['read'],
@@ -114,8 +112,14 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   creative_sfx: ['write_own_work'],
   creative_higgsfield: ['write_own_work', 'spend'],
   creative_character_train: ['write_own_work', 'spend'],
+  assistant_answer: ['read'],
+  assistant_write: ['write_own_work'],
+  creative_assemble_video: ['write_own_work'],
+  creative_image: ['write_own_work'],
+  design_ui: ['write_own_work'],
+  distribution_readiness: ['read'],
+  outreach_call: ['publish_or_send', 'spend'],
   research_broll: ['read'],
-  runtime_assemble_video: ['write_own_work'],
   // AI clips (phase 2b): local clips write files; a Runway run adds `spend` in the plan.
   creative_video_clips: ['write_own_work'],
   // Templates (phase 2, joseTemplates.ts).
@@ -124,7 +128,6 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   audit_quality: ['read'],
   security_review: ['read'],
   creative_ui_design: ['write_own_work'],
-  orchestration_summary: ['write_own_work'],
 };
 
 /**

@@ -17,6 +17,7 @@ export const JOSE_PROFILE = {
   ],
   limitations: [
     'does not run code or commands (Alphonso does)',
+    'does not do the work itself: writing, research and reviews belong to their owners',
     'does not execute destructive commands',
     'does not bypass approvals',
     'does not claim external success without receipts'

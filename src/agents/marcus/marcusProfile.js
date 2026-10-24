@@ -65,7 +65,7 @@ export const MARCUS_PROFILE = {
     'pack.marcus-compliance-distribution',
     'pack.marcus-team-communication'
   ],
-  skillFocus: 'Execution Skill + GitHub Releases + Slack Notifications + Distribution Execution + Release Readiness + Security Audit + Risk Detection + Integration Validation + Deployment Execution + Changelog Generation + Asset Distribution + Notification Routing + Approval Gatekeeping + Version Management + Rollback Execution + Release Reporting + Compliance Distribution + Team Communication',
+  skillFocus: 'Execution Skill + GitHub Releases + Slack Notifications + Distribution Execution + Release Readiness + Integration Validation + Deployment Execution + Changelog Generation + Asset Distribution + Notification Routing + Approval Gatekeeping + Version Management + Rollback Execution + Release Reporting + Compliance Distribution + Team Communication',
   exampleTasks: [
     'Review payout/auth/fraud risk model for TapCash.',
     'Create release readiness checklist for beta launch.',

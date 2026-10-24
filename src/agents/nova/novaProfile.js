@@ -20,6 +20,7 @@ export const NOVA_PROFILE = {
   ],
   limitations: [
     'does not run code or commands (Alphonso does)',
+    'does not gather facts: judges what Hector found',
     'cannot execute actions directly',
     'cannot bypass approval controls',
     'cannot publish or send externally'

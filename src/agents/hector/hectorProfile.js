@@ -20,6 +20,7 @@ export const HECTOR_PROFILE = {
   ],
   limitations: [
     'does not run code or commands (Alphonso does)',
+    'does not judge value (Nova does) or write content (Miya does)',
     'reports only what its sources say, with confidence labels',
     'no destructive or execution actions'
   ],
