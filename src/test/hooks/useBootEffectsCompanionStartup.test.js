@@ -5,14 +5,17 @@ import { useBootEffects } from '../../hooks/useBootEffects';
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn().mockResolvedValue(null) }));
 vi.mock('../../services/workspaceRootService', () => ({ getDefaultWorkspaceRoot: vi.fn().mockResolvedValue(null) }));
 
-let hydrateResolve;
+// Several boot effects wait for the saved keys (the companions, and since phase 3c the
+// staged-storage clean-up); each gets its own load, and loading the keys ends them all.
+let hydrateResolvers = [];
+const hydrateResolve = () => { hydrateResolvers.forEach((r) => r()); hydrateResolvers = []; };
 const hydrateCalls = [];
 const getConnectorCredential = vi.fn(() => 'a-real-saved-token');
 
 vi.mock('../../services/connectors/connectorAuth', () => ({
   hydrateConnectorCredentialsFromSqlite: vi.fn((...args) => {
     hydrateCalls.push('hydrate');
-    return new Promise((resolve) => { hydrateResolve = resolve; }).then(() => {});
+    return new Promise((resolve) => { hydrateResolvers.push(resolve); }).then(() => {});
   }),
   getConnectorCredential: (...args) => {
     hydrateCalls.push('read');
@@ -26,7 +29,7 @@ vi.mock('../../services/whatsappCompanionService', () => ({ startWhatsAppCompani
 describe('useBootEffects — Telegram/WhatsApp companion startup credential ordering', () => {
   beforeEach(() => {
     hydrateCalls.length = 0;
-    hydrateResolve = null;
+    hydrateResolvers = [];
     vi.clearAllMocks();
   });
 
