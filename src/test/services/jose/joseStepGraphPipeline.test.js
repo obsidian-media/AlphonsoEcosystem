@@ -764,3 +764,19 @@ describe('a step whose owner needs setting up', () => {
     expect(request.steps.every((s) => s.status === 'done')).toBe(true);
   });
 });
+
+describe('the closing summary (agent roles Part A)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(executeContentStepAssignment).mockClear();
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => ({
+      summary: `${assignment.stepId} finished. Details follow.`, resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType,
+    }));
+  });
+
+  it('ends a request with one line per step and the board, not "Jose merged"', async () => {
+    const result = await run([step('miya', 'creative_script', { stepId: 'script' }), step('miya', 'creative_scenes', { stepId: 'scenes', needs: ['script'] })]);
+    const command = listJoseCommands().find((c) => c.id === result.commandId);
+    expect(command.userReport.summary).toBe('Miya: script finished.\nMiya: scenes finished.\nOpen on the board.');
+  });
+});

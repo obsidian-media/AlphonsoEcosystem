@@ -288,7 +288,8 @@ describe('requests no specialist takes', () => {
     const report = result.command.userReport;
     expect(result.failedCount).toBe(1);
     // A failed step is reported as failed, with its reason, not as "waiting".
-    expect(report.summary).toMatch(/1 of 1 assignment\(s\) failed/);
+    // The closing summary (agent roles Part A): the step and why it failed.
+    expect(report.summary).toMatch(/^Alphonso: failed \(.*Nothing was produced/);
     expect(report.summary).not.toMatch(/waiting for agent reports/);
     expect(report.assignmentSummaries[0]).toMatchObject({ reportStatus: 'failed' });
     expect(report.assignmentSummaries[0].reportSummary).toMatch(/^Failed: .*Nothing was produced/);

@@ -1,3 +1,5 @@
+import { listJoseRequests } from './jose/joseRequestStore';
+import { closingSummary } from './jose/joseSummary';
 import type { ContentStepPayload } from './contentFactory/contentTypes';
 import { invoke } from '@tauri-apps/api/core';
 import {
@@ -950,6 +952,9 @@ function assignmentFailure(assignment: JoseCommandAssignment): string | null {
 }
 
 function buildUserSummary(command: JoseCommand, reports: any[], resultUrl: string | null, pendingAssignments: JoseCommandAssignment[], failedAssignments: JoseCommandAssignment[] = []): string {
+  // A Jose request ends with its closing summary: one line per step (agent roles Part A).
+  const request = listJoseRequests().find((r) => r.commandId === command.id);
+  if (request && request.steps?.length) return closingSummary(request);
   if (failedAssignments.length) {
     const done = reports.length ? ` ${reports.length} agent report(s) arrived.` : '';
     return `${failedAssignments.length} of ${(command.assignments || []).length} assignment(s) failed for "${shorten(command.commandText)}".${done} See each agent's report below.`;
