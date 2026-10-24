@@ -3,6 +3,7 @@
 // the free ones. A paid engine that isn't available (no key, Zero-Cost Mode on, over the
 // monthly cap) is replaced by the free one with a note saying why — never silently.
 import { getConnectorCredential } from '../connectors/connectorAuth';
+import { isHiggsfieldConfigured } from '../connectors/higgsfieldConnector';
 import { canSpend, getPaidModelSettings } from '../jose/joseSpend';
 import { getVideoSettings } from './contentProjectService';
 import type { ContentBrand, ContentProject } from './contentTypes';
@@ -27,8 +28,7 @@ function zeroCostModeOn(): boolean {
 
 function hasKeys(engine: PaidEngine): boolean {
   if (engine === 'elevenlabs') return Boolean(String(getConnectorCredential('elevenlabs', 'ELEVENLABS_API_KEY') || '').trim());
-  return Boolean(String(getConnectorCredential('higgsfield', 'HIGGSFIELD_KEY_ID') || '').trim())
-    && Boolean(String(getConnectorCredential('higgsfield', 'HIGGSFIELD_KEY_SECRET') || '').trim());
+  return isHiggsfieldConfigured();
 }
 
 /** Whether a paid engine can be used now; otherwise a plain reason. */

@@ -38,8 +38,9 @@ const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'clickup',
   'calle',
   'runway',
-  // Phase 4b: paid voices and sound effects.
-  'elevenlabs'
+  // Phase 4b: paid voices and sound effects; paid pictures and clips.
+  'elevenlabs',
+  'higgsfield'
 ]);
 
 /** The connector ids Zero-Cost Mode treats as paid or metered. */
@@ -166,7 +167,7 @@ export function classifyConnectorRisk(connectorId: string, actionType: string = 
   let risk: ConnectorRiskLevel = 'low';
   // runway: real paid cloud video generation, unconditionally high risk (not
   // by actionType pattern) -- see the PAID_OR_METERED_CONNECTORS comment above.
-  if (id === 'youtube' || id === 'meta' || id === 'runway' || id === 'elevenlabs' || action.includes('publish') || action.includes('upload')) risk = 'high';
+  if (id === 'youtube' || id === 'meta' || id === 'runway' || id === 'elevenlabs' || id === 'higgsfield' || action.includes('publish') || action.includes('upload')) risk = 'high';
   // hermes_agents: unlike a bare chat-completion connector, a Hermes profile
   // is a full standing agent (terminal, code_execution, delegation, cronjob,
   // memory — see docs/HERMES_AGENT_DELEGATION_PLAN.md §1b.2) that can run real

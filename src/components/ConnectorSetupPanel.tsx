@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { listElevenLabsVoices } from '../services/connectors/elevenLabsConnector';
+import { HIGGSFIELD_CONSOLE_URL, parseExtra, testHiggsfieldModel } from '../services/connectors/higgsfieldConnector';
 import { invoke } from '@tauri-apps/api/core';
 import {
   RadioTower, CheckCircle2, AlertCircle, Circle, ChevronDown, ChevronUp,
@@ -157,6 +158,53 @@ function ElevenLabsTest(): React.JSX.Element {
   );
 }
 
+/** Higgsfield (phase 4b): your keys, and the picture and clip model ids you paste from the Console, each with extra settings. */
+function HiggsfieldSection({ onSave }: { onSave: (fields: Record<string, string>) => void }): React.JSX.Element {
+  const get = (k: string) => getConnectorCredential('higgsfield', k) || '';
+  const [keyId, setKeyId] = useState(() => get('HIGGSFIELD_KEY_ID'));
+  const [keySecret, setKeySecret] = useState(() => get('HIGGSFIELD_KEY_SECRET'));
+  const [picture, setPicture] = useState(() => get('HIGGSFIELD_PICTURE_MODEL'));
+  const [pictureExtra, setPictureExtra] = useState(() => get('HIGGSFIELD_PICTURE_EXTRA'));
+  const [clip, setClip] = useState(() => get('HIGGSFIELD_CLIP_MODEL'));
+  const [clipExtra, setClipExtra] = useState(() => get('HIGGSFIELD_CLIP_EXTRA'));
+  const [result, setResult] = useState('');
+  const test = async (what: 'picture' | 'clip') => {
+    const model = (what === 'picture' ? picture : clip).trim();
+    const Name = what === 'picture' ? 'Picture' : 'Clip';
+    if (!model) { setResult(`Paste the ${what} model id from the Higgsfield Console first.`); return; }
+    const parsed = parseExtra(what === 'picture' ? pictureExtra : clipExtra, what);
+    if (parsed.problem) { setResult(parsed.problem); return; }
+    setResult('Checking…');
+    const answer = await testHiggsfieldModel(model, parsed.extra);
+    setResult(answer.ok && typeof answer.usd === 'number'
+      ? `${Name} model works: about $${answer.usd.toFixed(2)} each.`
+      : answer.reason || 'Higgsfield could not be reached.');
+  };
+  const text = (label: string, key: string, value: string, onChange: (v: string) => void, placeholder: string) => ({ label, key, value, onChange, placeholder, secret: false });
+  return (
+    <>
+      <CredentialSection title="Higgsfield (pictures and AI clips)" icon={FileText} borderColor="border-fuchsia-300/20" bgColor="bg-fuchsia-500/8" accentColor="text-fuchsia-400"
+        fields={[
+          { label: 'Key id', key: 'HIGGSFIELD_KEY_ID', value: keyId, onChange: setKeyId, placeholder: 'Your Higgsfield key id' },
+          { label: 'Key secret', key: 'HIGGSFIELD_KEY_SECRET', value: keySecret, onChange: setKeySecret, placeholder: 'Your Higgsfield key secret' },
+          text('Picture model id', 'HIGGSFIELD_PICTURE_MODEL', picture, setPicture, 'e.g. higgsfield-ai/soul/v2/standard'),
+          text('Picture model extra settings (JSON)', 'HIGGSFIELD_PICTURE_EXTRA', pictureExtra, setPictureExtra, 'Optional, e.g. {"quality": "high"}'),
+          text('Clip model id', 'HIGGSFIELD_CLIP_MODEL', clip, setClip, 'e.g. kling-video/v2.1/pro/image-to-video'),
+          text('Clip model extra settings (JSON)', 'HIGGSFIELD_CLIP_EXTRA', clipExtra, setClipExtra, 'Optional, e.g. {"duration": 5}'),
+        ]}
+        onSave={() => onSave({ HIGGSFIELD_KEY_ID: keyId, HIGGSFIELD_KEY_SECRET: keySecret, HIGGSFIELD_PICTURE_MODEL: picture, HIGGSFIELD_PICTURE_EXTRA: pictureExtra, HIGGSFIELD_CLIP_MODEL: clip, HIGGSFIELD_CLIP_EXTRA: clipExtra })}
+        hint="Paid, your own account. Copy a model id from the Higgsfield Console; prompt, picture, length and shape are filled in by Miya, and anything else that model takes goes in its extra settings. Every run asks first with Higgsfield's own estimate."
+        savedLabel="Higgsfield settings saved" />
+      <div className="-mt-2 flex flex-wrap items-center gap-2 px-1 text-[12px] text-(--text-2)">
+        <button type="button" className="rounded-lg bg-(--surface-2) px-2 py-1" onClick={() => { void test('picture'); }}>Test picture model</button>
+        <button type="button" className="rounded-lg bg-(--surface-2) px-2 py-1" onClick={() => { void test('clip'); }}>Test clip model</button>
+        <button type="button" className="rounded-lg bg-(--surface-2) px-2 py-1" onClick={() => { invoke('open_url', { url: HIGGSFIELD_CONSOLE_URL }).catch(() => {}); }}>Open the Higgsfield Console</button>
+        {result && <span>{result}</span>}
+      </div>
+    </>
+  );
+}
+
 function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColor, fields, onSave, hint, savedLabel }: CredentialSectionProps): React.JSX.Element {
   const [saved, setSaved] = useState(false);
 
@@ -178,6 +226,7 @@ function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColo
             <label className="mb-1.5 block text-[11px] font-medium text-(--text-3)">{f.label}</label>
             <input
               type={f.secret === false ? 'text' : 'password'}
+              aria-label={f.label}
               value={f.value || ''}
               onChange={(e) => f.onChange(e.target.value)}
               className="w-full rounded-xl bg-(--surface-2) px-3 py-2.5 text-sm text-(--text-1) placeholder-(--text-4) focus:outline-hidden"
@@ -1100,6 +1149,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             hint="Paid, your own account. A brand can read its voice-overs with one of your ElevenLabs voices (including one you cloned there), and Miya can add sound effects. Every run asks first with the cost, using your prices in Settings → Approvals → Allow paid models."
             savedLabel="ElevenLabs key saved" />
           <ElevenLabsTest />
+          {/* Higgsfield (content factory phase 4b): paid pictures and AI clips from the model ids you choose. */}
+          <HiggsfieldSection onSave={(fields) => { void saveConnectorApiKey('higgsfield', fields); }} />
 
           {/* Stock footage for Miya's B-roll step (content factory phase 2a): each key is a free sign-up. */}
           <CredentialSection title="Pexels (stock footage)" icon={FileText} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"

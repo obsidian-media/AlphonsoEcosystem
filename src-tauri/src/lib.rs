@@ -33,6 +33,7 @@ mod companion_server;
 mod companion_types;
 mod connector_commands;
 mod elevenlabs;
+mod higgsfield;
 mod kv_store;
 mod media_storage;
 mod media_tools;
@@ -783,6 +784,10 @@ pub fn run() {
       elevenlabs::elevenlabs_models,
       elevenlabs::elevenlabs_speak,
       elevenlabs::elevenlabs_sound,
+      higgsfield::higgsfield_estimate,
+      higgsfield::higgsfield_run,
+      higgsfield::higgsfield_check,
+      higgsfield::higgsfield_test,
       media_storage::storage_put_file,
       media_storage::storage_delete,
       media_storage::storage_list_staged,

@@ -73,6 +73,10 @@ vi.mock('../services/connectors/connectorAuth', () => ({
 }));
 
 // ── ToolConnectionsPanel (child component) ────────────────────────────────────
+vi.mock('../services/connectors/higgsfieldConnector', async (orig) => ({
+  ...(await orig()),
+  testHiggsfieldModel: vi.fn(async () => ({ ok: true, usd: 0.12 })),
+}));
 vi.mock('../services/connectors/elevenLabsConnector', () => ({
   listElevenLabsVoices: vi.fn(async () => ({ ok: true, voices: [{ id: 'v1', name: 'Rachel', cloned: false }, { id: 'v2', name: 'My voice', cloned: true }] })),
 }));
@@ -156,6 +160,24 @@ describe('ConnectorSetupPanel', () => {
     expect(screen.getByText('ElevenLabs (voices and sound effects)')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Test ElevenLabs' }));
     expect(await screen.findByText('Connected: 2 voices, 1 of them cloned by you.')).toBeInTheDocument();
+  });
+
+  // Phase 4b: Higgsfield, with the model ids you paste and a Test that asks its estimate.
+  it('has a Higgsfield section whose Test gives the estimate for the model id', async () => {
+    localStorage.clear();
+    render(<ConnectorSetupPanel />);
+    fireEvent.click(screen.getByTestId('connector-category-content'));
+    expect(screen.getByText('Higgsfield (pictures and AI clips)')).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('e.g. higgsfield-ai/soul/v2/standard'), { target: { value: 'higgsfield-ai/soul/v2/standard' } });
+    fireEvent.change(screen.getByLabelText('Picture model extra settings (JSON)'), { target: { value: '{"quality":"high"}' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Test picture model' }));
+    expect(await screen.findByText('Picture model works: about $0.12 each.')).toBeInTheDocument();
+    const { testHiggsfieldModel } = await import('../services/connectors/higgsfieldConnector');
+    expect(testHiggsfieldModel).toHaveBeenCalledWith('higgsfield-ai/soul/v2/standard', { quality: 'high' });
+    fireEvent.change(screen.getByLabelText('Clip model extra settings (JSON)'), { target: { value: '[1]' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g. kling-video/v2.1/pro/image-to-video'), { target: { value: 'kling-video/v2.1/pro/image-to-video' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Test clip model' }));
+    expect(await screen.findByText('The clip model’s extra settings are not valid JSON.')).toBeInTheDocument();
   });
 
   // Phase 3a: Meta (Facebook and Instagram) keys can be saved in Settings.
