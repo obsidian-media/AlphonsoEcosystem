@@ -1033,6 +1033,220 @@ async fn assemble_outputs(
   Ok(outputs)
 }
 
+// ── Highlight and cut Shorts (phase 3d) ─────────────────────────────────────
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CutShortSpec {
+  workspace_root: String,
+  /// The finished 9:16 video, relative to the workspace.
+  source: String,
+  source_seconds: f64,
+  start_sec: f64,
+  end_sec: f64,
+  /// The Short's file, relative to the workspace (`.mp4`, never written over).
+  out_path: String,
+  /// A highlight's hook line (a WAV), spoken over the start.
+  #[serde(default)]
+  hook_voice: Option<String>,
+  #[serde(default)]
+  hook_seconds: Option<f64>,
+  /// The hook's on-screen text (an SRT), shown for the hook's length.
+  #[serde(default)]
+  hook_srt: Option<String>,
+  #[serde(default)]
+  caption_color: Option<String>,
+  #[serde(default)]
+  outline_color: Option<String>,
+}
+
+/// The part of the video to use, kept inside it; under 3 seconds is refused.
+pub(crate) fn clamp_moment(
+  start: f64,
+  end: f64,
+  source_seconds: f64,
+) -> Result<(f64, f64), String> {
+  let start = start.max(0.0);
+  let end = end.min(source_seconds);
+  // NaN (a broken length) fails too.
+  if (end - start).is_nan() || end - start < 3.0 {
+    return Err(
+      "That part of the finished video is under 3 seconds; choose a longer moment.".to_string(),
+    );
+  }
+  Ok((start, end))
+}
+
+/// The ffmpeg run for a cut (a plain trim) or a highlight (the original about 12 dB
+/// lower under the hook line, the hook text burned in from its file by a plain name).
+pub(crate) fn build_cut_runs(
+  root: &Path,
+  work: &Path,
+  spec: &CutShortSpec,
+  start: f64,
+  end: f64,
+) -> Vec<FfmpegRun> {
+  let mut args = vec![
+    s("-y"),
+    s("-hide_banner"),
+    s("-loglevel"),
+    s("error"),
+    s("-ss"),
+    format!("{start:.3}"),
+    s("-t"),
+    format!("{:.3}", end - start),
+    s("-i"),
+    root.join(&spec.source).to_string_lossy().to_string(),
+  ];
+  match (&spec.hook_voice, spec.hook_seconds) {
+    (Some(voice), Some(hook)) => {
+      args.extend([s("-i"), root.join(voice).to_string_lossy().to_string()]);
+      let style = format!(
+        "FontName=Arial,FontSize=22,PrimaryColour={},OutlineColour={},BorderStyle=1,Outline=3,Shadow=0,Alignment=8,MarginV=260",
+        ass_color(spec.caption_color.as_deref(), "&H00FFFFFF"),
+        ass_color(spec.outline_color.as_deref(), "&H00000000"),
+      );
+      let video = if spec.hook_srt.is_some() {
+        format!("[0:v]subtitles=hook.srt:force_style='{style}'[v]")
+      } else {
+        s("[0:v]null[v]")
+      };
+      args.extend([
+        s("-filter_complex"),
+        format!(
+          "{video};[0:a]volume=0.25:enable='between(t,0,{hook:.3})'[orig];[orig][1:a]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[a]"
+        ),
+        s("-map"),
+        s("[v]"),
+        s("-map"),
+        s("[a]"),
+      ]);
+    }
+    _ => args.extend([s("-map"), s("0:v"), s("-map"), s("0:a")]),
+  }
+  args.extend([
+    s("-c:v"),
+    s("libopenh264"),
+    s("-b:v"),
+    s("6M"),
+    s("-c:a"),
+    s("aac"),
+    s("-b:a"),
+    s("192k"),
+    s("-movflags"),
+    s("+faststart"),
+    work.join("short.mp4").to_string_lossy().to_string(),
+  ]);
+  vec![FfmpegRun {
+    cwd: work.to_path_buf(),
+    args,
+  }]
+}
+
+/// Makes a highlight or a cut Short from the finished 9:16 video.
+#[tauri::command]
+pub async fn content_cut_short(spec: CutShortSpec) -> Result<serde_json::Value, String> {
+  let out_file = checked_file(&spec.workspace_root, &spec.out_path, &["mp4"])?;
+  if out_file.exists() {
+    return Err("That Short's file already exists; nothing was overwritten.".to_string());
+  }
+  let (start, end) = clamp_moment(spec.start_sec, spec.end_sec, spec.source_seconds)?;
+  let root = std::fs::canonicalize(&spec.workspace_root).map_err(|e| e.to_string())?;
+  for rel in [
+    Some(&spec.source),
+    spec.hook_voice.as_ref(),
+    spec.hook_srt.as_ref(),
+  ]
+  .into_iter()
+  .flatten()
+  {
+    let path = checked_file(&spec.workspace_root, rel, &["mp4", "wav", "srt"])?;
+    if !path.is_file() {
+      return Err(format!("A file for the Short is missing: {rel}"));
+    }
+  }
+  let ffmpeg = ffmpeg_path().ok_or_else(|| "ffmpeg is missing from this install.".to_string())?;
+  let ffprobe =
+    ffprobe_path().ok_or_else(|| "ffprobe is missing from this install.".to_string())?;
+  let out = out_file
+    .parent()
+    .map(Path::to_path_buf)
+    .ok_or_else(|| "The Short needs a folder.".to_string())?;
+  let stem = out_file
+    .file_stem()
+    .and_then(|x| x.to_str())
+    .unwrap_or("short")
+    .to_string();
+  let work = out.join(format!(".work-{stem}"));
+  std::fs::create_dir_all(&work).map_err(|e| e.to_string())?;
+  let result = async {
+    if let Some(srt) = &spec.hook_srt {
+      std::fs::copy(root.join(srt), work.join("hook.srt")).map_err(|e| e.to_string())?;
+    }
+    for run in build_cut_runs(&root, &work, &spec, start, end) {
+      run_ffmpeg(&ffmpeg, &run).await?;
+    }
+    std::fs::rename(work.join("short.mp4"), &out_file).map_err(|e| e.to_string())
+  }
+  .await;
+  let _ = std::fs::remove_dir_all(&work);
+  result?;
+  let (duration, has_video, has_audio) = probe(&ffprobe, &out_file).await?;
+  let mut written = vec![out_file.clone()];
+  let checked: Result<Vec<String>, String> = async {
+    if !has_video || !has_audio {
+      return Err(format!(
+        "The Short is missing its {}.",
+        if has_video { "sound" } else { "picture" }
+      ));
+    }
+    if (duration - (end - start)).abs() > 1.0 {
+      return Err(format!(
+        "The Short is {duration:.1} s long; it should be {:.1} s.",
+        end - start
+      ));
+    }
+    let mut frames = Vec::new();
+    for pct in [10, 50, 90] {
+      let frame = format!("{stem}-{pct}.jpg");
+      let grab = FfmpegRun {
+        cwd: out.clone(),
+        args: vec![
+          s("-y"),
+          s("-hide_banner"),
+          s("-loglevel"),
+          s("error"),
+          s("-ss"),
+          format!("{:.2}", duration * pct as f64 / 100.0),
+          s("-i"),
+          format!("{stem}.mp4"),
+          s("-frames:v"),
+          s("1"),
+          s("-q:v"),
+          s("3"),
+          frame.clone(),
+        ],
+      };
+      run_ffmpeg(&ffmpeg, &grab).await?;
+      written.push(out.join(&frame));
+      frames.push(frame);
+    }
+    Ok(frames)
+  }
+  .await;
+  match checked {
+    Ok(frames) => Ok(
+      serde_json::json!({ "ok": true, "path": spec.out_path, "durationSec": duration, "frames": frames }),
+    ),
+    Err(reason) => {
+      for file in &written {
+        let _ = std::fs::remove_file(file);
+      }
+      Err(reason)
+    }
+  }
+}
+
 // ── Word timings for the captions (phase 2a) ────────────────────────────────
 
 /// The words Whisper heard, with their times, from its JSON output.
@@ -1223,6 +1437,82 @@ pub(crate) async fn content_ready_to_post(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  fn cut_spec(hook: bool) -> CutShortSpec {
+    CutShortSpec {
+      workspace_root: "R".into(),
+      source: "b/p/output/v1-9x16.mp4".into(),
+      source_seconds: 120.0,
+      start_sec: 10.0,
+      end_sec: 50.0,
+      out_path: "b/p/shorts/sh1/v1.mp4".into(),
+      hook_voice: hook.then(|| "b/p/shorts/sh1/hook.wav".into()),
+      hook_seconds: hook.then_some(2.5),
+      hook_srt: hook.then(|| "b/p/shorts/sh1/hook.srt".into()),
+      caption_color: None,
+      outline_color: None,
+    }
+  }
+
+  #[test]
+  fn a_moment_past_the_end_is_clamped_and_under_3_seconds_refused() {
+    assert_eq!(clamp_moment(-2.0, 30.0, 120.0).unwrap(), (0.0, 30.0));
+    assert_eq!(clamp_moment(100.0, 160.0, 120.0).unwrap(), (100.0, 120.0));
+    assert!(clamp_moment(118.0, 160.0, 120.0)
+      .unwrap_err()
+      .contains("under 3 seconds"));
+    assert!(clamp_moment(40.0, 20.0, 120.0).is_err());
+  }
+
+  #[test]
+  fn a_cut_is_a_plain_trim() {
+    let runs = build_cut_runs(Path::new("R"), Path::new("W"), &cut_spec(false), 10.0, 50.0);
+    assert_eq!(runs.len(), 1);
+    let args = &runs[0].args;
+    assert!(args.windows(2).any(|w| w[0] == "-ss" && w[1] == "10.000"));
+    assert!(args.windows(2).any(|w| w[0] == "-t" && w[1] == "40.000"));
+    assert!(!args.iter().any(|a| a == "-filter_complex"));
+  }
+
+  #[test]
+  fn a_highlight_lowers_the_original_under_the_hook_and_burns_the_hook_text_from_its_file() {
+    let runs = build_cut_runs(Path::new("R"), Path::new("W"), &cut_spec(true), 10.0, 50.0);
+    let filter = runs[0]
+      .args
+      .iter()
+      .skip_while(|a| *a != "-filter_complex")
+      .nth(1)
+      .unwrap();
+    assert!(filter.contains("volume=0.25:enable='between(t,0,2.500)'"));
+    assert!(filter.contains("subtitles=hook.srt"));
+    assert!(filter.contains("amix=inputs=2"));
+  }
+
+  #[test]
+  fn no_hook_text_reaches_the_command_line() {
+    let runs = build_cut_runs(Path::new("R"), Path::new("W"), &cut_spec(true), 10.0, 50.0);
+    // The hook's words live only in hook.srt; no argument carries free text.
+    assert!(runs[0].args.iter().all(|a| !a.contains("Your coffee")));
+    assert!(runs[0].args.iter().all(|a| !a.contains('\n')));
+  }
+
+  #[tokio::test]
+  async fn the_shorts_file_is_never_written_over() {
+    let root = std::env::temp_dir().join(format!("alphonso-cut-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("b/p/shorts/sh1")).unwrap();
+    std::fs::write(root.join("b/p/shorts/sh1/v1.mp4"), b"old").unwrap();
+    let spec = CutShortSpec {
+      workspace_root: root.to_string_lossy().to_string(),
+      ..cut_spec(false)
+    };
+    let err = content_cut_short(spec).await.unwrap_err();
+    assert!(err.contains("already exists"));
+    assert_eq!(
+      std::fs::read(root.join("b/p/shorts/sh1/v1.mp4")).unwrap(),
+      b"old"
+    );
+    std::fs::remove_dir_all(&root).ok();
+  }
 
   #[test]
   fn ready_files_keep_their_order() {
