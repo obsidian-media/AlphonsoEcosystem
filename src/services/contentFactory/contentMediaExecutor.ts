@@ -15,7 +15,7 @@ import { chosenVersionOf, getProject, getVideoSettings, setVersionOutputField } 
 import { chosenScenes, resolveClipEngine } from './clipEngine';
 import { checkComfyClip, makeComfyClip } from './comfyVideoClip';
 import { makeRunwayClip, runwayClipAvailable, runwayClipSeconds } from './runwayClip';
-import { effectiveVideoModel, listVideoModels } from '../videoModelService';
+import { clipSizeFor, effectiveVideoModel, listVideoModels } from '../videoModelService';
 import { projectRelativeDir, requireOutputRoot } from './contentProjectFiles';
 import { priorOutputs } from './contentStepAgents';
 import { contentAppSettings } from './contentStepRecorder';
@@ -240,7 +240,9 @@ export const RUNWAY_NOT_APPROVED = 'Runway clips were not approved for this run.
 const NO_PICTURE = 'This scene has no picture to start from.';
 const NONE_MADE = 'No AI clip was made; those scenes use their stock clip or picture.';
 
-export interface ProjectClipEngine { engine: 'local' | 'runway' | null; reason?: string; modelId?: string; maxSeconds?: number }
+export interface ProjectClipEngine { engine: 'local' | 'runway' | null; reason?: string; modelId?: string; maxSeconds?: number; lowRes?: boolean }
+
+export const SMALL_CARD_NOTE = 'This graphics card has under 8 GB, so AI clips are made smaller and at most 3 seconds. Choose full size in Runtime Hub → ComfyUI → Video models.';
 
 /** The engine this project's AI clips use on this computer now. */
 export async function resolveProjectClipEngine(project: ContentProject): Promise<ProjectClipEngine> {
@@ -250,7 +252,9 @@ export async function resolveProjectClipEngine(project: ContentProject): Promise
     localModelInstalled: Boolean(model?.installed),
     runway: runwayClipAvailable(),
   });
-  return choice.engine === 'local' && model ? { engine: 'local', modelId: model.id, maxSeconds: model.maxSeconds } : choice;
+  if (choice.engine !== 'local' || !model) return choice;
+  const size = clipSizeFor(info);
+  return { engine: 'local', modelId: model.id, maxSeconds: Math.min(model.maxSeconds, size.maxSeconds), ...(size.lowRes ? { lowRes: true } : {}) };
 }
 
 export interface ClipOutcome {
@@ -291,7 +295,7 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
       const seconds = Math.min(sceneSeconds, engine.maxSeconds || 5);
       const outRel = `${ctx.dir}/clips/v${ctx.version}-${scene.id}.mp4`;
       const made = await makeComfyClip({
-        root: ctx.root, imageRel: picture, outRel, prompt, seconds, vertical, modelId: engine.modelId as string,
+        root: ctx.root, imageRel: picture, outRel, prompt, seconds, vertical, modelId: engine.modelId as string, lowRes: engine.lowRes,
       });
       clips.push(made.status === 'done'
         ? { sceneId: scene.id, status: 'done', path: made.path, seconds }
@@ -320,7 +324,7 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
       model: engine.engine === 'local' ? engine.modelId : settings.runwayModel,
       clips,
       ...(engine.engine === 'runway' ? { totalUsd } : {}),
-      ...(madeCount === 0 && clips.length > 0 ? { note: NONE_MADE } : {}),
+      ...(madeCount === 0 && clips.length > 0 ? { note: NONE_MADE } : engine.lowRes ? { note: SMALL_CARD_NOTE } : {}),
     },
     `AI clips: ${madeCount} of ${clips.length} scenes.`,
   );

@@ -72,3 +72,14 @@ describe('VideoModelsPanel', () => {
     await waitFor(() => expect(screen.getByText('No ComfyUI was found. Install it above, or choose yours in Settings → Runtime → ComfyUI.')).toBeTruthy());
   });
 });
+
+// Phase 3d: a small card makes smaller clips, unless full size is chosen.
+it('on a small card it says clips are smaller, and the switch makes them full size', async () => {
+  localStorage.clear();
+  vi.mocked(listVideoModels).mockResolvedValue({ ...info, vramGb: 6, smallCard: true });
+  render(<VideoModelsPanel />);
+  expect(await screen.findByText(/smaller and at most 3 seconds/)).toBeTruthy();
+  fireEvent.click(screen.getByLabelText(/Full size clips on this card/));
+  expect(localStorage.getItem('alphonso_full_size_clips_v1')).toBe('true');
+});
+

@@ -122,3 +122,13 @@ describe('makeComfyClip', () => {
     expect(result.error).toContain('not reachable');
   });
 });
+
+// Phase 3d: small cards make smaller clips.
+it('a low-resolution clip uses each model\'s smaller size', () => {
+  const base = { image: 'a.png', prompt: 'p', seconds: 3, seed: 1 };
+  const nodes = (g: Record<string, { inputs: Record<string, unknown> }>) => Object.values(g).find((n) => 'width' in n.inputs)!.inputs;
+  expect(nodes(buildVideoWorkflow('ltx_video_2b', { ...base, vertical: false, lowRes: true }))).toMatchObject({ width: 512, height: 288 });
+  expect(nodes(buildVideoWorkflow('ltx_video_2b', { ...base, vertical: true, lowRes: true }))).toMatchObject({ width: 288, height: 512 });
+  expect(nodes(buildVideoWorkflow('wan22_ti2v_5b', { ...base, vertical: false, lowRes: true }))).toMatchObject({ width: 640, height: 352 });
+  expect(nodes(buildVideoWorkflow('ltx_video_2b', { ...base, vertical: false }))).toMatchObject({ width: 768, height: 512 });
+});

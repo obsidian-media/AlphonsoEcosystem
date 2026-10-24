@@ -82,3 +82,23 @@ describe('recordContentStepResult', () => {
     expect(await recordContentStepResult({ projectId: p.id, step: 'research', agent: 'nova', data: {}, commandId: 'c1' })).toBe('saved');
   });
 });
+
+// Phase 3d: once the scenes exist, the waiting AI clips step shows Runway's cost on full runs.
+it("Scenes saving fills in the clips step's Runway estimate on the request", async () => {
+  const { createJoseRequest, getJoseRequest } = await import('../../../services/jose/joseRequestStore');
+  const { setProjectRequest, saveStepVersion, setVideoSettings } = await import('../../../services/contentFactory/contentProjectService');
+  localStorage.setItem('alphonso_settings', JSON.stringify({ outputFolder: 'D:\\Content', paidModels: { runwayPricePerSecondUsd: 0.05 } }));
+  const p = newProject();
+  setVideoSettings(p.id, { aiClips: 'every', clipEngine: 'runway' });
+  const request = createJoseRequest({ commandId: 'c9', source: 'user', text: 'x', kind: 'project', steps: [
+    { stepId: 'scenes', agent: 'miya', actionType: 'creative_scenes', effects: ['write_own_work'], needs: [] },
+    { stepId: 'clips', agent: 'miya', actionType: 'creative_video_clips', effects: ['write_own_work', 'spend'], needs: ['scenes'] },
+  ] });
+  setProjectRequest(p.id, request.id);
+  saveStepVersion(p.id, 'script', { output: {}, summary: '', joseCommandId: null });
+  await recordContentStepResult({ projectId: p.id, step: 'scenes', agent: 'miya', data: { style: 's', scenes: [
+    { id: 's1', startSec: 0, endSec: 4, imagePrompt: 'a', description: 'd' },
+    { id: 's2', startSec: 4, endSec: 12, imagePrompt: 'b', description: 'd' },
+  ] }, commandId: 'c9' });
+  expect(getJoseRequest(request.id)!.steps.find((s) => s.stepId === 'clips')!.costEstimateUsd).toBeGreaterThan(0);
+});

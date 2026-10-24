@@ -41,7 +41,7 @@ export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Mi
 export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
 
 /** Runway's estimate for the scenes AI clips would be made for, when the scene plan is known. */
-function runwayEstimate(project: ContentProject): number | null {
+export function runwayEstimate(project: ContentProject): number | null {
   const scenes = (chosenVersionOf(project, 'scenes')?.output as { miya?: { scenes?: { startSec?: number; endSec?: number; mainMoment?: unknown }[] } } | undefined)?.miya?.scenes;
   if (!scenes?.length) return null;
   const chosen = chosenScenes(scenes, getVideoSettings(project).aiClips);

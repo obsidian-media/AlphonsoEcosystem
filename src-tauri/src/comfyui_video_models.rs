@@ -84,6 +84,11 @@ pub(crate) const VIDEO_MODELS: &[VideoModel] = &[
   },
 ];
 
+/// A card with under 8 GB makes smaller, shorter clips (phase 3d), unless the user chooses full size.
+pub(crate) fn small_card(vram_gb: Option<f64>) -> bool {
+  vram_gb.is_some_and(|v| v < 8.0)
+}
+
 /// The largest model that fits the card; none without an NVIDIA card or
 /// below the smallest model's need (Runway is the way then).
 pub(crate) fn suggest_video_model(vram_gb: Option<f64>) -> Option<&'static str> {
@@ -161,6 +166,7 @@ pub struct VideoModelInfo {
 #[serde(rename_all = "camelCase")]
 pub struct VideoModelsInfo {
   vram_gb: Option<f64>,
+  small_card: bool,
   suggested: Option<&'static str>,
   comfyui_dir: Option<String>,
   models: Vec<VideoModelInfo>,
@@ -172,6 +178,7 @@ pub async fn comfyui_video_models(saved_dir: Option<String>) -> VideoModelsInfo 
   let root = comfyui_root(saved_dir);
   VideoModelsInfo {
     vram_gb,
+    small_card: small_card(vram_gb),
     suggested: suggest_video_model(vram_gb),
     comfyui_dir: root.as_ref().map(|r| r.to_string_lossy().to_string()),
     models: VIDEO_MODELS
@@ -280,5 +287,13 @@ mod tests {
     let model = &VIDEO_MODELS[0];
     assert!(!model_installed(&root, model));
     std::fs::remove_dir_all(&root).ok();
+  }
+
+  #[test]
+  fn small_card_under_8gb() {
+    assert!(small_card(Some(6.0)));
+    assert!(small_card(Some(7.9)));
+    assert!(!small_card(Some(8.0)));
+    assert!(!small_card(None));
   }
 }
