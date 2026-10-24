@@ -33,6 +33,7 @@ mod companion_server;
 mod companion_types;
 mod connector_commands;
 mod kv_store;
+mod media_storage;
 mod media_tools;
 mod memory_graph;
 mod memory_graph_prune;
@@ -771,6 +772,10 @@ pub fn run() {
       media_tools::content_assemble_video,
       media_tools::content_whisper_words,
       media_tools::content_allow_media_folder,
+      media_storage::storage_put_file,
+      media_storage::storage_delete,
+      media_storage::storage_list_staged,
+      media_storage::storage_test,
       comfyui_video_models::comfyui_video_models,
       comfyui_video_models::comfyui_install_video_model,
       comfyui_proxy::comfyui_upload_image,
