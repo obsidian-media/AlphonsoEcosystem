@@ -21,6 +21,12 @@ vi.mock('../../../services/contentFactory/contentBrandService', () => ({
   ],
 }));
 
+const signInWarnings = vi.fn();
+const getSignInExpiry = vi.fn();
+vi.mock('../../../services/contentFactory/signInExpiry', () => ({
+  signInWarnings: (...a: unknown[]) => signInWarnings(...a),
+  getSignInExpiry: (...a: unknown[]) => getSignInExpiry(...a),
+}));
 import { CalendarPage } from '../../../components/calendar/CalendarPage';
 import type { CalendarItem } from '../../../services/contentFactory/calendarItems';
 
@@ -43,6 +49,8 @@ beforeEach(() => {
   listCalendarItems.mockReset().mockReturnValue(ITEMS);
   moveCalendarItem.mockReset().mockResolvedValue({ ok: true });
   cancelProjectPost.mockReset().mockResolvedValue({ ok: true });
+  signInWarnings.mockReset().mockResolvedValue([]);
+  getSignInExpiry.mockReset().mockResolvedValue({ expiresAtMs: null, exact: false });
 });
 
 const renderPage = () => render(<CalendarPage initialDateMs={START} onOpenProject={vi.fn()} />);
@@ -116,5 +124,13 @@ describe('CalendarPage', () => {
     fireEvent.click(within(screen.getByRole('region', { name: 'Selected post' })).getByRole('button', { name: 'Cancel post' }));
     fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel it' }));
     await waitFor(() => expect(cancelProjectPost).toHaveBeenCalledWith('p1', 'ig'));
+  });
+
+  it('shows sign-in warnings and passes the expiries to the items', async () => {
+    signInWarnings.mockResolvedValue([{ service: 'youtube', message: 'Your YouTube sign-in runs out about Wed 28 Oct.', expiresAtMs: at(28, 10), postsAfter: [] }]);
+    getSignInExpiry.mockImplementation(async (service: string) => ({ expiresAtMs: service === 'youtube' ? at(28, 10) : null, exact: false }));
+    renderPage();
+    expect(await screen.findByText('Your YouTube sign-in runs out about Wed 28 Oct.')).toBeInTheDocument();
+    await waitFor(() => expect(listCalendarItems).toHaveBeenLastCalledWith(expect.any(Number), { expiries: { youtube: at(28, 10), meta: null } }));
   });
 });

@@ -121,3 +121,15 @@ describe('publishPost: Content Studio', () => {
     expect(result).toEqual({ status: 'failed', reason: 'Add the keys.', setupRequired: true });
   });
 });
+
+// Phase 3b: an expired sign-in says so plainly.
+describe('publishPost: expired sign-ins', () => {
+  it('YouTube', async () => {
+    uploadYouTube.mockResolvedValue({ ok: false, error: 'invalid_grant: Token has been expired or revoked.' });
+    expect((await publishPost(post(), settings, NOW)).reason).toBe('Sign in to YouTube again in Settings → Connectors: the sign-in has run out.');
+  });
+  it('Meta', async () => {
+    publishMetaVideo.mockResolvedValue({ ok: false, status: 'failed', message: 'Error validating access token: Session has expired' });
+    expect((await publishPost(post({ platform: 'instagram', piece: 'reel' }), settings, NOW)).reason).toBe('Sign in to Meta again in Settings → Connectors: the sign-in has run out.');
+  });
+});

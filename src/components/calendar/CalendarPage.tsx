@@ -5,6 +5,8 @@ import {
   filterCalendarItems, itemsForMonth, itemsForWeek, listCalendarItems, moveCalendarItem, type CalendarItem,
 } from '../../services/contentFactory/calendarItems';
 import { cancelProjectPost, moveToDay, moveToSlot, type MoveResult } from '../../services/contentFactory/contentPostMoves';
+import { listProjects } from '../../services/contentFactory/contentProjectService';
+import { getSignInExpiry, signInWarnings, type SignInWarning } from '../../services/contentFactory/signInExpiry';
 import { MonthGrid } from './MonthGrid';
 import { WeekGrid } from './WeekGrid';
 import { CalendarSidePanel } from './CalendarSidePanel';
@@ -35,8 +37,25 @@ export function CalendarPage({ initialDateMs, onOpenProject, expiries }: {
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   useEffect(() => { const timer = setInterval(refresh, 5000); return () => clearInterval(timer); }, [refresh]);
 
+  // Sign-ins running out (phase 3b): a banner, and posts due after them are flagged.
+  const [loaded, setLoaded] = useState<{ youtube: number | null; meta: number | null } | null>(null);
+  const [warnings, setWarnings] = useState<SignInWarning[]>([]);
+  useEffect(() => {
+    if (expiries) return undefined;
+    let alive = true;
+    void (async () => {
+      const [youtube, meta] = await Promise.all([getSignInExpiry('youtube'), getSignInExpiry('meta')]);
+      const found = await signInWarnings(Date.now(), listProjects().flatMap((p) => p.posts || []));
+      if (!alive) return;
+      setLoaded({ youtube: youtube.expiresAtMs, meta: meta.expiresAtMs });
+      setWarnings(found);
+    })().catch(() => undefined);
+    return () => { alive = false; };
+  }, [expiries]);
+  const usedExpiries = expiries || loaded || undefined;
+
   const brands = useMemo(() => listBrands(), [tick]);
-  const all = useMemo(() => listCalendarItems(Date.now(), { expiries }), [tick, expiries]);
+  const all = useMemo(() => listCalendarItems(Date.now(), usedExpiries ? { expiries: usedExpiries } : {}), [tick, usedExpiries]);
   const items = useMemo(() => {
     const brandIds = new Set([...brands.map((b) => b.id), ''].filter((id) => !hidden.has(id)));
     return filterCalendarItems(all, { brands: brandIds, platforms: platform === 'all' ? null : new Set([platform]) });
@@ -101,6 +120,9 @@ export function CalendarPage({ initialDateMs, onOpenProject, expiries }: {
           </select>
         </label>
       </div>
+      {warnings.map((w) => (
+        <p key={w.service} role="status" className="rounded-xl bg-(--surface-2) px-3 py-2 text-[12px] text-(--warning)">{w.message}</p>
+      ))}
       <div className="flex flex-wrap gap-2" aria-label="Brands">
         {[...brands.map((b) => ({ id: b.id, name: b.name, platforms: (b.platforms || []).join(', ') })), { id: '', name: 'Content Studio and other sends', platforms: '' }].map((b) => (
           <button

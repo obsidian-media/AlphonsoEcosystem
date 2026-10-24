@@ -10,11 +10,12 @@ vi.mock('../../services/telegramCompanionService', () => ({ sendTelegramMessage:
 
 import {
   scheduleContentPost, scheduleContentReminder, getScheduledPublishes, runScheduledPublishes, recoverScheduledPublishes,
-  postOverdueNow, cancelScheduledContentPost, schedulePublish,
+  postOverdueNow, cancelScheduledContentPost, schedulePublish, checkSignIns,
 } from '../../services/marcusExecutionService';
 import { createProject, emptyBrief, getProject } from '../../services/contentFactory/contentProjectService';
 import { savePosts } from '../../services/contentFactory/contentPosts';
 import type { ProjectPost } from '../../services/contentFactory/contentTypes';
+import { recordSignIn } from '../../services/contentFactory/signInExpiry';
 
 const NOW = new Date(2026, 9, 26, 10, 0).getTime();
 const HOUR = 3_600_000;
@@ -157,4 +158,16 @@ it('keeps every post still waiting when the store is trimmed', () => {
   const kept = getScheduledPublishes();
   expect(kept.find((i) => i.postId === postId)?.status).toBe('pending');
   expect(kept.length).toBeLessThanOrEqual(101);
+});
+
+// Phase 3b: a sign-in running out is told once a day, in the app and on Telegram.
+it('warns about a sign-in running out once a day', async () => {
+  recordSignIn('youtube', NOW - 6 * DAY);
+  await checkSignIns(NOW);
+  await checkSignIns(NOW + HOUR);
+  expect(appendNotification).toHaveBeenCalledTimes(1);
+  expect(appendNotification).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('YouTube sign-in') }));
+  expect(sendTelegramMessage).toHaveBeenCalledTimes(1);
+  await checkSignIns(NOW + DAY);
+  expect(appendNotification).toHaveBeenCalledTimes(2);
 });

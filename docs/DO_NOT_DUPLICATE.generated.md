@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 260 services and 163 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 261 services and 163 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -278,6 +278,7 @@ Source-backed inventory: 260 services and 163 components. Human purpose descript
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `PostingSlot`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/publishPost.ts` | `PostResult`, `PublishablePost`, `publishPost` |
 | service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
+| service | `src/services/contentFactory/signInExpiry.ts` | `getSignInExpiry`, `isYoutubeProjectPublished`, `plainSignInReason`, `recordSignIn`, `setYoutubeProjectPublished`, `SignInService`, `SignInWarning`, `signInWarnings` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
 | service | `src/services/creativeRoutingService.ts` | `detectCreativeIntent`, `routeToCreativeTool` |
@@ -323,7 +324,7 @@ Source-backed inventory: 260 services and 163 components. Human purpose descript
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
 | service | `src/services/licenseService.ts` | `__setTrustedPublicKeyForTests`, `activateLicense`, `canUseConnector`, `clearLicenseDenialLog`, `deactivateLicense`, `getLicenseDenialLog`, `getLicenseInfo`, `initLicense`, `isPremiumConnector`, `isPremiumGatingEnabled`, `LicenseDenialEntry`, `LicenseInfo`, `LicenseTier` |
 | service | `src/services/localMarketplaceService.ts` | `DEFAULT_CATALOGUE_URL`, `fetchRemoteCatalogue`, `getRemoteCatalogueUrl`, `listMarketplaceItems`, `setMarketplaceItemStatus`, `setRemoteCatalogueUrl` |
-| service | `src/services/marcusExecutionService.ts` | `buildMarcusExecutionRecord`, `cancelScheduledContentPost`, `cancelScheduledPublish`, `executeMarcusGitHubAction`, `executeMarcusN8nAction`, `executeMarcusSlackAction`, `getScheduledPublishes`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `selectDistributionTarget`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
+| service | `src/services/marcusExecutionService.ts` | `buildMarcusExecutionRecord`, `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `executeMarcusGitHubAction`, `executeMarcusN8nAction`, `executeMarcusSlackAction`, `getScheduledPublishes`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `selectDistributionTarget`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
 | service | `src/services/marcusPublishService.ts` | `buildMarcusPublishPacket`, `executeMarcusPublish`, `MARCUS_PUBLISH_PLATFORMS` |
 | service | `src/services/mariaAuditService.ts` | `buildMariaAuditPrompt`, `buildMariaFallbackAudit`, `MariaAuditAssignment`, `MariaAuditOptions`, `MariaAuditResponse`, `MariaAuditResult`, `parseMariaAuditResponse`, `runMariaGovernanceAudit` |
 | service | `src/services/mariaWeeklyReportService.ts` | `generateWeeklyReport`, `getLatestReport`, `getReports`, `saveReport`, `scheduleWeeklyGeneration` |

@@ -11,6 +11,8 @@ import { contentAppSettings } from './contentFactory/contentStepRecorder';
 import { getProject } from './contentFactory/contentProjectService';
 import { updatePost } from './contentFactory/contentPosts';
 import { appendNotification } from './notificationService';
+import { listProjects } from './contentFactory/contentProjectService';
+import { signInWarnings } from './contentFactory/signInExpiry';
 import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -724,13 +726,33 @@ let _schedulerInterval: ReturnType<typeof setInterval> | null = null;
  */
 export function startScheduler(intervalMs: number = 60_000): void {
   stopScheduler();
-  _schedulerInterval = setInterval(() => { void runScheduledPublishes(); }, intervalMs);
+  _schedulerInterval = setInterval(() => {
+    void runScheduledPublishes();
+    void checkSignIns().catch(() => undefined);
+  }, intervalMs);
+}
+
+const SIGN_IN_CHECKED_KEY = 'alphonso_sign_in_checked_v1';
+
+/**
+ * Once a day (phase 3b): warns when the YouTube or Meta sign-in runs out soon, has run out,
+ * or posts are due after it, in the app and on Telegram.
+ */
+export async function checkSignIns(nowMs = Date.now()): Promise<void> {
+  const d = new Date(nowMs);
+  const today = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  try { if (localStorage.getItem(SIGN_IN_CHECKED_KEY) === today) return; localStorage.setItem(SIGN_IN_CHECKED_KEY, today); } catch { return; }
+  const posts = listProjects().flatMap((p) => p.posts || []);
+  for (const warning of await signInWarnings(nowMs, posts)) {
+    await tell(warning.expiresAtMs <= nowMs ? 'error' : 'info', `${warning.service === 'youtube' ? 'YouTube' : 'Meta'} sign-in`, warning.message);
+  }
 }
 
 /** At app start (phase 3a): recover, send what is due now, then check every minute. */
 export function startPostScheduler(): void {
   recoverScheduledPublishes();
   void runScheduledPublishes();
+  void checkSignIns().catch(() => undefined);
   startScheduler();
 }
 

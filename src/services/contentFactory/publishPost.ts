@@ -6,6 +6,7 @@
 import { uploadYouTubeConnectorVideo } from '../connectors/connectorOutbound';
 import { publishMetaContent, publishMetaVideo } from '../metaPublishService';
 import { outputPath } from './contentProjectFiles';
+import { plainSignInReason } from './signInExpiry';
 import type { PostStatus, ProjectPost } from './contentTypes';
 
 export interface PostResult {
@@ -51,7 +52,8 @@ export async function publishPost(post: PublishablePost, settings: { outputFolde
       })) as { ok?: boolean; published?: boolean; postIds?: string[]; post_ids?: string[]; url?: string; message?: string; error?: string; setupRequired?: boolean; setup_required?: boolean } | null;
       const postIds = Array.isArray(result?.postIds) ? result.postIds : Array.isArray(result?.post_ids) ? result.post_ids : [];
       if (result?.ok && result?.published) return { status: 'posted', ...linkAndId(result.url, postIds[0]) };
-      const reason = result?.message || result?.error || 'Meta did not take the post.';
+      const raw = result?.message || result?.error || 'Meta did not take the post.';
+      const reason = plainSignInReason(post.platform, raw) || raw;
       return result?.setupRequired || result?.setup_required ? { status: 'failed', reason, setupRequired: true } : { status: 'failed', reason };
     }
 
@@ -75,7 +77,10 @@ export async function publishPost(post: PublishablePost, settings: { outputFolde
         publishAt: scheduled ? new Date(post.scheduledAtMs).toISOString() : null,
         thumbnailPath: thumbnail,
       }, { approved: true, requestedBy: 'marcus', reason: 'Approved in the Publish step.' });
-      if (!result?.ok) return { status: 'failed', reason: result?.error || 'YouTube did not take the video.' };
+      if (!result?.ok) {
+        const raw = result?.error || 'YouTube did not take the video.';
+        return { status: 'failed', reason: plainSignInReason('youtube', raw) || raw };
+      }
       const ids = linkAndId(result.url, result.videoId);
       if (result.lockedPrivate) return { status: 'locked_private', ...ids, reason: result.note || 'YouTube kept this video private.' };
       if (scheduled && result.publishAt) return { status: 'scheduled', ...ids };
@@ -95,7 +100,8 @@ export async function publishPost(post: PublishablePost, settings: { outputFolde
       approved: true,
     });
     if (result.status === 'posted' || result.status === 'scheduled') return { status: result.status, ...linkAndId(result.url, result.postId) };
-    const reason = result.message || 'Meta did not take the video.';
+    const raw = result.message || 'Meta did not take the video.';
+    const reason = plainSignInReason(post.platform, raw) || raw;
     return result.status === 'setup_required' ? { status: 'failed', reason, setupRequired: true } : { status: 'failed', reason };
   } catch (error) {
     return { status: 'failed', reason: error instanceof Error ? error.message : String(error) };
