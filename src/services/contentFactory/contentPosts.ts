@@ -145,7 +145,8 @@ function onPlatformOnly(post: ProjectPost): string | null {
 }
 
 /** Changes a post that has not gone out yet. */
-export function updatePost(projectId: string, postId: string, patch: Partial<ProjectPost>): { ok: boolean; reason?: string } {
+/** `onPlatform`: the platform already made this change (phase 3b), so a post scheduled there may change. */
+export function updatePost(projectId: string, postId: string, patch: Partial<ProjectPost>, options: { onPlatform?: boolean } = {}): { ok: boolean; reason?: string } {
   let result: { ok: boolean; reason?: string } = { ok: false, reason: 'That post was not found.' };
   changeProjectPosts(projectId, (posts) => posts.map((post) => {
     if (post.id !== postId) return post;
@@ -155,7 +156,7 @@ export function updatePost(projectId: string, postId: string, patch: Partial<Pro
         result = { ok: false, reason: `This post has already ${post.status === 'cancelled' ? 'been cancelled' : 'gone out'}.` };
         return post;
       }
-      const locked = onPlatformOnly(post);
+      const locked = options.onPlatform ? null : onPlatformOnly(post);
       if (locked) {
         result = { ok: false, reason: locked };
         return post;
@@ -168,11 +169,11 @@ export function updatePost(projectId: string, postId: string, patch: Partial<Pro
 }
 
 /** Cancels a post before it goes out. */
-export function cancelPost(projectId: string, postId: string): { ok: boolean; reason?: string } {
+export function cancelPost(projectId: string, postId: string, options: { onPlatform?: boolean } = {}): { ok: boolean; reason?: string } {
   const post = getProject(projectId)?.posts?.find((p) => p.id === postId);
   if (!post) return { ok: false, reason: 'That post was not found.' };
   if (GONE.includes(post.status)) return { ok: false, reason: `This post has already ${post.status === 'cancelled' ? 'been cancelled' : 'gone out'}.` };
-  const locked = onPlatformOnly(post);
+  const locked = options.onPlatform ? null : onPlatformOnly(post);
   if (locked) return { ok: false, reason: locked.replace('change it', 'cancel it') };
-  return updatePost(projectId, postId, { status: 'cancelled' });
+  return updatePost(projectId, postId, { status: 'cancelled' }, options);
 }

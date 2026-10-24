@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Badge, Button } from '../ui';
-import { buildPosts, cancelPost, savePosts, updatePost } from '../../services/contentFactory/contentPosts';
-import { cancelScheduledContentPost, postOverdueNow, scheduleContentPost } from '../../services/marcusExecutionService';
+import { buildPosts, savePosts, updatePost } from '../../services/contentFactory/contentPosts';
+import { cancelProjectPost, movePost, type MoveResult } from '../../services/contentFactory/contentPostMoves';
+import { postOverdueNow } from '../../services/marcusExecutionService';
 import { openExternalUrl } from '../../services/browserAutomationService';
 import type { ContentBrand, ContentProject, PostStatus, ProjectPost } from '../../services/contentFactory/contentTypes';
 
@@ -52,22 +53,21 @@ export function PostsPanel({ project, brand, approvePosts, onChange }: {
     onChange();
   };
 
-  const change = (post: ProjectPost, patch: Partial<ProjectPost>) => {
-    const result = updatePost(project.id, post.id, patch);
-    setProblem(result.ok ? null : result.reason || 'That could not be changed.');
-    // A scheduled Instagram post waits in Marcus's runner: move it there too.
-    if (result.ok && patch.scheduledAtMs && post.platform === 'instagram' && post.status === 'scheduled') {
-      scheduleContentPost({ projectId: project.id, postId: post.id, platform: 'instagram', scheduledAt: patch.scheduledAtMs });
-    }
+  const show = (result: MoveResult) => {
+    setProblem(result.ok ? null : `${result.reason || 'That could not be changed.'}${result.manageUrl ? ` (${result.manageUrl})` : ''}`);
     onChange();
   };
 
-  const cancel = (post: ProjectPost) => {
-    const result = cancelPost(project.id, post.id);
-    if (result.ok) cancelScheduledContentPost(post.id);
-    setProblem(result.ok ? null : result.reason || 'That could not be cancelled.');
-    onChange();
+  const change = (post: ProjectPost, patch: Partial<ProjectPost>) => {
+    // A new time goes through the one move path (Marcus's runner, or the platform itself).
+    if (patch.scheduledAtMs) {
+      void movePost(project.id, post.id, patch.scheduledAtMs).then(show);
+      return;
+    }
+    show(updatePost(project.id, post.id, patch));
   };
+
+  const cancel = (post: ProjectPost) => { void cancelProjectPost(project.id, post.id).then(show); };
 
   const field = 'mt-1 w-full rounded-xl bg-(--surface-2) px-3 py-2 text-[12px] text-(--text-1) disabled:opacity-60';
   return (
@@ -84,7 +84,9 @@ export function PostsPanel({ project, brand, approvePosts, onChange }: {
       {notes.map((note) => <p key={note} className="text-(--warning)">{note}</p>)}
       {posts.map((post) => {
         const label = `${PLATFORM[post.platform]} ${PIECE[post.piece]}`;
-        const editable = EDITABLE.includes(post.status);
+        // Scheduled on YouTube or Facebook: changed on the Calendar, which asks before changing the platform.
+        const onPlatform = post.status === 'scheduled' && !!post.platformId && post.platform !== 'instagram';
+        const editable = EDITABLE.includes(post.status) && !onPlatform;
         return (
           <div key={post.id} className="space-y-2 rounded-xl bg-(--surface-2) p-3" aria-label={label}>
             <div className="flex flex-wrap items-center gap-2">
@@ -92,11 +94,12 @@ export function PostsPanel({ project, brand, approvePosts, onChange }: {
               <Badge variant={VARIANT[post.status] || 'default'}>{STATUS[post.status]}</Badge>
               {post.link && <Button size="sm" variant="ghost" aria-label={`Open ${label}`} onClick={() => { void openExternalUrl(post.link as string); }}>Open</Button>}
               {post.status === 'ask' && <Button size="sm" aria-label={`Post ${label} now`} onClick={() => { postOverdueNow(post.id); onChange(); }}>Post it now</Button>}
-              {!['posting', 'posted', 'locked_private', 'check', 'cancelled'].includes(post.status) && (
+              {!onPlatform && !['posting', 'posted', 'locked_private', 'check', 'cancelled'].includes(post.status) && (
                 <Button size="sm" variant="ghost" aria-label={`Cancel ${label}`} onClick={() => cancel(post)}>Cancel</Button>
               )}
             </div>
             {post.reason && <p className="text-(--text-2)">{post.reason}</p>}
+            {onPlatform && <p className="text-(--text-3)">Scheduled on {PLATFORM[post.platform]}: move or cancel it on the Calendar, which asks before changing it there.</p>}
             <div className="grid gap-2 md:grid-cols-2">
               {post.platform === 'youtube' && (
                 <label className="block text-[11px] text-(--text-3)">
