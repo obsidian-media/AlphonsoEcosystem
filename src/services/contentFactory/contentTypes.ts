@@ -225,6 +225,8 @@ export interface ProjectPost {
   sentAtMs?: number;
   /** A vertical video's length (phase 3d), for each platform's limits. */
   seconds?: number;
+  /** The Short this post is (phase 3d). */
+  shortId?: string;
 }
 
 /** What a content-factory step sends to an agent through Jose. */

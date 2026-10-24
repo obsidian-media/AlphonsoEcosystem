@@ -6,7 +6,7 @@ import { changeProjectPosts, chosenVersionOf, getProject } from './contentProjec
 import { fitsPlatform } from './platformLimits';
 import {
   secureId,
-  type ContentBrand, type ContentProject, type PostPlatform, type PostStatus, type PostingSlot, type ProjectPost,
+  type ContentBrand, type ContentProject, type PostPlatform, type PostStatus, type PostingSlot, type ProjectPost, type ShortPlan,
 } from './contentTypes';
 
 /** What each post status says on screen (the Posts list and the Calendar). */
@@ -101,8 +101,9 @@ export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: 
   const notes: string[] = [];
   const assembled = (chosenVersionOf(project, 'assemble')?.output as { miya?: { outputs?: { aspect: string; path: string; durationSec?: number }[] } } | undefined)?.miya?.outputs || [];
   const NO_VIDEO = 'Run the Finished video step first: there is no video to post yet.';
-  // A carousel can go out without a video (phase 3c); with neither there is nothing to post.
-  if (!assembled.length && !chosenVersionOf(project, 'carousel')) return { posts: [], notes: [NO_VIDEO] };
+  // A carousel or Shorts can go out without the video (phases 3c, 3d); with none there is nothing to post.
+  const shortsOutput = chosenVersionOf(project, 'shorts')?.output as { miya?: { shorts?: ShortPlan[] }; made?: Record<string, { status?: string; path?: string; seconds?: number }> } | undefined;
+  if (!assembled.length && !chosenVersionOf(project, 'carousel') && !shortsOutput) return { posts: [], notes: [NO_VIDEO] };
   if (!assembled.length) notes.push(NO_VIDEO);
   const wide = assembled.find((o) => o.aspect === '16x9')?.path;
   const tall = assembled.find((o) => o.aspect === '9x16')?.path;
@@ -155,6 +156,21 @@ export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: 
           caption: campaign.carousel?.caption || copy.caption || '', hashtags: campaign.carousel?.hashtags || copy.hashtags || [],
         });
       }
+    }
+  }
+  // Shorts (phase 3d): each made Short on the platforms ticked for it, with its own copy.
+  for (const short of shortsOutput?.miya?.shorts || []) {
+    const made = shortsOutput?.made?.[short.id];
+    const label = `"${short.title || short.id}"`;
+    if (!short.platforms?.length) { notes.push(`${label} is not posted anywhere: tick a platform for it in Shorts Studio.`); continue; }
+    if (made?.status !== 'done' || !made.path) { notes.push(`${label} is not made yet; make it in Shorts Studio.`); continue; }
+    for (const platform of short.platforms) {
+      const copy = short.copy?.find((c) => c.platform === platform);
+      rows.push({
+        platform, piece: platform === 'youtube' ? 'short' : 'reel', file: made.path, shortId: short.id,
+        ...(typeof made.seconds === 'number' ? { seconds: made.seconds } : {}),
+        title: copy?.title || short.title || project.name, caption: copy?.caption || '', hashtags: copy?.hashtags || [],
+      });
     }
   }
   // Each platform's length limits (phase 3d): a post it won't take is left out, with a note.

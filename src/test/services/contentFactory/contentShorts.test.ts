@@ -7,6 +7,7 @@ import {
 } from '../../../services/contentFactory/contentProjectService';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { getTemplate } from '../../../services/jose/joseTemplates';
+import { buildPosts } from '../../../services/contentFactory/contentPosts';
 import { checkPlan } from '../../../services/jose/stepGraph';
 import { STEP_ORDER } from '../../../services/contentFactory/contentTypes';
 
@@ -116,5 +117,59 @@ describe('Shorts settings and edits', () => {
     setShortKind(p.id, 'sh1', 'cut');
     const short = (getProject(p.id)!.steps.shorts.versions[0].output as { miya: { shorts: Record<string, unknown>[] } }).miya.shorts[0];
     expect(short).toMatchObject({ platforms: ['instagram', 'facebook'], kind: 'cut' });
+  });
+});
+
+// Phase 3d: Shorts become posts on the platforms ticked for each.
+describe('Shorts as posts', () => {
+  const NOW = new Date(2026, 9, 26, 10).getTime();
+  const short = (id: string, platforms: string[], patch: Record<string, unknown> = {}) => ({
+    id, kind: 'mini', title: `Short ${id}`, hook: 'h', seconds: 45, platforms,
+    copy: [{ platform: 'youtube', title: `YT ${id}`, caption: `yt ${id}`, hashtags: ['#y'] }, { platform: 'instagram', caption: `ig ${id}`, hashtags: ['#i'] }], ...patch,
+  });
+  function project(shorts: unknown[], made: Record<string, unknown>, withVideo = true) {
+    const b = saveBrand({ name: 'Acme', platforms: ['YouTube', 'Instagram', 'Facebook'] });
+    const p = createProject(b.id, 'Launch', { ...emptyBrief(), idea: 'x', outputs: ['2 Shorts'] });
+    if (withVideo) saveStepVersion(p.id, 'assemble', { output: { miya: { outputs: [{ aspect: '16x9', path: 'a/l/output/v1-16x9.mp4', durationSec: 300 }] } }, summary: '', joseCommandId: null });
+    saveStepVersion(p.id, 'shorts', { output: { miya: { shorts }, made }, summary: '', joseCommandId: null });
+    return { b, p: getProject(p.id)! };
+  }
+  const done = (id: string, seconds = 45) => ({ shortId: id, status: 'done', path: `a/l/shorts/${id}/v1.mp4`, seconds, fileVersion: 1 });
+
+  it('each made Short is posted on the platforms ticked for it, with its own copy', () => {
+    const { b, p } = project([short('sh1', ['youtube', 'instagram']), short('sh2', ['facebook'])], { sh1: done('sh1'), sh2: done('sh2') });
+    const posts = buildPosts(p, b, NOW).posts.filter((x) => x.shortId);
+    expect(posts.map((x) => [x.shortId, x.platform, x.piece])).toEqual([
+      ['sh1', 'youtube', 'short'], ['sh1', 'instagram', 'reel'], ['sh2', 'facebook', 'reel'],
+    ]);
+    expect(posts[0]).toMatchObject({ file: 'a/l/shorts/sh1/v1.mp4', title: 'YT sh1', caption: 'yt sh1', hashtags: ['#y'], seconds: 45 });
+    expect(posts[2]).toMatchObject({ title: 'Short sh2', caption: '' });
+  });
+
+  it('a Short unticked from every platform makes no posts and is noted', () => {
+    const { b, p } = project([short('sh1', [])], { sh1: done('sh1') });
+    const { posts, notes } = buildPosts(p, b, NOW);
+    expect(posts.some((x) => x.shortId)).toBe(false);
+    expect(notes.join(' ')).toContain('"Short sh1" is not posted anywhere: tick a platform for it in Shorts Studio.');
+  });
+
+  it('a Short not made yet gives a note, not a post', () => {
+    const { b, p } = project([short('sh1', ['youtube'])], { sh1: { shortId: 'sh1', status: 'failed', reason: 'Kokoro is missing' } });
+    const { posts, notes } = buildPosts(p, b, NOW);
+    expect(posts.some((x) => x.shortId)).toBe(false);
+    expect(notes.join(' ')).toContain('"Short sh1" is not made yet');
+  });
+
+  it('a Short too long for Facebook is left off Facebook', () => {
+    const { b, p } = project([short('sh1', ['facebook', 'instagram'])], { sh1: done('sh1', 95) });
+    const posts = buildPosts(p, b, NOW).posts.filter((x) => x.shortId);
+    expect(posts.map((x) => x.platform)).toEqual(['instagram']);
+  });
+
+  it('Shorts and the long video are spread over different times; Shorts post without a finished video', () => {
+    const { b, p } = project([short('sh1', ['youtube', 'instagram'])], { sh1: done('sh1') }, false);
+    const { posts } = buildPosts(p, b, NOW);
+    expect(posts.map((x) => x.shortId)).toEqual(['sh1', 'sh1']);
+    expect(new Set(posts.map((x) => x.scheduledAtMs)).size).toBe(2);
   });
 });
