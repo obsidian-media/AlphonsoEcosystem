@@ -189,6 +189,8 @@ export interface ProjectPost {
   reason?: string;
   /** When Alphonso sent it to the platform (phase 3b: counts toward the daily limit). */
   sentAtMs?: number;
+  /** A vertical video's length (phase 3d), for each platform's limits. */
+  seconds?: number;
 }
 
 /** What a content-factory step sends to an agent through Jose. */

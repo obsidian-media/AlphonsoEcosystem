@@ -162,6 +162,19 @@ pub(crate) fn token_expiry_from_debug(json: &Value) -> Option<u64> {
   }
 }
 
+/// Instagram takes Reels of 300 MB at most (phase 3d).
+pub(crate) const INSTAGRAM_MAX_BYTES: u64 = 300 * 1024 * 1024;
+
+pub(crate) fn instagram_size_ok(size: u64) -> Result<(), String> {
+  if size > INSTAGRAM_MAX_BYTES {
+    return Err(format!(
+      "Not an Instagram Reel: the file is {} MB; Instagram takes 300 MB at most.",
+      size.div_ceil(1024 * 1024)
+    ));
+  }
+  Ok(())
+}
+
 /// The publishing-limit address for an Instagram account id that is a plain number.
 pub(crate) fn limit_url(base: &str, ig_user_id: &str) -> Option<String> {
   let id: u64 = ig_user_id.trim().parse().ok()?;
@@ -624,7 +637,9 @@ pub(crate) async fn meta_publish_video(
     if keys.access_token.trim().is_empty() || keys.ig_user_id.trim().is_empty() {
       return Ok(proof(&platform, "setup_required", "Add the Meta access token and Instagram Business Account ID in Settings → Connectors → Meta."));
     }
-    let _ = size;
+    if let Err(message) = instagram_size_ok(size) {
+      return Ok(proof(&platform, "failed", message));
+    }
     post_instagram(
       &client,
       &base,
@@ -1036,5 +1051,13 @@ mod tests {
     );
     assert!(limit_url("https://g", "17841400/../me").is_none());
     assert!(limit_url("https://g", "").is_none());
+  }
+
+  #[test]
+  fn instagram_takes_300_mb_at_most() {
+    assert!(instagram_size_ok(INSTAGRAM_MAX_BYTES).is_ok());
+    assert!(instagram_size_ok(INSTAGRAM_MAX_BYTES + 1)
+      .unwrap_err()
+      .contains("300 MB"));
   }
 }

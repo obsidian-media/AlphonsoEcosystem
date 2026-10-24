@@ -25,10 +25,10 @@ const campaign = {
   nova: { times: [{ platform: 'Instagram', dayOfWeek: 'Wednesday', time: '19:30', reason: 'evenings' }] },
 };
 
-function setup(opts: { platforms?: string[]; outputs?: string[]; slots?: ContentBrand['postingSlots'] } = {}): { project: ContentProject; brand: ContentBrand } {
+function setup(opts: { platforms?: string[]; outputs?: string[]; slots?: ContentBrand['postingSlots']; seconds?: number } = {}): { project: ContentProject; brand: ContentBrand } {
   const brand = saveBrand({ name: 'Acme', platforms: ['YouTube', 'Instagram', 'Facebook'], postingSlots: opts.slots || [] });
   let project = createProject(brand.id, 'Launch', { ...emptyBrief(), idea: 'x', platforms: opts.platforms || [] });
-  const outputs = (opts.outputs || ['16x9', '9x16']).map((aspect) => ({ aspect, path: `acme/launch/output/video-${aspect}-v1.mp4`, durationSec: 40, frames: [] }));
+  const outputs = (opts.outputs || ['16x9', '9x16']).map((aspect) => ({ aspect, path: `acme/launch/output/video-${aspect}-v1.mp4`, durationSec: opts.seconds ?? 40, frames: [] }));
   saveStepVersion(project.id, 'assemble', { output: { miya: { outputs } }, summary: 'video', joseCommandId: null });
   saveStepVersion(project.id, 'thumbnail', {
     output: { miya: { concepts: [] }, pictures: [{ sceneId: 't1', status: 'failed' }, { sceneId: 't2', status: 'done', relativePath: 'acme/launch/thumbnail/t2.png' }] },
@@ -81,6 +81,27 @@ describe('buildPosts', () => {
     const { posts, notes } = buildPosts(project, brand, NOW);
     expect(posts).toEqual([]);
     expect(notes.join(' ')).toContain('Finished video');
+  });
+});
+
+// Phase 3d: the long video's 9:16 version keeps posting, within each platform's limits.
+describe('buildPosts and the platform limits', () => {
+  it('skips a Facebook Reel over 90 s with a note and marks a YouTube Short over 3 minutes as a regular video', () => {
+    const { project, brand } = setup({ seconds: 252 });
+    const { posts, notes } = buildPosts(project, brand, NOW);
+    expect(posts.some((p) => p.platform === 'facebook')).toBe(false);
+    expect(notes.join(' ')).toContain('Not a Facebook Reel: it is 4:12 long; Facebook takes 3–90 seconds.');
+    const short = posts.find((p) => p.piece === 'short')!;
+    expect(short.seconds).toBe(252);
+    expect(short.reason).toContain('regular video');
+    expect(posts.find((p) => p.platform === 'instagram')!.seconds).toBe(252);
+  });
+
+  it("an older project with the campaign's short copy still posts its 9:16 version", () => {
+    const { project, brand } = setup({ seconds: 40 });
+    const { posts } = buildPosts(project, brand, NOW);
+    expect(posts.find((p) => p.piece === 'short')).toMatchObject({ title: 'Short title', caption: 'Short caption', seconds: 40 });
+    expect(posts.filter((p) => p.piece === 'reel').map((p) => p.platform).sort()).toEqual(['facebook', 'instagram']);
   });
 });
 

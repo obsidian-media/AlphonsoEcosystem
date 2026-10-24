@@ -11,6 +11,7 @@ import { publishFacebookPhotos, publishInstagramByUrl, publishMetaContent, publi
 import { removeStaged, stageFile, storageConfigured } from '../mediaStorageService';
 import { outputPath } from './contentProjectFiles';
 import { getInstagramRoute } from './instagramRoute';
+import { fitsPlatform } from './platformLimits';
 import { exportForHand } from './readyToPost';
 import { plainSignInReason } from './signInExpiry';
 import type { PostStatus, ProjectPost } from './contentTypes';
@@ -114,6 +115,9 @@ async function postByLink(post: PublishablePost, caption: string, root: string):
 /** Posts (or schedules) one approved post. Never throws; a failure says why. */
 export async function publishPost(post: PublishablePost, settings: { outputFolder?: string | null }, nowMs = Date.now()): Promise<PostResult> {
   const caption = withHashtags(post.caption, post.hashtags || []);
+  // A post its platform won't take for its length is refused before anything is sent (phase 3d).
+  const fit = fitsPlatform(post.platform, post.piece, post.seconds ?? null);
+  if (!fit.ok) return { status: 'failed', reason: fit.reason };
   try {
     // A public image or video address (Content Studio): Meta fetches it.
     if (post.platform !== 'youtube' && post.mediaUrl !== undefined && !post.file) {

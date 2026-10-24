@@ -3,6 +3,7 @@
 // from the campaign step and a time from the brand's posting slots, then Nova's
 // suggested times, then tomorrow at 18:00. Everything is editable until it goes out.
 import { changeProjectPosts, chosenVersionOf, getProject } from './contentProjectService';
+import { fitsPlatform } from './platformLimits';
 import {
   secureId,
   type ContentBrand, type ContentProject, type PostPlatform, type PostStatus, type PostingSlot, type ProjectPost,
@@ -98,13 +99,15 @@ export function nextPostTime(
 /** The posts a finished project can make, with notes on any it cannot. */
 export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: number): { posts: ProjectPost[]; notes: string[] } {
   const notes: string[] = [];
-  const assembled = (chosenVersionOf(project, 'assemble')?.output as { miya?: { outputs?: { aspect: string; path: string }[] } } | undefined)?.miya?.outputs || [];
+  const assembled = (chosenVersionOf(project, 'assemble')?.output as { miya?: { outputs?: { aspect: string; path: string; durationSec?: number }[] } } | undefined)?.miya?.outputs || [];
   const NO_VIDEO = 'Run the Finished video step first: there is no video to post yet.';
   // A carousel can go out without a video (phase 3c); with neither there is nothing to post.
   if (!assembled.length && !chosenVersionOf(project, 'carousel')) return { posts: [], notes: [NO_VIDEO] };
   if (!assembled.length) notes.push(NO_VIDEO);
   const wide = assembled.find((o) => o.aspect === '16x9')?.path;
   const tall = assembled.find((o) => o.aspect === '9x16')?.path;
+  const tallSeconds = assembled.find((o) => o.aspect === '9x16')?.durationSec;
+  const withSeconds = typeof tallSeconds === 'number' ? { seconds: tallSeconds } : {};
   const thumbs = (chosenVersionOf(project, 'thumbnail')?.output as { pictures?: { status: string; relativePath?: string }[] } | undefined)?.pictures || [];
   const thumbnail = thumbs.find((t) => t.status === 'done' && t.relativePath)?.relativePath;
   const campaignOutput = chosenVersionOf(project, 'campaign')?.output as { miya?: Campaign; nova?: { times?: NovaTime[] } } | undefined;
@@ -126,13 +129,13 @@ export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: 
       } else notes.push('No YouTube video: the finished video has no 16:9 version.');
       if (tall) {
         rows.push({
-          platform, piece: 'short', file: tall,
+          platform, piece: 'short', file: tall, ...withSeconds,
           title: campaign.short?.title || copy.title || project.name,
           caption: campaign.short?.caption || copy.caption || '', hashtags: campaign.short?.hashtags || copy.hashtags || [],
         });
       } else notes.push('No YouTube Short: the finished video has no 9:16 version.');
     } else if (tall) {
-      rows.push({ platform, piece: 'reel', file: tall, title: project.name, caption: copy.caption || '', hashtags: copy.hashtags || [] });
+      rows.push({ platform, piece: 'reel', file: tall, ...withSeconds, title: project.name, caption: copy.caption || '', hashtags: copy.hashtags || [] });
     } else {
       notes.push(`No ${platform === 'instagram' ? 'Instagram' : 'Facebook'} Reel: the finished video has no 9:16 version.`);
     }
@@ -154,8 +157,15 @@ export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: 
       }
     }
   }
+  // Each platform's length limits (phase 3d): a post it won't take is left out, with a note.
+  const fitting = rows.filter((row) => {
+    const fit = fitsPlatform(row.platform, row.piece, row.seconds ?? null);
+    if (!fit.ok) notes.push(fit.reason as string);
+    else if (fit.asRegularVideo) row.reason = fit.reason;
+    return fit.ok;
+  });
   const taken: number[] = [];
-  const posts = rows.map((row) => {
+  const posts = fitting.map((row) => {
     const scheduledAtMs = nextPostTime(row.platform, brand, novaTimes, nowMs, taken);
     taken.push(scheduledAtMs);
     return { ...row, id: secureId('post'), scheduledAtMs, status: 'draft' as const };
