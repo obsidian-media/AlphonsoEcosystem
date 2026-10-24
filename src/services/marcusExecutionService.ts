@@ -15,6 +15,7 @@ import { listProjects } from './contentFactory/contentProjectService';
 import { signInWarnings } from './contentFactory/signInExpiry';
 import { checkDailyLimit } from './contentFactory/dailyLimits';
 import { BY_HAND_REMINDER } from './contentFactory/readyToPost';
+import { SIGN_IN_NAME } from './contentFactory/signInExpiry';
 import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -759,9 +760,14 @@ export async function checkSignIns(nowMs = Date.now()): Promise<void> {
   const d = new Date(nowMs);
   const today = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   try { if (localStorage.getItem(SIGN_IN_CHECKED_KEY) === today) return; localStorage.setItem(SIGN_IN_CHECKED_KEY, today); } catch { return; }
+  // Instagram Login's token is renewed when under 10 days are left (phase 3c).
+  try {
+    const { refreshInstagramIfDue } = await import('./signInService');
+    await refreshInstagramIfDue(nowMs);
+  } catch { /* warned below if it runs out */ }
   const posts = listProjects().flatMap((p) => p.posts || []);
   for (const warning of await signInWarnings(nowMs, posts)) {
-    await tell(warning.expiresAtMs <= nowMs ? 'error' : 'info', `${warning.service === 'youtube' ? 'YouTube' : 'Meta'} sign-in`, warning.message);
+    await tell(warning.expiresAtMs <= nowMs ? 'error' : 'info', `${SIGN_IN_NAME[warning.service]} sign-in`, warning.message);
   }
 }
 

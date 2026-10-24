@@ -75,3 +75,18 @@ describe('plainSignInReason', () => {
     expect(plainSignInReason('youtube', 'quotaExceeded')).toBeNull();
   });
 });
+
+// Phase 3c: Instagram Login's 60-day token.
+describe('Instagram Login', () => {
+  it('runs out 60 days after signing in (or renewing), and warns 7 days before', async () => {
+    recordSignIn('instagram', NOW - 54 * DAY);
+    expect((await getSignInExpiry('instagram', NOW)).expiresAtMs).toBe(NOW + 6 * DAY);
+    const warnings = await signInWarnings(NOW, []);
+    expect(warnings.map((w) => w.service)).toEqual(['instagram']);
+    expect(warnings[0].message).toMatch(/Instagram sign-in runs out/);
+  });
+
+  it('not before signing in', async () => {
+    expect((await getSignInExpiry('instagram', NOW)).expiresAtMs).toBeNull();
+  });
+});

@@ -44,6 +44,7 @@ import { listAgentProfiles } from '../agents/agentRegistry';
 import { getHermesAgentEndpoint, saveHermesAgentEndpoint, getHermesAgentHealth } from '../services/connectors/hermesAgentConnector';
 import { CloudModelSelect } from './CloudModelSelect';
 import { MediaStorageSection } from './MediaStorageSection';
+import { InstagramLoginSection, SignInButton } from './SignInPanel';
 import { isYoutubeProjectPublished, recordSignIn, setYoutubeProjectPublished } from '../services/contentFactory/signInExpiry';
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number | string }>;
@@ -1119,20 +1120,21 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             fields={[
               { label: 'Client ID', placeholder: 'From Google Cloud Console', value: youtubeClientId, onChange: setYoutubeClientId, key: 'YOUTUBE_CLIENT_ID', secret: false },
               { label: 'Client Secret', placeholder: 'From Google Cloud Console', value: youtubeClientSecret, onChange: setYoutubeClientSecret, key: 'YOUTUBE_CLIENT_SECRET' },
-              { label: 'Refresh Token', placeholder: 'Run: npm run auth:youtube', value: youtubeRefreshToken, onChange: setYoutubeRefreshToken, key: 'YOUTUBE_REFRESH_TOKEN' },
+              { label: 'Refresh Token', placeholder: 'Filled in by Sign in to YouTube below', value: youtubeRefreshToken, onChange: setYoutubeRefreshToken, key: 'YOUTUBE_REFRESH_TOKEN' },
               { label: 'Channel ID', placeholder: 'UC...', value: youtubeChannelId, onChange: setYoutubeChannelId, key: 'YOUTUBE_CHANNEL_ID', secret: false }
             ]}
             onSave={() => { recordSignIn('youtube'); void saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId }); }}
-            hint="Create OAuth 2.0 credentials in Google Cloud Console with the YouTube Data API v3 enabled. Then run npm run auth:youtube in a terminal to generate your Refresh Token."
+            hint="Use your own Google project with the YouTube Data API v3 turned on: paste its Client ID and Client Secret, save, then Sign in to YouTube below (the Refresh Token fills itself in)."
             savedLabel="YouTube credentials saved" />
           <label className="-mt-2 flex items-center gap-2 px-1 text-[11px] text-(--text-3)">
             <input type="checkbox" checked={youtubePublished} onChange={(e) => { setYoutubePublished(e.target.checked); setYoutubeProjectPublished(e.target.checked); }} />
             My Google project is Published (no 7-day sign-in limit; while it is in Testing, Google ends a YouTube sign-in after 7 days and Alphonso warns 2 days before)
           </label>
+          <SignInButton service="youtube" />
 
           <CredentialSection title="Meta (Facebook and Instagram)" icon={Video} borderColor="border-blue-300/20" bgColor="bg-blue-500/8" accentColor="text-blue-400"
             fields={[
-              { label: 'Access Token', placeholder: 'Run: npm run auth:meta', value: metaAccessToken, onChange: setMetaAccessToken, key: 'META_ACCESS_TOKEN' },
+              { label: 'Access Token', placeholder: 'Filled in by Sign in to Facebook below', value: metaAccessToken, onChange: setMetaAccessToken, key: 'META_ACCESS_TOKEN' },
               { label: 'Page Access Token', placeholder: 'For Facebook Page posts (optional)', value: metaPageAccessToken, onChange: setMetaPageAccessToken, key: 'META_PAGE_ACCESS_TOKEN' },
               { label: 'Page ID', placeholder: 'Your Facebook Page', value: metaPageId, onChange: setMetaPageId, key: 'META_PAGE_ID', secret: false },
               { label: 'Instagram Business Account ID', placeholder: 'Linked to the Page', value: metaIgId, onChange: setMetaIgId, key: 'INSTAGRAM_BUSINESS_ACCOUNT_ID', secret: false },
@@ -1140,8 +1142,10 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               { label: 'App Secret', placeholder: 'From your Meta app (optional, adds appsecret_proof)', value: metaAppSecret, onChange: setMetaAppSecret, key: 'META_APP_SECRET' },
             ]}
             onSave={() => { recordSignIn('meta'); void saveConnectorApiKey('meta', { META_ACCESS_TOKEN: metaAccessToken, META_PAGE_ACCESS_TOKEN: metaPageAccessToken, META_PAGE_ID: metaPageId, INSTAGRAM_BUSINESS_ACCOUNT_ID: metaIgId, META_APP_ID: metaAppId, META_APP_SECRET: metaAppSecret }); }}
-            hint="Use your own Meta app with Facebook Login for Business. Run npm run auth:meta in a terminal to get the tokens and IDs, then paste them here. Instagram needs a Business or Creator account linked to the Page."
+            hint="Use your own Meta app with Facebook Login for Business: paste its App ID and App Secret, save, then Sign in to Facebook below and choose your Page (the tokens and IDs fill themselves in). Instagram through the Page needs a Business or Creator account linked to it."
             savedLabel="Meta credentials saved" />
+          <SignInButton service="meta" />
+          <InstagramLoginSection />
 
           <CredentialSection title="Runway ML (Video Generation)" icon={Video} borderColor="border-fuchsia-300/20" bgColor="bg-fuchsia-500/8" accentColor="text-fuchsia-400"
             fields={[{ label: 'API Secret', placeholder: 'key_...', value: runwayApiKey, onChange: setRunwayApiKey, key: 'RUNWAYML_API_SECRET' }]}
