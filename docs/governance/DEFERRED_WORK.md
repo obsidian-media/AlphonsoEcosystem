@@ -39,14 +39,26 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-24] **Miya content factory phase 3d (Shorts as their own pieces): what it leaves open.**
+  - Not checked with real accounts or a real model yet: making a mini-script Short end to end (pictures, Kokoro, AI clips), a highlight's hook over the finished video, and posting Shorts. In the combined live check in `docs/qa/DESKTOP_QA_COVERAGE.md`.
+  - Runway clips are not used for Shorts yet: a Shorts setting of Runway makes the Short with pictures and says so (a Runway run must ask for its cost, and Shorts are made after their step).
+  - A mini Short's "main moments" for AI clips are its first and last parts; Shorts carry no main-moment marks.
+  - The Shorts step ends "done" even when some Shorts failed; Shorts Studio shows each one's reason.
+  - Add a Short adds a plain 45 s cut; a new mini-script Short needs the Shorts step run again (or Send back) to get its script.
+  - The Calendar shows Shorts as ordinary posts, with their titles; nothing marks them as Shorts.
+  - CodeQL alerts still open, not in this phase: 26 (Boardroom thread storage), 33 and 34 (the ACC bridge to a local address), 36 (contentStepPrompts' prompt lookup).
+  - Closed by this phase from 3c's list: a post with no Instagram route is now saved to post by hand.
+  - Next: phase 4.
+  - **Status:** OPEN.
+
 - [2026-10-24] **Miya content factory phase 3c (storage, carousels, Instagram Login, in-app sign-in): what it leaves open.**
   - Not checked with real accounts yet (no keys on the dev machine): the in-app sign-ins, storage uploads and links, Instagram carousels and Reels by link, Facebook photo posts and moving or cancelling them. All are in the combined live check in `docs/qa/DESKTOP_QA_COVERAGE.md`.
   - Instagram Login's redirect: Meta's documents don't say whether a local `http://localhost:8087/callback` is accepted; if not, the user pastes the address the browser ended on. Check with the owner's app.
   - The Meta sign-in asks only the publishing permissions; WhatsApp keys still come from the developer script or Settings.
   - Sending one slide back makes the whole carousel again (with the reason), as a rejected thumbnail does; Redo makes one slide's picture again.
   - Storage uploads are read into memory (1 GB at most); a very large file uses that much memory while it uploads.
-  - A post with no Instagram route at all (no Page keys, no Instagram Login) fails with what to set up rather than being saved to post by hand.
-  - Next: phase 3d (Shorts as their own pieces: own mini-script by default, or a highlight with its own hook, or the plain 9:16 cut, chosen per project), then phase 4.
+  - A post with no Instagram route at all (no Page keys, no Instagram Login) fails with what to set up rather than being saved to post by hand. (Closed in 3d: it is saved to post by hand.)
+  - Next: phase 3d (done 2026-10-24, Shorts as their own pieces), then phase 4.
   - **Status:** OPEN.
 
 - [2026-10-24] **Shared Obsidian Media app (owner's business decision, not built).** Today every user makes their own Google project and Meta app and pastes its id and secret (guided in Settings). A shared app would let people just sign in. What it would take: Google's OAuth verification and a security assessment for the YouTube upload scope (a restricted scope); Meta App Review for each permission (pages_manage_posts, instagram_content_publish, business_management…) with screencasts and a privacy policy; Business Verification of Obsidian Media; a small server of the owner's that holds Meta's (and Google's) app secret and does the token exchange, since a secret can't ship inside a desktop app; a privacy policy and terms; and per-app rate limits shared across every user. Until then the own-app path stays.
@@ -105,7 +117,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
   - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
   - The board's "Approve and carry on" on Scenes approves the review too, but only when Scenes starts (Miya Studio shows it as waiting until then).
-  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file), 2b (AI clips), 3a (publishing) and 3b (the Calendar) done 2026-10-23, 3c (storage, carousels, Instagram Login, in-app sign-in) 2026-10-24; 3d (Shorts as their own pieces) and 4 next.
+  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file), 2b (AI clips), 3a (publishing) and 3b (the Calendar) done 2026-10-23, 3c (storage, carousels, Instagram Login, in-app sign-in) and 3d (Shorts as their own pieces) 2026-10-24; 4 next.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**
