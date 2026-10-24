@@ -316,8 +316,62 @@ fn failed(reason: impl Into<String>) -> RunResult {
   }
 }
 
+/// The result address and every redirect are checked as research fetches are (phase 4c):
+/// never this computer or a private network.
+async fn guarded_download(url: &str) -> Result<reqwest::Response, String> {
+  const PRIVATE: &str =
+    "Higgsfield's result address is on a private network; nothing was downloaded.";
+  let parsed = reqwest::Url::parse(url)
+    .map_err(|_| "Higgsfield sent an address that can't be used.".to_string())?;
+  if let Some(host) = parsed.host_str() {
+    if crate::search::is_private_host(host).await {
+      return Err(PRIVATE.to_string());
+    }
+  }
+  let http = reqwest::Client::builder()
+    .timeout(Duration::from_secs(600))
+    .redirect(reqwest::redirect::Policy::none())
+    .user_agent("Alphonso-Higgsfield/0.1")
+    .build()
+    .map_err(|_| "Could not start the download.".to_string())?;
+  crate::search::fetch_with_ssrf_guard(&http, parsed)
+    .await
+    .map_err(|e| {
+      if e.contains("SSRF") {
+        PRIVATE.to_string()
+      } else {
+        "The result could not be downloaded from Higgsfield.".to_string()
+      }
+    })
+}
+
 /// Downloads the result to `out_rel` (never over an existing file), then deletes it on Higgsfield.
 async fn fetch_result(
+  base: &str,
+  http: &reqwest::Client,
+  authz: &str,
+  workspace_root: &str,
+  out_rel: &str,
+  url: &str,
+  request_id: &str,
+) -> RunResult {
+  fetch_result_with(
+    true,
+    base,
+    http,
+    authz,
+    workspace_root,
+    out_rel,
+    url,
+    request_id,
+  )
+  .await
+}
+
+/// `guard`: the result address must not be on this computer or a private network (tests turn it off).
+#[allow(clippy::too_many_arguments)]
+async fn fetch_result_with(
+  guard: bool,
   base: &str,
   http: &reqwest::Client,
   authz: &str,
@@ -340,9 +394,16 @@ async fn fetch_result(
   if let Some(dir) = out.parent() {
     let _ = std::fs::create_dir_all(dir);
   }
-  let response = match http.get(url).timeout(Duration::from_secs(600)).send().await {
-    Ok(r) => r,
-    Err(_) => return failed("The result could not be downloaded from Higgsfield."),
+  let response = if guard {
+    match guarded_download(url).await {
+      Ok(r) => r,
+      Err(reason) => return failed(reason),
+    }
+  } else {
+    match http.get(url).timeout(Duration::from_secs(600)).send().await {
+      Ok(r) => r,
+      Err(_) => return failed("The result could not be downloaded from Higgsfield."),
+    }
   };
   if response.content_length().unwrap_or(0) > MAX_BYTES {
     return failed("The result is too large.");
@@ -759,7 +820,8 @@ mod tests {
     .await;
     let base = format!("http://127.0.0.1:{port}");
     let http = client().unwrap();
-    let done = fetch_result(
+    let done = fetch_result_with(
+      false,
       &base,
       &http,
       "Key a:b",
@@ -783,7 +845,8 @@ mod tests {
       ]
     );
     // A second result for the same file is refused, and the first stays.
-    let again = fetch_result(
+    let again = fetch_result_with(
+      false,
       &base,
       &http,
       "Key a:b",
@@ -843,6 +906,33 @@ mod tests {
     assert_eq!(
       seen.lock().unwrap().clone(),
       vec!["GET /requests/req-9/status HTTP/1.1".to_string(); 2]
+    );
+  }
+
+  #[tokio::test]
+  async fn a_result_on_a_private_address_is_refused() {
+    let root = workspace("private");
+    let (port, seen) = serve(vec![http_ok(b"PNGDATA", "image/png")]).await;
+    let base = format!("http://127.0.0.1:{port}");
+    let http = client().unwrap();
+    let out = fetch_result(
+      &base,
+      &http,
+      "Key a:b",
+      &root,
+      "b/p/scenes/v1-s1.png",
+      &format!("{base}/out.png"),
+      "req-1",
+    )
+    .await;
+    assert!(!out.ok, "a private address must be refused");
+    assert!(out.reason.unwrap().contains("private"));
+    assert!(!std::path::Path::new(&root)
+      .join("b/p/scenes/v1-s1.png")
+      .exists());
+    assert!(
+      seen.lock().unwrap().is_empty(),
+      "nothing is fetched from a private address"
     );
   }
 }

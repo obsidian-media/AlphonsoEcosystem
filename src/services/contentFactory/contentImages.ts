@@ -85,7 +85,10 @@ async function makePicture(
         job: { model: models.picture, prompt: comfy.prompt, aspect, extra: models.pictureExtra ?? null },
         workspaceRoot: rootDir, outPath: higgsfieldRel, keys: higgsfieldKeys(),
       }).catch(() => ({ ok: false, reason: 'Higgsfield could not be reached.' }));
-      return higgsfieldResult(rootDir, answer, choice.usd, higgsfieldRel, readBack);
+      const made = await higgsfieldResult(rootDir, answer, choice.usd, higgsfieldRel, readBack);
+      if (made.ok || made.pending) return made;
+      // Phase 4c: a picture Higgsfield couldn't make is made with ComfyUI instead (nothing was charged).
+      choice.notes.push(`Higgsfield couldn't make picture ${index + 1} (${made.error || 'no reason given'}); made with ComfyUI.`);
     }
   }
   try {

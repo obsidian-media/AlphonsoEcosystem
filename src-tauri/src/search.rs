@@ -139,7 +139,7 @@ pub(crate) async fn is_private_host(host: &str) -> bool {
 /// redirect policy has no async hook, so a request could otherwise be redirected straight past
 /// the initial SSRF check (e.g. a source URL that 302s to `169.254.169.254`) with no re-check on
 /// each hop.
-async fn fetch_with_ssrf_guard(
+pub(crate) async fn fetch_with_ssrf_guard(
   client: &reqwest::Client,
   start_url: reqwest::Url,
 ) -> Result<reqwest::Response, String> {

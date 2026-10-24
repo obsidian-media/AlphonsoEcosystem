@@ -32,6 +32,8 @@ export interface HiggsfieldResult {
   requestId?: string;
   commandId?: string;
   usd?: number;
+  /** Already shown in Chat (phase 4c). */
+  shownInChat?: boolean;
 }
 
 /** 'picture' or 'video' when the text asks for Higgsfield by name. */
@@ -87,6 +89,16 @@ function saveResult(result: HiggsfieldResult): void {
   } catch {
     // The file is still in the folder.
   }
+}
+
+/** Done results made since a time and not yet shown in Chat (phase 4c: approved on the board or Telegram). */
+export function higgsfieldResultsDoneSince(sinceMs: number): HiggsfieldResult[] {
+  return listHiggsfieldResults().filter((r) => r.status === 'done' && r.atMs >= sinceMs && !r.shownInChat);
+}
+
+export function markShownInChat(id: string): void {
+  const found = listHiggsfieldResults().find((r) => r.id === id);
+  if (found) saveResult({ ...found, shownInChat: true });
 }
 
 /** Results of one Jose command (Chat shows them under its reply). */

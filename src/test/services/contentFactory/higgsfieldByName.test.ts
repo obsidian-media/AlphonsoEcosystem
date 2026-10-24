@@ -23,7 +23,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { runJoseCommandExecutionPipeline } from '../../../services/joseExecutionEngineService';
 import { detectCreativeIntent } from '../../../services/creativeRoutingService';
 import { submitToJose } from '../../../services/jose/submitToJose';
-import { executeHiggsfieldByName, listHiggsfieldResults, HIGGSFIELD_BY_NAME_NOT_SET_UP, HIGGSFIELD_LABEL, HIGGSFIELD_NOT_FROM_SCHEDULE } from '../../../services/contentFactory/higgsfieldByName';
+import { executeHiggsfieldByName, higgsfieldResultsDoneSince, markShownInChat, listHiggsfieldResults, HIGGSFIELD_BY_NAME_NOT_SET_UP, HIGGSFIELD_LABEL, HIGGSFIELD_NOT_FROM_SCHEDULE } from '../../../services/contentFactory/higgsfieldByName';
 import { sendTelegramFileOrFolder } from '../../../services/telegramCompanionService';
 import { setStorage } from '../../../lib/appStorage';
 import { monthSpendUsd } from '../../../services/jose/joseSpend';
@@ -88,6 +88,19 @@ describe('asking for Higgsfield by name', () => {
     expect(result.resultState).toBe('completed');
     expect(listHiggsfieldResults()[0]).toMatchObject({ kind: 'video', prompt: 'a pour', path: run.outPath, status: 'done', commandId: 'c9' });
     expect(monthSpendUsd()).toBeCloseTo(0.4, 6);
+  });
+
+  // Phase 4c (4b leftover): a result approved on the board or Telegram reaches Chat once.
+  it('a by-name result approved elsewhere is listed once for Chat', async () => {
+    backend.higgsfield_run = (a) => ({ ok: true, status: 'done', path: a.outPath });
+    const since = Date.now() - 1;
+    await executeHiggsfieldByName({ agent: 'miya', actionType: 'creative_higgsfield', effects: ['write_own_work', 'spend'], costEstimateUsd: 0.1, payload: { kind: 'picture', prompt: 'a cat' } } as any, { id: 'p1', commandId: 'c1' });
+    await executeHiggsfieldByName({ agent: 'miya', actionType: 'creative_higgsfield', effects: ['write_own_work', 'spend'], costEstimateUsd: 0.1, payload: { kind: 'picture', prompt: 'a dog' } } as any, { id: 'p2', commandId: 'c2' });
+    const found = higgsfieldResultsDoneSince(since);
+    expect(found.map((r) => r.prompt).sort()).toEqual(['a cat', 'a dog']);
+    found.forEach((r) => markShownInChat(r.id));
+    expect(higgsfieldResultsDoneSince(since)).toEqual([]);
+    expect(higgsfieldResultsDoneSince(Date.now() + 1000)).toEqual([]);
   });
 
   it('without the approval nothing is sent', async () => {
