@@ -1354,6 +1354,11 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
     const { executeHiggsfieldByName } = await import('./contentFactory/higgsfieldByName');
     return executeHiggsfieldByName(assignment, packet);
   }
+  // Placing a CALL-E call is Marcus's outreach, run once approved (agent roles Part A).
+  if (assignment?.actionType === 'outreach_call') {
+    const { executeOutreachCall } = await import('./calleCallStep');
+    return executeOutreachCall(assignment);
+  }
   // A picture asked for in words: Miya makes it with ComfyUI (agent roles Part A).
   if (assignment?.agent === AGENTS.MIYA && assignment?.actionType === 'creative_image') {
     return executeImageStep(requestText, assignment);
