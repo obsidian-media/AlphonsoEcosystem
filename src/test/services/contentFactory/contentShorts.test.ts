@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { parseStepAnswer } from '../../../services/contentFactory/contentStepPrompts';
 import { briefWantsShorts, contentProjectPlanSteps, shortsCount } from '../../../services/contentFactory/contentProjectPlan';
 import {
-  createProject, emptyBrief, getProject, saveStepVersion, isStepStale, getShortsSettings, setShortsSettings, setShortPlatforms, setShortKind,
+  createProject, emptyBrief, getProject, saveStepVersion, isStepStale, getShortsSettings, setShortsSettings, setShortPlatforms, setShortKind, addShortPlan,
 } from '../../../services/contentFactory/contentProjectService';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { getTemplate } from '../../../services/jose/joseTemplates';
@@ -172,4 +172,14 @@ describe('Shorts as posts', () => {
     expect(posts.map((x) => x.shortId)).toEqual(['sh1', 'sh1']);
     expect(new Set(posts.map((x) => x.scheduledAtMs)).size).toBe(2);
   });
+});
+
+it("Add a Short adds a cut of the finished video, on the project's platforms, to edit and make", () => {
+  const b = saveBrand({ name: 'Acme', platforms: ['Instagram'] });
+  const p = createProject(b.id, 'A', { ...emptyBrief(), idea: 'x' });
+  saveStepVersion(p.id, 'assemble', { output: { miya: { outputs: [{ aspect: '9x16', path: 'v.mp4', durationSec: 120 }] } }, summary: '', joseCommandId: null });
+  saveStepVersion(p.id, 'shorts', { output: { miya: { shorts: [{ id: 'sh1', kind: 'mini' }] } }, summary: '', joseCommandId: null });
+  addShortPlan(p.id);
+  const shorts = (getProject(p.id)!.steps.shorts.versions[0].output as { miya: { shorts: Record<string, unknown>[] } }).miya.shorts;
+  expect(shorts[1]).toMatchObject({ id: 'sh2', kind: 'cut', title: 'Short 2', seconds: 45, platforms: ['instagram'], moment: { startSec: 37.5, endSec: 82.5 } });
 });

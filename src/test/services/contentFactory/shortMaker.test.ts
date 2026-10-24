@@ -114,6 +114,13 @@ describe('makeShorts', () => {
   });
 });
 
+it('a mini Short with no script says how to give it one', async () => {
+  const p = setup([{ ...cut, kind: 'mini', parts: undefined }]);
+  const [out] = await makeShorts(p.id, settings);
+  expect(out).toMatchObject({ status: 'failed', reason: expect.stringContaining('needs its own script') });
+  expect(generateComfyUiImage).not.toHaveBeenCalled();
+});
+
 describe('redoShort', () => {
   it('makes that Short again as a new version file', async () => {
     const p = setup([cut]);

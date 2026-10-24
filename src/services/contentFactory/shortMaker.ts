@@ -69,8 +69,11 @@ async function writeText(ctx: Ctx, relativePath: string, content: string): Promi
   await invoke('write_workspace_text_file', { workspaceRoot: ctx.root, relativePath, content });
 }
 
+export const NEEDS_SCRIPT = 'A mini-script Short needs its own script: send it back saying what it should be about, or run the Shorts step again.';
+
 async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
   const parts = plan.parts || [];
+  if (!parts.length) return { shortId: plan.id, status: 'failed', reason: NEEDS_SCRIPT };
   const look = [ctx.brand.visualStyle, ctx.brand.characterRefs].filter(Boolean).join(', ');
   const pictures: (string | null)[] = [];
   for (const [i, part] of parts.entries()) {

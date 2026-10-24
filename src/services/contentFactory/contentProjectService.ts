@@ -2,6 +2,7 @@
 // The full project is also written to its folder (contentProjectFiles.ts).
 import { durableGet, durableSet } from '../../lib/durableStore.js';
 import { slugForFolder } from './contentProjectFiles';
+import { getBrand } from './contentBrandService';
 import {
   STEP_ORDER,
   SIDE_STEPS,
@@ -290,6 +291,29 @@ export function setShortPlatforms(id: string, shortId: string, platforms: PostPl
 /** A Short's kind (Shorts Studio); it is made again with Redo. */
 export function setShortKind(id: string, shortId: string, kind: ShortKind): ContentProject {
   return editShort(id, shortId, (s) => { s.kind = kind; });
+}
+
+/**
+ * Shorts Studio's "Add a Short" (phase 3d): a plain 45 s cut from the middle of the
+ * finished video (no model needed), on the project's platforms; its kind and part can
+ * then be changed and it is made with Redo.
+ */
+export function addShortPlan(id: string): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.shorts.versions.find((v) => v.version === p.steps.shorts.chosenVersion);
+    if (!chosen) throw new Error('Run the Shorts step first.');
+    const output = (chosen.output as { miya?: { shorts?: { id: string }[] } }) || {};
+    const shorts = output.miya?.shorts || [];
+    const outputs = (p.steps.assemble.versions.find((v) => v.version === p.steps.assemble.chosenVersion)?.output as { miya?: { outputs?: { aspect: string; durationSec?: number }[] } } | undefined)?.miya?.outputs || [];
+    const length = outputs.find((o) => o.aspect === '9x16')?.durationSec ?? 45;
+    const start = Math.max(0, (length - 45) / 2);
+    const n = shorts.length + 1;
+    const wanted = p.brief.platforms.length ? p.brief.platforms : getBrand(p.brandId)?.platforms || [];
+    const known = ['youtube', 'instagram', 'facebook'];
+    const platforms = wanted.map((x) => String(x).trim().toLowerCase()).filter((x) => known.includes(x));
+    const next = { id: `sh${n}`, kind: 'cut', title: `Short ${n}`, hook: '', seconds: 45, platforms, copy: [], moment: { startSec: start, endSec: Math.min(length, start + 45) } };
+    chosen.output = { ...output, miya: { ...(output.miya || {}), shorts: [...shorts, next] } };
+  });
 }
 
 /** A made Short's file and state, kept in the chosen Shorts version (phase 3d). */

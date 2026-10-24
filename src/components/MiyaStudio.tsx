@@ -8,6 +8,7 @@ import {
   Lightbulb,
   Megaphone,
   Palette,
+  Smartphone,
   Sparkles
 } from 'lucide-react';
 import miyaMascot from '../assets/agents/miya/portrait.jpg';
@@ -193,6 +194,7 @@ interface MiyaStudioProps {
 const studioTabs: Array<{ id: string; label: string; icon: typeof FileVideo }> = [
   { id: 'script', label: 'Script Studio', icon: FileVideo },
   { id: 'scene', label: 'Scene Builder', icon: Clapperboard },
+  { id: 'shorts', label: 'Shorts Studio', icon: Smartphone },
   { id: 'thumbnail', label: 'Thumbnail Studio', icon: Palette },
   { id: 'carousel', label: 'Carousel Studio', icon: GalleryHorizontal },
   { id: 'campaign', label: 'Campaign Studio', icon: Megaphone },
@@ -201,7 +203,7 @@ const studioTabs: Array<{ id: string; label: string; icon: typeof FileVideo }> =
   { id: 'prompt', label: 'Prompt Builder', icon: Sparkles }
 ];
 
-const FACTORY_TABS: ContentFactoryTab[] = ['script', 'scene', 'thumbnail', 'carousel', 'campaign'];
+const FACTORY_TABS: ContentFactoryTab[] = ['script', 'scene', 'shorts', 'thumbnail', 'carousel', 'campaign'];
 
 const defaultPipeline: PipelineInput = {
   idea: '',
