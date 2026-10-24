@@ -112,7 +112,7 @@ describe('the Sound effects step', () => {
     backend.media_tools_status = () => ({ whisper: false });
     backend.write_workspace_text_file = () => ({ ok: true });
     backend.content_assemble_video = () => ({ ok: true, outputs: [] });
-    await executeMediaStep({ agent: 'alphonso', actionType: 'runtime_assemble_video', contentStep: { projectId: project.id, step: 'assemble', brief: project.brief, brand, prior: {}, task: '' } } as any);
+    await executeMediaStep({ agent: 'alphonso', actionType: 'creative_assemble_video', contentStep: { projectId: project.id, step: 'assemble', brief: project.brief, brand, prior: {}, task: '' } } as any);
     const spec = (vi.mocked(invoke).mock.calls.find((c) => c[0] === 'content_assemble_video')![1] as any).spec;
     expect(spec.sfx).toEqual([{ path: `${dir}/audio/sfx-v1-s1.wav`, atSec: 0 }]);
   });

@@ -6,6 +6,7 @@
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.3–2.4, §5
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
+import { toCurrentOwners } from './movedTaskTypes';
 import { AGENT_PERMISSION_TABLE, describeAgentPermissions } from './agentPermissionTable';
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
 import { TEMPLATE_FIT_THRESHOLD, getTemplate, scoreTemplateFit, type JoseTemplate } from './joseTemplates';
@@ -34,7 +35,7 @@ interface PlanOptions {
 
 function agentsForPrompt(): string {
   return Object.entries(AGENT_PERMISSION_TABLE)
-    .map(([agent, p]) => `- ${agent} (${p.role}): task types starting with ${p.taskTypes.join(', ')}; may: ${describeAgentPermissions(agent).allowed.join('; ')}`)
+    .map(([agent, p]) => `- ${agent} owns: ${p.owns} Never: ${p.never} Task types starting with ${p.taskTypes.join(', ')}; may: ${describeAgentPermissions(agent).allowed.join('; ')}`)
     .join('\n');
 }
 
@@ -204,8 +205,9 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     }
     const basedOn = template && plan.basedOnTemplate === template.id ? template : null;
     if (basedOn) plan.steps = fillFromTemplate(plan.steps, basedOn);
-    plan.steps = inferReviewOf(plan.steps);
-    const check = checkPlan(plan.steps);
+    plan.steps = toCurrentOwners(inferReviewOf(plan.steps)).steps;
+    // Each step only to the agent who owns its kind of work (owner, 2026-10-24).
+    const check = checkPlan(plan.steps, { taskTypes: true });
     if (!check.ok) {
       problems = check.problems;
       continue;

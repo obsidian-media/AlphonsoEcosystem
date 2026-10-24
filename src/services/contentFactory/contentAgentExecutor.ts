@@ -65,7 +65,12 @@ function livePayload(assignment: ContentAssignment): ContentStepPayload {
   const prior = project ? { ...payload.prior, ...priorOutputs(project, payload.step) } : payload.prior;
   const at = String(assignment.instruction || '').indexOf(FINDINGS_MARK);
   const findings = at >= 0 ? String(assignment.instruction).slice(at).trim() : '';
-  return { ...payload, prior, ...(findings ? { task: [payload.task, findings].filter(Boolean).join('\n\n') } : {}) };
+  // Hector finds, Nova judges (owner, 2026-10-24): Nova's market check reads
+  // Hector's research answer from the same research step.
+  const hector = assignment.actionType === 'analysis_market' ? project?.steps?.research?.pendingAgents?.hector : undefined;
+  const fromHector = hector ? `Hector's research:\n${JSON.stringify(hector).slice(0, 6000)}` : '';
+  const task = [payload.task, fromHector, findings].filter(Boolean).join('\n\n');
+  return { ...payload, prior, ...(fromHector || findings ? { task } : {}) };
 }
 
 export interface ContentStepResult {

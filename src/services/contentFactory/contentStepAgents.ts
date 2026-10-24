@@ -24,7 +24,7 @@ export const STEP_AGENTS: Record<StepId, StepAgent[]> = {
   sfx: [{ agent: 'miya', actionType: 'creative_sfx', title: 'Sound effects' }],
   broll: [{ agent: 'hector', actionType: 'research_broll', title: 'Stock clips for the scenes' }],
   clips: [{ agent: 'miya', actionType: 'creative_video_clips', title: 'AI clips for the main moments' }],
-  assemble: [{ agent: 'alphonso', actionType: 'runtime_assemble_video', title: 'The finished video, 16:9 and 9:16' }],
+  assemble: [{ agent: 'miya', actionType: 'creative_assemble_video', title: 'The finished video, 16:9 and 9:16' }],
   shorts: [{ agent: 'miya', actionType: 'creative_shorts', title: 'Shorts' }],
   carousel: [{ agent: 'miya', actionType: 'creative_carousel', title: 'Carousel slides' }],
   campaign: [

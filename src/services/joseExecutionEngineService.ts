@@ -41,6 +41,7 @@ import { rejectWaitingPackets } from './jose/joseExpiry';
 import { saveRequestDecisions } from './jose/joseFinish';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
+import { moveToOwner } from './jose/movedTaskTypes';
 import type { PlanStep } from './jose/stepGraph';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
 import { listInstalledModels, pickLargerModel } from './jose/joseModels';
@@ -986,18 +987,6 @@ async function executeMiyaAssignment(commandText: any, assignment: any, options:
 }
 
 async function executeHectorAssignment(commandText: any, assignment: any) {
-  const action = String(assignment?.actionType || '').toLowerCase();
-  if (action.includes('external_publish_handoff')) {
-    return {
-      summary: 'Hector prepared publish-readiness handoff. External publish remains approval-gated.',
-      resultState: 'pending_review',
-      resultUrl: null,
-      artifacts: [{ type: 'publish_handoff', status: 'approval_required' }],
-      sources: [],
-      contractAction: assignment?.actionType || 'external_publish_handoff'
-    };
-  }
-
   const draft = createResearchDraft({
     researchQuestion: commandText,
     sourceUrls: [],
@@ -1022,25 +1011,23 @@ async function executeHectorAssignment(commandText: any, assignment: any) {
 }
 
 /**
- * A request no specialist agent matched ("write a note", "draft an email"...).
- * Jose answers it directly with his model (QA 2026-10-22). Until then this
- * step returned "Jose completed orchestration review" without asking any model,
- * so such requests produced nothing in Chat, schedules and the phone app while
- * the card said "1 executed". If the model can't answer, it says so.
+ * A plain question or everyday writing ("write a note", "draft an email"...):
+ * Alphonso's work (owner, 2026-10-24). Until then Jose answered these himself.
+ * If the model can't answer, it says so; nothing else is produced.
  */
-async function executeJoseAssignment(commandText: any, assignment: any, options: any = {}) {
+async function executeAssistantAssignment(commandText: any, assignment: any, options: any = {}) {
   const base = {
     resultUrl: null,
     sources: [],
-    contractAction: assignment?.actionType || 'orchestration_review'
+    contractAction: assignment?.actionType || 'assistant_answer'
   };
   try {
     const prompt = [
       CHAT_ASSISTANT_PROMPT,
-      'No specialist agent took this request, so you (Jose) answer it directly. Do the writing or thinking asked for, in text.',
+      'Answer the request below, or do the everyday writing it asks for, in text.',
       `Request: ${String(commandText || '').slice(0, 4000)}`
     ].join('\n\n');
-    const reply = await generateAgentLlmResponse('jose', {
+    const reply = await generateAgentLlmResponse('alphonso', {
       endpoint: options.endpoint || getConfiguredOllamaEndpoint(),
       model: options.model || getConfiguredOllamaModel(),
       prompt,
@@ -1052,16 +1039,32 @@ async function executeJoseAssignment(commandText: any, assignment: any, options:
       ...base,
       summary: text,
       resultState: 'completed',
-      artifacts: [{ type: 'direct_answer', action: assignment?.actionType || 'orchestration_review' }]
+      artifacts: [{ type: 'direct_answer', action: assignment?.actionType || 'assistant_answer' }]
     };
   } catch (error) {
     return {
       ...base,
-      summary: `No specialist agent matched this request, and Jose's model didn't answer (${error instanceof Error ? error.message : String(error)}). Nothing was produced.`,
+      summary: `Alphonso's model didn't answer (${error instanceof Error ? error.message : String(error)}). Nothing was produced.`,
       resultState: 'failed',
-      artifacts: [{ type: 'orchestration_review', action: assignment?.actionType || 'orchestration_review' }]
+      artifacts: [{ type: 'assistant_answer', action: assignment?.actionType || 'assistant_answer' }]
     };
   }
+}
+
+/**
+ * Jose plans, routes and approves; he does no work himself (owner, 2026-10-24).
+ * His approval gate (cost_policy_) and a summary step saved before 2026-10-24
+ * finish without a model; anything else has no owner to do it.
+ */
+function executeJoseStep(assignment: any) {
+  const actionType = String(assignment?.actionType || '');
+  const done = (summary: string) => ({ summary, resultState: 'completed', resultUrl: null, artifacts: [], sources: [], contractAction: actionType });
+  if (actionType.startsWith('cost_policy_')) return done('Approved: this request may use the paid service.');
+  if (actionType === 'orchestration_summary') return done("Jose's summary comes at the end of the request.");
+  return {
+    summary: `No agent owns this step's task: ${actionType || 'none'}. Nothing was produced.`,
+    resultState: 'failed', resultUrl: null, artifacts: [], sources: [], contractAction: actionType,
+  };
 }
 
 async function executeMariaAssignment(commandText: any, assignment: any, options: any = {}) {
@@ -1320,6 +1323,9 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (assignment?.actionType === 'boardroom_advance') {
     return executeBoardroomAdvance(assignment, commandText, options);
   }
+  if (assignment?.agent === AGENTS.ALPHONSO && String(assignment?.actionType || '').startsWith('assistant_')) {
+    return executeAssistantAssignment(requestText, assignment, options);
+  }
   if (assignment?.agent === AGENTS.ALPHONSO) {
     return executeAlphonsoAssignment(commandText, assignment, options);
   }
@@ -1344,7 +1350,7 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (assignment?.agent === AGENTS.MARCUS) {
     return executeMarcusAssignment(commandText, assignment);
   }
-  return executeJoseAssignment(commandText, assignment, options);
+  return executeJoseStep(assignment);
 }
 
 async function checkOllamaAvailable(endpoint: any) {
@@ -1470,6 +1476,18 @@ export async function runJoseCommandExecutionPipeline({
     for (const assignment of planAssignments) {
       const saved = resumeRequest.steps.find((step: any) => step.stepId === assignment.stepId);
       if (saved) assignment.needs = saved.needs;
+      // Work that changed owner on 2026-10-24 runs at its current owner, with a note.
+      const { step: owned, moved } = moveToOwner(toPlanStep(assignment));
+      if (moved) {
+        assignment.agent = owned.agent;
+        assignment.actionType = owned.actionType;
+        const packet: any = assignment.packetId ? getPacketById(assignment.packetId) : null;
+        if (packet) updatePacketStatus(packet.id, packet.status, { toAgent: owned.agent, actionType: owned.actionType } as any);
+        try {
+          updateJoseStep(resumeRequest.id, assignment.stepId, { agent: owned.agent, actionType: owned.actionType } as any);
+          appendRequestNote(resumeRequest.id, moved);
+        } catch { /* display aid only */ }
+      }
     }
   }
   const planSteps: PlanStep[] = planAssignments.map(toPlanStep);

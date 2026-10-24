@@ -375,10 +375,10 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
 
   if (intents.publishing) {
     assignments.push({
-      agent: AGENTS.HECTOR,
-      title: `Hector publishing handoff check: ${shorten(clean)}`,
-      rationale: 'Publishing language detected. Hector must validate connector/auth readiness before any external action.',
-      actionType: 'external_publish_handoff',
+      agent: AGENTS.MARCUS,
+      title: `Marcus publishing readiness check: ${shorten(clean)}`,
+      rationale: 'Publishing language detected. Marcus checks connector and sign-in readiness; nothing is published.',
+      actionType: 'distribution_readiness',
       riskLevel: 'high',
       requiresApproval: true,
       commandPreview: 'No automatic upload. Requires connector auth + Jose/user approval before any external posting.',
@@ -481,13 +481,13 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
 
   if (!assignments.length) {
     assignments.push({
-      agent: AGENTS.JOSE,
-      title: `Jose planning task: ${shorten(clean)}`,
-      rationale: 'No specialist match found. Jose keeps this for orchestration planning.',
-      actionType: 'orchestration_review',
+      agent: AGENTS.ALPHONSO,
+      title: `Alphonso answers: ${shorten(clean)}`,
+      rationale: 'No specialist owns this. Plain questions and everyday writing are Alphonso\'s (owner, 2026-10-24).',
+      actionType: 'assistant_answer',
       riskLevel: 'low',
       requiresApproval: false,
-      commandPreview: 'Planning only.',
+      commandPreview: 'An answer or a piece of everyday writing.',
       fragments
     });
   }

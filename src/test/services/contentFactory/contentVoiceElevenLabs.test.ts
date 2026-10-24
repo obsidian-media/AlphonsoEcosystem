@@ -90,7 +90,7 @@ describe('Voice with ElevenLabs', () => {
     backend.media_tools_status = () => ({ whisper: true });
     backend.write_workspace_text_file = (a) => { written[a.relativePath] = a.content; return { ok: true }; };
     backend.content_assemble_video = () => ({ ok: true, outputs: [] });
-    const result = await executeMediaStep({ agent: 'alphonso', actionType: 'runtime_assemble_video', contentStep: { projectId: project.id, step: 'assemble', brief: project.brief, brand, prior: {}, task: '' } } as any);
+    const result = await executeMediaStep({ agent: 'alphonso', actionType: 'creative_assemble_video', contentStep: { projectId: project.id, step: 'assemble', brief: project.brief, brand, prior: {}, task: '' } } as any);
     expect(vi.mocked(invoke).mock.calls.some((c) => c[0] === 'content_whisper_words')).toBe(false);
     expect((result.artifacts[0].data as any).captions).toBe('elevenlabs');
     expect(written[`${dir}/output/v1.srt`]).toContain('00:00:00,100');

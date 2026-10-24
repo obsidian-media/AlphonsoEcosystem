@@ -329,6 +329,18 @@ export function buildMarcusExecutionRecord(result: ExecutionResult, assignment: 
 // ── Main entry ────────────────────────────────────────────────────────────────
 
 export async function runMarcusDistribution(commandText: string, assignment: Assignment, priorOutputs: PriorOutputs | null, options: Record<string, unknown> = {}): Promise<MarcusResult> {
+  // A publishing readiness check publishes nothing (Hector's until 2026-10-24).
+  if (assignment?.actionType === 'distribution_readiness') {
+    return {
+      summary: 'Marcus checked publishing readiness. Nothing was published; posting still asks for approval.',
+      resultState: 'pending_review',
+      resultUrl: null,
+      artifacts: [{ type: 'publish_handoff', status: 'approval_required' }],
+      sources: [] as never[],
+      contractAction: 'distribution_readiness',
+      schema: buildMarcusExecutionRecord({ ok: false }, assignment),
+    };
+  }
   const mariaOutput = priorOutputs?.maria;
   const startMs = timestampMs();
 

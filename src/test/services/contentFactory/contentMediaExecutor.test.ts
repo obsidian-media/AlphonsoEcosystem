@@ -64,7 +64,7 @@ beforeEach(() => {
 // Miya content factory phase 2a: the steps that make the finished video file.
 describe('executeMediaStep', () => {
   it('handles the media task types (AI clips since phase 2b)', () => {
-    expect([...MEDIA_ACTIONS].sort()).toEqual(['creative_music', 'creative_sfx', 'creative_video_clips', 'creative_voice', 'research_broll', 'runtime_assemble_video']);
+    expect([...MEDIA_ACTIONS].sort()).toEqual(['creative_assemble_video', 'creative_music', 'creative_sfx', 'creative_video_clips', 'creative_voice', 'research_broll']);
   });
 
   it('Voice speaks each scene\'s lines in the brand voice; a quiet scene keeps its planned seconds', async () => {
@@ -144,7 +144,7 @@ describe('executeMediaStep', () => {
 
   it('Assemble needs the voice-over first', async () => {
     const { brand, project } = setup();
-    const result = await executeMediaStep(assignment(project, brand, 'alphonso', 'runtime_assemble_video', 'assemble'));
+    const result = await executeMediaStep(assignment(project, brand, 'alphonso', 'creative_assemble_video', 'assemble'));
     expect(result.resultState).toBe('failed');
     expect(result.failureReason).toBe('Run the Voice step first.');
   });
@@ -166,7 +166,7 @@ describe('executeMediaStep', () => {
       { aspect: '16x9', path: 'v1-16x9.mp4', durationSec: 8, frames: ['v1-16x9-10.jpg'] },
       { aspect: '9x16', path: 'v1-9x16.mp4', durationSec: 8, frames: ['v1-9x16-10.jpg'] },
     ] });
-    const result = await executeMediaStep(assignment(project, brand, 'alphonso', 'runtime_assemble_video', 'assemble'));
+    const result = await executeMediaStep(assignment(project, brand, 'alphonso', 'creative_assemble_video', 'assemble'));
     expect(result.resultState).toBe('completed');
     expect(invoke).toHaveBeenCalledWith('content_assemble_video', { spec: {
       workspaceRoot: 'D:\\Content', outDir: `${dir}/output`, version: 1,
@@ -199,7 +199,7 @@ describe('executeMediaStep', () => {
     backend.media_tools_status = () => ({ whisper: false });
     backend.write_workspace_text_file = () => ({ ok: true });
     backend.content_assemble_video = () => ({ ok: true, outputs: [] });
-    await executeMediaStep(assignment(project, brand, 'alphonso', 'runtime_assemble_video', 'assemble'));
+    await executeMediaStep(assignment(project, brand, 'alphonso', 'creative_assemble_video', 'assemble'));
     const sent = vi.mocked(invoke).mock.calls.find((c) => c[0] === 'content_assemble_video')![1] as any;
     expect(sent.spec.scenes[0]).toMatchObject({ aiClip: `${dir}/clips/v1-s1.mp4`, aiSeconds: 2 });
     expect(sent.spec.scenes[1].aiClip).toBeUndefined();
@@ -217,7 +217,7 @@ describe('executeMediaStep', () => {
     const written: Record<string, string> = {};
     backend.write_workspace_text_file = (a) => { written[a.relativePath] = a.content; return { ok: true }; };
     backend.content_assemble_video = () => ({ ok: true, outputs: [] });
-    const result = await executeMediaStep(assignment(project, brand, 'alphonso', 'runtime_assemble_video', 'assemble'));
+    const result = await executeMediaStep(assignment(project, brand, 'alphonso', 'creative_assemble_video', 'assemble'));
     expect(invoke).toHaveBeenCalledWith('content_whisper_words', { request: { workspaceRoot: 'D:\\Content', audioPath: `${dir}/audio/voice-v1/full.wav` } });
     expect(written[`${dir}/output/v1.srt`]).toContain('Hello there.');
     expect(written[`${dir}/output/v1.srt`]).toContain('00:00:00,100');
@@ -237,7 +237,7 @@ describe('executeMediaStep', () => {
     backend.media_tools_status = () => ({ whisper: false });
     backend.write_workspace_text_file = () => ({ ok: true });
     backend.content_assemble_video = () => ({ ok: true, outputs: [], fontNote: "The brand font Montserrat isn't installed on this computer; the captions use Arial." });
-    const result = await executeMediaStep(assignment(project, withFont, 'alphonso', 'runtime_assemble_video', 'assemble'));
+    const result = await executeMediaStep(assignment(project, withFont, 'alphonso', 'creative_assemble_video', 'assemble'));
     const sent = vi.mocked(invoke).mock.calls.find((c) => c[0] === 'content_assemble_video')![1] as any;
     expect(sent.spec.font).toBe('Montserrat');
     expect(String((result.artifacts[0].data as any).note)).toContain("isn't installed");

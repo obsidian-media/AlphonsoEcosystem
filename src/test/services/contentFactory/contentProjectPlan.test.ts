@@ -71,7 +71,7 @@ describe('contentProjectPlanSteps', () => {
     const { brand, project } = newProject();
     const steps = contentProjectPlanSteps(project, brand);
     const byId = Object.fromEntries(steps.map((s) => [s.stepId, s]));
-    expect(byId.assemble).toMatchObject({ agent: 'alphonso', actionType: 'runtime_assemble_video', needs: ['voice', 'music', 'sfx', 'broll', 'clips'] });
+    expect(byId.assemble).toMatchObject({ agent: 'miya', actionType: 'creative_assemble_video', needs: ['voice', 'music', 'sfx', 'broll', 'clips'] });
     expect(byId.broll).toMatchObject({ agent: 'hector', actionType: 'research_broll' });
     expect(byId.campaign.needs).toEqual(['assemble']);
     expect(byId.assemble.effects).toEqual(['write_own_work']);

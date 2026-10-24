@@ -83,7 +83,9 @@ describe('runContentStep', () => {
     const args = submitted();
     expect(args.source).toBe('content-factory');
     expect(args.steps.map((s: any) => [s.agent, s.actionType])).toEqual([['hector', 'research_virality'], ['nova', 'analysis_market']]);
-    expect(args.steps.every((s: any) => s.contentStep.step === 'research' && !s.waitFor && s.needs.length === 0)).toBe(true);
+    expect(args.steps.every((s: any) => s.contentStep.step === 'research' && !s.waitFor)).toBe(true);
+    // Hector finds, Nova judges (2026-10-24): Nova's step waits for Hector's.
+    expect(args.steps.map((s: any) => s.needs)).toEqual([[], ['research_trends']]);
     expect(getProject(p.id)!.joseRequestId).toBe('jose-request-c1');
   });
 

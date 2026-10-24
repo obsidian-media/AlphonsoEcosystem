@@ -22,7 +22,7 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
   },
   analysis_market: {
     role: 'Nova, Alphonso\'s opportunity analyst',
-    ask: 'Check the market from the web search results below: who already makes this kind of content and what they do (name only those found in the results), which gaps are open, how big the opportunity is (0-100) and which angle to take.',
+    ask: "Judge the market from what Hector found (his research and the web search results he used, below): who already makes this kind of content and what they do (name only those Hector found), which gaps are open, how big the opportunity is (0-100) and which angle to take. Don't look for new facts: judge his.",
     keys: '{"competitors":[{"name":"a channel or brand","whatTheyDo":"what they make"}],"gaps":["something nobody covers well"],"opportunityScore":"a whole number from 0 to 100","angle":"the angle this video should take"}',
     uses: [],
   },

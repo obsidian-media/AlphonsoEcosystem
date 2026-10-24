@@ -151,10 +151,10 @@ describe('decomposeJoseCommand — agent assignment routing', () => {
 });
 
 describe('decomposeJoseCommand — agent assignment routing', () => {
-  it('assigns Jose for unrecognized commands', () => {
+  it('assigns Alphonso for requests no specialist owns', () => {
     const parsed = parseJoseCommand('hello');
     const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
-    expect(assignments.some((a) => a.agent === 'jose')).toBe(true);
+    expect(assignments.some((a) => a.agent === 'alphonso' && a.actionType === 'assistant_answer')).toBe(true);
   });
 
   it('assigns Maria for governance/audit commands', () => {
@@ -197,12 +197,12 @@ describe('decomposeJoseCommand — agent assignment routing', () => {
     expect(marcus.requiresApproval).toBe(true);
   });
 
-  it('assigns Hector for publishing handoff', () => {
+  it('assigns Marcus the publishing readiness check', () => {
     const parsed = parseJoseCommand('upload and publish this video to youtube');
     const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
-    const hectorPublish = assignments.find((a) => a.agent === 'hector' && a.actionType === 'external_publish_handoff');
-    expect(hectorPublish).toBeTruthy();
-    expect(hectorPublish.requiresApproval).toBe(true);
+    const readiness = assignments.find((a) => a.agent === 'marcus' && a.actionType === 'distribution_readiness');
+    expect(readiness).toBeTruthy();
+    expect(readiness.requiresApproval).toBe(true);
   });
 
   it('marks local execution as high risk when riskyLocal is true', () => {
