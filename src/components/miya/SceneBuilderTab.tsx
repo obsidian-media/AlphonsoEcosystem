@@ -59,6 +59,7 @@ export function SceneBuilderTab({
   const pictures = output?.pictures || [];
   const voice = agentOutput<VoiceOut>(project, 'voice', 'miya');
   const music = agentOutput<MusicOut>(project, 'music', 'miya');
+  const sfx = agentOutput<{ skipped?: string; effects?: { sceneId: string; text: string; status: string; path?: string; reason?: string }[] }>(project, 'sfx', 'miya');
   const broll = agentOutput<BrollOut>(project, 'broll', 'hector');
   const video = agentOutput<AssembleOut>(project, 'assemble', 'alphonso');
   // A video or audio player refused its first load never tries again, so the players wait
@@ -112,6 +113,18 @@ export function SceneBuilderTab({
         <SkippedNote text={music?.skipped} />
         {mediaReady && music?.path && <audio key={outputRoot} controls preload="none" src={mediaUrl(outputRoot, music.path)} className="w-full" />}
         {music?.prompt && <div className="text-[11px] text-(--text-3)">{music.prompt}</div>}
+      </>)}
+      {panel('sfx', <>
+        <SkippedNote text={sfx?.skipped} />
+        <ul className="space-y-1 text-[12px]">
+          {(sfx?.effects || []).map((fx) => (
+            <li key={fx.sceneId} className="space-y-1">
+              <div className="text-(--text-2)">{fx.sceneId}: {fx.text}</div>
+              {fx.status === 'done' && fx.path && mediaReady && <audio key={outputRoot} controls preload="none" src={mediaUrl(outputRoot, fx.path)} className="w-full" />}
+              {fx.status !== 'done' && fx.reason && <div className="text-[11px] text-(--warning)">{fx.reason}</div>}
+            </li>
+          ))}
+        </ul>
       </>)}
       {panel('broll', <>
         <SkippedNote text={broll?.skipped} />

@@ -51,6 +51,8 @@ export interface ContentBrand {
     voice?: { engine: 'kokoro' | 'elevenlabs'; voiceId: string; modelId?: string };
     pictures?: 'comfyui' | 'higgsfield';
     clips?: 'local' | 'runway' | 'higgsfield' | null;
+    /** Sound effects from ElevenLabs in the long video (phase 4b); off unless switched on. */
+    soundEffects?: boolean;
   };
   createdAtMs: number;
   updatedAtMs: number;
@@ -71,7 +73,7 @@ export function hasOwnKey(record: object, key: string): boolean {
 
 export type StepId =
   | 'brief' | 'research' | 'script' | 'review' | 'scenes' | 'thumbnail'
-  | 'voice' | 'music' | 'broll' | 'clips' | 'assemble' | 'shorts' | 'carousel' | 'campaign' | 'quality' | 'publish';
+  | 'voice' | 'music' | 'sfx' | 'broll' | 'clips' | 'assemble' | 'shorts' | 'carousel' | 'campaign' | 'quality' | 'publish';
 
 /**
  * Voice, Music, B-roll and Assemble make the finished video file (phase 2a). The carousel
@@ -79,7 +81,7 @@ export type StepId =
  * must not put the voice-over or the finished video out of date.
  */
 export const STEP_ORDER: StepId[] = [
-  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'shorts', 'carousel', 'campaign', 'quality', 'publish',
+  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'sfx', 'broll', 'clips', 'assemble', 'shorts', 'carousel', 'campaign', 'quality', 'publish',
 ];
 
 /**

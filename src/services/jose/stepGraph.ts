@@ -111,7 +111,7 @@ export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean } = 
       else if (effect === 'spend' && isPaidModelId(s.model)) continue;
       // Miya's AI clips through Runway (content factory phase 2b): paid through the gated Runway
       // connector, approved once per run with the estimate. Only that step, only Miya.
-      else if (effect === 'spend' && s.agent === 'miya' && (s.actionType === 'creative_video_clips' || s.actionType === 'creative_shorts' || s.actionType === 'creative_voice')) continue;
+      else if (effect === 'spend' && s.agent === 'miya' && (s.actionType === 'creative_video_clips' || s.actionType === 'creative_shorts' || s.actionType === 'creative_voice' || s.actionType === 'creative_sfx')) continue;
       else if (!isEffectAllowed(s.agent, effect)) problems.push(`Step "${s.stepId}": ${name} may not ${EFFECT_LABELS[effect].toLowerCase()}.`);
     }
     for (const need of s.needs) {

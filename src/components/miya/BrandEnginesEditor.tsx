@@ -50,6 +50,10 @@ export function BrandEnginesEditor({ brand, onChange }: { brand: ContentBrand; o
           {problem && <span className="text-[11px] text-(--warning)">{problem}</span>}
         </div>
       )}
+      <label className="flex items-center gap-2 text-[11px] text-(--text-3)">
+        <input type="checkbox" aria-label="Sound effects from ElevenLabs" checked={engines.soundEffects === true} onChange={(e) => set({ soundEffects: e.target.checked })} />
+        Sound effects from ElevenLabs (Miya picks at most one per scene; asks first with the cost)
+      </label>
       <label className="block text-[11px] text-(--text-3)">
         Pictures made by
         <select aria-label="Pictures made by" className={`${field} ml-2`} value={engines.pictures || 'comfyui'} onChange={(e) => set({ pictures: e.target.value as Engines['pictures'] })}>

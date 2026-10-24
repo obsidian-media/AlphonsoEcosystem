@@ -41,9 +41,10 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
       // The finished video file (Miya content factory phase 2a).
       step('voice', 'miya', 'creative_voice', 'Read the script aloud in the brand voice, one line per scene.', ['thumbnail'], ['write_own_work']),
       step('music', 'miya', 'creative_music', 'Make a music bed for the video from the brief.', ['thumbnail'], ['write_own_work']),
+      step('sfx', 'miya', 'creative_sfx', 'Choose a short sound effect for the scenes where one helps, and make them.', ['voice', 'music'], ['write_own_work']),
       step('broll', 'hector', 'research_broll', 'Find a stock clip for each scene from the sources that have keys.', ['thumbnail']),
       step('clips', 'miya', 'creative_video_clips', 'Make an AI video clip for each main moment, from its scene picture.', ['scenes', 'broll'], ['write_own_work']),
-      step('assemble', 'alphonso', 'runtime_assemble_video', 'Cut the finished video in 16:9 and 9:16 with the voice, music, AI clips and captions.', ['voice', 'music', 'broll', 'clips'], ['write_own_work']),
+      step('assemble', 'alphonso', 'runtime_assemble_video', 'Cut the finished video in 16:9 and 9:16 with the voice, music, AI clips and captions.', ['voice', 'music', 'sfx', 'broll', 'clips'], ['write_own_work']),
       // Shorts (phase 3d), only when the brief asks for Shorts or Reels: each its own piece.
       step('shorts', 'miya', 'creative_shorts', 'Plan and make the Shorts: each a mini-script, a highlight with a new hook, or a cut of the finished video.', ['assemble'], ['write_own_work']),
       // A carousel (phase 3c), only when the brief asks for one: 5 to 10 slides, a picture each.

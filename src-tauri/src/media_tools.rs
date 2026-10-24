@@ -592,6 +592,16 @@ pub struct AssemblySpec {
   /// The brand's font for the captions (phase 4a); Arial when not set or not installed.
   #[serde(default)]
   font: Option<String>,
+  /// Sound effects (phase 4b): each starts at its scene's start, about 12 dB under the voice.
+  #[serde(default)]
+  sfx: Vec<AssemblySfx>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AssemblySfx {
+  path: String,
+  at_sec: f64,
 }
 
 /// The shapes this assembly makes, in the usual order.
@@ -717,6 +727,7 @@ pub(crate) fn missing_input(root: &Path, spec: &AssemblySpec) -> Option<String> 
     .flatten()
     .chain([&spec.voice, &spec.srt])
     .chain(spec.music.iter())
+    .chain(spec.sfx.iter().map(|fx| &fx.path))
     .find(|rel| {
       let path = root.join(rel);
       !path.is_file()
@@ -831,17 +842,40 @@ pub(crate) fn build_assembly_runs(
     s("-i"),
     root.join(&spec.voice).to_string_lossy().to_string(),
   ];
-  let audio = if let Some(music) = &spec.music {
+  if let Some(music) = &spec.music {
     args.extend([
       s("-stream_loop"),
       s("-1"),
       s("-i"),
       root.join(music).to_string_lossy().to_string(),
     ]);
-    // The music sits about 12 dB under the voice and ducks further while it speaks.
-    s("[1:a]asplit=2[voice][key];[2:a]volume=0.25[bed];[bed][key]sidechaincompress=threshold=0.05:ratio=8:attack=20:release=400[ducked];[voice][ducked]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[a]")
+  }
+  // Sound effects (phase 4b) go under the voice first, each at its start, about 12 dB down.
+  let first_sfx = if spec.music.is_some() { 3 } else { 2 };
+  let mut sfx_chain = String::new();
+  for (i, fx) in spec.sfx.iter().enumerate() {
+    args.extend([s("-i"), root.join(&fx.path).to_string_lossy().to_string()]);
+    let ms = (fx.at_sec.max(0.0) * 1000.0).round() as u64;
+    sfx_chain.push_str(&format!(
+      "[{}:a]adelay={ms}|{ms},volume=0.25[fx{i}];",
+      first_sfx + i
+    ));
+  }
+  let voice = if spec.sfx.is_empty() {
+    s("[1:a]")
   } else {
-    s("[1:a]loudnorm=I=-14:TP=-1.5:LRA=11[a]")
+    let labels: String = (0..spec.sfx.len()).map(|i| format!("[fx{i}]")).collect();
+    sfx_chain.push_str(&format!(
+      "[1:a]{labels}amix=inputs={}:duration=first:normalize=0[vo];",
+      spec.sfx.len() + 1
+    ));
+    s("[vo]")
+  };
+  let audio = if spec.music.is_some() {
+    // The music sits about 12 dB under the voice and ducks further while it speaks.
+    format!("{sfx_chain}{voice}asplit=2[voice][key];[2:a]volume=0.25[bed];[bed][key]sidechaincompress=threshold=0.05:ratio=8:attack=20:release=400[ducked];[voice][ducked]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[a]")
+  } else {
+    format!("{sfx_chain}{voice}loudnorm=I=-14:TP=-1.5:LRA=11[a]")
   };
   let filter = format!("[0:v]subtitles=captions.srt:force_style='{caption_style}'[v];{audio}");
   args.extend([
@@ -1787,6 +1821,7 @@ mod tests {
       aspects: None,
       output_stem: None,
       font: None,
+      sfx: vec![],
     }
   }
 
@@ -1886,6 +1921,68 @@ mod tests {
       .args
       .iter()
       .any(|x| x == "color=c=0x112233:s=1920x1080:r=30"));
+  }
+
+  #[test]
+  fn effects_are_mixed_under_the_voice_at_their_start() {
+    let mut with = spec(vec![scene(None, Some("p.png"), 3.0)], true);
+    with.sfx = vec![
+      AssemblySfx {
+        path: "brand/p/audio/sfx-v1-s1.wav".into(),
+        at_sec: 0.0,
+      },
+      AssemblySfx {
+        path: "brand/p/audio/sfx-v1-s2.wav".into(),
+        at_sec: 2.5,
+      },
+    ];
+    let runs = build_assembly_runs(
+      Path::new("R"),
+      Path::new("W"),
+      "v1-16x9.mp4",
+      &with,
+      1920,
+      1080,
+    );
+    let last = runs.last().unwrap();
+    let filter = &last.args[last
+      .args
+      .iter()
+      .position(|x| x == "-filter_complex")
+      .unwrap()
+      + 1];
+    assert!(
+      filter.contains("[3:a]adelay=0|0,volume=0.25[fx0]"),
+      "{filter}"
+    );
+    assert!(
+      filter.contains("[4:a]adelay=2500|2500,volume=0.25[fx1]"),
+      "{filter}"
+    );
+    assert!(
+      filter.contains("[1:a][fx0][fx1]amix=inputs=3:duration=first:normalize=0[vo]"),
+      "{filter}"
+    );
+    assert!(filter.contains("[vo]asplit=2[voice][key]"), "{filter}");
+    assert!(last.args.iter().any(|a| a.ends_with("sfx-v1-s2.wav")));
+    // Without effects the voice goes in as it is.
+    let plain = build_assembly_runs(
+      Path::new("R"),
+      Path::new("W"),
+      "v1-16x9.mp4",
+      &spec(vec![scene(None, Some("p.png"), 3.0)], true),
+      1920,
+      1080,
+    );
+    let f2 = &plain.last().unwrap().args[plain
+      .last()
+      .unwrap()
+      .args
+      .iter()
+      .position(|x| x == "-filter_complex")
+      .unwrap()
+      + 1];
+    assert!(f2.contains("[1:a]asplit=2[voice][key]") && !f2.contains("adelay"));
   }
 
   #[test]
@@ -2052,6 +2149,7 @@ mod tests {
       aspects: None,
       output_stem: None,
       font: None,
+      sfx: vec![],
     };
     // A run that fails its check (the voice is said to be 20 s) leaves no file behind...
     let wrong = AssemblySpec {

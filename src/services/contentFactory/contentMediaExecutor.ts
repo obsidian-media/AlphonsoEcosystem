@@ -4,9 +4,10 @@
 // the recorder saves as the step's version. Every file goes in the project
 // folder; nothing is overwritten, since each version has its own names.
 // Design: docs/superpowers/specs/2026-10-23-miya-content-factory-phase2a-design.md
-import { resolveVoice } from './engineChoice';
+import { paidEngineAvailable, resolveVoice } from './engineChoice';
+import { parseStepAnswer } from './contentStepPrompts';
 import { elevenLabsKey } from '../connectors/elevenLabsConnector';
-import { canSpend, estimateElevenLabsUsd, recordSpendUsd } from '../jose/joseSpend';
+import { canSpend, estimateEffectsUsd, estimateElevenLabsUsd, recordSpendUsd } from '../jose/joseSpend';
 import { invoke } from '@tauri-apps/api/core';
 import { freeOllamaGpuMemory, generateAgentLlmResponse } from '../../lib/ollama';
 import { getConnectorCredential } from '../connectors/connectorAuth';
@@ -26,7 +27,10 @@ import { brandFontName, darkestColour, headlineColour } from './thumbnailRendere
 import type { ContentBrand, ContentProject, StepId } from './contentTypes';
 import type { ContentStepResult } from './contentAgentExecutor';
 
-export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'research_broll', 'creative_video_clips', 'runtime_assemble_video']);
+export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'creative_sfx', 'research_broll', 'creative_video_clips', 'runtime_assemble_video']);
+
+export const SFX_OFF = 'Sound effects are off for this brand (Brands tab).';
+export const SFX_NOT_APPROVED = "Sound effects weren't approved for this run.";
 
 export const NO_STOCK_KEYS = 'No stock footage keys are set. Add a free Pexels, Pixabay or Coverr key in Connectors → Content & Productivity to use stock clips; the scene pictures are used instead.';
 export const NO_VOICE = 'Run the Voice step first.';
@@ -191,6 +195,46 @@ async function runVoice(assignment: MediaAssignment, ctx: Context): Promise<Cont
     ...(note ? { note } : {}),
   };
   return done(assignment, output, `Voice-over read in ${ctx.brand.voice?.voiceId || 'af_heart'}, ${output.durationSec.toFixed(1)} s.`);
+}
+
+interface SfxOutcome { sceneId: string; text: string; seconds: number; status: 'done' | 'failed'; path?: string; atSec?: number; reason?: string }
+
+/** Sound effects (phase 4b): Miya picks at most one per scene; ElevenLabs makes each, within the cap. */
+async function runSfx(assignment: MediaAssignment, ctx: Context): Promise<ContentStepResult> {
+  if (!ctx.brand.engines?.soundEffects) return done(assignment, { skipped: SFX_OFF }, SFX_OFF);
+  const can = paidEngineAvailable('elevenlabs');
+  if (!can.ok) return done(assignment, { skipped: `${can.reason}; no sound effects.` }, `${can.reason}; no sound effects.`);
+  if (!(assignment.effects || []).includes('spend')) return done(assignment, { skipped: SFX_NOT_APPROVED }, SFX_NOT_APPROVED);
+  const scenes = scenesOf(ctx);
+  const prompt = [
+    'Choose short sound effects for this video: at most one per scene, and only where a sound helps. Return only JSON: {"effects":[{"sceneId":"s1","text":"what the sound is","seconds":2}]}.',
+    ...scenes.map((sc) => `${sc.id} (${sc.startSec ?? 0}–${sc.endSec ?? 0} s): ${sc.description || ''}`),
+  ].join('\n');
+  const reply = await generateAgentLlmResponse('miya', { prompt, format: 'json', sessionId: `content:${ctx.project.id}:sfx` });
+  const planned = (parseStepAnswer('creative_sfx', String(reply?.response || '')) as { effects?: { sceneId: string; text: string; seconds: number }[] } | null)?.effects || [];
+  const known = new Set(scenes.map((sc) => sc.id));
+  const voiceLines = part<VoiceOutput>(ctx.prior, 'voice', 'miya')?.lines || [];
+  const effects: SfxOutcome[] = [];
+  let totalUsd = 0;
+  for (const fx of planned.filter((f) => known.has(f.sceneId))) {
+    const cost = estimateEffectsUsd(1) ?? 0;
+    const cap = canSpend(cost);
+    if (!cap.ok) { effects.push({ ...fx, status: 'failed', reason: cap.reason }); continue; }
+    const outPath = `${ctx.dir}/audio/sfx-v${ctx.version}-${fx.sceneId}.wav`;
+    const made = await invoke<{ ok?: boolean; path?: string; reason?: string }>('elevenlabs_sound', { request: {
+      workspaceRoot: ctx.root, outPath, text: fx.text, seconds: fx.seconds, key: elevenLabsKey(),
+    } }).catch(() => null);
+    if (made?.ok) {
+      recordSpendUsd(cost);
+      totalUsd += cost;
+      const atSec = voiceLines.find((l) => l.sceneId === fx.sceneId)?.startSec ?? scenes.find((sc) => sc.id === fx.sceneId)?.startSec ?? 0;
+      effects.push({ ...fx, status: 'done', path: outPath, atSec });
+    } else {
+      effects.push({ ...fx, status: 'failed', reason: made?.reason || 'ElevenLabs made no sound.' });
+    }
+  }
+  const madeCount = effects.filter((e) => e.status === 'done').length;
+  return done(assignment, { effects, totalUsd }, madeCount ? `${madeCount} sound effects made.` : 'No sound effects were needed.');
 }
 
 async function moodPrompt(ctx: Context): Promise<string | null> {
@@ -433,12 +477,16 @@ async function runAssemble(assignment: MediaAssignment, ctx: Context): Promise<C
     return { cardColor: hex(darkestColour(palette)), seconds, ...first };
   });
   const font = brandFontName(ctx.brand);
+  // Sound effects that were made (phase 4b), each at its scene's start.
+  const sfx = (part<{ effects?: SfxOutcome[] }>(ctx.prior, 'sfx', 'miya')?.effects || [])
+    .filter((e) => e.status === 'done' && e.path).map((e) => ({ path: e.path as string, atSec: e.atSec ?? 0 }));
   const result = await invoke<{ ok?: boolean; fontNote?: string | null; outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
     workspaceRoot: ctx.root, outDir, version: ctx.version, scenes,
     voice: voice.full, voiceSeconds: voice.durationSec,
     ...(music ? { music } : {}),
     srt, captionColor: hex(headlineColour(palette)), outlineColor: hex(darkestColour(palette)),
     ...(font ? { font } : {}),
+    ...(sfx.length ? { sfx } : {}),
   } });
   const notes = [captions === 'lines' ? NO_WHISPER_NOTE : '', result?.fontNote || ''].filter(Boolean);
   const outputs = (result?.outputs || []).map((o) => ({
@@ -458,6 +506,7 @@ export async function executeMediaStep(assignment: MediaAssignment): Promise<Con
     switch (assignment.actionType) {
       case 'creative_voice': return await runVoice(assignment, ctx);
       case 'creative_music': return await runMusic(assignment, ctx);
+      case 'creative_sfx': return await runSfx(assignment, ctx);
       case 'research_broll': return await runBroll(assignment, ctx);
       case 'creative_video_clips': return await runClips(assignment, ctx);
       case 'runtime_assemble_video': return await runAssemble(assignment, ctx);

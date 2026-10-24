@@ -68,6 +68,12 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
     keys: '{"worked":["one sentence"],"didnt":["one sentence"]}',
     uses: ['script', 'thumbnail', 'campaign'],
   },
+  creative_sfx: {
+    role: 'Miya, Alphonso\'s creative director',
+    ask: 'Choose short sound effects for this video: at most one per scene, and only where a sound really helps (a pour, a door, a whoosh on a cut). For each give the scene id, a short description for a sound generator, and its length in seconds (0.5 to 30). No music, no speech. Leave a scene out when it needs nothing.',
+    keys: '{"effects":[{"sceneId":"s1","text":"what the sound is","seconds":2}]}',
+    uses: ['scenes'],
+  },
   analysis_ideas: {
     role: 'Nova, Alphonso\'s analyst',
     ask: 'Suggest up to 3 follow-up videos for this brand from the post described below and its script: a sequel, the same hook on another topic, or a Short from it. One line each, ready to be a new project\'s idea. No made-up numbers.',
@@ -187,6 +193,7 @@ const VALIDATORS: Record<string, (j: Json) => boolean> = {
   creative_shorts: (j) => list(j.shorts, 1),
   analysis_performance: (j) => texts(j.worked) && texts(j.didnt) && (j.worked as unknown[]).length + (j.didnt as unknown[]).length > 0,
   analysis_ideas: (j) => texts(j.ideas, 1),
+  creative_sfx: (j) => Array.isArray(j.effects),
   creative_lessons: (j) => texts(j.worked) && texts(j.didnt) && (j.worked as unknown[]).length + (j.didnt as unknown[]).length > 0,
   creative_carousel: (j) => list(j.slides, 5) && (j.slides as unknown[]).length <= 10
     && every(j.slides, 5, (sl) => isText(sl.headline) && isText(sl.body) && isText(sl.imagePrompt) && words(sl.headline) <= 8 && words(sl.body) <= 25),
@@ -293,6 +300,19 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
     // Only links Hector actually found; a model without internet invents them.
     const allowed = new Set(options.allowedUrls.map((u) => u.trim()));
     answer = { ...answer, references: (answer.references as Json[]).filter((r) => allowed.has(String(r?.url || '').trim())) };
+  }
+  if (actionType === 'creative_sfx') {
+    // At most one per scene, 0.5–30 s, with a description (phase 4b).
+    const seen = new Set<string>();
+    const effects = (Array.isArray(answer.effects) ? answer.effects as Json[] : []).flatMap((e) => {
+      const sceneId = String(e?.sceneId ?? '').trim();
+      const text = String(e?.text ?? '').trim().slice(0, 300);
+      if (!sceneId || !text || seen.has(sceneId)) return [];
+      seen.add(sceneId);
+      const seconds = Math.min(30, Math.max(0.5, Number(e?.seconds) || 2));
+      return [{ sceneId, text, seconds }];
+    });
+    answer = { effects };
   }
   if (actionType === 'analysis_ideas') {
     answer = { ideas: (Array.isArray(answer.ideas) ? answer.ideas : []).map((t) => String(t ?? '').trim().slice(0, 160)).filter(Boolean).slice(0, 3) };

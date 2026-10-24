@@ -83,7 +83,7 @@ describe('the plan', () => {
 
   it('the template has the shorts step after assemble', () => {
     const t = getTemplate('content_video')!;
-    expect(t.steps).toHaveLength(19);
+    expect(t.steps).toHaveLength(20);
     expect(t.steps.find((s) => s.stepId === 'shorts')!.needs).toEqual(['assemble']);
   });
 });

@@ -79,3 +79,11 @@ it("the brand's voice can be one of your ElevenLabs voices, and pictures and cli
   });
 });
 
+it('sound effects can be switched on for the brand', () => {
+  const brand = saveBrand({ name: 'Acme' });
+  render(<BrandEditor brandId={brand.id} onBrand={() => undefined} />);
+  fireEvent.click(screen.getByLabelText('Sound effects from ElevenLabs'));
+  fireEvent.click(screen.getByRole('button', { name: 'Save brand' }));
+  expect(getBrand(brand.id)!.engines?.soundEffects).toBe(true);
+});
+

@@ -111,6 +111,7 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   // The finished video (phase 2a): files in the project folder only.
   creative_voice: ['write_own_work'],
   creative_music: ['write_own_work'],
+  creative_sfx: ['write_own_work'],
   research_broll: ['read'],
   runtime_assemble_video: ['write_own_work'],
   // AI clips (phase 2b): local clips write files; a Runway run adds `spend` in the plan.

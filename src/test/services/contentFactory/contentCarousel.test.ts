@@ -68,7 +68,7 @@ describe('the plan', () => {
 
   it('the Content video template has the carousel step after thumbnails', () => {
     const t = getTemplate('content_video')!;
-    expect(t.steps).toHaveLength(19);
+    expect(t.steps).toHaveLength(20);
     const ids = t.steps.map((s) => s.stepId);
     expect(ids.indexOf('carousel')).toBeGreaterThan(ids.indexOf('thumbnail'));
     expect(t.steps.find((s) => s.stepId === 'carousel')!.needs).toEqual(['thumbnail']);

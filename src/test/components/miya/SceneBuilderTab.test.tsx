@@ -21,9 +21,9 @@ import { allowMediaFolder } from '../../../services/contentFactory/contentProjec
 import { SceneBuilderTab } from '../../../components/miya/SceneBuilderTab';
 import { createProject, emptyBrief, getProject, saveStepVersion } from '../../../services/contentFactory/contentProjectService';
 
-beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); });
+beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); vi.mocked(allowMediaFolder).mockImplementation(async () => true); });
 
-function setup(options: { musicSkipped?: boolean } = {}) {
+function setup(options: { musicSkipped?: boolean; sfx?: unknown } = {}) {
   const p = createProject('b', 'P', emptyBrief());
   const save = (step: any, output: unknown) => saveStepVersion(p.id, step, { output, summary: '', joseCommandId: null });
   save('scenes', { miya: { style: 'warm', scenes: [{ id: 's1', description: 'A barista pours coffee' }] } });
@@ -34,6 +34,7 @@ function setup(options: { musicSkipped?: boolean } = {}) {
   save('broll', { hector: { clips: [
     { sceneId: 's1', path: 'b/p/broll/v1-s1.mp4', source: 'pexels', author: 'Ana', pageUrl: 'https://www.pexels.com/video/7', license: 'Pexels License' },
   ] } });
+  if (options.sfx) save('sfx', { miya: options.sfx });
   save('assemble', { alphonso: {
     outputs: [
       { aspect: '16x9', path: 'b/p/output/v1-16x9.mp4', durationSec: 8, frames: ['b/p/output/v1-16x9-10.jpg', 'b/p/output/v1-16x9-50.jpg', 'b/p/output/v1-16x9-90.jpg'] },
@@ -113,5 +114,18 @@ describe('a new output folder', () => {
     allowB(true);
     await waitFor(() => expect(container.querySelectorAll('video').length).toBeGreaterThan(0));
   });
-});
 
+  // Phase 4b: the Sound effects step, with a player for each effect and its note.
+  it('plays each sound effect and says why one was not made', async () => {
+    const project = setup({ sfx: { effects: [
+      { sceneId: 's1', text: 'a coffee pour', seconds: 2, status: 'done', path: 'b/p/audio/sfx-v1-s1.wav', atSec: 0 },
+      { sceneId: 's2', text: 'a whoosh', seconds: 1, status: 'failed', reason: 'ElevenLabs says the account is over its limit for now.' },
+    ] } });
+    const { container } = render(<SceneBuilderTab {...props(project)} />);
+    expect(screen.getAllByText('Sound effects').length).toBeGreaterThan(0);
+    await waitFor(() => expect(container.querySelectorAll('video')).toHaveLength(2));
+    expect([...container.querySelectorAll('audio')].map((a) => a.getAttribute('src'))).toContain('asset-test://b/p/audio/sfx-v1-s1.wav');
+    expect(screen.getByText('s1: a coffee pour')).toBeTruthy();
+    expect(screen.getByText('ElevenLabs says the account is over its limit for now.')).toBeTruthy();
+  });
+});

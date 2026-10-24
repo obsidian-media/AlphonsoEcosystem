@@ -6,8 +6,8 @@ import { STEP_ORDER, type ContentBrand, type ContentProject, type StepId } from 
 import { chosenVersionOf, getShortsSettings, getVideoSettings } from './contentProjectService';
 import { chosenScenes } from './clipEngine';
 import { estimateRunwayUsd, runwayClipAvailable } from './runwayClip';
-import { estimateElevenLabsUsd } from '../jose/joseSpend';
-import { resolveVoice } from './engineChoice';
+import { estimateEffectsUsd, estimateElevenLabsUsd } from '../jose/joseSpend';
+import { paidEngineAvailable, resolveVoice } from './engineChoice';
 
 /** Which content-factory step each template step belongs to. */
 export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
@@ -20,6 +20,7 @@ export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
   thumbnail: 'thumbnail',
   voice: 'voice',
   music: 'music',
+  sfx: 'sfx',
   broll: 'broll',
   clips: 'clips',
   assemble: 'assemble',
@@ -41,6 +42,9 @@ export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Mi
 
 /** Why Publish waits (phase 3a): you approve the exact posts in Campaign Studio's Posts list. */
 export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
+
+/** Why a full run waits at Sound effects (phase 4b): once, with the most they could cost. */
+export const SFX_WAIT_PAID = (max: number, usd: number): string => `Make up to ${max} sound effects, about $${usd.toFixed(2)} at most.`;
 
 /** Why a full run waits at Voice when the brand reads with ElevenLabs (phase 4b): once, with the cost. */
 export const VOICE_WAIT_PAID = (usd: number): string => `Read the voice-over with ElevenLabs, about $${usd.toFixed(2)}.`;
@@ -170,6 +174,17 @@ export function contentProjectPlanSteps(
         step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
         step.costEstimateUsd = usd;
         if (!options.only) step.waitFor = VOICE_WAIT_PAID(usd);
+      }
+    }
+    // Sound effects (phase 4b): at most one per scene, so the stop shows the most they could cost.
+    if (factoryStep === 'sfx' && brand.engines?.soundEffects && paidEngineAvailable('elevenlabs').ok) {
+      const scenes = (chosenVersionOf(project, 'scenes')?.output as { miya?: { scenes?: unknown[] } } | undefined)?.miya?.scenes;
+      const max = scenes?.length || Math.max(1, Math.ceil(Number(project.brief.lengthSec || 60) / 6));
+      const usd = estimateEffectsUsd(max);
+      if (usd !== null) {
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        step.costEstimateUsd = usd;
+        if (!options.only) step.waitFor = SFX_WAIT_PAID(max, usd);
       }
     }
     // Runway clips in the Shorts (phase 4a): spending always asks; a full run stops once with the cost.
