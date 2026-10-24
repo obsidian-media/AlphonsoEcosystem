@@ -14,6 +14,8 @@ interface ClipsOutput { engine?: string; model?: string; clips?: ClipOutcome[]; 
 export interface AiClipsPanelProps {
   project: ContentProject;
   outputRoot: string;
+  /** The output folder is allowed for the players (see SceneBuilderTab). */
+  mediaReady?: boolean;
   /** The project's run is waiting at the AI clips step (the main moments, and Runway's cost). */
   waiting: boolean;
   onRun(): void;
@@ -26,7 +28,7 @@ export interface AiClipsPanelProps {
 const field = 'rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)';
 
 /** Scene Builder → AI clips (Miya content factory phase 2b). */
-export function AiClipsPanel({ project, outputRoot, waiting, onRun, onChooseVersion, onApprove, onCheckAgain, onChange }: AiClipsPanelProps) {
+export function AiClipsPanel({ project, outputRoot, mediaReady = true, waiting, onRun, onChooseVersion, onApprove, onCheckAgain, onChange }: AiClipsPanelProps) {
   const settings = getVideoSettings(project);
   const [engine, setEngine] = useState<ProjectClipEngine | null>(null);
 
@@ -97,7 +99,7 @@ export function AiClipsPanel({ project, outputRoot, waiting, onRun, onChooseVers
               <div className="font-semibold text-(--text-1)">
                 {clip.sceneId}{typeof clip.seconds === 'number' ? ` · ${clip.seconds} s` : ''}{typeof clip.costUsd === 'number' ? ` · $${clip.costUsd.toFixed(2)}` : ''}
               </div>
-              {clip.status === 'done' && clip.path && <video controls preload="metadata" src={mediaUrl(outputRoot, clip.path)} className="max-h-64 w-full rounded-xl bg-black" />}
+              {mediaReady && clip.status === 'done' && clip.path && <video key={outputRoot} controls preload="metadata" src={mediaUrl(outputRoot, clip.path)} className="max-h-64 w-full rounded-xl bg-black" />}
               {clip.status === 'pending' && <div className="text-(--text-3)">Still being made in ComfyUI.</div>}
               {(clip.status === 'skipped' || clip.status === 'failed') && <div className="text-(--text-3)">{clip.reason}</div>}
             </div>

@@ -3,7 +3,9 @@
 import { getTemplate } from '../jose/joseTemplates';
 import type { PlanStep } from '../jose/stepGraph';
 import { STEP_ORDER, type ContentBrand, type ContentProject, type StepId } from './contentTypes';
-import { getVideoSettings } from './contentProjectService';
+import { chosenVersionOf, getVideoSettings } from './contentProjectService';
+import { chosenScenes } from './clipEngine';
+import { estimateRunwayUsd } from './runwayClip';
 
 /** Which content-factory step each template step belongs to. */
 export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
@@ -35,6 +37,15 @@ export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Mi
 
 /** Why Publish waits (phase 3a): you approve the exact posts in Campaign Studio's Posts list. */
 export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
+
+/** Runway's estimate for the scenes AI clips would be made for, when the scene plan is known. */
+function runwayEstimate(project: ContentProject): number | null {
+  const scenes = (chosenVersionOf(project, 'scenes')?.output as { miya?: { scenes?: { startSec?: number; endSec?: number; mainMoment?: unknown }[] } } | undefined)?.miya?.scenes;
+  if (!scenes?.length) return null;
+  const chosen = chosenScenes(scenes, getVideoSettings(project).aiClips);
+  if (!chosen.length) return null;
+  return estimateRunwayUsd(chosen.map((s) => Math.max(0, Number(s.endSec || 0) - Number(s.startSec || 0))));
+}
 
 /**
  * The project's plan from `from` (default research) onward, or with `only`
@@ -81,7 +92,12 @@ export function contentProjectPlanSteps(
     // Run on its own from Miya Studio, the user is already looking at the marks: no extra stop,
     // but a Runway run still asks for its cost (spending always asks).
     if (factoryStep === 'clips' && getVideoSettings(project).aiClips !== 'none') {
-      if (options.clipEngine === 'runway') step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+      if (options.clipEngine === 'runway') {
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        // The estimate travels with the step (phase 3b), so Telegram and the board say "(about $X.XX)".
+        const estimate = runwayEstimate(project);
+        if (estimate !== null) step.costEstimateUsd = estimate;
+      }
       // No stop when nothing can make clips here (null); the step then says what to set up.
       // An unknown engine (undefined) still stops, to be safe.
       if (!options.only && options.clipEngine !== null) step.waitFor = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : CLIPS_WAIT;

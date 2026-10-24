@@ -94,3 +94,24 @@ describe('SceneBuilderTab: main moments', () => {
     expect(screen.getByRole('region', { name: 'AI clips' })).toBeTruthy();
   });
 });
+
+// Phase 3b: a new output folder works without reopening Miya Studio. A player refused its
+// first load never tries again, so players wait until the current folder is allowed.
+describe('a new output folder', () => {
+  it('shows the players only once the folder is allowed, and again after the folder changes', async () => {
+    const project = setup();
+    let allowA: (v: boolean) => void = () => undefined;
+    let allowB: (v: boolean) => void = () => undefined;
+    vi.mocked(allowMediaFolder).mockImplementation((root: string) => new Promise((r) => { if (root === 'D:/A') allowA = r; else allowB = r; }));
+    const { container, rerender } = render(<SceneBuilderTab {...props(project)} outputRoot="D:/A" />);
+    expect(container.querySelectorAll('video').length).toBe(0);
+    allowA(true);
+    await waitFor(() => expect(container.querySelectorAll('video').length).toBeGreaterThan(0));
+    rerender(<SceneBuilderTab {...props(project)} outputRoot="D:/B" />);
+    expect(allowMediaFolder).toHaveBeenLastCalledWith('D:/B');
+    expect(container.querySelectorAll('video').length).toBe(0);
+    allowB(true);
+    await waitFor(() => expect(container.querySelectorAll('video').length).toBeGreaterThan(0));
+  });
+});
+
