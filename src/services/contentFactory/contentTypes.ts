@@ -227,6 +227,29 @@ export interface ProjectPost {
   seconds?: number;
   /** The Short this post is (phase 3d). */
   shortId?: string;
+  /** Its numbers from the platform at each checkpoint (phase 4a). */
+  metrics?: PostMetrics;
+}
+
+/** When a post's numbers are read (phase 4a): after 1 hour, 1 day, 7 days and 30 days. */
+export type Checkpoint = '1h' | '1d' | '7d' | '30d';
+
+export interface MetricsReading {
+  readAtMs: number;
+  /** The app's keys: views, reach, likes, comments, saves, shares, reactions, watchMinutes, … */
+  values: Record<string, number>;
+  /** Numbers the platform didn't give (shown as "—", never 0). */
+  unavailable: string[];
+}
+
+export interface PostMetrics {
+  readings: Partial<Record<Checkpoint, MetricsReading>>;
+  /** Deleted on the platform: no more checkpoints. */
+  removed?: boolean;
+  /** A temporary refusal: try again after this. */
+  retryAfterMs?: number;
+  lastRefreshMs?: number;
+  lastProblem?: string;
 }
 
 /** What a content-factory step sends to an agent through Jose. */

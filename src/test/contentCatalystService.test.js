@@ -643,6 +643,8 @@ describe('publishContent', () => {
     const result = await publishContent(job, { approved: true });
     expect(result.status).toBe('published');
     expect(result.publish.postIds).toEqual(['post_123']);
+    // Phase 4a: when it went out, so its numbers can be read later.
+    expect(typeof result.publish.sentAtMs).toBe('number');
   });
 
   it('returns failed when meta publish fails', async () => {

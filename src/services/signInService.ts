@@ -3,6 +3,7 @@
 // its id and secret are saved in Settings → Connectors first. The backend opens the
 // browser, receives the sign-in on this computer and exchanges it (`oauth_sign_in`);
 // this saves what comes back in the OS keychain, like a key typed into Settings.
+import { clearNeedsPermission } from './contentFactory/postMetrics';
 import { invoke } from '@tauri-apps/api/core';
 import { getConnectorCredential, saveConnectorCredential } from './connectors/connectorAuth';
 import { recordSignIn, signedInAt, type SignInService } from './contentFactory/signInExpiry';
@@ -45,6 +46,8 @@ function finish(service: SignInService, result: BackendResult | null, nowMs: num
     if (value) saveConnectorCredential(connector, key, value);
   }
   recordSignIn(service, nowMs);
+  // A new sign-in carries the reading permissions (phase 4a).
+  clearNeedsPermission(service);
   if (service === 'meta') {
     const pages = result.pages || [];
     if (pages.length === 1) chooseMetaPage(pages[0]);
