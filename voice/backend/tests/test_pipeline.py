@@ -73,3 +73,21 @@ def test_ollama_model_comes_from_the_launcher(monkeypatch):
     assert pipeline.ollama_model() == "qwen2.5:7b"
     monkeypatch.delenv("VOICE_OLLAMA_MODEL")
     assert pipeline.ollama_model() == "llama3.2:3b"
+
+
+# Agent roles Part A (2026-10-24): the agent answers in its role.
+def test_messages_start_with_the_agents_role():
+    import pipeline
+    from agent_roles import ROLES
+    messages = pipeline.build_messages("research bees", "hector", [{"role": "user", "content": "earlier"}])
+    assert messages[0]["role"] == "system"
+    assert ROLES["hector"]["owns"] in messages[0]["content"]
+    assert ROLES["hector"]["never"] in messages[0]["content"]
+    assert "which agent does it" in messages[0]["content"]
+    assert messages[1:] == [{"role": "user", "content": "earlier"}, {"role": "user", "content": "research bees"}]
+
+
+def test_the_default_agent_answers_as_alphonso():
+    import pipeline
+    from agent_roles import ROLES
+    assert ROLES["alphonso"]["owns"] in pipeline.build_messages("hi", "alphonso_core", [])[0]["content"]
