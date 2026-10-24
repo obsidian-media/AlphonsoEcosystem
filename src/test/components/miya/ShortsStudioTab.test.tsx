@@ -91,4 +91,11 @@ describe('ShortsStudioTab', () => {
     render(<ShortsStudioTab project={createProject('b', 'P', emptyBrief())} {...props()} />);
     expect(screen.getByText(/add .Shorts. to What to make/i)).toBeTruthy();
   });
+
+  it('a failed Short is flagged', () => {
+    render(<ShortsStudioTab project={setup()} {...props()} />);
+    expect(screen.getByTestId('short-failed-sh2')).toBeTruthy();
+    expect(screen.queryByTestId('short-failed-sh1')).toBeNull();
+  });
 });
+

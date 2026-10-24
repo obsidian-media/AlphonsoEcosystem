@@ -20,7 +20,7 @@ vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   return { ...actual, saveProjectImage: vi.fn(async (_r, _b, _p, sub, file) => `D:/Content/${sub}/${file}`), writeProjectFile: vi.fn(async () => undefined) };
 });
 
-import { makeShorts, redoShort, MAKING_ANOTHER, NEEDS_FINISHED_VIDEO } from '../../../services/contentFactory/shortMaker';
+import { makeShorts, redoShort, shortsSummary, NEEDS_FINISHED_VIDEO } from '../../../services/contentFactory/shortMaker';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief, getProject, saveStepVersion, setShortsSettings } from '../../../services/contentFactory/contentProjectService';
 
@@ -100,7 +100,12 @@ describe('makeShorts', () => {
 
   it('one Short failing does not stop the others', async () => {
     const p = setup([highlight, cut]);
-    invoke.mockImplementationOnce(async () => { throw new Error('Kokoro is not installed'); });
+    const base = invoke.getMockImplementation()!;
+    let thrown = false;
+    invoke.mockImplementation(async (cmd: string, args: unknown) => {
+      if (cmd === 'content_tts_kokoro' && !thrown) { thrown = true; throw new Error('Kokoro is not installed'); }
+      return base(cmd, args as never);
+    });
     const outs = await makeShorts(p.id, settings);
     expect(outs.map((o) => o.status)).toEqual(['failed', 'done']);
     expect(outs[0].reason).toContain('Kokoro');
@@ -151,13 +156,42 @@ describe('redoShort', () => {
     expect(made(p.id).sh3).toMatchObject({ fileVersion: 2 });
   });
 
-  it('Redo while another Short is being made is refused', async () => {
+  it('Redo waits for the Short being made, then runs', async () => {
     const p = setup([cut, highlight]);
-    let release: (v: unknown) => void = () => undefined;
-    invoke.mockImplementationOnce(() => new Promise((r) => { release = r; }));
+    const base = invoke.getMockImplementation()!;
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((r) => { release = r; });
+    const order: string[] = [];
+    invoke.mockImplementation(async (cmd: string, args: { spec?: { outPath?: string } }) => {
+      if (cmd === 'content_cut_short') {
+        order.push(`start ${args.spec?.outPath}`);
+        if (order.length === 1) await held;
+        order.push(`end ${args.spec?.outPath}`);
+      }
+      return base(cmd, args);
+    });
     const first = makeShorts(p.id, settings);
-    expect(await redoShort(p.id, 'sh2', settings)).toEqual({ ok: false, reason: MAKING_ANOTHER });
-    release({ ok: true, path: 'acme/launch/shorts/sh3/v1.mp4', durationSec: 30, frames: [] });
-    await first;
+    const again = redoShort(p.id, 'sh3', settings);
+    await new Promise((r) => setTimeout(r, 0));
+    release();
+    const [outs, redo] = await Promise.all([first, again]);
+    expect(outs.map((o) => o.status)).toEqual(['done', 'done']);
+    expect(redo).toMatchObject({ status: 'done', path: 'acme/launch/shorts/sh3/v2.mp4' });
+    // Never two cuts at once.
+    for (let i = 0; i < order.length; i += 2) {
+      expect(order[i].startsWith('start')).toBe(true);
+      expect(order[i + 1].startsWith('end')).toBe(true);
+    }
   });
 });
+
+describe('shortsSummary', () => {
+  it('the Shorts step says how many failed', () => {
+    const d = { shortId: 'a', status: 'done' } as const;
+    const f = { shortId: 'b', status: 'failed' } as const;
+    expect(shortsSummary([d, f, d])).toBe('done, 1 of 3 failed');
+    expect(shortsSummary([d, d])).toBe('done');
+    expect(shortsSummary([])).toBe('done');
+  });
+});
+

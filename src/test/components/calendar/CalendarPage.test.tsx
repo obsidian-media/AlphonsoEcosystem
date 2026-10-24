@@ -34,7 +34,7 @@ const at = (day: number, h: number, m = 0) => new Date(2026, 9, day, h, m).getTi
 const item = (patch: Partial<CalendarItem>): CalendarItem => ({
   id: 'post:x', kind: 'post', brandId: 'lw', brandName: 'Learn With Alphonso', brandColor: '#30a46c', initials: 'LW',
   platform: 'instagram', piece: 'Reel', title: 'Reel', caption: 'Hi', atMs: at(27, 18), hasTime: true, status: 'scheduled',
-  statusLabel: 'Scheduled', needsYou: false, projectId: 'p1', projectName: 'Why tired', postId: 'x', draggable: true, movesOnPlatform: false, ...patch,
+  statusLabel: 'Scheduled', needsYou: false, projectId: 'p1', projectName: 'Why tired', postId: 'x', draggable: true, movesOnPlatform: false, isShort: false, ...patch,
 });
 const ITEMS = [
   item({ id: 'post:yt', postId: 'yt', platform: 'youtube', piece: 'video', title: 'Why tired', atMs: at(26, 18), movesOnPlatform: true }),
@@ -139,4 +139,16 @@ describe('CalendarPage', () => {
     expect(await screen.findByText('Your YouTube sign-in runs out about Wed 28 Oct.')).toBeInTheDocument();
     await waitFor(() => expect(listCalendarItems).toHaveBeenLastCalledWith(expect.any(Number), { expiries: { youtube: at(28, 10), meta: null } }));
   });
+
+  // Phase 4a: a Short is marked on its chip and in the side panel.
+  it('a Short is marked on its chip and in the side panel', () => {
+    listCalendarItems.mockReturnValue([...ITEMS, item({ id: 'post:short', postId: 'short', title: 'Quick tip', isShort: true, atMs: at(28, 12) })]);
+    renderPage();
+    const chip = screen.getByTestId('calendar-item-post:short');
+    expect(within(chip).getByText('Short')).toBeInTheDocument();
+    expect(within(screen.getByTestId('calendar-item-post:ig')).queryByText('Short')).toBeNull();
+    fireEvent.click(chip);
+    expect(within(screen.getByRole('region', { name: 'Selected post' })).getByText(/Short/)).toBeInTheDocument();
+  });
 });
+

@@ -28,7 +28,7 @@ export function CalendarSidePanel({ item, message, onChange, onCancel, onOpenPro
         <>
           <div className="flex items-center gap-2">
             <span className="rounded-sm px-1 text-[10px] font-extrabold text-white" style={{ background: item.brandColor }}>{item.initials}</span>
-            <span className="font-semibold text-(--text-1)">{PLATFORM_LABEL[item.platform]} {item.piece}</span>
+            <span className="font-semibold text-(--text-1)">{PLATFORM_LABEL[item.platform]} {item.piece}{item.isShort ? ' · Short' : ''}</span>
           </div>
           <div className="text-(--text-2)">{item.brandName}{item.projectName ? ` · ${item.projectName}` : ''}</div>
           <div className="text-(--text-1)">{item.title}</div>

@@ -22,6 +22,8 @@ export interface CalendarItem {
   platform: CalendarPlatform;
   /** "video", "Short", "Reel", or the send's channel. */
   piece: string;
+  /** One of the project's Shorts (phase 4a: marked on the Calendar). */
+  isShort: boolean;
   title: string;
   caption: string;
   atMs: number;
@@ -93,6 +95,7 @@ export function listCalendarItems(
           initials: marker.initials,
           platform: post.platform,
           piece: PIECE[post.piece],
+          isShort: Boolean(post.shortId),
           title: post.title,
           caption: post.caption,
           atMs: post.scheduledAtMs,
@@ -117,7 +120,8 @@ export function listCalendarItems(
     const platform = (['youtube', 'instagram', 'facebook'].includes(draft.platform || '') ? draft.platform : 'other') as CalendarPlatform;
     const published = draft.published_status === 'published';
     items.push({
-      id: `draft:${draft.id}`, kind: 'draft', brandId: null, brandName: 'Content Studio', brandColor: STUDIO_COLOR, initials: 'CS',
+      id: `draft:${draft.id}`, kind: 'draft',
+      isShort: false, brandId: null, brandName: 'Content Studio', brandColor: STUDIO_COLOR, initials: 'CS',
       platform, piece: 'draft', title: draft.idea || 'Content Studio draft', caption: draft.caption || '',
       atMs: when.atMs, hasTime: when.hasTime, status: published ? 'posted' : 'draft', statusLabel: published ? 'Posted' : 'Content Studio draft',
       needsYou: draft.status === 'failed', draftId: draft.id, draggable: !published, movesOnPlatform: false,
@@ -126,7 +130,8 @@ export function listCalendarItems(
   for (const send of getScheduledPublishes()) {
     if ((send.kind && send.kind !== 'text') || send.status !== 'pending') continue;
     items.push({
-      id: `send:${send.id}`, kind: 'send', brandId: null, brandName: 'Marcus', brandColor: STUDIO_COLOR, initials: 'M',
+      id: `send:${send.id}`, kind: 'send',
+      isShort: false, brandId: null, brandName: 'Marcus', brandColor: STUDIO_COLOR, initials: 'M',
       platform: 'other', piece: send.platform, title: send.content.slice(0, 60) || 'Scheduled send', caption: send.content,
       atMs: send.scheduledAt, hasTime: true, status: 'scheduled', statusLabel: `Scheduled send (${send.platform})`,
       needsYou: false, sendId: send.id, draggable: true, movesOnPlatform: false,

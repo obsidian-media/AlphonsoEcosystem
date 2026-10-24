@@ -115,7 +115,7 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
                 {result?.status === 'done' && result.path && mediaReady && (
                   <video key={outputRoot} controls preload="metadata" src={mediaUrl(outputRoot, result.path)} className="max-h-96 w-full rounded-xl bg-black" />
                 )}
-                {result?.status === 'failed' && <p className="text-[11px] text-(--error)">{result.reason}</p>}
+                {result?.status === 'failed' && <p data-testid={`short-failed-${short.id}`} className="text-[11px] text-(--error)">{result.reason}</p>}
                 {!result && <p className="text-[11px] text-(--text-3)">Not made yet.</p>}
                 {result?.note && <p className="text-[11px] text-(--text-3)">{result.note}</p>}
                 <div className="flex flex-wrap gap-1">

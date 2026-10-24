@@ -9,7 +9,7 @@ import {
 import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
 import { getJoseRequest, updateJoseStep } from '../jose/joseRequestStore';
 import { runwayEstimate } from './contentProjectPlan';
-import { makeShorts } from './shortMaker';
+import { makeShorts, shortsSummary } from './shortMaker';
 import { renderCarouselSlides, renderScenePictures, renderThumbnails } from './contentImages';
 import { STEP_AGENTS, stepMarkdown } from './contentStepAgents';
 import { hasOwnKey, type StepId } from './contentTypes';
@@ -74,7 +74,7 @@ export async function recordContentStepResult(input: {
   if (input.step === 'shorts') {
     markStepStatus(input.projectId, 'shorts', 'running', null);
     try {
-      await makeShorts(input.projectId, settings, say);
+      say(shortsSummary(await makeShorts(input.projectId, settings, say)));
     } catch (error) {
       say(`The Shorts could not be made: ${(error as Error).message}`);
     }

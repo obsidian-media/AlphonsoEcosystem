@@ -15,8 +15,7 @@ import { captionsFromLines, toSrt, alignCaptions } from './contentCaptions';
 import { chosenVersionOf, getProject, getShortsSettings, setShortOutput } from './contentProjectService';
 import { projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
 import { makeComfyClip } from './comfyVideoClip';
-import { brandFontName } from './contentMediaExecutor';
-import { darkestColour, headlineColour } from './thumbnailRenderer';
+import { brandFontName, darkestColour, headlineColour } from './thumbnailRenderer';
 import type { ContentBrand, ContentProject, ShortPlan } from './contentTypes';
 
 export const MAKING_ANOTHER = 'Making another Short…';
@@ -38,7 +37,19 @@ export interface ShortOutput {
 type Settings = { outputFolder?: string | null };
 interface Ctx { project: ContentProject; brand: ContentBrand; root: string; dir: string; n: number }
 
-let busy = false;
+// Every make waits for the one before it, so Redo never runs beside another Short (phase 4a).
+let queue: Promise<unknown> = Promise.resolve();
+function inTurn<T>(work: () => Promise<T>): Promise<T> {
+  const run = queue.then(work, work);
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+/** "done", or "done, N of M failed" when some Shorts failed (phase 4a). */
+export function shortsSummary(outputs: Pick<ShortOutput, 'status'>[]): string {
+  const failed = outputs.filter((o) => o.status === 'failed').length;
+  return failed ? `done, ${failed} of ${outputs.length} failed` : 'done';
+}
 
 const hex = (c: string) => (c.trim().startsWith('#') ? c.trim() : `#${c.trim()}`);
 
@@ -205,29 +216,22 @@ export async function makeShorts(projectId: string, settings: Settings, onProgre
   const project = getProject(projectId);
   if (!project) throw new Error(`Content project not found: ${projectId}`);
   const { shorts } = planOf(project);
-  busy = true;
-  try {
+  return inTurn(async () => {
     const outputs: ShortOutput[] = [];
     for (const [i, plan] of shorts.entries()) {
       onProgress?.(`Making Short ${i + 1} of ${shorts.length}…`);
       outputs.push(await makeOne(projectId, plan, settings));
     }
     return outputs;
-  } finally {
-    busy = false;
-  }
+  });
 }
 
-/** Makes one Short again (a new `v<n>` file); refused while another is being made. */
+/** Makes one Short again (a new `v<n>` file), after any Short being made now. */
 export async function redoShort(projectId: string, shortId: string, settings: Settings): Promise<ShortOutput | { ok: false; reason: string }> {
-  if (busy) return { ok: false, reason: MAKING_ANOTHER };
-  const project = getProject(projectId);
-  const plan = project ? planOf(project).shorts.find((s) => s.id === shortId) : undefined;
-  if (!plan) return { ok: false, reason: 'That Short is not in the chosen Shorts.' };
-  busy = true;
-  try {
-    return await makeOne(projectId, plan, settings);
-  } finally {
-    busy = false;
-  }
+  return inTurn(async () => {
+    const project = getProject(projectId);
+    const plan = project ? planOf(project).shorts.find((s) => s.id === shortId) : undefined;
+    if (!plan) return { ok: false as const, reason: 'That Short is not in the chosen Shorts.' };
+    return makeOne(projectId, plan, settings);
+  });
 }

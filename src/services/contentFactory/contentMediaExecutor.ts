@@ -19,7 +19,7 @@ import { clipSizeFor, effectiveVideoModel, listVideoModels } from '../videoModel
 import { projectRelativeDir, requireOutputRoot } from './contentProjectFiles';
 import { priorOutputs } from './contentStepAgents';
 import { contentAppSettings } from './contentStepRecorder';
-import { darkestColour, headlineColour } from './thumbnailRenderer';
+import { brandFontName, darkestColour, headlineColour } from './thumbnailRenderer';
 import type { ContentBrand, ContentProject, StepId } from './contentTypes';
 import type { ContentStepResult } from './contentAgentExecutor';
 
@@ -346,12 +346,6 @@ export async function checkPendingClips(projectId: string): Promise<ClipOutcome[
   }
   setVersionOutputField(projectId, 'clips', chosen.version, 'miya', { ...output, clips });
   return clips;
-}
-
-/** The brand's font for burned-in text (phase 4a): the first family it names, or null. */
-export function brandFontName(brand: Pick<ContentBrand, 'fonts'>): string | null {
-  const first = String(brand.fonts || '').split(',')[0].replace(/["']/g, '').trim();
-  return first || null;
 }
 
 function hex(colour: string): string {
