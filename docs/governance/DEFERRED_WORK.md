@@ -39,13 +39,23 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-24] **Miya content factory phase 4c (characters and motion): what it leaves open.** Design `docs/superpowers/specs/2026-10-24-miya-content-factory-phase4c-design.md`, plan `docs/superpowers/plans/2026-10-24-miya-content-factory-phase4c.md`.
+  - **Not checked live.** No Higgsfield keys on the dev machine and no live ComfyUI run of the new graphs: unit tests mock both, and the desktop spec keeps Zero-Cost Mode on. Live check steps 13–15 in `docs/qa/DESKTOP_QA_COVERAGE.md`.
+  - **Higgsfield's character and motion fields are not confirmed.** They are not in Higgsfield's public docs: the training request body and status (`training_body()`, `training_of()` reads several id names), the character field on a picture or clip request (`soul_id`), the motion fields (`video_url` for the clip, `motion_id` for a preset) and the preset list (`GET /motions`). Without a list the user pastes a preset id.
+  - **The local graphs are written from ComfyUI's official templates but not run here:** the character reference (unCLIP, `buildCharacterWorkflow()`) and motion transfer (Wan 2.1 VACE 1.3B, `buildMotionWorkflow()`). Node input names may need correcting after a live run; 1.3B motion quality may be modest.
+  - **Shorts use only the character's description,** not its reference pictures, on ComfyUI.
+  - **A motion clip uses one estimate** (asked for 5 s) whatever its length, as the 4b clips do.
+  - **Higgsfield first when a run's spending was approved,** then this computer, then the normal clip: a brand that prefers local motion still uses Higgsfield when the run was approved for it.
+  - The three 4b leftovers are closed (Higgsfield downloads check private addresses; a failed Higgsfield picture is remade with ComfyUI; Chat shows by-name results wherever they were approved).
+  - Status: OPEN.
+
 - [2026-10-24] **Miya content factory phase 4b (ElevenLabs and Higgsfield): what it leaves open.** Design `docs/superpowers/specs/2026-10-24-miya-content-factory-phase4b-design.md`, plan `docs/superpowers/plans/2026-10-24-miya-content-factory-phase4b.md`.
   - **Not checked with real accounts.** Nothing in 4b has run against ElevenLabs or Higgsfield: no keys on the dev machine. Unit tests mock both, and the desktop spec keeps Zero-Cost Mode on. The live check is in `docs/qa/DESKTOP_QA_COVERAGE.md` (steps 11 and 12).
   - **Higgsfield's API details to confirm live:** the estimate's amount field (`parse_estimate()` reads several names), whether a model refuses the estimate without its picture (the estimate sends none), and whether a text-to-video request works with the pasted clip model.
   - **Costs recorded are the estimates.** Higgsfield's status may not report the charge, and one clip estimate (asked for 5 s) is used for every clip up to 10 s.
   - **An approval covers a fixed number of pictures** (Scenes one per 5 s of the brief, Thumbnail 3, Carousel 10); more are made with ComfyUI, with a note.
-  - **Chat shows a by-name result only when approved in Chat;** approved on the board or Telegram, it is in Quick package and on Telegram.
-  - **Phase 4c next:** motion transfer and a consistent character (owner, 2026-10-24).
+  - ~~**Chat shows a by-name result only when approved in Chat.**~~ Closed in phase 4c, with the private-address check on Higgsfield downloads and the ComfyUI remake of a failed Higgsfield picture.
+  - **Phase 4c:** motion transfer and a consistent character (owner, 2026-10-24), entry above.
   - Status: OPEN.
 
 - [2026-10-24] **Miya content factory phase 4a (learning from real results): what it leaves open.**
