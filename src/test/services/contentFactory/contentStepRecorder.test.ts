@@ -4,6 +4,7 @@ vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   const actual = await vi.importActual<typeof import('../../../services/contentFactory/contentProjectFiles')>('../../../services/contentFactory/contentProjectFiles');
   return { ...actual, writeProjectFile: vi.fn(async () => undefined), writeStepText: vi.fn(async () => 'x/v1.md') };
 });
+vi.mock('../../../services/contentFactory/shortMaker', () => ({ makeShorts: vi.fn(async () => []) }));
 vi.mock('../../../services/contentFactory/contentImages', () => ({
   renderScenePictures: vi.fn(async () => []),
   renderThumbnails: vi.fn(async () => []),
@@ -81,4 +82,33 @@ describe('recordContentStepResult', () => {
     expect(getProject(p.id)!.steps.research.status).toBe('running');
     expect(await recordContentStepResult({ projectId: p.id, step: 'research', agent: 'nova', data: {}, commandId: 'c1' })).toBe('saved');
   });
+});
+
+// Phase 3d: once the scenes exist, the waiting AI clips step shows Runway's cost on full runs.
+it("Scenes saving fills in the clips step's Runway estimate on the request", async () => {
+  const { createJoseRequest, getJoseRequest } = await import('../../../services/jose/joseRequestStore');
+  const { setProjectRequest, saveStepVersion, setVideoSettings } = await import('../../../services/contentFactory/contentProjectService');
+  localStorage.setItem('alphonso_settings', JSON.stringify({ outputFolder: 'D:\\Content', paidModels: { runwayPricePerSecondUsd: 0.05 } }));
+  const p = newProject();
+  setVideoSettings(p.id, { aiClips: 'every', clipEngine: 'runway' });
+  const request = createJoseRequest({ commandId: 'c9', source: 'user', text: 'x', kind: 'project', steps: [
+    { stepId: 'scenes', agent: 'miya', actionType: 'creative_scenes', effects: ['write_own_work'], needs: [] },
+    { stepId: 'clips', agent: 'miya', actionType: 'creative_video_clips', effects: ['write_own_work', 'spend'], needs: ['scenes'] },
+  ] });
+  setProjectRequest(p.id, request.id);
+  saveStepVersion(p.id, 'script', { output: {}, summary: '', joseCommandId: null });
+  await recordContentStepResult({ projectId: p.id, step: 'scenes', agent: 'miya', data: { style: 's', scenes: [
+    { id: 's1', startSec: 0, endSec: 4, imagePrompt: 'a', description: 'd' },
+    { id: 's2', startSec: 4, endSec: 12, imagePrompt: 'b', description: 'd' },
+  ] }, commandId: 'c9' });
+  expect(getJoseRequest(request.id)!.steps.find((s) => s.stepId === 'clips')!.costEstimateUsd).toBeGreaterThan(0);
+});
+
+// Phase 3d: once the Shorts are planned, each one is made.
+it('the Shorts step makes each Short after it saves its plan', async () => {
+  const { makeShorts } = await import('../../../services/contentFactory/shortMaker');
+  const p = newProject();
+  await recordContentStepResult({ projectId: p.id, step: 'shorts', agent: 'miya', data: { shorts: [{ id: 'sh1', kind: 'cut' }] }, commandId: 'c1' });
+  expect(makeShorts).toHaveBeenCalledWith(p.id, expect.objectContaining({ outputFolder: expect.stringContaining('Content') }), expect.any(Function));
+  expect(getProject(p.id)!.steps.shorts.status).toBe('done');
 });

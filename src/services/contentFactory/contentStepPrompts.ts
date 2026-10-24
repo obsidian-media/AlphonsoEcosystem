@@ -56,6 +56,12 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
     keys: '{"concepts":[{"id":"t1, t2 or t3","headline":"at most 6 words","imagePrompt":"what the picture shows, in detail, with no text in it","layout":"left, right or center: where the headline goes"}]} (exactly 3 concepts in one list)',
     uses: ['research', 'script'],
   },
+  creative_shorts: {
+    role: 'Miya, Alphonso\'s creative director',
+    ask: 'Plan the Shorts for this video (the number asked for in Outputs, else one). Each Short is 30 to 60 seconds and has a hook of at most 12 words. Choose for each its kind: "mini" (its own short script: write its parts, each with the words spoken and a picture prompt), "highlight" (the strongest moment of the finished video, with a new hook spoken over its start: give the moment\'s start and end seconds within the finished video) or "cut" (a part of the finished video as it is: give its start and end). Prefer mini unless the finished video has a moment that works on its own. For each Short write its own copy per platform.',
+    keys: '{"shorts":[{"kind":"mini, highlight or cut","title":"the Short\'s title","hook":"at most 12 words","seconds":"30 to 60","platforms":["youtube, instagram or facebook"],"copy":[{"platform":"youtube, instagram or facebook","title":"the title (YouTube)","caption":"the caption","hashtags":["#a-hashtag"]}],"parts":[{"spoken":"the words said (mini only)","imagePrompt":"what the picture shows, no text","seconds":"how long"}],"moment":{"startSec":"start in the finished video (highlight or cut)","endSec":"end"}}]}',
+    uses: ['research', 'script', 'assemble'],
+  },
   creative_carousel: {
     role: 'Miya, Alphonso\'s creative director',
     ask: 'Write a carousel of 5 to 10 slides from the research and the script: slide 1 is the cover with the hook, then one idea per slide, and the last slide is the call to action. Each slide has a headline of at most 8 words, a body of at most 25 words, and an image prompt for its picture (no text in the picture).',
@@ -159,6 +165,7 @@ const VALIDATORS: Record<string, (j: Json) => boolean> = {
   creative_scenes: (j) => isText(j.style) && every(j.scenes, 1, (s) => isText(s.id) && isText(s.imagePrompt) && isText(s.description)),
   creative_thumbnails: (j) => list(j.concepts, 3) && (j.concepts as unknown[]).length === 3
     && every(j.concepts, 3, (c) => isText(c.headline) && words(c.headline) <= 6 && isText(c.imagePrompt) && ['left', 'right', 'center'].includes(String(c.layout))),
+  creative_shorts: (j) => list(j.shorts, 1),
   creative_carousel: (j) => list(j.slides, 5) && (j.slides as unknown[]).length <= 10
     && every(j.slides, 5, (sl) => isText(sl.headline) && isText(sl.body) && isText(sl.imagePrompt) && words(sl.headline) <= 8 && words(sl.body) <= 25),
   creative_campaign: (j) => every(j.platforms, 1, (p) => isText(p.platform) && isText(p.caption) && Array.isArray(p.hashtags)) && Array.isArray(j.ads) && Array.isArray(j.calendar),
@@ -210,8 +217,40 @@ function repairThumbnails(j: Json, text: string): Json {
   return concepts.length > 0 ? { ...j, concepts } : j;
 }
 
+const PLATFORMS = ['youtube', 'instagram', 'facebook'];
+const platformList = (v: unknown): string[] => (Array.isArray(v) ? [...new Set(v.map((p) => String(p).trim().toLowerCase()).filter((p) => PLATFORMS.includes(p)))] : []);
+const cutWords = (v: unknown, max: number) => String(v ?? '').trim().split(/\s+/).filter(Boolean).slice(0, max).join(' ');
+
+/** Shorts as Miya wrote them, kept only when each has what its kind needs (phase 3d). */
+function repairShorts(shorts: Json[], defaultPlatforms: string[]): Json[] {
+  const kept: Json[] = [];
+  for (const raw of shorts) {
+    if (!raw || typeof raw !== 'object') continue;
+    const kind = ['mini', 'highlight', 'cut'].includes(String(raw.kind)) ? String(raw.kind) : 'mini';
+    const parts = Array.isArray(raw.parts)
+      ? (raw.parts as Json[]).filter((p) => p && isText(p.spoken) && isText(p.imagePrompt)).map((p) => ({ spoken: String(p.spoken).trim(), imagePrompt: String(p.imagePrompt).trim(), seconds: isNum(p.seconds, 0) ? p.seconds : 0 }))
+      : [];
+    const m = raw.moment as Json | undefined;
+    const moment = m && isNum(m.startSec, 0) && isNum(m.endSec, 0) && (m.endSec as number) > (m.startSec as number) ? { startSec: m.startSec, endSec: m.endSec } : null;
+    if (kind === 'mini' ? parts.length === 0 : !moment) continue;
+    const platforms = platformList(raw.platforms);
+    kept.push({
+      ...raw,
+      id: `sh${kept.length + 1}`,
+      kind,
+      title: String(raw.title ?? '').trim(),
+      hook: cutWords(raw.hook, 12),
+      seconds: Math.min(60, Math.max(30, isNum(raw.seconds, 0) ? (raw.seconds as number) : 45)),
+      platforms: platforms.length ? platforms : platformList(defaultPlatforms),
+      copy: Array.isArray(raw.copy) ? (raw.copy as Json[]).filter((c) => c && PLATFORMS.includes(String(c.platform).toLowerCase())).map((c) => ({ ...c, platform: String(c.platform).toLowerCase(), hashtags: Array.isArray(c.hashtags) ? c.hashtags : [] })) : [],
+      ...(kind === 'mini' ? { parts } : { moment }),
+    });
+  }
+  return kept;
+}
+
 /** The agent's answer as an object, or null when it is not usable. */
-export function parseStepAnswer(actionType: string, text: string, options: { allowedUrls?: string[] } = {}): unknown | null {
+export function parseStepAnswer(actionType: string, text: string, options: { allowedUrls?: string[]; defaultPlatforms?: string[] } = {}): unknown | null {
   // Own keys only: a name like "constructor" must not find Object's methods (CodeQL).
   const validate = hasOwnKey(VALIDATORS, actionType) ? VALIDATORS[actionType] : undefined;
   if (!validate) return null;
@@ -232,6 +271,9 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
     // Only links Hector actually found; a model without internet invents them.
     const allowed = new Set(options.allowedUrls.map((u) => u.trim()));
     answer = { ...answer, references: (answer.references as Json[]).filter((r) => allowed.has(String(r?.url || '').trim())) };
+  }
+  if (actionType === 'creative_shorts' && Array.isArray(answer.shorts)) {
+    answer = { ...answer, shorts: repairShorts(answer.shorts as Json[], options.defaultPlatforms || []) };
   }
   if (actionType === 'creative_carousel' && Array.isArray(answer.slides)) {
     // Ids by position (slide 1 is the cover); over-long text is cut to the limits.

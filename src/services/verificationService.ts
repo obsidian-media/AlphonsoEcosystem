@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
+import { randomHex } from '../lib/randomId';
 
 const LOG_KEY = 'alphonso_verification_logs_v1';
 export const VERIFICATION_SCOPE = 'verification_logs_v1';
@@ -70,7 +71,7 @@ export function appendVerificationLog(entry: VerificationLogInput): Verification
   const logs = readLogs();
   const payload: VerificationLogEntry = {
     ...entry,
-    id: `proof-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `proof-${Date.now()}-${randomHex(6)}`,
     timestampMs: timestampMs(),
     type: entry.type,
   } as VerificationLogEntry;

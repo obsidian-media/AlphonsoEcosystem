@@ -7,7 +7,7 @@ import { createProject, emptyBrief } from '../../../services/contentFactory/cont
 import { CLIPS_WAIT, CONTENT_TEMPLATE_STEPS, PUBLISH_WAIT, REVIEW_WAIT, contentProjectPlanSteps } from '../../../services/contentFactory/contentProjectPlan';
 
 // Phase 2a added voice, music, broll and assemble; phase 2b clips; phase 3a publish: 17 steps.
-const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'carousel', 'campaign', 'timing', 'quality', 'security', 'publish'];
+const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'shorts', 'carousel', 'campaign', 'timing', 'quality', 'security', 'publish'];
 
 function newProject() {
   const brand = saveBrand({ name: 'My brand' });
@@ -48,8 +48,8 @@ describe('contentProjectPlanSteps', () => {
   it('carries the project and waits before scenes', () => {
     const { brand, project } = newProject();
     const steps = contentProjectPlanSteps(project, brand);
-    // No carousel: this brief does not ask for one (phase 3c).
-    expect(steps.map((s) => s.stepId)).toEqual(IDS.filter((id) => id !== 'carousel'));
+    // No carousel or Shorts: this brief asks for neither (phases 3c, 3d).
+    expect(steps.map((s) => s.stepId)).toEqual(IDS.filter((id) => id !== 'carousel' && id !== 'shorts'));
     expect(steps.every((s) => s.contentStep?.projectId === project.id)).toBe(true);
     expect(steps.find((s) => s.stepId === 'research_market')!.contentStep!.step).toBe('research');
     // AI clips are on by default (main moments), so the clips step waits too (phase 2b).

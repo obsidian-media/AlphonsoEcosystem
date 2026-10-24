@@ -15,6 +15,7 @@ import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceSe
 import { addNode, addEdge } from './memoryGraphService';
 import { generateAgentLlmResponse, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
+import { randomHex } from '../lib/randomId';
 
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
@@ -732,7 +733,7 @@ export function listHectorActivity() {
 export function recordHectorActivity(type, details = {}) {
   const rows = readRows(ACTIVITY_KEY);
   const activity = {
-    id: `hector-activity-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `hector-activity-${Date.now()}-${randomHex(6)}`,
     type,
     details,
     timestampMs: timestampMs(),
@@ -787,7 +788,7 @@ export function createResearchDraft({
 
   const report = {
     ...HECTOR_RESEARCH_SCHEMA,
-    id: `hector-report-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `hector-report-${Date.now()}-${randomHex(6)}`,
     researchQuestion: researchQuestion || 'Untitled research question',
     summary: 'Draft created. Hector can discover public sources, fetch them, and attach proof-backed citations.',
     sources,

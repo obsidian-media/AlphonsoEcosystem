@@ -2,8 +2,14 @@
 // The full project is also written to its folder (contentProjectFiles.ts).
 import { durableGet, durableSet } from '../../lib/durableStore.js';
 import { slugForFolder } from './contentProjectFiles';
+import { getBrand } from './contentBrandService';
 import {
   STEP_ORDER,
+  SIDE_STEPS,
+  DEFAULT_SHORTS_SETTINGS,
+  type PostPlatform,
+  type ShortKind,
+  type ShortsSettings,
   secureId,
   type BasedOn,
   type ContentBrief,
@@ -69,7 +75,9 @@ function update(id: string, change: (project: ContentProject) => void): ContentP
 }
 
 function earlierSteps(step: StepId): StepId[] {
-  return STEP_ORDER.slice(0, STEP_ORDER.indexOf(step));
+  const earlier = STEP_ORDER.slice(0, STEP_ORDER.indexOf(step));
+  // Side pieces don't feed each other (phase 3d): the carousel doesn't put Shorts out of date.
+  return SIDE_STEPS.includes(step) ? earlier.filter((s) => !SIDE_STEPS.includes(s)) : earlier;
 }
 
 /** What `step` is based on right now: the brief's revision and each earlier step's chosen version. */
@@ -253,6 +261,69 @@ export function reorderSlides(id: string, from: number, to: number): ContentProj
       const order = slides.map((s) => s.id);
       output.pictures.sort((a, b) => order.indexOf(a.sceneId) - order.indexOf(b.sceneId));
     }
+  });
+}
+
+/** The Shorts' own AI clip setting (phase 3d); off until chosen. */
+export function getShortsSettings(project: ContentProject): ShortsSettings {
+  return { ...DEFAULT_SHORTS_SETTINGS, ...(project.shortsSettings || {}) };
+}
+
+export function setShortsSettings(id: string, settings: Partial<ShortsSettings>): ContentProject {
+  return update(id, (p) => { p.shortsSettings = { ...getShortsSettings(p), ...settings }; });
+}
+
+function editShort(id: string, shortId: string, change: (short: { kind?: ShortKind; platforms?: PostPlatform[] }) => void): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.shorts.versions.find((v) => v.version === p.steps.shorts.chosenVersion);
+    const shorts = (chosen?.output as { miya?: { shorts?: { id: string; kind?: ShortKind; platforms?: PostPlatform[] }[] } } | undefined)?.miya?.shorts;
+    const short = shorts?.find((s) => s.id === shortId);
+    if (!short) throw new Error(`No Short ${shortId} in the chosen Shorts.`);
+    change(short);
+  });
+}
+
+/** Which platforms a Short goes to (Shorts Studio); nothing goes out of date. */
+export function setShortPlatforms(id: string, shortId: string, platforms: PostPlatform[]): ContentProject {
+  return editShort(id, shortId, (s) => { s.platforms = [...new Set(platforms)]; });
+}
+
+/** A Short's kind (Shorts Studio); it is made again with Redo. */
+export function setShortKind(id: string, shortId: string, kind: ShortKind): ContentProject {
+  return editShort(id, shortId, (s) => { s.kind = kind; });
+}
+
+/**
+ * Shorts Studio's "Add a Short" (phase 3d): a plain 45 s cut from the middle of the
+ * finished video (no model needed), on the project's platforms; its kind and part can
+ * then be changed and it is made with Redo.
+ */
+export function addShortPlan(id: string): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.shorts.versions.find((v) => v.version === p.steps.shorts.chosenVersion);
+    if (!chosen) throw new Error('Run the Shorts step first.');
+    const output = (chosen.output as { miya?: { shorts?: { id: string }[] } }) || {};
+    const shorts = output.miya?.shorts || [];
+    const outputs = (p.steps.assemble.versions.find((v) => v.version === p.steps.assemble.chosenVersion)?.output as { miya?: { outputs?: { aspect: string; durationSec?: number }[] } } | undefined)?.miya?.outputs || [];
+    const length = outputs.find((o) => o.aspect === '9x16')?.durationSec ?? 45;
+    const start = Math.max(0, (length - 45) / 2);
+    const n = shorts.length + 1;
+    const wanted = p.brief.platforms.length ? p.brief.platforms : getBrand(p.brandId)?.platforms || [];
+    const known = ['youtube', 'instagram', 'facebook'];
+    const platforms = wanted.map((x) => String(x).trim().toLowerCase()).filter((x) => known.includes(x));
+    const next = { id: `sh${n}`, kind: 'cut', title: `Short ${n}`, hook: '', seconds: 45, platforms, copy: [], moment: { startSec: start, endSec: Math.min(length, start + 45) } };
+    chosen.output = { ...output, miya: { ...(output.miya || {}), shorts: [...shorts, next] } };
+  });
+}
+
+/** A made Short's file and state, kept in the chosen Shorts version (phase 3d). */
+export function setShortOutput(id: string, shortId: string, output: unknown): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.shorts.versions.find((v) => v.version === p.steps.shorts.chosenVersion);
+    if (!chosen) throw new Error('Run the Shorts step first.');
+    const current = (chosen.output as Record<string, unknown>) || {};
+    const made = { ...((current.made as Record<string, unknown>) || {}), [shortId]: output };
+    chosen.output = { ...current, made };
   });
 }
 

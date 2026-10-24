@@ -1,5 +1,6 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
+import { randomHex } from '../lib/randomId';
 
 const WORKFLOW_TELEMETRY_KEY = 'alphonso_workflow_telemetry_v1';
 export const WORKFLOW_TELEMETRY_SCOPE = 'workflow_telemetry_v1';
@@ -77,7 +78,7 @@ export function appendWorkflowTelemetryEvent({
 }: TelemetryEventInput): TelemetryRow {
   const rows = readRows();
   const row: TelemetryRow = {
-    id: `wft-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `wft-${Date.now()}-${randomHex(6)}`,
     workflowId,
     workflowRunId,
     eventType,

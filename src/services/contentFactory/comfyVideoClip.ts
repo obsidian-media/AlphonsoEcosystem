@@ -8,11 +8,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { freeOllamaGpuMemory } from '../../lib/ollama';
 import { comfyRequest, getComfyUiEndpoint } from '../connectors/connectorImageGenerators';
 
-interface Spec { fps: number; maxFrames: number; step: number; landscape: [number, number] }
+interface Spec { fps: number; maxFrames: number; step: number; landscape: [number, number]; small: [number, number] }
 
 const MODELS: Record<string, Spec> = {
-  ltx_video_2b: { fps: 24, maxFrames: 121, step: 8, landscape: [768, 512] },
-  wan22_ti2v_5b: { fps: 24, maxFrames: 121, step: 4, landscape: [1280, 704] },
+  // `small`: the size used on a card with under 8 GB (phase 3d), in each template's multiples of 32.
+  ltx_video_2b: { fps: 24, maxFrames: 121, step: 8, landscape: [768, 512], small: [512, 288] },
+  wan22_ti2v_5b: { fps: 24, maxFrames: 121, step: 4, landscape: [1280, 704], small: [640, 352] },
 };
 
 const LTX_NEGATIVE = 'low quality, worst quality, deformed, distorted, disfigured, motion smear, motion artifacts, fused fingers, bad anatomy, weird hand, ugly';
@@ -40,13 +41,16 @@ export interface VideoWorkflowInput {
   seconds: number;
   vertical: boolean;
   seed: number;
+  /** Smaller frames, for a card with little memory. */
+  lowRes?: boolean;
 }
 
 type Graph = Record<string, { class_type: string; inputs: Record<string, unknown> }>;
 
 export function buildVideoWorkflow(modelId: string, input: VideoWorkflowInput): Graph {
   const s = spec(modelId);
-  const [w, h] = input.vertical ? [s.landscape[1], s.landscape[0]] : s.landscape;
+  const size = input.lowRes ? s.small : s.landscape;
+  const [w, h] = input.vertical ? [size[1], size[0]] : size;
   const length = framesFor(modelId, input.seconds);
   const save = {
     80: { class_type: 'CreateVideo', inputs: { images: ['8', 0], fps: s.fps } },
@@ -94,6 +98,8 @@ export interface ComfyClipInput {
   seconds: number;
   vertical: boolean;
   modelId: string;
+  /** Smaller frames on a small card (phase 3d). */
+  lowRes?: boolean;
   /** How long to wait before keeping the job for later (default 30 minutes). */
   timeoutMs?: number;
   intervalMs?: number;
@@ -133,7 +139,7 @@ export async function makeComfyClip(input: ComfyClipInput): Promise<ClipResult> 
     await freeOllamaGpuMemory().catch(() => undefined);
     const uploaded = await invoke<{ name: string }>('comfyui_upload_image', { request: { endpoint, workspaceRoot: input.root, relPath: input.imageRel } });
     const workflow = buildVideoWorkflow(input.modelId, {
-      image: uploaded.name, prompt: input.prompt, seconds: input.seconds, vertical: input.vertical,
+      image: uploaded.name, prompt: input.prompt, seconds: input.seconds, vertical: input.vertical, lowRes: input.lowRes,
       seed: Math.floor(Math.random() * 2 ** 31),
     });
     const queued = await comfyRequest(endpoint, '/prompt', { method: 'POST', body: JSON.stringify({ prompt: workflow }) });

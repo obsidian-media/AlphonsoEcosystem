@@ -6,10 +6,12 @@ import { SceneBuilderTab } from './SceneBuilderTab';
 import { checkPendingClips } from '../../services/contentFactory/contentMediaExecutor';
 import { ThumbnailStudioTab } from './ThumbnailStudioTab';
 import { CarouselStudioTab } from './CarouselStudioTab';
+import { ShortsStudioTab } from './ShortsStudioTab';
+import { redoShort } from '../../services/contentFactory/shortMaker';
 import { CampaignStudioTab } from './CampaignStudioTab';
 import { ensureFirstBrand, getBrand, listBrands } from '../../services/contentFactory/contentBrandService';
 import {
-  chooseVersion, createProject, emptyBrief, getProject, listProjects, recoverInterruptedSteps, reorderSlides, updateBrief,
+  addShortPlan, chooseVersion, createProject, emptyBrief, getProject, listProjects, recoverInterruptedSteps, reorderSlides, updateBrief,
 } from '../../services/contentFactory/contentProjectService';
 import { approveContentStep, runContentProject, runContentStep } from '../../services/contentFactory/contentStepRunner';
 import { getJoseRequest } from '../../services/jose/joseRequestStore';
@@ -19,7 +21,7 @@ import { checkPendingPictures, renderCarouselSlides } from '../../services/conte
 import { rejectPiece, retryWithReason, sendBackTarget } from '../../services/contentFactory/contentQualityGate';
 import type { ContentProject, StepId } from '../../services/contentFactory/contentTypes';
 
-export type ContentFactoryTab = 'script' | 'scene' | 'thumbnail' | 'carousel' | 'campaign';
+export type ContentFactoryTab = 'script' | 'scene' | 'shorts' | 'thumbnail' | 'carousel' | 'campaign';
 
 const LAST_KEY = 'alphonso_content_factory_last_v1';
 
@@ -142,6 +144,13 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
               clipsWaiting={request?.status === 'waiting_approval' && request.steps.some((s) => s.stepId === 'clips' && s.status === 'waiting_approval')}
               approveClips={() => tabProps.approve('clips')}
               checkClips={() => { checkPendingClips(project.id).catch(() => undefined).finally(refresh); }} />
+          )}
+          {tab === 'shorts' && (
+            <ShortsStudioTab project={project} outputRoot={outputRoot} runStep={tabProps.runStep} chooseVersion={tabProps.chooseVersion}
+              redo={(shortId) => { redoShort(project.id, shortId, settings).catch(() => undefined).finally(refresh); }}
+              reject={(pieceId, reason) => { rejectPiece(project.id, 'shorts', pieceId, reason); refresh(); run('shorts', reason); }}
+              addShort={() => { try { addShortPlan(project.id); } finally { refresh(); } }}
+              onChange={refresh} />
           )}
           {tab === 'thumbnail' && (
             <ThumbnailStudioTab project={project} outputRoot={outputRoot} runStep={tabProps.runStep} chooseVersion={tabProps.chooseVersion}

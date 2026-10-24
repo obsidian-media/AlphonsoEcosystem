@@ -1,5 +1,6 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
+import { randomHex } from '../lib/randomId';
 
 const DECISION_KEY = 'alphonso_jose_governance_decisions_v1';
 export const GOVERNANCE_SCOPE = 'jose_governance_decisions_v1';
@@ -75,7 +76,7 @@ export function recordGovernanceDecision({
 }: GovernanceDecisionInput = {}): GovernanceDecision {
   const rows = readDecisions();
   const decision: GovernanceDecision = {
-    id: `jose-decision-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `jose-decision-${Date.now()}-${randomHex(6)}`,
     title: title || 'Untitled governance decision',
     summary: summary || '',
     source,

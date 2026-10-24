@@ -7,6 +7,9 @@ import {
   addStepProgress, approveStep, getProject, markStepStatus, saveStepVersion, setPendingAgents, startStep,
 } from './contentProjectService';
 import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
+import { getJoseRequest, updateJoseStep } from '../jose/joseRequestStore';
+import { runwayEstimate } from './contentProjectPlan';
+import { makeShorts } from './shortMaker';
 import { renderCarouselSlides, renderScenePictures, renderThumbnails } from './contentImages';
 import { STEP_AGENTS, stepMarkdown } from './contentStepAgents';
 import { hasOwnKey, type StepId } from './contentTypes';
@@ -65,6 +68,18 @@ export async function recordContentStepResult(input: {
       say(`Saved in the app, but the project folder could not be written: ${(error as Error).message}`);
     }
   }
+  // Once the scenes exist, a waiting Runway clips step shows its cost on Telegram and the board (phase 3d).
+  if (input.step === 'scenes') fillClipsEstimate(input.projectId);
+  // Shorts (phase 3d): once planned, each is made in turn; the step stays "running" meanwhile.
+  if (input.step === 'shorts') {
+    markStepStatus(input.projectId, 'shorts', 'running', null);
+    try {
+      await makeShorts(input.projectId, settings, say);
+    } catch (error) {
+      say(`The Shorts could not be made: ${(error as Error).message}`);
+    }
+    markStepStatus(input.projectId, 'shorts', 'done', null);
+  }
   // Scenes, thumbnails and carousel slides go on to make their pictures; the step stays "running" meanwhile.
   if (input.step === 'scenes' || input.step === 'thumbnail' || input.step === 'carousel') {
     markStepStatus(input.projectId, input.step, 'running', null);
@@ -78,4 +93,19 @@ export async function recordContentStepResult(input: {
     markStepStatus(input.projectId, input.step, 'done', null);
   }
   return 'saved';
+}
+
+/** Sets the project's AI clips step's Runway estimate on its request, when it spends and has none yet. */
+function fillClipsEstimate(projectId: string): void {
+  try {
+    const project = getProject(projectId);
+    const requestId = project?.joseRequestId;
+    if (!project || !requestId) return;
+    const step = getJoseRequest(requestId)?.steps.find((s) => s.stepId === 'clips');
+    if (!step || !(step.effects || []).includes('spend') || typeof step.costEstimateUsd === 'number') return;
+    const usd = runwayEstimate(project);
+    if (usd !== null) updateJoseStep(requestId, 'clips', { costEstimateUsd: usd });
+  } catch {
+    // Only the estimate is missing; the step still asks before spending.
+  }
 }

@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { writeWorkspaceArtifact } from '../workspaceArtifactService';
 import { timestampMs } from '../trustModel';
+import { randomHex } from '../../lib/randomId';
 
 const BRIDGE_CONFIG_KEY = 'alphonso_acc_bridge_config_v1';
 const BRIDGE_PACKET_KEY = 'alphonso_acc_bridge_packets_v1';
@@ -86,7 +87,7 @@ function replacePacket(packetId, updates) {
 }
 
 function createPacketId(prefix) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  return `${prefix}-${Date.now()}-${randomHex(6)}`;
 }
 
 function buildPacket(kind, payload = {}, options = {}) {

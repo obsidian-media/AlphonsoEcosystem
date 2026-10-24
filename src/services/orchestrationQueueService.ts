@@ -2,6 +2,7 @@ import { getPacketById, listAgentPackets, requestPacketRetry, sendPacketToDeadLe
 import { persistScopeRows } from './runtimeLedgerService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { durableGet, durableSet } from '../lib/durableStore';
+import { randomHex } from '../lib/randomId';
 
 const QUEUE_KEY = 'alphonso_orchestration_queue_transitions_v1';
 const JOSE_COMMAND_KEY = 'alphonso_jose_command_routes_v2';
@@ -123,7 +124,7 @@ export function recordOrchestrationQueueTransition({
   if (!packetId) return null;
   const rows = readTransitions();
   const transition: QueueTransition = {
-    id: `qtx-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `qtx-${Date.now()}-${randomHex(6)}`,
     commandId: commandId ?? null,
     packetId,
     agent,

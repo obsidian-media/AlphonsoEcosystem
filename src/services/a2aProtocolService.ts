@@ -1,5 +1,6 @@
 import { sendAgentMessage } from './agentBusService';
 import { durableGet, durableSet } from '../lib/durableStore';
+import { randomHex } from '../lib/randomId';
 
 const STORAGE_KEY = 'alphonso_a2a_tasks_v1';
 
@@ -40,7 +41,7 @@ function writeTasks(tasks: A2ATask[]): void {
 }
 
 function generateDelegateId(): string {
-  return `a2a_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return `a2a_${Date.now()}_${randomHex(6)}`;
 }
 
 export function delegate(

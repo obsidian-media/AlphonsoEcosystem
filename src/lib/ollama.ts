@@ -8,6 +8,7 @@ import type { GeminiSendResult } from '../services/connectors/geminiConnector';
 import type { HermesSendResult } from '../services/connectors/hermesAgentConnector';
 import { getStorage } from './appStorage';
 import { isPaidModelId } from '../services/jose/stepGraph';
+import { randomHex } from './randomId';
 
 export const DEFAULT_OLLAMA_ENDPOINT = 'http://localhost:11434';
 // The model to fall back on when the user has not picked one (or the one
@@ -885,7 +886,7 @@ export async function generateAgentLlmResponse(agentId: string, options: AgentGe
  */
 async function pullOllamaModelThroughBackend(baseUrl: string, model: string, onProgress?: (p: ModelProgress) => void): Promise<{ ok: boolean; model: string }> {
   const { listen } = await import('@tauri-apps/api/event');
-  const pullId = `pull-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const pullId = `pull-${Date.now()}-${randomHex(6)}`;
   const unlisten = await listen<{ pullId: string; status: string; completed: number | null; total: number | null }>('ollama://pull_progress', (event) => {
     const p = event.payload;
     if (!p || p.pullId !== pullId) return;

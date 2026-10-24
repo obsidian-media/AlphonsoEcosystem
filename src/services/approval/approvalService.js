@@ -1,6 +1,7 @@
 import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
 import { TRUST_STATES } from '../trustModel';
 import { durableGet, durableSet } from '../../lib/durableStore';
+import { randomHex } from '../../lib/randomId';
 const APPROVAL_KEY = 'alphonso_project_execution_approvals_v1';
 
 const APPROVAL_REQUIRED_TYPES = new Set([
@@ -52,7 +53,7 @@ export function getApprovalReason(actionType) {
 export function createApprovalRequest(payload = {}) {
   const actionType = payload.actionType || 'unknown';
   const request = {
-    id: `approval-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `approval-${Date.now()}-${randomHex(6)}`,
     status: 'pending',
     riskLevel: payload.riskLevel || 'medium',
     actionType,

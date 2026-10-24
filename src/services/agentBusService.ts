@@ -3,6 +3,7 @@ import { persistScopeRows } from './runtimeLedgerService';
 import { validateAgentExecutionContract } from './agentContractService';
 import { durableGet, durableSet } from '../lib/durableStore';
 import { EFFECT_LABELS, stepEffectsToWaitFor, type JoseEffect } from './jose/joseEffects';
+import { randomHex } from '../lib/randomId';
 
 export const PACKET_KEY = 'alphonso_agent_bus_packets_v1';
 export const PACKET_SCOPE = 'agent_bus_packets_v1';
@@ -145,7 +146,7 @@ export function createAgentPacket({
 }: AgentPacketInput): AgentPacket {
   const packets = readPackets();
   const packet: AgentPacket = {
-    id: `packet-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `packet-${Date.now()}-${randomHex(6)}`,
     fromAgent,
     toAgent,
     title,
@@ -335,7 +336,7 @@ export function sendAgentMessage(fromAgent: string, toAgent: string, message: st
   } catch { ring = []; }
 
   ring.push({
-    id: `msg-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+    id: `msg-${Date.now()}-${randomHex(4)}`,
     fromAgent: String(fromAgent),
     toAgent: String(toAgent),
     message: String(message),

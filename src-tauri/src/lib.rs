@@ -775,6 +775,7 @@ pub fn run() {
       media_tools::content_whisper_words,
       media_tools::content_allow_media_folder,
       media_tools::content_ready_to_post,
+      media_tools::content_cut_short,
       media_storage::storage_put_file,
       media_storage::storage_delete,
       media_storage::storage_list_staged,

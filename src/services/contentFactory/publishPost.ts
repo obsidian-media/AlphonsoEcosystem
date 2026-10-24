@@ -11,6 +11,7 @@ import { publishFacebookPhotos, publishInstagramByUrl, publishMetaContent, publi
 import { removeStaged, stageFile, storageConfigured } from '../mediaStorageService';
 import { outputPath } from './contentProjectFiles';
 import { getInstagramRoute } from './instagramRoute';
+import { fitsPlatform } from './platformLimits';
 import { exportForHand } from './readyToPost';
 import { plainSignInReason } from './signInExpiry';
 import type { PostStatus, ProjectPost } from './contentTypes';
@@ -26,7 +27,6 @@ export interface PostResult {
   folder?: string;
 }
 
-const NO_INSTAGRAM = 'Set up Instagram in Settings → Connectors → Meta: your Facebook Page keys, or sign in with Instagram.';
 const NO_OUTPUT_FOLDER = 'Choose an output folder in Settings first: the video is saved there.';
 
 /**
@@ -82,8 +82,12 @@ async function postByLink(post: PublishablePost, caption: string, root: string):
   if (post.platform !== 'instagram') return null;
   const route = await getInstagramRoute();
   if (!carousel && route !== 'instagram_login') return null;
-  if (!route) return { status: 'failed', reason: NO_INSTAGRAM, setupRequired: true };
   if (needsRoot && !root) return { status: 'failed', reason: NO_OUTPUT_FOLDER };
+  // No way in to Instagram (phase 3d): save it to post by hand rather than fail.
+  if (!route) {
+    const { folder } = await exportForHand(post, root);
+    return { status: 'by_hand', folder, reason: `Saved to post by hand (Instagram isn't set up in Settings → Connectors → Meta): ${folder}` };
+  }
   if (!(await storageConfigured())) {
     const { folder } = await exportForHand(post, root);
     return { status: 'by_hand', folder, reason: `Saved to post by hand (no storage is set up): ${folder}` };
@@ -111,6 +115,9 @@ async function postByLink(post: PublishablePost, caption: string, root: string):
 /** Posts (or schedules) one approved post. Never throws; a failure says why. */
 export async function publishPost(post: PublishablePost, settings: { outputFolder?: string | null }, nowMs = Date.now()): Promise<PostResult> {
   const caption = withHashtags(post.caption, post.hashtags || []);
+  // A post its platform won't take for its length is refused before anything is sent (phase 3d).
+  const fit = fitsPlatform(post.platform, post.piece, post.seconds ?? null);
+  if (!fit.ok) return { status: 'failed', reason: fit.reason };
   try {
     // A public image or video address (Content Studio): Meta fetches it.
     if (post.platform !== 'youtube' && post.mediaUrl !== undefined && !post.file) {

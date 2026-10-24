@@ -1,3 +1,4 @@
+import { randomHex } from '../lib/randomId';
 const STORAGE_KEY = 'alphonso_hector_bookmarks_v1';
 const MAX_BOOKMARKS = 200;
 
@@ -42,7 +43,7 @@ function saveBookmarks(bookmarks: HectorBookmark[]) {
 }
 
 function makeId(): string {
-  return `bm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return `bm_${Date.now()}_${randomHex(6)}`;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────

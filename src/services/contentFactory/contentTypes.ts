@@ -43,7 +43,7 @@ export function hasOwnKey(record: object, key: string): boolean {
 
 export type StepId =
   | 'brief' | 'research' | 'script' | 'review' | 'scenes' | 'thumbnail'
-  | 'voice' | 'music' | 'broll' | 'clips' | 'assemble' | 'carousel' | 'campaign' | 'quality' | 'publish';
+  | 'voice' | 'music' | 'broll' | 'clips' | 'assemble' | 'shorts' | 'carousel' | 'campaign' | 'quality' | 'publish';
 
 /**
  * Voice, Music, B-roll and Assemble make the finished video file (phase 2a). The carousel
@@ -51,8 +51,40 @@ export type StepId =
  * must not put the voice-over or the finished video out of date.
  */
 export const STEP_ORDER: StepId[] = [
-  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'carousel', 'campaign', 'quality', 'publish',
+  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'shorts', 'carousel', 'campaign', 'quality', 'publish',
 ];
+
+/**
+ * Side pieces (phases 3c, 3d) made from the project but not from each other: one being
+ * made again never puts another out of date.
+ */
+export const SIDE_STEPS: StepId[] = ['shorts', 'carousel'];
+
+/** A Short's kind (phase 3d): its own mini-script, a highlight with a new hook, or a plain cut. */
+export type ShortKind = 'mini' | 'highlight' | 'cut';
+
+/** One Short as Miya planned it (phase 3d). */
+export interface ShortPlan {
+  id: string;
+  kind: ShortKind;
+  title: string;
+  hook: string;
+  seconds: number;
+  platforms: PostPlatform[];
+  copy: { platform: PostPlatform; title?: string; caption: string; hashtags: string[] }[];
+  /** A mini-script Short's own script, with a picture for each part. */
+  parts?: { spoken: string; imagePrompt: string; seconds: number }[];
+  /** A highlight's or a cut's part of the finished video. */
+  moment?: { startSec: number; endSec: number };
+}
+
+/** The Shorts' own AI clip setting (phase 3d), separate from the long video's. */
+export interface ShortsSettings {
+  aiClips: 'main' | 'every' | 'none';
+  clipEngine: 'local' | 'runway' | null;
+}
+
+export const DEFAULT_SHORTS_SETTINGS: ShortsSettings = { aiClips: 'none', clipEngine: null };
 
 /** One carousel slide (phase 3c): slide 1 is the cover. */
 export interface CarouselSlide {
@@ -149,6 +181,8 @@ export interface ContentProject {
   posts?: ProjectPost[];
   createdAtMs: number;
   updatedAtMs: number;
+  /** The Shorts' own AI clip setting (phase 3d). */
+  shortsSettings?: ShortsSettings;
 }
 
 /** Where a post goes (phase 3a). */
@@ -189,6 +223,10 @@ export interface ProjectPost {
   reason?: string;
   /** When Alphonso sent it to the platform (phase 3b: counts toward the daily limit). */
   sentAtMs?: number;
+  /** A vertical video's length (phase 3d), for each platform's limits. */
+  seconds?: number;
+  /** The Short this post is (phase 3d). */
+  shortId?: string;
 }
 
 /** What a content-factory step sends to an agent through Jose. */

@@ -1,6 +1,7 @@
 import { normalizeMemoryRecord, listDurableMemoryRecords, upsertDurableMemoryRecords } from '../durableMemoryService';
 import { TRUST_STATES, timestampMs } from '../trustModel';
 import { writeHandoffArtifact } from '../workspaceArtifactService';
+import { randomHex } from '../../lib/randomId';
 
 const WORKSHOP_CATEGORY = 'project_memory';
 const WORKSHOP_SOURCE = 'project_execution_workshop';
@@ -8,7 +9,7 @@ const WORKSHOP_SOURCE = 'project_execution_workshop';
 function toSessionMemoryRecord(session) {
   const now = timestampMs();
   return normalizeMemoryRecord({
-    id: session?.id || `workshop-${now}-${Math.random().toString(16).slice(2, 8)}`,
+    id: session?.id || `workshop-${now}-${randomHex(6)}`,
     title: `${session?.projectName || 'Project'} execution session`,
     content: session,
     category: WORKSHOP_CATEGORY,

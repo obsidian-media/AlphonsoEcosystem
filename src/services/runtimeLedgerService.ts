@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 interface LedgerAvailability {
   checked: boolean;
@@ -52,7 +53,7 @@ function normalizeRecord(scope: string, row: Record<string, unknown> = {}): Ledg
   const data = (row as { data?: unknown }).data ?? row;
   const dataObj = (data && typeof data === 'object') ? data as Record<string, unknown> : undefined;
   return {
-    id: (row.id as string) || `${scope}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: (row.id as string) || `${scope}-${Date.now()}-${randomHex(6)}`,
     data,
     status: (row.status as string) || (dataObj?.status as string) || 'recorded',
     confidence: (row.confidence as string) || (dataObj?.confidence as string) || TRUST_STATES.TEMPORARY,

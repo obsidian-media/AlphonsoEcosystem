@@ -4,6 +4,7 @@ import { pushMemoryItem, listMemoryItems } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { addMemoryToChroma, semanticSearchMemory, isChromaHealthy } from './chromaDbService.js';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
+import { randomHex } from '../lib/randomId';
 
 export type RetentionPolicy = 'standard_180d' | 'permanent' | 'ephemeral_7d';
 export type MemoryCategory = 'project_memory' | 'timeline_memory' | 'preference_memory' | 'orchestration_memory';
@@ -209,7 +210,7 @@ export async function runEchoPreservation(commandText: string, assignment: EchoA
   }
 
   const schema: EchoMemorySchema = {
-    memoryId: `echo-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    memoryId: `echo-${Date.now()}-${randomHex(6)}`,
     workflowId: assignment?.commandId || assignment?.packetId || '',
     sourceAgent: 'echo',
     title: memoryEntry.title,

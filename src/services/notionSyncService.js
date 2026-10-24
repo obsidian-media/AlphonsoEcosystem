@@ -34,6 +34,7 @@ import { pushMemoryItem } from './memoryService';
 import { sendNotionConnectorEntry, isConnectorAuthenticated } from './connectorRegistryService';
 import { createApprovalRequest } from './approval/approvalService';
 import { buildNotionSyncEvent, recordEvent as recordCanonicalEvent } from './eventsService';
+import { randomHex } from '../lib/randomId';
 
 export const NOTION_SYNC_SCOPE = 'notion_sync_v1';
 
@@ -415,7 +416,7 @@ export function buildNotionSyncMemoryRecord({
   const safeSync = buildSyncMetadata(syncMetadata || {});
   const normalizedCorrelation = buildCorrelationId(correlation || {}) || {};
   return {
-    id: buildNotionSyncRecordId(normalizedCorrelation, safeSync.source) || `notion-sync-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: buildNotionSyncRecordId(normalizedCorrelation, safeSync.source) || `notion-sync-${Date.now()}-${randomHex(6)}`,
     title: safeString(title).trim() || 'Notion sync record',
     category,
     source: 'notion_sync',

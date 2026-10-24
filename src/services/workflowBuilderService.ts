@@ -1,4 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 const WORKFLOW_KEY = 'alphonso_visual_workflows_v1';
 
@@ -71,7 +72,7 @@ export function createWorkflow(name: string, agentScope = 'shared'): Workflow | 
   if (typeof agentScope !== 'string' || !agentScope) agentScope = 'shared';
   const workflows = readWorkflows();
   const workflow: Workflow = {
-    id: `wf-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `wf-${Date.now()}-${randomHex(6)}`,
     name: name.trim(),
     agentScope,
     nodes: [],
@@ -101,7 +102,7 @@ export function addWorkflowNode(workflowId: string, type: string, position: { x:
   const workflows = readWorkflows().map((workflow) => {
     if (workflow.id !== workflowId) return workflow;
     const node: WorkflowNode = {
-      id: `node-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
+      id: `node-${Date.now()}-${randomHex(5)}`,
       type,
       position,
       config,
@@ -123,7 +124,7 @@ export function addWorkflowEdge(workflowId: string, fromNode: string, toNode: st
   const workflows = readWorkflows().map((workflow) => {
     if (workflow.id !== workflowId) return workflow;
     const edge: WorkflowEdge = {
-      id: `edge-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
+      id: `edge-${Date.now()}-${randomHex(5)}`,
       fromNode,
       toNode,
       condition: condition || 'always'

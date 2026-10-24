@@ -133,3 +133,10 @@ describe('publishPost: expired sign-ins', () => {
     expect((await publishPost(post({ platform: 'instagram', piece: 'reel' }), settings, NOW)).reason).toBe('Sign in to Meta again in Settings → Connectors: the sign-in has run out.');
   });
 });
+
+// Phase 3d: a post that doesn't fit its platform is refused before anything is sent.
+it("publishPost refuses a post that doesn't fit, before sending", async () => {
+  const result = await publishPost(post({ platform: 'facebook', piece: 'reel', seconds: 252 }), settings, NOW);
+  expect(result).toEqual({ status: 'failed', reason: 'Not a Facebook Reel: it is 4:12 long; Facebook takes 3–90 seconds.' });
+  expect(publishMetaVideo).not.toHaveBeenCalled();
+});

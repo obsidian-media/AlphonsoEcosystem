@@ -17,12 +17,29 @@ export interface VideoModel {
 
 export interface VideoModelsInfo {
   vramGb: number | null;
+  /** Under 8 GB of graphics memory (phase 3d): clips are made smaller unless switched off. */
+  smallCard?: boolean;
   suggested: string | null;
   comfyuiDir: string | null;
   models: VideoModel[];
 }
 
 const SELECTED_KEY = 'alphonso_comfyui_video_model_v1';
+const FULL_SIZE_KEY = 'alphonso_full_size_clips_v1';
+
+/** "Full size clips on this card" (Runtime Hub's video models; phase 3d). */
+export function getFullSizeClips(): boolean {
+  try { return localStorage.getItem(FULL_SIZE_KEY) === 'true'; } catch { return false; }
+}
+
+export function setFullSizeClips(on: boolean): void {
+  try { localStorage.setItem(FULL_SIZE_KEY, on ? 'true' : 'false'); } catch { /* the default stays */ }
+}
+
+/** On a small card, clips are smaller and at most 3 seconds, unless full size was chosen. */
+export function clipSizeFor(info: { smallCard?: boolean } | null): { lowRes: boolean; maxSeconds: number } {
+  return info?.smallCard && !getFullSizeClips() ? { lowRes: true, maxSeconds: 3 } : { lowRes: false, maxSeconds: Infinity };
+}
 
 function savedComfyDir(): string | null {
   try {

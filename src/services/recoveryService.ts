@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 const SNAPSHOT_KEY = 'alphonso_recovery_snapshots_v1';
 
@@ -44,7 +45,7 @@ export function restoreSnapshotById(snapshotId: string): unknown | null {
 
 export function backupMemoryLedger(memoryItems: unknown[]): MemoryBackup {
   const backup: MemoryBackup = {
-    id: `mem-backup-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `mem-backup-${Date.now()}-${randomHex(6)}`,
     timestampMs: timestampMs(),
     trust: TRUST_STATES.TEMPORARY,
     items: Array.isArray(memoryItems) ? memoryItems : []
@@ -55,7 +56,7 @@ export function backupMemoryLedger(memoryItems: unknown[]): MemoryBackup {
 
 export async function createSnapshot(payload: Record<string, unknown>): Promise<RecoverySnapshot> {
   const snapshot: RecoverySnapshot = {
-    id: `snap-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `snap-${Date.now()}-${randomHex(6)}`,
     timestampMs: timestampMs(),
     trust: TRUST_STATES.TEMPORARY,
     payload

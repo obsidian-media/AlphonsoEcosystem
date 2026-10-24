@@ -1,4 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 const RESOURCE_KEY = 'alphonso_resource_snapshots_v1';
 
@@ -41,7 +42,7 @@ function writeSnapshots(items: ResourceSnapshot[]) {
 
 export function collectResourceSnapshot({ ollamaConnected, modelName, tokenEstimate = 0 }: { ollamaConnected: boolean; modelName?: unknown; tokenEstimate?: number }): ResourceSnapshot {
   const snapshot: ResourceSnapshot = {
-    id: `rs-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `rs-${Date.now()}-${randomHex(6)}`,
     timestampMs: timestampMs(),
     cpuCores: navigator.hardwareConcurrency || null,
     deviceMemoryGb: (navigator as unknown as Record<string, unknown>).deviceMemory as number || undefined,

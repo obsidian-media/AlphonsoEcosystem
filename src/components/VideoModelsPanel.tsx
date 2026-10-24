@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { Badge, Button } from './ui';
 import {
+  getFullSizeClips, setFullSizeClips,
   effectiveVideoModel, installVideoModel, listVideoModels, setSelectedVideoModel, type VideoModelsInfo,
 } from '../services/videoModelService';
 
@@ -14,6 +15,7 @@ export function VideoModelsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [, setPicked] = useState(0);
   const [progress, setProgress] = useState<{ message: string; pct: number } | null>(null);
+  const [fullSize, setFullSize] = useState(() => getFullSizeClips());
 
   // The backend reports each file's download on runtime://progress as tool "comfyui-video".
   useEffect(() => {
@@ -59,6 +61,17 @@ export function VideoModelsPanel() {
           ? 'No NVIDIA graphics card was found, so AI clips need Runway (Connectors). You can still install a model if your card is not detected.'
           : `Your card: ${Math.round(info.vramGb)} GB of video memory.`}
       </p>
+      {info.smallCard && (
+        <div className="space-y-1 text-(--text-3)">
+          <p>{fullSize
+            ? 'Clips are made full size on this card (slower; it has under 8 GB).'
+            : 'This card has under 8 GB, so AI clips are made smaller and at most 3 seconds, which is much faster.'}</p>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={fullSize} onChange={(e) => { setFullSize(e.target.checked); setFullSizeClips(e.target.checked); }} />
+            Full size clips on this card
+          </label>
+        </div>
+      )}
       <p className="text-(--text-3)">
         {info.comfyuiDir
           ? `Installs into: ${info.comfyuiDir}${info.comfyuiDir.includes('\\') ? '\\' : '/'}models`

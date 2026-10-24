@@ -1,3 +1,4 @@
+import { randomHex } from '../../lib/randomId';
 const PROPOSAL_KEY = 'alphonso_diff_first_proposals_v1';
 
 function readRows() {
@@ -16,7 +17,7 @@ function writeRows(rows) {
 
 export function createDiffProposal(payload = {}) {
   const proposal = {
-    id: payload.id || `proposal-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: payload.id || `proposal-${Date.now()}-${randomHex(6)}`,
     traceId: payload.traceId || `workflow-${Date.now()}`,
     agentId: payload.agentId || 'unknown',
     title: payload.title || 'Proposed changes',

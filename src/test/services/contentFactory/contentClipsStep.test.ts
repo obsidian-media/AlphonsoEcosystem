@@ -5,6 +5,8 @@ vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: vi.fn(), freeO
 vi.mock('../../../services/videoModelService', () => ({
   listVideoModels: vi.fn(async () => (globalThis as any).__videoModels),
   effectiveVideoModel: (info: any) => info.models.find((m: any) => m.id === info.suggested) || null,
+  // A card with 8 GB or more (phase 3d): clips at full size and length.
+  clipSizeFor: () => ({ lowRes: false, maxSeconds: Infinity }),
 }));
 vi.mock('../../../services/contentFactory/comfyVideoClip', () => ({ makeComfyClip: vi.fn(), checkComfyClip: vi.fn() }));
 vi.mock('../../../services/contentFactory/runwayClip', async () => {
@@ -59,10 +61,10 @@ beforeEach(() => {
 
 // Miya content factory phase 2b: the AI clips step.
 describe('the clips step in the plan', () => {
-  it('sits after Stock clips, before the finished video; 18 template steps (Publish, phase 3a; Carousel, phase 3c)', () => {
+  it('sits after Stock clips, before the finished video; 19 template steps (Publish 3a, Carousel 3c, Shorts 3d)', () => {
     expect(STEP_ORDER.slice(STEP_ORDER.indexOf('broll'), STEP_ORDER.indexOf('assemble') + 1)).toEqual(['broll', 'clips', 'assemble']);
     const steps = getTemplate('content_video')!.steps;
-    expect(steps).toHaveLength(18);
+    expect(steps).toHaveLength(19);
     const byId = Object.fromEntries(steps.map((s) => [s.stepId, s]));
     expect(byId.clips).toMatchObject({ agent: 'miya', actionType: 'creative_video_clips', needs: ['scenes', 'broll'] });
     expect(byId.assemble.needs).toEqual(['voice', 'music', 'broll', 'clips']);

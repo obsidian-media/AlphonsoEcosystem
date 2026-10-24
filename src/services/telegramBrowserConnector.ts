@@ -1,4 +1,5 @@
 import { timestampMs } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 const TELEGRAM_POLL_KEY = 'alphonso_telegram_poll_cursor_v1';
 const TELEGRAM_POLL_AUDIT_KEY = 'alphonso_telegram_poll_audit_v1';
@@ -86,7 +87,7 @@ function getAuditRows(): TelegramAuditEntry[] {
 }
 
 function appendAudit(entry: TelegramAuditEntry): void {
-  const next = [...getAuditRows(), { ...entry, id: `telegram_browser_${Date.now()}_${Math.random().toString(16).slice(2, 8)}` }].slice(-200);
+  const next = [...getAuditRows(), { ...entry, id: `telegram_browser_${Date.now()}_${randomHex(6)}` }].slice(-200);
   try {
     localStorage.setItem(TELEGRAM_POLL_AUDIT_KEY, JSON.stringify(next));
   } catch {

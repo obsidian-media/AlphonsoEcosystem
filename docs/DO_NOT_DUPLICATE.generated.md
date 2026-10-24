@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 266 services and 166 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 268 services and 167 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -102,6 +102,7 @@ Source-backed inventory: 266 services and 166 components. Human purpose descript
 | component | `src/components/miya/ProjectPicture.tsx` | `ProjectPicture` |
 | component | `src/components/miya/SceneBuilderTab.tsx` | `SceneBuilderTab`, `SceneBuilderTabProps` |
 | component | `src/components/miya/ScriptStudioTab.tsx` | `ScriptStudioTab`, `StepTabProps` |
+| component | `src/components/miya/ShortsStudioTab.tsx` | `ShortsStudioTab`, `ShortsStudioTabProps` |
 | component | `src/components/miya/StepPanel.tsx` | `StepPanel`, `StepPanelProps` |
 | component | `src/components/miya/ThumbnailStudioTab.tsx` | `ThumbnailStudioTab`, `ThumbnailStudioTabProps` |
 | component | `src/components/MiyaCompanionWidget.tsx` | `MiyaCompanionWidget` |
@@ -266,24 +267,26 @@ Source-backed inventory: 266 services and 166 components. Human purpose descript
 | service | `src/services/contentFactory/contentCaptions.ts` | `alignCaptions`, `captionsFromLines`, `TimedWord`, `toSrt` |
 | service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderCarouselSlides`, `renderScenePictures`, `renderThumbnails` |
-| service | `src/services/contentFactory/contentMediaExecutor.ts` | `checkPendingClips`, `ClipOutcome`, `CLIPS_OFF`, `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `ProjectClipEngine`, `resolveProjectClipEngine`, `RUNWAY_NOT_APPROVED`, `VoiceLine`, `VoiceOutput` |
+| service | `src/services/contentFactory/contentMediaExecutor.ts` | `checkPendingClips`, `ClipOutcome`, `CLIPS_OFF`, `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `ProjectClipEngine`, `resolveProjectClipEngine`, `RUNWAY_NOT_APPROVED`, `SMALL_CARD_NOTE`, `VoiceLine`, `VoiceOutput` |
 | service | `src/services/contentFactory/contentPostMoves.ts` | `cancelProjectPost`, `movePost`, `MoveResult`, `moveToDay`, `moveToSlot` |
 | service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `POST_STATUS_LABEL`, `savePosts`, `updatePost` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `outputPath`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
-| service | `src/services/contentFactory/contentProjectPlan.ts` | `briefWantsCarousel`, `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `PUBLISH_WAIT`, `REVIEW_WAIT` |
-| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
+| service | `src/services/contentFactory/contentProjectPlan.ts` | `briefWantsCarousel`, `briefWantsShorts`, `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `PUBLISH_WAIT`, `REVIEW_WAIT`, `runwayEstimate`, `shortsCount` |
+| service | `src/services/contentFactory/contentProjectService.ts` | `addShortPlan`, `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getShortsSettings`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setShortKind`, `setShortOutput`, `setShortPlatforms`, `setShortsSettings`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentPublishExecutor.ts` | `executePublishStep`, `NO_APPROVED_POSTS` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
 | service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `parseStepAnswer` |
 | service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
 | service | `src/services/contentFactory/contentStepRunner.ts` | `approveContentStep`, `CONTENT_TASK_PREVIEW`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
-| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CarouselShape`, `CarouselSlide`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `PostingSlot`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
+| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CarouselShape`, `CarouselSlide`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `PostingSlot`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
 | service | `src/services/contentFactory/instagramRoute.ts` | `getInstagramRoute`, `instagramLoginSetUp`, `InstagramRoute`, `pageRouteSetUp`, `savedInstagramRoute`, `setInstagramRoute` |
+| service | `src/services/contentFactory/platformLimits.ts` | `fitsPlatform`, `formatSeconds`, `PLATFORM_LIMITS`, `PlatformFit` |
 | service | `src/services/contentFactory/publishPost.ts` | `PostResult`, `PublishablePost`, `publishPost` |
 | service | `src/services/contentFactory/readyToPost.ts` | `BY_HAND_REMINDER`, `exportForHand`, `handFolderFor` |
 | service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
+| service | `src/services/contentFactory/shortMaker.ts` | `makeShorts`, `MAKING_ANOTHER`, `NEEDS_FINISHED_VIDEO`, `NEEDS_SCRIPT`, `redoShort`, `RUNWAY_SHORTS_NOTE`, `ShortOutput` |
 | service | `src/services/contentFactory/signInExpiry.ts` | `getSignInExpiry`, `isYoutubeProjectPublished`, `plainSignInReason`, `recordSignIn`, `setYoutubeProjectPublished`, `SIGN_IN_NAME`, `signedInAt`, `SignInService`, `SignInWarning`, `signInWarnings` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `drawSlide`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline`, `layoutSlideText`, `slideSize`, `SlideTextLayout` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
@@ -417,7 +420,7 @@ Source-backed inventory: 266 services and 166 components. Human purpose descript
 | service | `src/services/trustModel.ts` | `timestampMs`, `TRUST_STATES`, `trustColor`, `TrustState` |
 | service | `src/services/unifiedMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getDurableMemoryStatus`, `getMemorySize`, `getMemorySummary`, `getNamespaceCount`, `hydrateFromDurable`, `hydrateMemoryFromDurable`, `importMemoryItems`, `listDurableMemoryRecords`, `listEcosystemMemoryItems`, `listMemory`, `listMemoryByNamespace`, `listMemoryItems`, `listMiyaMemory`, `listWorkflowMemory`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `normalizeMemoryRecord`, `pushMemory`, `pushMemoryItem`, `pushMiyaMemory`, `pushWorkflowMemory`, `resetMemoryServiceState`, `tickExpiry`, `upsertBrandKit`, `upsertDurableMemoryRecords` |
 | service | `src/services/verificationService.ts` | `appendVerificationLog`, `buildOllamaStartupGuide`, `getVerificationLogs`, `listOllamaModels`, `OllamaStartupGuide`, `readDurableAuditLog`, `VERIFICATION_SCOPE`, `VerificationLogEntry`, `VerificationLogInput`, `verifyCommandExecution`, `verifyDurableAuditChain`, `verifyOllamaRuntimeProof`, `verifyPathProof`, `verifyProcessProof` |
-| service | `src/services/videoModelService.ts` | `effectiveVideoModel`, `getSelectedVideoModel`, `installVideoModel`, `listVideoModels`, `setSelectedVideoModel`, `VideoModel`, `VideoModelsInfo` |
+| service | `src/services/videoModelService.ts` | `clipSizeFor`, `effectiveVideoModel`, `getFullSizeClips`, `getSelectedVideoModel`, `installVideoModel`, `listVideoModels`, `setFullSizeClips`, `setSelectedVideoModel`, `VideoModel`, `VideoModelsInfo` |
 | service | `src/services/voiceOsService.ts` | `checkVoiceWatchdog`, `getVoiceServerStatus`, `getVoiceToken`, `getVoiceWebSocketUrl`, `resetVoiceWatchdogState`, `startVoiceServer`, `startVoiceWatchdog`, `stopVoiceServer`, `stopVoiceWatchdog` |
 | service | `src/services/voiceService.ts` | `classifyVoiceError`, `getVoicePrivacyLabel`, `requestAudioStream`, `SpeechRecognitionOptions`, `startSpeechRecognition`, `stopAudioStream`, `supportsMicrophoneCapture`, `supportsSpeechRecognition`, `TRANSCRIPTION_PIPELINE_STATUS`, `VOICE_STATES`, `VoiceErrorClassification`, `VoiceState` |
 | service | `src/services/whatsappBrowserConnector.ts` | `browserPollWhatsAppGateway`, `browserSendWhatsApp`, `processWhatsAppWebhook`, `verifyWhatsAppWebhook` |

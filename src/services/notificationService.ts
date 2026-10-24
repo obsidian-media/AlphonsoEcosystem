@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { randomHex } from '../lib/randomId';
 
 interface NotificationPayload {
   id: string;
@@ -30,7 +31,7 @@ export function appendNotification(options: AppendOptions = {}): NotificationPay
   let existing: NotificationPayload[] = [];
   try { existing = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]'); } catch { existing = []; }
   const notification: NotificationPayload = {
-    id: `notif-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+    id: `notif-${Date.now()}-${randomHex(4)}`,
     type: String(type),
     title: String(title).slice(0, 120),
     message: String(message).slice(0, 400),

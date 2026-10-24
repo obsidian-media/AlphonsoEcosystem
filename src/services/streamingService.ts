@@ -1,5 +1,6 @@
 import { generateOllamaStream, generateOllamaChatStream, normalizeEndpoint } from '../lib/ollama';
 import type { OllamaMessage } from '../lib/ollama';
+import { randomHex } from '../lib/randomId';
 
 const STREAM_STATE_KEY = 'alphonso_stream_state_v1';
 
@@ -51,7 +52,7 @@ function persistStreamState(streamId: string, state: Partial<StreamState>): void
 }
 
 export function subscribeToStreams(fn: StreamListener, key?: string): () => void {
-  const id = key || `listener_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const id = key || `listener_${Date.now()}_${randomHex(6)}`;
   if (!listeners.has(id) && listeners.size >= MAX_LISTENERS) {
     const firstKey = listeners.keys().next().value;
     if (firstKey !== undefined) listeners.delete(firstKey);

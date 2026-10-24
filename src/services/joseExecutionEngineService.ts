@@ -72,6 +72,7 @@ import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, ge
 import { parseJsonResponse } from '../lib/jsonUtils';
 import { executeParallel } from './parallelExecutionService';
 import { agentCache } from './cacheService';
+import { randomHex } from '../lib/randomId';
 
 // This pipeline still crosses a few dynamic JS-era payload boundaries.
 // Keep the `any` usage below scoped to those runtime edges so behavior stays unchanged.
@@ -492,7 +493,7 @@ function isRetryableTaskFailure(result: any) {
 }
 
 async function executeAssignmentWithRetries(packet: any, assignment: any, commandText: any, options: any = {}) {
-  const taskId = packet?.id || assignment?.packetId || `task-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  const taskId = packet?.id || assignment?.packetId || `task-${Date.now()}-${randomHex(6)}`;
   const instruction = getExecutionInstruction(commandText, assignment);
   let lastError = null;
 

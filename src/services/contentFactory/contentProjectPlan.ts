@@ -21,6 +21,7 @@ export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
   broll: 'broll',
   clips: 'clips',
   assemble: 'assemble',
+  shorts: 'shorts',
   carousel: 'carousel',
   campaign: 'campaign',
   timing: 'campaign',
@@ -40,7 +41,7 @@ export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Mi
 export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
 
 /** Runway's estimate for the scenes AI clips would be made for, when the scene plan is known. */
-function runwayEstimate(project: ContentProject): number | null {
+export function runwayEstimate(project: ContentProject): number | null {
   const scenes = (chosenVersionOf(project, 'scenes')?.output as { miya?: { scenes?: { startSec?: number; endSec?: number; mainMoment?: unknown }[] } } | undefined)?.miya?.scenes;
   if (!scenes?.length) return null;
   const chosen = chosenScenes(scenes, getVideoSettings(project).aiClips);
@@ -51,6 +52,26 @@ function runwayEstimate(project: ContentProject): number | null {
 /** The brief asks for a carousel (its "What to make" or its format says so; phase 3c). */
 export function briefWantsCarousel(brief: { outputs?: string[]; format?: string }): boolean {
   return [...(brief.outputs || []), String(brief.format || '')].some((o) => /carousel/i.test(String(o)));
+}
+
+const NUMBER_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+
+/** The brief asks for Shorts or Reels (its "What to make" or its format; phase 3d). */
+export function briefWantsShorts(brief: { outputs?: string[]; format?: string }): boolean {
+  return [...(brief.outputs || []), String(brief.format || '')].some((o) => /\b(shorts?|reels?)\b/i.test(String(o)));
+}
+
+/** How many Shorts the brief asks for: "3 Shorts", "three shorts", "Shorts x2"; else 1. */
+export function shortsCount(brief: { outputs?: string[] }): number {
+  for (const raw of brief.outputs || []) {
+    const text = String(raw).toLowerCase();
+    if (!/\b(shorts?|reels?)\b/.test(text)) continue;
+    const digits = /(\d+)\s*(?:x\s*)?(?:shorts?|reels?)|(?:shorts?|reels?)\s*x\s*(\d+)/.exec(text);
+    if (digits) return Math.max(1, Math.min(10, Number(digits[1] || digits[2])));
+    const word = /\b(one|two|three|four|five)\b/.exec(text);
+    if (word) return NUMBER_WORDS[word[1]];
+  }
+  return 1;
 }
 
 /**
@@ -72,6 +93,7 @@ export function contentProjectPlanSteps(
     if (options.only) return factoryStep === from;
     // A carousel is made only when the brief asks for one; it can always be run on its own.
     if (factoryStep === 'carousel' && !briefWantsCarousel(project.brief)) return false;
+    if (factoryStep === 'shorts' && !briefWantsShorts(project.brief)) return false;
     return STEP_ORDER.indexOf(factoryStep) >= start;
   });
   const ids = new Set(included.map((s) => s.stepId));

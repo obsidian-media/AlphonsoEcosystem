@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Link2 } from 'lucide-react';
 import { listAgentProfiles } from '../agents/agentRegistry';
+import { randomHex } from '../lib/randomId';
 
 const PAIRS_KEY = 'alphonso_agent_pairs_v1';
 
@@ -137,7 +138,7 @@ export function AgentPairingView() {
       return;
     }
     const pair: AgentPair = {
-      id: `pair-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      id: `pair-${Date.now()}-${randomHex(4)}`,
       agentA: selectedA,
       agentB: selectedB,
       triggerOn: form.triggerOn.trim(),

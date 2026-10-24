@@ -1,3 +1,4 @@
+import { randomHex } from '../../lib/randomId';
 const CONTRACT_KEY = 'alphonso_work_contracts_v1';
 
 function readRows() {
@@ -27,7 +28,7 @@ export function createWorkContractDraft({
   rollbackExpectations = []
 }) {
   const draft = {
-    id: `contract-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `contract-${Date.now()}-${randomHex(6)}`,
     traceId: traceId || `workflow-${Date.now()}`,
     projectId: projectId || null,
     draftedBy,

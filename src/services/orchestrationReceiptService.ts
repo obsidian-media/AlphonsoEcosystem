@@ -2,6 +2,7 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 import { durableGet, durableSet } from '../lib/durableStore';
 import { addNode, addEdge } from './memoryGraphService';
+import { randomHex } from '../lib/randomId';
 
 const RECEIPT_KEY = 'alphonso_orchestration_receipts_v1';
 export const ORCHESTRATION_RECEIPT_SCOPE = 'orchestration_receipts_v1';
@@ -106,7 +107,7 @@ export function appendOrchestrationReceipt({
 }: AppendReceiptInput): OrchestrationReceipt {
   const rows = readReceipts();
   const receipt: OrchestrationReceipt = {
-    id: `orx-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `orx-${Date.now()}-${randomHex(6)}`,
     workflowId: workflowId ?? null,
     commandId: commandId ?? null,
     packetId: packetId ?? null,

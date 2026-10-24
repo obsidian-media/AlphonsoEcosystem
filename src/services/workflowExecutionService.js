@@ -29,6 +29,7 @@ import { getLastRepoAudit, summarizeRepoAudit } from './repoAuditService';
 import { collectProductionReadinessSnapshot, summarizeProductionReadiness } from './productionReadinessService';
 import { listGovernanceDecisions } from './orchestrationGovernanceService';
 import { listConnectors } from './connectorRegistryService';
+import { randomHex } from '../lib/randomId';
 
 async function webSearch({ query = '', limit = 5 } = {}) {
   try {
@@ -884,7 +885,7 @@ function appendTimeline(runId, entry) {
 }
 
 function generateRunId() {
-  return `wf-run-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  return `wf-run-${Date.now()}-${randomHex(6)}`;
 }
 
 function hasRealConnectors(connectorRequirements) {

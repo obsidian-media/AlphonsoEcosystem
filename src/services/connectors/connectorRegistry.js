@@ -10,6 +10,7 @@ import { hydrateConnectorAuthProfilesFromSqlite, getConnectorCredential } from '
 import { durableSet } from '../../lib/durableStore.js';
 import { getComfyUiEndpoint } from './comfyUiEndpoint.js';
 import { evaluateAction as evaluateDslAction } from '../policyDslService';
+import { randomHex } from '../../lib/randomId';
 
 // Read credentials saved via UI (separate from OS env vars). Delegates to
 // connectorAuth.js's SQLite-backed credential store — do NOT read
@@ -534,7 +535,7 @@ export function appendConnectorAudit(connectorId, action, details = {}) {
   appendAgentActivity({ agent: 'connector', action: `${connectorId}: ${action}`, detail: details?.summary || details?.reason || '' });
   const rows = readRows(CONNECTOR_AUDIT_KEY);
   const entry = {
-    id: `connector-audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `connector-audit-${Date.now()}-${randomHex(6)}`,
     connectorId,
     action,
     details,

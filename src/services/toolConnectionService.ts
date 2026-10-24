@@ -4,6 +4,7 @@ import { appendSessionEvent } from './sessionIntelligenceService';
 import { requireApproval } from './approval/approvalService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
+import { randomHex } from '../lib/randomId';
 
 const CONNECTION_KEY = 'alphonso_tool_connections_v1';
 const CONNECTION_AUDIT_KEY = 'alphonso_tool_connection_audit_v1';
@@ -135,7 +136,7 @@ function writeRows(key: string, rows: ToolConnection[] | ToolConnectionAuditEntr
 function appendAudit(action: string, details: Record<string, unknown> = {}): ToolConnectionAuditEntry {
   const rows = readRows(CONNECTION_AUDIT_KEY) as ToolConnectionAuditEntry[];
   const entry: ToolConnectionAuditEntry = {
-    id: `tool-connection-audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `tool-connection-audit-${Date.now()}-${randomHex(6)}`,
     action,
     details,
     timestampMs: timestampMs(),
@@ -229,7 +230,7 @@ export function listToolConnectionAudit(): ToolConnectionAuditEntry[] {
 }
 
 export function upsertToolConnection(patch: ToolConnectionPatch = {}): ToolConnectionResult {
-  const id = String(patch.id || '').trim() || `tool-connection-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  const id = String(patch.id || '').trim() || `tool-connection-${Date.now()}-${randomHex(6)}`;
   const rows = listToolConnections();
   const current = rows.find((row) => row.id === id) || ({} as ToolConnection);
   const type = normalizeType(patch.type || current.type);

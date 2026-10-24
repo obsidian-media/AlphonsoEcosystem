@@ -1,6 +1,7 @@
 import { appendAgentActivity } from './agentActivityService';
 import { getConnectorCredential } from './connectors/connectorAuth.js';
 import { createCall, getCall, pollCallUntilTerminal, type CalleCallStatus, type CalleCallTask } from './connectors/calleConnector';
+import { randomHex } from '../lib/randomId';
 
 const CALLE_OUTREACH_KEY = 'alphonso_calle_outreach_v1';
 // Best-effort estimate only, sourced from CALL-E's pricing page as of
@@ -88,8 +89,8 @@ export function createOutreachDraft({ businessName, phone, taskType, task }: {
   if (existing) return existing;
 
   const record: OutreachCallRecord = {
-    id: `calle-outreach-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    idempotencyKey: `outreach-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `calle-outreach-${Date.now()}-${randomHex(6)}`,
+    idempotencyKey: `outreach-${Date.now()}-${randomHex(6)}`,
     businessName,
     phone,
     taskType,

@@ -16,6 +16,7 @@ vi.mock('../../../services/contentFactory/contentImages', async (importOriginal)
   ...(await importOriginal<typeof import('../../../services/contentFactory/contentImages')>()),
   renderCarouselSlides: vi.fn(async () => []),
 }));
+vi.mock('../../../services/contentFactory/shortMaker', () => ({ redoShort: vi.fn(async () => ({ shortId: 'sh1', status: 'done' })) }));
 vi.mock('../../../services/jose/joseRequestStore', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../services/jose/joseRequestStore')>()),
   getJoseRequest: vi.fn(() => (globalThis as any).__request || null),
@@ -24,6 +25,7 @@ vi.mock('../../../services/jose/joseRequestStore', async (importOriginal) => ({
 import { ContentFactoryPanel, selectContentProject } from '../../../components/miya/ContentFactoryPanel';
 import { runContentProject, approveContentStep } from '../../../services/contentFactory/contentStepRunner';
 import { renderCarouselSlides } from '../../../services/contentFactory/contentImages';
+import { redoShort } from '../../../services/contentFactory/shortMaker';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief, markStepStatus, saveStepVersion, setProjectRequest } from '../../../services/contentFactory/contentProjectService';
 
@@ -101,4 +103,14 @@ it('the Carousel tab shows Carousel Studio, and Redo makes only that slide again
   expect(screen.getByRole('heading', { name: 'Carousel Studio' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Redo slide 3' }));
   await waitFor(() => expect(renderCarouselSlides).toHaveBeenCalledWith(project.id, settings, undefined, 2));
+});
+
+// Phase 3d: Shorts Studio.
+it('the Shorts tab shows Shorts Studio, and Redo makes that Short again', async () => {
+  const { project } = setup();
+  saveStepVersion(project.id, 'shorts', { output: { miya: { shorts: [{ id: 'sh1', kind: 'cut', title: 'S', hook: 'h', seconds: 30, platforms: ['youtube'], copy: [], moment: { startSec: 0, endSec: 30 } }] } }, summary: '', joseCommandId: null });
+  render(<ContentFactoryPanel tab="shorts" settings={settings} />);
+  expect(screen.getByRole('heading', { name: 'Shorts Studio' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Redo Short 1' }));
+  await waitFor(() => expect(redoShort).toHaveBeenCalledWith(project.id, 'sh1', settings));
 });

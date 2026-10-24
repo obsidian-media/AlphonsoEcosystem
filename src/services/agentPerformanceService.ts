@@ -1,6 +1,7 @@
 import { getAgentMetrics, getAgentSuccessRate, getAgentLatency, getAgentApprovalRate, recordAgentExecution } from './agentMetricsService';
 import { listGovernanceDecisions } from './orchestrationGovernanceService';
 import { timestampMs } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 const PERF_SNAPSHOT_KEY = 'alphonso_agent_performance_snapshots_v1';
 const MAX_SNAPSHOTS = 100;
@@ -168,7 +169,7 @@ export function snapshotAgentPerformance(): SnapshotResult {
   if (!summary.ok) return { ok: false };
 
   const snapshot: PerformanceSnapshot = {
-    id: `perf-snap-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `perf-snap-${Date.now()}-${randomHex(6)}`,
     timestampMs: timestampMs(),
     summary: summary.summary
   };

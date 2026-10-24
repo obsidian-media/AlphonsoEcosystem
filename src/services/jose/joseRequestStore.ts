@@ -5,6 +5,7 @@ import { durableGet, durableSet } from '../../lib/durableStore.js';
 import type { PlanStep } from './stepGraph';
 import { rewireNeeds } from './josePlanEdits';
 import { getPacketById } from '../agentBusService';
+import { randomHex } from '../../lib/randomId';
 
 const REQUESTS_KEY = 'alphonso_jose_requests_v1';
 const MAX_REQUESTS = 200;
@@ -108,7 +109,7 @@ export function createWaitingPlanRequest(input: {
 }): JoseRequest {
   const now = Date.now();
   return saveNew({
-    id: `jose-request-plan-${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `jose-request-plan-${now.toString(36)}-${randomHex(6)}`,
     commandId: '',
     source: input.source,
     text: input.text,

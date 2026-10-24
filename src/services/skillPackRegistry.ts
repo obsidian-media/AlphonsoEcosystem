@@ -2,6 +2,7 @@ import { timestampMs, TRUST_STATES } from './trustModel';
 import { validateSkillPackAgainstContract } from './skillPackPermissions';
 import { DEFAULT_PACKS } from './skillPackContent';
 import { SHARED_AGENT_SKILL_PACK_IDS, SKILL_WORKFLOW_GUIDANCE } from './skillPackGuidance';
+import { randomHex } from '../lib/randomId';
 
 const SKILL_PACK_KEY = 'alphonso_skill_packs_v1';
 const SKILL_AUDIT_KEY = 'alphonso_skill_pack_audit_v1';
@@ -28,7 +29,7 @@ function write(key, value) {
 function audit(action, packId, details = {}) {
   const rows = read(SKILL_AUDIT_KEY, []);
   rows.push({
-    id: `skill-audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `skill-audit-${Date.now()}-${randomHex(6)}`,
     action,
     packId,
     details,

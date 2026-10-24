@@ -3,6 +3,7 @@ import { createConnectorRoutePacket, normalizeWhatsAppCloudInboundPayload, appen
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { AGENTS, updatePacketStatus } from './agentBusService';
 import { TRUST_STATES, timestampMs } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 const WEBHOOK_EVENTS_KEY = 'alphonso_whatsapp_webhook_events_v1';
 export const WHATSAPP_WEBHOOK_SCOPE = 'whatsapp_webhook_events_v1';
@@ -80,7 +81,7 @@ function writeEvents(rows: WebhookEvent[]): void {
 function recordEvent(eventType: string, details: Record<string, unknown> = {}): WebhookEvent {
   const rows = readEvents();
   const entry: WebhookEvent = {
-    id: `whatsapp-webhook-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `whatsapp-webhook-${Date.now()}-${randomHex(6)}`,
     eventType,
     details,
     timestampMs: timestampMs(),

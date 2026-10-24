@@ -17,6 +17,7 @@ import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { inferEffects, stepEffectsToWaitFor, type JoseEffect } from './jose/joseEffects';
 import { legacyNeeds } from './jose/stepGraph';
+import { randomHex } from '../lib/randomId';
 
 const COMMAND_KEY = 'alphonso_jose_command_routes_v2';
 const SETTINGS_KEY = 'alphonso_settings';
@@ -222,7 +223,7 @@ function writeCommands(rows: JoseCommand[]): void {
 }
 
 function newId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  return `${prefix}-${Date.now()}-${randomHex(6)}`;
 }
 
 function riskRank(risk: string): number {

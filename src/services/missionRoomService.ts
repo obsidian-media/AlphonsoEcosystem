@@ -1,4 +1,5 @@
 import { timestampMs } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -166,7 +167,7 @@ function writeJson<T>(key: string, value: T): T {
 }
 
 function makeId(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+  return `${prefix}_${Date.now()}_${randomHex(6)}`;
 }
 
 function hashText(text: string = ''): string {

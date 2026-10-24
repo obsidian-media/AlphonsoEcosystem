@@ -8,6 +8,7 @@ import { writeWorkspaceArtifact } from '../../../services/workspaceArtifactServi
 import { buildMiyaExportPacket, createMiyaExportHandoffPacket } from '../../../services/miyaExportPacketService';
 import { TRUST_STATES, timestampMs } from '../../../services/trustModel';
 import { createDefaultContentRequest, CONTENT_JOB_STATES } from '../types/contentCatalystTypes';
+import { randomHex } from '../../../lib/randomId';
 
 const JOB_KEY = 'alphonso_content_catalyst_jobs_v1';
 
@@ -80,7 +81,7 @@ function withLog(job, level, message, details = {}) {
     logs: [
       ...(job.logs || []),
       {
-        id: `content-log-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        id: `content-log-${Date.now()}-${randomHex(6)}`,
         level,
         message,
         details,
@@ -302,7 +303,7 @@ function describeModelError(error) {
 
 export function createContentJobFromBridgeRequest(bridgeRequest = {}, jobOptions = {}) {
   const request = createContentBridgeRequest(bridgeRequest);
-  const id = `content_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+  const id = `content_${Date.now()}_${randomHex(6)}`;
   const job = persistJob({
     id,
     request,
