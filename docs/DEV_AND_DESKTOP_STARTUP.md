@@ -39,6 +39,17 @@ npm.cmd run verify:ollama
 
 This checks the local Ollama HTTP API, picks an installed model, and runs one real generate round-trip.
 
+## Desktop end-to-end tests
+
+The real built app, driven by WebdriverIO and `tauri-driver`, on isolated test data:
+
+```powershell
+npm.cmd run tauri build -- --debug --no-bundle
+npm.cmd run test:e2e:desktop
+```
+
+Prerequisites (tauri-driver, an Edge driver matching WebView2) are at the top of `e2e-desktop/wdio.conf.mjs`. `npm run test:e2e` is the Playwright suite against the web build with the backend mocked.
+
 ## Preview
 
 Use preview when you want a built frontend preview without the desktop runtime:
