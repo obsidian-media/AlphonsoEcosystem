@@ -1,5 +1,7 @@
 # Phase 2 — Miya Studio Re-skin Spec
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 ## Scope
 
 Re-skin `MiyaStudio.tsx` (1726 lines, the single largest remaining hardcoded-color file in the app — 91 real color-class occurrences, verified via direct grep, not estimated). Everything lives in one file: the main `MiyaStudio` component (tab shell, header, generation handlers) plus 9 internal helper components defined below it (`ProductionPipelineMatrix`, `ExportPackageReadiness`, `LocalGenerationPanel`, `PipelineInputs`, `BrandKitEditor`, `OutputPanels`, `YouTubePublishHandoffPanel`, `CapCutExportHandoffPanel`, `Field`). Same direct spec-and-build recipe as the previous 4 re-skins this session — no new mockup round.

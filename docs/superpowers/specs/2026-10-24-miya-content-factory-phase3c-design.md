@@ -1,5 +1,7 @@
 # Miya content factory, phase 3c: storage, carousels, Instagram Login, in-app sign-in
 
+> **Status (2026-10-25):** built and merged in PR #350 (phase 3c); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 Date: 2026-10-24. Builds on phases 3a (publishing) and 3b (the Calendar). Phase 3
 is now four parts (owner, 2026-10-24): 3a, 3b (done), **3c** this document, **3d**
 Shorts as their own pieces (a new project starts with its own mini-script; the

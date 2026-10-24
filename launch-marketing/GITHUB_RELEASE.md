@@ -1,6 +1,8 @@
-# GitHub Release: Alphonso v2.6.5
+> Draft. Facts updated on 2026-10-25 to match the app on `main` (2.10.0, not released yet). Re-check the numbers on launch day.
 
-## 🚀 Alphonso v2.6.5 — Local-First AI Desktop Companion
+# GitHub Release: Alphonso v2.10.0
+
+## 🚀 Alphonso v2.10.0 — Local-First AI Desktop Companion
 
 **The AI that runs on your machine. Not someone else's server.**
 
@@ -8,32 +10,20 @@
 
 ### What's New
 
-#### 🎙️ Voice OS — Fully Rewritten
-The voice backend pipeline called a broken/nonexistent LLM function on every request and never awaited its own text-to-speech call. We rewrote it from scratch. Local voice conversations now work reliably with faster-whisper STT, Piper TTS, and Ollama LLM — all running on-device.
+#### 🧭 Jose plans and runs every request
+Ask anything. A plain question is answered at once; anything else Jose plans as steps for the right agents, shows you bigger plans first, and runs them with approval by what each step does: spending, publishing and deleting always ask. Watch every plan live on the Requests board, edit it, or save it as a template. Away from your desk? Jose asks you on Telegram, with Approve and Reject buttons.
 
-#### 📱 iOS Companion — Fixed & Functional
-The #1 reported issue: Mobile Companion pairing never worked. Root cause was a port collision — the Companion server and Voice OS were both trying to use port 8765. Fixed by moving Voice OS to port 8766. iOS cloud voice now supports multilingual routing including Persian/Farsi with device-gated authentication.
+#### 🎬 Miya Studio — from an idea to posted videos
+One idea becomes research, a timed script with hooks and two reviews, a storyboard, thumbnails, a voice-over in your brand's voice, music, stock and AI clips, and finished 16:9 and 9:16 videos, plus Shorts and carousels. Approve once and it posts to YouTube, Instagram and Facebook at their times. The Calendar shows every brand's posts; Alphonso reads each post's results and proposes lessons for the next one. Keep a brand character the same in every picture, and copy a movement from a clip you record.
 
-#### 🤖 Boardroom — Real-Time Multi-Agent Group Chat
-Boardroom is rebuilt as a true multi-agent conversation. @mention any of the 9 agents, get real persona-specific responses, bounded chaining with auto-escalation, cross-thread context recall, and a Stop button when things go sideways.
+#### 💸 Free by default, paid only if you choose
+Everything runs locally with free tools installed from Runtime Hub (Ollama, ComfyUI, Kokoro, MusicGen, Whisper, FFmpeg). ElevenLabs, Higgsfield, Runway, Claude and ChatGPT are optional; each run asks first with the cost, inside a monthly cap you set.
 
-#### 🔒 Security Hardening
-- Telegram companion bot now requires pre-configured chat ID (previously, first messenger became permanent owner)
-- Constant-time token comparison on all inbound webhook gateways
-- Full security audit of Discord, webhook, and CI posture
+#### 🍎 macOS is back
+An Apple Silicon build ships again (not yet signed by Apple: right-click → Open the first time), alongside Windows and Linux.
 
-#### 🐛 Bug Fixes
-- Fixed CMD windows flashing open/closed on Windows (process spawn flags)
-- Fixed sidebar navigation clipping on short windows
-- Fixed Coach Mode (zero permissions granted by Tauri capability system)
-- Fixed WhatsApp bot — added real commands (/status, /queue, /approve, /reject, /agents, /report, /ping, /help, /ask)
-- Fixed Telegram bot response and poll batch processing
-
-#### 🏗️ Architecture
-- 6 more services migrated to TypeScript (Sprint 5, batch 10)
-- ESLint now covers all `.ts`/`.tsx` files (previously never linted)
-- 3,758+ tests passing
-- Full in-app auto-update with signed manifests
+#### 🐛 Honest screens
+Connector checks say whether the service really answered, risk ratings come from what a command does, scheduled tasks really run, and anything that falls back says so.
 
 ---
 
@@ -41,18 +31,19 @@ Boardroom is rebuilt as a true multi-agent conversation. @mention any of the 9 a
 
 | Platform | Package |
 |----------|---------|
-| Windows x64 | [Alphonso_2.6.5_x64-setup.exe](https://github.com/obsidian-media/AlphonsoEcosystem/releases/download/v2.6.5/Alphonso_2.6.5_x64-setup.exe) |
+| Windows x64 | `Alphonso_2.10.0_x64-setup.exe` |
+| macOS (Apple Silicon) | `Alphonso_2.10.0_aarch64.dmg` |
+| Linux x64 | `Alphonso_2.10.0_amd64.AppImage` |
 
 ### System Requirements
-- Windows 10/11 (64-bit)
-- 8GB RAM minimum (16GB recommended for local models)
-- Ollama installed (we'll guide you through setup)
+- Windows 10/11 (64-bit), macOS on Apple Silicon, or 64-bit Linux
+- 8GB RAM minimum (16GB recommended); an NVIDIA card with 6–8GB of graphics memory for AI clips and motion
+- The Windows installer bundles Ollama and the starter model; Setup installs the rest
 
 ### Quick Start
 1. Download and run the installer
-2. Install Ollama from [ollama.com](https://ollama.com)
-3. Launch Alphonso — it'll detect Ollama and set everything up
-4. Start chatting with your 9 agents
+2. Setup checks your computer, asks what you want to do, and installs it
+3. Start chatting with your 9 agents, or open Miya Studio and make your first video
 
 ---
 

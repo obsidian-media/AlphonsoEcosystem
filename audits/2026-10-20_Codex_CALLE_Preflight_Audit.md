@@ -1,5 +1,7 @@
 # CALL-E Native/Live Preflight Audit
 
+> **Status (2026-10-25):** a real placed call is still not checked. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Date: 2026-10-20  
 Branch: `agent/Codex-priority-hardening`  
 Scope: deferred-work item J3 / CALL-E live verification

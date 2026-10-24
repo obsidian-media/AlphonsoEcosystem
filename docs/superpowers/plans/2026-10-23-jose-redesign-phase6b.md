@@ -1,5 +1,7 @@
 # Jose redesign phase 6b: the content factory as one Jose request — Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #342 (phase 6b); on `main`, not released yet. The current behaviour is in `CLAUDE.md`'s Jose rows and `docs/USER_MANUAL.md` section 5.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A Miya Studio project runs as one Jose request from the Content video template (with real review loops and a stop for your approval), each Studio tab can still redo its own step, Chat can start a project, and nothing outside Jose calls the old pipeline.

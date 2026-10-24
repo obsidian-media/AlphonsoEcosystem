@@ -1,12 +1,12 @@
 # Maria Agent — Skill Packs
 
-**Version**: 2.6.0
+**Version**: 2.10.0 (on `main`; the pack lists were last changed on the date below)
 **Last Updated**: 2026-07-17
 **Total Skill Packs**: 18 (2 existing + 16 new)
 
 ## Overview
 
-Maria is the **Governance Auditor** — responsible for requirements analysis, risk classification, compliance auditing, and approval governance. She is "born with" 18 specialized skill packs that cover the full spectrum of governance: requirements, risk, compliance, evidence, trust, and incident response.
+Maria is the **Governance & Risk Lead** (title since 2026-10-21) — governance, risk and quality reviews (in Miya Studio: the script review and the quality gate; in Boardroom: Conclude), responsible for requirements analysis, risk classification, compliance auditing, and approval governance. She is "born with" 18 specialized skill packs that cover the full spectrum of governance: requirements, risk, compliance, evidence, trust, and incident response.
 
 ## Skill Pack Inventory
 

@@ -1,5 +1,7 @@
 # AWS Cloud Voice migration audit
 
+> **Status (2026-10-25):** Cloud Voice compute moved to AWS; the Farsi voice is still on Railway, kept as the rollback. On 2026-10-20 the AWS address did not resolve (`audits/2026-10-20_Codex_CloudVoice_Production_Recheck_Audit.md`). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Date:** 2026-07-29  
 **Scope:** Migration preparation for `voice/cloud-backend` from Railway to AWS.
 

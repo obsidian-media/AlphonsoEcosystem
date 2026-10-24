@@ -1,12 +1,12 @@
 # Miya Agent — Skill Packs
 
-**Version**: 2.6.0
+**Version**: 2.10.0 (on `main`; the pack lists were last changed on the date below)
 **Last Updated**: 2026-07-19
 **Total Skill Packs**: 21 (5 existing + 16 new)
 
 ## Overview
 
-Miya is the **Creative Systems Designer** — responsible for UI/UX direction, brand identity, video production, and creative system structure. She is "born with" 21 specialized skill packs that cover the full creative lifecycle: strategy, design, production, and systematization.
+Miya is the **Creative Systems Designer** — responsible for UI/UX direction, brand identity, video production, and creative system structure. Since 2026-10-22 she does most of Miya Studio's content factory: hooks and scripts, scene plans and pictures (with the brand's character), thumbnails, voice-overs, music, sound effects, AI clips and motion, Shorts, carousels, campaigns, and lessons from results. She may spend only inside her paid media steps, which always ask, and never publishes (that is Marcus). She is "born with" 21 specialized skill packs that cover the full creative lifecycle: strategy, design, production, and systematization.
 
 ## Skill Pack Inventory
 

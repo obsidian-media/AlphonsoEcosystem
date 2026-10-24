@@ -2,17 +2,17 @@
 
 **Alphonso is free at launch.** Every agent, connector and local feature is available to every user, with no license key and no trial clock.
 
-_Last updated: 2026-09-30. This replaces an earlier draft that described a Pro/Enterprise price list, a 14-day trial, a Lemon Squeezy checkout and a "BSL 1.1" license. None of those were ever implemented, and the license is not BSL (see [License](#license) below)._
+_Last updated: 2026-10-25 (first written 2026-09-30). This replaces an earlier draft that described a Pro/Enterprise price list, a 14-day trial, a Lemon Squeezy checkout and a "BSL 1.1" license. None of those were ever implemented, and the license is not BSL (see [License](#license) below)._
 
 ---
 
 ## What "free" covers today
 
 - All 9 agents (Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova)
-- All 26 connectors, including the ones the code classifies as "premium" (Claude, ChatGPT, YouTube, Notion, ClickUp, WhatsApp, SD WebUI, ComfyUI)
-- Local Ollama inference, memory, workflows, Boardroom, voice, and the auto-updater
+- All 33 connectors, including the ones the code classifies as "premium" (Claude, ChatGPT, YouTube, Notion, ClickUp, WhatsApp, SD WebUI, ComfyUI)
+- Local Ollama inference, Jose's requests and plans, Miya Studio's content factory (from an idea to finished, posted videos, Shorts and carousels), the Calendar, memory, workflows, Boardroom, voice, and the auto-updater
 
-Connecting to a third-party service still means you bring your own account and API key. Any usage that provider bills is between you and them. Alphonso's Zero-Cost Mode and Approval Mode (both on by default) block paid or metered calls until you approve them.
+Connecting to a third-party service still means you bring your own account and API key. Any usage that provider bills is between you and them: for example Claude or ChatGPT for a step, Runway, ElevenLabs or Higgsfield in Miya Studio, or a CALL-E phone call. Alphonso's Zero-Cost Mode and Approval Mode (both on by default) block paid or metered calls until you approve them; spending always asks first with an estimate from the prices you enter, and a monthly cap you set stops spending past it.
 
 ## How paid tiers would come back later
 

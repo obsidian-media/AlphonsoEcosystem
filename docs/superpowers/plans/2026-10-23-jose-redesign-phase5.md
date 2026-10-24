@@ -1,5 +1,7 @@
 # Jose redesign, phase 5: away from the app — Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #340 (phase 5); on `main`, not released yet. The current behaviour is in `CLAUDE.md`'s Jose rows and `docs/USER_MANUAL.md` section 5.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Jose's requests can be followed and approved from Telegram, a request cut off when the app closed can be carried on, and waiting requests don't wait forever.

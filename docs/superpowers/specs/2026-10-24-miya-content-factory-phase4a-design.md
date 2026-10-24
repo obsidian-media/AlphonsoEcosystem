@@ -1,5 +1,7 @@
 # Miya content factory, phase 4a: learning from real results
 
+> **Status (2026-10-25):** built and merged in PR #352 (phase 4a); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 Date: 2026-10-24. Builds on phases 1–3d (`2026-10-22-miya-content-factory-design.md`, §7 "Learning" and §8 phase 4).
 Phase 4 is split: **4a** (this document: performance numbers, lessons, ideas, better post times, and the phase 3d
 leftovers) and **4b** (ElevenLabs and Higgsfield connectors, designed separately; the owner's answers for 4b are kept

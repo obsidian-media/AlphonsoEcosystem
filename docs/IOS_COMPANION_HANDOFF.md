@@ -1,5 +1,7 @@
 # Alphonso iOS Companion — Handoff Plan
 
+> **Status (2026-10-25):** built; pairing confirmed on a real device (PR #121, 2026-07-25). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Prepared by:** Kilo CLI agent (2026-06-22)
 **Branch:** `feat/kilo-mobile-companion` (merged to `main`); iOS work continues on `feat/ios-companion`
 **Status:** Phases 1–4 core complete; Phase 5 polish + final release pending
@@ -51,7 +53,7 @@ This file is the complete briefing for any agent (human or AI) picking up the iO
 ### Phase 2 — Desktop UI + mDNS Discovery (React)
 
 **Files created:**
-- `src/components/CompanionPairingPanel.jsx` — Full pairing UI with:
+- `src/components/CompanionPairingPanel.tsx` — Full pairing UI with:
   - "Generate PIN" button calling `companion_get_pin`
   - Large 6-digit PIN display with copy-to-clipboard
   - QR code rendering via `qrcode.react` (`QRCodeCanvas` named export)
@@ -76,7 +78,7 @@ This file is the complete briefing for any agent (human or AI) picking up the iO
 **Verification passed:**
 - `npm run build` — succeeds, main chunk 288KB (in 550KB budget)
 - `npx eslint src/components/CompanionPairingPanel.jsx` — zero errors
-- `npm run lint` — pre-existing errors in `connectorCircuitBreakerService.js`, `hectorBookmarkService.js`, `mariaWeeklyReportService.js`, `memoryMonitorService.js`, `unifiedMemoryService.js` are unrelated to this work
+- `npm run lint` — pre-existing errors in `connectorCircuitBreakerService.ts`, `hectorBookmarkService.ts`, `mariaWeeklyReportService.ts`, `memoryMonitorService.ts`, `unifiedMemoryService.js` are unrelated to this work
 - `npm run test` — test suite runs (workers spawn; full pass confirmed in earlier runs)
 
 **Key design decisions:**
@@ -122,7 +124,7 @@ This file is the complete briefing for any agent (human or AI) picking up the iO
 - `iOS/AlphonsoCompanion/Services/WebSocketService.swift` — Added sendRaw(), tokenCount, isStreaming state, task_complete event
 
 **What remains (desktop-side, macOS required for full testing):**
-- Token streaming (`token` events) needs to be wired from `generateOllamaChatStream` in `src/lib/ollama.js` through the WebSocket broadcast channel
+- Token streaming (`token` events) needs to be wired from `generateOllamaChatStream` in `src/lib/ollama.ts` through the WebSocket broadcast channel
 - Agent status events (`agent_status`) need to be emitted from the desktop when agent runtimes change state
 
 ### Phase 5 — Push Notifications + Polish
@@ -173,7 +175,7 @@ cargo fmt --all -- --check   # Format check
 - `src/services/telegramCompanionService.js` — **Telegram** companion (bot-based), completely separate from this WebSocket iOS companion
 - All 9 agent runtimes — the WebSocket server routes to these, does not reimplement them
 - `policyEnforcementService.ts` — all agent commands still go through this gate
-- `src/services/voiceService.js` — STT pipeline (only relevant if voice input on iOS is desired later)
+- `src/services/voiceService.ts` — STT pipeline (only relevant if voice input on iOS is desired later)
 
 ### What Already Works
 - Desktop server running on `0.0.0.0:8765`
@@ -230,7 +232,7 @@ Constraints:
 | JSON-RPC router | `src-tauri/src/companion_router.rs` |
 | Shared types | `src-tauri/src/companion_types.rs` |
 | Rust module registration | `src-tauri/src/lib.rs` (companion_* mods + invoke_handler) |
-| Pairing UI | `src/components/CompanionPairingPanel.jsx` |
+| Pairing UI | `src/components/CompanionPairingPanel.tsx` |
 | Pairing tests | `src/test/CompanionPairingPanel.test.jsx` |
 | Settings integration | `src/components/SettingsView.tsx` line ~1031 |
 | iOS target folder | `ios/AlphonsoCompanion/` (Phase 3 complete) | |

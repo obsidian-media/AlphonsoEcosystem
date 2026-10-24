@@ -1,5 +1,7 @@
 # Free-Tier Cloud Providers (NVIDIA NIM + Gemini) Implementation Plan
 
+> **Status (2026-10-25):** built (PR #122, 2026-07-25); Gemini defaults updated 2026-09-04.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add two new zero-cost-by-default connectors — NVIDIA NIM and Google Gemini (AI Studio free tier) — following the exact pattern of the existing `deepseekConnector.ts`, wired into the registry, credential UI, health checks, and Zero-Cost Mode gate, with graceful rate-limit handling and a mandatory user-facing disclosure.
@@ -323,7 +325,7 @@ describe('geminiConnector', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/test/geminiConnector.test.js`
-Expected: FAIL — module `../services/connectors/geminiConnector.js` not found.
+Expected: FAIL — module `../services/connectors/geminiConnector.ts` not found.
 
 - [ ] **Step 3: Write minimal implementation**
 

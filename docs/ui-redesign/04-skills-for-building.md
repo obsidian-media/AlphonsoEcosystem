@@ -1,5 +1,7 @@
 # Skills to Use While Building This, Page by Page
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Checked the real stack first rather than guessing: `package.json` confirms **Tailwind CSS v3.4** (not v4 — so v4-specific skills don't apply), **Framer Motion 12**, **lucide-react** icons. Recommendations below are matched to what's actually installed.
 
 ## Core, use on every page

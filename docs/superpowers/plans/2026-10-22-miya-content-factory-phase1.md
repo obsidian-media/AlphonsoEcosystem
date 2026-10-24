@@ -1,5 +1,7 @@
 # Miya Content Factory, Phase 1 Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #332 (phase 1); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Turn Miya Studio into a project-based content engine for phase 1:
@@ -388,7 +390,7 @@ pictures go into new sub-folders.
 - Test: `src/test/services/contentFactory/contentQualityGate.test.ts`
 
 **Interfaces:**
-- Consumes: Tasks 2, 3 and 8. `appendAgentActivity`. Echo's memory through `addMemoryItem` from `src/services/unifiedMemoryService.ts` (check its export name first).
+- Consumes: Tasks 2, 3 and 8. `appendAgentActivity`. Echo's memory through `addMemoryItem` from `src/services/unifiedMemoryService.js` (check its export name first).
 - Produces:
   - `visiblePieces(project, brand): { pieceId; score; weakPoints; visible: boolean }[]`. `visible = score >= brand.qualityThreshold || project.brief.showEverything`.
   - `rejectPiece(projectId, step, pieceId, reason): ContentProject`. Calls `sendBackStep`, then `addBrandLesson(brand.id, \`${step}: ${reason}\`, 'rejection')`, then `addMemoryItem` with `{ category: 'preference_memory', agent: 'echo', content: … }`.

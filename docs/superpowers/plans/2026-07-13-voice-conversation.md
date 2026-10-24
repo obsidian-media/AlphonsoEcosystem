@@ -1,5 +1,7 @@
 # Voice Conversation Implementation Plan
 
+> **Status (2026-10-25):** built in July 2026; desktop Voice OS reworked on 2026-10-22 (whole utterances, the model chosen in Settings).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Deliver reliable iOS push-to-talk conversations with spoken Local and Cloud replies, explicit nine-agent personas, and English/Farsi turn switching.

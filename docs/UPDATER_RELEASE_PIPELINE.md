@@ -1,6 +1,6 @@
 # Alphonso Updater Release Pipeline (Tauri v2)
 
-This project now includes a one-command updater release flow:
+This is the **local** alternative to the CI release (`.github/workflows/release.yml`, see `docs/RELEASE.md`), which is the normal way to release and builds Windows, macOS and Linux. The local flow builds the Windows updater artifacts:
 
 ```powershell
 npm.cmd run release:updater
@@ -30,7 +30,7 @@ Set these in your shell before running the command:
 ```powershell
 $env:TAURI_SIGNING_PRIVATE_KEY="C:\path\to\alphonso.key"
 $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""
-$env:ALPHONSO_UPDATE_BASE_URL="https://github.com/obsidian-media/Alphonso/releases/download/v0.1.0"
+$env:ALPHONSO_UPDATE_BASE_URL="https://github.com/obsidian-media/AlphonsoEcosystem/releases/download/v<version>"
 $env:GITHUB_TOKEN="ghp_..."
 $env:GITHUB_REPOSITORY="owner/repo"
 ```
@@ -45,8 +45,8 @@ Notes:
 
 After success:
 
-- `Alphonso_0.1.0_x64-setup.exe`
-- `Alphonso_0.1.0_x64-setup.exe.sig`
+- `Alphonso_<version>_x64-setup.exe`
+- `Alphonso_<version>_x64-setup.exe.sig`
 - `latest.json`
 
 `latest.json` format is Tauri static-updater compatible and includes:
@@ -60,11 +60,9 @@ After success:
 ## Publish flow
 
 1. Upload the exported installer and `.sig` to your release host.
-2. Upload `latest.json` to the endpoint configured in Alphonso settings.
-3. In the app, set:
-   - Updater Endpoint
-   - Updater Public Key
-4. Keep Auto Update Checks enabled.
+2. Upload `latest.json` to the endpoint in `src-tauri/tauri.conf.json` (`plugins.updater.endpoints`; the GitHub `releases/latest/download/latest.json` path by default).
+3. The public key the app checks against is `plugins.updater.pubkey` in the same file.
+4. Installed copies check at launch and install the update in the app.
 
 ## Optional skip-build mode
 

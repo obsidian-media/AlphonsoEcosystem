@@ -1,10 +1,12 @@
 # Boardroom External-Action Confirmation Gate — Phase 11 Implementation Plan
 
+> **Status (2026-10-25):** built on 2026-07-10 and shipped in v2.6.0. Later: the old "Boardroom Legacy" tab was removed and its Conclude, Distribute and Creative brief actions moved onto every thread (2026-10-21), and those actions became one-step Jose requests (Jose redesign phase 6a, PR #341).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Spec 1.10.13 — gate high-risk, action-proposing content behind an
 explicit user confirmation before it's shown in full, mirroring the real
-`ApprovalModal.jsx` pattern used elsewhere in the app for actual connector
+`ApprovalModal.tsx` pattern used elsewhere in the app for actual connector
 actions.
 
 **Honest scope limitation, stated up front — this is the important one for

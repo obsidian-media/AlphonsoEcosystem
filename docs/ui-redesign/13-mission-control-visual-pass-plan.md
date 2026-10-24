@@ -1,5 +1,7 @@
 # Mission Control Visual Pass — Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (inline, per this session's standing "no subagents" instruction). Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Execute `07-phase2-mission-control-spec.md`'s "Visual Pass Design" section — replace `MissionControlHome.tsx`'s static banner hero and 4-tile stats row with the locked design (agent-portrait strip, dynamic greeting, 2 context-rich stat tiles, Zone-styled sections, a real empty state) — while resolving one real conflict this plan found between that spec and an already-passing test, documented in Task 4 below.

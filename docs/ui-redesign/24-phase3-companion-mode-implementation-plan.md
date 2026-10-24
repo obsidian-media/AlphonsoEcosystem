@@ -1,5 +1,7 @@
 # Phase 3 — Companion Mode (Draft B) Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Status: **Approved to build.** User confirmed Phase 3 = building `draft-b-normal-user-direction.md`'s locked skeleton, and confirmed the integration decision below via explicit choice (not assumed).
 
 ## Integration decision (locked)
@@ -29,7 +31,7 @@ One new page: the Companion Mode home/chat screen, per the draft's "Skeleton" se
 3. **Active agent header** — name (Fraunces) + a short greeting line. Greetings are new, hand-written per agent (not fabricated from thin air — grounded in each profile's real `purpose`/`personality` fields), added as a small local `COMPANION_GREETINGS` map in the new component, not a change to the agent profile files themselves (keeps this UI-only, no backend churn).
 4. **Chat area** — tailed bubbles (mine = solid dark, theirs = soft translucent), each incoming message shows the responding agent's mini avatar. Real animated 3-dot typing indicator while a response is pending.
 5. **Quick-start chip row** — shown once, right after switching agents. Miya's chips are image-gen-flavored, Hector's are research-flavored (per the draft's two clearest examples); the other 7 agents get one generic-but-real chip set grounded in their actual `purpose` field, not invented busywork. This directly resolves the draft's open item #3 with a real (if simple) answer instead of leaving it undesigned.
-6. **Bottom input bar** — pill-shaped, icon-prefixed (changes per active agent), mic icon. Mic reuses the existing `useVoiceInput.ts`/`SmartVoiceButton.tsx` plumbing rather than a new voice implementation.
+6. **Bottom input bar** — pill-shaped, icon-prefixed (changes per active agent), mic icon. Mic reuses the existing `useVoiceInput.js`/`SmartVoiceButton.tsx` plumbing rather than a new voice implementation.
 7. **Background** — layered blurred organic color blobs (CSS, static default palette only — see Non-goals for per-agent variation).
 
 ### Real chat, not a mockup

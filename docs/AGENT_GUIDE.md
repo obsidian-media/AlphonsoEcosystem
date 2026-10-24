@@ -1,14 +1,14 @@
 # Agent Guide
 
-Alphonso has 9 specialized agents. Each has a defined role, permissions, and constraints enforced by `agentContractService.js`.
+Alphonso has 9 specialized agents. What each may do is one table, `src/services/jose/agentPermissionTable.ts`: everyone may read and create new files of its own; only **Alphonso** may run code or change project files; only **Marcus** may publish or send. Spending is allowed only on certain steps (a paid-model step, Miya's paid media steps, Marcus's paid sends) and always asks. `agentContractService.ts` and Jose's plan check enforce it.
 
 ## Agent Roster
 
 ### Alphonso — Local Operator
 **Role:** General execution, verification, packaging
 **Can do:** Run commands, read/write files, build projects, verify outputs
-**Cannot:** Bypass approval gates for risky actions
-**When to use:** Default agent for most tasks. When you say "build me a website" or "fix this bug", Alphonso handles it.
+**Cannot:** Bypass approval gates (commands that run code ask according to Settings; commands that delete always ask); spend or publish
+**When to use:** Building, fixing, testing. In Miya Studio, Alphonso assembles the finished video.
 **Skill Packs (18):**
 - Core Coding: `pack.coding.full-stack`, `pack.coding.tdd`, `pack.alphonso-typescript-mastery`, `pack.alphonso-rust-operations`, `pack.alphonso-react-patterns`, `pack.alphonso-python-voice`
 - Verification: `pack.alphonso-code-review`, `pack.alphonso-build-verification`, `pack.alphonso-refactoring`, `pack.debugging.root-cause`
@@ -17,11 +17,11 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 - Existing: `pack.codex-professional-coding`, `pack.alphonso-runtime-operations`
 
 ### Jose — Orchestrator
-**Role:** Intake, routing, decomposition, merge, confirm, report
-**Can do:** Break complex tasks into sub-tasks, assign to other agents, merge results
-**Cannot:** Bypass high-risk restrictions
-**When to use:** Complex multi-step requests. Jose automatically decomposes "research X, write a report, and email it" into sub-tasks for Hector, Miya, and Marcus.
-**Skill Packs (22):**
+**Role:** Answers or plans every request, runs the plan, reports
+**Can do:** Answer plain questions; plan a request as steps (agent, action, what each needs), from a template or fresh; show bigger plans first; change a plan while it runs (review rounds, help, a larger model, a paid model if you allow them); tell you on Telegram what waits for you
+**Cannot:** Run code or publish; spend only on a paid-model step, which always asks; a plan that breaks the permission table doesn't run
+**When to use:** Everything — every message reaches Jose. "Research X, write a report and post it to Slack" becomes steps for Hector, Miya and Marcus, with the Slack step waiting for your approval. Plans are on the Requests board (System → Orchestrator → Requests).
+**Skill Packs (21, plus the shared executing-plans pack):**
 - Orchestration: `pack.jose-professional-orchestration`, `pack.jose-task-routing`, `pack.jose-approval-gating`, `pack.jose-cross-agent-synthesis`, `pack.jose-pipeline-governance`, `pack.workflow.executing-plans`
 - Planning: `pack.jose-workflow-design`, `pack.jose-strategic-planning`, `pack.jose-dependency-mapping`
 - Coordination: `pack.jose-agent-coordination`, `pack.jose-parallel-orchestration`, `pack.jose-task-prioritization`
@@ -32,11 +32,11 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 
 ### Hector — Researcher
 **Role:** Finds facts and sources (including competitors' public material), with citations
-**Runtime:** `src/services/hectorResearchService.js` — Brave Search + RSS + Ollama-powered
-**Can do:** Web search, document analysis, source verification, API docs research, compliance research, competitive analysis
-**Cannot:** Execute terminal commands, filesystem operations, posting, or purchases
+**Runtime:** `src/services/hectorResearchService.js` — Brave Search, Tavily, Perplexity, DuckDuckGo and RSS (through the backend), synthesized with Ollama
+**Can do:** Web search, document analysis, source verification, API docs research, compliance research, competitive analysis; in Miya Studio, what goes viral and a stock clip for each scene (Pexels, Pixabay, Coverr)
+**Cannot:** Run commands, change project files, post, or spend
 **When to use:** "Research the latest trends in AI", "Find sources for this claim", "Summarize this article"
-**Skill Packs (23):**
+**Skill Packs (21, plus the shared executing-plans and GitHub research packs):**
 - Existing: `pack.hector-professional-marketing`, `pack.hector-market-research`, `pack.hector-competitive-analysis`, `pack.hector-source-verification`, `pack.hector-rss-monitoring`, `pack.workflow.executing-plans`, `pack.github.research`
 - API Research: `pack.hector-api-documentation-research`, `pack.hector-api-integration-research`
 - Compliance: `pack.hector-compliance-research`, `pack.hector-security-research`
@@ -47,17 +47,18 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 
 ### Miya — Creative
 **Role:** UI/UX and creative systems, content creation, and front-end design and code drafts
-**Can do:** Write scripts, scenes, thumbnails and campaigns (Miya Studio's content factory), plan UI/UX and brand direction, and draft front-end designs and code for Alphonso to build
-**Cannot:** Run code or commands (only Alphonso does), or publish without approval
-**When to use:** "Write a YouTube script about X", "Create a marketing strategy", "Design a storyboard".
+**Can do:** Miya Studio's content factory: scripts with hooks, scene plans and pictures (with the brand's character), thumbnails, voice-overs, music, sound effects, AI clips and motion, Shorts, carousels and campaigns, and lessons from results; plan UI/UX and brand direction; draft front-end designs and code for Alphonso to build
+**Cannot:** Run code or commands (only Alphonso does) or publish (only Marcus does); paid engines (ElevenLabs, Higgsfield, Runway) only inside a step you approved
+**When to use:** "Make a YouTube video about X" (starts a Miya Studio project), "Write a script", "Create a marketing strategy", "Design a storyboard".
+**Skill Packs (21).**
 
-### Maria — Governance Auditor
-**Role:** Risk assessment, compliance review, approval gating
-**Runtime:** `src/services/mariaAuditService.js` — Ollama-powered with deterministic fallback
-**Can do:** Run governance audits on any assignment, score risk (low/medium/high/critical), flag policy violations, emit compliance notes, gate Marcus execution
+### Maria — Governance & Risk Lead
+**Role:** Governance, risk and quality reviews
+**Runtime:** `src/services/mariaAuditService.ts` — Ollama-powered with deterministic fallback
+**Can do:** Run governance audits, score risk (low/medium/high/critical), flag policy violations, emit compliance notes; review scripts and run the quality gate in Miya Studio; Boardroom's Conclude. She says when her verdict came from the rule-based check because the model's reply couldn't be read
 **Cannot:** Perform destructive execution
 **Schema:** `riskLevel`, `approvalRequired`, `policyFindings[]`, `complianceNotes[]`, `summary`
-**When to use:** Automatic — Jose routes governance-flagged actions through Maria before Marcus executes. High/critical risk with `approvalRequired=true` blocks Marcus.
+**When to use:** Jose plans her review steps; a review that finds problems sends the work back (at most 2 rounds).
 **Skill Packs (18):**
 - Governance: `pack.maria-audit-governance`, `pack.maria-trust-verification`
 - Requirements: `pack.maria-requirements-analysis`, `pack.maria-risk-classification`
@@ -68,38 +69,40 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 - Documentation: `pack.maria-documentation-review`, `pack.maria-stakeholder-reporting`
 - Incident: `pack.maria-incident-response`
 
-### Marcus — Distribution Executor
-**Role:** Approved distribution execution across GitHub, Slack, and publish platforms
-**Runtime:** `src/services/marcusExecutionService.js` — requires Maria governance clearance
-**Can do:** Create GitHub releases and issues, send Slack messages, dispatch multi-platform publish (Instagram, YouTube, Telegram, WhatsApp, Notion, ClickUp) — but only after Maria clears the risk level
-**Cannot:** Execute anything not explicitly approved or where Maria flagged critical/high with `approvalRequired`
+### Marcus — Distribution & Release Manager
+**Role:** The only agent that publishes or sends — always after your approval
+**Runtime:** `src/services/marcusExecutionService.ts` — also the one scheduler for posts
+**Can do:** Post a project's videos, Shorts and carousels to YouTube, Instagram and Facebook at their times (YouTube and Facebook are scheduled on the platform; Instagram is sent by his runner, also after the app was closed), remind you of posts to make by hand, create GitHub releases and issues, send Slack messages
+**Cannot:** Publish or send anything you haven't approved
+**Skill Packs (15):** release, distribution and communication packs (his security and risk packs moved to Sentinel and Maria on 2026-10-23)
 **Schema:** `workflowId`, `connectorId`, `approvedBy: "maria-governance"`, `status`, `resultUrl`, `executedAtMs`
-**When to use:** "Post this to Telegram", "Create a GitHub release", "Send Slack notification" (after Maria audit).
+**When to use:** "Post this to Slack", "Create a GitHub release", or Campaign Studio's **Approve and schedule**.
 
 ### Echo — Knowledge Historian
 **Role:** Memory synthesis and archival across all agent outputs
-**Runtime:** `src/services/echoMemoryService.js` — Ollama-powered with deterministic fallback
+**Runtime:** `src/services/echoMemoryService.ts` — Ollama-powered with deterministic fallback
 **Can do:** Synthesize memories from workflow outputs, classify retention policy (permanent/standard_180d/ephemeral_7d), categorize memories (project/timeline/preference/orchestration), normalize confidence levels
 **Cannot:** Modify or delete without approval
 **Schema:** `memoryId`, `category`, `retentionPolicy`, `sensitivity`, `confidenceLevel`, `archivedAtMs`
-**When to use:** Automatic — Echo runs after workflow completion to preserve important context and knowledge.
+**When to use:** Automatic — Echo saves a request's decisions when it finishes, and remembers what you reject in Miya Studio.
 
 ### Sentinel — Security Monitor
 **Role:** Security monitoring and automation safety
-**Runtime:** `src/services/sentinelSecurityService.js` — two-layer detection: deterministic + Ollama
-**Can do:** Monitor for threats, validate safety of automated actions
+**Note:** security only (risk and quality reviews are Maria's)
+**Runtime:** `src/services/sentinelSecurityService.ts` — two-layer detection: deterministic + Ollama
+**Can do:** Monitor for threats, validate safety of automated actions, scan the last week of activity (the sidebar's quick scan says how much it looked at), check content before it's posted
 **Cannot:** Perform destructive execution
 **When to use:** Automatic — Sentinel monitors all external interactions for security risks.
 
 ### Nova — Opportunity Analyst
 **Role:** Opportunity scoring, prioritization, and strategic analysis
-**Runtime:** `src/services/novaAnalysisService.js` — 4-dimension scoring + Ollama strategic analysis
+**Runtime:** `src/services/novaAnalysisService.ts` — 4-dimension scoring + Ollama strategic analysis
 **Can do:** Score opportunities across 4 dimensions (valueScore/riskScore/timingScore/effortScore), classify priority tier (watchlist/medium/high/critical), generate strategic recommendations, store scores for decomposition hints, identify favorable opportunity/risk ratios
 **Cannot:** Execute actions — analysis and recommendation only
 **Schema:** `opportunityId`, `valueScore`, `riskScore`, `timingScore`, `effortScore`, `priorityTier`, `recommendation`, `analyzedAtMs`
-**When to use:** "Which of these is most promising?", "Prioritize these tasks", "Analyze this opportunity". Nova also runs automatically to score incoming commands for Jose's routing decisions.
+**When to use:** "Which of these is most promising?", "Prioritize these tasks", "Analyze this opportunity". In Miya Studio, Nova checks the market, reviews the script's value, suggests post times, and turns each post's results into lessons and follow-up ideas.
 
-## Hermes agent backend (PR 1a shipped — bare connector)
+## Hermes agent backend (opt-in, per agent)
 
 Every agent's "thinking" comes from local Ollama by default (with NVIDIA/Gemini
 as alternate providers — see `modelSelectionService.ts`, `ModelSwitcher.tsx`).
@@ -119,15 +122,13 @@ the per-agent provider map in `modelSelectionService.ts`
 UI and `AgentProvidersSection` picker, and the shared `generateAgentLlmResponse`
 dispatcher in `src/lib/ollama.ts` wired into every confirmed per-agent LLM
 call site (see the "Shared per-agent LLM dispatcher" row in `CLAUDE.md`'s
-Do Not Duplicate table for the exact list). Stateless calls only — no circuit
-breaker, rate limiter, policy/approval gating, or session continuity yet.
-
-**PR 1b (not started):** connector-infrastructure parity (health-check panel
-registration, circuit breaker, rate limiter, audit log), policy/approval
-gating for Hermes-backed turns (since a Hermes profile can execute real tools,
-not just generate text), and session continuity via Hermes' own
-`X-Hermes-Session-Id`/memory. **Phase 2 (not started):** bundling Hermes into
-the installer for new users.
+Do Not Duplicate table for the exact list). **PR 1b (done 2026-08-21):** health-check registration, circuit breaker, rate
+limiter, audit log and approval gating for Hermes-backed turns (a Hermes
+profile can run real tools, not just generate text). **Session continuity
+(done 2026-10-06):** each per-agent call passes a natural session id through
+`X-Hermes-Session-Id`. A Hermes endpoint that isn't on this computer counts as
+paid, so Zero-Cost Mode blocks it. **Phase 2 (deferred, opt-in decided):**
+bundling Hermes into the installer for new users.
 
 Full design lives in `docs/HERMES_AGENT_DELEGATION_PLAN.md`. **That file is
 gitignored** (it references this machine's own local Hermes install
@@ -139,31 +140,33 @@ starting Phase 1b or Phase 2.
 ## How Agents Collaborate
 
 ```
-You: "Research AI trends and write a blog post"
-  → Jose decomposes:
-    → Hector: Research AI trends (with citations)
-    → Miya: Write blog post based on research
-    → Maria: Review for accuracy and tone
-    → Jose: Merge and confirm
-  → You: Review and approve
-  → Marcus: Publish (if requested)
+You: "Research AI trends, write a blog post and post it to Slack"
+  → Jose plans (from the Research report template, adapted):
+    → hector: research AI trends, with citations
+    → miya: write the post             (needs hector)
+    → maria: review accuracy and tone  (needs miya; may send it back, 2 rounds)
+    → marcus: post to Slack            (needs maria; publish_or_send: waits for you)
+  → You: approve on the board, in Chat or on Telegram
+  → Marcus posts; Echo saves what was decided
 ```
 
 ## Agent Permissions Matrix
 
-| Agent | Terminal | Files | External | Approval | Memory |
-|-------|----------|-------|----------|----------|--------|
-| Alphonso | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
-| Jose | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Hector | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Miya | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Maria | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Marcus | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Echo | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Sentinel | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Nova | ❌ | ❌ | ❌ | ❌ | ✅ |
+From `agentPermissionTable.ts` and the plan check. Settings → General → What asks first decides which allowed effects ask; spend and publish always do.
 
-✅ = Allowed | ⚠️ = Approval required | ❌ = Blocked
+| Agent | Read | Write its own work | Change project files | Run code | Spend | Publish or send |
+|-------|------|------|------|------|------|------|
+| Alphonso | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Jose | ✅ | ✅ | ❌ | ❌ | ⚠️ paid-model steps | ❌ |
+| Hector | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Miya | ✅ | ✅ | ❌ | ❌ | ⚠️ paid media steps only | ❌ |
+| Maria | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Marcus | ✅ | ✅ | ❌ | ❌ | ⚠️ | ⚠️ |
+| Echo | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Sentinel | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Nova | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+✅ = Allowed | ⚠️ = Allowed, always asks | ❌ = Not allowed. Any step Jose gives a paid model (Claude, ChatGPT) may spend, and always asks.
 
 ## Agents in Voice OS
 
@@ -185,4 +188,4 @@ The Voice OS agent routing is stateless per utterance — each transcription is 
 
 ## Viewing Agent Activity
 
-Open the **Activity** tab to see real-time agent actions, decisions, and audit logs. Voice OS activity (server start/stop) is also logged here via `agentActivityService`.
+Open **Runtimes → Activity** to see real-time agent actions, decisions, and audit logs; each Jose request's steps and outputs are on the Requests board. Voice OS activity (server start/stop) is also logged here via `agentActivityService`.

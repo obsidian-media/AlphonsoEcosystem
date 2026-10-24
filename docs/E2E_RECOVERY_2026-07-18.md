@@ -1,5 +1,7 @@
 # E2E Recovery Ledger — 2026-07-18
 
+> **Status (2026-10-25):** the Playwright suite has been a required check since 2026-08-22, and a desktop suite against the real app (34 spec files) runs in CI. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 ## Baseline
 
 `npx playwright test --reporter=line` collected 28 tests. The command exceeded

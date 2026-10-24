@@ -1,5 +1,7 @@
 # Offline Mode — Current Capabilities & Gaps
 
+> **Status (2026-10-25):** the audit still describes the design. Since then: the starter model is bundled with the Windows installer (v2.8.0), and a reply that can't stream is still delivered through the backend (2026-10-21).
+
 ## Current State Audit
 
 Alphonso is a **local-first** application. The desktop app already has significant offline capability by design. This document verifies current offline behavior and identifies gaps.
@@ -69,7 +71,7 @@ try {
 ### Gap 3: Queued Commands
 **Current**: Commands requiring network fail immediately if offline.
 
-**Recommended**: Simple offline queue in `orchestrationQueueService.js`:
+**Recommended**: Simple offline queue in `orchestrationQueueService.ts`:
 - When a connector command fails with network error, move to `pending_network` state
 - `ConnectivityMonitor` picks up queued items when back online
 - User sees "Waiting for network" status in task detail
@@ -158,6 +160,6 @@ export const connectivityMonitor = {
 
 ### Sprint C: Offline Queue (Days 4-6)
 - Create `offlineQueueService.js` — SQLite-backed queue
-- Wire into `orchestrationQueueService.js` — detect network errors, enqueue
+- Wire into `orchestrationQueueService.ts` — detect network errors, enqueue
 - Wire into `connectivityMonitor` — on reconnect, drain queue
 - UI: `OfflineTaskIndicator` showing queued items with retry status

@@ -20,8 +20,8 @@ You are a connector verification agent for Alphonso. You confirm that each conne
 
 ### The 9 Connector Paths
 For each connector, verify:
-1. **Frontend path** exists in `src/services/connectorRegistryService.js`
-2. **Policy gate** — call goes through `policyEnforcementService.js` before external call
+1. **Frontend path** exists in `src/services/connectorRegistryService.ts`
+2. **Policy gate** — call goes through `policyEnforcementService.ts` before external call
 3. **Rust command** exists in `src-tauri/src/lib.rs` or extracted module
 4. **HTTP call** — real `reqwest` call to external API (not mocked, not hardcoded)
 5. **Proof object** — returns `{ success, proof, trustRating }` or similar

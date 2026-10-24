@@ -1,5 +1,7 @@
 # ALPHONSOTOTHEMOON
 
+> **Status (2026-10-25):** the sprint roadmap's last entry is 2026-10-06. Since then the work has moved to the Jose redesign (phases 1–6b) and Miya's content factory (phases 1–4c), tracked in `docs/TRUTH_FIRST_EXECUTION_PLAN.md` section K and `docs/governance/DEFERRED_WORK.md`. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 10 of N, v2.5.18): 6 more root-level services migrated to TypeScript (novaAnalysisService, missionRoomService, eventsService, workflowRegistryService, marcusExecutionService, workflowOperationsRegistryService). Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
@@ -120,7 +122,7 @@ second-class citizen relative to native connectors.
 
 ### 3.5 Kernel-style scheduler supervision (heartbeat/health, not just cron) — MEDIUM priority
 **Source pattern:** OpenFang `scheduler.rs`, `supervisor.rs`, `heartbeat.rs`.
-**Current gap:** `joseSchedulerService.js` already does cron-style scheduling
+**Current gap:** `joseSchedulerService.ts` already does cron-style scheduling
 (`createSchedule`, `listSchedules`, `startScheduler`/`stopScheduler`) but does not
 supervise agent health — it fires on a timer and trusts the run completes.
 **Plan:** Add heartbeat/liveness checks to scheduled agent runs; auto-restart or
@@ -173,8 +175,8 @@ implements:
    `agent_skill`-category default pack. Alphonso, Marcus, Echo, Sentinel, Nova do not.
    This sprint adds default skill packs for the remaining 4 agents, matching their
    existing runtime services (e.g. `pack.sentinel-vuln-scan` wrapping
-   `sentinelSecurityService.js`'s scan capability, `pack.echo-memory-synthesis`
-   wrapping `echoMemoryService.js`).
+   `sentinelSecurityService.ts`'s scan capability, `pack.echo-memory-synthesis`
+   wrapping `echoMemoryService.ts`).
 3. **Module system convergence.** `modules/` (TOML manifests, e.g.
    `alphonso.researcher.web_monitor`) and `skillPackService.ts` (JSON packs in
    localStorage) are two parallel capability-packaging systems today. This sprint
@@ -190,7 +192,7 @@ implements:
 ## 5. Connector expansion
 
 Alphonso already has 15 policy-gated connectors with a proven pattern
-(`connectorRegistryService.js` + credential UI in `ConnectorSetupPanel.jsx`
+(`connectorRegistryService.ts` + credential UI in `ConnectorSetupPanel.tsx`
 `CredentialSection` + Rust backend in `connector_commands.rs`). OpenFang has 40 channel
 adapters + 27 LLM providers; the gap is breadth, not architecture. This sprint targets
 the highest-leverage additions using the existing connector pattern — no redesign
@@ -203,14 +205,14 @@ needed.
    Alphonso without a bespoke connector; unlocks long-tail integrations cheaply.
 3. **Email (SMTP send / IMAP poll)** — high utility, well-understood protocol,
    pairs naturally with Marcus (distribution) and Echo (inbox watcher pattern already
-   exists via `echoFileWatcherService.js` — same polling shape).
+   exists via `echoFileWatcherService.ts` — same polling shape).
 
 **Backlog (post-sprint-1):** Signal, Matrix, X/Twitter (OpenFang has a whole "Hand"
 for this — worth studying their rate-limit/anti-detection handling specifically before
 building), generic RSS-out.
 
 Each follows the existing pattern: connector service in
-`src/services/connectors/`, credential section in `ConnectorSetupPanel.jsx`,
+`src/services/connectors/`, credential section in `ConnectorSetupPanel.tsx`,
 policy gate entry in `policyEnforcementService.ts`, license-tier gate in
 `licenseService.ts` if premium, Rust command in `connector_commands.rs` if native
 access is needed, tests in `src/test/`.
@@ -232,7 +234,7 @@ first new connector (Discord) — all without breaking the existing 3,174+ test 
 | 5 | Add per-execution loop-guard + token/time budget | `joseExecutionEngineService.ts`, `agentContractService.ts` | — | ✅ Done |
 | 6 | Add resumable-execution checkpoint on top of existing DLQ | `orchestrationQueueService.ts`, `App.tsx` | — | ✅ Done (Sprint 2) |
 | 7 | Discord connector (credential UI + service + policy gate) | `src/services/connectors/discordConnector.ts` (new), `ConnectorSetupPanel.tsx`, `connectorRegistry.js`, `policyEnforcementService.ts` | — | ✅ Done (Sprint 2) |
-| 8 | Generic inbound webhook connector | `gateway/generic-webhook/` (new), `genericWebhookService.js` (new), `ConnectorSetupPanel.tsx`, `App.tsx` | — | ✅ Done (Sprint 2) |
+| 8 | Generic inbound webhook connector | `gateway/generic-webhook/` (new), `genericWebhookService.ts` (new), `ConnectorSetupPanel.tsx`, `App.tsx` | — | ✅ Done (Sprint 2) |
 | 9 | Update `CLAUDE.md` Do-Not-Duplicate table + Real Gaps section post-sprint | `CLAUDE.md` | — | ✅ Done |
 | 10 | Full test run + typecheck + clippy before marking sprint done | — | — | ✅ Done (with caveat — see §8) |
 
@@ -325,8 +327,8 @@ into Sprint 2+ — not dropped.
     pattern instead, generalized to accept any `sourceId`:
     `gateway/generic-webhook/` (new standalone deployable, its `security.js`
     is a verbatim copy of the WhatsApp gateway's — already fully generic,
-    no WhatsApp-specific logic in it) + `genericWebhookService.js` (poller,
-    mirrors `echoFileWatcherService.js`'s config+interval shape). No Rust
+    no WhatsApp-specific logic in it) + `genericWebhookService.ts` (poller,
+    mirrors `echoFileWatcherService.ts`'s config+interval shape). No Rust
     code was touched this sprint as a result.
   - `connectorGitHubSlack.test.ts` asserted `DEFAULT_CONNECTORS.length` ===
     14, which was accurate pre-Sprint-2 (verified against the committed
@@ -523,8 +525,8 @@ into Sprint 2+ — not dropped.
     `getChannelHistory` — confirmed it's outbound-only with no automatic
     ingestion pipeline, so the "Discord message content reaching agent
     prompts" threat from the sprint doc doesn't currently exist. Did the
-    same trace for `genericWebhookService.js` and
-    `whatsappBrowserConnector.js` — neither forwards raw payload content
+    same trace for `genericWebhookService.ts` and
+    `whatsappBrowserConnector.ts` — neither forwards raw payload content
     into `createJoseCommandRoute`.
   - That last check is what surfaced the real finding: grepping for
     `createJoseCommandRoute(` across the codebase showed
@@ -586,12 +588,12 @@ into Sprint 2+ — not dropped.
   `src/services/connectors/` directly (10 `.js` + 3 `.ts`) rather than
   assuming from the doc's root-level 115/16 figure, and picked the smallest
   files first within that subsystem, per its own "small and self-contained"
-  guidance: `connectorConstants.js` (6 lines) as a pattern sanity-check,
-  then `tavilyConnector.js`/`perplexityConnector.js`/`deepseekConnector.js`
-  (55-67 lines), then `n8nConnector.js` (180 lines), then `connectorAuth.js`
+  guidance: `connectorConstants.ts` (6 lines) as a pattern sanity-check,
+  then `tavilyConnector.ts`/`perplexityConnector.ts`/`deepseekConnector.ts`
+  (55-67 lines), then `n8nConnector.ts` (180 lines), then `connectorAuth.ts`
   (236 lines, saved for last since it's the most depended-upon).
-  - Before renaming anything, grepped for `discordConnector.js` /
-    `slackConnector.js` literal-extension imports elsewhere in the
+  - Before renaming anything, grepped for `discordConnector.ts` /
+    `slackConnector.ts` literal-extension imports elsewhere in the
     codebase to confirm the already-`.ts` connectors were being imported
     with a `.js` specifier and it was working — established this was a
     safe, already-proven pattern rather than assuming it would be.
@@ -695,7 +697,7 @@ into Sprint 2+ — not dropped.
       `no-unused-expressions` exists to catch before it silently becomes
       one. Rewrote as `if`/`else`.
     - 3 `require()` calls in `SettingsView.tsx` — checked
-      `echoFileWatcherService.js` and `memoryMonitorService.js` directly
+      `echoFileWatcherService.ts` and `memoryMonitorService.ts` directly
       to confirm `getWatcherConfig`/`saveWatcherConfig`/`getUsageStats`
       are real, always-resolvable named exports (not something
       conditionally available) before converting to static imports —
@@ -1170,10 +1172,10 @@ targets already-merged Sprint 2 code, not a pending PR.
    calls the connector; there is no standing inbound listener. Not a gap
    this sprint — logged so this doesn't get re-audited from scratch later.
 4. **Generic webhook + WhatsApp inbound content: traced, not currently a
-   prompt-injection vector.** `genericWebhookService.js`'s drained events
+   prompt-injection vector.** `genericWebhookService.ts`'s drained events
    only produce an `orchestrationReceipt` (audit log) and a UI notification
    count — the raw payload is never passed to `createJoseCommandRoute`.
-   `whatsappBrowserConnector.js` likewise never calls it. The one channel
+   `whatsappBrowserConnector.ts` likewise never calls it. The one channel
    that *does* forward raw text to Jose is Telegram's `/ask` and
    plain-message path — which is exactly why item 1 above (who's allowed to
    use that path) was the real finding, not the content itself.

@@ -1,5 +1,7 @@
 # Smart Installer ("Ritual Installer") Implementation Plan
 
+> **Status (2026-10-25):** built (shipped in v2.8.0); later changes are listed in its design doc's status line.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace `OnboardingWizard.tsx`'s first-run flow with an intent-first "Setup" experience — hardware scan, plain-language intent picker, a smart recommendation combining both, a parallel install queue with an early-exit path to chat, and a themed activation sequence — using the app's existing first-run gating mechanism rather than a new window or binary.

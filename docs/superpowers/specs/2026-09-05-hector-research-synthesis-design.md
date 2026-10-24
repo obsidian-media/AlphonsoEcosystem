@@ -1,5 +1,7 @@
 # Hector Research Synthesis — Design Spec
 
+> **Status (2026-10-25):** built in September 2026 (synthesis with a depth toggle, Re-synthesize, and Markdown/PDF/PowerPoint export). Hector's RSS feeds load in the desktop app since 2026-10-22; Perplexity uses its Search API since 2026-10-21.
+
 ## Problem
 
 Hector's research pipeline aggregates and truncates; it never synthesizes. Confirmed directly
@@ -224,7 +226,7 @@ Owns all three export formats, called from `ResearchReportPanel.tsx`'s export ro
 - `src-tauri/src/search.rs`: extend existing tests to confirm the 420-char truncation is gone
   (full stripped text returned, bounded only by the pre-existing 200KB raw-fetch limit) and the
   10-source cap (`.take(10)`) still holds.
-- `joseExecutionEngineService.test.ts` (existing file): `executeHectorAssignment` no longer calls
+- `joseExecutionEngineService.test.js` (existing file): `executeHectorAssignment` no longer calls
   `generateAgentLlmResponse` a second time — asserts it's called exactly once overall (inside
   `runHectorLiveResearch`'s own synthesis step, mocked at the service boundary) and that the
   returned `summary` equals `report.summary` directly, not a re-derived value.

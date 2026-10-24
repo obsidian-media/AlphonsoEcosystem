@@ -1,5 +1,7 @@
 # Alphonso E2E Mobile Operations & Security Audit
 
+> **Status (2026-10-25):** since then phone commands go through Jose (PR #341, 2026-10-23). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Date:** 2026-08-13  
 **Auditor:** Alphonso (Engineering Execution Agent)  
 **Pull Request:** #143  

@@ -1,16 +1,17 @@
 # Alphonso Voice OS
 
-Real-time interruptible voice agent system with separate local and cloud delivery paths. Local Voice runs on the paired desktop. Railway Cloud Voice and private Piper Farsi are deployed and health-checked, but phone access is **PARTIAL** until local pairing can provision a durable cloud-device credential.
+Real-time interruptible voice agent system with separate local and cloud delivery paths. Local Voice runs on the paired desktop. Cloud Voice (iOS) uses Supabase email sign-in and device enrollment; its compute moved to AWS ECS (`voice.obsidianmedia.online`) in September 2026, the Farsi Piper voice is still on Railway, and Railway is kept as the rollback. It is invite-only with per-account limits. On 2026-10-20 the AWS address did not resolve, and a real-iPhone acceptance test is still open, so phone Cloud Voice stays **PARTIAL**.
 
 ## Pipeline
 
 ```
 Microphone (AudioWorklet, 16kHz PCM)
   → WebSocket binary frames → FastAPI (port 8766)
-  → webrtcvad gate (discards silence)
-  → faster-whisper STT (tiny.en, CPU int8, lru_cache)
+  → webrtcvad: collects a whole utterance (speech, then a 0.7 s pause; 15 s at most)
+  → faster-whisper STT (VOICE_STT_MODEL, default tiny.en; CPU int8, lru_cache)
   → 9-agent regex router
-  → Ollama /api/chat streaming (conversation history, max 10 turns)
+  → Ollama /api/chat (the model from the app's config message or VOICE_OLLAMA_MODEL,
+    at LOCAL_OLLAMA_URL, which Alphonso sets from Settings; history, max 10 turns)
   → piper TTS (ThreadPoolExecutor, async)
   → WebSocket binary frame → AudioContext playback
           ↑ barge-in cancels current task at any state ↑
@@ -20,7 +21,7 @@ Microphone (AudioWorklet, 16kHz PCM)
 
 ```
 iOS push-to-talk
-  → Railway Cloud Voice Service POST /v1/voice/respond
+  → Cloud Voice Service POST /v1/voice/respond (AWS ECS; Railway as the rollback)
   → NVIDIA NIM reply generation
   → English: NVIDIA TTS (Magpie; Chatterbox optional)
   → Persian/Farsi: token-protected Railway Piper (Mana or Manta)
@@ -103,7 +104,7 @@ state.py        Per-session VoiceState dict
 
 ## Tests
 
-Five pytest test files live in `voice/backend/tests/`:
+Eight pytest test files live in `voice/backend/tests/` (the five below plus `test_main.py`, `test_tts.py` and `test_vad.py`, which cover the WebSocket server, Piper and the utterance collector):
 
 | File | Coverage |
 |------|----------|
@@ -124,10 +125,10 @@ python -m pytest tests/ -v
 The voice server is launched and stopped from the main Alphonso app via:
 
 - **Rust**: `src-tauri/src/voice_sidecar.rs` — `voice_start`, `voice_stop`, `voice_status` commands
-- **JS service**: `src/services/voiceOsService.js` — wraps `invoke()` calls
+- **JS service**: `src/services/voiceOsService.ts` — wraps `invoke()` calls
 - **Hook**: `src/hooks/useJarvisVoice.ts` — drop-in replacement for browser SpeechRecognition
-- **UI**: Runtime Manager → Voice OS card (start/stop buttons, status indicator)
+- **UI**: the Voice page (status, Start/Stop) and Runtimes → Voice OS (install, start/stop)
 
 ---
 
-*Last updated: 2026-07-13 — Cloud Voice status reconciled; device enrollment remains PARTIAL.*
+*Last updated: 2026-10-25 — whole-utterance listening and the chosen model (2026-10-22); Cloud Voice on AWS with Railway as the rollback; device acceptance still PARTIAL.*

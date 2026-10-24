@@ -1,6 +1,6 @@
 # Workflow Execution States
 
-Workflow run states currently used by `workflowExecutionService`:
+Workflow run states currently used by `workflowExecutionService` (the operations and visual-builder workflows; an agent-chain workflow from `workflowRegistryService.ts` runs as a Jose request instead, with the request's own statuses on the Requests board):
 
 - `queued`
 - `in_progress`

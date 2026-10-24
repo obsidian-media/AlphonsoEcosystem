@@ -1,5 +1,7 @@
 # Miya content factory, phase 3d: Shorts as their own pieces
 
+> **Status (2026-10-25):** built and merged in PR #351 (phase 3d); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 Date: 2026-10-24. Builds on phases 2a–3c. Alphonso is a product for many people
 (owner): every choice below is the user's, with sensible defaults.
 

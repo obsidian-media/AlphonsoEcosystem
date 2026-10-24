@@ -1,5 +1,7 @@
 # Draft A — Power-User Visual Direction
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Status: **Locked for Phase 1 spec.** Validated against real nested-tab pages (Connectors' real live/foundation_only/placeholder/disabled status categories + zero-cost-mode blocking; Automation's real 4 internal tabs Overview/Builder/Schedules/Dead Letter) — the 5-room skeleton holds up against real page complexity, not just illustrative content. Full page-by-page pixel-accurate design is explicitly still ahead in Phase 2 — this lock covers skeleton + visual language only, not every page's exact layout. Captured from live brainstorming with real mockups in the visual companion browser tool, iterated across ~15+ rounds total, including two full structural rejections and one course-correction anchored to real reference apps.
 
 ## Revision history (do not silently discard — later rounds found real problems in earlier ones)

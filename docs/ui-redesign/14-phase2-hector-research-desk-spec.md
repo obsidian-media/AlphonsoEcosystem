@@ -1,5 +1,7 @@
 # Phase 2 — Research / Hector Desk Spec
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 ## Scope
 
 Re-skin `HectorResearchDesk.tsx` and its 5 sub-panels (`SourceBoard.tsx`, `CitationPanel.tsx`, `ResearchReportPanel.tsx`, `HectorActivityLog.tsx`, `HectorApprovalHandoff.tsx`) onto the design-token system already established in Phase 1/2 (`--surface-*`, `--text-*`, `--agent-hector`, `Zone`). This is a **direct spec-and-build**, not a fresh visual-mockup session — the visual language (Zone washes, token colors, no hardcoded Tailwind palette colors) is already locked from Mission Control and applies here without new design exploration.

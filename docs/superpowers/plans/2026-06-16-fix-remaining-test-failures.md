@@ -1,5 +1,7 @@
 # Fix Remaining Test Failures — Implementation Plan
 
+> **Status (2026-10-25):** done on 2026-06-16; the test suite has since grown to 546 files and 6,777 tests, all passing.
+
 > **For agentic workers:** Each task is self-contained. Tasks are ordered by difficulty (quick wins first). Each step shows exact code changes.
 
 **Goal:** Fix all 72 remaining test failures across 19 test files.
@@ -139,7 +141,7 @@ git commit -m "fix: make getRuntimePolicySettings sync (remove async cached() ca
 **Investigation needed:** Read the specific test code and the service's Tauri wrapper functions (lines ~160-429 of eventsService.js) to understand what invoke commands they call and what responses they expect.
 
 **Files:**
-- Possibly modify: `src/services/eventsService.js`
+- Possibly modify: `src/services/eventsService.ts`
 - Possibly modify: `src/test/eventsService.test.js`
 
 - [ ] **Step 1: Read the failing tests and service code**

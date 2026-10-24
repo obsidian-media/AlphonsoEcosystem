@@ -7,7 +7,7 @@
 
 ## Overview
 
-Alphonso is a local-first AI companion desktop application built with Tauri v2 (Rust backend + React frontend). It runs entirely on the user's machine with no cloud dependency for core operation. A 9-agent multi-agent system handles intake, orchestration, research, creative generation, governance, distribution, memory, security, and analysis — all coordinated through a durable Jose orchestration pipeline and a centralized policy enforcement layer. The JS `policyEnforcementService.ts` is fail-closed on missing credentials and Zero-Cost Mode (blocks paid connectors). The supplemental connector DSL (`policyDslService.ts`) is default-deny; it currently applies to the registry image-dispatch path in addition to the primary gate.
+Alphonso is a local-first AI companion desktop application built with Tauri v2 (Rust backend + React frontend). It runs entirely on the user's machine with no cloud dependency for core operation. A 9-agent multi-agent system handles intake, orchestration, research, creative generation, governance, distribution, memory, security, and analysis. Jose answers or plans every request as a graph of steps, each checked against one permission table and approved by what it does; Miya's content factory runs a whole video project (script to posted videos and their results) as one such request; and a centralized policy enforcement layer gates every outbound call. The JS `policyEnforcementService.ts` is fail-closed on missing credentials and Zero-Cost Mode (blocks paid connectors). The supplemental connector DSL (`policyDslService.ts`) is default-deny; it currently applies to the registry image-dispatch path in addition to the primary gate.
 
 ---
 
@@ -15,15 +15,17 @@ Alphonso is a local-first AI companion desktop application built with Tauri v2 (
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite 8, Tailwind CSS 4, Lucide React, Framer Motion — new UI components are `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain for a future migration. |
+| Frontend | React 19, Vite 8, Tailwind CSS 4, Lucide React, Framer Motion — new UI components are `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain for a future migration. |
 | Animation | Framer Motion (`src/lib/motion.ts` — `spring`, `tween`, `fadeUp`, `messageIn`, `panelIn` etc.) |
 | Design Tokens | OKLCH CSS custom properties (`src/styles/tokens.css`) — all colors in perceptually-uniform `oklch()` syntax |
-| Backend | Rust 1.77, Tauri 2.11, tokio async runtime, reqwest HTTP client |
+| Backend | Rust (minimum 1.77.2), Tauri 2 (2.12 in the lockfile), tokio async runtime, reqwest HTTP client |
 | Voice OS | Python FastAPI (`voice/backend/`) — faster-whisper STT, piper TTS, webrtcvad VAD, Ollama LLM. Launched as a Tauri-managed sidecar process. WebSocket on port 8766 (moved from 8765 on 2026-07-10 — collided with the Mobile Companion WebSocket server, which also defaults to 8765). |
 | AI (local) | Ollama (`llama3.2:3b` default), runs on-device |
-| AI (cloud, optional) | Claude API (Anthropic), OpenAI API — policy-gated, approval-required |
-| Storage | SQLite via rusqlite (bundled), localStorage (session/UI state, migration ongoing) |
-| Deployment | Windows NSIS + MSI installer; Railway for gateway hosting; Tauri updater with signed manifest |
+| AI (cloud, optional) | Claude, ChatGPT (paid; Jose may use them for a step only when you allow paid models), NVIDIA NIM and Gemini (free tiers), Hermes Agents (self-hosted) — all policy-gated |
+| Media (local) | FFmpeg (bundled on Windows), Kokoro voice-overs, MusicGen music, Whisper captions, ComfyUI pictures, AI clips (LTX-Video, Wan 2.2), the character reference model and motion transfer (Wan 2.1 VACE) — installed from Runtime Hub |
+| Media (paid, optional) | Runway clips, ElevenLabs voices and sound effects, Higgsfield pictures, clips, characters and motion — each run asks first with the cost |
+| Storage | SQLite via rusqlite (bundled), the OS keychain for connector keys and other secrets, localStorage (session/UI state), and project folders under the user's output folder (`<brand>/<project>/`) for the content factory |
+| Deployment | Windows NSIS + MSI installer, macOS DMG (Apple Silicon), Linux AppImage; Railway for the WhatsApp gateway and the Farsi voice; AWS ECS for Cloud Voice compute (iOS); Tauri updater with signed manifest |
 
 ---
 
@@ -31,13 +33,15 @@ Alphonso is a local-first AI companion desktop application built with Tauri v2 (
 
 ```
 Tauri WebView (React)
-  → window.__TAURI__.invoke("command_name", { ...args })
-  → Rust #[tauri::command] handler (src-tauri/src/lib.rs)
+  → invoke("command_name", { ...args })   (@tauri-apps/api/core)
+  → Rust #[tauri::command] handler (registered in src-tauri/src/lib.rs, defined in its module)
   → SQLite (rusqlite) / reqwest (external APIs) / tokio tasks
   → Result<T, String> returned to frontend via Promise
 ```
 
-All outbound connector calls additionally run through `policyEnforcementService.js` on the JS side before `invoke()` is called, and the Rust handlers do their own validation. The gate is fail-closed: if the policy is uncertain or credentials are missing, the call is blocked and an audit receipt is written.
+All outbound connector calls additionally run through `policyEnforcementService.ts` on the JS side before `invoke()` is called, and the Rust handlers do their own validation. The gate is fail-closed: if the policy is uncertain or credentials are missing, the call is blocked and an audit receipt is written.
+
+The desktop window's origin (`http://tauri.localhost`) is refused by local servers such as Ollama and ComfyUI, so calls to them go through narrow backend commands (`ollama_chat`, `ollama_pull_model`, `comfyui_request`, `comfyui_upload_image`, `comfyui_save_output`) instead of `fetch` from the window.
 
 ---
 
@@ -45,36 +49,64 @@ All outbound connector calls additionally run through `policyEnforcementService.
 
 | Agent | Role | Key Constraint |
 |---|---|---|
-| **Alphonso** | Local operator — execution, verification, packaging | General execution agent |
-| **Jose** | Orchestrator — intake, routing, merge, confirm, report | Cannot bypass high-risk restrictions |
-| **Hector** | Research + citations, source scan | Cannot execute terminal/filesystem/posting/purchase actions |
-| **Miya** | Creative — strategy, script, storyboard, export | Cannot execute system commands or unapproved publishing |
-| **Maria** | Governance, audit, risk, approval review | Does not perform destructive execution |
-| **Marcus** | Approved distribution execution | Executes distribution only under approved paths |
-| **Echo** | Memory historian and archival | Knowledge preservation only |
-| **Sentinel** | Security monitoring, automation safety | Safety checks only, no destructive execution |
-| **Nova** | Scoring, analysis, opportunity prioritization | Analysis only |
+| **Alphonso** | Local operator — execution, verification, packaging; assembles videos | The only agent that may run code or change project files |
+| **Jose** | Orchestrator — answers or plans every request as steps, runs and reports | Never runs code or publishes; may spend only on a paid-model step, which always asks |
+| **Hector** | Research — facts, sources, citations, stock clips | Read and write its own work |
+| **Miya** | Creative — the content factory, front-end drafts | Read and write its own work |
+| **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Read and write its own work |
+| **Marcus** | Distribution & Release Manager — posts and schedules | The only agent that may publish or send, after approval |
+| **Echo** | Memory historian and archival | Read and write its own work |
+| **Sentinel** | Security only | Read and write its own work |
+| **Nova** | Scoring, analysis, timing, results | Read and write its own work |
 
-All agents have a profile, permissions file, and schema in `src/agents/`. All are registered in `src/agents/agentRegistry.js` and enforced by `src/services/agentContractService.js`.
+All agents have a profile and schema in `src/agents/` and are registered in `src/agents/agentRegistry.js`. What each may do is one table, `src/services/jose/agentPermissionTable.ts`; `agentContractService.ts` and Jose's plan check (`jose/stepGraph.ts`) enforce it. The `src/agents/*/…Permissions.js` files are descriptive only.
 
 ---
 
 ## Orchestration Flow
 
 ```
-Shayan (user input or Telegram/WhatsApp inbound)
-  → Jose intake (joseCommandRouterService.js)
-  → Decomposition into sub-packets
-  → Agent assignment (agentContractService.js checks per-agent allowed/blocked actions)
-  → orchestrationQueueService.js: new → pending_approval → queued → reported_to_jose
-  → Execution (packetExecutionService.js → joseExecutionEngineService.ts)
-  → Approval gate if risky (policyEnforcementService.js, ApprovalModal UI)
-  → Jose merge + confirm
-  → Report to user (chat UI + optional Telegram/WhatsApp reply)
-  → orchestrationReceiptService.js writes receipt events at every step
+A message (Chat, Telegram, WhatsApp, the phone, a schedule, Boardroom, a workflow)
+  → answerOrPlan() (jose/joseInbound.ts) → decideJoseRoute(): answer, or plan
+  → answer: Alphonso's model replies directly
+  → plan: submitToJose() → planJoseRequest() (jose/josePlanner.ts)
+      Jose's model writes a step graph (agent, action type, effects, needs),
+      starting from a fitting template or fresh; checkPlan() checks it against
+      the permission table and the limits (50 steps); one fix, else a fallback
+  → bigger plans wait for "Run this plan" (jose/josePlanApproval.ts)
+  → the request is saved (jose/joseRequestStore.ts) and shown on the Requests board
+  → runJoseCommandExecutionPipeline() runs every ready step (joseExecutionEngineService.ts)
+      each step waits on the effects that ask (jose/joseEffects.ts):
+      spend, publish and delete always ask; run is asked per command
+  → adaptPlan() (jose/joseAdapt.ts) may add review rounds, help steps,
+      a larger model or a paid retry, checked again before they are added
+  → a waiting step is approved in Chat, on the board or on Telegram, and
+      resumeJoseRequest() carries the request on
+  → Echo saves the decisions; the user gets the report (and Telegram, if paired)
+  → orchestrationReceiptService.ts writes receipt events at every step
 ```
 
-Dead-letter path: failed packets move to `dead_letter` state with replay capability.
+Dead-letter path: failed packets move to `dead_letter` state with replay capability. A request cut off when the app closed is marked interrupted and can be carried on; a waiting request expires after the days set in Settings.
+
+---
+
+## Content Factory Flow
+
+```
+A project (one idea for one brand, saved in <output folder>/<brand>/<project>/)
+  → Run project: one Jose request (contentFactory/contentProjectPlan.ts)
+  → research (Hector, Nova) → script (Miya) → reviews (Nova, Maria; up to 2 rounds)
+  → waits: "Approve the review in Miya Studio first."
+  → scenes and pictures → thumbnails → voice (Kokoro or ElevenLabs) → music
+  → sound effects (optional) → stock clips (Hector) → AI clips and motion (local,
+    Runway or Higgsfield; paid ones ask once) → finished 16:9 and 9:16 videos
+    (Alphonso, FFmpeg) → Shorts and carousel (when asked for) → campaign
+  → quality gate (Maria, Sentinel) → Publish (Marcus; always asks)
+  → YouTube, Facebook (scheduled on the platform), Instagram (sent by Marcus's runner)
+  → numbers read at 1 h, 1 day, 7 and 30 days → lessons and ideas you keep or drop
+```
+
+Each step's result is saved to the project as it finishes (`contentStepRecorder.ts`), with versions and an "Out of date" mark when an earlier step changes. The Calendar (`components/calendar/`) shows every brand's posts and moves them, on the platform too when they are scheduled there.
 
 ---
 
@@ -111,17 +143,22 @@ Tauri integration: `src-tauri/src/voice_sidecar.rs` manages a `Child` process vi
 ## Service Layer
 
 ### Orchestration & Governance
-- `orchestrationQueueService.js` — durable queue with full state transitions and dead-letter replay
-- `orchestrationReceiptService.js` — receipt events across all pipeline phases
-- `orchestrationGovernanceService.js` — governance layer over orchestration
-- `joseCommandRouterService.js` — Jose intake, decomposition, routing
-- `joseExecutionEngineService.ts` — Jose execution engine
-- `packetExecutionService.js` — packet-level execution
+- `jose/` — `joseInbound.ts` (answer or plan), `submitToJose.ts`, `josePlanner.ts`, `stepGraph.ts`, `joseEffects.ts`, `agentPermissionTable.ts`, `joseRequestStore.ts`, `joseAdapt.ts`, `joseTelegram.ts`, `joseSpend.ts` (paid models)
+- `orchestrationQueueService.ts` — durable queue with full state transitions and dead-letter replay
+- `orchestrationReceiptService.ts` — receipt events across all pipeline phases
+- `orchestrationGovernanceService.ts` — governance layer over orchestration
+- `joseCommandRouterService.ts` — routes a plan's steps into packets (only Jose's own code calls it)
+- `joseExecutionEngineService.ts` — Jose execution engine (runs, resumes and carries on requests)
+- `packetExecutionService.ts` — packet-level execution
+
+### Content Factory
+- `contentFactory/` — projects and brands, the project plan, each step's prompts and executors (text, media, publishing), pictures, captions, posts, the one publishing path (`publishPost.ts`), post moves, sign-in expiry, daily limits, results, lessons, ideas, characters and motion
+- `marcusExecutionService.ts` — the one scheduler for posts
 
 ### Policy & Approval (fail-closed)
 - `policyEnforcementService.ts` — centralized policy gate: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks, license tier validation
 - `licenseService.ts` — license tier system (Free/Pro/Enterprise) with premium connector gates. Inert at launch (2026-09-30) until a vendor signing key is configured (`isPremiumGatingEnabled()`)
-- `connectorRegistryService.js` — all **26 connector** send paths run through policy gate before any external call
+- `connectorRegistryService.ts` — all **33 connector** send paths run through policy gate before any external call
 
 ### Performance & Execution
 - `parallelExecutionService.ts` — parallel task execution with concurrency control, retry logic, and task queues
@@ -129,46 +166,46 @@ Tauri integration: `src-tauri/src/voice_sidecar.rs` manages a `Child` process vi
 
 ### Agent Contracts
 - `agentContractService.ts` — per-agent allowed/blocked action prefixes, checked before every packet execution
-- `agentBusService.js` — inter-agent messaging bus
+- `agentBusService.ts` — inter-agent messaging bus
 
 ### Memory & Knowledge
-- `memoryService.js`, `durableMemoryService.js` — general + SQLite-backed durable memory
-- `miyaMemoryService.js`, `workflowMemoryService.js`, `workflowReceiptService.js`, `workflowTelemetryService.js`
-- `sessionIntelligenceService.js`, `workspaceIntelligenceService.js`
-- `sourceConfidenceService.js`, `trustModel.js`, `verificationService.js`
+- `memoryService.ts`, `durableMemoryService.ts` — general + SQLite-backed durable memory
+- `miyaMemoryService.ts`, `workflowMemoryService.ts`, `workflowReceiptService.ts`, `workflowTelemetryService.ts`
+- `sessionIntelligenceService.ts`, `workspaceIntelligenceService.ts`
+- `sourceConfidenceService.ts`, `trustModel.ts`, `verificationService.ts`
 
 ### Connectors & External
-- `connectorRegistryService.js` — all outbound connector paths (policy-gated)
+- `connectorRegistryService.ts` — all outbound connector paths (policy-gated)
 - `connectors/connectorOutbound.js` — frontend dispatch (policy-gated, calls Rust commands via invoke)
 - `connector_commands.rs` — `connector_github_action`: GitHub REST API v3 — create_issue, dispatch_workflow, create_pr, get_repo, list_issues
 - `connector_commands.rs` — `connector_slack_send`: Slack Web API chat.postMessage with optional thread_ts
-- `connectors/connectorAuth.js` — connector authentication management
+- `connectors/connectorAuth.ts` — connector authentication management
 - `connectors/connectorOutbound.js` — outbound connector dispatch
 - `connectors/connectorPolling.js` — inbound connector polling
 - `connectors/connectorImageGenerators.js` — image generation connectors (SD WebUI, ComfyUI)
-- `whatsappWebhookService.js` — WhatsApp webhook handling
-- `marcusPublishService.js` — Marcus-governed distribution
-- `metaPublishService.js` — Meta/Instagram publishing
+- `whatsappWebhookService.ts` — WhatsApp webhook handling
+- `marcusPublishService.ts` — Marcus-governed distribution
+- `metaPublishService.ts` — Meta/Instagram publishing
 - `hectorResearchService.js` — Hector live research
-- `toolConnectionService.js`, `toolNotificationDispatcher.js`
+- `toolConnectionService.ts`, `toolNotificationDispatcher.ts`
 
-### Workflow Operations (10 structured workflows)
-- `workflowOperationsRegistryService.js` — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance
-- `workflowExecutionService.js`, `workflowBuilderService.js`, `workflowGovernanceService.js`
+### Workflow Operations (16 structured workflows)
+- `workflowOperationsRegistryService.ts` — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance, Research Operations, Crisis Management, Ecosystem Learning, Human Collaboration, Financial Intelligence, Reputation and Brand Monitoring
+- `workflowExecutionService.js`, `workflowBuilderService.ts`, `workflowGovernanceService.ts`
 
 ### Self-Development & Release
-- `selfDevelopmentService.js`, `nativeSelfDevelopmentAutostartService.js`
-- `productionReadinessService.js`, `rc0EvidenceService.js`, `nativeRc0ProofService.js`
-- `runwayService.js`, `appUpdateService.js`, `repoAuditService.js`
+- `selfDevelopmentService.ts`, `nativeSelfDevelopmentAutostartService.ts`
+- `productionReadinessService.js`, `rc0EvidenceService.ts`, `nativeRc0ProofService.ts`
+- `runwayService.ts`, `appUpdateService.ts`, `repoAuditService.ts`
 
 ### Utility & Other
-- `pluginSandboxService.js`, `pluginRegistryService.js`
-- `recoveryService.js`, `runtimeLedgerService.js`
-- `screenIntelligenceService.js`, `voiceService.js`
-- `chatPersistenceService.js`, `notificationService.js`
-- `coachModeService.js`, `skillPackService.ts`
-- `localMarketplaceService.js`, `resourceCostService.js`
-- `agentAvatarService.js`, `agentVisualService.js`
+- `pluginSandboxService.ts`, `pluginRegistryService.ts`
+- `recoveryService.ts`, `runtimeLedgerService.ts`
+- `screenIntelligenceService.ts`, `voiceService.ts`
+- `chatPersistenceService.ts`, `notificationService.ts`
+- `coachModeService.ts`, `skillPackService.ts`
+- `localMarketplaceService.ts`, `resourceCostService.ts`
+- `agentAvatarService.ts`, `agentVisualService.ts`
 
 ---
 
@@ -195,8 +232,9 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - **Zero-cost mode** — blocks paid connectors (Claude API, OpenAI, YouTube, etc.) by default unless explicitly overridden
 - **Approval gates** — risky actions (external sends, uploads, publishes) require explicit user confirmation in the `ApprovalModal` UI before execution proceeds
 - **Connector allowlists** — `TELEGRAM_ALLOWED_CHAT_IDS` (`telegramCompanionService.js`) and `WHATSAPP_ALLOWED_NUMBERS` (`whatsappCompanionService.ts`, added 2026-07-10) gate first-time owner pairing before any command executes. Enforced in the JS companion service layer, not the Rust command layer — corrected 2026-07-10, this line previously overstated where the check lives
-- **Secrets** — all credentials in `.env` only (never committed); `.gitignore` excludes `.env`, `.env.*`, `.tauri-updater-key`, `.tauri-updater-key.pub`
-- **Plugin sandbox** — `pluginSandboxService.js` enforces token-based plugin isolation
+- **Secrets** — connector keys, the license token and other secrets saved in Settings are kept in the OS keychain (`os_keychain_store.rs`), never in localStorage, backups or exports; environment variables still work as a fallback. `.gitignore` excludes `.env`, `.env.*`, `.tauri-updater-key`, `.tauri-updater-key.pub`
+- **Network** — research and media downloads go through `fetch_with_ssrf_guard` (private addresses refused, every redirect checked); stock-clip downloads only from the stock hosts; the sign-in callbacks listen on `127.0.0.1` only, for 5 minutes
+- **Plugin sandbox** — `pluginSandboxService.ts` enforces token-based plugin isolation
 
 ---
 
@@ -204,23 +242,24 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 
 | Target | Method |
 |---|---|
-| Windows installer | `npm run release:updater` → NSIS + MSI artifacts |
+| Installers | `release.yml` on a tag: Windows NSIS + MSI (with the bundled Ollama runtime and FFmpeg), macOS DMG, Linux AppImage; `npm run release:updater` locally |
 | Auto-updater | Tauri updater with signed manifest; keys generated via `npm run updater:keygen` |
 | Gateway (WhatsApp Cloud inbound) | Railway static serve; service root `gateway/whatsapp-cloud/`; healthcheck at `/health` |
+| Cloud Voice (iOS companion) | AWS ECS behind `voice.obsidianmedia.online`, deployed by `deploy-cloud-voice.yml`; Farsi Piper on Railway; Railway kept as the rollback. The address did not resolve on 2026-10-20 (see `docs/deployment/AWS_VOICE_MIGRATION.md`) |
 | Dev server | `npm run dev` (Vite, port 5173) or `npm run tauri dev` (full Tauri with Rust) |
 
 ---
 
 ## Known Technical Debt
 
-- `src-tauri/src/lib.rs` is **~938 lines** with **126 `#[tauri::command]` functions** across **50 modules in src-tauri/src/** (incl. `companion_server.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_types.rs`, `voice_sidecar.rs`, `os_keychain_store.rs`, and the modules listed below). Module list: `audit_log.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_server.rs`, `companion_types.rs`, `connector_commands.rs`, `kv_store.rs`, `main.rs`, `memory_graph.rs`, `memory_store.rs`, `meta_publish.rs`, `native_proof.rs`, `ollama.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `runway.rs`, `runtime_manager.rs`, `search.rs`, `os_keychain_store.rs`, `telegram.rs`, `utils.rs`, `voice_sidecar.rs`, `whatsapp_webhook.rs`, `workspace.rs`, `youtube.rs`, and `lib.rs` itself. `memory_graph.rs` (added 2026-09-04) implements the memory knowledge graph — `memory_nodes`/`memory_edges` SQLite tables, one-hop and cycle-safe multi-hop traversal via `WITH RECURSIVE`, and automated structural edge inference (`memory_graph_infer_edges`).
+- `src-tauri/src/lib.rs` is **~938 lines**; there are **189 `#[tauri::command]` functions** across **50 modules in src-tauri/src/**. Module list: `audit_log.rs`, `comfyui_installs.rs`, `comfyui_proxy.rs`, `comfyui_video_models.rs`, `commands/` (`bridge`, `clipboard`, `filesystem`, `jose`, `notification`, `ocr`, `restore`, `runtime`, `system`, `updates`, `url`), `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_server.rs`, `companion_types.rs`, `connector_commands.rs`, `elevenlabs.rs`, `higgsfield.rs`, `kv_store.rs`, `main.rs`, `media_storage.rs`, `media_tools.rs`, `memory_graph.rs`, `memory_graph_prune.rs`, `memory_store.rs`, `meta_media.rs`, `meta_publish.rs`, `meta_video.rs`, `native_proof.rs`, `oauth_signin.rs`, `ollama.rs`, `os_keychain_store.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `post_metrics.rs`, `runtime_manager.rs`, `runway.rs`, `search.rs`, `telegram.rs`, `utils.rs`, `voice_sidecar.rs`, `whatsapp_webhook.rs`, `workspace.rs`, `youtube.rs`, and `lib.rs` itself. `memory_graph.rs` (added 2026-09-04) implements the memory knowledge graph — `memory_nodes`/`memory_edges` SQLite tables, one-hop and cycle-safe multi-hop traversal via `WITH RECURSIVE`, and automated structural edge inference (`memory_graph_infer_edges`).
 - Frontend uses `.tsx` for new UI work, with legacy production `.jsx` contexts and Content Catalyst files still present. The service layer remains mixed JavaScript/TypeScript; current exact counts are verified by `npm run verify:docs`.
-- Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
+- Much of the app's state (Jose's requests, content projects and brands, schedules) is still in `localStorage`, with schema migrations; durable records and secrets are in SQLite and the keychain
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
-- Playwright E2E wired into CI (`e2e/smoke.spec.js`, `e2e/boot.spec.js`) — runs the web build with the Tauri bridge mocked, so it never exercises the Rust backend
-- Desktop E2E suite (`e2e-desktop/`, `npm run test:e2e:desktop`) — WebdriverIO + tauri-driver against the real built binary on isolated test data; 16 spec files; run locally, not in CI yet
-- Component test coverage ~38%+ (threshold 38% via `npm run test:coverage`); 263 test files, 3,758 tests, all passing (verified 2026-07-25 — this line is not covered by `scripts/verify-doc-counts.mjs`'s ARCHITECTURE.md checks, so it can drift silently; cross-check against AGENTS.md's Project Identity line before trusting it)
+- Playwright E2E wired into CI (8 spec files under `e2e/`) — runs the web build with the Tauri bridge mocked, so it never exercises the Rust backend
+- Desktop E2E suite (`e2e-desktop/`, `npm run test:e2e:desktop`) — WebdriverIO + tauri-driver against the real built binary on isolated test data; 34 spec files; runs in CI as `Desktop E2E (real Tauri binary)` on Windows (not a required check)
+- Coverage floors 48% lines / 38% branches / 30% functions / 48% statements (`npm run test:coverage`); 546 test files, 6,777 tests, all passing (verified 2026-10-25 — this line is not covered by `scripts/verify-doc-counts.mjs`'s ARCHITECTURE.md checks, so it can drift silently; cross-check against AGENTS.md's Project Identity line before trusting it)
 - GitHub connector tests: 20 tests in `githubConnector.test.js`; Slack connector tests: 16 tests in `slackConnector.test.js`
 - `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI; `cargo clippy -- -D warnings` clean (verified 2026-07-08)
-- **Last audited:** 2026-07-08 — see `docs/AUDIT_REPORT_2026-07-08.md`. AGENTS.md regenerated from ground truth; do not trust older counts.
+- **Last reconciled with the code:** 2026-10-25 (first full audit 2026-07-08 — see `docs/AUDIT_REPORT_2026-07-08.md`).
 

@@ -1,12 +1,14 @@
 # Memory Knowledge Graph — Design Spec
 
+> **Status (2026-10-25):** Phase 1 built (PR #210), Phase 2 (PR #213), Phase 3 viewer and inferred edges (PRs #215, #217; v2.7.0), Phase 4 governance (PR #282, 2026-10-11).
+
 **Date:** 2026-09-03
 **Status:** Approved for planning (pending user sign-off on this doc)
 **Owner:** Echo (schema + service maintenance)
 
 ## Problem
 
-Alphonso's memory today is flat. `unifiedMemoryService.ts` stores items, ChromaDB
+Alphonso's memory today is flat. `unifiedMemoryService.js` stores items, ChromaDB
 does vector similarity search, and Boardroom's `findCrossThreadContext`
 approximates "relatedness" with plain keyword overlap across threads. None of
 this captures *why* two things are connected — only that they share words or
@@ -42,7 +44,7 @@ graph engine badly would be worse than not having one:
   running server or hosted service. Incompatible with this app's
   local-first/zero-cost posture; rejected outright.
 - **Opinionated agent-memory frameworks** (agent-memory, Cognee, AgentOS) —
-  would compete with `unifiedMemoryService.ts`/ChromaDB, which already own
+  would compete with `unifiedMemoryService.js`/ChromaDB, which already own
   memory storage and semantic search here, rather than complement them.
 
 **Decision:** plain SQLite tables via the existing `kv_store.rs`/
@@ -93,7 +95,7 @@ table shape never has to change, only what's written into it.
 
 ### Service: `src/services/memoryGraphService.ts`
 
-New, dedicated file — not folded into `unifiedMemoryService.ts`. This
+New, dedicated file — not folded into `unifiedMemoryService.js`. This
 codebase's own "Do Not Duplicate" convention favors one obvious file per
 concern over growing an already-large service; "a graph of relationships
 between things" is conceptually distinct from "a store of memory items,"
@@ -118,7 +120,7 @@ implementation, not a new function or a schema change.
 
 ### Writers (Phase 1 — exactly two)
 
-- `unifiedMemoryService.ts` — writes a `memory_item` node whenever a memory
+- `unifiedMemoryService.js` — writes a `memory_item` node whenever a memory
   item is created; writes edges only where a real relationship is already
   known at write time (e.g. "this memory item is about the same task as
   that one").
@@ -146,7 +148,7 @@ be.
 ## Roadmap
 
 **Phase 1 — Foundation** *(this spec)*
-Schema (open-ended), two writers (`unifiedMemoryService.ts`,
+Schema (open-ended), two writers (`unifiedMemoryService.js`,
 `boardroomThreadService.ts`), manual edges only, one-hop reads, every agent
 can read. No UI.
 
@@ -180,7 +182,7 @@ own brainstorm, not drift.
 
 **Phase 4 — Governance** *(detailed spec `2026-10-06-memory-knowledge-graph-phase4-governance-design.md`; implemented 2026-10-06, awaiting merge and a real Preview run)*
 Retention/pruning tied into Echo's existing retention-tier logic (the same
-discipline that already caps `crashLogService.js`'s and `agentAuditService.js`'s
+discipline that already caps `crashLogService.ts`'s and `agentAuditService.ts`'s
 rings at 100 entries) — without it, the graph only ever grows. Also where
 GraphZep's temporal-validity-window idea (borrowed from the prior-art
 research, not the dependency) would land: edges can express "this was true
@@ -192,7 +194,7 @@ until X," not just "this is true."
   `queryRelated`) against an in-memory/mock of the `kv_store.rs` Tauri
   commands, following the existing pattern used by other durable-store
   service tests in `src/test/`.
-- Integration: a test confirming `unifiedMemoryService.ts` and
+- Integration: a test confirming `unifiedMemoryService.js` and
   `boardroomThreadService.ts` actually call the writer API at the intended
   moments (not just that the API works in isolation).
 - No new Rust-side test surface beyond whatever `kv_store.rs` already covers

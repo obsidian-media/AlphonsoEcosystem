@@ -1,5 +1,7 @@
 # Atlas Mobile Release Readiness
 
+> **Status (2026-10-25):** Atlas exists in the iOS app as an opt-in preview only: since PR #200 (2026-09-02) the classic companion is the default, and Atlas stays a preview until it is wired to real desktop task execution instead of its demo backend (`ContentView.swift`). No non-demo rollout has happened.
+
 ## Purpose
 
 This guide is the operational gate between the current **Atlas mobile foundation** and any non-demo mobile rollout. It converts the existing control-plane, persistence, and mobile architecture boundaries into verifiable release criteria. It must be completed in an isolated non-production environment before TestFlight, and repeated with production evidence before a public release. The present FastAPI Atlas module is intentionally a non-production contract-validation surface, and its confirmations remain non-executing.[1]

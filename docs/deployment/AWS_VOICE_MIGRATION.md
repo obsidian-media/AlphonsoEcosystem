@@ -6,6 +6,8 @@ service in the first phase.
 
 ## Current staging status (2026-10-20)
 
+> Later the same day, `audits/2026-10-20_Codex_CloudVoice_Production_Recheck_Audit.md` found that `voice.obsidianmedia.online` resolved to the load balancer's name but to no address, so the endpoint was unreachable. Nothing newer is recorded (2026-10-25).
+
 The credit-constrained AWS staging service is live at
 `https://voice.obsidianmedia.online`: one 0.5 vCPU / 1 GB Fargate task is
 running behind the HTTPS ALB. It uses immutable ECR image

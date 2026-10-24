@@ -1,5 +1,7 @@
 # Alphonso Ecosystem — Production-Readiness Assessment & Transformation Roadmap
 
+> **Status (2026-10-25):** T1–T6, T10–T14, T16, T19 and T20 are done; T15 was confirmed on 2026-09-05 (the app updated itself from v2.7.0 to v2.7.1); T17 is partial and T18 in progress (Ground Truth §11). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Date:** 2026-07-15
 **Author role:** Principal Architect / Staff Eng / CTO / Security / DevOps / QA — combined audit pass
 **Basis:** Independent verification of `14.07.2026CurrentStateofRepo.md` against the live codebase, git history, CI run history, and the running configuration. Every claim below was checked against source or CI, not accepted from the prior report.
@@ -143,7 +145,7 @@ Three independent auth surfaces, all with gaps:
 There is no RBAC beyond the license tier and the Telegram/WhatsApp owner-allowlist gates.
 
 ### 3.6 AI systems
-Real Ollama-backed generation across agents; persona system prompts sourced from `agentRegistry`; a bounded `@mention` chain (`MAX_CHAIN_DEPTH=3`) with escalation; a pipeline execution budget (`PIPELINE_MAX_ASSIGNMENTS`/`_DURATION_MS`) guarding runaway loops. Honest limitations are documented: low-confidence detection is a hedge-phrase heuristic (no logprobs), cross-thread recall is keyword-overlap (ChromaDB exists but Boardroom doesn't use it), and Stop doesn't abort in-flight fetches (`lib/ollama.js` has no `AbortController`). Cost efficiency is protected by Zero-Cost Mode (default on). Failure handling is reasonable (retry/rose-state UI). The main AI-architecture risk is **fan-out cost/latency** under multi-agent chaining with no per-request budget ceiling in tokens (only assignment-count/time).
+Real Ollama-backed generation across agents; persona system prompts sourced from `agentRegistry`; a bounded `@mention` chain (`MAX_CHAIN_DEPTH=3`) with escalation; a pipeline execution budget (`PIPELINE_MAX_ASSIGNMENTS`/`_DURATION_MS`) guarding runaway loops. Honest limitations are documented: low-confidence detection is a hedge-phrase heuristic (no logprobs), cross-thread recall is keyword-overlap (ChromaDB exists but Boardroom doesn't use it), and Stop doesn't abort in-flight fetches (`lib/ollama.ts` has no `AbortController`). Cost efficiency is protected by Zero-Cost Mode (default on). Failure handling is reasonable (retry/rose-state UI). The main AI-architecture risk is **fan-out cost/latency** under multi-agent chaining with no per-request budget ceiling in tokens (only assignment-count/time).
 
 ### 3.7 Infrastructure / DevOps
 CI is comprehensive on paper (7 workflows: test+build on Win/Mac/Linux, Rust quality, secrets scan, doc-count freshness, gateway health, iOS build, E2E). **But it is red and has been for 8+ runs**, and there is **no branch protection on `main`** (the most-repeated open item in CLAUDE.md), so red CI does not block merges. Releases are CI-built and signed on tag. Observability/monitoring/alerting/backup/DR are essentially **absent** — appropriate for a desktop app in some respects, but the cloud sidecars (Railway gateways, voice backend, MCP/bridge servers) have only a single gateway health-check job and no logging/alerting strategy.

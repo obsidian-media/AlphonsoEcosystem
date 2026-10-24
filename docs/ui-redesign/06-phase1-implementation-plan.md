@@ -1,5 +1,7 @@
 # Phase 1 Foundation Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Lay the smallest real, independently-shippable slice of Phase 1's design-system foundation: fix a found nav bug, resolve a found naming collision, add the accent-theme mechanism, and build the `Zone` primitive that replaces `Card` for the new no-shadow visual language — all four verified against the real, already-live codebase (`tokens.css`, `tailwind.config.js`, `App.tsx`), not invented from the brainstorming mockups alone.
@@ -16,7 +18,7 @@
 
 **Files:**
 - Modify: `src/App.tsx:138` (add lazy import), `src/App.tsx` (add render branch near the other `activeTab ===` cases, e.g. after line 933's `AgentActivityLog` branch)
-- Test: `src/test/appAgentPerformanceNav.test.tsx` (new)
+- Test: `src/test/appAgentPerformanceNav.test.js` (new)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -104,7 +106,7 @@ git commit -m "fix: wire Agent Performance nav item to AgentPerformanceView (was
 **Files:**
 - Rename: `src/components/BoardroomPanel.tsx` → `src/components/ProjectBatchPanel.tsx`
 - Modify: `src/components/OperatorDashboard.tsx:25,795`
-- Test: `src/test/projectBatchPanelRename.test.tsx` (new)
+- Test: `src/test/projectBatchPanelRename.test.js` (new)
 
 - [ ] **Step 1: Write the failing test**
 

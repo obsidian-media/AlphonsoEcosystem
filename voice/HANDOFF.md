@@ -1,5 +1,7 @@
 # Alphonso Voice OS — Agent Handoff Brief
 
+> **Status (2026-10-25):** the Voice OS described here was built, rewritten on 2026-07-10, and reworked on 2026-10-22 (whole utterances, the chosen model and address). See `voice/README.md`. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Branch:** `feat/voice-os`
 **Assigned to:** OpenCode (or equivalent autonomous coding agent)
 **Maturity target:** 10 → 90 / 100
@@ -24,7 +26,7 @@ The scaffold (10/100) lives in `voice/`. Your job is to implement every stub, fi
 
 - **Main stack:** React + TypeScript frontend, Tauri (Rust) desktop shell, Vitest test suite (1930+ tests)
 - **LLM runtime:** Ollama (local), accessed at `http://localhost:11434` — already used by the main app
-- **Existing voice in main app:** `src/services/voiceService.js` + `src/hooks/useVoiceInput.js` — browser SpeechRecognition only, online-only, no TTS. This Voice OS replaces/extends that with offline capability.
+- **Existing voice in main app:** `src/services/voiceService.ts` + `src/hooks/useVoiceInput.js` — browser SpeechRecognition only, online-only, no TTS. This Voice OS replaces/extends that with offline capability.
 - **Do NOT touch `src/`** (the main Tauri app) — this is a standalone microservice for now. Integration happens later by the reviewer.
 - **Python runtime:** The main app already detects Python via `src-tauri/src/runtime_manager.rs`. Assume Python 3.11+ available.
 - **All tests must continue to pass:** `npm run test` in the repo root must still show 1930+ passing after your changes (your changes are in `voice/` only, so this should be automatic — just don't touch anything outside `voice/`).
@@ -1256,7 +1258,7 @@ Do NOT do any of the following — these are reviewer tasks:
 - Wiring the Voice OS into the main Alphonso Tauri app (`src/`)
 - Adding a Tauri sidecar launcher for the Python backend
 - Connecting pipeline events to `appendAgentActivity` in the main app
-- Modifying `src/services/voiceService.js` or `src/hooks/useVoiceInput.js`
+- Modifying `src/services/voiceService.ts` or `src/hooks/useVoiceInput.js`
 - Changing anything in `src-tauri/`
 - Modifying `src/components/`
 - Running `npm run test` against the main app test suite

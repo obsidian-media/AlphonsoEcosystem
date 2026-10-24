@@ -1,5 +1,7 @@
 # Alphonso iOS Companion — Architecture Plan
 
+> **Status (2026-10-25):** built; see `docs/platform/ios-companion.md` and `ios/AlphonsoCompanion/AlphonsoCompanion/README.md`. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 ## Concept
 Desktop runs everything (Ollama, agents, Composio, SQLite, filesystem).
 iOS is a remote control — connects via WebSocket to your desktop on local network.

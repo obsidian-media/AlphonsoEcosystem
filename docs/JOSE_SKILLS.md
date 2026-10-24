@@ -1,12 +1,12 @@
 # Jose Agent — Skill Packs
 
-**Version**: 2.6.0
+**Version**: 2.10.0 (on `main`; the pack lists were last changed on the date below)
 **Last Updated**: 2026-07-17
-**Total Skill Packs**: 22 (6 existing + 16 new)
+**Total Skill Packs**: 22 (21 owned by Jose + the shared executing-plans pack)
 
 ## Overview
 
-Jose is the **Master Orchestrator / Hermes** — the highest-authority agent responsible for planning, decomposing, routing, gating approvals, and synthesizing cross-agent outputs. He is "born with" 22 specialized skill packs that cover the full spectrum of orchestration: planning, coordination, governance, monitoring, and optimization.
+Jose is the **Master Orchestrator** — he answers or plans every request as a graph of steps, checks each plan against the one permission table, runs it, changes it while it runs (review rounds, help, larger or paid models), and reports. (The old "Hermes" runtime label was removed on 2026-10-23; Hermes Agents is a separate, optional connector.) He never runs code or publishes, and spends only on a paid-model step, which always asks. He is "born with" 22 specialized skill packs that cover the full spectrum of orchestration: planning, coordination, governance, monitoring, and optimization.
 
 ## Skill Pack Inventory
 

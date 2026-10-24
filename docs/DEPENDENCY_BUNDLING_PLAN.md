@@ -1,5 +1,7 @@
 # Alphonso Dependency Bundling — Zero-Prerequisite Install
 
+> **Status (2026-10-25):** O1/O2 shipped in v2.8.0 (Ollama runtime and starter model); FFmpeg is bundled on Windows since 2026-10-23; Kokoro, AudioCraft, the video models and others are installed from Runtime Hub, not bundled. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Status:** IN PROGRESS — v1 scope decided 2026-08-16; WIN1 and O1/O3
 implemented and partially verified same-day (see "Implementation log" near
 the end of this document for exactly what was and wasn't verified, and how).

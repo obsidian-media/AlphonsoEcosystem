@@ -1,5 +1,7 @@
 # Agent Mascot Asset Replacement Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (inline, per this session's standing "no subagents" instruction). Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the app's existing 6-agent mascot art (used across `agentVisualService.ts`, `CompanionWidget.tsx`, `MarketingLandingPage.tsx`, `MiyaStudio.tsx`, and all 9 agent profile files' `mascotPath` metadata) with the new 9-agent portrait set supplied this session — closing the pre-existing Echo/Sentinel/Nova gap in the same pass, since the new set covers all 9 and the old one never did.

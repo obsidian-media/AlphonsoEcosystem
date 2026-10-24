@@ -1,5 +1,7 @@
 # iOS Companion — Implementation Details
 
+> **Status (2026-10-25):** built; pairing confirmed on a real device on 2026-07-25 (PR #121). The desktop listener is off until you enable mobile pairing (2026-09-30), and phone commands go through Jose (2026-10-23, PR #341). Cloud Voice: compute on AWS, Farsi voice on Railway; the AWS address did not resolve on 2026-10-20.
+
 ## Overview
 
 Expands on `docs/IOS_COMPANION_PLAN.md`. The iOS companion is a native SwiftUI app that connects to the Alphonso desktop via WebSocket over local network. Desktop remains the single runtime — iOS is a remote control.

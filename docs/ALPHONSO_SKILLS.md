@@ -1,12 +1,12 @@
 # Alphonso Agent — Skill Packs
 
-**Version**: 2.6.0
+**Version**: 2.10.0 (on `main`; the pack lists were last changed on the date below)
 **Last Updated**: 2026-07-17
 **Total Skill Packs**: 18 (2 existing + 16 new)
 
 ## Overview
 
-Alphonso is the **Local Operator & Coder** agent — the only agent with filesystem and execution privileges. He is "born with" 18 specialized skill packs that cover the full spectrum of software development: coding, verification, operations, and integration.
+Alphonso is the **Local Operator & Coder** agent — the only agent with filesystem and execution privileges. In Jose's permission table he is the only agent that may run code or change project files, and in Miya Studio he assembles the finished video. He is "born with" 18 specialized skill packs that cover the full spectrum of software development: coding, verification, operations, and integration.
 
 ## Skill Pack Inventory
 

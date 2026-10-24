@@ -1,5 +1,7 @@
 # Alphonso — Premium Design System Handoff
 
+> **Status (2026-10-25):** a dated handoff (2026-06-24); the UI was redesigned since (PR #237, v2.8.0; `docs/ui-redesign/`). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Branch:** `feat/ui-ux-overhaul`
 **Scope:** Visual identity, motion system, premium component redesigns
 **Depends on:** `UI_UX_HANDOFF.md` (complete all 17 bug fixes first, then apply this)
@@ -454,7 +456,7 @@ import { slideInRight, fadeIn } from '../lib/motion';
 </motion.div>
 ```
 
-#### 5. Modals and Panels — `ApprovalModal.tsx`, `SentinelFindingModal.jsx`, memory search
+#### 5. Modals and Panels — `ApprovalModal.tsx`, `SentinelFindingModal.tsx`, memory search
 
 ```tsx
 import { motion, AnimatePresence } from 'framer-motion';
@@ -822,7 +824,7 @@ The TopBar needs to feel like it belongs to a premium desktop product.
 </header>
 ```
 
-### 4F — Dashboard Hero (`src/components/MissionControlHome.jsx`)
+### 4F — Dashboard Hero (`src/components/MissionControlHome.tsx`)
 
 The hero needs depth and life — not just a banner image with opacity.
 

@@ -1,5 +1,7 @@
 # Atlas Mobile Demo Validation Runbook
 
+> **Status (2026-10-25):** Atlas exists in the iOS app as an opt-in preview only: since PR #200 (2026-09-02) the classic companion is the default, and Atlas stays a preview until it is wired to real desktop task execution instead of its demo backend (`ContentView.swift`).
+
 ## Purpose and boundary
 
 This runbook provides a repeatable **non-production** validation session for the Atlas iOS foundation. It exercises the typed mobile product against both fixture data and the gated Atlas demo control plane. It is intended for a trusted developer or tester using an isolated Supabase project and a supported iPhone/iPad or Xcode simulator.

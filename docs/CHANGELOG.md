@@ -4,9 +4,11 @@ All notable changes to Alphonso are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+Older entries name files as they were at that release. Many `.js`/`.jsx` files have since become `.ts`/`.tsx`; `CLAUDE.md`'s Do Not Duplicate table has the current names.
+
 ---
 
-## [2.10.0] — 2026-10-21 (PR 304 and PR 305: deferred-work batches; macOS back in the release)
+## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
 ### Release
 - **macOS is back.** 2.9.0 shipped without a Mac build. 2.10.0 ships an Apple Silicon DMG again, unsigned by Apple (as 2.8.0 was): the first time, right-click Alphonso in Applications and choose Open. Mac installs on 2.8.0 are offered this update.
@@ -188,6 +190,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Project Execution names each gate's real owner** instead of guessing from the action type.
 - **Setup disk checks agree with each other** when the models folder is on the same or a different drive.
 - Removed three paid-connector entries that never matched a real connector.
+
+### Documentation
+- **Every document reconciled with the code (2026-10-25).** The README, AGENTS, ARCHITECTURE, Ground Truth, User Manual, Getting Started, Agent Guide, Troubleshooting, Connectors, the setup guides, skill pages, privacy policy, pricing, comparison, release and contributor docs, and the launch drafts now describe the Jose redesign, Miya's content factory and all 33 connectors. Dated records (audits, reports, specs, plans, handoffs) are kept as written, each with a status line at the top. File names that moved from `.js`/`.jsx` to `.ts`/`.tsx` were updated everywhere.
+- The launch drafts no longer offer a paid Pro tier or call the app open source, and Cloud Voice's status says plainly that its AWS address didn't resolve on 2026-10-20.
+- `scripts/verify-doc-counts.mjs` matched the first number in a file: in the README that was the v2.4.4 release note, so every PR's count fix rewrote that history, while the architecture block's command count was never checked. It now checks the lines that state the current numbers.
 
 ### CI and tests
 - Weekly npm and cargo security audit workflow; one cargo ignore list (`.cargo/audit.toml`) for CI and the weekly run.

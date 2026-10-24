@@ -1,5 +1,7 @@
 # Alphonso Release Candidate Checklist
 
+> **Status (2026-10-25):** an early RC0 checklist (version 0.1.0); releases have been cut by `release.yml` since v2.0.2. Use `docs/RELEASE_CHECKLIST.md`. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 This checklist reflects the current local truth of the Alphonso checkout.
 It is intentionally conservative: `setup_required` is not treated as ready.
 

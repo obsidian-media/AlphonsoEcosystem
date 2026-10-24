@@ -1,5 +1,7 @@
 # Cloud Sync — Encrypted Cross-Device Sync
 
+> **Status (2026-10-25):** a proposal; not built. Nothing syncs state between desktops; backups are a JSON export/import without secrets (Settings → Backup).
+
 ## Overview
 
 Synchronize Alphonso state (chat history, agent memory, profiles, settings) across multiple desktop instances using end-to-end encrypted cloud storage. No plaintext data ever reaches the server.

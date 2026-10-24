@@ -1,5 +1,7 @@
 # iOS Companion — Operational Remote Design
 
+> **Status (2026-10-25):** built (PR #143, August 2026). Since phase 6a of the Jose redesign (PR #341), phone commands go through Jose like any other message.
+
 ## Purpose
 
 Make the iOS Companion a premium operational remote for Alphonso Desktop. The first release must help a paired user see what needs attention, approve or stop live work, recover from connection problems, and continue deeper work on desktop. It is not a second desktop application.

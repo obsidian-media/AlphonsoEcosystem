@@ -1,5 +1,7 @@
 # Jose redesign, phase 6a: every caller goes through Jose — Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #341 (phase 6a); on `main`, not released yet. The current behaviour is in `CLAUDE.md`'s Jose rows and `docs/USER_MANUAL.md` section 5.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Every place that sends work to Jose (Telegram, WhatsApp, the phone, schedules, Boardroom, workflows, the batch orchestrator, the Orchestrator page) goes through Jose's decision and planner, as Chat does; plus the three items folded in by the owner.
@@ -56,7 +58,7 @@
 
 ### Task 4: Schedules
 
-**Files:** `src/App.tsx` (`runCommand`), `joseSchedulerService.ts` if the result shape needs it. Test: `src/test/services/joseSchedulerService.test.ts` (result mapping) and a unit test of the extracted `runScheduledCommand(text, settings)` in `src/services/scheduledCommandService.ts`.
+**Files:** `src/App.tsx` (`runCommand`), `joseSchedulerService.ts` if the result shape needs it. Test: `src/test/services/joseSchedulerService.test.js` (result mapping) and a unit test of the extracted `runScheduledCommand(text, settings)` in `src/services/scheduledCommandService.ts`.
 - `runScheduledCommand` = `answerOrPlan(text, { source: 'schedule', showPlanFirst: 'never', allowPaidModels: false })`; maps to today's `lastResult` (`done` / `waiting_approval` / `failed`, summary, details).
 - [ ] Tests first (Review Focus 3): never waits for a plan; a waiting step → `waiting_approval`; no paid model; a direct answer → `done` with the text.
 - [ ] Implement; commit `feat(schedules): schedules go through Jose, never paid, never plan-first`.

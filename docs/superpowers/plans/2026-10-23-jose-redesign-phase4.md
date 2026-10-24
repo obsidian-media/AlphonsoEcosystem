@@ -1,5 +1,7 @@
 # Jose Redesign Phase 4 (Loops and Adaptation) Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #339 (phase 4); on `main`, not released yet. The current behaviour is in `CLAUDE.md`'s Jose rows and `docs/USER_MANUAL.md` section 5.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Jose's plans adapt while they run:

@@ -1,5 +1,7 @@
 # Atlas Supabase RLS Verification Procedure
 
+> **Status (2026-10-25):** Atlas exists in the iOS app as an opt-in preview only: since PR #200 (2026-09-02) the classic companion is the default, and Atlas stays a preview until it is wired to real desktop task execution instead of its demo backend (`ContentView.swift`). This procedure has still not been run.
+
 **Status:** Prepared for an isolated non-production Supabase project; **not yet executed**. This procedure verifies the read-only Atlas data boundary introduced in `20260826230000_atlas_control_plane_foundation.sql`. It does not authorize a production deployment, expose a client write path, or enable execution of external actions.
 
 ## Objective

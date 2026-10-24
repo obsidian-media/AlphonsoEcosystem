@@ -1,5 +1,7 @@
 # CALL-E MCP Conversational Outreach Implementation Plan
 
+> **Status (2026-10-25):** built (PR #230), v2.8.0.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let a user place a CALL-E outreach call conversationally from chat — CALL-E's `plan_call` MCP tool asks clarifying questions until it has everything it needs, then a real button click (not a typed word) approves placing the call via `run_call`, polled to completion in the background.

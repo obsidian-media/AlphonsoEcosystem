@@ -1,5 +1,7 @@
 # Alphonso Infrastructure & Documentation Report
 
+> **Status (2026-10-25):** a dated record, kept as written. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Generated:** 2026-05-31  
 **Session:** Claude Code infrastructure documentation pass
 
@@ -140,5 +142,5 @@ Dependabot (`.github/dependabot.yml`) will open weekly PRs for npm, Cargo, and G
 | `ARCHITECTURE.md` | Architecture reference (this session) |
 | `CLAUDE.md` | Claude Code session guide (this session) |
 | `src-tauri/src/lib.rs` | Entire Rust backend (~7,200 lines) — the most critical single file |
-| `src/services/policyEnforcementService.js` | Fail-closed policy gate — do not modify without thorough testing |
+| `src/services/policyEnforcementService.ts` | Fail-closed policy gate — do not modify without thorough testing |
 | `src/agents/agentRegistry.js` | Agent registry — update when adding or removing agents |

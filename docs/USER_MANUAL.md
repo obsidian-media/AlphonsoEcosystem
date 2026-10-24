@@ -1,8 +1,8 @@
 # Alphonso User Manual
 
 **Version**: 2.10.0
-**Last Updated**: 2026-10-21 (version and macOS install note for v2.10.0; Ollama setup and troubleshooting sections revised for v2.9.0; other sections were last reviewed on earlier dates and may describe older screens)
-**Status**: Production Ready
+**Last Updated**: 2026-10-25 (every section checked against the app on `main`: Jose's requests, Miya's content factory, the Calendar, publishing, Telegram, approvals by effect, connectors)
+**Status**: 2.10.0 is on `main`, not released yet; the latest release is 2.9.0. Features marked "not checked with real accounts" work in tests but have not been tried with a real account.
 
 ---
 
@@ -12,10 +12,12 @@
 2. [Getting Started](#2-getting-started)
 3. [Chat Interface](#3-chat-interface)
 4. [Voice OS — Local Voice Pipeline](#4-voice-os--local-voice-pipeline)
-5. [Jose Command System](#5-jose-command-system)
+5. [Jose — Requests and Plans](#5-jose--requests-and-plans)
 6. [9 Agents — Who Does What](#6-9-agents--who-does-what)
-7. [Boardroom Orchestrator](#7-boardroom-orchestrator)
-8. [Content Catalyst](#8-content-catalyst)
+7. [Boardroom and Project Batches](#7-boardroom-and-project-batches)
+8. [Miya Studio — the Content Factory](#8-miya-studio--the-content-factory)
+   - [Content Studio (quick posts)](#content-studio-quick-posts)
+   - [Calendar](#calendar)
 9. [Connector System](#9-connector-system)
 10. [Approval & Governance](#10-approval--governance)
 11. [Memory & Knowledge](#11-memory--knowledge)
@@ -67,7 +69,9 @@ An installed copy checks for updates at launch and offers to install them.
 
 1. Open Alphonso
 2. The chat interface appears — this is your primary interaction point
-3. Type anything to start. Alphonso will route your request to the right agent automatically.
+3. Type anything to start. A plain question gets an answer at once; anything else Jose plans as steps for the right agents (see [section 5](#5-jose--requests-and-plans)).
+
+On a fresh install the **Setup** screen comes first: it checks your computer, asks what you want to do (chat, images, voice, everything or custom) and installs what that needs, including the starter model `llama3.2:3b`.
 
 ### Ollama Setup
 
@@ -125,10 +129,10 @@ has been verified; use the Chat microphone to make that check.
 ```
 Microphone (AudioWorklet PCM)
   → WebSocket → FastAPI voice server (port 8766)
-  → VAD gate (webrtcvad — discards silence)
-  → STT (faster-whisper, CPU, int8)
+  → VAD (webrtcvad) — waits until you finish speaking (a 0.7 s pause, 15 s at most)
+  → STT (faster-whisper, CPU, int8; tiny.en by default)
   → Agent routing (9-agent regex patterns)
-  → Ollama /api/chat streaming (same local model as chat)
+  → Ollama /api/chat (the model and Ollama address you chose in Settings)
   → TTS (piper — WAV audio back over WebSocket)
   → Speakers
 ```
@@ -154,7 +158,7 @@ Once the Voice OS server is running:
 
 1. Click the **microphone button** in the Chat input area
 2. Speak your request — the status indicator shows: `idle → listening → thinking → speaking`
-3. Alphonso transcribes, routes to the appropriate agent, generates a response, and plays it back
+3. Alphonso waits until you finish, transcribes, routes to the appropriate agent, answers once and plays it back; the agent that answered is shown
 4. **Barge in** at any time by speaking — the current response will be cancelled immediately
 5. Click **Stop** to end the voice session; click **Reset** to clear the conversation history
 
@@ -201,66 +205,84 @@ curl http://127.0.0.1:8766/health
 
 ---
 
-## 5. Jose Command System
+## 5. Jose — Requests and Plans
 
-Jose is the orchestrator agent. You can explicitly invoke Jose with these prefixes:
+Jose is the orchestrator. Every message, from Chat, Telegram, WhatsApp, the phone, a schedule or a Boardroom thread, reaches him.
 
-### Explicit Jose Commands
+### Answer or plan
 
-| Command | Description |
-|---------|-------------|
-| `/jose <task>` | Route any task through Jose's decomposition pipeline |
-| `ask jose <task>` | Same as above, natural language variant |
-| `jose: <task>` | Colon-prefix variant |
+- **A plain question** ("what is…", "how do I…") is answered straight away.
+- **Anything else** is decided by Jose's model: answer, or plan. If the model is slow or not available, a simple rule decides.
+- **`/jose <task>`** always plans.
+- **"Plan this fresh: <task>"** plans without starting from a template.
 
-### Automatic Jose Routing
+### Plans
 
-Jose is automatically triggered when your message contains these keywords:
-`folder`, `file`, `desktop`, `rename`, `create`, `make`, `generate`, `image`, `picture`, `visual`, `miya`, `jose`, `agent`, `delegate`, `task`, `move`, `delete`, `remove`, `open`, `save`, `install`, `write`, `edit`, `copy`, `path`, `command`, `system`, `plan`, `roadmap`, `batch`, `boardroom`
+A plan is a set of steps. Each step names its agent, what it does, and which steps it needs first; steps that don't need each other run at the same time. Jose starts from a template when one fits (Content video, Build an app, Research report, or one you saved) or plans fresh. Every planned reply says how it was planned.
 
-### What Jose Does
+Before anything runs, the plan is checked: no step can wait for itself, every step it needs must exist, and each agent may only do what its permissions allow (see [section 6](#6-9-agents--who-does-what)). A plan that still breaks the rules after one fix falls back to the simple plan, and Jose says why. A plan has at most 50 steps.
 
-1. **Parses** your command into intent flags (research, creative, execution, etc.)
-2. **Decomposes** the command into agent-specific assignments
-3. **Routes** assignments to the right agents (Hector, Miya, Alphonso, etc.)
-4. **Executes** agents in dependency order (wave execution)
-5. **Merges** all agent results into a final report
-6. **Displays** the result in chat with a structured card
+### Show the plan first
+
+**Settings → General → Show Jose's plan first:** Always, Bigger requests only (the default: 4 or more agents counting Jose and Maria, or a step that always asks) or Never. A waiting plan shows as a card in Chat with **Run this plan**, **Edit on the board** and **Cancel**.
+
+### The Requests board
+
+**Sidebar → System → Orchestrator → Requests** lists every request. Pick one to see its plan as boxes and arrows in the agents' colours, each step's status and time, a "Waiting for you" badge where a step waits, the change log, and what each step produced (its summary, files, sources and result). From here you can:
+
+- **Run this plan**, **Edit** (remove or add a step, change its agent, what it needs or its instruction; a plan that breaks the rules can't be saved), or **Cancel**
+- **Approve and carry on** a waiting step, or **Reject** it (which cancels the request)
+- **Save as template** so Jose offers the plan for similar requests
+- **Carry on** a request that was cut off when the app closed
+
+### While a plan runs
+
+- **Reviews can send work back:** when a review finds problems, the work goes back to its author with the findings and is reviewed again, at most 2 rounds; then Jose asks you.
+- **Agents can ask for help:** an agent that needs something asks Jose, who picks a helper (once per step).
+- **A larger model:** a step that keeps failing is tried once with the next larger installed model.
+- **Paid models, only if you allow them:** Settings → Approvals → **Allow paid models** (off by default, and Zero-Cost Mode must be off). A step that still fails may then be given to Claude or ChatGPT at the prices you enter; it asks first with the cost, and a monthly cap stops spending past it. Not checked with a paid account yet.
+
+### Away from the app
+
+With Telegram paired (Settings → Connectors → Telegram), Jose tells your chat when a step or a plan waits for you (with **Approve** / **Reject** or **Run this plan** / **Cancel** buttons), when a request finishes or fails, and when a review asks you to decide. Settings → Approvals → **Jose on Telegram** switches each kind on or off. A waiting request expires after the days set in Settings → Approvals (7 to start; 0 or blank = never).
 
 ### Zero-Cost Mode
 
-If enabled, Jose blocks any task that would use paid external services (Telegram, WhatsApp, YouTube connectors). You'll be prompted to approve or reroute.
+On by default. It blocks every paid or metered connector (Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E and others) until you turn it off in Settings.
 
 ---
 
 ## 6. 9 Agents — Who Does What
 
-| Agent | Role | Triggers | Can Do | Cannot Do |
-|-------|------|----------|--------|-----------|
-| **Jose** | Orchestrator | `/jose`, `ask jose`, planning keywords | Decompose, route, merge, approve, parallel execution | Bypass approval gates |
-| **Hector** | Research | `research`, `lookup`, `docs`, `source`, `citation`, `github` | Fetch sources, verify citations, write reports, GitHub repo/code/issue search | Terminal commands, file writes, social posting |
-| **Miya** | Creative | `video`, `script`, `brand`, `campaign`, `image`, `creative` | Scripts, storyboards, images (ComfyUI), content | System commands, file operations |
-| **Alphonso** | Operator | `build`, `file`, `verify`, `install`, `command`, `fix`, `test`, `github` | Execute commands, write files, install packages, verify builds, GitHub PR/issue management, code search | Bypass safety checks |
-| **Maria** | Governance | `audit`, `compliance`, `policy`, `approval`, `risk` | Requirements, roadmaps, risk registers, audits | Destructive execution |
-| **Marcus** | Distribution | `distribute`, `schedule`, `publish`, `upload`, `release`, `slack` | Approved publishing, release readiness, GitHub releases, Slack notifications | Execute without approval |
-| **Echo** | Memory | `remember`, `archive`, `knowledge`, `history` | Store decisions, preserve context, knowledge archival | Execution, posting |
-| **Sentinel** | Security | `security`, `secrets`, `permission`, `vulnerability` | Safety monitoring, vulnerability scanning, alerts | Execution, posting |
-| **Nova** | Analysis | `opportunity`, `priority`, `score`, `roi`, `value` | Scoring, prioritization, performance analysis | Execution, file writes |
+What each agent may do is one table, shown in Project Execution's capability matrix and on the Hector desk. Everyone may read and create new files of its own; only **Alphonso** may run code or change project files; only **Marcus** may publish or send. Spending (a paid model, or Miya's paid voices, pictures and clips) is allowed only on certain steps, and always asks.
 
-### Agent Dependency Order (Wave Execution)
-
-```
-Wave 0: Hector, Maria, Sentinel, Nova (no dependencies)
-Wave 1: Miya (needs Hector), Marcus (needs Maria)
-Wave 2: Alphonso (needs Miya)
-Wave 3: Echo (needs all)
-```
+| Agent | Role | In Miya Studio |
+|-------|------|----------------|
+| **Jose** | Orchestrator — answers or plans every request, runs the steps, reports | Runs a project as one request |
+| **Hector** | Research — facts, sources, citations | What goes viral; finds stock clips |
+| **Miya** | Creative — scripts, storyboards, pictures, front-end drafts | Script, scenes, thumbnails, voice, music, clips, Shorts, carousels, campaign |
+| **Alphonso** | Operator — runs commands, writes project files, builds and verifies | Assembles the finished video |
+| **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Reviews the script; the quality gate |
+| **Marcus** | Distribution & Release Manager — posts and sends, after approval | Posts and schedules the posts |
+| **Echo** | Memory — decisions, knowledge, history | Remembers what you reject and decide |
+| **Sentinel** | Security only | The security check before posting |
+| **Nova** | Analysis — scoring, timing, results | Market check, post times, results, lessons and ideas |
 
 ---
 
-## 7. Boardroom Orchestrator
+## 7. Boardroom and Project Batches
 
-The Boardroom is Alphonso's **autonomous project execution system**. It breaks high-level goals into concrete tasks, assigns them to specialized agents, and executes them in iterative batches — with Maria governance reviewing each batch.
+### Boardroom (group chat)
+
+**Sidebar → Boardroom** is a group chat with the agents. Mention one or more with `@` (for example `@hector @nova`) and each replies with its own model; a reply that mentions another agent passes the turn on, at most 3 times, then asks you. **Stop** halts the chain. Each thread has three actions, each run as a one-step Jose request on the Requests board:
+
+- **Conclude** — Maria's governance review: risk level, whether approval is needed, and a summary, saved on the thread.
+- **Distribute** — Marcus prepares a review that sends nothing, or posts to a Slack channel after you approve it.
+- **Creative brief** — Miya writes a brief from the thread.
+
+### Project goals and batches
+
+The batch orchestrator is Alphonso's **goal-and-batch tracker**. It breaks high-level goals into concrete tasks, assigns them to specialized agents, and executes them in iterative batches — with Maria governance reviewing each batch.
 
 ### How to Use
 
@@ -284,7 +306,7 @@ roadmap Design a React Native mobile app
 
 #### Via Dashboard
 
-1. Open the **Boardroom Panel** in the operator dashboard
+1. Open the batch panel on the **Operator Dashboard** (turn on Settings → Desktop & UI → Developer mode first)
 2. Enter your project goal and optionally a project folder path
 3. Click **SET GOAL & GENERATE BATCH**
 4. Batch #1 is generated with ~7-10 tasks assigned to agents by specialty
@@ -323,7 +345,7 @@ roadmap Design a React Native mobile app
 Each project can have its own working directory:
 
 1. Set the directory when creating a goal: "plan Build a dashboard in /path/to/project"
-2. Or set it via the Boardroom Panel input field
+2. Or set it in the project batch panel's folder field
 3. Agents receive directory context in their task assignments
 4. File operations reference the project directory
 
@@ -342,72 +364,87 @@ Each project can have its own working directory:
 
 ---
 
-## 8. Content Catalyst
+## 8. Miya Studio — the Content Factory
 
-Content Catalyst is Miya's **content creation studio** for social media. Start
-with a creative brief, choose the asset types you need, then review each output
-before it moves forward. The studio never treats an unavailable asset as a
-finished one.
+**Sidebar → Work → Creative** (Miya Studio) turns an idea into finished, posted videos for a brand. Set **Settings → Output folder** first: every project is saved in `<output folder>/<brand>/<project>/`, with each step's versions.
 
-For image work, the studio checks the local ComfyUI runtime. If ComfyUI is
-installed but stopped, use **Start ComfyUI** from the active job; if it is not
-installed, set it up in **Runtimes** first. A generated image is shown directly
-in the Creative output card when available. Video generation uses Runway only
-when it is configured. Publishing always requires approval.
+### Brands
 
-### Trigger
+The **Brands** tab holds each brand: name, colours, fonts, logo, tone, audience, visual style, voice, platforms and posting times, honesty rules, references, and a quality threshold (pieces below it are hidden unless you tick "Show everything"). What you reject is remembered for that brand, and only the lessons you keep reach new projects. Also here:
 
-```
-Create an Instagram post about our new feature
-Generate a LinkedIn article on AI trends
-Make a YouTube video script for product launch
-```
+- **Engines:** who reads the voice-over (Kokoro, free, or one of your ElevenLabs voices), who makes pictures (ComfyUI, free, or Higgsfield) and AI clips (this computer, Runway or Higgsfield), and whether ElevenLabs adds sound effects. A project can override these in the Scene Builder.
+- **Characters:** any number of characters, made-up or a real person. A real person needs the tick **"This is me, or I have this person's permission"** (saved with its date). Give a character 5–20 pictures, or press **Make pictures with Miya** (8 pictures with ComfyUI, made-up characters only). One is the brand's main character; a project or a single scene can pick another, or none. With ComfyUI the character is kept free from its pictures (install the character reference model on Runtime Hub's ComfyUI card); **Train on Higgsfield** trains it once, after asking with the cost.
+- **Results, lessons and ideas** (see below).
 
-### Pipeline Steps
+### A project, step by step
 
-1. **Brief** — Miya creates a content brief (platform, format, tone)
-2. **Draft** — LLM generates the content draft
-3. **Image** — ComfyUI generates visual assets
-4. **Video** — Runway generates video (if requested)
-5. **Narration** — A narration script (if requested; audio generation is not implied)
-6. **Preview** — Shows the complete package
-7. **Publish** — Posts to the platform (requires approval)
+Create a project, fill in the brief (the idea, platforms, what to make, format, length) and press **Run project**. Jose runs every step as one request, shown on the Requests board:
 
-### Supported Platforms
+1. **Research** — Hector looks at what goes viral, Nova checks the market.
+2. **Script** — Miya writes 3 hooks and a timed script; Nova and Maria review it and may send it back (2 rounds). Then it waits: **"Approve the review in Miya Studio first."**
+3. **Scenes** — a storyboard with a picture for each scene, the brand's character in it.
+4. **Thumbnails** — 3 finished 1280×720 thumbnails with the headline drawn on in the brand's colours.
+5. **Voice-over** — Kokoro (install it in Runtime Hub) or ElevenLabs reads each scene's lines.
+6. **Music** — MusicGen (AudioCraft, from Runtime Hub) makes a music bed; without it the step is skipped and says so.
+7. **Sound effects** — optional, ElevenLabs, at most one per scene.
+8. **Stock clips** — Hector finds a clip per scene on Pexels, Pixabay or Coverr (free keys in Connectors → Content & Productivity), keeping each clip's source, author and license.
+9. **AI clips** — real moving video for the main moments (Miya marks them; switch any scene on or off), every scene, or none. Made with a local video model in your ComfyUI (Runtime Hub → ComfyUI suggests one for your graphics card), Runway or Higgsfield. A run with paid clips stops once and asks with the cost.
+10. **Motion** — a scene (or a Short's part) can copy a movement: a Higgsfield preset, a move you **Record** with the webcam (3-2-1, up to 10 seconds), or **A video from your files** (over 10 seconds is refused). Miya suggests where a move would help. Higgsfield makes it inside the clips step's one approval; without that, your computer makes it for free (install motion transfer on Runtime Hub's ComfyUI card; about 8 GB of graphics memory). If a motion can't be made, the scene gets its normal clip and says why.
+11. **Finished video** — Alphonso assembles a 16:9 and a 9:16 MP4 with FFmpeg: voice on top, music under it, captions using only the script's words. The Scene Builder plays everything.
+12. **Shorts** (when "What to make" asks for them, e.g. "3 Shorts") — each 30–60 seconds: its own mini-script, a highlight of the finished video with a new hook, or a plain cut. **Shorts Studio** lets you change a Short's kind, tick its platforms, play, redo or send it back.
+13. **Carousel** (when "What to make" says carousel) — 5–10 slides in the brand's style and shape (4:5 or 1:1), reviewed in **Carousel Studio**.
+14. **Campaign** — captions, hashtags, ad copy and posting times; ad copy can be exported as CSV for Meta Ads Manager or Google Ads Editor.
+15. **Quality gate** — Maria and Sentinel check everything.
+16. **Publish** — always asks (see below).
 
-- Instagram (posts, reels, stories)
-- Facebook (posts, ads)
-- Twitter/X (tweets, threads)
-- TikTok (videos)
-- LinkedIn (posts, articles)
-- YouTube (scripts, descriptions)
+Each tab also has its own **Run** to redo one step; later steps then show **Out of date**, and nothing reruns by itself. **Send back** with a reason redoes a piece and saves the reason as a brand lesson. Asking in Chat for a content video ("make a YouTube video about…") starts a project for your default brand, with **Open in Miya Studio**. The old one-shot generator is the **Quick package** tab.
+
+### Publishing
+
+In **Campaign Studio → Posts**, **Make the posts list** prepares one post per platform and piece (YouTube video and Short, Instagram and Facebook Reels, carousels), each with its own title, caption, hashtags and time (from the brand's posting times, then Nova's suggestion, then tomorrow at 18:00). Change any of them, then **Approve and schedule** sends them all with one approval:
+
+- **YouTube** uploads early as private and goes public at its time, even with the app closed. If YouTube keeps your channel's uploads private (it does for a Google project that hasn't passed its audit), Alphonso says so and reminds you at the time.
+- **Facebook** Reels and photo posts are scheduled on your Page.
+- **Instagram** posts are sent by Alphonso at their time, or at the next start if the app was closed then (more than 7 days late, it asks first). A post cut off while sending is never sent again blindly.
+- **Daily limits:** a post over Instagram's daily limit or Facebook's 30 Reels a day waits and goes when there is room.
+- **Your own storage (optional):** Instagram carousels (and Reels through Instagram Login) need a public link. Connect any S3-compatible bucket in Connectors → **Your storage** (with a Test); files are deleted once posted. Without storage, the post is saved in the project's `ready-to-post` folder with its caption, marked **Post by hand**, and Marcus reminds you at its time.
+
+**Signing in:** Settings → Connectors → **Sign in to YouTube**, **Sign in to Facebook** and **Sign in with Instagram** open your browser and Alphonso receives the sign-in itself (on this computer only, for 5 minutes). You use your own Google project or Meta app; each button lists the steps and the address to register. Alphonso warns before a sign-in runs out (YouTube: about 7 days while your Google project is in Testing, so tick "My Google project is Published" once it is; Meta: 60 days). *Not checked with real accounts yet.*
+
+### Results, lessons and ideas
+
+Each post's numbers are read 1 hour, 1 day, 7 days and 30 days after it goes out: views, watch time, likes, comments, shares, saves, reach, new subscribers (whatever the platform gives; a number it doesn't give is "—"). The Posts list, the Calendar and the Brands tab's **Results** show each as good, weak or usual against the brand's own usual numbers (after 3 posts). After 7 days, Nova and Miya propose lessons (**Keep**, edit or **Drop**), a post that did well gets up to 3 follow-up ideas (**Start project**), and with 5 posts on a platform Alphonso suggests posting times (**Use this slot**). Telegram gets a daily summary. *Not checked with real accounts yet.*
+
+### Content Studio (quick posts)
+
+**Sidebar → Work → Content** (Content Studio) is the older one-shot studio for single social posts: a brief, a draft, an optional ComfyUI image and Runway video, and an approved publish (through the same publishing path). A draft that fell back to the template says so.
+
+### Calendar
+
+**Sidebar → Work → Calendar** shows every brand's posts, Content Studio's scheduled drafts and Marcus's other sends, by month or week, with brand and platform filters. Colours show the platform, a small marker the brand; striped means it needs you. **Drag** a post to move it (in the month it keeps its time, in the week it takes the hour you drop it on). A post already scheduled on YouTube or Facebook asks first and changes there. The side panel shows a post's details and numbers, changes its time, cancels it or opens its project.
 
 ---
 
 ## 9. Connector System
 
-Alphonso has 13 built-in connectors, all policy-gated:
+Alphonso has 33 connectors, all set up in **Settings → Connectors** and all policy-gated. Keys are kept in your system's keychain, never in a file; an environment variable still works as a fallback.
 
-| Connector | Type | Cost | Tier Required |
-|-----------|------|------|---------------|
-| Telegram | Messaging | Free (self-hosted bot) | Free |
-| WhatsApp | Messaging | Free (Meta Cloud API + Railway gateway) | Free |
-| Brave Search | Search | Free | Free |
-| YouTube | Publishing | Free | Free |
-| Claude | LLM | Paid | Free |
-| ChatGPT | LLM | Paid | Free |
-| GitHub | Development | Free tier | Free |
-| Slack | Communication | Free tier | Free |
-| Notion | Workspace | Free tier | Free |
-| ClickUp | Project Mgmt | Free tier | Free |
-| SD WebUI | Image Gen | Free (local) | Free |
-| ComfyUI | Image Gen | Free (local) | Free |
-| Runway | Video Gen | Paid | Free |
-| Ollama | LLM | Free (local) | Free |
+| Group | Connectors | Cost |
+|-------|-----------|------|
+| Messaging | Telegram, WhatsApp Cloud, Discord, Slack, Generic Webhook, Mobile Bridge | Free |
+| | CALL-E (real outbound phone calls) | Paid |
+| AI models | Ollama (local), NVIDIA NIM, Gemini (free tiers), Hermes Agents (self-hosted) | Free |
+| | Claude, ChatGPT, Qwen, DeepSeek | Paid |
+| Search & research | Brave Search, Tavily, Perplexity | Free tiers / paid |
+| Content & productivity | YouTube, Meta (Facebook and Instagram), ComfyUI, SD WebUI, Pexels, Pixabay, Coverr, your own storage, Notion, ClickUp, GitHub | Free |
+| | Runway, ElevenLabs, Higgsfield | Paid |
+| Automation | n8n | Free (self-hosted) |
+
+**Claude and ChatGPT:** pick the model from the live list in each connector (Claude Haiku 5.5 and GPT-6 Luna by default). **Higgsfield:** paste the model ids from the Higgsfield Console (pictures, clips, character training, motion), each with optional extra settings as JSON; **Test** gives Higgsfield's estimate without making anything. **ElevenLabs:** **Test** lists your voices, including your clones. Prices for paid engines are yours to enter in Settings → Approvals → Allow paid models.
 
 ### WhatsApp Cloud Setup
 
-WhatsApp uses Meta's Cloud API (free) + a small Railway gateway service for inbound messages.
+WhatsApp uses Meta's Cloud API (free) + a small Railway gateway service for inbound messages. Twilio is not supported.
 
 **Required credentials** (set in Settings → Connectors → WhatsApp):
 
@@ -423,52 +460,51 @@ See [GETTING_STARTED.md](./GETTING_STARTED.md) for the full Railway deployment s
 
 ### Setting Up Connectors
 
-1. Go to **Settings → Connectors** and select the connector you want to set up
-2. Enter the required credential(s) in the input fields
-3. Click **Save** — credentials are automatically verified immediately after saving
-4. A green "saved & verified ✓" notice confirms the connector is ready to use
-5. If verification fails, re-check your credential values and try again
-
-> **Note (v2.2.3+)**: Connectors now auto-verify when you save credentials. You no longer need to click "Test Connection" manually after saving.
+1. Go to **Settings → Connectors**; connectors are grouped (Messaging, AI Models, Search & Research, Content & Productivity, Automation)
+2. Enter the required credential(s) and click **Save**
+3. Use **Test** in the Connector Health Monitor: "Live check passed" means the service itself answered; "key found" means only that a key is saved
+4. If a check fails, the reason says what is missing or what the service said
 
 ### Connector Safety
 
-- Every connector call goes through `policyEnforcementService`
-- Paid connectors trigger approval prompts in Zero-Cost Mode
-- External actions (publish, upload) always require approval
+- Every connector call goes through the policy gate
+- Paid connectors are blocked in Zero-Cost Mode
+- Publishing, sending and spending always ask first
 
 ---
 
 ## 10. Approval & Governance
 
-### When Approval Is Required
+### What asks first
 
-| Action | Risk Level | Approval Needed |
-|--------|-----------|----------------|
-| Read files, research | Low | No |
-| Write files, create code | Medium | No (local only) |
-| Delete files | High | Yes |
-| External API calls | Medium | Yes (if paid) |
-| Publish/upload | High | Yes |
-| Payment actions | Critical | Yes |
-| Deploy | Critical | Yes |
+Each step says what it does, and approval follows from that, not from the words in your request. **Settings → General → What asks first** has a switch for each kind:
 
-### Approval Panel
+| A step that… | Asks first |
+|---|---|
+| reads | No |
+| creates new files of its own | No |
+| changes project files | Your choice |
+| runs code or commands | Your choice (asked per command; commands that only read never ask) |
+| spends money | **Always** |
+| publishes or sends | **Always** |
+| deletes | **Always** (including AI-planned commands such as `git reset --hard` or `ollama rm`) |
 
-When approval is required, an **Approval Panel** appears **directly in the chat thread**, inline below the last assistant message:
-- Risk level badge (color-coded)
-- Action description
-- **Approve** / **Deny** buttons
-- **Continue** button after all approvals resolved
+The last three ask even with Approval Mode off. A command's risk rating comes from what it does, and the approval window says why.
 
-> **Note (v2.2.3+)**: All pipeline results (agent receipts, approval prompts, Nova insights) now appear inline in the chat thread — you no longer need to scroll below the chat or look at separate panels.
+### Where you approve
+
+- **In Chat**, inline under the reply (Approve / Deny)
+- **On the Requests board** (Approve and carry on / Reject)
+- **On Telegram**, with the buttons Jose sends
+- **In Miya Studio**, for the review, AI clips and Publish steps
+
+Approving carries the request on; approving twice runs it once.
 
 ### Governance Agents
 
-- **Maria**: Governance and risk review: requirements, roadmaps, acceptance criteria, risk
-- **Sentinel**: Security scanning of commands and outputs
-- **Marcus**: Release readiness and distribution (publishing only after approval)
-- **Sentinel**: Monitors for safety violations and blocks dangerous actions
+- **Maria**: governance, risk and quality reviews (scripts, the quality gate, Boardroom's Conclude)
+- **Sentinel**: security scanning of activity, commands and content
+- **Marcus**: the only agent that publishes or sends, after approval
 
 ---
 
@@ -504,18 +540,18 @@ Alphonso maintains several memory systems:
 
 ## 12. Operator Dashboard
 
-The operator dashboard shows system health and controls.
+The Operator Dashboard is a developer tool: it appears in the sidebar and on Home only when **Settings → Desktop & UI → Developer mode** is on. It shows system health and controls.
 
 ### Panels
 
 | Panel | Shows |
 |-------|-------|
 | **System Health** | Build status, verification, Ollama connection (polls every 3s) |
-| **Connector Health** | Status of all 11 connectors |
+| **Connector Health** | Status of all 33 connectors |
 | **Approval Center** | Pending approvals across all agents |
 | **Memory Confidence** | Memory item quality scores |
 | **Session Intelligence** | Real-time activity feed |
-| **Boardroom** | Project goals, batch progress, task queue |
+| **Batches** | Project goals, batch progress, task queue |
 
 ### Focus Mode
 
@@ -547,13 +583,18 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 ## 14. All Chat Commands
 
+You don't need commands: write what you want and Jose answers or plans it. These still work:
+
 ### Jose Commands
 
 | Command | Description |
 |---------|-------------|
-| `/jose <task>` | Route task through Jose's pipeline |
+| `/jose <task>` | Always plan the task |
+| `Plan this fresh: <task>` | Plan without starting from a template |
 | `ask jose <task>` | Natural language Jose invocation |
 | `jose: <task>` | Colon-prefix variant |
+| `Make a Higgsfield picture of <description>` | One Higgsfield picture (asks first with the cost; also works on Telegram) |
+| `Make a Higgsfield video of <description>` | One Higgsfield clip (same) |
 | `plan <goal>` | Create project goal + generate batch |
 | `execute batch` | Run all pending tasks in the active batch |
 | `run batch` | Same as execute batch |
@@ -574,7 +615,7 @@ Navigate to the Project Execution panel in the dashboard, or use:
 | `lookup <info>` | Hector | Look up specific information |
 | `docs <library>` | Hector | Find documentation |
 | `create image <prompt>` | Miya | Generate an image via ComfyUI |
-| `make a video <script>` | Miya | Generate video content |
+| `make a YouTube video about <topic>` | Miya | Start a Miya Studio project (see section 8) |
 | `brand <direction>` | Miya | Brand strategy and creative |
 | `script <topic>` | Miya | Write a script |
 | `build <thing>` | Alphonso | Build/compile/package |
@@ -597,21 +638,15 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 | Command | Description |
 |---------|-------------|
-| `create content for <platform>` | Full content pipeline |
+| `create content for <platform>` | Content Studio post |
 | `make an Instagram post about <topic>` | Instagram content |
-| `generate a YouTube video script` | YouTube script |
+| `make a YouTube video about <topic>` | A full Miya Studio project, opened from Chat |
 | `write a blog article about <topic>` | Blog post |
 | `create a marketing campaign` | Full campaign |
 
 ### System Commands
 
-| Command | Description |
-|---------|-------------|
-| `check ollama` | Verify Ollama connection |
-| `list models` | Show available Ollama models |
-| `system health` | Show system health status |
-| `list connectors` | Show connector status |
-| `list agents` | Show all agents and their status |
+Ask in plain words ("is Ollama running?", "which models do I have?"); Jose answers. Settings → Runtime and Runtime Hub show the real status of Ollama, ComfyUI, Voice OS and the other tools, and the Connector Health Monitor tests each connector.
 
 ### Memory Commands
 
@@ -630,7 +665,19 @@ Navigate to the Project Execution panel in the dashboard, or use:
 |-----|--------|
 | `Enter` | Send message |
 | `Shift + Enter` | New line in textarea |
-| `Escape` | Cancel current generation |
+| `Escape` | Stop the current reply |
+| `Ctrl + N` | New chat |
+| `Ctrl + K` or `/` | Focus the message box |
+| `Ctrl + B` | Boardroom |
+| `Ctrl + S` | Settings |
+| `Ctrl + D` | Agent dock |
+| `Ctrl + M` | Metrics |
+| `Ctrl + E` | Export a backup |
+| `Ctrl + L` | Clear chat |
+| `Ctrl + P` | Search memory |
+| `?` | Show all shortcuts |
+
+On a Mac, use `⌘` instead of `Ctrl`.
 
 ---
 
@@ -646,7 +693,7 @@ Connecting a third-party service (Claude, ChatGPT, Runway and so on) uses your o
 
 ## 17. Performance Features
 
-Alphonso v2.0.0 includes significant performance optimizations:
+Alphonso includes these performance features (first added in v2.0.0):
 
 ### Parallel Execution
 

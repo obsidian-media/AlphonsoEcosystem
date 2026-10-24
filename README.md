@@ -4,18 +4,44 @@
 
 # Alphonso
 
-> **v2.10.0** — Local-first AI desktop companion with 9 agents, 33 connectors, a first-run Smart Installer, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.10.0** — Local-first AI desktop companion with 9 agents that Jose plans and runs as step-by-step requests, Miya's content factory (from an idea to finished, posted videos, Shorts and carousels), 33 connectors, a first-run Smart Installer, an iOS companion app and Boardroom multi-agent sessions — powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.10.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-5645%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
+[![Tests](https://img.shields.io/badge/tests-6777%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
 [**Download the latest release**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
-## What's New in v2.10.0 (2026-10-21)
+## What's New in v2.10.0 (on `main`, not released yet)
 
+2.10.0 is not tagged yet; the latest release is 2.9.0. Everything below is on `main`. The full list is in [docs/CHANGELOG.md](docs/CHANGELOG.md).
+
+### Jose plans and runs every request (Jose redesign, phases 1–6b)
+
+- **Answer or plan:** Jose answers a plain question at once and plans anything else as steps, each with the agent that does it and what it needs first. Templates (Content video, Build an app, Research report) are starting points; "Plan this fresh:" skips them.
+- **Approval by what a step does**, not by its wording: read, create files, change the project, run code, spend, publish or send, delete. Spending, publishing and deleting always ask. Settings → General → What asks first.
+- **The Requests board** (Orchestrator → Requests): every request's plan as boxes and arrows, live, with what each step produced. Bigger requests show their plan first in Chat; you can edit a plan or save it as a template.
+- **Plans change while they run:** a review can send work back (2 rounds at most), an agent can ask another for help, a failing step can get a larger model, or a paid model if you allow them (Settings → Approvals → Allow paid models, off by default, with a monthly cap).
+- **Away from the app:** Jose tells your Telegram chat what waits for you, with Approve / Reject buttons; a request cut off when the app closed can be carried on.
+- **Everything goes through Jose:** Chat, Telegram, WhatsApp, the phone, schedules, Boardroom's thread actions and workflows.
+
+### Miya's content factory (phases 1–4c)
+
+- **A project from idea to video:** research (Hector, Nova), a timed script with 3 hooks and two reviews (Nova, Maria), a storyboard with a picture per scene, thumbnails with the headline drawn on, and a campaign. Every project is saved in a folder per brand, with versions.
+- **The finished video:** Kokoro voice-over in the brand's voice, MusicGen music, stock clips (Pexels, Pixabay, Coverr), AI clips for the main moments (your ComfyUI with a local video model, Runway or Higgsfield), captions from the script's own words, as 16:9 and 9:16 MP4s. FFmpeg is now in the Windows installer.
+- **Shorts and carousels:** a Short can be its own mini-script, a highlight with a new hook, or a cut; a carousel is 5–10 slides in the brand's style. Each has its own studio tab.
+- **Publishing:** one approval posts to YouTube, Instagram and Facebook at their times. Sign in from Settings, no terminal. The new **Calendar** shows every brand's posts; drag to move them. Your own S3-compatible storage is optional; without it, a post that needs a link is saved to post by hand.
+- **Learning from results:** each post's numbers are read at 1 hour, 1 day, 7 days and 30 days, compared with the brand's usual ones; Nova and Miya propose lessons you keep or drop, and good posts get follow-up ideas.
+- **Paid engines, only if you choose them:** ElevenLabs voices (including your clone) and sound effects; Higgsfield pictures and clips. Each run asks first with the cost.
+- **Brand characters and motion:** the same character (made-up, or a real person with their permission) in every picture, free with ComfyUI or trained on Higgsfield; a scene can copy a movement from a Higgsfield preset, a webcam recording or a video file.
+
+### Fixes and the rest
+
+- **Honest screens:** connector checks say whether the service answered or only a key was found; risk ratings come from what a command does; scheduled tasks really run; Sentinel's scan checks real activity; Content Studio and Maria say when they fell back.
+- **Your models and folders:** agents use the model and Ollama address you chose; Ollama models on another drive are found; you choose where tools install; your own ComfyUI is found and used; Claude and ChatGPT work again with a model you pick.
+- **One Boardroom** with Conclude, Distribute and Creative brief on every thread; **Settings → Bridges** for ACC and SessionGuard; the Operator Dashboard is a developer tool.
 - **macOS is back.** An Apple Silicon DMG ships again (2.9.0 had none), so Mac installs on 2.8.0 are offered the update. It is not yet signed by Apple: the first time, right-click Alphonso in Applications and choose Open.
 - **Updates relaunch the app on macOS and Linux.** The restart plugin's Rust half was missing, so the app could not restart itself after installing an update.
 - **Chat works with an Ollama you started yourself.** When Ollama refuses the app window, chat now goes through the backend with the whole conversation (the reply arrives in one piece rather than streamed). Before, it sent only a flattened prompt.
@@ -23,7 +49,7 @@
 - **Smaller fixes:** provider tabs lock while a reply is generating; Project Execution approval gates name their real owner agent; the Setup disk checks agree when Ollama keeps its models on another drive.
 - **CI:** a weekly npm and Rust security audit; a check that Tauri's JavaScript and Rust packages match; a check that the Windows installer really contains Ollama; the real desktop app's end-to-end suite now runs on every PR.
 
-Not tested with real accounts yet: Perplexity (no API key), and auto-update from 2.9.0 to 2.10.0.
+Not tested with real accounts yet: Perplexity, the paid models, publishing and reading results on YouTube, Instagram and Facebook, ElevenLabs, Higgsfield, and auto-update from 2.9.0 to 2.10.0. The live checks are listed in [docs/qa/DESKTOP_QA_COVERAGE.md](docs/qa/DESKTOP_QA_COVERAGE.md).
 
 ## What's New in v2.9.0 (2026-10-12)
 
@@ -52,7 +78,7 @@ Came out of a full pre-launch audit. Highlights:
 - **Installers show an end-user license** ([legal/EULA.txt](legal/EULA.txt), draft pending legal review). [NOTICE](NOTICE) now credits the bundled Ollama runtime and Llama 3.2 ("Built with Llama").
 - Full list: [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
-## Voice + Mobile pass — 2026-07-14 (unreleased work on `main`)
+## Voice + Mobile pass — 2026-07-14 (shipped from v2.6.2 on)
 
 Recent voice/mobile work since `v2.6.0` has been substantial and spans both the
 desktop app and the iOS companion:
@@ -64,14 +90,15 @@ desktop app and the iOS companion:
   Local voice turns can now route through the selected one of nine agents instead
   of always collapsing into a generic reply path.
 - **Cloud voice gained multilingual routing, including Persian/Farsi.**
-  English replies use NVIDIA TTS; `fa-IR` uses Railway-hosted Piper voices
-  (`Mana` / `Manta`) with playback retry handling.
+  English replies use NVIDIA TTS; `fa-IR` uses Piper voices (`Mana` / `Manta`)
+  with playback retry handling. (Since September 2026 the cloud service's compute
+  is on AWS at `voice.obsidianmedia.online`; the Farsi voices are still on Railway.)
 - **Cloud voice access is now device-gated.**
   The iOS app signs in via Supabase one-time-code auth, stores the session in
   Keychain, enrolls a generated device UUID, and sends voice requests only as an
   authenticated enrolled device. The service-role key remains server-only.
 - **Cloud voice is now a standalone service, not just an extension of local Voice OS.**
-  The repo now contains a dedicated `voice/cloud-backend/` Railway service with
+  The repo now contains a dedicated `voice/cloud-backend/` service (first on Railway; its compute moved to AWS in September 2026, with Railway kept as the rollback) with
   its own contracts, auth, tests, deployment config, and provider policy layer.
 - **Local and cloud voice responsibilities were explicitly separated.**
   The desktop `voice/backend/` path remains the local Ollama/Voice OS runtime,
@@ -94,7 +121,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 - **Fixed Voice OS being completely non-functional** — the backend pipeline called a broken/nonexistent LLM function on every request and never awaited its own text-to-speech call. Fully rewritten.
 - **Fixed the #1 reported issue: Mobile Companion pairing never worked.** Root cause: the Companion server and Voice OS were both trying to use the same network port, so one silently failed to start every time.
 - **Added real WhatsApp bot commands** (`/status`, `/queue`, `/approve`, `/reject`, `/agents`, `/report`, `/ping`, `/help`, `/ask`) — WhatsApp previously had zero command handling, and inbound polling was never automatic. Also fixed a missing settings field that made WhatsApp inbound impossible to configure at all.
-- **Handed off** full in-app auto-update (download+install+relaunch) as a scoped follow-up — `docs/AUTO_UPDATE_HANDOFF.md`, PR #98.
+- **Handed off** full in-app auto-update (download+install+relaunch) as a scoped follow-up — `docs/AUTO_UPDATE_HANDOFF.md`, PR #98 (merged in v2.6.0, and checked against a real release in v2.7.1).
 
 ## What's New in v2.6.0
 
@@ -160,7 +187,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery and a PIN-authenticated local WebSocket (off until you enable mobile pairing on the desktop). Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **357 Rust unit tests across 50 modules** — 189 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **69 Rust unit tests across 25 modules** — 104 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -191,7 +218,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 
 - **Voice OS Install Fixed** — Critical: pip packages for Voice OS were silently skipped because `requirements_file` path was relative to the wrong directory. Now uses `pip_packages` list directly — all packages install correctly.
 - **Voice OS Start Fixed** — `runtime_start_tool` now resolves `voice/backend/main.py` from the app resource directory (`app.path().resource_dir()`), matching `voice_sidecar.rs`. Jarvis mic button in Chat now works with Desktop app.
-- **Agent Pairing View Mounted** — `AgentPairingView.jsx` (define agent-to-agent trigger pairings) was fully built but never accessible. Now mounted as a "Pairings" tab in the All Agents page.
+- **Agent Pairing View Mounted** — `AgentPairingView.tsx` (define agent-to-agent trigger pairings) was fully built but never accessible. Now mounted as a "Pairings" tab in the All Agents page.
 - **Settings Now Persist** — Critical fix: all settings (model, workspace root, theme, output folder, etc.) now properly save to localStorage on every change. Previously only survived the session.
 - **Boardroom Added to Sidebar** — The Boardroom (MissionRoom) is now accessible directly from the sidebar under Agents.
 - **All Agents Page — 6-Tab Layout** — Tab layout now includes Pairings tab alongside Overview, Queue, Skills, Workflows, and Advanced.
@@ -204,14 +231,14 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 
 ## What's New in v2.3.2
 
-- **Perplexity Connector** — Added 15th connector: `perplexityConnector.js` as a tier-2 Hector research fallback.
+- **Perplexity Connector** — Added 15th connector: `perplexityConnector.ts` as a tier-2 Hector research fallback.
 - **UI Polish v2** — Design system tokens + Framer Motion applied across all 6 pages.
 
 ## What's New in v2.3.0–v2.3.1
 
-- **n8n Workflow Automation** — `n8nConnector.js` + Runtime Hub ToolDef + Marcus distribution target + ConnectorSetupPanel credential section.
-- **Jose Scheduled Tasks** — `joseSchedulerService.js` + AutomationView Schedules tab + App.tsx background scheduler wiring.
-- **Echo File System Watcher** — `echoFileWatcherService.js` polls `watch_inbox_poll` Tauri command every 30s. Config card in Settings.
+- **n8n Workflow Automation** — `n8nConnector.ts` + Runtime Hub ToolDef + Marcus distribution target + ConnectorSetupPanel credential section.
+- **Jose Scheduled Tasks** — `joseSchedulerService.ts` + AutomationView Schedules tab + App.tsx background scheduler wiring.
+- **Echo File System Watcher** — `echoFileWatcherService.ts` polls `watch_inbox_poll` Tauri command every 30s. Config card in Settings.
 - **MCP Bridge Live Responses** — `bridge/server.js` calls Ollama `/api/chat` for live responses; `alphonso_get_status` checks `/api/tags`.
 - **21 Telegram Commands** — `/research`, `/memory`, `/receipts`, `/read` added to telegramCompanionService (total: 21 commands).
 
@@ -253,19 +280,21 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 
 ## Features
 
-- **9 Enhanced Agents** — Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — each with defined roles, permission contracts, and enforced boundaries. Now with GitHub and Slack capabilities.
-- **24 Connectors** — Ollama, Telegram, WhatsApp Cloud, YouTube, Mobile Bridge, ChatGPT, Claude API, Qwen, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI Video, Runway, GitHub, Slack, Discord, Generic Webhook, Brave Search, Perplexity, Tavily, DeepSeek, NVIDIA NIM, Gemini, n8n
+- **9 Agents** — Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — each with a role and one permission table (`agentPermissionTable.ts`) that every plan is checked against.
+- **Jose's requests** — every message is answered or planned as steps; approval by what a step does; a live Requests board; plans that adapt while they run; Telegram approvals while you're away.
+- **Miya's content factory** — research, script, storyboard, thumbnails, voice-over, music, stock and AI clips, finished 16:9 and 9:16 videos, Shorts, carousels, campaign, publishing on YouTube, Instagram and Facebook, a Calendar, results and lessons, brand characters and motion.
+- **33 Connectors** — Ollama, Telegram, WhatsApp Cloud, YouTube, Meta (Facebook and Instagram), Mobile Bridge, ChatGPT, Claude, Qwen, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI, Runway, GitHub, Slack, Discord, Generic Webhook, Brave Search, Perplexity, Tavily, DeepSeek, n8n, NVIDIA NIM, Gemini, Hermes Agents, CALL-E, Pexels, Pixabay, Coverr, your own storage, ElevenLabs, Higgsfield
 - **1,000+ Integrations** — Composio integration gives access to GitHub, Slack, Jira, Salesforce, Linear, and 1,000+ more services — all policy-gated
 - **Local LLM First** — Ollama with model switching (`llama3.2:3b` default); no prompt leaves your device for core operations
 - **Fail-Closed Policy Gate** — every outbound action runs through `policyEnforcementService.ts`; if credentials are missing or the action is ambiguous it is blocked, not allowed
 - **Durable Orchestration** — queue with state transitions (`queued → approval_required → approved → in_progress → completed`), dead-letter replay, and approval workflows
-- **10 Structured Workflows** — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance
+- **16 Structured Workflows** — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance, Research Operations, Crisis Management, Ecosystem Learning, Human Collaboration, Financial Intelligence, Reputation and Brand Monitoring
 - **SQLite Memory** — durable memory with governance metadata (owner, sensitivity, retention, privacy policy) in WAL mode
 - **Plugin System** — sandboxed plugin runtime + local marketplace
-- **Screen Intelligence** — `screenIntelligenceService.js` for on-screen context awareness
+- **Screen Intelligence** — `screenIntelligenceService.ts` for on-screen context awareness
 - **Voice OS** — Real-time STT→LLM→TTS pipeline (`voice/`) with faster-whisper, Ollama, and Piper. Launched from Runtime Manager as a Tauri sidecar. AudioWorklet-based `useJarvisVoice` hook with barge-in and conversation history.
 - **Premium Animated UI** — OKLCH design token system, Framer Motion animations (`AnimatePresence` on chat messages), glassmorphism input, sidebar tooltips.
-- **Desktop Native** — Tauri v2 (Rust 1.77) + React 18 + Vite 8; ~6.8MB NSIS/MSI installer for Windows
+- **Desktop Native** — Tauri v2 + React 19 + Vite 8; NSIS/MSI installer for Windows (it bundles the Ollama runtime and FFmpeg), a DMG for Apple Silicon and an AppImage for Linux
 
 ---
 
@@ -278,7 +307,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 1. Run the installer (per-user, no admin required)
 1. Launch Alphonso — it auto-detects Ollama if running
 
-**Auto-Update:** Alphonso checks for new versions on launch and shows a banner when one is available (ed25519-signed release manifests). Clicking "Download Update" currently opens the release page in your browser — full in-app one-click download+install+relaunch is scoped but not yet built (`docs/AUTO_UPDATE_HANDOFF.md`).
+**Auto-Update:** Alphonso checks for new versions on launch and shows a banner when one is available (signed release manifests). "Download Update" downloads and installs it in the app and restarts Alphonso (Runtime Hub tools are stopped first so the installer can replace their files).
 
 ### Prerequisites
 
@@ -324,9 +353,9 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │                  React 18 (Vite 8, Tailwind 4)                   │
 │                                                                  │
 │  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
-│  │  9 Agents     │  │  118 UI          │  │  188 Services      │  │
+│  │  9 Agents     │  │  175 UI          │  │  285 Services      │  │
 │  │  (profiles,   │  │  Components     │  │  (policy-gated,    │  │
-│  │   contracts)  │  │  14 Hooks       │  │   orchestrated)    │  │
+│  │   contracts)  │  │  21 Hooks       │  │   orchestrated)    │  │
 │  └──────┬────────┘  └─────────────────┘  └──────────┬─────────┘  │
 │         │                                            │            │
 │         └────────────────┬───────────────────────────┘            │
@@ -343,7 +372,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~938 lines · 131 Tauri commands · 50 modules   │    │
+│  │  lib.rs ~938 lines · 189 Tauri commands · 50 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -359,6 +388,13 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │  │  ├── search.rs            Research search                │    │
 │  │  ├── workspace.rs         Workspace file ops (path guard)│    │
 │  │  ├── runway.rs            Video generation               │    │
+│  │  ├── media_tools.rs       FFmpeg, voice, music, assembly │    │
+│  │  ├── comfyui_*.rs         ComfyUI installs, proxy, models│    │
+│  │  ├── meta_video.rs        Reels upload and scheduling    │    │
+│  │  ├── oauth_signin.rs      Sign in from Settings          │    │
+│  │  ├── post_metrics.rs      Post numbers from the platforms│    │
+│  │  ├── elevenlabs.rs        ElevenLabs voices and effects  │    │
+│  │  ├── higgsfield.rs        Higgsfield pictures and clips  │    │
 │  │  └── utils.rs             Shared utilities               │    │
 │  └──────────────────────────────────────────────────────────┘    │
 │                                                                  │
@@ -373,7 +409,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 - **Fail-closed**: Every outbound connector call runs through `policyEnforcementService.ts` — if credentials are missing or the action is ambiguous, it is blocked, never allowed
 - **Agent contracts**: `agentContractService.ts` enforces per-agent allowed/blocked action prefixes on every packet before execution
 - **License gates**: `licenseService.ts` can gate premium connectors by tier. It is inert at launch (no vendor key configured), and an approval never substitutes for a license once it is enabled
-- **Durable queue**: `orchestrationQueueService.js` manages state transitions, dead-letter replay, and approval workflows
+- **Durable queue**: `orchestrationQueueService.ts` manages state transitions, dead-letter replay, and approval workflows
 - **Parallel execution**: `parallelExecutionService.ts` handles concurrency control and retry logic
 - **Memory caching**: `cacheService.ts` provides TTL and LRU eviction for global, connector, and agent caches
 - **SQLite in WAL mode**: `PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;` for concurrent read/write
@@ -382,42 +418,35 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 
 ## The 9 Agents
 
-| Agent | Role | Key Constraint | v2.0.0 Capabilities |
+| Agent | Role | What it may do | In the content factory |
 |------------|------------------------------------------------------|-----------------------------------------------|--------------------------------------------------------|
-| **Alphonso** | Local operator — execution, verification, packaging | General execution | GitHub code search, issue/PR management, repo analysis |
-| **Jose** | Orchestrator — intake, routing, merge, confirm, report | Cannot bypass high-risk restrictions | Parallel execution coordination |
-| **Hector** | Research + citations, source scan | No terminal/filesystem/posting/purchase actions | GitHub research, open source analysis, trend discovery |
-| **Miya** | Creative — strategy, script, storyboard, export | No unapproved publishing or system commands | Content Catalyst pipeline |
-| **Maria** | Governance, audit, risk, approval review | No destructive execution | Enhanced compliance checks |
-| **Marcus** | Approved distribution execution | Only executes under approved paths | GitHub releases, Slack notifications, team communication |
-| **Echo** | Memory historian and archival | Knowledge preservation only | Improved retrieval speed |
-| **Sentinel** | Security monitoring, automation safety | Safety checks only, no destructive execution | Optimized policy checks |
-| **Nova** | Scoring, analysis, opportunity prioritization | Analysis only | Cached analytics |
+| **Alphonso** | Local operator — execution, verification, packaging | The only agent that may run code or change project files | Assembles the finished video |
+| **Jose** | Orchestrator — plans every request as steps, routes, reports | Reads and writes its own work; never runs code or publishes; may spend only on a paid-model step you approve | Runs a project as one request |
+| **Hector** | Research — facts, sources, citations | Read and write its own work | What goes viral; finds stock clips |
+| **Miya** | Creative — scripts, storyboards, pictures, front-end drafts | Read and write its own work; its paid media steps may spend, and always ask | Script, scenes, thumbnails, voice, music, clips, Shorts, carousels, campaign |
+| **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Read and write its own work | Reviews the script and the quality gate |
+| **Marcus** | Distribution & Release Manager | The only agent that may publish or send, and only after approval | Posts and schedules the posts |
+| **Echo** | Memory historian and archival | Read and write its own work | Remembers rejections and decisions |
+| **Sentinel** | Security only | Read and write its own work | Security check before publishing |
+| **Nova** | Scoring, analysis, timing | Read and write its own work | Market check, post times, results and lessons |
 
-All agents are registered in `src/agents/agentRegistry.js`, enforced by `agentContractService.ts`, and communicate via `agentBusService.js`.
+All agents are registered in `src/agents/agentRegistry.js`; what each may do is one table, `src/services/jose/agentPermissionTable.ts`, enforced by `agentContractService.ts` and Jose's plan check.
 
 ---
 
 ## Connectors
 
-| Connector | Status | Env Var |
-|--------------|-----------------------|----------------------|
-| Ollama | Built-in | None (local) |
-| Telegram | Production | `TELEGRAM_BOT_TOKEN` |
-| WhatsApp Cloud | Staging | `WHATSAPP_CLOUD_TOKEN` |
-| Claude API | Production | `ANTHROPIC_API_KEY` |
-| ChatGPT | Production | `OPENAI_API_KEY` |
-| **GitHub** | **Production (v2.0.0)** | `GITHUB_TOKEN` |
-| **Slack** | **Production (v2.0.0)** | `SLACK_BOT_TOKEN` |
-| YouTube | Ready | `YOUTUBE_API_KEY` |
-| Notion | Ready | `NOTION_API_KEY` |
-| ClickUp | Ready | `CLICKUP_API_KEY` |
-| SD WebUI | Ready | `SD_WEBUI_URL` |
-| ComfyUI | Ready | `COMFYUI_URL` |
-| Brave Search | Ready | `BRAVE_SEARCH_API_KEY` |
-| Qwen/DashScope | Ready | `DASHSCOPE_API_KEY` |
+All 33 connectors are set up in **Settings → Connectors**; keys are kept in the system keychain, never in a file. An environment variable still works as a fallback.
 
-All connectors are policy-gated through `connectorRegistryService.js`. See [docs/CONNECTORS.md](docs/CONNECTORS.md) for full setup instructions.
+| Group | Connectors |
+|-------|-----------|
+| Messaging | Telegram, WhatsApp Cloud, Discord, Slack, CALL-E (phone calls), Generic Webhook, Mobile Bridge |
+| AI models | Ollama (local), Claude, ChatGPT, Qwen, DeepSeek, NVIDIA NIM, Gemini, Hermes Agents |
+| Search & research | Brave Search, Perplexity, Tavily |
+| Content & productivity | YouTube, Meta (Facebook and Instagram), ComfyUI, SD WebUI, Runway, Pexels, Pixabay, Coverr, your own storage, ElevenLabs, Higgsfield, Notion, ClickUp, GitHub |
+| Automation | n8n |
+
+Every outbound call goes through the policy gate; paid connectors (Claude, ChatGPT, Runway, CALL-E, ElevenLabs, Higgsfield and others) are off in Zero-Cost Mode and ask first. See [docs/CONNECTORS.md](docs/CONNECTORS.md) for setup.
 
 ---
 
@@ -434,7 +463,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 5,239 tests across 546 files (src + bridge)
+npm run test           # 6,777 tests across 546 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -447,9 +476,9 @@ npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app 
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 112 static Rust unit tests across 37 modules
-                                # (cargo test's own count may run a few more —
-                                # async #[tokio::test] cases, per AGENTS.md)
+cargo test                     # 357 Rust unit tests across 50 modules
+                                # (cargo test runs a few more: the async
+                                # #[tokio::test] cases, 370 in all)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 ```
 
@@ -463,17 +492,18 @@ is the mandatory repository-wide checklist for humans and agents. Read it with
 security, dependency, release, agent-contract, iOS, voice, or documentation work.
 Tasks are checked only with recorded verification evidence.
 
-**Latest verification:** [Release Verification — 2026-07-22](docs/RELEASE_VERIFICATION_2026-07-22.md)
-records the current PASS/PARTIAL baseline and remaining Rust dependency-audit
-blocker.
+**Latest verification:** the desktop QA coverage list, [docs/qa/DESKTOP_QA_COVERAGE.md](docs/qa/DESKTOP_QA_COVERAGE.md),
+says what the real-app suite checks and what still needs a live check with real
+accounts. [Release Verification — 2026-07-22](docs/RELEASE_VERIFICATION_2026-07-22.md)
+is the last full release-verification record.
 
 | Document | Description |
 |---------------------------------------------|----------------------------------------------|
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Quick setup guide |
 | [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | What each agent does and when to use them |
-| [CONNECTORS.md](docs/CONNECTORS.md) | Setup for all 14 connectors (UI-based credential entry) |
+| [CONNECTORS.md](docs/CONNECTORS.md) | Setup for all 33 connectors (keys entered in Settings) |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
-| [USER_MANUAL.md](docs/USER_MANUAL.md) | Full feature reference (v2.0.0) |
+| [USER_MANUAL.md](docs/USER_MANUAL.md) | Full feature reference (current) |
 | [RELEASE.md](docs/RELEASE.md) | Auto-updater signing and release pipeline |
 | [TRUTH_FIRST_EXECUTION_PLAN.md](docs/TRUTH_FIRST_EXECUTION_PLAN.md) | Active readiness backlog, owners, acceptance checks, and evidence rules |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design and technical details |
@@ -489,6 +519,14 @@ blocker.
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
+| 2.10.0 | not released yet | Jose redesign (plans as steps, approval by effect, Requests board, Telegram approvals); Miya's content factory (finished videos, Shorts, carousels, publishing, Calendar, results, paid engines, characters and motion); macOS back |
+| **v2.9.0** | October 12, 2026 | First end-to-end test of the real desktop app and the fixes it found; approval hardening; Tailwind v4 |
+| **v2.8.0** | September 9, 2026 | Smart Installer, UI/UX redesign, CALL-E outreach connector, bundled starter model |
+| v2.7.1 | September 5, 2026 | Auto-updater installer fix |
+| **v2.7.0** | September 4, 2026 | Memory knowledge graph, Gemini and Hermes fixes |
+| v2.6.4 | August 23, 2026 | Live post-install bug batch |
+| v2.6.3 | August 22, 2026 | Installer fix and external QA sweep |
+| v2.6.2 | August 14, 2026 | Repo hygiene: security, CI and bug fixes |
 | **v2.4.4** | June 27, 2026 | iOS companion app (Swift, mDNS, ed25519-signed WebSocket, TestFlight workflow); 104 Tauri commands / 25 modules; 2,151 tests / 159 files |
 | v2.4.2 | June 27, 2026 | TypeScript migration (94 .tsx); 10 pre-merge bugs patched; rand/mdns-sd/tokio-tungstenite/jsdom dep bumps; 2147 tests / 158 files |
 | **v2.4.1** | June 27, 2026 | 37-task bug & gap sprint: Voice OS health, IPC rate limit, MCP auth, bridge hardening, Nova threshold, agent perf export, DLQ section |

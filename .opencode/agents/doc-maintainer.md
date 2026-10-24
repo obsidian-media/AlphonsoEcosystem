@@ -45,7 +45,7 @@ You are a documentation maintenance agent for Alphonso. You verify that docs mat
 - Does the [0.1.0] summary match reality?
 
 ### Other Docs
-- `docs/CONNECTORS.md` — all 11 connectors documented?
+- `docs/CONNECTORS.md` — all 33 connectors documented (`DEFAULT_CONNECTORS` in `connectorRegistry.js`)?
 - `docs/SECURITY_CONFIG_REPORT.md` — CSP still matches `tauri.conf.json`?
 - `docs/UPDATER_RELEASE_PIPELINE.md` — still accurate?
 - `docs/FRONTEND_MIGRATION_REPORT.md` — TypeScript progress accurate?

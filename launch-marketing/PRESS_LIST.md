@@ -1,3 +1,5 @@
+> Draft. Facts updated on 2026-10-25 to match the app on `main` (2.10.0, not released yet). Re-check the numbers on launch day.
+
 # Press List for Alphonso Launch
 
 ## 10 Tech Journalists
@@ -36,7 +38,7 @@
 - **Name:** Samuel Tolbert
 - **Role:** Senior Reporter
 - **Contact:** samuel.tolbert@windowscentral.com
-- **Why:** Covers Windows apps and software. Alphonso is a Windows-first desktop app.
+- **Why:** Covers Windows apps and software. Alphonso is a Windows-first desktop app (Mac and Linux builds too).
 
 ### 7. **VentureBeat**
 - **Name:** Carl Franks
@@ -117,13 +119,13 @@ Hi [NAME],
 I'm reaching out because Alphonso is launching [DATE] and I think it would be a great fit for [PUBLICATION/CHANNEL].
 
 **What is Alphonso?**
-A local-first AI desktop companion that runs entirely on your Windows machine via Ollama. No cloud dependency for core operation. 9 specialized agents, 25 connectors, Voice OS, iOS companion, and approval-gated execution.
+A local-first AI desktop companion that runs on your own computer (Windows, Mac or Linux) via Ollama. No cloud dependency for core operation. 9 specialized agents that plan and run your requests, Miya Studio (from an idea to finished, posted videos), 33 connectors, Voice OS, an iOS companion, and approval by what each step does.
 
 **Why it matters:**
 - Privacy-first: All data stays on-device
-- Developer-friendly: Built with Tauri + React, 3,758+ tests
+- Developer-friendly: Built with Tauri + React, 6,700+ tests
 - Multi-agent orchestration: 9 agents working together in Boardroom
-- Free for local use: Pro at $12/mo for premium connectors
+- Free at launch: every agent and connector; paid services only if you connect your own account
 
 **What makes it newsworthy:**
 - Fully local AI (no API costs, no data leaving your machine)

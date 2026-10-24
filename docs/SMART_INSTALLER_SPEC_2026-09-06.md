@@ -15,6 +15,8 @@
 > `BOARDROOM_ROLES.md`/`BOARDROOM_MODEL_REGISTRY.md`.
 
 # Alphonso Ritual Installer — SMART_INSTALLER_SPEC
+
+> **Status (2026-10-25):** built as the Setup flow (v2.8.0); see `docs/superpowers/specs/2026-09-07-smart-installer-design.md` and its status line. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
 Date: 2026-09-06T17:12:00-04:00
 Branch: analysis/dependency-bundling-strategy
 Author: Copilot (draft — for review)

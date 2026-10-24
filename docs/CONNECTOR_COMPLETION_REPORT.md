@@ -1,4 +1,6 @@
 # Connector Completion Report
+
+> **Status (2026-10-25):** a dated report (2026-05-31, 14 connectors then; 33 now). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
 **Date:** 2026-05-31
 **Agent:** Parallel subagent — connector error handling, Brave Search, ModelSwitcher
 
@@ -9,7 +11,7 @@
 ### What was improved
 
 Both `sendClaudeConnectorMessage` and `sendChatGptConnectorMessage` in
-`src/services/connectorRegistryService.js` previously called `invoke(...)` directly with no
+`src/services/connectorRegistryService.ts` previously called `invoke(...)` directly with no
 error wrapping. If the Rust command threw (or timed out), the exception would propagate
 uncaught to the caller with no structured payload.
 
@@ -70,7 +72,7 @@ registered in the Tauri command handler. No Rust changes were needed.
 
 ## 3. ModelSwitcher Component (Tasks 3 + 4)
 
-### Component: `src/components/ModelSwitcher.jsx`
+### Component: `src/components/ModelSwitcher.tsx`
 
 - On mount, fetches `http://localhost:11434/api/tags` with a 3 s timeout.
 - Shows a compact `<select>` dropdown in Tailwind dark theme, sized to fit in the chat header bar.
@@ -81,7 +83,7 @@ registered in the Tauri command handler. No Rust changes were needed.
 
 ### Where it is mounted
 
-`ChatView.jsx` — in the `h-12` header bar at the top of the chat view, immediately to the
+`ChatView.tsx` — in the `h-12` header bar at the top of the chat view, immediately to the
 right of the "CHAT SESSION: id" label. The dropdown sits alongside Export / Clear buttons.
 
 `onModelChange` is wired through to `App.jsx` as:

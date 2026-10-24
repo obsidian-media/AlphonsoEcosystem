@@ -1,5 +1,7 @@
 # Boardroom Alphonso Facilitator — Phase 3 Implementation Plan
 
+> **Status (2026-10-25):** built on 2026-07-10 and shipped in v2.6.0. Later: the old "Boardroom Legacy" tab was removed and its Conclude, Distribute and Creative brief actions moved onto every thread (2026-10-21), and those actions became one-step Jose requests (Jose redesign phase 6a, PR #341).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** When a user posts a message to a Boardroom thread with no `@mention`,
@@ -14,13 +16,13 @@ does not touch.
 **Architecture:** New `boardroomFacilitatorService.ts` with a pure,
 network-free prompt-builder (`buildFacilitatorPrompt`) and a thin async
 wrapper (`generateAlphonsoResponse`) around the existing
-`generateOllamaResponse()` in `src/lib/ollama.js` — reused, not
+`generateOllamaResponse()` in `src/lib/ollama.ts` — reused, not
 reimplemented. `BoardroomChatView.tsx` calls it after `handleSend` whenever
 the posted message has zero `parseMentions()` matches, shows a "Alphonso is
 thinking…" indicator while pending, and posts the reply (or a visible
 failure message on error — never a silent swallow) as a new thread message.
 
-**Tech Stack:** Same as Phase 1/2, plus `src/lib/ollama.js`'s
+**Tech Stack:** Same as Phase 1/2, plus `src/lib/ollama.ts`'s
 `generateOllamaResponse` (already used elsewhere in the app; not new
 infrastructure).
 

@@ -1,5 +1,7 @@
 # Jose Redesign Phase 2 (The Planner) Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #337 (phase 2); on `main`, not released yet. The current behaviour is in `CLAUDE.md`'s Jose rows and `docs/USER_MANUAL.md` section 5.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Jose decides whether to answer directly or plan, and plans with his model. Templates are starting points he scores, adapts or ignores, and he can always plan fresh. When his model can't produce a valid plan, a rule-based plan is used and he says so. Chat sends everything to Jose.

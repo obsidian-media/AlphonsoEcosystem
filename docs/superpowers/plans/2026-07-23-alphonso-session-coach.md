@@ -1,5 +1,7 @@
 # Alphonso Session Coach — Implementation Plan
 
+> **Status (2026-10-25):** built, phases 1 to 5 (July 2026); Coach's message rewriting uses the model you chose since 2026-10-22.
+
 **Status:** Ready for implementation — full spec, 6 phases (not v1-only)
 **Author:** Claude Code (planning pass), 2026-07-23 — expanded same day from an initial v1-only draft after explicit direction to make it comprehensive
 **Implementer:** OpenCode (this document is the handoff)
@@ -82,7 +84,7 @@ Severity tiers, in firing priority order (most severe wins if multiple fire at o
 - Keep this gentle — it's explicitly the one idea borrowed most directly from SessionGuard's tilt-detection logic, reframed for fatigue instead of gambling. Do not make the tone alarmist.
 
 ### 3.3 `repeated_pipeline_failure`
-- **Data source:** `orchestrationReceiptService.js` (or `orchestrationQueueService.ts`'s packet history — check both, use whichever actually records per-attempt outcomes with an agent/task identifier) and `crashLogService.ts` (`getCrashLog()`).
+- **Data source:** `orchestrationReceiptService.ts` (or `orchestrationQueueService.ts`'s packet history — check both, use whichever actually records per-attempt outcomes with an agent/task identifier) and `crashLogService.ts` (`getCrashLog()`).
 - **Logic:** Same agent + same action-type combination fails ≥ 3 times within the last 10 recorded attempts for that agent.
 - **Message (warning):** `"{agent} has failed '{actionType}' {N} times in a row. Might be worth checking its skill pack or recent output before retrying again."`
 
@@ -153,7 +155,7 @@ export function runCoachDetectors(): CoachSignal | null {
 
 **Cooldown/dedup:** Do not fire the same `id` more than once per N minutes (suggest 15 — tune during implementation) and do not re-fire the exact same signal if the user already dismissed/acknowledged it this session. Store last-fired state in a small local map (in-memory is fine for "this session"; persist to `durableStore` only if you want it to survive app restart — your call, document which you chose).
 
-**Wiring point:** Call `runCoachDetectors()` on an interval (reuse the existing pattern from `proactiveAgentService.js`'s 60s interval if one already exists that's a good fit — check before adding a second interval timer) or on the same cadence `RightPanel.tsx`'s auto-refresh uses (10 minutes — probably too slow for this; a dedicated shorter interval, e.g. 60–120s, is reasonable). When a signal fires, feed it into `CoachContext.jsx`'s existing intervention state through the same path `showDemoIntervention` uses today, just with a real signal instead of `buildDemoSlotIntervention()`.
+**Wiring point:** Call `runCoachDetectors()` on an interval (reuse the existing pattern from `proactiveAgentService.ts`'s 60s interval if one already exists that's a good fit — check before adding a second interval timer) or on the same cadence `RightPanel.tsx`'s auto-refresh uses (10 minutes — probably too slow for this; a dedicated shorter interval, e.g. 60–120s, is reasonable). When a signal fires, feed it into `CoachContext.jsx`'s existing intervention state through the same path `showDemoIntervention` uses today, just with a real signal instead of `buildDemoSlotIntervention()`.
 
 ---
 
@@ -212,7 +214,7 @@ export function runCoachDetectors(): CoachSignal | null {
 | File | Change |
 |---|---|
 | `src/components/SettingsView.tsx` | New Coach settings section — master toggle, per-trigger toggles, style selector, Ollama toggle, snooze control |
-| `src/components/CoachHistoryPanel.tsx` | **New file** — history list UI, mirrors `NovaHistoryChart.jsx`/`EchoTimeline` pattern |
+| `src/components/CoachHistoryPanel.tsx` | **New file** — history list UI, mirrors `NovaHistoryChart.tsx`/`EchoTimeline` pattern |
 | `src/services/coachEngineService.ts` or a new `coachHistoryService.ts` | Persist fired signals to a capped ring buffer |
 
 ---
@@ -281,7 +283,7 @@ SessionGuard's `live_coach_engine.py` supports `strict/balanced/supportive` — 
 
 SessionGuard's `_nvidia_coach()` is gated behind `has_issue` (only called for consequential situations, not every trigger) and falls back cleanly to rule-based text on any failure (`except Exception: return None`, then `_detect_patterns()` runs anyway). Port that exact gating and fallback shape — do not make every intervention an LLM call, and never let an LLM failure produce a blank/broken intervention.
 
-- New function, e.g. `generateNarrativeCoachMessage(signal: CoachSignal, style: string): Promise<string | null>` — calls local Ollama (reuse `generateOllamaResponse`/whatever the existing single-turn helper is in `src/lib/ollama.js` — do not add a second Ollama client) with a system prompt adapted from `live_coach_engine.py`'s `COACH_SYSTEM` constant, but rewritten for Alphonso's actual domain (agent orchestration, not gambling) — do not reuse gambling-specific language.
+- New function, e.g. `generateNarrativeCoachMessage(signal: CoachSignal, style: string): Promise<string | null>` — calls local Ollama (reuse `generateOllamaResponse`/whatever the existing single-turn helper is in `src/lib/ollama.ts` — do not add a second Ollama client) with a system prompt adapted from `live_coach_engine.py`'s `COACH_SYSTEM` constant, but rewritten for Alphonso's actual domain (agent orchestration, not gambling) — do not reuse gambling-specific language.
 - Only call it for `critical` and `warning` severity signals — skip it for `neutral`/`positive` (matches SessionGuard's `has_issue` gate, adapted).
 - Timeout it aggressively (SessionGuard's Boardroom work already hit a real 30s-default-timeout bug against local Ollama under cold model-swap — see `CLAUDE.md`'s Boardroom Phase 4 note; budget for a slow first call, but don't block Coach Mode's UI on it — fire the rule-based message immediately and swap in the narrative version if/when it resolves, rather than delaying the intervention).
 - On any failure or timeout, silently fall back to the Phase 3 rule-based/styled message — never surface an Ollama error to the user in the coach window.
@@ -300,7 +302,7 @@ Coach Mode currently has zero user configurability and zero record of what it's 
 - Ollama-narrative toggle (§11) — default off.
 - A "snooze" control — mute all coaching for N hours, separate from disabling individual triggers.
 
-**History** (new, mirrors the existing `NovaHistoryChart.jsx` / `EchoTimeline` pattern already in `SettingsView.tsx` — same UI convention, don't invent a new one):
+**History** (new, mirrors the existing `NovaHistoryChart.tsx` / `EchoTimeline` pattern already in `SettingsView.tsx` — same UI convention, don't invent a new one):
 - Persist every fired `CoachSignal` (not just the currently-displayed one) to a capped local log, same ring-buffer shape as `agentAuditService.ts`.
 - A `CoachHistoryPanel.tsx` component listing recent interventions with timestamp, trigger id, severity, and the exact message shown — lets the user see what the coach has said over time, and lets *you* (or a future implementer) tell whether detectors are firing too often, too rarely, or on noise.
 - **This history log is also the feedback loop for tuning thresholds** — if a trigger fires constantly and gets dismissed every time, that's a signal the threshold in §3/§9 was set too aggressively; this doc's suggested numbers (5 approvals, 25 percentage points, 48 hours, etc.) are starting points, not final — the history panel is what lets someone actually validate or correct them post-launch.

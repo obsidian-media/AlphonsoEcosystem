@@ -1,4 +1,6 @@
-# 60-Second Demo Video Script: Alphonso v2.6.5
+> Draft. Facts updated on 2026-10-25 to match the app on `main` (2.10.0, not released yet). Re-check the numbers on launch day.
+
+# 60-Second Demo Video Script: Alphonso v2.10.0
 
 ## "Your AI. Your Machine. Your Rules."
 
@@ -16,7 +18,7 @@
 **Visual:** Alphonso desktop app opens. Clean, dark UI with sidebar showing 9 agents. The Alphonso logo animates in.
 
 **Voiceover:**
-"Meet Alphonso. A local-first AI desktop companion that runs entirely on your Windows machine. No cloud required."
+"Meet Alphonso. A local-first AI desktop companion that runs on your own computer. No cloud required."
 
 ---
 
@@ -32,7 +34,7 @@
 **Visual:** Quick montage — Telegram bot responding, WhatsApp command /status, Voice OS waveform animation, iOS companion pairing screen.
 
 **Voiceover:**
-"Connect to Telegram, WhatsApp, YouTube, GitHub, Slack — 25 connectors. Talk to it with Voice OS. Pair your iPhone for mobile access."
+"Connect to Telegram, WhatsApp, YouTube, GitHub, Slack — 33 connectors. Talk to it with Voice OS. Pair your iPhone for mobile access."
 
 ---
 
@@ -52,9 +54,9 @@
 
 **Text on screen:**
 ```
-Alphonso v2.6.5
+Alphonso v2.10.0
 github.com/obsidian-media/AlphonsoEcosystem
-Free • Local-First • Open Source
+Free • Local-First • Source-Visible
 ```
 
 ---

@@ -1,5 +1,7 @@
 # Hook Test Coverage Recovery — Handoff to OpenCode
 
+> **Status (2026-10-25):** resolved: PR #151 merged on 2026-08-20. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **RESOLVED 2026-08-20** (Claude Code session): all 5 originally-flagged files
 (`useAppShellState`, `useBootEffects`, `usePersistenceEffects`,
 `useSessionEffects`, `useTrayEffects`) fixed, plus `useKeyboardShortcuts`
@@ -22,7 +24,7 @@ diagnosis — see `docs/governance/DEFERRED_WORK.md` for the resolution entry.
 On 2026-07-10, a concurrent debugging session on this repo produced 7,243 lines of real, never-committed test coverage — 14 new files under `src/test/hooks/` — that were sitting in a git stash and were at real risk of being lost. On 2026-08-14, a repo-hygiene pass audited all local branches and stashes, identified this stash as genuinely unrecovered work (not superseded, not trivial), and rescued it onto this branch: `recover/hook-test-coverage`. Two commits were made to get it running at all:
 
 1. `47c6c89` — `test(hooks): recover lost hook test coverage from 2026-07-10 stash` (the raw recovery)
-2. `56d8509` — `fix: remove stale appStorage.js/ollama.js duplicates, fix act import` (fixed a real regression the recovery surfaced: `src/lib/appStorage.js`/`ollama.js` existed alongside already-migrated `.ts` siblings, and Vite's default resolve order was silently running the untyped `.js` — deleting them surfaced a real bug in `ollama.ts`'s `classifyOllamaError`, separately fixed in PR #147 on `main`)
+2. `56d8509` — `fix: remove stale appStorage.js/ollama.js duplicates, fix act import` (fixed a real regression the recovery surfaced: `src/lib/appStorage.ts`/`ollama.ts` existed alongside already-migrated `.ts` siblings, and Vite's default resolve order was silently running the untyped `.js` — deleting them surfaced a real bug in `ollama.ts`'s `classifyOllamaError`, separately fixed in PR #147 on `main`)
 
 After those two fixes, the suite sat at **257+/396 tests passing**. The remaining **132 failures** are concentrated in exactly 5 of the 14 files and have a diagnosed, but not yet fixed, root cause (§3 below). This has been sitting untouched since 2026-08-14, tracked in `docs/governance/DEFERRED_WORK.md` (2026-08-14 entry) and referenced from `docs/TRUTH_FIRST_EXECUTION_PLAN.md`.
 

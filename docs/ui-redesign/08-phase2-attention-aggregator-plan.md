@@ -1,5 +1,7 @@
 # Attention Aggregator Service Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build `attentionAggregatorService.ts` — a new service that merges "needs attention" items from 4 real, already-existing sources (both real approval queues, Coach's fired signals, and connectors with a genuinely tripped circuit breaker) into one normalized, severity-sorted list — plus the dismissal mechanic for its non-actionable items. This is the backend half of `07-phase2-mission-control-spec.md`; the visual page rewiring that consumes it is a separate, follow-up plan.

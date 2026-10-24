@@ -26,7 +26,7 @@ Use this when:
 ### For Each Connector
 
 #### 1. Frontend Path
-- [ ] Send function exists in `connectorRegistryService.js`
+- [ ] Send function exists in `connectorRegistryService.ts`
 - [ ] Function name follows pattern: `send[Connector]Connector[Action]`
 - [ ] Function accepts appropriate parameters (message, recipient, etc.)
 
@@ -64,8 +64,10 @@ Use this when:
 | Telegram outbound | `sendTelegramConnectorMessage` | | | | | | |
 | Telegram inbound | `connector_poll_telegram` | | | | | | |
 | WhatsApp outbound | `sendWhatsAppConnectorMessage` | | | | | | |
-| WhatsApp inbound (Twilio) | `whatsappWebhookService` | | | | | | |
-| WhatsApp Cloud | normalizer exists | | | | | | |
+| WhatsApp inbound (Cloud API, gateway queue) | `browserPollWhatsAppGateway` | | | | | | |
+| Meta (Facebook, Instagram) | `publishMetaVideo`, `publishPost` | | | | | | |
+| ElevenLabs | `elevenlabs_speak` | | | | | | |
+| Higgsfield | `higgsfield_run` | | | | | | |
 | YouTube | `uploadYouTubeConnectorVideo` | | | | | | |
 | Claude | `sendClaudeConnectorMessage` | | | | | | |
 | ChatGPT | `sendChatGptConnectorMessage` | | | | | | |

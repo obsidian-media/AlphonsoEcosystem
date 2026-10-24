@@ -1,5 +1,7 @@
 # Voice runtime and Cloud Voice handoff
 
+> **Status (2026-10-25):** a dated record, kept as written. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **2026-08-10 addendum:** PR #140 (which introduced the bypass described
 > below) merged with 20 CodeRabbit review threads unresolved, including a
 > Critical finding on this exact bypass. The "Mandatory rollback" section

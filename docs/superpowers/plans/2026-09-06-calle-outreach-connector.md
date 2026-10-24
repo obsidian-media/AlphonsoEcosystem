@@ -1,5 +1,7 @@
 # CALL-E Outreach Connector Implementation Plan
 
+> **Status (2026-10-25):** built (PRs #230, #234), v2.8.0.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a CALL-E outreach connector so Alphonso can place a real, policy-gated, approval-gated outbound phone call (via a basic functional panel) asking a business about website interest and/or booking a demo appointment.

@@ -1,5 +1,7 @@
 # Smart Installer ("Ritual Installer") — Design
 
+> **Status (2026-10-25):** built (shipped in v2.8.0). Later changes: Setup asks where to install tools, finds ComfyUI and Ollama models you already have, and installs ComfyUI (not Fooocus) for images (2026-10-21/22).
+
 **Date:** 2026-09-07
 **Branch:** `feat/smart-installer-bundling`
 **Status:** design, not yet implemented

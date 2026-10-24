@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Inferred Edges (Phase 3, second half)
 
+> **Status (2026-10-25):** built (PR #217, v2.7.0).
+
 ## Context
 
 Phases 1 (Foundation), 2 (Expansion), and Phase 3's visual viewer are all
@@ -32,7 +34,7 @@ That last fact is the key architectural constraint this design respects.
 
 The graph layer was designed to never see content (see the original spec's
 "Prior Art Considered" section — memory storage/semantic search stays with
-`unifiedMemoryService.ts`/ChromaDB). Content-based inference (keyword/entity
+`unifiedMemoryService.js`/ChromaDB). Content-based inference (keyword/entity
 matching across memory item text, research report bodies, etc.) would mean
 reaching back into each writer's own storage — a real boundary crossing,
 new complexity, likely a new text-similarity dependency.

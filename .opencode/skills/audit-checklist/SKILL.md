@@ -27,7 +27,7 @@ Use this when:
 - [ ] Count agent files in `src/agents/` — should be 9
 - [ ] Verify each agent has: profile, permissions, (schema if applicable)
 - [ ] Check `agentRegistry.js` imports all 9
-- [ ] Check `agentContractService.js` enforces contracts
+- [ ] Check `agentContractService.ts` enforces contracts
 
 ### Phase 2: Service Layer
 - [ ] Count service files in `src/services/` — should be 89+
@@ -35,8 +35,8 @@ Use this when:
   - Has real logic → COMPLETE
   - Has comments but no implementation → PLACEHOLDER
   - Returns hardcoded values → FAKE
-- [ ] Check `policyEnforcementService.js` is fail-closed
-- [ ] Check `connectorRegistryService.js` routes through policy gate
+- [ ] Check `policyEnforcementService.ts` is fail-closed
+- [ ] Check `connectorRegistryService.ts` routes through policy gate
 
 ### Phase 3: Frontend
 - [ ] Count components in `src/components/` — should be 76+
@@ -46,7 +46,7 @@ Use this when:
 
 ### Phase 4: Rust Backend
 - [ ] Count lines in `lib.rs` — should be ~7,078
-- [ ] Count registered Tauri commands — should be 63
+- [ ] Count registered Tauri commands — compare with `npm run verify:docs` (189 on 2026-10-25)
 - [ ] Sample 5 commands — verify real implementations
 - [ ] Check extracted modules: kv_store.rs, whatsapp_webhook.rs, native_proof.rs, runway.rs
 - [ ] Run `cargo check` and `cargo clippy -- -D warnings`

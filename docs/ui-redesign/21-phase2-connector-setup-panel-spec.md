@@ -1,5 +1,7 @@
 # Phase 2 — Connector Setup Panel Re-skin Spec
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 ## Scope
 
 Re-skin `ConnectorSetupPanel.tsx` (1043 lines) — but with a real, deliberate scope carve-out found during the color audit, described below. Existing test coverage (`src/test/ConnectorSetupPanel.test.jsx`) reused as the regression guard.

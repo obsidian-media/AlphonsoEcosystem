@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Visual Viewer Implementation Plan
 
+> **Status (2026-10-25):** built (PR #215, v2.7.0).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a real, whole-graph 3D visualization of the memory knowledge graph, per `docs/superpowers/specs/2026-09-03-memory-knowledge-graph-visual-viewer-design.md`.

@@ -24,7 +24,7 @@ These are implemented in `.github/workflows/gate.yml` and `scripts/verify.sh` / 
 
 ## GitHub branch protection settings (apply via Settings → Branches or `gh`)
 - Require a pull request before merging to `main`.
-- Require status checks: `gate` (the workflow job that runs all checks).
+- Require status checks: `gate` (the workflow job that runs all checks). As of 2026-10-25, `main` also requires `Test & Build`, `Rust Tests & Clippy`, `Secrets Scan (TruffleHog)`, `Doc Count Freshness` and `Playwright E2E Smoke Test` from `ci.yml`. `Desktop E2E (real Tauri binary)` runs on every PR but is not required.
 - Require branches to be up to date before merging.
 - Dismiss stale approvals on new commits.
 - Require review from Shayan or CODEOWNERS.

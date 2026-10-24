@@ -1,3 +1,5 @@
+> Draft. Facts updated on 2026-10-25 to match the app on `main` (2.10.0, not released yet). Re-check the numbers on launch day.
+
 # Social Media Content Calendar
 ## Alphonso Launch — 3 Weeks, 15 Posts
 
@@ -6,12 +8,12 @@
 ### WEEK 1: Pre-Launch Hype
 
 **Day 1 (Monday) — Twitter/X**
-> 🚀 Something big is coming. 9 agents. 25 connectors. 100% local.
+> 🚀 Something big is coming. 9 agents. 33 connectors. 100% local.
 > Your AI is about to come home.
 > #AI #LocalFirst #Alphonso
 
 **Day 2 (Tuesday) — LinkedIn**
-> Excited to announce that after 12+ months of development, 3,758+ tests, and a full TypeScript migration, Alphonso is launching next week.
+> Excited to announce that after 12+ months of development, 6,700+ tests, and a desktop end-to-end suite against the real app, Alphonso is launching next week.
 >
 > A local-first AI desktop companion that runs entirely on your machine. No cloud dependency. No data leaving your device.
 >
@@ -27,9 +29,9 @@
 > Launching soon. 🔥
 
 **Day 4 (Thursday) — Reddit (r/selfhosted, r/LocalLLaMA)**
-> **Title:** I built a local-first AI desktop companion with 9 agents and 25 connectors — launching next week
+> **Title:** I built a local-first AI desktop companion with 9 agents and 33 connectors — launching next week
 >
-> Body: After a year of development, I'm launching Alphonso — a Windows desktop app that runs AI entirely on your machine via Ollama. Features include multi-agent orchestration, Voice OS, iOS companion, Telegram/WhatsApp bots, and approval-gated execution.
+> Body: After a year of development, I'm launching Alphonso — a desktop app (Windows, Mac, Linux) that runs AI on your machine via Ollama. Features include multi-agent orchestration, Voice OS, iOS companion, Telegram/WhatsApp bots, and approval-gated execution.
 >
 > Free for local use. Would love feedback from the self-hosted community.
 >
@@ -60,7 +62,7 @@
 > Your AI. Your Machine. Your Rules.
 >
 > ✅ 9 specialized agents
-> ✅ 25 connectors
+> ✅ 33 connectors
 > ✅ 100% local
 > ✅ iOS companion
 > ✅ Voice OS
@@ -73,7 +75,7 @@
 **Day 7 (Tuesday) — LinkedIn**
 > 🎉 Today marks the public launch of Alphonso!
 >
-> What started as a personal project to bring AI home — literally, to my own machine — has become a full-featured desktop companion with 9 specialized agents, 25 connectors, Voice OS, and an iOS companion.
+> What started as a personal project to bring AI home — literally, to my own machine — has become a full-featured desktop companion with 9 specialized agents, 33 connectors, Voice OS, and an iOS companion.
 >
 > Key differentiator: Everything runs locally. Your conversations never leave your device. Your data is yours.
 >
@@ -178,7 +180,7 @@
 > • X amazing feedback messages
 >
 > What's next:
-> • macOS & Linux builds
+> • Signed macOS builds
 > • Plugin marketplace
 > • Team collaboration features
 >

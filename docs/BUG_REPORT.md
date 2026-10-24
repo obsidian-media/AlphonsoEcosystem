@@ -1,4 +1,6 @@
 # Alphonso Bug Report — Full Codebase Audit
+
+> **Status (2026-10-25):** a dated bug report (2026-06-24); its items were fixed in the passes that followed (`docs/FIX_PLAN.md`). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
 **Date:** 2026-06-24  
 **Version:** v2.2.3  
 **Scope:** Every file in `src/`, `src-tauri/src/`, `voice/`, `.github/workflows/`  
@@ -141,7 +143,7 @@ imported by src/App.tsx but also statically imported by:
   src/components/RuntimeManagerView.jsx
   src/services/creativeRoutingService.js
 ```
-The static imports force `runtimeManagerService.js` (a large service with Tauri invoke calls) into the main `index-C3hpk8iR.js` bundle (292kB). It can't be split into a lazy chunk.
+The static imports force `runtimeManagerService.ts` (a large service with Tauri invoke calls) into the main `index-C3hpk8iR.js` bundle (292kB). It can't be split into a lazy chunk.
 
 **Impact:** Slower initial parse/load. All users pay the cost of loading the runtime manager even if they never open the Runtimes tab.
 
@@ -339,7 +341,7 @@ useEffect(() => {
 | BUG-015 | `voice_sidecar.rs:13` | HIGH | Relative `voice/backend` path fails in production builds |
 | BUG-006 | Multiple files | MEDIUM | Static imports defeat dynamic code splitting for runtimeManagerService |
 | BUG-008 | `ChatView.tsx:942` | MEDIUM | O(n²) `messages.indexOf` in render |
-| BUG-009 | `ConnectorStatusIndicators.jsx` | MEDIUM | Connector status never refreshes after mount |
+| BUG-009 | `ConnectorStatusIndicators.tsx` | MEDIUM | Connector status never refreshes after mount |
 | BUG-010 | `durableStore.js:22` | MEDIUM | `durableRemove` sets to `''` instead of deleting from SQLite |
 | BUG-013 | `RightPanel.tsx:210` | MEDIUM | `getAuditLog()` called in render, not memoized |
 | BUG-016 | `ChatView.tsx:203` | MEDIUM | `voice` prop type missing `liveTranscript` |
@@ -355,8 +357,8 @@ useEffect(() => {
 
 The following files were not read in depth due to context limits:
 - `src/agents/` — 9 agent profile/schema files (skimmed, no bugs identified)
-- `src/services/telegramCompanionService.js`, `whatsappBrowserConnector.js`, `marcusExecutionService.js` — only glanced
-- `src/services/sessionIntelligenceService.js`, `runtimeLedgerService.js`, `missionRoomService.js`
+- `src/services/telegramCompanionService.js`, `whatsappBrowserConnector.ts`, `marcusExecutionService.ts` — only glanced
+- `src/services/sessionIntelligenceService.ts`, `runtimeLedgerService.ts`, `missionRoomService.ts`
 - `src-tauri/src/companion_*.rs`, `runtime_manager.rs` (deeper logic)
 - `voice/backend/` — Python FastAPI source
 - All `src/test/` files (144 test files)

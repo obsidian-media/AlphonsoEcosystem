@@ -1,5 +1,7 @@
 # Phase 2 — Mission Control / Home Page Spec
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 First real page of Phase 2 (page-by-page redesign, following Phase 1's foundation). Applies Draft A's power-user "Home room" visual language (locked in `draft-a-power-user-direction.md`) to real data, with one deliberate scope expansion agreed during brainstorming: building a real unified attention-aggregator, not just wiring the mockup's illustrative approvals list.
 
 **Implementation split:** during plan-writing, this spec turned out to cover two genuinely independent subsystems — a new backend service, and an open-ended visual page rewrite — so it's implemented as two separate plans rather than one. The backend half (`attentionAggregatorService.ts` + dismissal mechanic) is `08-phase2-attention-aggregator-plan.md`, already written and ready to execute. The page-visual half (wiring `MissionControlHome.tsx` to consume it, styled per Draft A) is a follow-up plan, not yet written, to be done once the backend exists.
@@ -33,7 +35,7 @@ attentionAggregatorService.ts
   └─ reads: connectorCircuitBreakerService.getAll() (real tripped-circuit state — see §Connector normalization fix below; deliberately NOT connectorHealthCheckService, see §No fresh expensive operations)
 ```
 
-This mirrors `RightPanel.tsx`'s existing polling pattern in this codebase (chosen over an event-driven rewrite of all 4 source services, and over page-level direct queries — see the brainstorming session's SWOT comparison for the full reasoning). Poll interval: 60s, matching `proactiveAgentService.js`'s existing convention rather than inventing a new number.
+This mirrors `RightPanel.tsx`'s existing polling pattern in this codebase (chosen over an event-driven rewrite of all 4 source services, and over page-level direct queries — see the brainstorming session's SWOT comparison for the full reasoning). Poll interval: 60s, matching `proactiveAgentService.ts`'s existing convention rather than inventing a new number.
 
 ### No fresh expensive operations (self-critique fix #2)
 

@@ -1,5 +1,7 @@
 # Miya content factory, phase 3b: the calendar, moving posts, sign-in expiry
 
+> **Status (2026-10-25):** built and merged in PR #349 (phase 3b); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 Date: 2026-10-23. Builds on phase 3a (`2026-10-23-miya-content-factory-phase3a-design.md`):
 the posts list, `publishPost()`, Marcus's runner and the Publish step. Phase 3 is
 split in three (owner, 2026-10-23): **3a** publishing (done), **3b** this

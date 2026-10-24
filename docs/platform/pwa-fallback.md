@@ -1,5 +1,7 @@
 # PWA Fallback — Progressive Web App Mode
 
+> **Status (2026-10-25):** partly built: `public/sw.js` (service worker) and `offlineChatService.ts` (messages saved when Ollama is unreachable) exist; the full browser-app mode described here was not built.
+
 ## Overview
 
 Enable Alphonso to run as a Progressive Web App (PWA) in browsers, providing an app-like experience for the web interface without requiring the Tauri desktop app installation. PWA mode is a **fallback** — the Tauri desktop app remains the primary target.

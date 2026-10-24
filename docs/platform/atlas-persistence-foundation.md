@@ -1,5 +1,7 @@
 # Atlas Persistence Foundation
 
+> **Status (2026-10-25):** Atlas exists in the iOS app as an opt-in preview only: since PR #200 (2026-09-02) the classic companion is the default, and Atlas stays a preview until it is wired to real desktop task execution instead of its demo backend (`ContentView.swift`).
+
 ## Purpose
 
 This foundation replaces the implicit persistence assumptions of the Atlas demo with a durable schema and a dedicated audit repository boundary. The active Cloud backend remains explicitly **non-production**: it uses `InMemoryAtlasAuditRepository` only when `ATLAS_CONTROL_PLANE_DEMO_MODE=true`. The Supabase migration establishes the tables, RLS policies, indexes, and immutable audit-receipt trigger that a production adapter must use.

@@ -1,5 +1,7 @@
 # Miya content factory phase 4c: characters and motion transfer — Implementation Plan
 
+> **Status (2026-10-25):** built and merged in PR #354 (phase 4c); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Brands keep consistent characters (Higgsfield-trained or ComfyUI from reference pictures) that appear in scene pictures, clips, Shorts, thumbnails and carousels; scenes and Short parts can borrow a movement (Higgsfield preset, recorded or chosen clip; Higgsfield or local); plus the three 4b leftovers.

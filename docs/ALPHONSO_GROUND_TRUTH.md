@@ -1,5 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-09-30 — pre-launch all-angle audit and fix pass on branch `fix/prelaunch-audit-2026-09-30` (see §11.28). Version is still 2.8.0; nothing has been released since. Work between 2026-09-09 and 2026-09-21 (SSRF redirect fix, ChatView hydration race, Hermes loopback check, Cloud Voice model pin, macOS boot-crash build target, Runway gate, fan-out budget) is recorded in `CLAUDE.md`'s dated entries and `docs/CHANGELOG.md`.
+**Last verified:** 2026-10-25 — every document reconciled with the code (§11.38). Version 2.10.0 is on `main` and **not tagged**; the latest release is v2.9.0 (2026-10-12). Since 2026-10-21, `main` gained the Jose redesign (phases 1–6b, §11.36) and Miya's content factory (phases 1–4c, §11.37). Current numbers: 9 agents, 33 connectors, 285 services, 175 components, 21 hooks, 546 test files with 6,777 Vitest tests, 357 Rust `#[test]`s (370 with the async ones), 189 Tauri commands, 50 Rust modules, 34 desktop end-to-end spec files.
+
+**Last verified before that:** 2026-09-30 — pre-launch all-angle audit and fix pass on branch `fix/prelaunch-audit-2026-09-30` (see §11.28). Version is still 2.8.0; nothing has been released since. Work between 2026-09-09 and 2026-09-21 (SSRF redirect fix, ChatView hydration race, Hermes loopback check, Cloud Voice model pin, macOS boot-crash build target, Runway gate, fan-out budget) is recorded in `CLAUDE.md`'s dated entries and `docs/CHANGELOG.md`.
 
 **Last verified before that:** 2026-09-09 — **v2.8.0 tagged and released.** See §11.27 for the actual release cut (PR #238 merged into `main` as `f3cdb03`, version bumped across all 4 locations, tag `v2.8.0` pushed to trigger `release.yml`'s real signed Windows/Linux builds) and §11.26 for the branch work that shipped in it (Dependency Bundling Plan O2, full WCAG sweep, first real live `npm run tauri dev` verification pass). `main` also carries the UI/UX redesign (PR #237) and Smart Installer (PR #233) from just before this. §11.1 onward below (dated 2026-09-07 and earlier) describes CALL-E and prior work and is still accurate as history, just no longer the most recent entry.
 
@@ -91,7 +93,7 @@ not local execution.
 **Previous entry (2026-08-25):** v2.6.5 (PR #189 + #190). User reported the installed v2.6.4 app "not functional," specifically Hermes Agents and Voice OS still broken despite the 2026-08-22 CSP/ACL/timeout fixes. Full source-level health check on `main` found the app itself sound (dev-mode click-through across all 14 sections + a real Ollama chat round-trip, zero console/page errors — this dev machine doesn't have the app installed, so the *installed* build couldn't be driven directly). Root-caused and fixed 2 real bugs the prior fixes had missed: **(1) PR #189** — `voice_start` in `voice_sidecar.rs` conflated "sidecar is slow to start" with "sidecar crashed immediately" into the identical generic "did not become ready within 15 seconds" message; the 2026-08-22 timeout bump only fixed the slow-start case. Now captures the sidecar's last 20 stderr lines and checks for early process exit on every poll, surfacing the real crash reason instead. **(2) PR #190** — the actual root cause of Hermes's "Failed to fetch": every Hermes call used the webview's own `fetch()`, which is subject to browser CORS; Hermes Agent is a third-party process the user runs on their own arbitrary local port and has no reason to send CORS headers, so a cross-origin `fetch()` from the Tauri webview was silently blocked regardless of whether the profile was actually running and reachable (confirmed connected in this case). The 2026-08-22 CSP allowlist fix addressed Content-Security-Policy — a different browser mechanism — so it could never have fixed this. Added `connector_hermes_agent_request`, a native Rust `reqwest`-backed Tauri command (mirrors the existing `connector_github_action`/`probe_local_runtime_health` pattern), not subject to CORS; `hermesAgentConnector.ts` routes through it inside Tauri, falls back to the original `fetch()` outside Tauri (dev mode / this file's unchanged unit tests). Verified: `cargo check`/`clippy -D warnings`/`fmt --check` clean, `tsc --noEmit` clean, `npx eslint` clean, 3 existing `voice_sidecar` Rust tests + 27 existing `hermesAgentConnector` tests all passing. **Not yet live-verified** against a real Voice OS crash or a real Hermes profile in a packaged v2.6.5 build — flagged, not assumed working. This dev machine's Vitest `forks` pool has a pre-existing startup-timeout issue (documented below) that also affected a single-file run this session; `--pool=threads` worked around it for local verification only, CI is unaffected.
 **Previous entry (2026-08-20):** `recover/hook-test-coverage` (PR #151): the 5 hook test files flagged 2026-08-14/2026-08-19 as failing under Vitest 4's `vi.mock` hoisting semantics (`useAppShellState`, `useBootEffects`, `usePersistenceEffects`, `useSessionEffects`, `useTrayEffects`) are now fixed, plus `useKeyboardShortcuts` (found failing during verification, not in the original 5). Full `src/test/hooks/` suite: 15 files / 345 tests, 0 failures. Branch merged with `main` (zero conflicts) and pushed; PR #151 CI re-triggered. See `docs/governance/DEFERRED_WORK.md`'s 2026-08-20 update and `docs/handoffs/2026-08-19_OpenCode_HookTestCoverageRecovery_Handoff.md` for the resolved handoff.
 **Previous entry (2026-08-14):** v2.6.2 (post-PR #143 stabilization pass: branch/stash audit, security patch, CI hardening, real bug fixes, 8 Dependabot merges, release cut)
-**Verified by:** Claude Code session — the user asked for a full repo-hygiene pass after PR #143 (iOS companion operations area) landed. Work done, each verified against real test/CI output rather than assumed: **(1)** patched `requests` 2.32.5→2.33.0 in the voice backend (GHSA-gc5v-m9x4-r6x2), 37/37 voice-backend pytest passing (PR #145, merged); the paired `glib` Dependabot alert is documented as blocked on Tauri's own `gtk = "^0.18"` pin, not fixable from this repo. **(2)** wired `AlphonsoCompanionTests` (5 files, previously never executed anywhere) into `ios-build.yml` ahead of the signing/archive/upload steps (PR #146, merged). **(3)** audited all 7 local branches and 16 git stashes: 6 branches confirmed to have zero unique commits vs. `main` (deleted, local+remote); 15 of 16 stashes traced and confirmed superseded or trivial (dropped) — one, a stash from 2026-07-10 containing 7,243 lines of never-committed hook test coverage (14 new test files under `src/test/hooks/`), was genuinely unrecovered work and rescued onto branch `recover/hook-test-coverage` (pushed, no PR — 257+/396 passing; the remaining 132 failures trace to a Vitest 2.1.9→4.1.8 major-version jump changing `vi.mock` hoisting semantics, tracked in `docs/governance/DEFERRED_WORK.md`, not force-fixed blind). **(4)** found and fixed a real, silent duplicate-file bug: `src/lib/appStorage.js`/`ollama.js` existed alongside their already-migrated `.ts` counterparts, and Vite's default resolve order was silently running the untyped `.js` files; deleting them surfaced a genuine behavior regression in `ollama.ts`'s `classifyOllamaError` (required a literal `DOMException` instance to classify aborts as `'timeout'`, which the tested `.js` version didn't require — non-`DOMException` abort errors were silently misclassified as `'disconnected'`), fixed to match tested behavior (PR #147, merged). **(5)** fixed all 5 pre-existing `tsc --noEmit` errors — one of which was not cosmetic: `App.tsx`'s iOS "steer boardroom" handler called `addThreadMessage(sessionId, 'shayan', guidance)` with 3 positional arguments against a function that takes a single options object, so every boardroom-steering message sent from the iOS companion since PR #143 shipped has silently no-opped (destructuring a string as `{threadId, speaker, content}` yields all `undefined`, and the function returns `null` on empty content) — fixed to pass the object form (PR #148, merged). **(6)** merged 8 green Dependabot PRs (`actions/setup-python`, `actions/setup-node`, `softprops/action-gh-release`, `mdns-sd`, `eslint`, `tokio-tungstenite`, `@types/node`, `@vitejs/plugin-react`); left `tailwindcss` v4 (#131) and `rand` 0.10 (#92) deferred as previously decided (major breaking bumps, CI red). **Not verified live:** iOS companion pairing on a real device, and the boardroom-steering fix above — both still need a real phone in hand, flagged explicitly rather than assumed working from code alone.
+**Verified by:** Claude Code session — the user asked for a full repo-hygiene pass after PR #143 (iOS companion operations area) landed. Work done, each verified against real test/CI output rather than assumed: **(1)** patched `requests` 2.32.5→2.33.0 in the voice backend (GHSA-gc5v-m9x4-r6x2), 37/37 voice-backend pytest passing (PR #145, merged); the paired `glib` Dependabot alert is documented as blocked on Tauri's own `gtk = "^0.18"` pin, not fixable from this repo. **(2)** wired `AlphonsoCompanionTests` (5 files, previously never executed anywhere) into `ios-build.yml` ahead of the signing/archive/upload steps (PR #146, merged). **(3)** audited all 7 local branches and 16 git stashes: 6 branches confirmed to have zero unique commits vs. `main` (deleted, local+remote); 15 of 16 stashes traced and confirmed superseded or trivial (dropped) — one, a stash from 2026-07-10 containing 7,243 lines of never-committed hook test coverage (14 new test files under `src/test/hooks/`), was genuinely unrecovered work and rescued onto branch `recover/hook-test-coverage` (pushed, no PR — 257+/396 passing; the remaining 132 failures trace to a Vitest 2.1.9→4.1.8 major-version jump changing `vi.mock` hoisting semantics, tracked in `docs/governance/DEFERRED_WORK.md`, not force-fixed blind). **(4)** found and fixed a real, silent duplicate-file bug: `src/lib/appStorage.ts`/`ollama.ts` existed alongside their already-migrated `.ts` counterparts, and Vite's default resolve order was silently running the untyped `.js` files; deleting them surfaced a genuine behavior regression in `ollama.ts`'s `classifyOllamaError` (required a literal `DOMException` instance to classify aborts as `'timeout'`, which the tested `.js` version didn't require — non-`DOMException` abort errors were silently misclassified as `'disconnected'`), fixed to match tested behavior (PR #147, merged). **(5)** fixed all 5 pre-existing `tsc --noEmit` errors — one of which was not cosmetic: `App.tsx`'s iOS "steer boardroom" handler called `addThreadMessage(sessionId, 'shayan', guidance)` with 3 positional arguments against a function that takes a single options object, so every boardroom-steering message sent from the iOS companion since PR #143 shipped has silently no-opped (destructuring a string as `{threadId, speaker, content}` yields all `undefined`, and the function returns `null` on empty content) — fixed to pass the object form (PR #148, merged). **(6)** merged 8 green Dependabot PRs (`actions/setup-python`, `actions/setup-node`, `softprops/action-gh-release`, `mdns-sd`, `eslint`, `tokio-tungstenite`, `@types/node`, `@vitejs/plugin-react`); left `tailwindcss` v4 (#131) and `rand` 0.10 (#92) deferred as previously decided (major breaking bumps, CI red). **Not verified live:** iOS companion pairing on a real device, and the boardroom-steering fix above — both still need a real phone in hand, flagged explicitly rather than assumed working from code alone.
 **Previous entry (2026-08-12):** v2.6.1 (Mobile companion operations + ChatView race condition fix: added Task Launcher bento card, Agent Dock Interlock profiles sheet, and Boardroom live steering; resolved the chat-loading race bug; branch `fix/pr140-review-followup`) — OpenCode session. Designed and implemented premium "Midnight Editorial Cyberpunk" UI/UX styling for the iOS Companion using the `ultimate-frontend-design` framework and real cloud-hosted portrait assets; resolved a major latent race condition bug in `ChatView.tsx` by introducing synchronous message list clearing on activeChatId changes. Integrated remote image loading with AsyncImage, dual-storage updates in `approvalService.js` via `durableSet`, and JSON-RPC dispatch mappings in `companion_router.rs`. Current repo totals at that time: 263 test files, 3,758 tests, 185 services, 24 connectors.
 **Previous entry (2026-07-24, Phase 4):** v2.6.1 (Session Coach Phase 4: optional Ollama-narrative layer, gated off by default) — implemented `generateNarrativeCoachMessage()` in `coachEngineService.ts` per §11, wired into `CoachContext.jsx` as an immediate-display-then-swap-in pattern so the LLM call never blocks the rule-based intervention. 100/100 `coachEngineService.test.js` tests passing, `tsc --noEmit` clean, lint clean.
 **Previous entry (2026-07-23):** v2.6.1 (Session Coach Phase 3: 3 configurable message styles per detector — direct/balanced/gentle; 33 hand-written message variants, 3,619 tests; no version bump) — Claude Code session reconciled the root docs against recent voice/mobile commits already on `main` (desktop Voice OS, iOS companion Voice tab, cloud voice, Farsi routing, Supabase device enrollment), reviewed branch `sprint-5-kilo-cli` for PR readiness against current `main`, and corrected the failing README Rust test count so `npm run verify:docs` passes on `main`. Full details: sections 11.19 and 11.20.
@@ -128,112 +130,126 @@ the same change; no task is complete without the plan's stated verification.
 |---|---|
 | App name | Alphonso |
 | Version | 2.10.0 |
-| Type | Tauri v2 desktop app (Windows) |
+| Type | Tauri v2 desktop app (Windows; macOS Apple Silicon and Linux builds too) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
-| Backend | Rust 1.77, Tauri 2.12, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
-| Frontend | React 18, Vite 8, Tailwind 4, Lucide React, Framer Motion — new UI work is `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain and are tracked for migration. |
+| Backend | Rust (minimum 1.77.2), Tauri 2.12, SQLite (rusqlite bundled), the OS keychain, tokio, reqwest, tokio-tungstenite (companion) |
+| Frontend | React 19, Vite 8, Tailwind 4, Lucide React, Framer Motion — new UI work is `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain and are tracked for migration. |
 | UI System | **OKLCH** CSS design token system (`src/styles/tokens.css` — all colors in `oklch()` syntax), Framer Motion animation library (`src/lib/motion.ts` — spring/tween/fadeUp/fadeIn/slideInRight/scaleIn/staggerContainer/staggerItem/messageIn/panelIn), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
-| AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
+| AI layer | Ollama local (`llama3.2:3b` starter model, or the model you choose), NVIDIA NIM and Gemini (free tiers), Hermes Agents (self-hosted), Claude and ChatGPT (paid; used for Jose's steps only when you allow paid models) |
+| Media | FFmpeg (bundled on Windows), Kokoro, MusicGen, Whisper, ComfyUI (pictures, AI clips, the character reference model, motion transfer); paid and optional: Runway, ElevenLabs, Higgsfield |
 | Voice OS | FastAPI + Python microservice in `voice/` — STT (faster-whisper), LLM (Ollama `/api/chat`), TTS (piper), VAD (webrtcvad), barge-in cancellation. Launched as Tauri sidecar via `voice_sidecar.rs`. |
-| Deployment | Windows NSIS + MSI installers, macOS and Linux builds (`release.yml`), Railway static serve (gateway) |
+| Deployment | Windows NSIS + MSI installers, macOS DMG and Linux AppImage (`release.yml`), Railway (WhatsApp gateway, Farsi Piper), AWS ECS (Cloud Voice compute; did not resolve on 2026-10-20) |
 
 ---
 
 ## 2. Agent Roster — 9 Agents (not 4)
 
-Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 are registered in `src/agents/agentRegistry.js` and enforced by `src/services/agentContractService.js`.
+Every agent has a profile and schema in `src/agents/`. All 9 are registered in `src/agents/agentRegistry.js`. What each may do is one table, `src/services/jose/agentPermissionTable.ts` (Jose redesign phase 1, 2026-10-23): everyone may read and write its own work; only Alphonso may run code or change project files; only Marcus may publish or send; Jose and Marcus may spend, and so may Miya's paid media steps (`checkPlan()` allows them by action type); spending always asks. `agentContractService.ts` and Jose's plan check (`jose/stepGraph.ts`) enforce it. The `…Permissions.js` files in `src/agents/` are descriptive only.
 
-**Note:** Agent orchestration in this project is managed via OpenCode (opencode.ai), an interactive CLI tool that provides specialized agent skills and subagents for software engineering tasks. OpenCode agents are distinct from the 9 Alphonso agents defined in `src/agents/`.
+**Note:** this repository is developed with coding agents (Claude Code, OpenCode, Codex). Those are distinct from the 9 Alphonso agents defined in `src/agents/`.
 
 | Agent | Role | Key constraint |
 |---|---|---|
-| **Alphonso** | Local operator — execution, verification, packaging | General execution agent |
-| **Jose** | Orchestrator — intake, routing, merge, confirm, report | Cannot bypass high-risk restrictions |
-| **Hector** | Research + citations, source scan | Cannot execute terminal/filesystem/posting/purchase actions |
-| **Miya** | Creative — strategy, script, storyboard, export | Cannot execute system commands or unapproved publishing |
-| **Maria** | Governance Auditor — risk assessment, compliance review, approval gate | Does not perform destructive execution; Ollama-powered with deterministic fallback |
-| **Marcus** | Distribution Executor — GitHub releases, Slack notifications, publish pipelines | Requires Maria governance clearance; blocked on high/critical risk without approval |
-| **Echo** | Knowledge Historian — memory synthesis, retention classification, archival | Knowledge preservation only; Ollama-powered with deterministic fallback |
-| **Sentinel** | Security Monitor — threat detection, permission audit, automation safety | Ollama-powered + deterministic scan; blocks on critical risk or secret detection |
-| **Nova** | Opportunity Analyst — scoring, prioritization, strategic analysis | 4-dimension scoring (value/risk/timing/effort); Ollama-powered with deterministic fallback |
+| **Alphonso** | Local operator — execution, verification, packaging; assembles the content factory's videos | The only agent that may run code or change project files |
+| **Jose** | Orchestrator — answers or plans every request as a step graph, runs it, reports | Never runs code or publishes; may spend only on a paid-model step, which always asks; every plan is checked before anything runs |
+| **Hector** | Research — facts, sources, citations, what goes viral, stock clips | Read and write its own work only |
+| **Miya** | Creative — the content factory (script, scenes, pictures, voice, music, clips, Shorts, carousels, campaign), front-end drafts | Read and write its own work only; paid engines only inside an approved step |
+| **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Read and write its own work only; Ollama-powered with deterministic fallback, and says which one gave the verdict |
+| **Marcus** | Distribution & Release Manager — posts and schedules; the one scheduler for posts | The only agent that may publish or send, always after approval |
+| **Echo** | Knowledge Historian — memory synthesis, retention classification, a finished request's decisions | Read and write its own work only; Ollama-powered with deterministic fallback |
+| **Sentinel** | Security only — threat detection, permission audit, the content security check | Read and write its own work only |
+| **Nova** | Analyst — scoring, market checks, post times, results, lessons and ideas | Read and write its own work only |
 
 ---
 
-## 3. Service Layer — ~169 Services in `src/services/`
+## 3. Service Layer — 285 Services in `src/services/`
 
 Key services that past audits missed or underestimated:
 
 ### Orchestration & Governance (fully implemented)
-- `orchestrationQueueService.js` — durable queue with state transitions (`new → pending_approval → queued → reported_to_jose → dead_letter/failed`), dead-letter replay, manual interrupt
-- `orchestrationReceiptService.js` — receipt events across all flows: assignment creation, policy blocks, retries, dead-letter, merge/confirm, pipeline completion
-- `orchestrationGovernanceService.js` — governance layer over orchestration
-- `joseCommandRouterService.js` — Jose intake, decomposition, routing
-- `joseExecutionEngineService.ts` — Jose execution engine
-- `packetExecutionService.js` — packet-level execution
+- `orchestrationQueueService.ts` — durable queue with state transitions (`new → pending_approval → queued → reported_to_jose → dead_letter/failed`), dead-letter replay, manual interrupt
+- `orchestrationReceiptService.ts` — receipt events across all flows: assignment creation, policy blocks, retries, dead-letter, merge/confirm, pipeline completion
+- `orchestrationGovernanceService.ts` — governance layer over orchestration
+- `joseCommandRouterService.ts` — routes a plan's steps into packets (only Jose's own code calls it; `src/test/joseEntryPoints.test.js` enforces this)
+- `joseExecutionEngineService.ts` — Jose execution engine: runs, resumes after an approval, carries on an interrupted request
+- `packetExecutionService.ts` — packet-level execution
+
+### Jose (redesign phases 1–6b, 2026-10-23)
+- `jose/joseInbound.ts` (`answerOrPlan()`), `jose/joseDecision.ts`, `jose/submitToJose.ts` — every caller's entry point
+- `jose/josePlanner.ts`, `jose/joseTemplates.ts`, `jose/joseUserTemplates.ts` — plans from templates or fresh
+- `jose/stepGraph.ts`, `jose/agentPermissionTable.ts`, `jose/joseEffects.ts` — the plan check, the one permission table, approval by effect
+- `jose/joseRequestStore.ts`, `jose/joseStepOutputs.ts` — saved requests and each step's output
+- `jose/joseAdapt.ts`, `jose/joseReviewLoop.ts`, `jose/joseHelp.ts`, `jose/joseModels.ts`, `jose/joseSpend.ts` — plans that change while they run, larger models, paid models
+- `jose/joseTelegram.ts`, `jose/joseExpiry.ts`, `jose/joseFinish.ts` — Telegram approvals, expiry, Echo's save
+- Screens: `src/components/jose/` (plan map, Requests board, editor, Chat card, step output)
+
+### Miya's content factory (phases 1–4c, 2026-10-22 to 2026-10-25)
+- `contentFactory/` — 46 services: projects, brands, the project plan, step prompts and executors, media (voice, music, stock clips, AI clips, assembly, captions), Shorts, carousels, posts and the one publishing path, post moves, the Calendar's items, sign-in expiry, daily limits, results, lessons, ideas, paid engines, characters and motion. Rows for each are in `CLAUDE.md`'s Do Not Duplicate table.
+- Screens: `src/components/miya/` (the studio tabs), `src/components/calendar/` (the Calendar)
 
 ### Policy & Approval (fully implemented, fail-closed)
-- `policyEnforcementService.js` — **centralized policy gate** enforcing: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks. Fails closed with a blocked result object when uncertain or unauthorized.
-- `connectorRegistryService.js` — all 9 connector send paths run through policy gate before any external call
+- `policyEnforcementService.ts` — **centralized policy gate** enforcing: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks. Fails closed with a blocked result object when uncertain or unauthorized.
+- `connectorRegistryService.ts` — all 33 connectors' send paths run through policy gate before any external call
 
 ### Agent Contracts (fully implemented)
-- `agentContractService.js` — per-agent allowed/blocked action prefixes, checked before packet execution
-- `agentBusService.js` — inter-agent messaging bus
+- `agentContractService.ts` — per-agent allowed/blocked action prefixes, checked before packet execution
+- `agentBusService.ts` — inter-agent messaging bus
 
 ### Memory & Knowledge
 - `unifiedMemoryService.js` — **unified memory** consolidating 4 separate systems (shared 1000, miya 700, ecosystem 1500, workflow 2000) into single API with namespace/category filters. All old services re-export from unified service (backward compatible).
-- `memoryService.js` — re-exports from unifiedMemoryService
-- `miyaMemoryService.js` — re-exports from unifiedMemoryService
+- `memoryService.ts` — re-exports from unifiedMemoryService
+- `miyaMemoryService.ts` — re-exports from unifiedMemoryService
 - `memory/ecosystemMemoryService.js` — re-exports from unifiedMemoryService
-- `durableMemoryService.js` — re-exports from unifiedMemoryService + migration helpers
-- `workflowMemoryService.js` — re-exports from unifiedMemoryService
-- `sessionIntelligenceService.js`, `workspaceIntelligenceService.js`
-- `sourceConfidenceService.js`, `trustModel.js`, `verificationService.js`
+- `durableMemoryService.ts` — re-exports from unifiedMemoryService + migration helpers
+- `workflowMemoryService.ts` — re-exports from unifiedMemoryService
+- `sessionIntelligenceService.ts`, `workspaceIntelligenceService.ts`
+- `sourceConfidenceService.ts`, `trustModel.ts`, `verificationService.ts`
 
 ### Connector & External
-- `connectorRegistryService.js` — all outbound connector paths (policy-gated)
-- `whatsappWebhookService.js` — WhatsApp webhook handling
-- `marcusPublishService.js` — Marcus-governed distribution
-- `metaPublishService.js` — Meta/Instagram publishing
+- `connectorRegistryService.ts` — all outbound connector paths (policy-gated)
+- `whatsappWebhookService.ts` — WhatsApp webhook handling
+- `marcusPublishService.ts` — Marcus-governed distribution
+- `metaPublishService.ts` — Meta/Instagram publishing
 - `hectorResearchService.js` — Hector live research
-- `toolConnectionService.js`, `toolNotificationDispatcher.js`
+- `toolConnectionService.ts`, `toolNotificationDispatcher.ts`
 
-### Workflow Operations (10 structured workflows)
-- `workflowOperationsRegistryService.js` — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance
-- `workflowExecutionService.js`, `workflowBuilderService.js`, `workflowGovernanceService.js`
+### Workflow Operations (16 structured workflows)
+- `workflowOperationsRegistryService.ts` — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance, Research Operations, Crisis Management, Ecosystem Learning, Human Collaboration, Financial Intelligence, Reputation and Brand Monitoring
+- `workflowExecutionService.js`, `workflowBuilderService.ts`, `workflowGovernanceService.ts`
 
 ### Self-Development & Release
-- `selfDevelopmentService.js`, `nativeSelfDevelopmentAutostartService.js`
-- `productionReadinessService.js`, `rc0EvidenceService.js`, `nativeRc0ProofService.js`
-- `runwayService.js`, `appUpdateService.js`
-- `repoAuditService.js`
+- `selfDevelopmentService.ts`, `nativeSelfDevelopmentAutostartService.ts`
+- `productionReadinessService.js`, `rc0EvidenceService.ts`, `nativeRc0ProofService.ts`
+- `runwayService.ts`, `appUpdateService.ts`
+- `repoAuditService.ts`
 
 ### Agent Brain & Execution
 - `agentBrainService.js` — Brain 1-9: context reader, clarifying questions, plan preview, pattern memory (200 cap), thinking loop with error feedback, optimized Ollama params, multi-step decomposition (12+ patterns), git auto-commit, auto-run dev server, Composio external tool detection, post-write validation loop (build/lint after generation), self-evaluation (confidence 0-100), structured tool use (`executeWithTools` loop with 16 tools, max 10 iterations)
-- `toolRegistryService.js` — 16 tools with JSON schemas: read/write/delete/move files, search, list dir, run commands, fetch URL, open URL, clipboard read/write, Composio, memory save/search, git commit/status
-- `streamingService.js` — real-time token streaming with state persistence, subscriber pattern, abort support
-- `composioService.js` — Composio SDK integration: API key config, toolkit discovery, action execution, agent tool selection via LLM, health check
-- `agentMetricsService.js` — execution recording, success rate, confidence tracking, validation pass rate, 7-day trend, top commands, error patterns, per-agent breakdown
-- `proactiveAgentService.js` — 7 proactive checks (failed builds, validation failures, high iterations, low confidence, project staleness, idle time, unused memory), suggestion banner with action buttons, 60s interval with 5min cooldown per type
-- `workspaceFileService.js` — frontend wrapper for Tauri file operations: read, delete, move, search, list directory, tree builder
-- `browserAutomationService.js` — open URL, fetch content (HTML stripping, title extraction), clipboard read/write
-- `backupService.js` — full export/import of localStorage + SQLite + KV store as JSON, size estimation, file download/upload
-- `searchService.js` — memory/project search with relevance scoring, category/agent filters, date range, suggestions
-- `modelSelectionService.js` — multi-model selection, task-type routing, per-task override
-- `autoRunService.js` — auto-run dev server after build, opt-out toggle
-- `gitService.js` — git revert, log, status, diff for rollback
+- `toolRegistryService.ts` — 16 tools with JSON schemas: read/write/delete/move files, search, list dir, run commands, fetch URL, open URL, clipboard read/write, Composio, memory save/search, git commit/status
+- `streamingService.ts` — real-time token streaming with state persistence, subscriber pattern, abort support
+- `composioService.ts` — Composio SDK integration: API key config, toolkit discovery, action execution, agent tool selection via LLM, health check
+- `agentMetricsService.ts` — execution recording, success rate, confidence tracking, validation pass rate, 7-day trend, top commands, error patterns, per-agent breakdown
+- `proactiveAgentService.ts` — 7 proactive checks (failed builds, validation failures, high iterations, low confidence, project staleness, idle time, unused memory), suggestion banner with action buttons, 60s interval with 5min cooldown per type
+- `workspaceFileService.ts` — frontend wrapper for Tauri file operations: read, delete, move, search, list directory, tree builder
+- `browserAutomationService.ts` — open URL, fetch content (HTML stripping, title extraction), clipboard read/write
+- `backupService.ts` — full export/import of localStorage + SQLite + KV store as JSON, size estimation, file download/upload
+- `searchService.ts` — memory/project search with relevance scoring, category/agent filters, date range, suggestions
+- `modelSelectionService.ts` — multi-model selection, task-type routing, per-task override
+- `autoRunService.ts` — auto-run dev server after build, opt-out toggle
+- `gitService.ts` — git revert, log, status, diff for rollback
 - `scaffoldTemplatesService.js` — 8 project templates (React, Next.js, Express, full-stack, vanilla)
 
 ### Resilience & Monitoring (added Sprint Next-50)
-- `connectorCircuitBreakerService.js` — localStorage-backed circuit breaker per connector; 5-failure threshold, 60s cooldown, half-open recovery
-- `connectorRateLimiterService.js` — in-memory token-bucket rate limiter; 60 req/min default, per-connector config
-- `memoryMonitorService.js` — localStorage usage monitor; byte counts, threshold alerts (5MB warn / 8MB critical), pruneOldest helper
+- `connectorCircuitBreakerService.ts` — localStorage-backed circuit breaker per connector; 5-failure threshold, 60s cooldown, half-open recovery
+- `connectorRateLimiterService.ts` — in-memory token-bucket rate limiter; 60 req/min default, per-connector config
+- `memoryMonitorService.ts` — localStorage usage monitor; byte counts, threshold alerts (5MB warn / 8MB critical), pruneOldest helper
 
 ### Agent Intelligence (added Sprint Next-50)
-- `hectorBookmarkService.js` — Hector research bookmark ring (200 cap); tag/search filter, JSON export
-- `mariaWeeklyReportService.js` — Maria governance weekly report; reads audit + receipt logs, risk breakdown, scheduleWeeklyGeneration
+- `hectorBookmarkService.ts` — Hector research bookmark ring (200 cap); tag/search filter, JSON export
+- `mariaWeeklyReportService.ts` — Maria governance weekly report; reads audit + receipt logs, risk breakdown, scheduleWeeklyGeneration
 
 ### Voice OS (added feat/voice-os sprint)
-- `src/services/voiceOsService.js` — Tauri `invoke` wrappers: `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus`, `getVoiceWebSocketUrl`. Appends `agentActivityService` (now `.ts`) events on start/stop.
+- `src/services/voiceOsService.ts` — Tauri `invoke` wrappers: `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus`, `getVoiceWebSocketUrl`. Appends `agentActivityService` (now `.ts`) events on start/stop.
 - `src/hooks/useJarvisVoice.ts` — React hook for voice WebSocket: `start`, `stop`, `reset`, `state`, `transcript`, `reply`, `activeAgent`, `error`, `isConnected`. Uses **AudioWorklet** (not deprecated ScriptProcessor).
 - `src-tauri/src/voice_sidecar.rs` — `VoiceSidecar` state struct + `voice_start`/`voice_stop`/`voice_status` Tauri commands. `voice_start` accepts `app: tauri::AppHandle` and resolves the backend path via `app.path().resource_dir().join("voice/backend")` — works in both dev and production installs. `voice/backend/**` is included in bundle resources via `tauri.conf.json`.
 - `voice/backend/` — Python FastAPI: `main.py` (lifespan preload, CORSMiddleware, `/health`, barge-in, conversation history), `pipeline.py` (async generator: VAD→STT→agent→LLM→TTS), `router.py` (9-agent regex routing), `state.py` (per-session `get_state`/`set_state`/`remove_state`), `session.py` (task registry, barge-in cancel), `stt.py` (faster-whisper + lru_cache), `tts.py` (piper + ThreadPoolExecutor, async `synthesize()`), `vad.py` (webrtcvad `is_speech()`)
@@ -241,41 +257,41 @@ Key services that past audits missed or underestimated:
 - `voice/frontend/src/useJarvisVoice.ts` — Standalone frontend hook (AudioWorklet, all exports)
 - `voice/frontend/src/pcm-processor.worklet.ts` — AudioWorklet processor (PCM float32→int16)
 - `src/hooks/pcm-processor.worklet.ts` — **copy required by `useJarvisVoice.ts`** (the hook imports from `./pcm-processor.worklet`; the voice/frontend version is a separate package). Do NOT remove this file.
-- `voice/cloud-backend/` — Railway Cloud Voice FastAPI service. It validates bearer-authenticated requests, applies one of nine voice personas, uses NVIDIA NIM for replies, NVIDIA TTS for non-Farsi replies, and private Railway Piper for `fa-IR` (`mana`/`manta`). `/health` and `/ready` were verified live on 2026-07-13.
+- `voice/cloud-backend/` — Cloud Voice FastAPI service (on Railway at first). Cloud Voice compute moved to AWS ECS (`voice.obsidianmedia.online`, the iOS app's built-in address) in September 2026; the Farsi Piper voice is still on Railway, and Railway is kept as the rollback. On 2026-10-20 the AWS address did not resolve (`audits/2026-10-20_Codex_CloudVoice_Production_Recheck_Audit.md`), so it needs the infrastructure owner before a device test. It validates bearer-authenticated requests, applies one of nine voice personas, uses NVIDIA NIM for replies, NVIDIA TTS for non-Farsi replies, and private Railway Piper for `fa-IR` (`mana`/`manta`). `/health` and `/ready` were verified live on 2026-07-13.
 - `voice/piper-farsi/` — token-protected Railway Piper service with a persistent `/data` model cache. `/health` was verified live on 2026-07-13 and reports `mana` and `manta`.
 - **Cloud Voice access truth: PARTIAL.** The iOS Voice UI no longer exposes provider credentials, carries selected agent/language metadata, uses Supabase email OTP with a Keychain session, and enrolls a stable device UUID. Cloud Voice validates the Supabase user session plus active device on each request. The server and migration were deployed on 2026-07-13; physical iPhone sign-in, English speech, and Farsi speech acceptance still require verification before public-ready status.
 
 ### UI Polish Sprint (v2.3.1)
-- `src/services/connectors/perplexityConnector.js` — Perplexity AI search: `isPerplexityConfigured`, `searchPerplexity`. Calls `/chat/completions` with `llama-3.1-sonar-small-128k-online`.
-- **6 pages tab-overhauled**: `ProjectExecutionMode.jsx` (4 tabs), `HectorResearchDesk.jsx` (3 tabs), `OrchestratorView.jsx` (4 tabs), `MiyaStudio.jsx` (tab-conditional layout), `EcosystemHub.jsx` (flat header + pill toggle), `ContentCatalystWorkspace.jsx` (max-w-5xl wrapper).
+- `src/services/connectors/perplexityConnector.ts` — Perplexity AI search: `isPerplexityConfigured`, `searchPerplexity`. Called `/chat/completions` with `llama-3.1-sonar-small-128k-online` at first; since 2026-10-21 it uses Perplexity's Search API (`POST /search`), as that model was retired.
+- **6 pages tab-overhauled**: `ProjectExecutionMode.tsx` (4 tabs), `HectorResearchDesk.tsx` (3 tabs), `OrchestratorView.tsx` (4 tabs), `MiyaStudio.tsx` (tab-conditional layout), `EcosystemHub.tsx` (flat header + pill toggle), `ContentCatalystWorkspace.jsx` (max-w-5xl wrapper).
 
 ### JUNE CANDY Additions (v2.2.8 – v2.3.0)
-- `src/services/connectors/tavilyConnector.js` — Tavily AI search (free tier 1K/mo), `searchTavily`, `isTavilyConfigured`. Wired as tier-2 fallback in `hectorResearchService.js` (Brave → Tavily → DuckDuckGo → RSS).
-- `src/services/chromaDbService.js` — ChromaDB local vector DB (port 8000): `addMemoryToChroma`, `semanticSearchMemory`, `deleteMemoryFromChroma`, `isChromaHealthy`. Fire-and-forget write from `echoMemoryService.runEchoPreservation`.
+- `src/services/connectors/tavilyConnector.ts` — Tavily AI search (free tier 1K/mo), `searchTavily`, `isTavilyConfigured`. Wired as tier-2 fallback in `hectorResearchService.js` (Brave → Tavily → DuckDuckGo → RSS).
+- `src/services/chromaDbService.ts` — ChromaDB local vector DB (port 8000): `addMemoryToChroma`, `semanticSearchMemory`, `deleteMemoryFromChroma`, `isChromaHealthy`. Fire-and-forget write from `echoMemoryService.runEchoPreservation`.
 - `src/services/whisperTranscriptionService.ts` — Whisper meeting transcription: `transcribeAndIngest(audioFilePath, filename, onProgress)` — calls `transcribe_audio_file` Tauri command → Ollama summarize → Echo `pushMemoryItem`.
-- `src/services/connectors/n8nConnector.js` — n8n workflow automation: `isN8nHealthy`, `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`. Wired as Marcus distribution target (`n8n|workflow.*trigger`). All endpoints have AbortController timeouts (15s/10s/5s).
+- `src/services/connectors/n8nConnector.ts` — n8n workflow automation: `isN8nHealthy`, `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`. Wired as Marcus distribution target (`n8n|workflow.*trigger`). All endpoints have AbortController timeouts (15s/10s/5s).
 - `src/services/moduleRegistryService.ts` — Agent OS module registry: `installModule`, `enableModule`, `disableModule`, `listModules`, `getModule`, `uninstallModule`. Persisted via durableStore as `alphonso_modules_v1`. Reads `module.toml` manifests.
 - `src/services/runtimeApiService.ts` — Bridge client (port 4444) for module lifecycle: `listModules`, `runModule`, `getRunStatus`, `publishEvent`. Falls back to registry when bridge offline. 10s AbortController timeout.
 - `src/services/policyDslService.ts` — Module-level policy evaluation: `loadPolicy`, `evaluateAction`, `getPolicyRules`. Uses hardcoded rules from `policy.yaml` spec. Separate from `policyEnforcementService`.
 - `src/services/a2aProtocolService.ts` — A2A task delegation: `delegate`, `getTaskStatus`, `updateTaskResult`, `listActiveTasks`, `listTasksByAgent`. Uses agentBusService for message passing; persists to `alphonso_a2a_tasks_v1`.
-- `src/services/joseSchedulerService.js` — Jose cron scheduler: `createSchedule`, `listSchedules`, `saveSchedule`, `deleteSchedule`, `startScheduler`, `stopScheduler`. `SCHEDULE_PRESETS`: 30min/hourly/daily/weekly. Polls every 60s, fires callback when due. Started in `App.tsx`.
-- `src/services/echoFileWatcherService.js` — Echo inbox file watcher: `startFileWatcher`, `stopFileWatcher`, `getWatcherConfig`, `saveWatcherConfig`. Polls via `watch_inbox_poll` Tauri command every 30s, auto-summarizes with Ollama, saves to Echo via `runEchoPreservation`, deduplicates via `.processed` suffix. Started in `App.tsx`.
+- `src/services/joseSchedulerService.ts` — Jose cron scheduler: `createSchedule`, `listSchedules`, `saveSchedule`, `deleteSchedule`, `startScheduler`, `stopScheduler`. `SCHEDULE_PRESETS`: 30min/hourly/daily/weekly. Polls every 60s, fires callback when due. Started in `App.tsx`.
+- `src/services/echoFileWatcherService.ts` — Echo inbox file watcher: `startFileWatcher`, `stopFileWatcher`, `getWatcherConfig`, `saveWatcherConfig`. Polls via `watch_inbox_poll` Tauri command every 30s, auto-summarizes with Ollama, saves to Echo via `runEchoPreservation`, deduplicates via `.processed` suffix. Started in `App.tsx`.
 - `mcp-server/server.js` — MCP server (port 3333): 5 tools (`alphonso_run_pipeline`, `alphonso_search_memory`, `alphonso_research`, `alphonso_get_status`, `alphonso_get_receipts`), callable from Claude Desktop/Cursor/Windsurf.
 - `bridge/server.js` — Alphonso Bridge (port 4444): proxies MCP tool calls to Ollama `/api/chat` for live responses; `alphonso_get_status` checks Ollama `/api/tags` for real health + model list.
 
 ### Other
-- `pluginSandboxService.js`, `pluginRegistryService.js`
-- `recoveryService.js`, `runtimeLedgerService.js`
-- `screenIntelligenceService.js`, `voiceService.js`
-- `chatPersistenceService.js`, `notificationService.js`
-- `coachModeService.js`, `skillPackService.ts`
-- `localMarketplaceService.js`, `resourceCostService.js`
-- `devPacketService.js`, `serviceScopes.js`
-- `agentAvatarService.js`, `agentVisualService.js`
+- `pluginSandboxService.ts`, `pluginRegistryService.ts`
+- `recoveryService.ts`, `runtimeLedgerService.ts`
+- `screenIntelligenceService.ts`, `voiceService.ts`
+- `chatPersistenceService.ts`, `notificationService.ts`
+- `coachModeService.ts`, `skillPackService.ts`
+- `localMarketplaceService.ts`, `resourceCostService.ts`
+- `devPacketService.ts`, `serviceScopes.ts`
+- `agentAvatarService.ts`, `agentVisualService.ts`
 
 ---
 
-## 4. Test Suite — 250 Files in `src/test/` (not zero)
+## 4. Test Suite — 546 Files in `src/test/` and `bridge/tests/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
@@ -443,15 +459,19 @@ echoFileWatcherService.test.js       ← added JUNE CANDY v2.3.0 (14 tests)
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- 218 test files / 3,167 tests (Batch 2 + Test Expansion Phases 1-3; all passing as of 2026-07-01)
+- 546 test files / 6,777 tests, all passing (2026-10-25); 218 files / 3,167 tests on 2026-07-01
+- 357 Rust `#[test]`s (370 with the async `#[tokio::test]` cases), all passing
+- Desktop end-to-end: 34 spec files in `e2e-desktop/specs/`, run against the real built app (CI job `Desktop E2E (real Tauri binary)`)
 - Coverage expanded significantly across agent adapters, connector services, voice OS, workflow services
 - Run `npm run test:coverage` to see current state
 
 ---
 
-## 5. CI/CD — Two Workflows Already Exist
+## 5. CI/CD — Six Workflows
 
-**`.github/workflows/ci.yml`** — runs on push/PR to main:
+Workflows in `.github/workflows/`: `ci.yml` (below), `release.yml` (tag-triggered build, sign and publish for Windows, macOS and Linux), `gate.yml` (governance gate, a required check), `ios-build.yml` (iOS companion build, tests and TestFlight), `deploy-cloud-voice.yml` (Cloud Voice on AWS) and `security-audit.yml` (weekly npm and cargo audit).
+
+**`.github/workflows/ci.yml`** — runs on push/PR to main (since 2026-10: also desktop E2E, doc-count, Do-Not-Duplicate, CREATE_NO_WINDOW and Tauri version checks):
 - `npm ci` → `npm audit --audit-level=high` → lint → `npm test` → `npm run build`
 - `rust-quality` job: runs on **ubuntu-latest** (Windows App Control was blocking DLL loading), `cargo clippy -- -D warnings` + `cargo test`
 - On main branch only: Tauri desktop build + NSIS artifact upload
@@ -489,26 +509,43 @@ updater:setup            node scripts/setup-updater-signing.mjs
 updater:verify           node scripts/verify-updater-readiness.mjs
 release:updater          node scripts/release-updater.mjs
 verify:ollama            node scripts/verify-ollama-runtime.mjs
+export:ground-truth      node scripts/export-ground-truth.mjs
+verify:docs              node scripts/verify-doc-counts.mjs
+verify:dnd-coverage      node scripts/verify-dnd-coverage.mjs
+generate:dnd-map         node scripts/generate-dnd-map.mjs
+verify:dnd-map           node scripts/generate-dnd-map.mjs --check
+verify:no-window-coverage node scripts/verify-no-window-coverage.mjs
+verify:npm-audit         node scripts/verify-npm-audit.mjs
+verify:tauri-versions    node scripts/verify-tauri-versions.mjs
+generate:skill-matrix    node scripts/generate-skill-permission-matrix.mjs
+verify:skill-matrix      node scripts/generate-skill-permission-matrix.mjs --check
 proof:native-selfdev     node scripts/proof-native-selfdev.mjs
 proof:rc0                node scripts/proof-native-selfdev.mjs --rc0
 auth:youtube             node scripts/auth-youtube.mjs
 auth:meta                node scripts/auth-meta.mjs
 auth:outlook             node scripts/auth-outlook.mjs
 preview                  node scripts/run-vite-preview.mjs
+e2e:server               node scripts/run-e2e-server.mjs
 tauri                    tauri
+test:file                vitest run
+test:coverage            vitest run --coverage src bridge --pool=forks
+test:e2e                 playwright test
+test:e2e:desktop         wdio run e2e-desktop/wdio.conf.mjs
+test:rust                cd src-tauri && cargo test
+version:bump             node scripts/bump-version.mjs
+prepare                  husky
 ```
 
 ---
 
 ## 7. Connector Status — Policy-Gated, Not Raw Stubs
 
-All outbound connector paths run through `policyEnforcementService.js` before any external call. They are not raw stubs.
+All outbound connector paths run through `policyEnforcementService.ts` before any external call. They are not raw stubs.
 
 | Connector | Frontend path | Rust command | Live status |
 |---|---|---|---|
 | Telegram | `connectorRegistryService.sendTelegramConnectorMessage` | Yes | Credential-dependent |
 | WhatsApp outbound | `connectorRegistryService.sendWhatsAppConnectorMessage` | Yes (+ browser fallback) | Credential-dependent |
-| WhatsApp inbound (Twilio poll) | `whatsappWebhookService.js` | Yes | Credential-dependent |
 | WhatsApp inbound (Cloud webhook) | `browserPollWhatsAppGateway` → Railway queue drain | Browser fallback | Live — requires Railway gateway + 5 credentials in UI |
 | YouTube upload | `connectorRegistryService.uploadYouTubeConnectorVideo` | Yes | OAuth-dependent |
 | Notion | `connectorRegistryService.sendNotionConnectorEntry` | Yes | Token-dependent |
@@ -520,6 +557,15 @@ All outbound connector paths run through `policyEnforcementService.js` before an
 | Brave Search | `connectorRegistryService` via `hectorResearchService` | No | API key-dependent |
 | Tavily | `tavilyConnector.searchTavily` | No | API key-dependent (tier-2 Hector fallback) |
 | n8n | `n8nConnector.triggerN8nWebhook` | No | Local service at localhost:5678; Marcus distribution target |
+| Meta (Facebook, Instagram) | `metaPublishService.ts`, `publishMetaVideo()`, `publishPost()` | Yes (`meta_publish.rs`, `meta_video.rs`, `meta_media.rs`) | Sign in from Settings; not checked with a real account yet |
+| Pexels, Pixabay, Coverr | `stockFootageConnector.ts` | Yes (`content_stock_search`, `content_download_media`) | Free key-dependent |
+| Your storage (S3-compatible) | `mediaStorageService.ts` | Yes (`media_storage.rs`) | Optional; used only inside an approved post |
+| ElevenLabs | `elevenLabsConnector.ts` | Yes (`elevenlabs.rs`) | Paid; not checked with a real account yet |
+| Higgsfield | `higgsfieldConnector.ts` | Yes (`higgsfield.rs`) | Paid; not checked with a real account yet; some request fields unconfirmed |
+| Runway | `runwayService.ts`, `runwayClip.ts` | Yes (`runway.rs`) | Paid; not checked live |
+| CALL-E | `calleConnector.ts`, `calleMcpConnector.ts` | No | Paid (real phone calls) |
+
+WhatsApp is Meta Cloud API only; Twilio support was removed on 2026-10-21.
 
 All paths: fail-closed on missing credentials, blocked in zero-cost mode unless explicitly overridden, approval-gated for risky external actions.
 
@@ -539,18 +585,18 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **WhatsApp had no command handling and no auto-start** — new `whatsappCompanionService.ts` (9 real commands, mirrors Telegram's pattern); also found `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` had no UI field anywhere, making inbound polling unconfigurable regardless of credentials.
 - [x] **`voice/backend/router.py` keyword-routing bugs** — hector's broad keywords stole matches meant for nova/sentinel; miya was missing write/blog/draft keywords entirely.
 - [x] **Stale Boardroom docs referencing nonexistent "Hermes"/"Kairo" agents** — correction banners added to `BOARDROOM_ROLES.md`/`BOARDROOM_MODEL_REGISTRY.md`.
-- [ ] **Auto-update full in-app download+install+relaunch** — handed off, not built: `docs/AUTO_UPDATE_HANDOFF.md` + PR #98 on `feat/in-app-auto-update`.
+- [x] **Auto-update full in-app download+install+relaunch** — handed off as `docs/AUTO_UPDATE_HANDOFF.md` + PR #98; merged in v2.6.0 and confirmed against a real signed release on 2026-09-05 (v2.7.0 → v2.7.1).
 - [x] **`companionIntegration.test.js` asserts against fabricated Tauri command names** — closed 2026-10-06: rewritten as a source-reading contract test (§11.29).
-- [ ] **Mobile Companion pairing not independently re-verified live** — port collision fix is high-confidence but not confirmed against an actual paired phone this session; Windows Firewall (port 8765 / mDNS UDP 5353) remains a possible unverified contributor.
+- [x] **Mobile Companion pairing not independently re-verified live** — confirmed on a real device on 2026-07-25 (PR #121, after a second fix to the host-name suffix).
 
 ### CLOSED — 2026-07-02 (iOS companion pairing fix, post-audit Phase 1)
 - [x] **iOS companion pairing — phone could not find/connect to desktop** — Root cause: `companion_discovery.rs`'s `advertise()` passed the bare OS hostname (e.g. `"DESKTOP-ABC123"`) as the mDNS `ServiceInfo::new` host name. The `mdns-sd` crate does NOT append `".local."` automatically — its `normalize_hostname()` only dedupes an already-doubled `".local.local."` suffix (confirmed by reading the crate source at `mdns-sd-0.20.1/src/service_info.rs`). This registered a service whose SRV target was not a valid mDNS host record, so iOS's `NWBrowser`/`NWConnection` (in `MDNSService.swift`) could discover the service instance but fail to resolve it to a connectable address — exactly matching "can't pair with my phone." Fixed by adding `to_mdns_host_name()` (always ends in `.local.`, with 3 new unit tests) and using it in `advertise()`. Also confirmed (by reading `mdns-sd`'s `ServiceDaemon::new_with_port` source) that the `ServiceDaemon`/`CompanionDiscovery` handle can be safely dropped after calling `advertise()` — the crate spawns a detached background thread holding its own sender clone, so the advertisement is NOT torn down when the caller's handle goes out of scope. That is not a bug; no change needed there. Also added a visible error message in `CompanionPairingPanel.tsx` when `companion_start_discovery` fails — previously the button just silently reset to "Start Discovery" with zero user feedback.
 
 ### CLOSED — 2026-07-02 (User-reported bug batch, post-audit Phase 1)
-- [x] **Connector credentials appeared to not save (Telegram bot token example)** — Root cause was two-fold: (1) `hydrateConnectorCredentialsFromSqlite()` in `connectors/connectorAuth.js` was dead code, never called at app boot or component mount, so the in-memory credential cache permanently locked itself to `{}` on first read before SQLite ever got consulted; (2) `getStoredCredential()` in `connectors/connectorRegistry.js` and `getConnectorEnvironment()` in `connectors/connectorOutbound.js` both read directly from `localStorage.getItem('alphonso_connector_credentials_v1')` — a key that the KV-primary migration (see CLOSED audit-sprint-26jun entry below) stopped writing to and actively clears. So a credential saved via the UI persisted correctly to SQLite but both verification and the actual Telegram send path read a dead, always-empty key and reported "not configured" / "token is not configured". Fixed: `ConnectorSetupPanel.tsx` now hydrates+re-syncs all 20 credential fields on mount; `useDataHydration.js` hydrates the cache at boot (with `force=true` to guarantee a real SQLite read); both stale localStorage readers now delegate to `getConnectorCredential()`.
+- [x] **Connector credentials appeared to not save (Telegram bot token example)** — Root cause was two-fold: (1) `hydrateConnectorCredentialsFromSqlite()` in `connectors/connectorAuth.ts` was dead code, never called at app boot or component mount, so the in-memory credential cache permanently locked itself to `{}` on first read before SQLite ever got consulted; (2) `getStoredCredential()` in `connectors/connectorRegistry.js` and `getConnectorEnvironment()` in `connectors/connectorOutbound.js` both read directly from `localStorage.getItem('alphonso_connector_credentials_v1')` — a key that the KV-primary migration (see CLOSED audit-sprint-26jun entry below) stopped writing to and actively clears. So a credential saved via the UI persisted correctly to SQLite but both verification and the actual Telegram send path read a dead, always-empty key and reported "not configured" / "token is not configured". Fixed: `ConnectorSetupPanel.tsx` now hydrates+re-syncs all 20 credential fields on mount; `useDataHydration.js` hydrates the cache at boot (with `force=true` to guarantee a real SQLite read); both stale localStorage readers now delegate to `getConnectorCredential()`.
 - [x] **ComfyUI reported "not running" in Content Catalyst while Runtime Hub showed it running** — `connectorImageGenerators.js`'s `generateComfyUiImage()` talks to ComfyUI via raw browser `fetch()` (not a Tauri command), using `http://127.0.0.1:8188` as the default endpoint. `tauri.conf.json`'s CSP `connect-src` only allowlisted `http://localhost:8188`, not the `127.0.0.1` form — browsers do not treat these as equivalent origins for CSP purposes — so the fetch was silently blocked and `contentCatalystService.js` reported a hardcoded "ComfyUI not running" message regardless of the actual failure. Fixed: added `http://127.0.0.1:8188` to CSP; the toast now surfaces the real underlying error instead of a hardcoded guess.
 - [x] **No submit/input affordance on the Projects page** — `ProjectExecutionMode.tsx`'s intake form (Setup tab, via `ProjectIntakePanel`) had zero call-to-action; the only "Generate" submit button lived on a separate Execution tab with no link between them. Added a "Continue to Execution →" button directly under the intake form.
-- [x] **Hector research output showed unclickable link-like text, no proper report** — Confirmed real bug: `CitationPanel.tsx`, `SourceBoard.tsx`, and `ResearchReportPanel.tsx` rendered source URLs as plain `<div>`/string text with no anchor or click handler at all. Separately, `ChatView.tsx`'s inline Hector citation chips called bare `window.open()`, which silently no-ops in the Tauri webview (same class of bug CLAUDE.md already documents for `<a target="_blank">`). Fixed: added `openExternalUrl()` to `browserAutomationService.js` (tries `invoke('open_url', ...)`, falls back to `window.open` only outside Tauri) and wired it into all four surfaces. Note: `HectorResearchDesk.tsx` already had a working Markdown export button (`exportReport()`) — that part of the "proper output format" request was already implemented and did not need a fix.
+- [x] **Hector research output showed unclickable link-like text, no proper report** — Confirmed real bug: `CitationPanel.tsx`, `SourceBoard.tsx`, and `ResearchReportPanel.tsx` rendered source URLs as plain `<div>`/string text with no anchor or click handler at all. Separately, `ChatView.tsx`'s inline Hector citation chips called bare `window.open()`, which silently no-ops in the Tauri webview (same class of bug CLAUDE.md already documents for `<a target="_blank">`). Fixed: added `openExternalUrl()` to `browserAutomationService.ts` (tries `invoke('open_url', ...)`, falls back to `window.open` only outside Tauri) and wired it into all four surfaces. Note: `HectorResearchDesk.tsx` already had a working Markdown export button (`exportReport()`) — that part of the "proper output format" request was already implemented and did not need a fix.
 
 ### CLOSED — 2026-07-02 (Onboarding wizard expansion, post-audit)
 - [x] **Approval mode default was invisible to users** — `OnboardingWizard.tsx` now has a dedicated "Approval mode" step (new step 3 of 6) that asks the user explicitly whether Alphonso should ask before high-risk actions, defaulting to ON during onboarding, and writes the choice via `setRuntimePolicySettings({ approvalMode })`. Previously `approvalMode: false` was silently the default with no onboarding-time decision point (flagged as a P0 risk in `ALPHONSOAUDIT25.06.2026.md`'s completion report).
@@ -559,12 +605,12 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **Onboarding wizard is now 6 steps**, not 4: Check Ollama → Pick a model → **Approval mode (new)** → Connect → **Advanced services (new)** → Ready. `StepIndicator` and both test files (`src/test/OnboardingWizard.test.jsx`, `src/test/components/OnboardingWizard.test.tsx`) updated accordingly.
 
 ### OPEN GAPS (as of v2.5.0-security)
-- [ ] **Voice OS Python dependency** — Voice OS in Runtime Hub can Install/Start, but requires Python 3.10+ on PATH. `find_python()` checks standard paths but won't auto-install Python itself. User must have Python installed first.
-- [x] **CLOSED 2026-07-02 — Plugin execution isolation (corrected from a stale/incorrect prior claim)** — This entry previously claimed "Plugin tools run in the main thread" with "no Web Worker, iframe, or subprocess isolation." That claim was **wrong** and was never re-verified against the actual Rust implementation before being written. In reality: `executePluginToolRun` (`pluginRegistryService.js`) invokes the Tauri command `execute_plugin_tool` in `plugin_runtime.rs`, which runs plugin tools as **native OS subprocesses** via `Command::new(&tool.program)` — never as in-process JavaScript, and never in the browser/renderer main thread. There is no `eval()`/dynamic `import()` of plugin code anywhere in the JS layer to isolate in the first place; manifests are purely declarative (`tool.id` → fixed `program` + `args`), not executable plugin code. Execution was already gated by: manifest `tools.execute`/`command.execute` permission checks, the shared `allowed_program()` system allowlist, `validate_plugin_extra_args()` (arg count/length/blocked-token checks), and workspace-root-scoped `cwd` resolution. The one real gap — that any plugin could declare `program` as anything already in the *shared, system-wide* allowlist (git/npm/docker/etc.), with no per-plugin scoping — is now closed: manifests may declare `declared_programs: string[]`; when present, `execute_plugin_tool` rejects any `tool.program` not in that plugin's own list, enforced on top of (not instead of) the shared allowlist. `validate_plugin_manifest_disk` now warns when a manifest omits `declared_programs` and errors if a tool's program isn't listed in a declared set. Optional field — fully backward compatible with any manifest written before this change. 4 new Rust unit tests added (`program_allowed_by_manifest_*`) in `plugin_runtime.rs`. **Correction note for future audits: verify claims like "runs in the main thread" against the actual Tauri command implementation before repeating them — this file itself was the source of the stale claim.**
-- [ ] **Rust cargo check for new crates (arboard, tauri-plugin-dialog, tauri-plugin-opener)** — added to Cargo.toml in Batch 1 but not yet verified to compile on CI (first CI run on this branch will confirm).
+- [x] **Voice OS Python dependency** — closed: `runtime_install_prerequisite` installs Python with winget/brew/apt (since 2026-06-23, noticed 2026-09-02), and since 2026-10-22 `find_python()` picks a suitable 3.10–3.14.
+- [x] **CLOSED 2026-07-02 — Plugin execution isolation (corrected from a stale/incorrect prior claim)** — This entry previously claimed "Plugin tools run in the main thread" with "no Web Worker, iframe, or subprocess isolation." That claim was **wrong** and was never re-verified against the actual Rust implementation before being written. In reality: `executePluginToolRun` (`pluginRegistryService.ts`) invokes the Tauri command `execute_plugin_tool` in `plugin_runtime.rs`, which runs plugin tools as **native OS subprocesses** via `Command::new(&tool.program)` — never as in-process JavaScript, and never in the browser/renderer main thread. There is no `eval()`/dynamic `import()` of plugin code anywhere in the JS layer to isolate in the first place; manifests are purely declarative (`tool.id` → fixed `program` + `args`), not executable plugin code. Execution was already gated by: manifest `tools.execute`/`command.execute` permission checks, the shared `allowed_program()` system allowlist, `validate_plugin_extra_args()` (arg count/length/blocked-token checks), and workspace-root-scoped `cwd` resolution. The one real gap — that any plugin could declare `program` as anything already in the *shared, system-wide* allowlist (git/npm/docker/etc.), with no per-plugin scoping — is now closed: manifests may declare `declared_programs: string[]`; when present, `execute_plugin_tool` rejects any `tool.program` not in that plugin's own list, enforced on top of (not instead of) the shared allowlist. `validate_plugin_manifest_disk` now warns when a manifest omits `declared_programs` and errors if a tool's program isn't listed in a declared set. Optional field — fully backward compatible with any manifest written before this change. 4 new Rust unit tests added (`program_allowed_by_manifest_*`) in `plugin_runtime.rs`. **Correction note for future audits: verify claims like "runs in the main thread" against the actual Tauri command implementation before repeating them — this file itself was the source of the stale claim.**
+- [x] **Rust cargo check for new crates (arboard, tauri-plugin-dialog, tauri-plugin-opener)** — compiled and passed Clippy in CI on every run since Batch 1.
 
 ### CLOSED — Batch 1 Security Sprint (2026-07-02, Bob/IBM)
-- [x] **Boot crash: TDZ ReferenceError on launch** — `appConstants.js` imported `VOICE_STATES` from `voiceService.js` at module scope. Rollup couldn't safely order the module initialization chain, causing a TDZ crash. Fixed by inlining `VOICE_STATES` as a literal const inside `appConstants.js`. Build ✓ Tests ✓ (2,555 passing).
+- [x] **Boot crash: TDZ ReferenceError on launch** — `appConstants.js` imported `VOICE_STATES` from `voiceService.ts` at module scope. Rollup couldn't safely order the module initialization chain, causing a TDZ crash. Fixed by inlining `VOICE_STATES` as a literal const inside `appConstants.js`. Build ✓ Tests ✓ (2,555 passing).
 - [x] **C-2: Policy gate — 6 browser-only connectors** — verified already wired (`deepseekConnector`, `perplexityConnector`, `tavilyConnector`, `n8nConnector`, `githubConnector`, `slackConnector` all call `evaluatePolicyGate`).
 - [x] **C-3: getComfyUiVideoHistory missing policy gate** — `gateConnectorAction` now called at top of function before circuit breaker.
 - [x] **C-4/C-5: Path traversal in transcribe_audio_file + save_image_to_folder** — verified already protected.
@@ -592,8 +638,8 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 
 ### CLOSED — v2.4.4 (2026-06-28)
 - [x] **iOS companion router — events emitted but no frontend listener** — Already closed: `App.tsx` line 375+ listens for `companion://command`, `companion://abort`, `companion://approve` events and routes them to the execution engine. Swift WebSocketService (MDNSService.swift, WebSocketService.swift) matches Rust JSON-RPC protocol (companion_router.rs). 12 integration tests added in `companionIntegration.test.js`.
-- [x] **DeepSeek connector** — `src/services/connectors/deepseekConnector.js` created: `isDeepSeekConfigured`, `sendDeepSeekMessage`, `searchWithDeepSeek`. Credential UI added to ConnectorSetupPanel. `externalAgentAdapter.js` wired: `runExternalAgentTask('deepseek', task)` calls DeepSeek API live. Hector tier-3 fallback added. 4 tests in `deepseekConnector.test.js`.
-- [x] **PWA offline ChatView wiring** — `saveMessageOffline()` from `offlineChatService.js` now called in ChatView.tsx (import added line 43; called on Ollama stream error at line 687). Messages are saved to IndexedDB when Ollama is unreachable.
+- [x] **DeepSeek connector** — `src/services/connectors/deepseekConnector.ts` created: `isDeepSeekConfigured`, `sendDeepSeekMessage`, `searchWithDeepSeek`. Credential UI added to ConnectorSetupPanel. `externalAgentAdapter.js` wired: `runExternalAgentTask('deepseek', task)` calls DeepSeek API live. Hector tier-3 fallback added. 4 tests in `deepseekConnector.test.js`.
+- [x] **PWA offline ChatView wiring** — `saveMessageOffline()` from `offlineChatService.ts` now called in ChatView.tsx (import added line 43; called on Ollama stream error at line 687). Messages are saved to IndexedDB when Ollama is unreachable.
 - [x] **Runway API key credential UI** — Already closed in prior sprint (ConnectorSetupPanel.tsx line 701). Ground Truth was stale.
 - [x] **Plugin sandbox wiring** — Already closed: `PluginContext.jsx` imports and calls `evaluatePluginExecutionPolicy` before every tool run. Ground Truth was stale (incorrect "never imported" claim).
 - [x] **agentContractService alphonso allowedActionPrefixes** — `execute_command` and `filesystem_` added to alphonso's allowed prefixes. Fixes test `allows alphonso execute_command`. Alphonso is the operator agent and CAN run commands and filesystem ops.
@@ -628,8 +674,8 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **Framer Motion animation library** — `framer-motion` in `package.json`. `src/lib/motion.ts` exports: `spring`, `tween`, `fadeUp`, `fadeIn`, `slideInRight`, `scaleIn`, `staggerContainer`, `staggerItem`, `messageIn`, `panelIn`. Chat messages wrapped in `AnimatePresence` with `motion.div` per message using `messageIn` variants. (2026-06-24, feat/ui-ux-overhaul)
 - [x] **Full token sweep** — `OnboardingWizard`, `AgentStatusStrip`, `AutomationView`, `SettingsView EchoTimeline`, `RightPanel`, `TopBar`, `MissionControlHome` — all `zinc-*/indigo-*` hardcoded classes replaced with CSS var tokens. (2026-06-24, feat/ui-ux-overhaul)
 - [x] **Sidebar collapsed tooltips** — collapsed sidebar nav buttons show `title` + `aria-label` for keyboard and hover accessibility. (2026-06-24, feat/ui-ux-overhaul)
-- [x] **Voice OS sidecar integration** — `RuntimeManagerView` has `voice-os` entry in `TOOL_META`; `voiceOsService.js` wires Tauri commands; `useJarvisVoice.ts` hook uses AudioWorklet. (2026-06-24, feat/voice-os)
-- [x] **Design system created** — `tailwind.config.js` tokens (surface-0..4, accent, success/warning/danger), CSS component classes (.panel, .card, .btn-*, .badge-*, .input, .section-label), Manrope font, ambient glow, custom scrollbar.
+- [x] **Voice OS sidecar integration** — `RuntimeManagerView` has `voice-os` entry in `TOOL_META`; `voiceOsService.ts` wires Tauri commands; `useJarvisVoice.ts` hook uses AudioWorklet. (2026-06-24, feat/voice-os)
+- [x] **Design system created** — `tailwind.config.js` tokens (since Tailwind v4, 2026-10-12, the tokens live in `src/styles/tokens.css` and `src/index.css`; there is no `tailwind.config.js`) (surface-0..4, accent, success/warning/danger), CSS component classes (.panel, .card, .btn-*, .badge-*, .input, .section-label), Manrope font, ambient glow, custom scrollbar.
 - [x] **Font size standardization** — Eliminated all `text-[8px]`/`[9px]` across AgentDock, ChatView, BoardroomPanel, App, TopBar, RightPanel, Badge. Standardized to `text-2xs` (10px) and `text-xs` (12px).
 - [x] **Streaming UX** — Real-time token display while 7B model generates, abort button with stop/cancel, token counter, elapsed time ticker, live streaming status indicator with green pulse dot.
 - [x] **Keyboard shortcuts** — 12 shortcuts: Ctrl+N new chat, Ctrl+K or / focus input, Esc abort, Ctrl+P search, ? help modal. `useKeyboardShortcuts` hook.
@@ -651,10 +697,10 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **SentinelAllowlistPanel compact rewrite** — Fully restyled for sidebar embedding: inline form row, `flex-1 min-w-0` inputs, abbreviated type options (dom/path/ip), list capped at `max-h-48 overflow-y-auto`, CSS variable theming. No longer overflows RightPanel width. (2026-06-25, patch2)
 - [x] **pcm-processor.worklet.ts dead class removed** — Dead `class PcmProcessor extends AudioWorkletNode` placeholder existed at module level. `AudioWorkletNode` is browser-only; jsdom test environment does not define it. Adding `useJarvisVoice` to `ChatView.tsx` pulled this file into the test graph and caused 1 test failure. Only `PCM_WORKLET_CODE` string export is needed — placeholder class removed. All 144 test files now pass. (2026-06-25, patch2)
 - [x] **`alphonso_settings` → SQLite** — already done (Sessions 3). Both persist to localStorage + SQLite; SQLite hydrated on boot.
-- [x] **`alphonso_conversations` → SQLite** — DONE (2026-06-01, Session 4): `App.jsx` now calls `invoke('kv_set', ...)` on every conversations change and hydrates from `kv_get` on boot. localStorage kept as fallback.
+- [x] **`alphonso_conversations` → SQLite** — DONE (2026-06-01, Session 4): `App.tsx` now calls `invoke('kv_set', ...)` on every conversations change and hydrates from `kv_get` on boot. localStorage kept as fallback.
 - [x] **`alphonso_connector_auth_profiles_v1` → SQLite** — DONE (2026-06-03, Session 5): persisted via `kv_set`/`kv_get` with localStorage fallback.
 - [x] **`alphonso_connector_registry_v2` → SQLite** — DONE (2026-06-03, Session 5): persisted via `kv_set`/`kv_get` with localStorage fallback.
-- [x] **`alphonso_messages_${id}` → SQLite** — DONE (2026-06-03, Session 6): `chatPersistenceService.js` persists via `upsert_memory_records`/`list_memory_records`; `ChatView.jsx` also calls `kv_set`/`kv_get` for secondary SQLite path. localStorage kept as fallback. All message keys now dual-write.
+- [x] **`alphonso_messages_${id}` → SQLite** — DONE (2026-06-03, Session 6): `chatPersistenceService.ts` persists via `upsert_memory_records`/`list_memory_records`; `ChatView.tsx` also calls `kv_set`/`kv_get` for secondary SQLite path. localStorage kept as fallback. All message keys now dual-write.
 
 ### TESTING
 - [x] **Coverage threshold** — set to 9% in `vite.config.js` (actual measured: 9.22%). Staged path: write tests to hit 12→20→30. `@vitest/coverage-v8@2.1.9` installed and version-matched.
@@ -667,10 +713,10 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
 - [x] **Brave Search for Hector** — `search_brave_sources` Rust command exists (line 5965 in lib.rs). Added frontend `searchBrave()` with dual-path: Rust first, then `VITE_BRAVE_SEARCH_API_KEY` frontend fallback (2026-05-31, Agent F)
-- [x] **Model switcher UI** — `src/components/ModelSwitcher.jsx` created. Fetches Ollama `/api/tags`, shows dropdown in ChatView header, persists to `alphonso_selected_model_v1`, shows "Ollama offline" pill if unreachable (2026-05-31, Agent F)
-- [x] **Connector health dashboard** — `ConnectorHealthPanel.jsx` with status for all 11 connectors (2026-05-31, Agent C)
+- [x] **Model switcher UI** — `src/components/ModelSwitcher.tsx` created. Fetches Ollama `/api/tags`, shows dropdown in ChatView header, persists to `alphonso_selected_model_v1`, shows "Ollama offline" pill if unreachable (2026-05-31, Agent F)
+- [x] **Connector health dashboard** — `ConnectorHealthPanel.tsx` with status for all 11 connectors (2026-05-31, Agent C)
 - [x] **Hector research persistence** — `persistResearchResult(query, results)` added to `hectorResearchService.js`; called at all exit points of `discoverResearchSourcesBrave`; writes via `pushMemoryItem` with `category: 'research_memory'` (2026-06-01, Agent 4)
-- [x] **Composio integration** — External tool access for agents via `composioService.js`. API key config, toolkit discovery, action execution, LLM tool selection, health check. Wired into agent brain — detects external tool intent before code generation.
+- [x] **Composio integration** — External tool access for agents via `composioService.ts`. API key config, toolkit discovery, action execution, LLM tool selection, health check. Wired into agent brain — detects external tool intent before code generation.
 - [x] **Structured tool use framework** — 16 tools with JSON schemas. `executeWithTools()` loop: LLM chooses tool → execute → feed result back → repeat up to 10 iterations. Tools: read/write/delete/move files, search, list dir, run commands, fetch URL, open URL, clipboard read/write, Composio, memory, git.
 - [x] **Browser automation** — `open_url` (opens in default browser), `fetch_url_content` (strips HTML, extracts title, 10KB limit), `read_clipboard`/`write_clipboard` (via PowerShell on Windows).
 - [x] **File system operations** — `read_workspace_file`, `delete_workspace_file`, `move_workspace_file`, `search_workspace_files` (grep across workspace, skips node_modules/.git, max 200 results), `list_workspace_directory` (recursive tree builder).
@@ -686,54 +732,54 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **`docs/IOS_COMPANION_PLAN.md`** — iOS companion architecture: WebSocket server design, JSON-RPC protocol, mDNS discovery, SwiftUI vs React Native tradeoffs, 5-phase implementation roadmap (2026-06-08)
 - [x] **`.github/dependabot.yml`** — npm (weekly), Cargo (weekly), GitHub Actions (weekly)
 - [x] **Auto-updater fully operational** — ed25519 keypair generated, `TAURI_SIGNING_PRIVATE_KEY` set in GitHub Secrets, pubkey in `tauri.conf.json`, v2.0.2 release triggered via `workflow_dispatch`. Future installs will auto-update.
-- [x] **Sentinel Security Monitor runtime** — **CLOSED Phase 1** `src/services/sentinelSecurityService.js` — deterministic threat scan + Ollama deep analysis, blocks on critical risk/secret detection, full SENTINEL_ALERT_SCHEMA output.
-- [x] **Nova Opportunity Analyst runtime** — **CLOSED Phase 1** `src/services/novaAnalysisService.js` — 4-dimension scoring (value/risk/timing/effort), Ollama strategic recommendation, integrates novaFeedbackService for decomposition hints, full NOVA_OPPORTUNITY_SCHEMA output.
-- [x] **Maria Governance Auditor runtime** — **CLOSED Phase 3** `src/services/mariaAuditService.js` — Ollama-powered audit with JSON schema, deterministic fallback via `marcusAuditService.generateRiskScore()`, memory persistence, session event logging, orchestration receipt.
-- [x] **Echo Knowledge Historian runtime** — **CLOSED Phase 3** `src/services/echoMemoryService.js` — Ollama synthesis, retention classification (permanent/standard_180d/ephemeral_7d), category classification, confidence normalization, memory persistence.
-- [x] **Marcus Distribution Executor runtime** — **CLOSED Phase 3** `src/services/marcusExecutionService.js` — Maria governance gate (blocks on critical/high with approvalRequired), GitHub actions (release/issue), Slack messaging, publish dispatch via `marcusPublishService`, audit records.
-- [x] **Connector credential UI gap** — **CLOSED Phase 3** All 9 API-key connectors now have credential input panels in `ConnectorSetupPanel.jsx`: GitHub, Slack, Claude/Anthropic, ChatGPT/OpenAI, Notion (2-field), ClickUp (2-field), WhatsApp (3-field), YouTube (4-field), Qwen.
+- [x] **Sentinel Security Monitor runtime** — **CLOSED Phase 1** `src/services/sentinelSecurityService.ts` — deterministic threat scan + Ollama deep analysis, blocks on critical risk/secret detection, full SENTINEL_ALERT_SCHEMA output.
+- [x] **Nova Opportunity Analyst runtime** — **CLOSED Phase 1** `src/services/novaAnalysisService.ts` — 4-dimension scoring (value/risk/timing/effort), Ollama strategic recommendation, integrates novaFeedbackService for decomposition hints, full NOVA_OPPORTUNITY_SCHEMA output.
+- [x] **Maria Governance Auditor runtime** — **CLOSED Phase 3** `src/services/mariaAuditService.ts` — Ollama-powered audit with JSON schema, deterministic fallback via `marcusAuditService.generateRiskScore()`, memory persistence, session event logging, orchestration receipt.
+- [x] **Echo Knowledge Historian runtime** — **CLOSED Phase 3** `src/services/echoMemoryService.ts` — Ollama synthesis, retention classification (permanent/standard_180d/ephemeral_7d), category classification, confidence normalization, memory persistence.
+- [x] **Marcus Distribution Executor runtime** — **CLOSED Phase 3** `src/services/marcusExecutionService.ts` — Maria governance gate (blocks on critical/high with approvalRequired), GitHub actions (release/issue), Slack messaging, publish dispatch via `marcusPublishService`, audit records.
+- [x] **Connector credential UI gap** — **CLOSED Phase 3** All 9 API-key connectors now have credential input panels in `ConnectorSetupPanel.tsx`: GitHub, Slack, Claude/Anthropic, ChatGPT/OpenAI, Notion (2-field), ClickUp (2-field), WhatsApp (3-field), YouTube (4-field), Qwen.
 - [x] **claudeService.js credential inconsistency** — **CLOSED Phase 3** Was reading from auth profiles `.claude.apiKey`; now reads via `getConnectorCredential('claude', 'ANTHROPIC_API_KEY')` consistent with all other connectors.
 - [x] **chatgptService.js credential inconsistency** — **CLOSED Phase 3** Now reads via `getConnectorCredential('chatgpt', 'OPENAI_API_KEY')`.
 - [x] **Telegram companion commands** — **CLOSED Direction 1** `telegramCompanionService.js` now handles `/help` (full command list), `/report` (Ollama status + queue + activity), `/files` (workspace directory listing). `telegramCompanionService.test.js` added (full test suite).
-- [x] **Voice STT wiring** — **CLOSED Direction 1** `voiceService.js` now exports `SpeechRecognitionClass`, `supportsSpeechRecognition()`, `startSpeechRecognition()`. `useVoiceInput.js` hooks STT path with `liveTranscript` state + fallback mic-only path.
+- [x] **Voice STT wiring** — **CLOSED Direction 1** `voiceService.ts` now exports `SpeechRecognitionClass`, `supportsSpeechRecognition()`, `startSpeechRecognition()`. `useVoiceInput.js` hooks STT path with `liveTranscript` state + fallback mic-only path.
 - [x] **Nova insight card in ChatView** — **CLOSED Direction 4** After Jose pipeline, fires `computeOpportunityScores` + async `runNovaAnalysis`; score > 65 shows insight card with SVG score ring, recommendation, dismiss button.
-- [x] **Screen context injection** — **CLOSED Direction 4** `buildProjectSummary()` accepts `screenContext` param; last 3 `screenObserverLogs` events injected before "Next steps". `App.jsx` passes `screenObserverLogs` to `ChatView`.
+- [x] **Screen context injection** — **CLOSED Direction 4** `buildProjectSummary()` accepts `screenContext` param; last 3 `screenObserverLogs` events injected before "Next steps". `App.tsx` passes `screenObserverLogs` to `ChatView`.
 - [x] **Maria risk score ring in ApprovalModal** — **CLOSED Direction 4** `ScoreRing` SVG component + `riskToScore()` + `mariaScore` prop override. Color-coded red/amber/green by score.
 - [x] **Sentinel dashboard in RightPanel** — **CLOSED Direction 4** `scanForThreats()` on mount + ↺ re-scan button; threat level badge, findings list, last-scanned time; persisted to `alphonso_sentinel_last_scan_v1`.
 - [x] **Echo memory timeline in SettingsView** — **CLOSED Direction 4** `EchoTimeline` component groups `listMemoryItems()` by retentionTier (permanent ♾ / standard_180d 📅 / ephemeral_7d ⏳) with expiry countdown.
 - [x] **Composio toolkit toggles** — **CLOSED Direction 4** Static badge spans → toggleable 2-col grid cards; enabled set persisted to `alphonso_composio_toolkits_enabled_v1`.
 - [x] **Hector RSS failover** — **CLOSED Direction 4** `RSS_FEED_CATALOG` (12 curated feeds), `fetchRssSources()`, `parseRssItems()` (DOMParser-based), `scoreRssFeed()` — wired as last-resort after Brave/DDG.
-- [x] **WorkflowBuilderView** — **CLOSED Direction 4** New `src/components/WorkflowBuilderView.jsx` — two-panel builder (sidebar + node editor), 9 node types, up/down reorder, save confirmation. `AutomationView` now has Overview/Builder tab bar.
+- [x] **WorkflowBuilderView** — **CLOSED Direction 4** New `src/components/WorkflowBuilderView.tsx` — two-panel builder (sidebar + node editor), 9 node types, up/down reorder, save confirmation. `AutomationView` now has Overview/Builder tab bar.
 - [x] **Component test coverage** — **CLOSED Direction 3** 11 new component test files: ApprovalModal, RightPanel, ChatView, ConnectorSetupPanel, WorkflowBuilderView, AgentActivityLog, VoiceInputButton, MicrophoneStatus plus voiceService + useVoiceInput hook tests. Direction 5 added agentAuditService + workspaceExportService tests. 101 test files / 1439+ tests.
-- [x] **NotificationCenter** — **CLOSED Direction 1** `src/components/NotificationCenter.jsx` — fixed top-right panel, max 5 notifications visible, colored left borders by type, relative timestamps, dismiss X, "Clear all" link.
-- [x] **AgentStatusStrip** — **CLOSED Direction 1** `src/components/AgentStatusStrip.jsx` — horizontal flex strip of agent status badges; pulsing emerald dot for `status==='running'`; compact mode; returns null when empty.
-- [x] **UpdaterNotification** — **CLOSED Direction 1** `src/components/UpdaterNotification.jsx` — amber fixed banner, "Update & Restart" + "Later" buttons; wired into App.jsx via `updaterVersion` state.
-- [x] **WhatsAppInboxPanel** — **CLOSED Direction 1** `src/components/WhatsAppInboxPanel.jsx` — scrollable received-message list with inline per-message reply state.
-- [x] **ModelSwitcher 3-pill + OllamaModelPicker** — **CLOSED Direction 1** `ModelSwitcher.jsx` now exports both: `ModelSwitcher` (3-pill Ollama/Claude/ChatGPT switcher, amber active state) and `OllamaModelPicker` (legacy renamed Ollama model selector). ChatView imports both.
+- [x] **NotificationCenter** — **CLOSED Direction 1** `src/components/NotificationCenter.tsx` — fixed top-right panel, max 5 notifications visible, colored left borders by type, relative timestamps, dismiss X, "Clear all" link.
+- [x] **AgentStatusStrip** — **CLOSED Direction 1** `src/components/AgentStatusStrip.tsx` — horizontal flex strip of agent status badges; pulsing emerald dot for `status==='running'`; compact mode; returns null when empty.
+- [x] **UpdaterNotification** — **CLOSED Direction 1** `src/components/UpdaterNotification.tsx` — amber fixed banner, "Update & Restart" + "Later" buttons; wired into App.jsx via `updaterVersion` state.
+- [x] **WhatsAppInboxPanel** — **CLOSED Direction 1** `src/components/WhatsAppInboxPanel.tsx` — scrollable received-message list with inline per-message reply state.
+- [x] **ModelSwitcher 3-pill + OllamaModelPicker** — **CLOSED Direction 1** `ModelSwitcher.tsx` now exports both: `ModelSwitcher` (3-pill Ollama/Claude/ChatGPT switcher, amber active state) and `OllamaModelPicker` (legacy renamed Ollama model selector). ChatView imports both.
 - [x] **cacheService maxEntries cap** — **CLOSED Direction 2** `cacheService.ts` — `CacheOptions.maxEntries` (default 500 via `DEFAULT_MAX_ENTRIES`); while-loop evicts oldest key after every `set()`.
-- [x] **crashLogService** — **CLOSED Direction 2** `src/services/crashLogService.js` — localStorage ring buffer, 100 entries, key `alphonso_crash_log_v1`. Exports: `logError`, `getCrashLog`, `clearCrashLog`.
+- [x] **crashLogService** — **CLOSED Direction 2** `src/services/crashLogService.ts` — localStorage ring buffer, 100 entries, key `alphonso_crash_log_v1`. Exports: `logError`, `getCrashLog`, `clearCrashLog`.
 - [x] **retryDeadLetter** — **CLOSED Direction 2** `orchestrationQueueService.ts` — `retryDeadLetter()` exported: replays all `dead_letter` packets via `replayPacketFromDeadLetter()`, returns retry count.
 - [x] **ChatView drag-and-drop + Hector card** — **CLOSED Direction 4** Drag-and-drop onto chat input area; file pills with × remove; `[Attached files: ...]` suffix in messages. Hector briefing card (sky-tinted, dismissible) shows top 3 research sources above input.
 - [x] **sentinelSecurityService scheduled scans** — **CLOSED Direction 4** `startScheduledScans(intervalMs, onResult)` exported from sentinelSecurityService; returns cleanup function; RightPanel auto-rescans every 10 min.
 - [x] **novaAnalysisService opportunity history** — **CLOSED Direction 4** `saveOpportunityScore(score, recommendation)` + `getOpportunityHistory()` persist last 30 scores to `alphonso_nova_history_v1`.
-- [x] **agentAuditService** — **CLOSED Direction 5** `src/services/agentAuditService.js` — localStorage ring buffer, 100 entries, key `alphonso_approval_audit_v1`. Exports: `logApprovalEvent`, `getAuditLog`, `clearAuditLog`.
-- [x] **workspaceExportService** — **CLOSED Direction 5** `src/services/workspaceExportService.js` — `exportWorkspace()` (all `alphonso_*` keys as JSON), `importWorkspace(jsonString)` (validates prefix, returns `{ imported, errors }`).
-- [x] **WorkspaceExportImportView** — **CLOSED Direction 5** `src/components/WorkspaceExportImportView.jsx` — export via Blob download, import via FileReader, emerald/red status feedback; rendered at bottom of SettingsView.
+- [x] **agentAuditService** — **CLOSED Direction 5** `src/services/agentAuditService.ts` — localStorage ring buffer, 100 entries, key `alphonso_approval_audit_v1`. Exports: `logApprovalEvent`, `getAuditLog`, `clearAuditLog`.
+- [x] **workspaceExportService** — **CLOSED Direction 5** `src/services/workspaceExportService.ts` — `exportWorkspace()` (all `alphonso_*` keys as JSON), `importWorkspace(jsonString)` (validates prefix, returns `{ imported, errors }`).
+- [x] **WorkspaceExportImportView** — **CLOSED Direction 5** `src/components/WorkspaceExportImportView.tsx` — export via Blob download, import via FileReader, emerald/red status feedback; rendered at bottom of SettingsView.
 - [x] **RightPanel Audit tab** — **CLOSED Direction 5** System/Audit tab switcher in RightPanel header; Audit tab shows last 10 approval events with emerald/red outcome badges and relative timestamps.
 - [x] **AgentPerformanceView** — **CLOSED Direction 5** `src/components/AgentPerformanceView.tsx` — per-agent success/error counts + avg latency computed from orchestration receipt data; props: `receipts`. (Migrated to .tsx in Sprint Next-10.)
-- [x] **Onboarding connector step** — **CLOSED Sprint Next-10 T1** `OnboardingWizard.jsx` now has 4 steps; step 3 = "Connect a channel" with Telegram/WhatsApp/Skip cards; saves preference to `alphonso_onboarding_connector_v1`.
-- [x] **CrashLogView** — **CLOSED Sprint Next-10 T5** `src/components/CrashLogView.jsx` — entry list with timestamp/message/context, "Clear" button; wired as "Logs" tab in SettingsView.
-- [x] **NovaHistoryChart** — **CLOSED Sprint Next-10 T6** `src/components/NovaHistoryChart.jsx` — SVG sparkline of last 10 opportunity scores (indigo polyline + dots), most-recent recommendation; wired in SettingsView.
+- [x] **Onboarding connector step** — **CLOSED Sprint Next-10 T1** `OnboardingWizard.tsx` now has 4 steps; step 3 = "Connect a channel" with Telegram/WhatsApp/Skip cards; saves preference to `alphonso_onboarding_connector_v1`.
+- [x] **CrashLogView** — **CLOSED Sprint Next-10 T5** `src/components/CrashLogView.tsx` — entry list with timestamp/message/context, "Clear" button; wired as "Logs" tab in SettingsView.
+- [x] **NovaHistoryChart** — **CLOSED Sprint Next-10 T6** `src/components/NovaHistoryChart.tsx` — SVG sparkline of last 10 opportunity scores (indigo polyline + dots), most-recent recommendation; wired in SettingsView.
 - [x] **Gateway Dockerfile** — **CLOSED Sprint Next-10 T7** `gateway/whatsapp-cloud/Dockerfile` multi-stage Node 20 Alpine build + `.dockerignore`.
 - [x] **TypeScript migration (5 components)** — **CLOSED Sprint Next-10 T8** AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar migrated to `.tsx` with full prop interfaces. SVG type declaration added to `src/types/declarations.d.ts`. Old `.jsx` files removed.
-- [x] **SentinelFindingModal** — **CLOSED Sprint Next-10 T9** `src/components/SentinelFindingModal.jsx` — fixed overlay modal, severity badge, pattern + recommendation rows. RightPanel findings now clickable to open modal.
+- [x] **SentinelFindingModal** — **CLOSED Sprint Next-10 T9** `src/components/SentinelFindingModal.tsx` — fixed overlay modal, severity badge, pattern + recommendation rows. RightPanel findings now clickable to open modal.
 - [x] **durableStore / SQLite dual-write** — **CLOSED Sprint Next-10 T10** `src/lib/durableStore.js` — `durableGet/Set/Remove` writes to localStorage + fire-and-forgets to Tauri `kv_set`; applied to crashLogService, agentAuditService, novaAnalysisService. **Bug fixed 2026-06-25 patch1:** `durableRemove` previously called `kv_set(key, '')` (ghost entries on cold boot). Now correctly calls `kv_delete(key)` which issues `DELETE FROM kv_store WHERE key = ?`.
 - [x] **Test coverage push** — **CLOSED Sprint Next-10 T3** 10 new service test files → 111 total / 1621+ tests: agentBrainService, workspaceFileService, proactiveAgentService, streamingService, browserAutomationService, backupService, composioService, agentActivityService, resourceCostService, marcusPublishService.
 - [x] **Branch protection on `main`** — **CLOSED 2026-07-06** Classic branch protection enabled on `main` via `gh api`: requires "Test & Build" + "Rust Tests & Clippy" status checks (strict) + 1 approving review, blocks force-push/deletion. Note: a repo-wide ruleset named "Protected-Main" (created 2026-07-03, source unclear — predates this session) already enforced an equivalent policy across all branches, making this classic-API addition partially redundant; both are active now. A separate ruleset "Alphonso" (created 2026-06-17) blocks deletion/force-push on the default branch only. Recommend consolidating to one mechanism in a future pass rather than running both indefinitely.
 - [x] **TypeScript migration (continued)** — **CLOSED Sprint Next-50 D5** App, Sidebar, RightPanel, SettingsView, ChatView all migrated to `.tsx`. Total: 10 TSX components. Remaining JSX: 63 components.
 - [x] **TypeScript migration COMPLETE** — **CLOSED audit-sprint-26jun 2026-06-27** Final 20 subdirectory .jsx components migrated to .tsx (agents/, hector/, projectExecution/, research/, approval/, audit/, dashboard/ + ConnectorSetupPanel + ModelSwitcher). ui/Badge.jsx re-export shim deleted. Total: 114 .tsx, 0 subdirectory .jsx remain. P1-14 CLOSED.
-- [x] **Connector credentials KV-primary** — **CLOSED audit-sprint-26jun 2026-06-27** `connectorAuth.js` now uses Tauri KV (SQLite) as primary store with in-memory `_credCache`. localStorage cleared after KV hydration. `hydrateConnectorCredentialsFromSqlite()` migrates and removes old localStorage keys. P1-05 CLOSED.
-- [x] **Plugin signing keys KV-primary** — **CLOSED audit-sprint-26jun 2026-06-27** `pluginSigningService.js` stores keypair and trusted signer keys in KV; localStorage cleared after read. `hydrateTrustedSignerKeysFromKv()` migrates on boot. P2-14 CLOSED.
+- [x] **Connector credentials KV-primary** — **CLOSED audit-sprint-26jun 2026-06-27** `connectorAuth.ts` now uses Tauri KV (SQLite) as primary store with in-memory `_credCache`. localStorage cleared after KV hydration. `hydrateConnectorCredentialsFromSqlite()` migrates and removes old localStorage keys. P1-05 CLOSED.
+- [x] **Plugin signing keys KV-primary** — **CLOSED audit-sprint-26jun 2026-06-27** `pluginSigningService.ts` stores keypair and trusted signer keys in KV; localStorage cleared after read. `hydrateTrustedSignerKeysFromKv()` migrates on boot. P2-14 CLOSED.
 
 ### BATCH 2 Completions (2026-06-29 — feat/batch2-testing-completeness → main)
 
@@ -742,16 +788,16 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **Phase 2 — Test coverage expansion** — 22+ new test files covering previously untested services: approvalService, offlineChatService, coachModeService, connectorRateLimiter, voiceOsService, whisperTranscriptionService, externalAgentAdapter, connectorImageGenerators, connectorPolling, whatsappBrowserConnector, chatgptService, claudeService, connectorHealthCheck, memoryMonitor, workflowReceipt, workflowTelemetry, orchestrationGovernance, toolRegistry, verificationService, verificationChain, moduleRegistry, runtimeApi, a2aProtocol, workflowBuilder. Also added `bridge/tests/server.test.js` for MCP bridge.
 - [x] **Phase 3 — Voice backend completion** — `voice/backend/vad.py` now implements real WebRTC VAD (`webrtcvad`, aggressiveness=2, 30ms frames at 16kHz) replacing energy heuristic stub. `voice/backend/router.py` implements full 9-agent routing via keyword/regex patterns (jose/hector/miya/maria/marcus/echo/sentinel/nova/alphonso). `requirements.txt` pinned to exact versions. Python tests updated for real VAD and routing.
 - [x] **Phase 4 — UX completeness** — Voice sidebar nav entry added to `Sidebar.tsx` (Mic icon). `SmartVoiceButton.tsx` created — consolidates VoiceInputButton + Jarvis mic into one smart button (prefers Voice OS WebSocket, falls back to SpeechRecognition). `useJarvisVoice.ts` dispatches `alphonso:toast` on connection failure with setup guidance. `useAppShellState.js` refactored — sub-hooks extracted to reduce complexity. `e2e/voice.spec.js` + `e2e/visual.spec.js` added (visual regression baselines). `public/sw.js` updated with proper caching strategy (cache-first static, network-first nav, network-only API).
-- [x] **Phase 5 — ExternalAgentAdapter wired** — `src/services/agentWorkshop/externalAgentAdapter.js` now wires: OpenAI/ChatGPT (credential-checked via `isConnectorAuthenticated('chatgpt')`), Claude/Anthropic (credential-checked), Ollama (local, no credentials needed), DeepSeek (credential-checked). Gemini documented as `planned_v2.6`. ACC documented as `not_wired` (requires MCP server). Import path fixed: `./connectorRegistryService.js` → `../connectorRegistryService.js`.
+- [x] **Phase 5 — ExternalAgentAdapter wired** — `src/services/agentWorkshop/externalAgentAdapter.js` now wires: OpenAI/ChatGPT (credential-checked via `isConnectorAuthenticated('chatgpt')`), Claude/Anthropic (credential-checked), Ollama (local, no credentials needed), DeepSeek (credential-checked). Gemini documented as `planned_v2.6`. ACC documented as `not_wired` (requires MCP server). Import path fixed: `./connectorRegistryService.ts` → `../connectorRegistryService.ts`.
 - [x] **Phase 6 — iOS companion verification** — Swift files in `ios/AlphonsoCompanion/` audited (MDNSService.swift, WebSocketService.swift, PINAuthService.swift). WebSocket + PIN auth flow verified against Rust `companion_router.rs` protocol. Swift ↔ Rust protocol mismatches fixed. `companionIntegration.test.js` added (8+ integration tests). iOS companion status documented as "Rust complete / Swift verified / integration tested".
 
 ### v2.2.4 UX Restructure (2026-06-25)
 - [x] **Coach mode no visual feedback** — **CLOSED** `CoachContext.jsx` now sets `coachMode=true` and dispatches `alphonso:toast` even when Tauri window open fails. `ToastProvider` now listens to `window.alphonso:toast` CustomEvent for cross-context toasting.
 - [x] **ACC Bridge config overload in Content page** — **CLOSED** `ContentCatalystWorkspace.jsx` now shows a 2-line status indicator (connected/not, Sync + Refresh buttons). Full config stays in Settings → Connectors.
-- [x] **AgentDock not integrated in RightPanel** — **CLOSED** `AgentDock.jsx` added `embedded` prop (inline, no fixed positioning, no drag). `RightPanel.tsx` passes `agentDockCompanions` from App.tsx.
-- [x] **Activity page too thin for standalone** — **CLOSED** `RuntimeManagerView.jsx` now has a Runtimes/Activity tab bar; Activity tab renders `AgentActivityLog`. Sidebar `activity` item removed.
+- [x] **AgentDock not integrated in RightPanel** — **CLOSED** `AgentDock.tsx` added `embedded` prop (inline, no fixed positioning, no drag). `RightPanel.tsx` passes `agentDockCompanions` from App.tsx.
+- [x] **Activity page too thin for standalone** — **CLOSED** `RuntimeManagerView.tsx` now has a Runtimes/Activity tab bar; Activity tab renders `AgentActivityLog`. Sidebar `activity` item removed.
 - [x] **Knowledge/Files page too thin for standalone** — **CLOSED** `SettingsView.tsx` has a new "Knowledge" section that renders `FilesView`. Sidebar `files` item removed.
-- [x] **Automation operations not interactive** — **CLOSED** `AutomationView.jsx` operations now have Enable/Active toggle via `updateWorkflowOperationStatus`.
+- [x] **Automation operations not interactive** — **CLOSED** `AutomationView.tsx` operations now have Enable/Active toggle via `updateWorkflowOperationStatus`.
 - [x] **Telegram commands limited** — **CLOSED** 17 commands total: added `/ping`, `/agents`, `/nova`, `/scan` to `telegramCompanionService.js`.
 
 ### Runtime Hub (2026-06-23) — All 9 Gaps Fixed
@@ -774,9 +820,9 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 
 ### v2.2.5 Fixes & Additions (2026-06-25)
 - [x] **Boot crash: hooks violation in RightPanel** — `auditEntries` useMemo moved above `if (collapsed) return` early return.
-- [x] **OpenWebUI added** — `runtime_manager.rs` TOOLS array + `RuntimeManagerView.jsx` TOOL_META (LLM category, port 3000, `open-webui serve`). Unit test `tool_def_lookup_works` updated.
-- [x] **Brave Search CredentialSection** — `ConnectorSetupPanel.jsx` + `hectorResearchService.js` checks credential store before env vars.
-- [x] **Runtime catalog fallback** — `RuntimeManagerView.jsx` shows `catalogFallback` from TOOL_META when `getAllStatus()` returns empty (web/browser mode).
+- [x] **OpenWebUI added** — `runtime_manager.rs` TOOLS array + `RuntimeManagerView.tsx` TOOL_META (LLM category, port 3000, `open-webui serve`). Unit test `tool_def_lookup_works` updated.
+- [x] **Brave Search CredentialSection** — `ConnectorSetupPanel.tsx` + `hectorResearchService.js` checks credential store before env vars.
+- [x] **Runtime catalog fallback** — `RuntimeManagerView.tsx` shows `catalogFallback` from TOOL_META when `getAllStatus()` returns empty (web/browser mode).
 - [x] **ContentCalendar real grid** — monthly grid with prev/next navigation, today highlight, draft dots, minimize/expand toggle.
 - [x] **Content workspace full polish** — all 7 workspace components (BrandHeader, GeneratorForm, ContentCalendar, DraftPreview, DraftList, BrandSettings, AnalyticsDashboard, TrendResearch) rewritten to compact CSS-var-based design. Bridge/job-detail panels in ContentCatalystWorkspace also updated.
 - [x] **E2E specs added** — `e2e/runtime-tools.spec.js` (ComfyUI + OpenWebUI), `e2e/content-pipeline.spec.js` (5 pipeline tests). Output path set to `D:\AgentDevDev\phonso`.
@@ -828,12 +874,12 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **`@types/react`, `@types/react-dom`, `@types/node`** — **added 2026-06-25 patch1**. Were missing from devDependencies; `tsc --noEmit` was producing 1,867 errors silently (Vite/OXC build skips type-checking). `typecheck` script added; `verify:app` now runs lint + typecheck + test + build.
 
 ### UX/UI
-- [x] **Connector health dashboard** — `src/components/ConnectorHealthPanel.jsx` created with `ConnectorHealthPanel` (full panel), `ConnectorStatusStrip` (compact sidebar count), `ConnectorStatusDot` (per-connector dot). Mounted as `connectors` tab in `src/App.jsx` (2026-05-31, Agent C)
-- [x] **Sidebar connector status** — `src/components/Sidebar.jsx` updated with "Connectors" nav item + inline `ConnectorStatusStrip` showing live/missing/disabled counts (2026-05-31, Agent C)
-- [x] **Approval modal improved** — `src/components/ApprovalModal.jsx` now shows connector badge, colored risk level (high/medium/low), irreversibility warning banner, red confirm button for high-risk actions — backward compatible with existing `label` prop (2026-05-31, Agent C)
+- [x] **Connector health dashboard** — `src/components/ConnectorHealthPanel.tsx` created with `ConnectorHealthPanel` (full panel), `ConnectorStatusStrip` (compact sidebar count), `ConnectorStatusDot` (per-connector dot). Mounted as `connectors` tab in `src/App.tsx` (2026-05-31, Agent C)
+- [x] **Sidebar connector status** — `src/components/Sidebar.tsx` updated with "Connectors" nav item + inline `ConnectorStatusStrip` showing live/missing/disabled counts (2026-05-31, Agent C)
+- [x] **Approval modal improved** — `src/components/ApprovalModal.tsx` now shows connector badge, colored risk level (high/medium/low), irreversibility warning banner, red confirm button for high-risk actions — backward compatible with existing `label` prop (2026-05-31, Agent C)
 - [ ] **No onboarding flow** — first-launch experience does not guide through Ollama check → model download → connector setup
-- [x] **Dark/light theme toggle** — `Sidebar.jsx` has Moon/Sun toggle persisting to `alphonso_theme_v1`; applies `.light` class to `<html>`; basic CSS variables in `index.css` (2026-06-01, Agent 1). Full Tailwind token propagation is a future task.
-- [ ] **Toast notifications** — `ToastProvider` already mounted in `main.jsx`; inbound message toasts already wired in `App.jsx` — no gap here
+- [x] **Dark/light theme toggle** — `Sidebar.tsx` has Moon/Sun toggle persisting to `alphonso_theme_v1`; applies `.light` class to `<html>`; basic CSS variables in `index.css` (2026-06-01, Agent 1). Full Tailwind token propagation is a future task.
+- [ ] **Toast notifications** — `ToastProvider` already mounted in `main.jsx`; inbound message toasts already wired in `App.tsx` — no gap here
 
 ### FREEZE FIX & BOOT OPTIMIZATIONS (v1.0.2)
 - [x] **WebView2 zombie process fix** — Changed `CloseRequested` handler from hide-to-tray (`api.prevent_close()` + `window.hide()`) to `std::process::exit(0)`. This prevents WebView2 Edge processes from accumulating across sessions, which was causing the freeze.
@@ -850,81 +896,81 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 Before writing any new service or feature, verify it does not already exist:
 
 - **Memory unification** → `unifiedMemoryService.js` — 4 systems consolidated, all old services re-export (backward compatible). Do NOT create another memory service.
-- **Streaming output** → `streamingService.js` + ChatView — real-time token display, abort button, token counter, elapsed time. Do NOT recreate streaming.
-- **Composio integration** → `composioService.js` — API key config, toolkit discovery, action execution, wired into agent brain. Do NOT create another external tool connector.
-- **Tool use framework** → `toolRegistryService.js` — 16 tools with JSON schemas, `executeWithTools()` loop. Do NOT add tools outside this registry.
-- **Browser automation** → `browserAutomationService.js` — open URL, fetch content, clipboard read/write. Do NOT create another browser service.
-- **File operations** → `workspaceFileService.js` — read, delete, move, search, list directory. Do NOT create another file service.
+- **Streaming output** → `streamingService.ts` + ChatView — real-time token display, abort button, token counter, elapsed time. Do NOT recreate streaming.
+- **Composio integration** → `composioService.ts` — API key config, toolkit discovery, action execution, wired into agent brain. Do NOT create another external tool connector.
+- **Tool use framework** → `toolRegistryService.ts` — 16 tools with JSON schemas, `executeWithTools()` loop. Do NOT add tools outside this registry.
+- **Browser automation** → `browserAutomationService.ts` — open URL, fetch content, clipboard read/write. Do NOT create another browser service.
+- **File operations** → `workspaceFileService.ts` — read, delete, move, search, list directory. Do NOT create another file service.
 - **Post-write validation** → built into `agentBrainService.js` — runs build/lint after generation, auto-fixes, self-evaluation. Do NOT recreate validation.
-- **Agent metrics** → `agentMetricsService.js` + `AgentMetricsPanel.jsx` — success rate, confidence, 7-day trend. Wired into SettingsView. Do NOT create another metrics system.
-- **Backup/restore** → `backupService.js` — export/import all data as JSON. Wired into SettingsView. Do NOT create another backup system.
-- **Search** → `searchService.js` + `MemorySearch.jsx` — memory/project search with relevance scoring, Ctrl+P shortcut. Do NOT create another search.
-- **Proactive agent** → `proactiveAgentService.js` — 7 checks, suggestion banner, 60s interval. Do NOT create another proactive system.
+- **Agent metrics** → `agentMetricsService.ts` + `AgentMetricsPanel.tsx` — success rate, confidence, 7-day trend. Wired into SettingsView. Do NOT create another metrics system.
+- **Backup/restore** → `backupService.ts` — export/import all data as JSON. Wired into SettingsView. Do NOT create another backup system.
+- **Search** → `searchService.ts` + `MemorySearch.tsx` — memory/project search with relevance scoring, Ctrl+P shortcut. Do NOT create another search.
+- **Proactive agent** → `proactiveAgentService.ts` — 7 checks, suggestion banner, 60s interval. Do NOT create another proactive system.
 - **Keyboard shortcuts** → `useKeyboardShortcuts.js` — 12 shortcuts, ? help modal. Do NOT create another shortcut system.
 - **Policy gate** → `policy_gate.rs` — 40+ programs whitelisted. Do NOT modify without reviewing security implications.
 - **iOS companion plan** → `docs/IOS_COMPANION_PLAN.md` — architecture doc, do NOT start building without reviewing.
-- **Error boundaries** → `ViewErrorBoundary.jsx` (enhanced with copy error, expandable stack trace), `ErrorBoundary.jsx` (reusable with HOC). All views wrapped.
+- **Error boundaries** → `ViewErrorBoundary.tsx` (enhanced with copy error, expandable stack trace), `ErrorBoundary.tsx` (reusable with HOC). All views wrapped.
 - **Code splitting** — ChatView, WorkflowPanel, CoachMissionBadge, CoachInterventionCard, CoachHardInterruptOverlay, CoachSkillGrid now lazy-loaded. Main chunk reduced from 519KB to 288KB.
-- **Approval modal** → `src/components/ApprovalModal.jsx` — already shows connector, risk level, irreversibility warning
-- **Toast notifications** → `ToastProvider` already in `main.jsx`, inbound toasts already wired in `App.jsx`
-- **Policy enforcement** → `policyEnforcementService.js` (do not recreate approval/risk logic)
-- **Orchestration queue + receipts** → `orchestrationQueueService.js` + `orchestrationReceiptService.js`
-- **Dead-letter replay** → already in `orchestrationQueueService.js`
-- **Zero-cost mode** → enforced in Jose routing and `policyEnforcementService.js`
-- **Agent contracts/boundaries** → `agentContractService.js` (do not add per-agent logic elsewhere)
-- **10 workflow operations** → `workflowOperationsRegistryService.js`
+- **Approval modal** → `src/components/ApprovalModal.tsx` — already shows connector, risk level, irreversibility warning
+- **Toast notifications** → `ToastProvider` already in `main.jsx`, inbound toasts already wired in `App.tsx`
+- **Policy enforcement** → `policyEnforcementService.ts` (do not recreate approval/risk logic)
+- **Orchestration queue + receipts** → `orchestrationQueueService.ts` + `orchestrationReceiptService.ts`
+- **Dead-letter replay** → already in `orchestrationQueueService.ts`
+- **Zero-cost mode** → enforced in Jose routing and `policyEnforcementService.ts`
+- **Agent contracts/boundaries** → `agentContractService.ts` (do not add per-agent logic elsewhere)
+- **16 workflow operations** → `workflowOperationsRegistryService.ts`
 - **Updater release script** → `npm run release:updater` (do not write a new one)
 - **Architecture doc** → `ARCHITECTURE.md` at project root
 - **Developer guide** → `CLAUDE.md` at project root (read at every session start)
 - **Connector docs** → `docs/CONNECTORS.md`
 - **Changelog** → `docs/CHANGELOG.md` — add to this, don't create a new one
 - **Dependabot** → `.github/dependabot.yml` already exists
-- **ModelSwitcher** → `src/components/ModelSwitcher.jsx` — Ollama model dropdown, already mounted in ChatView. Fixed 2026-06-01: now syncs model to parent on mount (was blocking all chat responses)
-- **AgentActivityLog** → `src/components/AgentActivityLog.jsx` — activity timeline tab, auto-refreshes every 3s
-- **connectorAuditLogService** → `src/services/connectorAuditLogService.js` — ring buffer for last 100 connector call results
+- **ModelSwitcher** → `src/components/ModelSwitcher.tsx` — Ollama model dropdown, already mounted in ChatView. Fixed 2026-06-01: now syncs model to parent on mount (was blocking all chat responses)
+- **AgentActivityLog** → `src/components/AgentActivityLog.tsx` — activity timeline tab, auto-refreshes every 3s
+- **connectorAuditLogService** → `src/services/connectorAuditLogService.ts` — ring buffer for last 100 connector call results
 - **Brave Search** → already wired in `hectorResearchService.js` with Rust + VITE_ fallback
 - **Auth scripts** → `auth:youtube`, `auth:meta`, `auth:outlook` already exist
 - **Desktop preflight/verify** → `verify:desktop:preflight`, `verify:desktop` already exist
 - **CI workflows** → `ci.yml`, `release.yml`, and `ios-build.yml` exist and pass green (extend, do not replace). Note: `verify-app.yml` does NOT exist as a file — `npm run verify:app` runs inside `ci.yml`. `ios-build.yml` triggers on `main` pushes to `ios/**` + `workflow_dispatch`; builds, archives, exports IPA, and uploads to TestFlight via `xcrun altool` + App Store Connect API key.
 - **WhatsApp webhook Rust module** → `src-tauri/src/whatsapp_webhook.rs` — `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` + 4 structs live here. Do not re-add to `lib.rs`.
-- **WhatsApp browser connector** → `src/services/whatsappBrowserConnector.js` — `browserSendWhatsApp` (outbound via Meta Graph API v17.0) and `browserPollWhatsAppGateway` (inbound via Railway gateway `/queue/drain`). Reads credentials from `connectorAuth.js` (`getConnectorCredential`). Do NOT recreate.
+- **WhatsApp browser connector** → `src/services/whatsappBrowserConnector.ts` — `browserSendWhatsApp` (outbound via Meta Graph API v17.0) and `browserPollWhatsAppGateway` (inbound via Railway gateway `/queue/drain`). Reads credentials from `connectorAuth.ts` (`getConnectorCredential`). Do NOT recreate.
 - **WhatsApp companion bot commands** → `src/services/whatsappCompanionService.ts` (added 2026-07-10) — `/status`, `/queue`, `/approve`, `/reject`, `/agents`, `/report`, `/ping`, `/help`, `/ask`, real Jose routing for free text. Owner-pairing gated on `WHATSAPP_ALLOWED_NUMBERS` credential (mirrors Telegram's `TELEGRAM_ALLOWED_CHAT_IDS` pattern). Auto-starts at boot in `useBootEffects.js` if `WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` are both set. Do NOT recreate — this did not exist before 2026-07-10; WhatsApp previously had zero command handling.
 - **KV store Rust module** → `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `kv_delete`, `save_settings`, `load_settings`, `ensure_kv_table`. `kv_delete` issues `DELETE FROM kv_store WHERE key = ?`. Do not re-add to `lib.rs`.
-- **Multi-turn Ollama chat** → `src/lib/ollama.js` — `generateOllamaChatStream` uses `/api/chat` endpoint with full `messages` array. `ChatView.jsx` captures history snapshot before state updates and passes it. Do not recreate.
-- **appendAgentActivity wiring** → wired in `joseExecutionEngineService.ts` (`executeAssignment`) and `connectorRegistryService.js` (`appendConnectorAudit`). Both import from `../components/AgentActivityLog`.
+- **Multi-turn Ollama chat** → `src/lib/ollama.ts` — `generateOllamaChatStream` uses `/api/chat` endpoint with full `messages` array. `ChatView.tsx` captures history snapshot before state updates and passes it. Do not recreate.
+- **appendAgentActivity wiring** → wired in `joseExecutionEngineService.ts` (`executeAssignment`) and `connectorRegistryService.ts` (`appendConnectorAudit`). Both import from `../components/AgentActivityLog`.
 - **Playwright browser installed** → `@playwright/test@1.60.0` + Chromium installed. `npm run test:e2e` is ready to run (needs dev server + Ollama).
 - **Playwright config** → `playwright.config.js` at project root; tests in `e2e/`. Do not create another E2E config.
 - **`.npmrc`** — `legacy-peer-deps=true` already set at project root. Do not remove.
 - **Companion WebSocket server** → Phase 1 implemented in `src-tauri/src/companion_*.rs` (5 Rust modules: `companion_types`, `companion_auth`, `companion_discovery`, `companion_router`, `companion_server`). Provides PIN auth, JSON-RPC routing, and mDNS discovery. Do not recreate.
 - **CompanionPairingPanel** → `src/components/CompanionPairingPanel.tsx` — mobile-pairing Enable/Turn off control (the LAN server is opt-in and off by default as of 2026-09-30), Remote Access PIN display, copy-to-clipboard, QR code, connected clients count, Start Discovery button for mDNS. Integrated in SettingsView. Do NOT create another pairing UI.
-- **NotificationCenter** → `src/components/NotificationCenter.jsx` — fixed top-right panel, max 5 visible, colored left borders by type (emerald/amber/red/zinc), relative timestamps, dismiss X, "Clear all". Do NOT create another notification system.
-- **AgentStatusStrip** → `src/components/AgentStatusStrip.jsx` — horizontal flex strip of agent badges with pulsing emerald dot for running agents, compact mode, returns null when empty. Do NOT duplicate.
-- **UpdaterNotification** → `src/components/UpdaterNotification.jsx` — amber fixed banner, "Update & Restart" + "Later" buttons, wired into App.jsx via `updaterVersion` state. Do NOT recreate updater UI.
-- **WhatsAppInboxPanel** → `src/components/WhatsAppInboxPanel.jsx` — scrollable received-message list with inline reply state per message. Reads from `browserPollWhatsAppGateway`. Do NOT duplicate.
-- **AgentPerformanceView** → `src/components/AgentPerformanceView.jsx` — per-agent success/error counts + avg latency from orchestration receipt data. Props: `receipts`. Do NOT recreate.
-- **WorkspaceExportImportView** → `src/components/WorkspaceExportImportView.jsx` — export all `alphonso_*` localStorage keys as JSON download; import via FileReader with prefix validation. Rendered in SettingsView. Do NOT create another export/import UI.
+- **NotificationCenter** → `src/components/NotificationCenter.tsx` — fixed top-right panel, max 5 visible, colored left borders by type (emerald/amber/red/zinc), relative timestamps, dismiss X, "Clear all". Do NOT create another notification system.
+- **AgentStatusStrip** → `src/components/AgentStatusStrip.tsx` — horizontal flex strip of agent badges with pulsing emerald dot for running agents, compact mode, returns null when empty. Do NOT duplicate.
+- **UpdaterNotification** → `src/components/UpdaterNotification.tsx` — amber fixed banner, "Update & Restart" + "Later" buttons, wired into App.jsx via `updaterVersion` state. Do NOT recreate updater UI.
+- **WhatsAppInboxPanel** → `src/components/WhatsAppInboxPanel.tsx` — scrollable received-message list with inline reply state per message. Reads from `browserPollWhatsAppGateway`. Do NOT duplicate.
+- **AgentPerformanceView** → `src/components/AgentPerformanceView.tsx` — per-agent success/error counts + avg latency from orchestration receipt data. Props: `receipts`. Do NOT recreate.
+- **WorkspaceExportImportView** → `src/components/WorkspaceExportImportView.tsx` — export all `alphonso_*` localStorage keys as JSON download; import via FileReader with prefix validation. Rendered in SettingsView. Do NOT create another export/import UI.
 - **RightPanel tabs** → `src/components/RightPanel.tsx` now has **System | Audit | Agents** tabs (3 tabs). Audit tab shows last 10 approval events from `agentAuditService`. Security section + SentinelAllowlistPanel live inside System tab. Agents tab shows `AgentStatusStrip useAutoFeed`. Do NOT add a separate panel for this.
 - **Jarvis voice button in ChatView** → `src/components/ChatView.tsx` wires `useJarvisVoice` — second mic button (WebSocket AudioWorklet pipeline) next to SpeechRecognition button. STT transcript populates input field. Button state reflects listening/thinking/speaking/error. Requires FastAPI voice server. Do NOT add another Jarvis voice UI.
 - **Browse fallbacks in SettingsView** → `src/components/SettingsView.tsx` has hidden `<input type="file" webkitdirectory>` refs for Output Folder (`outputFolderPickerRef`) and ComfyUI Dir (`comfyuiDirPickerRef`). Triggered automatically when `invoke('pick_folder')` fails in web mode. Same pattern as Workspace Root Browse (line ~583). Do NOT add another folder picker flow.
-- **ChatView drag-drop** → `src/components/ChatView.jsx` — file drag-and-drop onto chat input, file pills, `[Attached files: ...]` suffix appended to messages. Hector briefing card (sky-tinted, dismissible) shows top 3 sources. All state in `ChatView`.
-- **crashLogService** → `src/services/crashLogService.js` — localStorage ring buffer (100 entries, `alphonso_crash_log_v1`). `logError(error, context)`, `getCrashLog()`, `clearCrashLog()`. Do NOT create another error logging system.
+- **ChatView drag-drop** → `src/components/ChatView.tsx` — file drag-and-drop onto chat input, file pills, `[Attached files: ...]` suffix appended to messages. Hector briefing card (sky-tinted, dismissible) shows top 3 sources. All state in `ChatView`.
+- **crashLogService** → `src/services/crashLogService.ts` — localStorage ring buffer (100 entries, `alphonso_crash_log_v1`). `logError(error, context)`, `getCrashLog()`, `clearCrashLog()`. Do NOT create another error logging system.
 - **agentAuditService** → `src/services/agentAuditService.ts` — localStorage ring buffer (100 entries, `alphonso_approval_audit_v1`). `logApprovalEvent(packetId, agent, action, outcome)`, `getAuditLog()`, `clearAuditLog()`. Do NOT duplicate.
-- **workspaceExportService** → `src/services/workspaceExportService.ts` — exports/imports all `alphonso_*` localStorage keys as JSON. `exportWorkspace()`, `importWorkspace(jsonString)`. Do NOT create another backup/export service (also see `backupService.js`).
+- **workspaceExportService** → `src/services/workspaceExportService.ts` — exports/imports all `alphonso_*` localStorage keys as JSON. `exportWorkspace()`, `importWorkspace(jsonString)`. Do NOT create another backup/export service (also see `backupService.ts`).
 - **cacheService maxEntries** → `src/services/cacheService.ts` — hard cap of 500 entries (`DEFAULT_MAX_ENTRIES`) with oldest-key eviction on every `set()`. `CacheOptions.maxEntries` controls per-instance limit.
 - **retryDeadLetter** → `src/services/orchestrationQueueService.ts` — exported `retryDeadLetter()` replays all `dead_letter` packets via `replayPacketFromDeadLetter()`. Do NOT add duplicate dead-letter retry elsewhere.
-- **OllamaModelPicker** → `src/components/ModelSwitcher.jsx` also exports `OllamaModelPicker` (legacy Ollama model selector). The default export `ModelSwitcher` is the 3-pill switcher (Ollama/Claude/ChatGPT). ChatView imports both.
-- **sentinelSecurityService scheduled scans** → `src/services/sentinelSecurityService.js` — `startScheduledScans(intervalMs, onResult)` returns a cleanup function. Do NOT create another scheduled scan loop.
-- **novaAnalysisService opportunity history** → `src/services/novaAnalysisService.js` — `saveOpportunityScore(score, recommendation)` + `getOpportunityHistory()` persist last 30 scores to `alphonso_nova_history_v1`. Do NOT recreate.
-- **OnboardingWizard connector step** → `src/components/OnboardingWizard.jsx` — 4-step wizard; step 3 = "Connect a channel" (Telegram/WhatsApp/Skip), saves to `alphonso_onboarding_connector_v1`. Do NOT add another onboarding flow.
-- **CrashLogView** → `src/components/CrashLogView.jsx` — entry list with timestamp/message/context keys, "Clear" button; rendered in SettingsView "Logs" tab. Do NOT duplicate.
-- **NovaHistoryChart** → `src/components/NovaHistoryChart.jsx` — SVG sparkline (last 10 scores, indigo polyline), latest score + recommendation, wired in SettingsView. Do NOT recreate.
-- **SentinelFindingModal** → `src/components/SentinelFindingModal.jsx` — fixed overlay, severity badge (critical/high/medium/low), pattern + recommendation; triggered from RightPanel. Do NOT duplicate.
+- **OllamaModelPicker** → `src/components/ModelSwitcher.tsx` also exports `OllamaModelPicker` (legacy Ollama model selector). The default export `ModelSwitcher` is the 3-pill switcher (Ollama/Claude/ChatGPT). ChatView imports both.
+- **sentinelSecurityService scheduled scans** → `src/services/sentinelSecurityService.ts` — `startScheduledScans(intervalMs, onResult)` returns a cleanup function. Do NOT create another scheduled scan loop.
+- **novaAnalysisService opportunity history** → `src/services/novaAnalysisService.ts` — `saveOpportunityScore(score, recommendation)` + `getOpportunityHistory()` persist last 30 scores to `alphonso_nova_history_v1`. Do NOT recreate.
+- **OnboardingWizard connector step** → `src/components/OnboardingWizard.tsx` — 4-step wizard; step 3 = "Connect a channel" (Telegram/WhatsApp/Skip), saves to `alphonso_onboarding_connector_v1`. Do NOT add another onboarding flow.
+- **CrashLogView** → `src/components/CrashLogView.tsx` — entry list with timestamp/message/context keys, "Clear" button; rendered in SettingsView "Logs" tab. Do NOT duplicate.
+- **NovaHistoryChart** → `src/components/NovaHistoryChart.tsx` — SVG sparkline (last 10 scores, indigo polyline), latest score + recommendation, wired in SettingsView. Do NOT recreate.
+- **SentinelFindingModal** → `src/components/SentinelFindingModal.tsx` — fixed overlay, severity badge (critical/high/medium/low), pattern + recommendation; triggered from RightPanel. Do NOT duplicate.
 - **durableStore** → `src/lib/durableStore.js` — `durableGet/Set/Remove` sync to localStorage + async fire-and-forget to Tauri `kv_set`. Use this for any new service that persists data. Do NOT call `localStorage` directly in new services.
 - **Gateway Dockerfile** → `gateway/whatsapp-cloud/Dockerfile` — multi-stage Node 20 Alpine. `.dockerignore` alongside. Do NOT create another container config.
 - **TypeScript components (.tsx)** → AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar are now `.tsx` with typed props. Do NOT recreate as `.jsx`. Remaining large components (ChatView, RightPanel, SettingsView, App, Sidebar) still `.jsx`.
 - **SmartVoiceButton** → `src/components/SmartVoiceButton.tsx` — unified voice input button; prefers Voice OS WebSocket (Jarvis), falls back to browser SpeechRecognition. Shows status tooltip. Do NOT add another voice button to ChatView.
 - **externalAgentAdapter** → `src/services/agentWorkshop/externalAgentAdapter.js` — routes tasks to OpenAI, Claude, Ollama, DeepSeek. Gemini/ACC planned v2.6. Do NOT add another external provider routing layer.
-- **voiceOsService** → `src/services/voiceOsService.js` — `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus`, `getVoiceWebSocketUrl`, `startVoiceWatchdog`, `stopVoiceWatchdog`. Tested in `voiceOsService.test.js`. Do NOT duplicate.
+- **voiceOsService** → `src/services/voiceOsService.ts` — `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus`, `getVoiceWebSocketUrl`, `startVoiceWatchdog`, `stopVoiceWatchdog`. Tested in `voiceOsService.test.js`. Do NOT duplicate.
 - **WebRTC VAD** → `voice/backend/vad.py` — real webrtcvad implementation (aggressiveness=2, 30ms frames). Do NOT revert to energy heuristic stub.
 - **9-agent voice routing** → `voice/backend/router.py` — keyword/regex routing for all 9 agents. Do NOT recreate stub that returns `'alphonso_core'` for everything.
 - **E2E voice + visual specs** → `e2e/voice.spec.js` (voice flow tests) and `e2e/visual.spec.js` (visual regression baselines for 5 views). Do NOT delete baseline snapshots.
@@ -947,7 +993,7 @@ Before writing any new service or feature, verify it does not already exist:
 
 These items were explicitly deferred by the product owner. Do not skip them permanently — revisit when the milestone conditions are met.
 
-### Production-readiness roadmap T11–T20 (active, tracked 2026-07-15/22)
+### Production-readiness roadmap T11–T20 (tracked 2026-07-15/22; status 2026-10-25: T11–T14, T16, T19 and T20 done; T15 confirmed 2026-09-05 when v2.7.0 updated itself to v2.7.1; T17 partial; T18 in progress)
 Full task list, plan, risk, and dependencies for each: `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6. T1/T2/T3/T4/T5/T6 are done (see §11.21/§11.22); **T10 E2E is verified** as of 2026-07-22 (26 tests / 7 specs, no retries) using the production-preview server in `npm run e2e:server`. The active, evidence-backed queue is `docs/TRUTH_FIRST_EXECUTION_PLAN.md`; do not re-derive scope from memory. Short list for quick reference:
 - **T11** — harden KV/localStorage persistence with a real schema + migrations
 - **T12** — replace the fail-open connector policy DSL default with risk-tiered rules
@@ -960,7 +1006,7 @@ Full task list, plan, risk, and dependencies for each: `docs/PRODUCTION_READINES
 - **T19** — auto-generate the "Do Not Duplicate" map to close doc-drift at the source
 - **T20** — add a token/cost budget to multi-agent fan-out + surface hidden features
 
-### Gap 5 — macOS Support (deferred until Windows is fully mature)
+### Gap 5 — macOS Support (closed: an Apple Silicon DMG has shipped since v2.8.0, unsigned by Apple; Apple Developer ID signing is still open, see `docs/MACOS_SIGNING.md`)
 **Decision (2026-06-20):** Focus on Windows first. Once the app reaches maturity on Windows, backport macOS support in a single focused effort.
 **What will be needed when the time comes:**
 - Tauri `[bundle]` targets: add `"dmg"`, `"app"` to `src-tauri/tauri.conf.json`
@@ -970,7 +1016,7 @@ Full task list, plan, risk, and dependencies for each: `docs/PRODUCTION_READINES
 - Replace any Windows-path assumptions in `workspace.rs` (path separators, home dir)
 - Test installer flow on macOS (DMG notarization)
 
-### UI / UX Improvements (next UI sprint)
+### UI / UX Improvements (closed: the onboarding flow is the Smart Installer since v2.8.0, the Ollama offline banner and Composio setup exist, and component coverage is far above 15%)
 The following improvements were noted but deferred to a dedicated UI sprint:
 - **Onboarding flow** — first-launch experience: Ollama offline detection → model pull prompt → connector setup wizard
 - **Ollama offline state** — currently fails silently or shows cryptic errors; needs a visible banner/prompt when Ollama is unreachable
@@ -1084,7 +1130,7 @@ Full context lives in `ALPHONSOTOTHEMOON.md` at repo root.
      WhatsApp Cloud gateway: a desktop app has no stable public IP, so the
      receiving side has to be an externally-deployed service, not a listener
      inside the app.
-  2. `src/services/genericWebhookService.js` — `pollGenericWebhookGateway()`
+  2. `src/services/genericWebhookService.ts` — `pollGenericWebhookGateway()`
      (one-shot drain, appends an `orchestrationReceiptService` receipt per
      event for auditability), `startGenericWebhookPolling()` /
      `stopGenericWebhookPolling()` (30s interval, no-ops until a drain URL
@@ -1318,9 +1364,9 @@ since there was no pending PR to review.
   to both gateways' `security.js` and to `verify.js`'s `verifyChallenge`.
 - **Audited, no fix needed**: `discordConnector.ts` is outbound-only, no
   automatic ingestion pipeline exists for its `getChannelHistory()` or any
-  other read into agent prompts. `genericWebhookService.js`'s drained
+  other read into agent prompts. `genericWebhookService.ts`'s drained
   events only produce an audit receipt + UI notification count, never
-  reach `createJoseCommandRoute`. Same for `whatsappBrowserConnector.js`.
+  reach `createJoseCommandRoute`. Same for `whatsappBrowserConnector.ts`.
   `.github/workflows/ci.yml` confirmed: `npm audit --audit-level=high` and
   `cargo audit --deny warnings` both already fail the build on findings
   (no `continue-on-error` on either).
@@ -1359,7 +1405,7 @@ guidance, not the root-level count.
   (`discordConnector.ts`/`slackConnector.ts`/`githubConnector.ts`) via
   literal `.js`-suffixed import specifiers in several other files (Vite's
   bundler module resolution rewrites the extension) — confirmed by
-  grepping for `discordConnector.js`/`slackConnector.js` and finding real
+  grepping for `discordConnector.ts`/`slackConnector.ts` and finding real
   hits before assuming the same would work for the 6 files in this batch.
   No import statement needed changing across the ~15 files that reference
   these connectors.
@@ -1433,8 +1479,8 @@ files were never among them — see below.
     as `if (cond) a(); else b();`.
   - 3 `require()` calls inside try/catch in `SettingsView.tsx` — checked
     that `getWatcherConfig`/`saveWatcherConfig`
-    (`echoFileWatcherService.js`) and `getUsageStats`
-    (`memoryMonitorService.js`) are always-resolvable named exports
+    (`echoFileWatcherService.ts`) and `getUsageStats`
+    (`memoryMonitorService.ts`) are always-resolvable named exports
     before converting to static top-level imports (confirming the
     dynamic `require()` wasn't defensive lazy-loading, just unnecessary
     indirection).
@@ -1772,7 +1818,7 @@ current.
   per-topic/per-pair round tracking.
 - A **Stop** button (visible while `facilitatorPending`) halts further
   chained hops. Does **not** abort an in-flight fetch — `generateOllamaResponse`
-  in `src/lib/ollama.js` has no `AbortController` wiring, and that's shared
+  in `src/lib/ollama.ts` has no `AbortController` wiring, and that's shared
   by every other caller in the app, so real cancellation was explicitly
   out of scope for this phase.
 - Failed replies (`kind: 'failure'`) render distinct (rose styling) with a
@@ -1799,7 +1845,7 @@ mid-phase and found a genuine bug mocked tests could never catch —
 `generateOllamaResponse`'s hardcoded 30s timeout failed reproducibly
 against a real multi-model Ollama instance (a cold model swap alone took
 47.3s, total round-trip 73.1s). Fixed by bumping the timeout to 120s in
-`src/lib/ollama.js`.
+`src/lib/ollama.ts`.
 
 **Architectural decision (Phase 4):** Boardroom's chat does **not** route
 through `agentBusService.ts` or `a2aProtocolService.ts` — both solve
@@ -2003,8 +2049,8 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 |---|---|
 | "No real test suite — zero coverage, no test files found" | 37 test files exist in `src/test/` covering Jose pipeline, connectors, Ollama, approval enforcement, WhatsApp, workflows, and more |
 | "Testing score: 4.0/10 F" | The gap is Rust tests + coverage thresholds + E2E, not absence of tests |
-| "Claude and ChatGPT connectors are frontend-only stubs" | Both run through `policyEnforcementService.js` and `connectorRegistryService.js` with policy gating, audit receipts, and fail-closed behavior |
-| "4 agent personas: Alphonso, Jose, Hector, Miya" | 9 agents: + Maria, Marcus, Echo, Sentinel, Nova — all with profile + permissions files and `agentContractService.js` enforcement |
+| "Claude and ChatGPT connectors are frontend-only stubs" | Both run through `policyEnforcementService.ts` and `connectorRegistryService.ts` with policy gating, audit receipts, and fail-closed behavior |
+| "4 agent personas: Alphonso, Jose, Hector, Miya" | 9 agents: + Maria, Marcus, Echo, Sentinel, Nova — all with profile + permissions files and `agentContractService.ts` enforcement |
 | "No CI/CD" (implied by Testing F grade) | Two GitHub Actions workflows exist: `ci.yml` (lint + test + build + Tauri artifact + cargo clippy/test) and `release.yml` (tag-triggered build + sign + publish) |
 | ".env not in .gitignore" (implied) | `.env` and `.env.*` are correctly listed in `.gitignore`; the concern is git history, not current config |
 | "Plugin tools run in the main thread, no Web Worker/iframe/subprocess isolation" (this file, until 2026-07-02) | Plugin tools already run as native OS subprocesses via `execute_plugin_tool` in `plugin_runtime.rs` (`Command::new`), not as in-process JS — there was never any plugin JS code to isolate with a Web Worker. This claim was written into ground truth itself without checking the Rust implementation; the real (narrower) gap was a missing per-plugin program allowlist, closed via `declared_programs`. |
@@ -2361,3 +2407,33 @@ Verified: 43 Rust tests in `memory_graph*` (cargo test --lib memory_graph, 22 of
 **Still open:** Apple Developer ID signing (five `APPLE_*` secrets, see `docs/MACOS_SIGNING.md`); running the published installers; auto-update from 2.8.0 (macOS) and 2.9.0 (Windows/Linux) to 2.10.0.
 
 ---
+
+## 11.36 Jose redesign, phases 1–6b (2026-10-23)
+
+Jose now answers or plans every request, from every caller. Full detail: `CLAUDE.md`'s Jose rows and `docs/CHANGELOG.md`.
+- **Phase 1:** plans are step graphs (`jose/stepGraph.ts`: agent, action type, effects, needs; at most 50 steps); one permission table for the 9 agents (`jose/agentPermissionTable.ts`); approval by effect, not by words (`jose/joseEffects.ts`: spend, publish and delete always ask, even with Approval Mode off; Settings → General → What asks first).
+- **Phase 2:** Jose's model decides answer or plan (`jose/joseDecision.ts`) and writes the plan from a fitting template or fresh (`jose/josePlanner.ts`); every plan is checked, fixed once, else falls back with a note.
+- **Phase 3:** the Requests board on the Orchestrator page, plan-first cards in Chat for bigger requests, plan editing, user templates.
+- **Phase 4:** reviews send work back (2 rounds), agents ask for help, a step can get a larger model or, when allowed, a paid model (`jose/joseSpend.ts`, with a monthly cap); approving carries the request on.
+- **Phase 5:** Telegram approvals with buttons, Carry on for interrupted requests, expiry of waiting requests, Echo saving decisions.
+- **Phase 6a/6b:** every caller goes through Jose (Telegram, WhatsApp, the phone, schedules, Boardroom's thread actions, workflows); a Miya Studio project is one Jose request.
+
+Checked: unit tests, desktop specs (`jose-planner`, `jose-board`, `jose-loops`, `jose-away`, `jose-callers`), Telegram live with the owner's bot. Not checked with real accounts: the paid models.
+
+## 11.37 Miya's content factory, phases 1–4c (2026-10-22 to 2026-10-25)
+
+Merged one PR per phase (phase 4b: PR 353; phase 4c: PR 354, `34e97b4`). Each phase's design and plan are in `docs/superpowers/specs/` and `docs/superpowers/plans/` (dated 2026-10-22 to 2026-10-24); what each leaves open is in `docs/governance/DEFERRED_WORK.md`.
+- **1:** projects per brand, research, script and reviews, scenes, thumbnails, campaign, quality gate.
+- **2a / 2b:** the finished video (Kokoro, MusicGen, stock clips, FFmpeg assembly, captions); AI clips for the main moments (local video models, Runway).
+- **3a–3d:** publishing on YouTube, Instagram and Facebook; the Calendar and moving posts; carousels, your own storage, Instagram Login, signing in from Settings; Shorts.
+- **4a:** reading each post's numbers, lessons, ideas and post times.
+- **4b:** ElevenLabs (voices, sound effects) and Higgsfield (pictures, clips, by name), each asking first with the cost.
+- **4c:** brand characters (ComfyUI reference or Higgsfield training) and motion (Higgsfield presets, recordings, files; local motion transfer), plus three 4b fixes.
+
+Checked: unit tests and desktop specs with Zero-Cost Mode on and seeded data. **Not checked with real accounts:** posting, reading numbers, ElevenLabs, Higgsfield (several of its request fields come from third-party descriptions), Runway; the new ComfyUI graphs (character reference, motion transfer) have not run live. The live checks are steps 1–15 in `docs/qa/DESKTOP_QA_COVERAGE.md`.
+
+## 11.38 Every document reconciled with the code (2026-10-25)
+
+At the owner's request, every Markdown document was checked against the code, the dated records included. Documents that describe the app now were brought up to date; dated records (audits, reports, plans) had claims about the present corrected in place and a dated note added, so their history stays readable. Two systematic causes were found and fixed:
+- **`scripts/verify-doc-counts.mjs` matched the first number in a file.** In the README that was the v2.4.4 release note, so every PR's count fix rewrote that historical line with current numbers, while the architecture block's command count was never checked. The claims now match the lines that describe the present, and the v2.4.4 note has its original numbers again.
+- **File names drifted.** Many services and components moved from `.js`/`.jsx` to `.ts`/`.tsx` without the documents following; every such name was updated where exactly one renamed file exists.

@@ -1,5 +1,7 @@
 # Draft B — Normal-User Visual Direction
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Status: **Locked skeleton + interaction model.** Anchored to 3 real reference apps the user confirmed resonated: **ChatGPT/Gemini mobile** (chat-first, almost nothing else on screen), **Duolingo** (playful, mascot-driven, guided), **Headspace/Calm** (warm, illustrated, low-cognitive-load). This is a completely separate design track from Draft A (power-user) — not a "simple mode" toggle on the same visual system, a genuinely different experience for a different kind of user.
 
 ## Core concept

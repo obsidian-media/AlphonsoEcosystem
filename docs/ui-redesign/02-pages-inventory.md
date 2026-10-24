@@ -1,5 +1,7 @@
 # Full Pages / Tabs / Cards Inventory + IA Structure Notes
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Ground-truthed against the real `Sidebar.tsx` nav registry and `App.tsx`'s `activeTab` render switch (not assumed from docs). Cross-referenced with CLAUDE.md's Do-Not-Duplicate table for anything reachable outside the main sidebar. Per the locked decision earlier in this session, this covers both **what exists visually** and **structural/IA problems**, with proposed fixes flagged.
 
 ---

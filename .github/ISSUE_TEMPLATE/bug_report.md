@@ -31,11 +31,11 @@ If applicable, add screenshots to help explain your problem.
 
 ## Environment
 
-- OS: [e.g., Windows 11]
-- Alphonso Version: [e.g., 0.1.0]
-- Node.js Version: [e.g., 20.x]
-- Rust Version: [e.g., 1.77]
-- Ollama Version: [e.g., 0.1.x]
+- OS: [e.g., Windows 11, macOS 15 on Apple Silicon, Ubuntu 24.04]
+- Alphonso Version: [e.g., 2.10.0 — see Settings → About]
+- Node.js Version (building from source only): [e.g., 22.x]
+- Rust Version (building from source only): [e.g., 1.77.2 or later]
+- Ollama Version: [e.g., 0.33.x; the Windows installer bundles one]
 
 ## Additional Context
 

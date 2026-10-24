@@ -1,5 +1,7 @@
 # AlphonsoEcosystem Security Scan Report
 
+> **Status (2026-10-25):** a dated scan, kept as written. Since then: connector keys moved to the OS keychain, the command policy became fail-closed per program (2026-09-30), downloads check every redirect for private addresses, and CodeQL findings on the content factory were fixed (2026-10-22, 2026-10-24). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Repository:** `D:\AgentDevWork\repos\AlphonsoEcosystem`  
 **Scope:** Source code only (excludes docs, `.md`, READMEs, test files, `.json`)  
 **Files Scanned:** ~544 source files across `src/`, `src-tauri/src/`, `gateway/`, `bridge/`, `mcp-server/`
@@ -115,7 +117,7 @@
 **Finding: 2 MEDIUM issues.**
 
 ### MEDIUM — Connector Credentials Fallback to localStorage
-- **File:** `src/services/connectors/connectorAuth.js`
+- **File:** `src/services/connectors/connectorAuth.ts`
 - **Lines:** 25, 40, 84
 - **Key:** `alphonso_connector_credentials_v1`
 - **Snippet:**
@@ -166,7 +168,7 @@
 | CORS Wildcard | — | 0 | No issues |
 | Debug Mode | — | 0 | No issues |
 | Unsafe Rust | — | 0 | No issues (no `unsafe` blocks) |
-| LocalStorage Credentials | **Medium** | 2 | `connectorAuth.js`, `OnboardingWizard.tsx` |
+| LocalStorage Credentials | **Medium** | 2 | `connectorAuth.ts`, `OnboardingWizard.tsx` |
 | WhatsApp Gateway | — | 0 | Properly secured |
 
 ---
@@ -175,5 +177,5 @@
 
 1. **CRITICAL:** Fix `save_image_to_folder` in `src-tauri/src/lib.rs` (non-Windows path). Use a pure Rust base64 decoder (e.g., `base64` crate) and `std::fs::write()` instead of shelling out to `sh -c`. Do not construct shell commands with user-controlled paths.
 2. **MEDIUM:** Add `allowed_program(&py)` validation in `launch_comfyui` before spawning the process, consistent with `execute_command_verified`.
-3. **MEDIUM:** Remove `localStorage` fallback for credentials. Ensure `connectorAuth.js` strictly uses the Tauri KV store and never writes connector credentials to `localStorage`. Migrate `OnboardingWizard.tsx` to use the KV store via `invoke('kv_set')` instead of `localStorage.setItem` for the Telegram bot token.
+3. **MEDIUM:** Remove `localStorage` fallback for credentials. Ensure `connectorAuth.ts` strictly uses the Tauri KV store and never writes connector credentials to `localStorage`. Migrate `OnboardingWizard.tsx` to use the KV store via `invoke('kv_set')` instead of `localStorage.setItem` for the Telegram bot token.
 4. **LOW:** Add input validation/sanitization for `folder` and `filename` in `save_image_to_folder` to prevent path traversal (e.g., reject `../` sequences).

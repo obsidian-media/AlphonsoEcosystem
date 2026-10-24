@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Phase 4 (Governance): Retention & Pruning — Design Spec
 
+> **Status (2026-10-25):** built (PR #282, 2026-10-11; shipped in v2.9.0).
+
 **Date:** 2026-10-06
 **Status:** Implemented 2026-10-06 on branch `claude/memory-graph-phase4-prune` (see "Implementation notes" at the end); Phase 4b (validity windows) still undecided
 **Owner:** Echo (retention discipline), `memory_graph.rs` / `memoryGraphService.ts` (mechanism)

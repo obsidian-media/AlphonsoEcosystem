@@ -1,5 +1,7 @@
 # Credential Rotation Checklist
 
+> **Status (2026-10-25):** still the rotation checklist. Keys saved in Settings are in the OS keychain; rotate them there (Settings → Connectors). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > Rotate ALL of the following if `.env` was ever committed to git history,
 > or if you suspect any of these values may have been exposed.
 > **Check git history** with: `git log --all --full-history -- .env`

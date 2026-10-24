@@ -1,5 +1,7 @@
 # ROAD TO ALPHONSO ECOSYSTEM — 10/10
 
+> **Status (2026-10-25):** a roadmap written 2026-07-02. Many items shipped since (Smart Installer, in-app updates, memory graph, macOS and Linux builds, the Jose redesign, the content factory). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Version baseline:** v2.4.4 | **Date:** 2026-06-29  
 **Goal:** Production-grade, secure, fully-tested, 10/10 maturity  
 **Strategy:** Two parallel agent batches working on separate branches, each committing after every phase.
@@ -148,8 +150,8 @@ is referenced before it is initialized in the bundled output.
   - Commit: `fix(security/s1): eliminate command injection in save_image_to_folder`
 
 - [ ] **B1-P1-T4: Add policy gate to 6 bypass connectors (C-2)**
-  - Files: `deepseekConnector.js`, `perplexityConnector.js`, `tavilyConnector.js`,
-    `n8nConnector.js`, `githubConnector.ts`, `slackConnector.ts`
+  - Files: `deepseekConnector.ts`, `perplexityConnector.ts`, `tavilyConnector.ts`,
+    `n8nConnector.ts`, `githubConnector.ts`, `slackConnector.ts`
   - Import `gateConnectorAction` from `connectorRegistry.js`
   - Add `const gate = await gateConnectorAction(connectorId, action, payload, options)`
     before every `fetch()` call; return early if `!gate.ok`
@@ -478,7 +480,7 @@ Branch: `feat/batch2-testing-completeness`
   - Target: 10+ tests
 
 - [ ] **B2-P2-T14: Tests for agentPairingRegistryService.js**
-  - Create: `src/test/services/agentPairingRegistryService.test.js`
+  - Create: `src/test/services/agentPairingRegistryService.test.ts`
   - Cover: `resolveAgentPairingRoute`, `listAvailablePairings`, `isAgentPairingRoute`
   - Target: 8+ tests
 
@@ -508,7 +510,7 @@ Branch: `feat/batch2-testing-completeness`
   - Target: 8+ tests
 
 - [ ] **B2-P2-T20: Tests for miyaMemoryService.js**
-  - Create: `src/test/services/miyaMemoryService.test.js`
+  - Create: `src/test/services/miyaMemoryService.test.ts`
   - Cover: memory save, retrieval, TTL expiry
   - Target: 8+ tests
 
@@ -565,9 +567,9 @@ Branch: `feat/batch2-testing-completeness`
   - Target: 10+ tests
 
 - [x] **B2-P2-T32: Inspect and test 5 suspiciously thin service files**
-  - Inspected: `workflowMemoryService.js`, `ecosystemMemoryService.js`,
-    `connectorRegistryService.js`, `agentAuditService.js`,
-    `workspaceArtifactService.js`, `aiReviewPolicyService.js`
+  - Inspected: `workflowMemoryService.ts`, `ecosystemMemoryService.js`,
+    `connectorRegistryService.ts`, `agentAuditService.ts`,
+    `workspaceArtifactService.ts`, `aiReviewPolicyService.js`
   - Result: added barrel re-export tests and thin-complete service tests
   - Commit: `docs: mark Phase 2 test tasks complete (P2-T6,7,8,9,10,11,12,32,41)`
 
@@ -627,8 +629,8 @@ Branch: `feat/batch2-testing-completeness`
   - Commit: `test: add tests for operational and execution mode services`
 
 - [ ] **B2-P2-T38f: Tests for rc0EvidenceService.js + repoAuditService.js**
-  - Create: `src/test/services/rc0EvidenceService.test.js`
-  - Create: `src/test/services/repoAuditService.test.js`
+  - Create: `src/test/services/rc0EvidenceService.test.ts`
+  - Create: `src/test/services/repoAuditService.test.ts`
   - Cover: evidence collection, audit entry format, score computation
   - Target: 8+ tests each
   - Commit: `test: add tests for RC0 evidence and repo audit services`
@@ -758,18 +760,18 @@ Branch: `feat/batch2-testing-completeness`
 **Previously: 5 of 6 providers returned `not_wired`.**
 
 - [x] **B2-P5-T1: Wire OpenAI path in externalAgentAdapter.js**
-  - Imported `chatgptService.js`; `runExternalAgentTask()` now calls `sendChatGptMessage`
+  - Imported `chatgptService.ts`; `runExternalAgentTask()` now calls `sendChatGptMessage`
   - Added credential check: `isConnectorAuthenticated('chatgpt')`
   - `openai` status set to `'live'` in `listSupportedExternalProviders()`
   - Commit: `feat(adapter): wire OpenAI provider in externalAgentAdapter`
 
 - [x] **B2-P5-T2: Wire Claude/Anthropic path in externalAgentAdapter.js**
-  - Imported `claudeService.js`; `claude` provider now live
+  - Imported `claudeService.ts`; `claude` provider now live
   - Credential check: `isConnectorAuthenticated('claude')`
   - Commit: `feat(adapter): wire Claude provider in externalAgentAdapter`
 
 - [x] **B2-P5-T3: Wire Ollama path in externalAgentAdapter.js**
-  - Imported `generateOllamaChatStream` from `src/lib/ollama.js`
+  - Imported `generateOllamaChatStream` from `src/lib/ollama.ts`
   - `ollama` provider streams using configured model (no credential check needed)
   - Commit: `feat(adapter): wire Ollama provider in externalAgentAdapter`
 

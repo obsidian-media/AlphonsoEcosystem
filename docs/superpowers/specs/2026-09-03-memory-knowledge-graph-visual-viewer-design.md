@@ -1,5 +1,7 @@
 # Memory Knowledge Graph — Visual Viewer Design Spec
 
+> **Status (2026-10-25):** built (PR #215, v2.7.0).
+
 **Date:** 2026-09-03
 **Status:** Approved for planning (pending user sign-off on this doc)
 **Owner:** Echo (data), new component ownership TBD at planning time
@@ -59,7 +61,7 @@ only `memory_graph_add_node` writes to it. `GraphEdgeRow` already exists
 (Phase 1) and is reused as-is.
 
 **Capped, not unbounded** — matches this app's existing convention
-(`crashLogService.js`/`agentAuditService.js` ring buffers capped at 100,
+(`crashLogService.ts`/`agentAuditService.ts` ring buffers capped at 100,
 `orchestrationReceiptService.ts` capped at 3000) rather than retrofitting a
 cap later once it's actually a problem. Concrete numbers: **500 nodes /
 1000 edges**, most recently created first (`ORDER BY created_at DESC

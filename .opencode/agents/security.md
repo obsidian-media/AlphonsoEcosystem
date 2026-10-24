@@ -36,7 +36,7 @@ You are a security auditor for the Alphonso project. You perform read-only secur
 - Any overly broad capabilities (shell, filesystem, network)?
 
 ### Connector Gating
-- `src/services/policyEnforcementService.js` — is it fail-closed?
+- `src/services/policyEnforcementService.ts` — is it fail-closed?
 - Do all 9 connector paths go through policy gate before external calls?
 - Is zero-cost mode properly enforced?
 

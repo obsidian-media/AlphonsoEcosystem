@@ -1,5 +1,7 @@
 # Multi-User Profiles — User Switching
 
+> **Status (2026-10-25):** a proposal; not built. Alphonso has one user per installation.
+
 ## Overview
 
 Add multi-user profile support to Alphonso, allowing multiple people to use the same desktop installation with isolated conversations, agent permissions, and settings. Profiles are local-only (no cloud accounts).
@@ -120,7 +122,7 @@ CREATE TABLE profile_sessions (
 - Guest profile (no PIN, auto-login)
 
 ### Phase 3: Agent Permission Overrides (Days 5-6)
-- Extend `agentContractService.js` to check per-profile overrides
+- Extend `agentContractService.ts` to check per-profile overrides
 - Profiles can block or allow specific agents or action types
 - Example: Bob's profile blocks Miya's "post to social" actions
 - Display locked agents in UI with lock icon

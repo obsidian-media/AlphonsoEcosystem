@@ -1,5 +1,7 @@
 # FABLE5.md — Fast Orientation for the Next Agent Session
 
+> **Status (2026-10-25):** **out of date — do not read this first.** Read `CLAUDE.md` and `docs/ALPHONSO_GROUND_TRUTH.md` first. This orientation describes the repo on 2026-07-12 (22 connectors, 141 services, React 18, lib.rs 2,199 lines); none of those numbers hold now. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 **Purpose:** Read this file FIRST, before `CLAUDE.md` or `docs/ALPHONSO_GROUND_TRUTH.md`. It tells you what this repo *is*, where the real source-of-truth docs live, what I verified myself vs. what I trusted from existing docs. It is deliberately short — the existing docs are already excellent and huge; don't re-read them cover to cover unless you're working in that specific area.
 
 **Written:** 2026-07-12, by a Claude Code session. Two passes this session:

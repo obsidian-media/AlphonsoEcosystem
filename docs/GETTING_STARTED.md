@@ -2,24 +2,32 @@
 
 Alphonso is a local-first AI desktop companion. Your data stays on your machine.
 
-## Prerequisites
+## Install the app (most people)
+
+1. Download the installer from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest): Windows `…_x64-setup.exe`, macOS (Apple Silicon) `…_aarch64.dmg`, Linux `…_amd64.AppImage`. On macOS the build isn't signed by Apple yet: the first time, right-click Alphonso in Applications and choose **Open**.
+2. Launch Alphonso. **Setup** checks your computer, asks what you want to do (Chat only, Chat + Images, Chat + Voice, Full Power, or Custom), asks where to install tools, and installs what that needs, including the starter model `llama3.2:3b` and, on Windows, the bundled Ollama runtime. Ollama installed already, or ComfyUI of your own, is found and used.
+3. When it's done, chat. Installed copies update themselves.
+
+## Build from source (developers)
+
+### Prerequisites
 
 | Dependency | Version | Install |
 |-----------|---------|---------|
 | **Ollama** | Latest | https://ollama.com |
-| **Node.js** | 20+ | https://nodejs.org |
-| **Rust** | 1.77+ | https://rustup.rs |
+| **Node.js** | 22 LTS (`nvm use` picks the repo's version) | https://nodejs.org |
+| **Rust** | 1.77.2+ | https://rustup.rs |
 
-## Quick Start (5 minutes)
+### Quick Start (5 minutes)
 
-### 1. Install Ollama and pull a model
+#### 1. Install Ollama and pull a model
 
 ```bash
 # Install from https://ollama.com, then:
 ollama pull llama3.2:3b
 ```
 
-### 2. Clone and install
+#### 2. Clone and install
 
 ```bash
 git clone https://github.com/obsidian-media/AlphonsoEcosystem.git
@@ -27,7 +35,7 @@ cd AlphonsoEcosystem
 npm install
 ```
 
-### 3. Run
+#### 3. Run
 
 ```bash
 # Web-only mode (fastest to start)
@@ -38,19 +46,18 @@ npm run dev
 npm run tauri dev
 ```
 
-### 4. First-run wizard
+#### 4. First-run Setup
 
-On first launch, Alphonso will:
-1. Check if Ollama is running
-2. Let you pick a model (llama3.2:3b recommended)
-3. Confirm you're ready
+On first launch, the Setup screen runs as described above. In web-only mode (`npm run dev`) it can't scan the computer and shows "Unknown" instead.
 
 ## What's Next
 
-- **Chat** — Type a message in the Chat tab. Alphonso routes your request to the right agent. All results (pipeline receipts, approval buttons, insights) appear inline in the chat thread.
+- **Chat** — Type a message. A plain question is answered at once; anything else Jose plans as steps for the right agents, and bigger plans are shown first. Approvals, results and insights appear inline in the chat thread; **Open on the board** shows the plan on the Requests board (System → Orchestrator → Requests).
 - **Agents** — 9 specialized agents handle different tasks. See [AGENT_GUIDE.md](./AGENT_GUIDE.md).
-- **Connectors** — Connect to Telegram, WhatsApp, Notion, and more. Enter credentials in **Settings → Connectors** and click Save — they are verified automatically. See [CONNECTORS.md](./CONNECTORS.md).
-- **Settings** — Configure approval mode, zero-cost mode, privacy shield, and more.
+- **Your first video** — set **Settings → Output folder**, open **Work → Creative** (Miya Studio), create a project for your brand, fill in the idea and press **Run project**. For the finished video, install Kokoro (voice-over) and, for AI clips, a video model in **Runtimes**. See the [User Manual, section 8](./USER_MANUAL.md#8-miya-studio--the-content-factory).
+- **Connectors** — Connect Telegram, WhatsApp, YouTube, Facebook and Instagram, and more in **Settings → Connectors**; YouTube, Facebook and Instagram have **Sign in** buttons. **Test** says whether the service itself answered. See [CONNECTORS.md](./CONNECTORS.md).
+- **Telegram** — pair your Telegram chat and Jose asks you there when something waits for your approval.
+- **Settings** — approval mode and what asks first, zero-cost mode, paid models (off by default), privacy shield, and more.
 
 ## WhatsApp Cloud Setup (optional)
 
@@ -85,13 +92,15 @@ Alphonso includes a full real-time voice pipeline: speech-to-text → agent rout
 
 ### Prerequisites for Voice OS
 
+In the app, **Runtimes → Voice OS → Install** installs Python (if needed) and everything below, and the speech models download on first use. For running it by hand:
+
 | Dependency | Install |
 |-----------|---------|
 | **Python 3.10+** | https://python.org |
 | **faster-whisper** | `pip install faster-whisper` |
 | **piper-tts** | `pip install piper-tts` |
 | **webrtcvad** | `pip install webrtcvad` |
-| **Ollama** | Running on `http://localhost:11434` |
+| **Ollama** | Running at the address set in Settings (default `http://localhost:11434`) |
 
 ### Start the Voice Server
 
@@ -107,13 +116,13 @@ set VOICE_OS_TOKEN=<any-long-random-string>   # Windows (bash: export VOICE_OS_T
 python -m uvicorn main:app --host 127.0.0.1 --port 8766 --no-access-log
 ```
 
-Or launch it from within Alphonso: open **Runtime Manager → Voice OS → Start**.
+Or launch it from within Alphonso: open **Runtimes → Voice OS → Start**, or the **Voice** page. Started from the app, it uses the Ollama model and address you chose.
 
 ### First Use
 
 1. With the voice server running, open **Chat** in Alphonso
 2. Click the microphone button — it uses the `useJarvisVoice` hook (AudioWorklet)
-3. Speak naturally — Alphonso transcribes, routes to the right agent, and responds by voice
+3. Speak naturally — Alphonso waits until you finish, transcribes, routes to the right agent, and responds by voice
 4. Say anything to interrupt the response (barge-in is supported)
 
 ### Voice Agent Routing
@@ -150,10 +159,10 @@ That agent's replies now come from the real standalone Hermes profile. Every oth
 ## Key Concepts
 
 ### Approval Mode (on by default)
-Any risky action (external sends, uploads, publishes) requires your explicit approval before execution.
+Each step asks according to what it does (Settings → General → What asks first). Spending, publishing or sending, and deleting always ask, even with Approval Mode off.
 
 ### Zero-Cost Mode (on by default)
-Blocks paid connectors (Claude API, OpenAI, etc.) unless you explicitly enable them.
+Blocks paid connectors (Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E and others) unless you turn it off.
 
 ### Privacy Shield
 When active, no data leaves your machine. All processing happens locally via Ollama.

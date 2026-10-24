@@ -1,5 +1,7 @@
 # Sidebar Redesign Implementation Plan
 
+> **Status (2026-10-25):** part of the UI redesign, merged in PR #237 and released in v2.8.0 (2026-09-09). Screens changed again since: Miya Studio became the content factory, the Orchestrator gained the Requests board, and the Calendar was added. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (inline, per this session's standing "no subagents" instruction). Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rebuild the real, global `Sidebar.tsx` into Draft A's locked "Rooms" skeleton — a search field (wired to a real, globally-lifted memory search, not just Chat-scoped), 5 Space pills (Home/Work/Research/Boardroom/System) regrouping the real nav items per Draft A's decision — while preserving every existing real behavior unchanged: collapse/expand, chat list with delete-confirm, approval badge, connector status dot, coach/settings/theme footer buttons, simple-mode filtering, and the existing `AgentStatusStrip` (dots variant, untouched).

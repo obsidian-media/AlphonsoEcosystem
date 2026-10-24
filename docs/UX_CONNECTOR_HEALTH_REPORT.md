@@ -1,5 +1,7 @@
 # UX Connector Health Report
 
+> **Status (2026-10-25):** since 2026-10-21 the Connector Health Monitor says whether the service itself answered or only a key was found. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+
 Generated: 2026-05-31
 
 ---
@@ -7,11 +9,11 @@ Generated: 2026-05-31
 ## 1. Files Created / Changed
 
 ### Created
-- `src/components/ConnectorHealthPanel.jsx` — main panel + helper exports
+- `src/components/ConnectorHealthPanel.tsx` — main panel + helper exports
 
 ### Changed
-- `src/components/Sidebar.jsx` — added `RadioTower` import, `ConnectorStatusStrip` import, `settings` prop, "Connectors" nav item, connector status strip inline in that nav row
-- `src/components/ApprovalModal.jsx` — enhanced with action / connector / riskLevel / destructive-warning fields while keeping full backward compatibility with the `label` prop
+- `src/components/Sidebar.tsx` — added `RadioTower` import, `ConnectorStatusStrip` import, `settings` prop, "Connectors" nav item, connector status strip inline in that nav row
+- `src/components/ApprovalModal.tsx` — enhanced with action / connector / riskLevel / destructive-warning fields while keeping full backward compatibility with the `label` prop
 - `src/App.jsx` — imports `ConnectorHealthPanel`, passes `settings` to `Sidebar`, mounts the `connectors` tab
 
 ---
@@ -72,7 +74,7 @@ Access it via the "Connectors" entry at the bottom of the sidebar nav list (Radi
 
 Status derivation is purely client-side from the connector registry object:
 
-1. `listConnectors()` from `connectorRegistryService.js` is called on mount, merging localStorage rows with `DEFAULT_CONNECTORS`.
+1. `listConnectors()` from `connectorRegistryService.ts` is called on mount, merging localStorage rows with `DEFAULT_CONNECTORS`.
 2. `verifyConnectorEnvironment(id)` is called for every connector on mount (async, one at a time) — this invokes the Tauri `check_env_vars_presence` command to probe each `requiredEnv` key. The updated registry object is written back to localStorage and `listConnectors()` is called again.
 3. The `deriveStatus(connector)` helper maps the result:
 
@@ -110,7 +112,7 @@ New fields displayed:
 | Per-connector status dots on every sidebar nav item | Not implemented | Only the Connectors nav item has the strip. Individual dots per connector on Chat Hub / Jose / Hector etc. would require mapping connectors to agent tabs, which is not clearly defined in the current registry. |
 | Live polling / websocket push for connector status changes | Not implemented | Would require a pub-sub or interval-based refresh loop. The "Refresh" button gives the user on-demand control; a polling interval was not added to avoid background noise. |
 | Notification toasts for "Telegram message received" etc. | Already exists | `App.jsx` already wires `pollWhatsAppConnector` and calls `toast.info(...)` on inbound WhatsApp messages. `ToastProvider` is mounted in `main.jsx`. `sendNativeNotification` dispatches OS-level notifications via Tauri. No new toast component was needed. |
-| `ToastNotification.jsx` creation | Skipped | `ToastProvider.jsx` already implements a full toast stack with success/error/info/warning types, auto-dismiss, and dismiss button. Creating a duplicate would be redundant. |
+| `ToastNotification.jsx` creation | Skipped | `ToastProvider.tsx` already implements a full toast stack with success/error/info/warning types, auto-dismiss, and dismiss button. Creating a duplicate would be redundant. |
 
 ---
 

@@ -1,5 +1,7 @@
 # Hector Research Synthesis Implementation Plan
 
+> **Status (2026-10-25):** built in September 2026.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give Hector's research pipeline a real synthesis step — one LLM call that reads fetched sources together and produces a structured report (Overview / Key Findings / Disagreements / Gaps), instead of today's aggregate-and-truncate behavior — plus Markdown/PDF/PowerPoint export and a depth-toggle UI, while removing a redundant second LLM call elsewhere in the pipeline.

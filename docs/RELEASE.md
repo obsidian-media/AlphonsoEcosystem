@@ -16,8 +16,11 @@ The release pipeline is fully automated via `.github/workflows/release.yml`. The
 | Updater endpoint in `tauri.conf.json` | **Done** — `releases/latest/download/latest.json` |
 | Private key file (`.tauri/alphonso-updater.key`) | **Done** — generated, gitignored |
 | `release.yml` workflow | **Done** — signs build, generates manifest, publishes GitHub Release |
-| `TAURI_SIGNING_PRIVATE_KEY` GitHub Secret | **Required — add this** |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` GitHub Secret | **Required — add this** |
+| `TAURI_SIGNING_PRIVATE_KEY` GitHub Secret | **Done** — releases have been signed since v2.0.2 |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` GitHub Secret | **Done** |
+| In-app download, install and restart | **Done** — merged in v2.6.0, confirmed against a real release on 2026-09-05 (v2.7.0 → v2.7.1) |
+| Apple Developer ID signing (`APPLE_*` secrets) | **Not set** — the Mac build ships unsigned; see `docs/MACOS_SIGNING.md` |
+| Latest release | v2.9.0 (2026-10-12). 2.10.0 is on `main`, not tagged yet |
 
 ---
 
@@ -84,9 +87,11 @@ Both secrets are consumed by the `release.yml` workflow step:
 ### Via Git Tag (recommended)
 
 ```bash
-# Bump version in tauri.conf.json and Cargo.toml first, then:
-git tag v2.0.1
-git push origin v2.0.1
+# Bump the version in all four places first (package.json + lock,
+# src-tauri/tauri.conf.json, src-tauri/Cargo.toml, and the app entry in
+# src-tauri/Cargo.lock) — `npm run version:bump` does it — then:
+git tag v2.10.0
+git push origin v2.10.0
 ```
 
 The `release.yml` workflow fires automatically on any `v*` tag.
@@ -95,17 +100,19 @@ The `release.yml` workflow fires automatically on any `v*` tag.
 
 Go to: `Actions → Release → Run workflow`
 
-Enter the version tag (e.g. `v2.0.1`) in the input field and click Run.
+Enter the version tag (e.g. `v2.10.0`) in the input field and click Run. Leave **publish** off to build and check all three installers without releasing anything; turn it on to publish.
 
 ---
 
 ## What the Release Workflow Does
 
-1. Runs `npm run verify:app` (lint + test + build) — release is aborted if any step fails
+1. Runs `npm run verify:app` (lint + typecheck + test + build) — release is aborted if any step fails
 2. Runs `cargo test` and `cargo clippy -- -D warnings`
-3. Runs `npx.cmd tauri build` with the signing key injected — produces `Alphonso_X.Y.Z_x64-setup.exe` and `Alphonso_X.Y.Z_x64-setup.exe.sig`
-4. Generates `latest.json` — the updater manifest with version, pub_date, download URL, and ed25519 signature
-5. Creates a GitHub Release with the installer, signature file, and `latest.json` as release assets
+3. **Windows:** fetches the bundled Ollama runtime and FFmpeg, runs `npx.cmd tauri build` with the signing key injected, and checks that Ollama is inside the NSIS installer — produces `Alphonso_X.Y.Z_x64-setup.exe` (+ `.sig`) and the MSI
+4. **macOS (Apple Silicon):** builds the `.app`, the DMG and the updater archive; signs and notarizes only when `APPLE_CERTIFICATE` is set, and checks the DMG and the updater archive both contain the Ollama runtime
+5. **Linux:** builds and checks the AppImage
+6. Generates `latest.json` — the updater manifest with version, pub_date, download URL and signature for each platform
+7. Creates a GitHub Release with the installers, signature files and `latest.json` (the notes say whether the Mac build is notarized)
 
 The updater endpoint in `tauri.conf.json` points to:
 ```
@@ -177,4 +184,4 @@ This is expected on CI and on any machine that does not have `.tauri/alphonso-up
 
 ---
 
-_Last updated: 2026-06-20. Pipeline status: ready pending GitHub Secrets addition._
+_Last updated: 2026-10-25 (first written 2026-06-20). Pipeline status: working; Windows, macOS and Linux; Apple signing not set._

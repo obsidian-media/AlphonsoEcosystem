@@ -1,4 +1,6 @@
 # Alphonso Fix Plan — Prioritized Remediation
+
+> **Status (2026-10-25):** a dated plan (2026-06-24); worked through in the June and July passes. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
 **Based on:** `docs/BUG_REPORT.md` — full codebase audit 2026-06-24  
 **Version:** v2.2.3
 
@@ -120,7 +122,7 @@ Also add `voice/backend` to `src-tauri/tauri.conf.json`:
 ---
 
 ### FIX-06: Live Connector Status Updates (BUG-009)
-**File:** `src/components/ConnectorStatusIndicators.jsx`  
+**File:** `src/components/ConnectorStatusIndicators.tsx`  
 **Effort:** 30 min
 
 Add a polling interval or a storage event listener so connector status refreshes after credentials are saved:
@@ -191,7 +193,7 @@ messages.map((message, idx) => {
 ---
 
 ### FIX-09: Fix Code Splitting for `runtimeManagerService` (BUG-006)
-**File:** `src/components/OllamaOfflineBanner.tsx`, `src/components/OnboardingWizard.tsx`, `src/services/creativeRoutingService.js`  
+**File:** `src/components/OllamaOfflineBanner.tsx`, `src/components/OnboardingWizard.tsx`, `src/services/creativeRoutingService.ts`  
 **Effort:** 45 min
 
 Convert all static imports of `runtimeManagerService` to dynamic imports:
