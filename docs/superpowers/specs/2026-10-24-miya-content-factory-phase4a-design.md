@@ -55,7 +55,7 @@ Anti-goals (what would make this a failure even if it works):
 
 Every post Alphonso put on a platform and has an id for: the content factory's posts (`ProjectPost.platformId`,
 YouTube, Instagram on either route, Facebook Reels and carousel photo posts) and Content Studio's posts that went
-out through `publishPost()`. Posts made outside Alphonso, posted by hand (`by_hand`), cancelled or failed are left out.
+out through `publishPost()` (their platform ids are read where Content Studio already keeps them; my call). Posts made outside Alphonso, posted by hand (`by_hand`), cancelled or failed are left out.
 A post saved by hand that the user later marks as posted is a 4a+ idea, not in scope.
 
 ### 4.2 When
@@ -77,7 +77,7 @@ to once per 10 minutes per post).
 
 Exact metric names and endpoints are for the builder to check against each platform's current documentation (YouTube
 Analytics API `reports.query`; Instagram media insights on the Graph API and on Instagram Login; Facebook video and
-post insights). A metric a platform no longer offers is shown as "—" with "not available from <platform>", never 0.
+post insights). A metric a platform no longer offers is shown as "—" with "not available from <platform>", never 0. A post deleted on the platform shows "—" with "removed from <platform>" and gets no further checkpoints (my call).
 
 ### 4.4 Permissions
 
@@ -113,7 +113,7 @@ nothing to compare with yet"). The main number per platform is views (my call).
 After a post's 7-day checkpoint, Miya and Nova are asked (through Jose, as a one-step request each, like the other
 factory steps: Nova `analysis_performance`, Miya `creative_lessons`; my call on the task types) with the post, its
 script, hook, thumbnail choice, posting time and its numbers against the brand's median. They answer with up to 3
-"what worked" and 3 "what didn't" lessons, each a short sentence tied to something the brand controls.
+"what worked" and 3 "what didn't" lessons, each a short sentence tied to something the brand controls. The two lists are merged and near-duplicates dropped (my call).
 
 The lessons are saved as **proposed**: the brand's `lessons` gain `status: 'proposed' | 'kept'` and `source:
 'performance'` (existing lessons count as kept). Only kept lessons go into prompts. The user keeps, edits or drops each
@@ -136,7 +136,7 @@ Nothing changes otherwise.
 Two new kinds in `collectJoseNotifications()`'s neighbour for content (my call: a `contentTelegram` collector next to it,
 using the same sent log and button tokens, each kind with an on/off switch in Settings → Approvals → "Jose on
 Telegram"):
-- **7-day summary:** "Launch video (YouTube): 12,400 views, best of the month for Acme." plus the proposed lessons, each
+- **7-day summary**, at most one message a day covering every post that reached 7 days that day (my call, so a busy brand isn't flooded): "Launch video (YouTube): 12,400 views, best of the month for Acme." plus the proposed lessons, each
   with Keep / Drop buttons.
 - **New ideas:** each idea with Start project / Dismiss.
 Only the paired chat may press them, as today.
