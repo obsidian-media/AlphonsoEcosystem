@@ -11,6 +11,8 @@ export function savedMetaCredentials() {
     instagramBusinessAccountId: saved('INSTAGRAM_BUSINESS_ACCOUNT_ID'),
     appSecret: saved('META_APP_SECRET'),
     appId: saved('META_APP_ID'),
+    instagramLoginToken: saved('INSTAGRAM_LOGIN_TOKEN'),
+    instagramLoginUserId: saved('INSTAGRAM_LOGIN_USER_ID'),
   };
 }
 
@@ -97,13 +99,42 @@ async function metaChange(command: string, request: Record<string, unknown>): Pr
 }
 
 /** Moves a Facebook Reel scheduled on Meta to `scheduledAtMs`; the result is what Meta kept. */
-export function rescheduleMetaVideo({ videoId, scheduledAtMs }: { videoId: string; scheduledAtMs: number }): Promise<MetaChangeResult> {
-  return metaChange('meta_reschedule_video', { videoId, scheduledAtMs });
+export function rescheduleMetaVideo({ videoId, scheduledAtMs, kind }: { videoId: string; scheduledAtMs: number; kind?: 'post' }): Promise<MetaChangeResult> {
+  return metaChange('meta_reschedule_video', { videoId, scheduledAtMs, ...(kind ? { kind } : {}) });
 }
 
 /** Cancels (deletes) a Facebook Reel that is still scheduled on Meta. */
-export function cancelMetaVideo({ videoId }: { videoId: string }): Promise<MetaChangeResult> {
-  return metaChange('meta_cancel_video', { videoId });
+export function cancelMetaVideo({ videoId, kind }: { videoId: string; kind?: 'post' }): Promise<MetaChangeResult> {
+  return metaChange('meta_cancel_video', { videoId, ...(kind ? { kind } : {}) });
+}
+
+async function metaPost(command: string, request: Record<string, unknown>, platform: 'instagram' | 'facebook'): Promise<MetaVideoResult> {
+  try {
+    return await invoke<MetaVideoResult>(command, { request: { ...request, approved: true, credentials: savedMetaCredentials() } });
+  } catch (error) {
+    return { ok: false, platform, status: 'failed', message: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * Posts a Reel or a carousel to Instagram from https links (the user's storage, phase 3c),
+ * through the Facebook Page or Instagram Login. Only called for an approved post.
+ */
+export function publishInstagramByUrl(post: {
+  route: 'page' | 'instagram_login';
+  mediaType: 'REELS' | 'CAROUSEL';
+  videoUrl?: string;
+  imageUrls?: string[];
+  caption: string;
+}): Promise<MetaVideoResult> {
+  return metaPost('meta_instagram_publish_by_url', { ...post, imageUrls: post.imageUrls || [] }, 'instagram');
+}
+
+/** Posts pictures from the project folder as one Facebook Page post, now or scheduled on Meta (phase 3c). */
+export function publishFacebookPhotos(post: { root: string; photoFiles: string[]; message: string; scheduledAtMs?: number | null }): Promise<MetaVideoResult> {
+  return metaPost('meta_facebook_photo_post', {
+    workspaceRoot: post.root, photoFiles: post.photoFiles, message: post.message, scheduledAtMs: post.scheduledAtMs ?? null,
+  }, 'facebook');
 }
 
 /** Posts left in Instagram's 24-hour limit, or null when Meta does not say. */

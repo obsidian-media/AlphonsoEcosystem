@@ -133,3 +133,115 @@ export async function drawHeadline(baseBase64: string, headline: string, brand: 
   });
   return canvas.toDataURL('image/png').split(',')[1] || '';
 }
+
+// ---- Carousel slides (phase 3c) ----
+
+/** A slide's size for the brand's shape: 4:5 portrait (the default) or 1:1 square. */
+export function slideSize(shape: ContentBrand['carouselShape'] | undefined): { width: number; height: number } {
+  return shape === '1:1' ? { width: 1080, height: 1080 } : { width: 1080, height: 1350 };
+}
+
+export interface SlideTextLayout {
+  headline: HeadlineLayout;
+  bodyLines: string[];
+  bodySize: number;
+  bodyX: number;
+  /** The first body line's baseline. */
+  bodyY: number;
+}
+
+/**
+ * Where a slide's headline and body go: a block at the bottom, left-aligned, inside the
+ * picture. The cover gets a bigger headline. Sizes shrink until the block fits in the lower 60%.
+ */
+export function layoutSlideText(
+  headline: string,
+  body: string,
+  opts: { width: number; height: number; cover: boolean; measure: (t: string, size: number) => number },
+): SlideTextLayout {
+  const { width, height, cover, measure } = opts;
+  const margin = Math.round(width * 0.06);
+  const maxWidth = width * 0.88;
+  const headSizes = cover ? [120, 108, 96, 84, 72, 64, 56] : [96, 88, 80, 72, 64, 56, 48, 40];
+  const bodySizes = [48, 44, 40, 36, 32, 28, 26];
+  const fit = (text: string, size: number, maxLines: number) => (text.trim() ? wrap(text, size, maxWidth, maxLines, measure) : []);
+  const blockHeight = (hs: number, hl: number, bs: number, bl: number) => hs + Math.max(0, hl - 1) * hs * 1.05 + (bl ? 0.4 * hs + bs + bl * bs * 1.25 : 0);
+  let chosen: { hs: number; head: string[]; bs: number; lines: string[] } | null = null;
+  for (const hs of headSizes) {
+    const head = fit(headline.toUpperCase(), hs, 3);
+    if (!head) continue;
+    for (const bs of bodySizes) {
+      const lines = fit(body, bs, 6);
+      if (lines && blockHeight(hs, head.length, bs, lines.length) <= height * 0.6) {
+        chosen = { hs, head, bs, lines };
+        break;
+      }
+    }
+    if (chosen) break;
+  }
+  if (!chosen) {
+    const hs = headSizes[headSizes.length - 1];
+    const bs = bodySizes[bodySizes.length - 1];
+    chosen = { hs, head: fit(headline.toUpperCase(), hs, 6) || cut(headline.toUpperCase(), 3), bs, lines: fit(body, bs, 12) || cut(body, 6) };
+  }
+  const { hs, head, bs, lines } = chosen;
+  const top = Math.max(margin, height - margin - blockHeight(hs, head.length, bs, lines.length));
+  const headY = Math.round(top + hs);
+  return {
+    headline: { lines: head, fontSize: hs, x: margin, y: headY, align: 'left' },
+    bodyLines: lines,
+    bodySize: bs,
+    bodyX: margin,
+    bodyY: Math.round(headY + Math.max(0, head.length - 1) * hs * 1.05 + 0.4 * hs + bs),
+  };
+}
+
+/** Returns a finished carousel slide (the picture, darkened below, with its text) as PNG base64. */
+export async function drawSlide(
+  baseBase64: string,
+  slide: { headline: string; body: string; cover?: boolean },
+  brand: Pick<ContentBrand, 'palette' | 'fonts'>,
+  size: { width: number; height: number },
+): Promise<string> {
+  const { width, height } = size;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Drawing is not available in this window.');
+  const img = await loadImage(baseBase64);
+  const scale = Math.max(width / img.width, height / img.height);
+  ctx.drawImage(img, (width - img.width * scale) / 2, (height - img.height * scale) / 2, img.width * scale, img.height * scale);
+  const gradient = ctx.createLinearGradient(0, height * 0.35, 0, height);
+  gradient.addColorStop(0, 'rgba(0,0,0,0)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0.8)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  const font = brand.fonts?.trim() || 'Impact, "Arial Black", sans-serif';
+  const bodyFont = '"Segoe UI", Arial, sans-serif';
+  const measure = (t: string, s: number, f = font, weight = 900) => {
+    ctx.font = `${weight} ${s}px ${f}`;
+    return ctx.measureText(t).width;
+  };
+  const placed = layoutSlideText(slide.headline, slide.body, {
+    width, height, cover: Boolean(slide.cover),
+    measure: (t, s) => Math.max(measure(t, s), measure(t, s, bodyFont, 600)),
+  });
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round';
+  ctx.font = `900 ${placed.headline.fontSize}px ${font}`;
+  ctx.lineWidth = Math.max(4, Math.round(placed.headline.fontSize / 12));
+  ctx.strokeStyle = darkestColour(brand.palette || []);
+  ctx.fillStyle = headlineColour(brand.palette || []);
+  placed.headline.lines.forEach((line, i) => {
+    const y = placed.headline.y + i * placed.headline.fontSize * 1.05;
+    ctx.strokeText(line, placed.headline.x, y);
+    ctx.fillText(line, placed.headline.x, y);
+  });
+  ctx.font = `600 ${placed.bodySize}px ${bodyFont}`;
+  ctx.fillStyle = '#FFFFFF';
+  placed.bodyLines.forEach((line, i) => ctx.fillText(line, placed.bodyX, placed.bodyY + i * placed.bodySize * 1.25));
+  return canvas.toDataURL('image/png').split(',')[1] || '';
+}

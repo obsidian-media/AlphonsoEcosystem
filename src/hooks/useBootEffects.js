@@ -274,4 +274,29 @@ export function useBootEffects({
       if (stopPolling) stopPolling();
     };
   }, []);
+
+  // Staged storage files (content factory phase 3c): a file put in the user's own
+  // storage for a platform is deleted once posted; any left over (the app closed
+  // mid-post) is deleted here once it is a day old. Nothing happens without storage.
+  useEffect(() => {
+    let cancelled = false;
+    let idleId;
+
+    async function cleanStaged() {
+      if (cancelled) return;
+      try {
+        const { hydrateConnectorCredentialsFromSqlite } = await import('../services/connectors/connectorAuth');
+        await hydrateConnectorCredentialsFromSqlite();
+        if (cancelled) return;
+        const { cleanOldStaged } = await import('../services/mediaStorageService');
+        await cleanOldStaged(Date.now());
+      } catch { /* cleaned at the next start */ }
+    }
+
+    idleId = onIdle(cleanStaged);
+    return () => {
+      cancelled = true;
+      if (idleId) cancelIdle(idleId);
+    };
+  }, []);
 }

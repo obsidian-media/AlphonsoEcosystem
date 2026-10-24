@@ -169,6 +169,9 @@ pub(crate) const META_MANAGE_URL: &str = "https://business.facebook.com/latest/c
 #[serde(rename_all = "camelCase")]
 pub(crate) struct MetaChangeRequest {
   video_id: Option<String>,
+  /// `post` for a Page photo post (phase 3c); a Reel otherwise.
+  #[serde(default)]
+  kind: Option<String>,
   scheduled_at_ms: Option<u64>,
   #[serde(default)]
   credentials: Option<MetaCredentials>,
@@ -186,7 +189,21 @@ pub(crate) struct MetaChangeProof {
   manage_url: Option<String>,
 }
 
-fn change_failed(reason: impl Into<String>) -> MetaChangeProof {
+impl MetaChangeProof {
+  /// A change Meta made (read back).
+  pub(crate) fn done(scheduled_at_ms: Option<u64>) -> Self {
+    MetaChangeProof {
+      ok: true,
+      scheduled_at_ms,
+      posts_left: None,
+      expires_at_ms: None,
+      reason: None,
+      manage_url: None,
+    }
+  }
+}
+
+pub(crate) fn change_failed(reason: impl Into<String>) -> MetaChangeProof {
   MetaChangeProof {
     ok: false,
     scheduled_at_ms: None,
@@ -238,6 +255,16 @@ pub(crate) async fn meta_reschedule_video(
   request: MetaChangeRequest,
 ) -> Result<MetaChangeProof, String> {
   rate_limiter.check_and_record("meta_reschedule_video")?;
+  if request.kind.as_deref() == Some("post") {
+    return Ok(
+      crate::meta_media::reschedule_page_post(
+        request.video_id.as_deref(),
+        request.scheduled_at_ms,
+        request.credentials,
+      )
+      .await,
+    );
+  }
   let Some(id) = numeric_id(request.video_id.as_deref()) else {
     return Ok(change_failed("That is not a Facebook video id."));
   };
@@ -299,6 +326,11 @@ pub(crate) async fn meta_cancel_video(
   request: MetaChangeRequest,
 ) -> Result<MetaChangeProof, String> {
   rate_limiter.check_and_record("meta_cancel_video")?;
+  if request.kind.as_deref() == Some("post") {
+    return Ok(
+      crate::meta_media::cancel_page_post(request.video_id.as_deref(), request.credentials).await,
+    );
+  }
   let Some(id) = numeric_id(request.video_id.as_deref()) else {
     return Ok(change_failed("That is not a Facebook video id."));
   };
@@ -461,7 +493,37 @@ pub(crate) struct MetaVideoProof {
   message: String,
 }
 
-fn proof(platform: &str, status: &str, message: impl Into<String>) -> MetaVideoProof {
+impl MetaVideoProof {
+  pub(crate) fn posted(
+    platform: &str,
+    post_id: String,
+    url: Option<String>,
+    message: &str,
+  ) -> Self {
+    MetaVideoProof {
+      post_id: Some(post_id),
+      url,
+      ..proof(platform, "posted", message)
+    }
+  }
+
+  pub(crate) fn scheduled(
+    platform: &str,
+    post_id: String,
+    url: Option<String>,
+    at_ms: u64,
+    message: &str,
+  ) -> Self {
+    MetaVideoProof {
+      post_id: Some(post_id),
+      url,
+      publish_at_ms: Some(at_ms),
+      ..proof(platform, "scheduled", message)
+    }
+  }
+}
+
+pub(crate) fn proof(platform: &str, status: &str, message: impl Into<String>) -> MetaVideoProof {
   MetaVideoProof {
     ok: matches!(status, "posted" | "scheduled"),
     platform: platform.to_string(),
@@ -473,7 +535,7 @@ fn proof(platform: &str, status: &str, message: impl Into<String>) -> MetaVideoP
   }
 }
 
-fn auth_query(token: &str, app_secret: &str) -> Vec<(String, String)> {
+pub(crate) fn auth_query(token: &str, app_secret: &str) -> Vec<(String, String)> {
   let mut q = vec![("access_token".to_string(), token.trim().to_string())];
   if let Some(p) = meta_appsecret_proof_with(app_secret, token.trim()) {
     q.push(("appsecret_proof".to_string(), p));
@@ -481,7 +543,10 @@ fn auth_query(token: &str, app_secret: &str) -> Vec<(String, String)> {
   q
 }
 
-async fn json_or_error(response: reqwest::Response, fallback: &str) -> Result<Value, String> {
+pub(crate) async fn json_or_error(
+  response: reqwest::Response,
+  fallback: &str,
+) -> Result<Value, String> {
   let ok = response.status().is_success();
   let body: Value = response.json().await.unwrap_or(Value::Null);
   if ok {

@@ -29,3 +29,14 @@ describe('BrandEditor posting times', () => {
     expect((screen.getByLabelText('Posting time 1 time') as HTMLInputElement).value).toBe('17:00');
   });
 });
+
+// Phase 3c: each brand chooses its carousel shape.
+it('saves the carousel shape, 4:5 by default', () => {
+  const brand = saveBrand({ name: 'Acme' });
+  render(<BrandEditor brandId={brand.id} onBrand={() => undefined} />);
+  const shape = screen.getByLabelText('Carousel shape') as HTMLSelectElement;
+  expect(shape.value).toBe('4:5');
+  fireEvent.change(shape, { target: { value: '1:1' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save brand' }));
+  expect(getBrand(brand.id)!.carouselShape).toBe('1:1');
+});

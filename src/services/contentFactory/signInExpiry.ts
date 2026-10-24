@@ -6,20 +6,27 @@
 import { metaTokenExpiry } from '../metaPublishService';
 import type { ProjectPost } from './contentTypes';
 
-export type SignInService = 'youtube' | 'meta';
+// Phase 3c: Instagram Login's token lasts 60 days from signing in or renewing it.
+export type SignInService = 'youtube' | 'meta' | 'instagram';
 const KEY = 'alphonso_sign_ins_v1';
 const DAY = 24 * 3_600_000;
-const COUNTED_DAYS: Record<SignInService, number> = { youtube: 7, meta: 60 };
-const WARN_DAYS: Record<SignInService, number> = { youtube: 2, meta: 7 };
-const NAME: Record<SignInService, string> = { youtube: 'YouTube', meta: 'Meta' };
+const COUNTED_DAYS: Record<SignInService, number> = { youtube: 7, meta: 60, instagram: 60 };
+const WARN_DAYS: Record<SignInService, number> = { youtube: 2, meta: 7, instagram: 7 };
+export const SIGN_IN_NAME: Record<SignInService, string> = { youtube: 'YouTube', meta: 'Meta', instagram: 'Instagram' };
+const NAME = SIGN_IN_NAME;
 
-interface SignIns { youtube?: { savedAtMs: number }; meta?: { savedAtMs: number }; youtubePublished?: boolean }
+interface SignIns { youtube?: { savedAtMs: number }; meta?: { savedAtMs: number }; instagram?: { savedAtMs: number }; youtubePublished?: boolean }
 
 function read(): SignIns {
   try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { return {}; }
 }
 function write(next: SignIns): void {
   try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage full */ }
+}
+
+/** When a sign-in was saved: its keys saved in Settings, a sign-in from Settings, or a renewal. */
+export function signedInAt(service: SignInService): number | null {
+  return read()[service]?.savedAtMs ?? null;
 }
 
 /** Called when the YouTube or Meta keys are saved in Settings. */
@@ -43,6 +50,9 @@ export async function getSignInExpiry(service: SignInService, nowMs = Date.now()
     if (saved.youtubePublished || !saved.youtube) return { expiresAtMs: null, exact: false };
     return { expiresAtMs: saved.youtube.savedAtMs + COUNTED_DAYS.youtube * DAY, exact: false };
   }
+  if (service === 'instagram') {
+    return { expiresAtMs: saved.instagram ? saved.instagram.savedAtMs + COUNTED_DAYS.instagram * DAY : null, exact: false };
+  }
   const exact = await metaTokenExpiry().catch(() => null);
   if (typeof exact === 'number') return { expiresAtMs: exact, exact: true };
   return { expiresAtMs: saved.meta ? saved.meta.savedAtMs + COUNTED_DAYS.meta * DAY : null, exact: false };
@@ -51,8 +61,11 @@ export async function getSignInExpiry(service: SignInService, nowMs = Date.now()
 /** Whether Alphonso still needs this service's sign-in at the post's time. */
 function needsSignInAt(post: ProjectPost, service: SignInService): boolean {
   if (['posted', 'posting', 'check', 'cancelled', 'locked_private'].includes(post.status)) return false;
-  const platform = post.platform === 'youtube' ? 'youtube' : 'meta';
-  if (platform !== service) return false;
+  if (service === 'instagram') {
+    if (post.platform !== 'instagram') return false;
+  } else if ((post.platform === 'youtube' ? 'youtube' : 'meta') !== service) {
+    return false;
+  }
   const onPlatform = post.status === 'scheduled' && !!post.platformId && post.platform !== 'instagram';
   return !onPlatform;
 }
@@ -62,7 +75,7 @@ export interface SignInWarning { service: SignInService; message: string; expire
 /** Sign-ins running out soon (YouTube 2 days, Meta 7), run out, or with posts due after them. */
 export async function signInWarnings(nowMs: number, posts: ProjectPost[]): Promise<SignInWarning[]> {
   const warnings: SignInWarning[] = [];
-  for (const service of ['youtube', 'meta'] as SignInService[]) {
+  for (const service of ['youtube', 'meta', 'instagram'] as SignInService[]) {
     const { expiresAtMs, exact } = await getSignInExpiry(service, nowMs);
     if (expiresAtMs === null) continue;
     const postsAfter = posts.filter((p) => needsSignInAt(p, service) && p.scheduledAtMs > expiresAtMs).map((p) => p.id);

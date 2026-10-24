@@ -62,7 +62,7 @@ export async function executePublishStep(assignment: PublishAssignment, nowMs = 
       }
     }
     const sent = (outcome.status === 'posted' || outcome.status === 'scheduled') && !(post.platform === 'instagram' && post.scheduledAtMs > nowMs + 60_000);
-    updatePost(projectId, post.id, { status: outcome.status, link: outcome.link, platformId: outcome.platformId, reason: outcome.reason, ...(sent ? { sentAtMs: nowMs } : {}) });
+    updatePost(projectId, post.id, { status: outcome.status, link: outcome.link, platformId: outcome.platformId, reason: outcome.reason, ...(outcome.folder ? { folder: outcome.folder } : {}), ...(sent ? { sentAtMs: nowMs } : {}) });
     outcomes.push({ id: post.id, platform: post.platform, piece: post.piece, status: outcome.status, link: outcome.link, reason: outcome.reason });
   }
 
@@ -73,6 +73,7 @@ export async function executePublishStep(assignment: PublishAssignment, nowMs = 
     count('locked_private') && `${count('locked_private')} kept private by YouTube (a reminder comes at the time)`,
     count('check') && `${count('check')} to check`,
     count('over_limit') && `${count('over_limit')} waiting for the daily limit`,
+    count('by_hand') && `${count('by_hand')} to post by hand (no storage is set up; the files are in the project's ready-to-post folder)`,
     count('failed') && `${count('failed')} failed`,
   ].filter(Boolean);
   const summary = `Posts: ${parts.join(', ')}.`;

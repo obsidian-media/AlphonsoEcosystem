@@ -13,6 +13,7 @@ export const POST_STATUS_LABEL: Record<PostStatus, string> = {
   draft: 'Not approved yet', approved: 'Approved', scheduled: 'Scheduled', posting: 'Posting…', posted: 'Posted',
   locked_private: 'Kept private by YouTube', waiting_app: 'Waiting for the app', failed: 'Failed', check: 'Check it',
   cancelled: 'Cancelled', ask: 'Waiting for you', over_limit: 'Waiting: daily limit',
+  by_hand: 'Post by hand',
 };
 
 const PLATFORMS: PostPlatform[] = ['youtube', 'instagram', 'facebook'];
@@ -23,7 +24,12 @@ const LEAD_MS = 15 * MINUTE;
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 interface CampaignCopy { platform?: string; caption?: string; hashtags?: string[]; description?: string; title?: string }
-interface Campaign { platforms?: CampaignCopy[]; short?: { title?: string; caption?: string; hashtags?: string[] } }
+interface Campaign {
+  platforms?: CampaignCopy[];
+  short?: { title?: string; caption?: string; hashtags?: string[] };
+  /** The carousel's own copy (phase 3c). */
+  carousel?: { caption?: string; hashtags?: string[] };
+}
 export interface NovaTime { platform?: string; dayOfWeek?: string; time?: string }
 
 function platformOf(name: string): PostPlatform | null {
@@ -93,7 +99,10 @@ export function nextPostTime(
 export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: number): { posts: ProjectPost[]; notes: string[] } {
   const notes: string[] = [];
   const assembled = (chosenVersionOf(project, 'assemble')?.output as { miya?: { outputs?: { aspect: string; path: string }[] } } | undefined)?.miya?.outputs || [];
-  if (!assembled.length) return { posts: [], notes: ['Run the Finished video step first: there is no video to post yet.'] };
+  const NO_VIDEO = 'Run the Finished video step first: there is no video to post yet.';
+  // A carousel can go out without a video (phase 3c); with neither there is nothing to post.
+  if (!assembled.length && !chosenVersionOf(project, 'carousel')) return { posts: [], notes: [NO_VIDEO] };
+  if (!assembled.length) notes.push(NO_VIDEO);
   const wide = assembled.find((o) => o.aspect === '16x9')?.path;
   const tall = assembled.find((o) => o.aspect === '9x16')?.path;
   const thumbs = (chosenVersionOf(project, 'thumbnail')?.output as { pictures?: { status: string; relativePath?: string }[] } | undefined)?.pictures || [];
@@ -106,7 +115,7 @@ export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: 
   const { platforms, note } = wantedPlatforms(project, brand);
   if (note) notes.push(note);
   const rows: Omit<ProjectPost, 'id' | 'scheduledAtMs' | 'status'>[] = [];
-  for (const platform of platforms) {
+  for (const platform of assembled.length ? platforms : []) {
     const copy = copyFor(platform);
     if (platform === 'youtube') {
       if (wide) {
@@ -126,6 +135,23 @@ export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: 
       rows.push({ platform, piece: 'reel', file: tall, title: project.name, caption: copy.caption || '', hashtags: copy.hashtags || [] });
     } else {
       notes.push(`No ${platform === 'instagram' ? 'Instagram' : 'Facebook'} Reel: the finished video has no 9:16 version.`);
+    }
+  }
+  // A carousel (phase 3c): an Instagram carousel and a Facebook photo post, with its own copy.
+  const carouselOutput = chosenVersionOf(project, 'carousel')?.output as { pictures?: { status: string; relativePath?: string }[] } | undefined;
+  if (carouselOutput) {
+    const pictures = carouselOutput.pictures || [];
+    const files = pictures.map((p) => (p.status === 'done' ? p.relativePath || '' : ''));
+    if (!pictures.length || files.some((f) => !f)) {
+      notes.push('No carousel posts yet: some slides have no picture. Check them in Carousel Studio.');
+    } else {
+      for (const platform of platforms.filter((p) => p !== 'youtube')) {
+        const copy = copyFor(platform);
+        rows.push({
+          platform, piece: 'carousel', file: files[0], files, title: project.name,
+          caption: campaign.carousel?.caption || copy.caption || '', hashtags: campaign.carousel?.hashtags || copy.hashtags || [],
+        });
+      }
     }
   }
   const taken: number[] = [];
@@ -157,7 +183,7 @@ export function updatePost(projectId: string, postId: string, patch: Partial<Pro
   let result: { ok: boolean; reason?: string } = { ok: false, reason: 'That post was not found.' };
   changeProjectPosts(projectId, (posts) => posts.map((post) => {
     if (post.id !== postId) return post;
-    const statusOnly = Object.keys(patch).every((k) => ['status', 'link', 'platformId', 'reason', 'sentAtMs'].includes(k));
+    const statusOnly = Object.keys(patch).every((k) => ['status', 'link', 'platformId', 'reason', 'sentAtMs', 'folder'].includes(k));
     if (!statusOnly) {
       if (GONE.includes(post.status)) {
         result = { ok: false, reason: `This post has already ${post.status === 'cancelled' ? 'been cancelled' : 'gone out'}.` };

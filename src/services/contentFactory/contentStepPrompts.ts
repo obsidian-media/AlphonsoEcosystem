@@ -42,7 +42,7 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
     role: 'Maria, Alphonso\'s quality and governance agent',
     ask: 'Score each piece 1-10 side by side with the brand\'s reference posts (say which one you compared it to), list its weak points, and list any honesty problems. Be strict: a 7 means it could sit next to the references.',
     keys: '{"pieces":[{"pieceId":"which piece, e.g. script or thumbnail-t1","score":"a whole number from 1 to 10","comparedTo":"the reference post you compared it with","weakPoints":["a weak point"]}],"honestyIssues":["an honesty problem, if any"]}',
-    uses: ['research', 'script', 'scenes', 'thumbnail', 'campaign'],
+    uses: ['research', 'script', 'scenes', 'thumbnail', 'carousel', 'campaign'],
   },
   creative_scenes: {
     role: 'Miya, Alphonso\'s creative director',
@@ -56,11 +56,17 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
     keys: '{"concepts":[{"id":"t1, t2 or t3","headline":"at most 6 words","imagePrompt":"what the picture shows, in detail, with no text in it","layout":"left, right or center: where the headline goes"}]} (exactly 3 concepts in one list)',
     uses: ['research', 'script'],
   },
+  creative_carousel: {
+    role: 'Miya, Alphonso\'s creative director',
+    ask: 'Write a carousel of 5 to 10 slides from the research and the script: slide 1 is the cover with the hook, then one idea per slide, and the last slide is the call to action. Each slide has a headline of at most 8 words, a body of at most 25 words, and an image prompt for its picture (no text in the picture).',
+    keys: '{"slides":[{"headline":"at most 8 words","body":"at most 25 words","imagePrompt":"what the picture shows, in detail, with no text in it"}]} (5 to 10 slides in one list)',
+    uses: ['research', 'script'],
+  },
   creative_campaign: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Write the campaign: for each platform a caption, hashtags and a description within that platform\'s limits; the YouTube Short\'s own title, caption and hashtags (it is a separate piece made from the 9:16 video); ad copy for Meta, Google and YouTube; and suggested publishing dates.',
-    keys: '{"platforms":[{"platform":"the platform","caption":"the caption","hashtags":["#a-hashtag"],"description":"the description"}],"ads":[{"network":"meta, google or youtube","headline":"the ad headline","body":"the ad text"}],"short":{"title":"the Short\'s title, at most 100 characters","caption":"the Short\'s description","hashtags":["#a-hashtag"]},"calendar":[{"platform":"the platform","suggestedAt":"day and time","reason":"why then"}]}',
-    uses: ['research', 'script', 'thumbnail'],
+    ask: 'Write the campaign: for each platform a caption, hashtags and a description within that platform\'s limits; the YouTube Short\'s own title, caption and hashtags (it is a separate piece made from the 9:16 video); when there is a carousel, its own caption and hashtags (it reads differently from a Reel); ad copy for Meta, Google and YouTube; and suggested publishing dates.',
+    keys: '{"platforms":[{"platform":"the platform","caption":"the caption","hashtags":["#a-hashtag"],"description":"the description"}],"ads":[{"network":"meta, google or youtube","headline":"the ad headline","body":"the ad text"}],"short":{"title":"the Short\'s title, at most 100 characters","caption":"the Short\'s description","hashtags":["#a-hashtag"]},"carousel":{"caption":"the carousel\'s caption, only when there is a carousel","hashtags":["#a-hashtag"]},"calendar":[{"platform":"the platform","suggestedAt":"day and time","reason":"why then"}]}',
+    uses: ['research', 'script', 'thumbnail', 'carousel'],
   },
   strategy_timing: {
     role: 'Nova, Alphonso\'s opportunity analyst',
@@ -153,6 +159,8 @@ const VALIDATORS: Record<string, (j: Json) => boolean> = {
   creative_scenes: (j) => isText(j.style) && every(j.scenes, 1, (s) => isText(s.id) && isText(s.imagePrompt) && isText(s.description)),
   creative_thumbnails: (j) => list(j.concepts, 3) && (j.concepts as unknown[]).length === 3
     && every(j.concepts, 3, (c) => isText(c.headline) && words(c.headline) <= 6 && isText(c.imagePrompt) && ['left', 'right', 'center'].includes(String(c.layout))),
+  creative_carousel: (j) => list(j.slides, 5) && (j.slides as unknown[]).length <= 10
+    && every(j.slides, 5, (sl) => isText(sl.headline) && isText(sl.body) && isText(sl.imagePrompt) && words(sl.headline) <= 8 && words(sl.body) <= 25),
   creative_campaign: (j) => every(j.platforms, 1, (p) => isText(p.platform) && isText(p.caption) && Array.isArray(p.hashtags)) && Array.isArray(j.ads) && Array.isArray(j.calendar),
   strategy_timing: (j) => every(j.times, 1, (t) => isText(t.platform) && isText(t.time)),
   security_content_check: (j) => typeof j.ok === 'boolean' && Array.isArray(j.issues),
@@ -224,6 +232,16 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
     // Only links Hector actually found; a model without internet invents them.
     const allowed = new Set(options.allowedUrls.map((u) => u.trim()));
     answer = { ...answer, references: (answer.references as Json[]).filter((r) => allowed.has(String(r?.url || '').trim())) };
+  }
+  if (actionType === 'creative_carousel' && Array.isArray(answer.slides)) {
+    // Ids by position (slide 1 is the cover); over-long text is cut to the limits.
+    const cut = (v: unknown, max: number) => String(v ?? '').trim().split(/\s+/).filter(Boolean).slice(0, max).join(' ');
+    answer = {
+      ...answer,
+      slides: (answer.slides as Json[]).map((sl, i) => ({
+        ...sl, id: `c${i + 1}`, cover: i === 0, headline: cut(sl?.headline, 8), body: cut(sl?.body, 25), imagePrompt: String(sl?.imagePrompt ?? '').trim(),
+      })),
+    };
   }
   if (actionType === 'creative_scenes' && Array.isArray(answer.scenes)) {
     // Pictures are matched to scenes by id, so ids must be unique.

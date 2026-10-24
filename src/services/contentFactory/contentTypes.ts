@@ -22,6 +22,8 @@ export interface ContentBrand {
   lessons: { atMs: number; text: string; source: 'rejection' | 'user' }[];
   pastScripts: string;
   qualityThreshold: number;
+  /** The shape of the brand's carousels (phase 3c); 4:5 when not set. */
+  carouselShape?: CarouselShape;
   createdAtMs: number;
   updatedAtMs: number;
 }
@@ -41,12 +43,28 @@ export function hasOwnKey(record: object, key: string): boolean {
 
 export type StepId =
   | 'brief' | 'research' | 'script' | 'review' | 'scenes' | 'thumbnail'
-  | 'voice' | 'music' | 'broll' | 'clips' | 'assemble' | 'campaign' | 'quality' | 'publish';
+  | 'voice' | 'music' | 'broll' | 'clips' | 'assemble' | 'carousel' | 'campaign' | 'quality' | 'publish';
 
-/** Voice, Music, B-roll and Assemble make the finished video file (phase 2a). */
+/**
+ * Voice, Music, B-roll and Assemble make the finished video file (phase 2a). The carousel
+ * (phase 3c) sits just before Campaign: it follows the thumbnails in a run, but making one
+ * must not put the voice-over or the finished video out of date.
+ */
 export const STEP_ORDER: StepId[] = [
-  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'campaign', 'quality', 'publish',
+  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'carousel', 'campaign', 'quality', 'publish',
 ];
+
+/** One carousel slide (phase 3c): slide 1 is the cover. */
+export interface CarouselSlide {
+  id: string;
+  cover: boolean;
+  headline: string;
+  body: string;
+  imagePrompt: string;
+}
+
+/** A brand's carousel shape: 4:5 portrait (1080×1350) or 1:1 square (1080×1080). */
+export type CarouselShape = '4:5' | '1:1';
 
 export type StepStatus = 'not_started' | 'running' | 'done' | 'failed' | 'interrupted' | 'needs_approval' | 'approved' | 'sent_back';
 
@@ -145,14 +163,18 @@ export interface PostingSlot {
 
 export type PostStatus =
   | 'draft' | 'approved' | 'scheduled' | 'posting' | 'posted' | 'locked_private'
-  | 'waiting_app' | 'failed' | 'check' | 'cancelled' | 'ask' | 'over_limit';
+  | 'waiting_app' | 'failed' | 'check' | 'cancelled' | 'ask' | 'over_limit' | 'by_hand';
 
 /** One post of a project (phase 3a). `file` and `thumbnail` are relative to the output folder. */
 export interface ProjectPost {
   id: string;
   platform: PostPlatform;
-  piece: 'video' | 'short' | 'reel';
+  piece: 'video' | 'short' | 'reel' | 'carousel';
   file: string;
+  /** A carousel's slides in order (phase 3c); `file` is the first. */
+  files?: string[];
+  /** Where a post Alphonso could not send was saved to post by hand (phase 3c). */
+  folder?: string;
   thumbnail?: string;
   title: string;
   caption: string;

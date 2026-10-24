@@ -236,6 +236,26 @@ export function setMainMoment(id: string, sceneId: string, on: boolean): Content
   });
 }
 
+/**
+ * Moves a carousel slide (and its picture) in the chosen version (phase 3c). Nothing goes
+ * out of date and no new version is made; the first slide is always the cover.
+ */
+export function reorderSlides(id: string, from: number, to: number): ContentProject {
+  return update(id, (p) => {
+    const chosen = p.steps.carousel.versions.find((v) => v.version === p.steps.carousel.chosenVersion);
+    const output = chosen?.output as { miya?: { slides?: { id: string; cover?: boolean }[] }; pictures?: { sceneId: string }[] } | undefined;
+    const slides = output?.miya?.slides;
+    if (!slides || from < 0 || to < 0 || from >= slides.length || to >= slides.length) throw new Error('That slide is not in the chosen carousel.');
+    const [moved] = slides.splice(from, 1);
+    slides.splice(to, 0, moved);
+    slides.forEach((s, i) => { s.cover = i === 0; });
+    if (output.pictures) {
+      const order = slides.map((s) => s.id);
+      output.pictures.sort((a, b) => order.indexOf(a.sceneId) - order.indexOf(b.sceneId));
+    }
+  });
+}
+
 export function setVersionOutputField(id: string, step: StepId, version: number, field: string, value: unknown): ContentProject {
   return update(id, (p) => {
     const v = p.steps[step].versions.find((item) => item.version === version);

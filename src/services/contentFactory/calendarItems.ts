@@ -43,9 +43,9 @@ export interface CalendarItem {
 export const BRAND_COLORS = ['#30a46c', '#f76b15', '#8e4ec6', '#0090ff', '#e54666', '#12a594', '#ffb224', '#7c66dc'];
 const STUDIO_COLOR = '#8d8d8d';
 
-const NEEDS_YOU: string[] = ['locked_private', 'failed', 'check', 'ask', 'over_limit'];
-const GONE: string[] = ['posted', 'posting', 'check', 'cancelled', 'locked_private'];
-const PIECE: Record<ProjectPost['piece'], string> = { video: 'video', short: 'Short', reel: 'Reel' };
+const NEEDS_YOU: string[] = ['locked_private', 'failed', 'check', 'ask', 'over_limit', 'by_hand'];
+const GONE: string[] = ['posted', 'posting', 'check', 'cancelled', 'locked_private', 'by_hand'];
+const PIECE: Record<ProjectPost['piece'], string> = { video: 'video', short: 'Short', reel: 'Reel', carousel: 'carousel' };
 
 /** A brand's colour (its first palette colour, else a fixed one by order) and initials. */
 export function brandMarker(brand: Pick<ContentBrand, 'name' | 'palette'>, index: number): { color: string; initials: string } {

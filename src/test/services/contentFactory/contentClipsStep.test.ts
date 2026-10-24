@@ -59,10 +59,10 @@ beforeEach(() => {
 
 // Miya content factory phase 2b: the AI clips step.
 describe('the clips step in the plan', () => {
-  it('sits after Stock clips, before the finished video; 17 template steps (with Publish, phase 3a)', () => {
+  it('sits after Stock clips, before the finished video; 18 template steps (Publish, phase 3a; Carousel, phase 3c)', () => {
     expect(STEP_ORDER.slice(STEP_ORDER.indexOf('broll'), STEP_ORDER.indexOf('assemble') + 1)).toEqual(['broll', 'clips', 'assemble']);
     const steps = getTemplate('content_video')!.steps;
-    expect(steps).toHaveLength(17);
+    expect(steps).toHaveLength(18);
     const byId = Object.fromEntries(steps.map((s) => [s.stepId, s]));
     expect(byId.clips).toMatchObject({ agent: 'miya', actionType: 'creative_video_clips', needs: ['scenes', 'broll'] });
     expect(byId.assemble.needs).toEqual(['voice', 'music', 'broll', 'clips']);

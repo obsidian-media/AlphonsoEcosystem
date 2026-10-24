@@ -266,6 +266,17 @@ export const DEFAULT_CONNECTORS = [
     disabledReason: 'Coverr API key is not configured.'
   },
   {
+    // Content factory phase 3c: the user's own S3-compatible bucket, optional, used only
+    // to hand a file to a platform by a link that works for an hour.
+    id: 'media_storage',
+    name: 'Your storage',
+    status: 'not_configured',
+    transport: 's3_compatible_storage',
+    requiredEnv: ['STORAGE_ENDPOINT', 'STORAGE_BUCKET', 'STORAGE_ACCESS_KEY', 'STORAGE_SECRET_KEY'],
+    permissions: ['media_staging'],
+    disabledReason: 'Your storage is not set up (optional).'
+  },
+  {
     id: 'deepseek',
     name: 'DeepSeek',
     status: 'not_configured',

@@ -1,5 +1,6 @@
 /**
  * auth-meta.mjs
+ * Developers only: users sign in from Settings → Connectors → Meta ("Sign in to Facebook").
  * Gets Meta (Facebook / Instagram / WhatsApp) long-lived tokens and writes them to .env.
  * Covers: Facebook Pages, Instagram Business, WhatsApp Business Cloud API.
  *

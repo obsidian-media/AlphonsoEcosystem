@@ -21,6 +21,7 @@ export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
   broll: 'broll',
   clips: 'clips',
   assemble: 'assemble',
+  carousel: 'carousel',
   campaign: 'campaign',
   timing: 'campaign',
   quality: 'quality',
@@ -47,6 +48,11 @@ function runwayEstimate(project: ContentProject): number | null {
   return estimateRunwayUsd(chosen.map((s) => Math.max(0, Number(s.endSec || 0) - Number(s.startSec || 0))));
 }
 
+/** The brief asks for a carousel (its "What to make" or its format says so; phase 3c). */
+export function briefWantsCarousel(brief: { outputs?: string[]; format?: string }): boolean {
+  return [...(brief.outputs || []), String(brief.format || '')].some((o) => /carousel/i.test(String(o)));
+}
+
 /**
  * The project's plan from `from` (default research) onward, or with `only`
  * just that factory step's steps. Links to steps not in the plan are dropped.
@@ -63,7 +69,10 @@ export function contentProjectPlanSteps(
   const included = template.steps.filter((s) => {
     const factoryStep = CONTENT_TEMPLATE_STEPS[s.stepId];
     if (!factoryStep) return false;
-    return options.only ? factoryStep === from : STEP_ORDER.indexOf(factoryStep) >= start;
+    if (options.only) return factoryStep === from;
+    // A carousel is made only when the brief asks for one; it can always be run on its own.
+    if (factoryStep === 'carousel' && !briefWantsCarousel(project.brief)) return false;
+    return STEP_ORDER.indexOf(factoryStep) >= start;
   });
   const ids = new Set(included.map((s) => s.stepId));
   const hasReview = included.some((s) => CONTENT_TEMPLATE_STEPS[s.stepId] === 'review');

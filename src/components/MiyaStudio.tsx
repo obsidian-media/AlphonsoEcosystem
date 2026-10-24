@@ -4,6 +4,7 @@ import {
   Bot,
   Clapperboard,
   FileVideo,
+  GalleryHorizontal,
   Lightbulb,
   Megaphone,
   Palette,
@@ -193,13 +194,14 @@ const studioTabs: Array<{ id: string; label: string; icon: typeof FileVideo }> =
   { id: 'script', label: 'Script Studio', icon: FileVideo },
   { id: 'scene', label: 'Scene Builder', icon: Clapperboard },
   { id: 'thumbnail', label: 'Thumbnail Studio', icon: Palette },
+  { id: 'carousel', label: 'Carousel Studio', icon: GalleryHorizontal },
   { id: 'campaign', label: 'Campaign Studio', icon: Megaphone },
   { id: 'brand', label: 'Brands', icon: Bot },
   { id: 'package', label: 'Quick package', icon: Lightbulb },
   { id: 'prompt', label: 'Prompt Builder', icon: Sparkles }
 ];
 
-const FACTORY_TABS: ContentFactoryTab[] = ['script', 'scene', 'thumbnail', 'campaign'];
+const FACTORY_TABS: ContentFactoryTab[] = ['script', 'scene', 'thumbnail', 'carousel', 'campaign'];
 
 const defaultPipeline: PipelineInput = {
   idea: '',

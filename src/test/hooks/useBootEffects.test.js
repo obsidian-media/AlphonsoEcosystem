@@ -35,6 +35,10 @@ vi.mock('../../services/escalationCallService', () => ({
   startEscalationPolling: vi.fn(() => vi.fn()),
 }));
 
+vi.mock('../../services/mediaStorageService', () => ({
+  cleanOldStaged: vi.fn(async () => 0),
+}));
+
 vi.mock('../../constants/appConstants', () => ({
   INITIAL_CONVERSATION_ID: 'default-session',
 }));
@@ -46,6 +50,7 @@ import { getConnectorCredential } from '../../services/connectors/connectorAuth'
 import { startTelegramCompanion } from '../../services/telegramCompanionService';
 import { startWhatsAppCompanion } from '../../services/whatsappCompanionService';
 import { startEscalationPolling } from '../../services/escalationCallService';
+import { cleanOldStaged } from '../../services/mediaStorageService';
 
 describe('useBootEffects', () => {
   const mockSetSettings = vi.fn();
@@ -423,6 +428,16 @@ describe('useBootEffects', () => {
       });
       const secondCallCount = invoke.mock.calls.filter(c => c[0] === 'kv_get').length;
       expect(secondCallCount).toBe(firstCallCount);
+    });
+  });
+
+  describe('Staged storage files (phase 3c)', () => {
+    it('deletes leftovers older than a day once the saved keys have loaded', async () => {
+      renderHook(() => useBootEffects(defaultProps));
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+      expect(cleanOldStaged).toHaveBeenCalledTimes(1);
     });
   });
 

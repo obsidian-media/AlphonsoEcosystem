@@ -121,6 +121,14 @@ export function BrandEditor({ brandId, onBrand }: { brandId: string; onBrand(id:
             onChange={(e) => setDraft({ ...draft, qualityThreshold: Math.min(10, Math.max(1, Number(e.target.value) || 7)) })} />
         </label>
       </div>
+      <label className="block text-[11px] text-(--text-3)">
+        Carousel shape
+        <select aria-label="Carousel shape" className={field} value={draft.carouselShape || '4:5'}
+          onChange={(e) => setDraft({ ...draft, carouselShape: e.target.value === '1:1' ? '1:1' : '4:5' })}>
+          <option value="4:5">4:5 portrait (1080×1350)</option>
+          <option value="1:1">1:1 square (1080×1080)</option>
+        </select>
+      </label>
       <PostingSlotsEditor slots={draft.postingSlots || []} onChange={(postingSlots) => setDraft({ ...draft, postingSlots })} />
       {text('honestyRules', 'Brand rules (what may and may not be said)', true)}
       <label className="block text-[11px] text-(--text-3)">

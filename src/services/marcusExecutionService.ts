@@ -14,6 +14,8 @@ import { appendNotification } from './notificationService';
 import { listProjects } from './contentFactory/contentProjectService';
 import { signInWarnings } from './contentFactory/signInExpiry';
 import { checkDailyLimit } from './contentFactory/dailyLimits';
+import { BY_HAND_REMINDER } from './contentFactory/readyToPost';
+import { SIGN_IN_NAME } from './contentFactory/signInExpiry';
 import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -620,9 +622,12 @@ async function tell(type: 'success' | 'error' | 'info', title: string, message: 
   } catch { /* not set up, or offline */ }
 }
 
-function setPost(item: ScheduledPublish, patch: { status: PostStatus; link?: string; platformId?: string; reason?: string; sentAtMs?: number }): void {
+function setPost(item: ScheduledPublish, patch: { status: PostStatus; link?: string; platformId?: string; reason?: string; sentAtMs?: number; folder?: string }): void {
   if (!item.projectId || !item.postId) return;
-  try { updatePost(item.projectId, item.postId, patch); } catch { /* the project was deleted */ }
+  // Only what the post keeps (a result's setupRequired is for the screen, not the post).
+  const { status, link, platformId, reason, sentAtMs, folder } = patch;
+  const kept = Object.fromEntries(Object.entries({ status, link, platformId, reason, sentAtMs, folder }).filter(([, v]) => v !== undefined));
+  try { updatePost(item.projectId, item.postId, kept); } catch { /* the project was deleted */ }
 }
 
 /**
@@ -683,6 +688,9 @@ async function sendContentPost(item: ScheduledPublish, nowMs: number): Promise<v
   const lateNote = late ? ` It went out late: Alphonso was closed at ${new Date(item.scheduledAt).toLocaleString()}.` : '';
   if (result.status === 'posted' || result.status === 'scheduled') {
     await tell('success', `${result.status === 'posted' ? 'Posted on' : 'Scheduled on'} ${where}: ${post.title}`, `${result.link || ''}${lateNote}`.trim());
+  } else if (result.status === 'by_hand' && result.folder) {
+    // Phase 3c: no storage for a post that needs a link; its files and caption are saved.
+    await tell('info', `Post by hand on ${where}: ${post.title}`, `${BY_HAND_REMINDER(post, result.folder)}${lateNote}`);
   } else {
     await tell('error', `Not posted on ${where}: ${post.title}`, `${result.reason || 'It failed.'}${lateNote}`);
   }
@@ -752,9 +760,14 @@ export async function checkSignIns(nowMs = Date.now()): Promise<void> {
   const d = new Date(nowMs);
   const today = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   try { if (localStorage.getItem(SIGN_IN_CHECKED_KEY) === today) return; localStorage.setItem(SIGN_IN_CHECKED_KEY, today); } catch { return; }
+  // Instagram Login's token is renewed when under 10 days are left (phase 3c).
+  try {
+    const { refreshInstagramIfDue } = await import('./signInService');
+    await refreshInstagramIfDue(nowMs);
+  } catch { /* warned below if it runs out */ }
   const posts = listProjects().flatMap((p) => p.posts || []);
   for (const warning of await signInWarnings(nowMs, posts)) {
-    await tell(warning.expiresAtMs <= nowMs ? 'error' : 'info', `${warning.service === 'youtube' ? 'YouTube' : 'Meta'} sign-in`, warning.message);
+    await tell(warning.expiresAtMs <= nowMs ? 'error' : 'info', `${SIGN_IN_NAME[warning.service]} sign-in`, warning.message);
   }
 }
 

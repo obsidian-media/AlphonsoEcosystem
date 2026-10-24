@@ -1,5 +1,6 @@
 /**
  * auth-youtube.mjs
+ * Developers only: users sign in from Settings → Connectors → YouTube ("Sign in to YouTube").
  * Gets a YouTube OAuth refresh token and writes it to .env.
  *
  * Setup (one-time, ~5 min):

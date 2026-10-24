@@ -33,13 +33,16 @@ mod companion_server;
 mod companion_types;
 mod connector_commands;
 mod kv_store;
+mod media_storage;
 mod media_tools;
 mod memory_graph;
 mod memory_graph_prune;
 mod memory_store;
+mod meta_media;
 mod meta_publish;
 mod meta_video;
 mod native_proof;
+mod oauth_signin;
 mod ollama;
 mod os_keychain_store;
 mod plugin_runtime;
@@ -771,6 +774,16 @@ pub fn run() {
       media_tools::content_assemble_video,
       media_tools::content_whisper_words,
       media_tools::content_allow_media_folder,
+      media_tools::content_ready_to_post,
+      media_storage::storage_put_file,
+      media_storage::storage_delete,
+      media_storage::storage_list_staged,
+      media_storage::storage_test,
+      meta_media::meta_instagram_publish_by_url,
+      meta_media::meta_facebook_photo_post,
+      oauth_signin::oauth_sign_in,
+      oauth_signin::oauth_finish_pasted,
+      oauth_signin::instagram_refresh_token,
       comfyui_video_models::comfyui_video_models,
       comfyui_video_models::comfyui_install_video_model,
       comfyui_proxy::comfyui_upload_image,

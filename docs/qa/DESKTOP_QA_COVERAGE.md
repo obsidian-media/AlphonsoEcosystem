@@ -120,7 +120,7 @@ a finding.
 | Work | Projects (Project Execution) | E2E | `project-execution.e2e.mjs` | Setup/Agents/Execution tabs; Bug 5 (heading count, "unknown" owner) |
 | Work | Content (Content Studio) | E2E | `content.e2e.mjs`, `content-image.e2e.mjs` | video step (Runway: low priority), publish step, brief fallback label (Bug 9) |
 | Work | Automation | E2E (Builder) | `workflow-builder.e2e.mjs` | Overview, Schedules, Dead Letter tabs; toggling operations |
-| Work | Creative (Miya Studio) | E2E (package; the finished video since content factory phase 2a: `content-video.e2e.mjs` runs Voice, Stock clips and Music in the real app (each says what it needs when Kokoro, AudioCraft or a stock key is missing) and a real Finished video with the bundled ffmpeg: both MP4s at the voice's length, the captions file, and both videos loading in the Scene Builder's players) | `creative.e2e.mjs`, `content-video.e2e.mjs`, `content-calendar.e2e.mjs` (phase 3b: two brands' posts and a Content Studio draft show on the month, the draft is dragged to another day, the side panel moves an Instagram post and its send, then cancels both; nothing is posted), `content-publish.e2e.mjs` (phase 3a: the Posts list is made from the finished video and campaign, a time is changed, "Approve and schedule" runs Publish with one approval and hands the Instagram Reel to Marcus's runner, cancelling cancels its send; nothing is posted), `content-clips.e2e.mjs` (phase 2b: the Main moment switch and AI clip settings are saved; the AI clips step makes a real clip with the installed local video model and it plays in the Scene Builder, or says what to set up; Runtime Hub's ComfyUI card shows the video models and the card's memory) | Miya Studio's own image and video buttons; a real Kokoro voice-over, MusicGen music and stock clips with keys (each needs an install or a key the test profile does not have) |
+| Work | Creative (Miya Studio) | E2E (package; the finished video since content factory phase 2a: `content-video.e2e.mjs` runs Voice, Stock clips and Music in the real app (each says what it needs when Kokoro, AudioCraft or a stock key is missing) and a real Finished video with the bundled ffmpeg: both MP4s at the voice's length, the captions file, and both videos loading in the Scene Builder's players) | `creative.e2e.mjs`, `content-video.e2e.mjs`, `content-carousel.e2e.mjs` (phase 3c: Carousel Studio shows five seeded slides, the Posts list has the Instagram carousel with its own caption, and with no storage approving it saves the slides and caption.txt to the ready-to-post folder; nothing is posted), `content-calendar.e2e.mjs` (phase 3b: two brands' posts and a Content Studio draft show on the month, the draft is dragged to another day, the side panel moves an Instagram post and its send, then cancels both; nothing is posted), `content-publish.e2e.mjs` (phase 3a: the Posts list is made from the finished video and campaign, a time is changed, "Approve and schedule" runs Publish with one approval and hands the Instagram Reel to Marcus's runner, cancelling cancels its send; nothing is posted), `content-clips.e2e.mjs` (phase 2b: the Main moment switch and AI clip settings are saved; the AI clips step makes a real clip with the installed local video model and it plays in the Scene Builder, or says what to set up; Runtime Hub's ComfyUI card shows the video models and the card's memory) | Miya Studio's own image and video buttons; a real Kokoro voice-over, MusicGen music and stock clips with keys (each needs an install or a key the test profile does not have) |
 | Research | Research Desk (Hector) | E2E | `research.e2e.mjs` | raw CSS in snippets (Bug 3), export Markdown/PDF/PowerPoint, re-synthesize, depth toggle, bookmarks |
 | Boardroom | Boardroom | E2E | `boardroom.e2e.mjs` | chained mentions, Stop, Retry, Acknowledge, Confirm-to-reveal, speaker name (Bug 7) |
 | System | Orchestrator | Visit | `smoke` | Command, Packets, Monitor tabs; WhatsApp status (Bug 8) |
@@ -179,6 +179,8 @@ needs the owner's account and is marked separately.
 | whatsapp | — | — |
 | youtube | unit tests (scheduled upload, thumbnail, read-back of a channel kept private) | a real upload with the owner's channel |
 | meta (phase 3a) | unit tests (local Reels, Facebook schedule window, Meta's status) | a real Reel and a scheduled Facebook post with the owner's Page |
+| meta: Instagram Login, carousels, photo posts (phase 3c) | unit tests (request building, route choice, by-link posting, Post by hand); desktop spec without storage | the combined live check below |
+| media_storage (phase 3c) | unit tests (SigV4 against AWS's examples, links, staging and clean-up) | the combined live check below |
 | mobile_bridge | — | low priority (phone) |
 | chatgpt | — | — |
 | claude | — | — |
@@ -213,6 +215,20 @@ needs the owner's account and is marked separately.
 | Content Studio job: draft → image → publish | E2E up to image | publish (needs accounts) |
 | Hector research → report → export | E2E up to report | export formats |
 | Pull a new model from the app | — | the Pull box in the model picker |
+
+### Combined live check: publishing (phases 3a + 3b + 3c)
+
+Run once with the owner's accounts, in this order, on a real build. Nothing here is
+covered by a test with real accounts yet.
+
+1. Sign in from Settings → Connectors: Sign in to YouTube, Sign in to Facebook (choose the Page), Sign in with Instagram. Each saves its keys, with no terminal.
+2. Your storage: fill in a bucket and press Test: upload, link and delete each say "worked".
+3. Publish a test Reel to YouTube, Instagram and Facebook from a project (Approve and schedule): each post says what the platform did, with its link.
+4. On the Calendar: move a scheduled YouTube video and a scheduled Facebook Reel, then cancel them; the platform keeps the new time, and the cancelled ones are gone (YouTube: private).
+5. A carousel: post it to Instagram (by link, through storage) and to Facebook (photos); move and cancel the scheduled Facebook one on the Calendar.
+6. Instagram Login: switch "Post to Instagram" to Instagram Login and post a Reel and a carousel through it.
+7. Without storage (clear its keys): an Instagram carousel becomes "Post by hand", with its files and caption.txt in the project's ready-to-post folder, and the reminder comes at its time.
+8. Check the bucket is empty afterwards.
 
 ## Findings
 

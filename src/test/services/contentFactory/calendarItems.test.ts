@@ -127,3 +127,11 @@ it('a draft or a send cannot be moved into the past', async () => {
   expect((await moveCalendarItem(items.find((i) => i.kind === 'draft')!, todayMidnight)).ok).toBe(true);
   expect(getScheduledPublishes().find((s) => s.content === 'Hello Slack')!.scheduledAt).toBe(at(28, 9));
 });
+
+// Phase 3c: a post saved to post by hand needs you, and can't be dragged.
+it('a post to post by hand needs you', () => {
+  seed();
+  const p = createProject(saveBrand({ name: 'Hand' }).id, 'Hand', { ...emptyBrief(), idea: 'z' });
+  savePosts(p.id, [{ id: 'hand', platform: 'instagram', piece: 'carousel', file: 'f', title: 'Slides', caption: '', hashtags: [], scheduledAtMs: at(29, 9), status: 'by_hand', folder: 'h/ready-to-post/x' }]);
+  expect(listCalendarItems(NOW).find((i) => i.postId === 'hand')).toMatchObject({ needsYou: true, draggable: false });
+});

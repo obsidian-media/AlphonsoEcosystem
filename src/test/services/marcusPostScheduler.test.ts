@@ -71,6 +71,21 @@ describe('content posts in the runner', () => {
     expect(appendNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: expect.stringContaining('Token expired') }));
   });
 
+  it('a due by_hand post sends the reminder once, in the app and on Telegram', async () => {
+    const { projectId, postId } = project();
+    scheduleContentPost({ projectId, postId, platform: 'instagram', scheduledAt: NOW - 60_000 });
+    publishPost.mockResolvedValue({ status: 'by_hand', folder: 'acme/launch/ready-to-post/instagram-reel-v1', reason: 'Saved to post by hand' });
+    await runScheduledPublishes(NOW);
+    await runScheduledPublishes(NOW + 60_000);
+    expect(publishPost).toHaveBeenCalledTimes(1);
+    expect(postOf(projectId)).toMatchObject({ status: 'by_hand', folder: 'acme/launch/ready-to-post/instagram-reel-v1' });
+    expect(getScheduledPublishes()[0].status).toBe('done');
+    const text = 'Time to post Launch on Instagram by hand: the files and caption are in acme/launch/ready-to-post/instagram-reel-v1.';
+    expect(appendNotification).toHaveBeenCalledTimes(1);
+    expect(appendNotification).toHaveBeenCalledWith(expect.objectContaining({ title: 'Post by hand on Instagram: Launch', message: expect.stringContaining(text) }));
+    expect(sendTelegramMessage).toHaveBeenCalledWith(expect.stringContaining(text));
+  });
+
   it('a post not yet due waits', async () => {
     const { projectId, postId } = project('instagram', NOW + HOUR);
     scheduleContentPost({ projectId, postId, platform: 'instagram', scheduledAt: NOW + HOUR });
