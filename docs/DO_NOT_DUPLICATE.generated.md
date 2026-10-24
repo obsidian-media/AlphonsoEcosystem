@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 279 services and 171 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 280 services and 172 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -100,6 +100,7 @@ Source-backed inventory: 279 services and 171 components. Human purpose descript
 | component | `src/components/miya/CarouselStudioTab.tsx` | `CarouselStudioTab`, `CarouselStudioTabProps` |
 | component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab`, `selectContentProject` |
 | component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
+| component | `src/components/miya/HiggsfieldResults.tsx` | `HiggsfieldMedia`, `HiggsfieldResultsList` |
 | component | `src/components/miya/IdeasList.tsx` | `IdeasList` |
 | component | `src/components/miya/PostNumbers.tsx` | `PostNumbers` |
 | component | `src/components/miya/PostsPanel.tsx` | `PostsPanel` |
@@ -292,6 +293,7 @@ Source-backed inventory: 279 services and 171 components. Human purpose descript
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `BrandLesson`, `CarouselShape`, `CarouselSlide`, `Checkpoint`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentIdea`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `MetricsReading`, `PostingSlot`, `PostMetrics`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
 | service | `src/services/contentFactory/engineChoice.ts` | `EngineChoices`, `higgsfieldPictureLimit`, `PaidEngine`, `paidEngineAvailable`, `prepareEngineEstimates`, `projectEngines`, `resolvePictures`, `resolveVoice`, `VoiceChoice` |
+| service | `src/services/contentFactory/higgsfieldByName.ts` | `askHiggsfieldByName`, `checkHiggsfieldResult`, `executeHiggsfieldByName`, `HIGGSFIELD_BY_NAME_NOT_SET_UP`, `HIGGSFIELD_LABEL`, `HiggsfieldKind`, `higgsfieldKindOf`, `higgsfieldPromptOf`, `HiggsfieldResult`, `higgsfieldResultsFor`, `listHiggsfieldResults` |
 | service | `src/services/contentFactory/higgsfieldClip.ts` | `checkHiggsfieldClip`, `estimateHiggsfieldClipsUsd`, `higgsfieldClipAvailable`, `HiggsfieldClipResult`, `makeHiggsfieldClip` |
 | service | `src/services/contentFactory/instagramRoute.ts` | `getInstagramRoute`, `instagramLoginSetUp`, `InstagramRoute`, `pageRouteSetUp`, `savedInstagramRoute`, `setInstagramRoute` |
 | service | `src/services/contentFactory/performanceLessons.ts` | `LESSONS_TASK_MARK`, `proposeLessons` |
@@ -428,7 +430,7 @@ Source-backed inventory: 279 services and 171 components. Human purpose descript
 | service | `src/services/systemHealth/systemHealthService.js` | `getLastBuildStatus`, `getSystemHealthSummary`, `setLastBuildStatus` |
 | service | `src/services/telegramAutoPollService.ts` | `getTelegramAutoPollState`, `getTelegramEnvSafe`, `runSingleTelegramPoll` |
 | service | `src/services/telegramBrowserConnector.ts` | `browserPollTelegram`, `browserSendTelegram`, `getTelegramPollCursor`, `handleTelegramBotCommand`, `parseTelegramCommand`, `setTelegramPollCursor`, `TelegramAuditEntry`, `TelegramBotVerifyResult`, `TelegramMessage`, `TelegramPollResult`, `TelegramSendResult`, `verifyTelegramBotEnvironment` |
-| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `runPushWatcher`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
+| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
 | service | `src/services/toolConnectionService.ts` | `buildToolConnectionPayload`, `listToolConnectionAudit`, `listToolConnections`, `listToolConnectionTypes`, `proveToolConnectionPath`, `removeToolConnection`, `sendToolConnectionMessage`, `SendToolConnectionOptions`, `setToolConnectionStatus`, `testToolConnection`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `ToolConnection`, `ToolConnectionAuditEntry`, `ToolConnectionPatch`, `ToolConnectionResult`, `ToolConnectionType`, `upsertToolConnection` |
 | service | `src/services/toolNotificationDispatcher.ts` | `dispatchReceiptNotifications` |
 | service | `src/services/toolRegistryService.ts` | `executeTool`, `formatToolsForPrompt`, `getAllToolNames`, `getToolDefinition`, `getToolDefinitions`, `ToolArgs`, `ToolContext`, `ToolDefinition`, `ToolExecutionResult`, `ToolParameterSchema` |

@@ -29,6 +29,10 @@ interface RouteResult {
 }
 
 export function detectCreativeIntent(commandText: string): string | null {
+  // Asked for Higgsfield by name (phase 4b): its own paid step, before the general requests.
+  if (/\bhiggsfield\b/i.test(commandText) && /\b(make|create|generate|render|draw|produce)\b/i.test(commandText)) {
+    return /\b(video|clip|reel|animation|film)s?\b/i.test(commandText) ? 'higgsfield_video' : 'higgsfield_picture';
+  }
   for (const [intent, pattern] of Object.entries(CREATIVE_PATTERNS)) {
     if (pattern.test(commandText)) return intent;
   }

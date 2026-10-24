@@ -568,6 +568,25 @@ async function handleReadFileCommand(token, chatId, filename) {
  * the work is claimed at once (so a second press finds it taken) and runs on,
  * and the returned text answers the press.
  */
+/**
+ * Sends a file from the output folder to the paired chat (phase 4b: a Higgsfield result);
+ * one over Telegram's 50 MB limit is named by its folder instead. Returns 'file', 'folder' or 'none'.
+ */
+export async function sendTelegramFileOrFolder({ root, relativePath, caption }) {
+  const token = getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
+  const chatId = getOwnerChatId();
+  if (!token || !chatId) return 'none';
+  const sent = await telegramInvoke('connector_send_telegram_file', { token, chatId: String(chatId), workspaceRoot: root, relativePath, caption });
+  if (sent?.ok) return 'file';
+  if (sent?.tooLarge) {
+    const { outputPath } = await import('./contentFactory/contentProjectFiles');
+    const folder = outputPath(root, relativePath.split('/').slice(0, -1).join('/'));
+    await sendTelegramMessageInternal({ token, chatId: String(chatId), text: `${caption} It's too large for Telegram; it's saved in ${folder}.` });
+    return 'folder';
+  }
+  return 'none';
+}
+
 export async function handleJoseButton(token, update) {
   const ownerChatId = getOwnerChatId();
   if (!ownerChatId || String(update?.chatId || '') !== String(ownerChatId)) return 'Unauthorized.';

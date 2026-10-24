@@ -64,6 +64,8 @@ function toAssignments(steps: PlanStep[], planNote: string) {
     ...(step.payload ? { payload: step.payload } : {}),
     ...(step.contentStep ? { contentStep: step.contentStep } : {}),
     ...(step.waitFor ? { waitFor: step.waitFor } : {}),
+    // The cost reaches the approval message ("about $X.XX"; phase 4b).
+    ...(Number.isFinite(step.costEstimateUsd) ? { costEstimateUsd: step.costEstimateUsd } : {}),
     title: `${agentName(step.agent)} ${step.actionType}`,
     rationale: planNote,
     riskLevel: 'low',
@@ -87,6 +89,11 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
       return { ok: started.ok, reason: started.ok ? undefined : started.note, contentProjectId: started.projectId || null, plan: null, planNote: started.note };
     }
   }
+
+  // Asked for Higgsfield by name (phase 4b): one Miya step that asks with the estimate.
+  const { askHiggsfieldByName } = await import('../contentFactory/higgsfieldByName');
+  const higgsfield = await askHiggsfieldByName({ text, source, onProgress });
+  if (higgsfield) return higgsfield;
 
   const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });
   if (shortcut) return { ...shortcut, plan: null, planNote: '' };

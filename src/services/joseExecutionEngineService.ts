@@ -1301,6 +1301,11 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (assignment?.contentStep) {
     return executeContentStepAssignment(assignment, options);
   }
+  // Asked for Higgsfield by name (phase 4b).
+  if (assignment?.actionType === 'creative_higgsfield') {
+    const { executeHiggsfieldByName } = await import('./contentFactory/higgsfieldByName');
+    return executeHiggsfieldByName(assignment, packet);
+  }
   if (assignment?.actionType === 'boardroom_planning') {
     return executeBoardroomPlanning(assignment, commandText, options);
   }

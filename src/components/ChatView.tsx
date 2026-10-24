@@ -34,6 +34,8 @@ import {
   markMcpOutreachDelivered
 } from '../services/calleMcpOutreachService';
 import { executeApprovedPackets, carryOnRequest } from '../services/joseExecutionEngineService';
+import { higgsfieldResultsFor, type HiggsfieldResult } from '../services/contentFactory/higgsfieldByName';
+import { HiggsfieldMedia } from './miya/HiggsfieldResults';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
 import {
@@ -1413,6 +1415,11 @@ export function ChatView({
                         </details>
                       )}
                       <MarkdownMessage content={message.content} />
+                      {Array.isArray((message as unknown as { media?: HiggsfieldResult[] }).media) && (
+                        <div className="mt-2 space-y-2" data-testid="chat-higgsfield-media">
+                          {(message as unknown as { media: HiggsfieldResult[] }).media.map((r) => <HiggsfieldMedia key={r.id} outputRoot={String(settings.outputFolder || '')} result={r} />)}
+                        </div>
+                      )}
                     </div>
                   )}
                   {/* Runtime Hub action button — shown when image generation needs ComfyUI/A1111 */}
@@ -1619,7 +1626,9 @@ export function ChatView({
                         }
                       });
                       setMessages((current) => current.map((m) => (m as unknown as { streaming?: boolean }).streaming ? { ...m, streaming: false } : m));
-                      setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: (execResult as unknown as { summary?: string }).summary || 'Approved tasks completed.' }]);
+                      // What Higgsfield made for this request, under the reply (phase 4b).
+                      const made = higgsfieldResultsFor(cmdId as string);
+                      setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: (execResult as unknown as { summary?: string }).summary || 'Approved tasks completed.', ...(made.length ? { media: made } : {}) }]);
                       onJoseExecutionState?.('task_complete', 'Approved tasks completed.');
                     } catch (err) {
                       setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: `Error running approved tasks: ${(err as Error)?.message || String(err)}`, isError: true }]);

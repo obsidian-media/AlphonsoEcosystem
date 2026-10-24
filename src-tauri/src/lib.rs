@@ -788,6 +788,7 @@ pub fn run() {
       higgsfield::higgsfield_run,
       higgsfield::higgsfield_check,
       higgsfield::higgsfield_test,
+      telegram::connector_send_telegram_file,
       media_storage::storage_put_file,
       media_storage::storage_delete,
       media_storage::storage_list_staged,
