@@ -152,7 +152,10 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
 async function makeFromVideo(ctx: Ctx, plan: ShortPlan, withHook: boolean): Promise<ShortOutput> {
   const video = finishedVertical(ctx.project);
   if (!video) return { shortId: plan.id, status: 'failed', reason: NEEDS_FINISHED_VIDEO };
-  const moment = plan.moment as { startSec: number; endSec: number };
+  // A Short switched from a mini-script has no part chosen: use the middle of the video.
+  const length = Math.min(Math.max(plan.seconds || 45, 3), video.durationSec);
+  const middle = Math.max(0, (video.durationSec - length) / 2);
+  const moment = plan.moment || { startSec: middle, endSec: middle + length };
   const outPath = `${ctx.dir}/v${ctx.n}.mp4`;
   const palette = ctx.brand.palette || [];
   let hook = {};

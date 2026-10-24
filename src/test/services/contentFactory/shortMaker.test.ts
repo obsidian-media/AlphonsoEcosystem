@@ -121,6 +121,13 @@ it('a mini Short with no script says how to give it one', async () => {
   expect(generateComfyUiImage).not.toHaveBeenCalled();
 });
 
+it('a highlight or cut with no part chosen (switched from a mini Short) uses the middle of the finished video', async () => {
+  const p = setup([{ ...mini, kind: 'cut', seconds: 40 }]);
+  const [out] = await makeShorts(p.id, settings);
+  expect(out.status).toBe('done');
+  expect(calls('content_cut_short')[0].spec).toMatchObject({ startSec: 40, endSec: 80 });
+});
+
 describe('redoShort', () => {
   it('makes that Short again as a new version file', async () => {
     const p = setup([cut]);
