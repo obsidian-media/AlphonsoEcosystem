@@ -1,3 +1,4 @@
+import { describeResponsibility } from '../services/jose/agentPermissionTable';
 import React, { useMemo, useState } from 'react';
 import { Menu, Settings as SettingsIcon } from 'lucide-react';
 import { listAgentProfiles } from '../agents/agentRegistry';
@@ -19,14 +20,17 @@ import { resolveSecureSessionId } from '../services/connectors/hermesAgentConnec
 // route through Jose's real orchestration/tool pipeline (see
 // docs/ui-redesign/24-phase3-companion-mode-implementation-plan.md's
 // Non-goals) -- it is a real conversation with a persona, not a tool runner.
-function buildSystemPrompt(agentName: string, purpose: string): string {
+function buildSystemPrompt(agentId: string, agentName: string, purpose: string): string {
+  // What this agent owns and never does (agent roles Part A, 2026-10-24).
+  const duty = describeResponsibility(agentId);
   return [
     `You are ${agentName}, one of a team of AI agents inside a local-first desktop assistant app.`,
     `Your role: ${purpose}`,
+    duty ? `You own: ${duty.owns} You never: ${duty.never} If asked for work you don't own, say which agent does it.` : '',
     'Answer like a helpful, knowledgeable companion -- warm and direct, not a generic chatbot.',
     'CRITICAL: in this mode you have NO file system, tool, or execution access -- you are a text-only conversation.',
     'NEVER claim to have created, moved, deleted, run, or generated anything. If the user needs a real action taken, tell them to switch to Advanced mode or ask another agent to help.'
-  ].join(' ');
+  ].filter(Boolean).join(' ');
 }
 
 let messageIdCounter = 0;
@@ -92,7 +96,7 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
         .map((m) => `${m.role === 'user' ? 'User' : activeAgent.name}: ${m.text}`)
         .join('\n');
       const prompt = [
-        buildSystemPrompt(activeAgent.name, activeAgent.purpose || activeAgent.title || 'general assistant'),
+        buildSystemPrompt(activeAgent.id, activeAgent.name, activeAgent.purpose || activeAgent.title || 'general assistant'),
         history ? `\nConversation so far:\n${history}` : '',
         `\nUser: ${text}`,
         `\n${activeAgent.name}:`

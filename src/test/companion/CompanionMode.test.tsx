@@ -36,6 +36,10 @@ describe('CompanionMode', () => {
     expect(screen.getByText('What can you help me with?')).toBeTruthy();
     await waitFor(() => expect(screen.getByText('Mock reply from the agent.')).toBeTruthy());
     expect(generateAgentLlmResponse).toHaveBeenCalledWith('alphonso', expect.objectContaining({ prompt: expect.stringContaining('What can you help me with?') }));
+    // Agent roles Part A: the agent says what it owns, and points elsewhere for the rest.
+    const prompt = String(vi.mocked(generateAgentLlmResponse).mock.calls.at(-1)![1].prompt);
+    expect(prompt).toContain('You own: Code (front-end too)');
+    expect(prompt).toContain("If asked for work you don't own, say which agent does it.");
   });
 
   it('opens the menu drawer with the mode toggle', () => {
