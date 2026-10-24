@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 260 services and 158 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 260 services and 163 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -30,6 +30,11 @@ Source-backed inventory: 260 services and 158 components. Human purpose descript
 | component | `src/components/BoardroomChatView.tsx` | `BoardroomApprovalRequest`, `BoardroomChatView`, `BoardroomRequestApproval` |
 | component | `src/components/BootStatusBanner.tsx` | `BootStatusBanner` |
 | component | `src/components/BridgesPanel.tsx` | `BridgesPanel` |
+| component | `src/components/calendar/CalendarPage.tsx` | `CalendarPage` |
+| component | `src/components/calendar/calendarShared.tsx` | `addDays`, `CalendarChip`, `dayKey`, `PLATFORM_COLOR`, `PLATFORM_LABEL`, `startOfDay`, `startOfWeek`, `timeLabel`, `whenLabel` |
+| component | `src/components/calendar/CalendarSidePanel.tsx` | `CalendarSidePanel` |
+| component | `src/components/calendar/MonthGrid.tsx` | `MonthGrid` |
+| component | `src/components/calendar/WeekGrid.tsx` | `WeekGrid` |
 | component | `src/components/calle/CalleOutreachPanel.tsx` | `CalleOutreachPanel` |
 | component | `src/components/calle/EscalationCallPanel.tsx` | `EscalationCallPanel` |
 | component | `src/components/ChatView.tsx` | `ChatView` |

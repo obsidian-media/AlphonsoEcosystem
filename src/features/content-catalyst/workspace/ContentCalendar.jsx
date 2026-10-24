@@ -9,7 +9,7 @@ function getFirstDayOfMonth(year, month) {
   return new Date(year, month, 1).getDay();
 }
 
-export function ContentCalendar({ drafts = [], onAssignDay, onSelectDraft, onPublish }) {
+export function ContentCalendar({ drafts = [], onAssignDay, onSelectDraft, onPublish, onOpenCalendar }) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -40,6 +40,9 @@ export function ContentCalendar({ drafts = [], onAssignDay, onSelectDraft, onPub
         <div className="flex items-center gap-2">
           <Calendar className="h-3.5 w-3.5 text-(--accent)" />
           <span className="text-[11px] font-bold uppercase tracking-widest text-(--text-3)">Schedule</span>
+          {onOpenCalendar && (
+            <button type="button" onClick={onOpenCalendar} className="ml-2 text-[11px] text-(--accent) underline">Open the Calendar</button>
+          )}
         </div>
         <div className="flex items-center gap-1">
           {expanded && (
