@@ -25,6 +25,13 @@ function outputText(output: any): string {
 
 /** Ask the reviewer's own model whether its review asked for changes. Unreadable → pass, with a note. */
 export async function judgeReview(review: PlanStep, output: any): Promise<ReviewJudgement> {
+  // A review step gives its verdict in its own answer (agent roles Part A); ask only when it didn't.
+  const saved = output?.schema?.verdict;
+  if (saved === 'pass') return { verdict: 'pass', findings: [] };
+  if (saved === 'fix') {
+    const findings = Array.isArray(output.schema.findings) ? output.schema.findings.filter((f: unknown) => typeof f === 'string' && f.trim()) : [];
+    return { verdict: 'fix', findings: findings.length ? findings : ['The review asked for changes.'] };
+  }
   const prompt = [
     'You wrote the review below.',
     `Your review:\n${outputText(output) || '(empty)'}`,

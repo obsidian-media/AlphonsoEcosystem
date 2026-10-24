@@ -43,6 +43,7 @@ import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
 import { moveToOwner } from './jose/movedTaskTypes';
 import { buildStepInput, stepInputText } from './jose/stepInput';
+import { runReviewStep } from './jose/reviewStep';
 import type { PlanStep } from './jose/stepGraph';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
 import { listInstalledModels, pickLargerModel } from './jose/joseModels';
@@ -1335,6 +1336,10 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (assignment?.actionType === 'creative_higgsfield') {
     const { executeHiggsfieldByName } = await import('./contentFactory/higgsfieldByName');
     return executeHiggsfieldByName(assignment, packet);
+  }
+  // A review judges the work it reviews (agent roles Part A).
+  if (assignment?.reviewOf) {
+    return runReviewStep(assignment.agent, options.stepInput, assignment.actionType);
   }
   if (assignment?.actionType === 'boardroom_planning') {
     return executeBoardroomPlanning(assignment, commandText, options);
