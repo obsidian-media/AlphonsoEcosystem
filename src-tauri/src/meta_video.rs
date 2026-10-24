@@ -144,6 +144,297 @@ pub(crate) fn check_video_file(path: &std::path::Path) -> Result<u64, String> {
   Ok(size)
 }
 
+/// Posts left in Instagram's 24-hour publishing limit, from `content_publishing_limit`.
+pub(crate) fn instagram_posts_left(json: &Value) -> Option<u32> {
+  let entry = json.get("data")?.get(0)?;
+  let used = entry.get("quota_usage")?.as_u64()?;
+  let total = entry.get("config")?.get("quota_total")?.as_u64()?;
+  Some(total.saturating_sub(used) as u32)
+}
+
+/// A token's expiry from `debug_token` (`data.expires_at`, seconds; 0 = never) in milliseconds.
+pub(crate) fn token_expiry_from_debug(json: &Value) -> Option<u64> {
+  let seconds = json.get("data")?.get("expires_at")?.as_u64()?;
+  if seconds == 0 {
+    None
+  } else {
+    Some(seconds * 1000)
+  }
+}
+
+/// Where a user changes a scheduled post by hand when Meta's API won't.
+pub(crate) const META_MANAGE_URL: &str = "https://business.facebook.com/latest/content_calendar";
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MetaChangeRequest {
+  video_id: Option<String>,
+  scheduled_at_ms: Option<u64>,
+  #[serde(default)]
+  credentials: Option<MetaCredentials>,
+}
+
+/// What Meta did with a change (read back), or why not, with where to do it by hand.
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MetaChangeProof {
+  ok: bool,
+  scheduled_at_ms: Option<u64>,
+  posts_left: Option<u32>,
+  expires_at_ms: Option<u64>,
+  reason: Option<String>,
+  manage_url: Option<String>,
+}
+
+fn change_failed(reason: impl Into<String>) -> MetaChangeProof {
+  MetaChangeProof {
+    ok: false,
+    scheduled_at_ms: None,
+    posts_left: None,
+    expires_at_ms: None,
+    reason: Some(reason.into()),
+    manage_url: Some(META_MANAGE_URL.to_string()),
+  }
+}
+
+fn meta_client() -> Result<reqwest::Client, String> {
+  reqwest::Client::builder()
+    .timeout(Duration::from_secs(60))
+    .user_agent("Alphonso-Meta-Publish/0.2")
+    .build()
+    .map_err(|e| e.to_string())
+}
+
+fn numeric_id(id: Option<&str>) -> Option<String> {
+  let id = id?.trim();
+  (!id.is_empty() && id.len() <= 32 && id.chars().all(|c| c.is_ascii_digit()))
+    .then(|| id.to_string())
+}
+
+async fn reel_status(
+  client: &reqwest::Client,
+  base: &str,
+  id: &str,
+  auth: &[(String, String)],
+) -> Result<Value, String> {
+  let body = json_or_error(
+    client
+      .get(format!("{base}/{id}"))
+      .query(auth)
+      .query(&[("fields", "status")])
+      .send()
+      .await
+      .map_err(|e| e.to_string())?,
+    "Could not read the Reel's status from Facebook.",
+  )
+  .await?;
+  Ok(body.get("status").cloned().unwrap_or(Value::Null))
+}
+
+/// Moves a Facebook Reel that is scheduled on Meta to a new time, then reads back what Meta kept.
+#[tauri::command]
+pub(crate) async fn meta_reschedule_video(
+  rate_limiter: tauri::State<'_, crate::RateLimiter>,
+  request: MetaChangeRequest,
+) -> Result<MetaChangeProof, String> {
+  rate_limiter.check_and_record("meta_reschedule_video")?;
+  let Some(id) = numeric_id(request.video_id.as_deref()) else {
+    return Ok(change_failed("That is not a Facebook video id."));
+  };
+  let unix = match facebook_schedule(now_ms(), request.scheduled_at_ms) {
+    Ok(Some(unix)) => unix,
+    Ok(None) => {
+      return Ok(change_failed(
+        "Facebook needs a time at least 11 minutes from now.",
+      ))
+    }
+    Err(reason) => return Ok(change_failed(reason)),
+  };
+  let keys = resolve_meta_credentials(request.credentials);
+  if keys.page_token.trim().is_empty() {
+    return Ok(change_failed(
+      "Add the Meta keys in Settings → Connectors → Meta.",
+    ));
+  }
+  let client = meta_client()?;
+  let base = format!("https://graph.facebook.com/{}", meta_graph_api_version());
+  let auth = auth_query(&keys.page_token, &keys.app_secret);
+  let sent = client
+    .post(format!("{base}/{id}"))
+    .query(&auth)
+    .form(&[("scheduled_publish_time", unix.to_string())])
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+  if let Err(reason) = json_or_error(sent, "Facebook refused the new time.").await {
+    return Ok(change_failed(reason));
+  }
+  let status = match reel_status(&client, &base, &id, &auth).await {
+    Ok(status) => status,
+    Err(reason) => return Ok(change_failed(reason)),
+  };
+  let kept = status
+    .get("publishing_phase")
+    .and_then(|p| p.get("publish_time"))
+    .and_then(Value::as_u64);
+  if kept.is_some_and(|t| t.abs_diff(unix) <= 60) {
+    return Ok(MetaChangeProof {
+      ok: true,
+      scheduled_at_ms: Some(unix * 1000),
+      posts_left: None,
+      expires_at_ms: None,
+      reason: None,
+      manage_url: None,
+    });
+  }
+  Ok(change_failed(
+    "Facebook did not keep the new time; change it in Meta Business Suite.",
+  ))
+}
+
+/// Cancels a Facebook Reel that is still scheduled on Meta (deletes it); refused once it has gone out.
+#[tauri::command]
+pub(crate) async fn meta_cancel_video(
+  rate_limiter: tauri::State<'_, crate::RateLimiter>,
+  request: MetaChangeRequest,
+) -> Result<MetaChangeProof, String> {
+  rate_limiter.check_and_record("meta_cancel_video")?;
+  let Some(id) = numeric_id(request.video_id.as_deref()) else {
+    return Ok(change_failed("That is not a Facebook video id."));
+  };
+  let keys = resolve_meta_credentials(request.credentials);
+  if keys.page_token.trim().is_empty() {
+    return Ok(change_failed(
+      "Add the Meta keys in Settings → Connectors → Meta.",
+    ));
+  }
+  let client = meta_client()?;
+  let base = format!("https://graph.facebook.com/{}", meta_graph_api_version());
+  let auth = auth_query(&keys.page_token, &keys.app_secret);
+  let status = match reel_status(&client, &base, &id, &auth).await {
+    Ok(status) => status,
+    Err(reason) => return Ok(change_failed(reason)),
+  };
+  let scheduled = status
+    .get("publishing_phase")
+    .and_then(|p| p.get("publish_status"))
+    .and_then(Value::as_str)
+    == Some("scheduled");
+  if !scheduled {
+    return Ok(change_failed(
+      "This has already gone out on Facebook (or is not scheduled).",
+    ));
+  }
+  let deleted = client
+    .delete(format!("{base}/{id}"))
+    .query(&auth)
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+  match json_or_error(deleted, "Facebook refused to cancel the Reel.").await {
+    Ok(body) if body.get("success").and_then(Value::as_bool) == Some(true) => Ok(MetaChangeProof {
+      ok: true,
+      scheduled_at_ms: None,
+      posts_left: None,
+      expires_at_ms: None,
+      reason: None,
+      manage_url: None,
+    }),
+    Ok(_) => Ok(change_failed(
+      "Facebook did not confirm the cancel; check Meta Business Suite.",
+    )),
+    Err(reason) => Ok(change_failed(reason)),
+  }
+}
+
+/// How many Instagram posts are left in the 24-hour limit (None when Meta does not say).
+#[tauri::command]
+pub(crate) async fn meta_instagram_limit(
+  rate_limiter: tauri::State<'_, crate::RateLimiter>,
+  request: MetaChangeRequest,
+) -> Result<MetaChangeProof, String> {
+  rate_limiter.check_and_record("meta_instagram_limit")?;
+  let keys = resolve_meta_credentials(request.credentials);
+  if keys.access_token.trim().is_empty() || keys.ig_user_id.trim().is_empty() {
+    return Ok(change_failed(
+      "Add the Meta keys in Settings → Connectors → Meta.",
+    ));
+  }
+  let client = meta_client()?;
+  let base = format!("https://graph.facebook.com/{}", meta_graph_api_version());
+  let auth = auth_query(&keys.access_token, &keys.app_secret);
+  let body = json_or_error(
+    client
+      .get(format!(
+        "{base}/{}/content_publishing_limit",
+        keys.ig_user_id.trim()
+      ))
+      .query(&auth)
+      .query(&[("fields", "quota_usage,config")])
+      .send()
+      .await
+      .map_err(|e| e.to_string())?,
+    "Could not read Instagram's publishing limit.",
+  )
+  .await;
+  Ok(match body {
+    Ok(json) => MetaChangeProof {
+      ok: true,
+      posts_left: instagram_posts_left(&json),
+      scheduled_at_ms: None,
+      expires_at_ms: None,
+      reason: None,
+      manage_url: None,
+    },
+    Err(reason) => change_failed(reason),
+  })
+}
+
+/// When the saved Meta token expires, read from `debug_token` (needs the App ID and App Secret).
+#[tauri::command]
+pub(crate) async fn meta_token_expiry(
+  rate_limiter: tauri::State<'_, crate::RateLimiter>,
+  request: MetaChangeRequest,
+) -> Result<MetaChangeProof, String> {
+  rate_limiter.check_and_record("meta_token_expiry")?;
+  let keys = resolve_meta_credentials(request.credentials);
+  if keys.access_token.trim().is_empty()
+    || keys.app_id.trim().is_empty()
+    || keys.app_secret.trim().is_empty()
+  {
+    return Ok(change_failed(
+      "Add the Meta App ID and App Secret in Settings to know exactly when the sign-in runs out.",
+    ));
+  }
+  let client = meta_client()?;
+  let base = format!("https://graph.facebook.com/{}", meta_graph_api_version());
+  let app_token = format!("{}|{}", keys.app_id.trim(), keys.app_secret.trim());
+  let body = json_or_error(
+    client
+      .get(format!("{base}/debug_token"))
+      .query(&[
+        ("input_token", keys.access_token.trim()),
+        ("access_token", app_token.as_str()),
+      ])
+      .send()
+      .await
+      .map_err(|e| e.to_string())?,
+    "Could not read the Meta sign-in's expiry.",
+  )
+  .await;
+  Ok(match body {
+    Ok(json) => MetaChangeProof {
+      ok: true,
+      expires_at_ms: token_expiry_from_debug(&json),
+      scheduled_at_ms: None,
+      posts_left: None,
+      reason: None,
+      manage_url: None,
+    },
+    Err(reason) => change_failed(reason),
+  })
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct MetaVideoRequest {
@@ -635,5 +926,31 @@ mod tests {
     std::fs::write(&empty, b"").unwrap();
     assert!(check_video_file(&empty).unwrap_err().contains("empty"));
     let _ = std::fs::remove_dir_all(&dir);
+  }
+
+  #[test]
+  fn instagram_posts_left_from_the_limit() {
+    let json = json!({ "data": [{ "quota_usage": 3, "config": { "quota_total": 100, "quota_duration": 86400 } }] });
+    assert_eq!(instagram_posts_left(&json), Some(97));
+    let full = json!({ "data": [{ "quota_usage": 100, "config": { "quota_total": 100 } }] });
+    assert_eq!(instagram_posts_left(&full), Some(0));
+    assert_eq!(instagram_posts_left(&json!({ "data": [] })), None);
+    assert_eq!(instagram_posts_left(&json!({})), None);
+  }
+
+  #[test]
+  fn token_expiry_from_debug_token() {
+    assert_eq!(
+      token_expiry_from_debug(&json!({ "data": { "expires_at": 1_800_000_000 } })),
+      Some(1_800_000_000_000)
+    );
+    assert_eq!(
+      token_expiry_from_debug(&json!({ "data": { "expires_at": 0 } })),
+      None
+    );
+    assert_eq!(
+      token_expiry_from_debug(&json!({ "error": { "message": "x" } })),
+      None
+    );
   }
 }

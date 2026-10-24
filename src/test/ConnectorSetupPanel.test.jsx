@@ -151,7 +151,7 @@ describe('ConnectorSetupPanel', () => {
     render(<ConnectorSetupPanel />);
     fireEvent.click(screen.getByTestId('connector-category-content'));
     expect(screen.getByText('Meta (Facebook and Instagram)')).toBeInTheDocument();
-    for (const label of ['Access Token', 'Page Access Token', 'Page ID', 'Instagram Business Account ID', 'App Secret']) {
+    for (const label of ['Access Token', 'Page Access Token', 'Page ID', 'Instagram Business Account ID', 'App ID', 'App Secret']) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
   });

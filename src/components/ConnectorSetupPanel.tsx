@@ -512,6 +512,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [metaPageId, setMetaPageId] = useState(() => getConnectorCredential('meta', 'META_PAGE_ID') || '');
   const [metaIgId, setMetaIgId] = useState(() => getConnectorCredential('meta', 'INSTAGRAM_BUSINESS_ACCOUNT_ID') || '');
   const [metaAppSecret, setMetaAppSecret] = useState(() => getConnectorCredential('meta', 'META_APP_SECRET') || '');
+  const [metaAppId, setMetaAppId] = useState(() => getConnectorCredential('meta', 'META_APP_ID') || '');
   const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
   const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
@@ -1126,9 +1127,10 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               { label: 'Page Access Token', placeholder: 'For Facebook Page posts (optional)', value: metaPageAccessToken, onChange: setMetaPageAccessToken, key: 'META_PAGE_ACCESS_TOKEN' },
               { label: 'Page ID', placeholder: 'Your Facebook Page', value: metaPageId, onChange: setMetaPageId, key: 'META_PAGE_ID', secret: false },
               { label: 'Instagram Business Account ID', placeholder: 'Linked to the Page', value: metaIgId, onChange: setMetaIgId, key: 'INSTAGRAM_BUSINESS_ACCOUNT_ID', secret: false },
+              { label: 'App ID', placeholder: 'From your Meta app (with the App Secret: the exact sign-in expiry)', value: metaAppId, onChange: setMetaAppId, key: 'META_APP_ID', secret: false },
               { label: 'App Secret', placeholder: 'From your Meta app (optional, adds appsecret_proof)', value: metaAppSecret, onChange: setMetaAppSecret, key: 'META_APP_SECRET' },
             ]}
-            onSave={() => saveConnectorApiKey('meta', { META_ACCESS_TOKEN: metaAccessToken, META_PAGE_ACCESS_TOKEN: metaPageAccessToken, META_PAGE_ID: metaPageId, INSTAGRAM_BUSINESS_ACCOUNT_ID: metaIgId, META_APP_SECRET: metaAppSecret })}
+            onSave={() => saveConnectorApiKey('meta', { META_ACCESS_TOKEN: metaAccessToken, META_PAGE_ACCESS_TOKEN: metaPageAccessToken, META_PAGE_ID: metaPageId, INSTAGRAM_BUSINESS_ACCOUNT_ID: metaIgId, META_APP_ID: metaAppId, META_APP_SECRET: metaAppSecret })}
             hint="Use your own Meta app with Facebook Login for Business. Run npm run auth:meta in a terminal to get the tokens and IDs, then paste them here. Instagram needs a Business or Creator account linked to the Page."
             savedLabel="Meta credentials saved" />
 
