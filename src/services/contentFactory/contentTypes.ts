@@ -23,6 +23,9 @@ export interface ContentIdea {
   status: 'new' | 'started' | 'dismissed';
 }
 
+/** A scene's (or a Short part's) motion (phase 4c): a Higgsfield preset, a recording or a chosen clip. */
+export interface SceneMotion { source: 'preset' | 'recorded' | 'file'; presetId?: string; path?: string }
+
 /** A brand's character (phase 4c). Pictures are paths relative to the output folder. */
 export interface BrandCharacter {
   id: string;

@@ -6,6 +6,10 @@ import {
   chosenVersionOf, getShortsSettings, setShortKind, setShortPlatforms, setShortsSettings,
 } from '../../services/contentFactory/contentProjectService';
 import { fitsPlatform, formatSeconds } from '../../services/contentFactory/platformLimits';
+import { saveShortPartMotionClip, shortPartMotion } from '../../services/contentFactory/contentMotion';
+import { setShortPartMotion } from '../../services/contentFactory/contentProjectService';
+import { contentAppSettings } from '../../services/contentFactory/contentStepRecorder';
+import { MotionPicker } from './MotionPicker';
 import type { ShortOutput } from '../../services/contentFactory/shortMaker';
 import type { ContentProject, PostPlatform, ShortKind, ShortPlan, StepId } from '../../services/contentFactory/contentTypes';
 
@@ -102,6 +106,12 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
                   <span className="text-[11px] text-(--text-3)">{formatSeconds(seconds)}</span>
                 </div>
                 <div className="text-[12px] text-(--text-2)">{short.hook}</div>
+                {/* A mini Short's parts can each get a motion (phase 4c). */}
+                {(short.kind || 'mini') === 'mini' && (short.parts || []).map((part, i) => (
+                  <MotionPicker key={`${short.id}-${i}`} label={`${short.title || `Short ${n}`}, part ${i + 1}`} motion={shortPartMotion(project, short.id, i)}
+                    onSet={(motion) => { setShortPartMotion(project.id, short.id, i, motion); onChange(); }}
+                    onClip={async (input) => { const saved = await saveShortPartMotionClip(project.id, short.id, i, input, contentAppSettings()); onChange(); return saved; }} />
+                ))}
                 <label className="block text-[11px] text-(--text-3)">
                   Kind
                   <select aria-label={`Kind of Short ${n}`} className={`${field} ml-2`} value={short.kind}

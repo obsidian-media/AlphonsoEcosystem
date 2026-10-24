@@ -160,4 +160,17 @@ describe('a new output folder', () => {
     expect(scene.characterId).toBe('none');
     expect(ana.id).toBeTruthy();
   });
+
+  // Phase 4c: each scene can get a motion instead of a normal AI clip.
+  it('a scene can get a motion, with Miya suggesting where', () => {
+    const p = createProject('b', 'P', emptyBrief());
+    saveStepVersion(p.id, 'scenes', { output: { miya: { style: 'warm', scenes: [{ id: 's1', description: 'A wave', motionSuggested: true }] } }, summary: '', joseCommandId: null });
+    render(<SceneBuilderTab {...props(getProject(p.id)!)} />);
+    expect(screen.getByText('Miya suggests a move here.')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Motion: Scene 1'), { target: { value: 'preset' } });
+    fireEvent.change(screen.getByLabelText('Preset id: Scene 1'), { target: { value: 'wave-01' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Use this preset' }));
+    const scene = (getProject(p.id)!.steps.scenes.versions[0].output as any).miya.scenes[0];
+    expect(scene.motion).toEqual({ source: 'preset', presetId: 'wave-01' });
+  });
 });

@@ -1555,6 +1555,133 @@ pub(crate) async fn content_ready_to_post(
   }
 }
 
+// ---- A scene's motion clip (content factory phase 4c) ----
+
+pub(crate) const MOTION_MAX_SECONDS: f64 = 10.0;
+pub(crate) const MOTION_TOO_LONG: &str = "The clip is longer than 10 seconds.";
+pub(crate) const MOTION_NOT_VIDEO: &str = "That file isn't a video.";
+
+/// Why a recorded or chosen clip can't be used as a motion, or None.
+pub(crate) fn motion_clip_problem(duration: f64, has_video: bool) -> Option<&'static str> {
+  if !has_video || duration <= 0.0 {
+    Some(MOTION_NOT_VIDEO)
+  } else if duration > MOTION_MAX_SECONDS + 0.5 {
+    Some(MOTION_TOO_LONG)
+  } else {
+    None
+  }
+}
+
+/// The run that turns a recording or a chosen file into the motion MP4 (no sound; the voice-over is the sound).
+pub(crate) fn motion_clip_run(cwd: &Path, source: &Path, part: &Path) -> FfmpegRun {
+  let s = |v: &str| v.to_string();
+  FfmpegRun {
+    cwd: cwd.to_path_buf(),
+    args: vec![
+      s("-y"),
+      s("-i"),
+      source.to_string_lossy().to_string(),
+      s("-t"),
+      format!("{MOTION_MAX_SECONDS}"),
+      s("-an"),
+      s("-c:v"),
+      s("libopenh264"),
+      s("-pix_fmt"),
+      s("yuv420p"),
+      s("-movflags"),
+      s("+faststart"),
+      s("-f"),
+      s("mp4"),
+      part.to_string_lossy().to_string(),
+    ],
+  }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MotionClipRequest {
+  workspace_root: String,
+  out_path: String,
+  /// A recording from the window's camera (WebM, base64).
+  #[serde(default)]
+  base64: Option<String>,
+  /// Choose a video file in a dialog the backend opens (the window never supplies a path).
+  #[serde(default)]
+  choose: Option<bool>,
+}
+
+/// Saves a scene's motion clip as `<project>/motion/<scene>-v<n>.mp4`: a recording, or a file
+/// chosen in a dialog (copied, the original untouched). At most 10 seconds, a video, never over a file.
+#[tauri::command]
+pub async fn content_save_motion_clip(
+  app: tauri::AppHandle,
+  request: MotionClipRequest,
+) -> serde_json::Value {
+  use base64::Engine;
+  let fail = |r: &str| serde_json::json!({ "ok": false, "reason": r });
+  let out = match checked_file(&request.workspace_root, &request.out_path, &["mp4"]) {
+    Ok(p) => p,
+    Err(r) => return serde_json::json!({ "ok": false, "reason": r }),
+  };
+  if out.exists() {
+    return fail("That file already exists; nothing was overwritten.");
+  }
+  let (Some(ffmpeg), Some(ffprobe)) = (ffmpeg_path(), ffprobe_path()) else {
+    return fail("FFmpeg isn't available on this computer.");
+  };
+  let dir = out.parent().map(Path::to_path_buf).unwrap_or_default();
+  let mut temp: Option<PathBuf> = None;
+  let source: PathBuf = if let Some(b64) = request.base64.as_deref() {
+    let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(b64.trim()) else {
+      return fail(MOTION_NOT_VIDEO);
+    };
+    let recorded = out.with_extension("recording.webm");
+    if std::fs::write(&recorded, &bytes).is_err() {
+      return fail("The recording could not be saved.");
+    }
+    temp = Some(recorded.clone());
+    recorded
+  } else if request.choose == Some(true) {
+    use tauri_plugin_dialog::DialogExt;
+    let picked = app
+      .dialog()
+      .file()
+      .add_filter("Video", &["mp4", "mov", "webm", "m4v", "mkv", "avi"])
+      .blocking_pick_file();
+    let Some(path) = picked.and_then(|p| p.into_path().ok()) else {
+      return serde_json::json!({ "ok": false, "cancelled": true });
+    };
+    path
+  } else {
+    return fail("Record a clip or choose a file.");
+  };
+  let cleanup = |temp: &Option<PathBuf>| {
+    if let Some(t) = temp {
+      let _ = std::fs::remove_file(t);
+    }
+  };
+  match probe(&ffprobe, &source).await {
+    Ok((duration, has_video, _)) => {
+      if let Some(problem) = motion_clip_problem(duration, has_video) {
+        cleanup(&temp);
+        return fail(problem);
+      }
+    }
+    Err(_) => {
+      cleanup(&temp);
+      return fail(MOTION_NOT_VIDEO);
+    }
+  }
+  let part = out.with_extension("part.mp4");
+  let result = run_ffmpeg(&ffmpeg, &motion_clip_run(&dir, &source, &part)).await;
+  cleanup(&temp);
+  if result.is_err() || std::fs::rename(&part, &out).is_err() {
+    let _ = std::fs::remove_file(&part);
+    return fail("The clip could not be turned into a video for the scene.");
+  }
+  serde_json::json!({ "ok": true, "path": request.out_path })
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -2277,5 +2404,29 @@ mod tests {
     std::fs::write(root.join("p/missing.mp4"), b"x").unwrap();
     assert_eq!(missing_input(&root, &sp), None);
     std::fs::remove_dir_all(&root).ok();
+  }
+
+  #[test]
+  fn a_motion_clip_is_a_video_of_at_most_ten_seconds() {
+    assert_eq!(motion_clip_problem(11.0, true), Some(MOTION_TOO_LONG));
+    assert_eq!(MOTION_TOO_LONG, "The clip is longer than 10 seconds.");
+    assert_eq!(motion_clip_problem(10.4, true), None);
+    assert_eq!(motion_clip_problem(4.0, false), Some(MOTION_NOT_VIDEO));
+    assert_eq!(MOTION_NOT_VIDEO, "That file isn't a video.");
+    assert_eq!(motion_clip_problem(0.0, true), Some(MOTION_NOT_VIDEO));
+  }
+
+  #[test]
+  fn a_motion_clip_drops_its_sound_and_is_cut_at_ten_seconds() {
+    let run = motion_clip_run(
+      Path::new("W"),
+      Path::new("W/in.webm"),
+      Path::new("W/s1-v1.part.mp4"),
+    );
+    let joined = run.args.join(" ");
+    assert!(joined.contains("-t 10"), "{joined}");
+    assert!(joined.contains("-an"));
+    assert!(joined.contains("-c:v libopenh264"));
+    assert!(joined.ends_with("s1-v1.part.mp4"));
   }
 }

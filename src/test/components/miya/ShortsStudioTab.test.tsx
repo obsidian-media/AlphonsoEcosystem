@@ -111,5 +111,15 @@ describe('ShortsStudioTab', () => {
     fireEvent.change(screen.getByLabelText('Clip engine for Shorts'), { target: { value: 'higgsfield' } });
     expect(getShortsSettings(getProject(p.id)!)).toEqual({ aiClips: 'main', clipEngine: 'higgsfield' });
   });
-});
 
+  // Phase 4c: a mini Short's part can get a motion.
+  it("a mini Short's part can get a motion", () => {
+    const p = setup();
+    render(<ShortsStudioTab project={getProject(p.id)!} {...props()} />);
+    fireEvent.change(screen.getByLabelText('Motion: Why coffee waits, part 1'), { target: { value: 'preset' } });
+    fireEvent.change(screen.getByLabelText('Preset id: Why coffee waits, part 1'), { target: { value: 'nod' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Use this preset' }));
+    const short = (getProject(p.id)!.steps.shorts.versions[0].output as any).miya.shorts.find((x: any) => x.id === 'sh1');
+    expect(short.parts[0].motion).toEqual({ source: 'preset', presetId: 'nod' });
+  });
+});

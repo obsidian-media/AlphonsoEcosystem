@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '../ui';
 import { StepPanel } from './StepPanel';
 import { ProjectPicture } from './ProjectPicture';
-import { chosenVersionOf, getVideoSettings, setMainMoment, setSceneCharacter } from '../../services/contentFactory/contentProjectService';
+import { chosenVersionOf, getVideoSettings, setMainMoment, setMotionSuggested, setSceneCharacter, setSceneMotion } from '../../services/contentFactory/contentProjectService';
+import { saveMotionClip } from '../../services/contentFactory/contentMotion';
+import { contentAppSettings } from '../../services/contentFactory/contentStepRecorder';
+import { MotionPicker } from './MotionPicker';
+import type { SceneMotion } from '../../services/contentFactory/contentTypes';
 import { getBrand } from '../../services/contentFactory/contentBrandService';
 import { AiClipsPanel } from './AiClipsPanel';
 import { allowMediaFolder, mediaUrl } from '../../services/contentFactory/contentProjectFiles';
@@ -108,6 +112,11 @@ export function SceneBuilderTab({
                     </select>
                   </label>
                 )}
+                <MotionPicker label={`Scene ${index + 1}`} motion={(scene as { motion?: SceneMotion }).motion || null}
+                  suggested={(scene as { motionSuggested?: boolean }).motionSuggested === true}
+                  onSet={(motion) => { setSceneMotion(project.id, scene.id, motion); onChange(); }}
+                  onClip={async (input) => { const saved = await saveMotionClip(project.id, scene.id, input, contentAppSettings()); onChange(); return saved; }}
+                  onDismissSuggestion={() => { setMotionSuggested(project.id, scene.id, false); onChange(); }} />
                 {marking && (
                   <label className="flex items-center gap-1 text-(--text-2)">
                     <input type="checkbox" aria-label={`Main moment: Scene ${index + 1}`} checked={scene.mainMoment === true}
