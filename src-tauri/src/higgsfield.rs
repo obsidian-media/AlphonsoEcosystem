@@ -42,7 +42,17 @@ pub(crate) struct HiggsfieldJob {
   /// A brand character trained on Higgsfield (phase 4c).
   #[serde(default)]
   character_id: Option<String>,
+  /// Motion transfer (phase 4c): a clip in the workspace whose movement is copied (uploaded first)…
+  #[serde(default)]
+  motion_path: Option<String>,
+  /// …or one of Higgsfield's own motion presets.
+  #[serde(default)]
+  preset_id: Option<String>,
 }
+
+/// Motion transfer request fields (phase 4c; not in Higgsfield's public docs, confirm live).
+pub(crate) const MOTION_PRESET_FIELD: &str = "motion_id";
+pub(crate) const MOTION_VIDEO_FIELD: &str = "video_url";
 
 /// The request field for a trained character (phase 4c; Higgsfield's "Soul ID", confirm live).
 pub(crate) const CHARACTER_FIELD: &str = "soul_id";
@@ -64,6 +74,15 @@ pub(crate) fn valid_model(model: &str) -> bool {
 
 /// The common fields, with the user's extra settings merged over them.
 pub(crate) fn request_body(job: &HiggsfieldJob, image_url: Option<&str>) -> Result<Value, String> {
+  request_body_with_motion(job, image_url, None)
+}
+
+/// The request with a motion (phase 4c): the uploaded clip's address, or a preset id.
+pub(crate) fn request_body_with_motion(
+  job: &HiggsfieldJob,
+  image_url: Option<&str>,
+  motion_url: Option<&str>,
+) -> Result<Value, String> {
   let mut body = serde_json::json!({ "prompt": job.prompt.chars().take(2000).collect::<String>() });
   if let Some(url) = image_url {
     body["image_url"] = Value::String(url.to_string());
@@ -77,6 +96,23 @@ pub(crate) fn request_body(job: &HiggsfieldJob, image_url: Option<&str>) -> Resu
     .filter(|a| ["16:9", "9:16", "1:1", "4:5"].contains(a))
   {
     body["aspect_ratio"] = Value::String(aspect.to_string());
+  }
+  if let Some(url) = motion_url {
+    body[MOTION_VIDEO_FIELD] = Value::String(url.to_string());
+  }
+  if let Some(id) = job
+    .preset_id
+    .as_deref()
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+  {
+    if !id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+    {
+      return Err("That is not a Higgsfield preset id.".to_string());
+    }
+    body[MOTION_PRESET_FIELD] = Value::String(id.to_string());
   }
   if let Some(id) = job
     .character_id
@@ -305,7 +341,65 @@ async fn body_for(
     Some(rel) => Some(upload(http, authz, workspace_root, rel).await?),
     None => None,
   };
-  request_body(job, image_url.as_deref())
+  let motion_url = match &job.motion_path {
+    Some(rel) => Some(upload(http, authz, workspace_root, rel).await?),
+    None => None,
+  };
+  request_body_with_motion(job, image_url.as_deref(), motion_url.as_deref())
+}
+
+/// Higgsfield's motion presets, from whichever list shape it answers with: `(id, name)`.
+pub(crate) fn parse_presets(body: &Value) -> Vec<(String, String)> {
+  let list = body
+    .as_array()
+    .or_else(|| body["items"].as_array())
+    .or_else(|| body["motions"].as_array())
+    .or_else(|| body["data"].as_array());
+  list
+    .into_iter()
+    .flatten()
+    .filter_map(|m| {
+      let id = m["id"].as_str()?.to_string();
+      let name = m["name"]
+        .as_str()
+        .or_else(|| m["title"].as_str())
+        .unwrap_or(&id)
+        .to_string();
+      Some((id, name))
+    })
+    .collect()
+}
+
+/// The motion presets Higgsfield offers, when its API lists them; otherwise the user pastes an id.
+#[tauri::command]
+pub(crate) async fn higgsfield_presets(keys: Option<HiggsfieldKeys>) -> Value {
+  let fail = |r: &str| serde_json::json!({ "ok": false, "reason": r });
+  let Ok(authz) = auth(&keys.unwrap_or_default()) else {
+    return fail("Add your Higgsfield key id and secret in Settings → Connectors → Higgsfield.");
+  };
+  let Ok(http) = client() else {
+    return fail("Could not start the request.");
+  };
+  match send_json(
+    http
+      .get(format!("{BASE}/motions"))
+      .header("Authorization", &authz),
+  )
+  .await
+  {
+    Ok(answer) => {
+      let presets: Vec<Value> = parse_presets(&answer)
+        .into_iter()
+        .map(|(id, name)| serde_json::json!({ "id": id, "name": name }))
+        .collect();
+      if presets.is_empty() {
+        fail("Higgsfield gave no preset list; paste a preset id instead.")
+      } else {
+        serde_json::json!({ "ok": true, "presets": presets })
+      }
+    }
+    Err(_) => fail("Higgsfield gave no preset list; paste a preset id instead."),
+  }
 }
 
 fn random_key() -> String {
@@ -670,6 +764,8 @@ pub(crate) async fn higgsfield_test(
     aspect: None,
     extra,
     character_id: None,
+    motion_path: None,
+    preset_id: None,
   };
   higgsfield_estimate(job, keys).await
 }
@@ -961,6 +1057,8 @@ mod tests {
       aspect: Some("9:16".into()),
       extra,
       character_id: None,
+      motion_path: None,
+      preset_id: None,
     }
   }
 
@@ -1298,5 +1396,39 @@ mod tests {
     // A character id that isn't one is refused before anything is sent.
     with.character_id = Some("../x".into());
     assert!(request_body(&with, None).is_err());
+  }
+
+  #[test]
+  fn a_motion_goes_with_the_request() {
+    let mut with = job(None);
+    with.preset_id = Some("wave-01".into());
+    assert_eq!(
+      request_body(&with, None).unwrap()[MOTION_PRESET_FIELD],
+      json!("wave-01")
+    );
+    with.preset_id = Some("a b".into());
+    assert!(request_body(&with, None).is_err());
+    let plain = job(None);
+    let body = request_body_with_motion(&plain, None, Some("https://cdn/m.mp4")).unwrap();
+    assert_eq!(body[MOTION_VIDEO_FIELD], json!("https://cdn/m.mp4"));
+  }
+
+  #[test]
+  fn the_preset_list_is_read_from_its_items() {
+    let list = parse_presets(
+      &json!({ "items": [{ "id": "m1", "name": "Wave" }, { "id": "m2", "title": "Nod" }, { "name": "no id" }] }),
+    );
+    assert_eq!(
+      list,
+      vec![
+        ("m1".to_string(), "Wave".to_string()),
+        ("m2".to_string(), "Nod".to_string())
+      ]
+    );
+    assert_eq!(
+      parse_presets(&json!([{ "id": "x", "name": "X" }])),
+      vec![("x".to_string(), "X".to_string())]
+    );
+    assert!(parse_presets(&json!({ "detail": "nope" })).is_empty());
   }
 }

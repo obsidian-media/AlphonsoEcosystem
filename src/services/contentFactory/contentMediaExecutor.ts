@@ -5,7 +5,7 @@
 // folder; nothing is overwritten, since each version has its own names.
 // Design: docs/superpowers/specs/2026-10-23-miya-content-factory-phase2a-design.md
 import { paidEngineAvailable, projectEngines, resolveVoice } from './engineChoice';
-import { checkHiggsfieldClip, higgsfieldClipAvailable, makeHiggsfieldClip } from './higgsfieldClip';
+import { checkHiggsfieldClip, higgsfieldClipAvailable, higgsfieldMotionAvailable, makeHiggsfieldClip, makeHiggsfieldMotionClip } from './higgsfieldClip';
 import { higgsfieldModels } from '../connectors/higgsfieldConnector';
 import { parseStepAnswer } from './contentStepPrompts';
 import { elevenLabsKey } from '../connectors/elevenLabsConnector';
@@ -18,7 +18,7 @@ import { getBrand } from './contentBrandService';
 import { alignCaptions, captionsFromLines, toSrt } from './contentCaptions';
 import { isVerticalOnly } from './contentImages';
 import { chosenVersionOf, getProject, getVideoSettings, setVersionOutputField } from './contentProjectService';
-import { chosenScenes, resolveClipEngine } from './clipEngine';
+import { chosenScenes, NO_CLIP_ENGINE, resolveClipEngine } from './clipEngine';
 import { checkComfyClip, makeComfyClip } from './comfyVideoClip';
 import { makeRunwayClip, runwayClipAvailable, runwayClipSeconds } from './runwayClip';
 import { clipSizeFor, effectiveVideoModel, listVideoModels } from '../videoModelService';
@@ -26,7 +26,7 @@ import { projectRelativeDir, requireOutputRoot } from './contentProjectFiles';
 import { priorOutputs } from './contentStepAgents';
 import { contentAppSettings } from './contentStepRecorder';
 import { brandFontName, darkestColour, headlineColour } from './thumbnailRenderer';
-import type { ContentBrand, ContentProject, StepId } from './contentTypes';
+import type { ContentBrand, ContentProject, SceneMotion, StepId } from './contentTypes';
 import type { ContentStepResult } from './contentAgentExecutor';
 
 export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'creative_sfx', 'research_broll', 'creative_video_clips', 'runtime_assemble_video']);
@@ -357,21 +357,32 @@ export interface ClipOutcome {
   /** Where a pending clip will be saved when ComfyUI finishes it. */
   target?: string;
   reason?: string;
+  /** Phase 4c: true when the scene's motion was copied; false when it was asked for but not made. */
+  motion?: boolean;
 }
+
+export const MOTION_NOT_APPROVED = "Motion clips weren't approved for this run.";
 
 async function runClips(assignment: MediaAssignment, ctx: Context): Promise<ContentStepResult> {
   const settings = getVideoSettings(ctx.project);
-  if (settings.aiClips === 'none') return done(assignment, { skipped: CLIPS_OFF }, CLIPS_OFF);
+  const approved = (assignment.effects || []).includes('spend');
+  // Scenes with a motion (phase 4c) get a clip even when they aren't main moments.
+  const allScenes = scenesOf(ctx);
+  const withMotion = allScenes.filter((s) => (s as { motion?: SceneMotion }).motion);
+  if (settings.aiClips === 'none' && withMotion.length === 0) return done(assignment, { skipped: CLIPS_OFF }, CLIPS_OFF);
   const engine = await resolveProjectClipEngine(ctx.project);
-  if (!engine.engine) return done(assignment, { skipped: engine.reason }, `AI clips skipped: ${engine.reason}`);
-  if (engine.engine === 'runway' && !(assignment.effects || []).includes('spend')) {
-    return done(assignment, { skipped: RUNWAY_NOT_APPROVED }, RUNWAY_NOT_APPROVED);
+  if (withMotion.length === 0) {
+    if (!engine.engine) return done(assignment, { skipped: engine.reason }, `AI clips skipped: ${engine.reason}`);
+    if (engine.engine === 'runway' && !approved) return done(assignment, { skipped: RUNWAY_NOT_APPROVED }, RUNWAY_NOT_APPROVED);
+    if (engine.engine === 'higgsfield' && !approved) return done(assignment, { skipped: HIGGSFIELD_NOT_APPROVED }, HIGGSFIELD_NOT_APPROVED);
   }
-  if (engine.engine === 'higgsfield' && !(assignment.effects || []).includes('spend')) {
-    return done(assignment, { skipped: HIGGSFIELD_NOT_APPROVED }, HIGGSFIELD_NOT_APPROVED);
-  }
+  // Why a normal clip can't be made here, or null.
+  const normalBlocked = !engine.engine ? (engine.reason || NO_CLIP_ENGINE)
+    : (engine.engine === 'runway' && !approved) ? RUNWAY_NOT_APPROVED
+      : (engine.engine === 'higgsfield' && !approved) ? HIGGSFIELD_NOT_APPROVED : null;
   // The marks as they are now: the user may have changed them while the run waited.
-  const scenes = chosenScenes(scenesOf(ctx), settings.aiClips);
+  const chosen = new Set((settings.aiClips === 'none' ? [] : chosenScenes(allScenes, settings.aiClips)).map((s) => s.id));
+  const scenes = allScenes.filter((s) => chosen.has(s.id) || (s as { motion?: SceneMotion }).motion);
   const style = part<{ style?: string }>(ctx.prior, 'scenes', 'miya')?.style;
   const scenesVersion = chosenVersionOf(ctx.project, 'scenes');
   const pictures = ((scenesVersion?.output as { pictures?: { sceneId: string; status: string; relativePath?: string }[] })?.pictures) || [];
@@ -384,6 +395,31 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
     if (!picture) { clips.push({ sceneId: scene.id, status: 'skipped', reason: NO_PICTURE }); continue; }
     const sceneSeconds = Math.max(1, (num(scene.endSec) ?? 0) - (num(scene.startSec) ?? 0));
     const prompt = [scene.description, scene.movement && `Camera: ${scene.movement}`, style].filter(Boolean).join('. ');
+    const motion = (scene as { motion?: SceneMotion }).motion;
+    let motionReason: string | null = null;
+    if (motion) {
+      const outRel = `${ctx.dir}/clips/v${ctx.version}-${scene.id}.mp4`;
+      const seconds = Math.min(sceneSeconds, 10);
+      const can = higgsfieldMotionAvailable();
+      if (!approved) motionReason = MOTION_NOT_APPROVED;
+      else if (can.ok) {
+        const made = await makeHiggsfieldMotionClip({ root: ctx.root, imageRel: picture, motion, outRel, prompt, seconds, vertical });
+        if (made.status === 'done') { clips.push({ sceneId: scene.id, status: 'done', path: made.path, seconds, costUsd: made.costUsd, motion: true }); continue; }
+        if (made.status === 'pending') { clips.push({ sceneId: scene.id, status: 'pending', requestId: made.requestId, seconds, target: outRel, costUsd: made.costUsd, motion: true }); continue; }
+        if (made.capped) stop = made.error || null;
+        motionReason = `The motion couldn't be made (${made.error || 'no reason given'}); a normal clip was made.`;
+      } else {
+        motionReason = `${can.reason}; a normal clip was made.`;
+      }
+      if (normalBlocked || stop) {
+        clips.push({ sceneId: scene.id, status: 'skipped', motion: false, reason: [motionReason.replace('; a normal clip was made.', '.'), stop || normalBlocked].filter(Boolean).join(' ') });
+        continue;
+      }
+    } else if (normalBlocked) {
+      clips.push({ sceneId: scene.id, status: 'skipped', reason: normalBlocked });
+      continue;
+    }
+    const before = clips.length;
     if (engine.engine === 'local') {
       const seconds = Math.min(sceneSeconds, engine.maxSeconds || 5);
       const outRel = `${ctx.dir}/clips/v${ctx.version}-${scene.id}.mp4`;
@@ -416,6 +452,11 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
         // Past the monthly limit nothing more is sent.
         if (/monthly cap/i.test(String(made.error || ''))) stop = made.error || null;
       }
+    }
+    // A motion asked for but not made: the normal clip says why.
+    if (motion && clips.length > before) {
+      const last = clips[clips.length - 1];
+      clips[clips.length - 1] = { ...last, motion: false, reason: [motionReason, last.reason].filter(Boolean).join(' ') };
     }
   }
   const madeCount = clips.filter((c) => c.status === 'done' || c.status === 'pending').length;

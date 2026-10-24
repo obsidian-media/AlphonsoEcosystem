@@ -123,4 +123,7 @@ export async function prepareEngineEstimates(project: ContentProject, brand: Con
   const engines = projectEngines(project, brand);
   if (engines.pictures === 'higgsfield') await refreshHiggsfieldEstimate('picture');
   if (engines.clips === 'higgsfield' || project.shortsSettings?.clipEngine === 'higgsfield') await refreshHiggsfieldEstimate('clip', { seconds: 5 });
+  // Motion clips (phase 4c): when any scene or Short part has a motion.
+  const hasMotion = JSON.stringify([chosenVersionOf(project, 'scenes')?.output, chosenVersionOf(project, 'shorts')?.output]).includes('"motion":{');
+  if (hasMotion) await refreshHiggsfieldEstimate('motion', { seconds: 5 });
 }

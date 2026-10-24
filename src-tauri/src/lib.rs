@@ -793,6 +793,7 @@ pub fn run() {
       higgsfield::higgsfield_train_character,
       higgsfield::higgsfield_character_status,
       higgsfield::higgsfield_delete_request,
+      higgsfield::higgsfield_presets,
       telegram::connector_send_telegram_file,
       media_storage::storage_put_file,
       media_storage::storage_delete,

@@ -21,6 +21,10 @@ export interface HiggsfieldModels {
   character?: string;
   characterExtra?: Record<string, unknown>;
   characterExtraProblem?: string;
+  /** Phase 4c: the model id that copies a motion onto a picture, and its extras. */
+  motion?: string;
+  motionExtra?: Record<string, unknown>;
+  motionExtraProblem?: string;
 }
 
 const read = (key: string): string => String(getConnectorCredential('higgsfield', key) || '').trim();
@@ -76,7 +80,24 @@ export function higgsfieldModels(): HiggsfieldModels {
     if (t.extra) out.characterExtra = t.extra;
     if (t.problem) out.characterExtraProblem = t.problem;
   }
+  const motion = read('HIGGSFIELD_MOTION_MODEL');
+  if (motion) {
+    out.motion = motion;
+    const m = parseExtra(read('HIGGSFIELD_MOTION_EXTRA'), 'motion');
+    if (m.extra) out.motionExtra = m.extra;
+    if (m.problem) out.motionExtraProblem = m.problem;
+  }
   return out;
+}
+
+/** Higgsfield's motion presets (phase 4c), when its API lists them; otherwise the user pastes an id. */
+export async function listHiggsfieldPresets(): Promise<{ ok: boolean; presets?: { id: string; name: string }[]; reason?: string }> {
+  if (!isHiggsfieldConfigured()) return { ok: false, reason: HIGGSFIELD_NOT_SET_UP };
+  try {
+    return (await invoke('higgsfield_presets', { keys: higgsfieldKeys() })) as { ok: boolean; presets?: { id: string; name: string }[]; reason?: string };
+  } catch {
+    return { ok: false, reason: 'Higgsfield could not be reached.' };
+  }
 }
 
 /** Settings' Test: Higgsfield's estimate for a model id; nothing is made or charged. */
@@ -90,14 +111,14 @@ export async function testHiggsfieldModel(model: string, extra?: Record<string, 
 }
 
 const ESTIMATES_KEY = 'alphonso_higgsfield_estimates_v1';
-type Kind = 'picture' | 'clip';
+type Kind = 'picture' | 'clip' | 'motion';
 interface StoredEstimate { model: string; extra: string; usd?: number; reason?: string; atMs: number }
 
 function current(kind: Kind): { model?: string; extra?: Record<string, unknown>; problem?: string } {
   const m = higgsfieldModels();
-  return kind === 'picture'
-    ? { model: m.picture, extra: m.pictureExtra, problem: m.pictureExtraProblem }
-    : { model: m.clip, extra: m.clipExtra, problem: m.clipExtraProblem };
+  if (kind === 'picture') return { model: m.picture, extra: m.pictureExtra, problem: m.pictureExtraProblem };
+  if (kind === 'motion') return { model: m.motion, extra: m.motionExtra, problem: m.motionExtraProblem };
+  return { model: m.clip, extra: m.clipExtra, problem: m.clipExtraProblem };
 }
 
 function readEstimates(): Partial<Record<Kind, StoredEstimate>> {
@@ -120,7 +141,7 @@ export async function refreshHiggsfieldEstimate(kind: Kind, job: { seconds?: num
   let answer: { ok: boolean; usd?: number; reason?: string };
   try {
     answer = (await invoke('higgsfield_estimate', {
-      job: { model, prompt: kind === 'picture' ? 'A picture for a video' : 'A short clip for a video', extra: extra ?? null, ...job },
+      job: { model, prompt: kind === 'picture' ? 'A picture for a video' : kind === 'motion' ? 'A short clip with a movement' : 'A short clip for a video', extra: extra ?? null, ...job },
       keys: higgsfieldKeys(),
     })) as { ok: boolean; usd?: number; reason?: string };
   } catch {

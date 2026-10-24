@@ -3,6 +3,9 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 
+const listHiggsfieldPresets = vi.fn(async () => ({ ok: false, reason: 'not set up' }));
+vi.mock('../../../services/connectors/higgsfieldConnector', () => ({ listHiggsfieldPresets: () => listHiggsfieldPresets() }));
+
 import { MotionPicker } from '../../../components/miya/MotionPicker';
 import { MOTION_CAMERA_REFUSED } from '../../../services/contentFactory/contentMotion';
 
@@ -70,5 +73,17 @@ describe('MotionPicker', () => {
     expect(stopTrack).toHaveBeenCalled();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Keep' })); });
     expect(h.onClip).toHaveBeenCalledWith({ base64: expect.any(String) });
+  });
+
+  it("offers Higgsfield's own presets when it lists them", async () => {
+    listHiggsfieldPresets.mockResolvedValueOnce({ ok: true, presets: [{ id: 'm1', name: 'Wave' }, { id: 'm2', name: 'Nod' }] } as any);
+    const h = handlers();
+    render(<MotionPicker label="Scene 1" motion={null} {...h} />);
+    fireEvent.change(screen.getByLabelText('Motion: Scene 1'), { target: { value: 'preset' } });
+    const pick = await screen.findByLabelText('Preset: Scene 1') as HTMLSelectElement;
+    expect([...pick.options].map((o) => o.text)).toEqual(['Choose a preset…', 'Wave', 'Nod']);
+    fireEvent.change(pick, { target: { value: 'm2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Use this preset' }));
+    expect(h.onSet).toHaveBeenCalledWith({ source: 'preset', presetId: 'm2' });
   });
 });

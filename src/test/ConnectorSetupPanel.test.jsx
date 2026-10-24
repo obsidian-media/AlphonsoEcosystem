@@ -168,6 +168,8 @@ describe('ConnectorSetupPanel', () => {
     render(<ConnectorSetupPanel />);
     fireEvent.click(screen.getByTestId('connector-category-content'));
     expect(screen.getByText('Higgsfield (pictures and AI clips)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Motion model id')).toBeInTheDocument();
+    expect(screen.getByLabelText('Motion model extra settings (JSON)')).toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText('e.g. higgsfield-ai/soul/v2/standard'), { target: { value: 'higgsfield-ai/soul/v2/standard' } });
     fireEvent.change(screen.getByLabelText('Picture model extra settings (JSON)'), { target: { value: '{"quality":"high"}' } });
     fireEvent.click(screen.getByRole('button', { name: 'Test picture model' }));

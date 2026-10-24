@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../ui';
 import { MotionRecorder } from './MotionRecorder';
 import type { SceneMotion } from '../../services/contentFactory/contentTypes';
+import { listHiggsfieldPresets } from '../../services/connectors/higgsfieldConnector';
 
 type Mode = 'none' | 'preset' | 'record' | 'file';
 const field = 'rounded-lg bg-(--surface-1) px-2 py-0.5 text-[11px]';
@@ -23,6 +24,14 @@ export function MotionPicker({ label, motion, suggested = false, onSet, onClip, 
   const [mode, setMode] = useState<Mode>(modeOf(motion));
   const [preset, setPreset] = useState(motion?.presetId || '');
   const [note, setNote] = useState('');
+  // Higgsfield's own presets when its API lists them (phase 4c); otherwise a pasted id.
+  const [presets, setPresets] = useState<{ id: string; name: string }[] | null>(null);
+  useEffect(() => {
+    if (mode !== 'preset' || presets) return;
+    let alive = true;
+    listHiggsfieldPresets().then((r) => { if (alive) setPresets(r.ok && r.presets?.length ? r.presets : []); }).catch(() => { if (alive) setPresets([]); });
+    return () => { alive = false; };
+  }, [mode, presets]);
   const clip = async (input: { base64: string } | { choose: true }) => {
     setNote('Saving…');
     const saved = await onClip(input);
@@ -48,7 +57,14 @@ export function MotionPicker({ label, motion, suggested = false, onSet, onClip, 
       </label>
       {mode === 'preset' && (
         <div className="flex items-center gap-1">
-          <input aria-label={`Preset id: ${label}`} className={field} placeholder="Preset id from Higgsfield" value={preset} onChange={(e) => setPreset(e.target.value)} />
+          {presets && presets.length > 0 ? (
+            <select aria-label={`Preset: ${label}`} className={field} value={preset} onChange={(e) => setPreset(e.target.value)}>
+              <option value="">Choose a preset…</option>
+              {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          ) : (
+            <input aria-label={`Preset id: ${label}`} className={field} placeholder="Preset id from Higgsfield" value={preset} onChange={(e) => setPreset(e.target.value)} />
+          )}
           <Button size="sm" variant="secondary" disabled={!preset.trim()} onClick={() => { onSet({ source: 'preset', presetId: preset.trim() }); setNote('Saved.'); }}>Use this preset</Button>
         </div>
       )}
