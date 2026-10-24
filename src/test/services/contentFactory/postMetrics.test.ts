@@ -125,6 +125,24 @@ describe('readDueMetrics', () => {
   });
 });
 
+describe('refused reads', () => {
+  it('a refusal for permission waits an hour and a refusal for anything else a day, so other posts get their turn', async () => {
+    const id = project([post({ id: 'perm', platformId: 'perm' }), post({ id: 'odd', platformId: 'odd' }), post({ id: 'fine', platformId: 'fine' })]);
+    invoke.mockImplementation(async (cmd: string, args: { request?: { platformId: string } }) => {
+      if (cmd !== 'content_read_metrics') return { ok: true };
+      if (args.request?.platformId === 'perm') return { ok: false, values: {}, unavailable: [], problem: 'permission' };
+      if (args.request?.platformId === 'odd') return { ok: false, values: {}, unavailable: [], problem: 'other' };
+      return { ok: true, values: { views: 1 }, unavailable: [] };
+    });
+    await readDueMetrics(NOW, 2);
+    expect(saved(id, 'perm').metrics?.retryAfterMs).toBe(NOW + H);
+    expect(saved(id, 'odd').metrics?.retryAfterMs).toBe(NOW + 24 * H);
+    invoke.mockClear();
+    await readDueMetrics(NOW + 60e3, 2);
+    expect(reads().map((c) => c[1].request.platformId)).toEqual(['fine']);
+  });
+});
+
 describe('refreshPostMetrics', () => {
   it('Refresh is limited to once per 10 minutes', async () => {
     const id = project([post()]);

@@ -156,10 +156,13 @@ async function readCheckpoint(target: MeasurablePost, checkpoint: Checkpoint | n
     if (result.problem !== 'permission') clearNeedsPermission(service);
   } else if (result.problem === 'removed') {
     metrics.removed = true;
-  } else if (result.problem === 'temporary') {
+  } else if (result.problem === 'temporary' || result.problem === 'permission') {
+    // Not every minute: a refused read waits, so other posts get their turn and quotas last.
     metrics.retryAfterMs = nowMs + H;
+    if (result.problem === 'permission') metrics.lastProblem = 'permission';
   } else {
     metrics.lastProblem = result.problem || 'other';
+    metrics.retryAfterMs = nowMs + 24 * H;
   }
   saveMetrics(target, metrics);
   if (result.ok && checkpoint === '7d' && target.projectId) {
