@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Modal } from '../ui';
 import { listBrands } from '../../services/contentFactory/contentBrandService';
 import {
-  filterCalendarItems, itemsForMonth, itemsForWeek, listCalendarItems, moveCalendarItem, type CalendarItem,
+  filterCalendarItems, itemsForWeek, listCalendarItems, moveCalendarItem, type CalendarItem,
 } from '../../services/contentFactory/calendarItems';
 import { cancelProjectPost, moveToDay, moveToSlot, type MoveResult } from '../../services/contentFactory/contentPostMoves';
 import { listProjects } from '../../services/contentFactory/contentProjectService';
@@ -64,7 +64,10 @@ export function CalendarPage({ initialDateMs, onOpenProject, expiries }: {
 
   const date = new Date(cursor);
   const weekStart = startOfWeek(cursor);
-  const shown = view === 'month' ? itemsForMonth(items, date.getFullYear(), date.getMonth()) : itemsForWeek(items, weekStart);
+  // The month grid shows six weeks (with the edges of the months around it): show their posts too.
+  const gridStart = startOfWeek(new Date(date.getFullYear(), date.getMonth(), 1).getTime());
+  const gridEnd = addDays(gridStart, 42);
+  const shown = view === 'month' ? items.filter((i) => i.atMs >= gridStart && i.atMs < gridEnd) : itemsForWeek(items, weekStart);
 
   const finish = (result: MoveResult) => {
     setMessage(result.ok ? null : { text: result.reason || 'That could not be changed.', ...(result.manageUrl ? { manageUrl: result.manageUrl } : {}) });

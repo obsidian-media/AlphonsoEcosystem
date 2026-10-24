@@ -66,6 +66,12 @@ describe('CalendarPage', () => {
     expect(screen.getByTestId('calendar-item-post:lock').getAttribute('data-needs-you')).toBe('true');
   });
 
+  it("shows posts on the next month's days that the month grid shows", () => {
+    listCalendarItems.mockReturnValue([...ITEMS, item({ id: 'post:nov', postId: 'nov', title: 'November reel', atMs: new Date(2026, 10, 2, 12).getTime() })]);
+    renderPage();
+    expect(within(screen.getByTestId('calendar-day-2026-11-02')).getByText(/November reel/)).toBeInTheDocument();
+  });
+
   it('the week shows only the hours that have posts, plus No time', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Week' }));
