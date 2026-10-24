@@ -622,7 +622,7 @@ export async function handleJoseButton(token, update) {
     return 'Running the plan.';
   }
   if (button.action === 'carry_on') {
-    if (request.status !== 'interrupted') return 'Already done.';
+    if (request.status !== 'interrupted' && request.status !== 'waiting_setup') return 'Already done.';
     quietly(engine.carryOnRequest(request.id));
     return 'Carrying on.';
   }

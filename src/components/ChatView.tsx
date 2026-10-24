@@ -1491,12 +1491,17 @@ export function ChatView({
                     <div className="mt-2 flex gap-2">
                       <button
                         onClick={async () => {
-                          const reply = await confirmMcpOutreachCall(message.pendingConfirmChatId);
-                          setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: reply }]);
+                          // Marcus places the call once you approve his step (agent roles Part A).
+                          const { askMarcusToCall } = await import('../services/calleCallStep');
+                          const result = await askMarcusToCall({ kind: 'mcp', chatId: message.pendingConfirmChatId }, 'The call planned in this chat');
+                          const reply = result?.ok === false
+                            ? `The call could not be set up: ${String(result.reason || (result.problems || []).join(' ') || 'unknown')}`
+                            : 'Waiting for your approval: Marcus will place the call.';
+                          setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: reply, ...(result?.requestId ? { joseRequestId: result.requestId } : {}) }]);
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-(--accent-dim) border border-(--accent-border) rounded-lg text-xs text-(--accent) hover:bg-(--accent-dim) hover:text-(--accent-hover) transition-colors"
                       >
-                        Approve &amp; Place Call
+                        Ask Marcus to place the call
                       </button>
                       <button
                         onClick={async () => {

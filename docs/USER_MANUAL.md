@@ -174,15 +174,18 @@ The voice pipeline uses the same 9 agents as the chat interface. Routing is keyw
 
 | Keywords | Agent routed to |
 |----------|----------------|
-| "search", "find", "research", "what is", "who is" | **Hector** |
-| "write", "draft", "create", "compose", "generate content" | **Miya** |
-| "publish", "post", "share", "distribute", "send to" | **Marcus** |
-| "remember", "recall", "memory", "what did I", "last time" | **Echo** |
-| "task", "assign", "schedule", "plan", "todo" | **Jose** |
-| "security", "scan", "vulnerability", "audit", "risk" | **Sentinel** |
-| "opportunity", "market", "trend", "analyse", "growth" | **Nova** |
-| "policy", "compliance", "governance", "approve", "review" | **Maria** |
+| "plan", "task", "schedule", "delegate" | **Jose** |
+| "email", "letter", "note", "code", "bug", "build", "install" | **Alphonso** |
+| "opportunity", "score", "prioritise", "timing", "when should" | **Nova** |
+| "publish", "send", "release", "slack", "call" | **Marcus** |
+| "write", "blog", "post", "script", "video", "design", "campaign" | **Miya** |
+| "audit", "risk", "compliance", "check", "review" | **Maria** |
+| "remember", "recall", "memory", "save" | **Echo** |
+| "security", "threat", "vulnerability", "permission" | **Sentinel** |
+| "research", "search", "find", "market", "competitor", "source" | **Hector** |
 | Everything else | **Alphonso** |
+
+Each agent answers in its role (from `voice/backend/agent_roles.py`) and, asked for someone else's work, says who does it.
 
 ### Voice Health Check
 
@@ -254,19 +257,21 @@ On by default. It blocks every paid or metered connector (Claude, ChatGPT, Runwa
 
 ## 6. 9 Agents — Who Does What
 
-What each agent may do is one table, shown in Project Execution's capability matrix and on the Hector desk. Everyone may read and create new files of its own; only **Alphonso** may run code or change project files; only **Marcus** may publish or send. Spending (a paid model, or Miya's paid voices, pictures and clips) is allowed only on certain steps, and always asks.
+Each kind of work has exactly one owner, and Jose gives every step to the agent who owns it; no agent does another's work. What each agent may do is one table, shown in Project Execution's capability matrix and on the Hector desk. Everyone may read and create new files of its own; only **Alphonso** may run code or change project files; only **Marcus** may publish or send. Spending (a paid model, or Miya's paid voices, pictures and clips) is allowed only on certain steps, and always asks.
 
-| Agent | Role | In Miya Studio |
-|-------|------|----------------|
-| **Jose** | Orchestrator — answers or plans every request, runs the steps, reports | Runs a project as one request |
-| **Hector** | Research — facts, sources, citations | What goes viral; finds stock clips |
-| **Miya** | Creative — scripts, storyboards, pictures, front-end drafts | Script, scenes, thumbnails, voice, music, clips, Shorts, carousels, campaign |
-| **Alphonso** | Operator — runs commands, writes project files, builds and verifies | Assembles the finished video |
-| **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Reviews the script; the quality gate |
-| **Marcus** | Distribution & Release Manager — posts and sends, after approval | Posts and schedules the posts |
-| **Echo** | Memory — decisions, knowledge, history | Remembers what you reject and decide |
-| **Sentinel** | Security only | The security check before posting |
-| **Nova** | Analysis — scoring, timing, results | Market check, post times, results, lessons and ideas |
+| Agent | Owns | Never does | In Miya Studio |
+|-------|------|------------|----------------|
+| **Jose** | Planning, routing each step to its owner, approvals, the closing summary | The work itself: no writing, research or reviews | Runs a project as one request |
+| **Alphonso** | Code (front-end too), commands, project changes, plain questions, everyday writing (emails, notes) | Brand content, design | — |
+| **Miya** | Content and design: scripts, pictures, voice, music, Shorts, carousels, campaign copy, UI/UX design, editing the finished video | Code | Script, scenes, thumbnails, voice, music, clips, the finished video, Shorts, carousels, campaign |
+| **Hector** | Finding facts: research, sources, competitors, stock footage | Judging value, writing content | What goes viral and who competes; stock clips |
+| **Nova** | Judging value, priority and timing from what Hector found | Gathering facts | Judges the market from Hector's research; post times, results, lessons and ideas |
+| **Maria** | Quality, governance and risk reviews | Security | Reviews the script; the quality gate |
+| **Sentinel** | Security and safety checks | Quality | The security check before posting |
+| **Marcus** | Sending and publishing approved work, placing calls | Deciding what to say | Posts and schedules the posts |
+| **Echo** | Organising and cleaning memory (others may save their own notes) | Others' work | Remembers what you reject and decide |
+
+Every step gets the full work of the steps it depends on, so a reviewer reads the actual draft and Marcus sends what was written, never the instruction. A request ends with a short summary, one line per step, then "Open on the board."; a one-step request shows its whole answer. When an agent can't work until something is set up (Kokoro not installed, a connector without its key), the step waits, says what to set up, and **Carry on** (board or Telegram) runs it again; it is never handed to another agent. In Boardroom and Simple mode an agent asked for someone else's work says who does it. Placing a CALL-E call is Marcus's step and waits for your approval.
 
 ---
 
@@ -583,7 +588,7 @@ Navigate to the Project Execution panel in the dashboard, or use:
 
 ## 14. All Chat Commands
 
-You don't need commands: write what you want and Jose answers or plans it. These still work:
+You don't need commands: write what you want and you get an answer (from Alphonso) or Jose plans it. These still work:
 
 ### Jose Commands
 
@@ -646,7 +651,7 @@ You don't need commands: write what you want and Jose answers or plans it. These
 
 ### System Commands
 
-Ask in plain words ("is Ollama running?", "which models do I have?"); Jose answers. Settings → Runtime and Runtime Hub show the real status of Ollama, ComfyUI, Voice OS and the other tools, and the Connector Health Monitor tests each connector.
+Ask in plain words ("is Ollama running?", "which models do I have?"); Alphonso answers. Settings → Runtime and Runtime Hub show the real status of Ollama, ComfyUI, Voice OS and the other tools, and the Connector Health Monitor tests each connector.
 
 ### Memory Commands
 

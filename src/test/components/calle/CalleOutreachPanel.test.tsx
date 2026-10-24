@@ -15,6 +15,8 @@ vi.mock('../../../services/calleOutreachService', () => ({
 }));
 
 const mockIsCalleConfigured = vi.fn<(...args: unknown[]) => boolean>(() => true);
+const mockAskMarcusToCall = vi.fn(async (..._args: unknown[]) => ({ ok: true }));
+vi.mock('../../../services/calleCallStep', () => ({ askMarcusToCall: (...args: unknown[]) => mockAskMarcusToCall(...args) }));
 vi.mock('../../../services/connectors/calleConnector', () => ({
   isCalleConfigured: (...args: unknown[]) => mockIsCalleConfigured(...args)
 }));
@@ -50,26 +52,26 @@ describe('CalleOutreachPanel', () => {
     expect(mockCreateOutreachDraft).toHaveBeenCalledWith(expect.objectContaining({ businessName: "Joe's Pizza", phone: '+15550123456' }));
   });
 
-  it('shows the Approve & Place Call action for a pending_approval record needing a click', () => {
+  it('shows the Ask Marcus to place the call action for a pending_approval record needing a click', () => {
     mockListOutreachCalls.mockReturnValue([{ id: 'r1', businessName: 'Joe\'s Pizza', phone: '+15550123456', task: 'Call and ask.', status: 'pending_approval', policyBlockKind: 'needs_approval_click' }]);
     render(<CalleOutreachPanel />);
-    expect(screen.getByRole('button', { name: /approve.*place call/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /ask marcus to place the call/i })).toBeTruthy();
   });
 
   it('shows Settings-change guidance instead of Approve for a zero_cost_mode block', () => {
     mockListOutreachCalls.mockReturnValue([{ id: 'r1', businessName: 'Joe\'s Pizza', phone: '+15550123456', task: 'Call and ask.', status: 'pending_approval', policyBlockKind: 'zero_cost_mode' }]);
     render(<CalleOutreachPanel />);
-    expect(screen.queryByRole('button', { name: /approve.*place call/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /ask marcus to place the call/i })).toBeNull();
     expect(screen.getByText(/zero-cost mode/i)).toBeTruthy();
   });
 
-  it('calls runOutreachCall with approved: true when Approve & Place Call is clicked', async () => {
+  it("asks Marcus to place the call (his step waits for your approval) instead of calling straight away", async () => {
     mockListOutreachCalls.mockReturnValue([{ id: 'r1', businessName: 'Joe\'s Pizza', phone: '+15550123456', task: 'Call and ask.', status: 'pending_approval', policyBlockKind: 'needs_approval_click' }]);
-    mockRunOutreachCall.mockResolvedValue({ id: 'r1', status: 'queued' });
     render(<CalleOutreachPanel />);
-    fireEvent.click(screen.getByRole('button', { name: /approve.*place call/i }));
+    fireEvent.click(screen.getByRole('button', { name: /ask marcus to place the call/i }));
 
-    await waitFor(() => expect(mockRunOutreachCall).toHaveBeenCalledWith('r1', { approved: true }));
+    await waitFor(() => expect(mockAskMarcusToCall).toHaveBeenCalledWith({ kind: 'rest', recordId: 'r1' }, expect.any(String)));
+    expect(mockRunOutreachCall).not.toHaveBeenCalled();
   });
 
   it('shows a Dismiss action for a blocked/failed record and calls dismissOutreachCall', () => {

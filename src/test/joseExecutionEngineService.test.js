@@ -153,7 +153,7 @@ describe('executeHectorAssignment no longer re-summarizes', () => {
       'utf-8'
     );
     const fnStart = source.indexOf('async function executeHectorAssignment(');
-    const fnEnd = source.indexOf('\nasync function executeJoseAssignment(');
+    const fnEnd = source.indexOf('\nasync function executeAssistantAssignment(');
     expect(fnStart).toBeGreaterThan(-1);
     expect(fnEnd).toBeGreaterThan(fnStart);
     const fnBody = source.slice(fnStart, fnEnd);
@@ -262,7 +262,7 @@ describe('requests no specialist takes', () => {
     restoreSetTimeout();
   });
 
-  it("Jose answers them with his model", async () => {
+  it("Alphonso answers them with his model (he owns plain questions and everyday writing)", async () => {
     mockAgentLlm.mockResolvedValue({ response: 'Backups protect your work when a disk fails. Keep one copy off-site.' });
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'Write a two-sentence note about why backups matter.',
@@ -271,7 +271,7 @@ describe('requests no specialist takes', () => {
       zeroCostMode: true
     });
     expect(result.ok).toBe(true);
-    expect(mockAgentLlm).toHaveBeenCalledWith('jose', expect.objectContaining({ prompt: expect.stringContaining('why backups matter') }));
+    expect(mockAgentLlm).toHaveBeenCalledWith('alphonso', expect.objectContaining({ prompt: expect.stringContaining('why backups matter') }));
     const reports = result.command.userReport.assignmentSummaries.map((a) => a.reportSummary).join(' ');
     expect(reports).toContain('Backups protect your work');
     expect(reports).not.toContain('orchestration review');
@@ -288,7 +288,8 @@ describe('requests no specialist takes', () => {
     const report = result.command.userReport;
     expect(result.failedCount).toBe(1);
     // A failed step is reported as failed, with its reason, not as "waiting".
-    expect(report.summary).toMatch(/1 of 1 assignment\(s\) failed/);
+    // The closing summary (agent roles Part A): the step and why it failed.
+    expect(report.summary).toMatch(/^Alphonso: failed \(.*Nothing was produced/);
     expect(report.summary).not.toMatch(/waiting for agent reports/);
     expect(report.assignmentSummaries[0]).toMatchObject({ reportStatus: 'failed' });
     expect(report.assignmentSummaries[0].reportSummary).toMatch(/^Failed: .*Nothing was produced/);

@@ -69,3 +69,12 @@ describe('expireWaitingRequests', () => {
     expect(getPacketById(other.id)!.status).toBe('pending_approval');
   });
 });
+
+describe('a request waiting for setup (agent roles Part A)', () => {
+  it('expires like one waiting for an approval', async () => {
+    const old = await waitingRequest(8);
+    setJoseRequestStatus(old.requestId, 'waiting_setup');
+    expireWaitingRequests(old.now);
+    expect(getJoseRequest(old.requestId)!.status).toBe('expired');
+  });
+});

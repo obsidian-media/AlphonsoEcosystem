@@ -65,12 +65,18 @@ function livePayload(assignment: ContentAssignment): ContentStepPayload {
   const prior = project ? { ...payload.prior, ...priorOutputs(project, payload.step) } : payload.prior;
   const at = String(assignment.instruction || '').indexOf(FINDINGS_MARK);
   const findings = at >= 0 ? String(assignment.instruction).slice(at).trim() : '';
-  return { ...payload, prior, ...(findings ? { task: [payload.task, findings].filter(Boolean).join('\n\n') } : {}) };
+  // Hector finds, Nova judges (owner, 2026-10-24): Nova's market check reads
+  // Hector's research answer from the same research step.
+  const hector = assignment.actionType === 'analysis_market' ? project?.steps?.research?.pendingAgents?.hector : undefined;
+  const fromHector = hector ? `Hector's research:\n${JSON.stringify(hector).slice(0, 6000)}` : '';
+  const task = [payload.task, fromHector, findings].filter(Boolean).join('\n\n');
+  return { ...payload, prior, ...(fromHector || findings ? { task } : {}) };
 }
 
 export interface ContentStepResult {
   summary: string;
-  resultState: 'completed' | 'failed';
+  /** setup_required: the owner can't work until something is installed (agent roles Part A). */
+  resultState: 'completed' | 'failed' | 'setup_required';
   artifacts: { type: 'content_step_output'; actionType: string; data: unknown; raw: string }[];
   sources: string[];
   contractAction: string;
@@ -98,7 +104,7 @@ export async function executeContentStepAssignment(assignment: ContentAssignment
   const result = assignment.actionType === 'distribution_schedule_posts'
     ? await executePublishStep(assignment)
     : MEDIA_ACTIONS.has(assignment.actionType) ? await executeMediaStep(assignment) : await runContentAgent(assignment);
-  if (result.resultState === 'failed' && getProject(projectId)) failStep(projectId, step, String(result.failureReason || 'An agent could not finish this step.'));
+  if ((result.resultState === 'failed' || result.resultState === 'setup_required') && getProject(projectId)) failStep(projectId, step, String(result.failureReason || 'An agent could not finish this step.'));
   return result;
 }
 

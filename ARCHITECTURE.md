@@ -49,10 +49,10 @@ The desktop window's origin (`http://tauri.localhost`) is refused by local serve
 
 | Agent | Role | Key Constraint |
 |---|---|---|
-| **Alphonso** | Local operator — execution, verification, packaging; assembles videos | The only agent that may run code or change project files |
-| **Jose** | Orchestrator — answers or plans every request as steps, runs and reports | Never runs code or publishes; may spend only on a paid-model step, which always asks |
-| **Hector** | Research — facts, sources, citations, stock clips | Read and write its own work |
-| **Miya** | Creative — the content factory, front-end drafts | Read and write its own work |
+| **Alphonso** | Local operator — code, commands, plain questions and everyday writing | The only agent that may run code or change project files |
+| **Jose** | Orchestrator — plans every request as steps, each to the agent who owns that work; runs and reports; does none of the work | Never runs code or publishes; may spend only on a paid-model step, which always asks |
+| **Hector** | Research — finding facts, sources, competitors, stock clips (Nova judges them) | Read and write its own work |
+| **Miya** | Creative — the content factory (including the finished video) and UI/UX design, never code | Read and write its own work |
 | **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Read and write its own work |
 | **Marcus** | Distribution & Release Manager — posts and schedules | The only agent that may publish or send, after approval |
 | **Echo** | Memory historian and archival | Read and write its own work |
@@ -258,7 +258,7 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
 - Playwright E2E wired into CI (8 spec files under `e2e/`) — runs the web build with the Tauri bridge mocked, so it never exercises the Rust backend
 - Desktop E2E suite (`e2e-desktop/`, `npm run test:e2e:desktop`) — WebdriverIO + tauri-driver against the real built binary on isolated test data; 34 spec files; runs in CI as `Desktop E2E (real Tauri binary)` on Windows (not a required check)
-- Coverage floors 48% lines / 38% branches / 30% functions / 48% statements (`npm run test:coverage`); 546 test files, 6,777 tests, all passing (verified 2026-10-25 — this line is not covered by `scripts/verify-doc-counts.mjs`'s ARCHITECTURE.md checks, so it can drift silently; cross-check against AGENTS.md's Project Identity line before trusting it)
+- Coverage floors 48% lines / 38% branches / 30% functions / 48% statements (`npm run test:coverage`); 556 test files, 6,832 tests, all passing (verified 2026-10-24 — this line is not covered by `scripts/verify-doc-counts.mjs`'s ARCHITECTURE.md checks, so it can drift silently; cross-check against AGENTS.md's Project Identity line before trusting it)
 - GitHub connector tests: 20 tests in `githubConnector.test.js`; Slack connector tests: 16 tests in `slackConnector.test.js`
 - `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI; `cargo clippy -- -D warnings` clean (verified 2026-07-08)
 - **Last reconciled with the code:** 2026-10-25 (first full audit 2026-07-08 — see `docs/AUDIT_REPORT_2026-07-08.md`).

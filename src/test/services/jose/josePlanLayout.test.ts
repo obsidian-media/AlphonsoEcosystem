@@ -8,19 +8,19 @@ describe('layoutPlan', () => {
     const steps = getTemplate('content_video')!.steps;
     const layout = layoutPlan(steps);
     const col = (id: string) => layout.nodes.find((n) => n.stepId === id)!.col;
-    // The content factory's 17 steps (phase 3a) in 11 columns.
-    expect(new Set(layout.nodes.map((n) => n.col)).size).toBe(11);
-    expect([col('research_trends'), col('research_market')]).toEqual([0, 0]);
-    expect(col('script')).toBe(1);
-    expect([col('review_value'), col('review_quality')]).toEqual([2, 2]);
-    expect(col('scenes')).toBe(3);
-    expect(col('thumbnail')).toBe(4);
-    expect([col('voice'), col('music'), col('broll')]).toEqual([5, 5, 5]);
-    expect(col('clips')).toBe(6);
-    expect(col('assemble')).toBe(7);
-    expect([col('campaign'), col('timing')]).toEqual([8, 8]);
-    expect([col('quality'), col('security')]).toEqual([9, 9]);
-    expect(col('publish')).toBe(10);
+    // Nova judges Hector's research (2026-10-24), so research takes two columns.
+    expect(new Set(layout.nodes.map((n) => n.col)).size).toBe(12);
+    expect([col('research_trends'), col('research_market')]).toEqual([0, 1]);
+    expect(col('script')).toBe(2);
+    expect([col('review_value'), col('review_quality')]).toEqual([3, 3]);
+    expect(col('scenes')).toBe(4);
+    expect(col('thumbnail')).toBe(5);
+    expect([col('voice'), col('music'), col('broll')]).toEqual([6, 6, 6]);
+    expect(col('clips')).toBe(7);
+    expect(col('assemble')).toBe(8);
+    expect([col('campaign'), col('timing')]).toEqual([9, 9]);
+    expect([col('quality'), col('security')]).toEqual([10, 10]);
+    expect(col('publish')).toBe(11);
     const expected = steps.flatMap((s) => s.needs.map((n) => `${n}->${s.stepId}`)).sort();
     expect(layout.edges.map((e) => `${e.from}->${e.to}`).sort()).toEqual(expected);
     expect(layout.width).toBeGreaterThan(0);

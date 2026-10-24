@@ -8,7 +8,7 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 **Role:** General execution, verification, packaging
 **Can do:** Run commands, read/write files, build projects, verify outputs
 **Cannot:** Bypass approval gates (commands that run code ask according to Settings; commands that delete always ask); spend or publish
-**When to use:** Building, fixing, testing. In Miya Studio, Alphonso assembles the finished video.
+**When to use:** Building, fixing, testing; plain questions and everyday writing (emails, notes).
 **Skill Packs (18):**
 - Core Coding: `pack.coding.full-stack`, `pack.coding.tdd`, `pack.alphonso-typescript-mastery`, `pack.alphonso-rust-operations`, `pack.alphonso-react-patterns`, `pack.alphonso-python-voice`
 - Verification: `pack.alphonso-code-review`, `pack.alphonso-build-verification`, `pack.alphonso-refactoring`, `pack.debugging.root-cause`
@@ -149,6 +149,12 @@ You: "Research AI trends, write a blog post and post it to Slack"
   → You: approve on the board, in Chat or on Telegram
   → Marcus posts; Echo saves what was decided
 ```
+
+## Who Owns What
+
+Each kind of work has exactly one owner (`AGENT_PERMISSION_TABLE`, `owns` and `never` per agent; `ownerOf()` finds it, and a test fails if two agents could take the same task type). Jose plans, routes, approves and writes the closing summary, and does none of the work. Alphonso owns code, commands, plain questions and everyday writing; Miya content and design (and editing the finished video), never code; Hector finding facts; Nova judging what Hector found; Maria quality, governance and risk; Sentinel security; Marcus sending, publishing and calls; Echo memory. Help goes only to the owner of the work asked for, and a step whose owner can't work waits for setup instead of moving to another agent.
+
+Every step gets the full output of the steps it depends on (by step, cut at 6,000 characters for local models, 20,000 for paid or cloud ones), one line for each other finished step, and memory. A review gets the work it reviews and gives its verdict in the same answer.
 
 ## Agent Permissions Matrix
 

@@ -30,7 +30,7 @@ import { brandFontName, darkestColour, headlineColour } from './thumbnailRendere
 import type { ContentBrand, ContentProject, SceneMotion, StepId } from './contentTypes';
 import type { ContentStepResult } from './contentAgentExecutor';
 
-export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'creative_sfx', 'research_broll', 'creative_video_clips', 'runtime_assemble_video']);
+export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'creative_sfx', 'research_broll', 'creative_video_clips', 'creative_assemble_video']);
 
 export const SFX_OFF = 'Sound effects are off for this brand (Brands tab).';
 export const HIGGSFIELD_NOT_APPROVED = "Higgsfield clips weren't approved for this run.";
@@ -83,6 +83,11 @@ function failed(assignment: MediaAssignment, reason: string): ContentStepResult 
     contractAction: assignment.actionType,
     failureReason: reason,
   };
+}
+
+/** The step can't run until a tool is installed: the request waits for setup, nothing is handed on. */
+function setupNeeded(assignment: MediaAssignment, reason: string): ContentStepResult {
+  return { ...failed(assignment, reason), resultState: 'setup_required', summary: reason };
 }
 
 interface Context {
@@ -191,6 +196,8 @@ async function runVoice(assignment: MediaAssignment, ctx: Context): Promise<Cont
       lines: lines.map((l) => (l.text ? { id: l.id, text: l.text } : { id: l.id, text: '', pauseSec: l.seconds })),
     } },
   );
+  // Kokoro not installed: the request waits until it is (the backend says "is not installed").
+  if (!result?.ok && /is not installed/i.test(String(result?.error || ''))) return setupNeeded(assignment, String(result?.error));
   if (!result?.ok || !result.full) return failed(assignment, result?.error || 'Kokoro made no voice-over.');
   const output: VoiceOutput = {
     full: `${outDir}/full.wav`,
@@ -590,7 +597,7 @@ export async function executeMediaStep(assignment: MediaAssignment): Promise<Con
       case 'creative_sfx': return await runSfx(assignment, ctx);
       case 'research_broll': return await runBroll(assignment, ctx);
       case 'creative_video_clips': return await runClips(assignment, ctx);
-      case 'runtime_assemble_video': return await runAssemble(assignment, ctx);
+      case 'creative_assemble_video': return await runAssemble(assignment, ctx);
       default: return failed(assignment, `Unknown media step: ${assignment.actionType}`);
     }
   } catch (error) {

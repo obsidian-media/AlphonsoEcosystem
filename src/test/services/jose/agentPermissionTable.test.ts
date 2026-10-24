@@ -46,10 +46,11 @@ describe('agentPermissionTable', () => {
 // Phase 3 (2026-10-23): task types the splitter has always used, which the
 // contracts never allowed, so they failed every time.
 describe("the splitter's own task types are allowed", () => {
-  it('lets Jose run Boardroom and cost-policy tasks, and Hector check publishing readiness', () => {
+  it('lets Jose run Boardroom and cost-policy tasks, and Marcus check publishing readiness', () => {
     expect(isTaskTypeAllowed('jose', 'boardroom_planning')).toBe(true);
     expect(isTaskTypeAllowed('jose', 'cost_policy_enforcement')).toBe(true);
-    expect(isTaskTypeAllowed('hector', 'external_publish_handoff')).toBe(true);
+    expect(isTaskTypeAllowed('marcus', 'distribution_readiness')).toBe(true);
+    expect(isTaskTypeAllowed('hector', 'external_publish_handoff')).toBe(false);
   });
 
   it('still blocks what the blocked prefixes are for', () => {
@@ -59,7 +60,7 @@ describe("the splitter's own task types are allowed", () => {
   });
 
   it('agrees with the contracts check', () => {
-    const gate = validateAgentExecutionContract({ toAgent: 'hector', actionType: 'external_publish_handoff', commandPreview: '', effects: ['read'] } as never);
+    const gate = validateAgentExecutionContract({ toAgent: 'marcus', actionType: 'distribution_readiness', commandPreview: '', effects: ['read'] } as never);
     expect(gate.ok).toBe(true);
     expect(validateAgentExecutionContract({ toAgent: 'jose', actionType: 'boardroom_planning', commandPreview: '', effects: ['write_own_work'] } as never).ok).toBe(true);
   });

@@ -20,7 +20,7 @@
 
 ### Jose plans and runs every request (Jose redesign, phases 1–6b)
 
-- **Answer or plan:** Jose answers a plain question at once and plans anything else as steps, each with the agent that does it and what it needs first. Templates (Content video, Build an app, Research report) are starting points; "Plan this fresh:" skips them.
+- **Answer or plan:** a plain question is answered at once (by Alphonso) and anything else Jose plans as steps, each given to the one agent who owns that kind of work, with what it needs first. Every step gets the full work it depends on; a request ends with one line per step and the board. Templates (Content video, Build an app, Research report) are starting points; "Plan this fresh:" skips them.
 - **Approval by what a step does**, not by its wording: read, create files, change the project, run code, spend, publish or send, delete. Spending, publishing and deleting always ask. Settings → General → What asks first.
 - **The Requests board** (Orchestrator → Requests): every request's plan as boxes and arrows, live, with what each step produced. Bigger requests show their plan first in Chat; you can edit a plan or save it as a template.
 - **Plans change while they run:** a review can send work back (2 rounds at most), an agent can ask another for help, a failing step can get a larger model, or a paid model if you allow them (Settings → Approvals → Allow paid models, off by default, with a monthly cap).
@@ -420,10 +420,10 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 
 | Agent | Role | What it may do | In the content factory |
 |------------|------------------------------------------------------|-----------------------------------------------|--------------------------------------------------------|
-| **Alphonso** | Local operator — execution, verification, packaging | The only agent that may run code or change project files | Assembles the finished video |
-| **Jose** | Orchestrator — plans every request as steps, routes, reports | Reads and writes its own work; never runs code or publishes; may spend only on a paid-model step you approve | Runs a project as one request |
+| **Alphonso** | Local operator — code, commands, plain questions and everyday writing | The only agent that may run code or change project files | — |
+| **Jose** | Orchestrator — plans every request as steps, routes each to its owner, reports; does none of the work | Reads and writes its own work; never runs code or publishes; may spend only on a paid-model step you approve | Runs a project as one request |
 | **Hector** | Research — facts, sources, citations | Read and write its own work | What goes viral; finds stock clips |
-| **Miya** | Creative — scripts, storyboards, pictures, front-end drafts | Read and write its own work; its paid media steps may spend, and always ask | Script, scenes, thumbnails, voice, music, clips, Shorts, carousels, campaign |
+| **Miya** | Creative — content and UI/UX design, never code | Read and write its own work; its paid media steps may spend, and always ask | Script, scenes, thumbnails, voice, music, clips, the finished video, Shorts, carousels, campaign |
 | **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Read and write its own work | Reviews the script and the quality gate |
 | **Marcus** | Distribution & Release Manager | The only agent that may publish or send, and only after approval | Posts and schedules the posts |
 | **Echo** | Memory historian and archival | Read and write its own work | Remembers rejections and decisions |
@@ -463,7 +463,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 6,777 tests across 546 files (src + bridge)
+npm run test           # 6,832 tests across 556 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -554,7 +554,7 @@ is the last full release-verification record.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 285 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 290 services already exist.
 
 ## Third-party notices
 

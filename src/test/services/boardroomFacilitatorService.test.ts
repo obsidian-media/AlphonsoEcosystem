@@ -17,6 +17,15 @@ vi.mock('../../lib/ollama', async () => {
 
 describe('boardroomFacilitatorService', () => {
   describe('buildFacilitatorPrompt', () => {
+    it('keeps each agent to its own work (agent roles Part A)', async () => {
+      const { buildFacilitatorPrompt } = await import('../../services/boardroomFacilitatorService');
+      const { describeResponsibility } = await import('../../services/jose/agentPermissionTable');
+      const prompt = buildFacilitatorPrompt({ topic: 'Launch', priorMessages: [], newMessageText: 'Research the market', agentId: 'marcus' });
+      expect(prompt).toContain(describeResponsibility('marcus')!.owns);
+      expect(prompt).toContain(describeResponsibility('marcus')!.never);
+      expect(prompt).toContain("If the user asks for work you don't own, say which agent does it and @mention them. Never do that work yourself.");
+    });
+
     it('includes the thread topic and the new message', async () => {
       const { buildFacilitatorPrompt } = await import('../../services/boardroomFacilitatorService');
       const prompt = buildFacilitatorPrompt({

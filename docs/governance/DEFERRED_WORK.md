@@ -39,6 +39,15 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-24] **Agent roles Part A: what it leaves for Parts B and C.**
+  - **Real skills (Part B):** skills as Markdown files with tools, picked by the agent with a reason on the board, user skills by form or file, the old one-line packs archived. Until then skill guidance still reaches only Miya's Quick package.
+  - **Projects, Teams, learning (Part C):** Work → Projects still shows template outputs; Agent Pairing still saves pairs nothing reads; skill use is not recorded.
+  - **Not enforceable from Alphonso:** what a Hermes-backed agent does with Hermes's own tools; the board only notes it.
+  - **Chat's notice** lists requests cut off when the app closed, not requests waiting for setup (the summary and the board say it).
+  - **Kokoro's missing install** is recognised from the backend's "is not installed" message; a `missing` flag from `content_tts_kokoro` would be sturdier.
+  - **Desktop check** `agent-roles.e2e.mjs` depends on the local model's plan; it checks owners, not the exact steps.
+  - Status: OPEN.
+
 - [2026-10-25] **Every document reconciled with the code: what it leaves open.**
   - **Competitor columns in `docs/COMPARISON.md` were not re-checked.** Only Alphonso's column was updated; the other tools' entries are from when the page was written.
   - **Dated records were not rewritten.** Audits, reports, specs, plans and handoffs keep their original text, with a status line at the top saying what changed and pointing to the current facts. A finding inside an old audit is not individually re-verified by that line.

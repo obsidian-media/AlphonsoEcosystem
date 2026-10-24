@@ -8,7 +8,7 @@ import { getPacketById, rejectPacket } from '../agentBusService';
 
 const DEFAULT_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WAITING = new Set(['waiting_approval', 'waiting_plan_approval']);
+const WAITING = new Set(['waiting_approval', 'waiting_plan_approval', 'waiting_setup']);
 
 export function getWaitingExpiryDays(): number {
   let raw: unknown;

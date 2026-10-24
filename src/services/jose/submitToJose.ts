@@ -3,10 +3,11 @@
 // plan from the model or a template runs as explicit steps on the step graph;
 // the simple rule-based plan runs through the old path unchanged.
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §4, §9
+import { toCurrentOwners } from './movedTaskTypes';
 import { runJoseCommandExecutionPipeline, runPipelineShortcuts } from '../joseExecutionEngineService';
 import { describePlanSource, planJoseRequest, type JosePlan } from './josePlanner';
 import { needsPlanApproval, type PlanFirstSetting } from './josePlanApproval';
-import { cancelJoseRequest, claimPlanForRun, createWaitingPlanRequest, returnPlanToWaiting, type JoseRequest } from './joseRequestStore';
+import { appendRequestNote, cancelJoseRequest, claimPlanForRun, createWaitingPlanRequest, returnPlanToWaiting, type JoseRequest } from './joseRequestStore';
 import { checkPlan, type PlanStep } from './stepGraph';
 import { agentName } from './agentNames';
 import { scoreTemplateFit, TEMPLATE_FIT_THRESHOLD } from './joseTemplates';
@@ -75,6 +76,12 @@ function toAssignments(steps: PlanStep[], planNote: string) {
   }));
 }
 
+/** A picture asked for in words: Miya's step (agent roles Part A, 2026-10-24). */
+export const IMAGE_STEP: PlanStep = {
+  stepId: 'picture', agent: 'miya', actionType: 'creative_image',
+  instruction: 'Make the picture the request asks for.', effects: ['write_own_work'], needs: [],
+};
+
 export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const { text, source, history, planFresh, endpoint, zeroCostMode, previewMode, onProgress, onToken } = input;
 
@@ -97,6 +104,14 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   }
 
   const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });
+  // A picture is Miya's work: one step of hers, like any other (agent roles Part A).
+  if (shortcut?.kind === 'image_step') {
+    return submitStepsToJose({
+      text, source, endpoint, zeroCostMode, onProgress, allowPaidModels: input.allowPaidModels,
+      label: source === 'user' ? 'Picture asked for in Chat.' : 'Picture asked for.',
+      steps: [IMAGE_STEP],
+    });
+  }
   if (shortcut) return { ...shortcut, plan: null, planNote: '' };
 
   onProgress?.({ stage: 'planning' });
@@ -145,10 +160,12 @@ export async function submitStepsToJose(input: {
   saveDecisions?: boolean;
   onProgress?: (event: any) => void;
 }): Promise<any> {
-  const check = checkPlan(input.steps, { taskTypes: true });
+  // Steps saved before 2026-10-24 go to their current owner (agent roles Part A).
+  const owned = toCurrentOwners(input.steps);
+  const check = checkPlan(owned.steps, { taskTypes: true });
   if (!check.ok) return { ok: false, reason: 'plan_rejected', problems: check.problems, plan: null, planNote: '' };
-  const plan: JosePlan = { steps: input.steps, source: 'given', templateId: null, kind: input.kind || 'normal', note: input.label };
-  const planNote = input.label;
+  const plan: JosePlan = { steps: owned.steps, source: 'given', templateId: null, kind: input.kind || 'normal', note: input.label };
+  const planNote = [input.label, ...owned.notes].join(' ');
   const result = await runJoseCommandExecutionPipeline({
     commandText: input.text,
     source: input.source,
@@ -158,7 +175,7 @@ export async function submitStepsToJose(input: {
     onProgress: input.onProgress,
     allowPaidModels: input.allowPaidModels !== false,
     saveDecisions: input.saveDecisions !== false,
-    assignments: toAssignments(input.steps, planNote),
+    assignments: toAssignments(owned.steps, planNote),
     requestKind: plan.kind,
     planInfo: { source: 'given', templateId: null, note: input.label },
   });
@@ -181,11 +198,14 @@ export async function runApprovedPlan(requestId: string, options: { onProgress?:
   if (!request) return { ok: false, reason: 'This plan is no longer waiting.' };
   // Every plan field (model, reviewOf, …), not the step's run state (phase 5:
   // a plan you approved first lost its reviews and models).
-  const steps: PlanStep[] = request.steps.map(({ status: _status, error: _error, startedAtMs: _started, endedAtMs: _ended, verdict: _verdict, ...step }) => step);
+  const saved: PlanStep[] = request.steps.map(({ status: _status, error: _error, startedAtMs: _started, endedAtMs: _ended, verdict: _verdict, ...step }) => step);
+  // A plan waiting since before 2026-10-24 runs with each step at its current owner.
+  const { steps, notes } = toCurrentOwners(saved);
+  for (const note of notes) appendRequestNote(requestId, note);
   const plan = planOf(request, steps);
   const edited = (request.changeLog || []).some((entry) => entry.text !== 'Cancelled.');
   const planNote = [noteFor(plan), edited ? 'You edited the plan.' : ''].filter(Boolean).join(' ');
-  const check = checkPlan(steps);
+  const check = checkPlan(steps, { taskTypes: true });
   if (!check.ok) {
     returnPlanToWaiting(requestId, `Not run: ${check.problems[0]}`);
     return { ok: false, reason: 'plan_rejected', problems: check.problems, plan, planNote };

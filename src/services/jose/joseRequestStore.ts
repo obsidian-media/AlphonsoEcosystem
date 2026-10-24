@@ -10,7 +10,7 @@ import { randomHex } from '../../lib/randomId';
 const REQUESTS_KEY = 'alphonso_jose_requests_v1';
 const MAX_REQUESTS = 200;
 
-export type JoseRequestStatus = 'waiting_plan_approval' | 'running' | 'waiting_approval' | 'done' | 'failed' | 'interrupted' | 'cancelled' | 'expired';
+export type JoseRequestStatus = 'waiting_plan_approval' | 'running' | 'waiting_approval' | 'waiting_setup' | 'done' | 'failed' | 'interrupted' | 'cancelled' | 'expired';
 
 export interface JoseRequestStep extends PlanStep {
   status: string;
@@ -19,6 +19,8 @@ export interface JoseRequestStep extends PlanStep {
   error?: string;
   startedAtMs?: number;
   endedAtMs?: number;
+  /** A plain note shown with the step, e.g. that it runs on Hermes (agent roles Part A). */
+  note?: string;
 }
 
 export interface JoseRequest {

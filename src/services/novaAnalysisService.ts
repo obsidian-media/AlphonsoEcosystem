@@ -1,3 +1,4 @@
+import { stepInputText, type StepInput } from './jose/stepInput';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { generateAgentLlmResponse, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
@@ -173,8 +174,8 @@ export function classifyPriorityTier(valueScore: number): PriorityTier {
 
 // ── Ollama prompt ─────────────────────────────────────────────────────────────
 
-export function buildNovaAnalysisPrompt(commandText: string, priorOutputs: PriorOutputs | null, scores: ScoreResult): string {
-  const agentContext = Object.entries(priorOutputs || {})
+export function buildNovaAnalysisPrompt(commandText: string, priorOutputs: PriorOutputs | null, scores: ScoreResult, stepInput: StepInput | null = null): string {
+  const agentContext = stepInput ? stepInputText(stepInput) : Object.entries(priorOutputs || {})
     .map(([agent, o]) => `[${agent}] ${String(o?.summary || 'no output').slice(0, 200)}`)
     .join('\n');
 
@@ -250,7 +251,7 @@ export async function runNovaAnalysis(commandText: string, assignment: Assignmen
   // 2. Ollama strategic analysis
   let ollamaResult: NovaAnalysisResult | null = null;
   try {
-    const prompt = buildNovaAnalysisPrompt(commandText, priorOutputs, scores);
+    const prompt = buildNovaAnalysisPrompt(commandText, priorOutputs, scores, (options as { stepInput?: StepInput | null }).stepInput || null);
     const response = await generateAgentLlmResponse('nova', { endpoint: getConfiguredOllamaEndpoint(), model: getConfiguredOllamaModel(), prompt, sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined }) as { response?: string } | null;
     ollamaResult = parseNovaAnalysisResponse(response?.response || '');
   } catch {

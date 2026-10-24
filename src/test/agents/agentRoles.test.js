@@ -12,10 +12,11 @@ describe('agent profiles', () => {
     expect(text(getAgentProfile('sentinel'))).not.toMatch(/roadmap|publish|campaign/);
   });
 
-  it('describe Miya as UI/UX, content and front-end', () => {
+  it('describe Miya as content and UI/UX design, never code (2026-10-24)', () => {
     const purpose = getAgentProfile('miya').purpose.toLowerCase();
     expect(purpose).toMatch(/content/);
-    expect(purpose).toMatch(/front-end/);
+    expect(purpose).toMatch(/ui\/ux/);
+    expect(purpose).toMatch(/never writes code/);
   });
 
   it('describe Hector as finding facts and sources, without "not wired"', () => {

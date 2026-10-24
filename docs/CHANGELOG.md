@@ -10,6 +10,13 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent roles, Part A (2026-10-24)
+- **Each kind of work has one owner.** Jose only plans, routes, approves and summarises; Alphonso answers plain questions and does everyday writing; Miya edits the finished video and designs (no code); Hector finds facts and Nova judges them; Marcus checks publishing readiness and places CALL-E calls. A test fails if two agents could take the same kind of task.
+- **Every step gets the work it depends on.** Maria, Nova, Sentinel, Echo, Hector and Marcus used to get only the request: reviews now judge the actual draft and give their verdict in the same answer, and Marcus sends what the earlier step wrote (never the instruction).
+- **A step that can't run waits for setup** (for example Kokoro not installed) and says what to set up; Carry on on the board or Telegram runs it again. It is never handed to another agent.
+- **Requests end with a short summary**, one line per step and "Open on the board.", instead of "Jose merged N agent report(s)".
+- A picture asked for in Chat is Miya's step; voice routes by owner and each agent answers in its role; Boardroom and Simple mode agents point to the right agent; a Hermes-backed agent is told its role, and the board says when Hermes runs a step.
+
 ### Release
 - **macOS is back.** 2.9.0 shipped without a Mac build. 2.10.0 ships an Apple Silicon DMG again, unsigned by Apple (as 2.8.0 was): the first time, right-click Alphonso in Applications and choose Open. Mac installs on 2.8.0 are offered this update.
 - `release.yml`: an `APPLE_TEAM_ID` secret on its own (the iOS pipeline uses it) no longer fails the macOS job as "partially configured"; signing starts only when `APPLE_CERTIFICATE` is set.

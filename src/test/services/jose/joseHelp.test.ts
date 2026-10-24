@@ -55,6 +55,28 @@ describe('chooseHelper', () => {
   });
 });
 
+describe('help goes to the owner (agent roles Part A)', () => {
+  it('tells Jose what each agent owns', async () => {
+    llm.mockResolvedValueOnce(says({ agent: 'hector', taskType: 'research_report' }));
+    await chooseHelper('facts about bees', 'miya');
+    const prompt = String((llm.mock.calls[0][1] as { prompt: string }).prompt);
+    expect(prompt).toContain('hector owns: Finding facts');
+    expect(prompt).toContain('nova owns: Judging value');
+  });
+
+  it('refuses a helper who does not own the work', async () => {
+    llm.mockResolvedValueOnce(says({ agent: 'nova', taskType: 'research_report' }));
+    expect(await chooseHelper('find competitors', 'miya')).toBeNull();
+  });
+
+  it("by the rules, finding facts is Hector's and judging them Nova's", async () => {
+    llm.mockResolvedValueOnce(says('no idea'));
+    expect(await chooseHelper('find the competitors in this market', 'miya')).toEqual({ agent: 'hector', actionType: 'research_report' });
+    llm.mockResolvedValueOnce(says('no idea'));
+    expect(await chooseHelper('when is the best time to post', 'miya')).toEqual({ agent: 'nova', actionType: 'analysis_findings' });
+  });
+});
+
 describe('planHelp', () => {
   it('adds the helper and a re-run, and moves later steps to the re-run', () => {
     const change = planHelp(plan, plan[0], 'facts about the launch date', { agent: 'hector', actionType: 'research_report' })!;

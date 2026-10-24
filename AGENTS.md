@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 19 (Vite 8, Tailwind 4) + Ollama (local LLM)
-- **Version**: 2.10.0 (on `main`, not tagged yet; latest release 2.9.0. 546 test files, 6,777 tests, 285 services)
+- **Version**: 2.10.0 (on `main`, not tagged yet; latest release 2.9.0. 556 test files, 6,832 tests, 290 services)
 - **Now**: the Jose redesign (phases 1–6b: plans as step graphs, approval by effect, the Requests board) and Miya's content factory (phases 1–4c: from an idea to finished, posted videos, Shorts and carousels, with results, paid engines, brand characters and motion) are on `main`. Jose phase 7 is next.
 
 ## Directory Structure
@@ -26,13 +26,13 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and older services)
   agents/              9 agent profiles and schemas (what each may do is src/services/jose/agentPermissionTable.ts)
   components/          175 UI components (incl. miya/, jose/, calendar/ for the content factory, Jose's board and the Calendar)
-  services/            285 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
+  services/            290 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
     jose/              Jose's planner, step graphs, effects, requests, Telegram, paid models
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                546 test files, 6,777 tests (Vitest; see ground truth for current verification status)
+  test/                556 test files, 6,832 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -86,7 +86,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,777 tests (546 files; also runs bridge/)
+npm run test             # 6,832 tests (556 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
@@ -108,7 +108,7 @@ What each agent may do is one table, `src/services/jose/agentPermissionTable.ts`
 | Alphonso | Local operator — execution, verification, packaging; assembles the content factory's videos | The only agent that runs code or changes project files | **18 skill packs**: Full-Stack, TDD, TypeScript, Rust, React, Python, Code Review, Build Verification, Refactoring, Debugging, Runtime Diagnostics, Security Audit, GitHub Integration, Performance Optimization, API Integration, Error Handling |
 | Jose | Orchestrator — answers or plans every request as steps, runs them, reports | Never runs code or publishes; may spend only on a paid-model step, which always asks; plans are checked against the permission table | **21 skill packs**: Orchestration, Task Routing, Approval Gating, Cross-Agent Synthesis, Pipeline Governance, Workflow Design, Strategic Planning, Dependency Mapping, Agent Coordination, Parallel Orchestration, Task Prioritization, Risk Assessment, Quality Gates, Compliance Checks, Progress Tracking, Status Reporting, Performance Metrics, Workflow Optimization, Bottleneck Detection, Continuous Improvement, Stakeholder Communication |
 | Hector | Research — facts, sources, citations; what goes viral; stock clips | Read and write its own work only | **21 skill packs**: Professional Marketing, Market Research, Competitive Analysis, Source Verification, RSS Monitoring, Executing Plans, API Documentation Research, API Integration Research, Compliance Research, Security Research, Trend Analysis, Market Intelligence, Content Research, Code Pattern Research, Technical Architecture Research, Open Source Analysis, Data Gathering, Source Curation, Confidence Scoring, Survey Design, Documentation Audit, Research Briefing |
-| Miya | Creative — the content factory: scripts, storyboards, pictures, voice, music, clips, Shorts, carousels, campaigns; front-end drafts | Read and write its own work only | **21 skill packs**: Runway Video Generation, Creative Image, UI/UX Design, Brand Identity, Motion Graphics, Typography System, Color Palette, Content Strategy, Video Storyboarding, Social Media Design, Editorial Design, Animation Design, Illustration Style, Video Editing, Landing Page, Dashboard Design, Brand Guidelines, Icon System, Design System, User Research, Motion System |
+| Miya | Creative — the content factory: scripts, storyboards, pictures, voice, music, clips, the finished video, Shorts, carousels, campaigns; UI/UX design, never code | Read and write its own work only | **21 skill packs**: Runway Video Generation, Creative Image, UI/UX Design, Brand Identity, Motion Graphics, Typography System, Color Palette, Content Strategy, Video Storyboarding, Social Media Design, Editorial Design, Animation Design, Illustration Style, Video Editing, Landing Page, Dashboard Design, Brand Guidelines, Icon System, Design System, User Research, Motion System |
 | Maria | Governance & Risk Lead — governance, risk and quality reviews (scripts, quality gate) | Read and write its own work only | **18 skill packs**: Audit Governance, Trust Verification, Requirements Analysis, Risk Classification, Compliance Auditing, Approval Workflow, Evidence Collection, Claim Verification, Policy Enforcement, Audit Trail, Trust Audit, State Verification, Brand Safety, Content Moderation, Quality Assurance, Documentation Review, Stakeholder Reporting, Incident Response |
 | Marcus | Distribution & Release Manager — posts and schedules (the one post scheduler) | The only agent that publishes or sends, after approval | **15 skill packs** (security and risk packs moved to Sentinel and Maria, 2026-10-23): Executing Plans, GitHub Releases, Slack Notifications, Distribution Execution, Release Readiness, Integration Validation, Deployment Execution, Changelog Generation, Asset Distribution, Notification Routing, Approval Gatekeeping, Version Management, Rollback Execution, Release Reporting, Compliance Distribution, Team Communication |
 | Echo | Memory historian and archival; saves a finished request's decisions | Read and write its own work only | **17 skill packs**: Memory Synthesis, Decision Capture, Retention Classification, Confidence Normalization, Knowledge Indexing, Historical Context, Audit Trail, Context Retrieval, Memory Pruning, Session Continuity, Memory Validation, Timeline Construction, Knowledge Graph, Memory Reporting, Preference Learning, Decision Diff |
@@ -127,7 +127,7 @@ What each agent may do is one table, `src/services/jose/agentPermissionTable.ts`
 - Window close now calls `std::process::exit(0)` to prevent WebView2 zombie process leak
 
 ## Do Not Duplicate
-Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 285 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 290 services already exist.
 
 ## Truth Source
 `docs/ALPHONSO_GROUND_TRUTH.md` is the single source of truth. If any other document conflicts, trust the ground truth file.

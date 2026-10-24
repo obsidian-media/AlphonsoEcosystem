@@ -106,7 +106,9 @@ describe('jose execution pipeline e2e', () => {
     expect(result.ok).toBe(true);
     expect(result.commandId).toBeTruthy();
     expect(result.executedCount).toBeGreaterThan(0);
-    expect(result.command?.userReport?.summary).toContain('Jose merged');
+    // The closing summary (agent roles Part A): one line per step, then the board.
+    expect(result.command?.userReport?.summary).toContain('Open on the board.');
+    expect(result.command?.userReport?.summary).not.toContain('Jose merged');
 
     const receipts = listOrchestrationReceipts({ commandId: result.commandId });
     const types = receipts.map((item) => item.eventType);

@@ -58,8 +58,9 @@ describe('Marcus profile integration', () => {
     expect(focus).toContain('GitHub Releases');
     expect(focus).toContain('Slack Notifications');
     expect(focus).toContain('Release Readiness');
-    expect(focus).toContain('Security Audit');
-    expect(focus).toContain('Risk Detection');
+    // Security is Sentinel's and risk review Maria's (2026-10-23/24).
+    expect(focus).not.toContain('Security Audit');
+    expect(focus).not.toContain('Risk Detection');
     expect(focus).toContain('Deployment');
     expect(focus).toContain('Rollback');
     expect(focus).toContain('Compliance');

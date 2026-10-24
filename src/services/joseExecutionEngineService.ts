@@ -41,6 +41,10 @@ import { rejectWaitingPackets } from './jose/joseExpiry';
 import { saveRequestDecisions } from './jose/joseFinish';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
+import { moveToOwner } from './jose/movedTaskTypes';
+import { buildStepInput, stepInputText } from './jose/stepInput';
+import { runReviewStep } from './jose/reviewStep';
+import { isEffectAllowed } from './jose/agentPermissionTable';
 import type { PlanStep } from './jose/stepGraph';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
 import { listInstalledModels, pickLargerModel } from './jose/joseModels';
@@ -92,6 +96,7 @@ const STEP_STATUS_BY_RECEIPT: Record<string, string> = {
   failed: 'failed',
   dead_letter: 'failed',
   not_run: 'not_run',
+  setup_needed: 'setup_needed',
 };
 
 /** Save each step's final status on the request (jose/joseRequestStore). Never breaks the run. */
@@ -110,9 +115,11 @@ function recordStepOutcomes(requestId: string, assignments: any[], receipts: any
         ...(receipt?.reason ? { error: String(receipt.reason) } : {}),
       });
     }
+    // A step whose owner can't work yet waits for setup (agent roles Part A).
     const requestStatus = cutShort || statuses.includes('failed')
       ? 'failed'
-      : statuses.includes('waiting_approval') ? 'waiting_approval' : 'done';
+      : statuses.includes('waiting_approval') ? 'waiting_approval'
+        : statuses.includes('setup_needed') ? 'waiting_setup' : 'done';
     setJoseRequestStatus(requestId, requestStatus);
   } catch {
     // The request record is a display aid; the run's own result stands.
@@ -985,21 +992,11 @@ async function executeMiyaAssignment(commandText: any, assignment: any, options:
   };
 }
 
-async function executeHectorAssignment(commandText: any, assignment: any) {
-  const action = String(assignment?.actionType || '').toLowerCase();
-  if (action.includes('external_publish_handoff')) {
-    return {
-      summary: 'Hector prepared publish-readiness handoff. External publish remains approval-gated.',
-      resultState: 'pending_review',
-      resultUrl: null,
-      artifacts: [{ type: 'publish_handoff', status: 'approval_required' }],
-      sources: [],
-      contractAction: assignment?.actionType || 'external_publish_handoff'
-    };
-  }
-
+async function executeHectorAssignment(commandText: any, assignment: any, options: any = {}) {
+  // Earlier steps' work (agent roles Part A): Hector researches with it in view.
+  const context = options.stepInput?.needs?.length ? stepInputText({ ...options.stepInput, others: [], memory: '' }) : '';
   const draft = createResearchDraft({
-    researchQuestion: commandText,
+    researchQuestion: context ? `${commandText}\n\n${context.slice(0, 1500)}` : commandText,
     sourceUrls: [],
     sourceType: 'official_docs',
     riskLevel: assignment?.riskLevel || 'medium'
@@ -1022,25 +1019,23 @@ async function executeHectorAssignment(commandText: any, assignment: any) {
 }
 
 /**
- * A request no specialist agent matched ("write a note", "draft an email"...).
- * Jose answers it directly with his model (QA 2026-10-22). Until then this
- * step returned "Jose completed orchestration review" without asking any model,
- * so such requests produced nothing in Chat, schedules and the phone app while
- * the card said "1 executed". If the model can't answer, it says so.
+ * A plain question or everyday writing ("write a note", "draft an email"...):
+ * Alphonso's work (owner, 2026-10-24). Until then Jose answered these himself.
+ * If the model can't answer, it says so; nothing else is produced.
  */
-async function executeJoseAssignment(commandText: any, assignment: any, options: any = {}) {
+async function executeAssistantAssignment(commandText: any, assignment: any, options: any = {}) {
   const base = {
     resultUrl: null,
     sources: [],
-    contractAction: assignment?.actionType || 'orchestration_review'
+    contractAction: assignment?.actionType || 'assistant_answer'
   };
   try {
     const prompt = [
       CHAT_ASSISTANT_PROMPT,
-      'No specialist agent took this request, so you (Jose) answer it directly. Do the writing or thinking asked for, in text.',
+      'Answer the request below, or do the everyday writing it asks for, in text.',
       `Request: ${String(commandText || '').slice(0, 4000)}`
     ].join('\n\n');
-    const reply = await generateAgentLlmResponse('jose', {
+    const reply = await generateAgentLlmResponse('alphonso', {
       endpoint: options.endpoint || getConfiguredOllamaEndpoint(),
       model: options.model || getConfiguredOllamaModel(),
       prompt,
@@ -1052,16 +1047,32 @@ async function executeJoseAssignment(commandText: any, assignment: any, options:
       ...base,
       summary: text,
       resultState: 'completed',
-      artifacts: [{ type: 'direct_answer', action: assignment?.actionType || 'orchestration_review' }]
+      artifacts: [{ type: 'direct_answer', action: assignment?.actionType || 'assistant_answer' }]
     };
   } catch (error) {
     return {
       ...base,
-      summary: `No specialist agent matched this request, and Jose's model didn't answer (${error instanceof Error ? error.message : String(error)}). Nothing was produced.`,
+      summary: `Alphonso's model didn't answer (${error instanceof Error ? error.message : String(error)}). Nothing was produced.`,
       resultState: 'failed',
-      artifacts: [{ type: 'orchestration_review', action: assignment?.actionType || 'orchestration_review' }]
+      artifacts: [{ type: 'assistant_answer', action: assignment?.actionType || 'assistant_answer' }]
     };
   }
+}
+
+/**
+ * Jose plans, routes and approves; he does no work himself (owner, 2026-10-24).
+ * His approval gate (cost_policy_) and a summary step saved before 2026-10-24
+ * finish without a model; anything else has no owner to do it.
+ */
+function executeJoseStep(assignment: any) {
+  const actionType = String(assignment?.actionType || '');
+  const done = (summary: string) => ({ summary, resultState: 'completed', resultUrl: null, artifacts: [], sources: [], contractAction: actionType });
+  if (actionType.startsWith('cost_policy_')) return done('Approved: this request may use the paid service.');
+  if (actionType === 'orchestration_summary') return done("Jose's summary comes at the end of the request.");
+  return {
+    summary: `No agent owns this step's task: ${actionType || 'none'}. Nothing was produced.`,
+    resultState: 'failed', resultUrl: null, artifacts: [], sources: [], contractAction: actionType,
+  };
 }
 
 async function executeMariaAssignment(commandText: any, assignment: any, options: any = {}) {
@@ -1292,8 +1303,41 @@ export function stepCommandText(assignment: any, commandText: string): string {
   return `${instruction}\n\nThe request: ${commandText}${help}`;
 }
 
+async function executeImageStep(requestText: any, assignment: any) {
+  const base = { resultUrl: null, sources: [], contractAction: assignment?.actionType || 'creative_image' };
+  const image: any = await generateComfyUiImage({ prompt: String(requestText || ''), width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: getComfyUiEndpoint() });
+  const path = Array.isArray(image?.outputPaths) ? image.outputPaths[0] : undefined;
+  if (image?.ok) {
+    return { ...base, summary: 'Miya made the picture.', resultState: 'completed', artifacts: [{ type: 'image', ...(path ? { path } : {}), urls: image.imageUrls || [] }] };
+  }
+  if (image?.pending) {
+    return { ...base, summary: 'The picture is still being made in ComfyUI.', resultState: 'pending_review', artifacts: [{ type: 'image_pending', jobId: image.jobId }] };
+  }
+  return { ...base, summary: `Miya couldn't make the picture: ${String(image?.error || image?.message || 'ComfyUI gave no picture')}`, resultState: 'failed', artifacts: [] };
+}
+
+/** A paid or cloud model gets the larger hand-over budget. */
+function usesLargeModel(assignment: any): boolean {
+  const model = String(assignment?.model || '');
+  if (model.startsWith('claude:') || model.startsWith('chatgpt:')) return true;
+  const provider = getAgentProvider(assignment?.agent)?.provider;
+  return Boolean(provider && provider !== 'ollama');
+}
+
 async function executeAssignment(packet: any, assignment: any, requestText: any, options: any = {}) {
   const commandText = stepCommandText(assignment, requestText);
+  // One input for every step, by step id (agent roles Part A, 2026-10-24).
+  const commandId = packet?.payload?.joseCommandId;
+  if (!options.stepInput && commandId && assignment?.stepId) {
+    options = {
+      ...options,
+      commandId,
+      stepInput: buildStepInput(commandId, assignment, String(requestText || ''), {
+        memory: options.retrievedContext?.snippet,
+        large: usesLargeModel(assignment),
+      }),
+    };
+  }
   if (assignment?.agent === AGENTS.ALPHONSO && assignment?.instruction) {
     options = { ...options, stepInstruction: assignment.instruction };
   }
@@ -1311,6 +1355,19 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
     const { executeHiggsfieldByName } = await import('./contentFactory/higgsfieldByName');
     return executeHiggsfieldByName(assignment, packet);
   }
+  // Placing a CALL-E call is Marcus's outreach, run once approved (agent roles Part A).
+  if (assignment?.actionType === 'outreach_call') {
+    const { executeOutreachCall } = await import('./calleCallStep');
+    return executeOutreachCall(assignment);
+  }
+  // A picture asked for in words: Miya makes it with ComfyUI (agent roles Part A).
+  if (assignment?.agent === AGENTS.MIYA && assignment?.actionType === 'creative_image') {
+    return executeImageStep(requestText, assignment);
+  }
+  // A review judges the work it reviews (agent roles Part A).
+  if (assignment?.reviewOf) {
+    return runReviewStep(assignment.agent, options.stepInput, assignment.actionType);
+  }
   if (assignment?.actionType === 'boardroom_planning') {
     return executeBoardroomPlanning(assignment, commandText, options);
   }
@@ -1320,6 +1377,9 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (assignment?.actionType === 'boardroom_advance') {
     return executeBoardroomAdvance(assignment, commandText, options);
   }
+  if (assignment?.agent === AGENTS.ALPHONSO && String(assignment?.actionType || '').startsWith('assistant_')) {
+    return executeAssistantAssignment(requestText, assignment, options);
+  }
   if (assignment?.agent === AGENTS.ALPHONSO) {
     return executeAlphonsoAssignment(commandText, assignment, options);
   }
@@ -1327,24 +1387,24 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
     return executeMiyaAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.HECTOR) {
-    return executeHectorAssignment(commandText, assignment);
+    return executeHectorAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.MARIA) {
-    return executeMariaAssignment(commandText, assignment);
+    return executeMariaAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.ECHO) {
-    return executeEchoAssignment(commandText, assignment);
+    return executeEchoAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.SENTINEL) {
-    return executeSentinelAssignment(commandText, assignment);
+    return executeSentinelAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.NOVA) {
-    return executeNovaAssignment(commandText, assignment);
+    return executeNovaAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.MARCUS) {
-    return executeMarcusAssignment(commandText, assignment);
+    return executeMarcusAssignment(commandText, assignment, options);
   }
-  return executeJoseAssignment(commandText, assignment, options);
+  return executeJoseStep(assignment);
 }
 
 async function checkOllamaAvailable(endpoint: any) {
@@ -1371,12 +1431,8 @@ export async function runPipelineShortcuts({ commandText, onProgress }: { comman
     }
     if (routing?.ok) {
       if (creativeIntent === 'image_generation') {
-        const prompt = commandText;
-        let imageResult = null;
-        // ComfyUI only (owner, 2026-10-22); routeToCreativeTool never returns another tool.
-        imageResult = await generateComfyUiImage({ prompt, width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: getComfyUiEndpoint() });
-        onProgress?.({ stage: 'creative_image_done', tool: routing.tool, result: imageResult });
-        return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, creativeResult: imageResult, command: null };
+        // A picture is Miya's step (agent roles Part A): the caller runs it as one.
+        return { kind: 'image_step', command: null };
       }
     }
   }
@@ -1436,6 +1492,13 @@ export async function runJoseCommandExecutionPipeline({
   // are planned like everything else.
   if (!explicitAssignments) {
     const shortcut = await runPipelineShortcuts({ commandText, onProgress });
+    if (shortcut?.kind === 'image_step') {
+      const picture = { stepId: 'picture', agent: AGENTS.MIYA, actionType: 'creative_image', effects: ['write_own_work'], needs: [],
+        instruction: 'Make the picture the request asks for.', title: 'Miya makes the picture', rationale: 'A picture is Miya\'s work.',
+        riskLevel: 'low', requiresApproval: false, commandPreview: 'Makes a picture with ComfyUI.', fragments: [] };
+      return runJoseCommandExecutionPipeline({ commandText, source, endpoint, zeroCostMode, previewMode, onProgress, onToken, conversationHistory,
+        assignments: [picture], planInfo: { source: 'given', templateId: null, note: 'Picture asked for.' }, allowPaidModels });
+    }
     if (shortcut) return shortcut;
   }
 
@@ -1470,6 +1533,18 @@ export async function runJoseCommandExecutionPipeline({
     for (const assignment of planAssignments) {
       const saved = resumeRequest.steps.find((step: any) => step.stepId === assignment.stepId);
       if (saved) assignment.needs = saved.needs;
+      // Work that changed owner on 2026-10-24 runs at its current owner, with a note.
+      const { step: owned, moved } = moveToOwner(toPlanStep(assignment));
+      if (moved) {
+        assignment.agent = owned.agent;
+        assignment.actionType = owned.actionType;
+        const packet: any = assignment.packetId ? getPacketById(assignment.packetId) : null;
+        if (packet) updatePacketStatus(packet.id, packet.status, { toAgent: owned.agent, actionType: owned.actionType } as any);
+        try {
+          updateJoseStep(resumeRequest.id, assignment.stepId, { agent: owned.agent, actionType: owned.actionType } as any);
+          appendRequestNote(resumeRequest.id, moved);
+        } catch { /* display aid only */ }
+      }
     }
   }
   const planSteps: PlanStep[] = planAssignments.map(toPlanStep);
@@ -1615,7 +1690,11 @@ export async function runJoseCommandExecutionPipeline({
       }
       processedAssignmentCount += 1;
       if (joseRequestId) {
-        try { updateJoseStep(joseRequestId, assignment.stepId, { status: 'running', startedAtMs: timestampMs() }); } catch { /* display aid only */ }
+        try {
+          // Alphonso can't see inside Hermes: say so on the board (agent roles Part A).
+          const onHermes = getAgentProvider(assignment.agent)?.provider === 'hermes' && !isEffectAllowed(assignment.agent, 'run');
+          updateJoseStep(joseRequestId, assignment.stepId, { status: 'running', startedAtMs: timestampMs(), ...(onHermes ? { note: 'Runs on Hermes, which can use its own tools.' } : {}) } as any);
+        } catch { /* display aid only */ }
       }
 
       const packet: any = getPacketById(assignment.packetId);
@@ -2009,6 +2088,14 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       const result: any = taskResult.result;
+      // The owner can't work until something is set up: no retry, no other agent,
+      // nothing saved for later steps; Carry on runs it again (agent roles Part A).
+      if (result?.resultState === 'setup_required') {
+        updatePacketStatus(assignment.packetId, 'queued', { failureReason: result.summary });
+        executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'setup_needed', reason: String(result.summary || 'Something needs setting up.') });
+        onProgress?.({ stage: 'setup_needed', assignment, packetId: assignment.packetId, reason: result.summary });
+        continue;
+      }
       const stepOutput = {
         summary: result.summary,
         resultState: result.resultState || 'pending_review',
@@ -2386,7 +2473,7 @@ export async function retryDLQ(taskId) {
 export async function resumeJoseRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
   // A waiting request, or one the app was closed on (phase 5).
-  if (!request || (request.status !== 'waiting_approval' && request.status !== 'interrupted')) {
+  if (!request || !['waiting_approval', 'interrupted', 'waiting_setup'].includes(request.status)) {
     return { ok: false, reason: request ? `This request is ${String(request.status).replace(/_/g, ' ')}, not waiting for an approval.` : 'Request not found.', requestId };
   }
   setJoseRequestStatus(requestId, 'running');
@@ -2430,8 +2517,8 @@ export function rejectRequestStep(requestId: string, stepId: string) {
 /** Carry on a request the app was closed on (phase 5): steps already done are kept; a step that needs approval asks again. */
 export async function carryOnRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
-  if (!request || request.status !== 'interrupted') {
-    return { ok: false, reason: 'Only a request that was cut off when the app closed can be carried on.', requestId };
+  if (!request || (request.status !== 'interrupted' && request.status !== 'waiting_setup')) {
+    return { ok: false, reason: 'Only a request that was cut off, or that waits for something to be set up, can be carried on.', requestId };
   }
   return resumeJoseRequest(requestId, options);
 }

@@ -32,7 +32,8 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
     steps: [
       // The Miya content factory's own steps (phase 6b); a project runs them as one request.
       step('research_trends', 'hector', 'research_virality', 'Find what makes videos on this topic do well: real examples, hooks and formats, with sources.'),
-      step('research_market', 'nova', 'analysis_market', 'Judge the audience and the opportunity for this video: who it is for and why now.'),
+      // Hector finds, Nova judges (owner, 2026-10-24).
+      step('research_market', 'nova', 'analysis_market', "Judge the audience and the opportunity from Hector's research: who it is for and why now.", ['research_trends']),
       step('script', 'miya', 'creative_script', 'Write three hooks and a timed script for the video, using the research.', ['research_trends', 'research_market'], ['write_own_work']),
       step('review_value', 'nova', 'analysis_content_review', 'Review the hook and the script for value to the audience and say what must change.', ['script'], ['read'], 'script'),
       step('review_quality', 'maria', 'audit_content_quality', 'Score the script against the references and check its claims are honest.', ['script'], ['read'], 'script'),
@@ -44,7 +45,7 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
       step('sfx', 'miya', 'creative_sfx', 'Choose a short sound effect for the scenes where one helps, and make them.', ['voice', 'music'], ['write_own_work']),
       step('broll', 'hector', 'research_broll', 'Find a stock clip for each scene from the sources that have keys.', ['thumbnail']),
       step('clips', 'miya', 'creative_video_clips', 'Make an AI video clip for each main moment, from its scene picture.', ['scenes', 'broll'], ['write_own_work']),
-      step('assemble', 'alphonso', 'runtime_assemble_video', 'Cut the finished video in 16:9 and 9:16 with the voice, music, AI clips and captions.', ['voice', 'music', 'sfx', 'broll', 'clips'], ['write_own_work']),
+      step('assemble', 'miya', 'creative_assemble_video', 'Cut the finished video in 16:9 and 9:16 with the voice, music, AI clips and captions.', ['voice', 'music', 'sfx', 'broll', 'clips'], ['write_own_work']),
       // Shorts (phase 3d), only when the brief asks for Shorts or Reels: each its own piece.
       step('shorts', 'miya', 'creative_shorts', 'Plan and make the Shorts: each a mini-script, a highlight with a new hook, or a cut of the finished video.', ['assemble'], ['write_own_work']),
       // A carousel (phase 3c), only when the brief asks for one: 5 to 10 slides, a picture each.
@@ -67,11 +68,10 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
     ],
     steps: [
       step('research', 'hector', 'research_report', 'Find how similar apps solve this, and the libraries and docs that apply, with sources.'),
-      step('design', 'miya', 'creative_ui_design', 'Design the screens and the user flow, and draft the front-end.', ['research'], ['write_own_work']),
+      step('design', 'miya', 'design_ui', 'Design the screens and the user flow. No code: Alphonso builds it.', ['research'], ['write_own_work']),
       step('build', 'alphonso', 'local_operation', 'Build the app in the project folder from the design, and check that it runs.', ['design'], ['run']),
       step('security', 'sentinel', 'security_review', 'Review the app for security problems: secrets, unsafe inputs, risky dependencies.', ['build'], ['read'], 'build'),
       step('quality', 'maria', 'audit_quality', 'Check the app against the request: what works, what is missing.', ['build'], ['read'], 'build'),
-      step('summary', 'jose', 'orchestration_summary', 'Write one summary: what was built, where it is, and what still needs doing.', ['security', 'quality'], ['write_own_work']),
     ],
   },
   {
@@ -86,7 +86,6 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
       step('research', 'hector', 'research_report', 'Find the facts and sources for the question, with citations.'),
       step('analysis', 'nova', 'analysis_findings', 'Judge what the findings mean: what matters most and why.', ['research']),
       step('review', 'maria', 'audit_quality', 'Check the findings against the sources: anything unsupported or missing.', ['analysis'], ['read'], 'analysis'),
-      step('summary', 'jose', 'orchestration_summary', 'Write the report: the answer, the key findings and the sources.', ['review'], ['write_own_work']),
     ],
   },
 ];

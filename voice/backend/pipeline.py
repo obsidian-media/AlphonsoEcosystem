@@ -5,6 +5,7 @@ import httpx
 from stt import transcribe
 from tts import synthesize
 from router import detect_agent
+from agent_roles import role_prompt
 from vad import is_speech
 
 # The model is the one chosen in Alphonso (passed in by the launcher as
@@ -22,6 +23,11 @@ def local_ollama_url() -> str:
     return os.environ.get("LOCAL_OLLAMA_URL", "http://localhost:11434/api/chat").strip()
 
 
+def build_messages(text, agent, history):
+    """The agent's role first, then the conversation (agent roles Part A, 2026-10-24)."""
+    return [{"role": "system", "content": role_prompt(agent)}, *history, {"role": "user", "content": text}]
+
+
 async def _call_ollama(session_id, text, agent, history, model=None):
     """Stream a reply from Ollama's /api/chat, yielding text chunks as they arrive.
 
@@ -30,7 +36,7 @@ async def _call_ollama(session_id, text, agent, history, model=None):
     never taken from the connection, so a client cannot make Voice OS send
     requests to an address of its choosing (CodeQL, 2026-10-22).
     """
-    messages = [*history, {"role": "user", "content": text}]
+    messages = build_messages(text, agent, history)
     payload = {"model": model or ollama_model(), "messages": messages, "stream": True}
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:

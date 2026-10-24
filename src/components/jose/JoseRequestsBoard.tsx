@@ -18,6 +18,7 @@ export const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
   running: 'Running',
   waiting_approval: 'Waiting for your approval',
+  waiting_setup: 'Waiting for something to be set up',
   done: 'Done',
   failed: 'Failed',
   interrupted: 'Interrupted',
@@ -148,6 +149,9 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 {stepId && selected.steps.some((s) => s.stepId === stepId) && (
                   <div className="mt-2 rounded-xl bg-(--surface-2) p-3">
                     <div className="mb-1 text-xs font-semibold text-(--text-2)">What {agentName(selected.steps.find((s) => s.stepId === stepId)!.agent)}'s step produced</div>
+                    {selected.steps.find((s) => s.stepId === stepId)?.note && (
+                      <p className="text-xs text-(--text-secondary) mb-2" data-testid="jose-step-note">{selected.steps.find((s) => s.stepId === stepId)!.note}</p>
+                    )}
                     <JoseStepOutput key={`${selected.commandId}-${stepId}-${selected.steps.find((s) => s.stepId === stepId)!.status}`} commandId={selected.commandId} stepId={stepId} />
                   </div>
                 )}
@@ -162,7 +166,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
             )}
-            {selected.status === 'interrupted' && (
+            {(selected.status === 'interrupted' || selected.status === 'waiting_setup') && (
               <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
             )}
             {waitingSteps.map((step) => (

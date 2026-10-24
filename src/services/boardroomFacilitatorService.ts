@@ -1,3 +1,4 @@
+import { describeResponsibility } from './jose/agentPermissionTable';
 import { generateAgentLlmResponse, DEFAULT_OLLAMA_ENDPOINT, getConfiguredOllamaModel } from '../lib/ollama';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { listAgentProfiles } from '../agents/agentRegistry';
@@ -61,9 +62,14 @@ function buildAgentSystemPrompt(agentId: string): string {
   const facilitatorClause = isFacilitator
     ? `\n\nWhen a message arrives with no @mention, you respond first. Either answer directly if it's something you can genuinely help with, or say plainly who else should weigh in and why, using an @mention (e.g. "@Hector, can you research the current market signals here?") — do not silently do another agent's job.`
     : '';
+  // What this agent owns and never does (agent roles Part A, 2026-10-24).
+  const duty = describeResponsibility(agentId);
+  const dutyLine = duty
+    ? `\n\nYou own: ${duty.owns} You never: ${duty.never} If the user asks for work you don't own, say which agent does it and @mention them. Never do that work yourself.`
+    : '';
   return `You are ${profile.name}, a participant in Alphonso's Boardroom — a multi-agent chat where you, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, and Nova collaborate with the user on real decisions.
 
-${roleLine}${facilitatorClause}
+${roleLine}${facilitatorClause}${dutyLine}
 
 Be concise and direct, like a real colleague in a live chat, not a formal report. Do not pad with disclaimers. Only speak from your own area of expertise — if something is outside your role, say who should handle it instead of guessing.`;
 }

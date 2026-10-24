@@ -4,7 +4,6 @@ import {
   createOutreachDraft,
   dismissOutreachCall,
   listOutreachCalls,
-  runOutreachCall,
   ESTIMATED_COST_USD,
   type OutreachCallRecord
 } from '../../services/calleOutreachService';
@@ -59,8 +58,10 @@ export function CalleOutreachPanel(): React.JSX.Element {
     setCustomTask('');
   };
 
+  // Marcus places the call once you approve his step on the board (agent roles Part A).
   const handleApprove = async (recordId: string) => {
-    await runOutreachCall(recordId, { approved: true });
+    const { askMarcusToCall } = await import('../../services/calleCallStep');
+    await askMarcusToCall({ kind: 'rest', recordId }, 'The call set up in CALL-E Outreach');
     setRecords(listOutreachCalls());
   };
 
@@ -105,7 +106,7 @@ export function CalleOutreachPanel(): React.JSX.Element {
                   {record.status === 'pending_approval' && (!record.policyBlockKind || record.policyBlockKind === 'needs_approval_click') && (
                     <>
                       <div className="text-xs text-(--text-3)">Calling {record.phone} — est. ${ESTIMATED_COST_USD.toFixed(2)}: "{record.task}"</div>
-                      <Button onClick={() => handleApprove(record.id)}>Approve & Place Call</Button>
+                      <Button onClick={() => handleApprove(record.id)}>Ask Marcus to place the call</Button>
                     </>
                   )}
                   {DISMISSABLE_STATUSES.has(record.status) && (

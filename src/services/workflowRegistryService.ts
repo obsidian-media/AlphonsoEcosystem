@@ -487,7 +487,7 @@ export const WORKFLOW_LABEL = 'Steps set by a workflow.';
  * in the permission table. Marcus reviews where things could go and sends
  * nothing: a workflow never publishes on its own.
  */
-const WORKFLOW_STEP_TASK: Record<string, string> = {
+export const WORKFLOW_STEP_TASK: Record<string, string> = {
   alphonso: 'verification_workflow_step',
   miya: 'creative_workflow_step',
   hector: 'research_workflow_step',

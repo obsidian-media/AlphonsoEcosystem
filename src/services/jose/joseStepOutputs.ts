@@ -8,9 +8,9 @@ import { listJoseRequests } from './joseRequestStore';
 const STEP_OUTPUTS_KEY = 'alphonso_jose_step_outputs_v1';
 const MAX_COMMANDS = 50;
 /** A request in one of these still needs its steps' work, however old (phase 6a). */
-const UNFINISHED = new Set(['waiting_approval', 'waiting_plan_approval', 'interrupted', 'running']);
+const UNFINISHED = new Set(['waiting_approval', 'waiting_plan_approval', 'waiting_setup', 'interrupted', 'running']);
 
-interface StepOutput {
+export interface StepOutput {
   [key: string]: unknown;
   stepId: string;
   agent: string;
@@ -50,6 +50,12 @@ export function getStepOutput(commandId: string, stepId: string): StepOutput | n
   if (!Object.prototype.hasOwnProperty.call(all, commandId)) return null;
   const steps = all[commandId].steps;
   return Object.prototype.hasOwnProperty.call(steps, stepId) ? steps[stepId] : null;
+}
+
+/** Every saved step output of one command. */
+export function listStepOutputs(commandId: string): StepOutput[] {
+  const all = readAll();
+  return Object.prototype.hasOwnProperty.call(all, commandId) ? Object.values(all[commandId].steps) : [];
 }
 
 /** The outputs of the steps a step needs, keyed by agent (an agent's later step wins), as agents read them today. */
