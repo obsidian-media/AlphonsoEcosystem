@@ -64,7 +64,7 @@ beforeEach(() => {
 // Miya content factory phase 2a: the steps that make the finished video file.
 describe('executeMediaStep', () => {
   it('handles the media task types (AI clips since phase 2b)', () => {
-    expect([...MEDIA_ACTIONS].sort()).toEqual(['creative_music', 'creative_video_clips', 'creative_voice', 'research_broll', 'runtime_assemble_video']);
+    expect([...MEDIA_ACTIONS].sort()).toEqual(['creative_music', 'creative_sfx', 'creative_video_clips', 'creative_voice', 'research_broll', 'runtime_assemble_video']);
   });
 
   it('Voice speaks each scene\'s lines in the brand voice; a quiet scene keeps its planned seconds', async () => {

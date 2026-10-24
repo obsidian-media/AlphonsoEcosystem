@@ -238,6 +238,26 @@ export const DEFAULT_CONNECTORS = [
     permissions: ['web_search'],
     disabledReason: 'Tavily API key is not configured.'
   },
+  // ElevenLabs (content factory phase 4b): paid voices, the user's cloned voice and sound effects.
+  {
+    id: 'elevenlabs',
+    name: 'ElevenLabs',
+    status: 'not_configured',
+    transport: 'elevenlabs_api',
+    requiredEnv: ['ELEVENLABS_API_KEY'],
+    permissions: ['voice_generation', 'sound_generation', 'approval_requests'],
+    disabledReason: 'ElevenLabs API key is not configured.'
+  },
+  // Higgsfield (content factory phase 4b): paid pictures and AI clips from model ids the user pastes.
+  {
+    id: 'higgsfield',
+    name: 'Higgsfield',
+    status: 'not_configured',
+    transport: 'higgsfield_api',
+    requiredEnv: ['HIGGSFIELD_KEY_ID', 'HIGGSFIELD_KEY_SECRET'],
+    permissions: ['image_generation', 'video_generation', 'approval_requests'],
+    disabledReason: 'Higgsfield keys are not configured.'
+  },
   // Stock footage for Miya's B-roll step (content factory phase 2a): free keys, read only.
   {
     id: 'pexels',

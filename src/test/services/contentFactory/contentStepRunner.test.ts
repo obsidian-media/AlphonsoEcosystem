@@ -47,7 +47,7 @@ describe('runContentProject', () => {
     const args = submitted();
     expect(args).toMatchObject({ source: 'content-factory', label: PROJECT_LABEL, saveDecisions: false });
     expect(PROJECT_LABEL).toBe('Steps set by Miya Studio.');
-    expect(args.steps).toHaveLength(17);
+    expect(args.steps).toHaveLength(18);
     expect(args.text).toContain('Why we wait');
     expect(getProject(p.id)!.joseRequestId).toBe('jose-request-c1');
   });

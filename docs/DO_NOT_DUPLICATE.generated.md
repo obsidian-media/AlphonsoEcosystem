@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 275 services and 170 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 280 services and 172 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -93,12 +93,14 @@ Source-backed inventory: 275 services and 170 components. Human purpose descript
 | component | `src/components/MissionRoom.tsx` | `MissionRoom` |
 | component | `src/components/miya/AiClipsPanel.tsx` | `AiClipsPanel`, `AiClipsPanelProps` |
 | component | `src/components/miya/BrandEditor.tsx` | `BrandEditor` |
+| component | `src/components/miya/BrandEnginesEditor.tsx` | `BrandEnginesEditor` |
 | component | `src/components/miya/BrandResults.tsx` | `BrandResults` |
 | component | `src/components/miya/BriefPanel.tsx` | `BriefPanel` |
 | component | `src/components/miya/CampaignStudioTab.tsx` | `CampaignStudioTab` |
 | component | `src/components/miya/CarouselStudioTab.tsx` | `CarouselStudioTab`, `CarouselStudioTabProps` |
 | component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab`, `selectContentProject` |
 | component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
+| component | `src/components/miya/HiggsfieldResults.tsx` | `HiggsfieldMedia`, `HiggsfieldResultsList` |
 | component | `src/components/miya/IdeasList.tsx` | `IdeasList` |
 | component | `src/components/miya/PostNumbers.tsx` | `PostNumbers` |
 | component | `src/components/miya/PostsPanel.tsx` | `PostsPanel` |
@@ -251,9 +253,11 @@ Source-backed inventory: 275 services and 170 components. Human purpose descript
 | service | `src/services/connectors/connectorRegistry.js` | `appendConnectorAudit`, `CIRCUIT_BREAKER_RESET_MS`, `CIRCUIT_BREAKER_THRESHOLD`, `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE`, `DEFAULT_CONNECTORS`, `gateConnectorAction`, `getConnectorCircuitState`, `hydrateConnectorAuditFromSqlite`, `hydrateConnectorRegistryFromSqlite`, `initializeConnectorRegistryFromSqlite`, `listConnectorAudit`, `listConnectors`, `readRows`, `recordConnectorFailure`, `recordConnectorSuccess`, `requireConnectorApproval`, `requireConnectorReady`, `resetConnectorCircuitState`, `setConnectorStatus`, `verifyConnectorEnvironment`, `writeRows` |
 | service | `src/services/connectors/deepseekConnector.ts` | `DeepSeekChatOptions`, `DeepSeekChatResult`, `DeepSeekMessage`, `DeepSeekSearchResult`, `isDeepSeekConfigured`, `searchWithDeepSeek`, `sendDeepSeekMessage` |
 | service | `src/services/connectors/discordConnector.ts` | `addReaction`, `deleteMessage`, `DiscordChannel`, `DiscordConfig`, `DiscordMessage`, `editMessage`, `getChannelHistory`, `listGuildChannels`, `sendMessage`, `sendWebhookMessage` |
+| service | `src/services/connectors/elevenLabsConnector.ts` | `ELEVENLABS_NOT_SET_UP`, `elevenLabsKey`, `ElevenLabsModel`, `ElevenLabsVoice`, `isElevenLabsConfigured`, `listElevenLabsModels`, `listElevenLabsVoices` |
 | service | `src/services/connectors/geminiConnector.ts` | `DEFAULT_MODEL`, `GeminiChatOptions`, `GeminiChatSuccess`, `GeminiMessage`, `GeminiRateLimited`, `GeminiSendResult`, `isGeminiConfigured`, `sendGeminiMessage` |
 | service | `src/services/connectors/githubConnector.ts` | `closeIssue`, `createIssue`, `createPullRequest`, `createRelease`, `getFileContent`, `GitHubAsset`, `GitHubConfig`, `GitHubIssue`, `GitHubPullRequest`, `GitHubRelease`, `GitHubSearchResult`, `listIssues`, `listPullRequests`, `listReleases`, `listWorkflows`, `mergePullRequest`, `searchCode`, `searchIssues`, `searchRepos`, `triggerWorkflow` |
 | service | `src/services/connectors/hermesAgentConnector.ts` | `getHermesAgentEndpoint`, `getHermesAgentHealth`, `getHermesSessionMode`, `HermesAgentEndpoint`, `HermesBlocked`, `HermesChatOptions`, `HermesChatSuccess`, `HermesCircuitOpen`, `HermesMessage`, `HermesRateLimited`, `HermesSendResult`, `HermesSessionMode`, `isHermesAgentConfigured`, `listHermesAgentModels`, `resolveSecureSessionId`, `saveHermesAgentEndpoint`, `sendHermesAgentMessage`, `setHermesSessionMode` |
+| service | `src/services/connectors/higgsfieldConnector.ts` | `cachedHiggsfieldEstimate`, `HIGGSFIELD_CONSOLE_URL`, `HIGGSFIELD_NOT_SET_UP`, `higgsfieldAvailable`, `higgsfieldKeys`, `HiggsfieldKeys`, `higgsfieldModels`, `HiggsfieldModels`, `isHiggsfieldConfigured`, `parseExtra`, `refreshHiggsfieldEstimate`, `testHiggsfieldModel` |
 | service | `src/services/connectors/n8nConnector.ts` | `isN8nHealthy`, `listN8nWorkflows`, `N8nActionResult`, `N8nHealthResult`, `N8nWebhookResult`, `N8nWorkflowListResult`, `setN8nWorkflowActive`, `triggerN8nWebhook` |
 | service | `src/services/connectors/nvidiaNimConnector.ts` | `DEFAULT_MODEL`, `isNvidiaConfigured`, `listNvidiaModels`, `NvidiaChatOptions`, `NvidiaChatSuccess`, `NvidiaMessage`, `NvidiaRateLimited`, `NvidiaSendResult`, `sendNvidiaMessage` |
 | service | `src/services/connectors/perplexityConnector.ts` | `isPerplexityConfigured`, `PerplexitySearchOptions`, `PerplexitySearchResult`, `PerplexitySource`, `searchPerplexity` |
@@ -271,13 +275,13 @@ Source-backed inventory: 275 services and 170 components. Human purpose descript
 | service | `src/services/contentFactory/contentCaptions.ts` | `alignCaptions`, `captionsFromLines`, `TimedWord`, `toSrt` |
 | service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentIdeas.ts` | `dismissIdea`, `getIdea`, `IDEAS_TASK_MARK`, `listIdeas`, `proposeIdeas`, `saveIdeas`, `startProjectFromIdea` |
-| service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureResult`, `renderCarouselSlides`, `renderScenePictures`, `renderThumbnails` |
+| service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureOptions`, `PictureResult`, `renderCarouselSlides`, `renderScenePictures`, `renderThumbnails` |
 | service | `src/services/contentFactory/contentLearning.ts` | `startContentLearning` |
-| service | `src/services/contentFactory/contentMediaExecutor.ts` | `checkPendingClips`, `ClipOutcome`, `CLIPS_OFF`, `executeMediaStep`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `ProjectClipEngine`, `resolveProjectClipEngine`, `RUNWAY_NOT_APPROVED`, `SMALL_CARD_NOTE`, `VoiceLine`, `VoiceOutput` |
+| service | `src/services/contentFactory/contentMediaExecutor.ts` | `checkPendingClips`, `ClipOutcome`, `CLIPS_OFF`, `executeMediaStep`, `HIGGSFIELD_NOT_APPROVED`, `linesForScenes`, `MEDIA_ACTIONS`, `NO_AUDIOCRAFT`, `NO_STOCK_KEYS`, `NO_VOICE`, `ProjectClipEngine`, `resolveProjectClipEngine`, `RUNWAY_NOT_APPROVED`, `SFX_NOT_APPROVED`, `SFX_OFF`, `SMALL_CARD_NOTE`, `VoiceLine`, `VoiceOutput` |
 | service | `src/services/contentFactory/contentPostMoves.ts` | `cancelProjectPost`, `movePost`, `MoveResult`, `moveToDay`, `moveToSlot` |
 | service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `POST_STATUS_LABEL`, `savePosts`, `updatePost` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `outputPath`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
-| service | `src/services/contentFactory/contentProjectPlan.ts` | `briefWantsCarousel`, `briefWantsShorts`, `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `PUBLISH_WAIT`, `REVIEW_WAIT`, `runwayEstimate`, `SHORTS_WAIT_PAID`, `shortsCount`, `shortsRunwayEstimate` |
+| service | `src/services/contentFactory/contentProjectPlan.ts` | `briefWantsCarousel`, `briefWantsShorts`, `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `clipsWaitPaid`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `higgsfieldClipsEstimate`, `PICTURES_WAIT_PAID`, `PUBLISH_WAIT`, `REVIEW_WAIT`, `runwayEstimate`, `SFX_WAIT_PAID`, `SHORTS_WAIT_PAID`, `shortsCount`, `shortsRunwayEstimate`, `VOICE_WAIT_PAID` |
 | service | `src/services/contentFactory/contentProjectService.ts` | `addShortPlan`, `addStepProgress`, `appendShortPlan`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getShortsSettings`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setShortKind`, `setShortOutput`, `setShortPlatforms`, `setShortsSettings`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentPublishExecutor.ts` | `executePublishStep`, `NO_APPROVED_POSTS` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
@@ -288,6 +292,9 @@ Source-backed inventory: 275 services and 170 components. Human purpose descript
 | service | `src/services/contentFactory/contentTelegram.ts` | `collectContentNotifications`, `ContentButton`, `ContentButtonAction`, `contentButtonToken`, `ContentNotification`, `ContentTelegramSettings`, `getContentTelegramSettings`, `handleContentButton`, `readContentButtonToken` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `BrandLesson`, `CarouselShape`, `CarouselSlide`, `Checkpoint`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentIdea`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `MetricsReading`, `PostingSlot`, `PostMetrics`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
+| service | `src/services/contentFactory/engineChoice.ts` | `EngineChoices`, `higgsfieldPictureLimit`, `PaidEngine`, `paidEngineAvailable`, `prepareEngineEstimates`, `projectEngines`, `resolvePictures`, `resolveVoice`, `VoiceChoice` |
+| service | `src/services/contentFactory/higgsfieldByName.ts` | `askHiggsfieldByName`, `checkHiggsfieldResult`, `executeHiggsfieldByName`, `HIGGSFIELD_BY_NAME_NOT_SET_UP`, `HIGGSFIELD_LABEL`, `HIGGSFIELD_NOT_FROM_SCHEDULE`, `HiggsfieldKind`, `higgsfieldKindOf`, `higgsfieldPromptOf`, `HiggsfieldResult`, `higgsfieldResultsFor`, `listHiggsfieldResults` |
+| service | `src/services/contentFactory/higgsfieldClip.ts` | `checkHiggsfieldClip`, `estimateHiggsfieldClipsUsd`, `higgsfieldClipAvailable`, `HiggsfieldClipResult`, `makeHiggsfieldClip` |
 | service | `src/services/contentFactory/instagramRoute.ts` | `getInstagramRoute`, `instagramLoginSetUp`, `InstagramRoute`, `pageRouteSetUp`, `savedInstagramRoute`, `setInstagramRoute` |
 | service | `src/services/contentFactory/performanceLessons.ts` | `LESSONS_TASK_MARK`, `proposeLessons` |
 | service | `src/services/contentFactory/platformLimits.ts` | `fitsPlatform`, `formatSeconds`, `PLATFORM_LIMITS`, `PlatformFit` |
@@ -296,7 +303,7 @@ Source-backed inventory: 275 services and 170 components. Human purpose descript
 | service | `src/services/contentFactory/publishPost.ts` | `PostResult`, `PublishablePost`, `publishPost` |
 | service | `src/services/contentFactory/readyToPost.ts` | `BY_HAND_REMINDER`, `exportForHand`, `handFolderFor` |
 | service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
-| service | `src/services/contentFactory/shortMaker.ts` | `MakeOptions`, `makeShorts`, `MAKING_ANOTHER`, `NEEDS_FINISHED_VIDEO`, `NEEDS_SCRIPT`, `redoShort`, `RUNWAY_SHORTS_NOTE`, `ShortOutput`, `shortsSummary` |
+| service | `src/services/contentFactory/shortMaker.ts` | `HIGGSFIELD_SHORTS_NOTE`, `MakeOptions`, `makeShorts`, `MAKING_ANOTHER`, `NEEDS_FINISHED_VIDEO`, `NEEDS_SCRIPT`, `redoShort`, `RUNWAY_SHORTS_NOTE`, `ShortOutput`, `shortsSummary` |
 | service | `src/services/contentFactory/signInExpiry.ts` | `getSignInExpiry`, `isYoutubeProjectPublished`, `plainSignInReason`, `recordSignIn`, `setYoutubeProjectPublished`, `SIGN_IN_NAME`, `signedInAt`, `SignInService`, `SignInWarning`, `signInWarnings` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `brandFontName`, `darkestColour`, `drawHeadline`, `drawSlide`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline`, `layoutSlideText`, `slideSize`, `SlideTextLayout` |
 | service | `src/services/crashLogService.ts` | `clearCrashLog`, `CrashLogEntry`, `getCrashLog`, `logError` |
@@ -331,7 +338,7 @@ Source-backed inventory: 275 services and 170 components. Human purpose descript
 | service | `src/services/jose/josePlanner.ts` | `describePlanSource`, `JosePlan`, `planJoseRequest` |
 | service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `replacePlanSteps`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `updateJoseStep` |
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
-| service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd` |
+| service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `estimateEffectsUsd`, `estimateElevenLabsUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd` |
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `priorOutputsForNeeds`, `setStepOutput` |
 | service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
@@ -423,7 +430,7 @@ Source-backed inventory: 275 services and 170 components. Human purpose descript
 | service | `src/services/systemHealth/systemHealthService.js` | `getLastBuildStatus`, `getSystemHealthSummary`, `setLastBuildStatus` |
 | service | `src/services/telegramAutoPollService.ts` | `getTelegramAutoPollState`, `getTelegramEnvSafe`, `runSingleTelegramPoll` |
 | service | `src/services/telegramBrowserConnector.ts` | `browserPollTelegram`, `browserSendTelegram`, `getTelegramPollCursor`, `handleTelegramBotCommand`, `parseTelegramCommand`, `setTelegramPollCursor`, `TelegramAuditEntry`, `TelegramBotVerifyResult`, `TelegramMessage`, `TelegramPollResult`, `TelegramSendResult`, `verifyTelegramBotEnvironment` |
-| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `runPushWatcher`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
+| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
 | service | `src/services/toolConnectionService.ts` | `buildToolConnectionPayload`, `listToolConnectionAudit`, `listToolConnections`, `listToolConnectionTypes`, `proveToolConnectionPath`, `removeToolConnection`, `sendToolConnectionMessage`, `SendToolConnectionOptions`, `setToolConnectionStatus`, `testToolConnection`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `ToolConnection`, `ToolConnectionAuditEntry`, `ToolConnectionPatch`, `ToolConnectionResult`, `ToolConnectionType`, `upsertToolConnection` |
 | service | `src/services/toolNotificationDispatcher.ts` | `dispatchReceiptNotifications` |
 | service | `src/services/toolRegistryService.ts` | `executeTool`, `formatToolsForPrompt`, `getAllToolNames`, `getToolDefinition`, `getToolDefinitions`, `ToolArgs`, `ToolContext`, `ToolDefinition`, `ToolExecutionResult`, `ToolParameterSchema` |

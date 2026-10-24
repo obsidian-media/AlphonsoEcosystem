@@ -1301,6 +1301,11 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (assignment?.contentStep) {
     return executeContentStepAssignment(assignment, options);
   }
+  // Asked for Higgsfield by name (phase 4b).
+  if (assignment?.actionType === 'creative_higgsfield') {
+    const { executeHiggsfieldByName } = await import('./contentFactory/higgsfieldByName');
+    return executeHiggsfieldByName(assignment, packet);
+  }
   if (assignment?.actionType === 'boardroom_planning') {
     return executeBoardroomPlanning(assignment, commandText, options);
   }
@@ -2025,6 +2030,7 @@ export async function runJoseCommandExecutionPipeline({
             ...(assignment.contentStep.appendShort ? { appendShort: true } : {}),
             ...(assignment.contentStep.purpose ? { purpose: assignment.contentStep.purpose, postRef: assignment.contentStep.postRef } : {}),
             ...(assignment.contentStep.step === 'shorts' && (assignment.effects || []).includes('spend') ? { runwayApproved: true } : {}),
+            ...((assignment.effects || []).includes('spend') ? { spendApproved: true } : {}),
           });
         } catch (error) {
           console.warn('[jose] content step not saved to its project', error);

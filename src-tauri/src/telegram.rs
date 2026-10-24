@@ -288,6 +288,138 @@ pub(crate) async fn connector_poll_telegram(
   })
 }
 
+/// Telegram's limits for a bot upload (phase 4b): 50 MB for any file, 10 MB for a photo.
+const TELEGRAM_FILE_LIMIT: u64 = 50 * 1024 * 1024;
+const TELEGRAM_PHOTO_LIMIT: u64 = 10 * 1024 * 1024;
+
+/// Which Bot API method sends this file: (method, field, mime); None when it is over 50 MB.
+pub(crate) fn telegram_file_method(
+  ext: &str,
+  size: u64,
+) -> Option<(&'static str, &'static str, &'static str)> {
+  if size > TELEGRAM_FILE_LIMIT {
+    return None;
+  }
+  Some(match ext.to_ascii_lowercase().as_str() {
+    "png" if size <= TELEGRAM_PHOTO_LIMIT => ("sendPhoto", "photo", "image/png"),
+    "jpg" | "jpeg" if size <= TELEGRAM_PHOTO_LIMIT => ("sendPhoto", "photo", "image/jpeg"),
+    "mp4" => ("sendVideo", "video", "video/mp4"),
+    "png" => ("sendDocument", "document", "image/png"),
+    "jpg" | "jpeg" => ("sendDocument", "document", "image/jpeg"),
+    _ => ("sendDocument", "document", "application/octet-stream"),
+  })
+}
+
+/// A multipart/form-data body with the chat, an optional caption and the file.
+pub(crate) fn telegram_file_body(
+  boundary: &str,
+  chat_id: &str,
+  caption: &str,
+  field: &str,
+  filename: &str,
+  mime: &str,
+  bytes: &[u8],
+) -> Vec<u8> {
+  let safe_name: String = filename
+    .chars()
+    .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'))
+    .collect();
+  let mut body = Vec::with_capacity(bytes.len() + 1024);
+  body.extend_from_slice(
+    format!(
+      "--{boundary}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{chat_id}\r\n"
+    )
+    .as_bytes(),
+  );
+  if !caption.trim().is_empty() {
+    let text: String = caption.chars().take(1000).collect();
+    body.extend_from_slice(
+      format!("--{boundary}\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n{text}\r\n")
+        .as_bytes(),
+    );
+  }
+  body.extend_from_slice(format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{field}\"; filename=\"{safe_name}\"\r\nContent-Type: {mime}\r\n\r\n").as_bytes());
+  body.extend_from_slice(bytes);
+  body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
+  body
+}
+
+/// Sends a file from the output folder to a chat (phase 4b: a Higgsfield result).
+/// Over Telegram's limit it sends nothing and answers `tooLarge`, so the app names the folder instead.
+#[tauri::command]
+pub(crate) async fn connector_send_telegram_file(
+  http_client: tauri::State<'_, reqwest::Client>,
+  token: Option<String>,
+  chat_id: String,
+  workspace_root: String,
+  relative_path: String,
+  caption: Option<String>,
+) -> Result<Value, String> {
+  let token = crate::utils::secret_or_env(token, "TELEGRAM_BOT_TOKEN");
+  if token.trim().is_empty() || chat_id.trim().is_empty() {
+    return Ok(
+      serde_json::json!({ "ok": false, "error": "TELEGRAM_BOT_TOKEN or the chat is not set." }),
+    );
+  }
+  let file = match crate::media_tools::checked_file(
+    &workspace_root,
+    &relative_path,
+    &["png", "jpg", "jpeg", "mp4", "webp"],
+  ) {
+    Ok(f) => f,
+    Err(e) => return Ok(serde_json::json!({ "ok": false, "error": e })),
+  };
+  let size = fs::metadata(&file).map(|m| m.len()).unwrap_or(0);
+  let ext = file
+    .extension()
+    .and_then(|e| e.to_str())
+    .unwrap_or("")
+    .to_string();
+  let Some((method, field, mime)) = telegram_file_method(&ext, size) else {
+    return Ok(serde_json::json!({ "ok": false, "tooLarge": true }));
+  };
+  let bytes = fs::read(&file).map_err(|_| "The file could not be read.".to_string())?;
+  let filename = file
+    .file_name()
+    .and_then(|n| n.to_str())
+    .unwrap_or("file")
+    .to_string();
+  let boundary = format!("alphonso{}", now_ms());
+  let body = telegram_file_body(
+    &boundary,
+    chat_id.trim(),
+    caption.as_deref().unwrap_or(""),
+    field,
+    &filename,
+    mime,
+    &bytes,
+  );
+  let response = http_client
+    .inner()
+    .post(format!(
+      "https://api.telegram.org/bot{}/{method}",
+      token.trim()
+    ))
+    .header(
+      "Content-Type",
+      format!("multipart/form-data; boundary={boundary}"),
+    )
+    .body(body)
+    .send()
+    .await
+    .map_err(|_| "Telegram could not be reached.".to_string())?;
+  let answer: Value = response.json().await.unwrap_or(Value::Null);
+  if answer.get("ok").and_then(|v| v.as_bool()).unwrap_or(false) {
+    Ok(serde_json::json!({ "ok": true }))
+  } else {
+    let description = answer
+      .get("description")
+      .and_then(|v| v.as_str())
+      .unwrap_or("Telegram refused the file.");
+    Ok(serde_json::json!({ "ok": false, "error": description }))
+  }
+}
+
 #[tauri::command]
 pub(crate) async fn connector_send_telegram(
   http_client: tauri::State<'_, reqwest::Client>,
@@ -462,6 +594,55 @@ pub(crate) async fn connector_answer_telegram_callback(
 
 #[cfg(test)]
 mod tests {
+  #[test]
+  fn a_file_goes_by_its_kind_and_size() {
+    assert_eq!(
+      telegram_file_method("png", 1_000),
+      Some(("sendPhoto", "photo", "image/png"))
+    );
+    assert_eq!(
+      telegram_file_method("PNG", 11 * 1024 * 1024),
+      Some(("sendDocument", "document", "image/png"))
+    );
+    assert_eq!(
+      telegram_file_method("mp4", 40 * 1024 * 1024),
+      Some(("sendVideo", "video", "video/mp4"))
+    );
+    assert_eq!(telegram_file_method("mp4", 51 * 1024 * 1024), None);
+  }
+
+  #[test]
+  fn the_file_body_has_the_chat_caption_and_file() {
+    let body = String::from_utf8(telegram_file_body(
+      "B",
+      "42",
+      "Your video",
+      "video",
+      "a\"b.mp4",
+      "video/mp4",
+      b"DATA",
+    ))
+    .unwrap();
+    assert!(
+      body.starts_with("--B\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n42\r\n")
+    );
+    assert!(body.contains("name=\"caption\"\r\n\r\nYour video\r\n"));
+    assert!(body.contains(
+      "name=\"video\"; filename=\"ab.mp4\"\r\nContent-Type: video/mp4\r\n\r\nDATA\r\n--B--\r\n"
+    ));
+    assert!(!String::from_utf8(telegram_file_body(
+      "B",
+      "1",
+      "  ",
+      "photo",
+      "x.png",
+      "image/png",
+      b""
+    ))
+    .unwrap()
+    .contains("caption"));
+  }
+
   use super::*;
   use serde_json::json;
 

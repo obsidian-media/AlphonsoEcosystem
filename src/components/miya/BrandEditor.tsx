@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BrandEnginesEditor } from './BrandEnginesEditor';
 import { getBrand } from '../../services/contentFactory/contentBrandService';
 import { IdeasList } from './IdeasList';
 import { BrandResults } from './BrandResults';
@@ -139,7 +140,7 @@ export function BrandEditor({ brandId, onBrand }: { brandId: string; onBrand(id:
         <textarea aria-label="Reference posts" className={field} rows={4} value={refs} onChange={(e) => setRefs(e.target.value)} />
       </label>
       {text('pastScripts', 'Past scripts (for “write in my voice”)', true)}
-      <div className="text-[11px] text-(--text-3)">Voice: Kokoro ({draft.voice.voiceId}), free and local.</div>
+      <BrandEnginesEditor brand={draft} onChange={(engines) => setDraft({ ...draft, engines })} />
 
       {draft.lessons.some((l) => l.status !== 'proposed') && (
         <div className="space-y-1">

@@ -51,7 +51,7 @@ describe('paidModelAvailable', () => {
 
   it('reads nothing usable from an empty or broken setting', () => {
     localStorage.setItem('alphonso_settings', '{not json');
-    expect(getPaidModelSettings()).toEqual({ allowed: false, provider: null, model: null, inputPerMillionUsd: null, outputPerMillionUsd: null, monthlyCapUsd: null, runwayPricePerSecondUsd: null });
+    expect(getPaidModelSettings()).toEqual({ allowed: false, provider: null, model: null, inputPerMillionUsd: null, outputPerMillionUsd: null, monthlyCapUsd: null, runwayPricePerSecondUsd: null, elevenLabsPricePer1kCharsUsd: null, elevenLabsPricePerEffectUsd: null });
   });
 });
 

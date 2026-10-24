@@ -13,6 +13,7 @@ const STEP_LABELS: Record<StepId, string> = {
   thumbnail: 'Thumbnails',
   voice: 'Voice-over',
   music: 'Music',
+  sfx: 'Sound effects',
   broll: 'Stock clips',
   clips: 'AI clips',
   assemble: 'Finished video',

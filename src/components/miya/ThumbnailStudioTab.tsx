@@ -42,7 +42,7 @@ export function ThumbnailStudioTab({ project, outputRoot, runStep, chooseVersion
                     <ProjectPicture outputRoot={outputRoot} relativePath={picture.relativePath} alt={`Thumbnail: ${concept.headline}`} className="aspect-video w-full" />
                   )}
                   {picture?.status === 'pending' && (
-                    <div className="flex aspect-video items-center justify-center rounded-xl bg-(--surface-2) text-[11px] text-(--text-3)">Waiting for ComfyUI…</div>
+                    <div className="flex aspect-video items-center justify-center rounded-xl bg-(--surface-2) text-[11px] text-(--text-3)">{picture.requestId ? 'Waiting for Higgsfield…' : 'Waiting for ComfyUI…'}</div>
                   )}
                   {picture?.status === 'failed' && (
                     <div className="flex aspect-video items-center justify-center rounded-xl bg-(--error-dim) p-2 text-center text-[11px] text-(--error)">{picture.error}</div>
@@ -66,6 +66,7 @@ export function ThumbnailStudioTab({ project, outputRoot, runStep, chooseVersion
             })}
           </div>
         )}
+        {(output as { pictureNote?: string } | undefined)?.pictureNote && <div className="text-[11px] text-(--text-3)">{(output as { pictureNote?: string }).pictureNote}</div>}
         {pictures.some((p) => p.status === 'pending') && <Button size="sm" variant="secondary" onClick={checkAgain}>Check again</Button>}
       </StepPanel>
     </div>

@@ -64,6 +64,8 @@ function toAssignments(steps: PlanStep[], planNote: string) {
     ...(step.payload ? { payload: step.payload } : {}),
     ...(step.contentStep ? { contentStep: step.contentStep } : {}),
     ...(step.waitFor ? { waitFor: step.waitFor } : {}),
+    // The cost reaches the approval message ("about $X.XX"; phase 4b).
+    ...(Number.isFinite(step.costEstimateUsd) ? { costEstimateUsd: step.costEstimateUsd } : {}),
     title: `${agentName(step.agent)} ${step.actionType}`,
     rationale: planNote,
     riskLevel: 'low',
@@ -75,6 +77,12 @@ function toAssignments(steps: PlanStep[], planNote: string) {
 
 export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const { text, source, history, planFresh, endpoint, zeroCostMode, previewMode, onProgress, onToken } = input;
+
+  // Asked for Higgsfield by name (phase 4b): one Miya step that asks with the estimate. Checked first:
+  // "a Higgsfield video for my channel" also fits the content video template.
+  const { askHiggsfieldByName } = await import('../contentFactory/higgsfieldByName');
+  const higgsfield = await askHiggsfieldByName({ text, source, onProgress, allowPaidModels: input.allowPaidModels });
+  if (higgsfield) return higgsfield;
 
   // From Chat, a content video becomes a Miya Studio project run as one request
   // (phase 6b, owner). "Plan this fresh" still plans it. Checked before the

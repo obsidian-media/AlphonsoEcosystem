@@ -222,9 +222,11 @@ export function markStepStatus(id: string, step: StepId, status: StepState['stat
 export function getVideoSettings(project: ContentProject): VideoSettings {
   const saved = project.videoSettings || {};
   const aiClips = saved.aiClips === 'every' || saved.aiClips === 'none' ? saved.aiClips : 'main';
-  const clipEngine = saved.clipEngine === 'local' || saved.clipEngine === 'runway' ? saved.clipEngine : null;
+  const clipEngine = saved.clipEngine === 'local' || saved.clipEngine === 'runway' || saved.clipEngine === 'higgsfield' ? saved.clipEngine : null;
   const runwayModel = typeof saved.runwayModel === 'string' && saved.runwayModel.trim() ? saved.runwayModel.trim() : DEFAULT_VIDEO_SETTINGS.runwayModel;
-  return { aiClips, clipEngine, runwayModel };
+  const voiceEngine = saved.voiceEngine === 'kokoro' || saved.voiceEngine === 'elevenlabs' ? saved.voiceEngine : undefined;
+  const pictures = saved.pictures === 'comfyui' || saved.pictures === 'higgsfield' ? saved.pictures : undefined;
+  return { aiClips, clipEngine, runwayModel, ...(voiceEngine ? { voiceEngine } : {}), ...(pictures ? { pictures } : {}) };
 }
 
 export function setVideoSettings(id: string, patch: Partial<VideoSettings>): ContentProject {

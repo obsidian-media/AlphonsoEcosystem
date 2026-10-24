@@ -6,6 +6,9 @@ import { STEP_ORDER, type ContentBrand, type ContentProject, type StepId } from 
 import { chosenVersionOf, getShortsSettings, getVideoSettings } from './contentProjectService';
 import { chosenScenes } from './clipEngine';
 import { estimateRunwayUsd, runwayClipAvailable } from './runwayClip';
+import { estimateEffectsUsd, estimateElevenLabsUsd } from '../jose/joseSpend';
+import { higgsfieldPictureLimit, paidEngineAvailable, resolvePictures, resolveVoice } from './engineChoice';
+import { estimateHiggsfieldClipsUsd } from './higgsfieldClip';
 
 /** Which content-factory step each template step belongs to. */
 export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
@@ -18,6 +21,7 @@ export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
   thumbnail: 'thumbnail',
   voice: 'voice',
   music: 'music',
+  sfx: 'sfx',
   broll: 'broll',
   clips: 'clips',
   assemble: 'assemble',
@@ -35,27 +39,58 @@ export const REVIEW_WAIT = 'Approve the review in Miya Studio first.';
 
 /** Why AI clips wait (phase 2b): you check Miya's main moments first; for Runway, the cost too. */
 export const CLIPS_WAIT = 'Check the main moments in Miya Studio first.';
-export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Miya Studio first.';
+/** The paid engine's name in the wait (phase 4b: Runway or Higgsfield). */
+export const clipsWaitPaid = (engine: string): string => `Check the main moments and the ${engine} cost in Miya Studio first.`;
+export const CLIPS_WAIT_PAID = clipsWaitPaid('Runway');
 
 /** Why Publish waits (phase 3a): you approve the exact posts in Campaign Studio's Posts list. */
 export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
 
+/** Why a full run waits for Higgsfield pictures (phase 4b): once per step, with the most they could cost. */
+export const PICTURES_WAIT_PAID = (max: number, usd: number): string => `Make up to ${max} pictures with Higgsfield, about $${usd.toFixed(2)} at most.`;
+
+/** Why a full run waits at Sound effects (phase 4b): once, with the most they could cost. */
+export const SFX_WAIT_PAID = (max: number, usd: number): string => `Make up to ${max} sound effects, about $${usd.toFixed(2)} at most.`;
+
+/** Why a full run waits at Voice when the brand reads with ElevenLabs (phase 4b): once, with the cost. */
+export const VOICE_WAIT_PAID = (usd: number): string => `Read the voice-over with ElevenLabs, about $${usd.toFixed(2)}.`;
+
+/** Spoken characters: the chosen script's, else about 15 a second of the brief's length. */
+function spokenCharacters(project: ContentProject): number {
+  const parts = (chosenVersionOf(project, 'script')?.output as { miya?: { script?: { spoken?: string }[] } } | undefined)?.miya?.script;
+  if (parts?.length) return parts.reduce((n, p) => n + String(p.spoken || '').length, 0);
+  return Math.max(0, Number(project.brief.lengthSec || 60)) * 15;
+}
+
 /** Why a run with Runway clips in its Shorts waits (phase 4a): once, with the cost. */
-export const SHORTS_WAIT_PAID = (clips: number, shorts: number, usd: number): string =>
-  `Make ${clips} Runway clips for ${shorts} Shorts, about $${usd.toFixed(2)}.`;
+export const SHORTS_WAIT_PAID = (clips: number, shorts: number, usd: number, engine = 'Runway'): string =>
+  `Make ${clips} ${engine} clips for ${shorts} Shorts, about $${usd.toFixed(2)}.`;
 
 /** Clips per Short before the Shorts are written: the hook and the ending, or about six parts for every part. */
 const SHORT_CLIPS_GUESS = { main: 2, every: 6 } as const;
 
 /** What Runway clips in the Shorts would cost, before the Shorts are written (phase 4a); null when Runway isn't used. */
-export function shortsRunwayEstimate(project: ContentProject): { clips: number; shorts: number; usd: number } | null {
+export function shortsRunwayEstimate(project: ContentProject): { clips: number; shorts: number; usd: number; engine: string } | null {
   const settings = getShortsSettings(project);
-  if (settings.clipEngine !== 'runway' || settings.aiClips === 'none') return null;
-  if (!runwayClipAvailable().ok) return null;
+  if ((settings.clipEngine !== 'runway' && settings.clipEngine !== 'higgsfield') || settings.aiClips === 'none') return null;
   const shorts = shortsCount(project.brief);
   const clips = shorts * SHORT_CLIPS_GUESS[settings.aiClips];
+  // Higgsfield (phase 4b): its estimate per clip.
+  if (settings.clipEngine === 'higgsfield') {
+    const usd = estimateHiggsfieldClipsUsd(clips);
+    return usd === null ? null : { clips, shorts, usd, engine: 'Higgsfield' };
+  }
+  if (!runwayClipAvailable().ok) return null;
   const usd = estimateRunwayUsd(Array.from({ length: clips }, () => 5));
-  return usd === null ? null : { clips, shorts, usd };
+  return usd === null ? null : { clips, shorts, usd, engine: 'Runway' };
+}
+
+/** Higgsfield's estimate for the scenes AI clips would be made for, when the scene plan is known (phase 4b). */
+export function higgsfieldClipsEstimate(project: ContentProject): number | null {
+  const scenes = (chosenVersionOf(project, 'scenes')?.output as { miya?: { scenes?: { mainMoment?: unknown }[] } } | undefined)?.miya?.scenes;
+  if (!scenes?.length) return null;
+  const chosen = chosenScenes(scenes, getVideoSettings(project).aiClips);
+  return chosen.length ? estimateHiggsfieldClipsUsd(chosen.length) : null;
 }
 
 /** Runway's estimate for the scenes AI clips would be made for, when the scene plan is known. */
@@ -100,7 +135,7 @@ export function contentProjectPlanSteps(
   project: ContentProject,
   brand: ContentBrand,
   from: StepId = 'research',
-  options: { only?: boolean; clipEngine?: 'local' | 'runway' | null } = {},
+  options: { only?: boolean; clipEngine?: 'local' | 'runway' | 'higgsfield' | null } = {},
 ): PlanStep[] {
   const template = getTemplate('content_video');
   if (!template) throw new Error('The Content video template is missing.');
@@ -140,16 +175,49 @@ export function contentProjectPlanSteps(
     // AI clips stop once for the main moments; a Runway run is that same stop plus its cost.
     // Run on its own from Miya Studio, the user is already looking at the marks: no extra stop,
     // but a Runway run still asks for its cost (spending always asks).
+    // Higgsfield pictures (phase 4b): the step spends, asked once with Higgsfield's estimate × the most pictures.
+    if (factoryStep === 'scenes' || factoryStep === 'thumbnail' || factoryStep === 'carousel') {
+      const pictures = resolvePictures(project, brand);
+      if (pictures.engine === 'higgsfield' && pictures.usd !== undefined) {
+        const max = higgsfieldPictureLimit(project, factoryStep);
+        const usd = Math.round(max * pictures.usd * 10000) / 10000;
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        step.costEstimateUsd = usd;
+        if (!options.only) step.waitFor = step.waitFor ? `${step.waitFor} ${PICTURES_WAIT_PAID(max, usd)}` : PICTURES_WAIT_PAID(max, usd);
+      }
+    }
     if (factoryStep === 'clips' && getVideoSettings(project).aiClips !== 'none') {
-      if (options.clipEngine === 'runway') {
+      if (options.clipEngine === 'runway' || options.clipEngine === 'higgsfield') {
         step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
         // The estimate travels with the step (phase 3b), so Telegram and the board say "(about $X.XX)".
-        const estimate = runwayEstimate(project);
+        const estimate = options.clipEngine === 'runway' ? runwayEstimate(project) : higgsfieldClipsEstimate(project);
         if (estimate !== null) step.costEstimateUsd = estimate;
       }
       // No stop when nothing can make clips here (null); the step then says what to set up.
       // An unknown engine (undefined) still stops, to be safe.
-      if (!options.only && options.clipEngine !== null) step.waitFor = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : CLIPS_WAIT;
+      if (!options.only && options.clipEngine !== null) {
+        step.waitFor = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : options.clipEngine === 'higgsfield' ? clipsWaitPaid('Higgsfield') : CLIPS_WAIT;
+      }
+    }
+    // An ElevenLabs voice (phase 4b): spending always asks; a full run stops once at Voice with the cost.
+    if (factoryStep === 'voice' && resolveVoice(project, brand).engine === 'elevenlabs') {
+      const usd = estimateElevenLabsUsd(spokenCharacters(project));
+      if (usd !== null) {
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        step.costEstimateUsd = usd;
+        if (!options.only) step.waitFor = VOICE_WAIT_PAID(usd);
+      }
+    }
+    // Sound effects (phase 4b): at most one per scene, so the stop shows the most they could cost.
+    if (factoryStep === 'sfx' && brand.engines?.soundEffects && paidEngineAvailable('elevenlabs').ok) {
+      const scenes = (chosenVersionOf(project, 'scenes')?.output as { miya?: { scenes?: unknown[] } } | undefined)?.miya?.scenes;
+      const max = scenes?.length || Math.max(1, Math.ceil(Number(project.brief.lengthSec || 60) / 6));
+      const usd = estimateEffectsUsd(max);
+      if (usd !== null) {
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        step.costEstimateUsd = usd;
+        if (!options.only) step.waitFor = SFX_WAIT_PAID(max, usd);
+      }
     }
     // Runway clips in the Shorts (phase 4a): spending always asks; a full run stops once with the cost.
     if (factoryStep === 'shorts') {
@@ -157,7 +225,7 @@ export function contentProjectPlanSteps(
       if (estimate) {
         step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
         step.costEstimateUsd = estimate.usd;
-        if (!options.only) step.waitFor = SHORTS_WAIT_PAID(estimate.clips, estimate.shorts, estimate.usd);
+        if (!options.only) step.waitFor = SHORTS_WAIT_PAID(estimate.clips, estimate.shorts, estimate.usd, estimate.engine);
       }
     }
     return step;

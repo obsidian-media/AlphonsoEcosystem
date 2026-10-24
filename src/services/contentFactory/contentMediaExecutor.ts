@@ -4,6 +4,12 @@
 // the recorder saves as the step's version. Every file goes in the project
 // folder; nothing is overwritten, since each version has its own names.
 // Design: docs/superpowers/specs/2026-10-23-miya-content-factory-phase2a-design.md
+import { paidEngineAvailable, projectEngines, resolveVoice } from './engineChoice';
+import { checkHiggsfieldClip, higgsfieldClipAvailable, makeHiggsfieldClip } from './higgsfieldClip';
+import { higgsfieldModels } from '../connectors/higgsfieldConnector';
+import { parseStepAnswer } from './contentStepPrompts';
+import { elevenLabsKey } from '../connectors/elevenLabsConnector';
+import { canSpend, estimateEffectsUsd, estimateElevenLabsUsd, recordSpendUsd } from '../jose/joseSpend';
 import { invoke } from '@tauri-apps/api/core';
 import { freeOllamaGpuMemory, generateAgentLlmResponse } from '../../lib/ollama';
 import { getConnectorCredential } from '../connectors/connectorAuth';
@@ -23,7 +29,11 @@ import { brandFontName, darkestColour, headlineColour } from './thumbnailRendere
 import type { ContentBrand, ContentProject, StepId } from './contentTypes';
 import type { ContentStepResult } from './contentAgentExecutor';
 
-export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'research_broll', 'creative_video_clips', 'runtime_assemble_video']);
+export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'creative_sfx', 'research_broll', 'creative_video_clips', 'runtime_assemble_video']);
+
+export const SFX_OFF = 'Sound effects are off for this brand (Brands tab).';
+export const HIGGSFIELD_NOT_APPROVED = "Higgsfield clips weren't approved for this run.";
+export const SFX_NOT_APPROVED = "Sound effects weren't approved for this run.";
 
 export const NO_STOCK_KEYS = 'No stock footage keys are set. Add a free Pexels, Pixabay or Coverr key in Connectors → Content & Productivity to use stock clips; the scene pictures are used instead.';
 export const NO_VOICE = 'Run the Voice step first.';
@@ -41,7 +51,15 @@ interface MediaAssignment {
 interface ScriptPart { startSec?: number; endSec?: number; spoken?: string; music?: string }
 interface Scene { id: string; startSec?: number; endSec?: number; description?: string; camera?: string; movement?: string; mainMoment?: boolean }
 export interface VoiceLine { sceneId: string; text: string; startSec: number; endSec: number; path: string | null }
-export interface VoiceOutput { full: string; durationSec: number; lines: VoiceLine[] }
+export interface VoiceOutput {
+  full: string;
+  durationSec: number;
+  lines: VoiceLine[];
+  /** Phase 4b: who read it, ElevenLabs' word timings (for the captions), and why the free voice was used. */
+  engine?: 'kokoro' | 'elevenlabs';
+  words?: { word: string; start: number; end: number }[];
+  note?: string;
+}
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
@@ -135,6 +153,36 @@ async function runVoice(assignment: MediaAssignment, ctx: Context): Promise<Cont
   const lines = linesForScenes(scriptParts(ctx), scenesOf(ctx));
   if (!lines.some((l) => l.text)) return failed(assignment, 'The script has no spoken words to read. Run the Script step first.');
   const outDir = `${ctx.dir}/audio/voice-v${ctx.version}`;
+  const toLine = (l: (typeof lines)[number]) => (l.text ? { id: l.id, text: l.text } : { id: l.id, text: '', pauseSec: l.seconds });
+  const voiceLines = (files: { id: string; path: string | null; durationSec: number; startSec: number }[]): VoiceLine[] => lines.map((l) => {
+    const f = files.find((x) => x.id === l.id);
+    const startSec = f?.startSec ?? 0;
+    return { sceneId: l.id, text: l.text, startSec, endSec: startSec + (f?.durationSec ?? 0), path: f?.path ? `${outDir}/${l.id}.wav` : null };
+  });
+
+  // An ElevenLabs voice (phase 4b): only when this run was approved, within the monthly cap;
+  // otherwise, or when ElevenLabs refuses, Kokoro reads it and the step says why.
+  let note: string | undefined;
+  const choice = resolveVoice(ctx.project, ctx.brand);
+  if (choice.engine === 'elevenlabs') {
+    const cost = estimateElevenLabsUsd(lines.reduce((n, l) => n + l.text.length, 0));
+    const cap = cost === null ? { ok: false, reason: "Enter ElevenLabs' price per 1,000 characters in Settings → Approvals" } : canSpend(cost);
+    if (!(assignment.effects || []).includes('spend')) note = "ElevenLabs wasn't approved for this run; read by Kokoro.";
+    else if (!cap.ok) note = `${String(cap.reason).replace(/\.$/, '')}; read by Kokoro.`;
+    else {
+      const spoken = await invoke<{ ok?: boolean; reason?: string; full?: { durationSec: number }; files?: { id: string; path: string | null; durationSec: number; startSec: number }[]; words?: { word: string; start: number; end: number }[] }>(
+        'elevenlabs_speak',
+        { request: { workspaceRoot: ctx.root, outDir, voiceId: choice.voiceId, ...(choice.modelId ? { modelId: choice.modelId } : {}), key: elevenLabsKey(), lines: lines.map(toLine) } },
+      ).catch(() => null);
+      if (spoken?.ok && spoken.full) {
+        recordSpendUsd(cost as number);
+        const output: VoiceOutput = { full: `${outDir}/full.wav`, durationSec: spoken.full.durationSec, lines: voiceLines(spoken.files || []), engine: 'elevenlabs', words: spoken.words || [] };
+        return done(assignment, output, `Voice-over read by ElevenLabs, ${output.durationSec.toFixed(1)} s.`);
+      }
+      note = `${String(spoken?.reason || 'ElevenLabs made no voice-over').replace(/\.$/, '')}; read by Kokoro.`;
+    }
+  } else if (choice.note) note = choice.note;
+
   const result = await invoke<{ ok?: boolean; error?: string; full?: { durationSec: number } | null; files?: { id: string; path: string | null; durationSec: number; startSec: number }[] }>(
     'content_tts_kokoro',
     { request: {
@@ -143,17 +191,53 @@ async function runVoice(assignment: MediaAssignment, ctx: Context): Promise<Cont
     } },
   );
   if (!result?.ok || !result.full) return failed(assignment, result?.error || 'Kokoro made no voice-over.');
-  const files = result.files || [];
   const output: VoiceOutput = {
     full: `${outDir}/full.wav`,
     durationSec: result.full.durationSec,
-    lines: lines.map((l) => {
-      const f = files.find((x) => x.id === l.id);
-      const startSec = f?.startSec ?? 0;
-      return { sceneId: l.id, text: l.text, startSec, endSec: startSec + (f?.durationSec ?? 0), path: f?.path ? `${outDir}/${l.id}.wav` : null };
-    }),
+    lines: voiceLines(result.files || []),
+    ...(note ? { note } : {}),
   };
   return done(assignment, output, `Voice-over read in ${ctx.brand.voice?.voiceId || 'af_heart'}, ${output.durationSec.toFixed(1)} s.`);
+}
+
+interface SfxOutcome { sceneId: string; text: string; seconds: number; status: 'done' | 'failed'; path?: string; atSec?: number; reason?: string }
+
+/** Sound effects (phase 4b): Miya picks at most one per scene; ElevenLabs makes each, within the cap. */
+async function runSfx(assignment: MediaAssignment, ctx: Context): Promise<ContentStepResult> {
+  if (!ctx.brand.engines?.soundEffects) return done(assignment, { skipped: SFX_OFF }, SFX_OFF);
+  const can = paidEngineAvailable('elevenlabs');
+  if (!can.ok) return done(assignment, { skipped: `${can.reason}; no sound effects.` }, `${can.reason}; no sound effects.`);
+  if (!(assignment.effects || []).includes('spend')) return done(assignment, { skipped: SFX_NOT_APPROVED }, SFX_NOT_APPROVED);
+  const scenes = scenesOf(ctx);
+  const prompt = [
+    'Choose short sound effects for this video: at most one per scene, and only where a sound helps. Return only JSON: {"effects":[{"sceneId":"s1","text":"what the sound is","seconds":2}]}.',
+    ...scenes.map((sc) => `${sc.id} (${sc.startSec ?? 0}–${sc.endSec ?? 0} s): ${sc.description || ''}`),
+  ].join('\n');
+  const reply = await generateAgentLlmResponse('miya', { prompt, format: 'json', sessionId: `content:${ctx.project.id}:sfx` });
+  const planned = (parseStepAnswer('creative_sfx', String(reply?.response || '')) as { effects?: { sceneId: string; text: string; seconds: number }[] } | null)?.effects || [];
+  const known = new Set(scenes.map((sc) => sc.id));
+  const voiceLines = part<VoiceOutput>(ctx.prior, 'voice', 'miya')?.lines || [];
+  const effects: SfxOutcome[] = [];
+  let totalUsd = 0;
+  for (const fx of planned.filter((f) => known.has(f.sceneId))) {
+    const cost = estimateEffectsUsd(1) ?? 0;
+    const cap = canSpend(cost);
+    if (!cap.ok) { effects.push({ ...fx, status: 'failed', reason: cap.reason }); continue; }
+    const outPath = `${ctx.dir}/audio/sfx-v${ctx.version}-${fx.sceneId}.wav`;
+    const made = await invoke<{ ok?: boolean; path?: string; reason?: string }>('elevenlabs_sound', { request: {
+      workspaceRoot: ctx.root, outPath, text: fx.text, seconds: fx.seconds, key: elevenLabsKey(),
+    } }).catch(() => null);
+    if (made?.ok) {
+      recordSpendUsd(cost);
+      totalUsd += cost;
+      const atSec = voiceLines.find((l) => l.sceneId === fx.sceneId)?.startSec ?? scenes.find((sc) => sc.id === fx.sceneId)?.startSec ?? 0;
+      effects.push({ ...fx, status: 'done', path: outPath, atSec });
+    } else {
+      effects.push({ ...fx, status: 'failed', reason: made?.reason || 'ElevenLabs made no sound.' });
+    }
+  }
+  const madeCount = effects.filter((e) => e.status === 'done').length;
+  return done(assignment, { effects, totalUsd }, madeCount ? `${madeCount} sound effects made.` : 'No sound effects were needed.');
 }
 
 async function moodPrompt(ctx: Context): Promise<string | null> {
@@ -240,7 +324,7 @@ export const RUNWAY_NOT_APPROVED = 'Runway clips were not approved for this run.
 const NO_PICTURE = 'This scene has no picture to start from.';
 const NONE_MADE = 'No AI clip was made; those scenes use their stock clip or picture.';
 
-export interface ProjectClipEngine { engine: 'local' | 'runway' | null; reason?: string; modelId?: string; maxSeconds?: number; lowRes?: boolean }
+export interface ProjectClipEngine { engine: 'local' | 'runway' | 'higgsfield' | null; reason?: string; modelId?: string; maxSeconds?: number; lowRes?: boolean }
 
 export const SMALL_CARD_NOTE = 'This graphics card has under 8 GB, so AI clips are made smaller and at most 3 seconds. Choose full size in Runtime Hub → ComfyUI → Video models.';
 
@@ -248,9 +332,13 @@ export const SMALL_CARD_NOTE = 'This graphics card has under 8 GB, so AI clips a
 export async function resolveProjectClipEngine(project: ContentProject): Promise<ProjectClipEngine> {
   const info = await listVideoModels().catch(() => null);
   const model = info ? effectiveVideoModel(info) : null;
-  const choice = resolveClipEngine(getVideoSettings(project), {
+  // The project's engine, else the brand's (Brands tab, phase 4b).
+  const brand = getBrand(project.brandId);
+  const settings = getVideoSettings(project);
+  const choice = resolveClipEngine({ ...settings, clipEngine: brand ? projectEngines(project, brand).clips : settings.clipEngine }, {
     localModelInstalled: Boolean(model?.installed),
     runway: runwayClipAvailable(),
+    higgsfield: higgsfieldClipAvailable(),
   });
   if (choice.engine !== 'local' || !model) return choice;
   const size = clipSizeFor(info);
@@ -264,6 +352,8 @@ export interface ClipOutcome {
   seconds?: number;
   costUsd?: number;
   jobId?: string;
+  /** A clip still being made at Higgsfield (phase 4b), fetched by Check again. */
+  requestId?: string;
   /** Where a pending clip will be saved when ComfyUI finishes it. */
   target?: string;
   reason?: string;
@@ -276,6 +366,9 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
   if (!engine.engine) return done(assignment, { skipped: engine.reason }, `AI clips skipped: ${engine.reason}`);
   if (engine.engine === 'runway' && !(assignment.effects || []).includes('spend')) {
     return done(assignment, { skipped: RUNWAY_NOT_APPROVED }, RUNWAY_NOT_APPROVED);
+  }
+  if (engine.engine === 'higgsfield' && !(assignment.effects || []).includes('spend')) {
+    return done(assignment, { skipped: HIGGSFIELD_NOT_APPROVED }, HIGGSFIELD_NOT_APPROVED);
   }
   // The marks as they are now: the user may have changed them while the run waited.
   const scenes = chosenScenes(scenesOf(ctx), settings.aiClips);
@@ -302,6 +395,16 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
         : made.status === 'pending'
           ? { sceneId: scene.id, status: 'pending', jobId: made.jobId, seconds, target: outRel }
           : { sceneId: scene.id, status: 'failed', reason: made.error });
+    } else if (engine.engine === 'higgsfield') {
+      const seconds = Math.min(sceneSeconds, 10);
+      const outRel = `${ctx.dir}/clips/v${ctx.version}-${scene.id}.mp4`;
+      const made = await makeHiggsfieldClip({ root: ctx.root, imageRel: picture, outRel, prompt, seconds, vertical });
+      if (made.status === 'done') clips.push({ sceneId: scene.id, status: 'done', path: made.path, seconds, costUsd: made.costUsd });
+      else if (made.status === 'pending') clips.push({ sceneId: scene.id, status: 'pending', requestId: made.requestId, seconds, target: outRel, costUsd: made.costUsd });
+      else {
+        clips.push({ sceneId: scene.id, status: 'failed', reason: made.error });
+        if (made.capped) stop = made.error || null;
+      }
     } else {
       const seconds = Math.min(sceneSeconds, runwayClipSeconds(sceneSeconds));
       const made = await makeRunwayClip({
@@ -316,14 +419,14 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
     }
   }
   const madeCount = clips.filter((c) => c.status === 'done' || c.status === 'pending').length;
-  const totalUsd = clips.reduce((sum, c) => sum + (c.costUsd || 0), 0);
+  const totalUsd = clips.reduce((sum, c) => sum + (c.status === 'done' ? c.costUsd || 0 : 0), 0);
   return done(
     assignment,
     {
       engine: engine.engine,
-      model: engine.engine === 'local' ? engine.modelId : settings.runwayModel,
+      model: engine.engine === 'local' ? engine.modelId : engine.engine === 'higgsfield' ? higgsfieldModels().clip : settings.runwayModel,
       clips,
-      ...(engine.engine === 'runway' ? { totalUsd } : {}),
+      ...(engine.engine === 'runway' || engine.engine === 'higgsfield' ? { totalUsd } : {}),
       ...(madeCount === 0 && clips.length > 0 ? { note: NONE_MADE } : engine.lowRes ? { note: SMALL_CARD_NOTE } : {}),
     },
     `AI clips: ${madeCount} of ${clips.length} scenes.`,
@@ -339,9 +442,12 @@ export async function checkPendingClips(projectId: string): Promise<ClipOutcome[
   const root = requireOutputRoot(contentAppSettings());
   const clips = [...output.clips];
   for (const [i, clip] of clips.entries()) {
-    if (clip.status !== 'pending' || !clip.jobId || !clip.target) continue;
-    const result = await checkComfyClip(clip.jobId, clip.target, root);
-    if (result.status === 'done') clips[i] = { sceneId: clip.sceneId, status: 'done', path: result.path, seconds: clip.seconds };
+    if (clip.status !== 'pending' || (!clip.jobId && !clip.requestId) || !clip.target) continue;
+    // Higgsfield (phase 4b): one look at the request; never a new run.
+    const result = clip.requestId
+      ? await checkHiggsfieldClip(clip.requestId, clip.target, root, clip.costUsd || 0).then((r) => ({ status: r.status, path: r.path, error: r.error }))
+      : await checkComfyClip(clip.jobId as string, clip.target, root);
+    if (result.status === 'done') clips[i] = { sceneId: clip.sceneId, status: 'done', path: result.path, seconds: clip.seconds, ...(clip.requestId ? { costUsd: clip.costUsd } : {}) };
     else if (result.status === 'failed') clips[i] = { sceneId: clip.sceneId, status: 'failed', reason: result.error };
   }
   setVersionOutputField(projectId, 'clips', chosen.version, 'miya', { ...output, clips });
@@ -364,9 +470,13 @@ async function runAssemble(assignment: MediaAssignment, ctx: Context): Promise<C
 
   // Captions: the script's words, timed by Whisper when it is installed.
   const status = await invoke<{ whisper?: boolean }>('media_tools_status').catch(() => ({ whisper: false }));
-  let captions: 'whisper' | 'lines' = 'lines';
+  let captions: 'whisper' | 'lines' | 'elevenlabs' = 'lines';
   let words = captionsFromLines(voice.lines.map((l) => ({ text: l.text, start: l.startSec, end: l.endSec })));
-  if (status?.whisper) {
+  if (voice.words?.length) {
+    // ElevenLabs gave each word's timing (phase 4b): exact, no Whisper needed.
+    words = alignCaptions(voice.lines.flatMap((l) => l.text.split(/\s+/).filter(Boolean)), voice.words);
+    captions = 'elevenlabs';
+  } else if (status?.whisper) {
     const heard = await invoke<{ ok?: boolean; words?: { word: string; start: number; end: number }[] }>('content_whisper_words', {
       request: { workspaceRoot: ctx.root, audioPath: voice.full },
     }).catch(() => null);
@@ -392,12 +502,16 @@ async function runAssemble(assignment: MediaAssignment, ctx: Context): Promise<C
     return { cardColor: hex(darkestColour(palette)), seconds, ...first };
   });
   const font = brandFontName(ctx.brand);
+  // Sound effects that were made (phase 4b), each at its scene's start.
+  const sfx = (part<{ effects?: SfxOutcome[] }>(ctx.prior, 'sfx', 'miya')?.effects || [])
+    .filter((e) => e.status === 'done' && e.path).map((e) => ({ path: e.path as string, atSec: e.atSec ?? 0 }));
   const result = await invoke<{ ok?: boolean; fontNote?: string | null; outputs?: { aspect: string; path: string; durationSec: number; frames: string[] }[] }>('content_assemble_video', { spec: {
     workspaceRoot: ctx.root, outDir, version: ctx.version, scenes,
     voice: voice.full, voiceSeconds: voice.durationSec,
     ...(music ? { music } : {}),
     srt, captionColor: hex(headlineColour(palette)), outlineColor: hex(darkestColour(palette)),
     ...(font ? { font } : {}),
+    ...(sfx.length ? { sfx } : {}),
   } });
   const notes = [captions === 'lines' ? NO_WHISPER_NOTE : '', result?.fontNote || ''].filter(Boolean);
   const outputs = (result?.outputs || []).map((o) => ({
@@ -417,6 +531,7 @@ export async function executeMediaStep(assignment: MediaAssignment): Promise<Con
     switch (assignment.actionType) {
       case 'creative_voice': return await runVoice(assignment, ctx);
       case 'creative_music': return await runMusic(assignment, ctx);
+      case 'creative_sfx': return await runSfx(assignment, ctx);
       case 'research_broll': return await runBroll(assignment, ctx);
       case 'creative_video_clips': return await runClips(assignment, ctx);
       case 'runtime_assemble_video': return await runAssemble(assignment, ctx);

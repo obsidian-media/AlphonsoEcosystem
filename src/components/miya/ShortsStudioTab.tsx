@@ -78,9 +78,10 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
           <label className="block text-[11px] text-(--text-3)">
             Clip engine for Shorts
             <select aria-label="Clip engine for Shorts" className={`${field} ml-2`} value={clipSetting.clipEngine || 'local'}
-              onChange={(e) => { setShortsSettings(project.id, { aiClips: clipSetting.aiClips, clipEngine: e.target.value as 'local' | 'runway' }); onChange(); }}>
+              onChange={(e) => { setShortsSettings(project.id, { aiClips: clipSetting.aiClips, clipEngine: e.target.value as 'local' | 'runway' | 'higgsfield' }); onChange(); }}>
               <option value="local">This computer (free)</option>
               <option value="runway">Runway (paid, asks first with the cost)</option>
+              <option value="higgsfield">Higgsfield (paid, asks first with its estimate)</option>
             </select>
           </label>
         )}

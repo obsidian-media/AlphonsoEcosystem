@@ -39,6 +39,15 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-24] **Miya content factory phase 4b (ElevenLabs and Higgsfield): what it leaves open.** Design `docs/superpowers/specs/2026-10-24-miya-content-factory-phase4b-design.md`, plan `docs/superpowers/plans/2026-10-24-miya-content-factory-phase4b.md`.
+  - **Not checked with real accounts.** Nothing in 4b has run against ElevenLabs or Higgsfield: no keys on the dev machine. Unit tests mock both, and the desktop spec keeps Zero-Cost Mode on. The live check is in `docs/qa/DESKTOP_QA_COVERAGE.md` (steps 11 and 12).
+  - **Higgsfield's API details to confirm live:** the estimate's amount field (`parse_estimate()` reads several names), whether a model refuses the estimate without its picture (the estimate sends none), and whether a text-to-video request works with the pasted clip model.
+  - **Costs recorded are the estimates.** Higgsfield's status may not report the charge, and one clip estimate (asked for 5 s) is used for every clip up to 10 s.
+  - **An approval covers a fixed number of pictures** (Scenes one per 5 s of the brief, Thumbnail 3, Carousel 10); more are made with ComfyUI, with a note.
+  - **Chat shows a by-name result only when approved in Chat;** approved on the board or Telegram, it is in Quick package and on Telegram.
+  - **Phase 4c next:** motion transfer and a consistent character (owner, 2026-10-24).
+  - Status: OPEN.
+
 - [2026-10-24] **Miya content factory phase 4a (learning from real results): what it leaves open.**
   - Not checked with real accounts yet: reading numbers from YouTube Analytics, Instagram insights (both routes) and Facebook Reel and photo-post insights; the new sign-in permissions; the Telegram summary. In the combined live check in `docs/qa/DESKTOP_QA_COVERAGE.md`.
   - Instagram carousel albums may give fewer numbers than Reels (Meta: no insights for media inside an album); missing ones show "—".

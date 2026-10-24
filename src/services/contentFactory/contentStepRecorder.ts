@@ -10,7 +10,8 @@ import {
 } from './contentProjectService';
 import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
 import { getJoseRequest, updateJoseStep } from '../jose/joseRequestStore';
-import { runwayEstimate } from './contentProjectPlan';
+import { higgsfieldClipsEstimate, runwayEstimate } from './contentProjectPlan';
+import { projectEngines } from './engineChoice';
 import { makeShorts, redoShort, shortsSummary } from './shortMaker';
 import { renderCarouselSlides, renderScenePictures, renderThumbnails } from './contentImages';
 import { STEP_AGENTS, stepMarkdown } from './contentStepAgents';
@@ -44,6 +45,8 @@ export async function recordContentStepResult(input: {
   appendShort?: boolean;
   /** The run's Runway clips for its Shorts were approved (phase 4a). */
   runwayApproved?: boolean;
+  /** Phase 4b: this step's spending was approved (Higgsfield pictures). */
+  spendApproved?: boolean;
   /** Lessons or ideas from a post's numbers (phase 4a), not a factory step. */
   purpose?: 'lessons' | 'ideas';
   postRef?: { projectId: string; postId: string };
@@ -117,9 +120,10 @@ export async function recordContentStepResult(input: {
   if (input.step === 'scenes' || input.step === 'thumbnail' || input.step === 'carousel') {
     markStepStatus(input.projectId, input.step, 'running', null);
     try {
-      if (input.step === 'scenes') await renderScenePictures(input.projectId, settings, say);
-      else if (input.step === 'carousel') await renderCarouselSlides(input.projectId, settings, say);
-      else await renderThumbnails(input.projectId, settings, say);
+      const paid = { paidApproved: input.spendApproved === true };
+      if (input.step === 'scenes') await renderScenePictures(input.projectId, settings, say, paid);
+      else if (input.step === 'carousel') await renderCarouselSlides(input.projectId, settings, say, undefined, paid);
+      else await renderThumbnails(input.projectId, settings, say, paid);
     } catch (error) {
       say(`The pictures could not be made: ${(error as Error).message}`);
     }
@@ -136,7 +140,8 @@ function fillClipsEstimate(projectId: string): void {
     if (!project || !requestId) return;
     const step = getJoseRequest(requestId)?.steps.find((s) => s.stepId === 'clips');
     if (!step || !(step.effects || []).includes('spend') || typeof step.costEstimateUsd === 'number') return;
-    const usd = runwayEstimate(project);
+    const brand = getBrand(project.brandId);
+    const usd = brand && projectEngines(project, brand).clips === 'higgsfield' ? higgsfieldClipsEstimate(project) : runwayEstimate(project);
     if (usd !== null) updateJoseStep(requestId, 'clips', { costEstimateUsd: usd });
   } catch {
     // Only the estimate is missing; the step still asks before spending.

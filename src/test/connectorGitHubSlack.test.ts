@@ -69,8 +69,8 @@ describe('connectorRegistry - GitHub and Slack', () => {
       }
     });
 
-    it("has 31 connectors total (Meta added in phase 3a, your storage in phase 3c)", () => {
-      expect(DEFAULT_CONNECTORS.length).toBe(31);
+    it("has 33 connectors total (Meta 3a, your storage 3c, ElevenLabs and Higgsfield 4b)", () => {
+      expect(DEFAULT_CONNECTORS.length).toBe(33);
     });
 
     it('github connector has not_configured status by default', () => {

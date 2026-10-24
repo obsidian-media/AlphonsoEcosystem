@@ -7,7 +7,7 @@ import { createProject, emptyBrief } from '../../../services/contentFactory/cont
 import { CLIPS_WAIT, CONTENT_TEMPLATE_STEPS, PUBLISH_WAIT, REVIEW_WAIT, contentProjectPlanSteps } from '../../../services/contentFactory/contentProjectPlan';
 
 // Phase 2a added voice, music, broll and assemble; phase 2b clips; phase 3a publish: 17 steps.
-const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'shorts', 'carousel', 'campaign', 'timing', 'quality', 'security', 'publish'];
+const IDS = ['research_trends', 'research_market', 'script', 'review_value', 'review_quality', 'scenes', 'thumbnail', 'voice', 'music', 'sfx', 'broll', 'clips', 'assemble', 'shorts', 'carousel', 'campaign', 'timing', 'quality', 'security', 'publish'];
 
 function newProject() {
   const brand = saveBrand({ name: 'My brand' });
@@ -61,7 +61,7 @@ describe('contentProjectPlanSteps', () => {
   it('from a later step the plan starts there', () => {
     const { brand, project } = newProject();
     const steps = contentProjectPlanSteps(project, brand, 'scenes');
-    expect(steps.map((s) => s.stepId)).toEqual(['scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'campaign', 'timing', 'quality', 'security', 'publish']);
+    expect(steps.map((s) => s.stepId)).toEqual(['scenes', 'thumbnail', 'voice', 'music', 'sfx', 'broll', 'clips', 'assemble', 'campaign', 'timing', 'quality', 'security', 'publish']);
     expect(steps[0]).toMatchObject({ needs: [] });
     expect(steps[0].waitFor).toBeUndefined();
     expect(checkPlan(steps, { taskTypes: true }).problems).toEqual([]);
@@ -71,7 +71,7 @@ describe('contentProjectPlanSteps', () => {
     const { brand, project } = newProject();
     const steps = contentProjectPlanSteps(project, brand);
     const byId = Object.fromEntries(steps.map((s) => [s.stepId, s]));
-    expect(byId.assemble).toMatchObject({ agent: 'alphonso', actionType: 'runtime_assemble_video', needs: ['voice', 'music', 'broll', 'clips'] });
+    expect(byId.assemble).toMatchObject({ agent: 'alphonso', actionType: 'runtime_assemble_video', needs: ['voice', 'music', 'sfx', 'broll', 'clips'] });
     expect(byId.broll).toMatchObject({ agent: 'hector', actionType: 'research_broll' });
     expect(byId.campaign.needs).toEqual(['assemble']);
     expect(byId.assemble.effects).toEqual(['write_own_work']);

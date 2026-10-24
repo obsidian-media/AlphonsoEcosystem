@@ -46,6 +46,14 @@ export interface ContentBrand {
   qualityThreshold: number;
   /** The shape of the brand's carousels (phase 3c); 4:5 when not set. */
   carouselShape?: CarouselShape;
+  /** Paid engines this brand uses by default (phase 4b): an ElevenLabs voice, Higgsfield pictures or clips. */
+  engines?: {
+    voice?: { engine: 'kokoro' | 'elevenlabs'; voiceId: string; modelId?: string };
+    pictures?: 'comfyui' | 'higgsfield';
+    clips?: 'local' | 'runway' | 'higgsfield' | null;
+    /** Sound effects from ElevenLabs in the long video (phase 4b); off unless switched on. */
+    soundEffects?: boolean;
+  };
   createdAtMs: number;
   updatedAtMs: number;
 }
@@ -65,7 +73,7 @@ export function hasOwnKey(record: object, key: string): boolean {
 
 export type StepId =
   | 'brief' | 'research' | 'script' | 'review' | 'scenes' | 'thumbnail'
-  | 'voice' | 'music' | 'broll' | 'clips' | 'assemble' | 'shorts' | 'carousel' | 'campaign' | 'quality' | 'publish';
+  | 'voice' | 'music' | 'sfx' | 'broll' | 'clips' | 'assemble' | 'shorts' | 'carousel' | 'campaign' | 'quality' | 'publish';
 
 /**
  * Voice, Music, B-roll and Assemble make the finished video file (phase 2a). The carousel
@@ -73,7 +81,7 @@ export type StepId =
  * must not put the voice-over or the finished video out of date.
  */
 export const STEP_ORDER: StepId[] = [
-  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'broll', 'clips', 'assemble', 'shorts', 'carousel', 'campaign', 'quality', 'publish',
+  'brief', 'research', 'script', 'review', 'scenes', 'thumbnail', 'voice', 'music', 'sfx', 'broll', 'clips', 'assemble', 'shorts', 'carousel', 'campaign', 'quality', 'publish',
 ];
 
 /**
@@ -103,7 +111,7 @@ export interface ShortPlan {
 /** The Shorts' own AI clip setting (phase 3d), separate from the long video's. */
 export interface ShortsSettings {
   aiClips: 'main' | 'every' | 'none';
-  clipEngine: 'local' | 'runway' | null;
+  clipEngine: 'local' | 'runway' | 'higgsfield' | null;
 }
 
 export const DEFAULT_SHORTS_SETTINGS: ShortsSettings = { aiClips: 'none', clipEngine: null };
@@ -180,9 +188,12 @@ export interface ContentBrief {
 export interface VideoSettings {
   /** Main moments (Miya marks them, you change them), every scene, or none. */
   aiClips: 'main' | 'every' | 'none';
-  /** null = automatic: a local video model if installed, else Runway, else none. */
-  clipEngine: 'local' | 'runway' | null;
+  /** null = the brand's choice, else automatic: a local video model if installed, else Runway, else none. */
+  clipEngine: 'local' | 'runway' | 'higgsfield' | null;
   runwayModel: string;
+  /** This project's voice and pictures, over the brand's (phase 4b); unset = the brand's. */
+  voiceEngine?: 'kokoro' | 'elevenlabs';
+  pictures?: 'comfyui' | 'higgsfield';
 }
 
 export const DEFAULT_VIDEO_SETTINGS: VideoSettings = { aiClips: 'main', clipEngine: null, runwayModel: 'gen4_turbo' };

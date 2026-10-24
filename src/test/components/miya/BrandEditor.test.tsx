@@ -1,7 +1,11 @@
 // Phase 3a: a brand's fixed posting times, edited in the Brands tab.
 import React from 'react';
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+vi.mock('../../../services/connectors/elevenLabsConnector', () => ({
+  listElevenLabsVoices: vi.fn(async () => ({ ok: true, voices: [{ id: 'v1', name: 'Rachel', cloned: false }, { id: 'v2', name: 'My voice', cloned: true }] })),
+  listElevenLabsModels: vi.fn(async () => ({ ok: true, models: [{ id: 'eleven_multilingual_v2', name: 'Multilingual v2' }] })),
+}));
 import { BrandEditor } from '../../../components/miya/BrandEditor';
 import { getBrand, saveBrand } from '../../../services/contentFactory/contentBrandService';
 
@@ -57,5 +61,29 @@ it('lists only kept lessons as lessons', () => {
   const lessons = screen.getByText('Lessons from your feedback').parentElement!;
   expect(lessons.textContent).toContain('An older lesson');
   expect(lessons.textContent).not.toContain('WAITING-LESSON');
+});
+
+// Phase 4b: a brand's voice, pictures and AI clips engines.
+it("the brand's voice can be one of your ElevenLabs voices, and pictures and clips can be Higgsfield", async () => {
+  const brand = saveBrand({ name: 'Acme' });
+  render(<BrandEditor brandId={brand.id} onBrand={() => undefined} />);
+  fireEvent.change(screen.getByLabelText('Voice engine'), { target: { value: 'elevenlabs' } });
+  await waitFor(() => expect(screen.getByRole('option', { name: 'My voice (your clone)' })).toBeTruthy());
+  fireEvent.change(screen.getByLabelText('ElevenLabs voice'), { target: { value: 'v2' } });
+  fireEvent.change(screen.getByLabelText('ElevenLabs model'), { target: { value: 'eleven_multilingual_v2' } });
+  fireEvent.change(screen.getByLabelText('Pictures made by'), { target: { value: 'higgsfield' } });
+  fireEvent.change(screen.getByLabelText('AI clips made by'), { target: { value: 'higgsfield' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save brand' }));
+  expect(getBrand(brand.id)!.engines).toEqual({
+    voice: { engine: 'elevenlabs', voiceId: 'v2', modelId: 'eleven_multilingual_v2' }, pictures: 'higgsfield', clips: 'higgsfield',
+  });
+});
+
+it('sound effects can be switched on for the brand', () => {
+  const brand = saveBrand({ name: 'Acme' });
+  render(<BrandEditor brandId={brand.id} onBrand={() => undefined} />);
+  fireEvent.click(screen.getByLabelText('Sound effects from ElevenLabs'));
+  fireEvent.click(screen.getByRole('button', { name: 'Save brand' }));
+  expect(getBrand(brand.id)!.engines?.soundEffects).toBe(true);
 });
 

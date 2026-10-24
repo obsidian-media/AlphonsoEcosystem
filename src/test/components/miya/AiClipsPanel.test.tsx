@@ -6,6 +6,7 @@ vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   const actual = await vi.importActual<typeof import('../../../services/contentFactory/contentProjectFiles')>('../../../services/contentFactory/contentProjectFiles');
   return { ...actual, mediaUrl: vi.fn((root: string, rel: string) => `asset-test://${rel}`), allowMediaFolder: vi.fn(async () => true), loadProjectImage: vi.fn(async () => null) };
 });
+vi.mock('../../../services/contentFactory/higgsfieldClip', () => ({ estimateHiggsfieldClipsUsd: (n: number) => n * 0.4 }));
 vi.mock('../../../services/contentFactory/contentMediaExecutor', () => ({
   resolveProjectClipEngine: vi.fn(async () => (globalThis as any).__engine),
 }));
@@ -64,6 +65,16 @@ describe('AiClipsPanel', () => {
     expect(p.onApprove).toHaveBeenCalled();
   });
 
+  // Phase 4b: Higgsfield's estimate per clip, from the kept estimate.
+  it('shows the Higgsfield estimate for the main moments', async () => {
+    (globalThis as any).__engine = { engine: 'higgsfield' };
+    const p = props(setup(), { waiting: true });
+    render(<AiClipsPanel {...p} />);
+    await waitFor(() => expect(screen.getByText('2 clips, about $0.80')).toBeTruthy());
+    expect(screen.getByText("Uses Higgsfield; each run asks first with Higgsfield's estimate.")).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Make AI clips (about $0.80)' })).toBeTruthy();
+  });
+
   it('plays each clip that was made, says why the others were not, and checks a pending one again', async () => {
     const project = setup({ engine: 'local', model: 'ltx_video_2b', clips: [
       { sceneId: 's1', status: 'done', path: 'b/p/clips/v1-s1.mp4', seconds: 3 },
@@ -78,4 +89,16 @@ describe('AiClipsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
     expect(p.onCheckAgain).toHaveBeenCalled();
   });
+
+  // Phase 4b: a project can override its brand's voice and pictures, and use Higgsfield clips.
+  it("a project can override the brand's voice and pictures, and choose Higgsfield clips", () => {
+    const project = setup();
+    render(<AiClipsPanel {...props(project)} />);
+    fireEvent.change(screen.getByLabelText('Voice for this project'), { target: { value: 'kokoro' } });
+    fireEvent.change(screen.getByLabelText('Pictures for this project'), { target: { value: 'higgsfield' } });
+    fireEvent.change(screen.getByLabelText('Clip engine'), { target: { value: 'higgsfield' } });
+    const saved = JSON.parse(localStorage.getItem('alphonso_content_projects_v1') || '[]').find((x: { id: string }) => x.id === project.id).videoSettings;
+    expect(saved).toMatchObject({ voiceEngine: 'kokoro', pictures: 'higgsfield', clipEngine: 'higgsfield' });
+  });
 });
+
