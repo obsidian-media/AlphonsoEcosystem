@@ -139,3 +139,15 @@ it('no carousel post while a slide still has no picture', () => {
   expect(posts.some((x) => x.piece === 'carousel')).toBe(false);
   expect(notes.join(' ')).toMatch(/carousel/i);
 });
+
+it('a carousel can be posted without a finished video', () => {
+  const b = saveBrand({ name: 'Acme', platforms: ['Instagram'] });
+  const p = createProject(b.id, 'Slides only', { ...emptyBrief(), idea: 'x', outputs: ['carousel'] });
+  saveStepVersion(p.id, 'carousel', {
+    output: { miya: { slides: [slide(1), slide(2)] }, pictures: [{ sceneId: 'c1', status: 'done', relativePath: 'a/b/carousel/v1-c1.png' }, { sceneId: 'c2', status: 'done', relativePath: 'a/b/carousel/v1-c2.png' }] },
+    summary: 'c', joseCommandId: null,
+  });
+  const { posts, notes } = buildPosts(getProject(p.id)!, b, Date.now());
+  expect(posts.map((x) => [x.platform, x.piece])).toEqual([['instagram', 'carousel']]);
+  expect(notes.join(' ')).toMatch(/no video to post yet/);
+});

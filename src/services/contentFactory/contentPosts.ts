@@ -99,7 +99,10 @@ export function nextPostTime(
 export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: number): { posts: ProjectPost[]; notes: string[] } {
   const notes: string[] = [];
   const assembled = (chosenVersionOf(project, 'assemble')?.output as { miya?: { outputs?: { aspect: string; path: string }[] } } | undefined)?.miya?.outputs || [];
-  if (!assembled.length) return { posts: [], notes: ['Run the Finished video step first: there is no video to post yet.'] };
+  const NO_VIDEO = 'Run the Finished video step first: there is no video to post yet.';
+  // A carousel can go out without a video (phase 3c); with neither there is nothing to post.
+  if (!assembled.length && !chosenVersionOf(project, 'carousel')) return { posts: [], notes: [NO_VIDEO] };
+  if (!assembled.length) notes.push(NO_VIDEO);
   const wide = assembled.find((o) => o.aspect === '16x9')?.path;
   const tall = assembled.find((o) => o.aspect === '9x16')?.path;
   const thumbs = (chosenVersionOf(project, 'thumbnail')?.output as { pictures?: { status: string; relativePath?: string }[] } | undefined)?.pictures || [];
@@ -112,7 +115,7 @@ export function buildPosts(project: ContentProject, brand: ContentBrand, nowMs: 
   const { platforms, note } = wantedPlatforms(project, brand);
   if (note) notes.push(note);
   const rows: Omit<ProjectPost, 'id' | 'scheduledAtMs' | 'status'>[] = [];
-  for (const platform of platforms) {
+  for (const platform of assembled.length ? platforms : []) {
     const copy = copyFor(platform);
     if (platform === 'youtube') {
       if (wide) {

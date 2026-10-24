@@ -39,6 +39,19 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - ~~After you approve a single step that waited, the saved request is not updated~~ — CLOSED 2026-10-23 by phase 4 (moved from phase 5): `resumeJoseRequest()`.
   - **Status:** CLOSED 2026-10-23.
 
+- [2026-10-24] **Miya content factory phase 3c (storage, carousels, Instagram Login, in-app sign-in): what it leaves open.**
+  - Not checked with real accounts yet (no keys on the dev machine): the in-app sign-ins, storage uploads and links, Instagram carousels and Reels by link, Facebook photo posts and moving or cancelling them. All are in the combined live check in `docs/qa/DESKTOP_QA_COVERAGE.md`.
+  - Instagram Login's redirect: Meta's documents don't say whether a local `http://localhost:8087/callback` is accepted; if not, the user pastes the address the browser ended on. Check with the owner's app.
+  - The Meta sign-in asks only the publishing permissions; WhatsApp keys still come from the developer script or Settings.
+  - Sending one slide back makes the whole carousel again (with the reason), as a rejected thumbnail does; Redo makes one slide's picture again.
+  - Storage uploads are read into memory (1 GB at most); a very large file uses that much memory while it uploads.
+  - A post with no Instagram route at all (no Page keys, no Instagram Login) fails with what to set up rather than being saved to post by hand.
+  - Next: phase 3d (Shorts as their own pieces: own mini-script by default, or a highlight with its own hook, or the plain 9:16 cut, chosen per project), then phase 4.
+  - **Status:** OPEN.
+
+- [2026-10-24] **Shared Obsidian Media app (owner's business decision, not built).** Today every user makes their own Google project and Meta app and pastes its id and secret (guided in Settings). A shared app would let people just sign in. What it would take: Google's OAuth verification and a security assessment for the YouTube upload scope (a restricted scope); Meta App Review for each permission (pages_manage_posts, instagram_content_publish, business_management…) with screencasts and a privacy policy; Business Verification of Obsidian Media; a small server of the owner's that holds Meta's (and Google's) app secret and does the token exchange, since a secret can't ship inside a desktop app; a privacy policy and terms; and per-app rate limits shared across every user. Until then the own-app path stays.
+  - **Status:** OPEN (decision).
+
 - [2026-10-23] **Miya content factory phase 3b (the Calendar, moving posts, sign-in expiry, limits): what it leaves open.**
   - Moving or cancelling a Reel scheduled on Facebook uses `POST /<video-id>` with `scheduled_publish_time` and `DELETE /<video-id>`, which Meta's reference does not clearly document for Reels; a refusal is shown with Meta Business Suite's link. Check live with the owner's Page.
   - Moving a scheduled YouTube video (`videos.update`) is checked with unit tests only; check live with the owner's channel.
@@ -47,7 +60,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - The output-folder fix follows the cause found by reading the code (players loaded before the folder was allowed, and a refused player never retries); not yet seen in the real app.
   - An Instagram post held by the daily limit is tried again every hour (Instagram does not say when the limit resets).
   - The calendar's drag uses the browser's drag and drop; with a keyboard, use the side panel's Change.
-  - Next: phase 3c (the owner's S3-compatible storage, carousels for Instagram and Facebook, Instagram Login, Shorts as their own pieces).
+  - Next: phase 3c (done 2026-10-24: storage, carousels, Instagram Login, in-app sign-in); Shorts as their own pieces moved to 3d.
   - **Status:** OPEN.
 
 - [2026-10-23] **Miya content factory phase 3a (publishing): what it leaves open.**
@@ -92,7 +105,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - Run this step is its own one-step request; a project's work can span several requests on the board, and the project shows the latest.
   - A content video asked on Telegram or by a schedule does not create a project (owner's decision named Chat).
   - The board's "Approve and carry on" on Scenes approves the review too, but only when Scenes starts (Miya Studio shows it as waiting until then).
-  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file), 2b (AI clips), 3a (publishing) and 3b (the Calendar) done 2026-10-23; 3c and 4 next.
+  - Content factory phases 2–4 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`): phase 2a (the finished video file), 2b (AI clips), 3a (publishing) and 3b (the Calendar) done 2026-10-23, 3c (storage, carousels, Instagram Login, in-app sign-in) 2026-10-24; 3d (Shorts as their own pieces) and 4 next.
   - **Status:** OPEN.
 
 - [2026-10-23] **Jose redesign phase 6a (every caller through Jose): what it leaves open.**
