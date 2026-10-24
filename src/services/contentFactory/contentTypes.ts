@@ -1,6 +1,18 @@
 // Types for Miya's content factory.
 // Design: docs/superpowers/specs/2026-10-22-miya-content-factory-design.md
 
+/** A brand lesson; one proposed from real numbers (phase 4a) reaches prompts only once kept. */
+export interface BrandLesson {
+  id?: string;
+  atMs: number;
+  text: string;
+  source: 'rejection' | 'user' | 'performance';
+  /** No status = kept (lessons from before phase 4a). */
+  status?: 'proposed' | 'kept';
+  kind?: 'worked' | 'didnt';
+  postRef?: { projectId: string; postId: string };
+}
+
 export interface ContentBrand {
   id: string;
   name: string;
@@ -19,7 +31,7 @@ export interface ContentBrand {
   postingSlots?: PostingSlot[];
   honestyRules: string;
   references: { url: string; note: string }[];
-  lessons: { atMs: number; text: string; source: 'rejection' | 'user' }[];
+  lessons: BrandLesson[];
   pastScripts: string;
   qualityThreshold: number;
   /** The shape of the brand's carousels (phase 3c); 4:5 when not set. */
@@ -264,6 +276,9 @@ export interface ContentStepPayload {
   task: string;
   /** Shorts only (phase 4a): add the one Short written to the chosen plan instead of saving a new version. */
   appendShort?: boolean;
+  /** Not a factory step (phase 4a): lessons or ideas from a post's real numbers. */
+  purpose?: 'lessons' | 'ideas';
+  postRef?: { projectId: string; postId: string };
   /** Real web results Hector found (research steps): the only sources allowed. */
   sources?: { url: string; title: string; snippet: string }[];
 }

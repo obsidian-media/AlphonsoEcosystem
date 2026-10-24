@@ -90,7 +90,9 @@ function failed(assignment: ContentAssignment, reason: string, raw: string): Con
 
 export async function executeContentStepAssignment(assignment: ContentAssignment, _options: unknown = {}): Promise<ContentStepResult> {
   // Miya Studio shows the step running, and a failure with its reason (phase 6b).
-  const { projectId, step } = assignment.contentStep;
+  const { projectId, step, purpose } = assignment.contentStep;
+  // Lessons and ideas from real numbers (phase 4a) are not a factory step: nothing is shown running.
+  if (purpose) return runContentAgent(assignment);
   beginContentStep(projectId, step);
   // Voice, Music, B-roll and Assemble make files rather than asking a model for text (phase 2a).
   const result = assignment.actionType === 'distribution_schedule_posts'

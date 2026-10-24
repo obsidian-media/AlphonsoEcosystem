@@ -2,7 +2,7 @@
 // A project runs as one Jose request and may be carried on from the board,
 // Telegram or Carry on, so the saving happens here, reached from the engine,
 // not in Miya Studio's own run call.
-import { getBrand } from './contentBrandService';
+import { addProposedLessons, getBrand } from './contentBrandService';
 import {
   appendShortPlan,
   addStepProgress, approveStep, getProject, markStepStatus, saveStepVersion, setPendingAgents, startStep,
@@ -43,8 +43,21 @@ export async function recordContentStepResult(input: {
   appendShort?: boolean;
   /** The run's Runway clips for its Shorts were approved (phase 4a). */
   runwayApproved?: boolean;
+  /** Lessons or ideas from a post's numbers (phase 4a), not a factory step. */
+  purpose?: 'lessons' | 'ideas';
+  postRef?: { projectId: string; postId: string };
 }): Promise<'partial' | 'saved' | 'ignored'> {
   const project = getProject(input.projectId);
+  if (input.purpose === 'lessons' && project && input.postRef) {
+    const answer = (input.data || {}) as { worked?: string[]; didnt?: string[] };
+    const items = [
+      ...(answer.worked || []).map((text) => ({ text, kind: 'worked' as const })),
+      ...(answer.didnt || []).map((text) => ({ text, kind: 'didnt' as const })),
+    ];
+    addProposedLessons(project.brandId, items, input.postRef);
+    return 'saved';
+  }
+  if (input.purpose) return 'ignored';
   const agents = STEP_AGENTS[input.step] || [];
   if (!project || !agents.some((a) => a.agent === input.agent)) return 'ignored';
   if (input.appendShort && input.step === 'shorts') {

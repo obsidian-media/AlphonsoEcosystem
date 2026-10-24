@@ -781,6 +781,8 @@ export function startPostScheduler(): void {
   void checkSignIns().catch(() => undefined);
   // The posts' numbers at their checkpoints (phase 4a); a missed one is read once now.
   void readDueMetrics().catch(() => undefined);
+  // Lessons after each 7-day reading (phase 4a); loaded lazily to keep the runner light.
+  void import('./contentFactory/contentLearning').then((m) => m.startContentLearning()).catch(() => undefined);
   startScheduler();
 }
 

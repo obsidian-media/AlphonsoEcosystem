@@ -78,3 +78,22 @@ describe('BrandResults', () => {
     expect(screen.getByText(/No numbers yet/)).toBeTruthy();
   });
 });
+
+describe('proposed lessons', () => {
+  it('are listed with Keep, Edit and Drop; only kept ones count as lessons', async () => {
+    const { getBrand } = await import('../../../services/contentFactory/contentBrandService');
+    const b = saveBrand({ name: 'Acme', lessons: [
+      { id: 'l1', atMs: 1, text: 'Question hooks work.', source: 'performance', status: 'proposed', kind: 'worked', postRef: { projectId: 'p', postId: 'a' } },
+      { id: 'l2', atMs: 2, text: 'Endings run long.', source: 'performance', status: 'proposed', kind: 'didnt', postRef: { projectId: 'p', postId: 'a' } },
+    ] } as any);
+    const view = render(<BrandResults brandId={b.id} />);
+    expect(screen.getByText('Question hooks work.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep lesson: Question hooks work.' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit lesson: Endings run long.' }));
+    fireEvent.change(screen.getByLabelText('Lesson text'), { target: { value: 'Keep endings under 5 seconds.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Keep edited lesson' }));
+    expect(getBrand(b.id)!.lessons.map((l) => [l.text, l.status])).toEqual([['Question hooks work.', 'kept'], ['Keep endings under 5 seconds.', 'kept']]);
+    view.unmount();
+  });
+});
+

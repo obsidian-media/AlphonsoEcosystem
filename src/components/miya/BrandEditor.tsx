@@ -139,10 +139,10 @@ export function BrandEditor({ brandId, onBrand }: { brandId: string; onBrand(id:
       {text('pastScripts', 'Past scripts (for “write in my voice”)', true)}
       <div className="text-[11px] text-(--text-3)">Voice: Kokoro ({draft.voice.voiceId}), free and local.</div>
 
-      {draft.lessons.length > 0 && (
+      {draft.lessons.some((l) => l.status !== 'proposed') && (
         <div className="space-y-1">
           <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Lessons from your feedback</div>
-          <ul className="list-disc pl-4 text-[12px] text-(--text-2)">{draft.lessons.slice(-20).map((l) => <li key={`${l.atMs}-${l.text}`}>{l.text}</li>)}</ul>
+          <ul className="list-disc pl-4 text-[12px] text-(--text-2)">{draft.lessons.filter((l) => l.status !== 'proposed').slice(-20).map((l) => <li key={`${l.atMs}-${l.text}`}>{l.text}</li>)}</ul>
         </div>
       )}
       <BrandResults brandId={draft.id} />
