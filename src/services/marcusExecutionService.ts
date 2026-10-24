@@ -17,6 +17,7 @@ import { checkDailyLimit } from './contentFactory/dailyLimits';
 import { BY_HAND_REMINDER } from './contentFactory/readyToPost';
 import { SIGN_IN_NAME } from './contentFactory/signInExpiry';
 import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
+import { randomHex } from '../lib/randomId';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -501,7 +502,7 @@ function _saveSchedule(items: ScheduledPublish[]): void {
  */
 export function schedulePublish({ content, platform, scheduledAt, agentId }: { content: string; platform: string; scheduledAt: number; agentId: string }): ScheduledPublish {
   const entry: ScheduledPublish = {
-    id: `marcus_sched_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `marcus_sched_${Date.now()}_${randomHex(6)}`,
     content: String(content || ''),
     platform: String(platform || ''),
     scheduledAt: Number(scheduledAt) || Date.now(),
@@ -546,7 +547,7 @@ const LATE_NOTE_AFTER_MS = 5 * 60 * 1000;
 
 function newItem(patch: Partial<ScheduledPublish> & { platform: string; scheduledAt: number }): ScheduledPublish {
   return {
-    id: `marcus_sched_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `marcus_sched_${Date.now()}_${randomHex(6)}`,
     content: '',
     agentId: 'marcus',
     createdAt: Date.now(),

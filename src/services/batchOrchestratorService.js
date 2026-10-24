@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { generateOllamaResponse, fetchOllamaModels, getConfiguredOllamaModel, normalizeEndpoint } from '../lib/ollama';
 import { getProjectDirectoryPath } from './projectDirectoryService';
+import { randomHex } from '../lib/randomId';
 
 const GOALS_KEY = 'alphonso_boardroom_goals_v1';
 const BATCHES_KEY = 'alphonso_boardroom_batches_v1';
@@ -8,7 +9,7 @@ const MAX_GOALS = 50;
 const MAX_BATCHES = 200;
 
 function newId(prefix) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${prefix}-${Date.now()}-${randomHex(6)}`;
 }
 
 function readGoals() {

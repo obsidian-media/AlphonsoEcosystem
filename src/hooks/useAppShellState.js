@@ -12,6 +12,7 @@ import { listAgentProfiles } from '../agents/agentRegistry';
 import { needsHighRiskApproval } from '../lib/chatUtils';
 import { TRUST_STATES } from '../services/trustModel';
 import { isSetupComplete } from '../services/setupFlowService';
+import { randomHex } from '../lib/randomId';
 
 export function useAppShellState({
   settings, setSettings, operatorMode, setOperatorMode,
@@ -160,7 +161,7 @@ export function useAppShellState({
     // id — Sidebar keys its list on chat.id, so React silently drops one of
     // the two entries from the DOM while both remain in state, which reads
     // to the user as a duplicate/missing chat in Recent Chats.
-    const newId = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const newId = `chat-${Date.now()}-${randomHex(6)}`;
     const newChat = { id: newId, title: 'Unsaved Chat', timestamp: Date.now() };
     setConversations((current) => [newChat, ...current]);
     setActiveChatId(newId);

@@ -8,6 +8,7 @@
 // for, four of the five built-in jobs called functions that don't exist (the
 // error was swallowed), and an "every N" time (`*/5`) produced an invalid date.
 // Each run's outcome is now saved on the schedule (`lastResult`).
+import { randomHex } from '../lib/randomId';
 
 const STORAGE_KEY = 'alphonso_jose_schedules_v1';
 const MAX_SCHEDULES = 100;
@@ -233,7 +234,7 @@ export function createSchedule({ name, commandText, presetId = 'hourly', interva
   const now = Date.now();
 
   const schedule: Schedule = {
-    id: `sched_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `sched_${Date.now()}_${randomHex(6)}`,
     name: String(name || 'Untitled Schedule').slice(0, 100),
     commandText: String(commandText || '').slice(0, 2000),
     presetId: preset.id,

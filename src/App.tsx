@@ -159,6 +159,7 @@ async function openContentProject(projectId: string): Promise<void> {
 import { markRunningRequestsInterrupted } from './services/jose/joseRequestStore';
 import { expireWaitingRequests } from './services/jose/joseExpiry';
 import { startPostScheduler, stopScheduler } from './services/marcusExecutionService';
+import { randomHex } from './lib/randomId';
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
@@ -244,7 +245,7 @@ function AppShell() {
 
   const addNotification = useCallback((n: Omit<AppNotification, 'id' | 'timestamp'>) => {
     setNotifications((prev) => [
-      { ...n, id: `notif-${Date.now()}-${Math.random()}`, timestamp: Date.now() },
+      { ...n, id: `notif-${Date.now()}-${randomHex(12)}`, timestamp: Date.now() },
       ...prev,
     ].slice(0, 50));
   }, []);

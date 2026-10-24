@@ -1,5 +1,6 @@
 import { timestampMs } from './trustModel';
 import { listMemory } from './unifiedMemoryService';
+import { randomHex } from '../lib/randomId';
 
 const METRICS_KEY = 'alphonso_agent_metrics_v1';
 const MAX_METRICS_ENTRIES = 500;
@@ -123,7 +124,7 @@ function writeMetrics(entries: AgentExecutionEntry[]): void {
 
 export function recordAgentExecution({ agent, command, success, confidence, filesWritten, validationPassed, iterations, durationMs, error }: AgentExecutionInput = {}): AgentExecutionEntry {
   const entry: AgentExecutionEntry = {
-    id: `metric-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `metric-${Date.now()}-${randomHex(6)}`,
     timestampMs: timestampMs(),
     agent: agent || 'alphonso',
     command: String(command || '').slice(0, 200),

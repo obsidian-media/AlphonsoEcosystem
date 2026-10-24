@@ -1,6 +1,7 @@
 import { redactMissionRoomSecrets, classifyMissionRoomRisk } from './missionRoomService';
 import { addNode, addEdge } from './memoryGraphService';
 import { TRUST_STATES } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 export const THREADS_KEY = 'alphonso_boardroom_threads_v2';
 export const MESSAGES_KEY = 'alphonso_boardroom_thread_messages_v2';
@@ -72,7 +73,7 @@ function nextSeq(): number {
 }
 
 function makeId(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+  return `${prefix}_${Date.now()}_${randomHex(6)}`;
 }
 
 function readJson<T>(key: string, fallback: T): T {

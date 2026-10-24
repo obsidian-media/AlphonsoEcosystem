@@ -190,6 +190,22 @@ struct Pending {
 
 static PENDING: Mutex<Option<Pending>> = Mutex::new(None);
 
+/// The code and verifier from a pasted address. The started sign-in is used up only
+/// when the address is right, so a wrong paste can be tried again (phase 3d).
+fn take_pending_if(
+  slot: &mut Option<Pending>,
+  service: Service,
+  pasted: &str,
+) -> Result<(String, String), String> {
+  let usable = slot
+    .as_ref()
+    .filter(|p| p.service == service && p.started.elapsed() < Duration::from_secs(600))
+    .ok_or_else(|| "Start the sign-in again first, then paste the address.".to_string())?;
+  let code = parse_callback(pasted, &usable.state)?;
+  let pending = slot.take().expect("checked above");
+  Ok((code, pending.verifier))
+}
+
 /// The answer the browser sees once Alphonso has the code.
 fn page(ok: bool) -> String {
   let text = if ok {
@@ -540,14 +556,12 @@ pub(crate) async fn oauth_finish_pasted(request: PastedRequest) -> SignInResult 
     Ok(s) => s,
     Err(e) => return failed(e),
   };
-  let taken = PENDING.lock().ok().and_then(|mut p| p.take());
-  let Some(pending) =
-    taken.filter(|p| p.service == service && p.started.elapsed() < Duration::from_secs(600))
-  else {
-    return failed("Start the sign-in again first, then paste the address.");
+  let taken = match PENDING.lock() {
+    Ok(mut slot) => take_pending_if(&mut slot, service, &request.pasted_url),
+    Err(_) => Err("Start the sign-in again first, then paste the address.".to_string()),
   };
-  let code = match parse_callback(&request.pasted_url, &pending.state) {
-    Ok(code) => code,
+  let (code, verifier) = match taken {
+    Ok(found) => found,
     Err(reason) => return failed(reason),
   };
   exchange(
@@ -555,7 +569,7 @@ pub(crate) async fn oauth_finish_pasted(request: PastedRequest) -> SignInResult 
     &code,
     request.client_id.trim(),
     request.client_secret.trim(),
-    &pending.verifier,
+    &verifier,
   )
   .await
 }
@@ -707,6 +721,35 @@ mod tests {
     let body = serde_json::json!({ "error": "invalid_grant", "error_description": "Bad Request" });
     assert_eq!(provider_error(&body, "x"), "Bad Request");
     assert_eq!(provider_error(&Value::Null, "fallback"), "fallback");
+  }
+
+  #[test]
+  fn a_wrong_pasted_address_keeps_the_sign_in_for_another_try() {
+    let mut slot = Some(Pending {
+      service: Service::Instagram,
+      state: "s1".to_string(),
+      verifier: "v1".to_string(),
+      started: std::time::Instant::now(),
+    });
+    assert!(take_pending_if(&mut slot, Service::Instagram, "nonsense").is_err());
+    assert!(slot.is_some());
+    assert!(take_pending_if(
+      &mut slot,
+      Service::YouTube,
+      "http://localhost:8087/callback?state=s1&code=c"
+    )
+    .is_err());
+    assert!(slot.is_some());
+    assert_eq!(
+      take_pending_if(
+        &mut slot,
+        Service::Instagram,
+        "http://localhost:8087/callback?state=s1&code=c"
+      )
+      .unwrap(),
+      ("c".to_string(), "v1".to_string())
+    );
+    assert!(slot.is_none());
   }
 
   #[tokio::test]

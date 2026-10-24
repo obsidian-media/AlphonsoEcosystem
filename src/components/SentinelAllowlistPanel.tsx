@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Shield, CheckCircle, XCircle } from 'lucide-react';
+import { randomHex } from '../lib/randomId';
 
 const ALLOWLIST_KEY = 'alphonso_sentinel_allowlist_v1';
 
@@ -98,7 +99,7 @@ export function SentinelAllowlistPanel() {
       return;
     }
     const entry: AllowlistEntry = {
-      id: `sal-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      id: `sal-${Date.now()}-${randomHex(4)}`,
       pattern: form.pattern.trim().toLowerCase(),
       type: form.type,
       note: form.note.trim(),

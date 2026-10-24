@@ -9,6 +9,7 @@ import {
   rejectPacket
 } from './agentBusService';
 import { resolveAgentPairingRoute } from './agentPairingRegistryService';
+import { randomHex } from '../lib/randomId';
 
 interface PairingEvent {
   id: string;
@@ -23,7 +24,7 @@ function logPairingEvent(pairingId: string, status: string, payload: Record<stri
     const raw = localStorage.getItem('alphonso_pairing_events_v1');
     const events: PairingEvent[] = raw ? JSON.parse(raw) : [];
     events.push({
-      id: `pe-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      id: `pe-${Date.now()}-${randomHex(6)}`,
       pairingId,
       status,
       payload,

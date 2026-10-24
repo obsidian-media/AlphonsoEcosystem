@@ -1,3 +1,4 @@
+import { randomHex } from '../../lib/randomId';
 const CHAIN_KEY = 'alphonso_verification_chains_v1';
 
 function readRows() {
@@ -16,7 +17,7 @@ function writeRows(rows) {
 
 export function createVerificationChain({ traceId, projectId, name = 'default_chain', stages = [] }) {
   const chain = {
-    id: `vchain-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `vchain-${Date.now()}-${randomHex(6)}`,
     traceId: traceId || `workflow-${Date.now()}`,
     projectId: projectId || null,
     name,

@@ -2,6 +2,7 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { invoke } from '@tauri-apps/api/core';
 import { persistScopeRows } from './runtimeLedgerService';
 import { verifyPluginSignature } from './pluginSigningService';
+import { randomHex } from '../lib/randomId';
 
 const PLUGINS_KEY = 'alphonso_plugins_v1';
 const AUDIT_KEY = 'alphonso_plugin_audit_v1';
@@ -223,7 +224,7 @@ function write(key: string, value: PluginEntry[]): void {
     const scope = key === PLUGINS_KEY ? PLUGINS_SCOPE : PLUGIN_AUDIT_SCOPE;
     const rows = Array.isArray(value) ? value : [];
     persistScopeRows(scope, rows, (row: PluginEntry) => ({
-      id: row.id || `${scope}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      id: row.id || `${scope}-${Date.now()}-${randomHex(6)}`,
       data: row,
       status: row.status || (row as unknown as { action?: string }).action || 'recorded',
       confidence: row.trust || TRUST_STATES.TEMPORARY,
@@ -255,7 +256,7 @@ export function listPluginAudit(): PluginAuditEntry[] {
 export function appendPluginAuditEntry(entry: PluginAuditInput = {}): PluginAuditEntry {
   const current = listPluginAudit();
   const next: PluginAuditEntry = {
-    id: entry.id || `audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: entry.id || `audit-${Date.now()}-${randomHex(6)}`,
     timestampMs: Number(entry.timestampMs || timestampMs()),
     pluginId: entry.pluginId || 'unknown',
     action: entry.action || 'event',

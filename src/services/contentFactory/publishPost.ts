@@ -26,7 +26,6 @@ export interface PostResult {
   folder?: string;
 }
 
-const NO_INSTAGRAM = 'Set up Instagram in Settings → Connectors → Meta: your Facebook Page keys, or sign in with Instagram.';
 const NO_OUTPUT_FOLDER = 'Choose an output folder in Settings first: the video is saved there.';
 
 /**
@@ -82,8 +81,12 @@ async function postByLink(post: PublishablePost, caption: string, root: string):
   if (post.platform !== 'instagram') return null;
   const route = await getInstagramRoute();
   if (!carousel && route !== 'instagram_login') return null;
-  if (!route) return { status: 'failed', reason: NO_INSTAGRAM, setupRequired: true };
   if (needsRoot && !root) return { status: 'failed', reason: NO_OUTPUT_FOLDER };
+  // No way in to Instagram (phase 3d): save it to post by hand rather than fail.
+  if (!route) {
+    const { folder } = await exportForHand(post, root);
+    return { status: 'by_hand', folder, reason: `Saved to post by hand (Instagram isn't set up in Settings → Connectors → Meta): ${folder}` };
+  }
   if (!(await storageConfigured())) {
     const { folder } = await exportForHand(post, root);
     return { status: 'by_hand', folder, reason: `Saved to post by hand (no storage is set up): ${folder}` };

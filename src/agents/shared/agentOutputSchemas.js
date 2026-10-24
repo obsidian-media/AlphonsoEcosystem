@@ -1,3 +1,4 @@
+import { randomHex } from '../../lib/randomId';
 const nowIso = () => new Date().toISOString();
 
 function createBaseOutput({
@@ -19,7 +20,7 @@ function createBaseOutput({
 }) {
   return {
     type,
-    id: `${type}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `${type}-${Date.now()}-${randomHex(6)}`,
     createdAt: nowIso(),
     agentId,
     projectId,

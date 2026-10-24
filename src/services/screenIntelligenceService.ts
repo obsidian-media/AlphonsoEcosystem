@@ -1,4 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
+import { randomHex } from '../lib/randomId';
 
 const STATE_KEY = 'alphonso_screen_observer_state_v1';
 const LOG_KEY = 'alphonso_screen_observer_logs_v1';
@@ -320,7 +321,7 @@ export async function startScreenObserver({
         : 'Screen appears stable.';
 
     const event: ScreenEvent = {
-      id: `screen-event-${timestamp}-${Math.random().toString(16).slice(2, 8)}`,
+      id: `screen-event-${timestamp}-${randomHex(6)}`,
       timestampMs: timestamp,
       status,
       summary,

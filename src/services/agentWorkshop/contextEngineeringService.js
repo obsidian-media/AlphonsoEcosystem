@@ -1,3 +1,4 @@
+import { randomHex } from '../../lib/randomId';
 export function createScopedContextPacket({
   traceId,
   projectId,
@@ -8,7 +9,7 @@ export function createScopedContextPacket({
   taskPackets = []
 }) {
   return {
-    id: `ctx-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `ctx-${Date.now()}-${randomHex(6)}`,
     traceId: traceId || null,
     projectId: projectId || null,
     agentId,

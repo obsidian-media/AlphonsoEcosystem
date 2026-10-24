@@ -685,7 +685,10 @@ mod tests {
 
   /// A test secret made when the test runs, so no key is written in the code (CodeQL).
   fn test_secret(tag: &str) -> String {
-    format!("test-{tag}-{}", std::process::id())
+    let random: String = (0..16)
+      .map(|_| format!("{:02x}", rand::random::<u8>()))
+      .collect();
+    format!("{}{random}", tag.len())
   }
 
   /// An empty secret, also made at run time.

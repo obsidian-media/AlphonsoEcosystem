@@ -3,6 +3,7 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { appendAgentActivity } from './agentActivityService';
 import { persistScopeRows } from './runtimeLedgerService';
 import { addNode, addEdge } from './memoryGraphService';
+import { randomHex } from '../lib/randomId';
 
 // Unified categories from all 4 systems
 export const MEMORY_CATEGORIES = [
@@ -288,7 +289,7 @@ export function pushMemory(partial) {
   const now = timestampMs();
 
   const item = {
-    id: partial.id || `mem-${now}-${Math.random().toString(16).slice(2, 8)}`,
+    id: partial.id || `mem-${now}-${randomHex(6)}`,
     timestampMs: now,
     title: partial.title || 'Untitled memory',
     category: partial.category || 'timeline_memory',
@@ -576,7 +577,7 @@ export function normalizeMemoryRecord(item, defaults = {}) {
     ? { ...rawContent, __governance: governance }
     : { value: rawContent, __governance: governance };
   return {
-    id: item.id || `mem-${now}-${Math.random().toString(16).slice(2, 8)}`,
+    id: item.id || `mem-${now}-${randomHex(6)}`,
     title: item.title || defaults.title || 'Untitled memory', content,
     category: item.category || defaults.category || 'timeline_memory',
     sourceAgent: item.sourceAgent || item.agent || defaults.sourceAgent || 'alphonso',

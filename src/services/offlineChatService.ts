@@ -1,3 +1,4 @@
+import { randomHex } from '../lib/randomId';
 const DB_NAME = 'alphonso-offline';
 const DB_VERSION = 1;
 const STORE_NAME = 'chat-messages';
@@ -39,7 +40,7 @@ export async function saveMessageOffline(message: OfflineMessageInput): Promise<
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     tx.objectStore(STORE_NAME).put({
-      id: message.id || `msg-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      id: message.id || `msg-${Date.now()}-${randomHex(6)}`,
       conversationId: message.conversationId || 'default',
       role: message.role || 'user',
       content: message.content || '',

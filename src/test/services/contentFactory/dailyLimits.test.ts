@@ -47,6 +47,16 @@ describe('Facebook', () => {
     const result = await checkDailyLimit(post({ id: 'new', platform: 'facebook' }), NOW);
     expect(result).toEqual({ ok: false, retryAtMs: NOW - 10 * HOUR + 24 * HOUR, reason: expect.stringContaining('30 Reels in 24 hours') });
   });
+  it("Facebook photo posts don't count toward the 30 Reels", async () => {
+    const p = createProject('b', 'X', { ...emptyBrief(), idea: 'x' });
+    savePosts(p.id, Array.from({ length: FACEBOOK_DAILY_LIMIT }, (_, i) => post({
+      id: `c${i}`, platform: 'facebook', piece: 'carousel', status: 'scheduled', sentAtMs: NOW - HOUR + i * 60_000,
+    })));
+    expect(await checkDailyLimit(post({ id: 'new', platform: 'facebook' }), NOW)).toEqual({ ok: true });
+    // A photo post itself isn't held by the Reels limit.
+    sent(FACEBOOK_DAILY_LIMIT, 10 * HOUR);
+    expect(await checkDailyLimit(post({ id: 'photo', platform: 'facebook', piece: 'carousel' }), NOW)).toEqual({ ok: true });
+  });
   it('Reels sent more than 24 hours ago do not count', async () => {
     sent(FACEBOOK_DAILY_LIMIT, 30 * HOUR);
     expect(await checkDailyLimit(post({ id: 'new', platform: 'facebook' }), NOW)).toEqual({ ok: true });

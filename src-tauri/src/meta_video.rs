@@ -162,6 +162,12 @@ pub(crate) fn token_expiry_from_debug(json: &Value) -> Option<u64> {
   }
 }
 
+/// The publishing-limit address for an Instagram account id that is a plain number.
+pub(crate) fn limit_url(base: &str, ig_user_id: &str) -> Option<String> {
+  let id: u64 = ig_user_id.trim().parse().ok()?;
+  Some(format!("{base}/{id}/content_publishing_limit"))
+}
+
 /// Where a user changes a scheduled post by hand when Meta's API won't.
 pub(crate) const META_MANAGE_URL: &str = "https://business.facebook.com/latest/content_calendar";
 
@@ -395,12 +401,15 @@ pub(crate) async fn meta_instagram_limit(
   let client = meta_client()?;
   let base = format!("https://graph.facebook.com/{}", meta_graph_api_version());
   let auth = auth_query(&keys.access_token, &keys.app_secret);
+  // The account id goes into the address only as a checked number (CodeQL).
+  let Some(url) = limit_url(&base, &keys.ig_user_id) else {
+    return Ok(change_failed(
+      "The Instagram Business Account ID in Settings is not a number.",
+    ));
+  };
   let body = json_or_error(
     client
-      .get(format!(
-        "{base}/{}/content_publishing_limit",
-        keys.ig_user_id.trim()
-      ))
+      .get(url)
       .query(&auth)
       .query(&[("fields", "quota_usage,config")])
       .send()
@@ -1017,5 +1026,15 @@ mod tests {
       token_expiry_from_debug(&json!({ "error": { "message": "x" } })),
       None
     );
+  }
+
+  #[test]
+  fn instagram_limit_uses_a_checked_id() {
+    assert_eq!(
+      limit_url("https://graph.facebook.com/v20.0", " 17841400 ").as_deref(),
+      Some("https://graph.facebook.com/v20.0/17841400/content_publishing_limit")
+    );
+    assert!(limit_url("https://g", "17841400/../me").is_none());
+    assert!(limit_url("https://g", "").is_none());
   }
 }

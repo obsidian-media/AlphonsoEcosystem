@@ -23,10 +23,11 @@ export async function checkDailyLimit(post: ProjectPost, nowMs = Date.now()): Pr
     }
     return { ok: true };
   }
-  if (post.platform === 'facebook') {
+  // The 30-a-day limit is for Reels; a photo post (a carousel, phase 3c) isn't held or counted.
+  if (post.platform === 'facebook' && post.piece !== 'carousel') {
     const sent = listProjects()
       .flatMap((p) => p.posts || [])
-      .filter((p) => p.platform === 'facebook' && p.id !== post.id && typeof p.sentAtMs === 'number' && p.sentAtMs > nowMs - DAY)
+      .filter((p) => p.platform === 'facebook' && p.piece !== 'carousel' && p.id !== post.id && typeof p.sentAtMs === 'number' && p.sentAtMs > nowMs - DAY)
       .map((p) => p.sentAtMs as number)
       .sort((a, b) => a - b);
     if (sent.length >= FACEBOOK_DAILY_LIMIT) {

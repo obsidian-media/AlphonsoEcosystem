@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
+import { randomHex } from '../lib/randomId';
 
 const EVENT_KEY = 'alphonso_session_events_v1';
 export const SESSION_EVENT_SCOPE = 'session_events_v1';
@@ -73,7 +74,7 @@ export function appendSessionEvent({
 }: SessionEventInput): SessionEvent {
   const events = readEvents();
   const event: SessionEvent = {
-    id: `evt-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `evt-${Date.now()}-${randomHex(6)}`,
     timestampMs: timestampMs(),
     category,
     title,

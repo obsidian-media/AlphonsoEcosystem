@@ -1,3 +1,4 @@
+import { randomHex } from '../../lib/randomId';
 const PROJECT_DNA_KEY = 'alphonso_project_dna_v1';
 
 function readRows() {
@@ -16,7 +17,7 @@ function writeRows(rows) {
 
 export function createProjectDNA(payload = {}) {
   const dna = {
-    id: payload.id || `dna-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: payload.id || `dna-${Date.now()}-${randomHex(6)}`,
     projectId: payload.projectId || null,
     architecture: payload.architecture || '',
     codingStandards: payload.codingStandards || '',

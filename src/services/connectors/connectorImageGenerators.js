@@ -4,6 +4,7 @@ import { appendConnectorAudit, getConnectorCircuitState, recordConnectorFailure,
 import { gateConnectorAction } from './connectorRegistry.js';
 import { freeOllamaGpuMemory, getConfiguredOllamaEndpoint } from '../../lib/ollama';
 import { DEFAULT_COMFYUI_ENDPOINT, getComfyUiEndpoint } from './comfyUiEndpoint.js';
+import { randomHex } from '../../lib/randomId';
 export { DEFAULT_COMFYUI_ENDPOINT, COMFYUI_ENDPOINT_KEY, getComfyUiEndpoint, setComfyUiEndpoint } from './comfyUiEndpoint.js';
 
 export async function generateSdWebUiImage({
@@ -84,7 +85,7 @@ const FALLBACK_COMFYUI_CHECKPOINT = 'DreamShaper_8_pruned.safetensors';
 
 function createComfyClientId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return `alphonso-miya-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `alphonso-miya-${Date.now()}-${randomHex(12).slice(2)}`;
 }
 
 /**

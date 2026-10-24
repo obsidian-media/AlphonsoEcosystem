@@ -1,3 +1,4 @@
+import { randomHex } from '../../lib/randomId';
 const TRACE_KEY = 'alphonso_traceability_chain_v1';
 
 export const TRACE_STAGES = Object.freeze([
@@ -26,7 +27,7 @@ function writeTraceRows(rows) {
 
 export function appendTraceEvent(event = {}) {
   const row = {
-    id: event.id || `trace-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: event.id || `trace-${Date.now()}-${randomHex(6)}`,
     traceId: event.traceId || `workflow-${Date.now()}`,
     stage: TRACE_STAGES.includes(event.stage) ? event.stage : 'message',
     generatedBy: event.generatedBy || 'system',

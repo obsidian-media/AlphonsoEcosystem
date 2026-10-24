@@ -6,6 +6,7 @@
 // saved in Settings → Connectors → Your storage (connector `media_storage`).
 import { invoke } from '@tauri-apps/api/core';
 import { getConnectorCredential } from './connectors/connectorAuth';
+import { randomHex } from '../lib/randomId';
 
 export const STORAGE_CONNECTOR = 'media_storage';
 export const STAGED_PREFIX = 'alphonso-staged/';
@@ -52,7 +53,7 @@ export function stagedKey(relativePath: string, nowMs = Date.now()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   const day = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const name = (relativePath.split(/[\\/]/).pop() || 'file').replace(/[^A-Za-z0-9._-]+/g, '-');
-  const random = Math.random().toString(36).slice(2, 10).padEnd(8, '0');
+  const random = randomHex(8).padEnd(8, '0');
   return `${STAGED_PREFIX}${day}/${random}-${name}`;
 }
 

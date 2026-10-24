@@ -60,6 +60,7 @@ import { AgentAvatar } from './AgentAvatar';
 import { JoseTaskQueue } from './JoseTaskQueue';
 import { WhatsAppInboxPanel } from './WhatsAppInboxPanel';
 import { OrchestratorQueueView } from './OrchestratorQueueView';
+import { randomHex } from '../lib/randomId';
 
 interface Packet {
   id: string;
@@ -862,7 +863,7 @@ export function OrchestratorView({
                 </div>
                 <WhatsAppInboxPanel
                   messages={whatsappAudit.map((e) => ({
-                    id: e.id || String(Math.random()),
+                    id: e.id || randomHex(12),
                     from: (e.details?.from as string) || 'WhatsApp',
                     body: (e.details?.body as string) || e.action || 'event',
                     timestamp: e.timestampMs || Date.now(),

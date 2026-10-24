@@ -126,10 +126,11 @@ describe('Carousels', () => {
     expect(result).toEqual({ status: 'scheduled', link: 'https://www.facebook.com/1_2', platformId: '1_2' });
   });
 
-  it('with no Instagram route set up, says what to set up', async () => {
+  it('with no Instagram route set up, a post is saved to post by hand', async () => {
     getInstagramRoute.mockResolvedValue(null);
     const result = await publishPost(carousel(), settings, NOW);
-    expect(result).toMatchObject({ status: 'failed', setupRequired: true });
-    expect(result.reason).toMatch(/Settings → Connectors → Meta/);
+    expect(result).toMatchObject({ status: 'by_hand', folder: 'acme/launch/ready-to-post/instagram-carousel-v1' });
+    expect(result.reason).toMatch(/Instagram isn't set up/);
+    expect(stageFile).not.toHaveBeenCalled();
   });
 });

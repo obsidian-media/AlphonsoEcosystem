@@ -1,5 +1,6 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
+import { randomHex } from '../lib/randomId';
 
 const WORKFLOW_RECEIPT_KEY = 'alphonso_workflow_receipts_v1';
 export const WORKFLOW_RECEIPT_SCOPE = 'workflow_receipts_v1';
@@ -97,7 +98,7 @@ export function appendWorkflowReceipt({
 }: WorkflowReceiptInput = {}): WorkflowReceipt {
   const rows = readRows();
   const receipt: WorkflowReceipt = {
-    id: `wfr-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: `wfr-${Date.now()}-${randomHex(6)}`,
     workflowId: workflowId || null,
     workflowRunId,
     stageId,
