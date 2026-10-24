@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 276 services and 170 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 277 services and 171 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -93,6 +93,7 @@ Source-backed inventory: 276 services and 170 components. Human purpose descript
 | component | `src/components/MissionRoom.tsx` | `MissionRoom` |
 | component | `src/components/miya/AiClipsPanel.tsx` | `AiClipsPanel`, `AiClipsPanelProps` |
 | component | `src/components/miya/BrandEditor.tsx` | `BrandEditor` |
+| component | `src/components/miya/BrandEnginesEditor.tsx` | `BrandEnginesEditor` |
 | component | `src/components/miya/BrandResults.tsx` | `BrandResults` |
 | component | `src/components/miya/BriefPanel.tsx` | `BriefPanel` |
 | component | `src/components/miya/CampaignStudioTab.tsx` | `CampaignStudioTab` |
@@ -289,6 +290,7 @@ Source-backed inventory: 276 services and 170 components. Human purpose descript
 | service | `src/services/contentFactory/contentTelegram.ts` | `collectContentNotifications`, `ContentButton`, `ContentButtonAction`, `contentButtonToken`, `ContentNotification`, `ContentTelegramSettings`, `getContentTelegramSettings`, `handleContentButton`, `readContentButtonToken` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `BrandLesson`, `CarouselShape`, `CarouselSlide`, `Checkpoint`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentIdea`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `MetricsReading`, `PostingSlot`, `PostMetrics`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
+| service | `src/services/contentFactory/engineChoice.ts` | `EngineChoices`, `PaidEngine`, `paidEngineAvailable`, `projectEngines`, `resolvePictures`, `resolveVoice`, `VoiceChoice` |
 | service | `src/services/contentFactory/instagramRoute.ts` | `getInstagramRoute`, `instagramLoginSetUp`, `InstagramRoute`, `pageRouteSetUp`, `savedInstagramRoute`, `setInstagramRoute` |
 | service | `src/services/contentFactory/performanceLessons.ts` | `LESSONS_TASK_MARK`, `proposeLessons` |
 | service | `src/services/contentFactory/platformLimits.ts` | `fitsPlatform`, `formatSeconds`, `PLATFORM_LIMITS`, `PlatformFit` |

@@ -78,4 +78,16 @@ describe('AiClipsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
     expect(p.onCheckAgain).toHaveBeenCalled();
   });
+
+  // Phase 4b: a project can override its brand's voice and pictures, and use Higgsfield clips.
+  it("a project can override the brand's voice and pictures, and choose Higgsfield clips", () => {
+    const project = setup();
+    render(<AiClipsPanel {...props(project)} />);
+    fireEvent.change(screen.getByLabelText('Voice for this project'), { target: { value: 'kokoro' } });
+    fireEvent.change(screen.getByLabelText('Pictures for this project'), { target: { value: 'higgsfield' } });
+    fireEvent.change(screen.getByLabelText('Clip engine'), { target: { value: 'higgsfield' } });
+    const saved = JSON.parse(localStorage.getItem('alphonso_content_projects_v1') || '[]').find((x: { id: string }) => x.id === project.id).videoSettings;
+    expect(saved).toMatchObject({ voiceEngine: 'kokoro', pictures: 'higgsfield', clipEngine: 'higgsfield' });
+  });
 });
+

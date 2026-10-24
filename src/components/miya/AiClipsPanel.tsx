@@ -71,6 +71,21 @@ export function AiClipsPanel({ project, outputRoot, mediaReady = true, waiting, 
               <option value="">Automatic</option>
               <option value="local">Local (ComfyUI)</option>
               <option value="runway">Runway</option>
+              <option value="higgsfield">Higgsfield</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-1">Voice
+            <select aria-label="Voice for this project" className={field} value={settings.voiceEngine || ''} onChange={(e) => save({ voiceEngine: (e.target.value || undefined) as VideoSettings['voiceEngine'] })}>
+              <option value="">The brand's</option>
+              <option value="kokoro">Kokoro (free)</option>
+              <option value="elevenlabs">The brand's ElevenLabs voice</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-1">Pictures
+            <select aria-label="Pictures for this project" className={field} value={settings.pictures || ''} onChange={(e) => save({ pictures: (e.target.value || undefined) as VideoSettings['pictures'] })}>
+              <option value="">The brand's</option>
+              <option value="comfyui">ComfyUI (free)</option>
+              <option value="higgsfield">Higgsfield</option>
             </select>
           </label>
           {settings.clipEngine === 'runway' && (
