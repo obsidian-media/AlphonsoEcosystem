@@ -1,3 +1,5 @@
+import type { StepInput } from './jose/stepInput';
+import { listStepOutputs } from './jose/joseStepOutputs';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { readDueMetrics } from './contentFactory/postMetrics';
 import { pushMemoryItem } from './memoryService';
@@ -328,6 +330,25 @@ export function buildMarcusExecutionRecord(result: ExecutionResult, assignment: 
 
 // ── Main entry ────────────────────────────────────────────────────────────────
 
+/**
+ * What Marcus sends inside a Jose request (agent roles Part A, 2026-10-24): the
+ * text he was given, else what the step he needs wrote. Never the step's
+ * instruction or the request. Null when no earlier step wrote anything.
+ */
+export function textToSend(assignment: Assignment, stepInput: StepInput | null | undefined): string | null {
+  const given = assignment?.payload?.text;
+  if (typeof given === 'string' && given.trim()) return given;
+  const written = (stepInput?.needs || []).map((n) => n.text).find((t) => typeof t === 'string' && t.trim());
+  return written || null;
+}
+
+/** Maria's review in the same request, when the step Marcus needs is not hers. */
+function mariaInRequest(commandId: unknown): PriorOutputs['maria'] {
+  if (typeof commandId !== 'string' || !commandId) return undefined;
+  const found = listStepOutputs(commandId).filter((o) => o.agent === 'maria').sort((a, b) => b.storedAtMs - a.storedAtMs)[0];
+  return found as unknown as PriorOutputs['maria'];
+}
+
 export async function runMarcusDistribution(commandText: string, assignment: Assignment, priorOutputs: PriorOutputs | null, options: Record<string, unknown> = {}): Promise<MarcusResult> {
   // A publishing readiness check publishes nothing (Hector's until 2026-10-24).
   if (assignment?.actionType === 'distribution_readiness') {
@@ -341,7 +362,7 @@ export async function runMarcusDistribution(commandText: string, assignment: Ass
       schema: buildMarcusExecutionRecord({ ok: false }, assignment),
     };
   }
-  const mariaOutput = priorOutputs?.maria;
+  const mariaOutput = priorOutputs?.maria || mariaInRequest(options.commandId);
   const startMs = timestampMs();
 
   // 1. Governance gate — Maria must not have flagged critical/high with approvalRequired
@@ -381,6 +402,24 @@ export async function runMarcusDistribution(commandText: string, assignment: Ass
 
   // 2. Select distribution target
   const target = selectDistributionTarget(assignment);
+
+  // Inside a Jose request Marcus sends the work, never the instruction (agent roles Part A).
+  const stepInput = (options as { stepInput?: StepInput | null }).stepInput;
+  if (stepInput && ['github', 'slack', 'n8n'].includes(target.type)) {
+    const text = textToSend(assignment, stepInput);
+    if (!text) {
+      return {
+        summary: 'Nothing to send: no earlier step wrote the text.',
+        resultState: 'failed',
+        resultUrl: null,
+        artifacts: [{ type: 'distribution_blocked', reason: 'nothing_to_send' }],
+        sources: [],
+        contractAction: assignment?.actionType || 'distribution_execution',
+        schema: buildMarcusExecutionRecord({ ok: false }, assignment)
+      };
+    }
+    commandText = text;
+  }
 
   // 3. Execute based on target type
   let execResult: ExecutionResult = { ok: false };

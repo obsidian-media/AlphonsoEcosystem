@@ -1314,6 +1314,7 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (!options.stepInput && commandId && assignment?.stepId) {
     options = {
       ...options,
+      commandId,
       stepInput: buildStepInput(commandId, assignment, String(requestText || ''), {
         memory: options.retrievedContext?.snippet,
         large: usesLargeModel(assignment),
