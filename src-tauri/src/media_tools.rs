@@ -872,7 +872,7 @@ pub(crate) fn build_assembly_runs(
   runs
 }
 
-async fn run_ffmpeg(tool: &Path, run: &FfmpegRun) -> Result<(), String> {
+pub(crate) async fn run_ffmpeg(tool: &Path, run: &FfmpegRun) -> Result<(), String> {
   let mut cmd = tokio::process::Command::new(tool);
   cmd.args(&run.args).current_dir(&run.cwd).kill_on_drop(true);
   crate::utils::no_window_async(&mut cmd);

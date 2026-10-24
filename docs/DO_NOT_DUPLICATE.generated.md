@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 275 services and 170 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 276 services and 170 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -251,6 +251,7 @@ Source-backed inventory: 275 services and 170 components. Human purpose descript
 | service | `src/services/connectors/connectorRegistry.js` | `appendConnectorAudit`, `CIRCUIT_BREAKER_RESET_MS`, `CIRCUIT_BREAKER_THRESHOLD`, `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE`, `DEFAULT_CONNECTORS`, `gateConnectorAction`, `getConnectorCircuitState`, `hydrateConnectorAuditFromSqlite`, `hydrateConnectorRegistryFromSqlite`, `initializeConnectorRegistryFromSqlite`, `listConnectorAudit`, `listConnectors`, `readRows`, `recordConnectorFailure`, `recordConnectorSuccess`, `requireConnectorApproval`, `requireConnectorReady`, `resetConnectorCircuitState`, `setConnectorStatus`, `verifyConnectorEnvironment`, `writeRows` |
 | service | `src/services/connectors/deepseekConnector.ts` | `DeepSeekChatOptions`, `DeepSeekChatResult`, `DeepSeekMessage`, `DeepSeekSearchResult`, `isDeepSeekConfigured`, `searchWithDeepSeek`, `sendDeepSeekMessage` |
 | service | `src/services/connectors/discordConnector.ts` | `addReaction`, `deleteMessage`, `DiscordChannel`, `DiscordConfig`, `DiscordMessage`, `editMessage`, `getChannelHistory`, `listGuildChannels`, `sendMessage`, `sendWebhookMessage` |
+| service | `src/services/connectors/elevenLabsConnector.ts` | `ELEVENLABS_NOT_SET_UP`, `elevenLabsKey`, `ElevenLabsModel`, `ElevenLabsVoice`, `isElevenLabsConfigured`, `listElevenLabsModels`, `listElevenLabsVoices` |
 | service | `src/services/connectors/geminiConnector.ts` | `DEFAULT_MODEL`, `GeminiChatOptions`, `GeminiChatSuccess`, `GeminiMessage`, `GeminiRateLimited`, `GeminiSendResult`, `isGeminiConfigured`, `sendGeminiMessage` |
 | service | `src/services/connectors/githubConnector.ts` | `closeIssue`, `createIssue`, `createPullRequest`, `createRelease`, `getFileContent`, `GitHubAsset`, `GitHubConfig`, `GitHubIssue`, `GitHubPullRequest`, `GitHubRelease`, `GitHubSearchResult`, `listIssues`, `listPullRequests`, `listReleases`, `listWorkflows`, `mergePullRequest`, `searchCode`, `searchIssues`, `searchRepos`, `triggerWorkflow` |
 | service | `src/services/connectors/hermesAgentConnector.ts` | `getHermesAgentEndpoint`, `getHermesAgentHealth`, `getHermesSessionMode`, `HermesAgentEndpoint`, `HermesBlocked`, `HermesChatOptions`, `HermesChatSuccess`, `HermesCircuitOpen`, `HermesMessage`, `HermesRateLimited`, `HermesSendResult`, `HermesSessionMode`, `isHermesAgentConfigured`, `listHermesAgentModels`, `resolveSecureSessionId`, `saveHermesAgentEndpoint`, `sendHermesAgentMessage`, `setHermesSessionMode` |

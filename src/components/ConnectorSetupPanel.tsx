@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { listElevenLabsVoices } from '../services/connectors/elevenLabsConnector';
 import { invoke } from '@tauri-apps/api/core';
 import {
   RadioTower, CheckCircle2, AlertCircle, Circle, ChevronDown, ChevronUp,
@@ -135,6 +136,25 @@ interface CredentialSectionProps {
   onSave: () => void;
   hint?: string;
   savedLabel?: string;
+}
+
+/** Test for ElevenLabs (phase 4b): lists the account's voices. */
+function ElevenLabsTest(): React.JSX.Element {
+  const [result, setResult] = useState('');
+  const test = async () => {
+    setResult('Checking…');
+    const answer = await listElevenLabsVoices();
+    if (!answer.ok) { setResult(answer.reason || 'ElevenLabs could not be reached.'); return; }
+    const voices = answer.voices || [];
+    const cloned = voices.filter((v) => v.cloned).length;
+    setResult(`Connected: ${voices.length} voices${cloned ? `, ${cloned} of them cloned by you` : ''}.`);
+  };
+  return (
+    <div className="-mt-2 flex items-center gap-2 px-1 text-[12px] text-(--text-2)">
+      <button type="button" aria-label="Test ElevenLabs" className="rounded-lg bg-(--surface-2) px-2 py-1" onClick={() => { void test(); }}>Test</button>
+      {result && <span>{result}</span>}
+    </div>
+  );
 }
 
 function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColor, fields, onSave, hint, savedLabel }: CredentialSectionProps): React.JSX.Element {
@@ -521,6 +541,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
   const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
   const [pexelsApiKey, setPexelsApiKey] = useState(() => getConnectorCredential('pexels', 'PEXELS_API_KEY') || '');
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState(() => getConnectorCredential('elevenlabs', 'ELEVENLABS_API_KEY') || '');
   const [pixabayApiKey, setPixabayApiKey] = useState(() => getConnectorCredential('pixabay', 'PIXABAY_API_KEY') || '');
   const [coverrApiKey, setCoverrApiKey] = useState(() => getConnectorCredential('coverr', 'COVERR_API_KEY') || '');
   const [perplexityApiKey, setPerplexityApiKey] = useState(() => getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY') || '');
@@ -567,6 +588,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setBraveApiKey((prev) => prev || getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
       setTavilyApiKey((prev) => prev || getConnectorCredential('tavily', 'TAVILY_API_KEY'));
       setPexelsApiKey((prev) => prev || getConnectorCredential('pexels', 'PEXELS_API_KEY'));
+      setElevenLabsApiKey((prev) => prev || getConnectorCredential('elevenlabs', 'ELEVENLABS_API_KEY'));
       setPixabayApiKey((prev) => prev || getConnectorCredential('pixabay', 'PIXABAY_API_KEY'));
       setCoverrApiKey((prev) => prev || getConnectorCredential('coverr', 'COVERR_API_KEY'));
       setPerplexityApiKey((prev) => prev || getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY'));
@@ -1070,6 +1092,14 @@ export function ConnectorSetupPanel(): React.JSX.Element {
         </CollapsibleCategory>
 
         <CollapsibleCategory id="content" label="Content & Productivity" icon={FileText} defaultOpen={false}>
+
+          {/* ElevenLabs (content factory phase 4b): paid voices, your cloned voice, sound effects. */}
+          <CredentialSection title="ElevenLabs (voices and sound effects)" icon={FileText} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
+            fields={[{ label: 'API Key', placeholder: 'Your ElevenLabs API key', value: elevenLabsApiKey, onChange: setElevenLabsApiKey, key: 'ELEVENLABS_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('elevenlabs', { ELEVENLABS_API_KEY: elevenLabsApiKey })}
+            hint="Paid, your own account. A brand can read its voice-overs with one of your ElevenLabs voices (including one you cloned there), and Miya can add sound effects. Every run asks first with the cost, using your prices in Settings → Approvals → Allow paid models."
+            savedLabel="ElevenLabs key saved" />
+          <ElevenLabsTest />
 
           {/* Stock footage for Miya's B-roll step (content factory phase 2a): each key is a free sign-up. */}
           <CredentialSection title="Pexels (stock footage)" icon={FileText} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"

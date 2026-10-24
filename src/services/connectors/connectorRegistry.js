@@ -238,6 +238,16 @@ export const DEFAULT_CONNECTORS = [
     permissions: ['web_search'],
     disabledReason: 'Tavily API key is not configured.'
   },
+  // ElevenLabs (content factory phase 4b): paid voices, the user's cloned voice and sound effects.
+  {
+    id: 'elevenlabs',
+    name: 'ElevenLabs',
+    status: 'not_configured',
+    transport: 'elevenlabs_api',
+    requiredEnv: ['ELEVENLABS_API_KEY'],
+    permissions: ['voice_generation', 'sound_generation', 'approval_requests'],
+    disabledReason: 'ElevenLabs API key is not configured.'
+  },
   // Stock footage for Miya's B-roll step (content factory phase 2a): free keys, read only.
   {
     id: 'pexels',

@@ -32,6 +32,7 @@ mod companion_router;
 mod companion_server;
 mod companion_types;
 mod connector_commands;
+mod elevenlabs;
 mod kv_store;
 mod media_storage;
 mod media_tools;
@@ -778,6 +779,10 @@ pub fn run() {
       media_tools::content_ready_to_post,
       media_tools::content_cut_short,
       post_metrics::content_read_metrics,
+      elevenlabs::elevenlabs_voices,
+      elevenlabs::elevenlabs_models,
+      elevenlabs::elevenlabs_speak,
+      elevenlabs::elevenlabs_sound,
       media_storage::storage_put_file,
       media_storage::storage_delete,
       media_storage::storage_list_staged,

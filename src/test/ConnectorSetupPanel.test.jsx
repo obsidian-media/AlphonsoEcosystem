@@ -73,6 +73,9 @@ vi.mock('../services/connectors/connectorAuth', () => ({
 }));
 
 // ── ToolConnectionsPanel (child component) ────────────────────────────────────
+vi.mock('../services/connectors/elevenLabsConnector', () => ({
+  listElevenLabsVoices: vi.fn(async () => ({ ok: true, voices: [{ id: 'v1', name: 'Rachel', cloned: false }, { id: 'v2', name: 'My voice', cloned: true }] })),
+}));
 vi.mock('../components/ToolConnectionsPanel', () => ({
   ToolConnectionsPanel: () => <div data-testid="tool-connections-panel" />
 }));
@@ -143,6 +146,16 @@ describe('ConnectorSetupPanel', () => {
     for (const title of ['Pexels (stock footage)', 'Pixabay (stock footage)', 'Coverr (stock footage)']) {
       expect(screen.getByText(title)).toBeInTheDocument();
     }
+  });
+
+  // Phase 4b: ElevenLabs, with a Test that lists the account's voices.
+  it('has an ElevenLabs section whose Test lists your voices', async () => {
+    localStorage.clear();
+    render(<ConnectorSetupPanel />);
+    fireEvent.click(screen.getByTestId('connector-category-content'));
+    expect(screen.getByText('ElevenLabs (voices and sound effects)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Test ElevenLabs' }));
+    expect(await screen.findByText('Connected: 2 voices, 1 of them cloned by you.')).toBeInTheDocument();
   });
 
   // Phase 3a: Meta (Facebook and Instagram) keys can be saved in Settings.
