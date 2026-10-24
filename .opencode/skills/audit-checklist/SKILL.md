@@ -46,7 +46,7 @@ Use this when:
 
 ### Phase 4: Rust Backend
 - [ ] Count lines in `lib.rs` — should be ~7,078
-- [ ] Count registered Tauri commands — should be 63
+- [ ] Count registered Tauri commands — compare with `npm run verify:docs` (189 on 2026-10-25)
 - [ ] Sample 5 commands — verify real implementations
 - [ ] Check extracted modules: kv_store.rs, whatsapp_webhook.rs, native_proof.rs, runway.rs
 - [ ] Run `cargo check` and `cargo clippy -- -D warnings`

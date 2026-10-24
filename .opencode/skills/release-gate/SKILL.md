@@ -87,9 +87,9 @@ Use this when:
 - [ ] Settings hydrated from SQLite on boot
 
 #### User Experience
-- [ ] First-launch onboarding flow exists
+- [ ] First-launch Setup flow works (`SetupFlow.tsx`)
 - [ ] Public README with install instructions
-- [ ] Connector setup guides for all 9 connectors
+- [ ] Connector setup guides cover all 33 connectors (`docs/CONNECTORS.md`)
 
 ## Output Format
 

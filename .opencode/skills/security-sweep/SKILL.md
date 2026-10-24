@@ -73,7 +73,7 @@ Use this when:
 
 ### 4. Policy Enforcement
 
-#### policyEnforcementService.js
+#### policyEnforcementService.ts
 - [ ] Fail-closed: blocks action when uncertain
 - [ ] Zero-cost mode blocks all paid connectors unless overridden
 - [ ] Approval mode requires explicit user approval for high-risk actions
@@ -87,14 +87,13 @@ Use this when:
 ### 5. Authentication Flows
 
 #### OAuth Scripts
-- [ ] `scripts/auth-youtube.mjs` — tokens written to `.env`, not logged
-- [ ] `scripts/auth-meta.mjs` — tokens written to `.env`, not logged
-- [ ] `scripts/auth-outlook.mjs` — tokens written to `.env`, not logged
+- [ ] In-app sign-in (`src-tauri/src/oauth_signin.rs`): `127.0.0.1` only, 5 minutes, PKCE and a checked `state`, errors never carry a token
+- [ ] Developer scripts `scripts/auth-youtube.mjs` / `auth-meta.mjs` / `auth-outlook.mjs` — tokens written to `.env`, not logged
 - [ ] Local HTTP server for OAuth callback uses `localhost` only
 
 #### Token Storage
-- [ ] Tokens stored in `.env` (not localStorage, not SQLite, not logged)
-- [ ] `.env` file permissions are restrictive (not world-readable)
+- [ ] Tokens saved in the app are in the OS keychain (`os_keychain_store.rs`), not localStorage, not SQLite, not backups or exports, not logged
+- [ ] A developer `.env` has restrictive permissions (not world-readable), and an installed app never reads one
 
 ### 6. Gateway Security
 

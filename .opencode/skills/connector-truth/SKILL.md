@@ -64,8 +64,10 @@ Use this when:
 | Telegram outbound | `sendTelegramConnectorMessage` | | | | | | |
 | Telegram inbound | `connector_poll_telegram` | | | | | | |
 | WhatsApp outbound | `sendWhatsAppConnectorMessage` | | | | | | |
-| WhatsApp inbound (Twilio) | `whatsappWebhookService` | | | | | | |
-| WhatsApp Cloud | normalizer exists | | | | | | |
+| WhatsApp inbound (Cloud API, gateway queue) | `browserPollWhatsAppGateway` | | | | | | |
+| Meta (Facebook, Instagram) | `publishMetaVideo`, `publishPost` | | | | | | |
+| ElevenLabs | `elevenlabs_speak` | | | | | | |
+| Higgsfield | `higgsfield_run` | | | | | | |
 | YouTube | `uploadYouTubeConnectorVideo` | | | | | | |
 | Claude | `sendClaudeConnectorMessage` | | | | | | |
 | ChatGPT | `sendChatGptConnectorMessage` | | | | | | |
