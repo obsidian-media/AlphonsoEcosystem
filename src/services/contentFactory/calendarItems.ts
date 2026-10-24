@@ -164,6 +164,11 @@ export function hoursWithItems(items: CalendarItem[]): number[] {
 export async function moveCalendarItem(item: CalendarItem, atMs: number): Promise<MoveResult> {
   if (!item.draggable) return { ok: false, reason: 'This can no longer be moved.' };
   if (item.kind === 'post' && item.projectId && item.postId) return movePost(item.projectId, item.postId, atMs);
+  // A send moved into the past would go out at once; a draft with no time may go on today.
+  const now = Date.now();
+  const midnight = (ms: number) => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+  const past = item.kind === 'draft' && !item.hasTime ? midnight(atMs) < midnight(now) : atMs < now;
+  if (past) return { ok: false, reason: 'That time is in the past.' };
   if (item.kind === 'draft' && item.draftId) {
     const d = new Date(atMs);
     const pad = (n: number) => String(n).padStart(2, '0');

@@ -113,3 +113,17 @@ describe('moveCalendarItem', () => {
     expect(getScheduledPublishes().find((s) => s.content === 'Hello Slack')!.scheduledAt).toBe(at(29, 11));
   });
 });
+
+// Final review: a Marcus send moved into the past would go out at once; drafts and sends refuse it too.
+it('a draft or a send cannot be moved into the past', async () => {
+  seed();
+  const items = listCalendarItems(NOW);
+  const past = Date.now() - 3_600_000;
+  expect(await moveCalendarItem(items.find((i) => i.kind === 'send')!, past)).toEqual({ ok: false, reason: 'That time is in the past.' });
+  // A draft with no time is judged by its day: yesterday is past, today is not.
+  const yesterday = Date.now() - 24 * 3_600_000;
+  expect(await moveCalendarItem(items.find((i) => i.kind === 'draft')!, yesterday)).toEqual({ ok: false, reason: 'That time is in the past.' });
+  const todayMidnight = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+  expect((await moveCalendarItem(items.find((i) => i.kind === 'draft')!, todayMidnight)).ok).toBe(true);
+  expect(getScheduledPublishes().find((s) => s.content === 'Hello Slack')!.scheduledAt).toBe(at(28, 9));
+});
