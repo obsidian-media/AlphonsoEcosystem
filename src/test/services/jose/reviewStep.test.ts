@@ -14,7 +14,7 @@ const input = (reviewText: string | null): StepInput => ({
   needs: [],
   others: [],
   memory: '',
-  review: reviewText === null ? null : { stepId: 'miya', agent: 'miya', text: reviewText, files: [], sources: [], cut: 0 },
+  review: reviewText === null ? null : { stepId: 'miya', agent: 'miya', text: reviewText, files: [], sources: [], cut: 0, main: reviewText },
 });
 
 describe('runReviewStep', () => {

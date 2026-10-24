@@ -53,3 +53,11 @@ describe('Marcus sends the work', () => {
     expect(result.summary).toMatch(/Maria governance audit requires approval/);
   });
 });
+
+describe('Marcus sends the main text of the step he needs (final review)', () => {
+  it('prefers the main text over the readable dump', () => {
+    const input = { instruction: '', request: '', others: [], memory: '', review: null,
+      needs: [{ stepId: 'miya', agent: 'miya', text: 'Miya generated a package.\n\nscript: The post', main: 'The post', files: [], sources: [], cut: 0 }] };
+    expect(textToSend({}, input)).toBe('The post');
+  });
+});

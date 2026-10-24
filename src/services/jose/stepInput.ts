@@ -16,6 +16,8 @@ export interface NeededWork {
   sources: string[];
   /** Characters left out; the whole output is on the board. */
   cut: number;
+  /** The piece of work itself (a post, a script, a letter), for whoever sends or uses it. */
+  main: string;
 }
 
 export interface StepInput {
@@ -30,6 +32,22 @@ export interface StepInput {
 }
 
 export const STEP_INPUT_LIMITS = { localChars: 6000, largeChars: 20000, otherLines: 12, otherLineChars: 160 };
+
+/** Artifacts that describe how a step ran, not what it made: never handed on. */
+const INTERNAL_ARTIFACTS = new Set(['comfyui_local_generation_options', 'open_runtime_hub', 'generated_images', 'orchestration_review', 'direct_answer', 'assistant_answer']);
+/** Fields that hold the work itself, most specific first. */
+const MAIN_FIELDS = ['post', 'text', 'body', 'message', 'letter', 'script', 'caption', 'draft', 'content', 'report'];
+
+function mainOf(output: StepOutput): string {
+  const holders = [output.schema, ...(Array.isArray(output.artifacts) ? output.artifacts : [])];
+  for (const field of MAIN_FIELDS) {
+    for (const holder of holders as any[]) {
+      const value = holder && typeof holder === 'object' ? (holder.data && typeof holder.data === 'object' ? holder.data[field] ?? holder[field] : holder[field]) : undefined;
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+  }
+  return typeof output.summary === 'string' ? output.summary.trim() : '';
+}
 
 function filesOf(output: StepOutput): string[] {
   const artifacts = Array.isArray(output.artifacts) ? output.artifacts : [];
@@ -48,7 +66,15 @@ export function readableOutput(output: StepOutput): string {
   }
   const artifacts = Array.isArray(output.artifacts) ? output.artifacts : [];
   for (const artifact of artifacts as any[]) {
-    const text = typeof artifact?.raw === 'string' ? artifact.raw : artifact?.data !== undefined ? toReadableText(artifact.data) : '';
+    if (INTERNAL_ARTIFACTS.has(String(artifact?.type || ''))) continue;
+    let text = '';
+    if (typeof artifact?.raw === 'string' && artifact.raw) text = artifact.raw;
+    else if (artifact?.data !== undefined && artifact?.data !== null) text = toReadableText(artifact.data);
+    else if (artifact && typeof artifact === 'object') {
+      // A plain object is the work itself (Miya's package with its script, for example).
+      const { type: _type, ...rest } = artifact;
+      if (Object.keys(rest).length) text = toReadableText(rest);
+    }
     if (text && text.trim() && !parts.includes(text.trim())) parts.push(text.trim());
   }
   return parts.join('\n\n');
@@ -65,6 +91,7 @@ function neededWork(output: StepOutput, limit: number): NeededWork {
     files: filesOf(output),
     sources: (Array.isArray(output.sources) ? output.sources : []).map(String),
     cut,
+    main: mainOf(output),
   };
 }
 

@@ -61,3 +61,26 @@ describe('buildStepInput', () => {
     expect(buildEchoSynthesisPrompt('r', {}, input)).toContain('Bees pollinate');
   });
 });
+
+describe('the work inside a step (final review, agent roles Part A)', () => {
+  beforeEach(() => localStorage.clear());
+
+  it("reads a package artifact's text, not only the summary, and skips internal option lists", () => {
+    setStepOutput('c1', 'miya', 'miya', {
+      summary: 'Miya generated a structured creative package for "Bees".',
+      artifacts: [
+        { type: 'creative_package', title: 'Bees', hook: 'Bees run the world.', script: 'Bees pollinate a third of our food.' },
+        { type: 'comfyui_local_generation_options', presets: [{ id: 'p1', name: 'Preset one' }] },
+      ],
+    });
+    const input = buildStepInput('c1', step('maria', 'maria', ['miya']), 'r', {});
+    expect(input.needs[0].text).toContain('Bees pollinate a third of our food.');
+    expect(input.needs[0].text).not.toContain('Preset one');
+    expect(input.needs[0].main).toBe('Bees pollinate a third of our food.');
+  });
+
+  it("uses the summary as the main text when the step saved nothing else", () => {
+    setStepOutput('c1', 'alphonso', 'alphonso', { summary: 'Dear team, the launch moves to Friday.' });
+    expect(buildStepInput('c1', step('marcus', 'marcus', ['alphonso']), 'r', {}).needs[0].main).toBe('Dear team, the launch moves to Friday.');
+  });
+});

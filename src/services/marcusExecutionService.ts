@@ -338,7 +338,8 @@ export function buildMarcusExecutionRecord(result: ExecutionResult, assignment: 
 export function textToSend(assignment: Assignment, stepInput: StepInput | null | undefined): string | null {
   const given = assignment?.payload?.text;
   if (typeof given === 'string' && given.trim()) return given;
-  const written = (stepInput?.needs || []).map((n) => n.text).find((t) => typeof t === 'string' && t.trim());
+  // The piece of work itself (a post, a letter), else the step's readable output.
+  const written = (stepInput?.needs || []).map((n) => n.main || n.text).find((t) => typeof t === 'string' && t.trim());
   return written || null;
 }
 
