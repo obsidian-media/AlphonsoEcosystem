@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 265 services and 164 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 265 services and 165 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -95,6 +95,7 @@ Source-backed inventory: 265 services and 164 components. Human purpose descript
 | component | `src/components/miya/BrandEditor.tsx` | `BrandEditor` |
 | component | `src/components/miya/BriefPanel.tsx` | `BriefPanel` |
 | component | `src/components/miya/CampaignStudioTab.tsx` | `CampaignStudioTab` |
+| component | `src/components/miya/CarouselStudioTab.tsx` | `CarouselStudioTab`, `CarouselStudioTabProps` |
 | component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab`, `selectContentProject` |
 | component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
 | component | `src/components/miya/PostsPanel.tsx` | `PostsPanel` |
@@ -269,7 +270,7 @@ Source-backed inventory: 265 services and 164 components. Human purpose descript
 | service | `src/services/contentFactory/contentPosts.ts` | `buildPosts`, `cancelPost`, `nextPostTime`, `NovaTime`, `POST_STATUS_LABEL`, `savePosts`, `updatePost` |
 | service | `src/services/contentFactory/contentProjectFiles.ts` | `allowMediaFolder`, `loadProjectFile`, `loadProjectImage`, `mediaUrl`, `outputPath`, `projectRelativeDir`, `requireOutputRoot`, `saveProjectImage`, `slugForFolder`, `writeProjectFile`, `writeStepText` |
 | service | `src/services/contentFactory/contentProjectPlan.ts` | `briefWantsCarousel`, `CLIPS_WAIT`, `CLIPS_WAIT_PAID`, `CONTENT_TEMPLATE_STEPS`, `contentProjectPlanSteps`, `PUBLISH_WAIT`, `REVIEW_WAIT` |
-| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
+| service | `src/services/contentFactory/contentProjectService.ts` | `addStepProgress`, `approveStep`, `changeProjectPosts`, `chooseVersion`, `chosenVersionOf`, `createProject`, `emptyBrief`, `failStep`, `getProject`, `getVideoSettings`, `isStepStale`, `listProjects`, `markStepStatus`, `recoverInterruptedSteps`, `reorderSlides`, `saveStepVersion`, `sendBackStep`, `setMainMoment`, `setPendingAgents`, `setProjectRequest`, `setVersionOutputField`, `setVideoSettings`, `startStep`, `updateBrief` |
 | service | `src/services/contentFactory/contentPublishExecutor.ts` | `executePublishStep`, `NO_APPROVED_POSTS` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |

@@ -12,6 +12,10 @@ vi.mock('../../../services/contentFactory/contentMediaExecutor', async (importOr
   ...(await importOriginal<any>()),
   resolveProjectClipEngine: vi.fn(async () => ({ engine: 'local', modelId: 'ltx_video_2b', maxSeconds: 5 })),
 }));
+vi.mock('../../../services/contentFactory/contentImages', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../services/contentFactory/contentImages')>()),
+  renderCarouselSlides: vi.fn(async () => []),
+}));
 vi.mock('../../../services/jose/joseRequestStore', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../services/jose/joseRequestStore')>()),
   getJoseRequest: vi.fn(() => (globalThis as any).__request || null),
@@ -19,6 +23,7 @@ vi.mock('../../../services/jose/joseRequestStore', async (importOriginal) => ({
 
 import { ContentFactoryPanel, selectContentProject } from '../../../components/miya/ContentFactoryPanel';
 import { runContentProject, approveContentStep } from '../../../services/contentFactory/contentStepRunner';
+import { renderCarouselSlides } from '../../../services/contentFactory/contentImages';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief, markStepStatus, saveStepVersion, setProjectRequest } from '../../../services/contentFactory/contentProjectService';
 
@@ -85,4 +90,15 @@ describe('ContentFactoryPanel: AI clips', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Make AI clips' }));
     expect(approveContentStep).toHaveBeenCalledWith(project.id, 'clips', expect.objectContaining({ outputFolder: expect.any(String) }));
   });
+});
+
+// Phase 3c: Carousel Studio.
+it('the Carousel tab shows Carousel Studio, and Redo makes only that slide again', async () => {
+  const { project } = setup();
+  const slides = [1, 2, 3, 4, 5].map((n) => ({ id: `c${n}`, cover: n === 1, headline: `H${n}`, body: `B${n}`, imagePrompt: 'x' }));
+  saveStepVersion(project.id, 'carousel', { output: { miya: { slides } }, summary: '', joseCommandId: null });
+  render(<ContentFactoryPanel tab="carousel" settings={settings} />);
+  expect(screen.getByRole('heading', { name: 'Carousel Studio' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Redo slide 3' }));
+  await waitFor(() => expect(renderCarouselSlides).toHaveBeenCalledWith(project.id, settings, undefined, 2));
 });

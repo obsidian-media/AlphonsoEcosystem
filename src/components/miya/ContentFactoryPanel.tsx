@@ -5,20 +5,21 @@ import { ScriptStudioTab } from './ScriptStudioTab';
 import { SceneBuilderTab } from './SceneBuilderTab';
 import { checkPendingClips } from '../../services/contentFactory/contentMediaExecutor';
 import { ThumbnailStudioTab } from './ThumbnailStudioTab';
+import { CarouselStudioTab } from './CarouselStudioTab';
 import { CampaignStudioTab } from './CampaignStudioTab';
 import { ensureFirstBrand, getBrand, listBrands } from '../../services/contentFactory/contentBrandService';
 import {
-  chooseVersion, createProject, emptyBrief, getProject, listProjects, recoverInterruptedSteps, updateBrief,
+  chooseVersion, createProject, emptyBrief, getProject, listProjects, recoverInterruptedSteps, reorderSlides, updateBrief,
 } from '../../services/contentFactory/contentProjectService';
 import { approveContentStep, runContentProject, runContentStep } from '../../services/contentFactory/contentStepRunner';
 import { getJoseRequest } from '../../services/jose/joseRequestStore';
 import { STATUS_LABELS } from '../jose/JoseRequestsBoard';
 import { Button } from '../ui';
-import { checkPendingPictures } from '../../services/contentFactory/contentImages';
+import { checkPendingPictures, renderCarouselSlides } from '../../services/contentFactory/contentImages';
 import { rejectPiece, retryWithReason, sendBackTarget } from '../../services/contentFactory/contentQualityGate';
 import type { ContentProject, StepId } from '../../services/contentFactory/contentTypes';
 
-export type ContentFactoryTab = 'script' | 'scene' | 'thumbnail' | 'campaign';
+export type ContentFactoryTab = 'script' | 'scene' | 'thumbnail' | 'carousel' | 'campaign';
 
 const LAST_KEY = 'alphonso_content_factory_last_v1';
 
@@ -146,6 +147,13 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
             <ThumbnailStudioTab project={project} outputRoot={outputRoot} runStep={tabProps.runStep} chooseVersion={tabProps.chooseVersion}
               reject={(pieceId, reason) => { rejectPiece(project.id, 'thumbnail', pieceId, reason); refresh(); run('thumbnail', reason); }}
               checkAgain={() => { checkPendingPictures(project.id, 'thumbnail', settings).finally(refresh); }} />
+          )}
+          {tab === 'carousel' && (
+            <CarouselStudioTab project={project} outputRoot={outputRoot} runStep={tabProps.runStep} chooseVersion={tabProps.chooseVersion}
+              redo={(index) => { renderCarouselSlides(project.id, settings, undefined, index).catch(() => undefined).finally(refresh); }}
+              move={(from, to) => { try { reorderSlides(project.id, from, to); } finally { refresh(); } }}
+              reject={(pieceId, reason) => { rejectPiece(project.id, 'carousel', pieceId, reason); refresh(); run('carousel', reason); }}
+              checkAgain={() => { checkPendingPictures(project.id, 'carousel', settings).finally(refresh); }} />
           )}
           {tab === 'campaign' && <CampaignStudioTab {...tabProps} brand={brand} outputRoot={outputRoot} onChange={refresh} />}
         </>
