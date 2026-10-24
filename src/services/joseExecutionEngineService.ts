@@ -1302,6 +1302,19 @@ export function stepCommandText(assignment: any, commandText: string): string {
   return `${instruction}\n\nThe request: ${commandText}${help}`;
 }
 
+async function executeImageStep(requestText: any, assignment: any) {
+  const base = { resultUrl: null, sources: [], contractAction: assignment?.actionType || 'creative_image' };
+  const image: any = await generateComfyUiImage({ prompt: String(requestText || ''), width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: getComfyUiEndpoint() });
+  const path = Array.isArray(image?.outputPaths) ? image.outputPaths[0] : undefined;
+  if (image?.ok) {
+    return { ...base, summary: 'Miya made the picture.', resultState: 'completed', artifacts: [{ type: 'image', ...(path ? { path } : {}), urls: image.imageUrls || [] }] };
+  }
+  if (image?.pending) {
+    return { ...base, summary: 'The picture is still being made in ComfyUI.', resultState: 'pending_review', artifacts: [{ type: 'image_pending', jobId: image.jobId }] };
+  }
+  return { ...base, summary: `Miya couldn't make the picture: ${String(image?.error || image?.message || 'ComfyUI gave no picture')}`, resultState: 'failed', artifacts: [] };
+}
+
 /** A paid or cloud model gets the larger hand-over budget. */
 function usesLargeModel(assignment: any): boolean {
   const model = String(assignment?.model || '');
@@ -1340,6 +1353,10 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (assignment?.actionType === 'creative_higgsfield') {
     const { executeHiggsfieldByName } = await import('./contentFactory/higgsfieldByName');
     return executeHiggsfieldByName(assignment, packet);
+  }
+  // A picture asked for in words: Miya makes it with ComfyUI (agent roles Part A).
+  if (assignment?.agent === AGENTS.MIYA && assignment?.actionType === 'creative_image') {
+    return executeImageStep(requestText, assignment);
   }
   // A review judges the work it reviews (agent roles Part A).
   if (assignment?.reviewOf) {
@@ -1408,12 +1425,8 @@ export async function runPipelineShortcuts({ commandText, onProgress }: { comman
     }
     if (routing?.ok) {
       if (creativeIntent === 'image_generation') {
-        const prompt = commandText;
-        let imageResult = null;
-        // ComfyUI only (owner, 2026-10-22); routeToCreativeTool never returns another tool.
-        imageResult = await generateComfyUiImage({ prompt, width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: getComfyUiEndpoint() });
-        onProgress?.({ stage: 'creative_image_done', tool: routing.tool, result: imageResult });
-        return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, creativeResult: imageResult, command: null };
+        // A picture is Miya's step (agent roles Part A): the caller runs it as one.
+        return { kind: 'image_step', command: null };
       }
     }
   }
@@ -1473,6 +1486,13 @@ export async function runJoseCommandExecutionPipeline({
   // are planned like everything else.
   if (!explicitAssignments) {
     const shortcut = await runPipelineShortcuts({ commandText, onProgress });
+    if (shortcut?.kind === 'image_step') {
+      const picture = { stepId: 'picture', agent: AGENTS.MIYA, actionType: 'creative_image', effects: ['write_own_work'], needs: [],
+        instruction: 'Make the picture the request asks for.', title: 'Miya makes the picture', rationale: 'A picture is Miya\'s work.',
+        riskLevel: 'low', requiresApproval: false, commandPreview: 'Makes a picture with ComfyUI.', fragments: [] };
+      return runJoseCommandExecutionPipeline({ commandText, source, endpoint, zeroCostMode, previewMode, onProgress, onToken, conversationHistory,
+        assignments: [picture], planInfo: { source: 'given', templateId: null, note: 'Picture asked for.' }, allowPaidModels });
+    }
     if (shortcut) return shortcut;
   }
 

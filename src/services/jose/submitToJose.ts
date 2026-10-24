@@ -76,6 +76,12 @@ function toAssignments(steps: PlanStep[], planNote: string) {
   }));
 }
 
+/** A picture asked for in words: Miya's step (agent roles Part A, 2026-10-24). */
+export const IMAGE_STEP: PlanStep = {
+  stepId: 'picture', agent: 'miya', actionType: 'creative_image',
+  instruction: 'Make the picture the request asks for.', effects: ['write_own_work'], needs: [],
+};
+
 export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const { text, source, history, planFresh, endpoint, zeroCostMode, previewMode, onProgress, onToken } = input;
 
@@ -98,6 +104,14 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   }
 
   const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });
+  // A picture is Miya's work: one step of hers, like any other (agent roles Part A).
+  if (shortcut?.kind === 'image_step') {
+    return submitStepsToJose({
+      text, source, endpoint, zeroCostMode, onProgress, allowPaidModels: input.allowPaidModels,
+      label: source === 'user' ? 'Picture asked for in Chat.' : 'Picture asked for.',
+      steps: [IMAGE_STEP],
+    });
+  }
   if (shortcut) return { ...shortcut, plan: null, planNote: '' };
 
   onProgress?.({ stage: 'planning' });

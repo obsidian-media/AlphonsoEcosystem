@@ -219,3 +219,14 @@ describe('showing the plan first', () => {
     expect(pipeline).not.toHaveBeenCalled();
   });
 });
+
+describe('a picture request is Miya\'s step (agent roles Part A)', () => {
+  it('runs one Miya creative_image step instead of calling ComfyUI from the shortcut', async () => {
+    vi.mocked(runPipelineShortcuts).mockResolvedValueOnce({ kind: 'image_step' });
+    await submitToJose({ text: 'make a picture of a red fox', source: 'user' });
+    expect(planner).not.toHaveBeenCalled();
+    const call = pipeline.mock.calls.at(-1)[0];
+    expect(call.assignments.map((a) => [a.agent, a.actionType, a.effects])).toEqual([['miya', 'creative_image', ['write_own_work']]]);
+    expect(call.planInfo.note).toBe('Picture asked for in Chat.');
+  });
+});
