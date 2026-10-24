@@ -281,6 +281,11 @@ describe('SettingsView smoke', () => {
     // Content factory phase 2b: Runway's price for Miya's AI clips, which share the cap.
     fireEvent.change(screen.getByLabelText("Runway price per second of video (USD)"), { target: { value: '0.05' } });
     expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ paidModels: expect.objectContaining({ runwayPricePerSecondUsd: 0.05 }) }));
+    // Phase 4b: ElevenLabs' prices.
+    fireEvent.change(screen.getByLabelText('ElevenLabs price per 1,000 characters (USD)'), { target: { value: '0.3' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ paidModels: expect.objectContaining({ elevenLabsPricePer1kCharsUsd: 0.3 }) }));
+    fireEvent.change(screen.getByLabelText('ElevenLabs price per sound effect (USD)'), { target: { value: '0.02' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ paidModels: expect.objectContaining({ elevenLabsPricePerEffectUsd: 0.02 }) }));
   });
 
   it('saves how long waiting requests wait before they expire', () => {

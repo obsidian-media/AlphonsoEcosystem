@@ -26,6 +26,9 @@ export interface PaidModelSettings {
   monthlyCapUsd: number | null;
   /** Runway's price per second of video, entered by you (content factory phase 2b). */
   runwayPricePerSecondUsd: number | null;
+  /** ElevenLabs' prices, entered by you (content factory phase 4b). */
+  elevenLabsPricePer1kCharsUsd: number | null;
+  elevenLabsPricePerEffectUsd: number | null;
 }
 
 const PROVIDER_NAMES: Record<PaidProvider, string> = { claude: 'Claude', chatgpt: 'ChatGPT' };
@@ -57,6 +60,8 @@ export function getPaidModelSettings(): PaidModelSettings {
     outputPerMillionUsd: amount(raw.outputPerMillionUsd),
     monthlyCapUsd: amount(raw.monthlyCapUsd),
     runwayPricePerSecondUsd: amount(raw.runwayPricePerSecondUsd),
+    elevenLabsPricePer1kCharsUsd: amount(raw.elevenLabsPricePer1kCharsUsd),
+    elevenLabsPricePerEffectUsd: amount(raw.elevenLabsPricePerEffectUsd),
   };
 }
 
@@ -118,6 +123,18 @@ export function recordSpendUsd(costUsd: number): number {
 }
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
+
+/** ElevenLabs' cost for this many characters at your price, or null without a price (phase 4b). */
+export function estimateElevenLabsUsd(characters: number): number | null {
+  const price = getPaidModelSettings().elevenLabsPricePer1kCharsUsd;
+  return price === null ? null : (Math.max(0, characters) / 1000) * price;
+}
+
+/** ElevenLabs' cost for this many sound effects at your price, or null without a price. */
+export function estimateEffectsUsd(count: number): number | null {
+  const price = getPaidModelSettings().elevenLabsPricePerEffectUsd;
+  return price === null ? null : Math.max(0, count) * price;
+}
 
 export function canSpend(estimateUsd: number): { ok: boolean; reason?: string } {
   const cap = getPaidModelSettings().monthlyCapUsd;

@@ -15,7 +15,7 @@ const settings = (s: Record<string, unknown>) => localStorage.setItem('alphonso_
 beforeEach(() => {
   localStorage.clear();
   for (const k of Object.keys(creds)) delete creds[k];
-  settings({ zeroCostMode: false });
+  settings({ zeroCostMode: false, paidModels: { elevenLabsPricePer1kCharsUsd: 0.3 } });
 });
 
 function setup(engines?: Record<string, unknown>) {
@@ -54,7 +54,7 @@ describe('paid engines that are not available', () => {
     expect(resolveVoice(project, brand).note).toBe('ElevenLabs is off while Zero-Cost Mode is on; read by Kokoro.');
     expect(resolvePictures(project, brand).note).toBe('Higgsfield is off while Zero-Cost Mode is on; made with ComfyUI.');
 
-    settings({ zeroCostMode: false, paidModels: { monthlyCapUsd: 1 } });
+    settings({ zeroCostMode: false, paidModels: { monthlyCapUsd: 1, elevenLabsPricePer1kCharsUsd: 0.3 } });
     recordSpendUsd(1);
     expect(paidEngineAvailable('higgsfield').reason).toMatch(/monthly cap/);
   });

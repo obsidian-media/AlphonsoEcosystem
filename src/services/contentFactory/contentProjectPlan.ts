@@ -6,6 +6,8 @@ import { STEP_ORDER, type ContentBrand, type ContentProject, type StepId } from 
 import { chosenVersionOf, getShortsSettings, getVideoSettings } from './contentProjectService';
 import { chosenScenes } from './clipEngine';
 import { estimateRunwayUsd, runwayClipAvailable } from './runwayClip';
+import { estimateElevenLabsUsd } from '../jose/joseSpend';
+import { resolveVoice } from './engineChoice';
 
 /** Which content-factory step each template step belongs to. */
 export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
@@ -39,6 +41,16 @@ export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Mi
 
 /** Why Publish waits (phase 3a): you approve the exact posts in Campaign Studio's Posts list. */
 export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
+
+/** Why a full run waits at Voice when the brand reads with ElevenLabs (phase 4b): once, with the cost. */
+export const VOICE_WAIT_PAID = (usd: number): string => `Read the voice-over with ElevenLabs, about $${usd.toFixed(2)}.`;
+
+/** Spoken characters: the chosen script's, else about 15 a second of the brief's length. */
+function spokenCharacters(project: ContentProject): number {
+  const parts = (chosenVersionOf(project, 'script')?.output as { miya?: { script?: { spoken?: string }[] } } | undefined)?.miya?.script;
+  if (parts?.length) return parts.reduce((n, p) => n + String(p.spoken || '').length, 0);
+  return Math.max(0, Number(project.brief.lengthSec || 60)) * 15;
+}
 
 /** Why a run with Runway clips in its Shorts waits (phase 4a): once, with the cost. */
 export const SHORTS_WAIT_PAID = (clips: number, shorts: number, usd: number): string =>
@@ -150,6 +162,15 @@ export function contentProjectPlanSteps(
       // No stop when nothing can make clips here (null); the step then says what to set up.
       // An unknown engine (undefined) still stops, to be safe.
       if (!options.only && options.clipEngine !== null) step.waitFor = options.clipEngine === 'runway' ? CLIPS_WAIT_PAID : CLIPS_WAIT;
+    }
+    // An ElevenLabs voice (phase 4b): spending always asks; a full run stops once at Voice with the cost.
+    if (factoryStep === 'voice' && resolveVoice(project, brand).engine === 'elevenlabs') {
+      const usd = estimateElevenLabsUsd(spokenCharacters(project));
+      if (usd !== null) {
+        step.effects = [...step.effects.filter((e) => e !== 'spend'), 'spend'];
+        step.costEstimateUsd = usd;
+        if (!options.only) step.waitFor = VOICE_WAIT_PAID(usd);
+      }
     }
     // Runway clips in the Shorts (phase 4a): spending always asks; a full run stops once with the cost.
     if (factoryStep === 'shorts') {

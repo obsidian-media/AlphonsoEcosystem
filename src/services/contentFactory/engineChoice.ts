@@ -3,7 +3,7 @@
 // the free ones. A paid engine that isn't available (no key, Zero-Cost Mode on, over the
 // monthly cap) is replaced by the free one with a note saying why — never silently.
 import { getConnectorCredential } from '../connectors/connectorAuth';
-import { canSpend } from '../jose/joseSpend';
+import { canSpend, getPaidModelSettings } from '../jose/joseSpend';
 import { getVideoSettings } from './contentProjectService';
 import type { ContentBrand, ContentProject } from './contentTypes';
 
@@ -35,6 +35,9 @@ function hasKeys(engine: PaidEngine): boolean {
 export function paidEngineAvailable(engine: PaidEngine): { ok: boolean; reason?: string } {
   if (!hasKeys(engine)) return { ok: false, reason: `${NAME[engine]} isn't set up` };
   if (zeroCostModeOn()) return { ok: false, reason: `${NAME[engine]} is off while Zero-Cost Mode is on` };
+  if (engine === 'elevenlabs' && getPaidModelSettings().elevenLabsPricePer1kCharsUsd === null) {
+    return { ok: false, reason: "Enter ElevenLabs' price per 1,000 characters in Settings → Approvals → Allow paid models" };
+  }
   const cap = canSpend(0.01);
   if (!cap.ok) return { ok: false, reason: `Over this month's spending cap (${cap.reason})` };
   return { ok: true };

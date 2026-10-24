@@ -4,6 +4,9 @@
 // the recorder saves as the step's version. Every file goes in the project
 // folder; nothing is overwritten, since each version has its own names.
 // Design: docs/superpowers/specs/2026-10-23-miya-content-factory-phase2a-design.md
+import { resolveVoice } from './engineChoice';
+import { elevenLabsKey } from '../connectors/elevenLabsConnector';
+import { canSpend, estimateElevenLabsUsd, recordSpendUsd } from '../jose/joseSpend';
 import { invoke } from '@tauri-apps/api/core';
 import { freeOllamaGpuMemory, generateAgentLlmResponse } from '../../lib/ollama';
 import { getConnectorCredential } from '../connectors/connectorAuth';
@@ -41,7 +44,15 @@ interface MediaAssignment {
 interface ScriptPart { startSec?: number; endSec?: number; spoken?: string; music?: string }
 interface Scene { id: string; startSec?: number; endSec?: number; description?: string; camera?: string; movement?: string; mainMoment?: boolean }
 export interface VoiceLine { sceneId: string; text: string; startSec: number; endSec: number; path: string | null }
-export interface VoiceOutput { full: string; durationSec: number; lines: VoiceLine[] }
+export interface VoiceOutput {
+  full: string;
+  durationSec: number;
+  lines: VoiceLine[];
+  /** Phase 4b: who read it, ElevenLabs' word timings (for the captions), and why the free voice was used. */
+  engine?: 'kokoro' | 'elevenlabs';
+  words?: { word: string; start: number; end: number }[];
+  note?: string;
+}
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
@@ -135,6 +146,36 @@ async function runVoice(assignment: MediaAssignment, ctx: Context): Promise<Cont
   const lines = linesForScenes(scriptParts(ctx), scenesOf(ctx));
   if (!lines.some((l) => l.text)) return failed(assignment, 'The script has no spoken words to read. Run the Script step first.');
   const outDir = `${ctx.dir}/audio/voice-v${ctx.version}`;
+  const toLine = (l: (typeof lines)[number]) => (l.text ? { id: l.id, text: l.text } : { id: l.id, text: '', pauseSec: l.seconds });
+  const voiceLines = (files: { id: string; path: string | null; durationSec: number; startSec: number }[]): VoiceLine[] => lines.map((l) => {
+    const f = files.find((x) => x.id === l.id);
+    const startSec = f?.startSec ?? 0;
+    return { sceneId: l.id, text: l.text, startSec, endSec: startSec + (f?.durationSec ?? 0), path: f?.path ? `${outDir}/${l.id}.wav` : null };
+  });
+
+  // An ElevenLabs voice (phase 4b): only when this run was approved, within the monthly cap;
+  // otherwise, or when ElevenLabs refuses, Kokoro reads it and the step says why.
+  let note: string | undefined;
+  const choice = resolveVoice(ctx.project, ctx.brand);
+  if (choice.engine === 'elevenlabs') {
+    const cost = estimateElevenLabsUsd(lines.reduce((n, l) => n + l.text.length, 0));
+    const cap = cost === null ? { ok: false, reason: "Enter ElevenLabs' price per 1,000 characters in Settings → Approvals" } : canSpend(cost);
+    if (!(assignment.effects || []).includes('spend')) note = "ElevenLabs wasn't approved for this run; read by Kokoro.";
+    else if (!cap.ok) note = `${String(cap.reason).replace(/\.$/, '')}; read by Kokoro.`;
+    else {
+      const spoken = await invoke<{ ok?: boolean; reason?: string; full?: { durationSec: number }; files?: { id: string; path: string | null; durationSec: number; startSec: number }[]; words?: { word: string; start: number; end: number }[] }>(
+        'elevenlabs_speak',
+        { request: { workspaceRoot: ctx.root, outDir, voiceId: choice.voiceId, ...(choice.modelId ? { modelId: choice.modelId } : {}), key: elevenLabsKey(), lines: lines.map(toLine) } },
+      ).catch(() => null);
+      if (spoken?.ok && spoken.full) {
+        recordSpendUsd(cost as number);
+        const output: VoiceOutput = { full: `${outDir}/full.wav`, durationSec: spoken.full.durationSec, lines: voiceLines(spoken.files || []), engine: 'elevenlabs', words: spoken.words || [] };
+        return done(assignment, output, `Voice-over read by ElevenLabs, ${output.durationSec.toFixed(1)} s.`);
+      }
+      note = `${String(spoken?.reason || 'ElevenLabs made no voice-over').replace(/\.$/, '')}; read by Kokoro.`;
+    }
+  } else if (choice.note) note = choice.note;
+
   const result = await invoke<{ ok?: boolean; error?: string; full?: { durationSec: number } | null; files?: { id: string; path: string | null; durationSec: number; startSec: number }[] }>(
     'content_tts_kokoro',
     { request: {
@@ -143,15 +184,11 @@ async function runVoice(assignment: MediaAssignment, ctx: Context): Promise<Cont
     } },
   );
   if (!result?.ok || !result.full) return failed(assignment, result?.error || 'Kokoro made no voice-over.');
-  const files = result.files || [];
   const output: VoiceOutput = {
     full: `${outDir}/full.wav`,
     durationSec: result.full.durationSec,
-    lines: lines.map((l) => {
-      const f = files.find((x) => x.id === l.id);
-      const startSec = f?.startSec ?? 0;
-      return { sceneId: l.id, text: l.text, startSec, endSec: startSec + (f?.durationSec ?? 0), path: f?.path ? `${outDir}/${l.id}.wav` : null };
-    }),
+    lines: voiceLines(result.files || []),
+    ...(note ? { note } : {}),
   };
   return done(assignment, output, `Voice-over read in ${ctx.brand.voice?.voiceId || 'af_heart'}, ${output.durationSec.toFixed(1)} s.`);
 }
@@ -364,9 +401,13 @@ async function runAssemble(assignment: MediaAssignment, ctx: Context): Promise<C
 
   // Captions: the script's words, timed by Whisper when it is installed.
   const status = await invoke<{ whisper?: boolean }>('media_tools_status').catch(() => ({ whisper: false }));
-  let captions: 'whisper' | 'lines' = 'lines';
+  let captions: 'whisper' | 'lines' | 'elevenlabs' = 'lines';
   let words = captionsFromLines(voice.lines.map((l) => ({ text: l.text, start: l.startSec, end: l.endSec })));
-  if (status?.whisper) {
+  if (voice.words?.length) {
+    // ElevenLabs gave each word's timing (phase 4b): exact, no Whisper needed.
+    words = alignCaptions(voice.lines.flatMap((l) => l.text.split(/\s+/).filter(Boolean)), voice.words);
+    captions = 'elevenlabs';
+  } else if (status?.whisper) {
     const heard = await invoke<{ ok?: boolean; words?: { word: string; start: number; end: number }[] }>('content_whisper_words', {
       request: { workspaceRoot: ctx.root, audioPath: voice.full },
     }).catch(() => null);
