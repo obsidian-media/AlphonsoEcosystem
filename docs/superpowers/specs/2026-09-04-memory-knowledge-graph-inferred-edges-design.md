@@ -32,7 +32,7 @@ That last fact is the key architectural constraint this design respects.
 
 The graph layer was designed to never see content (see the original spec's
 "Prior Art Considered" section — memory storage/semantic search stays with
-`unifiedMemoryService.ts`/ChromaDB). Content-based inference (keyword/entity
+`unifiedMemoryService.js`/ChromaDB). Content-based inference (keyword/entity
 matching across memory item text, research report bodies, etc.) would mean
 reaching back into each writer's own storage — a real boundary crossing,
 new complexity, likely a new text-similarity dependency.

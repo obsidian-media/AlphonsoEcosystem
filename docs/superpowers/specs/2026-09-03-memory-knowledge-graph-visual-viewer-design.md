@@ -59,7 +59,7 @@ only `memory_graph_add_node` writes to it. `GraphEdgeRow` already exists
 (Phase 1) and is reused as-is.
 
 **Capped, not unbounded** — matches this app's existing convention
-(`crashLogService.js`/`agentAuditService.js` ring buffers capped at 100,
+(`crashLogService.ts`/`agentAuditService.ts` ring buffers capped at 100,
 `orchestrationReceiptService.ts` capped at 3000) rather than retrofitting a
 cap later once it's actually a problem. Concrete numbers: **500 nodes /
 1000 edges**, most recently created first (`ORDER BY created_at DESC

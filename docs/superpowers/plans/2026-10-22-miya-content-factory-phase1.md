@@ -388,7 +388,7 @@ pictures go into new sub-folders.
 - Test: `src/test/services/contentFactory/contentQualityGate.test.ts`
 
 **Interfaces:**
-- Consumes: Tasks 2, 3 and 8. `appendAgentActivity`. Echo's memory through `addMemoryItem` from `src/services/unifiedMemoryService.ts` (check its export name first).
+- Consumes: Tasks 2, 3 and 8. `appendAgentActivity`. Echo's memory through `addMemoryItem` from `src/services/unifiedMemoryService.js` (check its export name first).
 - Produces:
   - `visiblePieces(project, brand): { pieceId; score; weakPoints; visible: boolean }[]`. `visible = score >= brand.qualityThreshold || project.brief.showEverything`.
   - `rejectPiece(projectId, step, pieceId, reason): ContentProject`. Calls `sendBackStep`, then `addBrandLesson(brand.id, \`${step}: ${reason}\`, 'rejection')`, then `addMemoryItem` with `{ category: 'preference_memory', agent: 'echo', content: … }`.

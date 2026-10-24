@@ -10,7 +10,7 @@
 
 Alphonso is local-first (Ollama) by default, with 3 existing paid cloud LLM connectors (Claude, ChatGPT, DeepSeek) all correctly gated behind Zero-Cost Mode (blocked by default, `PAID_OR_METERED_CONNECTORS` in `policyEnforcementService.ts`). NVIDIA NIM (`build.nvidia.com`) and Google Gemini (AI Studio) both offer genuinely rate-limited **free tiers** — not trials, not credits that run out and start billing, but ongoing free access gated by requests-per-minute/day, not by a card on file. NVIDIA's free tier alone exposes 70-80+ hosted models (Llama, Mistral, Nemotron, and others) through one OpenAI-compatible endpoint.
 
-**The idea, and why it's worth building:** these can be added as connectors that stay inside Zero-Cost Mode's default-on "free" classification — not paid, not blocked — giving Alphonso real cloud model diversity and, more importantly, **a working fallback for users who never install Ollama at all**. That's a genuine onboarding win: right now, a user without a GPU or without Ollama installed hits `OllamaOfflineBanner.jsx` and is stuck until they set up local infra. A free-tier cloud provider removes that hard blocker.
+**The idea, and why it's worth building:** these can be added as connectors that stay inside Zero-Cost Mode's default-on "free" classification — not paid, not blocked — giving Alphonso real cloud model diversity and, more importantly, **a working fallback for users who never install Ollama at all**. That's a genuine onboarding win: right now, a user without a GPU or without Ollama installed hits `OllamaOfflineBanner.tsx` and is stuck until they set up local infra. A free-tier cloud provider removes that hard blocker.
 
 ### The mechanism already exists — verified, not assumed
 
@@ -83,7 +83,7 @@ A `429` from either provider must not surface as a raw error to the calling agen
 `src/services/modelSelectionService.ts` already has `getModelList(endpoint)` (currently Ollama-only, calling `/api/tags`) and per-task model overrides (`setTaskModelOverride`, `getModelForTask`). Extend this, don't replace it:
 
 - `getModelList()` should accept a provider argument (or a second function, `getNvidiaModelList()`) rather than assuming Ollama's endpoint shape for a fundamentally different provider's catalog.
-- `ModelSwitcher.jsx`'s `OllamaModelPicker` (per `CLAUDE.md`'s existing description) should either gain a provider tab/section, or a sibling `CloudModelPicker` component should be added — check the existing component before deciding; do not duplicate the whole picker UI if adding a provider dimension to the existing one is cleaner.
+- `ModelSwitcher.tsx`'s `OllamaModelPicker` (per `CLAUDE.md`'s existing description) should either gain a provider tab/section, or a sibling `CloudModelPicker` component should be added — check the existing component before deciding; do not duplicate the whole picker UI if adding a provider dimension to the existing one is cleaner.
 - Given 70-80 models is a lot to dump in a flat list, group/filter sensibly (by size class, or a curated "recommended" subset up top) rather than an unfiltered dropdown — a raw 80-item list is a UX regression, not a feature.
 
 ---
@@ -115,7 +115,7 @@ This is not legal boilerplate — it's the honest tradeoff a user should see bef
 | `src/services/connectorHealthCheckService.ts` | Health checks for both, following the pattern already used for github/slack/discord/etc. |
 | `src/services/policyEnforcementService.ts` | Documented non-inclusion in `PAID_OR_METERED_CONNECTORS` (§3) — comment only, no logic change |
 | `src/services/modelSelectionService.ts` | Provider-aware model listing (§4) |
-| `src/components/ModelSwitcher.jsx` | Cloud model picker UI (§4) |
+| `src/components/ModelSwitcher.tsx` | Cloud model picker UI (§4) |
 | `docs/ALPHONSO_GROUND_TRUTH.md` / `CLAUDE.md` | Update connector count (22 → 24) and add both to the "Do Not Duplicate" table once built |
 | `src/test/connectors/nvidiaNimConnector.test.js`, `geminiConnector.test.js` | **New** — mirror `deepseekConnector.test.js`'s test shape |
 

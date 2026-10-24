@@ -139,7 +139,7 @@ git commit -m "fix: make getRuntimePolicySettings sync (remove async cached() ca
 **Investigation needed:** Read the specific test code and the service's Tauri wrapper functions (lines ~160-429 of eventsService.js) to understand what invoke commands they call and what responses they expect.
 
 **Files:**
-- Possibly modify: `src/services/eventsService.js`
+- Possibly modify: `src/services/eventsService.ts`
 - Possibly modify: `src/test/eventsService.test.js`
 
 - [ ] **Step 1: Read the failing tests and service code**

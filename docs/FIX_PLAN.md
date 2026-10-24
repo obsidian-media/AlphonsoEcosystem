@@ -120,7 +120,7 @@ Also add `voice/backend` to `src-tauri/tauri.conf.json`:
 ---
 
 ### FIX-06: Live Connector Status Updates (BUG-009)
-**File:** `src/components/ConnectorStatusIndicators.jsx`  
+**File:** `src/components/ConnectorStatusIndicators.tsx`  
 **Effort:** 30 min
 
 Add a polling interval or a storage event listener so connector status refreshes after credentials are saved:
@@ -191,7 +191,7 @@ messages.map((message, idx) => {
 ---
 
 ### FIX-09: Fix Code Splitting for `runtimeManagerService` (BUG-006)
-**File:** `src/components/OllamaOfflineBanner.tsx`, `src/components/OnboardingWizard.tsx`, `src/services/creativeRoutingService.js`  
+**File:** `src/components/OllamaOfflineBanner.tsx`, `src/components/OnboardingWizard.tsx`, `src/services/creativeRoutingService.ts`  
 **Effort:** 45 min
 
 Convert all static imports of `runtimeManagerService` to dynamic imports:

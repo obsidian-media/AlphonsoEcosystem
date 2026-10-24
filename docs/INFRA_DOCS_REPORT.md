@@ -140,5 +140,5 @@ Dependabot (`.github/dependabot.yml`) will open weekly PRs for npm, Cargo, and G
 | `ARCHITECTURE.md` | Architecture reference (this session) |
 | `CLAUDE.md` | Claude Code session guide (this session) |
 | `src-tauri/src/lib.rs` | Entire Rust backend (~7,200 lines) — the most critical single file |
-| `src/services/policyEnforcementService.js` | Fail-closed policy gate — do not modify without thorough testing |
+| `src/services/policyEnforcementService.ts` | Fail-closed policy gate — do not modify without thorough testing |
 | `src/agents/agentRegistry.js` | Agent registry — update when adding or removing agents |

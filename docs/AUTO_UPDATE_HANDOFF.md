@@ -126,7 +126,7 @@ new.
   (settings/credentials/memory intact after relaunch).
 - Add unit tests for the new click-handler logic (mock the plugin API)
   following the existing pattern in `src/test/services/` for
-  `appUpdateService.test.ts`.
+  `appUpdateService.test.js`.
 
 ---
 

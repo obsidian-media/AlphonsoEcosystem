@@ -106,13 +106,13 @@ These components are fully implemented and tested but have no navigation entry p
 - **Status:** missing mount  
 - **Effort:** S  
 - **What to do:** Mount in SettingsView under an "Agents" or "Companions" section, or add as a tab in EcosystemHub alongside AgentPairingView.  
-- **File:** `src/components/CompanionPairingPanel.jsx`
+- **File:** `src/components/CompanionPairingPanel.tsx`
 
 ### 3.2 AgentMetricsPanel.jsx
 - **Status:** missing mount  
 - **Effort:** S  
 - **What to do:** Mount in EcosystemHub "Advanced" tab, or in RightPanel Agents section as a collapsible.  
-- **File:** `src/components/AgentMetricsPanel.jsx`
+- **File:** `src/components/AgentMetricsPanel.tsx`
 
 ### 3.3 agentWorkshop/ directory
 - **Status:** missing mount  
@@ -124,7 +124,7 @@ These components are fully implemented and tested but have no navigation entry p
 - **Status:** partial  
 - **Effort:** S  
 - **What to do:** Exists in SettingsView (confirmed per GROUND_TRUTH), uses `pick_file` Tauri command + `whisperTranscriptionService`. Whisper tool must be installed in Runtimes for it to work — no warning shown if Whisper is not installed.  
-- **File:** `src/components/SettingsView.tsx`, `src/services/whisperTranscriptionService.js`
+- **File:** `src/components/SettingsView.tsx`, `src/services/whisperTranscriptionService.ts`
 
 ---
 
@@ -134,13 +134,13 @@ These components are fully implemented and tested but have no navigation entry p
 - **Status:** cut  
 - **Effort:** S  
 - **What to do:** The label says "Connected" when it means "credentials saved." A user who connected GitHub will assume the agents can browse repos directly — they cannot (everything runs through local Ollama). Label should say "Credentials saved" or "Ready". The explanation banner helps but the label still misleads.  
-- **File:** `src/components/ConnectorHealthPanel.tsx`, `src/services/connectorRegistryService.js`
+- **File:** `src/components/ConnectorHealthPanel.tsx`, `src/services/connectorRegistryService.ts`
 
 ### 4.2 Composio config section in Settings not verified
 - **Status:** untested  
 - **Effort:** S  
 - **What to do:** The callout card added to ConnectorHealthPanel says "go to Settings → Connectors → External Tools." Verify that path actually shows a Composio API key input and that `setComposioConfig` saves it correctly.  
-- **File:** `src/components/SettingsView.tsx`, `src/components/ConnectorSetupPanel.jsx`
+- **File:** `src/components/SettingsView.tsx`, `src/components/ConnectorSetupPanel.tsx`
 
 ### 4.3 GitHub connector "uses Ollama" explanation needs to reach SettingsView
 - **Status:** cut  
@@ -163,7 +163,7 @@ These components are fully implemented and tested but have no navigation entry p
 - **Status:** missing (docs)  
 - **Effort:** S  
 - **What to do:** Users have no way to know Runway requires an API key and costs money. No UI prompt, no connector setup section for Runway in ConnectorSetupPanel. At minimum, add a Runway credential section.  
-- **File:** `src/components/ConnectorSetupPanel.jsx`
+- **File:** `src/components/ConnectorSetupPanel.tsx`
 
 ### 5.3 Content pipeline error states not surfaced to user
 - **Status:** PARTIAL — the active job now shows the real ComfyUI readiness state and no-image condition; a live ComfyUI failure still needs desktop verification
@@ -179,7 +179,7 @@ These components are fully implemented and tested but have no navigation entry p
 - **Status:** partial  
 - **Effort:** M  
 - **What to do:** `settings.workspaceRoot` is now saved correctly. But not every service that needs a workspace path actually reads from `useSettings()`. Audit all services that use hardcoded paths or `process.cwd()` and have them read the workspace root from settings.  
-- **File:** `src/services/workspaceRootService.js`, all services that use file paths
+- **File:** `src/services/workspaceRootService.ts`, all services that use file paths
 
 ### 6.2 `durableStore` SQLite writes are fire-and-forget
 - **Status:** cut  
@@ -194,7 +194,7 @@ These components are fully implemented and tested but have no navigation entry p
 ### 7.1 Coverage stuck at ~38%, target 40% never met
 - **Status:** cut  
 - **Effort:** M  
-- **What to do:** `npm run test:coverage` — identify which service files have 0% coverage. Focus on connectors (`githubConnector.ts`, `slackConnector.ts`, `n8nConnector.js`) and newer services.  
+- **What to do:** `npm run test:coverage` — identify which service files have 0% coverage. Focus on connectors (`githubConnector.ts`, `slackConnector.ts`, `n8nConnector.ts`) and newer services.  
 - **File:** `src/test/`
 
 ### 7.2 EcosystemHub has no tests
@@ -258,13 +258,13 @@ These components are fully implemented and tested but have no navigation entry p
 - **Status:** cut  
 - **Effort:** M  
 - **What to do:** Most connector setup panels have a "Test" button that just shows a success toast without making a real API call. GitHub connector, for example, should `GET /user` with the saved token to confirm it's valid.  
-- **File:** `src/components/ConnectorSetupPanel.jsx`
+- **File:** `src/components/ConnectorSetupPanel.tsx`
 
 ### 10.2 Ollama model picker shows no download progress
 - **Status:** cut  
 - **Effort:** M  
-- **What to do:** `ModelSwitcher.jsx` lets you pick a model but if the model isn't pulled yet, it silently fails when Jose tries to use it. Should show "pull" button + streaming progress for models not yet on disk.  
-- **File:** `src/components/ModelSwitcher.jsx`
+- **What to do:** `ModelSwitcher.tsx` lets you pick a model but if the model isn't pulled yet, it silently fails when Jose tries to use it. Should show "pull" button + streaming progress for models not yet on disk.  
+- **File:** `src/components/ModelSwitcher.tsx`
 
 ### 10.3 Hector briefing card shows "top 3 sources" but sources are often empty
 - **Status:** cut  

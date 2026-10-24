@@ -323,7 +323,7 @@ describe('geminiConnector', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/test/geminiConnector.test.js`
-Expected: FAIL — module `../services/connectors/geminiConnector.js` not found.
+Expected: FAIL — module `../services/connectors/geminiConnector.ts` not found.
 
 - [ ] **Step 3: Write minimal implementation**
 

@@ -4,7 +4,7 @@
 
 **Goal:** Spec 1.10.13 — gate high-risk, action-proposing content behind an
 explicit user confirmation before it's shown in full, mirroring the real
-`ApprovalModal.jsx` pattern used elsewhere in the app for actual connector
+`ApprovalModal.tsx` pattern used elsewhere in the app for actual connector
 actions.
 
 **Honest scope limitation, stated up front — this is the important one for

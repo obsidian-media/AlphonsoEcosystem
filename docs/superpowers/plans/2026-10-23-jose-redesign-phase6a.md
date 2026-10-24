@@ -56,7 +56,7 @@
 
 ### Task 4: Schedules
 
-**Files:** `src/App.tsx` (`runCommand`), `joseSchedulerService.ts` if the result shape needs it. Test: `src/test/services/joseSchedulerService.test.ts` (result mapping) and a unit test of the extracted `runScheduledCommand(text, settings)` in `src/services/scheduledCommandService.ts`.
+**Files:** `src/App.tsx` (`runCommand`), `joseSchedulerService.ts` if the result shape needs it. Test: `src/test/services/joseSchedulerService.test.js` (result mapping) and a unit test of the extracted `runScheduledCommand(text, settings)` in `src/services/scheduledCommandService.ts`.
 - `runScheduledCommand` = `answerOrPlan(text, { source: 'schedule', showPlanFirst: 'never', allowPaidModels: false })`; maps to today's `lastResult` (`done` / `waiting_approval` / `failed`, summary, details).
 - [ ] Tests first (Review Focus 3): never waits for a plan; a waiting step → `waiting_approval`; no paid model; a direct answer → `done` with the text.
 - [ ] Implement; commit `feat(schedules): schedules go through Jose, never paid, never plan-first`.

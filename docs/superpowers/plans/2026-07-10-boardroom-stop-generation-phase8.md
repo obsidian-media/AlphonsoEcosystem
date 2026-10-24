@@ -8,7 +8,7 @@ remain (up to `MAX_CHAIN_DEPTH` real Ollama calls, each of which can take
 tens of seconds per the Phase 3/4 live-verification findings).
 
 **Honest scope limitation, stated up front:** This phase does not abort an
-in-flight network request — `generateOllamaResponse` in `src/lib/ollama.js`
+in-flight network request — `generateOllamaResponse` in `src/lib/ollama.ts`
 has no `AbortController` wiring, and adding real fetch cancellation is a
 separate, larger change to the Ollama client shared by every other caller
 in the app (ChatView, all agent services), not something to bolt on here

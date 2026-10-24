@@ -454,7 +454,7 @@ import { slideInRight, fadeIn } from '../lib/motion';
 </motion.div>
 ```
 
-#### 5. Modals and Panels — `ApprovalModal.tsx`, `SentinelFindingModal.jsx`, memory search
+#### 5. Modals and Panels — `ApprovalModal.tsx`, `SentinelFindingModal.tsx`, memory search
 
 ```tsx
 import { motion, AnimatePresence } from 'framer-motion';
@@ -822,7 +822,7 @@ The TopBar needs to feel like it belongs to a premium desktop product.
 </header>
 ```
 
-### 4F — Dashboard Hero (`src/components/MissionControlHome.jsx`)
+### 4F — Dashboard Hero (`src/components/MissionControlHome.tsx`)
 
 The hero needs depth and life — not just a banner image with opacity.
 

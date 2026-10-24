@@ -120,7 +120,7 @@ CREATE TABLE profile_sessions (
 - Guest profile (no PIN, auto-login)
 
 ### Phase 3: Agent Permission Overrides (Days 5-6)
-- Extend `agentContractService.js` to check per-profile overrides
+- Extend `agentContractService.ts` to check per-profile overrides
 - Profiles can block or allow specific agents or action types
 - Example: Bob's profile blocks Miya's "post to social" actions
 - Display locked agents in UI with lock icon

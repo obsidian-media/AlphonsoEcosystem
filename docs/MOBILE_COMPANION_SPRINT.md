@@ -614,7 +614,7 @@ Add `hostname = "0.3"` to Cargo.toml.
 
 ### Desktop UI Component
 
-Create `src/components/CompanionPairingPanel.jsx`:
+Create `src/components/CompanionPairingPanel.tsx`:
 - Shows "Remote Access" section in SettingsView
 - "Generate PIN" button → calls `companion_get_pin` Tauri command
 - Displays 6-digit PIN in large text (copy-to-clipboard on click)
@@ -622,7 +622,7 @@ Create `src/components/CompanionPairingPanel.jsx`:
 - Shows connection status: "0 devices connected" / "iPhone connected"
 - Uses `companion_get_status` to poll every 5s
 
-Wire into `SettingsView.jsx` under a new "Remote Access" section.
+Wire into `SettingsView.tsx` under a new "Remote Access" section.
 
 ---
 
@@ -961,7 +961,7 @@ After each phase, verify:
 - `src-tauri/src/kv_store.rs` — KV storage, already handles `save_settings`/`load_settings`
 - All 9 agent runtimes — the WebSocket server routes to these, does not reimplement them
 - `policyEnforcementService.ts` — all agent commands still go through this gate
-- `src/services/voiceService.js` — STT pipeline already exists if voice input on iOS is considered later
+- `src/services/voiceService.ts` — STT pipeline already exists if voice input on iOS is considered later
 
 ---
 

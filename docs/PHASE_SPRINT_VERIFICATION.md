@@ -36,14 +36,14 @@ Fixed one lint error: `handleBoardroomCommand` was called in telegramCompanionSe
 - [x] F-03: `src/services/policyDslService.ts` + `policy.yaml`
 - [x] F-04: `src/services/runtimeApiService.ts` — bridge client with AbortController timeouts + offline fallback
 - [x] F-05: `src/services/a2aProtocolService.ts` — delegate, getTaskStatus, updateTaskResult, listActiveTasks, listTasksByAgent
-- [x] F-06: `src/services/agentBusService.js` — sendAgentMessage, getAgentMessages, clearAgentMessages, subscribeToMessages
+- [x] F-06: `src/services/agentBusService.ts` — sendAgentMessage, getAgentMessages, clearAgentMessages, subscribeToMessages
 
 ### Section O — Observability & Reliability (all 8 done)
-- [x] O-01: `voiceOsService.js` — 30s watchdog interval, stopVoiceWatchdog() export
+- [x] O-01: `voiceOsService.ts` — 30s watchdog interval, stopVoiceWatchdog() export
 - [x] O-02: `hectorResearchService.js` — fetchWithRetry (3 attempts, 500/1000/2000ms)
-- [x] O-03: `joseSchedulerService.js` — cron validation + 5 SCHEDULE_PRESETS
-- [x] O-04: `chromaDbService.js` — write error surface + getChromaWriteErrors()
-- [x] O-05: `n8nConnector.js` — AbortController timeouts (15s/10s/5s)
+- [x] O-03: `joseSchedulerService.ts` — cron validation + 5 SCHEDULE_PRESETS
+- [x] O-04: `chromaDbService.ts` — write error surface + getChromaWriteErrors()
+- [x] O-05: `n8nConnector.ts` — AbortController timeouts (15s/10s/5s)
 - [x] O-06: `unifiedMemoryService.js` — namespace eviction + getNamespaceCount()
 - [x] O-07: `.github/workflows/ci.yml` — bundle size check step (10MB total / 2MB per chunk)
 - [x] O-08: `AgentPerformanceView.tsx` — Dead Letter Queue section + Retry All button
@@ -51,13 +51,13 @@ Fixed one lint error: `handleBoardroomCommand` was called in telegramCompanionSe
 ### Section A — Agent Capabilities (all 10 done)
 - [x] A-01+A-02: `BoardroomView.tsx` — full session model + Hector briefing integration
 - [x] A-03: `BoardroomView.tsx` — Miya creative brief button in concluded sessions
-- [x] A-04: `joseSchedulerService.js` — nova_scan handler wired
-- [x] A-05: `joseSchedulerService.js` — sentinel_summary handler wired
-- [x] A-06: `joseSchedulerService.js` — echo_consolidate handler wired
+- [x] A-04: `joseSchedulerService.ts` — nova_scan handler wired
+- [x] A-05: `joseSchedulerService.ts` — sentinel_summary handler wired
+- [x] A-06: `joseSchedulerService.ts` — echo_consolidate handler wired
 - [x] A-07: `telegramCompanionService.js` — /boardroom command (22nd); handleBoardroomCommand added
-- [x] A-08: `joseSchedulerService.js` — hector_brief handler wired
-- [x] A-09: `joseSchedulerService.js` — maria_audit handler wired
-- [x] A-10: `RuntimeManagerView.jsx` — Modules tab (install, list, enable/disable)
+- [x] A-08: `joseSchedulerService.ts` — hector_brief handler wired
+- [x] A-09: `joseSchedulerService.ts` — maria_audit handler wired
+- [x] A-10: `RuntimeManagerView.tsx` — Modules tab (install, list, enable/disable)
 
 ### Section P — Polish & Documentation (all 8 done)
 - [x] P-01: `tokens.css` — [data-theme="light"] selector added; `TopBar.tsx` — sun/moon toggle + localStorage persist
@@ -93,15 +93,15 @@ Fixed one lint error: `handleBoardroomCommand` was called in telegramCompanionSe
 ## Modified Files
 1. `.github/workflows/ci.yml`
 2. `src/components/AgentPerformanceView.tsx`
-3. `src/services/agentBusService.js`
-4. `src/services/chromaDbService.js`
-5. `src/services/connectors/n8nConnector.js`
+3. `src/services/agentBusService.ts`
+4. `src/services/chromaDbService.ts`
+5. `src/services/connectors/n8nConnector.ts`
 6. `src/services/hectorResearchService.js`
-7. `src/services/joseSchedulerService.js`
+7. `src/services/joseSchedulerService.ts`
 8. `src/services/orchestrationQueueService.ts`
 9. `src/services/telegramCompanionService.js`
 10. `src/services/unifiedMemoryService.js`
-11. `src/services/voiceOsService.js`
+11. `src/services/voiceOsService.ts`
 12. `src/components/TopBar.tsx`
 13. `src/styles/tokens.css`
 14. `README.md`

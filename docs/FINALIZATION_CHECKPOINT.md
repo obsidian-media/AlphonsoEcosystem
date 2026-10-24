@@ -14,6 +14,6 @@ Architecture observed:
 
 - Frontend: `src/App.jsx`, `src/components`, `src/hooks`, `src/lib`, `src/services`, `src/assets`, `src/test`.
 - Desktop backend: `src-tauri`.
-- Ollama integration: `src/lib/ollama.js`, runtime proof commands in `src/services/verificationService.js` and `src-tauri/src`.
-- Memory: local structured ledgers in `src/services/memoryService.js` and `src/services/miyaMemoryService.js`.
+- Ollama integration: `src/lib/ollama.ts`, runtime proof commands in `src/services/verificationService.ts` and `src-tauri/src`.
+- Memory: local structured ledgers in `src/services/memoryService.ts` and `src/services/miyaMemoryService.ts`.
 - Plugin/connectors: plugin registry and sandbox services exist; Telegram/WhatsApp live bridge was not present before this pass.

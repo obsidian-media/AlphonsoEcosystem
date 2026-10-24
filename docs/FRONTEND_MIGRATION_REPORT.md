@@ -27,7 +27,7 @@ Two new files were created at the project root:
 
 - **`tsconfig.node.json`** — composite config for the Vite config file itself, required by the `references` field in `tsconfig.json`.
 
-### 3. Documented all keys in `src/services/serviceScopes.js`
+### 3. Documented all keys in `src/services/serviceScopes.ts`
 
 All 24 exported constants (23 string keys + 1 `PROOF_AUTHORITY` object) now have a one-line JSDoc comment directly above each export. Comments describe:
 - What data the key stores
@@ -40,7 +40,7 @@ No keys were renamed. The file is still pure JS and can be imported by any compo
 **Files changed:**
 - `src/services/memoryService.ts` — new TypeScript version (canonical)
 - `src/services/memoryService.js.bak` — original JS preserved as backup
-- `src/services/memoryService.js` — original still present (Vite resolves `.ts` first when importing without extension)
+- `src/services/memoryService.ts` — original still present (Vite resolves `.ts` first when importing without extension)
 
 **TypeScript additions:**
 - `MemoryRecord` — full interface for a stored memory item
@@ -103,21 +103,21 @@ Migrate services in this order — simplest/most isolated first, most complex la
 
 | Priority | Service | Reason |
 |----------|---------|--------|
-| 1 | `trustModel.js` | Pure utility, no Tauri, imported by memoryService (already migrated) |
-| 2 | `appStorage.js` (lib) | Two tiny functions, no dependencies |
+| 1 | `trustModel.ts` | Pure utility, no Tauri, imported by memoryService (already migrated) |
+| 2 | `appStorage.ts` (lib) | Two tiny functions, no dependencies |
 | 3 | `chatUtils.js` (lib) | Pure utilities, no Tauri, no service dependencies |
-| 4 | `notificationService.js` | Very small (395 bytes), isolated |
-| 5 | `recoveryService.js` | Small (1.8 KB), isolated |
-| 6 | `sourceConfidenceService.js` | Small (1 KB), utility-only |
-| 7 | `miyaMemoryService.js` | Small, isolated to Miya agent |
-| 8 | `workflowMemoryService.js` | Small, imports memoryService (already typed) |
-| 9 | `coachModeService.js` | Medium, isolated |
-| 10 | `agentAvatarService.js` / `agentVisualService.js` | UI-adjacent, no Tauri |
-| 11 | `chatPersistenceService.js` | Touches chat state, imported by App.jsx |
-| 12 | `orchestrationReceiptService.js` / `orchestrationQueueService.js` | Moderate, use serviceScopes |
-| 13 | `verificationService.js` | Uses Tauri invoke — needs type stubs |
-| 14 | `connectorRegistryService.js` | Large (45 KB) — migrate last in registry group |
-| 15 | `joseCommandRouterService.js` / `joseExecutionEngineService.ts` | Largest files, heavy Tauri usage — migrate last |
+| 4 | `notificationService.ts` | Very small (395 bytes), isolated |
+| 5 | `recoveryService.ts` | Small (1.8 KB), isolated |
+| 6 | `sourceConfidenceService.ts` | Small (1 KB), utility-only |
+| 7 | `miyaMemoryService.ts` | Small, isolated to Miya agent |
+| 8 | `workflowMemoryService.ts` | Small, imports memoryService (already typed) |
+| 9 | `coachModeService.ts` | Medium, isolated |
+| 10 | `agentAvatarService.ts` / `agentVisualService.ts` | UI-adjacent, no Tauri |
+| 11 | `chatPersistenceService.ts` | Touches chat state, imported by App.jsx |
+| 12 | `orchestrationReceiptService.ts` / `orchestrationQueueService.ts` | Moderate, use serviceScopes |
+| 13 | `verificationService.ts` | Uses Tauri invoke — needs type stubs |
+| 14 | `connectorRegistryService.ts` | Large (45 KB) — migrate last in registry group |
+| 15 | `joseCommandRouterService.ts` / `joseExecutionEngineService.ts` | Largest files, heavy Tauri usage — migrate last |
 
 ---
 
@@ -145,11 +145,11 @@ This is optional — `invoke<any>()` is valid and does not block migration.
 ### 3. Vite `@vitejs/plugin-react` does not need `@vitejs/plugin-react-swc`
 The project uses Babel-based `@vitejs/plugin-react`. TypeScript files will be transpiled by Vite/esbuild automatically — no additional plugin is needed.
 
-### 4. `ollama.js` uses `isTauri()` — type import caution
-`src/lib/ollama.js` imports `isTauri` from `@tauri-apps/api/core`. When migrating to `.ts`, ensure `@tauri-apps/api` types are available (they are — the package ships its own `.d.ts` files).
+### 4. `ollama.ts` uses `isTauri()` — type import caution
+`src/lib/ollama.ts` imports `isTauri` from `@tauri-apps/api/core`. When migrating to `.ts`, ensure `@tauri-apps/api` types are available (they are — the package ships its own `.d.ts` files).
 
 ### 5. Large service files with 30+ local functions
-Services like `joseCommandRouterService.js` (35 KB) and `workflowOperationsRegistryService.js` (17 KB) have many internal types. Use `any` liberally for internal function arguments to avoid a weeks-long typing effort. Only type the exported API surface.
+Services like `joseCommandRouterService.ts` (35 KB) and `workflowOperationsRegistryService.ts` (17 KB) have many internal types. Use `any` liberally for internal function arguments to avoid a weeks-long typing effort. Only type the exported API surface.
 
 ---
 
@@ -179,7 +179,7 @@ Expected initial output: zero errors (since `checkJs: false` and only `memorySer
 | `vite.config.cjs` | Deleted (duplicate) |
 | `tsconfig.json` | Created |
 | `tsconfig.node.json` | Created |
-| `src/services/serviceScopes.js` | JSDoc added to all 24 exports |
+| `src/services/serviceScopes.ts` | JSDoc added to all 24 exports |
 | `src/services/memoryService.ts` | Created (TypeScript migration) |
 | `src/services/memoryService.js.bak` | Created (backup of original) |
 | `docs/FRONTEND_MIGRATION_REPORT.md` | Created (this file) |

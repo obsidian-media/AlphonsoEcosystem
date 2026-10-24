@@ -124,7 +124,7 @@ Use this when:
 #### Path Traversal
 - [ ] Rust commands that write files validate paths
 - [ ] No user-controlled paths passed directly to `std::fs::write`
-- [ ] Workspace root validation in `workspaceRootService.js`
+- [ ] Workspace root validation in `workspaceRootService.ts`
 
 #### Sensitive Files
 - [ ] `.env` denied by default in `read` permission

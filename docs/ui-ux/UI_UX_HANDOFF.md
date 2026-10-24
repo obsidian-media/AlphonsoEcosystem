@@ -391,7 +391,7 @@ Also in `EchoTimeline` (line 76–80): the `indigo` color in tier badge should u
 'bg-[var(--border-strong)]'  // or var(--surface-4)
 ```
 
-**`src/components/AutomationView.jsx` — tab bar (lines 34–53):**
+**`src/components/AutomationView.tsx` — tab bar (lines 34–53):**
 ```tsx
 // WRONG:
 'bg-zinc-900 border border-b-0 border-white/[0.08] text-zinc-100'
@@ -435,9 +435,9 @@ Light mode defines `--color-bg`, `--color-surface`, `--color-accent` etc. as a *
 
 ### ISSUE 9 — RuntimeManagerView: Emoji Icons (Medium)
 
-**Root cause:** `RuntimeManagerView.jsx` defines tool metadata with emoji icons (`🦙`, `🎨`, `🖼️`, `✨`) at lines 31–60. Emoji render inconsistently across platforms and are not part of the app's design system.
+**Root cause:** `RuntimeManagerView.tsx` defines tool metadata with emoji icons (`🦙`, `🎨`, `🖼️`, `✨`) at lines 31–60. Emoji render inconsistently across platforms and are not part of the app's design system.
 
-**File:** `src/components/RuntimeManagerView.jsx`, lines 32–100 (TOOL_META)
+**File:** `src/components/RuntimeManagerView.tsx`, lines 32–100 (TOOL_META)
 
 **Fix:** Replace emoji with lucide-react icons. Add an `icon` field to each tool using a Lucide component:
 
@@ -685,9 +685,9 @@ Change all `surface-*` Tailwind classes in Button.tsx to use CSS variable syntax
 
 ### ISSUE 17 — MissionControlHome: Hidden Views After Hero (Medium)
 
-**Root cause:** `MissionControlHome.jsx` renders a `<img src={alphonsoBanner}>` hero section with hard-coded `py-10 md:py-14` padding. On smaller windows (the Tauri default size is often 1280×800) the hero takes most of the visible height, and the "Next Actions" cards are below the fold. A dashboard where the actionable content is hidden is broken.
+**Root cause:** `MissionControlHome.tsx` renders a `<img src={alphonsoBanner}>` hero section with hard-coded `py-10 md:py-14` padding. On smaller windows (the Tauri default size is often 1280×800) the hero takes most of the visible height, and the "Next Actions" cards are below the fold. A dashboard where the actionable content is hidden is broken.
 
-**File:** `src/components/MissionControlHome.jsx`, lines 71–80
+**File:** `src/components/MissionControlHome.tsx`, lines 71–80
 
 **Fix:** Reduce the hero vertical padding and make it proportional to viewport:
 
@@ -802,10 +802,10 @@ Do NOT do any of these — they belong to the reviewer (Claude Code) after hando
 | `src/components/AgentStatusStrip.tsx` | #8 |
 | `src/components/SettingsView.tsx` | #8 (EchoTimeline), P5 |
 | `src/components/OnboardingWizard.tsx` | #8, #14 |
-| `src/components/AutomationView.jsx` | #8 |
-| `src/components/RuntimeManagerView.jsx` | #9 |
+| `src/components/AutomationView.tsx` | #8 |
+| `src/components/RuntimeManagerView.tsx` | #9 |
 | `src/components/ui/Button.tsx` | #16 |
-| `src/components/MissionControlHome.jsx` | #17 |
+| `src/components/MissionControlHome.tsx` | #17 |
 | `src/index.css` | #8 (light mode tokens) |
 
 ---

@@ -113,7 +113,7 @@ Note: an authoritative size measurement requires running `npm run build` after t
 
 **Finding: no debounce needed.**
 
-The `onChange` handler on the chat textarea in `src/components/ChatView.jsx` (line 383) is:
+The `onChange` handler on the chat textarea in `src/components/ChatView.tsx` (line 383) is:
 
 ```jsx
 onChange={(event) => setInputValue(event.target.value)}

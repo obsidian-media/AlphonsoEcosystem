@@ -224,7 +224,7 @@ Owns all three export formats, called from `ResearchReportPanel.tsx`'s export ro
 - `src-tauri/src/search.rs`: extend existing tests to confirm the 420-char truncation is gone
   (full stripped text returned, bounded only by the pre-existing 200KB raw-fetch limit) and the
   10-source cap (`.take(10)`) still holds.
-- `joseExecutionEngineService.test.ts` (existing file): `executeHectorAssignment` no longer calls
+- `joseExecutionEngineService.test.js` (existing file): `executeHectorAssignment` no longer calls
   `generateAgentLlmResponse` a second time — asserts it's called exactly once overall (inside
   `runHectorLiveResearch`'s own synthesis step, mocked at the service boundary) and that the
   returned `summary` equals `report.summary` directly, not a re-derived value.

@@ -43,7 +43,7 @@ conscious scope cuts. Listed here so a future session doesn't have to
 re-derive them from 12 separate plan docs:
 
 - [ ] **Real fetch cancellation for Stop (Phase 8).** `generateOllamaResponse`
-  in `src/lib/ollama.js` has no `AbortController` wiring. Stop currently
+  in `src/lib/ollama.ts` has no `AbortController` wiring. Stop currently
   only prevents the *next* hop from starting; an in-flight hop always
   finishes. Fixing this properly means touching the shared Ollama client
   used by every other caller in the app (ChatView, all agent services) —
@@ -125,7 +125,7 @@ is worse than either extreme.
   anything.
 - [ ] `src/services/pluginSigningService.ts` (277 lines) — ECDSA plugin
   signing/verification, a real security feature sitting unused. Worth
-  checking whether `pluginRegistryService.js` should be calling into it.
+  checking whether `pluginRegistryService.ts` should be calling into it.
 - [ ] `src/components/AgentPerformanceView.tsx` (138 lines) — dead-letter
   queue stats/retry UI, real implementation, no nav entry anywhere.
 - [ ] `src/components/CompanionWidget.tsx`,

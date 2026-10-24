@@ -124,7 +124,7 @@ python -m pytest tests/ -v
 The voice server is launched and stopped from the main Alphonso app via:
 
 - **Rust**: `src-tauri/src/voice_sidecar.rs` — `voice_start`, `voice_stop`, `voice_status` commands
-- **JS service**: `src/services/voiceOsService.js` — wraps `invoke()` calls
+- **JS service**: `src/services/voiceOsService.ts` — wraps `invoke()` calls
 - **Hook**: `src/hooks/useJarvisVoice.ts` — drop-in replacement for browser SpeechRecognition
 - **UI**: Runtime Manager → Voice OS card (start/stop buttons, status indicator)
 

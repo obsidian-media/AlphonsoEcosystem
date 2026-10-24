@@ -16,7 +16,7 @@
 
 Agent workflow action boundaries are enforced via:
 
-- `src/services/agentContractService.js`
+- `src/services/agentContractService.ts`
 
 This defines allowed and blocked action prefixes per agent and is checked before packet execution paths.
 

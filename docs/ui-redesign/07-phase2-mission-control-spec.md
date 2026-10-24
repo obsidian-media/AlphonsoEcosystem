@@ -33,7 +33,7 @@ attentionAggregatorService.ts
   └─ reads: connectorCircuitBreakerService.getAll() (real tripped-circuit state — see §Connector normalization fix below; deliberately NOT connectorHealthCheckService, see §No fresh expensive operations)
 ```
 
-This mirrors `RightPanel.tsx`'s existing polling pattern in this codebase (chosen over an event-driven rewrite of all 4 source services, and over page-level direct queries — see the brainstorming session's SWOT comparison for the full reasoning). Poll interval: 60s, matching `proactiveAgentService.js`'s existing convention rather than inventing a new number.
+This mirrors `RightPanel.tsx`'s existing polling pattern in this codebase (chosen over an event-driven rewrite of all 4 source services, and over page-level direct queries — see the brainstorming session's SWOT comparison for the full reasoning). Poll interval: 60s, matching `proactiveAgentService.ts`'s existing convention rather than inventing a new number.
 
 ### No fresh expensive operations (self-critique fix #2)
 

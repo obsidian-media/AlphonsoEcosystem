@@ -16,7 +16,7 @@
 
 **Files:**
 - Modify: `src/App.tsx:138` (add lazy import), `src/App.tsx` (add render branch near the other `activeTab ===` cases, e.g. after line 933's `AgentActivityLog` branch)
-- Test: `src/test/appAgentPerformanceNav.test.tsx` (new)
+- Test: `src/test/appAgentPerformanceNav.test.js` (new)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -104,7 +104,7 @@ git commit -m "fix: wire Agent Performance nav item to AgentPerformanceView (was
 **Files:**
 - Rename: `src/components/BoardroomPanel.tsx` → `src/components/ProjectBatchPanel.tsx`
 - Modify: `src/components/OperatorDashboard.tsx:25,795`
-- Test: `src/test/projectBatchPanelRename.test.tsx` (new)
+- Test: `src/test/projectBatchPanelRename.test.js` (new)
 
 - [ ] **Step 1: Write the failing test**
 

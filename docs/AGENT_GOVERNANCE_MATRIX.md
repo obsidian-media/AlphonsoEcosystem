@@ -18,9 +18,9 @@ Shayan -> Jose intake -> Jose decomposition/routing -> agents report back -> Jos
 | Nova | Opportunity Intelligence | scoring/prioritization analysis | execution of external actions |
 
 ## Contract enforcement
-- `src/services/agentContractService.js` enforces action-prefix allow/deny boundaries.
+- `src/services/agentContractService.ts` enforces action-prefix allow/deny boundaries.
 - Jose command decomposition maps intents to governed agent assignments:
-  - `src/services/joseCommandRouterService.js`
+  - `src/services/joseCommandRouterService.ts`
 - Jose execution pipeline enforces approval and policy gates before execution:
   - `src/services/joseExecutionEngineService.ts`
 

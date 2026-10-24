@@ -35,7 +35,7 @@ You are the release gatekeeper for Alphonso. You validate whether the project is
 - [ ] CSP configured in `tauri.conf.json`
 - [ ] `.gitignore` excludes `.env`, `.tauri-updater-key`, `dist/`, `coverage/`
 - [ ] All 9 agents registered in `agentRegistry.js`
-- [ ] `policyEnforcementService.js` is fail-closed
+- [ ] `policyEnforcementService.ts` is fail-closed
 
 ### For v1.0.0 (Publicly Installable) — ALL must pass (in addition to v0.1.0)
 - [ ] Signed NSIS installer built and published to public URL

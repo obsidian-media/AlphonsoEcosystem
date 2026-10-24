@@ -1,7 +1,7 @@
 # Connector Approval & Policy Audit
 
 ## Policy engine
-- `src/services/policyEnforcementService.js`
+- `src/services/policyEnforcementService.ts`
 - Enforces:
   - approval mode
   - zero-cost mode
@@ -10,7 +10,7 @@
   - fail-closed behavior
 
 ## Enforcement points (this cycle)
-- `src/services/connectorRegistryService.js`
+- `src/services/connectorRegistryService.ts`
   - `sendTelegramConnectorMessage`
   - `sendWhatsAppConnectorMessage`
   - `sendChatGptConnectorMessage`

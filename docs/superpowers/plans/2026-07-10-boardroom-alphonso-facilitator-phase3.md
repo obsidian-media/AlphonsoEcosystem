@@ -14,13 +14,13 @@ does not touch.
 **Architecture:** New `boardroomFacilitatorService.ts` with a pure,
 network-free prompt-builder (`buildFacilitatorPrompt`) and a thin async
 wrapper (`generateAlphonsoResponse`) around the existing
-`generateOllamaResponse()` in `src/lib/ollama.js` — reused, not
+`generateOllamaResponse()` in `src/lib/ollama.ts` — reused, not
 reimplemented. `BoardroomChatView.tsx` calls it after `handleSend` whenever
 the posted message has zero `parseMentions()` matches, shows a "Alphonso is
 thinking…" indicator while pending, and posts the reply (or a visible
 failure message on error — never a silent swallow) as a new thread message.
 
-**Tech Stack:** Same as Phase 1/2, plus `src/lib/ollama.js`'s
+**Tech Stack:** Same as Phase 1/2, plus `src/lib/ollama.ts`'s
 `generateOllamaResponse` (already used elsewhere in the app; not new
 infrastructure).
 

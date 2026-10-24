@@ -26,7 +26,7 @@ Use this when:
 ### For Each Connector
 
 #### 1. Frontend Path
-- [ ] Send function exists in `connectorRegistryService.js`
+- [ ] Send function exists in `connectorRegistryService.ts`
 - [ ] Function name follows pattern: `send[Connector]Connector[Action]`
 - [ ] Function accepts appropriate parameters (message, recipient, etc.)
 

@@ -67,7 +67,7 @@ Purpose: this is the master reference for "what already exists and must not be s
 | `connectors/hermesAgentConnector.ts` | Per-agent self-hosted Hermes Agent LLM backend (high-risk classified) |
 | `telegramCompanionService.js` / `telegramBrowserConnector.ts` / `telegramAutoPollService.ts` | Telegram (21 bot commands + browser send + auto-poll) |
 | `whatsappCompanionService.ts` / `whatsappBrowserConnector.ts` / `whatsappWebhookService.ts` | WhatsApp (9 bot commands + browser send + webhook) |
-| `genericWebhookService.js` | Generic inbound webhook gateway client |
+| `genericWebhookService.ts` | Generic inbound webhook gateway client |
 | `chatgptService.ts` / `claudeService.ts` | ChatGPT / Claude connectors |
 | `composioService.ts` | Composio toolkit integration |
 | `notionSyncService.js` | Notion database sync |

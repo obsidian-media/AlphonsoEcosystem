@@ -47,4 +47,4 @@ In Alphonso, Settings → Connectors → Generic Webhook, set:
 - `GENERIC_WEBHOOK_TOKEN` — same token as `ALPHONSO_DRAIN_TOKEN` (or
   `WEBHOOK_SHARED_SECRET` if you didn't set a separate drain token)
 
-See `src/services/genericWebhookService.js` for the polling implementation.
+See `src/services/genericWebhookService.ts` for the polling implementation.

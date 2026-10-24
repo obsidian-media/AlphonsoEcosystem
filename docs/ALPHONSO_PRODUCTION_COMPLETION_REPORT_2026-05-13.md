@@ -10,22 +10,22 @@
 
 ### 1) Jose orchestration durability hardening
 - Added durable orchestration queue transition service:
-  - `src/services/orchestrationQueueService.js`
+  - `src/services/orchestrationQueueService.ts`
   - Tracks queue status transitions (`new -> pending_approval -> queued -> reported_to_jose -> dead_letter/failed`)
   - Supports dead-letter replay and manual interrupt marking.
 - Expanded orchestration receipts wiring:
-  - `src/services/orchestrationReceiptService.js` used across router/execution/connector policy flows.
+  - `src/services/orchestrationReceiptService.ts` used across router/execution/connector policy flows.
   - Receipt events now include assignment creation, policy blocks, retries, dead-letter, merge/confirm, and pipeline completion.
 - Integrated queue+receipt instrumentation into:
-  - `src/services/joseCommandRouterService.js`
+  - `src/services/joseCommandRouterService.ts`
   - `src/services/joseExecutionEngineService.ts`
-  - `src/services/packetExecutionService.js`
+  - `src/services/packetExecutionService.ts`
 
 ### 2) Approval and policy enforcement hardening
 - Added centralized policy gate:
-  - `src/services/policyEnforcementService.js`
+  - `src/services/policyEnforcementService.ts`
 - Enforced connector action gates in:
-  - `src/services/connectorRegistryService.js`
+  - `src/services/connectorRegistryService.ts`
 - Outbound connector actions now generate explicit allow/block policy decisions with audit + receipts:
   - Telegram send
   - WhatsApp send
@@ -63,8 +63,8 @@
   - updated timestamp
 - Metadata is persisted through the durable memory content envelope (non-breaking fallback for existing schema).
 - Files:
-  - `src/services/memoryService.js`
-  - `src/services/durableMemoryService.js`
+  - `src/services/memoryService.ts`
+  - `src/services/durableMemoryService.ts`
 
 ### 6) New governed agents integration
 - Governed agents added and integrated into contracts/router paths:
@@ -76,15 +76,15 @@
 - Added/updated:
   - `src/agents/*` profiles/permissions/schema
   - `src/agents/agentRegistry.js`
-  - `src/services/agentBusService.js`
-  - `src/services/agentContractService.js`
-  - `src/services/orchestrationGovernanceService.js`
-  - `src/services/joseCommandRouterService.js`
+  - `src/services/agentBusService.ts`
+  - `src/services/agentContractService.ts`
+  - `src/services/orchestrationGovernanceService.ts`
+  - `src/services/joseCommandRouterService.ts`
   - `src/services/joseExecutionEngineService.ts`
 - UI presence upgraded in:
-  - `src/components/CommandRib.jsx`
-  - `src/components/EcosystemMaturityPanels.jsx`
-  - `src/components/OrchestratorView.jsx`
+  - `src/components/CommandRib.tsx`
+  - `src/components/EcosystemMaturityPanels.tsx`
+  - `src/components/OrchestratorView.tsx`
 
 ### 7) Workflow operations implementation (structured registry)
 - Added operational registry with 10 structured workflows:
@@ -99,17 +99,17 @@
   - Content Repurposing
   - Automation Governance
 - New service:
-  - `src/services/workflowOperationsRegistryService.js`
+  - `src/services/workflowOperationsRegistryService.ts`
 - Exposed in UI via:
-  - `WorkflowOperationsPanel` in `src/components/EcosystemMaturityPanels.jsx`
-  - Mounted in `src/components/EcosystemHub.jsx`
+  - `WorkflowOperationsPanel` in `src/components/EcosystemMaturityPanels.tsx`
+  - Mounted in `src/components/EcosystemHub.tsx`
 
 ### 8) Trust/receipt browser expansion
 - Trust panel now merges:
   - verification receipts
   - orchestration receipts
 - File:
-  - `src/components/EcosystemMaturityPanels.jsx`
+  - `src/components/EcosystemMaturityPanels.tsx`
 
 ## What remains partial (real+partial)
 1. End-to-end hosted WhatsApp Cloud webhook delivery:

@@ -42,8 +42,8 @@ Use this when:
 
 #### Agent System
 - [ ] 9 agents registered in `agentRegistry.js`
-- [ ] `agentContractService.js` enforces contracts
-- [ ] `policyEnforcementService.js` is fail-closed
+- [ ] `agentContractService.ts` enforces contracts
+- [ ] `policyEnforcementService.ts` is fail-closed
 
 #### Connectors
 - [ ] All 9 connector paths traced through policy gate
@@ -64,7 +64,7 @@ Use this when:
 #### Auto-Updater
 - [ ] Updater manifest hosted at configured endpoint
 - [ ] Manifest signed with production key
-- [ ] `appUpdateService.js` can reach manifest
+- [ ] `appUpdateService.ts` can reach manifest
 
 #### Gateway
 - [ ] WhatsApp Cloud gateway deployed to Railway

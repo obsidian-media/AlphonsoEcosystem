@@ -247,11 +247,11 @@ Improve frontend maintainability by migrating critical frontend files from `.jsx
 
 - `src/`
 - `src/App.jsx`
-- `src/views/ChatView.jsx`
-- `src/services/connectorRegistryService.js`
-- `src/services/memoryService.js`
-- `src/services/miyaMemoryService.js`
-- `src/lib/ollama.js`
+- `src/views/ChatView.tsx`
+- `src/services/connectorRegistryService.ts`
+- `src/services/memoryService.ts`
+- `src/services/miyaMemoryService.ts`
+- `src/lib/ollama.ts`
 - `vite.config.js`
 - `vite.config.cjs`
 - `tsconfig.json`, if present
@@ -271,7 +271,7 @@ Improve frontend maintainability by migrating critical frontend files from `.jsx
 
 ### Component Extraction
 
-Refactor `ChatView.jsx` into smaller pieces:
+Refactor `ChatView.tsx` into smaller pieces:
 
 - `ChatMessageList`
 - `ChatInput`
@@ -340,8 +340,8 @@ Create the first real quality gate for ALPHONSO: unit tests, CI workflow, covera
 - `package.json`
 - `vitest.config.*`
 - `setupTests.js`
-- `src/lib/ollama.js`
-- `src/services/connectorRegistryService.js`
+- `src/lib/ollama.ts`
+- `src/services/connectorRegistryService.ts`
 - `src-tauri/src/lib.rs`
 - `.github/workflows/`
 - Existing proof scripts in `package.json`
@@ -352,13 +352,13 @@ Create the first real quality gate for ALPHONSO: unit tests, CI workflow, covera
 
 Write at least 10 meaningful Vitest tests covering:
 
-- `src/lib/ollama.js`
+- `src/lib/ollama.ts`
   - successful fetch
   - timeout
   - retry
   - failed response
   - streaming behavior if present
-- `connectorRegistryService.js`
+- `connectorRegistryService.ts`
   - valid connector lookup
   - invalid connector
   - missing config
@@ -446,7 +446,7 @@ Finish incomplete connector flows and make connector status visible and debuggab
 
 - Rust connector commands in `src-tauri/src/lib.rs` or extracted modules
 - Frontend connector stubs
-- `connectorRegistryService.js`
+- `connectorRegistryService.ts`
 - Connector settings UI
 - Chat transport/routing files
 - Any existing proof/audit trail types:
@@ -542,7 +542,7 @@ Make ALPHONSO faster and more stable by fixing obvious performance bottlenecks, 
 - Tauri launch/config files
 - `src-tauri/src/lib.rs`
 - SQLite initialization code
-- `src/lib/ollama.js`
+- `src/lib/ollama.ts`
 - Chat input components
 - Vite build config
 - Heavy views:
@@ -791,7 +791,7 @@ Create or update:
 - `CHANGELOG.md`
 - `docs/PROOF_AUDIT_TRAIL.md`
 - Inline docs for major Rust `#[tauri::command]` functions
-- Comments for `serviceScopes.js` storage keys
+- Comments for `serviceScopes.ts` storage keys
 
 ### Health Check
 
