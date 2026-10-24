@@ -164,7 +164,7 @@ export function classifyConnectorRisk(connectorId: string, actionType: string = 
   let risk: ConnectorRiskLevel = 'low';
   // runway: real paid cloud video generation, unconditionally high risk (not
   // by actionType pattern) -- see the PAID_OR_METERED_CONNECTORS comment above.
-  if (id === 'youtube' || id === 'runway' || action.includes('publish') || action.includes('upload')) risk = 'high';
+  if (id === 'youtube' || id === 'meta' || id === 'runway' || action.includes('publish') || action.includes('upload')) risk = 'high';
   // hermes_agents: unlike a bare chat-completion connector, a Hermes profile
   // is a full standing agent (terminal, code_execution, delegation, cronjob,
   // memory — see docs/HERMES_AGENT_DELEGATION_PLAN.md §1b.2) that can run real

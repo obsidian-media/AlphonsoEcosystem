@@ -71,7 +71,7 @@ describe('ContentFactoryPanel and the project request', () => {
     markStepStatus(project.id, 'review', 'needs_approval', null);
     render(<ContentFactoryPanel tab="script" settings={settings} />);
     fireEvent.click(screen.getAllByRole('button', { name: 'Approve' })[0]);
-    await waitFor(() => expect(approveContentStep).toHaveBeenCalledWith(project.id, 'review'));
+    await waitFor(() => expect(approveContentStep).toHaveBeenCalledWith(project.id, 'review', expect.objectContaining({ outputFolder: expect.any(String) })));
   });
 });
 
@@ -83,6 +83,6 @@ describe('ContentFactoryPanel: AI clips', () => {
     (globalThis as any).__request = { id: 'jose-request-c1', status: 'waiting_approval', steps: [{ stepId: 'clips', status: 'waiting_approval', waitFor: 'Check the main moments in Miya Studio first.' }] };
     render(<ContentFactoryPanel tab="scene" settings={settings} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Make AI clips' }));
-    expect(approveContentStep).toHaveBeenCalledWith(project.id, 'clips');
+    expect(approveContentStep).toHaveBeenCalledWith(project.id, 'clips', expect.objectContaining({ outputFolder: expect.any(String) }));
   });
 });

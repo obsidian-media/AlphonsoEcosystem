@@ -145,6 +145,17 @@ describe('ConnectorSetupPanel', () => {
     }
   });
 
+  // Phase 3a: Meta (Facebook and Instagram) keys can be saved in Settings.
+  it('has a Meta section with its keys', () => {
+    localStorage.clear();
+    render(<ConnectorSetupPanel />);
+    fireEvent.click(screen.getByTestId('connector-category-content'));
+    expect(screen.getByText('Meta (Facebook and Instagram)')).toBeInTheDocument();
+    for (const label of ['Access Token', 'Page Access Token', 'Page ID', 'Instagram Business Account ID', 'App Secret']) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
+  });
+
   it('save credential button exists in GitHub section', () => {
     render(<ConnectorSetupPanel />);
     // Multiple "Save & Enable" buttons exist (one per CredentialSection)

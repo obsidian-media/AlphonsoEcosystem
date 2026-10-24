@@ -13,4 +13,10 @@ describe('App start', () => {
     const source = readFileSync(resolve(__dirname, '../App.tsx'), 'utf8');
     expect((source.match(/expireWaitingRequests\(\)/g) || []).length).toBeGreaterThanOrEqual(2);
   });
+
+  // Phase 3a: scheduled posts go out while the app is open, never from the Coach window.
+  it('starts the post runner outside the Coach window', () => {
+    const source = readFileSync(resolve(__dirname, '../App.tsx'), 'utf8');
+    expect(source).toMatch(/if \(IS_COACH_WINDOW\) return undefined;\s*try \{ startPostScheduler\(\); \}/);
+  });
 });

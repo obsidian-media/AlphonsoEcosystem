@@ -32,6 +32,8 @@ export const STEP_AGENTS: Record<StepId, StepAgent[]> = {
     { agent: 'maria', actionType: 'audit_content_quality', title: 'Quality gate' },
     { agent: 'sentinel', actionType: 'security_content_check', title: 'Text and link check' },
   ],
+  // Phase 3a: Marcus schedules the posts you approved (always asks first).
+  publish: [{ agent: 'marcus', actionType: 'distribution_schedule_posts', title: 'Schedule the posts' }],
 };
 
 /** The chosen output of each step before this one. */

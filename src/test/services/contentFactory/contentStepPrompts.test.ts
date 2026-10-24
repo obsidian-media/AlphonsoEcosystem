@@ -35,6 +35,13 @@ describe('buildStepPrompt', () => {
     expect(all).toContain('Why we procrastinate');
   });
 
+  // Phase 3a: the Short is its own piece, so the campaign writes its title, caption and hashtags.
+  it("asks the campaign for the Short's own copy", () => {
+    const { prompt } = buildStepPrompt(payload(), 'miya', 'creative_campaign');
+    expect(prompt).toContain('"short":{"title"');
+    expect(prompt).toContain('Short');
+  });
+
   it('adds past scripts only when "write in my voice" is on', () => {
     expect(buildStepPrompt(payload(true), 'miya', 'creative_script').prompt).toContain('MY OLD SCRIPT TEXT');
     expect(buildStepPrompt(payload(false), 'miya', 'creative_script').prompt).not.toContain('MY OLD SCRIPT TEXT');

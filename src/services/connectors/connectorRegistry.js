@@ -67,6 +67,15 @@ export const DEFAULT_CONNECTORS = [
     disabledReason: 'OAuth credentials are not configured.'
   },
   {
+    id: 'meta',
+    name: 'Meta (Facebook and Instagram)',
+    status: 'not_configured',
+    transport: 'meta_graph_api',
+    requiredEnv: ['META_ACCESS_TOKEN', 'META_PAGE_ID'],
+    permissions: ['publish_post', 'publish_reel', 'approval_requests'],
+    disabledReason: 'Add your Meta access token and Page ID in Settings → Connectors → Meta (run npm run auth:meta to get them).'
+  },
+  {
     id: 'mobile_bridge',
     name: 'Mobile Bridge',
     status: 'foundation_only',

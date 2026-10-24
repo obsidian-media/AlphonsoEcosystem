@@ -5,6 +5,7 @@ use sha2::Sha256;
 use std::time::Duration;
 
 use crate::now_ms;
+use crate::utils::secret_or_env;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -36,9 +37,52 @@ pub(crate) struct MetaPublishRequest {
   local_file_path: Option<String>,
   media_type: Option<String>,
   request_id: Option<String>,
+  /// Keys saved in Settings → Connectors → Meta; each falls back to the environment.
+  #[serde(default)]
+  credentials: Option<MetaCredentials>,
 }
 
-fn meta_graph_api_version() -> String {
+#[derive(Deserialize, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MetaCredentials {
+  access_token: Option<String>,
+  page_access_token: Option<String>,
+  page_id: Option<String>,
+  instagram_business_account_id: Option<String>,
+  app_secret: Option<String>,
+}
+
+/// The Meta keys to use: what the app passed (saved in Settings), else the environment.
+pub(crate) struct ResolvedMeta {
+  pub access_token: String,
+  /// Facebook Page posts use the Page token when there is one.
+  pub page_token: String,
+  pub page_id: String,
+  pub ig_user_id: String,
+  pub app_secret: String,
+}
+
+pub(crate) fn resolve_meta_credentials(passed: Option<MetaCredentials>) -> ResolvedMeta {
+  let c = passed.unwrap_or_default();
+  let access_token = secret_or_env(c.access_token, "META_ACCESS_TOKEN");
+  let page_token = secret_or_env(c.page_access_token, "META_PAGE_ACCESS_TOKEN");
+  ResolvedMeta {
+    page_token: if page_token.is_empty() {
+      access_token.clone()
+    } else {
+      page_token
+    },
+    access_token,
+    page_id: secret_or_env(c.page_id, "META_PAGE_ID"),
+    ig_user_id: secret_or_env(
+      c.instagram_business_account_id,
+      "INSTAGRAM_BUSINESS_ACCOUNT_ID",
+    ),
+    app_secret: secret_or_env(c.app_secret, "META_APP_SECRET"),
+  }
+}
+
+pub(crate) fn meta_graph_api_version() -> String {
   std::env::var("META_GRAPH_API_VERSION")
     .map(|value| {
       let clean = value.trim();
@@ -51,8 +95,8 @@ fn meta_graph_api_version() -> String {
     .unwrap_or_else(|_| "v20.0".to_string())
 }
 
-fn meta_appsecret_proof(access_token: &str) -> Option<String> {
-  let app_secret = std::env::var("META_APP_SECRET").unwrap_or_default();
+/// `appsecret_proof` for a token with this app secret (none without a secret).
+pub(crate) fn meta_appsecret_proof_with(app_secret: &str, access_token: &str) -> Option<String> {
   let secret = app_secret.trim();
   if secret.is_empty() {
     return None;
@@ -68,7 +112,7 @@ fn meta_appsecret_proof(access_token: &str) -> Option<String> {
   Some(out)
 }
 
-fn graph_error_message(body: &Value, fallback: &str) -> String {
+pub(crate) fn graph_error_message(body: &Value, fallback: &str) -> String {
   body
     .get("error")
     .and_then(|value| value.get("message"))
@@ -123,7 +167,8 @@ pub(crate) async fn meta_publish_content(
     });
   }
 
-  let access_token = std::env::var("META_ACCESS_TOKEN").unwrap_or_default();
+  let keys = resolve_meta_credentials(request.credentials.clone());
+  let access_token = keys.access_token.clone();
   if access_token.trim().is_empty() {
     return Ok(MetaPublishProof {
       connector_id: "meta".to_string(),
@@ -140,7 +185,7 @@ pub(crate) async fn meta_publish_content(
     });
   }
 
-  let proof = meta_appsecret_proof(access_token.trim());
+  let proof = meta_appsecret_proof_with(&keys.app_secret, access_token.trim());
   let client = reqwest::Client::builder()
     .timeout(Duration::from_secs(90))
     .user_agent("Alphonso-Meta-Publish/0.1")
@@ -167,7 +212,7 @@ pub(crate) async fn meta_publish_content(
   }
 
   if platform == "instagram" {
-    let ig_user_id = std::env::var("INSTAGRAM_BUSINESS_ACCOUNT_ID").unwrap_or_default();
+    let ig_user_id = keys.ig_user_id.clone();
     if ig_user_id.trim().is_empty() {
       return Ok(MetaPublishProof {
         connector_id: "meta".to_string(),
@@ -348,7 +393,15 @@ pub(crate) async fn meta_publish_content(
     });
   }
 
-  let page_id = std::env::var("META_PAGE_ID").unwrap_or_default();
+  let page_id = keys.page_id.clone();
+  // Facebook Page posts are made with the Page's own token when there is one.
+  let mut auth_query: Vec<(String, String)> = vec![(
+    "access_token".to_string(),
+    keys.page_token.trim().to_string(),
+  )];
+  if let Some(proof_value) = meta_appsecret_proof_with(&keys.app_secret, keys.page_token.trim()) {
+    auth_query.push(("appsecret_proof".to_string(), proof_value));
+  }
   if page_id.trim().is_empty() {
     return Ok(MetaPublishProof {
       connector_id: "meta".to_string(),
@@ -677,14 +730,12 @@ mod tests {
 
   #[test]
   fn meta_appsecret_proof_returns_none_without_secret() {
-    let (_lock, _restore) = set_meta_env("META_APP_SECRET", None);
-    assert!(meta_appsecret_proof("any_token").is_none());
+    assert!(meta_appsecret_proof_with("", "any_token").is_none());
   }
 
   #[test]
   fn meta_appsecret_proof_returns_hex_hmac_when_secret_set() {
-    let (_lock, _restore) = set_meta_env("META_APP_SECRET", Some("secret123"));
-    let proof = meta_appsecret_proof("access_token");
+    let proof = meta_appsecret_proof_with("secret123", "access_token");
     assert!(proof.is_some());
     let value = proof.unwrap();
     assert_eq!(value.len(), 64, "HMAC-SHA256 hex must be 64 chars");
@@ -706,5 +757,37 @@ mod tests {
   fn graph_error_message_falls_back_when_no_error() {
     let body = serde_json::json!({ "id": "123" });
     assert_eq!(graph_error_message(&body, "fallback msg"), "fallback msg");
+  }
+
+  #[test]
+  fn saved_meta_keys_win_over_the_environment_and_fall_back_to_it() {
+    let (_lock, _restore) = set_meta_env("META_ACCESS_TOKEN", Some("env-token"));
+    let keys = resolve_meta_credentials(Some(MetaCredentials {
+      access_token: Some(" saved-token ".into()),
+      page_id: Some("123".into()),
+      ..Default::default()
+    }));
+    assert_eq!(keys.access_token, "saved-token");
+    assert_eq!(keys.page_id, "123");
+    // No Page token anywhere: Page posts use the access token.
+    assert_eq!(keys.page_token, "saved-token");
+    let from_env = resolve_meta_credentials(None);
+    assert_eq!(from_env.access_token, "env-token");
+  }
+
+  #[test]
+  fn the_page_token_is_used_for_page_posts_when_there_is_one() {
+    let keys = resolve_meta_credentials(Some(MetaCredentials {
+      access_token: Some("user".into()),
+      page_access_token: Some("page".into()),
+      ..Default::default()
+    }));
+    assert_eq!(keys.page_token, "page");
+  }
+
+  #[test]
+  fn appsecret_proof_uses_the_given_secret() {
+    assert!(meta_appsecret_proof_with("", "t").is_none());
+    assert_eq!(meta_appsecret_proof_with("s", "t").unwrap().len(), 64);
   }
 }

@@ -105,7 +105,9 @@ describe('connectorOutbound youtube bridge', () => {
       tags: ['alpha', 'beta'],
       privacyStatus: 'unlisted',
       // The OAuth values saved in Settings are passed to the backend (QA Bug 32).
-      oauth: { clientId: 'unused', clientSecret: 'unused', refreshToken: 'unused' }
+      oauth: { clientId: 'unused', clientSecret: 'unused', refreshToken: 'unused' },
+      publishAt: null,
+      thumbnailPath: null
     });
     expect(result.ok).toBe(true);
     expect(result.videoId).toBe('abc123');
@@ -114,6 +116,22 @@ describe('connectorOutbound youtube bridge', () => {
     expect(mockAppendConnectorAudit).toHaveBeenCalledWith('youtube', 'upload_success', expect.objectContaining({
       filePath: 'C:/tmp/video.mp4',
       title: 'Test video'
+    }));
+  });
+
+  // Phase 3a: a scheduled publish and the project's thumbnail reach the backend.
+  it('passes the scheduled publish time and the thumbnail', async () => {
+    const { uploadYouTubeConnectorVideo } = await import('../../services/connectors/connectorOutbound');
+    await uploadYouTubeConnectorVideo({
+      filePath: 'C:/tmp/video.mp4',
+      title: 'Test video',
+      privacyStatus: 'public',
+      publishAt: '2026-11-01T18:00:00.000Z',
+      thumbnailPath: 'C:/tmp/thumb.png'
+    });
+    expect(mockInvoke).toHaveBeenCalledWith('connector_upload_youtube', expect.objectContaining({
+      publishAt: '2026-11-01T18:00:00.000Z',
+      thumbnailPath: 'C:/tmp/thumb.png'
     }));
   });
 });

@@ -1,7 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../ui';
 import { listBrands, saveBrand } from '../../services/contentFactory/contentBrandService';
-import type { ContentBrand } from '../../services/contentFactory/contentTypes';
+import type { ContentBrand, PostingSlot, PostPlatform } from '../../services/contentFactory/contentTypes';
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const SLOT_PLATFORMS: { id: PostPlatform; label: string }[] = [
+  { id: 'youtube', label: 'YouTube' }, { id: 'instagram', label: 'Instagram' }, { id: 'facebook', label: 'Facebook' },
+];
+
+/** The brand's fixed posting times (phase 3a): a post's time starts from the next free one. */
+function PostingSlotsEditor({ slots, onChange }: { slots: PostingSlot[]; onChange(next: PostingSlot[]): void }) {
+  const cell = 'rounded-lg bg-(--surface-2) px-2 py-1 text-[12px] text-(--text-1)';
+  const set = (i: number, patch: Partial<PostingSlot>) => onChange(slots.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+  return (
+    <div className="space-y-2" aria-label="Posting times">
+      <div className="text-[11px] text-(--text-3)">Posting times (each post starts at the next free one; you can change it before approving)</div>
+      {slots.map((slot, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2">
+          <select aria-label={`Posting time ${i + 1} platform`} className={cell} value={slot.platform} onChange={(e) => set(i, { platform: e.target.value as PostPlatform })}>
+            {SLOT_PLATFORMS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+          <select aria-label={`Posting time ${i + 1} day`} className={cell} value={String(slot.day)} onChange={(e) => set(i, { day: Number(e.target.value) })}>
+            {DAY_NAMES.map((d, n) => <option key={d} value={String(n)}>{d}</option>)}
+          </select>
+          <input aria-label={`Posting time ${i + 1} time`} type="time" className={cell} value={slot.time} onChange={(e) => set(i, { time: e.target.value })} />
+          <Button size="sm" variant="secondary" aria-label={`Remove posting time ${i + 1}`} onClick={() => onChange(slots.filter((_, j) => j !== i))}>Remove</Button>
+        </div>
+      ))}
+      <Button size="sm" variant="secondary" onClick={() => onChange([...slots, { platform: 'youtube', day: 2, time: '18:00' }])}>Add a posting time</Button>
+    </div>
+  );
+}
 
 const lines = (text: string) => text.split('\n').map((s) => s.trim()).filter(Boolean);
 
@@ -85,13 +114,14 @@ export function BrandEditor({ brandId, onBrand }: { brandId: string; onBrand(id:
           <input aria-label="Brand platforms" className={field} value={draft.platforms.join(', ')}
             onChange={(e) => setDraft({ ...draft, platforms: e.target.value.split(',').map((c) => c.trim()).filter(Boolean) })} />
         </label>
-        {text('schedule', 'Posting schedule (e.g. Tuesdays and Fridays at 6 pm)')}
+        {text('schedule', 'Notes about the posting schedule')}
         <label className="block text-[11px] text-(--text-3)">
           Quality threshold (1–10)
           <input aria-label="Quality threshold" type="number" min={1} max={10} className={field} value={draft.qualityThreshold}
             onChange={(e) => setDraft({ ...draft, qualityThreshold: Math.min(10, Math.max(1, Number(e.target.value) || 7)) })} />
         </label>
       </div>
+      <PostingSlotsEditor slots={draft.postingSlots || []} onChange={(postingSlots) => setDraft({ ...draft, postingSlots })} />
       {text('honestyRules', 'Brand rules (what may and may not be said)', true)}
       <label className="block text-[11px] text-(--text-3)">
         Reference posts (one per line: link | why it is good)

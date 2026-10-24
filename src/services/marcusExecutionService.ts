@@ -6,6 +6,12 @@ import { auditProjectPlan, auditReleaseReadiness, generateRiskScore } from './au
 import { executeMarcusPublish, MARCUS_PUBLISH_PLATFORMS } from './marcusPublishService';
 import { getConnectorCredential } from './connectors/connectorAuth';
 import { isConnectorAuthenticated } from './connectorRegistryService';
+import { publishPost } from './contentFactory/publishPost';
+import { contentAppSettings } from './contentFactory/contentStepRecorder';
+import { getProject } from './contentFactory/contentProjectService';
+import { updatePost } from './contentFactory/contentPosts';
+import { appendNotification } from './notificationService';
+import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -110,8 +116,15 @@ interface ScheduledPublish {
   scheduledAt: number;
   agentId: string;
   createdAt: number;
-  status: 'pending' | 'executed' | 'cancelled';
+  /** `posting`: claimed and being sent; `check`: the app closed mid-send; `ask`: more than 7 days late. */
+  status: 'pending' | 'executed' | 'cancelled' | 'posting' | 'done' | 'failed' | 'check' | 'ask';
   executedAt?: number;
+  /** Phase 3a: a project's post (sent through publishPost), or a reminder. Missing = text, as before. */
+  kind?: 'text' | 'content_post' | 'reminder';
+  projectId?: string;
+  postId?: string;
+  /** A reminder's text. */
+  message?: string;
 }
 
 interface PublishResult {
@@ -469,7 +482,12 @@ function _loadSchedule(): ScheduledPublish[] {
 
 function _saveSchedule(items: ScheduledPublish[]): void {
   try {
-    localStorage.setItem(MARCUS_SCHEDULE_KEY, JSON.stringify(items.slice(-MARCUS_SCHEDULE_MAX)));
+    // Keep every item still to go out (or being sent, or waiting for you); trim only finished ones.
+    const open = (i: ScheduledPublish) => i.status === 'pending' || i.status === 'posting' || i.status === 'ask';
+    const finishedRoom = Math.max(0, MARCUS_SCHEDULE_MAX - items.filter(open).length);
+    const finished = items.filter((i) => !open(i));
+    const keep = new Set(finished.slice(finished.length - finishedRoom));
+    localStorage.setItem(MARCUS_SCHEDULE_KEY, JSON.stringify(items.filter((i) => open(i) || keep.has(i))));
   } catch { /* ignore */ }
 }
 
@@ -511,42 +529,199 @@ export function cancelScheduledPublish(id: string): boolean {
   return true;
 }
 
+// ── Posts (content factory phase 3a) ──────────────────────────────────────────
+
+const PLATFORM_NAMES: Record<string, string> = { youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook' };
+const platformName = (platform: string) => PLATFORM_NAMES[platform] || platform;
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** A post this late when the app starts asks before it goes out. */
+const ASK_AFTER_LATE_MS = 7 * DAY_MS;
+/** Later than this counts as "late" in the note (the runner checks every minute). */
+const LATE_NOTE_AFTER_MS = 5 * 60 * 1000;
+
+function newItem(patch: Partial<ScheduledPublish> & { platform: string; scheduledAt: number }): ScheduledPublish {
+  return {
+    id: `marcus_sched_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    content: '',
+    agentId: 'marcus',
+    createdAt: Date.now(),
+    status: 'pending',
+    ...patch,
+  };
+}
+
+/** Schedules a project's post; scheduling the same post again moves it. */
+export function scheduleContentPost({ projectId, postId, platform, scheduledAt }: { projectId: string; postId: string; platform: PostPlatform; scheduledAt: number }): ScheduledPublish {
+  const items = _loadSchedule();
+  const existing = items.find((i) => i.kind === 'content_post' && i.postId === postId && (i.status === 'pending' || i.status === 'ask'));
+  if (existing) {
+    existing.scheduledAt = scheduledAt;
+    existing.status = 'pending';
+    _saveSchedule(items);
+    return existing;
+  }
+  const item = newItem({ kind: 'content_post', projectId, postId, platform, scheduledAt });
+  _saveSchedule([...items, item]);
+  return item;
+}
+
+/** A reminder at a post's time (a YouTube video the channel keeps private: make it public). */
+export function scheduleContentReminder({ projectId, postId, scheduledAt, message }: { projectId: string; postId: string; scheduledAt: number; message: string }): ScheduledPublish {
+  const item = newItem({ kind: 'reminder', projectId, postId, platform: 'youtube', scheduledAt, message });
+  _saveSchedule([..._loadSchedule(), item]);
+  return item;
+}
+
+/** Cancels a post's pending send or reminder. */
+export function cancelScheduledContentPost(postId: string): boolean {
+  const items = _loadSchedule();
+  let changed = false;
+  for (const item of items) {
+    if (item.postId === postId && (item.status === 'pending' || item.status === 'ask')) {
+      item.status = 'cancelled';
+      changed = true;
+    }
+  }
+  if (changed) _saveSchedule(items);
+  return changed;
+}
+
+/** "Post it now" for a post that waited because it was more than 7 days late. */
+export function postOverdueNow(postId: string, nowMs = Date.now()): boolean {
+  const items = _loadSchedule();
+  const item = items.find((i) => i.postId === postId && i.status === 'ask');
+  if (!item) return false;
+  item.status = 'pending';
+  item.scheduledAt = nowMs;
+  _saveSchedule(items);
+  if (item.projectId) updatePost(item.projectId, postId, { status: 'scheduled', reason: undefined });
+  return true;
+}
+
+async function tell(type: 'success' | 'error' | 'info', title: string, message: string): Promise<void> {
+  try { appendNotification({ type, title, message }); } catch { /* storage full */ }
+  // Telegram, when it is set up and paired (otherwise this quietly does nothing).
+  try {
+    const telegram = await import('./telegramCompanionService');
+    await telegram.sendTelegramMessage(`${title}\n${message}`);
+  } catch { /* not set up, or offline */ }
+}
+
+function setPost(item: ScheduledPublish, patch: { status: PostStatus; link?: string; platformId?: string; reason?: string }): void {
+  if (!item.projectId || !item.postId) return;
+  try { updatePost(item.projectId, item.postId, patch); } catch { /* the project was deleted */ }
+}
+
+/**
+ * At app start: a post cut off while it was being sent becomes "check" (it may have gone
+ * out; never send it again blindly), and a post more than 7 days late waits for you.
+ */
+export function recoverScheduledPublishes(nowMs = Date.now()): void {
+  const items = _loadSchedule();
+  let changed = false;
+  for (const item of items) {
+    if (item.kind !== 'content_post') continue;
+    if (item.status === 'posting') {
+      item.status = 'check';
+      changed = true;
+      const where = platformName(item.platform);
+      const reason = `Alphonso closed while this was being posted to ${where}, so it may or may not have gone out. Check ${where} before posting it again.`;
+      setPost(item, { status: 'check', reason });
+      void tell('error', `Check your ${where} post`, reason);
+    } else if (item.status === 'pending' && nowMs - item.scheduledAt > ASK_AFTER_LATE_MS) {
+      item.status = 'ask';
+      changed = true;
+      const due = new Date(item.scheduledAt).toLocaleString();
+      setPost(item, { status: 'ask', reason: `This was due on ${due}, more than 7 days ago, while Alphonso was closed. Post it now or cancel it.` });
+    }
+  }
+  if (changed) _saveSchedule(items);
+}
+
+async function sendContentPost(item: ScheduledPublish, nowMs: number): Promise<void> {
+  const project = item.projectId ? getProject(item.projectId) : null;
+  const post = project?.posts?.find((p) => p.id === item.postId);
+  const items = _loadSchedule();
+  const mine = items.find((i) => i.id === item.id);
+  if (!post || post.status === 'cancelled') {
+    if (mine) { mine.status = 'cancelled'; _saveSchedule(items); }
+    return;
+  }
+  const late = nowMs - item.scheduledAt > LATE_NOTE_AFTER_MS;
+  const result = await publishPost(post, contentAppSettings(), nowMs);
+  setPost(item, result);
+  const after = _loadSchedule();
+  const done = after.find((i) => i.id === item.id);
+  if (done) {
+    done.status = result.status === 'failed' ? 'failed' : 'done';
+    done.executedAt = nowMs;
+    _saveSchedule(after);
+  }
+  const where = platformName(post.platform);
+  const lateNote = late ? ` It went out late: Alphonso was closed at ${new Date(item.scheduledAt).toLocaleString()}.` : '';
+  if (result.status === 'posted' || result.status === 'scheduled') {
+    await tell('success', `${result.status === 'posted' ? 'Posted on' : 'Scheduled on'} ${where}: ${post.title}`, `${result.link || ''}${lateNote}`.trim());
+  } else {
+    await tell('error', `Not posted on ${where}: ${post.title}`, `${result.reason || 'It failed.'}${lateNote}`);
+  }
+}
+
+let _running = false;
+
+/**
+ * One pass of the runner: sends everything due. Each item is claimed and saved before
+ * anything is sent, so two passes (or a crash) never send it twice.
+ */
+export async function runScheduledPublishes(nowMs = Date.now()): Promise<void> {
+  if (_running) return;
+  _running = true;
+  try {
+    const items = _loadSchedule();
+    const due = items.filter((i) => i.status === 'pending' && i.scheduledAt <= nowMs);
+    for (const item of due) {
+      item.status = item.kind === 'content_post' ? 'posting' : item.kind === 'reminder' ? 'done' : 'executed';
+      item.executedAt = nowMs;
+    }
+    if (due.length) _saveSchedule(items);
+    for (const item of due) {
+      if (item.kind === 'content_post') {
+        setPost(item, { status: 'posting' });
+        try { await sendContentPost(item, nowMs); } catch { /* sendContentPost never throws; keep the loop going */ }
+      } else if (item.kind === 'reminder') {
+        await tell('info', 'Time to publish on YouTube', item.message || '');
+      } else {
+        try {
+          await executeMarcusPublish({
+            platform: item.platform,
+            payload: { text: item.content, content: item.content },
+            commandId: item.id,
+            workflowId: `scheduler_${item.id}`,
+            preApproved: false
+          });
+        } catch { /* best-effort; item is already marked executed */ }
+      }
+    }
+  } finally {
+    _running = false;
+  }
+}
+
 let _schedulerInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Start the scheduler — checks every `intervalMs` (default 60s) for pending
- * items past their `scheduledAt` time and calls `executeMarcusPublish` on them.
- * Safe to call multiple times — stops any previous interval first.
+ * Start the scheduler — checks every `intervalMs` (default 60s) for items past their
+ * time. Safe to call multiple times — stops any previous interval first.
  */
 export function startScheduler(intervalMs: number = 60_000): void {
   stopScheduler();
-  _schedulerInterval = setInterval(async () => {
-    const now = Date.now();
-    const items = _loadSchedule();
-    let changed = false;
+  _schedulerInterval = setInterval(() => { void runScheduledPublishes(); }, intervalMs);
+}
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.status !== 'pending') continue;
-      if (item.scheduledAt > now) continue;
-
-      // Mark as executed optimistically before async call
-      items[i] = { ...item, status: 'executed', executedAt: now };
-      changed = true;
-
-      try {
-        await executeMarcusPublish({
-          platform: item.platform,
-          payload: { text: item.content, content: item.content },
-          commandId: item.id,
-          workflowId: `scheduler_${item.id}`,
-          preApproved: false
-        });
-      } catch { /* best-effort; item is already marked executed */ }
-    }
-
-    if (changed) _saveSchedule(items);
-  }, intervalMs);
+/** At app start (phase 3a): recover, send what is due now, then check every minute. */
+export function startPostScheduler(): void {
+  recoverScheduledPublishes();
+  void runScheduledPublishes();
+  startScheduler();
 }
 
 /**

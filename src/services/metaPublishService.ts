@@ -1,4 +1,17 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getConnectorCredential } from './connectors/connectorAuth';
+
+/** Keys saved in Settings → Connectors → Meta; a key not saved is left for the environment (QA Bug 32). */
+export function savedMetaCredentials() {
+  const saved = (key: string) => getConnectorCredential('meta', key) || null;
+  return {
+    accessToken: saved('META_ACCESS_TOKEN'),
+    pageAccessToken: saved('META_PAGE_ACCESS_TOKEN'),
+    pageId: saved('META_PAGE_ID'),
+    instagramBusinessAccountId: saved('INSTAGRAM_BUSINESS_ACCOUNT_ID'),
+    appSecret: saved('META_APP_SECRET'),
+  };
+}
 
 export function buildMetaPublishRequest(job: Record<string, any> = {}, options: Record<string, any> = {}) {
   const platform = String(options.platform || job.request?.platform || 'instagram').trim().toLowerCase() || 'instagram';
@@ -20,5 +33,46 @@ export function buildMetaPublishRequest(job: Record<string, any> = {}, options: 
 
 export async function publishMetaContent(job: Record<string, any> = {}, options: Record<string, any> = {}) {
   const request = buildMetaPublishRequest(job, options);
-  return invoke('meta_publish_content', { request });
+  return invoke('meta_publish_content', { request: { ...request, credentials: savedMetaCredentials() } });
+}
+
+/** What Meta did with a video post (phase 3a). */
+export interface MetaVideoResult {
+  ok: boolean;
+  platform?: string;
+  status: 'posted' | 'scheduled' | 'failed' | 'setup_required';
+  postId?: string | null;
+  url?: string | null;
+  publishAtMs?: number | null;
+  message?: string;
+}
+
+/**
+ * Posts a video on this computer as an Instagram Reel (now) or a Facebook Reel (now, or
+ * scheduled on Meta when `scheduledAtMs` is more than 10 minutes ahead). Waits for Meta and
+ * returns what Meta actually did. Only approved calls post.
+ */
+export async function publishMetaVideo(post: {
+  platform: 'instagram' | 'facebook';
+  localFilePath: string;
+  caption: string;
+  title?: string;
+  scheduledAtMs?: number | null;
+  approved?: boolean;
+}): Promise<MetaVideoResult> {
+  try {
+    return await invoke<MetaVideoResult>('meta_publish_video', {
+      request: {
+        approved: post.approved === true,
+        platform: post.platform,
+        localFilePath: post.localFilePath,
+        caption: post.caption,
+        title: post.title || '',
+        scheduledAtMs: post.scheduledAtMs ?? null,
+        credentials: savedMetaCredentials(),
+      },
+    });
+  } catch (error) {
+    return { ok: false, platform: post.platform, status: 'failed', message: error instanceof Error ? error.message : String(error) };
+  }
 }

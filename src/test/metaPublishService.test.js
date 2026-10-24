@@ -3,9 +3,12 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn()
 }));
+vi.mock('../services/connectors/connectorAuth', () => ({
+  getConnectorCredential: vi.fn((id, key) => (id === 'meta' ? ({ META_ACCESS_TOKEN: 'saved-token', META_PAGE_ID: '42' })[key] || '' : '')),
+}));
 
 import { invoke } from '@tauri-apps/api/core';
-import { buildMetaPublishRequest, publishMetaContent } from '../services/metaPublishService';
+import { buildMetaPublishRequest, publishMetaContent, publishMetaVideo } from '../services/metaPublishService';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -81,5 +84,45 @@ describe('publishMetaContent', () => {
     invoke.mockResolvedValue({ ok: true, published_id: '999' });
     const result = await publishMetaContent({}, {});
     expect(result.published_id).toBe('999');
+  });
+});
+
+// Phase 3a: keys saved in Settings → Connectors → Meta reach the backend (QA Bug 32's rule).
+describe('saved Meta keys', () => {
+  it('passes the saved keys with every request; a key not saved is left for the environment', async () => {
+    invoke.mockResolvedValue({ ok: true });
+    await publishMetaContent({}, { platform: 'facebook', approved: true });
+    const { request } = invoke.mock.calls[0][1];
+    expect(request.credentials).toEqual({
+      accessToken: 'saved-token', pageAccessToken: null, pageId: '42', instagramBusinessAccountId: null, appSecret: null,
+    });
+  });
+});
+
+// Phase 3a: a video file on this computer posted as a Reel (meta_publish_video).
+describe('publishMetaVideo', () => {
+  it('sends the file, caption, time and saved keys, and returns what Meta did', async () => {
+    invoke.mockResolvedValue({ ok: true, status: 'scheduled', postId: '9', url: 'https://www.facebook.com/reel/9', publishAtMs: 1800000000000 });
+    const result = await publishMetaVideo({ platform: 'facebook', localFilePath: 'D:/out/v.mp4', caption: 'Hi #a', title: 'T', scheduledAtMs: 1800000000000, approved: true });
+    expect(invoke).toHaveBeenCalledWith('meta_publish_video', {
+      request: {
+        approved: true, platform: 'facebook', localFilePath: 'D:/out/v.mp4', caption: 'Hi #a', title: 'T', scheduledAtMs: 1800000000000,
+        credentials: expect.objectContaining({ accessToken: 'saved-token', pageId: '42' }),
+      },
+    });
+    expect(result.status).toBe('scheduled');
+  });
+
+  it('is never approved unless the caller says so', async () => {
+    invoke.mockResolvedValue({ ok: false, status: 'failed' });
+    await publishMetaVideo({ platform: 'instagram', localFilePath: 'v.mp4', caption: '' });
+    expect(invoke.mock.calls[0][1].request.approved).toBe(false);
+    expect(invoke.mock.calls[0][1].request.scheduledAtMs).toBeNull();
+  });
+
+  it('says it failed when the backend cannot be reached', async () => {
+    invoke.mockRejectedValue(new Error('no backend'));
+    const result = await publishMetaVideo({ platform: 'instagram', localFilePath: 'v.mp4', caption: '', approved: true });
+    expect(result).toEqual(expect.objectContaining({ ok: false, status: 'failed', message: 'no backend' }));
   });
 });

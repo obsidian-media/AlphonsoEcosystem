@@ -7,10 +7,10 @@ import { approveRequestStep } from '../joseExecutionEngineService';
 import { getJoseRequest } from '../jose/joseRequestStore';
 import { getBrand } from './contentBrandService';
 import {
-  addStepProgress, approveStep, failStep, getProject, markStepStatus, setProjectRequest, startStep,
+  addStepProgress, approveStep, changeProjectPosts, failStep, getProject, markStepStatus, setProjectRequest, startStep,
 } from './contentProjectService';
 import { requireOutputRoot } from './contentProjectFiles';
-import { CLIPS_WAIT, CLIPS_WAIT_PAID, contentProjectPlanSteps, REVIEW_WAIT } from './contentProjectPlan';
+import { CLIPS_WAIT, CLIPS_WAIT_PAID, contentProjectPlanSteps, PUBLISH_WAIT, REVIEW_WAIT } from './contentProjectPlan';
 import { resolveProjectClipEngine } from './contentMediaExecutor';
 import { STEP_AGENTS } from './contentStepAgents';
 import { STEP_ORDER, type ContentProject, type StepId } from './contentTypes';
@@ -149,7 +149,35 @@ export async function runContentStep(projectId: string, step: StepId, options: R
 }
 
 /** Approve a step in Miya Studio; after the review this also carries the project's request on. */
-export async function approveContentStep(projectId: string, step: StepId): Promise<ContentProject> {
+export async function approveContentStep(projectId: string, step: StepId, settings?: { outputFolder?: string | null }): Promise<ContentProject> {
+  // "Approve and schedule" (phase 3a): approves the draft posts you see, then carries the
+  // request on at Publish, or runs Publish through Jose when no request is waiting there.
+  if (step === 'publish') {
+    // A failed post (say, a key was missing) is approved again with the drafts, so it is retried.
+    const waitingForYou = (status: string) => status === 'draft' || status === 'failed';
+    const drafts = (getProject(projectId)?.posts || []).filter((p) => waitingForYou(p.status));
+    if (!drafts.length) return getProject(projectId) as ContentProject;
+    changeProjectPosts(projectId, (posts) => posts.map((p) => (waitingForYou(p.status) ? { ...p, status: 'approved', reason: undefined } : p)));
+    const project = getProject(projectId);
+    const request = project?.joseRequestId ? getJoseRequest(project.joseRequestId) : null;
+    const waiting = request?.status === 'waiting_approval'
+      ? request.steps.find((s) => s.status === 'waiting_approval' && (s.waitFor === PUBLISH_WAIT || s.stepId === 'publish'))
+      : null;
+    if (request && waiting) {
+      await approveRequestStep(request.id, waiting.stepId);
+      return getProject(projectId) as ContentProject;
+    }
+    // Run on its own, Publish stops for approval like any post; this click, with the list in
+    // front of you, is that approval, so you are not asked a second time on the board.
+    await runContentStep(projectId, 'publish', { settings: settings || {} });
+    const started = getProject(projectId);
+    const run = started?.joseRequestId ? getJoseRequest(started.joseRequestId) : null;
+    const stopped = run?.status === 'waiting_approval'
+      ? run.steps.find((s) => s.status === 'waiting_approval' && (s.waitFor === PUBLISH_WAIT || s.stepId === 'publish'))
+      : null;
+    if (run && stopped) await approveRequestStep(run.id, stopped.stepId);
+    return getProject(projectId) as ContentProject;
+  }
   // "Make AI clips" (phase 2b): the request waits at the clips step; approving it carries the run
   // on (and, for Runway, approves the cost). The step itself is not an approval step.
   if (step === 'clips') {

@@ -157,6 +157,7 @@ async function openContentProject(projectId: string): Promise<void> {
 }
 import { markRunningRequestsInterrupted } from './services/jose/joseRequestStore';
 import { expireWaitingRequests } from './services/jose/joseExpiry';
+import { startPostScheduler, stopScheduler } from './services/marcusExecutionService';
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
@@ -205,6 +206,13 @@ function AppShell() {
     if (IS_COACH_WINDOW) return undefined;
     const timer = setInterval(() => { try { expireWaitingRequests(); } catch { /* next hour */ } }, 60 * 60 * 1000);
     return () => clearInterval(timer);
+  }, []);
+  // Scheduled posts (content factory phase 3a): Marcus's runner, every minute while the app is
+  // open; one due while the app was closed goes out now (more than 7 days late: it asks first).
+  useEffect(() => {
+    if (IS_COACH_WINDOW) return undefined;
+    try { startPostScheduler(); } catch { /* checked again next start */ }
+    return () => stopScheduler();
   }, []);
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;

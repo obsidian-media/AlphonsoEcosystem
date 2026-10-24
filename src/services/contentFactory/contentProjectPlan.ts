@@ -23,6 +23,7 @@ export const CONTENT_TEMPLATE_STEPS: Record<string, StepId> = {
   timing: 'campaign',
   quality: 'quality',
   security: 'quality',
+  publish: 'publish',
 };
 
 /** Why Scenes waits: you approve the review in Miya Studio first (owner, 2026-10-23). */
@@ -31,6 +32,9 @@ export const REVIEW_WAIT = 'Approve the review in Miya Studio first.';
 /** Why AI clips wait (phase 2b): you check Miya's main moments first; for Runway, the cost too. */
 export const CLIPS_WAIT = 'Check the main moments in Miya Studio first.';
 export const CLIPS_WAIT_PAID = 'Check the main moments and the Runway cost in Miya Studio first.';
+
+/** Why Publish waits (phase 3a): you approve the exact posts in Campaign Studio's Posts list. */
+export const PUBLISH_WAIT = 'Check the posts in Campaign Studio and choose "Approve and schedule".';
 
 /**
  * The project's plan from `from` (default research) onward, or with `only`
@@ -72,6 +76,7 @@ export function contentProjectPlanSteps(
     };
     if (s.reviewOf && ids.has(s.reviewOf)) step.reviewOf = s.reviewOf;
     if (factoryStep === 'scenes' && hasReview) step.waitFor = REVIEW_WAIT;
+    if (factoryStep === 'publish') step.waitFor = PUBLISH_WAIT;
     // AI clips stop once for the main moments; a Runway run is that same stop plus its cost.
     // Run on its own from Miya Studio, the user is already looking at the marks: no extra stop,
     // but a Runway run still asks for its cost (spending always asks).

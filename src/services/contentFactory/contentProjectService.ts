@@ -8,6 +8,7 @@ import {
   type BasedOn,
   type ContentBrief,
   type ContentProject,
+  type ProjectPost,
   type StepId,
   type StepState,
   type StepVersion,
@@ -166,6 +167,13 @@ export function saveStepVersion(
     s.error = null;
     s.runBasedOn = null;
     delete s.pendingAgents;
+  });
+}
+
+/** Replaces the project's posts (phase 3a); `change` edits them in place. */
+export function changeProjectPosts(id: string, change: (posts: ProjectPost[]) => ProjectPost[]): ContentProject {
+  return update(id, (p) => {
+    p.posts = change(p.posts ? p.posts.map((post) => ({ ...post })) : []);
   });
 }
 

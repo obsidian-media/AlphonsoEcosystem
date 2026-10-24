@@ -38,6 +38,7 @@ mod memory_graph;
 mod memory_graph_prune;
 mod memory_store;
 mod meta_publish;
+mod meta_video;
 mod native_proof;
 mod ollama;
 mod os_keychain_store;
@@ -133,7 +134,7 @@ pub(crate) struct ConnectorInboundMessage {
   pub(crate) callback_data: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct YouTubeUploadProof {
   pub(crate) connector_id: String,
@@ -145,6 +146,13 @@ pub(crate) struct YouTubeUploadProof {
   pub(crate) uploaded_at_ms: u64,
   pub(crate) trust: String,
   pub(crate) error: Option<String>,
+  /// The scheduled publish time YouTube kept (read back), RFC 3339.
+  pub(crate) publish_at: Option<String>,
+  /// YouTube kept the video private when it was asked to publish it.
+  pub(crate) locked_private: bool,
+  pub(crate) thumbnail_set: bool,
+  /// What the user should know (thumbnail not set, locked private with the Studio link).
+  pub(crate) note: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -855,6 +863,7 @@ pub fn run() {
       connector_send_clickup,
       connector_upload_youtube,
       meta_publish_content,
+      meta_video::meta_publish_video,
       tool_connection_post_webhook,
       connector_generate_sdwebui_image,
       connector_queue_comfyui_video,

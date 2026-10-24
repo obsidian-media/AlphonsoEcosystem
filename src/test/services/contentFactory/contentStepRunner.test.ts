@@ -19,7 +19,8 @@ import { createProject, emptyBrief, getProject, markStepStatus, startStep } from
 import {
   runContentStep, runContentProject, approveContentStep, STEP_AGENTS, CONTENT_TASK_PREVIEW, PROJECT_LABEL, WAITING_FOR_APPROVAL,
 } from '../../../services/contentFactory/contentStepRunner';
-import { CLIPS_WAIT, CLIPS_WAIT_PAID, REVIEW_WAIT } from '../../../services/contentFactory/contentProjectPlan';
+import { CLIPS_WAIT, CLIPS_WAIT_PAID, PUBLISH_WAIT, REVIEW_WAIT } from '../../../services/contentFactory/contentProjectPlan';
+import { savePosts } from '../../../services/contentFactory/contentPosts';
 import { resolveProjectClipEngine } from '../../../services/contentFactory/contentMediaExecutor';
 import { canExecutePacket } from '../../../services/agentBusService';
 
@@ -46,7 +47,7 @@ describe('runContentProject', () => {
     const args = submitted();
     expect(args).toMatchObject({ source: 'content-factory', label: PROJECT_LABEL, saveDecisions: false });
     expect(PROJECT_LABEL).toBe('Steps set by Miya Studio.');
-    expect(args.steps).toHaveLength(16);
+    expect(args.steps).toHaveLength(17);
     expect(args.text).toContain('Why we wait');
     expect(getProject(p.id)!.joseRequestId).toBe('jose-request-c1');
   });
@@ -129,14 +130,75 @@ describe('runContentStep', () => {
   it("every factory task passes Jose's execution gates", () => {
     for (const [step, agents] of Object.entries(STEP_AGENTS)) {
       for (const { agent, actionType } of agents) {
-        const gate = canExecutePacket({ toAgent: agent, actionType, commandPreview: CONTENT_TASK_PREVIEW, status: 'queued', requiresApproval: false } as never);
+        // Publishing (phase 3a) runs only once approved; every other task runs as queued.
+        const status = step === 'publish' ? 'approved' : 'queued';
+        const gate = canExecutePacket({ toAgent: agent, actionType, commandPreview: CONTENT_TASK_PREVIEW, status, requiresApproval: step === 'publish' } as never);
         expect(gate, `${step} ${agent} ${actionType}`).toEqual({ ok: true, reason: null });
       }
     }
   });
+
+  it('publishing is refused until it is approved', () => {
+    const gate = canExecutePacket({ toAgent: 'marcus', actionType: 'distribution_schedule_posts', commandPreview: CONTENT_TASK_PREVIEW, status: 'queued', requiresApproval: false } as never);
+    expect(gate.ok).toBe(false);
+  });
 });
 
 describe('approveContentStep', () => {
+  // Phase 3a: "Approve and schedule" approves the drafts you see, then carries the request on (or runs Publish).
+  function withPosts() {
+    const p = newProject();
+    const post = (id: string, status: 'draft' | 'cancelled') => ({
+      id, platform: 'youtube' as const, piece: 'video' as const, file: 'f', title: 't', caption: 'c', hashtags: [], scheduledAtMs: 1, status,
+    });
+    savePosts(p.id, [post('a', 'draft'), post('b', 'cancelled')]);
+    return p;
+  }
+
+  it('approving Publish approves the drafts and carries the waiting request on', async () => {
+    const p = withPosts();
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok({ pendingApprovalCount: 1 }) as never);
+    await runContentProject(p.id, { settings });
+    vi.mocked(getJoseRequest).mockReturnValue({ id: 'jose-request-c1', status: 'waiting_approval', steps: [{ stepId: 'publish', status: 'waiting_approval', waitFor: PUBLISH_WAIT }] } as never);
+    const after = await approveContentStep(p.id, 'publish', settings);
+    expect(after.posts!.map((x) => x.status)).toEqual(['approved', 'cancelled']);
+    expect(approveRequestStep).toHaveBeenCalledWith('jose-request-c1', 'publish');
+  });
+
+  it('with no request waiting, approving Publish runs the Publish step through Jose', async () => {
+    const p = withPosts();
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok() as never);
+    await approveContentStep(p.id, 'publish', settings);
+    expect(submitted().steps.map((s: any) => s.actionType)).toEqual(['distribution_schedule_posts']);
+    expect(getProject(p.id)!.posts![0].status).toBe('approved');
+  });
+
+  it('your click is the one approval: the Publish step it starts is approved, not asked again', async () => {
+    const p = withPosts();
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok({ pendingApprovalCount: 1 }) as never);
+    vi.mocked(getJoseRequest).mockReturnValue({ id: 'jose-request-c1', status: 'waiting_approval', steps: [{ stepId: 'publish', status: 'waiting_approval', waitFor: PUBLISH_WAIT }] } as never);
+    await approveContentStep(p.id, 'publish', settings);
+    expect(submitStepsToJose).toHaveBeenCalledTimes(1);
+    expect(approveRequestStep).toHaveBeenCalledTimes(1);
+    expect(approveRequestStep).toHaveBeenCalledWith('jose-request-c1', 'publish');
+  });
+
+  // Final review: a post that failed (a key was missing) can be approved again once fixed.
+  it('approving Publish again retries a failed post', async () => {
+    const p = newProject();
+    savePosts(p.id, [{ id: 'f', platform: 'youtube', piece: 'video', file: 'f', title: 't', caption: 'c', hashtags: [], scheduledAtMs: 1, status: 'failed', reason: 'No key' }]);
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok() as never);
+    await approveContentStep(p.id, 'publish', settings);
+    expect(getProject(p.id)!.posts![0].status).toBe('approved');
+    expect(submitStepsToJose).toHaveBeenCalledTimes(1);
+  });
+
+  it('with no drafts left, nothing is run', async () => {
+    const p = newProject();
+    await approveContentStep(p.id, 'publish', settings);
+    expect(submitStepsToJose).not.toHaveBeenCalled();
+  });
+
   it('approving the review carries the request on to Scenes', async () => {
     const p = newProject();
     vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok({ pendingApprovalCount: 1 }) as never);
