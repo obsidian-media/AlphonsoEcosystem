@@ -7,7 +7,7 @@
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.7
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { inferEffects, type JoseEffect } from './joseEffects';
-import { isTaskTypeAllowed } from './agentPermissionTable';
+import { isTaskTypeAllowed, ownerOf, responsibilityLines } from './agentPermissionTable';
 import type { PlanStep } from './stepGraph';
 import type { PlanChange } from './joseAdapt';
 
@@ -43,6 +43,8 @@ export function findHelpRequest(output: any): string | null {
 function safeHelper(helper: Helper, askingAgent: string): Helper | null {
   if (!helper.agent || !helper.actionType || helper.agent === askingAgent) return null;
   if (!isTaskTypeAllowed(helper.agent, helper.actionType)) return null;
+  // Only the agent who owns the work helps with it (agent roles Part A).
+  if (ownerOf(helper.actionType) !== helper.agent) return null;
   if (!inferEffects(helper.actionType).every((effect) => SAFE_HELP_EFFECTS.includes(effect))) return null;
   return helper;
 }
@@ -51,7 +53,8 @@ function safeHelper(helper: Helper, askingAgent: string): Helper | null {
 function ruleHelper(request: string): Helper {
   const text = request.toLowerCase();
   if (/\b(accura|correct|check|verify|quality|review|honest)/.test(text)) return { agent: 'maria', actionType: 'audit_quality' };
-  if (/\b(when|timing|market|audience|trend|analy|score)/.test(text)) return { agent: 'nova', actionType: 'analysis_market' };
+  // Hector finds facts (markets, competitors and trends too); Nova judges them (2026-10-24).
+  if (/\b(when|timing|score|priorit|worth|judge|value)/.test(text)) return { agent: 'nova', actionType: 'analysis_findings' };
   return { agent: 'hector', actionType: 'research_report' };
 }
 
@@ -62,7 +65,9 @@ function ruleHelper(request: string): Helper {
 export async function chooseHelper(request: string, askingAgent: string): Promise<Helper | null> {
   const prompt = [
     `An agent (${askingAgent}) asked for help: ${request}`,
-    'Which agent should help, and with which task type? Agents: hector (research_), nova (analysis_), maria (audit_), sentinel (security_), miya (creative_), echo (memory_).',
+    'Which agent owns what is needed, and with which task type? Each agent helps only with its own work:',
+    responsibilityLines().join('\n'),
+    'Task types: hector research_, nova analysis_, maria audit_, sentinel security_, miya creative_, echo memory_.',
     'Answer with JSON only: {"agent": "<agent>", "taskType": "<task type>"}',
   ].join('\n\n');
   try {
