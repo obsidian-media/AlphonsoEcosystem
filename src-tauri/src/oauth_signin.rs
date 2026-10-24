@@ -18,9 +18,10 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 /// How long Alphonso waits for the browser to come back.
 pub(crate) const SIGN_IN_WAIT: Duration = Duration::from_secs(300);
-const GOOGLE_SCOPES: &str = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.readonly";
-const META_SCOPES: &str = "pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_metadata,instagram_basic,instagram_content_publish,business_management,public_profile";
-const INSTAGRAM_SCOPES: &str = "instagram_business_basic,instagram_business_content_publish";
+const GOOGLE_SCOPES: &str = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly";
+const META_SCOPES: &str = "pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_metadata,instagram_basic,instagram_content_publish,business_management,public_profile,instagram_manage_insights,read_insights,pages_manage_engagement";
+const INSTAGRAM_SCOPES: &str =
+  "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Service {
@@ -615,6 +616,21 @@ pub(crate) async fn instagram_refresh_token(token: String) -> RefreshResult {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn the_sign_ins_ask_to_read_numbers() {
+    assert!(GOOGLE_SCOPES.contains("https://www.googleapis.com/auth/yt-analytics.readonly"));
+    assert!(META_SCOPES
+      .split(',')
+      .any(|s| s == "instagram_manage_insights"));
+    assert!(META_SCOPES.split(',').any(|s| s == "read_insights"));
+    assert!(META_SCOPES
+      .split(',')
+      .any(|s| s == "pages_manage_engagement"));
+    assert!(INSTAGRAM_SCOPES
+      .split(',')
+      .any(|s| s == "instagram_business_manage_insights"));
+  }
 
   fn query(url: &str) -> HashMap<String, String> {
     reqwest::Url::parse(url)
