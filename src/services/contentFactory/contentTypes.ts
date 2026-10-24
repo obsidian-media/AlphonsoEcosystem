@@ -23,6 +23,20 @@ export interface ContentIdea {
   status: 'new' | 'started' | 'dismissed';
 }
 
+/** A brand's character (phase 4c). Pictures are paths relative to the output folder. */
+export interface BrandCharacter {
+  id: string;
+  name: string;
+  kind: 'made_up' | 'real_person';
+  description: string;
+  pictures: string[];
+  /** A real person only: "This is me, or I have this person's permission", with when it was ticked. */
+  permission?: { atMs: number };
+  higgsfield?: { characterId?: string; requestId?: string; status: 'not_trained' | 'training' | 'ready' | 'failed'; reason?: string; usd?: number };
+  /** The pictures ComfyUI keeps the character from (default: the first ones). */
+  comfyPictures?: string[];
+}
+
 export interface ContentBrand {
   id: string;
   name: string;
@@ -54,6 +68,10 @@ export interface ContentBrand {
     /** Sound effects from ElevenLabs in the long video (phase 4b); off unless switched on. */
     soundEffects?: boolean;
   };
+  /** Consistent characters (phase 4c): made-up, or a real person with permission. */
+  characters?: BrandCharacter[];
+  /** The character scenes use unless a project or scene chooses another. */
+  mainCharacterId?: string;
   createdAtMs: number;
   updatedAtMs: number;
 }

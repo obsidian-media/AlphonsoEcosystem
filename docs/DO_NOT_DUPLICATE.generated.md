@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 280 services and 172 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 281 services and 173 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -98,6 +98,7 @@ Source-backed inventory: 280 services and 172 components. Human purpose descript
 | component | `src/components/miya/BriefPanel.tsx` | `BriefPanel` |
 | component | `src/components/miya/CampaignStudioTab.tsx` | `CampaignStudioTab` |
 | component | `src/components/miya/CarouselStudioTab.tsx` | `CarouselStudioTab`, `CarouselStudioTabProps` |
+| component | `src/components/miya/CharactersEditor.tsx` | `CharactersEditor` |
 | component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab`, `selectContentProject` |
 | component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
 | component | `src/components/miya/HiggsfieldResults.tsx` | `HiggsfieldMedia`, `HiggsfieldResultsList` |
@@ -273,6 +274,7 @@ Source-backed inventory: 280 services and 172 components. Human purpose descript
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |
 | service | `src/services/contentFactory/contentBrandService.ts` | `addBrandLesson`, `addProposedLessons`, `DEFAULT_QUALITY_THRESHOLD`, `dropLesson`, `editLesson`, `ensureFirstBrand`, `getBrand`, `keepLesson`, `listBrands`, `proposedLessons`, `saveBrand` |
 | service | `src/services/contentFactory/contentCaptions.ts` | `alignCaptions`, `captionsFromLines`, `TimedWord`, `toSrt` |
+| service | `src/services/contentFactory/contentCharacters.ts` | `addCharacter`, `addCharacterPictures`, `characterUsable`, `deleteCharacter`, `getCharacter`, `listCharacters`, `makeCharacterPictures`, `MAX_CHARACTER_PICTURES`, `MIN_CHARACTER_PICTURES`, `MIYA_CHARACTER_PICTURES`, `NEEDS_PERMISSION`, `NEEDS_PICTURES`, `REAL_PERSON_OWN_PHOTOS`, `removeCharacterPicture`, `setMainCharacter`, `setPermission`, `updateCharacter` |
 | service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentIdeas.ts` | `dismissIdea`, `getIdea`, `IDEAS_TASK_MARK`, `listIdeas`, `proposeIdeas`, `saveIdeas`, `startProjectFromIdea` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureOptions`, `PictureResult`, `renderCarouselSlides`, `renderScenePictures`, `renderThumbnails` |
@@ -290,7 +292,7 @@ Source-backed inventory: 280 services and 172 components. Human purpose descript
 | service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
 | service | `src/services/contentFactory/contentStepRunner.ts` | `addMiniShort`, `approveContentStep`, `CONTENT_TASK_PREVIEW`, `ONE_MORE_SHORT`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
 | service | `src/services/contentFactory/contentTelegram.ts` | `collectContentNotifications`, `ContentButton`, `ContentButtonAction`, `contentButtonToken`, `ContentNotification`, `ContentTelegramSettings`, `getContentTelegramSettings`, `handleContentButton`, `readContentButtonToken` |
-| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `BrandLesson`, `CarouselShape`, `CarouselSlide`, `Checkpoint`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentIdea`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `MetricsReading`, `PostingSlot`, `PostMetrics`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
+| service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `BrandCharacter`, `BrandLesson`, `CarouselShape`, `CarouselSlide`, `Checkpoint`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentIdea`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `MetricsReading`, `PostingSlot`, `PostMetrics`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
 | service | `src/services/contentFactory/engineChoice.ts` | `EngineChoices`, `higgsfieldPictureLimit`, `PaidEngine`, `paidEngineAvailable`, `prepareEngineEstimates`, `projectEngines`, `resolvePictures`, `resolveVoice`, `VoiceChoice` |
 | service | `src/services/contentFactory/higgsfieldByName.ts` | `askHiggsfieldByName`, `checkHiggsfieldResult`, `executeHiggsfieldByName`, `HIGGSFIELD_BY_NAME_NOT_SET_UP`, `HIGGSFIELD_LABEL`, `HIGGSFIELD_NOT_FROM_SCHEDULE`, `HiggsfieldKind`, `higgsfieldKindOf`, `higgsfieldPromptOf`, `HiggsfieldResult`, `higgsfieldResultsDoneSince`, `higgsfieldResultsFor`, `listHiggsfieldResults`, `markShownInChat` |

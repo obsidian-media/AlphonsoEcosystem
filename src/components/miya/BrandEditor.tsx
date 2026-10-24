@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrandEnginesEditor } from './BrandEnginesEditor';
+import { CharactersEditor } from './CharactersEditor';
 import { getBrand } from '../../services/contentFactory/contentBrandService';
 import { IdeasList } from './IdeasList';
 import { BrandResults } from './BrandResults';
@@ -78,7 +79,9 @@ export function BrandEditor({ brandId, onBrand }: { brandId: string; onBrand(id:
   );
 
   const save = () => {
-    const next = saveBrand({ ...draft, references: textToReferences(refs) });
+    // Characters are saved as they change (phase 4c), so the latest ones are kept here.
+    const latest = getBrand(draft.id);
+    const next = saveBrand({ ...draft, references: textToReferences(refs), characters: latest?.characters, mainCharacterId: latest?.mainCharacterId });
     setBrands(listBrands());
     setDraft(next);
     setSaved('Saved');
@@ -141,6 +144,7 @@ export function BrandEditor({ brandId, onBrand }: { brandId: string; onBrand(id:
       </label>
       {text('pastScripts', 'Past scripts (for “write in my voice”)', true)}
       <BrandEnginesEditor brand={draft} onChange={(engines) => setDraft({ ...draft, engines })} />
+      <CharactersEditor brandId={draft.id} />
 
       {draft.lessons.some((l) => l.status !== 'proposed') && (
         <div className="space-y-1">
