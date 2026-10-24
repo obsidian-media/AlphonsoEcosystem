@@ -145,14 +145,18 @@ export interface PostingSlot {
 
 export type PostStatus =
   | 'draft' | 'approved' | 'scheduled' | 'posting' | 'posted' | 'locked_private'
-  | 'waiting_app' | 'failed' | 'check' | 'cancelled' | 'ask' | 'over_limit';
+  | 'waiting_app' | 'failed' | 'check' | 'cancelled' | 'ask' | 'over_limit' | 'by_hand';
 
 /** One post of a project (phase 3a). `file` and `thumbnail` are relative to the output folder. */
 export interface ProjectPost {
   id: string;
   platform: PostPlatform;
-  piece: 'video' | 'short' | 'reel';
+  piece: 'video' | 'short' | 'reel' | 'carousel';
   file: string;
+  /** A carousel's slides in order (phase 3c); `file` is the first. */
+  files?: string[];
+  /** Where a post Alphonso could not send was saved to post by hand (phase 3c). */
+  folder?: string;
   thumbnail?: string;
   title: string;
   caption: string;

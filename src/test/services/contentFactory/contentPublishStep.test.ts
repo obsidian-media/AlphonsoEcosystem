@@ -65,6 +65,15 @@ describe('executePublishStep', () => {
     expect(posts(id)[0].status).toBe('posted');
   });
 
+  it('a post saved to post by hand (no storage) says so, with its folder', async () => {
+    const id = setup([{ platform: 'instagram', piece: 'carousel', scheduledAtMs: NOW - HOUR }]);
+    publishPost.mockResolvedValue({ status: 'by_hand', folder: 'acme/launch/ready-to-post/instagram-carousel-v1', reason: 'Saved to post by hand (no storage is set up): acme/launch/ready-to-post/instagram-carousel-v1' });
+    const result = await executePublishStep(assignmentFor(id), NOW);
+    expect(result.resultState).toBe('completed');
+    expect(posts(id)[0]).toMatchObject({ status: 'by_hand', folder: 'acme/launch/ready-to-post/instagram-carousel-v1' });
+    expect(result.summary).toContain('1 to post by hand');
+  });
+
   it('a locked YouTube channel gets a reminder at the post time, with the Studio link', async () => {
     const id = setup([{ platform: 'youtube' }]);
     publishPost.mockResolvedValue({ status: 'locked_private', platformId: 'v1', reason: 'YouTube kept this video private …' });

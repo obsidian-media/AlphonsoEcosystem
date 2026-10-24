@@ -151,3 +151,14 @@ describe('cancelProjectPost', () => {
     expect(post(projectId).status).toBe('cancelled');
   });
 });
+
+// Phase 3c: a Facebook carousel is a Page photo post, not a Reel.
+it("a Facebook carousel moves and cancels with kind 'post'", async () => {
+  const { projectId, postId } = withPost({ platform: 'facebook', piece: 'carousel', status: 'scheduled', platformId: '1_2' });
+  rescheduleMetaVideo.mockResolvedValue({ ok: true, scheduledAtMs: NOW + 3 * DAY });
+  expect((await movePost(projectId, postId, NOW + 3 * DAY, NOW)).ok).toBe(true);
+  expect(rescheduleMetaVideo).toHaveBeenCalledWith({ videoId: '1_2', scheduledAtMs: NOW + 3 * DAY, kind: 'post' });
+  cancelMetaVideo.mockResolvedValue({ ok: true });
+  expect((await cancelProjectPost(projectId, postId)).ok).toBe(true);
+  expect(cancelMetaVideo).toHaveBeenCalledWith({ videoId: '1_2', kind: 'post' });
+});

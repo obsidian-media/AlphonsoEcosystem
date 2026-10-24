@@ -1095,9 +1095,110 @@ pub fn content_allow_media_folder(app: AppHandle, folder: String) -> Result<(), 
     .map_err(|e| e.to_string())
 }
 
+/// A ready-to-post file's name: slides keep their order (`01-…`), a single file its own name.
+pub(crate) fn ready_file_name(index: usize, total: usize, name: &str) -> String {
+  if total <= 1 {
+    name.to_string()
+  } else {
+    format!("{:02}-{name}", index + 1)
+  }
+}
+
+/// `folder`, or `folder-2`, `folder-3`… the first that does not exist yet.
+pub(crate) fn free_folder(exists: impl Fn(&str) -> bool, folder: &str) -> Option<String> {
+  (1..=50)
+    .map(|n| {
+      if n == 1 {
+        folder.to_string()
+      } else {
+        format!("{folder}-{n}")
+      }
+    })
+    .find(|candidate| !exists(candidate))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ReadyToPost {
+  ok: bool,
+  folder: Option<String>,
+  files: Vec<String>,
+  reason: Option<String>,
+}
+
+/// "Post by hand" (content factory phase 3c): copies a post's files and its caption
+/// (`caption.txt`) into a new folder in the project. Never overwrites anything.
+#[tauri::command]
+pub(crate) async fn content_ready_to_post(
+  workspace_root: String,
+  folder: String,
+  files: Vec<String>,
+  caption: String,
+) -> ReadyToPost {
+  let failed = |reason: &str| ReadyToPost {
+    ok: false,
+    folder: None,
+    files: Vec::new(),
+    reason: Some(reason.to_string()),
+  };
+  if files.is_empty() || files.len() > 10 {
+    return failed("A post has 1 to 10 files.");
+  }
+  let root = workspace_root.trim().to_string();
+  let Some(chosen) = free_folder(|rel| Path::new(&root).join(rel).exists(), folder.trim()) else {
+    return failed("Too many ready-to-post folders for this post already.");
+  };
+  let dir = match checked_dir(&root, &chosen) {
+    Ok(dir) => dir,
+    Err(reason) => return failed(&reason),
+  };
+  let mut copied = Vec::with_capacity(files.len());
+  for (i, file) in files.iter().enumerate() {
+    let src = match checked_file(&root, file, &["mp4", "mov", "jpg", "jpeg", "png", "webp"]) {
+      Ok(src) => src,
+      Err(reason) => return failed(&reason),
+    };
+    let Some(name) = src.file_name().and_then(|n| n.to_str()) else {
+      return failed("A file name is required.");
+    };
+    let target = ready_file_name(i, files.len(), name);
+    if std::fs::copy(&src, dir.join(&target)).is_err() {
+      return failed("A file was not found or could not be copied.");
+    }
+    copied.push(format!("{chosen}/{target}"));
+  }
+  if std::fs::write(dir.join("caption.txt"), caption.as_bytes()).is_err() {
+    return failed("The caption could not be saved.");
+  }
+  ReadyToPost {
+    ok: true,
+    folder: Some(chosen),
+    files: copied,
+    reason: None,
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn ready_files_keep_their_order() {
+    assert_eq!(ready_file_name(0, 1, "v1.mp4"), "v1.mp4");
+    assert_eq!(ready_file_name(0, 3, "a.png"), "01-a.png");
+    assert_eq!(ready_file_name(9, 10, "j.png"), "10-j.png");
+  }
+
+  #[test]
+  fn a_ready_folder_never_overwrites() {
+    let taken = ["p/ready-to-post/ig-v1", "p/ready-to-post/ig-v1-2"];
+    assert_eq!(
+      free_folder(|f| taken.contains(&f), "p/ready-to-post/ig-v1").as_deref(),
+      Some("p/ready-to-post/ig-v1-3")
+    );
+    assert_eq!(free_folder(|_| false, "x").as_deref(), Some("x"));
+    assert_eq!(free_folder(|_| true, "x"), None);
+  }
 
   #[test]
   fn prefers_the_bundled_copy() {

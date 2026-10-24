@@ -62,7 +62,7 @@ export async function movePost(projectId: string, postId: string, atMs: number, 
   try {
     const answer = post.platform === 'youtube'
       ? await rescheduleYouTubeVideo({ videoId: post.platformId as string, publishAt: new Date(atMs).toISOString() })
-      : await rescheduleMetaVideo({ videoId: post.platformId as string, scheduledAtMs: atMs });
+      : await rescheduleMetaVideo({ videoId: post.platformId as string, scheduledAtMs: atMs, ...metaKind(post) });
     appendConnectorAudit(post.platform, 'post_moved', { projectId, postId, fromMs: post.scheduledAtMs, toMs: atMs, ok: Boolean(answer?.ok) });
     if (!answer?.ok) {
       return { ok: false, reason: answer?.reason || 'The platform did not take the new time.', ...(answer?.manageUrl ? { manageUrl: answer.manageUrl } : {}) };
@@ -73,6 +73,9 @@ export async function movePost(projectId: string, postId: string, atMs: number, 
     moving.delete(postId);
   }
 }
+
+/** A Facebook carousel is a Page photo post (phase 3c), not a Reel. */
+const metaKind = (post: ProjectPost): { kind?: 'post' } => (post.piece === 'carousel' ? { kind: 'post' } : {});
 
 /** Cancels a post; one scheduled on YouTube loses its schedule (stays private), on Facebook it is deleted. */
 export async function cancelProjectPost(projectId: string, postId: string): Promise<MoveResult> {
@@ -88,7 +91,7 @@ export async function cancelProjectPost(projectId: string, postId: string): Prom
   try {
     const answer = post.platform === 'youtube'
       ? await rescheduleYouTubeVideo({ videoId: post.platformId as string, publishAt: null })
-      : await cancelMetaVideo({ videoId: post.platformId as string });
+      : await cancelMetaVideo({ videoId: post.platformId as string, ...metaKind(post) });
     appendConnectorAudit(post.platform, 'post_cancelled', { projectId, postId, ok: Boolean(answer?.ok) });
     if (!answer?.ok) {
       return { ok: false, reason: answer?.reason || 'The platform did not cancel it.', ...(answer?.manageUrl ? { manageUrl: answer.manageUrl } : {}) };

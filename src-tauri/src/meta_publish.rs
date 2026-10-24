@@ -52,6 +52,11 @@ pub(crate) struct MetaCredentials {
   app_secret: Option<String>,
   #[serde(default)]
   app_id: Option<String>,
+  /// Instagram Login (phase 3c): a token for an Instagram account with no Facebook Page.
+  #[serde(default)]
+  instagram_login_token: Option<String>,
+  #[serde(default)]
+  instagram_login_user_id: Option<String>,
 }
 
 /// The Meta keys to use: what the app passed (saved in Settings), else the environment.
@@ -63,6 +68,8 @@ pub(crate) struct ResolvedMeta {
   pub ig_user_id: String,
   pub app_secret: String,
   pub app_id: String,
+  pub ig_login_token: String,
+  pub ig_login_user_id: String,
 }
 
 pub(crate) fn resolve_meta_credentials(passed: Option<MetaCredentials>) -> ResolvedMeta {
@@ -83,6 +90,8 @@ pub(crate) fn resolve_meta_credentials(passed: Option<MetaCredentials>) -> Resol
     ),
     app_secret: secret_or_env(c.app_secret, "META_APP_SECRET"),
     app_id: secret_or_env(c.app_id, "META_APP_ID"),
+    ig_login_token: secret_or_env(c.instagram_login_token, "INSTAGRAM_LOGIN_TOKEN"),
+    ig_login_user_id: secret_or_env(c.instagram_login_user_id, "INSTAGRAM_LOGIN_USER_ID"),
   }
 }
 

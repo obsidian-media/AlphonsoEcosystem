@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 263 services and 164 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 265 services and 164 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -278,7 +278,9 @@ Source-backed inventory: 263 services and 164 components. Human purpose descript
 | service | `src/services/contentFactory/contentStepRunner.ts` | `approveContentStep`, `CONTENT_TASK_PREVIEW`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentProject`, `ContentStepPayload`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `PostingSlot`, `PostPlatform`, `PostStatus`, `ProjectPost`, `secureId`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
+| service | `src/services/contentFactory/instagramRoute.ts` | `getInstagramRoute`, `instagramLoginSetUp`, `InstagramRoute`, `pageRouteSetUp`, `savedInstagramRoute`, `setInstagramRoute` |
 | service | `src/services/contentFactory/publishPost.ts` | `PostResult`, `PublishablePost`, `publishPost` |
+| service | `src/services/contentFactory/readyToPost.ts` | `BY_HAND_REMINDER`, `exportForHand`, `handFolderFor` |
 | service | `src/services/contentFactory/runwayClip.ts` | `estimateRunwayUsd`, `makeRunwayClip`, `RUNWAY_DEFAULT_MODEL`, `runwayClipAvailable`, `RunwayClipInput`, `RunwayClipResult`, `runwayClipSeconds` |
 | service | `src/services/contentFactory/signInExpiry.ts` | `getSignInExpiry`, `isYoutubeProjectPublished`, `plainSignInReason`, `recordSignIn`, `setYoutubeProjectPublished`, `SignInService`, `SignInWarning`, `signInWarnings` |
 | service | `src/services/contentFactory/thumbnailRenderer.ts` | `darkestColour`, `drawHeadline`, `headlineColour`, `HeadlineLayout`, `HeadlineSide`, `layoutHeadline` |
@@ -337,7 +339,7 @@ Source-backed inventory: 263 services and 164 components. Human purpose descript
 | service | `src/services/memoryGraphService.ts` | `addEdge`, `AddEdgeOptions`, `addNode`, `GraphEdge`, `GraphEdgeWithDepth`, `GraphNode`, `inferEdges`, `listAllEdges`, `listAllNodes`, `queryRelated`, `queryRelatedDeep`, `touchNodes`, `TraversalDirection` |
 | service | `src/services/memoryMonitorService.ts` | `checkThresholds`, `getAlphonsoKeys`, `getUsageStats`, `KeySize`, `pruneOldest`, `subscribe`, `ThresholdResult`, `UsageStats`, `WarningEvent` |
 | service | `src/services/memoryService.ts` | `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getDurableMemoryStatus`, `getMemorySize`, `getMemorySummary`, `hydrateFromDurable`, `hydrateMemoryFromDurable`, `importMemoryItems`, `listDurableMemoryRecords`, `listMemory`, `listMemoryByNamespace`, `listMemoryItems`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `normalizeMemoryRecord`, `pushMemory`, `pushMemoryItem`, `resetMemoryServiceState`, `tickExpiry`, `upsertDurableMemoryRecords` |
-| service | `src/services/metaPublishService.ts` | `buildMetaPublishRequest`, `cancelMetaVideo`, `instagramPublishingLimit`, `MetaChangeResult`, `metaTokenExpiry`, `MetaVideoResult`, `publishMetaContent`, `publishMetaVideo`, `rescheduleMetaVideo`, `savedMetaCredentials` |
+| service | `src/services/metaPublishService.ts` | `buildMetaPublishRequest`, `cancelMetaVideo`, `instagramPublishingLimit`, `MetaChangeResult`, `metaTokenExpiry`, `MetaVideoResult`, `publishFacebookPhotos`, `publishInstagramByUrl`, `publishMetaContent`, `publishMetaVideo`, `rescheduleMetaVideo`, `savedMetaCredentials` |
 | service | `src/services/missionRoomService.ts` | `addMissionMessage`, `addMissionTask`, `appendMissionSecurityEvent`, `classifyMissionRoomRisk`, `clearMissionMessages`, `createDefaultMissionRoom`, `createHermesHandoff`, `getMissionRoom`, `listMissionMessages`, `listMissionRooms`, `listMissionSecurityEvents`, `listMissionTasks`, `MISSION_ROOM_AGENTS`, `MISSION_ROOM_SECURITY_MODEL`, `MISSION_TASK_STATUSES`, `MissionTaskStatus`, `redactMissionRoomSecrets`, `saveMissionRoom`, `SecurityEvent`, `updateMissionTask` |
 | service | `src/services/miyaComfyWorkflowPresetService.ts` | `getMiyaComfyWorkflowPreset`, `listMiyaComfyWorkflowPresets`, `MIYA_COMFY_WORKFLOW_PRESETS` |
 | service | `src/services/miyaExportPacketService.ts` | `buildMiyaExportPacket`, `createMiyaExportHandoffPacket` |

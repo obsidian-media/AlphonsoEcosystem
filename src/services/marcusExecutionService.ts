@@ -14,6 +14,7 @@ import { appendNotification } from './notificationService';
 import { listProjects } from './contentFactory/contentProjectService';
 import { signInWarnings } from './contentFactory/signInExpiry';
 import { checkDailyLimit } from './contentFactory/dailyLimits';
+import { BY_HAND_REMINDER } from './contentFactory/readyToPost';
 import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -620,9 +621,12 @@ async function tell(type: 'success' | 'error' | 'info', title: string, message: 
   } catch { /* not set up, or offline */ }
 }
 
-function setPost(item: ScheduledPublish, patch: { status: PostStatus; link?: string; platformId?: string; reason?: string; sentAtMs?: number }): void {
+function setPost(item: ScheduledPublish, patch: { status: PostStatus; link?: string; platformId?: string; reason?: string; sentAtMs?: number; folder?: string }): void {
   if (!item.projectId || !item.postId) return;
-  try { updatePost(item.projectId, item.postId, patch); } catch { /* the project was deleted */ }
+  // Only what the post keeps (a result's setupRequired is for the screen, not the post).
+  const { status, link, platformId, reason, sentAtMs, folder } = patch;
+  const kept = Object.fromEntries(Object.entries({ status, link, platformId, reason, sentAtMs, folder }).filter(([, v]) => v !== undefined));
+  try { updatePost(item.projectId, item.postId, kept); } catch { /* the project was deleted */ }
 }
 
 /**
@@ -683,6 +687,9 @@ async function sendContentPost(item: ScheduledPublish, nowMs: number): Promise<v
   const lateNote = late ? ` It went out late: Alphonso was closed at ${new Date(item.scheduledAt).toLocaleString()}.` : '';
   if (result.status === 'posted' || result.status === 'scheduled') {
     await tell('success', `${result.status === 'posted' ? 'Posted on' : 'Scheduled on'} ${where}: ${post.title}`, `${result.link || ''}${lateNote}`.trim());
+  } else if (result.status === 'by_hand' && result.folder) {
+    // Phase 3c: no storage for a post that needs a link; its files and caption are saved.
+    await tell('info', `Post by hand on ${where}: ${post.title}`, `${BY_HAND_REMINDER(post, result.folder)}${lateNote}`);
   } else {
     await tell('error', `Not posted on ${where}: ${post.title}`, `${result.reason || 'It failed.'}${lateNote}`);
   }

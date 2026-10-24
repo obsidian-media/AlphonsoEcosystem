@@ -7,7 +7,7 @@ import { openExternalUrl } from '../../services/browserAutomationService';
 import type { ContentBrand, ContentProject, PostStatus, ProjectPost } from '../../services/contentFactory/contentTypes';
 
 const PLATFORM: Record<ProjectPost['platform'], string> = { youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook' };
-const PIECE: Record<ProjectPost['piece'], string> = { video: 'video', short: 'Short', reel: 'Reel' };
+const PIECE: Record<ProjectPost['piece'], string> = { video: 'video', short: 'Short', reel: 'Reel', carousel: 'carousel' };
 const VARIANT: Partial<Record<PostStatus, 'success' | 'warning' | 'error' | 'info'>> = {
   posted: 'success', scheduled: 'info', approved: 'info', failed: 'error', check: 'warning', locked_private: 'warning', ask: 'warning',
 };

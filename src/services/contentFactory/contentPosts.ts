@@ -13,6 +13,7 @@ export const POST_STATUS_LABEL: Record<PostStatus, string> = {
   draft: 'Not approved yet', approved: 'Approved', scheduled: 'Scheduled', posting: 'Posting…', posted: 'Posted',
   locked_private: 'Kept private by YouTube', waiting_app: 'Waiting for the app', failed: 'Failed', check: 'Check it',
   cancelled: 'Cancelled', ask: 'Waiting for you', over_limit: 'Waiting: daily limit',
+  by_hand: 'Post by hand',
 };
 
 const PLATFORMS: PostPlatform[] = ['youtube', 'instagram', 'facebook'];
@@ -157,7 +158,7 @@ export function updatePost(projectId: string, postId: string, patch: Partial<Pro
   let result: { ok: boolean; reason?: string } = { ok: false, reason: 'That post was not found.' };
   changeProjectPosts(projectId, (posts) => posts.map((post) => {
     if (post.id !== postId) return post;
-    const statusOnly = Object.keys(patch).every((k) => ['status', 'link', 'platformId', 'reason', 'sentAtMs'].includes(k));
+    const statusOnly = Object.keys(patch).every((k) => ['status', 'link', 'platformId', 'reason', 'sentAtMs', 'folder'].includes(k));
     if (!statusOnly) {
       if (GONE.includes(post.status)) {
         result = { ok: false, reason: `This post has already ${post.status === 'cancelled' ? 'been cancelled' : 'gone out'}.` };
