@@ -13,6 +13,16 @@ export interface BrandLesson {
   postRef?: { projectId: string; postId: string };
 }
 
+/** A follow-up idea from a post that did well (phase 4a). */
+export interface ContentIdea {
+  id: string;
+  brandId: string;
+  text: string;
+  fromPost: { projectId: string; postId: string };
+  atMs: number;
+  status: 'new' | 'started' | 'dismissed';
+}
+
 export interface ContentBrand {
   id: string;
   name: string;

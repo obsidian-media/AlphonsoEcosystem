@@ -2,6 +2,7 @@
 // A project runs as one Jose request and may be carried on from the board,
 // Telegram or Carry on, so the saving happens here, reached from the engine,
 // not in Miya Studio's own run call.
+import { saveIdeas } from './contentIdeas';
 import { addProposedLessons, getBrand } from './contentBrandService';
 import {
   appendShortPlan,
@@ -55,6 +56,10 @@ export async function recordContentStepResult(input: {
       ...(answer.didnt || []).map((text) => ({ text, kind: 'didnt' as const })),
     ];
     addProposedLessons(project.brandId, items, input.postRef);
+    return 'saved';
+  }
+  if (input.purpose === 'ideas' && project && input.postRef) {
+    saveIdeas(project.brandId, ((input.data || {}) as { ideas?: string[] }).ideas || [], input.postRef);
     return 'saved';
   }
   if (input.purpose) return 'ignored';

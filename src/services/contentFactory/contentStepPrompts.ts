@@ -68,6 +68,12 @@ const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: S
     keys: '{"worked":["one sentence"],"didnt":["one sentence"]}',
     uses: ['script', 'thumbnail', 'campaign'],
   },
+  analysis_ideas: {
+    role: 'Nova, Alphonso\'s analyst',
+    ask: 'Suggest up to 3 follow-up videos for this brand from the post described below and its script: a sequel, the same hook on another topic, or a Short from it. One line each, ready to be a new project\'s idea. No made-up numbers.',
+    keys: '{"ideas":["one line"]}',
+    uses: ['research', 'script'],
+  },
   creative_lessons: {
     role: 'Miya, Alphonso\'s creative director',
     ask: 'Look at how this post did against the brand\'s usual numbers (given below) and at its script, hook, thumbnail and caption. Write up to 3 short lessons about what worked and up to 3 about what didn\'t, each one sentence about something you can do differently in the next video. No made-up numbers.',
@@ -180,6 +186,7 @@ const VALIDATORS: Record<string, (j: Json) => boolean> = {
     && every(j.concepts, 3, (c) => isText(c.headline) && words(c.headline) <= 6 && isText(c.imagePrompt) && ['left', 'right', 'center'].includes(String(c.layout))),
   creative_shorts: (j) => list(j.shorts, 1),
   analysis_performance: (j) => texts(j.worked) && texts(j.didnt) && (j.worked as unknown[]).length + (j.didnt as unknown[]).length > 0,
+  analysis_ideas: (j) => texts(j.ideas, 1),
   creative_lessons: (j) => texts(j.worked) && texts(j.didnt) && (j.worked as unknown[]).length + (j.didnt as unknown[]).length > 0,
   creative_carousel: (j) => list(j.slides, 5) && (j.slides as unknown[]).length <= 10
     && every(j.slides, 5, (sl) => isText(sl.headline) && isText(sl.body) && isText(sl.imagePrompt) && words(sl.headline) <= 8 && words(sl.body) <= 25),
@@ -286,6 +293,9 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
     // Only links Hector actually found; a model without internet invents them.
     const allowed = new Set(options.allowedUrls.map((u) => u.trim()));
     answer = { ...answer, references: (answer.references as Json[]).filter((r) => allowed.has(String(r?.url || '').trim())) };
+  }
+  if (actionType === 'analysis_ideas') {
+    answer = { ideas: (Array.isArray(answer.ideas) ? answer.ideas : []).map((t) => String(t ?? '').trim().slice(0, 160)).filter(Boolean).slice(0, 3) };
   }
   if (actionType === 'analysis_performance' || actionType === 'creative_lessons') {
     // Up to 3 a side, one sentence each (phase 4a).

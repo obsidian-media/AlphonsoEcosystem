@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { getBrand } from '../../services/contentFactory/contentBrandService';
+import { IdeasList } from './IdeasList';
 import { BrandResults } from './BrandResults';
 import { Button } from '../ui';
 import { listBrands, saveBrand } from '../../services/contentFactory/contentBrandService';
@@ -146,6 +148,7 @@ export function BrandEditor({ brandId, onBrand }: { brandId: string; onBrand(id:
         </div>
       )}
       <BrandResults brandId={draft.id} />
+      <IdeasList brandId={draft.id} onSlotsChanged={() => { const fresh = getBrand(draft.id); if (fresh) setDraft({ ...draft, postingSlots: fresh.postingSlots }); }} />
       <div className="flex items-center gap-3">
         <Button size="sm" onClick={save}>Save brand</Button>
         {saved && <span className="text-[12px] text-(--success)">{saved}</span>}

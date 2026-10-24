@@ -4,9 +4,11 @@ import { describe, it, expect, vi } from 'vitest';
 const listeners: ((projectId: string, postId: string) => void)[] = [];
 vi.mock('../../../services/contentFactory/postMetrics', () => ({ onSevenDays: (l: (p: string, i: string) => void) => { listeners.push(l); return () => undefined; } }));
 vi.mock('../../../services/contentFactory/performanceLessons', () => ({ proposeLessons: vi.fn(async () => ({ ok: true })) }));
+vi.mock('../../../services/contentFactory/contentIdeas', () => ({ proposeIdeas: vi.fn(async () => ({ ok: true })) }));
 
 import { startContentLearning } from '../../../services/contentFactory/contentLearning';
 import { proposeLessons } from '../../../services/contentFactory/performanceLessons';
+import { proposeIdeas } from '../../../services/contentFactory/contentIdeas';
 
 describe('startContentLearning', () => {
   it('asks for lessons after a 7-day reading, and listens only once', () => {
@@ -15,5 +17,6 @@ describe('startContentLearning', () => {
     expect(listeners).toHaveLength(1);
     listeners[0]('p1', 'post1');
     expect(proposeLessons).toHaveBeenCalledWith('p1', 'post1');
+    expect(proposeIdeas).toHaveBeenCalledWith('p1', 'post1');
   });
 });
