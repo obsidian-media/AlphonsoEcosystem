@@ -173,6 +173,16 @@ describe('approveContentStep', () => {
     expect(getProject(p.id)!.posts![0].status).toBe('approved');
   });
 
+  it('your click is the one approval: the Publish step it starts is approved, not asked again', async () => {
+    const p = withPosts();
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce(ok({ pendingApprovalCount: 1 }) as never);
+    vi.mocked(getJoseRequest).mockReturnValue({ id: 'jose-request-c1', status: 'waiting_approval', steps: [{ stepId: 'publish', status: 'waiting_approval', waitFor: PUBLISH_WAIT }] } as never);
+    await approveContentStep(p.id, 'publish', settings);
+    expect(submitStepsToJose).toHaveBeenCalledTimes(1);
+    expect(approveRequestStep).toHaveBeenCalledTimes(1);
+    expect(approveRequestStep).toHaveBeenCalledWith('jose-request-c1', 'publish');
+  });
+
   it('with no drafts left, nothing is run', async () => {
     const p = newProject();
     await approveContentStep(p.id, 'publish', settings);

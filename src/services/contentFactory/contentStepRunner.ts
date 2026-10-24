@@ -161,8 +161,19 @@ export async function approveContentStep(projectId: string, step: StepId, settin
     const waiting = request?.status === 'waiting_approval'
       ? request.steps.find((s) => s.status === 'waiting_approval' && (s.waitFor === PUBLISH_WAIT || s.stepId === 'publish'))
       : null;
-    if (request && waiting) await approveRequestStep(request.id, waiting.stepId);
-    else await runContentStep(projectId, 'publish', { settings: settings || {} });
+    if (request && waiting) {
+      await approveRequestStep(request.id, waiting.stepId);
+      return getProject(projectId) as ContentProject;
+    }
+    // Run on its own, Publish stops for approval like any post; this click, with the list in
+    // front of you, is that approval, so you are not asked a second time on the board.
+    await runContentStep(projectId, 'publish', { settings: settings || {} });
+    const started = getProject(projectId);
+    const run = started?.joseRequestId ? getJoseRequest(started.joseRequestId) : null;
+    const stopped = run?.status === 'waiting_approval'
+      ? run.steps.find((s) => s.status === 'waiting_approval' && (s.waitFor === PUBLISH_WAIT || s.stepId === 'publish'))
+      : null;
+    if (run && stopped) await approveRequestStep(run.id, stopped.stepId);
     return getProject(projectId) as ContentProject;
   }
   // "Make AI clips" (phase 2b): the request waits at the clips step; approving it carries the run
