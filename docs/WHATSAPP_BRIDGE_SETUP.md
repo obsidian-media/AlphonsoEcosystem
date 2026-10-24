@@ -1,12 +1,6 @@
 # WhatsApp Bridge Setup
 
-Status: official outbound send path is wired in this build (Meta Cloud API or Twilio). Inbound pull path is wired for Twilio provider; Cloud API inbound still requires webhook wiring.
-
-Allowed transport options:
-
-- WhatsApp Cloud API.
-- Twilio WhatsApp.
-- A documented webhook adapter using approved provider credentials.
+Status: Meta Cloud API only. Outbound send and inbound polling (through the hosted gateway's queue) are wired, with owner pairing and audit logs. Every message goes through Jose. Twilio support was removed on 2026-10-21.
 
 Blocked:
 
@@ -15,42 +9,21 @@ Blocked:
 - Silent file uploads.
 - Hardcoded tokens.
 
-Required environment names:
+Credentials (Settings → Connectors → WhatsApp; kept in the system keychain):
 
-- `WHATSAPP_PROVIDER`
-- `WHATSAPP_ALLOWED_NUMBERS`
-- Cloud API mode:
-  - `WHATSAPP_ACCESS_TOKEN`
-  - `WHATSAPP_PHONE_NUMBER_ID`
-  - `WHATSAPP_VERIFY_TOKEN`
-- Twilio mode:
-  - `WHATSAPP_TWILIO_ACCOUNT_SID`
-  - `WHATSAPP_TWILIO_AUTH_TOKEN`
-  - `WHATSAPP_TWILIO_FROM`
+- `WHATSAPP_ACCESS_TOKEN`
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `WHATSAPP_VERIFY_TOKEN`
+- `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` — `https://<your-gateway>/queue/drain`
+- `WHATSAPP_ALLOWED_NUMBERS` — digits only; required to pair
 
-Intended flow:
+Flow:
 
-1. Provider webhook receives inbound message.
-2. Bridge validates provider signature and allowed sender.
-3. Bridge creates a local connector route packet.
-4. Jose routes to Hector, Miya, or Alphonso.
-5. Risky actions require visible approval.
-6. Response formatting is provider-specific.
+1. Meta sends the inbound message to the gateway (`gateway/whatsapp-cloud`), which checks the signature and the allowlist and queues it.
+2. Alphonso drains the queue (with a lease, so a failed poll doesn't lose messages; acknowledged through `POST /queue/ack`).
+3. The message goes to Jose, who answers or plans it; WhatsApp gets "Jose is on it", and one line when the request ends.
+4. Steps that publish, send or spend wait for your approval (in the app, or on Telegram if paired).
 
-Current implementation:
+Commands: `/status`, `/queue`, `/approve`, `/reject`, `/agents`, `/report`, `/ping`, `/help`, `/ask`.
 
-- Connector status UI exists.
-- Local route packet simulation exists.
-- Official outbound send command exists (`connector_send_whatsapp`):
-  - Meta Cloud API path using `WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID`
-  - Twilio path using `WHATSAPP_TWILIO_ACCOUNT_SID` + `WHATSAPP_TWILIO_AUTH_TOKEN` + `WHATSAPP_TWILIO_FROM`
-- Twilio inbound polling command exists (`connector_poll_whatsapp`) and routes inbound text to Jose through supervised connector packets.
-- Cloud API verification helpers now exist in Tauri runtime:
-  - `verify_whatsapp_cloud_webhook_challenge`
-  - `verify_whatsapp_cloud_webhook_signature`
-  - `normalize_whatsapp_cloud_inbound`
-- Connector Setup panel includes a supervised Cloud API webhook simulation path to test:
-  - challenge token handling
-  - signature validation
-  - inbound payload normalization + Jose routing
-- Public hosted webhook endpoint is still setup-required for live Meta callback delivery.
+The companion starts by itself at launch when the access token and drain URL are saved.

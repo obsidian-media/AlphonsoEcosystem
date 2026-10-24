@@ -1,12 +1,12 @@
 # Marcus Agent — Skill Packs
 
-**Version**: 2.6.0
+**Version**: 2.10.0 (on `main`; the pack lists were last changed on the date below)
 **Last Updated**: 2026-07-19
 **Total Skill Packs**: 16 (15 owned by Marcus + 1 shared). Security audit and risk detection were removed 2026-10-23: security is Sentinel's, risk review Maria's.
 
 ## Overview
 
-Marcus is the **Distribution & Release Manager** — responsible for release readiness, deployment execution and distribution workflows, after Maria (governance and risk) has reviewed the work. (Title corrected 2026-10-21; the governance and audit role is Maria's.) He is "born with" 20 specialized skill packs that cover the full release lifecycle: validation, execution, notification, and reporting.
+Marcus is the **Distribution & Release Manager** — responsible for release readiness, deployment execution and distribution workflows, after Maria (governance and risk) has reviewed the work. (Title corrected 2026-10-21; the governance and audit role is Maria's.) He is the only agent that may publish or send, always after approval, and the one scheduler for posts (YouTube, Instagram, Facebook). He has 15 skill packs of his own that cover the full release lifecycle: validation, execution, notification, and reporting.
 
 ## Skill Pack Inventory
 

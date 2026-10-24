@@ -1,15 +1,14 @@
 # Notion + ClickUp Connector Setup
 
-Status: outbound write flow is wired in this build with supervised local runtime commands and connector audit logs.
+Status: outbound write flow is wired with supervised runtime commands and connector audit logs.
 
 ## Security rules
 
-- Keep all credentials in `.env` only.
-- Do not commit real keys/tokens.
-- Route risky actions through Jose approvals.
-- Treat external posting/upload/write as supervised actions.
+- Enter keys in **Settings → Connectors**. They are kept in your system's keychain, never in localStorage, backups or exports. A variable in the app's environment still works as a fallback; a `.env` file is read only in development runs.
+- Do not commit credentials.
+- Writes to Notion or ClickUp are steps that ask according to Settings → General → What asks first.
 
-## Required environment variables
+## Credentials (Settings → Connectors → Content & Productivity)
 
 ### Notion
 
@@ -26,6 +25,7 @@ Status: outbound write flow is wired in this build with supervised local runtime
 - Notion outbound create-page action via `connector_send_notion`.
 - ClickUp outbound create-task action via `connector_send_clickup`.
 - Connector audit entries are appended for success/failure.
+- Since 2026-10-21 a key saved in Settings is used (before, these commands needed an environment variable).
 
 ## What is not wired yet
 

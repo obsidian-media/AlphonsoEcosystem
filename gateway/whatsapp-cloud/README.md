@@ -2,7 +2,7 @@
 
 This package is a deployable inbound gateway for WhatsApp Cloud webhook traffic.
 
-It is intentionally setup-required until it is actually hosted, verified by Meta, and forwarding to Alphonso's local or remote ingress endpoint.
+Each owner deploys their own. It is setup-required until it is hosted, verified by Meta, and Alphonso drains its queue. (Meta Cloud API only; Twilio was removed on 2026-10-21.)
 
 ## What it does
 

@@ -1,7 +1,6 @@
 # Railway WhatsApp Gateway Setup
 
-This is the hosted service for the Alphonso WhatsApp Cloud gateway.
-It is still truthfully setup_required until the env vars, callback URL, and webhook proof are live.
+This is the hosted service for the Alphonso WhatsApp Cloud gateway (`gateway/whatsapp-cloud`). Each owner deploys their own; it stays setup_required until its environment, callback URL and webhook proof are live.
 
 ## Service
 
@@ -10,35 +9,21 @@ It is still truthfully setup_required until the env vars, callback URL, and webh
 - Start command: `npm start`
 - Healthcheck path: `/health`
 
-## Required env vars
+## Environment
 
-- `WHATSAPP_VERIFY_TOKEN`
-- `WHATSAPP_APP_SECRET`
-- `ALPHONSO_FORWARD_URL`
-- `WHATSAPP_ALLOWLIST` or `ALPHONSO_FORWARD_ALLOWLIST`
-- `WHATSAPP_RATE_WINDOW_MS` and `WHATSAPP_RATE_MAX_REQUESTS` if you want custom limits
-- `WHATSAPP_MAX_WEBHOOK_BODY_BYTES` if you want a custom payload cap
+- `WHATSAPP_VERIFY_TOKEN` — the same value as in the app
+- `WHATSAPP_APP_SECRET` — for signature checks
+- `WHATSAPP_ALLOWED_NUMBERS` or `WHATSAPP_ALLOWLIST` — digits only
+- `ALPHONSO_DRAIN_TOKEN` — the token Alphonso sends to `GET /queue/drain` (Bearer header only); falls back to the verify token
+- Optional: `QUEUE_LEASE_MS` (default 60 s), `WHATSAPP_RATE_WINDOW_MS`, `WHATSAPP_RATE_MAX_REQUESTS`, `WHATSAPP_MAX_WEBHOOK_BODY_BYTES`
+- Optional: `ALPHONSO_FORWARD_URL`, `ALPHONSO_FORWARD_ALLOWLIST`, `FORWARD_TIMEOUT_MS` (forwarding is not needed; Alphonso drains the queue)
 
-## Twilio mode
-
-- `WHATSAPP_PROVIDER=twilio`
-- `WHATSAPP_TWILIO_ACCOUNT_SID`
-- `WHATSAPP_TWILIO_AUTH_TOKEN`
-- `WHATSAPP_TWILIO_FROM`
-- `WHATSAPP_ALLOWED_NUMBERS`
-
-## Cloud API mode
-
-- `WHATSAPP_PROVIDER=cloud`
-- `WHATSAPP_ACCESS_TOKEN`
-- `WHATSAPP_PHONE_NUMBER_ID`
-- `WHATSAPP_ALLOWED_NUMBERS`
+Twilio mode was removed on 2026-10-21; the gateway is Meta Cloud API only.
 
 ## Deployment truth
 
 - `/health` should return `200`
 - `/webhook` must answer the Meta verify challenge
 - signature validation must pass
-- forwarded packets must hit Alphonso/Jose successfully
-- keep the service setup_required until the test action is verified
-
+- the app's drain must receive the test message
+- the queue is in memory: a restart drops anything not yet drained

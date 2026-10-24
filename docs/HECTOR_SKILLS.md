@@ -1,12 +1,12 @@
 # Hector Agent — Skill Packs
 
-**Version**: 2.6.0
+**Version**: 2.10.0 (on `main`; the pack lists were last changed on the date below)
 **Last Updated**: 2026-07-19
-**Total Skill Packs**: 23 (7 existing + 16 new)
+**Total Skill Packs**: 23 (21 owned by Hector + the shared executing-plans and GitHub research packs)
 
 ## Overview
 
-Hector is the **Cloud Scout / Research Agent** — responsible for source-backed research, API documentation lookup, compliance investigation, competitive analysis, and trend discovery. He is "born with" 23 specialized skill packs that cover the full research lifecycle: discovery, verification, scoring, and briefing.
+Hector is the **Research Agent** — he finds facts and sources (in Miya Studio: what goes viral, and a stock clip per scene), responsible for source-backed research, API documentation lookup, compliance investigation, competitive analysis, and trend discovery. He is "born with" 23 specialized skill packs that cover the full research lifecycle: discovery, verification, scoring, and briefing.
 
 ## Skill Pack Inventory
 

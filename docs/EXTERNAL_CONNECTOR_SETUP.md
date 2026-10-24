@@ -1,109 +1,75 @@
 # Alphonso External Connector Setup
 
-Status: this documents the real connector setup path. Nothing is marked live unless env verification, approval gating, and a verified test action exist.
+Status: this documents the real connector setup path for the most-used external connectors; [CONNECTORS.md](CONNECTORS.md) covers all 33. Nothing is "live" until the Connector Health Monitor's **Test** says "Live check passed" (the service itself answered) or a supervised action succeeded.
 
 ## Truth rules
 
 - Do not expose secrets.
-- Keep credentials in `.env` or the OS environment only.
-- Treat `setup_required` as honest until a real provider test succeeds.
-- Keep outbound sends and uploads approval-gated.
+- Enter credentials in **Settings → Connectors**; they are kept in the system keychain. A variable in the app's own environment still works as a fallback; a `.env` file is read only in development runs.
+- "Key found" is not "working": only a live check or a real action counts.
+- Publishing and sending always ask first; spending always asks first.
 - Do not claim hosted webhook completion until the public callback endpoint has been deployed and tested.
 
 ## Connector setup checklist
 
 ### Telegram
 
-- Required env:
-  - `TELEGRAM_BOT_TOKEN`
-  - `TELEGRAM_ALLOWED_CHAT_IDS`
-- Set allowlist IDs for the exact chats/users that may send commands.
-- Verify env in the Connector Setup panel.
-- Run a supervised poll/send test.
-- Keep unauthorized senders blocked.
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_CHAT_IDS` (required to pair)
+- Send `/start` from an allowed chat, then use **Test**. See [TELEGRAM_BRIDGE_SETUP.md](TELEGRAM_BRIDGE_SETUP.md).
 
-### WhatsApp
+### WhatsApp (Meta Cloud API only)
 
-- Required env:
-  - `WHATSAPP_PROVIDER`
-  - `WHATSAPP_ALLOWED_NUMBERS`
-- Cloud API mode:
-  - `WHATSAPP_ACCESS_TOKEN`
-  - `WHATSAPP_PHONE_NUMBER_ID`
-  - `WHATSAPP_VERIFY_TOKEN`
-- Twilio mode:
-  - `WHATSAPP_TWILIO_ACCOUNT_SID`
-  - `WHATSAPP_TWILIO_AUTH_TOKEN`
-  - `WHATSAPP_TWILIO_FROM`
-- Verify env, then test the outbound send path.
-- Cloud inbound webhook remains `setup_required` until hosted verification + signature validation are deployed.
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL`, `WHATSAPP_ALLOWED_NUMBERS`
+- Twilio is not supported (removed 2026-10-21).
+- Inbound needs the hosted gateway below.
 
 ### Railway-hosted WhatsApp gateway
 
-- Deploy `gateway/whatsapp-cloud` as the Railway service.
-- Use the service config at `gateway/whatsapp-cloud/railway.json`.
-- Set the service root directory to `/gateway/whatsapp-cloud`.
-- Confirm `/health` returns `200` before wiring the public callback URL.
-- Keep the gateway `setup_required` until the verify challenge, signature validation, and forward path all pass in the hosted environment.
+- Deploy `gateway/whatsapp-cloud` (root `/gateway/whatsapp-cloud`, config `railway.json`).
+- Confirm `/health` returns `200`, then point Meta's webhook at `https://<your-url>/webhook`.
+- See [RAILWAY_WHATSAPP_GATEWAY.md](RAILWAY_WHATSAPP_GATEWAY.md).
 
 ### YouTube
 
-- Required env:
-  - `YOUTUBE_CLIENT_ID`
-  - `YOUTUBE_CLIENT_SECRET`
-  - `YOUTUBE_REFRESH_TOKEN`
-  - `YOUTUBE_CHANNEL_ID`
-- Uploads remain approval-gated.
-- Verify env, then run a supervised upload test with a local file.
+- `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, then **Sign in to YouTube** (saves `YOUTUBE_REFRESH_TOKEN`); `YOUTUBE_CHANNEL_ID`
+- See [YOUTUBE_CONNECTOR_SETUP.md](YOUTUBE_CONNECTOR_SETUP.md).
 
-### Notion
+### Meta (Facebook and Instagram)
 
-- Required env:
-  - `NOTION_API_KEY`
-  - `NOTION_PARENT_PAGE_ID`
-- Verify env, then run a supervised write test.
+- `META_APP_ID`, `META_APP_SECRET`, then **Sign in to Facebook** and choose your Page; or `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` and **Sign in with Instagram** for an Instagram account without a Page.
+- Optional: **Your storage** (an S3-compatible bucket) for Instagram carousels; without it they are saved to post by hand.
+- See [CONNECTORS.md](CONNECTORS.md#11-meta--instagram).
 
-### ClickUp
+### Notion / ClickUp
 
-- Required env:
-  - `CLICKUP_API_KEY`
-  - `CLICKUP_LIST_ID`
-- Verify env, then run a supervised task creation test.
+- `NOTION_API_KEY`, `NOTION_PARENT_PAGE_ID`; `CLICKUP_API_KEY`, `CLICKUP_LIST_ID`
+- See [NOTION_CLICKUP_CONNECTORS_SETUP.md](NOTION_CLICKUP_CONNECTORS_SETUP.md).
 
 ### Slack / Discord / Custom webhook connections
 
-- Managed in the Tool Connections panel.
-- Configure:
-  - webhook URL
-  - label
-  - message prefix
-  - payload template for custom webhook only
-- Keep the connection inactive until the URL is valid and a test send succeeds.
-- Approval is required before external delivery.
+- Slack and Discord have their own connectors (bot tokens); the Tool Connections panel also manages simple webhook URLs (label, message prefix, payload template for custom webhooks).
+- Keep a connection inactive until the URL is valid and a test send succeeds. Sending asks first.
 
 ### Local SD WebUI
 
-- Default local endpoint: `http://127.0.0.1:7860`
-- Verify the local runtime is reachable before relying on the connector.
-- No secret env values are required.
+- Default local endpoint: `http://127.0.0.1:7860`. No secret needed. Standalone: the agents make images with ComfyUI.
 
 ### Local ComfyUI
 
-- Default local endpoint: `http://127.0.0.1:8188`
-- Verify the local runtime and workflow JSON before relying on the connector.
-- No secret env values are required.
+- Settings → Runtime → ComfyUI: your install (found automatically, or **Search this computer**), its address (default `http://127.0.0.1:8188`) and image model. The desktop app talks to it through its backend. No secret needed.
+
+### Paid media (optional)
+
+- Runway (`RUNWAYML_API_SECRET`), ElevenLabs (`ELEVENLABS_API_KEY`), Higgsfield (`HIGGSFIELD_KEY_ID`, `HIGGSFIELD_KEY_SECRET` and the model ids). Enter your prices in Settings → Approvals → Allow paid models.
 
 ## Recommended execution order
 
-1. Configure env variables.
-2. Verify environment presence in the Connector Setup panel.
-3. Confirm allowlist/auth profiles.
-4. Run a local supervised test.
-5. Keep the connector `setup_required` until the test result is verified.
+1. Enter the credentials in Settings → Connectors.
+2. **Test** each one in the Connector Health Monitor.
+3. Confirm allowlists (Telegram, WhatsApp).
+4. Run one supervised action.
 
 ## Remaining external blockers
 
-- WhatsApp hosted Cloud inbound webhook.
-- Any connector with missing env vars.
-- Any webhook connection without a valid URL.
-- Any connector test that has not produced a verified result.
+- None of the publishing, results or paid-media connectors have been checked with a real account yet (see the live check in [qa/DESKTOP_QA_COVERAGE.md](qa/DESKTOP_QA_COVERAGE.md)).
+- Any connector with missing credentials, and any webhook connection without a valid URL.
