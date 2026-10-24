@@ -56,14 +56,14 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     sendHermesAgentMessage.mockResolvedValueOnce({ ok: true, content: 'hi from jose profile', model: 'hermes-agent', usage: null, provider: 'hermes' });
     const result = await generateAgentLlmResponse('jose', { prompt: 'orchestrate this' });
     expect(result).toEqual({ response: 'hi from jose profile', done: true, backend: 'hermes', model: 'hermes-agent' });
-    expect(sendHermesAgentMessage).toHaveBeenCalledWith('jose', [{ role: 'user', content: 'orchestrate this' }], { model: 'hermes-agent' });
+    expect(sendHermesAgentMessage).toHaveBeenCalledWith('jose', [expect.objectContaining({ role: 'system', content: expect.stringContaining('You own:') }), { role: 'user', content: 'orchestrate this' }], { model: 'hermes-agent' });
   });
 
   it('passes sessionId and approved through to sendHermesAgentMessage when the caller supplies them', async () => {
     agentProviderMap.jose = { provider: 'hermes', model: 'hermes-agent' };
     sendHermesAgentMessage.mockResolvedValueOnce({ ok: true, content: 'hi', model: 'hermes-agent', usage: null, provider: 'hermes' });
     await generateAgentLlmResponse('jose', { prompt: 'orchestrate this', sessionId: 'receipt-7', approved: true });
-    expect(sendHermesAgentMessage).toHaveBeenCalledWith('jose', [{ role: 'user', content: 'orchestrate this' }], { model: 'hermes-agent', sessionId: 'receipt-7', approved: true });
+    expect(sendHermesAgentMessage).toHaveBeenCalledWith('jose', [expect.objectContaining({ role: 'system', content: expect.stringContaining('You own:') }), { role: 'user', content: 'orchestrate this' }], { model: 'hermes-agent', sessionId: 'receipt-7', approved: true });
   });
 
   it('a different agent set to ollama is unaffected by another agent being on hermes — per-agent resolution, not global', async () => {

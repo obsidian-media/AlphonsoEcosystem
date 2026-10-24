@@ -1,5 +1,5 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-10-25 — every document reconciled with the code (§11.38). Version 2.10.0 is on `main` and **not tagged**; the latest release is v2.9.0 (2026-10-12). Since 2026-10-21, `main` gained the Jose redesign (phases 1–6b, §11.36) and Miya's content factory (phases 1–4c, §11.37). Current numbers: 9 agents, 33 connectors, 285 services, 175 components, 21 hooks, 546 test files with 6,777 Vitest tests, 357 Rust `#[test]`s (370 with the async ones), 189 Tauri commands, 50 Rust modules, 34 desktop end-to-end spec files.
+**Last verified:** 2026-10-25 — every document reconciled with the code (§11.38). Version 2.10.0 is on `main` and **not tagged**; the latest release is v2.9.0 (2026-10-12). Since 2026-10-21, `main` gained the Jose redesign (phases 1–6b, §11.36) and Miya's content factory (phases 1–4c, §11.37). Current numbers: 9 agents, 33 connectors, 290 services, 175 components, 21 hooks, 556 test files with 6,832 Vitest tests, 357 Rust `#[test]`s (370 with the async ones), 189 Tauri commands, 50 Rust modules, 34 desktop end-to-end spec files.
 
 **Last verified before that:** 2026-09-30 — pre-launch all-angle audit and fix pass on branch `fix/prelaunch-audit-2026-09-30` (see §11.28). Version is still 2.8.0; nothing has been released since. Work between 2026-09-09 and 2026-09-21 (SSRF redirect fix, ChatView hydration race, Hermes loopback check, Cloud Voice model pin, macOS boot-crash build target, Runway gate, fan-out budget) is recorded in `CLAUDE.md`'s dated entries and `docs/CHANGELOG.md`.
 
@@ -459,7 +459,7 @@ echoFileWatcherService.test.js       ← added JUNE CANDY v2.3.0 (14 tests)
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- 546 test files / 6,777 tests, all passing (2026-10-25); 218 files / 3,167 tests on 2026-07-01
+- 556 test files / 6,832 tests, all passing (2026-10-24, agent roles Part A); 218 files / 3,167 tests on 2026-07-01
 - 357 Rust `#[test]`s (370 with the async `#[tokio::test]` cases), all passing
 - Desktop end-to-end: 34 spec files in `e2e-desktop/specs/`, run against the real built app (CI job `Desktop E2E (real Tauri binary)`)
 - Coverage expanded significantly across agent adapters, connector services, voice OS, workflow services
@@ -2431,6 +2431,16 @@ Merged one PR per phase (phase 4b: PR 353; phase 4c: PR 354, `34e97b4`). Each ph
 - **4c:** brand characters (ComfyUI reference or Higgsfield training) and motion (Higgsfield presets, recordings, files; local motion transfer), plus three 4b fixes.
 
 Checked: unit tests and desktop specs with Zero-Cost Mode on and seeded data. **Not checked with real accounts:** posting, reading numbers, ElevenLabs, Higgsfield (several of its request fields come from third-party descriptions), Runway; the new ComfyUI graphs (character reference, motion transfer) have not run live. The live checks are steps 1–15 in `docs/qa/DESKTOP_QA_COVERAGE.md`.
+
+## 11.39 Agent roles, Part A: one owner per kind of work (2026-10-24)
+
+The owner asked for a deep look at how the agents work together before Jose phase 7. Six of the nine agents never received the work of the steps they depended on (only the request text), so reviews reviewed the request and Marcus posted the step instruction; outputs reached a step keyed by agent; Jose wrote answers himself; Nova researched markets; Alphonso assembled the finished video. Part A (spec `docs/superpowers/specs/2026-10-24-agent-roles-skills-handover-design.md`, plan `docs/superpowers/plans/2026-10-24-agent-roles-part-a.md`):
+- **One owner per kind of work.** `AGENT_PERMISSION_TABLE` has no overlapping task-type prefix (tested); each agent has `owns`/`never` sentences used by the planner, help, Boardroom, Simple mode, Hermes and the voice backend. Steps whose owner changed move with a change-log line (`movedTaskTypes.ts`).
+- **The hand-over.** `StepInput` (`stepInput.ts`) gives every step the full work it depends on, by step; reviews judge the draft (`reviewStep.ts`); Marcus sends the needed step's text or refuses.
+- **Setup instead of hand-off.** A step whose owner can't work waits (`waiting_setup`) with what to set up; Carry on runs it again.
+- **The closing summary.** One line per step and "Open on the board." (`joseSummary.ts`).
+- **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
+Parts B (real skills) and C (Projects, Teams, learning) follow.
 
 ## 11.38 Every document reconciled with the code (2026-10-25)
 
