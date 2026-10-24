@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 257 services and 157 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 258 services and 158 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -91,6 +91,7 @@ Source-backed inventory: 257 services and 157 components. Human purpose descript
 | component | `src/components/miya/CampaignStudioTab.tsx` | `CampaignStudioTab` |
 | component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab`, `selectContentProject` |
 | component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
+| component | `src/components/miya/PostsPanel.tsx` | `PostsPanel` |
 | component | `src/components/miya/ProjectPicture.tsx` | `ProjectPicture` |
 | component | `src/components/miya/SceneBuilderTab.tsx` | `SceneBuilderTab`, `SceneBuilderTabProps` |
 | component | `src/components/miya/ScriptStudioTab.tsx` | `ScriptStudioTab`, `StepTabProps` |
@@ -248,6 +249,7 @@ Source-backed inventory: 257 services and 157 components. Human purpose descript
 | service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
+| service | `src/services/contentFactory/adCopyExport.ts` | `AD_NETWORKS`, `AdCopy`, `adCsv`, `AdNetwork`, `adsForNetwork`, `writeAdCsv` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
 | service | `src/services/contentFactory/comfyVideoClip.ts` | `buildVideoWorkflow`, `checkComfyClip`, `ClipResult`, `ComfyClipInput`, `framesFor`, `makeComfyClip`, `VideoWorkflowInput` |
 | service | `src/services/contentFactory/contentAgentExecutor.ts` | `clearContentSearches`, `ContentStepResult`, `executeContentStepAssignment`, `NO_SEARCH_RESULTS`, `UNREADABLE_ANSWER` |

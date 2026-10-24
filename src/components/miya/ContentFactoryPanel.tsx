@@ -95,7 +95,7 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
     runStep: (step: StepId) => run(step),
     chooseVersion: (step: StepId, v: number) => { chooseVersion(project.id, step, v); refresh(); },
     // After the review this also carries the project's request on to Scenes (phase 6b).
-    approve: (step: StepId) => { approveContentStep(project.id, step).catch(() => undefined).finally(refresh); },
+    approve: (step: StepId) => { approveContentStep(project.id, step, settings).catch(() => undefined).finally(refresh); },
     sendBack: (step: StepId, reason: string) => {
       // Like a rejected thumbnail, the reason becomes a brand lesson (Echo).
       rejectPiece(project.id, step, step, reason);
@@ -147,7 +147,7 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
               reject={(pieceId, reason) => { rejectPiece(project.id, 'thumbnail', pieceId, reason); refresh(); run('thumbnail', reason); }}
               checkAgain={() => { checkPendingPictures(project.id, 'thumbnail', settings).finally(refresh); }} />
           )}
-          {tab === 'campaign' && <CampaignStudioTab {...tabProps} brand={brand} />}
+          {tab === 'campaign' && <CampaignStudioTab {...tabProps} brand={brand} outputRoot={outputRoot} onChange={refresh} />}
         </>
       )}
     </div>

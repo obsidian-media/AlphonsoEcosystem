@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge, Button } from '../ui';
 import { StepPanel } from './StepPanel';
+import { PostsPanel } from './PostsPanel';
+import { AD_NETWORKS, adsForNetwork, writeAdCsv, type AdNetwork } from '../../services/contentFactory/adCopyExport';
 import { chosenVersionOf } from '../../services/contentFactory/contentProjectService';
 import { visiblePieces } from '../../services/contentFactory/contentQualityGate';
 import type { StepTabProps } from './ScriptStudioTab';
@@ -19,9 +21,22 @@ function copy(text: string) {
   try { navigator.clipboard?.writeText(text); } catch { /* clipboard unavailable */ }
 }
 
-/** Captions, hashtags, ad copy and posting times, then Maria's quality gate. */
-export function CampaignStudioTab({ project, brand, runStep, chooseVersion, approve, sendBack }: StepTabProps & { brand: ContentBrand | null }) {
-  const campaign = chosenVersionOf(project, 'campaign')?.output as CampaignOutput | undefined;
+/** Captions, hashtags, ad copy and posting times, Maria's quality gate, then the posts (phase 3a). */
+export function CampaignStudioTab({ project, brand, runStep, chooseVersion, approve, sendBack, outputRoot = '', onChange = () => undefined }: StepTabProps & {
+  brand: ContentBrand | null;
+  outputRoot?: string;
+  onChange?(): void;
+}) {
+  const campaignVersion = chosenVersionOf(project, 'campaign');
+  const campaign = campaignVersion?.output as CampaignOutput | undefined;
+  const [exported, setExported] = useState<Record<string, string>>({});
+  const exportAds = (network: AdNetwork) => {
+    if (!brand || !campaignVersion) return;
+    const ads = adsForNetwork(campaign?.miya?.ads || [], network);
+    writeAdCsv(outputRoot, brand, project, network, ads, { campaign: `${brand.name} - ${project.name}`, adGroup: project.name }, campaignVersion.version)
+      .then((path) => setExported((e) => ({ ...e, [network]: `Saved: ${path}` })))
+      .catch((error) => setExported((e) => ({ ...e, [network]: `Not saved: ${error instanceof Error ? error.message : String(error)}` })));
+  };
   const pieces = brand ? visiblePieces(project, brand) : [];
   const hidden = pieces.filter((p) => !p.visible).length;
   return (
@@ -45,14 +60,31 @@ export function CampaignStudioTab({ project, brand, runStep, chooseVersion, appr
               );
             })}
             {(campaign.miya.ads || []).length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Ad copy</div>
-                {campaign.miya.ads!.map((ad) => (
-                  <div key={`${ad.network}-${ad.headline}`} className="rounded-xl bg-(--surface-2) p-2">
-                    <Badge>{ad.network}</Badge> <span className="font-semibold text-(--text-1)">{ad.headline}</span>
-                    <div className="text-(--text-2)">{ad.body}</div>
-                  </div>
-                ))}
+                {AD_NETWORKS.map((network) => {
+                  const ads = adsForNetwork(campaign.miya!.ads || [], network.id);
+                  if (!ads.length) return null;
+                  return (
+                    <div key={network.id} className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge>{network.label}</Badge>
+                        <Button size="sm" variant="secondary" aria-label={`Export ${network.label} CSV`} disabled={!outputRoot} onClick={() => exportAds(network.id)}>Export CSV</Button>
+                        <span className="text-(--text-3)">{outputRoot ? `For ${network.importer}; check the columns against your own template.` : 'Choose an output folder in Settings to export.'}</span>
+                      </div>
+                      {exported[network.id] && <div className="text-(--text-2)">{exported[network.id]}</div>}
+                      {ads.map((ad) => (
+                        <div key={`${ad.network}-${ad.headline}`} className="rounded-xl bg-(--surface-2) p-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-(--text-1)">{ad.headline}</span>
+                            <Button size="sm" variant="ghost" onClick={() => copy(`${ad.headline}\n${ad.body}`)}>Copy</Button>
+                          </div>
+                          <div className="text-(--text-2)">{ad.body}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             )}
             {((campaign.miya.calendar || []).length > 0 || (campaign.nova?.times || []).length > 0) && (
@@ -91,6 +123,9 @@ export function CampaignStudioTab({ project, brand, runStep, chooseVersion, appr
           </div>
         )}
       </StepPanel>
+
+      <PostsPanel project={project} brand={brand} approvePosts={() => approve('publish')} onChange={onChange} />
+      <StepPanel project={project} step="publish" onRun={() => approve('publish')} onChooseVersion={(v) => chooseVersion('publish', v)} />
     </div>
   );
 }
