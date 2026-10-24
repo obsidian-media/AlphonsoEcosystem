@@ -4,12 +4,13 @@
 // not in Miya Studio's own run call.
 import { getBrand } from './contentBrandService';
 import {
+  appendShortPlan,
   addStepProgress, approveStep, getProject, markStepStatus, saveStepVersion, setPendingAgents, startStep,
 } from './contentProjectService';
 import { requireOutputRoot, writeProjectFile, writeStepText } from './contentProjectFiles';
 import { getJoseRequest, updateJoseStep } from '../jose/joseRequestStore';
 import { runwayEstimate } from './contentProjectPlan';
-import { makeShorts, shortsSummary } from './shortMaker';
+import { makeShorts, redoShort, shortsSummary } from './shortMaker';
 import { renderCarouselSlides, renderScenePictures, renderThumbnails } from './contentImages';
 import { STEP_AGENTS, stepMarkdown } from './contentStepAgents';
 import { hasOwnKey, type StepId } from './contentTypes';
@@ -38,10 +39,19 @@ export async function recordContentStepResult(input: {
   agent: string;
   data: unknown;
   commandId: string | null;
+  /** Add a Short as a mini-script (phase 4a): add it to the chosen Shorts, then make it. */
+  appendShort?: boolean;
 }): Promise<'partial' | 'saved' | 'ignored'> {
   const project = getProject(input.projectId);
   const agents = STEP_AGENTS[input.step] || [];
   if (!project || !agents.some((a) => a.agent === input.agent)) return 'ignored';
+  if (input.appendShort && input.step === 'shorts') {
+    const plan = (input.data as { shorts?: Record<string, unknown>[] } | null)?.shorts?.[0];
+    if (!plan) return 'ignored';
+    const shortId = appendShortPlan(input.projectId, plan);
+    await redoShort(input.projectId, shortId, contentAppSettings());
+    return 'saved';
+  }
 
   const pending = { ...(project.steps[input.step].pendingAgents || {}), [input.agent]: input.data };
   if (!agents.every((a) => hasOwnKey(pending, a.agent))) {

@@ -17,7 +17,7 @@ import { getJoseRequest } from '../../../services/jose/joseRequestStore';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief, getProject, markStepStatus, startStep } from '../../../services/contentFactory/contentProjectService';
 import {
-  runContentStep, runContentProject, approveContentStep, STEP_AGENTS, CONTENT_TASK_PREVIEW, PROJECT_LABEL, WAITING_FOR_APPROVAL,
+  runContentStep, runContentProject, approveContentStep, addMiniShort, STEP_AGENTS, CONTENT_TASK_PREVIEW, PROJECT_LABEL, WAITING_FOR_APPROVAL,
 } from '../../../services/contentFactory/contentStepRunner';
 import { CLIPS_WAIT, CLIPS_WAIT_PAID, PUBLISH_WAIT, REVIEW_WAIT } from '../../../services/contentFactory/contentProjectPlan';
 import { savePosts } from '../../../services/contentFactory/contentPosts';
@@ -238,3 +238,19 @@ describe('approveContentStep', () => {
     expect(approveRequestStep).not.toHaveBeenCalled();
   });
 });
+
+// Phase 4a: Add a Short as a mini-script asks Miya for just one, through Jose.
+describe('addMiniShort', () => {
+  it('asks Miya for exactly one more Short, to be added to the plan', async () => {
+    const brand = saveBrand({ name: 'Acme' });
+    const p = createProject(brand.id, 'Launch', { ...emptyBrief(), idea: 'x' });
+    vi.mocked(submitStepsToJose).mockResolvedValueOnce({ ok: true, requestId: 'r1' } as any);
+    const res = await addMiniShort(p.id, settings);
+    expect(res.ok).toBe(true);
+    const sent = vi.mocked(submitStepsToJose).mock.calls.at(-1)![0] as any;
+    expect(sent.steps).toHaveLength(1);
+    expect(sent.steps[0]).toMatchObject({ agent: 'miya', actionType: 'creative_shorts', contentStep: { step: 'shorts', appendShort: true } });
+    expect(sent.steps[0].contentStep.task).toMatch(/exactly one/i);
+  });
+});
+

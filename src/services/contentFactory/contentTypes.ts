@@ -239,6 +239,8 @@ export interface ContentStepPayload {
   prior: Partial<Record<StepId, unknown>>;
   /** The step's instruction, plus any reason the user sent it back with. */
   task: string;
+  /** Shorts only (phase 4a): add the one Short written to the chosen plan instead of saving a new version. */
+  appendShort?: boolean;
   /** Real web results Hector found (research steps): the only sources allowed. */
   sources?: { url: string; title: string; snippet: string }[];
 }

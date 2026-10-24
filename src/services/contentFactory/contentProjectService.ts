@@ -298,7 +298,7 @@ export function setShortKind(id: string, shortId: string, kind: ShortKind): Cont
  * finished video (no model needed), on the project's platforms; its kind and part can
  * then be changed and it is made with Redo.
  */
-export function addShortPlan(id: string): ContentProject {
+export function addShortPlan(id: string, kind: 'cut' | 'highlight' = 'cut'): ContentProject {
   return update(id, (p) => {
     const chosen = p.steps.shorts.versions.find((v) => v.version === p.steps.shorts.chosenVersion);
     if (!chosen) throw new Error('Run the Shorts step first.');
@@ -311,9 +311,23 @@ export function addShortPlan(id: string): ContentProject {
     const wanted = p.brief.platforms.length ? p.brief.platforms : getBrand(p.brandId)?.platforms || [];
     const known = ['youtube', 'instagram', 'facebook'];
     const platforms = wanted.map((x) => String(x).trim().toLowerCase()).filter((x) => known.includes(x));
-    const next = { id: `sh${n}`, kind: 'cut', title: `Short ${n}`, hook: '', seconds: 45, platforms, copy: [], moment: { startSec: start, endSec: Math.min(length, start + 45) } };
+    const next = { id: `sh${n}`, kind, title: `Short ${n}`, hook: '', seconds: 45, platforms, copy: [], moment: { startSec: start, endSec: Math.min(length, start + 45) } };
     chosen.output = { ...output, miya: { ...(output.miya || {}), shorts: [...shorts, next] } };
   });
+}
+
+/** Adds a Short Miya wrote on its own (phase 4a: Add a Short as a mini-script); returns its id. */
+export function appendShortPlan(id: string, plan: Record<string, unknown>): string {
+  let added = '';
+  update(id, (p) => {
+    const chosen = p.steps.shorts.versions.find((v) => v.version === p.steps.shorts.chosenVersion);
+    if (!chosen) throw new Error('Run the Shorts step first.');
+    const output = (chosen.output as { miya?: { shorts?: { id: string }[] } }) || {};
+    const shorts = output.miya?.shorts || [];
+    added = `sh${shorts.length + 1}`;
+    chosen.output = { ...output, miya: { ...(output.miya || {}), shorts: [...shorts, { ...plan, id: added }] } };
+  });
+  return added;
 }
 
 /** A made Short's file and state, kept in the chosen Shorts version (phase 3d). */

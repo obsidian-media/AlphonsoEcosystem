@@ -7,7 +7,7 @@ import { approveRequestStep } from '../joseExecutionEngineService';
 import { getJoseRequest } from '../jose/joseRequestStore';
 import { getBrand } from './contentBrandService';
 import {
-  addStepProgress, approveStep, changeProjectPosts, failStep, getProject, markStepStatus, setProjectRequest, startStep,
+  addStepProgress, approveStep, changeProjectPosts, chosenVersionOf, failStep, getProject, markStepStatus, setProjectRequest, startStep,
 } from './contentProjectService';
 import { requireOutputRoot } from './contentProjectFiles';
 import { CLIPS_WAIT, CLIPS_WAIT_PAID, contentProjectPlanSteps, PUBLISH_WAIT, REVIEW_WAIT } from './contentProjectPlan';
@@ -197,4 +197,31 @@ export async function approveContentStep(projectId: string, step: StepId, settin
     : null;
   if (step === 'review' && requestId && waiting) await approveRequestStep(requestId, waiting.stepId);
   return getProject(projectId) || approved;
+}
+
+export const ONE_MORE_SHORT = 'Write exactly one more Short, of kind "mini" (its own short script), different from the Shorts already planned.';
+
+/** Add a Short as a mini-script (phase 4a): Miya writes just that one, through Jose; it is added and made when it comes back. */
+export async function addMiniShort(projectId: string, settings: RunStepOptions['settings']): Promise<{ ok: boolean; reason?: string }> {
+  const project = getProject(projectId);
+  if (!project) return { ok: false, reason: `Content project not found: ${projectId}` };
+  const problem = cannotRun(project, settings);
+  if (problem) return { ok: false, reason: problem };
+  const brand = getBrand(project.brandId)!;
+  const existing = ((chosenVersionOf(project, 'shorts')?.output as { miya?: { shorts?: { title?: string }[] } } | undefined)?.miya?.shorts || [])
+    .map((s) => s.title).filter(Boolean).join('; ');
+  const task = [ONE_MORE_SHORT, existing ? `Already planned: ${existing}.` : ''].filter(Boolean).join(' ');
+  const steps = contentProjectPlanSteps(project, brand, 'shorts', { only: true }).map((s) => (
+    { ...s, instruction: task, contentStep: { ...s.contentStep!, task, appendShort: true } }
+  ));
+  try {
+    const result: any = await submitStepsToJose({
+      text: `Content factory: one more Short for "${project.name}"`,
+      source: 'content-factory', label: PROJECT_LABEL, saveDecisions: false, steps,
+    });
+    if (result?.requestId) setProjectRequest(projectId, result.requestId);
+    return { ok: result?.ok !== false };
+  } catch (error) {
+    return { ok: false, reason: `Jose could not ask Miya: ${(error as Error).message}` };
+  }
 }

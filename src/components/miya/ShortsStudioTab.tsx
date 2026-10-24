@@ -25,7 +25,7 @@ export interface ShortsStudioTabProps {
   chooseVersion(step: StepId, version: number): void;
   redo(shortId: string): void;
   reject(pieceId: string, reason: string): void;
-  addShort(): void;
+  addShort(kind: ShortKind): void;
   onChange(): void;
 }
 
@@ -45,6 +45,7 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
   const made = output?.made || {};
   const clipSetting = getShortsSettings(project);
   const [rejecting, setRejecting] = useState<string | null>(null);
+  const [choosingKind, setChoosingKind] = useState(false);
   const [reason, setReason] = useState('');
   // The players wait until the output folder may be played from (as in the Scene Builder).
   const [allowedRoot, setAllowedRoot] = useState<string | null>(null);
@@ -135,7 +136,14 @@ export function ShortsStudioTab({ project, outputRoot, runStep, chooseVersion, r
             );
           })}
         </div>
-        <Button size="sm" variant="secondary" onClick={addShort}>Add a Short</Button>
+        <Button size="sm" variant="secondary" onClick={() => setChoosingKind((open) => !open)}>Add a Short</Button>
+        {choosingKind && (
+          <div className="flex flex-wrap gap-1">
+            {KINDS.map((k) => (
+              <Button key={k.id} size="sm" variant="ghost" onClick={() => { setChoosingKind(false); addShort(k.id); }}>{k.label}</Button>
+            ))}
+          </div>
+        )}
       </StepPanel>
     </div>
   );

@@ -82,7 +82,11 @@ describe('ShortsStudioTab', () => {
     const pr = props();
     render(<ShortsStudioTab project={p} {...pr} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add a Short' }));
-    expect(pr.addShort).toHaveBeenCalled();
+    expect(pr.addShort).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Its own mini-script' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'A highlight with its own hook' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'A plain cut of the video' }));
+    expect(pr.addShort).toHaveBeenCalledWith('cut');
     fireEvent.change(screen.getByLabelText('AI clips for Shorts'), { target: { value: 'every' } });
     expect(getShortsSettings(getProject(p.id)!).aiClips).toBe('every');
   });

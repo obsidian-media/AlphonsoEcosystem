@@ -183,3 +183,14 @@ it("Add a Short adds a cut of the finished video, on the project's platforms, to
   const shorts = (getProject(p.id)!.steps.shorts.versions[0].output as { miya: { shorts: Record<string, unknown>[] } }).miya.shorts;
   expect(shorts[1]).toMatchObject({ id: 'sh2', kind: 'cut', title: 'Short 2', seconds: 45, platforms: ['instagram'], moment: { startSec: 37.5, endSec: 82.5 } });
 });
+
+it('Add a Short as a highlight gets the middle moment and an empty hook to fill', () => {
+  const b = saveBrand({ name: 'Acme', platforms: ['YouTube'] });
+  const p = createProject(b.id, 'A', { ...emptyBrief(), idea: 'x' });
+  saveStepVersion(p.id, 'assemble', { output: { miya: { outputs: [{ aspect: '9x16', path: 'v.mp4', durationSec: 120 }] } }, summary: '', joseCommandId: null });
+  saveStepVersion(p.id, 'shorts', { output: { miya: { shorts: [{ id: 'sh1', kind: 'mini' }] } }, summary: '', joseCommandId: null });
+  addShortPlan(p.id, 'highlight');
+  const shorts = (getProject(p.id)!.steps.shorts.versions[0].output as { miya: { shorts: Record<string, unknown>[] } }).miya.shorts;
+  expect(shorts[1]).toMatchObject({ id: 'sh2', kind: 'highlight', hook: '', platforms: ['youtube'], moment: { startSec: 37.5, endSec: 82.5 } });
+});
+
