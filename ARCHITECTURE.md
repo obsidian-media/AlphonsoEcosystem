@@ -50,7 +50,7 @@ The desktop window's origin (`http://tauri.localhost`) is refused by local serve
 | Agent | Role | Key Constraint |
 |---|---|---|
 | **Alphonso** | Local operator — execution, verification, packaging; assembles videos | The only agent that may run code or change project files |
-| **Jose** | Orchestrator — answers or plans every request as steps, runs and reports | Never runs, publishes or spends itself |
+| **Jose** | Orchestrator — answers or plans every request as steps, runs and reports | Never runs code or publishes; may spend only on a paid-model step, which always asks |
 | **Hector** | Research — facts, sources, citations, stock clips | Read and write its own work |
 | **Miya** | Creative — the content factory, front-end drafts | Read and write its own work |
 | **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Read and write its own work |

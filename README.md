@@ -421,9 +421,9 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 | Agent | Role | What it may do | In the content factory |
 |------------|------------------------------------------------------|-----------------------------------------------|--------------------------------------------------------|
 | **Alphonso** | Local operator — execution, verification, packaging | The only agent that may run code or change project files | Assembles the finished video |
-| **Jose** | Orchestrator — plans every request as steps, routes, reports | Reads and writes its own work; never runs, publishes or spends itself | Runs a project as one request |
+| **Jose** | Orchestrator — plans every request as steps, routes, reports | Reads and writes its own work; never runs code or publishes; may spend only on a paid-model step you approve | Runs a project as one request |
 | **Hector** | Research — facts, sources, citations | Read and write its own work | What goes viral; finds stock clips |
-| **Miya** | Creative — scripts, storyboards, pictures, front-end drafts | Read and write its own work | Script, scenes, thumbnails, voice, music, clips, Shorts, carousels, campaign |
+| **Miya** | Creative — scripts, storyboards, pictures, front-end drafts | Read and write its own work; its paid media steps may spend, and always ask | Script, scenes, thumbnails, voice, music, clips, Shorts, carousels, campaign |
 | **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Read and write its own work | Reviews the script and the quality gate |
 | **Marcus** | Distribution & Release Manager | The only agent that may publish or send, and only after approval | Posts and schedules the posts |
 | **Echo** | Memory historian and archival | Read and write its own work | Remembers rejections and decisions |

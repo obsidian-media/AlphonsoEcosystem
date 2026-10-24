@@ -254,7 +254,7 @@ On by default. It blocks every paid or metered connector (Claude, ChatGPT, Runwa
 
 ## 6. 9 Agents — Who Does What
 
-What each agent may do is one table, shown in Project Execution's capability matrix and on the Hector desk. Everyone may read and create new files of its own; only **Alphonso** may run code or change project files; only **Marcus** may publish or send.
+What each agent may do is one table, shown in Project Execution's capability matrix and on the Hector desk. Everyone may read and create new files of its own; only **Alphonso** may run code or change project files; only **Marcus** may publish or send. Spending (a paid model, or Miya's paid voices, pictures and clips) is allowed only on certain steps, and always asks.
 
 | Agent | Role | In Miya Studio |
 |-------|------|----------------|

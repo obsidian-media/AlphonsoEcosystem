@@ -144,14 +144,14 @@ the same change; no task is complete without the plan's stated verification.
 
 ## 2. Agent Roster — 9 Agents (not 4)
 
-Every agent has a profile and schema in `src/agents/`. All 9 are registered in `src/agents/agentRegistry.js`. What each may do is one table, `src/services/jose/agentPermissionTable.ts` (Jose redesign phase 1, 2026-10-23): everyone may read and write its own work; only Alphonso may run code or change project files; only Marcus may publish or send. `agentContractService.ts` and Jose's plan check (`jose/stepGraph.ts`) enforce it. The `…Permissions.js` files in `src/agents/` are descriptive only.
+Every agent has a profile and schema in `src/agents/`. All 9 are registered in `src/agents/agentRegistry.js`. What each may do is one table, `src/services/jose/agentPermissionTable.ts` (Jose redesign phase 1, 2026-10-23): everyone may read and write its own work; only Alphonso may run code or change project files; only Marcus may publish or send; Jose and Marcus may spend, and so may Miya's paid media steps (`checkPlan()` allows them by action type); spending always asks. `agentContractService.ts` and Jose's plan check (`jose/stepGraph.ts`) enforce it. The `…Permissions.js` files in `src/agents/` are descriptive only.
 
 **Note:** this repository is developed with coding agents (Claude Code, OpenCode, Codex). Those are distinct from the 9 Alphonso agents defined in `src/agents/`.
 
 | Agent | Role | Key constraint |
 |---|---|---|
 | **Alphonso** | Local operator — execution, verification, packaging; assembles the content factory's videos | The only agent that may run code or change project files |
-| **Jose** | Orchestrator — answers or plans every request as a step graph, runs it, reports | Never runs, publishes or spends itself; every plan is checked before anything runs |
+| **Jose** | Orchestrator — answers or plans every request as a step graph, runs it, reports | Never runs code or publishes; may spend only on a paid-model step, which always asks; every plan is checked before anything runs |
 | **Hector** | Research — facts, sources, citations, what goes viral, stock clips | Read and write its own work only |
 | **Miya** | Creative — the content factory (script, scenes, pictures, voice, music, clips, Shorts, carousels, campaign), front-end drafts | Read and write its own work only; paid engines only inside an approved step |
 | **Maria** | Governance & Risk Lead — governance, risk and quality reviews | Read and write its own work only; Ollama-powered with deterministic fallback, and says which one gave the verdict |
