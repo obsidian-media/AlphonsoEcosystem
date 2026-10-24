@@ -5,6 +5,7 @@
 // folder; nothing is overwritten, since each version has its own names.
 // Design: docs/superpowers/specs/2026-10-23-miya-content-factory-phase2a-design.md
 import { paidEngineAvailable, projectEngines, resolveVoice } from './engineChoice';
+import { localMotionAvailable, makeComfyMotionClip } from './comfyMotionClip';
 import { checkHiggsfieldClip, higgsfieldClipAvailable, higgsfieldMotionAvailable, makeHiggsfieldClip, makeHiggsfieldMotionClip } from './higgsfieldClip';
 import { higgsfieldModels } from '../connectors/higgsfieldConnector';
 import { parseStepAnswer } from './contentStepPrompts';
@@ -400,19 +401,33 @@ async function runClips(assignment: MediaAssignment, ctx: Context): Promise<Cont
     if (motion) {
       const outRel = `${ctx.dir}/clips/v${ctx.version}-${scene.id}.mp4`;
       const seconds = Math.min(sceneSeconds, 10);
+      // Higgsfield when the run's spending was approved; otherwise (or when it fails) this computer, for free.
       const can = higgsfieldMotionAvailable();
-      if (!approved) motionReason = MOTION_NOT_APPROVED;
+      let why: string;
+      if (!approved) why = MOTION_NOT_APPROVED.replace(/\.$/, '');
       else if (can.ok) {
         const made = await makeHiggsfieldMotionClip({ root: ctx.root, imageRel: picture, motion, outRel, prompt, seconds, vertical });
         if (made.status === 'done') { clips.push({ sceneId: scene.id, status: 'done', path: made.path, seconds, costUsd: made.costUsd, motion: true }); continue; }
         if (made.status === 'pending') { clips.push({ sceneId: scene.id, status: 'pending', requestId: made.requestId, seconds, target: outRel, costUsd: made.costUsd, motion: true }); continue; }
         if (made.capped) stop = made.error || null;
-        motionReason = `The motion couldn't be made (${made.error || 'no reason given'}); a normal clip was made.`;
+        why = `The motion couldn't be made (${made.error || 'no reason given'})`;
       } else {
-        motionReason = `${can.reason}; a normal clip was made.`;
+        why = String(can.reason);
       }
+      if (motion.path) {
+        const local = await localMotionAvailable();
+        if (local.ok) {
+          const made = await makeComfyMotionClip({ root: ctx.root, imageRel: picture, motionRel: motion.path, outRel, prompt, seconds: Math.min(seconds, 5), vertical });
+          if (made.status === 'done') { clips.push({ sceneId: scene.id, status: 'done', path: made.path, seconds: Math.min(seconds, 5), motion: true }); continue; }
+          if (made.status === 'pending') { clips.push({ sceneId: scene.id, status: 'pending', jobId: made.jobId, seconds: Math.min(seconds, 5), target: outRel, motion: true }); continue; }
+          why = `The motion couldn't be made on this computer (${made.error || 'no reason given'})`;
+        } else if (!approved || !can.ok) {
+          why = `${why}. ${local.reason}`.replace(/\.$/, '');
+        }
+      }
+      motionReason = `${why}; a normal clip was made.`;
       if (normalBlocked || stop) {
-        clips.push({ sceneId: scene.id, status: 'skipped', motion: false, reason: [motionReason.replace('; a normal clip was made.', '.'), stop || normalBlocked].filter(Boolean).join(' ') });
+        clips.push({ sceneId: scene.id, status: 'skipped', motion: false, reason: [`${why}.`, stop || normalBlocked].filter(Boolean).join(' ') });
         continue;
       }
     } else if (normalBlocked) {

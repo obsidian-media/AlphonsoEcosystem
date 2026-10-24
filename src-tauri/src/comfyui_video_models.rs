@@ -368,6 +368,61 @@ pub async fn comfyui_install_reference_model(
   .await
 }
 
+/// Motion transfer on this computer (phase 4c): Wan 2.1 VACE 1.3B follows a control video
+/// (the motion clip's edges, from ComfyUI's own Canny node) with the scene picture as its
+/// reference, on ComfyUI's own nodes (WanVaceToVideo). Pinned 2026-10-24 from the Hugging Face
+/// API (Comfy-Org/Wan-2.1, the Wan_2.1_ComfyUI_repackaged files at a fixed commit, Apache-2.0);
+/// the text encoder is the same file the Wan 2.2 clip model uses.
+pub(crate) const LOCAL_MOTION_MODEL: ExtraModel = ExtraModel {
+  id: "wan21_vace_1_3b",
+  name: "Motion transfer (Wan 2.1 VACE 1.3B)",
+  min_vram_gb: 8.0,
+  license: "Apache-2.0",
+  files: &[
+    ModelFile {
+      url: "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/diffusion_models/wan2.1_vace_1.3B_fp16.safetensors",
+      sha256: "640ccc0577e6a5d4bb15cd91b11b699ef914fc55f126c5a1c544e152130784f2",
+      size: 4_309_519_800,
+      subfolder: "diffusion_models",
+      filename: "wan2.1_vace_1.3B_fp16.safetensors",
+    },
+    ModelFile {
+      url: "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      sha256: "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      size: 6_735_906_897,
+      subfolder: "text_encoders",
+      filename: "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    },
+    ModelFile {
+      url: "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/vae/wan_2.1_vae.safetensors",
+      sha256: "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+      size: 253_815_318,
+      subfolder: "vae",
+      filename: "wan_2.1_vae.safetensors",
+    },
+  ],
+};
+
+#[tauri::command]
+pub async fn comfyui_motion_model(saved_dir: Option<String>) -> ExtraModelInfo {
+  extra_model_info(&LOCAL_MOTION_MODEL, saved_dir).await
+}
+
+#[tauri::command]
+pub async fn comfyui_install_motion_model(
+  app: AppHandle,
+  saved_dir: Option<String>,
+) -> Result<(), String> {
+  install_files(
+    &app,
+    saved_dir,
+    "comfyui-motion",
+    LOCAL_MOTION_MODEL.name,
+    LOCAL_MOTION_MODEL.files,
+  )
+  .await
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -441,5 +496,33 @@ mod tests {
       assert!(f.url.ends_with(f.filename));
       assert_eq!(f.subfolder, "checkpoints");
     }
+  }
+
+  #[test]
+  fn the_local_motion_model_is_pinned_and_shares_the_text_encoder() {
+    let m = &LOCAL_MOTION_MODEL;
+    assert_eq!(m.files.len(), 3);
+    for f in m.files {
+      assert_eq!(f.sha256.len(), 64);
+      assert!(
+        f.url
+          .contains("/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/")
+          && f.url.ends_with(f.filename)
+      );
+    }
+    let shared = VIDEO_MODELS
+      .iter()
+      .flat_map(|v| v.files.iter())
+      .find(|f| f.filename == "umt5_xxl_fp8_e4m3fn_scaled.safetensors")
+      .unwrap();
+    let ours = m
+      .files
+      .iter()
+      .find(|f| f.filename == shared.filename)
+      .unwrap();
+    assert_eq!(
+      (ours.sha256, ours.size, ours.subfolder),
+      (shared.sha256, shared.size, shared.subfolder)
+    );
   }
 }

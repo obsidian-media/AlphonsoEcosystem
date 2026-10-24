@@ -15,6 +15,11 @@ vi.mock('../../../services/connectors/connectorImageGenerators', () => ({
   generateComfyUiImage: vi.fn(async () => ({ ok: true, previewBase64: 'PIC' })),
   getComfyUiEndpoint: vi.fn(() => 'http://127.0.0.1:8188'),
 }));
+const localMotion = { ok: false as boolean, reason: "This graphics card can't run local motion transfer; Higgsfield can.", made: { status: 'done', path: '' } as any };
+vi.mock('../../../services/contentFactory/comfyMotionClip', () => ({
+  localMotionAvailable: vi.fn(async () => (localMotion.ok ? { ok: true } : { ok: false, reason: localMotion.reason })),
+  makeComfyMotionClip: vi.fn(async (i: any) => (localMotion.made.status === 'done' ? { status: 'done', path: i.outRel } : localMotion.made)),
+}));
 vi.mock('../../../services/videoModelService', async (orig) => ({
   ...(await orig<typeof import('../../../services/videoModelService')>()),
   listVideoModels: vi.fn(async () => ({ models: [], selected: null, suggested: null })),
@@ -29,6 +34,7 @@ import { setShortPartMotion } from '../../../services/contentFactory/contentProj
 import { contentProjectPlanSteps, clipsWaitPaid, motionIncluded, SHORTS_MOTION_WAIT } from '../../../services/contentFactory/contentProjectPlan';
 import { refreshHiggsfieldEstimate, listHiggsfieldPresets } from '../../../services/connectors/higgsfieldConnector';
 import { monthSpendUsd } from '../../../services/jose/joseSpend';
+import { makeComfyMotionClip } from '../../../services/contentFactory/comfyMotionClip';
 
 function setup(engines: Record<string, unknown> = { clips: 'higgsfield' }) {
   const brand = saveBrand({ name: 'B', engines } as any);
@@ -56,6 +62,8 @@ beforeEach(async () => {
   await refreshHiggsfieldEstimate('clip', { seconds: 5 });
   await refreshHiggsfieldEstimate('motion', { seconds: 5 });
   vi.clearAllMocks();
+  localMotion.ok = false;
+  localMotion.made = { status: 'done' };
 });
 
 describe('motion clips with Higgsfield', () => {
@@ -126,5 +134,34 @@ describe('motion clips with Higgsfield', () => {
     const motion = runs().find((r) => r.job.model === 'm/motion')!;
     expect(motion).toMatchObject({ outPath: `${dir}/shorts/sh1/clips/v1-p1.mp4`, job: { presetId: 'nod', imagePath: `${dir}/shorts/sh1/v1-p1.png` } });
     expect(runs()).toHaveLength(1);
+  });
+
+  it('without Higgsfield the motion is copied on this computer, for free', async () => {
+    const { brand, project, dir } = setup({ clips: 'local' });
+    localMotion.ok = true;
+    const result = await executeMediaStep(clips(project, brand, ['write_own_work']));
+    expect(runs()).toHaveLength(0);
+    expect(vi.mocked(makeComfyMotionClip).mock.calls[0][0]).toMatchObject({ imageRel: 'b/p/scenes/v1-s1.png', motionRel: 'b/p/motion/s1-v1.mp4', outRel: `${dir}/clips/v1-s1.mp4` });
+    expect((result.artifacts[0].data as any).clips.find((c: any) => c.sceneId === 's1')).toMatchObject({ status: 'done', motion: true });
+  });
+
+  it('a local motion still running is kept with its job id', async () => {
+    const { brand, project, dir } = setup({ clips: 'local' });
+    localMotion.ok = true;
+    localMotion.made = { status: 'pending', jobId: 'job-3' };
+    const result = await executeMediaStep(clips(project, brand, ['write_own_work']));
+    expect((result.artifacts[0].data as any).clips.find((c: any) => c.sceneId === 's1')).toMatchObject({ status: 'pending', jobId: 'job-3', target: `${dir}/clips/v1-s1.mp4`, motion: true });
+  });
+
+  it("when this computer can't copy it either, the scene's normal clip says why", async () => {
+    const { brand, project } = setup({ clips: 'higgsfield' });
+    setVideoSettings(project.id, { aiClips: 'every' });
+    localMotion.ok = true;
+    localMotion.made = { status: 'failed', error: 'ComfyUI refused the motion workflow: no LoadVideo' };
+    backend.higgsfield_run = (a) => (a.job.model === 'm/motion' ? { ok: false, status: 'failed', reason: 'Higgsfield is busy.' } : { ok: true, status: 'done', path: a.outPath });
+    const result = await executeMediaStep(clips(getProject(project.id)!, brand));
+    const s1 = (result.artifacts[0].data as any).clips.find((c: any) => c.sceneId === 's1');
+    expect(s1).toMatchObject({ status: 'done', motion: false });
+    expect(s1.reason).toContain("The motion couldn't be made on this computer (ComfyUI refused the motion workflow: no LoadVideo); a normal clip was made.");
   });
 });

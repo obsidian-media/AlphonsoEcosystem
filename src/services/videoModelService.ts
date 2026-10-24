@@ -71,6 +71,15 @@ export function installCharacterReferenceModel(): Promise<void> {
   return invoke<void>('comfyui_install_reference_model', { savedDir: savedComfyDir() });
 }
 
+/** Motion transfer on this computer (phase 4c): Wan 2.1 VACE 1.3B. */
+export function getLocalMotionModel(): Promise<ExtraModelInfo> {
+  return invoke<ExtraModelInfo>('comfyui_motion_model', { savedDir: savedComfyDir() });
+}
+
+export function installLocalMotionModel(): Promise<void> {
+  return invoke<void>('comfyui_install_motion_model', { savedDir: savedComfyDir() });
+}
+
 export function getSelectedVideoModel(): string | null {
   try {
     return localStorage.getItem(SELECTED_KEY) || null;

@@ -111,9 +111,27 @@ pub(crate) async fn comfyui_request(
 
 /// A scene picture as a `multipart/form-data` body for ComfyUI's `/upload/image`.
 pub(crate) fn multipart_image_body(boundary: &str, filename: &str, bytes: &[u8]) -> Vec<u8> {
+  multipart_upload_body(boundary, filename, upload_mime(filename), bytes)
+}
+
+/// The type ComfyUI's upload is told: a picture, or a motion clip (phase 4c).
+pub(crate) fn upload_mime(filename: &str) -> &'static str {
+  if filename.to_ascii_lowercase().ends_with(".mp4") {
+    "video/mp4"
+  } else {
+    "image/png"
+  }
+}
+
+pub(crate) fn multipart_upload_body(
+  boundary: &str,
+  filename: &str,
+  mime: &str,
+  bytes: &[u8],
+) -> Vec<u8> {
   let mut body = Vec::with_capacity(bytes.len() + 512);
   let head = format!(
-    "--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"{filename}\"\r\nContent-Type: image/png\r\n\r\n"
+    "--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"{filename}\"\r\nContent-Type: {mime}\r\n\r\n"
   );
   body.extend_from_slice(head.as_bytes());
   body.extend_from_slice(bytes);
@@ -174,7 +192,8 @@ pub(crate) async fn comfyui_upload_image(
   let file = crate::media_tools::checked_file(
     &request.workspace_root,
     &request.rel_path,
-    &["png", "jpg", "jpeg", "webp"],
+    // A motion clip too (phase 4c), for ComfyUI's LoadVideo.
+    &["png", "jpg", "jpeg", "webp", "mp4"],
   )?;
   let bytes = std::fs::read(&file).map_err(|_| "The scene picture is missing.".to_string())?;
   let name = format!(
@@ -285,7 +304,9 @@ pub(crate) async fn comfyui_save_output(
 
 #[cfg(test)]
 mod tests {
-  use super::{allowed_path, loopback_base, multipart_image_body, safe_comfy_name, view_path};
+  use super::{
+    allowed_path, loopback_base, multipart_image_body, safe_comfy_name, upload_mime, view_path,
+  };
 
   #[test]
   fn accepts_only_loopback_http_endpoints() {
@@ -358,5 +379,12 @@ mod tests {
     assert!(view_path("a\\b.mp4", "", "output").is_err());
     assert!(safe_comfy_name("alphonso-v1-s1.png"));
     assert!(!safe_comfy_name(""));
+  }
+  #[test]
+  fn a_motion_clip_is_uploaded_as_a_video() {
+    assert_eq!(upload_mime("alphonso-s1-v1.mp4"), "video/mp4");
+    assert_eq!(upload_mime("alphonso-v1-s1.png"), "image/png");
+    let body = String::from_utf8(multipart_image_body("B", "alphonso-s1-v1.mp4", b"MP4")).unwrap();
+    assert!(body.contains("Content-Type: video/mp4"));
   }
 }
