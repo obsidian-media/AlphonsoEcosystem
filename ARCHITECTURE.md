@@ -189,8 +189,8 @@ Tauri integration: `src-tauri/src/voice_sidecar.rs` manages a `Child` process vi
 - `hectorResearchService.js` — Hector live research
 - `toolConnectionService.ts`, `toolNotificationDispatcher.ts`
 
-### Workflow Operations (10 structured workflows)
-- `workflowOperationsRegistryService.ts` — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance
+### Workflow Operations (16 structured workflows)
+- `workflowOperationsRegistryService.ts` — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance, Research Operations, Crisis Management, Ecosystem Learning, Human Collaboration, Financial Intelligence, Reputation and Brand Monitoring
 - `workflowExecutionService.js`, `workflowBuilderService.ts`, `workflowGovernanceService.ts`
 
 ### Self-Development & Release

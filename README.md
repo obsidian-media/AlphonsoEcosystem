@@ -288,7 +288,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 - **Local LLM First** — Ollama with model switching (`llama3.2:3b` default); no prompt leaves your device for core operations
 - **Fail-Closed Policy Gate** — every outbound action runs through `policyEnforcementService.ts`; if credentials are missing or the action is ambiguous it is blocked, not allowed
 - **Durable Orchestration** — queue with state transitions (`queued → approval_required → approved → in_progress → completed`), dead-letter replay, and approval workflows
-- **10 Structured Workflows** — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance
+- **16 Structured Workflows** — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance, Research Operations, Crisis Management, Ecosystem Learning, Human Collaboration, Financial Intelligence, Reputation and Brand Monitoring
 - **SQLite Memory** — durable memory with governance metadata (owner, sensitivity, retention, privacy policy) in WAL mode
 - **Plugin System** — sandboxed plugin runtime + local marketplace
 - **Screen Intelligence** — `screenIntelligenceService.ts` for on-screen context awareness

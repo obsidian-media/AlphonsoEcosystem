@@ -213,8 +213,8 @@ Key services that past audits missed or underestimated:
 - `hectorResearchService.js` — Hector live research
 - `toolConnectionService.ts`, `toolNotificationDispatcher.ts`
 
-### Workflow Operations (10 structured workflows)
-- `workflowOperationsRegistryService.ts` — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance
+### Workflow Operations (16 structured workflows)
+- `workflowOperationsRegistryService.ts` — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance, Research Operations, Crisis Management, Ecosystem Learning, Human Collaboration, Financial Intelligence, Reputation and Brand Monitoring
 - `workflowExecutionService.js`, `workflowBuilderService.ts`, `workflowGovernanceService.ts`
 
 ### Self-Development & Release
@@ -918,7 +918,7 @@ Before writing any new service or feature, verify it does not already exist:
 - **Dead-letter replay** → already in `orchestrationQueueService.ts`
 - **Zero-cost mode** → enforced in Jose routing and `policyEnforcementService.ts`
 - **Agent contracts/boundaries** → `agentContractService.ts` (do not add per-agent logic elsewhere)
-- **10 workflow operations** → `workflowOperationsRegistryService.ts`
+- **16 workflow operations** → `workflowOperationsRegistryService.ts`
 - **Updater release script** → `npm run release:updater` (do not write a new one)
 - **Architecture doc** → `ARCHITECTURE.md` at project root
 - **Developer guide** → `CLAUDE.md` at project root (read at every session start)
