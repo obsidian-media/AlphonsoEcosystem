@@ -184,6 +184,159 @@ async fn read_back_status(client: &reqwest::Client, token: &str, video_id: &str)
   payload.get("items")?.get(0)?.get("status").cloned()
 }
 
+/// The `status` to send with `videos.update` to move a scheduled video (`publish_at`) or
+/// cancel its schedule (`None`: it stays private). YouTube clears any status field that is
+/// left out, so the ones it keeps are copied. Refused once the video has gone out.
+pub(crate) fn youtube_status_update(
+  current: &Value,
+  publish_at: Option<&str>,
+) -> Result<Value, String> {
+  let privacy = current
+    .get("privacyStatus")
+    .and_then(Value::as_str)
+    .unwrap_or("");
+  let scheduled = current
+    .get("publishAt")
+    .and_then(Value::as_str)
+    .is_some_and(|at| !at.is_empty());
+  if privacy != "private" || !scheduled {
+    return Err("This has already gone out on YouTube (or is not scheduled), so its time can't be changed here.".to_string());
+  }
+  let mut status = serde_json::json!({ "privacyStatus": "private" });
+  for key in ["license", "embeddable", "publicStatsViewable"] {
+    if let Some(value) = current.get(key) {
+      status[key] = value.clone();
+    }
+  }
+  if let Some(value) = current.get("madeForKids") {
+    status["selfDeclaredMadeForKids"] = value.clone();
+  }
+  if let Some(at) = publish_at {
+    status["publishAt"] = Value::String(at.to_string());
+  }
+  Ok(status)
+}
+
+/// A YouTube video id: letters, digits, `-` and `_`.
+fn valid_video_id(id: &str) -> bool {
+  !id.is_empty()
+    && id.len() <= 32
+    && id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+/// What YouTube did with a moved or cancelled schedule (read back).
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct YouTubeRescheduleProof {
+  ok: bool,
+  publish_at: Option<String>,
+  privacy_status: String,
+  reason: Option<String>,
+}
+
+fn reschedule_failed(reason: impl Into<String>) -> YouTubeRescheduleProof {
+  YouTubeRescheduleProof {
+    ok: false,
+    publish_at: None,
+    privacy_status: String::new(),
+    reason: Some(reason.into()),
+  }
+}
+
+/// Moves a scheduled (private) video's `publishAt`, or cancels its schedule (`publish_at`
+/// `None`: it stays private), then reads back what YouTube kept.
+#[tauri::command]
+pub(crate) async fn connector_reschedule_youtube(
+  rate_limiter: tauri::State<'_, crate::RateLimiter>,
+  video_id: String,
+  publish_at: Option<String>,
+  oauth: Option<YouTubeOAuth>,
+) -> Result<YouTubeRescheduleProof, String> {
+  rate_limiter.check_and_record("connector_reschedule_youtube")?;
+  let id = video_id.trim().to_string();
+  if !valid_video_id(&id) {
+    return Ok(reschedule_failed("That is not a YouTube video id."));
+  }
+  let publish_at = publish_at
+    .map(|at| at.trim().to_string())
+    .filter(|at| !at.is_empty());
+  let token = match youtube_access_token(oauth.unwrap_or_default()).await {
+    Ok(token) => token,
+    Err(error) => return Ok(reschedule_failed(error)),
+  };
+  let client = reqwest::Client::builder()
+    .timeout(Duration::from_secs(60))
+    .user_agent("Alphonso-YouTube-Connector/0.2")
+    .build()
+    .map_err(|error| error.to_string())?;
+  let Some(current) = read_back_status(&client, &token, &id).await else {
+    return Ok(reschedule_failed(
+      "YouTube did not return this video's status; check YouTube Studio.",
+    ));
+  };
+  let status = match youtube_status_update(&current, publish_at.as_deref()) {
+    Ok(status) => status,
+    Err(reason) => return Ok(reschedule_failed(reason)),
+  };
+  let response = client
+    .put("https://www.googleapis.com/youtube/v3/videos?part=status")
+    .bearer_auth(&token)
+    .json(&serde_json::json!({ "id": id, "status": status }))
+    .send()
+    .await
+    .map_err(|error| error.to_string())?;
+  if !response.status().is_success() {
+    let payload: Value = response.json().await.unwrap_or(Value::Null);
+    return Ok(reschedule_failed(api_error(
+      &payload,
+      "YouTube refused the change.",
+    )));
+  }
+  let Some(after) = read_back_status(&client, &token, &id).await else {
+    return Ok(reschedule_failed(
+      "YouTube took the change, but its status could not be read back; check YouTube Studio.",
+    ));
+  };
+  let kept = after
+    .get("publishAt")
+    .and_then(Value::as_str)
+    .map(str::to_string);
+  let privacy = after
+    .get("privacyStatus")
+    .and_then(Value::as_str)
+    .unwrap_or("")
+    .to_string();
+  let matches = match (&publish_at, &kept) {
+    (Some(wanted), Some(got)) => same_instant(wanted, got),
+    (None, None) => true,
+    _ => false,
+  };
+  Ok(YouTubeRescheduleProof {
+    ok: matches,
+    reason: if matches {
+      None
+    } else {
+      Some("YouTube did not keep the new time; check YouTube Studio.".to_string())
+    },
+    publish_at: kept,
+    privacy_status: privacy,
+  })
+}
+
+/// RFC 3339 times compared by instant (YouTube answers "…Z" without milliseconds).
+fn same_instant(a: &str, b: &str) -> bool {
+  let trim = |s: &str| {
+    s.trim_end_matches('Z')
+      .split('.')
+      .next()
+      .unwrap_or("")
+      .to_string()
+  };
+  trim(a) == trim(b)
+}
+
 fn mime_for_video_path(path: &Path) -> String {
   let extension = path
     .extension()
@@ -602,5 +755,45 @@ mod tests {
     assert_eq!(thumbnail_mime(Path::new("t.JPG")), Some("image/jpeg"));
     assert_eq!(thumbnail_mime(Path::new("t.jpeg")), Some("image/jpeg"));
     assert_eq!(thumbnail_mime(Path::new("t.webp")), None);
+  }
+
+  #[test]
+  fn a_scheduled_video_moves_and_keeps_its_other_status_fields() {
+    let current = serde_json::json!({
+      "privacyStatus": "private", "publishAt": "2026-11-01T18:00:00Z", "license": "creativeCommon",
+      "embeddable": false, "publicStatsViewable": true, "uploadStatus": "processed", "madeForKids": false
+    });
+    let moved = youtube_status_update(&current, Some("2026-11-03T09:30:00Z")).unwrap();
+    assert_eq!(moved["privacyStatus"], "private");
+    assert_eq!(moved["publishAt"], "2026-11-03T09:30:00Z");
+    assert_eq!(moved["license"], "creativeCommon");
+    assert_eq!(moved["embeddable"], false);
+    assert_eq!(moved["publicStatsViewable"], true);
+    assert_eq!(moved["selfDeclaredMadeForKids"], false);
+    assert!(
+      moved.get("uploadStatus").is_none(),
+      "read-only fields are not sent"
+    );
+  }
+
+  #[test]
+  fn cancelling_keeps_the_video_private_with_no_publish_time() {
+    let current =
+      serde_json::json!({ "privacyStatus": "private", "publishAt": "2026-11-01T18:00:00Z" });
+    let cancelled = youtube_status_update(&current, None).unwrap();
+    assert_eq!(cancelled["privacyStatus"], "private");
+    assert!(cancelled.get("publishAt").is_none());
+  }
+
+  #[test]
+  fn a_video_that_has_gone_out_cannot_be_moved() {
+    for current in [
+      serde_json::json!({ "privacyStatus": "public" }),
+      serde_json::json!({ "privacyStatus": "unlisted" }),
+      serde_json::json!({ "privacyStatus": "private" }),
+    ] {
+      let refused = youtube_status_update(&current, Some("2026-11-03T09:30:00Z")).unwrap_err();
+      assert!(refused.contains("already"), "{refused}");
+    }
   }
 }

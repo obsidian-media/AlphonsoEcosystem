@@ -862,6 +862,7 @@ pub fn run() {
       connector_send_notion,
       connector_send_clickup,
       connector_upload_youtube,
+      youtube::connector_reschedule_youtube,
       meta_publish_content,
       meta_video::meta_publish_video,
       tool_connection_post_webhook,
