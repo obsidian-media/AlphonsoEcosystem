@@ -583,6 +583,41 @@ pub struct AssemblySpec {
   srt: String,
   caption_color: Option<String>,
   outline_color: Option<String>,
+  /// Which shapes to make (phase 3d: a Short is `["9x16"]`); both when not given.
+  #[serde(default)]
+  aspects: Option<Vec<String>>,
+  /// A Short's file name without the shape (`v1` → `v1.mp4`) when one shape is made.
+  #[serde(default)]
+  output_stem: Option<String>,
+}
+
+/// The shapes this assembly makes, in the usual order.
+pub(crate) fn chosen_aspects(spec: &AssemblySpec) -> Vec<(&'static str, u32, u32)> {
+  match &spec.aspects {
+    None => ASPECTS.to_vec(),
+    Some(wanted) => ASPECTS
+      .iter()
+      .copied()
+      .filter(|(a, _, _)| wanted.iter().any(|w| w == a))
+      .collect(),
+  }
+}
+
+/// The finished file's name (and its frames' prefix) for one shape.
+pub(crate) fn output_stem(spec: &AssemblySpec, aspect: &str) -> String {
+  let single = chosen_aspects(spec).len() == 1;
+  match spec.output_stem.as_deref().map(str::trim) {
+    Some(stem)
+      if single
+        && !stem.is_empty()
+        && stem
+          .chars()
+          .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') =>
+    {
+      stem.to_string()
+    }
+    _ => format!("v{}-{aspect}", spec.version),
+  }
 }
 
 /// One ffmpeg run: its arguments and the folder it runs in.
@@ -897,8 +932,14 @@ pub async fn content_assemble_video(spec: AssemblySpec) -> Result<serde_json::Va
   if let Some(rel) = missing_input(&root, &spec) {
     return Err(format!("A file for the video is missing: {rel}"));
   }
-  for (aspect, _, _) in ASPECTS {
-    if out.join(format!("v{}-{aspect}.mp4", spec.version)).exists() {
+  if chosen_aspects(&spec).is_empty() {
+    return Err("Choose 16x9 or 9x16 for the video.".to_string());
+  }
+  for (aspect, _, _) in chosen_aspects(&spec) {
+    if out
+      .join(format!("{}.mp4", output_stem(&spec, aspect)))
+      .exists()
+    {
       return Err(format!(
         "Version {} already exists; nothing was overwritten.",
         spec.version
@@ -925,9 +966,10 @@ async fn assemble_outputs(
   written: &mut Vec<PathBuf>,
 ) -> Result<Vec<serde_json::Value>, String> {
   let mut outputs = Vec::new();
-  for (aspect, width, height) in ASPECTS {
-    let name = format!("v{}-{aspect}.mp4", spec.version);
-    let work = out.join(format!(".work-v{}-{aspect}", spec.version));
+  for (aspect, width, height) in chosen_aspects(spec) {
+    let stem = output_stem(spec, aspect);
+    let name = format!("{stem}.mp4");
+    let work = out.join(format!(".work-{stem}"));
     std::fs::create_dir_all(&work).map_err(|e| e.to_string())?;
     let runs = build_assembly_runs(root, &work, &name, spec, width, height);
     let list: String = assembly_segments(spec)
@@ -962,7 +1004,7 @@ async fn assemble_outputs(
     }
     let mut frames = Vec::new();
     for pct in [10, 50, 90] {
-      let frame = format!("v{}-{aspect}-{pct}.jpg", spec.version);
+      let frame = format!("{stem}-{pct}.jpg");
       let at = format!("{:.2}", duration * pct as f64 / 100.0);
       let grab = FfmpegRun {
         cwd: out.to_path_buf(),
@@ -1326,7 +1368,47 @@ mod tests {
       srt: "brand/p/output/v1.srt".into(),
       caption_color: Some("#ffeecc".into()),
       outline_color: None,
+      aspects: None,
+      output_stem: None,
     }
+  }
+
+  #[test]
+  fn assembly_can_make_only_the_9x16_version() {
+    let both = spec(vec![], false);
+    assert_eq!(chosen_aspects(&both).len(), 2);
+    let short = AssemblySpec {
+      aspects: Some(vec!["9x16".into()]),
+      ..spec(vec![], false)
+    };
+    assert_eq!(chosen_aspects(&short), vec![("9x16", 1080, 1920)]);
+    let none = AssemblySpec {
+      aspects: Some(vec!["4x3".into()]),
+      ..spec(vec![], false)
+    };
+    assert!(chosen_aspects(&none).is_empty());
+  }
+
+  #[test]
+  fn assembly_names_a_shorts_file() {
+    let short = AssemblySpec {
+      aspects: Some(vec!["9x16".into()]),
+      output_stem: Some("v2".into()),
+      ..spec(vec![], false)
+    };
+    assert_eq!(output_stem(&short, "9x16"), "v2");
+    // Both shapes keep their usual names; an odd stem is ignored.
+    let both = AssemblySpec {
+      output_stem: Some("v2".into()),
+      ..spec(vec![], false)
+    };
+    assert_eq!(output_stem(&both, "16x9"), "v1-16x9");
+    let odd = AssemblySpec {
+      aspects: Some(vec!["9x16".into()]),
+      output_stem: Some("../x".into()),
+      ..spec(vec![], false)
+    };
+    assert_eq!(output_stem(&odd, "9x16"), "v1-9x16");
   }
 
   fn scene(clip: Option<&str>, picture: Option<&str>, seconds: f64) -> AssemblyScene {
@@ -1550,6 +1632,8 @@ mod tests {
       srt: "My Brand/Café ideas/audio/v1.srt".into(),
       caption_color: Some("#ffffff".into()),
       outline_color: Some("#000000".into()),
+      aspects: None,
+      output_stem: None,
     };
     // A run that fails its check (the voice is said to be 20 s) leaves no file behind...
     let wrong = AssemblySpec {
