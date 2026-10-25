@@ -273,6 +273,17 @@ Each kind of work has exactly one owner, and Jose gives every step to the agent 
 
 Every step gets the full work of the steps it depends on, so a reviewer reads the actual draft and Marcus sends what was written, never the instruction. A request ends with a short summary, one line per step, then "Open on the board."; a one-step request shows its whole answer. When an agent can't work until something is set up (Kokoro not installed, a connector without its key), the step waits, says what to set up, and **Carry on** (board or Telegram) runs it again; it is never handed to another agent. In Boardroom and Simple mode an agent asked for someone else's work says who does it. Placing a CALL-E call is Marcus's step and waits for your approval.
 
+### Skills
+
+Each agent works with its own skills, one per kind of job (Hector's "Web research with sources", Maria's "Claim check"). For every step the agent picks the skill that fits, and the Requests board shows it under the step: "Skill: Claim check — The post quotes numbers." A skill can give its agent only its own work and tools.
+
+**All Agents → Skills** lists every agent's skills, built-in and yours, with when each was last used. To add your own:
+- **New skill** under an agent: a name, when to use it, the kinds of work it does (only that agent's), its tools (only that agent's), and the instructions. Save checks it and says what is wrong if anything is.
+- **Import a skill file**: a `.md` skill file, checked the same way.
+- **Open skills folder**: your skill files, one folder per agent. **Export** saves a skill as a file; **Delete** removes one of yours.
+
+A skill file that breaks the rules is listed with the reason and not used. **Settings → Agents → Agents call their own tools from model size** (14 by default): smaller models follow each skill's steps in order, larger ones (and paid or cloud models) decide which tools to call, at most 5 per step. Sending, publishing, calling, running code and making pictures always stay the step's own action and ask as before.
+
 ---
 
 ## 7. Boardroom and Project Batches

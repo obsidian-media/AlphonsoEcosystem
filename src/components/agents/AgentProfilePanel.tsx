@@ -1,6 +1,8 @@
 import React from 'react';
+import { listSkills } from '../../services/skills/skillLibrary';
 
 interface Agent {
+  id?: string;
   name: string;
   title?: string;
   role?: string;
@@ -8,7 +10,6 @@ interface Agent {
   strengths?: string[];
   limitations?: string[];
   skillFocus?: string;
-  skillPackIds?: string[];
 }
 
 interface Props {
@@ -20,6 +21,7 @@ export function AgentProfilePanel({ agent }: Props): React.JSX.Element {
     return <div className="rounded-xl bg-(--surface-2) p-3 text-sm text-(--text-3)">Select an agent to inspect profile details.</div>;
   }
 
+  const skills = agent.id ? listSkills(agent.id).map((s) => s.name) : [];
   return (
     <div className="rounded-xl bg-(--surface-2) p-4 space-y-3">
       <div>
@@ -37,13 +39,11 @@ export function AgentProfilePanel({ agent }: Props): React.JSX.Element {
           {(agent.limitations ?? []).slice(0, 4).map((item) => <div key={item} className="text-(--text-2)">{item}</div>)}
         </div>
       </div>
-      {(agent.skillFocus ?? (Array.isArray(agent.skillPackIds) && agent.skillPackIds.length > 0)) && (
+      {(agent.skillFocus || skills.length > 0) && (
         <div className="rounded-lg p-2 text-[11px]">
           <div className="text-(--text-3) uppercase tracking-wider font-bold text-[10px] mb-1">Professional Skill</div>
           {agent.skillFocus && <div className="text-(--text-1)">{agent.skillFocus}</div>}
-          {Array.isArray(agent.skillPackIds) && agent.skillPackIds.length > 0 && (
-            <div className="mt-1 text-(--text-3)">Packs: {agent.skillPackIds.join(', ')}</div>
-          )}
+          {skills.length > 0 && <div className="mt-1 text-(--text-3)">Skills: {skills.join(', ')}</div>}
         </div>
       )}
     </div>

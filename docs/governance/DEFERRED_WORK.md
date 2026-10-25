@@ -40,12 +40,20 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - **Status:** CLOSED 2026-10-23.
 
 - [2026-10-24] **Agent roles Part A: what it leaves for Parts B and C.**
-  - **Real skills (Part B):** skills as Markdown files with tools, picked by the agent with a reason on the board, user skills by form or file, the old one-line packs archived. Until then skill guidance still reaches only Miya's Quick package.
+  - **Real skills (Part B):** CLOSED 2026-10-25 (see the Part B entry below).
   - **Projects, Teams, learning (Part C):** Work → Projects still shows template outputs; Agent Pairing still saves pairs nothing reads; skill use is not recorded.
   - **Not enforceable from Alphonso:** what a Hermes-backed agent does with Hermes's own tools; the board only notes it.
   - **Chat's notice** lists requests cut off when the app closed, not requests waiting for setup (the summary and the board say it).
   - **Kokoro's missing install** is recognised from the backend's "is not installed" message; a `missing` flag from `content_tts_kokoro` would be sturdier.
   - **Desktop check** `agent-roles.e2e.mjs` depends on the local model's plan; it checks owners, not the exact steps.
+  - Status: OPEN.
+
+- [2026-10-25] **Agent roles Part B (skills): what it leaves.**
+  - **Action tools are not tool calls.** `send_message`, `publish_post`, `place_call`, `run_command`, `write_project_file` and Miya's media tools are listed in skills and checked against effects, but run only as the step's own action. An agent can't, mid-step, decide to send something; widening that needs its own approval design.
+  - **Your skills write plain text.** The form saves `output: text`; a content-factory step's fixed JSON stays built-in, so you can add skills beside those steps but not replace them.
+  - **`read_memory` uses its own word match**, not the engine's `retrieveRelevantContext()` (an import cycle); results can differ slightly from a step's memory snippet.
+  - **The tool-call loop is checked with unit tests and a 3B model only** on this machine; a 14B-plus model's own tool calls have not been run live.
+  - **Skill outcomes** (how often each skill's work passed review) are Part C.
   - Status: OPEN.
 
 - [2026-10-25] **Every document reconciled with the code: what it leaves open.**

@@ -67,3 +67,13 @@ as new work requiring its own review, not a revert.
 - **Why it was removed:** two Boardrooms side by side, and the owner decided Boardroom is the group chat (QA Q2, Bug 45). Its agent "discussion" was mostly scripted rather than model replies.
 - **What moved, and what did not:** its three actions now live on every Boardroom thread: Conclude (Maria's governance review), Distribute (Marcus) and Creative brief (Miya via Jose). Two behaviours were deliberately not carried over because they were untrue: Conclude showed a random "Maria risk score" (`Math.random()*40+20`; Maria's audit returns a risk level, not a number), and Distribute always toasted "sent via Marcus" although it gave Marcus no destination, so nothing was sent. Old sessions are imported into threads by `migrateLegacySessions()`, which now picks up every session not yet imported, not just those that existed on its first run.
 - **Before restoring:** don't. Extend the thread actions in `BoardroomChatView.tsx` instead.
+
+---
+
+## skillPacks/ — the one-line skill packs (retired 2026-10-25)
+
+**What:** `skillPack*.ts` (13 files: about 160 packs, each a sentence and five generic steps, with their storage and guidance), `agentContractSkillPackChecks.ts` (the pack-permission check cut out of `src/services/agentContractService.ts`: `validateSkillPackAgainstContract()`, `AGENT_SKILL_PACK_SCOPE_OVERRIDES` and friends), and their 33 test files in `skillPacks/tests/`.
+
+**Why retired:** agent roles Part B (spec `docs/superpowers/specs/2026-10-24-agent-roles-skills-handover-design.md`). The packs reached a prompt in one place only (Miya's Quick package, all at once) and carried no real know-how. They were replaced by real skills: Markdown files in `src/skills/<agent>/`, checked by `checkSkill()` in `src/services/skills/skillCheck.ts`, picked per step. The owner approved archiving them on 2026-10-24.
+
+**Before resurrecting:** the agent profiles no longer list `skillPackIds`, the Ecosystem hub's Skills tab is the new Skills page, and the Coach reads `skillLastUsed()` instead of the packs' invocation log. A pack's text could become a skill file's instructions; there is no other path back.

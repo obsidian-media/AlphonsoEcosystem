@@ -156,6 +156,23 @@ Each kind of work has exactly one owner (`AGENT_PERMISSION_TABLE`, `owns` and `n
 
 Every step gets the full output of the steps it depends on (by step, cut at 6,000 characters for local models, 20,000 for paid or cloud ones), one line for each other finished step, and memory. A review gets the work it reviews and gives its verdict in the same answer.
 
+## Skills
+
+Each agent (Jose aside: he plans) has its own skills: know-how for one kind of job plus the tools it needs, one Markdown file each (`src/skills/<agent>/`). A skill can give its agent only work it owns and tools it may use; one that breaks this is refused with the reason. For every step the agent picks one of its skills for that kind of work (with one, it is used straight away), and the board shows the skill and why. A small model runs the skill's tools in the skill's order; a larger one (14B and up by default, set in Settings → Agents) or a paid or cloud model calls them itself, at most 5 times. Tools that send, publish, call, run code, change files or make media are never called this way: they are the step's own action and keep its approval.
+
+| Agent | Built-in skills |
+|-------|-----------------|
+| Alphonso | Answer a question, Everyday writing, Code change, Verify a build |
+| Miya | Write the script, Plan the scenes, Design thumbnails, Plan the Shorts, Choose sound effects, Write a carousel, Write the campaign, Creative lessons, Creative package, UI design, Edit the video, Make a picture |
+| Hector | Web research with sources, Competitor material, Find what works, Stock footage |
+| Nova | Value and priority, Judge the market, Review the script, Best time to post, Read the results, Follow-up ideas |
+| Maria | Quality review, Claim check, Governance review, Quality against the references |
+| Sentinel | Text and link check, Permission audit, Content safety check |
+| Marcus | Send a message, Publish a post, Place a call, Release readiness |
+| Echo | Save decisions, Answer from memory, Merge and clean memory |
+
+You can add your own on All Agents → Skills (a form, or a skill file), and they sit beside the built-in ones.
+
 ## Agent Permissions Matrix
 
 From `agentPermissionTable.ts` and the plan check. Settings → General → What asks first decides which allowed effects ask; spend and publish always do.

@@ -2442,6 +2442,17 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.40 Agent roles, Part B: real skills (2026-10-25)
+
+Until now a skill was a one-line "pack" (about 160 of them) that reached a prompt in one place only, Miya's Quick package, while the real know-how sat in the content factory's own prompts. Part B (plan `docs/superpowers/plans/2026-10-25-agent-roles-part-b.md`):
+- **A skill is a Markdown file**: name, agent, when to use it, the task types it does (all owned by its agent), its tools, the tools' order for small models, and its output, then the instructions. 40 built-in skills in `src/skills/<agent>/` (Jose has none: he plans). The content factory's 16 asks moved into Miya's, Hector's, Nova's, Maria's and Sentinel's skills word for word, so the know-how is in one place.
+- **Checked, never fixed silently.** `checkSkill()` refuses a skill that gives an agent another agent's work, a tool it may not use, or an effect it lacks, with plain reasons; built-in skills are checked by a test, yours on save and on load.
+- **Picked per step, shown on the board.** Only skills for the step's task are offered; with one there is no model call; content steps use their own. The board shows "Skill: … — reason".
+- **Tools.** Each wraps an existing function (web search, opening a source, stock search, reading earlier steps, sources, memory, project files, saving a note). Small models run a skill's tools in order; models at or above Settings → Agents' size (14B by default), and paid or cloud models, call them themselves, at most 5 per step. Tools that send, publish, call, run code, change files or make media never run as tool calls: they stay the step's own action, with its approval.
+- **Your own skills** live in the app's skills folder (`skills_store.rs`); All Agents → Skills has New skill, Import a skill file, Open skills folder, Export and Delete.
+- The old packs, their tests and the contract service's pack checks are in `archive/MIGHTBEUSEDLATER/skillPacks/`; the Coach's "unused" check reads skills' last use.
+Part C (Projects, Teams, learning, old data) follows.
+
 ## 11.38 Every document reconciled with the code (2026-10-25)
 
 At the owner's request, every Markdown document was checked against the code, the dated records included. Documents that describe the app now were brought up to date; dated records (audits, reports, plans) had claims about the present corrected in place and a dated note added, so their history stays readable. Two systematic causes were found and fixed:

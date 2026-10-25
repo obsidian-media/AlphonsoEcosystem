@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 290 services and 176 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 287 services and 178 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -152,6 +152,8 @@ Source-backed inventory: 290 services and 176 components. Human purpose descript
 | component | `src/components/SetupFlow.tsx` | `SetupFlow`, `SetupFlowProps` |
 | component | `src/components/Sidebar.tsx` | `Sidebar` |
 | component | `src/components/SignInPanel.tsx` | `InstagramLoginSection`, `SignInButton` |
+| component | `src/components/skills/SkillForm.tsx` | `ownTaskTypes`, `SkillForm` |
+| component | `src/components/skills/SkillsPage.tsx` | `SkillsPage` |
 | component | `src/components/SmartVoiceButton.tsx` | `SmartVoiceButton` |
 | component | `src/components/ToastProvider.tsx` | `ToastProvider`, `useToast` |
 | component | `src/components/ToolConnectionsPanel.tsx` | `ToolConnectionsPanel` |
@@ -187,7 +189,7 @@ Source-backed inventory: 290 services and 176 components. Human purpose descript
 | service | `src/services/agentAvatarService.ts` | `getCustomAvatarDataUrl`, `listCustomAvatarAgentIds`, `processAvatarFile`, `removeCustomAvatar`, `setCustomAvatar` |
 | service | `src/services/agentBrainService.js` | `buildThinkingPrompt`, `decomposeTask`, `executeWithBrain`, `generatePlanPreview`, `getRelevantPatterns`, `gitAutoCommit`, `needsClarification`, `readProjectContext`, `sanitizeRelativePath` |
 | service | `src/services/agentBusService.ts` | `addPacketReference`, `AgentMessage`, `AgentName`, `AgentPacket`, `AgentPacketInput`, `AGENTS`, `approvePacket`, `attemptPacketExecution`, `canExecutePacket`, `clearAgentMessages`, `createAgentPacket`, `ExecutionAttemptResult`, `ExecutionGate`, `getAgentMessages`, `getPacketById`, `listAgentPackets`, `listApprovalQueue`, `listDeadLetterPackets`, `listFailedRetryablePackets`, `listPacketsByStatus`, `markPacketExecuted`, `markPacketFailed`, `PACKET_KEY`, `PACKET_SCOPE`, `PacketStatusUpdate`, `rejectPacket`, `requestPacketRetry`, `sendAgentMessage`, `sendPacketToDeadLetter`, `subscribeToMessages`, `updatePacketStatus` |
-| service | `src/services/agentContractService.ts` | `AGENT_EXECUTION_CONTRACTS`, `AGENT_SKILL_PACK_BLOCKED_OVERRIDES`, `AgentContractPacket`, `AgentExecutionContract`, `AgentId`, `ContractValidationResult`, `hasSkillPackScopeOverride`, `SkillPermissionValidationResult`, `validateAgentExecutionContract`, `validateSkillPackAgainstContract` |
+| service | `src/services/agentContractService.ts` | `AGENT_EXECUTION_CONTRACTS`, `AgentContractPacket`, `AgentExecutionContract`, `AgentId`, `ContractValidationResult`, `validateAgentExecutionContract` |
 | service | `src/services/agentMetricsService.ts` | `AgentBreakdownEntry`, `AgentExecutionEntry`, `AgentExecutionInput`, `AgentMetricsFilters`, `AgentMetricsResult`, `ApprovalRateResult`, `clearAgentMetrics`, `ErrorPattern`, `exportAgentMetrics`, `getAgentApprovalRate`, `getAgentLatency`, `getAgentMetrics`, `getAgentSuccessRate`, `getPerAgentBreakdown`, `getSevenDayTrend`, `getTopCommands`, `LatencyResult`, `recordAgentExecution`, `SuccessRateResult`, `TopCommand`, `TrendEntry` |
 | service | `src/services/agentOutputStoreService.ts` | `AGENT_DEPENDENCIES`, `AGENT_OUTPUT_SCOPE`, `buildExecutionPlan`, `clearAgentOutputs`, `getAgentOutput`, `getAllAgentOutputs`, `getPriorOutputs`, `setAgentOutput`, `validateWiring` |
 | service | `src/services/agentPairingConstants.ts` | `AGENT_PAIRING_ROUTES`, `AGENT_PAIRINGS_V1`, `AgentPairingKey`, `AgentPairingRoute`, `ApprovalMode`, `PAIRING_SCOPE`, `PairingRouteType`, `RiskLevel` |
@@ -341,7 +343,7 @@ Source-backed inventory: 290 services and 176 components. Human purpose descript
 | service | `src/services/jose/joseFinish.ts` | `DECISIONS_SAVED`, `saveRequestDecisions` |
 | service | `src/services/jose/joseHelp.ts` | `chooseHelper`, `findHelpRequest`, `HELP_INSTRUCTION`, `Helper`, `planHelp` |
 | service | `src/services/jose/joseInbound.ts` | `answerOrPlan`, `AnswerOrPlanOptions`, `AnswerOrPlanResult`, `inboundReply`, `outcomeLine` |
-| service | `src/services/jose/joseModels.ts` | `listInstalledModels`, `modelSize`, `pickLargerModel` |
+| service | `src/services/jose/joseModels.ts` | `DEFAULT_TOOL_CALL_MIN_SIZE`, `getToolCallMinSize`, `listInstalledModels`, `modelSize`, `pickLargerModel`, `stepModel`, `usesOwnToolCalls` |
 | service | `src/services/jose/josePlanApproval.ts` | `getPlanFirstSetting`, `needsPlanApproval`, `PlanFirstSetting` |
 | service | `src/services/jose/josePlanEdits.ts` | `addStep`, `changeStepAgent`, `removeStep`, `rewireNeeds`, `setStepInstruction`, `setStepNeeds` |
 | service | `src/services/jose/josePlanLayout.ts` | `DEFAULT_BOX`, `layoutPlan`, `PlanLayout` |
@@ -357,7 +359,7 @@ Source-backed inventory: 290 services and 176 components. Human purpose descript
 | service | `src/services/jose/movedTaskTypes.ts` | `dropRetiredSteps`, `MOVED_TASK_TYPES`, `moveToOwner`, `RETIRED_TASK_TYPES`, `toCurrentOwners` |
 | service | `src/services/jose/reviewStep.ts` | `ReviewStepResult`, `runReviewStep` |
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
-| service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText` |
+| service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals` |
 | service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `parseJsonResponse`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
@@ -426,19 +428,16 @@ Source-backed inventory: 290 services and 176 components. Human purpose descript
 | service | `src/services/sessionIntelligenceService.ts` | `appendSessionEvent`, `listSessionEvents`, `SESSION_EVENT_SCOPE`, `summarizeSession` |
 | service | `src/services/setupFlowService.ts` | `checkDiskSpace`, `ComponentProgress`, `DiskSpaceCheck`, `getUnmetPrereq`, `hardwareForInstallLocation`, `HardwareProfile`, `installComponent`, `isComponentAlreadyInstalled`, `isSetupComplete`, `markSetupComplete`, `needsInstallLocation`, `PrereqKind`, `sameInstallVolume`, `SCAN_TIMEOUT_MS`, `scanHardware`, `SelectableComponent`, `STARTER_MODEL_ID`, `STARTER_MODEL_TAG`, `withTimeout` |
 | service | `src/services/signInService.ts` | `chooseMetaPage`, `finishPastedSignIn`, `INSTAGRAM_RENEW_DAYS`, `MetaPage`, `refreshInstagramIfDue`, `signIn`, `SignInOutcome` |
-| service | `src/services/skillPackContent.ts` | `DEFAULT_PACKS` |
-| service | `src/services/skillPackContentCore.ts` | `CORE_BASE_PACKS` |
-| service | `src/services/skillPackContentEcho.ts` | `ECHO_BASE_PACKS` |
-| service | `src/services/skillPackContentJose.ts` | `JOSE_BASE_PACKS` |
-| service | `src/services/skillPackContentMarcus.ts` | `MARCUS_BASE_PACKS` |
-| service | `src/services/skillPackContentMaria.ts` | `MARIA_BASE_PACKS` |
-| service | `src/services/skillPackContentNova.ts` | `NOVA_BASE_PACKS` |
-| service | `src/services/skillPackContentSentinel.ts` | `SENTINEL_BASE_PACKS` |
-| service | `src/services/skillPackGuidance.ts` | `SHARED_AGENT_SKILL_PACK_IDS`, `SKILL_WORKFLOW_GUIDANCE` |
-| service | `src/services/skillPackPermissions.ts` | `validateSkillPackAgainstContract` |
-| service | `src/services/skillPackRegistry.ts` | `getSkillPackLastInvoked`, `installSkillPack`, `listSkillPackAudit`, `listSkillPacks`, `loadAgentSkillGuidance`, `recordSkillPackInvocation`, `setSkillPackEnabled`, `uninstallSkillPack`, `validateSkillPackManifest` |
-| service | `src/services/skillPackService.ts` | *(no static export detected)* |
-| service | `src/services/skillPackWorkflowData.ts` | `AGENT_WORKFLOW_PACKS`, `AGENT_WORKFLOW_SKILL_DEFS` |
+| service | `src/services/skills/prepareSkill.ts` | `prepareSkill` |
+| service | `src/services/skills/skillCheck.ts` | `checkSkill`, `isKnownOutput` |
+| service | `src/services/skills/skillFile.ts` | `MAX_SKILL_BYTES`, `parseSkillFile`, `serializeSkill`, `Skill` |
+| service | `src/services/skills/skillGather.ts` | `GatheredResult`, `gatherForSkill`, `MAX_TOOL_CALLS` |
+| service | `src/services/skills/skillLibrary.ts` | `contentAsk`, `listSkills`, `RefusedSkill`, `refusedSkills`, `setUserSkillFiles`, `skillsForTask` |
+| service | `src/services/skills/skillPick.ts` | `NO_SKILL`, `PickedSkill`, `pickSkill`, `skillLabel` |
+| service | `src/services/skills/skillToolRun.ts` | `ACTION_TOOL_REFUSAL`, `runSkillTool`, `ToolContext`, `ToolResult` |
+| service | `src/services/skills/skillTools.ts` | `ACTION_TOOLS`, `SKILL_TOOLS`, `SkillTool`, `toolsFor` |
+| service | `src/services/skills/skillUse.ts` | `recordSkillUse`, `skillLastUsed` |
+| service | `src/services/skills/userSkills.ts` | `deleteUserSkill`, `exportSkill`, `importUserSkill`, `loadUserSkills`, `openSkillsFolder`, `SaveResult`, `saveUserSkill`, `skillFileName` |
 | service | `src/services/sourceConfidenceService.ts` | `scoreSourceConfidence`, `sourceExpiryForType` |
 | service | `src/services/streamingService.ts` | `abortStream`, `clearStreamHistory`, `getActiveStreams`, `getStreamState`, `startStream`, `StreamEvent`, `subscribeToStreams` |
 | service | `src/services/systemHealth/systemHealthService.js` | `getLastBuildStatus`, `getSystemHealthSummary`, `setLastBuildStatus` |

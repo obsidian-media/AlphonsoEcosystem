@@ -635,15 +635,27 @@ describe('coachEngineService', () => {
         { id: 'slack', name: 'Slack', status: 'active', updatedAtMs: stale },
         { id: 'discord', name: 'Discord', status: 'active', updatedAtMs: stale }
       ]));
-      // 1 stale skill pack with installedAtMs to confirm it's been around
-      localStorage.setItem('alphonso_skill_packs_v1', JSON.stringify([
-        { id: 'pack.coding.full-stack', name: 'Full-Stack Coding', enabled: true, installedAtMs: stale }
-      ]));
+      // A skill last used long ago (agent roles Part B: skills replaced the packs)
+      localStorage.setItem('alphonso_skill_last_used_v1', JSON.stringify({ 'maria:claim check': stale }));
       const signal = detectUnusedSurfaceArea();
       expect(signal).not.toBeNull();
       expect(signal.id).toBe('unused_surface_area');
       expect(signal.severity).toBe('neutral');
       expect(signal.message).toContain('GitHub');
+    });
+
+    it('counts a skill not used for a while, never one that was never used', () => {
+      localStorage.removeItem('alphonso_skill_last_used_v1');
+      const stale = timestampMs() - 10 * 24 * 3600 * 1000;
+      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify([
+        { id: 'github', name: 'GitHub', status: 'active', updatedAtMs: stale },
+        { id: 'slack', name: 'Slack', status: 'active', updatedAtMs: stale }
+      ]));
+      expect(detectUnusedSurfaceArea()).toBeNull();
+      localStorage.setItem('alphonso_skill_last_used_v1', JSON.stringify({ 'maria:claim check': stale }));
+      const signal = detectUnusedSurfaceArea();
+      expect(signal).not.toBeNull();
+      expect(signal.message).toContain("Maria's skill 'Claim check'");
     });
 
     it('does not fire when fewer than 3 stale items', () => {

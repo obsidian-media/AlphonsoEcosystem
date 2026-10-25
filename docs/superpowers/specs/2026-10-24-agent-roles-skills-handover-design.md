@@ -1,6 +1,6 @@
 # Agent roles, skills and hand-over (the phase before Jose phase 7)
 
-> **Status (2026-10-24):** design, written with the owner in the session of 2026-10-24. Not built yet. Builds in three parts: A (owners and hand-over), B (real skills), C (Projects, teams, learning, old data), each merged on its own.
+> **Status (2026-10-25):** Part A merged 2026-10-24 (PR 356); Part B built 2026-10-25 (plan `docs/superpowers/plans/2026-10-25-agent-roles-part-b.md`); Part C not built yet. Design written with the owner in the session of 2026-10-24. Builds in three parts: A (owners and hand-over), B (real skills), C (Projects, teams, learning, old data), each merged on its own.
 
 ## Why
 

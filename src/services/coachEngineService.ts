@@ -6,7 +6,9 @@ import { listAgentPackets, PACKET_KEY } from './agentBusService';
 import { timestampMs } from './trustModel';
 import { THREADS_KEY, MESSAGES_KEY } from './boardroomThreadService';
 import { listConnectors } from './connectors/connectorRegistry';
-import { listSkillPacks, getSkillPackLastInvoked } from './skillPackService';
+import { listSkills } from './skills/skillLibrary';
+import { skillLastUsed } from './skills/skillUse';
+import { agentName } from './jose/agentNames';
 import { getLicenseDenialLog } from './licenseService';
 import { generateOllamaResponse, getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../lib/ollama';
 import { recordCoachHistory } from './coachHistoryService';
@@ -400,18 +402,13 @@ export function detectUnusedSurfaceArea(style: MessageStyle = 'balanced'): Coach
     }
   }
 
-  let packs: any[] = [];
-  try { packs = listSkillPacks(); } catch { /* ignore */ }
-  const enabledPacks = packs.filter((p) => p.enabled !== false);
-  for (const p of enabledPacks) {
-    const lastInvoked = getSkillPackLastInvoked(p.id);
-    if (!lastInvoked) {
-      if (p.installedAtMs && now - p.installedAtMs > STALE_MS) {
-        results.push(`skill pack '${p.name || p.id}' (never invoked)`);
-      }
-    } else if (now - lastInvoked > STALE_MS) {
-      results.push(`skill pack '${p.name || p.id}'`);
-    }
+  // Skills used before but not lately (agent roles Part B). A skill never used
+  // is not counted: most built-in skills wait for their kind of work.
+  let skills: { agent: string; name: string }[] = [];
+  try { skills = listSkills(); } catch { /* ignore */ }
+  for (const skill of skills) {
+    const lastUsed = skillLastUsed(skill.agent, skill.name);
+    if (lastUsed && now - lastUsed > STALE_MS) results.push(`${agentName(skill.agent)}'s skill '${skill.name}'`);
   }
 
   if (results.length >= 3) {
