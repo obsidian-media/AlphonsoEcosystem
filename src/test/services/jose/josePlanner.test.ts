@@ -220,3 +220,12 @@ describe('the model for each step', () => {
     expect(plan.steps[0].model).toBeUndefined();
   });
 });
+
+describe('the planner names each job with its meaning (agent phase 1)', () => {
+  it('the prompt lists task types with meanings, not prefixes', async () => {
+    llm.mockResolvedValueOnce(answer([{ id: 'ideas', agent: 'nova', taskType: 'analysis_findings', instruction: 'Suggest party ideas.', effects: ['read'], needs: [] }]));
+    await planJoseRequest(PARTY);
+    expect(promptOf(0)).toContain('- assistant_write: ');
+    expect(promptOf(0)).not.toContain('Task types starting with');
+  });
+});
