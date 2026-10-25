@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 287 services and 178 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 296 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -71,7 +71,9 @@ Source-backed inventory: 287 services and 178 components. Human purpose descript
 | component | `src/components/hector/CitationPanel.tsx` | `CitationPanel` |
 | component | `src/components/hector/HectorActivityLog.tsx` | `HectorActivityLog` |
 | component | `src/components/hector/HectorApprovalHandoff.tsx` | `HectorApprovalHandoff` |
+| component | `src/components/hector/ResearchFindings.tsx` | `ResearchFindings` |
 | component | `src/components/hector/ResearchReportPanel.tsx` | `ResearchReportPanel` |
+| component | `src/components/hector/SavedSources.tsx` | `SavedSources` |
 | component | `src/components/hector/SourceBoard.tsx` | `SourceBoard` |
 | component | `src/components/HectorCompanionWidget.tsx` | `HectorCompanionWidget` |
 | component | `src/components/InstallLocationPicker.tsx` | `InstallLocationPicker` |
@@ -330,9 +332,17 @@ Source-backed inventory: 287 services and 178 components. Human purpose descript
 | service | `src/services/fanOutBudgetService.ts` | `createFanOutBudgetTracker`, `DEFAULT_FANOUT_CHAR_BUDGET`, `FanOutBudgetTracker` |
 | service | `src/services/genericWebhookService.ts` | `pollGenericWebhookGateway`, `startGenericWebhookPolling`, `stopGenericWebhookPolling` |
 | service | `src/services/gitService.ts` | `getGitLog`, `getGitStatus`, `gitDiffStat`, `gitRevert`, `gitRevertLast` |
+| service | `src/services/hector/deskRequest.ts` | `askOnResearchDesk`, `DESK_LABEL` |
+| service | `src/services/hector/feeds.ts` | `searchFeeds` |
+| service | `src/services/hector/hectorStep.ts` | `runHectorStep` |
+| service | `src/services/hector/relevantText.ts` | `pageBudget`, `questionTerms`, `relevantText` |
+| service | `src/services/hector/researchLimits.ts` | `HECTOR_LIMITS` |
+| service | `src/services/hector/researchRun.ts` | `fallbackQuery`, `Finding`, `NO_REPORT`, `parseWriteUp`, `planQuestion`, `ReportSource`, `reportText`, `ResearchReport`, `runResearch`, `SubQuestion`, `Support` |
+| service | `src/services/hector/searchChain.ts` | `FoundSource`, `searchChain` |
+| service | `src/services/hector/sourceQuality.ts` | `isJunkResult`, `rankSources`, `sourceKind`, `SourceKind` |
 | service | `src/services/hectorBookmarkService.ts` | `deleteBookmark`, `exportBookmarks`, `getBookmarks`, `getStats`, `saveBookmark` |
 | service | `src/services/hectorExportService.ts` | `buildHectorReportMarkdown`, `exportHectorReportAsMarkdown`, `exportHectorReportAsPdf`, `exportHectorReportAsPowerPoint` |
-| service | `src/services/hectorResearchService.js` | `buildHectorSynthesisPrompt`, `createHectorApprovalPacket`, `createResearchBrief`, `createResearchDraft`, `fetchRssSources`, `fetchSuppliedSourcesForReport`, `isBraveSearchConfigured`, `listHectorActivity`, `listHectorReports`, `parseHectorSynthesisResponse`, `parseRssItems`, `persistResearchResult`, `recordHectorActivity`, `resynthesizeHectorReport`, `RSS_FEED_CATALOG`, `runHectorLiveResearch`, `runMultiSourceResearch`, `scoreRssFeed`, `searchBrave`, `synthesizeHectorResearch` |
+| service | `src/services/hectorResearchService.js` | `buildHectorSynthesisPrompt`, `createResearchBrief`, `createResearchDraft`, `fetchRssSources`, `fetchSuppliedSourcesForReport`, `isBraveSearchConfigured`, `listHectorActivity`, `listHectorReports`, `parseHectorSynthesisResponse`, `parseRssItems`, `persistResearchResult`, `recordHectorActivity`, `resynthesizeHectorReport`, `RSS_FEED_CATALOG`, `runHectorLiveResearch`, `runMultiSourceResearch`, `scoreRssFeed`, `searchBrave`, `slimOldReports`, `synthesizeHectorResearch` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
@@ -361,6 +371,7 @@ Source-backed inventory: 287 services and 178 components. Human purpose descript
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
 | service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
+| service | `src/services/jose/taskTypeMeanings.ts` | `CODE_TASK_PREFIXES`, `isCodeRequest`, `isCodeTask`, `planningMenu`, `TASK_TYPE_MEANINGS`, `taskTypesFor` |
 | service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals` |
 | service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `parseJsonResponse`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |

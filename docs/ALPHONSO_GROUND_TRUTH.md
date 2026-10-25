@@ -2440,6 +2440,15 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.41 Agent phase 1: Hector, and the routing guards (2026-10-25)
+
+The first of the per-agent phases (owner, 2026-10-25: Hector, Nova, Maria, Sentinel, Marcus, Alphonso, Echo, then agent roles Part C, then Jose phase 7). The inspection, with two live runs, found that about half of Hector's sources were blocked (he introduced himself as "Alphonso-Hector/0.1"), that Jose steps searched with the whole 317-character step text, that his write-up read ~750 characters from the start of each page (menus), that only a 2-4 sentence overview reached the next agent, that with no sources his model wrote facts from memory, that reports filled app storage after 15-20 runs, that DeepSeek's answer was used as a source, that RSS-only results crashed the run, and that the Research Desk ran outside Jose. The owner: "when I give a research task, I expect a proper result, not just a Google search." Built (spec `docs/superpowers/specs/2026-10-25-agent-phase-hector-design.md`, plan `docs/superpowers/plans/2026-10-25-agent-phase-hector.md`):
+- **Research in rounds** (`src/services/hector/researchRun.ts`): the question broken into parts with short queries, pages read for the parts that match, a write-up with numbered citations, follow-up rounds for what's missing, sources compared, the answer first; nothing usable → the step waits for setup with the reason.
+- **One search chain** for every caller, junk dropped, primary sources first; fetching like a browser with one retry; PDFs and blocked pages keep their search snippet, labelled.
+- **Storage**: page text in files (`research_store.rs`), 600-character excerpts and 200 reports in app storage, older reports slimmed once.
+- **The Research Desk** asks through Jose; reports on the Desk and the board show the cited findings; one export; saved sources.
+- **Routing**: the planner sees each task type with a plain meaning; a code step is refused for a request that isn't about code; the rule plan keeps every part (writing → Alphonso `assistant_write`, a check → Maria reviewing it), keywords match at word starts, negated sends are ignored; a routing test set of 39 requests.
+
 ## 11.40 Agent roles, Part B: real skills (2026-10-25)
 
 Until now a skill was a one-line "pack" (about 160 of them) that reached a prompt in one place only, Miya's Quick package, while the real know-how sat in the content factory's own prompts. Part B (plan `docs/superpowers/plans/2026-10-25-agent-roles-part-b.md`):

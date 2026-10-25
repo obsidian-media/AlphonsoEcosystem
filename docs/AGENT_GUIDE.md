@@ -20,7 +20,7 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 
 ### Hector — Researcher
 **Role:** Finds facts and sources (including competitors' public material), with citations
-**Runtime:** `src/services/hectorResearchService.js` — Brave Search, Tavily, Perplexity, DuckDuckGo and RSS (through the backend), synthesized with Ollama
+**Runtime:** `src/services/hector/` (since 2026-10-25) — researches in rounds: the question broken into parts, short searches through one chain (Brave, Tavily, Perplexity when set up, then DuckDuckGo and news feeds), the parts of each page that match the question, a write-up with numbered citations, follow-up rounds for what's missing; the answer first. Blocked pages keep their search snippet, labelled. Found nothing → his step waits and says why; he never writes facts from memory
 **Can do:** Web search, document analysis, source verification, API docs research, compliance research, competitive analysis; in Miya Studio, what goes viral and a stock clip for each scene (Pexels, Pixabay, Coverr)
 **Cannot:** Run commands, change project files, post, or spend
 **When to use:** "Research the latest trends in AI", "Find sources for this claim", "Summarize this article"

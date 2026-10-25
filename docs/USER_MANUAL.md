@@ -273,6 +273,12 @@ Each kind of work has exactly one owner, and Jose gives every step to the agent 
 
 Every step gets the full work of the steps it depends on, so a reviewer reads the actual draft and Marcus sends what was written, never the instruction. A request ends with a short summary, one line per step, then "Open on the board."; a one-step request shows its whole answer. When an agent can't work until something is set up (Kokoro not installed, a connector without its key), the step waits, says what to set up, and **Carry on** (board or Telegram) runs it again; it is never handed to another agent. In Boardroom and Simple mode an agent asked for someone else's work says who does it. Placing a CALL-E call is Marcus's step and waits for your approval.
 
+### Research with Hector
+
+Ask for research in Chat ("Research how many honeybee colonies there are in Europe") or on **Research → Research Desk**. Hector breaks the question into the parts it needs, searches, reads the parts of each page that match, and goes back for anything still missing (up to two more rounds on a small local model, three on larger or paid ones). His report starts with the answer, then each part with findings and their source numbers [1][2] and how well supported each is (several sources, one source, one source not primary), what the sources disagree on, what he couldn't find, and the numbered sources: **Read**, or **Snippet only** when a site blocked him or it's a PDF. If nothing usable turns up he stops and says why (no search key, everything blocked); **Carry on** tries again. A search key (Brave, Tavily or Perplexity in Settings → Connectors → Search & Research) gives better results than the free search.
+
+On the Research Desk each run is a request on the Requests board too. **Save source** keeps a source in **Saved sources**; **Use in a request** copies the report to paste into Chat with what you want done with it; **Export** saves it as Markdown, PDF or PowerPoint.
+
 ### Skills
 
 Each agent works with its own skills, one per kind of job (Hector's "Web research with sources", Maria's "Claim check"). For every step the agent picks the skill that fits, and the Requests board shows it under the step: "Skill: Claim check — The post quotes numbers." A skill can give its agent only its own work and tools.
