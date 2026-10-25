@@ -2,7 +2,8 @@
 // and a step that keeps failing is tried once more with the next larger model
 // the user has installed (owner: Q15, Q18). Only installed local models; a
 // model's size is read from its tag (qwen2.5:7b → 7).
-import { fetchOllamaModels, getConfiguredOllamaEndpoint } from '../../lib/ollama';
+import { fetchOllamaModels, getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../../lib/ollama';
+import { getAgentProvider } from '../modelSelectionService';
 
 /** Billions of parameters from a model tag, or null when the tag doesn't say. */
 export function modelSize(name: string): number | null {
@@ -29,4 +30,34 @@ export async function listInstalledModels(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/** Models this size (billions) and larger call their skills' tools themselves (Settings → Agents; agent roles Part B). */
+export const DEFAULT_TOOL_CALL_MIN_SIZE = 14;
+
+export function getToolCallMinSize(): number {
+  try {
+    const value = Number(JSON.parse(localStorage.getItem('alphonso_settings') || '{}')?.agentToolCallMinSizeB);
+    return Number.isFinite(value) && value > 0 ? value : DEFAULT_TOOL_CALL_MIN_SIZE;
+  } catch {
+    return DEFAULT_TOOL_CALL_MIN_SIZE;
+  }
+}
+
+/** The model a step runs with: its own, else the agent's chosen one, else the Settings model. */
+export function stepModel(assignment: { agent?: string; model?: string } | null | undefined): string {
+  if (assignment?.model) return assignment.model;
+  const chosen = assignment?.agent ? getAgentProvider(assignment.agent) : null;
+  if (chosen?.model) return chosen.model;
+  return getConfiguredOllamaModel();
+}
+
+/** Paid and cloud models, and local models at or above the size in Settings, call tools themselves. */
+export function usesOwnToolCalls(assignment: { agent?: string; model?: string } | null | undefined): boolean {
+  const model = stepModel(assignment);
+  if (model.startsWith('claude:') || model.startsWith('chatgpt:')) return true;
+  const provider = !assignment?.model && assignment?.agent ? getAgentProvider(assignment.agent)?.provider : 'ollama';
+  if (provider && provider !== 'ollama') return true;
+  const size = modelSize(model);
+  return size !== null && size >= getToolCallMinSize();
 }
