@@ -1,4 +1,5 @@
 # Force LF for the generated skill-permission matrix and its generator
+# (both retired with the skill packs on 2026-10-25; kept as records)
 # script, regardless of a checking-out machine's core.autocrlf setting.
 #
 # Why: scripts/generate-skill-permission-matrix.mjs writes the doc with a
