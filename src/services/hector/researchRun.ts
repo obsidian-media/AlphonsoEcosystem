@@ -215,6 +215,11 @@ export async function runResearch(
   if (!written || !usable.length) {
     const blocked = reads.filter((r) => r.label === 'unreadable').length;
     const offTopic = reads.filter((r) => r.label === 'off_topic').length;
+    // The free search refusing (its bot check) is not "nothing found": say so and the way out.
+    const refused = errors.find((e) => /refused/i.test(e));
+    if (!reads.length && refused) {
+      return { ok: false, reason: `${refused.replace(/^[a-z ]+:\s*/i, '')} in Settings → Connectors → Search & Research.` };
+    }
     if (!reads.length || offTopic === reads.length) {
       const why = errors.length ? ` (${errors.join('; ')})` : '';
       return { ok: false, reason: `No search engine found anything about "${question}"${why}. Add a search key in Settings → Connectors → Search & Research, or rephrase the question.` };

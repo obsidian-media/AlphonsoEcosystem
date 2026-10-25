@@ -685,7 +685,20 @@ pub(crate) async fn search_research_sources(
   }
 
   let html = response.text().await.map_err(|error| error.to_string())?;
+  if ddg_refused(status.as_u16(), &html) {
+    return Err(DDG_REFUSED.to_string());
+  }
   Ok(parse_ddg_results(&html, &source_type, limit))
+}
+
+/// What Hector says when DuckDuckGo answers with its bot check (agent phase 1): until
+/// then a refused search looked like "nothing found".
+pub(crate) const DDG_REFUSED: &str =
+  "The free search (DuckDuckGo) refused: too many searches from this computer. Try again later, or add a search key";
+
+/// DuckDuckGo's bot check: HTTP 202, or its "anomaly" page, instead of results.
+pub(crate) fn ddg_refused(status: u16, html: &str) -> bool {
+  status == 202 || (html.contains("anomaly") && !html.contains("result__a"))
 }
 
 #[tauri::command]
@@ -1069,5 +1082,16 @@ mod tests {
     assert!(is_pdf(Some("application/pdf"), b"anything"));
     assert!(is_pdf(None, b"%PDF-1.7 ..."));
     assert!(!is_pdf(Some("text/html; charset=utf-8"), b"<html>"));
+  }
+
+  #[test]
+  fn a_ddg_bot_check_is_a_refusal_not_an_empty_search() {
+    assert!(ddg_refused(202, "<html></html>"));
+    assert!(ddg_refused(200, "<div class=\"anomaly-modal\">"));
+    assert!(!ddg_refused(
+      200,
+      "<a class=\"result__a\" href=\"x\">Bees</a> anomaly"
+    ));
+    assert!(!ddg_refused(200, "<html>no results</html>"));
   }
 }

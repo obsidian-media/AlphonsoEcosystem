@@ -43,7 +43,7 @@ describe('Alphonso desktop: Hector researches properly', () => {
     await $('[data-testid="sidebar-chat-shortcut"]').click();
   });
 
-  it('answers first, with cited findings, labelled sources and small storage', async () => {
+  it('answers first, with cited findings, labelled sources and small storage', async function () {
     const input = await $('[data-testid="chat-compose-input"]');
     await input.waitForDisplayed();
     await input.setValue(`/jose Research this: ${QUESTION}`);
@@ -62,6 +62,12 @@ describe('Alphonso desktop: Hector researches properly', () => {
     const report = output?.schema;
     console.log('HECTOR-E2E', JSON.stringify({ status: hector.status, error: hector.error, answer: report?.answer, parts: report?.subQuestions?.map((q) => [q.question, q.status, q.findings.length]), rounds: report?.rounds, sources: report?.sources?.map((s) => [s.n, s.label, s.kind, s.url]) }).slice(0, 4000));
 
+    // With no search key the free search can refuse a busy computer (its bot check): Hector says
+    // so and the step waits; that is the intended behaviour, but nothing more can be checked here.
+    if (hector.status === 'setup_needed' && /refused/i.test(String(hector.error || ''))) {
+      console.log('HECTOR-E2E skipped: the free search refused this computer');
+      return this.skip();
+    }
     expect(hector.status).toBe('done');
     expect(report.answer.length).toBeGreaterThan(20);
     expect(String(output.summary).startsWith(report.answer)).toBe(true);

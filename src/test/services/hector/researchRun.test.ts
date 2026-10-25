@@ -214,3 +214,12 @@ describe('only sources about the question (agent phase 1 review)', () => {
     expect(search.mock.calls[1][0]).toEqual(['EU beehives statistics Eurostat']);
   });
 });
+
+describe('a refused free search is said plainly', () => {
+  it('names the refusal and the way out, not "rephrase"', async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'Bees?', queries: ['bees'] }] }));
+    search.mockResolvedValue({ sources: [], providers: ['duckduckgo'], errors: ['duckduckgo: The free search (DuckDuckGo) refused: too many searches from this computer. Try again later, or add a search key'] });
+    const out = await runResearch('Bees?', { large: false, reportId: 'hector-report-9-d' });
+    expect(out).toEqual({ ok: false, reason: 'The free search (DuckDuckGo) refused: too many searches from this computer. Try again later, or add a search key in Settings → Connectors → Search & Research.' });
+  });
+});
