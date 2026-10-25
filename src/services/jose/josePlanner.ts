@@ -205,8 +205,9 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     const basedOn = template && plan.basedOnTemplate === template.id ? template : null;
     if (basedOn) plan.steps = fillFromTemplate(plan.steps, basedOn);
     plan.steps = toCurrentOwners(inferReviewOf(plan.steps)).steps;
-    // Each step only to the agent who owns its kind of work (owner, 2026-10-24).
-    const check = checkPlan(plan.steps, { taskTypes: true });
+    // Each step only to the agent who owns its kind of work (owner, 2026-10-24),
+    // and no code step for a request that isn't about code (agent phase 1).
+    const check = checkPlan(plan.steps, { taskTypes: true, request: text });
     if (!check.ok) {
       problems = check.problems;
       continue;

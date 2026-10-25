@@ -87,3 +87,19 @@ export function planningMenu(): string {
     .map(([agent, p]) => [`${agent} owns: ${p.owns} Never: ${p.never}`, ...taskTypesFor(agent).map((t) => `- ${t.type}: ${t.meaning}`)].join('\n'))
     .join('\n\n');
 }
+
+/** Task types that write or run code (agent phase 1): only for a request about code. */
+export const CODE_TASK_PREFIXES = ['local_operation', 'verification_', 'execute_command', 'filesystem_'];
+
+const CODE_WORDS = ['code', 'coding', 'app', 'apps', 'website', 'build', 'compile', 'test', 'tests', 'bug', 'bugs', 'fix', 'function', 'script', 'scripts', 'repo', 'repository', 'install', 'deploy', 'file', 'files', 'api', 'component', 'refactor', 'npm', 'cargo', 'program', 'typescript', 'javascript', 'python', 'rust', 'react'];
+
+/** Whether the text asks for work on code (whole words). */
+export function isCodeRequest(text: string): boolean {
+  const words = new Set(String(text || '').toLowerCase().split(/[^a-z0-9']+/).filter(Boolean));
+  return CODE_WORDS.some((word) => words.has(word));
+}
+
+export function isCodeTask(actionType: string, effects: string[] = []): boolean {
+  const type = String(actionType || '').toLowerCase();
+  return CODE_TASK_PREFIXES.some((prefix) => type.startsWith(prefix)) || effects.includes('run') || effects.includes('change_project');
+}
