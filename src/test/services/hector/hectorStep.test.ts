@@ -110,3 +110,23 @@ describe('the memory graph', () => {
     expect(graph.addEdge).toHaveBeenCalledWith('node-1', 'node-1', 'cites', expect.objectContaining({ createdBy: 'hector' }));
   });
 });
+
+describe('research briefs (Project Execution)', () => {
+  it('return the answer, the cited text and the numbered sources', async () => {
+    const { createResearchBrief } = await import('../../../services/hectorResearchService');
+    research.mockResolvedValue({ ok: true, report: REPORT });
+    const brief: any = await createResearchBrief('How many honeybee colonies are in Europe?');
+    expect(brief.summary).toBe(REPORT.answer);
+    expect(brief.text).toContain('[1] EU report — https://ec.europa.eu/bees (Read)');
+    expect(brief.verifiedFacts).toEqual(['About 17 million managed colonies [1][2]']);
+    expect(brief.sources.map((s: { url: string }) => s.url)).toEqual(['https://ec.europa.eu/bees', 'https://news.example/2026/01/02/bees']);
+  });
+
+  it('say why when nothing was found', async () => {
+    const { createResearchBrief } = await import('../../../services/hectorResearchService');
+    research.mockResolvedValue({ ok: false, reason: 'No search engine found anything for "x".' });
+    const brief: any = await createResearchBrief('x');
+    expect(brief.status).toBe('research_failed');
+    expect(brief.summary).toBe('No search engine found anything for "x".');
+  });
+});

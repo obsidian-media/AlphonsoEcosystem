@@ -609,9 +609,11 @@ export async function createResearchBrief(topic, onProgress) {
       urls: report.urls || [],
       reportId: report.id,
       status: report.status || 'completed',
+      // The cited report (agent phase 1): the answer first, findings with source numbers, the sources.
+      text: report.text || report.summary || '',
       inferredPoints: report.inferredPoints || [],
-      verifiedFacts: report.verifiedFacts || [],
-      whatNeedsResearch: [],
+      verifiedFacts: report.synthesis?.keyFindings || [],
+      whatNeedsResearch: report.research?.notFound || [],
       sourceTypesNeeded: []
     };
   } catch (error) {
