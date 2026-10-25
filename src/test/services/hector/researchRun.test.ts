@@ -244,3 +244,25 @@ describe('planQuestion drops a repeated part', () => {
     expect((await planQuestion('Q', 'Q')).map((p) => p.question)).toEqual(['Causes of losses?', 'How many?']);
   });
 });
+
+describe('a snippet is never enough, and no planned part is lost', () => {
+  it('a primary source known only by its snippet still gets a follow-up', async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'How many colonies?', queries: ['eu honeybee colonies'] }] }));
+    search.mockResolvedValueOnce(found(['https://stats.example.gov/blocked'])).mockResolvedValueOnce(found(['https://other.example.org/bees']));
+    const writeUp = (n: number) => json({ answer: 'About 17 million.', subQuestions: [{ question: 'How many colonies?', status: 'answered', findings: [{ text: 'About 17 million', sources: [n] }] }] });
+    llm.mockResolvedValueOnce(writeUp(1)).mockResolvedValueOnce(writeUp(2));
+    const out = await runResearch('How many colonies?', { large: false, reportId: 'hector-report-9-f' });
+    expect(search).toHaveBeenCalledTimes(2);
+    if (out.ok) expect(out.report.rounds).toBe(2);
+  });
+
+  it('a planned part the write-up left out comes back as open, searched again', async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'How many colonies?', queries: ['eu colonies count'] }, { question: 'Causes of losses?', queries: ['honeybee colony losses causes'] }] }));
+    search.mockResolvedValueOnce(found(['https://a.example.org/honeybee'])).mockResolvedValueOnce(found(['https://b.example.org/honeybee']));
+    llm.mockResolvedValueOnce(json({ answer: 'Varroa and pesticides.', subQuestions: [{ question: 'Causes of losses?', status: 'answered', findings: [{ text: 'Varroa', sources: [1] }] }] }));
+    llm.mockResolvedValueOnce(json({ answer: 'About 17 million; varroa.', subQuestions: [{ question: 'How many colonies?', status: 'answered', findings: [{ text: '17 million', sources: [2] }] }, { question: 'Causes of losses?', status: 'answered', findings: [{ text: 'Varroa', sources: [1] }] }] }));
+    const out = await runResearch('Bees?', { large: false, reportId: 'hector-report-9-g' });
+    expect(search.mock.calls[1][0]).toEqual(['eu colonies count']);
+    expect(out.ok && out.report.subQuestions.map((q) => q.question)).toEqual(['How many colonies?', 'Causes of losses?']);
+  });
+});

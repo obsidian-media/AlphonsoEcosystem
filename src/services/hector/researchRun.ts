@@ -207,14 +207,19 @@ export async function runResearch(
     const reply: any = await generateAgentLlmResponse('hector', { prompt: writeUpPrompt(question, parts, usable, opts.large), format: 'json', signal: opts.signal } as any).catch(() => null);
     const parsed = parseWriteUp(String(reply?.response || ''), usable.map((r) => r.source.kind));
     if (!parsed) return { ok: false, reason: NO_REPORT };
-    // A part counts as answered only when a finding rests on a page Hector read or a primary
-    // source: a search snippet of an ordinary page (a social post, a blocked page) isn't enough,
-    // so the part gets a follow-up round (agent phase 1 live check: "9.4 million" from a Facebook snippet).
-    const solid = (n: number) => usable[n - 1]?.label === 'read' || usable[n - 1]?.source.kind === 'primary';
+    // A part counts as answered only when a finding rests on a page Hector read: a search snippet
+    // (a social post, a blocked page, a PDF) isn't enough, so the part gets a follow-up round
+    // (agent phase 1 live check: "9.4 million" from a Facebook snippet, figures from blocked papers).
+    const solid = (n: number) => usable[n - 1]?.label === 'read';
     parsed.subQuestions = parsed.subQuestions.map((sq) => {
       const status = sq.status === 'answered' && !sq.findings.some((f) => f.sources.some(solid)) ? 'partly' : sq.status;
       return status === 'answered' ? sq : { ...sq, status, followUp: sq.followUp || cutAtWord(sq.question, HECTOR_LIMITS.queryChars) };
     });
+    // A planned part the write-up left out isn't answered: it comes back as open, with its own searches.
+    const covered = (q: string) => parsed.subQuestions.some((sq) => sq.question.trim().toLowerCase() === q.trim().toLowerCase());
+    for (const p of parts) {
+      if (!covered(p.question)) parsed.subQuestions.push({ question: p.question, status: 'open', findings: [], followUp: p.queries[0] || cutAtWord(p.question, HECTOR_LIMITS.queryChars) });
+    }
     written = parsed;
     const missing = parsed.subQuestions.filter((sq) => sq.status !== 'answered' && sq.followUp).map((sq) => sq.followUp as string);
     queries = [...new Set(missing)].slice(0, HECTOR_LIMITS.maxSubQuestions);
