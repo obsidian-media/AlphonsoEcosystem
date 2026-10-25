@@ -65,6 +65,13 @@ describe('your own skills', () => {
     expect(refusedSkills().filter((r) => r.source === 'user')).toEqual([{ file: 'alphonso/bad.md', source: 'user', problems: ['The skill file must start with a --- line.'] }]);
   });
 
+  it('a second new skill with the same name gets its own file, never over the first', async () => {
+    await saveUserSkill(mine());
+    await saveUserSkill(mine({ instructions: 'Answer in five words.' }));
+    expect([...files.keys()].sort()).toEqual(['alphonso/short-answers-2.md', 'alphonso/short-answers.md']);
+    expect(files.get('alphonso/short-answers.md')).toContain('Answer in one line.');
+  });
+
   it('delete removes the file and the skill', async () => {
     await saveUserSkill(mine());
     await deleteUserSkill(listSkills('alphonso').find((s) => s.source === 'user')!);

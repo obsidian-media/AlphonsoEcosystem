@@ -5,7 +5,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { parseSkillFile, serializeSkill, type Skill } from './skillFile';
 import { checkSkill } from './skillCheck';
-import { setUserSkillFiles } from './skillLibrary';
+import { listSkills, refusedSkills, setUserSkillFiles } from './skillLibrary';
 
 export type SaveResult = { ok: true } | { ok: false; problems: string[] };
 
@@ -19,6 +19,20 @@ export function skillFileName(name: string): string {
     .slice(0, 64)
     .replace(/-+$/g, '');
   return `${slug || 'skill'}.md`;
+}
+
+/** A new skill never goes over one of yours: "-2", "-3"… when the name is taken. */
+function freeFileName(agent: string, file: string): string {
+  const taken = new Set([
+    ...listSkills(agent).filter((s) => s.source === 'user').map((s) => s.file.split('/')[1]),
+    ...refusedSkills().filter((r) => r.source === 'user' && r.file.startsWith(`${agent}/`)).map((r) => r.file.split('/')[1]),
+  ]);
+  if (!taken.has(file)) return file;
+  const stem = file.replace(/\.md$/, '').slice(0, 60);
+  for (let n = 2; ; n += 1) {
+    const candidate = `${stem}-${n}.md`;
+    if (!taken.has(candidate)) return candidate;
+  }
 }
 
 /** Reads every file in the skills folder into the library. */
@@ -37,7 +51,7 @@ export async function saveUserSkill(skill: Skill): Promise<SaveResult> {
   if ('problems' in parsed) problems.unshift(...parsed.problems);
   if (problems.length) return { ok: false, problems };
   const existing = skill.file.includes('/') ? skill.file.split('/')[1] : '';
-  const file = existing || skillFileName(skill.name);
+  const file = existing || freeFileName(skill.agent, skillFileName(skill.name));
   try {
     await invoke('skills_save_user', { agent: skill.agent, file, text: serializeSkill(skill) });
   } catch (error) {
