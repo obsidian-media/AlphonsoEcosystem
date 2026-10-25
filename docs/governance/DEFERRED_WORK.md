@@ -53,7 +53,8 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - **PDF text** isn't read; a PDF keeps its search snippet.
   - **PDF and PowerPoint exports** of new reports list findings with their numbers but not the sources' labels; the Markdown export has both.
   - **"Use in a request"** copies the report to paste into Chat; Chat has no pre-fill.
-  - **The research loop is checked live with qwen2.5:7b** on this machine; a larger model's planning of sub-questions hasn't been run live.
+  - **Answer quality is limited by the model and by blocked sites** (live check with a Tavily key, 2026-10-25): the loop works (3 rounds, 11 sources, 5 pages read, parts honestly marked partly/open), but qwen2.5:7b (the largest this 6 GB card runs) writes a muddled answer, and most academic sites refuse him (403 from Cloudflare; rustls and Schannel from Rust both refused, curl was let through). A stronger model (paid, or 14B+) and a real browser for blocked pages are the two levers; neither has been run live.
+  - **A search snippet passes the topic filter on one shared word**, so an unrelated page (an FCC robocalls guide) can still be listed; it can't answer a part (only a page read does), but it shows in the sources.
   - **Rust tests** for the browser-like fetch and page files could not run locally (Windows Application Control blocks new test binaries, os error 4551); CI runs them.
   - Status: OPEN.
 
