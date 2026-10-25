@@ -3,6 +3,7 @@
 // and says so, it is never filled in with stock text.
 import { extractJsonObject } from '../../lib/jsonUtils.js';
 import { type ContentStepPayload, type StepId } from './contentTypes';
+import { contentAsk } from '../skills/skillLibrary';
 
 type Json = Record<string, unknown>;
 
@@ -12,101 +13,85 @@ const HONEST_COPY = [
   'No claims the brand cannot back up.',
 ].join(' ');
 
-/** What each action asks for, and the JSON keys it must return. */
-const ACTIONS: Record<string, { role: string; ask: string; keys: string; uses: StepId[] }> = {
+/** Who each action is and the JSON keys it must return. What it is asked lives in its skill (src/skills, agent roles Part B). */
+const ACTIONS: Record<string, { role: string; keys: string; uses: StepId[] }> = {
   research_virality: {
     role: 'Hector, Alphonso\'s research agent',
-    ask: 'From the web search results below, pick the posts and pages that best show what works for this idea on these platforms. For each, say why it works and quote its opening line. Use only the search results: never invent a link, a title or a number. Then pull out the patterns and suggest hook ideas.',
     keys: '{"references":[{"title":"the post\'s title","url":"its link","whyItWorks":"why it did well","hook":"its opening line, word for word"}],"patterns":["something the top posts have in common"],"hookIdeas":["an opening line for this video"]} (at least 3 references, 3 patterns and 3 hook ideas)',
     uses: [],
   },
   analysis_market: {
     role: 'Nova, Alphonso\'s opportunity analyst',
-    ask: "Judge the market from what Hector found (his research and the web search results he used, below): who already makes this kind of content and what they do (name only those Hector found), which gaps are open, how big the opportunity is (0-100) and which angle to take. Don't look for new facts: judge his.",
     keys: '{"competitors":[{"name":"a channel or brand","whatTheyDo":"what they make"}],"gaps":["something nobody covers well"],"opportunityScore":"a whole number from 0 to 100","angle":"the angle this video should take"}',
     uses: [],
   },
   creative_script: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Write exactly 3 hook options based on the research, choose the best, and write the timed script. Each part has start and end seconds, the spoken words, the on-screen text, B-roll notes and a music cue.',
     keys: '{"hooks":["first opening line","a different second opening line","a different third opening line"],"chosenHook":"0, 1 or 2: the position of the best hook","title":"the video\'s title","script":[{"startSec":"when this part starts, in seconds","endSec":"when it ends, in seconds","spoken":"the words said","onScreenText":"text shown on screen","bRoll":"what is shown","music":"the music at this moment"}]} (exactly 3 different hooks)',
     uses: ['research'],
   },
   analysis_content_review: {
     role: 'Nova, Alphonso\'s opportunity analyst',
-    ask: 'Review the hook and the script against the research and the market: score each 1-10, give notes, and list what must be fixed before it goes further.',
     keys: '{"hookScore":"a whole number from 1 to 10","scriptScore":"a whole number from 1 to 10","notes":["what works or does not"],"mustFix":["what must change before it goes further"]}',
     uses: ['research', 'script'],
   },
   audit_content_quality: {
     role: 'Maria, Alphonso\'s quality and governance agent',
-    ask: 'Score each piece 1-10 side by side with the brand\'s reference posts (say which one you compared it to), list its weak points, and list any honesty problems. Be strict: a 7 means it could sit next to the references.',
     keys: '{"pieces":[{"pieceId":"which piece, e.g. script or thumbnail-t1","score":"a whole number from 1 to 10","comparedTo":"the reference post you compared it with","weakPoints":["a weak point"]}],"honestyIssues":["an honesty problem, if any"]}',
     uses: ['research', 'script', 'scenes', 'thumbnail', 'carousel', 'campaign'],
   },
   creative_scenes: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Turn the script into a storyboard: one scene per script part, with the camera angle, the movement, and an image prompt. Give one shared style so every scene has the same look. Mark the main moments (the hook, the turning points and the call to action) with mainMoment true; they may become AI video clips. Mark with character true each scene that shows the brand\'s presenter or mascot (a scene with no person: false). Mark with motionSuggested true a scene where a real movement (a wave, a gesture, a dance) would help more than a camera move.',
     keys: '{"style":"the one look every scene shares","scenes":[{"id":"s1, s2, ...","startSec":"start, in seconds","endSec":"end, in seconds","description":"what happens in the scene","camera":"the camera angle","movement":"how the camera moves","imagePrompt":"what the picture shows, in detail","negativePrompt":"what the picture must not show","mainMoment":"true for a main moment, else false","character":"true when the brand character is in the scene, else false","motionSuggested":"true when a real movement would help, else false"}]}',
     uses: ['script'],
   },
   creative_thumbnails: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Design exactly 3 thumbnail concepts: a headline of at most 6 words, an image prompt for the picture (no text in the picture), and which side the headline goes on.',
     keys: '{"concepts":[{"id":"t1, t2 or t3","headline":"at most 6 words","imagePrompt":"what the picture shows, in detail, with no text in it","layout":"left, right or center: where the headline goes"}]} (exactly 3 concepts in one list)',
     uses: ['research', 'script'],
   },
   creative_shorts: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Plan the Shorts for this video (the number asked for in Outputs, else one). Each Short is 30 to 60 seconds and has a hook of at most 12 words. Choose for each its kind: "mini" (its own short script: write its parts, each with the words spoken and a picture prompt), "highlight" (the strongest moment of the finished video, with a new hook spoken over its start: give the moment\'s start and end seconds within the finished video) or "cut" (a part of the finished video as it is: give its start and end). Prefer mini unless the finished video has a moment that works on its own. For each Short write its own copy per platform.',
     keys: '{"shorts":[{"kind":"mini, highlight or cut","title":"the Short\'s title","hook":"at most 12 words","seconds":"30 to 60","platforms":["youtube, instagram or facebook"],"copy":[{"platform":"youtube, instagram or facebook","title":"the title (YouTube)","caption":"the caption","hashtags":["#a-hashtag"]}],"parts":[{"spoken":"the words said (mini only)","imagePrompt":"what the picture shows, no text","seconds":"how long"}],"moment":{"startSec":"start in the finished video (highlight or cut)","endSec":"end"}}]}',
     uses: ['research', 'script', 'assemble'],
   },
   analysis_performance: {
     role: 'Nova, Alphonso\'s analyst',
-    ask: 'Look at how this post did against the brand\'s usual numbers (given below) and at its script, hook, thumbnail and posting time. Write up to 3 short lessons about what worked and up to 3 about what didn\'t, each one sentence about something the brand controls next time (the hook, the topic, the length, the thumbnail, the caption, the posting time). No made-up numbers.',
     keys: '{"worked":["one sentence"],"didnt":["one sentence"]}',
     uses: ['script', 'thumbnail', 'campaign'],
   },
   creative_sfx: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Choose short sound effects for this video: at most one per scene, and only where a sound really helps (a pour, a door, a whoosh on a cut). For each give the scene id, a short description for a sound generator, and its length in seconds (0.5 to 30). No music, no speech. Leave a scene out when it needs nothing.',
     keys: '{"effects":[{"sceneId":"s1","text":"what the sound is","seconds":2}]}',
     uses: ['scenes'],
   },
   analysis_ideas: {
     role: 'Nova, Alphonso\'s analyst',
-    ask: 'Suggest up to 3 follow-up videos for this brand from the post described below and its script: a sequel, the same hook on another topic, or a Short from it. One line each, ready to be a new project\'s idea. No made-up numbers.',
     keys: '{"ideas":["one line"]}',
     uses: ['research', 'script'],
   },
   creative_lessons: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Look at how this post did against the brand\'s usual numbers (given below) and at its script, hook, thumbnail and caption. Write up to 3 short lessons about what worked and up to 3 about what didn\'t, each one sentence about something you can do differently in the next video. No made-up numbers.',
     keys: '{"worked":["one sentence"],"didnt":["one sentence"]}',
     uses: ['script', 'thumbnail', 'campaign'],
   },
   creative_carousel: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Write a carousel of 5 to 10 slides from the research and the script: slide 1 is the cover with the hook, then one idea per slide, and the last slide is the call to action. Each slide has a headline of at most 8 words, a body of at most 25 words, and an image prompt for its picture (no text in the picture).',
     keys: '{"slides":[{"headline":"at most 8 words","body":"at most 25 words","imagePrompt":"what the picture shows, in detail, with no text in it"}]} (5 to 10 slides in one list)',
     uses: ['research', 'script'],
   },
   creative_campaign: {
     role: 'Miya, Alphonso\'s creative director',
-    ask: 'Write the campaign: for each platform a caption, hashtags and a description within that platform\'s limits; the YouTube Short\'s own title, caption and hashtags (it is a separate piece made from the 9:16 video); when there is a carousel, its own caption and hashtags (it reads differently from a Reel); ad copy for Meta, Google and YouTube; and suggested publishing dates.',
     keys: '{"platforms":[{"platform":"the platform","caption":"the caption","hashtags":["#a-hashtag"],"description":"the description"}],"ads":[{"network":"meta, google or youtube","headline":"the ad headline","body":"the ad text"}],"short":{"title":"the Short\'s title, at most 100 characters","caption":"the Short\'s description","hashtags":["#a-hashtag"]},"carousel":{"caption":"the carousel\'s caption, only when there is a carousel","hashtags":["#a-hashtag"]},"calendar":[{"platform":"the platform","suggestedAt":"day and time","reason":"why then"}]}',
     uses: ['research', 'script', 'thumbnail', 'carousel'],
   },
   strategy_timing: {
     role: 'Nova, Alphonso\'s opportunity analyst',
-    ask: 'Suggest when to post on each platform for this audience, with a reason from the research.',
     keys: '{"times":[{"platform":"the platform","dayOfWeek":"the day","time":"the time, e.g. 18:00","reason":"why then"}]}',
     uses: ['research'],
   },
   security_content_check: {
     role: 'Sentinel, Alphonso\'s security agent',
-    ask: 'Check the campaign text and links for anything risky: personal data, unsafe links, false claims or anything that breaks platform rules.',
     keys: '{"ok":"true or false: whether everything is fine","issues":["a problem found, if any"]}',
     uses: ['campaign'],
   },
@@ -134,11 +119,12 @@ function brandText(payload: ContentStepPayload): string {
 
 export function buildStepPrompt(payload: ContentStepPayload, agent: string, actionType: string): { system: string; prompt: string } {
   const action = ACTION_MAP.get(actionType);
+  const ask = contentAsk(actionType);
   const brief = payload.brief;
   const system = `You are ${action?.role || agent}. ${HONEST_COPY} Return JSON only, with exactly these keys. Each value below describes what to write: replace it with your own content (numbers as numbers, true/false as booleans): ${action?.keys || '{}'}`;
   const parts = [
-    action?.ask || payload.task,
-    payload.task && payload.task !== action?.ask ? `Instruction: ${payload.task}` : '',
+    ask || payload.task,
+    payload.task && payload.task !== ask ? `Instruction: ${payload.task}` : '',
     `Idea: ${brief.idea}`,
     `Format: ${brief.format}. Length: about ${brief.lengthSec} seconds. Platforms: ${brief.platforms.join(', ') || 'not chosen'}. Outputs: ${brief.outputs.join(', ') || 'not chosen'}.`,
     brief.notes ? `Notes: ${brief.notes}` : '',
