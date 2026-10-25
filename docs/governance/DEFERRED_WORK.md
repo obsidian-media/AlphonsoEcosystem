@@ -53,6 +53,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - **Your skills write plain text.** The form saves `output: text`; a content-factory step's fixed JSON stays built-in, so you can add skills beside those steps but not replace them.
   - **`read_memory` uses its own word match**, not the engine's `retrieveRelevantContext()` (an import cycle); results can differ slightly from a step's memory snippet.
   - **The tool-call loop is checked with unit tests and a 3B model only** on this machine; a 14B-plus model's own tool calls have not been run live.
+  - **Hector's research run doesn't read his skill's instructions yet.** His step records the skill and reason, but `runHectorLiveResearch()` searches and writes up with its own prompt; his skill text is kept out of the search question on purpose (it is the search query). Feeding the instructions into his synthesis prompt is the next step.
   - **Skill outcomes** (how often each skill's work passed review) are Part C.
   - Status: OPEN.
 
