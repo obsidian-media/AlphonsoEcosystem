@@ -484,8 +484,10 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       actionType: 'opportunity_analysis',
       riskLevel: 'low',
       requiresApproval: false,
-      commandPreview: 'Opportunity scoring only. No execution.',
-      fragments: fragments.filter((fragment) => /opportunity|priority|score|roi|value|timing/i.test(fragment))
+      commandPreview: 'Judging value, priority and timing. No execution.',
+      fragments: fragments.filter((fragment) => /opportunity|priority|score|roi|value|timing/i.test(fragment)),
+      // Nova judges what Hector found, so she waits for him (agent phase 2).
+      ...(assignments.some((a) => a.agent === AGENTS.HECTOR) ? { needs: ['hector'] } : {}),
     });
   }
 

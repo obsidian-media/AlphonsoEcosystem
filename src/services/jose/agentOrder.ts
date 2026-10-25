@@ -5,7 +5,8 @@ export const AGENT_DEPENDENCIES: Record<string, string[]> = Object.freeze({
   hector: [],
   maria: [],
   sentinel: [],
-  nova: [],
+  // Nova judges what Hector found (agent phase 2).
+  nova: ['hector'],
   jose: [],
   miya: ['hector'],
   alphonso: ['miya'],

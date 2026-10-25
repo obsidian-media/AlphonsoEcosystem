@@ -19,8 +19,9 @@ describe('workflows as given steps (phase 6a)', () => {
   it('one step per agent in the chain, each after the one before; Jose plans, so he has no step', () => {
     const workflow = listWorkflows().find((w) => w.id === 'WF_REVENUE_GEN');
     const steps = workflowSteps(workflow, 'Find new clients');
-    expect(steps.map((s) => s.agent)).toEqual(['nova', 'hector', 'marcus']);
-    expect(steps.map((s) => s.needs)).toEqual([[], ['nova'], ['hector']]);
+    // Nova judges what Hector found, so she comes after him (agent phase 2).
+    expect(steps.map((s) => s.agent)).toEqual(['hector', 'nova', 'marcus']);
+    expect(steps.map((s) => s.needs)).toEqual([[], ['hector'], ['nova']]);
     expect(steps[0].instruction).toContain('Find new clients');
     expect(steps[0].instruction).toContain('Revenue Generation');
   });
@@ -35,7 +36,7 @@ describe('workflows as given steps (phase 6a)', () => {
     vi.mocked(submitStepsToJose).mockResolvedValueOnce({ ok: true, commandId: 'c1', requestId: 'jose-request-c1' });
     const result = await runWorkflow('WF_REVENUE_GEN', { prompt: 'Find new clients' });
     expect(vi.mocked(submitStepsToJose).mock.calls[0][0]).toMatchObject({ text: 'Find new clients', source: 'workflow_engine', label: WORKFLOW_LABEL });
-    expect(result).toMatchObject({ ok: true, workflowId: 'WF_REVENUE_GEN', commandId: 'c1', requestId: 'jose-request-c1', chain: ['jose', 'nova', 'hector', 'marcus'] });
+    expect(result).toMatchObject({ ok: true, workflowId: 'WF_REVENUE_GEN', commandId: 'c1', requestId: 'jose-request-c1', chain: ['jose', 'hector', 'nova', 'marcus'] });
   });
 
   it('a refused or failed run is not ok', async () => {

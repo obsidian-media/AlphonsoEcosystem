@@ -80,3 +80,12 @@ describe('the routing set: which template fits', () => {
     });
   }
 });
+
+describe('Nova runs after Hector (agent phase 2)', () => {
+  it('research then judging: Nova waits for Hector', () => {
+    const steps = decomposeJoseCommand(parseJoseCommand('Research the coffee subscription market in Canada and tell me which opportunity is worth going after first'));
+    const nova = steps.find((s) => s.agent === 'nova');
+    expect(nova?.actionType).toBe('opportunity_analysis');
+    expect(nova?.needs).toEqual(['hector']);
+  });
+});

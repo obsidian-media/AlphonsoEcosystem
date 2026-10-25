@@ -131,8 +131,8 @@ const TEMPLATES = {
     { title: 'Set up project structure and navigation', agent: 'alphonso', priority: 'medium', description: 'Initialize the app shell with navigation, theme, and base components.' },
     { title: 'Implement core screens', agent: 'alphonso', priority: 'high', description: 'Build the main application screens with data binding.' },
     { title: 'Implement offline support and caching', agent: 'alphonso', priority: 'medium', description: 'Add offline-first data storage and sync when reconnected.' },
-    { title: 'Performance profiling and optimization', agent: 'nova', priority: 'low', profile: 'Profile render performance, memory usage, and startup time.' },
-    { title: 'Security review of data storage and transport', agent: 'marcus', priority: 'medium', description: 'Audit local storage encryption, API transport security, and deep link handling.' },
+    { title: 'Performance profiling and optimization', agent: 'alphonso', priority: 'low', description: 'Profile render performance, memory usage, and startup time.' },
+    { title: 'Security review of data storage and transport', agent: 'sentinel', priority: 'medium', description: 'Audit local storage encryption, API transport security, and deep link handling.' },
     { title: 'Write tests for critical flows', agent: 'alphonso', priority: 'medium', description: 'Cover navigation, data flows, and edge cases with unit and integration tests.' }
   ],
   content: [

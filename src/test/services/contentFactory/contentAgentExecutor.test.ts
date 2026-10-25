@@ -14,7 +14,7 @@ import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { executeContentStepAssignment, clearContentSearches } from '../../../services/contentFactory/contentAgentExecutor';
 import { runMultiSourceResearch } from '../../../services/hectorResearchService';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
-import { createProject, emptyBrief, saveStepVersion, getProject } from '../../../services/contentFactory/contentProjectService';
+import { createProject, emptyBrief, saveStepVersion, getProject, setPendingAgents } from '../../../services/contentFactory/contentProjectService';
 
 const good = JSON.stringify({ hookScore: 8, scriptScore: 7, notes: ['clear'], mustFix: [] });
 
@@ -138,5 +138,20 @@ describe('executeContentStepAssignment', () => {
     const a = { ...(assignment() as any), instruction: ['Review it.', '', 'Fix what the review found:', '- Make the hook shorter'].join(String.fromCharCode(10)) };
     await executeContentStepAssignment(a);
     expect(vi.mocked(generateAgentLlmResponse).mock.calls[0][1].prompt).toContain('Make the hook shorter');
+  });
+
+  // Agent phase 2: Nova judges the market from Hector's own answer for the same step.
+  it("the market step reads Hector's answer for the same step", async () => {
+    localStorage.clear();
+    const brand = saveBrand({ name: 'B' });
+    const project = createProject(brand.id, 'P', { ...emptyBrief(), idea: 'Idea' });
+    setPendingAgents(project.id, 'research', { hector: { patterns: ['HECTOR-PATTERN-1'] } });
+    vi.mocked(generateAgentLlmResponse).mockResolvedValue({ response: JSON.stringify({ competitors: [], gaps: ['g'], opportunityScore: 60, angle: 'a' }), done: true });
+    const a = assignment('analysis_market') as any;
+    a.contentStep = { ...a.contentStep, projectId: project.id, step: 'research' };
+    await executeContentStepAssignment(a);
+    const prompt = vi.mocked(generateAgentLlmResponse).mock.calls[0][1].prompt;
+    expect(prompt).toContain("Hector's research:");
+    expect(prompt).toContain('HECTOR-PATTERN-1');
   });
 });

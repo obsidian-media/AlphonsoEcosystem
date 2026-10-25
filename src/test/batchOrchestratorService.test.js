@@ -372,3 +372,12 @@ describe('batchOrchestratorService', () => {
     });
   });
 });
+
+describe('each batch task goes to its owner (agent phase 2)', () => {
+  it('no batch task gives code or security to the wrong agent', async () => {
+    const svc = await import('../services/batchOrchestratorService.js');
+    const tasks = svc.generateBatchRuleBased('Build a mobile app for my bakery');
+    expect(tasks.find((t) => t.title === 'Performance profiling and optimization')?.agent).toBe('alphonso');
+    expect(tasks.find((t) => t.title === 'Security review of data storage and transport')?.agent).toBe('sentinel');
+  });
+});
