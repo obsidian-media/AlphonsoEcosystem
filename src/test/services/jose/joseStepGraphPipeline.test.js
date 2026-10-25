@@ -796,3 +796,57 @@ describe('a step that runs on Hermes (agent roles Part A)', () => {
     expect(getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'facts').note).toBeUndefined();
   });
 });
+
+describe('every step runs with its skill (agent roles Part B)', () => {
+  const plain = (agent, actionType, extra = {}) => ({
+    agent, actionType, title: `Step ${actionType}`, rationale: 'test', riskLevel: 'low',
+    requiresApproval: false, commandPreview: 'Writes text only.', fragments: [], ...extra,
+  });
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(executeContentStepAssignment).mockClear();
+  });
+
+  it("a Maria review's prompt carries her skill, and each step saves its skill and reason", async () => {
+    const { generateAgentLlmResponse } = await import('../../../lib/ollama');
+    vi.mocked(generateAgentLlmResponse).mockClear();
+    const result = await run([
+      plain('miya', 'creative_package', { stepId: 'draft' }),
+      plain('maria', 'audit_quality', { stepId: 'check', needs: ['draft'], reviewOf: 'draft', effects: ['read'] }),
+    ]);
+    const prompts = vi.mocked(generateAgentLlmResponse).mock.calls.filter((c) => c[0] === 'maria').map((c) => String(c[1].prompt));
+    const reviewPrompt = prompts.find((p) => p.includes('Review it.'));
+    expect(reviewPrompt).toContain('Your skill: Claim check');
+    const steps = getJoseRequest(`jose-request-${result.commandId}`).steps;
+    expect(steps.find((s) => s.stepId === 'draft')).toMatchObject({ skill: 'Creative package', skillReason: 'The only skill for this task.' });
+    expect(steps.find((s) => s.stepId === 'check')).toMatchObject({ skill: 'Claim check', skillReason: "Matches this step's task." });
+  });
+
+  it("a content step records its skill but its prompt carries the ask only once", async () => {
+    const result = await run([step('miya', 'creative_script', { stepId: 'script' })]);
+    const options = vi.mocked(executeContentStepAssignment).mock.calls[0][1];
+    expect(options.stepInput?.skill ?? null).toBeNull();
+    expect(getJoseRequest(`jose-request-${result.commandId}`).steps[0]).toMatchObject({ skill: 'Write the script', skillReason: "This step's format needs it." });
+  });
+
+  it('a Jose step gets no skill', async () => {
+    const result = await run([plain('jose', 'cost_policy_enforcement', { stepId: 'gate', effects: ['read'] })]);
+    expect(getJoseRequest(`jose-request-${result.commandId}`).steps[0].skill).toBeUndefined();
+  });
+});
+
+describe("Hector's research question (agent roles Part B review)", () => {
+  beforeEach(() => localStorage.clear());
+
+  it('never carries his skill text into the search', async () => {
+    const hector = await import('../../../services/hectorResearchService');
+    vi.mocked(hector.createResearchDraft).mockClear();
+    const result = await run([
+      { agent: 'miya', actionType: 'creative_package', stepId: 'draft', needs: [], title: 'Draft', rationale: 'test', riskLevel: 'low', requiresApproval: false, commandPreview: 'Writes.', fragments: [] },
+      { agent: 'hector', actionType: 'research_report', stepId: 'facts', needs: ['draft'], title: 'Facts', rationale: 'test', riskLevel: 'low', requiresApproval: false, commandPreview: 'Reads.', fragments: [] },
+    ]);
+    const question = String(vi.mocked(hector.createResearchDraft).mock.calls[0][0].researchQuestion);
+    expect(question).not.toContain('Your skill');
+    expect(question).toContain("From Miya's step (draft)");
+  });
+});

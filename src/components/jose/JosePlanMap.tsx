@@ -86,6 +86,7 @@ export function JosePlanMap({ steps, compact = false, selectedStepId, onSelectSt
               onClick={() => onSelectStep?.(node.stepId)}
               className={`absolute text-left rounded-md border-2 bg-(--surface-1) px-2 py-1 overflow-hidden ${selectedStepId === node.stepId ? 'ring-2 ring-(--accent)' : ''}`}
               style={{ left: node.x, top: node.y, width: box.width, height: box.height, borderColor: `var(--agent-${step.agent}, var(--border))` }}
+              title={(step as { skill?: string }).skill ? `Skill: ${(step as { skill?: string }).skill}` : undefined}
             >
               <div className="flex items-center justify-between gap-1 text-[11px] font-semibold text-(--text-1)">
                 <span>{agentName(step.agent)}{step.round ? <span className="ml-1 font-normal text-(--text-3)">Round {step.round}</span> : null}</span>

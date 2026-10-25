@@ -158,6 +158,7 @@ async function openContentProject(projectId: string): Promise<void> {
 }
 import { markRunningRequestsInterrupted } from './services/jose/joseRequestStore';
 import { expireWaitingRequests } from './services/jose/joseExpiry';
+import { loadUserSkills } from './services/skills/userSkills';
 import { startPostScheduler, stopScheduler } from './services/marcusExecutionService';
 import { randomHex } from './lib/randomId';
 
@@ -174,6 +175,8 @@ function markInterruptedRequestsOnce(): void {
   interruptedRequestsChecked = true;
   try { markRunningRequestsInterrupted(); } catch { /* display aid only */ }
   try { expireWaitingRequests(); } catch { /* checked again every hour */ }
+  // Your own agent skills from the skills folder (agent roles Part B).
+  void loadUserSkills();
 }
 const COACH_AGENT_FROM_QUERY = parsedSearchParams.get('coachAgent');
 

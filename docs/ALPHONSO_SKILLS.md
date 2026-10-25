@@ -1,5 +1,7 @@
 # Alphonso Agent — Skill Packs
 
+> **Retired 2026-10-25 (agent roles Part B).** The skill packs this document describes were replaced by real skills: Markdown files in `src/skills/<agent>/`, checked by `checkSkill()` (`src/services/skills/skillCheck.ts`) and picked per step. The packs and their checks are archived in `archive/MIGHTBEUSEDLATER/skillPacks/`. Each agent's current skills: `docs/AGENT_GUIDE.md`. This document is kept as a record.
+
 **Version**: 2.10.0 (on `main`; the pack lists were last changed on the date below)
 **Last Updated**: 2026-07-17
 **Total Skill Packs**: 18 (2 existing + 16 new)

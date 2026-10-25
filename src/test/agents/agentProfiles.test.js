@@ -16,7 +16,7 @@ const REQUIRED_PROPERTIES = [
   'id', 'name', 'title', 'purpose', 'accentColor', 'visualIdentity',
   'personality', 'strengths', 'limitations', 'allowedActions',
   'blockedActions', 'outputTypes', 'requiresApprovalFor',
-  'defaultPrompt', 'skillPackIds', 'skillFocus', 'exampleTasks',
+  'defaultPrompt', 'skillFocus', 'exampleTasks',
   'hierarchyRank', 'mascotPath'
 ];
 
@@ -68,8 +68,8 @@ describe('Agent Profiles', () => {
         expect(profile.exampleTasks.length).toBeGreaterThanOrEqual(2);
       });
 
-      it('has skillPackIds as array', () => {
-        expect(Array.isArray(profile.skillPackIds)).toBe(true);
+      it('lists no old skill packs (agent roles Part B: skills live in src/skills)', () => {
+        expect(profile.skillPackIds).toBeUndefined();
       });
 
       it('has outputTypes as array', () => {

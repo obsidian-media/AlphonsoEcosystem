@@ -84,3 +84,17 @@ describe('the work inside a step (final review, agent roles Part A)', () => {
     expect(buildStepInput('c1', step('marcus', 'marcus', ['alphonso']), 'r', {}).needs[0].main).toBe('Dear team, the launch moves to Friday.');
   });
 });
+
+describe('the skill in the step input (agent roles Part B)', () => {
+  it('stepInputText puts the skill and what its tools found first', async () => {
+    const { stepInputText, skillSection } = await import('../../../services/jose/stepInput');
+    const input = {
+      instruction: 'Check it', request: 'Bees', others: [], memory: '', review: null, needs: [],
+      skill: { name: 'Claim check', reason: 'Numbers.', instructions: 'Check every claim.', results: [{ tool: 'read_sources', text: 'https://a.example' }] },
+    };
+    const text = stepInputText(input as never);
+    expect(text.startsWith('Your skill: Claim check\nCheck every claim.\n\nWhat your tools found:\n- read_sources: https://a.example')).toBe(true);
+    expect(skillSection({ ...input, skill: null } as never)).toBe('');
+    expect(skillSection(null)).toBe('');
+  });
+});

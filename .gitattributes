@@ -1,4 +1,5 @@
 # Force LF for the generated skill-permission matrix and its generator
+# (both retired with the skill packs on 2026-10-25; kept as records)
 # script, regardless of a checking-out machine's core.autocrlf setting.
 #
 # Why: scripts/generate-skill-permission-matrix.mjs writes the doc with a
@@ -13,4 +14,4 @@
 # it back with autocrlf=true active, and --check failed with 246 lines
 # converted to CRLF and zero real content changes.
 docs/AGENT_SKILL_PERMISSION_MATRIX.md text eol=lf
-scripts/generate-skill-permission-matrix.mjs text eol=lf
+archive/MIGHTBEUSEDLATER/skillPacks/generate-skill-permission-matrix.mjs text eol=lf

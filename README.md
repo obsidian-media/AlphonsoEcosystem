@@ -37,6 +37,11 @@
 - **Paid engines, only if you choose them:** ElevenLabs voices (including your clone) and sound effects; Higgsfield pictures and clips. Each run asks first with the cost.
 - **Brand characters and motion:** the same character (made-up, or a real person with their permission) in every picture, free with ComfyUI or trained on Higgsfield; a scene can copy a movement from a Higgsfield preset, a webcam recording or a video file.
 
+### Agent roles and skills (Parts A and B)
+
+- **One owner per kind of work:** Jose only plans and approves; research is Hector's, judging it Nova's, content and design Miya's, code and plain questions Alphonso's, sending Marcus's. Every step gets the full work of the steps it needs, reviews judge the actual draft, and a request ends with a short summary.
+- **Real skills:** each agent has its own (40 built in), picks one per step and the board says why; skills use tools (web search, sources, memory, earlier steps). Add your own on All Agents → Skills.
+
 ### Fixes and the rest
 
 - **Honest screens:** connector checks say whether the service answered or only a key was found; risk ratings come from what a command does; scheduled tasks really run; Sentinel's scan checks real activity; Content Studio and Maria say when they fell back.
@@ -372,7 +377,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~938 lines · 189 Tauri commands · 50 modules   │    │
+│  │  lib.rs ~944 lines · 194 Tauri commands · 51 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -463,7 +468,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 6,832 tests across 556 files (src + bridge)
+npm run test           # 6,630 tests across 532 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -476,7 +481,7 @@ npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app 
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 357 Rust unit tests across 50 modules
+cargo test                     # 362 Rust unit tests across 51 modules
                                 # (cargo test runs a few more: the async
                                 # #[tokio::test] cases, 370 in all)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
@@ -554,7 +559,7 @@ is the last full release-verification record.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 290 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 287 services already exist.
 
 ## Third-party notices
 

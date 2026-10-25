@@ -152,6 +152,13 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                     {selected.steps.find((s) => s.stepId === stepId)?.note && (
                       <p className="text-xs text-(--text-secondary) mb-2" data-testid="jose-step-note">{selected.steps.find((s) => s.stepId === stepId)!.note}</p>
                     )}
+                    {selected.steps.find((s) => s.stepId === stepId)?.skillReason && (
+                      <p className="text-xs text-(--text-2) mb-2" data-testid="jose-step-skill">
+                        {selected.steps.find((s) => s.stepId === stepId)?.skill
+                          ? `Skill: ${selected.steps.find((s) => s.stepId === stepId)!.skill} — ${selected.steps.find((s) => s.stepId === stepId)!.skillReason}`
+                          : selected.steps.find((s) => s.stepId === stepId)!.skillReason}
+                      </p>
+                    )}
                     <JoseStepOutput key={`${selected.commandId}-${stepId}-${selected.steps.find((s) => s.stepId === stepId)!.status}`} commandId={selected.commandId} stepId={stepId} />
                   </div>
                 )}

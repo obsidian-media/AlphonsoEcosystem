@@ -26,7 +26,7 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
     name: 'Content video',
     kind: 'normal',
     matchWords: [
-      ['video', 'youtube', 'tiktok', 'reel', 'reels', 'short', 'shorts', 'vlog'],
+      ['video', 'youtube', 'tiktok', 'reel', 'reels', 'shorts', 'vlog'],
       ['script', 'content', 'campaign', 'channel', 'thumbnail', 'thumbnails', 'post', 'upload', 'launch', 'promo'],
     ],
     steps: [

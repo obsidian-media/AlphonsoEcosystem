@@ -167,3 +167,29 @@ describe('JosePlanEditor', () => {
     expect(await screen.findByText('Rejected. The request was cancelled.')).toBeTruthy();
   });
 });
+
+describe('the skill under a step (agent roles Part B)', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('shows the skill and the reason for the step you pick', () => {
+    const request = createJoseRequest({
+      commandId: 'c-skill', source: 'user', text: 'Check the post', kind: 'normal',
+      steps: [{ stepId: 'check', agent: 'maria', actionType: 'audit_quality', effects: ['read'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'check', { skill: 'Claim check', skillReason: 'The post quotes numbers.' });
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    fireEvent.click(screen.getAllByTestId('jose-plan-step')[0]);
+    expect(screen.getByTestId('jose-step-skill').textContent).toBe('Skill: Claim check — The post quotes numbers.');
+  });
+
+  it('says when the step had no skill', () => {
+    const request = createJoseRequest({
+      commandId: 'c-noskill', source: 'user', text: 'x', kind: 'normal',
+      steps: [{ stepId: 'odd', agent: 'nova', actionType: 'analysis_odd', effects: ['read'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'odd', { skill: undefined, skillReason: 'No skill for this task.' });
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    fireEvent.click(screen.getAllByTestId('jose-plan-step')[0]);
+    expect(screen.getByTestId('jose-step-skill').textContent).toBe('No skill for this task.');
+  });
+});

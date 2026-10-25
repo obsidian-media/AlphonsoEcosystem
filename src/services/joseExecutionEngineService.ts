@@ -42,7 +42,7 @@ import { saveRequestDecisions } from './jose/joseFinish';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
 import { moveToOwner } from './jose/movedTaskTypes';
-import { buildStepInput, stepInputText } from './jose/stepInput';
+import { buildStepInput, skillSection, stepInputText } from './jose/stepInput';
 import { runReviewStep } from './jose/reviewStep';
 import { isEffectAllowed } from './jose/agentPermissionTable';
 import type { PlanStep } from './jose/stepGraph';
@@ -59,7 +59,7 @@ import { runMarcusDistribution } from './marcusExecutionService';
 import { runSentinelSecurityScan } from './sentinelSecurityService';
 import { runNovaAnalysis } from './novaAnalysisService';
 import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
-import { loadAgentSkillGuidance } from './skillPackService';
+import { prepareSkill } from './skills/prepareSkill';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
@@ -241,10 +241,8 @@ function checkSentinelGate(commandId, assignment) {
 export function draftPrompt(agent, task, context: any = {}) {
   const taskText = String(task || '').trim();
   const contextSnippet = String(context?.snippet || '').trim();
-  const skillGuidance = loadAgentSkillGuidance(agent);
-  const skillContext = skillGuidance.recommendedSteps.length > 0
-    ? `\nActive skill workflow: ${skillGuidance.recommendedSteps.join(' → ')}.\nSkill guidance: ${skillGuidance.guidance.map((g) => g.guidance).join(' ')}`
-    : '';
+  // The step's skill (agent roles Part B) arrives as context.skill.
+  const skillContext = String(context?.skill || '').trim() ? `\n${String(context.skill).trim()}` : '';
 
   if (agent === 'miya') {
     return [
@@ -674,7 +672,7 @@ async function buildMiyaPackage(commandText: any, assignment: any, options: any 
   if (options.draftDisabled) return fallback;
 
   try {
-    const prompt = draftPrompt('miya', commandText, { snippet: options.retrievedContext?.snippet || '' });
+    const prompt = draftPrompt('miya', commandText, { snippet: options.retrievedContext?.snippet || '', skill: skillSection(options.stepInput) });
     const response = await generateAgentLlmResponse('miya', {
       endpoint: options.endpoint,
       model: options.model || getConfiguredOllamaModel(),
@@ -994,7 +992,7 @@ async function executeMiyaAssignment(commandText: any, assignment: any, options:
 
 async function executeHectorAssignment(commandText: any, assignment: any, options: any = {}) {
   // Earlier steps' work (agent roles Part A): Hector researches with it in view.
-  const context = options.stepInput?.needs?.length ? stepInputText({ ...options.stepInput, others: [], memory: '' }) : '';
+  const context = options.stepInput?.needs?.length ? stepInputText({ ...options.stepInput, others: [], memory: '', skill: null }) : '';
   const draft = createResearchDraft({
     researchQuestion: context ? `${commandText}\n\n${context.slice(0, 1500)}` : commandText,
     sourceUrls: [],
@@ -1032,9 +1030,10 @@ async function executeAssistantAssignment(commandText: any, assignment: any, opt
   try {
     const prompt = [
       CHAT_ASSISTANT_PROMPT,
+      skillSection(options.stepInput),
       'Answer the request below, or do the everyday writing it asks for, in text.',
       `Request: ${String(commandText || '').slice(0, 4000)}`
-    ].join('\n\n');
+    ].filter(Boolean).join('\n\n');
     const reply = await generateAgentLlmResponse('alphonso', {
       endpoint: options.endpoint || getConfiguredOllamaEndpoint(),
       model: options.model || getConfiguredOllamaModel(),
@@ -1338,8 +1337,12 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
       }),
     };
   }
-  if (assignment?.agent === AGENTS.ALPHONSO && assignment?.instruction) {
-    options = { ...options, stepInstruction: assignment.instruction };
+  // The step's skill (agent roles Part B): picked, its tools run, put in the step input.
+  if (options.stepInput) {
+    options = { ...options, stepInput: await prepareSkill(packet, assignment, options.stepInput, { workspaceRoot: options.projectDirectory }) };
+  }
+  if (assignment?.agent === AGENTS.ALPHONSO && (assignment?.instruction || options.stepInput?.skill)) {
+    options = { ...options, stepInstruction: [assignment?.instruction, skillSection(options.stepInput)].filter(Boolean).join('\n\n') };
   }
   appendAgentActivity({ agent: assignment?.agent || 'jose', action: 'execute', detail: (commandText || '').slice(0, 80) });
   if (assignment?.contentStep) {

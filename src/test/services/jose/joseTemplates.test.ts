@@ -34,6 +34,13 @@ describe('joseTemplates', () => {
     expect(scoreTemplateFit('Make a cake').every((s) => s.score < TEMPLATE_FIT_THRESHOLD)).toBe(true);
   });
 
+  it('"a short post" is writing, not a video; "Shorts" still are', () => {
+    const fit = (text: string) => scoreTemplateFit(text).find((s) => s.templateId === 'content_video')?.score;
+    expect(fit('Research three facts about honeybees and write a short post about them')).toBeLessThan(TEMPLATE_FIT_THRESHOLD);
+    expect(fit('Make three Shorts for our launch')).toBeGreaterThanOrEqual(TEMPLATE_FIT_THRESHOLD);
+    expect(fit('Make a YouTube short about our launch')).toBeGreaterThanOrEqual(TEMPLATE_FIT_THRESHOLD);
+  });
+
   it('matches whole words only', () => {
     // "apple" must not count as "app".
     expect(scoreTemplateFit('Buy apples').find((s) => s.templateId === 'build_app')?.score).toBe(0);

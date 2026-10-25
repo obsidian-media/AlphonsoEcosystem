@@ -10,6 +10,13 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent roles, Part B: skills (2026-10-25)
+- **Each agent has real skills**: one Markdown file per kind of job, with the tools it needs (40 built in; Jose has none). The content factory's instructions now live in its agents' skills, word for word.
+- **The agent picks its skill for each step**, and the Requests board shows "Skill: … — reason". Only skills for that kind of work are offered; with one, no model call.
+- **Skills use tools**: web search, opening a source, stock search, earlier steps, sources, memory, project files, notes. Small models run them in order; models of 14B and up (Settings → Agents) and paid or cloud models call them themselves, at most 5 per step. Sending, publishing, calls, running code and making media stay the step's own action and keep their approval.
+- **Your own skills**: All Agents → Skills has New skill, Import a skill file, Open skills folder, Export and Delete. A skill that gives an agent another agent's work or tools is refused with the reason.
+- The old one-line skill packs moved to the archive.
+
 ### Agent roles, Part A (2026-10-24)
 - **Each kind of work has one owner.** Jose only plans, routes, approves and summarises; Alphonso answers plain questions and does everyday writing; Miya edits the finished video and designs (no code); Hector finds facts and Nova judges them; Marcus checks publishing readiness and places CALL-E calls. A test fails if two agents could take the same kind of task.
 - **Every step gets the work it depends on.** Maria, Nova, Sentinel, Echo, Hector and Marcus used to get only the request: reviews now judge the actual draft and give their verdict in the same answer, and Marcus sends what the earlier step wrote (never the instruction).

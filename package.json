@@ -33,8 +33,6 @@
     "verify:no-window-coverage": "node scripts/verify-no-window-coverage.mjs",
     "verify:npm-audit": "node scripts/verify-npm-audit.mjs",
     "verify:tauri-versions": "node scripts/verify-tauri-versions.mjs",
-    "generate:skill-matrix": "node scripts/generate-skill-permission-matrix.mjs",
-    "verify:skill-matrix": "node scripts/generate-skill-permission-matrix.mjs --check",
     "proof:native-selfdev": "node scripts/proof-native-selfdev.mjs",
     "proof:rc0": "node scripts/proof-native-selfdev.mjs --rc0",
     "auth:youtube": "node scripts/auth-youtube.mjs",

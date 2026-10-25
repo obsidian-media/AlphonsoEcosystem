@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 19 (Vite 8, Tailwind 4) + Ollama (local LLM)
-- **Version**: 2.10.0 (on `main`, not tagged yet; latest release 2.9.0. 556 test files, 6,832 tests, 290 services)
+- **Version**: 2.10.0 (on `main`, not tagged yet; latest release 2.9.0. 532 test files, 6,630 tests, 290 services)
 - **Now**: the Jose redesign (phases 1–6b: plans as step graphs, approval by effect, the Requests board) and Miya's content factory (phases 1–4c: from an idea to finished, posted videos, Shorts and carousels, with results, paid engines, brand characters and motion) are on `main`. Jose phase 7 is next.
 
 ## Directory Structure
@@ -26,13 +26,13 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and older services)
   agents/              9 agent profiles and schemas (what each may do is src/services/jose/agentPermissionTable.ts)
   components/          175 UI components (incl. miya/, jose/, calendar/ for the content factory, Jose's board and the Calendar)
-  services/            290 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
+  services/            287 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
     jose/              Jose's planner, step graphs, effects, requests, Telegram, paid models
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                556 test files, 6,832 tests (Vitest; see ground truth for current verification status)
+  test/                532 test files, 6,630 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -41,7 +41,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
   src-tauri/             Rust backend
-  src/lib.rs           ~938 lines, 189 Tauri commands (across 50 modules)
+  src/lib.rs           ~944 lines, 194 Tauri commands (across 51 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -52,6 +52,7 @@ ios/                   iOS companion app (SwiftUI)
   src/youtube.rs       YouTube upload
   src/workspace.rs     Workspace file ops
   src/search.rs        Research search
+  src/skills_store.rs  Your own agent skills (the app's skills folder)
   src/plugin_runtime.rs Plugin runtime engine
   src/policy_gate.rs   Policy enforcement backend
   src/audit_log.rs     Audit chain
@@ -86,7 +87,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,832 tests (556 files; also runs bridge/)
+npm run test             # 6,630 tests (532 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
@@ -103,17 +104,17 @@ cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 ## 9 Agents
 What each agent may do is one table, `src/services/jose/agentPermissionTable.ts`: everyone may read and write its own work; only Alphonso may run code or change project files; only Marcus may publish or send; Jose and Marcus may spend, and Miya's paid media steps (voice, pictures, clips, Shorts, sound effects, character training) may too; spending always asks. Every plan Jose makes is checked against it.
 
-| Agent | Role | Key Constraint | Skill packs |
+| Agent | Role | Key Constraint | Skills (`src/skills/<agent>/`) |
 |-------|------|----------------|------------------|
-| Alphonso | Local operator — execution, verification, packaging; assembles the content factory's videos | The only agent that runs code or changes project files | **18 skill packs**: Full-Stack, TDD, TypeScript, Rust, React, Python, Code Review, Build Verification, Refactoring, Debugging, Runtime Diagnostics, Security Audit, GitHub Integration, Performance Optimization, API Integration, Error Handling |
-| Jose | Orchestrator — answers or plans every request as steps, runs them, reports | Never runs code or publishes; may spend only on a paid-model step, which always asks; plans are checked against the permission table | **21 skill packs**: Orchestration, Task Routing, Approval Gating, Cross-Agent Synthesis, Pipeline Governance, Workflow Design, Strategic Planning, Dependency Mapping, Agent Coordination, Parallel Orchestration, Task Prioritization, Risk Assessment, Quality Gates, Compliance Checks, Progress Tracking, Status Reporting, Performance Metrics, Workflow Optimization, Bottleneck Detection, Continuous Improvement, Stakeholder Communication |
-| Hector | Research — facts, sources, citations; what goes viral; stock clips | Read and write its own work only | **21 skill packs**: Professional Marketing, Market Research, Competitive Analysis, Source Verification, RSS Monitoring, Executing Plans, API Documentation Research, API Integration Research, Compliance Research, Security Research, Trend Analysis, Market Intelligence, Content Research, Code Pattern Research, Technical Architecture Research, Open Source Analysis, Data Gathering, Source Curation, Confidence Scoring, Survey Design, Documentation Audit, Research Briefing |
-| Miya | Creative — the content factory: scripts, storyboards, pictures, voice, music, clips, the finished video, Shorts, carousels, campaigns; UI/UX design, never code | Read and write its own work only | **21 skill packs**: Runway Video Generation, Creative Image, UI/UX Design, Brand Identity, Motion Graphics, Typography System, Color Palette, Content Strategy, Video Storyboarding, Social Media Design, Editorial Design, Animation Design, Illustration Style, Video Editing, Landing Page, Dashboard Design, Brand Guidelines, Icon System, Design System, User Research, Motion System |
-| Maria | Governance & Risk Lead — governance, risk and quality reviews (scripts, quality gate) | Read and write its own work only | **18 skill packs**: Audit Governance, Trust Verification, Requirements Analysis, Risk Classification, Compliance Auditing, Approval Workflow, Evidence Collection, Claim Verification, Policy Enforcement, Audit Trail, Trust Audit, State Verification, Brand Safety, Content Moderation, Quality Assurance, Documentation Review, Stakeholder Reporting, Incident Response |
-| Marcus | Distribution & Release Manager — posts and schedules (the one post scheduler) | The only agent that publishes or sends, after approval | **15 skill packs** (security and risk packs moved to Sentinel and Maria, 2026-10-23): Executing Plans, GitHub Releases, Slack Notifications, Distribution Execution, Release Readiness, Integration Validation, Deployment Execution, Changelog Generation, Asset Distribution, Notification Routing, Approval Gatekeeping, Version Management, Rollback Execution, Release Reporting, Compliance Distribution, Team Communication |
-| Echo | Memory historian and archival; saves a finished request's decisions | Read and write its own work only | **17 skill packs**: Memory Synthesis, Decision Capture, Retention Classification, Confidence Normalization, Knowledge Indexing, Historical Context, Audit Trail, Context Retrieval, Memory Pruning, Session Continuity, Memory Validation, Timeline Construction, Knowledge Graph, Memory Reporting, Preference Learning, Decision Diff |
-| Sentinel | Security only — scans, connector risk, the content security check | Read and write its own work only | **17 skill packs**: Vulnerability Scan, Connector Risk, Secret Hygiene, Permission Audit, Automation Safety, Policy Compliance, Threat Detection, CSP Audit, Dependency Audit, Connector Gating, Runtime Monitoring, Approval Enforcement, Data Protection, Injection Scan, Auth Audit, Risk Scoring, Security Reporting |
-| Nova | Scoring and analysis — market checks, post times, results, lessons and ideas | Read and write its own work only | **17 skill packs**: Opportunity Analysis, Market Analysis, Prioritization Matrix, Risk-Reward Assessment, Timing Analysis, Effort Estimation, Strategic Alignment, Growth Analysis, Competitive Intelligence, Value Scoring, Resource Optimization, Scenario Modeling, Decision Support, Capability Assessment, Trend Forecasting, Portfolio Analysis, Recommendation Engine |
+| Alphonso | Local operator — code, commands, verification; plain questions and everyday writing | The only agent that runs code or changes project files | **4**: Answer a question, Code change, Everyday writing, Verify a build |
+| Jose | Orchestrator — answers or plans every request as steps, runs them, reports | Never runs code or publishes; may spend only on a paid-model step, which always asks; plans are checked against the permission table | None: Jose plans |
+| Hector | Research — facts, sources, citations; what goes viral; stock clips | Read and write its own work only | **4**: Competitor material, Find what works, Stock footage, Web research with sources |
+| Miya | Creative — the content factory: scripts, storyboards, pictures, voice, music, clips, the finished video, Shorts, carousels, campaigns; UI/UX design, never code | Read and write its own work only | **12**: Choose sound effects, Creative lessons, Creative package, Design thumbnails, Edit the video, Make a picture, Plan the scenes, Plan the Shorts, UI design, Write a carousel, Write the campaign, Write the script |
+| Maria | Governance & Risk Lead — governance, risk and quality reviews (scripts, quality gate) | Read and write its own work only | **4**: Claim check, Governance review, Quality against the references, Quality review |
+| Marcus | Distribution & Release Manager — posts and schedules (the one post scheduler) | The only agent that publishes or sends, after approval | **4**: Place a call, Publish a post, Release readiness, Send a message |
+| Echo | Memory historian and archival; saves a finished request's decisions | Read and write its own work only | **3**: Answer from memory, Merge and clean memory, Save decisions |
+| Sentinel | Security only — scans, connector risk, the content security check | Read and write its own work only | **3**: Content safety check, Permission audit, Text and link check |
+| Nova | Scoring and analysis — market checks, post times, results, lessons and ideas | Read and write its own work only | **6**: Best time to post, Follow-up ideas, Judge the market, Read the results, Review the script, Value and priority |
 
 ## Key Architecture Rules
 - **policyEnforcementService.ts** is fail-closed on missing credentials and Zero-Cost Mode (blocks paid connectors). The supplemental connector DSL (`policyDslService.ts`) is default-deny: unmatched actions deny and costly/irreversible actions require explicit consent. Every outbound connector call goes through the connector gate.

@@ -63,5 +63,4 @@ If you add new file categories to count, update `getAllCounts()` in `counters.mj
 
 - `npm run verify:dnd-coverage` — every service and component has a row in `CLAUDE.md`'s Do Not Duplicate table (blocking in CI).
 - `npm run verify:dnd-map` — `docs/DO_NOT_DUPLICATE.generated.md` is fresh (`npm run generate:dnd-map` refreshes it).
-- `npm run verify:skill-matrix` — `docs/AGENT_SKILL_PERMISSION_MATRIX.md` matches the skill packs.
 - Documents describing the app now are kept current; dated records (audits, reports, specs, plans) carry a status line at the top saying what changed since.

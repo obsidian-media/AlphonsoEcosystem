@@ -29,6 +29,15 @@ export interface StepInput {
   memory: string;
   /** The work a review step reviews (its reviewOf step), else null. */
   review: NeededWork | null;
+  /** The skill this step runs with and what its tools found (agent roles Part B), else null. */
+  skill?: StepSkill | null;
+}
+
+export interface StepSkill {
+  name: string;
+  reason: string;
+  instructions: string;
+  results: { tool: string; text: string }[];
 }
 
 export const STEP_INPUT_LIMITS = { localChars: 6000, largeChars: 20000, otherLines: 12, otherLineChars: 160 };
@@ -130,8 +139,20 @@ export function buildStepInput(
 }
 
 /** The block an agent's prompt includes: the work it needs, the rest in one line each, memory. */
+/** The step's skill and what its tools found, for any prompt; '' without one. */
+export function skillSection(input: StepInput | null | undefined): string {
+  const skill = input?.skill;
+  if (!skill) return '';
+  const found = skill.results.length
+    ? `\n\nWhat your tools found:\n${skill.results.map((r) => `- ${r.tool}: ${r.text}`).join('\n')}`
+    : '';
+  return `Your skill: ${skill.name}\n${skill.instructions}${found}`;
+}
+
 export function stepInputText(input: StepInput): string {
   const parts: string[] = [];
+  const skill = skillSection(input);
+  if (skill) parts.push(skill);
   if (input.review) parts.push(`The work to review (${agentName(input.review.agent)}'s step):\n${input.review.text || '(empty)'}`);
   for (const need of input.needs) {
     if (input.review && need.stepId === input.review.stepId) continue;

@@ -21,6 +21,9 @@ export interface JoseRequestStep extends PlanStep {
   endedAtMs?: number;
   /** A plain note shown with the step, e.g. that it runs on Hermes (agent roles Part A). */
   note?: string;
+  /** The skill the step ran with, and why (agent roles Part B). */
+  skill?: string;
+  skillReason?: string;
 }
 
 export interface JoseRequest {
