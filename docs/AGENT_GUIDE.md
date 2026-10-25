@@ -9,26 +9,14 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 **Can do:** Run commands, read/write files, build projects, verify outputs
 **Cannot:** Bypass approval gates (commands that run code ask according to Settings; commands that delete always ask); spend or publish
 **When to use:** Building, fixing, testing; plain questions and everyday writing (emails, notes).
-**Skill Packs (18):**
-- Core Coding: `pack.coding.full-stack`, `pack.coding.tdd`, `pack.alphonso-typescript-mastery`, `pack.alphonso-rust-operations`, `pack.alphonso-react-patterns`, `pack.alphonso-python-voice`
-- Verification: `pack.alphonso-code-review`, `pack.alphonso-build-verification`, `pack.alphonso-refactoring`, `pack.debugging.root-cause`
-- Operations: `pack.alphonso-runtime-diagnostics`, `pack.alphonso-security-audit`, `pack.github.integration`, `pack.alphonso-performance-optimization`
-- Extended: `pack.alphonso-api-integration`, `pack.alphonso-error-handling`
-- Existing: `pack.codex-professional-coding`, `pack.alphonso-runtime-operations`
+**Skills (4, `src/skills/alphonso/`):** Answer a question, Code change, Everyday writing, Verify a build.
 
 ### Jose — Orchestrator
 **Role:** Answers or plans every request, runs the plan, reports
 **Can do:** Answer plain questions; plan a request as steps (agent, action, what each needs), from a template or fresh; show bigger plans first; change a plan while it runs (review rounds, help, a larger model, a paid model if you allow them); tell you on Telegram what waits for you
 **Cannot:** Run code or publish; spend only on a paid-model step, which always asks; a plan that breaks the permission table doesn't run
 **When to use:** Everything — every message reaches Jose. "Research X, write a report and post it to Slack" becomes steps for Hector, Miya and Marcus, with the Slack step waiting for your approval. Plans are on the Requests board (System → Orchestrator → Requests).
-**Skill Packs (21, plus the shared executing-plans pack):**
-- Orchestration: `pack.jose-professional-orchestration`, `pack.jose-task-routing`, `pack.jose-approval-gating`, `pack.jose-cross-agent-synthesis`, `pack.jose-pipeline-governance`, `pack.workflow.executing-plans`
-- Planning: `pack.jose-workflow-design`, `pack.jose-strategic-planning`, `pack.jose-dependency-mapping`
-- Coordination: `pack.jose-agent-coordination`, `pack.jose-parallel-orchestration`, `pack.jose-task-prioritization`
-- Governance: `pack.jose-risk-assessment`, `pack.jose-quality-gates`, `pack.jose-compliance-checks`
-- Monitoring: `pack.jose-progress-tracking`, `pack.jose-status-reporting`, `pack.jose-performance-metrics`
-- Optimization: `pack.jose-workflow-optimization`, `pack.jose-bottleneck-detection`, `pack.jose-continuous-improvement`
-- Communication: `pack.jose-stakeholder-communication`
+**Skills:** none (Jose plans; planning is not a skill step).
 
 ### Hector — Researcher
 **Role:** Finds facts and sources (including competitors' public material), with citations
@@ -36,21 +24,14 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 **Can do:** Web search, document analysis, source verification, API docs research, compliance research, competitive analysis; in Miya Studio, what goes viral and a stock clip for each scene (Pexels, Pixabay, Coverr)
 **Cannot:** Run commands, change project files, post, or spend
 **When to use:** "Research the latest trends in AI", "Find sources for this claim", "Summarize this article"
-**Skill Packs (21, plus the shared executing-plans and GitHub research packs):**
-- Existing: `pack.hector-professional-marketing`, `pack.hector-market-research`, `pack.hector-competitive-analysis`, `pack.hector-source-verification`, `pack.hector-rss-monitoring`, `pack.workflow.executing-plans`, `pack.github.research`
-- API Research: `pack.hector-api-documentation-research`, `pack.hector-api-integration-research`
-- Compliance: `pack.hector-compliance-research`, `pack.hector-security-research`
-- Market: `pack.hector-trend-analysis`, `pack.hector-market-intelligence`, `pack.hector-content-research`
-- Technical: `pack.hector-code-pattern-research`, `pack.hector-technical-architecture-research`, `pack.hector-open-source-analysis`
-- Data: `pack.hector-data-gathering`, `pack.hector-source-curation`, `pack.hector-confidence-scoring`, `pack.hector-survey-design`
-- Documentation: `pack.hector-documentation-audit`, `pack.hector-research-briefing`
+**Skills (4, `src/skills/hector/`):** Competitor material, Find what works, Stock footage, Web research with sources.
 
 ### Miya — Creative
 **Role:** UI/UX and creative systems, content creation, and front-end design and code drafts
 **Can do:** Miya Studio's content factory: scripts with hooks, scene plans and pictures (with the brand's character), thumbnails, voice-overs, music, sound effects, AI clips and motion, Shorts, carousels and campaigns, and lessons from results; plan UI/UX and brand direction; draft front-end designs and code for Alphonso to build
 **Cannot:** Run code or commands (only Alphonso does) or publish (only Marcus does); paid engines (ElevenLabs, Higgsfield, Runway) only inside a step you approved
 **When to use:** "Make a YouTube video about X" (starts a Miya Studio project), "Write a script", "Create a marketing strategy", "Design a storyboard".
-**Skill Packs (21).**
+**Skills (12, `src/skills/miya/`):** Choose sound effects, Creative lessons, Creative package, Design thumbnails, Edit the video, Make a picture, Plan the scenes, Plan the Shorts, UI design, Write a carousel, Write the campaign, Write the script.
 
 ### Maria — Governance & Risk Lead
 **Role:** Governance, risk and quality reviews
@@ -59,28 +40,21 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 **Cannot:** Perform destructive execution
 **Schema:** `riskLevel`, `approvalRequired`, `policyFindings[]`, `complianceNotes[]`, `summary`
 **When to use:** Jose plans her review steps; a review that finds problems sends the work back (at most 2 rounds).
-**Skill Packs (18):**
-- Governance: `pack.maria-audit-governance`, `pack.maria-trust-verification`
-- Requirements: `pack.maria-requirements-analysis`, `pack.maria-risk-classification`
-- Compliance: `pack.maria-compliance-auditing`, `pack.maria-approval-workflow`, `pack.maria-policy-enforcement`
-- Evidence: `pack.maria-evidence-collection`, `pack.maria-claim-verification`, `pack.maria-trust-audit`
-- Audit: `pack.maria-audit-trail`, `pack.maria-state-verification`
-- Content: `pack.maria-brand-safety`, `pack.maria-content-moderation`, `pack.maria-quality-assurance`
-- Documentation: `pack.maria-documentation-review`, `pack.maria-stakeholder-reporting`
-- Incident: `pack.maria-incident-response`
+**Skills (4, `src/skills/maria/`):** Claim check, Governance review, Quality against the references, Quality review.
 
 ### Marcus — Distribution & Release Manager
 **Role:** The only agent that publishes or sends — always after your approval
 **Runtime:** `src/services/marcusExecutionService.ts` — also the one scheduler for posts
 **Can do:** Post a project's videos, Shorts and carousels to YouTube, Instagram and Facebook at their times (YouTube and Facebook are scheduled on the platform; Instagram is sent by his runner, also after the app was closed), remind you of posts to make by hand, create GitHub releases and issues, send Slack messages
 **Cannot:** Publish or send anything you haven't approved
-**Skill Packs (15):** release, distribution and communication packs (his security and risk packs moved to Sentinel and Maria on 2026-10-23)
+**Skills (4, `src/skills/marcus/`):** Place a call, Publish a post, Release readiness, Send a message.
 **Schema:** `workflowId`, `connectorId`, `approvedBy: "maria-governance"`, `status`, `resultUrl`, `executedAtMs`
 **When to use:** "Post this to Slack", "Create a GitHub release", or Campaign Studio's **Approve and schedule**.
 
 ### Echo — Knowledge Historian
 **Role:** Memory synthesis and archival across all agent outputs
 **Runtime:** `src/services/echoMemoryService.ts` — Ollama-powered with deterministic fallback
+**Skills (3, `src/skills/echo/`):** Answer from memory, Merge and clean memory, Save decisions.
 **Can do:** Synthesize memories from workflow outputs, classify retention policy (permanent/standard_180d/ephemeral_7d), categorize memories (project/timeline/preference/orchestration), normalize confidence levels
 **Cannot:** Modify or delete without approval
 **Schema:** `memoryId`, `category`, `retentionPolicy`, `sensitivity`, `confidenceLevel`, `archivedAtMs`
@@ -90,6 +64,7 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 **Role:** Security monitoring and automation safety
 **Note:** security only (risk and quality reviews are Maria's)
 **Runtime:** `src/services/sentinelSecurityService.ts` — two-layer detection: deterministic + Ollama
+**Skills (3, `src/skills/sentinel/`):** Content safety check, Permission audit, Text and link check.
 **Can do:** Monitor for threats, validate safety of automated actions, scan the last week of activity (the sidebar's quick scan says how much it looked at), check content before it's posted
 **Cannot:** Perform destructive execution
 **When to use:** Automatic — Sentinel monitors all external interactions for security risks.
@@ -97,6 +72,7 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 ### Nova — Opportunity Analyst
 **Role:** Opportunity scoring, prioritization, and strategic analysis
 **Runtime:** `src/services/novaAnalysisService.ts` — 4-dimension scoring + Ollama strategic analysis
+**Skills (6, `src/skills/nova/`):** Best time to post, Follow-up ideas, Judge the market, Read the results, Review the script, Value and priority.
 **Can do:** Score opportunities across 4 dimensions (valueScore/riskScore/timingScore/effortScore), classify priority tier (watchlist/medium/high/critical), generate strategic recommendations, store scores for decomposition hints, identify favorable opportunity/risk ratios
 **Cannot:** Execute actions — analysis and recommendation only
 **Schema:** `opportunityId`, `valueScore`, `riskScore`, `timingScore`, `effortScore`, `priorityTier`, `recommendation`, `analyzedAtMs`
