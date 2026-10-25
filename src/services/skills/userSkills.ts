@@ -12,7 +12,7 @@ export type SaveResult = { ok: true } | { ok: false; problems: string[] };
 /** "Short answers!" → "short-answers.md": small letters, digits and dashes only. */
 export function skillFileName(name: string): string {
   const slug = String(name || '')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
