@@ -1,7 +1,4 @@
 import { appendAgentActivity } from './agentActivityService';
-import { isTavilyConfigured, searchTavily } from './connectors/tavilyConnector.js';
-import { isPerplexityConfigured, searchPerplexity } from './connectors/perplexityConnector';
-import { isDeepSeekConfigured, searchWithDeepSeek } from './connectors/deepseekConnector.js';
 import { isBraveSearchConfigured, searchBrave } from './connectors/braveSearchConnector';
 import { getConnectorCredential } from './connectors/connectorAuth';
 import { invoke } from '@tauri-apps/api/core';
@@ -1230,177 +1227,21 @@ export async function createResearchBrief(topic, onProgress) {
 }
 
 export async function runMultiSourceResearch(query) {
+  // One search chain for every caller (agent phase 1, 2026-10-25): Brave, Tavily,
+  // Perplexity (each when set up), DuckDuckGo, news feeds. DeepSeek is no longer
+  // a "source": it is a chat model, and its answer was passed off as one.
   if (!query || typeof query !== 'string' || !query.trim()) {
     return { ok: false, error: 'No query provided.', sources: [], citations: [], providerChain: [] };
   }
-
-  const providerChain = [];
-  const allSources = [];
-  const citations = [];
-  let preferredProvider = null;
-
-  // 1. Try Brave Search (frontend)
-  try {
-    const braveConfig = await isBraveSearchConfigured();
-    if (braveConfig) {
-      const braveResult = await searchBrave(query, 10);
-      if (braveResult.success && Array.isArray(braveResult.results)) {
-        providerChain.push('brave_search');
-        preferredProvider = 'brave_search';
-        for (const r of braveResult.results) {
-          const source = {
-            url: r.url || '',
-            title: r.title || '',
-            snippet: r.snippet || '',
-            provider: 'brave_search',
-            sourceType: 'public_web'
-          };
-          allSources.push(source);
-          citations.push({
-            url: source.url,
-            title: source.title,
-            source: 'brave_search',
-            confidence: 'inferred'
-          });
-        }
-      }
-    }
-  } catch { /* Brave unavailable — fall through */ }
-
-  // 2. Try Tavily (free tier: 1,000 searches/month — tier-2 fallback when Brave unconfigured)
-  if (allSources.length < 3 && isTavilyConfigured()) {
-    try {
-      const tavilyResult = await searchTavily(query, { maxResults: 8 });
-      if (tavilyResult?.sources?.length > 0) {
-        providerChain.push('tavily');
-        if (!preferredProvider) preferredProvider = 'tavily';
-        for (const src of tavilyResult.sources) {
-          if (!allSources.some(s => s.url === src.url)) {
-            allSources.push({ ...src, sourceType: 'public_web', provider: 'tavily' });
-            citations.push({ url: src.url, title: src.title || '', source: 'tavily', confidence: 'inferred' });
-          }
-        }
-      }
-    } catch { /* Tavily unavailable — fall through */ }
-  }
-
-  // 2b. Try Perplexity's Search API (ranked web results) when sources are still thin
-  if (allSources.length < 3 && isPerplexityConfigured()) {
-    try {
-      const perplexityResult = await searchPerplexity(query, { maxResults: 8 });
-      if (perplexityResult?.sources?.length > 0) {
-        providerChain.push('perplexity');
-        if (!preferredProvider) preferredProvider = 'perplexity';
-        for (const src of perplexityResult.sources) {
-          if (!allSources.some(s => s.url === src.url)) {
-            allSources.push({ ...src, sourceType: 'public_web', provider: 'perplexity' });
-            citations.push({ url: src.url, title: src.title || '', source: 'perplexity', confidence: 'inferred' });
-          }
-        }
-      }
-    } catch { /* Perplexity unavailable — fall through */ }
-  }
-
-  // 3. Try DeepSeek AI synthesis (tier-3 fallback when web sources are thin)
-  if (isDeepSeekConfigured() && allSources.length < 3) {
-    try {
-      const dsResult = await searchWithDeepSeek(query, { maxTokens: 1024 });
-      if (dsResult?.summary) {
-        providerChain.push('deepseek');
-        if (!preferredProvider) preferredProvider = 'deepseek';
-        allSources.push({
-          url: `deepseek://synthesis/${Date.now()}`,
-          title: 'DeepSeek AI Synthesis',
-          summary: dsResult.summary,
-          sourceType: 'ai_synthesis',
-          provider: 'deepseek',
-          confidence: 'inferred'
-        });
-        citations.push({ url: `deepseek://synthesis`, title: 'DeepSeek AI', source: 'deepseek', confidence: 'inferred' });
-      }
-    } catch { /* DeepSeek unavailable — fall through */ }
-  }
-
-  // 4. Try Rust backend search_research_sources
-  try {
-    const rustSources = await discoverResearchSources({
-      researchQuestion: query,
-      sourceType: 'public_web',
-      limit: 8,
-      providerLabel: 'rust_backend',
-      queryLabel: query
-    });
-    if (Array.isArray(rustSources) && rustSources.length > 0) {
-      providerChain.push('rust_backend');
-      if (!preferredProvider) preferredProvider = 'rust_backend';
-      for (const src of rustSources) {
-        if (!allSources.some((s) => s.url === src.url)) {
-          allSources.push(src);
-          citations.push({
-            url: src.url,
-            title: src.title || '',
-            source: 'rust_backend',
-            confidence: src.confidence || 'temporary'
-          });
-        }
-      }
-    }
-  } catch { /* Rust backend unavailable */ }
-
-  // 3. Try DuckDuckGo via Rust
-  if (allSources.length < 3) {
-    try {
-      const ddgSources = await discoverResearchSources({
-        researchQuestion: query,
-        sourceType: 'public_web',
-        limit: 8,
-        providerLabel: 'duckduckgo_html',
-        queryLabel: query
-      });
-      if (Array.isArray(ddgSources) && ddgSources.length > 0) {
-        providerChain.push('duckduckgo_html');
-        if (!preferredProvider) preferredProvider = 'duckduckgo_html';
-        for (const src of ddgSources) {
-          if (!allSources.some((s) => s.url === src.url)) {
-            allSources.push(src);
-            citations.push({
-              url: src.url,
-              title: src.title || '',
-              source: 'duckduckgo_html',
-              confidence: src.confidence || 'temporary'
-            });
-          }
-        }
-      }
-    } catch { /* DDG unavailable */ }
-  }
-
-  // 4. Persist results to memory
-  if (allSources.length > 0) {
-    persistResearchResult(query, allSources);
-  }
-
-  recordHectorActivity('multi_source_research', {
-    query,
-    sourceCount: allSources.length,
-    citationCount: citations.length,
-    providerChain,
-    preferredProvider
-  });
-
-  const ok = allSources.length > 0;
-
+  const { searchChain } = await import('./hector/searchChain');
+  const found = await searchChain([query.trim()], { limit: 8 });
+  const sources = found.sources.map((s) => ({ ...s, sourceType: 'public_web' }));
   return {
-    ok,
-    query,
-    sources: allSources,
-    citations,
-    providerChain,
-    preferredProvider,
-    summary: ok
-      ? `Found ${allSources.length} source(s) via ${providerChain.join(' -> ')} with ${citations.length} citation(s).`
-      : 'No sources found from any provider. Try refining the query.',
-    totalSources: allSources.length,
-    totalCitations: citations.length
+    ok: sources.length > 0,
+    error: sources.length ? undefined : (found.errors.join('; ') || 'No results.'),
+    sources,
+    citations: sources.map((s) => ({ url: s.url, title: s.title, source: s.provider, confidence: 'inferred' })),
+    providerChain: found.providers,
+    preferredProvider: found.providers[0] || null,
   };
 }
