@@ -107,6 +107,8 @@ describe('Alphonso desktop: Nova judges what was found', () => {
     expect(output.schema.options.length).toBeGreaterThanOrEqual(3);
     const text = await mainText();
     expect(text).toContain('What to do first');
+    // Chat's Nova card shows her saved verdict for this request (found by its command id).
+    expect(await $('[data-testid="nova-verdict-card"]').isExisting()).toBe(true);
     expect(text).not.toContain('Analyzed At Ms');
     expect(text).not.toContain('Opportunity Score');
   }).timeout(1600000);

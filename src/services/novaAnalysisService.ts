@@ -66,7 +66,7 @@ export async function runNovaAnalysis(
   commandText: string,
   assignment: Assignment | null,
   _priorOutputs: unknown,
-  options: { stepInput?: StepInput | null; signal?: AbortSignal } = {},
+  options: { stepInput?: StepInput | null; signal?: AbortSignal; commandId?: string } = {},
 ): Promise<NovaResult> {
   const input = options.stepInput || emptyInput(String(commandText || ''));
   const contractAction = String(assignment?.actionType || 'opportunity_analysis');
@@ -96,7 +96,7 @@ export async function runNovaAnalysis(
   const summary = verdictText(verdict);
   const about = aboutOf(input.request);
   const request = assignment?.packetId ? findRequestByPacket(assignment.packetId) : null;
-  saveVerdict({ about, doFirst: verdict.doFirst, requestId: request?.id || null, commandId: assignment?.commandId || null, atMs: Date.now(), text: summary });
+  saveVerdict({ about, doFirst: verdict.doFirst, requestId: request?.id || null, commandId: options.commandId || assignment?.commandId || null, atMs: Date.now(), text: summary });
   pushMemoryItem({
     title: `Nova: ${about} — do first: ${verdict.doFirst}`,
     category: 'research_memory',

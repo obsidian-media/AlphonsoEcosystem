@@ -59,6 +59,13 @@ describe('what is kept', () => {
     expect(appendOrchestrationReceipt).not.toHaveBeenCalled();
   });
 
+  // Final review: the engine passes the command id in options, not on the assignment.
+  it('saves the verdict under the command id the engine passes', async () => {
+    llm.mockResolvedValueOnce(verdict);
+    await runNovaAnalysis('x', { packetId: 'p5', helpRound: 1 }, {}, { stepInput: input(), commandId: 'cmd-from-engine' });
+    expect(listVerdicts()[0].commandId).toBe('cmd-from-engine');
+  });
+
   it('the engine stores no score after a Nova step', () => {
     const engine = readFileSync('src/services/joseExecutionEngineService.ts', 'utf8');
     expect(engine).not.toContain('extractNovaScore');
