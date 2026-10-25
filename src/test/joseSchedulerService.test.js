@@ -12,9 +12,9 @@ import {
   SCHEDULE_PRESETS,
 } from '../services/joseSchedulerService';
 
-vi.mock('../services/novaAnalysisService', () => ({
-  runNovaAnalysis: vi.fn(async () => ({ summary: 'Nova: 2 opportunities.', schema: { valueScore: 40 } })),
-  saveOpportunityScore: vi.fn(),
+// Agent phase 2: the daily Nova job asks her through Jose what to do next.
+vi.mock('../services/nova/novaDaily', () => ({
+  askNovaWhatNext: vi.fn(async () => ({ state: 'done', summary: 'Nova: What to do first: approve the launch video.' })),
 }));
 vi.mock('../services/sentinelSecurityService', () => ({
   runSentinelSecurityScan: vi.fn(async () => ({ summary: 'Sentinel: risk 10/100, 0 findings.' })),
@@ -232,7 +232,7 @@ describe('running schedules', () => {
     appendAgentActivity.mockClear();
     startScheduler({ runCommand: vi.fn() });
     const cases = [
-      ['nova_daily_scan', 'Nova: 2 opportunities.'],
+      ['nova_daily_scan', 'What to do first: approve the launch video.'],
       ['sentinel_daily_summary', 'Sentinel: risk 10/100'],
       ['maria_weekly_audit', 'Maria: low risk.'],
     ];

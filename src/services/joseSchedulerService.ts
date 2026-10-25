@@ -29,7 +29,7 @@ export const SCHEDULE_PRESETS: SchedulePreset[] = [
   { id: 'hourly', label: 'Every hour', intervalMs: 60 * 60 * 1000 },
   { id: 'daily', label: 'Every day', intervalMs: 24 * 60 * 60 * 1000 },
   { id: 'weekly', label: 'Every week', intervalMs: 7 * 24 * 60 * 60 * 1000 },
-  { id: 'nova_daily_scan', cron: '0 9 * * *', label: 'Nova Daily Opportunity Scan', handler: 'nova_scan', description: "Every day at 9:00, Nova looks over the last week's work for opportunities." },
+  { id: 'nova_daily_scan', cron: '0 9 * * *', label: 'Nova: what to do next', handler: 'nova_scan', description: "Every day at 9:00, Nova looks over the last week's work and what is still waiting, and says what to do next." },
   { id: 'sentinel_daily_summary', cron: '0 8 * * *', label: 'Sentinel Daily Threat Summary', handler: 'sentinel_summary', description: "Every day at 8:00, Sentinel checks the last week's work for risky actions." },
   { id: 'echo_nightly_consolidation', cron: '0 2 * * *', label: 'Echo Nightly Memory Consolidation', handler: 'echo_consolidate', description: 'Every night at 2:00, Echo summarises memories older than a week.' },
   { id: 'hector_morning_briefing', cron: '0 7 * * *', label: 'Hector Morning Research Briefing', handler: 'hector_brief', description: 'Every day at 7:00, Hector collects the top headlines from his news feeds.' },
@@ -155,13 +155,11 @@ async function runBuiltInJob(handler: string): Promise<Omit<ScheduleRunResult, '
   if (handler === 'nova_scan') {
     const work = await recentWorkText();
     if (!work) return { state: 'skipped', summary: NOTHING_RECENT };
-    const { runNovaAnalysis, saveOpportunityScore } = await import('./novaAnalysisService');
-    const result = await runNovaAnalysis(`Daily opportunity scan of the last week's work:\n${work}`, null, null);
-    const score = Number(result.schema?.valueScore);
-    // saveOpportunityScore also notifies when the score passes the user's threshold.
-    try { if (Number.isFinite(score)) saveOpportunityScore(score, result.summary); } catch { /* history optional */ }
+    // Agent phase 2: Nova is asked, as a request, what to do next (a ranked verdict).
+    const { askNovaWhatNext } = await import('./nova/novaDaily');
+    const result = await askNovaWhatNext(work);
     await recordActivity('nova', 'daily_scan', result.summary);
-    return { state: 'done', summary: result.summary };
+    return result;
   }
   if (handler === 'sentinel_summary') {
     const work = await recentWorkText();
