@@ -3,7 +3,7 @@ import { isBraveSearchConfigured, searchBrave } from './connectors/braveSearchCo
 import { invoke } from '@tauri-apps/api/core';
 import { HECTOR_RESEARCH_SCHEMA } from '../agents/hector/hectorResearchSchema';
 import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../agents/hector/hectorPermissions';
-import { createAgentPacket, AGENTS } from './agentBusService';
+import { AGENTS } from './agentBusService';
 import { pushMemoryItem } from './memoryService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceService';
@@ -566,28 +566,6 @@ export async function resynthesizeHectorReport(reportId, onProgress) {
   return runHectorLiveResearch(reportId, onProgress);
 }
 
-export function createHectorApprovalPacket(reportId) {
-  const report = listHectorReports().find((item) => item.id === reportId);
-  if (!report) return null;
-  const packet = createAgentPacket({
-    fromAgent: AGENTS.HECTOR,
-    toAgent: AGENTS.JOSE,
-    title: `Research approval: ${report.researchQuestion}`,
-    packetType: 'research_approval_handoff',
-    payload: report,
-    source: 'hector-research-desk',
-    confidence: TRUST_STATES.TEMPORARY,
-    verificationState: TRUST_STATES.UNVERIFIED,
-    requiresApproval: false,
-    riskLevel: report.riskLevel || 'low',
-    actionType: 'research_review',
-    commandPreview: 'No command execution. Research review only.',
-    fileChangePreview: 'No file changes requested.',
-    rollbackAvailable: false
-  });
-  recordHectorActivity('jose_approval_handoff_created', { reportId, packetId: packet.id });
-  return packet;
-}
 
 export async function createResearchBrief(topic, onProgress) {
   const draft = createResearchDraft({

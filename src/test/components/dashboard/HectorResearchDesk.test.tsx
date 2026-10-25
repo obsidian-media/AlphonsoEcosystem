@@ -19,6 +19,7 @@ vi.mock('../../../services/hectorResearchService', () => {
 });
 vi.mock('../../../services/browserAutomationService', () => ({
   openExternalUrl: vi.fn(),
+  writeClipboard: vi.fn(async () => null),
 }));
 
 import { HectorResearchDesk } from '../../../components/dashboard/HectorResearchDesk';

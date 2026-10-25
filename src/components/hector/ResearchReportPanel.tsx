@@ -3,6 +3,8 @@ import { openExternalUrl } from '../../services/browserAutomationService';
 import { Zone } from '../ui/Zone';
 import { exportHectorReportAsMarkdown, exportHectorReportAsPdf, exportHectorReportAsPowerPoint } from '../../services/hectorExportService';
 import { resynthesizeHectorReport } from '../../services/hectorResearchService';
+import { ResearchFindings } from './ResearchFindings';
+import type { ResearchReport } from '../../services/hector/researchRun';
 
 interface SourceProof {
   ok?: boolean;
@@ -31,6 +33,8 @@ interface Report {
   inferredPoints?: string[];
   joseApprovalNeeded?: string[];
   recommendedNextStep?: string;
+  /** The cited report (agent phase 1). */
+  research?: ResearchReport | null;
 }
 
 interface Props {
@@ -103,6 +107,25 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
   }
 
   const sourceProofs = report.sourceProofs ?? [];
+
+  // Reports made since agent phase 1: the answer first, cited findings, labelled sources.
+  if (report.research) {
+    return (
+      <Zone mood="hector">
+        <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-(--agent-hector)">Research Report</div>
+        <div className="space-y-3">
+          <div className="text-sm font-semibold text-(--text-1)">{report.researchQuestion}</div>
+          <ResearchFindings research={report.research} />
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Export:</span>
+            <button type="button" onClick={() => exportHectorReportAsMarkdown(report)} className="rounded-lg bg-(--surface-2) px-2.5 py-1 text-[10px] font-semibold text-(--text-2) hover:bg-(--surface-3)">Markdown</button>
+            <button type="button" onClick={() => exportHectorReportAsPdf(report)} className="rounded-lg bg-(--surface-2) px-2.5 py-1 text-[10px] font-semibold text-(--text-2) hover:bg-(--surface-3)">PDF</button>
+            <button type="button" onClick={() => exportHectorReportAsPowerPoint(report)} className="rounded-lg bg-(--surface-2) px-2.5 py-1 text-[10px] font-semibold text-(--text-2) hover:bg-(--surface-3)">PowerPoint</button>
+          </div>
+        </div>
+      </Zone>
+    );
+  }
 
   return (
     <Zone mood="hector">

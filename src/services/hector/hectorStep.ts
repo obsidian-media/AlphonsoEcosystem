@@ -2,7 +2,7 @@
 // researches the request's own words (never Jose's notes or the HELP line, which
 // went into the search query until then), and hands on the cited report. Found
 // nothing → the step waits for setup with the reason; no facts from memory.
-import { createResearchDraft, runHectorLiveResearch } from '../hectorResearchService';
+import { createResearchDraft, listHectorReports, runHectorLiveResearch } from '../hectorResearchService';
 import { fallbackQuery, NO_REPORT } from './researchRun';
 import type { StepInput } from '../jose/stepInput';
 
@@ -12,7 +12,9 @@ export async function runHectorStep(assignment: any, stepInput: StepInput | null
   const question = fallbackQuery(request) || instruction;
   const base = { resultUrl: null, contractAction: assignment?.actionType || 'research' };
   const urls = Array.isArray(assignment?.payload?.urls) ? assignment.payload.urls.map(String) : [];
-  const draft = createResearchDraft({ researchQuestion: question, sourceUrls: urls, sourceType: 'public_web', riskLevel: assignment?.riskLevel || 'low' });
+  // The Research Desk's own report (agent phase 1): researched in place, so the Desk shows it.
+  const given = assignment?.payload?.reportId ? (listHectorReports() as any[]).find((r) => r.id === assignment.payload.reportId) : null;
+  const draft = given || createResearchDraft({ researchQuestion: question, sourceUrls: urls, sourceType: 'public_web', riskLevel: assignment?.riskLevel || 'low' });
   const report: any = await runHectorLiveResearch(draft.id, undefined, {
     request,
     focus: instruction && instruction !== question ? instruction : undefined,
