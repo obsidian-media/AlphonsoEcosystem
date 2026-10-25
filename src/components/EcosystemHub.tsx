@@ -20,14 +20,6 @@ import {
   rejectPacket
 } from '../services/agentBusService';
 import {
-  installSkillPack,
-  listSkillPackAudit,
-  listSkillPacks,
-  setSkillPackEnabled,
-  uninstallSkillPack,
-  validateSkillPackManifest
-} from '../services/skillPackService';
-import {
   WORKFLOW_NODE_LIBRARY,
   addWorkflowEdge,
   addWorkflowNode,
@@ -49,6 +41,7 @@ import { ExecutionTimeline } from './agentWorkshop/ExecutionTimeline';
 import { FinalExecutionPacket } from './agentWorkshop/FinalExecutionPacket';
 import { SystemHealthPanel } from './agentWorkshop/SystemHealthPanel';
 import { Tabs } from './ui/Tabs';
+import { SkillsPage } from './skills/SkillsPage';
 
 const WorkflowOperationsDashboard = lazy(() =>
   import('./WorkflowOperationsDashboard').then((module) => ({
@@ -73,8 +66,6 @@ interface Props {
 
 export function EcosystemHub({ initialTab = 'overview', settings, setSettings, ollamaStatus, verificationLogs = [], voiceStatus, workspaceFoundation, updateCheckState, nativeSelfDevProof, setNativeSelfDevProof, nativeProofHooks }: Props) {
   const [packets, setPackets] = useState<ReturnType<typeof listAgentPackets>>(() => listAgentPackets());
-  const [skills, setSkills] = useState<{ id: string; name: string; version: string; enabled: boolean; type: string; [key: string]: unknown }[]>(() => listSkillPacks());
-  const [skillAudit, setSkillAudit] = useState(() => listSkillPackAudit());
   const [workflows, setWorkflows] = useState<{ id: string; name: string; nodes: unknown[]; edges: unknown[]; [key: string]: unknown }[]>(() => listWorkflows());
   const [sessionSummary, setSessionSummary] = useState<{ totalEvents: number; warnings?: unknown[]; unresolved?: unknown[]; hours: number; recommendations?: string[] }>(() => summarizeSession(24));
   const [resourceSummary, setResourceSummary] = useState<{ points: number; avgTokenEstimate: number }>(() => summarizeResourceUsage(24));
@@ -82,30 +73,14 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
   const [marketItems, setMarketItems] = useState<{ id: string; name: string; type: string; status: string; [key: string]: unknown }[]>(() => listMarketplaceItems());
   const [snapshots, setSnapshots] = useState<{ id: string; timestampMs: number; payload?: Record<string, unknown> }[]>(() => listSnapshots());
   const [showAdvancedSections, setShowAdvancedSections] = useState<string>(initialTab);
-  const [manifestInput, setManifestInput] = useState('{\n  "id": "pack.youtube-studio",\n  "name": "YouTube Pack",\n  "version": "1.0.0",\n  "permissions": ["memory.read", "workflows.write"],\n  "category": "creator"\n}');
   const [newWorkflowName, setNewWorkflowName] = useState('You -> Jose -> Agents -> Jose Confirmation Flow');
   const [handoffNote, setHandoffNote] = useState('Creative packet validated and queued for supervised execution.');
 
   const approvalQueue = useMemo(() => listApprovalQueue() as { id: string; title: string; fromAgent: string; toAgent: string; packetType: string }[], [packets]);
-  const skillGroups = useMemo(() => {
-    const groups = new Map<string, typeof skills>();
-    for (const skill of skills) {
-      const ownerAgent = typeof skill.ownerAgent === 'string' ? skill.ownerAgent : undefined;
-      const category = typeof skill.category === 'string' ? skill.category : undefined;
-      const label = ownerAgent
-        ? ownerAgent.charAt(0).toUpperCase() + ownerAgent.slice(1)
-        : (category === 'agent_workflow' ? 'Agent Workflows' : 'General');
-      if (!groups.has(label)) groups.set(label, []);
-      groups.get(label)!.push(skill);
-    }
-    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [skills]);
   const timeline = useMemo(() => listSessionEvents().slice(-30).reverse() as { id: string; title: string; category: string; timestampMs: number }[], [sessionSummary, packets, workflows, resourceSnapshots]);
 
   const refreshAll = () => {
     setPackets(listAgentPackets());
-    setSkills(listSkillPacks());
-    setSkillAudit(listSkillPackAudit());
     setWorkflows(listWorkflows());
     setSessionSummary(summarizeSession(24));
     setResourceSummary(summarizeResourceUsage(24));
@@ -152,43 +127,6 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
       title: 'Packet marked executed',
       details: { packetId, status: 'resolved' },
       agent: 'alphonso'
-    });
-    refreshAll();
-  };
-
-  const runInstallSkillPack = () => {
-    let parsed = null;
-    try {
-      parsed = JSON.parse(manifestInput);
-    } catch {
-      parsed = null;
-    }
-
-    if (!parsed) return;
-    installSkillPack(parsed);
-    appendSessionEvent({
-      category: 'skill_pack',
-      title: 'Skill pack installed',
-      details: { id: parsed.id },
-      agent: 'alphonso'
-    });
-    refreshAll();
-  };
-
-  const runValidateManifest = () => {
-    let parsed = null;
-    try {
-      parsed = JSON.parse(manifestInput);
-    } catch {
-      parsed = null;
-    }
-    const result = validateSkillPackManifest(parsed);
-    appendSessionEvent({
-      category: 'verification',
-      title: 'Skill manifest validation',
-      details: result,
-      agent: 'alphonso',
-      verificationState: result.valid ? 'verified' : 'failed'
     });
     refreshAll();
   };
@@ -311,37 +249,8 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
 
           {/* SKILLS TAB */}
           {showAdvancedSections === 'skills' && (
-            <Panel icon={Layers3} title="Skill Pack System">
-              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                {skills.length === 0 && <p className="text-sm text-(--text-3)">No skill packs installed.</p>}
-                {skillGroups.map(([groupLabel, groupSkills]) => (
-                  <div key={groupLabel}>
-                    <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-(--text-3)">{groupLabel} <span className="text-(--text-4)">({groupSkills.length})</span></div>
-                    <div className="space-y-2">
-                      {groupSkills.map((skill) => (
-                        <div key={skill.id} className="rounded-lg bg-(--surface-1) px-3 py-2 flex items-center justify-between">
-                          <div>
-                            <div className="text-xs font-semibold text-(--text-2)">{skill.name}</div>
-                            <div className="text-[11px] text-(--text-3)">{skill.id} | v{skill.version}</div>
-                          </div>
-                          <div className="flex gap-1">
-                            <button onClick={() => { setSkillPackEnabled(skill.id, !skill.enabled); refreshAll(); }} className="rounded-sm bg-(--surface-2) px-2 py-1 text-[10px] text-(--text-2)">{skill.enabled ? 'Disable' : 'Enable'}</button>
-                            <button onClick={() => { uninstallSkillPack(skill.id); refreshAll(); }} className="rounded-sm bg-(--error-dim) px-2 py-1 text-[10px] text-(--error)">Remove</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4">
-                <label className="text-[10px] uppercase tracking-widest text-(--text-3) mb-1 block">Install from manifest JSON</label>
-                <textarea value={manifestInput} onChange={(e) => setManifestInput(e.target.value)} rows={6} className="w-full rounded-lg bg-(--surface-2) px-3 py-2 font-mono text-[11px] text-(--text-2)" />
-                <div className="mt-2 flex gap-2">
-                  <button onClick={runValidateManifest} className="rounded-sm bg-(--surface-2) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--text-2)">Validate</button>
-                  <button onClick={runInstallSkillPack} className="rounded-sm bg-(--accent-dim) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--accent)">Install</button>
-                </div>
-              </div>
+            <Panel icon={Layers3} title="Agent Skills">
+              <SkillsPage />
             </Panel>
           )}
 

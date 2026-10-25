@@ -16,15 +16,6 @@ vi.mock('../services/agentBusService', () => ({
   addPacketReference: vi.fn()
 }));
 
-vi.mock('../services/skillPackService', () => ({
-  listSkillPacks: vi.fn().mockReturnValue([]),
-  listSkillPackAudit: vi.fn().mockReturnValue([]),
-  installSkillPack: vi.fn(),
-  uninstallSkillPack: vi.fn(),
-  setSkillPackEnabled: vi.fn(),
-  validateSkillPackManifest: vi.fn().mockReturnValue({ valid: true })
-}));
-
 vi.mock('../services/workflowBuilderService', () => ({
   listWorkflows: vi.fn().mockReturnValue([]),
   createWorkflow: vi.fn().mockReturnValue({ id: 'wf-1', name: 'test', nodes: [], edges: [] }),
@@ -122,7 +113,7 @@ describe('EcosystemHub', () => {
   it('switches to Skills tab', async () => {
     render(<EcosystemHub {...defaultProps} />);
     fireEvent.click(screen.getByText('Skills'));
-    await waitFor(() => expect(screen.getByText('Skill Pack System')).toBeDefined(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByText('Agent Skills')).toBeDefined(), { timeout: 3000 });
   });
 
   it('switches to Workflows tab', () => {

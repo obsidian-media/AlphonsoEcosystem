@@ -298,6 +298,17 @@ describe('SettingsView smoke', () => {
     expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ joseWaitingExpiryDays: 0 }));
   });
 
+  it('saves the model size from which agents call their own tools (agent roles Part B)', () => {
+    const setSettings = renderApprovals({ ...minimalSettings });
+    fireEvent.click(screen.getByRole('button', { name: 'Agents' }));
+    const field = screen.getByLabelText('Agents call their own tools from model size (billions)');
+    expect(field.value).toBe('14');
+    fireEvent.change(field, { target: { value: '30' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ agentToolCallMinSizeB: 30 }));
+    fireEvent.change(field, { target: { value: 'abc' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ agentToolCallMinSizeB: 14 }));
+  });
+
   it('switches what Jose sends to Telegram, all on to start', () => {
     const setSettings = renderApprovals({ ...minimalSettings });
     for (const label of ['When a step waits for you', 'When a plan waits for you', 'When a request finishes or fails', 'When a review asks you to decide']) {

@@ -1586,6 +1586,25 @@ export function SettingsView({
         </div>
       </section>
       <section className="space-y-4">
+        <SectionHeader icon={Bot} label="Agent Skills" />
+        <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
+          <div>
+            <label htmlFor="agent-tool-call-size" className="text-sm font-semibold text-(--text-1)">Agents call their own tools from model size (billions)</label>
+            <div className="text-[11px] text-(--text-3) mt-0.5">Smaller models follow each skill's steps in order. Paid and cloud models always call their own tools. The skills themselves are under All Agents → Skills.</div>
+          </div>
+          <input
+            id="agent-tool-call-size"
+            inputMode="numeric"
+            value={Number(settings.agentToolCallMinSizeB) > 0 ? String(settings.agentToolCallMinSizeB) : '14'}
+            onChange={(e) => {
+              const size = Number(e.target.value);
+              setSettings({ ...settings, agentToolCallMinSizeB: Number.isFinite(size) && size > 0 ? size : 14 });
+            }}
+            className="w-20 rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+          />
+        </div>
+      </section>
+      <section className="space-y-4">
         <SectionHeader icon={BarChart3} label="Agent Performance" />
         <AgentMetricsPanel />
       </section>
