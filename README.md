@@ -481,7 +481,7 @@ npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app 
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 367 Rust unit tests across 52 modules
+cargo test                     # 368 Rust unit tests across 52 modules
                                 # (cargo test runs a few more: the async
                                 # #[tokio::test] cases, 370 in all)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
