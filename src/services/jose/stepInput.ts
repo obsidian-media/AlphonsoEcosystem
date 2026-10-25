@@ -18,6 +18,8 @@ export interface NeededWork {
   cut: number;
   /** The piece of work itself (a post, a script, a letter), for whoever sends or uses it. */
   main: string;
+  /** The step failed: its text is why, not work to build on (agent phase 2). */
+  failed?: boolean;
 }
 
 export interface StepInput {
@@ -101,6 +103,7 @@ function neededWork(output: StepOutput, limit: number): NeededWork {
     sources: (Array.isArray(output.sources) ? output.sources : []).map(String),
     cut,
     main: mainOf(output),
+    ...(output.resultState === 'failed' ? { failed: true } : {}),
   };
 }
 

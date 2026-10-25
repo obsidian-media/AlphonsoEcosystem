@@ -57,7 +57,7 @@ import { runEchoPreservation } from './echoMemoryService';
 import { runMarcusDistribution } from './marcusExecutionService';
 import { runSentinelSecurityScan } from './sentinelSecurityService';
 import { runNovaAnalysis } from './novaAnalysisService';
-import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
+import { getDecompositionHints } from './novaFeedbackService';
 import { prepareSkill } from './skills/prepareSkill';
 import { runHectorStep } from './hector/hectorStep';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
@@ -211,18 +211,6 @@ function isBlockedByZeroCostMode(packet, assignment) {
 function isBlockedByHermesApproval(assignment) {
   if (getAgentProvider(assignment?.agent)?.provider !== 'hermes') return false;
   return Boolean(getRuntimePolicySettings().approvalMode);
-}
-
-function extractNovaScore(result) {
-  if (!result) return null;
-  const artifacts = Array.isArray(result.artifacts) ? result.artifacts : [];
-  const scoreArtifact = artifacts.find((a) => a?.type === 'opportunity_score');
-  if (scoreArtifact) {
-    const opportunity = Number(scoreArtifact.opportunityScore ?? scoreArtifact.score ?? 50);
-    const risk = Number(scoreArtifact.riskScore ?? 0);
-    return { opportunityScore: opportunity, riskScore: risk, score: opportunity };
-  }
-  return null;
 }
 
 function checkSentinelGate(commandId, assignment) {
@@ -2111,12 +2099,6 @@ export async function runJoseCommandExecutionPipeline({
           });
         } catch (error) {
           console.warn('[jose] content step not saved to its project', error);
-        }
-      }
-      if (assignment.agent === AGENTS.NOVA) {
-        const novaScore = extractNovaScore(result);
-        if (novaScore) {
-          storeNovaScore(command.id, novaScore);
         }
       }
       createAgentReportToJose({

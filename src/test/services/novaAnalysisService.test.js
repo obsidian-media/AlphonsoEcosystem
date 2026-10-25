@@ -1,132 +1,66 @@
+// Nova's step (agent phase 2): with nothing to judge she asks Hector through the help line;
+// each verdict is saved once, with one memory note; the engine stores no keyword score.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  computeOpportunityScores, classifyPriorityTier, buildNovaAnalysisPrompt,
-  parseNovaAnalysisResponse, buildNovaFallbackAnalysis, setAlertThreshold,
-  getAlertThreshold, getOpportunityHistory
-} from '../../services/novaAnalysisService';
+import { readFileSync } from 'node:fs';
 
-vi.mock('../../services/trustModel', () => ({
-  TRUST_STATES: { VERIFIED: 'verified', INFERRED: 'inferred' },
-  timestampMs: vi.fn(() => Date.now())
-}));
+const llm = vi.fn();
+const pushMemoryItem = vi.fn();
+const appendSessionEvent = vi.fn();
+const appendOrchestrationReceipt = vi.fn();
+vi.mock('../../lib/ollama', () => ({ generateAgentLlmResponse: (...a) => llm(...a) }));
+vi.mock('../../services/memoryService', () => ({ pushMemoryItem: (...a) => pushMemoryItem(...a) }));
+vi.mock('../../services/sessionIntelligenceService', () => ({ appendSessionEvent: (...a) => appendSessionEvent(...a) }));
+vi.mock('../../services/orchestrationReceiptService', () => ({ appendOrchestrationReceipt: (...a) => appendOrchestrationReceipt(...a) }));
 
-vi.mock('../../services/memoryService', () => ({ pushMemoryItem: vi.fn() }));
-vi.mock('../../services/sessionIntelligenceService', () => ({ appendSessionEvent: vi.fn() }));
-vi.mock('../../services/orchestrationReceiptService', () => ({ appendOrchestrationReceipt: vi.fn() }));
-vi.mock('../../services/novaFeedbackService', () => ({
-  storeNovaScore: vi.fn(),
-  getDecompositionHints: vi.fn(() => ({ hints: [] }))
-}));
-vi.mock('../../lib/durableStore', () => ({
-  durableGet: vi.fn(() => null),
-  durableSet: vi.fn()
-}));
-vi.mock('../../services/notificationService', () => ({ appendNotification: vi.fn() }));
+import { runNovaAnalysis } from '../../services/novaAnalysisService';
+import { findHelpRequest } from '../../services/jose/joseHelp';
+import { listVerdicts } from '../../services/nova/novaVerdicts';
 
-describe('novaAnalysisService', () => {
-  beforeEach(() => {
-    localStorage.clear();
+const json = (v) => ({ response: JSON.stringify(v) });
+const input = (over = {}) => ({ instruction: '', request: 'What should my bakery do to get more customers?', needs: [], others: [], memory: '', review: null, ...over });
+const verdict = json({ doFirst: 'a loyalty card', options: [{ name: 'Loyalty card', rank: 1, why: 'brings regulars back', value: 'high', effort: 'low', risk: 'low' }] });
+
+beforeEach(() => { llm.mockReset(); pushMemoryItem.mockReset(); appendSessionEvent.mockReset(); appendOrchestrationReceipt.mockReset(); localStorage.clear(); });
+
+describe('nothing to judge', () => {
+  it('nothing to judge asks for research', async () => {
+    llm.mockResolvedValueOnce({ response: 'HELP: research what small bakeries spend on marketing' });
+    const out = await runNovaAnalysis('x', { commandId: 'c1', stepId: 'nova' }, {}, { stepInput: input() });
+    expect(llm.mock.calls[0][1].prompt).toContain('HELP: research');
+    expect(out.resultState).toBe('completed');
+    expect(findHelpRequest(out)).toBe('research what small bakeries spend on marketing');
+    expect(listVerdicts()).toEqual([]);
   });
 
-  describe('computeOpportunityScores', () => {
-    it('returns scores for empty input', () => {
-      const scores = computeOpportunityScores('', {});
-      expect(scores.opportunityScore).toBe(0);
-      expect(scores.riskScore).toBe(0);
-      expect(typeof scores.valueScore).toBe('number');
-    });
-
-    it('detects execution intent signals', () => {
-      const scores = computeOpportunityScores('build and launch the app', {});
-      expect(scores.opportunityScore).toBeGreaterThan(0);
-      expect(scores.opportunitySignals).toContain('execution_intent');
-    });
-
-    it('detects risk signals', () => {
-      const scores = computeOpportunityScores('delete the database', {});
-      expect(scores.riskScore).toBeGreaterThan(0);
-      expect(scores.riskSignals).toContain('destructive_action');
-    });
-
-    it('adds bonus for completed prior agents', () => {
-      const scores = computeOpportunityScores('test', { miya: { resultState: 'completed' } });
-      expect(scores.opportunitySignals).toContain('miya_creative_ready');
-    });
+  it('failed needs count as nothing to judge', async () => {
+    llm.mockResolvedValueOnce({ response: 'HELP: research bakery marketing' });
+    const failedHector = { stepId: 'hector', agent: 'hector', text: 'No search engine found anything.', files: [], sources: [], cut: 0, main: '', failed: true };
+    await runNovaAnalysis('x', { commandId: 'c2' }, {}, { stepInput: input({ needs: [failedHector] }) });
+    expect(llm.mock.calls[0][1].prompt).toContain('HELP: research');
   });
 
-  describe('classifyPriorityTier', () => {
-    it('returns critical for high scores', () => {
-      expect(classifyPriorityTier(80)).toBe('critical');
-    });
+  it('a help round never asks for help again', async () => {
+    llm.mockResolvedValueOnce(verdict);
+    const out = await runNovaAnalysis('x', { commandId: 'c3', helpRound: 1 }, {}, { stepInput: input() });
+    expect(llm.mock.calls[0][1].prompt).not.toContain('HELP:');
+    expect(out.schema.fromRequestOnly).toBe(true);
+    expect(out.summary.split('\n')[0]).toBe('Judged from your request only.');
+  });
+});
 
-    it('returns high for medium-high scores', () => {
-      expect(classifyPriorityTier(60)).toBe('high');
-    });
-
-    it('returns medium for medium scores', () => {
-      expect(classifyPriorityTier(40)).toBe('medium');
-    });
-
-    it('returns watchlist for low scores', () => {
-      expect(classifyPriorityTier(20)).toBe('watchlist');
-    });
+describe('what is kept', () => {
+  it('saves the verdict and one memory note', async () => {
+    llm.mockResolvedValueOnce(verdict);
+    await runNovaAnalysis('x', { commandId: 'c4', packetId: 'p4', helpRound: 1 }, {}, { stepInput: input() });
+    expect(listVerdicts()[0]).toMatchObject({ doFirst: 'a loyalty card', commandId: 'c4', about: 'What should my bakery do to get more customers?' });
+    expect(pushMemoryItem).toHaveBeenCalledTimes(1);
+    expect(pushMemoryItem.mock.calls[0][0]).toMatchObject({ title: 'Nova: What should my bakery do to get more customers? — do first: a loyalty card', confidence: 'inferred' });
+    expect(appendSessionEvent).not.toHaveBeenCalled();
+    expect(appendOrchestrationReceipt).not.toHaveBeenCalled();
   });
 
-  describe('buildNovaAnalysisPrompt', () => {
-    it('returns prompt with scores', () => {
-      const prompt = buildNovaAnalysisPrompt('test', {}, { opportunityScore: 50, riskScore: 20, timingScore: 60, effortScore: 70, valueScore: 55 });
-      expect(prompt).toContain('Nova');
-      expect(prompt).toContain('test');
-    });
-  });
-
-  describe('parseNovaAnalysisResponse', () => {
-    it('parses valid JSON', () => {
-      const json = JSON.stringify({ valueScore: 80, riskScore: 20, timingScore: 60, effortScore: 70, priorityTier: 'high', recommendation: 'Go for it', summary: 'Great opportunity' });
-      const result = parseNovaAnalysisResponse(json);
-      expect(result.valueScore).toBe(80);
-      expect(result.priorityTier).toBe('high');
-    });
-
-    it('returns null for invalid JSON', () => {
-      expect(parseNovaAnalysisResponse('not json')).toBeNull();
-    });
-  });
-
-  describe('buildNovaFallbackAnalysis', () => {
-    it('creates fallback for high value', () => {
-      const result = buildNovaFallbackAnalysis({ valueScore: 80, riskScore: 10, timingScore: 60, effortScore: 70 });
-      expect(result.priorityTier).toBe('critical');
-      expect(result.recommendation).toContain('High-value');
-    });
-
-    it('creates fallback for low value', () => {
-      const result = buildNovaFallbackAnalysis({ valueScore: 20, riskScore: 10, timingScore: 60, effortScore: 70 });
-      expect(result.priorityTier).toBe('watchlist');
-    });
-  });
-
-  describe('threshold management', () => {
-    it('getAlertThreshold returns default', () => {
-      expect(getAlertThreshold()).toBe(75);
-    });
-
-    it('setAlertThreshold stores value', () => {
-      setAlertThreshold(80);
-      expect(getAlertThreshold()).toBe(80);
-    });
-
-    it('setAlertThreshold clamps to 0-100', () => {
-      setAlertThreshold(150);
-      expect(getAlertThreshold()).toBe(100);
-      setAlertThreshold(-10);
-      expect(getAlertThreshold()).toBe(0);
-    });
-  });
-
-  describe('getOpportunityHistory', () => {
-    it('returns empty when nothing stored', () => {
-      expect(getOpportunityHistory()).toEqual([]);
-    });
+  it('the engine stores no score after a Nova step', () => {
+    const engine = readFileSync('src/services/joseExecutionEngineService.ts', 'utf8');
+    expect(engine).not.toContain('extractNovaScore');
   });
 });

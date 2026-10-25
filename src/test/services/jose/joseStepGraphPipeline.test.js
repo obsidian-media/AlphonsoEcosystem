@@ -50,6 +50,10 @@ vi.mock('../../../lib/ollama', () => ({
       const verdict = (globalThis.__joseVerdicts || []).shift() || 'pass';
       return { response: JSON.stringify({ verdict, findings: verdict === 'fix' ? ['The hook is weak.'] : [] }) };
     }
+    // Nova's ranked verdict (agent phase 2).
+    if (_agent === 'nova' && /You are Nova/.test(prompt)) {
+      return { response: JSON.stringify({ doFirst: 'the first option', options: [{ name: 'The first option', rank: 1, why: 'it is ready', value: 'high', effort: 'low', risk: 'low' }] }) };
+    }
     return { response: JSON.stringify({ summary: 'done', title: 'x', hook: 'x', script: 'x', scenes: [], prompts: [] }) };
   }),
   getConfiguredOllamaEndpoint: () => globalThis.__joseEndpoint || 'http://127.0.0.1:11434',
