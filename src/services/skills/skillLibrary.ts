@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 // Every agent's skills (agent roles Part B): the built-in ones bundled from
 // src/skills/<agent>/*.md, and your own from the app's skills folder (loaded by
 // userSkills.ts). A file that breaks the rules is kept out and listed with why.
