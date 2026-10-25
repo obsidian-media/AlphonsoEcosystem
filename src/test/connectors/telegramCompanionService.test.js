@@ -539,14 +539,22 @@ describe('telegramCompanionService', () => {
   });
 
   describe('handleNovaCommand', () => {
-    it('sends no-history message when empty', async () => {
-      const { getOpportunityHistory } = await import('../../services/novaAnalysisService');
-      getOpportunityHistory.mockReturnValue([]);
-
+    // Agent phase 2: /nova lists Nova's last verdicts.
+    it('says how to get a verdict when there is none', async () => {
+      localStorage.clear();
       await service.handleNovaCommand('test-token', 'chat-123');
-
       const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
-      expect(calls[0][1].text).toContain('No Nova analysis');
+      expect(calls[0][1].text).toContain('No verdicts yet');
+    });
+
+    it('/nova sends the last verdicts', async () => {
+      localStorage.clear();
+      const { saveVerdict, listVerdicts, verdictsText } = await import('../../services/nova/novaVerdicts');
+      saveVerdict({ about: 'Bakery marketing', doFirst: 'the email newsletter', requestId: 'r1', commandId: 'c1', atMs: Date.now(), text: 't' });
+      mockInvoke.mockClear();
+      await service.handleNovaCommand('test-token', 'chat-123');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
+      expect(calls[0][1].text).toContain(verdictsText(listVerdicts(5)));
     });
   });
 
