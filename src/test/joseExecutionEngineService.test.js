@@ -159,7 +159,8 @@ describe('executeHectorAssignment no longer re-summarizes', () => {
     const fnBody = source.slice(fnStart, fnEnd);
     expect(fnBody).not.toContain('generateAgentLlmResponse');
     expect(fnBody).not.toContain('draftPrompt');
-    expect(fnBody).toContain('report?.summary');
+    // Agent phase 1: Hector's step is runHectorStep (src/services/hector/hectorStep.ts).
+    expect(fnBody).toContain('runHectorStep');
   });
 });
 

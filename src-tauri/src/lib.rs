@@ -50,6 +50,7 @@ mod os_keychain_store;
 mod plugin_runtime;
 mod policy_gate;
 mod post_metrics;
+mod research_store;
 mod runtime_manager;
 mod runway;
 mod search;
@@ -782,6 +783,9 @@ pub fn run() {
       media_tools::content_ready_to_post,
       media_tools::content_cut_short,
       post_metrics::content_read_metrics,
+      research_store::research_save_pages,
+      research_store::research_read_page,
+      research_store::research_delete,
       skills_store::skills_list_user,
       skills_store::skills_save_user,
       skills_store::skills_delete_user,

@@ -23,7 +23,6 @@ import { pushMiyaMemory } from './miyaMemoryService';
 import { listMiyaComfyWorkflowPresets } from './miyaComfyWorkflowPresetService';
 import { listMiyaWorkflowTemplates, getMiyaWorkflowTemplate } from './miyaWorkflowTemplates';
 import { appendSessionEvent } from './sessionIntelligenceService';
-import { runHectorLiveResearch, createResearchDraft } from './hectorResearchService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { verifyOllamaRuntimeProof, verifyProcessProof, verifyCommandExecution } from './verificationService';
 import { classifyMissionRoomRisk, redactMissionRoomSecrets } from './missionRoomService';
@@ -47,7 +46,7 @@ import { runReviewStep } from './jose/reviewStep';
 import { isEffectAllowed } from './jose/agentPermissionTable';
 import type { PlanStep } from './jose/stepGraph';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
-import { listInstalledModels, pickLargerModel } from './jose/joseModels';
+import { listInstalledModels, pickLargerModel, usesOwnToolCalls } from './jose/joseModels';
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
@@ -60,6 +59,7 @@ import { runSentinelSecurityScan } from './sentinelSecurityService';
 import { runNovaAnalysis } from './novaAnalysisService';
 import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { prepareSkill } from './skills/prepareSkill';
+import { runHectorStep } from './hector/hectorStep';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
@@ -991,29 +991,11 @@ async function executeMiyaAssignment(commandText: any, assignment: any, options:
 }
 
 async function executeHectorAssignment(commandText: any, assignment: any, options: any = {}) {
-  // Earlier steps' work (agent roles Part A): Hector researches with it in view.
-  const context = options.stepInput?.needs?.length ? stepInputText({ ...options.stepInput, others: [], memory: '', skill: null }) : '';
-  const draft = createResearchDraft({
-    researchQuestion: context ? `${commandText}\n\n${context.slice(0, 1500)}` : commandText,
-    sourceUrls: [],
-    sourceType: 'official_docs',
-    riskLevel: assignment?.riskLevel || 'medium'
-  });
-  // runHectorLiveResearch already runs a real synthesis pass over the fetched
-  // sources (see synthesizeHectorResearch) and folds the result into
-  // report.summary when it succeeds -- no second, generic-prompt LLM call is
-  // needed here to "improve" an already-synthesized summary.
-  const report = await runHectorLiveResearch(draft.id);
-  const sourceRefs = Array.isArray(report?.sources) ? report.sources.map((item) => item?.url).filter(Boolean) : [];
-
-  return {
-    summary: report?.summary || 'Hector research run completed.',
-    resultState: report?.confidenceLevel === TRUST_STATES.VERIFIED ? 'verified' : 'pending_review',
-    resultUrl: null,
-    artifacts: [{ type: 'hector_report', reportId: report?.id || draft.id }],
-    sources: sourceRefs.length ? sourceRefs : [`hector_report:${report?.id || draft.id}`],
-    contractAction: assignment?.actionType || 'research'
-  };
+  // Agent phase 1 (2026-10-25): research works the question in rounds and hands on a
+  // cited report (src/services/hector/hectorStep.ts). The search uses the request's own
+  // words, never Jose's notes or earlier steps' work; nothing found → setup needed.
+  const stepInput = options.stepInput || { instruction: assignment?.instruction || '', request: String(commandText || ''), needs: [], others: [], memory: '', review: null };
+  return runHectorStep(assignment, stepInput, { large: usesOwnToolCalls(assignment), signal: options.signal });
 }
 
 /**

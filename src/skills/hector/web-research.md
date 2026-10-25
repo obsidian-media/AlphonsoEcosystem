@@ -3,7 +3,7 @@ name: Web research with sources
 agent: hector
 use_when: A question needs facts found on the web, with sources.
 task_types: [research, research_report, research_workflow_step]
-tools: [web_search, fetch_source, read_step_output, save_note]
+tools: [web_search, fetch_source, read_step_output, save_note, read_bookmarks]
 steps: []
 output: text
 ---

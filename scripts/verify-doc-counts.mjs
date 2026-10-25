@@ -46,7 +46,7 @@ const TRUTH_PATTERNS = [
 // not a local count. Earlier comments/commits referenced 3,831 and 5,147 --
 // both stale as of this reconciliation; this is the one number to trust going
 // forward until the next materially-different `npm test` run.
-const CURRENT_TOTAL_TESTS = '6,630';
+const CURRENT_TOTAL_TESTS = '6,722';
 
 // Each entry defines a claim to verify:
 //   file        — relative path from project root

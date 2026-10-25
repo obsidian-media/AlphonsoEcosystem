@@ -4,6 +4,8 @@ import { JOSE_LIMITS, checkPlan, buildStepWaves, legacyNeeds, isPaidModelId, typ
 const step = (stepId: string, agent: string, actionType: string, needs: string[] = [], effects: PlanStep['effects'] = ['read']): PlanStep =>
   ({ stepId, agent, actionType, needs, effects });
 
+import { isCodeRequest } from '../../../services/jose/taskTypeMeanings';
+
 describe('stepGraph', () => {
   it('has the limits from the design', () => {
     expect(JOSE_LIMITS).toEqual({ maxSteps: 50, normalMs: 1_800_000, projectMs: 7_200_000, maxFixRounds: 2 });
@@ -92,5 +94,32 @@ describe('stepGraph', () => {
     expect(isPaidModelId('chatgpt:')).toBe(true);
     expect(isPaidModelId('qwen2.5:7b')).toBe(false);
     expect(isPaidModelId(undefined)).toBe(false);
+  });
+});
+
+describe('a code step needs a code request (agent phase 1)', () => {
+  const codeStep = (instruction = 'Write the paragraph.') => [{ stepId: 'alphonso', agent: 'alphonso', actionType: 'local_operation', effects: ['run' as const], needs: [], instruction }];
+
+  it('refuses a code step for a writing request', () => {
+    expect(checkPlan(codeStep(), { request: 'Research bees and write a short summary' }).problems)
+      .toContain('alphonso is writing, not code: give it to Alphonso as assistant_write.');
+  });
+
+  it('allows it when the request is about code', () => {
+    expect(checkPlan(codeStep(), { request: 'Fix the build error in my app' }).ok).toBe(true);
+  });
+
+  it("allows it when the step's instruction is about code", () => {
+    expect(checkPlan(codeStep('Write a script that renames the files.'), { request: 'Tidy my photos folder' }).ok).toBe(true);
+  });
+
+  it('without a request there is no check (steps a caller already decided)', () => {
+    expect(checkPlan(codeStep()).ok).toBe(true);
+  });
+
+  it('isCodeRequest reads whole words', () => {
+    expect(isCodeRequest('fix the failing test')).toBe(true);
+    expect(isCodeRequest('write a short post about bees')).toBe(false);
+    expect(isCodeRequest('the latest contest results')).toBe(false);
   });
 });

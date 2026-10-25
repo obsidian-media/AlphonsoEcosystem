@@ -25,7 +25,30 @@ function safeFileBaseName(report: HectorReport): string {
   return String(report.researchQuestion ?? 'report').slice(0, 40).replace(/[^a-z0-9]/gi, '-');
 }
 
+const SOURCE_LABELS: Record<string, string> = { read: 'Read', snippet: 'Snippet only', unreadable: "Couldn't read" };
+
+/** A report made since agent phase 1: the answer, cited findings, the numbered sources. */
+function researchMarkdown(report: HectorReport, research: any): string {
+  const lines = [
+    '# Hector Research Report', '',
+    `**Question:** ${String(report.researchQuestion ?? research.question ?? 'Untitled')}`,
+    `**Exported:** ${new Date().toISOString()}`, '',
+    '## Answer', '', String(research.answer || ''), '',
+  ];
+  for (const sq of research.subQuestions || []) {
+    if (!sq.findings?.length) continue;
+    lines.push(`## ${sq.question}`, '', ...sq.findings.map((f: any) => `- ${f.text} ${f.sources.map((n: number) => `[${n}]`).join('')} (${f.support})`), '');
+  }
+  if (research.disagreements?.length) lines.push('## Sources disagree', '', ...research.disagreements.map((d: string) => `- ${d}`), '');
+  if (research.notFound?.length) lines.push('## Could not find', '', ...research.notFound.map((d: string) => `- ${d}`), '');
+  lines.push(`## Sources (${(research.sources || []).length})`, '');
+  for (const s of research.sources || []) lines.push(`[${s.n}] ${s.title} — ${s.url} (${SOURCE_LABELS[s.label] || s.label}${s.reason ? `: ${s.reason}` : ''})`);
+  return lines.join('\n');
+}
+
 export function buildHectorReportMarkdown(report: HectorReport): string {
+  const research = (report as { research?: unknown }).research;
+  if (research) return researchMarkdown(report, research);
   const sources = Array.isArray(report.sourceProofs) ? report.sourceProofs : [];
   const s = report.synthesis;
   const lines = [

@@ -7,6 +7,7 @@ import { SKILL_TOOLS, ACTION_TOOLS } from './skillTools';
 import { effectsNeedingApproval } from '../jose/joseEffects';
 import { agentName } from '../jose/agentNames';
 import type { StepInput } from '../jose/stepInput';
+import { getStepOutput } from '../jose/joseStepOutputs';
 
 export interface ToolContext {
   agent: string;
@@ -41,6 +42,31 @@ function matchMemory(query: string, items: any[]): any[] {
     .map((row) => row.item);
 }
 
+/** The outputs of the steps this one needs (all, or one by id). */
+function neededOutputs(ctx: ToolContext, stepId = ''): any[] {
+  if (!ctx.commandId) return [];
+  const needs = (ctx.stepInput?.needs || []).filter((n) => !stepId || n.stepId === stepId);
+  return needs.map((n) => getStepOutput(ctx.commandId as string, n.stepId)).filter(Boolean);
+}
+
+/** A needed research step's numbered sources (agent phase 1). */
+function researchSources(ctx: ToolContext): { n: number; title: string; url: string; label: string; excerpt: string }[] {
+  for (const output of neededOutputs(ctx)) {
+    const sources = (output as any)?.schema?.sources;
+    if (Array.isArray(sources) && sources.length) return sources;
+  }
+  return [];
+}
+
+/** The report whose page files a needed research step saved. */
+function researchReportId(ctx: ToolContext, stepId: string): string | null {
+  for (const output of neededOutputs(ctx, stepId)) {
+    const artifact = ((output as any)?.artifacts || []).find((a: any) => a?.type === 'hector_report' && a.reportId);
+    if (artifact) return String(artifact.reportId);
+  }
+  return null;
+}
+
 async function run(name: string, args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
   const input = ctx.stepInput;
   switch (name) {
@@ -52,8 +78,27 @@ async function run(name: string, args: Record<string, unknown>, ctx: ToolContext
       return { ok: true, text: `${agentName(need.agent)}'s step (${need.stepId}):\n${need.text || '(nothing saved)'}` };
     }
     case 'read_sources': {
+      // A research step's numbered sources with excerpts (agent phase 1); else the links.
+      const numbered = researchSources(ctx);
+      if (numbered.length) {
+        return { ok: true, text: numbered.map((s) => `[${s.n}] ${s.title} — ${s.url} (${s.label})${s.excerpt ? `\n${s.excerpt}` : ''}`).join('\n\n') };
+      }
       const sources = [...new Set((input?.needs || []).flatMap((n) => n.sources))];
       return sources.length ? { ok: true, text: sources.join('\n') } : { ok: false, text: 'Earlier steps used no sources.' };
+    }
+    case 'read_source_page': {
+      const n = Number(args.n);
+      if (!Number.isInteger(n) || n < 1) return { ok: false, text: 'read_source_page needs a source number, n.' };
+      const reportId = researchReportId(ctx, str(args.stepId));
+      if (!reportId) return { ok: false, text: 'No earlier research step saved its pages.' };
+      const { invoke } = await import('@tauri-apps/api/core');
+      return { ok: true, text: String(await invoke('research_read_page', { reportId, n })) };
+    }
+    case 'read_bookmarks': {
+      const { getBookmarks } = await import('../hectorBookmarkService');
+      const saved = getBookmarks({ search: str(args.query) || undefined, limit: 20 });
+      if (!saved.length) return { ok: true, text: 'No saved sources.' };
+      return { ok: true, text: saved.map((b) => `- ${b.title} (${b.url})${b.summary ? `: ${b.summary}` : ''}`).join('\n') };
     }
     case 'read_memory': {
       const { listMemoryItems } = await import('../unifiedMemoryService');
@@ -70,11 +115,11 @@ async function run(name: string, args: Record<string, unknown>, ctx: ToolContext
       return { ok: true, text: `Saved the note "${title}".` };
     }
     case 'web_search': {
-      const query = str(args.query) || input?.instruction || input?.request || '';
-      const { runMultiSourceResearch } = await import('../hectorResearchService');
-      const result: any = await runMultiSourceResearch(query);
-      const sources = Array.isArray(result?.sources) ? result.sources : [];
-      if (!sources.length) return { ok: false, text: result?.error ? `No results: ${result.error}` : 'No results.' };
+      const query = str(args.query) || input?.request || input?.instruction || '';
+      const { searchChain } = await import('../hector/searchChain');
+      const result = await searchChain([query], { limit: 8 });
+      const sources = result.sources;
+      if (!sources.length) return { ok: false, text: result.errors.length ? `No results: ${result.errors.join('; ')}` : 'No results.' };
       return { ok: true, text: sources.slice(0, 8).map((s: any) => `- ${s.title || s.url} (${s.url})${s.snippet ? `: ${s.snippet}` : ''}`).join('\n') };
     }
     case 'fetch_source': {

@@ -10,6 +10,14 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent phase 1: Hector, and the routing guards (2026-10-25)
+- **Research comes back as a researched answer.** Hector breaks the question into parts, reads the parts of each page that match, goes back for what's missing, compares sources and answers first, with numbered citations and how well each finding is supported. If he finds nothing usable he stops and says why, instead of writing facts from memory.
+- **Fewer blocked sites**: he fetches pages like a browser and tries once more when refused; a page that still blocks him, or a PDF, keeps its search snippet, labelled "Snippet only".
+- **One search everywhere**, with junk pages dropped and primary sources (official bodies, research) first. DeepSeek is no longer used as a source.
+- **Research no longer fills the app's storage**: page text is kept in files.
+- **The Research Desk asks through Jose** (its runs are on the Requests board), with one export, "Use in a request" and saved sources.
+- **Jose gives the right kind of work**: his model sees what each task type means, a writing request can't become a code task, and the simple plan keeps every part of a request ("research … and write a summary" now has its writing step; "write a short post" is writing, not publishing).
+
 ### Agent roles, Part B: skills (2026-10-25)
 - **Each agent has real skills**: one Markdown file per kind of job, with the tools it needs (40 built in; Jose has none). The content factory's instructions now live in its agents' skills, word for word.
 - **The agent picks its skill for each step**, and the Requests board shows "Skill: … — reason". Only skills for that kind of work are offered; with one, no model call.

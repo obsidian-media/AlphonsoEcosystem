@@ -45,3 +45,21 @@ describe('JoseStepOutput', () => {
     expect(screen.getByText('Nothing was saved for this step.')).toBeTruthy();
   });
 });
+
+describe("Hector's research on the board (agent phase 1)", () => {
+  it('shows the cited report with labelled sources and Save source', () => {
+    vi.mocked(getStepOutput).mockReturnValue({
+      summary: 'Europe has about 17 million colonies.\n\nSources:\n[1] EU — https://ec.europa.eu/bees (Read)',
+      sources: ['https://ec.europa.eu/bees'],
+      schema: {
+        question: 'Bees?', answer: 'Europe has about 17 million colonies.', rounds: 1, providers: [], disagreements: [], notFound: [],
+        subQuestions: [{ question: 'How many?', status: 'answered', findings: [{ text: 'About 17 million', sources: [1], support: 'one source' }] }],
+        sources: [{ n: 1, title: 'EU', url: 'https://ec.europa.eu/bees', kind: 'primary', label: 'read', excerpt: '' }],
+      },
+    } as never);
+    render(<JoseStepOutput commandId="c-research" stepId="research" />);
+    expect(screen.getByTestId('research-findings').textContent).toContain('About 17 million');
+    expect(screen.getByRole('button', { name: 'Save source' })).toBeTruthy();
+    expect(screen.queryByTestId('jose-step-output-text')).toBeNull();
+  });
+});

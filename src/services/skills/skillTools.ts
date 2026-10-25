@@ -19,6 +19,8 @@ export const SKILL_TOOLS: Record<string, SkillTool> = {
   fetch_source: { effects: ['read'], agents: ['hector'], label: 'Open a source' },
   stock_search: { effects: ['read'], agents: ['hector'], label: 'Search stock footage' },
   read_sources: { effects: ['read'], agents: ['maria', 'nova', 'sentinel'], label: 'Read the sources earlier steps used' },
+  read_source_page: { effects: ['read'], agents: ['maria', 'nova', 'sentinel'], label: 'Read a research source in full, by its number' },
+  read_bookmarks: { effects: ['read'], agents: ['hector'], label: 'Read the sources you saved' },
   make_picture: { effects: ['write_own_work'], agents: ['miya'], label: 'Make a picture' },
   make_voice: { effects: ['write_own_work'], agents: ['miya'], label: 'Read a voice-over' },
   make_music: { effects: ['write_own_work'], agents: ['miya'], label: 'Make music' },

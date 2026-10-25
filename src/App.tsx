@@ -177,6 +177,8 @@ function markInterruptedRequestsOnce(): void {
   try { expireWaitingRequests(); } catch { /* checked again every hour */ }
   // Your own agent skills from the skills folder (agent roles Part B).
   void loadUserSkills();
+  // Research reports saved before 2026-10-25 kept whole pages in app storage: moved to files once (agent phase 1).
+  void import('./services/hectorResearchService').then((m) => m.slimOldReports()).catch(() => {});
 }
 const COACH_AGENT_FROM_QUERY = parsedSearchParams.get('coachAgent');
 

@@ -60,9 +60,9 @@ describe('templates and splitter follow the owners', () => {
     expect(design.instruction).toMatch(/No code/);
   });
 
-  it('a request no specialist takes goes to Alphonso', () => {
+  it('a request no specialist takes goes to Alphonso (writing is assistant_write since agent phase 1)', () => {
     const plan = decomposeJoseCommand(parseJoseCommand('write a note to my landlord about the heating'));
-    expect(plan.map((a: { agent: string; actionType: string }) => [a.agent, a.actionType])).toEqual([['alphonso', 'assistant_answer']]);
+    expect(plan.map((a: { agent: string; actionType: string }) => [a.agent, a.actionType])).toEqual([['alphonso', 'assistant_write']]);
   });
 
   it('a publishing check is Marcus\'s, and publishes nothing', () => {

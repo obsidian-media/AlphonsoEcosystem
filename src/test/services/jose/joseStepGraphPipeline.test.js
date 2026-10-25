@@ -25,9 +25,13 @@ vi.mock('../../../services/verificationService', () => ({
 
 vi.mock('../../../services/hectorResearchService', () => ({
   createResearchDraft: vi.fn(() => ({ id: 'hector-report-draft' })),
+  // A finished research run (agent phase 1): status, the report and its hand-over text.
   runHectorLiveResearch: vi.fn(async () => ({
     id: 'hector-report-draft',
+    status: 'research_done',
     summary: 'Hector mock summary',
+    text: 'Hector mock summary\n\nSources:\n[1] Mock — https://example.com (Read)',
+    research: { answer: 'Hector mock summary', subQuestions: [], disagreements: [], notFound: [], sources: [{ n: 1, title: 'Mock', url: 'https://example.com', kind: 'general', label: 'read', excerpt: '' }], rounds: 1, providers: [] },
     confidenceLevel: 'inferred',
     sources: []
   }))
@@ -838,7 +842,7 @@ describe('every step runs with its skill (agent roles Part B)', () => {
 describe("Hector's research question (agent roles Part B review)", () => {
   beforeEach(() => localStorage.clear());
 
-  it('never carries his skill text into the search', async () => {
+  it('never carries his skill text or earlier work into the search (agent phase 1: only the words of the request)', async () => {
     const hector = await import('../../../services/hectorResearchService');
     vi.mocked(hector.createResearchDraft).mockClear();
     const result = await run([
@@ -847,6 +851,7 @@ describe("Hector's research question (agent roles Part B review)", () => {
     ]);
     const question = String(vi.mocked(hector.createResearchDraft).mock.calls[0][0].researchQuestion);
     expect(question).not.toContain('Your skill');
-    expect(question).toContain("From Miya's step (draft)");
+    expect(question).not.toContain("From Miya's step");
+    expect(question).toBe('Step graph test');
   });
 });

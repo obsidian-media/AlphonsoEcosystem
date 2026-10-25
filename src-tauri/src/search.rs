@@ -26,6 +26,9 @@ pub(crate) struct ResearchSourceProof {
   pub(crate) risk_level: String,
   pub(crate) verification_state: String,
   pub(crate) error: Option<String>,
+  /// The page is a PDF: its text is not decoded here (agent phase 1); the app keeps the search snippet.
+  #[serde(default)]
+  pub(crate) pdf: bool,
 }
 
 #[derive(Deserialize)]
@@ -400,18 +403,80 @@ pub(crate) fn parse_ddg_results(
   results
 }
 
-#[tauri::command]
-pub(crate) async fn fetch_research_sources(
-  sources: Vec<ResearchSourceInput>,
-) -> Vec<ResearchSourceProof> {
-  let client = match reqwest::Client::builder()
+/// A desktop browser's user agent (agent phase 1). Until 2026-10-25 Hector introduced himself
+/// as "Alphonso-Hector/0.1", and about half the sites he visited refused him as a bot.
+const BROWSER_USER_AGENT: &str =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+/// Statuses worth one more try: refused, too many requests, briefly unavailable.
+const RETRY_STATUSES: [u16; 3] = [403, 429, 503];
+const RETRY_DELAY_MS: u64 = 1500;
+
+/// The languages to ask pages in: the app passes the user's own; a neutral default otherwise.
+fn accept_language(passed: Option<&str>) -> String {
+  passed
+    .map(str::trim)
+    .filter(|value| {
+      !value.is_empty()
+        && value.len() <= 200
+        && value
+          .chars()
+          .all(|c| c.is_ascii_alphanumeric() || ",;=.- ".contains(c))
+    })
+    .map(str::to_string)
+    .unwrap_or_else(|| "en;q=0.9,*;q=0.5".to_string())
+}
+
+/// A client that asks for pages the way a desktop browser does.
+pub(crate) fn research_client(language: Option<&str>) -> Result<reqwest::Client, String> {
+  let mut headers = reqwest::header::HeaderMap::new();
+  headers.insert(
+    reqwest::header::ACCEPT,
+    reqwest::header::HeaderValue::from_static(
+      "text/html,application/xhtml+xml,application/xml;q=0.9,application/pdf;q=0.8,*/*;q=0.7",
+    ),
+  );
+  if let Ok(value) = reqwest::header::HeaderValue::from_str(&accept_language(language)) {
+    headers.insert(reqwest::header::ACCEPT_LANGUAGE, value);
+  }
+  reqwest::Client::builder()
     .timeout(std::time::Duration::from_secs(12))
     // Redirects are followed manually via `fetch_with_ssrf_guard` so each hop's host can be
     // re-validated -- reqwest's built-in `Policy` has no async hook to call `is_private_host`.
     .redirect(reqwest::redirect::Policy::none())
-    .user_agent("Alphonso-Hector/0.1 local-first research verifier")
+    .user_agent(BROWSER_USER_AGENT)
+    .default_headers(headers)
     .build()
-  {
+    .map_err(|error| error.to_string())
+}
+
+/// Fetches a page, trying once more after a short wait when the site refuses or is busy.
+pub(crate) async fn fetch_page_with_retry(
+  client: &reqwest::Client,
+  url: reqwest::Url,
+  retry_delay_ms: u64,
+) -> Result<reqwest::Response, String> {
+  let first = fetch_with_ssrf_guard(client, url.clone()).await?;
+  if !RETRY_STATUSES.contains(&first.status().as_u16()) {
+    return Ok(first);
+  }
+  tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms)).await;
+  fetch_with_ssrf_guard(client, url).await
+}
+
+/// Whether a response body is a PDF, by its content type or its first bytes.
+pub(crate) fn is_pdf(content_type: Option<&str>, bytes: &[u8]) -> bool {
+  content_type
+    .map(|value| value.to_ascii_lowercase().contains("application/pdf"))
+    .unwrap_or(false)
+    || bytes.starts_with(b"%PDF")
+}
+
+#[tauri::command]
+pub(crate) async fn fetch_research_sources(
+  sources: Vec<ResearchSourceInput>,
+  accept_language: Option<String>,
+) -> Vec<ResearchSourceProof> {
+  let client = match research_client(accept_language.as_deref()) {
     Ok(client) => client,
     Err(error) => {
       return vec![ResearchSourceProof {
@@ -427,7 +492,8 @@ pub(crate) async fn fetch_research_sources(
         confidence: "failed".to_string(),
         risk_level: "medium".to_string(),
         verification_state: "failed".to_string(),
-        error: Some(error.to_string()),
+        error: Some(error),
+        pdf: false,
       }];
     }
   };
@@ -460,6 +526,7 @@ pub(crate) async fn fetch_research_sources(
         risk_level,
         verification_state: "failed".to_string(),
         error: Some("Only http and https URLs are supported.".to_string()),
+        pdf: false,
       });
       continue;
     }
@@ -486,18 +553,29 @@ pub(crate) async fn fetch_research_sources(
           risk_level: "high".to_string(),
           verification_state: "blocked".to_string(),
           error: Some("SSRF blocked: private/internal IP address.".to_string()),
+          pdf: false,
         });
         continue;
       }
     }
-    match fetch_with_ssrf_guard(&client, url.clone()).await {
+    match fetch_page_with_retry(&client, url.clone(), RETRY_DELAY_MS).await {
       Ok(response) => {
         let status = response.status();
+        let content_type = response
+          .headers()
+          .get(reqwest::header::CONTENT_TYPE)
+          .and_then(|value| value.to_str().ok())
+          .map(str::to_string);
         match response.bytes().await {
           Ok(bytes) => {
+            let pdf = is_pdf(content_type.as_deref(), &bytes);
             let max_len = bytes.len().min(200_000);
-            let body = String::from_utf8_lossy(&bytes[..max_len]).to_string();
-            let title = extract_title(&body);
+            let body = if pdf {
+              String::new()
+            } else {
+              String::from_utf8_lossy(&bytes[..max_len]).to_string()
+            };
+            let title = if pdf { None } else { extract_title(&body) };
             let text = strip_html_tags(&body);
             let snippet = build_snippet(&text);
             proofs.push(ResearchSourceProof {
@@ -526,6 +604,7 @@ pub(crate) async fn fetch_research_sources(
               } else {
                 Some(format!("HTTP status {}", status.as_u16()))
               },
+              pdf,
             });
           }
           Err(error) => proofs.push(ResearchSourceProof {
@@ -542,6 +621,7 @@ pub(crate) async fn fetch_research_sources(
             risk_level,
             verification_state: "failed".to_string(),
             error: Some(error.to_string()),
+            pdf: false,
           }),
         }
       }
@@ -559,6 +639,7 @@ pub(crate) async fn fetch_research_sources(
         risk_level,
         verification_state: "failed".to_string(),
         error: Some(error),
+        pdf: false,
       }),
     }
   }
@@ -604,7 +685,20 @@ pub(crate) async fn search_research_sources(
   }
 
   let html = response.text().await.map_err(|error| error.to_string())?;
+  if ddg_refused(status.as_u16(), &html) {
+    return Err(DDG_REFUSED.to_string());
+  }
   Ok(parse_ddg_results(&html, &source_type, limit))
+}
+
+/// What Hector says when DuckDuckGo answers with its bot check (agent phase 1): until
+/// then a refused search looked like "nothing found".
+pub(crate) const DDG_REFUSED: &str =
+  "The free search (DuckDuckGo) refused: too many searches from this computer. Try again later, or add a search key";
+
+/// DuckDuckGo's bot check: HTTP 202, or its "anomaly" page, instead of results.
+pub(crate) fn ddg_refused(status: u16, html: &str) -> bool {
+  status == 202 || (html.contains("anomaly") && !html.contains("result__a"))
 }
 
 #[tauri::command]
@@ -906,5 +1000,98 @@ mod tests {
       error.contains("Location header"),
       "expected a missing-Location error, got: {error}"
     );
+  }
+
+  /// A loopback server that answers each connection from `replies` in turn and sends back
+  /// what it received on the channel, so a test can read the request headers.
+  async fn spawn_scripted_server(
+    replies: Vec<String>,
+  ) -> (u16, tokio::sync::mpsc::UnboundedReceiver<String>) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    tokio::spawn(async move {
+      for reply in replies {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut buf = vec![0u8; 4096];
+        let n = socket.read(&mut buf).await.unwrap_or(0);
+        let _ = tx.send(String::from_utf8_lossy(&buf[..n]).to_string());
+        let _ = socket.write_all(reply.as_bytes()).await;
+        let _ = socket.shutdown().await;
+      }
+    });
+    (port, rx)
+  }
+
+  fn reply(status: &str, content_type: &str, body: &str) -> String {
+    format!("HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len())
+  }
+
+  #[tokio::test]
+  async fn browser_headers_are_sent() {
+    let (port, mut seen) =
+      spawn_scripted_server(vec![reply("200 OK", "text/html", "<p>hi</p>")]).await;
+    let client = research_client(Some("de-DE,de;q=0.9")).unwrap();
+    let url = reqwest::Url::parse(&format!("http://127.0.0.1:{port}/page")).unwrap();
+    fetch_page_with_retry(&client, url, 1).await.unwrap();
+    let request = seen.recv().await.unwrap().to_ascii_lowercase();
+    assert!(request.contains("user-agent: mozilla/5.0"), "{request}");
+    assert!(!request.contains("alphonso-hector"), "{request}");
+    assert!(
+      request.contains("accept-language: de-de,de;q=0.9"),
+      "{request}"
+    );
+  }
+
+  #[test]
+  fn a_bad_language_falls_back() {
+    assert_eq!(
+      accept_language(Some("x\r\nInjected: 1")),
+      "en;q=0.9,*;q=0.5"
+    );
+    assert_eq!(accept_language(None), "en;q=0.9,*;q=0.5");
+    assert_eq!(accept_language(Some("fr-FR,fr;q=0.9")), "fr-FR,fr;q=0.9");
+  }
+
+  #[tokio::test]
+  async fn retries_once_on_403() {
+    let (port, _seen) = spawn_scripted_server(vec![
+      reply("403 Forbidden", "text/html", "blocked"),
+      reply("200 OK", "text/html", "<p>the page</p>"),
+    ])
+    .await;
+    let client = research_client(None).unwrap();
+    let url = reqwest::Url::parse(&format!("http://127.0.0.1:{port}/page")).unwrap();
+    let response = fetch_page_with_retry(&client, url, 1).await.unwrap();
+    assert_eq!(response.status().as_u16(), 200);
+  }
+
+  #[tokio::test]
+  async fn does_not_retry_a_404() {
+    let (port, _seen) =
+      spawn_scripted_server(vec![reply("404 Not Found", "text/html", "gone")]).await;
+    let client = research_client(None).unwrap();
+    let url = reqwest::Url::parse(&format!("http://127.0.0.1:{port}/page")).unwrap();
+    let response = fetch_page_with_retry(&client, url, 1).await.unwrap();
+    assert_eq!(response.status().as_u16(), 404);
+  }
+
+  #[test]
+  fn pdf_is_recognised() {
+    assert!(is_pdf(Some("application/pdf"), b"anything"));
+    assert!(is_pdf(None, b"%PDF-1.7 ..."));
+    assert!(!is_pdf(Some("text/html; charset=utf-8"), b"<html>"));
+  }
+
+  #[test]
+  fn a_ddg_bot_check_is_a_refusal_not_an_empty_search() {
+    assert!(ddg_refused(202, "<html></html>"));
+    assert!(ddg_refused(200, "<div class=\"anomaly-modal\">"));
+    assert!(!ddg_refused(
+      200,
+      "<a class=\"result__a\" href=\"x\">Bees</a> anomaly"
+    ));
+    assert!(!ddg_refused(200, "<html>no results</html>"));
   }
 }

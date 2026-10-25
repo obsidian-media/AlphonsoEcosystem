@@ -3,6 +3,7 @@
 // Before 2026-10-23 a request could give each agent only one task, in a fixed
 // order (AGENT_DEPENDENCIES); now an agent can have several steps, and each
 // step waits only for the steps it needs.
+import { isCodeRequest, isCodeTask } from './taskTypeMeanings';
 import type { ContentStepPayload } from '../contentFactory/contentTypes';
 import { AGENT_DEPENDENCIES } from './agentOrder';
 import { AGENT_PERMISSION_TABLE, isEffectAllowed, isTaskTypeAllowed } from './agentPermissionTable';
@@ -86,7 +87,12 @@ export function isPaidModelId(model?: unknown): boolean {
   return typeof model === 'string' && /^(claude|chatgpt):/.test(model);
 }
 
-export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean } = {}): { ok: boolean; problems: string[] } {
+/**
+ * options.request (agent phase 1): the user's words for a plan Jose's model wrote. A step that
+ * writes or runs code is refused when neither the request nor its instruction is about code.
+ * Steps a caller already decided (workflows, Boardroom) pass no request and are not checked.
+ */
+export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean; request?: string } = {}): { ok: boolean; problems: string[] } {
   const checkTaskTypes = options.taskTypes !== false;
   const problems: string[] = [];
   if (steps.length > JOSE_LIMITS.maxSteps) {
@@ -113,6 +119,9 @@ export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean } = 
       // connector, approved once per run with the estimate. Only that step, only Miya.
       else if (effect === 'spend' && s.agent === 'miya' && (s.actionType === 'creative_video_clips' || s.actionType === 'creative_shorts' || s.actionType === 'creative_voice' || s.actionType === 'creative_sfx' || s.actionType === 'creative_scenes' || s.actionType === 'creative_thumbnails' || s.actionType === 'creative_carousel' || s.actionType === 'creative_higgsfield' || s.actionType === 'creative_character_train')) continue;
       else if (!isEffectAllowed(s.agent, effect)) problems.push(`Step "${s.stepId}": ${name} may not ${EFFECT_LABELS[effect].toLowerCase()}.`);
+    }
+    if (typeof options.request === 'string' && isCodeTask(s.actionType, s.effects) && !isCodeRequest(options.request) && !isCodeRequest(s.instruction || '')) {
+      problems.push(`${s.stepId} is writing, not code: give it to Alphonso as assistant_write.`);
     }
     for (const need of s.needs) {
       if (!ids.has(need) && !steps.some((other) => other.stepId === need)) problems.push(`Step "${s.stepId}" needs "${need}", which is not in the plan.`);

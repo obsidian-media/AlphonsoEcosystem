@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, ChevronDown, ChevronRight, Compass, Download } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronRight, Compass } from 'lucide-react';
 import { HECTOR_PROFILE } from '../../agents/hector/hectorProfile';
 import { describeAgentPermissions } from '../../services/jose/agentPermissionTable';
 
@@ -8,12 +8,13 @@ import { describeAgentPermissions } from '../../services/jose/agentPermissionTab
 const HECTOR_TABLE = describeAgentPermissions('hector');
 import { HECTOR_SOURCE_TYPES } from '../../agents/hector/hectorResearchSchema';
 import {
-  createHectorApprovalPacket,
   createResearchDraft,
-  fetchSuppliedSourcesForReport,
   listHectorActivity,
   listHectorReports
 } from '../../services/hectorResearchService';
+import { askOnResearchDesk } from '../../services/hector/deskRequest';
+import { writeClipboard } from '../../services/browserAutomationService';
+import { SavedSources } from '../hector/SavedSources';
 import { SourceBoard } from '../hector/SourceBoard';
 import { CitationPanel } from '../hector/CitationPanel';
 import { ResearchReportPanel } from '../hector/ResearchReportPanel';
@@ -94,33 +95,6 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
     onHectorStateChange({ state, message, currentSourceUrl: (report?.currentSourceUrl as string) ?? null, lastRunSummary: String(report?.lastRunSummary ?? report?.summary ?? '') });
   };
 
-  const exportReport = () => {
-    if (!selectedReport) return;
-    const r = selectedReport as Record<string, unknown>;
-    const sources: Record<string, unknown>[] = Array.isArray(r.sources) ? r.sources : [];
-    const lines = [
-      `# Hector Research Report`, ``,
-      `**Question:** ${String(r.researchQuestion ?? 'Untitled')}`,
-      `**Status:** ${String(r.status ?? 'unknown')} | **Confidence:** ${String(r.confidenceLevel ?? 'unknown')}`,
-      `**Exported:** ${new Date().toISOString()}`, ``,
-      `## Summary`, ``,
-      String(r.lastRunSummary ?? r.summary ?? '_No summary yet._'), ``,
-      `## Sources (${sources.length})`, ``,
-      ...sources.map((s, i) => [
-        `### ${i + 1}. ${String(s.title ?? s.url ?? 'Untitled')}`,
-        s.url ? `**URL:** ${s.url}` : '',
-        s.summary ? `\n${s.summary}` : '', ``
-      ].filter(Boolean).join('\n')),
-    ].filter((l) => l !== undefined).join('\n');
-    const blob = new Blob([lines], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `hector-report-${String(r.researchQuestion ?? 'report').slice(0, 40).replace(/[^a-z0-9]/gi, '-')}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const refresh = () => {
     const nextReports = listHectorReports();
     setReports(nextReports);
@@ -137,33 +111,34 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
     setActiveTab('reports');
   };
 
-  const createHandoff = (reportId: string) => {
-    createHectorApprovalPacket(reportId);
-    refresh();
-  };
-
+  // A run is a one-step Hector request through Jose (agent phase 1): it shows on the
+  // Requests board; the Desk refreshes its report while Hector works.
   const fetchSources = async () => {
     if (!selectedReport?.id || isFetching) return;
     setFetchError('');
     setIsFetching(true);
     syncHectorCompanion(selectedReport as Record<string, unknown>, 'running');
+    const reportId = selectedReport.id;
+    const timer = setInterval(() => {
+      const live = listHectorReports().find((x) => x.id === reportId);
+      if (live) patchReportInState(live as Record<string, unknown>);
+    }, 2000);
     try {
-      const updated = await fetchSuppliedSourcesForReport(selectedReport.id, (liveReport: Record<string, unknown>) => {
-        patchReportInState(liveReport);
-        syncHectorCompanion(liveReport, 'running');
-      });
-      if ((updated as { id?: string })?.id) setSelectedId((updated as { id: string }).id);
-      patchReportInState(updated as Record<string, unknown>);
+      const result: any = await askOnResearchDesk(reportId);
+      if (result && result.ok === false && result.reason === 'plan_rejected') setFetchError((result.problems || []).join(' '));
       refresh();
-      const state = (updated as { runState?: string })?.runState === 'failed' ? 'error' : 'complete';
-      syncHectorCompanion(updated as Record<string, unknown>, state);
+      const updated = listHectorReports().find((x) => x.id === reportId) as Record<string, unknown> | undefined;
+      if (updated) patchReportInState(updated);
+      syncHectorCompanion(updated || null, (updated as { runState?: string } | undefined)?.runState === 'failed' ? 'error' : 'complete');
     } catch (error) {
       setFetchError(String(error));
       syncHectorCompanion(selectedReport as Record<string, unknown>, 'error');
     } finally {
+      clearInterval(timer);
       setIsFetching(false);
     }
   };
+
 
   const r = selectedReport as (Record<string, unknown> & { id: string; researchQuestion?: string; status?: string; confidenceLevel?: string; runState?: string; currentSourceUrl?: string; runLog?: { message: string; level?: string; timestampMs?: number }[] }) | null;
 
@@ -177,7 +152,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
                 <Compass className="h-3.5 w-3.5" />Research
               </div>
               <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-(--text-1)">Hector Research Desk</h1>
-              <p className="mt-1 text-[13px] text-(--text-3)">Discover and fetch public sources, attach citations, hand off to Jose.</p>
+              <p className="mt-1 text-[13px] text-(--text-3)">Research a question: Hector answers it with cited sources. Each run is a Jose request.</p>
             </div>
             <div className="flex items-center gap-2 shrink-0 text-[11px] text-(--text-3)">
               <span className="rounded-full border border-(--border) px-2.5 py-1">{reports.length} reports</span>
@@ -267,15 +242,14 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
                     <button onClick={fetchSources} disabled={!r?.id || isFetching} className="btn-primary flex-1 disabled:opacity-40 disabled:cursor-not-allowed">
                       {isFetching ? 'Researching…' : 'Run Live Research'}
                     </button>
-                    <button onClick={exportReport} disabled={!r} className="btn-secondary flex items-center gap-1.5 disabled:opacity-40">
-                      <Download className="h-3.5 w-3.5" /> Export
-                    </button>
                   </div>
                   {fetchError && <div className="rounded-xl bg-(--error-dim) p-3 text-[11px] text-(--error)">{fetchError}</div>}
                   <SourceBoard report={selectedReport as never} />
                   <CitationPanel report={selectedReport as never} />
                   <ResearchReportPanel report={selectedReport as never} />
-                  <HectorApprovalHandoff report={selectedReport as never} onCreateHandoff={createHandoff} />
+                  <HectorApprovalHandoff report={selectedReport as never} onCopy={writeClipboard} />
+                  <p className="text-[11px] text-(--text-4)">Each run is a Jose request: it also shows on the Requests board.</p>
+                  <SavedSources />
                 </div>
               </div>
             )}

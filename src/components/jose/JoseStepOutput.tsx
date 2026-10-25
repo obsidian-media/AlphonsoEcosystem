@@ -4,6 +4,7 @@
 import React, { useMemo, useState } from 'react';
 import { getStepOutput } from '../../services/jose/joseStepOutputs';
 import { openExternalUrl } from '../../services/browserAutomationService';
+import { ResearchFindings } from '../hector/ResearchFindings';
 import { toReadableText } from '../../lib/readableValue';
 
 const TEXT_LIMIT = 2000;
@@ -18,6 +19,11 @@ export function JoseStepOutput({ commandId, stepId }: { commandId: string; stepI
   const output: any = useMemo(() => getStepOutput(commandId, stepId), [commandId, stepId]);
   if (!output) {
     return <p className="text-xs text-(--text-3)">Nothing was saved for this step.</p>;
+  }
+  // Hector's cited report (agent phase 1): the answer, findings with sources, Save source.
+  const research: any = output.schema;
+  if (research && typeof research.answer === 'string' && Array.isArray(research.sources) && Array.isArray(research.subQuestions)) {
+    return <div className="text-xs" data-testid="jose-step-output"><ResearchFindings research={research} /></div>;
   }
   const artifacts: any[] = Array.isArray(output.artifacts) ? output.artifacts : [];
   const files = artifacts

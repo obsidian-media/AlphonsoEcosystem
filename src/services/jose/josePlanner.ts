@@ -7,7 +7,7 @@
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
-import { AGENT_PERMISSION_TABLE, describeAgentPermissions } from './agentPermissionTable';
+import { planningMenu } from './taskTypeMeanings';
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
 import { TEMPLATE_FIT_THRESHOLD, getTemplate, scoreTemplateFit, type JoseTemplate } from './joseTemplates';
 import { JOSE_LIMITS, checkPlan, legacyNeeds, type PlanStep } from './stepGraph';
@@ -33,10 +33,9 @@ interface PlanOptions {
   signal?: AbortSignal;
 }
 
+/** Each agent with its jobs and their meanings (agent phase 1): a small model picks from these, not from bare prefixes. */
 function agentsForPrompt(): string {
-  return Object.entries(AGENT_PERMISSION_TABLE)
-    .map(([agent, p]) => `- ${agent} owns: ${p.owns} Never: ${p.never} Task types starting with ${p.taskTypes.join(', ')}; may: ${describeAgentPermissions(agent).allowed.join('; ')}`)
-    .join('\n');
+  return planningMenu();
 }
 
 function templateForPrompt(template: JoseTemplate): string {
@@ -48,7 +47,7 @@ function buildPrompt(text: string, template: JoseTemplate | null, history: PlanO
   const recent = (history || []).slice(-6).map((m) => `${m.role}: ${String(m.content).slice(0, 400)}`).join('\n');
   return [
     'You are Jose, the orchestrator. Plan the request as steps for the agents below. You never do the work yourself.',
-    `Agents:\n${agentsForPrompt()}`,
+    `Agents and the jobs each may take (use these task types):\n${agentsForPrompt()}`,
     `Effects a step can have: ${JOSE_EFFECTS.map((e) => `${e} (${EFFECT_LABELS[e]})`).join(', ')}. Only alphonso may run; only marcus may publish_or_send.`,
     `A review step names the step it reviews ("reviewOf"); if it finds problems the work goes back for at most ${JOSE_LIMITS.maxFixRounds} rounds, so plan one review, not several.`,
     `Limits: at most ${JOSE_LIMITS.maxSteps} steps. Use "kind": "project" for long work such as building an app, otherwise "normal".`,
@@ -206,8 +205,9 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     const basedOn = template && plan.basedOnTemplate === template.id ? template : null;
     if (basedOn) plan.steps = fillFromTemplate(plan.steps, basedOn);
     plan.steps = toCurrentOwners(inferReviewOf(plan.steps)).steps;
-    // Each step only to the agent who owns its kind of work (owner, 2026-10-24).
-    const check = checkPlan(plan.steps, { taskTypes: true });
+    // Each step only to the agent who owns its kind of work (owner, 2026-10-24),
+    // and no code step for a request that isn't about code (agent phase 1).
+    const check = checkPlan(plan.steps, { taskTypes: true, request: text });
     if (!check.ok) {
       problems = check.problems;
       continue;

@@ -48,6 +48,16 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - **Desktop check** `agent-roles.e2e.mjs` depends on the local model's plan; it checks owners, not the exact steps.
   - Status: OPEN.
 
+- [2026-10-25] **Agent phase 1 (Hector): what it leaves.**
+  - **Sites that block any non-browser** (Cloudflare checks) still block Hector; he keeps their search snippet. A real browser for those pages was offered and not chosen.
+  - **PDF text** isn't read; a PDF keeps its search snippet.
+  - **PDF and PowerPoint exports** of new reports list findings with their numbers but not the sources' labels; the Markdown export has both.
+  - **"Use in a request"** copies the report to paste into Chat; Chat has no pre-fill.
+  - **Answer quality is limited by the model and by blocked sites** (live check with a Tavily key, 2026-10-25): the loop works (3 rounds, 11 sources, 5 pages read, parts honestly marked partly/open), but qwen2.5:7b (the largest this 6 GB card runs) writes a muddled answer, and most academic sites refuse him (403 from Cloudflare; rustls and Schannel from Rust both refused, curl was let through). A stronger model (paid, or 14B+) and a real browser for blocked pages are the two levers; neither has been run live.
+  - **A search snippet passes the topic filter on one shared word**, so an unrelated page (an FCC robocalls guide) can still be listed; it can't answer a part (only a page read does), but it shows in the sources.
+  - **Rust tests** for the browser-like fetch and page files could not run locally (Windows Application Control blocks new test binaries, os error 4551); CI runs them.
+  - Status: OPEN.
+
 - [2026-10-25] **Agent roles Part B (skills): what it leaves.**
   - **Action tools are not tool calls.** `send_message`, `publish_post`, `place_call`, `run_command`, `write_project_file` and Miya's media tools are listed in skills and checked against effects, but run only as the step's own action. An agent can't, mid-step, decide to send something; widening that needs its own approval design.
   - **Your skills write plain text.** The form saves `output: text`; a content-factory step's fixed JSON stays built-in, so you can add skills beside those steps but not replace them.

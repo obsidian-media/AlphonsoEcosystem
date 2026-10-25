@@ -1,21 +1,16 @@
 import { appendAgentActivity } from './agentActivityService';
-import { isTavilyConfigured, searchTavily } from './connectors/tavilyConnector.js';
-import { isPerplexityConfigured, searchPerplexity } from './connectors/perplexityConnector';
-import { isDeepSeekConfigured, searchWithDeepSeek } from './connectors/deepseekConnector.js';
 import { isBraveSearchConfigured, searchBrave } from './connectors/braveSearchConnector';
-import { getConnectorCredential } from './connectors/connectorAuth';
 import { invoke } from '@tauri-apps/api/core';
 import { HECTOR_RESEARCH_SCHEMA } from '../agents/hector/hectorResearchSchema';
 import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../agents/hector/hectorPermissions';
-import { createAgentPacket, AGENTS } from './agentBusService';
+import { AGENTS } from './agentBusService';
 import { pushMemoryItem } from './memoryService';
-import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceService';
 import { addNode, addEdge } from './memoryGraphService';
 import { generateAgentLlmResponse, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
-import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { randomHex } from '../lib/randomId';
+import { HECTOR_LIMITS } from './hector/researchLimits';
 
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
@@ -68,21 +63,6 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3) {
   throw lastError;
 }
 
-async function retryWithBackoff(fn, maxRetries = 3) {
-  let lastError = null;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      if (attempt < maxRetries) {
-        const backoffMs = Math.min(1000 * Math.pow(2, attempt), 10000);
-        await new Promise((resolve) => setTimeout(resolve, backoffMs));
-      }
-    }
-  }
-  throw lastError;
-}
 
 function readRows(key) {
   try {
@@ -98,11 +78,58 @@ function writeRows(key, rows, limit = 500) {
   localStorage.setItem(key, JSON.stringify(rows.slice(-limit)));
 }
 
+/**
+ * Saves the reports, newest last, keeping HECTOR_LIMITS.maxReports (agent phase 1;
+ * 500 until 2026-10-25). The page files of a report that drops off are deleted.
+ */
+function saveReports(rows) {
+  const keep = rows.slice(-HECTOR_LIMITS.maxReports);
+  const dropped = rows.slice(0, Math.max(0, rows.length - keep.length));
+  writeRows(REPORT_KEY, keep, HECTOR_LIMITS.maxReports);
+  for (const report of dropped) {
+    if (report?.id) Promise.resolve(invoke('research_delete', { reportId: report.id })).catch(() => {});
+  }
+}
+
 function updateReport(reportId, patch) {
   const rows = readRows(REPORT_KEY);
   const nextRows = rows.map((report) => (report.id === reportId ? { ...report, ...patch } : report));
-  writeRows(REPORT_KEY, nextRows);
+  saveReports(nextRows);
   return nextRows.find((report) => report.id === reportId) || null;
+}
+
+const SLIMMED_KEY = 'alphonso_hector_reports_slimmed_v1';
+
+/**
+ * Once (agent phase 1): reports saved before 2026-10-25 kept up to 200 KB of page
+ * text per source in app storage. Each long text moves to a page file and the
+ * report keeps a short excerpt.
+ */
+export async function slimOldReports() {
+  try {
+    if (localStorage.getItem(SLIMMED_KEY)) return;
+  } catch {
+    return;
+  }
+  const rows = readRows(REPORT_KEY);
+  let changed = false;
+  for (const report of rows) {
+    const sources = Array.isArray(report?.sources) ? report.sources : [];
+    const pages = [];
+    sources.forEach((source, index) => {
+      const text = String(source?.snippet || '');
+      if (text.length > HECTOR_LIMITS.excerptChars) {
+        pages.push({ n: index + 1, text });
+        source.snippet = text.slice(0, HECTOR_LIMITS.excerptChars);
+        changed = true;
+      }
+    });
+    if (pages.length && report?.id) {
+      try { await invoke('research_save_pages', { reportId: report.id, pages }); } catch { /* the excerpt is kept either way */ }
+    }
+  }
+  if (changed) saveReports(rows);
+  try { localStorage.setItem(SLIMMED_KEY, String(Date.now())); } catch { /* tried again next start */ }
 }
 
 function appendRunLog(report, entry) {
@@ -110,70 +137,8 @@ function appendRunLog(report, entry) {
   return [...current, { ...entry, timestampMs: timestampMs() }].slice(-120);
 }
 
-function normalizeSourceUrl(url) {
-  return String(url || '').trim().replace(/\/+$/, '');
-}
 
-function mergeSources(existing = [], discovered = []) {
-  const byUrl = new Map();
-  [...existing, ...discovered].forEach((source) => {
-    const key = normalizeSourceUrl(source.url);
-    if (!key) return;
-    const previous = byUrl.get(key);
-    byUrl.set(key, previous ? {
-      ...previous,
-      ...source,
-      confidence: source.confidence || previous.confidence,
-      confidenceReason: source.confidenceReason || previous.confidenceReason,
-      expiresAt: source.expiresAt || previous.expiresAt
-    } : source);
-  });
-  return [...byUrl.values()];
-}
 
-async function discoverResearchSources({
-  researchQuestion,
-  sourceType,
-  limit = 8,
-  providerLabel = 'duckduckgo_html',
-  queryLabel = null
-}) {
-  const results = await retryWithBackoff(() => invoke('search_research_sources', {
-    request: {
-      query: queryLabel || researchQuestion,
-      sourceType,
-      limit
-    }
-  }));
-
-  if (!Array.isArray(results)) return [];
-  return results
-    .map((row) => {
-      const url = String(row.url || '').trim();
-      if (!url) return null;
-      const source = {
-        url,
-        type: row.sourceType || sourceType || 'official_docs',
-        official: row.sourceType === 'official_docs' || /docs|developer|github|tauri|ollama/i.test(url),
-        title: row.title || null,
-        snippet: row.snippet || null
-      };
-      const score = scoreSourceConfidence(source);
-      return {
-        ...source,
-        confidence: row.confidence || score.confidence,
-        confidenceReason: row.verificationState
-          ? `Search provider state: ${row.verificationState}.`
-          : score.reason,
-        verificationState: row.verificationState || TRUST_STATES.INFERRED,
-        riskLevel: row.riskLevel || 'medium',
-        expiresAt: sourceExpiryForType(source.type),
-        dateChecked: row.dateChecked || new Date().toISOString(),
-        provider: row.provider || providerLabel
-      };
-    })
-    .filter(Boolean);
-}
 
 function extractJsonArray(text) {
   const clean = String(text || '')
@@ -224,125 +189,7 @@ async function chooseHectorOllamaModel() {
   }
 }
 
-async function buildResearchQueryRefinements(researchQuestion, sourceType, existingSources = []) {
-  const modelChoice = await chooseHectorOllamaModel();
-  if (!modelChoice.ok || !modelChoice.model) {
-    return {
-      ok: false,
-      model: null,
-      queries: [],
-      error: modelChoice.proof?.error || 'No Ollama model available.'
-    };
-  }
 
-  const prompt = [
-    'You are Hector, a research assistant that produces concise web search refinements.',
-    `Question: ${researchQuestion}`,
-    `Preferred source type: ${sourceType}`,
-    existingSources.length
-      ? `Already seen sources: ${existingSources.map((source) => source.url).join(' | ')}`
-      : 'Already seen sources: none',
-    'Return JSON array only. Generate up to 3 short search queries that are more specific and more likely to find official or authoritative sources.'
-  ].join('\n');
-
-  const proof = await invoke('ollama_generate', {
-    endpoint: getConfiguredOllamaEndpoint(),
-    model: modelChoice.model,
-    prompt
-  }).catch((error) => ({
-    endpoint: getConfiguredOllamaEndpoint(),
-    httpStatus: null,
-    model: modelChoice.model,
-    response: '',
-    done: false,
-    trust: 'failed',
-    error: String(error)
-  }));
-
-  const queries = extractJsonArray(proof?.response)
-    .map((query) => query.trim())
-    .filter(Boolean)
-    .filter((query, index, array) => array.indexOf(query) === index)
-    .slice(0, 3);
-
-  return {
-    ok: queries.length > 0,
-    model: modelChoice.model,
-    proof,
-    queries
-  };
-}
-
-async function synthesizeHectorFallbackReport(researchQuestion, sourceType, providerChain, refinements = []) {
-  const modelChoice = await chooseHectorOllamaModel();
-  if (!modelChoice.ok || !modelChoice.model) {
-    return {
-      ok: false,
-      provider: 'ollama_synthesis',
-      summary: 'Live source discovery failed and no Ollama model was available for a synthesis fallback.',
-      inferredPoints: [],
-      recommendedNextStep: 'Retry source discovery or supply URLs manually.',
-      providerChain,
-      refinements,
-      model: null,
-      trust: TRUST_STATES.FAILED,
-      error: modelChoice.proof?.error || 'No Ollama model available.'
-    };
-  }
-
-  const prompt = [
-    'You are Hector. The live web search provider failed or returned no verified sources.',
-    `Research question: ${researchQuestion}`,
-    `Source type target: ${sourceType}`,
-    refinements.length ? `Tried query refinements: ${refinements.join(' | ')}` : 'Tried query refinements: none',
-    `Provider chain: ${providerChain.join(' -> ')}`,
-    'Return JSON object only with keys summary, inferredPoints, and recommendedNextStep.',
-    'Keep the summary cautious and honest. Do not claim verification without sources.',
-    'inferredPoints must be an array of short strings.'
-  ].join('\n');
-
-  const proof = await invoke('ollama_generate', {
-    endpoint: getConfiguredOllamaEndpoint(),
-    model: modelChoice.model,
-    prompt
-  }).catch((error) => ({
-    endpoint: getConfiguredOllamaEndpoint(),
-    httpStatus: null,
-    model: modelChoice.model,
-    response: '',
-    done: false,
-    trust: 'failed',
-    error: String(error)
-  }));
-
-  const clean = String(proof?.response || '')
-    .replace(/```json\s*/gi, '')
-    .replace(/```\s*/g, '')
-    .trim();
-  let parsed = null;
-  try {
-    parsed = clean ? JSON.parse(clean) : null;
-  } catch {
-    parsed = null;
-  }
-
-  return {
-    ok: Boolean(parsed || clean),
-    provider: 'ollama_synthesis',
-    summary: parsed?.summary || clean || 'Hector synthesized a cautious fallback summary from local Ollama.',
-    inferredPoints: Array.isArray(parsed?.inferredPoints)
-      ? parsed.inferredPoints
-      : clean
-        ? [clean.slice(0, 220)]
-        : [],
-    recommendedNextStep: parsed?.recommendedNextStep || 'Review the fallback summary, then retry discovery with more specific terms or supply URLs.',
-    providerChain,
-    refinements,
-    model: modelChoice.model,
-    proof,
-    trust: proof?.trust || TRUST_STATES.TEMPORARY
-  };
-}
 
 const HECTOR_SYNTHESIS_TOTAL_BUDGET = 6000;
 
@@ -518,209 +365,8 @@ export async function fetchRssSources(query, limit = 8) {
   return deduped;
 }
 
-async function discoverResearchSourcesBrave({ researchQuestion, sourceType, limit = 8 }) {
-  let results = null;
-  try {
-    results = await retryWithBackoff(() => invoke('search_brave_sources', {
-      query: researchQuestion,
-      limit,
-      sourceType,
-      // The key saved in Settings; the backend falls back to the environment.
-      apiKey: String(getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY') || '').trim() || null
-    }));
-  } catch {
-    // Rust path failed — fall through to frontend path below
-  }
 
-  // If the Rust path returned nothing or failed, try the frontend VITE_ key path
-  if (!Array.isArray(results) || results.length === 0) {
-    const frontendResult = await searchBrave(researchQuestion, limit);
-    if (frontendResult.success && frontendResult.results.length > 0) {
-      const mapped = frontendResult.results.map((r) => {
-        const source = {
-          url: r.url,
-          type: sourceType || 'official_docs',
-          official: /docs|developer|github|tauri|ollama/i.test(r.url),
-          title: r.title || null,
-          snippet: r.snippet || null
-        };
-        const score = scoreSourceConfidence(source);
-        return {
-          ...source,
-          confidence: score.confidence,
-          confidenceReason: score.reason,
-          verificationState: TRUST_STATES.INFERRED,
-          riskLevel: 'medium',
-          expiresAt: sourceExpiryForType(source.type),
-          dateChecked: new Date().toISOString(),
-          provider: 'brave_search_frontend'
-        };
-      });
-      persistResearchResult(researchQuestion, mapped);
-      return mapped;
-    }
-    persistResearchResult(researchQuestion, []);
-    return [];
-  }
 
-  const mapped = results
-    .map((row) => {
-      const url = String(row.url || '').trim();
-      if (!url) return null;
-      const source = {
-        url,
-        type: row.sourceType || sourceType || 'official_docs',
-        official: /docs|developer|github|tauri|ollama/i.test(url),
-        title: row.title || null,
-        snippet: row.snippet || null
-      };
-      const score = scoreSourceConfidence(source);
-      return {
-        ...source,
-        confidence: row.confidence || score.confidence,
-        confidenceReason: score.reason,
-        verificationState: TRUST_STATES.INFERRED,
-        riskLevel: row.riskLevel || 'medium',
-        expiresAt: sourceExpiryForType(source.type),
-        dateChecked: row.dateChecked || new Date().toISOString(),
-        provider: 'brave_search'
-      };
-    })
-    .filter(Boolean);
-  persistResearchResult(researchQuestion, mapped);
-  return mapped;
-}
-
-async function discoverResearchSourcesWithFailover({
-  researchQuestion,
-  sourceType,
-  limit = 8
-}) {
-  const primaryQuery = researchQuestion;
-
-  // Try Brave Search first (if API key is configured)
-  try {
-    const braveSources = await discoverResearchSourcesBrave({ researchQuestion, sourceType, limit });
-    if (braveSources.length) {
-      return {
-        ok: true,
-        sources: braveSources,
-        provider: 'brave_search',
-        providerChain: ['brave_search'],
-        queryUsed: primaryQuery,
-        refinements: [],
-        synthesis: null
-      };
-    }
-  } catch { /* key not set or API error — fall through to DDG */ }
-
-  const providerChain = ['duckduckgo_html'];
-
-  try {
-    const primarySources = await discoverResearchSources({
-      researchQuestion,
-      sourceType,
-      limit,
-      providerLabel: 'duckduckgo_html',
-      queryLabel: primaryQuery
-    });
-    if (primarySources.length) {
-      return {
-        ok: true,
-        sources: primarySources,
-        provider: 'duckduckgo_html',
-        providerChain,
-        queryUsed: primaryQuery,
-        refinements: [],
-        synthesis: null
-      };
-    }
-  } catch (error) {
-    providerChain.push('duckduckgo_html_error');
-    // Try RSS as last-resort fallback
-    const rssSources = await fetchRssSources(researchQuestion, limit);
-    if (rssSources.length > 0) return { ok: true, sources: rssSources, strategy: 'rss_fallback' };
-    return await continueWithRefinements({
-      researchQuestion,
-      sourceType,
-      limit,
-      providerChain,
-      primaryQuery,
-      primaryError: String(error)
-    });
-  }
-
-  // Try RSS as last-resort fallback
-  const rssSources = await fetchRssSources(researchQuestion, limit);
-  if (rssSources.length > 0) return { ok: true, sources: rssSources, strategy: 'rss_fallback' };
-
-  return continueWithRefinements({
-    researchQuestion,
-    sourceType,
-    limit,
-    providerChain,
-    primaryQuery
-  });
-}
-
-async function continueWithRefinements({
-  researchQuestion,
-  sourceType,
-  limit,
-  providerChain,
-  primaryQuery,
-  primaryError = null
-}) {
-  const refinementsProof = await buildResearchQueryRefinements(researchQuestion, sourceType, []);
-  const refinements = refinementsProof.queries || [];
-  if (refinementsProof.ok && refinements.length) {
-    providerChain.push('ollama_query_refinement');
-    for (const refinedQuery of refinements) {
-      try {
-        const refinedSources = await discoverResearchSources({
-          researchQuestion,
-          sourceType,
-          limit,
-          providerLabel: 'duckduckgo_html_refined',
-          queryLabel: refinedQuery
-        });
-        if (refinedSources.length) {
-          return {
-            ok: true,
-            sources: refinedSources,
-            provider: 'duckduckgo_html_refined',
-            providerChain: [...providerChain, 'duckduckgo_html_refined'],
-            queryUsed: refinedQuery,
-            refinements,
-            synthesis: null,
-            primaryError
-          };
-        }
-      } catch {
-        // Try the next refinement.
-      }
-    }
-  }
-
-  providerChain.push('ollama_synthesis');
-  const synthesis = await synthesizeHectorFallbackReport(
-    researchQuestion,
-    sourceType,
-    providerChain,
-    refinements
-  );
-
-  return {
-    ok: Boolean(synthesis.ok),
-    sources: [],
-    provider: synthesis.provider,
-    providerChain,
-    queryUsed: primaryQuery,
-    refinements,
-    synthesis,
-    primaryError
-  };
-}
 
 export function listHectorReports() {
   return readRows(REPORT_KEY);
@@ -808,47 +454,8 @@ export function createResearchDraft({
 
   const rows = readRows(REPORT_KEY);
   rows.push(report);
-  writeRows(REPORT_KEY, rows);
-  pushMemoryItem({
-    title: `Hector research draft: ${report.researchQuestion}`,
-    category: 'research_memory',
-    content: {
-      reportId: report.id,
-      researchQuestion: report.researchQuestion,
-      sourceCount: sources.length,
-      status: report.status
-    },
-    source: 'hector-research-desk',
-    sourceAgent: AGENTS.HECTOR,
-    confidence: report.confidenceLevel,
-    verificationState: TRUST_STATES.UNVERIFIED,
-    expiresAt: sources[0]?.expiresAt || null,
-    expiryRule: sourceType
-  });
+  saveReports(rows);
   recordHectorActivity('research_draft_created', { id: report.id, sourceCount: sources.length });
-  appendSessionEvent({
-    category: 'research',
-    title: 'Hector research draft created',
-    details: { id: report.id, sourceCount: sources.length },
-    agent: AGENTS.HECTOR,
-    confidence: TRUST_STATES.TEMPORARY,
-    verificationState: TRUST_STATES.UNVERIFIED
-  });
-
-  addNode('research_report', report.id).then((reportNodeId) => {
-    if (!reportNodeId) return;
-    sources.forEach((source) => {
-      addNode('source', source.url).then((sourceNodeId) => {
-        if (!sourceNodeId) return;
-        addEdge(reportNodeId, sourceNodeId, 'cites', {
-          confidence: source.confidence,
-          createdBy: AGENTS.HECTOR,
-          createdEvent: report.id
-        });
-      }).catch(() => {});
-    });
-  }).catch(() => {});
-
   return report;
 }
 
@@ -856,333 +463,109 @@ export async function fetchSuppliedSourcesForReport(reportId, onProgress) {
   return runHectorLiveResearch(reportId, onProgress);
 }
 
-export async function runHectorLiveResearch(reportId, onProgress) {
+/**
+ * A research run on a saved report (agent phase 1, owner 2026-10-25): the question
+ * broken into parts, short searches, the pages read for what matches, a write-up
+ * with numbered citations, follow-up rounds for what's missing
+ * (src/services/hector/researchRun.ts). Nothing usable → the report says why;
+ * no facts from the model's memory.
+ * options: { request, focus, large, signal }; `large` defaults to Hector's model size.
+ */
+export async function runHectorLiveResearch(reportId, onProgress, options = {}) {
   const report = listHectorReports().find((item) => item.id === reportId);
   if (!report) {
     throw new Error('Hector report not found.');
   }
   appendAgentActivity({ agent: 'hector', action: 'research', detail: (report.researchQuestion || '').slice(0, 80) });
-  let workingReport = report;
-  if (!Array.isArray(workingReport.sources) || workingReport.sources.length === 0) {
-    const discoveryStart = updateReport(reportId, {
-      status: 'source_discovery_running',
-      runState: 'running',
-      currentSourceUrl: null,
-      runLog: appendRunLog(workingReport, {
-        level: 'info',
-        message: `Discovering live sources for: ${workingReport.researchQuestion}`
-      }),
-      summary: 'Hector is discovering public sources from the live web...'
-    });
-    onProgress?.(discoveryStart);
-    try {
-      const discovery = await discoverResearchSourcesWithFailover({
-        researchQuestion: workingReport.researchQuestion,
-        sourceType: workingReport.sources?.[0]?.type || 'official_docs',
-        limit: 8
-      });
-      if (!discovery.sources.length) {
-        const failedState = discovery.synthesis?.ok
-          ? 'source_discovery_synthesized'
-          : 'source_discovery_empty';
-        const nextSummary = discovery.synthesis?.summary || 'No public sources were discovered for this query.';
-        const nextStep = discovery.synthesis?.recommendedNextStep || 'Refine the research question or supply URLs manually, then retry.';
-        const noDiscovery = updateReport(reportId, {
-          status: failedState,
-          runState: discovery.synthesis?.ok ? 'partial' : 'failed',
-          currentSourceUrl: null,
-          confidenceLevel: discovery.synthesis?.ok ? TRUST_STATES.INFERRED : TRUST_STATES.UNVERIFIED,
-          summary: nextSummary,
-          inferredPoints: discovery.synthesis?.inferredPoints || [],
-          providerUsed: discovery.provider,
-          providerChain: discovery.providerChain,
-          queryUsed: discovery.queryUsed,
-          refinements: discovery.refinements,
-          synthesis: discovery.synthesis || null,
-          runLog: appendRunLog(discoveryStart || workingReport, {
-            level: discovery.synthesis?.ok ? 'warning' : 'warning',
-            message: discovery.synthesis?.ok
-              ? `No verified sources found. Ollama synthesis fallback used via ${discovery.providerChain.join(' -> ')}.`
-              : `Live source discovery returned no results via ${discovery.providerChain.join(' -> ')}.`
-          }),
-          recommendedNextStep: nextStep
-        });
-        recordHectorActivity(discovery.synthesis?.ok ? 'source_discovery_synthesized' : 'source_discovery_empty', {
-          reportId,
-          provider: discovery.provider,
-          providerChain: discovery.providerChain,
-          queryUsed: discovery.queryUsed,
-          refinements: discovery.refinements
-        });
-        onProgress?.(noDiscovery);
-        return noDiscovery;
-      }
-
-      const mergedSources = mergeSources(workingReport.sources || [], discovery.sources);
-      const discoveredMessage = `Discovered ${discovery.sources.length} source(s) via ${discovery.providerChain.join(' -> ')}.`;
-      const discoveredReport = updateReport(reportId, {
-        sources: mergedSources,
-        status: 'source_discovery_completed',
-        runState: 'running',
-        currentSourceUrl: null,
-        confidenceLevel: TRUST_STATES.INFERRED,
-        summary: discoveredMessage,
-        providerUsed: discovery.provider,
-        providerChain: discovery.providerChain,
-        queryUsed: discovery.queryUsed,
-        refinements: discovery.refinements,
-        runLog: appendRunLog(discoveryStart || workingReport, {
-          level: 'success',
-          message: discoveredMessage
-        }),
-        recommendedNextStep: 'Fetching discovered sources for verification...'
-      });
-      recordHectorActivity('source_discovery_completed', {
-        reportId,
-        discoveredCount: discovery.sources.length,
-        provider: discovery.provider,
-        providerChain: discovery.providerChain,
-        queryUsed: discovery.queryUsed,
-        refinements: discovery.refinements
-      });
-      workingReport = discoveredReport || workingReport;
-      onProgress?.(workingReport);
-    } catch (error) {
-      const failedDiscovery = updateReport(reportId, {
-        status: 'source_discovery_failed',
-        runState: 'failed',
-        currentSourceUrl: null,
-        confidenceLevel: TRUST_STATES.FAILED,
-        summary: 'Live source discovery failed.',
-        runLog: appendRunLog(discoveryStart || workingReport, {
-          level: 'error',
-          message: `Source discovery failed: ${String(error)}`
-        }),
-        recommendedNextStep: 'Check network connectivity or add URLs manually, then retry.',
-        providerUsed: 'duckduckgo_html',
-        providerChain: ['duckduckgo_html', 'failed']
-      });
-      recordHectorActivity('source_discovery_failed', { reportId, error: String(error) });
-      onProgress?.(failedDiscovery);
-      return failedDiscovery;
-    }
-  }
-
-  let liveReport = updateReport(reportId, {
-    status: 'source_fetch_running',
+  let working = updateReport(reportId, {
+    status: 'research_running',
     runState: 'running',
-    currentSourceUrl: null,
-    runLog: appendRunLog(workingReport, {
-      level: 'info',
-      message: `Starting live run across ${workingReport.sources.length} source(s).`
-    }),
-    summary: 'Hector run started. Fetching discovered/supplied sources...'
+    summary: 'Hector is researching…',
+    runLog: appendRunLog(report, { level: 'info', message: `Researching: ${report.researchQuestion}` })
   });
-  onProgress?.(liveReport);
-
-  recordHectorActivity('source_fetch_started', { reportId, sourceCount: workingReport.sources.length });
-
-  const proofs = [];
-  for (const source of workingReport.sources) {
-    liveReport = updateReport(reportId, {
-      currentSourceUrl: source.url,
-      runState: 'running',
-      runLog: appendRunLog(liveReport || report, {
-        level: 'info',
-        message: `Visiting ${source.url}`
-      })
-    });
-    onProgress?.(liveReport);
-
-    try {
-      const sourceProofs = await invoke('fetch_research_sources', {
-        sources: [{
-          url: source.url,
-          sourceType: source.type || 'public_web',
-          official: Boolean(source.official)
-        }]
-      });
-      const proof = Array.isArray(sourceProofs) ? sourceProofs[0] : null;
-      if (proof) {
-        proofs.push(proof);
-      }
-      liveReport = updateReport(reportId, {
-        runLog: appendRunLog(liveReport || report, {
-          level: proof?.ok ? 'success' : 'warning',
-          message: proof
-            ? `${proof.ok ? 'Fetched' : 'Failed'} ${source.url}${proof.httpStatus ? ` (HTTP ${proof.httpStatus})` : ''}`
-            : `No proof payload returned for ${source.url}`
-        })
-      });
-      onProgress?.(liveReport);
-    } catch (error) {
-      const fallbackProof = {
-        url: source.url,
-        sourceType: source.type || 'public_web',
-        official: Boolean(source.official),
-        fetchedAtMs: timestampMs(),
-        httpStatus: null,
-        ok: false,
-        title: null,
-        snippet: null,
-        dateChecked: new Date().toISOString(),
-        confidence: TRUST_STATES.FAILED,
-        riskLevel: source.official ? 'low' : 'medium',
-        verificationState: TRUST_STATES.FAILED,
-        error: String(error)
-      };
-      proofs.push(fallbackProof);
-      liveReport = updateReport(reportId, {
-        runLog: appendRunLog(liveReport || report, {
-          level: 'error',
-          message: `Error fetching ${source.url}: ${String(error)}`
-        })
-      });
-      onProgress?.(liveReport);
-    }
-  }
-
-  const successProofs = proofs.filter((proof) => proof.ok);
-  const failedProofs = proofs.filter((proof) => !proof.ok);
-  const sources = workingReport.sources.map((source) => {
-    const proof = proofs.find((item) => item.url === source.url || item.url.replace(/\/$/, '') === source.url.replace(/\/$/, ''));
-    return proof ? {
-      ...source,
-      fetched: proof.ok,
-      fetchedAtMs: proof.fetchedAtMs,
-      httpStatus: proof.httpStatus,
-      title: proof.title,
-      snippet: proof.snippet,
-      confidence: proof.confidence,
-      riskLevel: proof.riskLevel,
-      verificationState: proof.verificationState,
-      error: proof.error || null
-    } : source;
-  });
-
-  const runSummary = successProofs.length
-    ? `Visited ${proofs.length} source(s): ${successProofs.length} verified, ${failedProofs.length} failed.`
-    : `Visited ${proofs.length} source(s): none verified.`;
-  const updated = updateReport(reportId, {
-    sources,
-    sourceProofs: proofs,
-    urls: proofs.map((proof) => proof.url).filter(Boolean),
-    dateChecked: new Date().toISOString(),
-    // updateReport shallow-merges, so a stale synthesis from a prior run
-    // would otherwise survive attached to this run's new sourceProofs if the
-    // synthesis attempt below fails -- explicitly clear it here so a failed
-    // re-synthesis never leaves a mismatched (old conclusion, new sources)
-    // report on screen. Repopulated below only if this run's synthesis succeeds.
-    synthesis: null,
-    confidenceLevel: failedProofs.length ? (successProofs.length ? TRUST_STATES.INFERRED : TRUST_STATES.FAILED) : TRUST_STATES.VERIFIED,
-    verifiedFacts: successProofs.map((proof) => `Fetched ${proof.url} with HTTP ${proof.httpStatus}.`),
-    inferredPoints: successProofs
-      .filter((proof) => proof.title || proof.snippet)
-      .map((proof) => `${proof.title || proof.url}: ${(proof.snippet || '').slice(0, 220)}`),
-    summary: successProofs.length
-      ? `Fetched ${successProofs.length} of ${proofs.length} source(s) with proof-backed citations.`
-      : 'No sources were reachable. No citations were verified.',
-    status: failedProofs.length ? (successProofs.length ? 'source_fetch_partial' : 'source_fetch_failed') : 'sources_verified',
-    runState: failedProofs.length ? (successProofs.length ? 'partial' : 'failed') : 'completed',
-    currentSourceUrl: null,
-    providerUsed: workingReport.providerUsed || 'duckduckgo_html',
-    providerChain: workingReport.providerChain || ['duckduckgo_html'],
-    queryUsed: workingReport.queryUsed || workingReport.researchQuestion,
-    refinements: workingReport.refinements || [],
-    lastRunSummary: runSummary,
-    runLog: appendRunLog(liveReport || workingReport, {
-      level: failedProofs.length ? 'warning' : 'success',
-      message: runSummary
-    }),
-    recommendedNextStep: successProofs.length
-      ? 'Review extracted snippets and create a Jose approval handoff if the report should enter orchestration.'
-      : 'Check URLs/network access, then retry.'
-  });
-  onProgress?.(updated);
-
-  let finalReport = updated;
-  if (successProofs.length > 0) {
-    const synthesis = await synthesizeHectorResearch(workingReport.researchQuestion, successProofs, { sessionId: resolveSecureSessionId(reportId) });
-    if (synthesis) {
-      finalReport = updateReport(reportId, { synthesis, summary: synthesis.overview });
-      onProgress?.(finalReport);
-    }
-  }
-
-  successProofs.forEach((proof) => {
-    pushMemoryItem({
-      title: `Hector verified source: ${proof.title || proof.url}`,
-      category: 'source_memory',
-      content: {
-        reportId,
-        url: proof.url,
-        httpStatus: proof.httpStatus,
-        title: proof.title,
-        snippet: proof.snippet,
-        dateChecked: proof.dateChecked
-      },
-      source: 'hector-source-fetch',
-      sourceAgent: AGENTS.HECTOR,
-      confidence: TRUST_STATES.VERIFIED,
-      verificationState: TRUST_STATES.VERIFIED,
-      expiresAt: sourceExpiryForType(proof.sourceType || 'public_web'),
-      expiryRule: proof.sourceType || 'public_web'
-    });
-  });
-
-  recordHectorActivity('source_fetch_completed', {
+  onProgress?.(working);
+  const { runResearch, reportText } = await import('./hector/researchRun');
+  const { usesOwnToolCalls } = await import('./jose/joseModels');
+  const large = typeof options.large === 'boolean' ? options.large : usesOwnToolCalls({ agent: 'hector' });
+  const result = await runResearch(report.researchQuestion, {
+    request: options.request,
+    focus: options.focus,
+    urls: Array.isArray(report.urls) ? report.urls : [],
+    large,
     reportId,
-    successCount: successProofs.length,
-    failedCount: failedProofs.length
+    signal: options.signal,
+    onProgress: (note) => {
+      working = updateReport(reportId, { runLog: appendRunLog(working || report, { level: 'info', message: note }) });
+      onProgress?.(working);
+    }
   });
-  appendSessionEvent({
-    category: 'research',
-    title: 'Hector live source fetch completed',
-    details: { reportId, successCount: successProofs.length, failedCount: failedProofs.length },
-    agent: AGENTS.HECTOR,
-    confidence: successProofs.length ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED,
-    verificationState: successProofs.length ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED
+  if (!result.ok) {
+    const failed = updateReport(reportId, {
+      status: 'research_failed',
+      runState: 'failed',
+      confidenceLevel: TRUST_STATES.UNVERIFIED,
+      summary: result.reason,
+      research: null,
+      runLog: appendRunLog(working || report, { level: 'error', message: result.reason })
+    });
+    recordHectorActivity('research_failed', { reportId, reason: result.reason });
+    onProgress?.(failed);
+    return failed;
+  }
+  const research = result.report;
+  const findings = research.subQuestions.flatMap((sq) => sq.findings.map((f) => `${f.text} ${f.sources.map((n) => `[${n}]`).join('')}`));
+  const done = updateReport(reportId, {
+    status: 'research_done',
+    runState: 'completed',
+    confidenceLevel: TRUST_STATES.INFERRED,
+    summary: research.answer,
+    research,
+    text: reportText(research),
+    // The report panel and exports read these (until they read `research`).
+    synthesis: { overview: research.answer, keyFindings: findings, disagreements: research.disagreements, gaps: research.notFound },
+    sources: research.sources.map((source) => ({
+      n: source.n, url: source.url, title: source.title, type: source.kind, kind: source.kind,
+      label: source.label, reason: source.reason || null, snippet: source.excerpt, fetched: source.label === 'read'
+    })),
+    urls: research.sources.map((source) => source.url),
+    providerChain: research.providers,
+    rounds: research.rounds,
+    verifiedFacts: [],
+    runLog: appendRunLog(working || report, {
+      level: 'success',
+      message: `Done in ${research.rounds} round(s): ${findings.length} finding(s) from ${research.sources.length} source(s).`
+    })
   });
-  return finalReport;
+  // One memory note per finished report (agent phase 1): drafts save none.
+  pushMemoryItem({
+    title: `Hector research: ${report.researchQuestion}`,
+    category: 'research_memory',
+    content: { reportId, question: report.researchQuestion, answer: research.answer, findings: findings.length, sources: research.sources.length },
+    source: 'hector-research',
+    sourceAgent: AGENTS.HECTOR,
+    confidence: TRUST_STATES.INFERRED,
+    verificationState: TRUST_STATES.UNVERIFIED
+  });
+  addNode('research_report', reportId).then((reportNodeId) => {
+    if (!reportNodeId) return;
+    research.sources.forEach((source) => {
+      addNode('source', source.url).then((sourceNodeId) => {
+        if (!sourceNodeId) return;
+        addEdge(reportNodeId, sourceNodeId, 'cites', { confidence: TRUST_STATES.INFERRED, createdBy: AGENTS.HECTOR, createdEvent: reportId });
+      }).catch(() => {});
+    });
+  }).catch(() => {});
+  recordHectorActivity('research_done', { reportId, rounds: research.rounds, sources: research.sources.length });
+  onProgress?.(done);
+  return done;
 }
 
 export async function resynthesizeHectorReport(reportId, onProgress) {
-  const report = listHectorReports().find((item) => item.id === reportId);
-  if (!report) throw new Error('Hector report not found.');
-  const successProofs = Array.isArray(report.sourceProofs) ? report.sourceProofs.filter((p) => p.ok) : [];
-  if (successProofs.length === 0) return null;
-
-  const synthesis = await synthesizeHectorResearch(report.researchQuestion, successProofs, { sessionId: resolveSecureSessionId(reportId) });
-  if (!synthesis) return null;
-
-  const updated = updateReport(reportId, { synthesis, summary: synthesis.overview });
-  onProgress?.(updated);
+  // Retry (agent phase 1): the research runs again; its rounds and page reading changed.
   recordHectorActivity('synthesis_retried', { reportId });
-  return updated;
+  return runHectorLiveResearch(reportId, onProgress);
 }
 
-export function createHectorApprovalPacket(reportId) {
-  const report = listHectorReports().find((item) => item.id === reportId);
-  if (!report) return null;
-  const packet = createAgentPacket({
-    fromAgent: AGENTS.HECTOR,
-    toAgent: AGENTS.JOSE,
-    title: `Research approval: ${report.researchQuestion}`,
-    packetType: 'research_approval_handoff',
-    payload: report,
-    source: 'hector-research-desk',
-    confidence: TRUST_STATES.TEMPORARY,
-    verificationState: TRUST_STATES.UNVERIFIED,
-    requiresApproval: false,
-    riskLevel: report.riskLevel || 'low',
-    actionType: 'research_review',
-    commandPreview: 'No command execution. Research review only.',
-    fileChangePreview: 'No file changes requested.',
-    rollbackAvailable: false
-  });
-  recordHectorActivity('jose_approval_handoff_created', { reportId, packetId: packet.id });
-  return packet;
-}
 
 export async function createResearchBrief(topic, onProgress) {
   const draft = createResearchDraft({
@@ -1204,9 +587,11 @@ export async function createResearchBrief(topic, onProgress) {
       urls: report.urls || [],
       reportId: report.id,
       status: report.status || 'completed',
+      // The cited report (agent phase 1): the answer first, findings with source numbers, the sources.
+      text: report.text || report.summary || '',
       inferredPoints: report.inferredPoints || [],
-      verifiedFacts: report.verifiedFacts || [],
-      whatNeedsResearch: [],
+      verifiedFacts: report.synthesis?.keyFindings || [],
+      whatNeedsResearch: report.research?.notFound || [],
       sourceTypesNeeded: []
     };
   } catch (error) {
@@ -1230,177 +615,21 @@ export async function createResearchBrief(topic, onProgress) {
 }
 
 export async function runMultiSourceResearch(query) {
+  // One search chain for every caller (agent phase 1, 2026-10-25): Brave, Tavily,
+  // Perplexity (each when set up), DuckDuckGo, news feeds. DeepSeek is no longer
+  // a "source": it is a chat model, and its answer was passed off as one.
   if (!query || typeof query !== 'string' || !query.trim()) {
     return { ok: false, error: 'No query provided.', sources: [], citations: [], providerChain: [] };
   }
-
-  const providerChain = [];
-  const allSources = [];
-  const citations = [];
-  let preferredProvider = null;
-
-  // 1. Try Brave Search (frontend)
-  try {
-    const braveConfig = await isBraveSearchConfigured();
-    if (braveConfig) {
-      const braveResult = await searchBrave(query, 10);
-      if (braveResult.success && Array.isArray(braveResult.results)) {
-        providerChain.push('brave_search');
-        preferredProvider = 'brave_search';
-        for (const r of braveResult.results) {
-          const source = {
-            url: r.url || '',
-            title: r.title || '',
-            snippet: r.snippet || '',
-            provider: 'brave_search',
-            sourceType: 'public_web'
-          };
-          allSources.push(source);
-          citations.push({
-            url: source.url,
-            title: source.title,
-            source: 'brave_search',
-            confidence: 'inferred'
-          });
-        }
-      }
-    }
-  } catch { /* Brave unavailable — fall through */ }
-
-  // 2. Try Tavily (free tier: 1,000 searches/month — tier-2 fallback when Brave unconfigured)
-  if (allSources.length < 3 && isTavilyConfigured()) {
-    try {
-      const tavilyResult = await searchTavily(query, { maxResults: 8 });
-      if (tavilyResult?.sources?.length > 0) {
-        providerChain.push('tavily');
-        if (!preferredProvider) preferredProvider = 'tavily';
-        for (const src of tavilyResult.sources) {
-          if (!allSources.some(s => s.url === src.url)) {
-            allSources.push({ ...src, sourceType: 'public_web', provider: 'tavily' });
-            citations.push({ url: src.url, title: src.title || '', source: 'tavily', confidence: 'inferred' });
-          }
-        }
-      }
-    } catch { /* Tavily unavailable — fall through */ }
-  }
-
-  // 2b. Try Perplexity's Search API (ranked web results) when sources are still thin
-  if (allSources.length < 3 && isPerplexityConfigured()) {
-    try {
-      const perplexityResult = await searchPerplexity(query, { maxResults: 8 });
-      if (perplexityResult?.sources?.length > 0) {
-        providerChain.push('perplexity');
-        if (!preferredProvider) preferredProvider = 'perplexity';
-        for (const src of perplexityResult.sources) {
-          if (!allSources.some(s => s.url === src.url)) {
-            allSources.push({ ...src, sourceType: 'public_web', provider: 'perplexity' });
-            citations.push({ url: src.url, title: src.title || '', source: 'perplexity', confidence: 'inferred' });
-          }
-        }
-      }
-    } catch { /* Perplexity unavailable — fall through */ }
-  }
-
-  // 3. Try DeepSeek AI synthesis (tier-3 fallback when web sources are thin)
-  if (isDeepSeekConfigured() && allSources.length < 3) {
-    try {
-      const dsResult = await searchWithDeepSeek(query, { maxTokens: 1024 });
-      if (dsResult?.summary) {
-        providerChain.push('deepseek');
-        if (!preferredProvider) preferredProvider = 'deepseek';
-        allSources.push({
-          url: `deepseek://synthesis/${Date.now()}`,
-          title: 'DeepSeek AI Synthesis',
-          summary: dsResult.summary,
-          sourceType: 'ai_synthesis',
-          provider: 'deepseek',
-          confidence: 'inferred'
-        });
-        citations.push({ url: `deepseek://synthesis`, title: 'DeepSeek AI', source: 'deepseek', confidence: 'inferred' });
-      }
-    } catch { /* DeepSeek unavailable — fall through */ }
-  }
-
-  // 4. Try Rust backend search_research_sources
-  try {
-    const rustSources = await discoverResearchSources({
-      researchQuestion: query,
-      sourceType: 'public_web',
-      limit: 8,
-      providerLabel: 'rust_backend',
-      queryLabel: query
-    });
-    if (Array.isArray(rustSources) && rustSources.length > 0) {
-      providerChain.push('rust_backend');
-      if (!preferredProvider) preferredProvider = 'rust_backend';
-      for (const src of rustSources) {
-        if (!allSources.some((s) => s.url === src.url)) {
-          allSources.push(src);
-          citations.push({
-            url: src.url,
-            title: src.title || '',
-            source: 'rust_backend',
-            confidence: src.confidence || 'temporary'
-          });
-        }
-      }
-    }
-  } catch { /* Rust backend unavailable */ }
-
-  // 3. Try DuckDuckGo via Rust
-  if (allSources.length < 3) {
-    try {
-      const ddgSources = await discoverResearchSources({
-        researchQuestion: query,
-        sourceType: 'public_web',
-        limit: 8,
-        providerLabel: 'duckduckgo_html',
-        queryLabel: query
-      });
-      if (Array.isArray(ddgSources) && ddgSources.length > 0) {
-        providerChain.push('duckduckgo_html');
-        if (!preferredProvider) preferredProvider = 'duckduckgo_html';
-        for (const src of ddgSources) {
-          if (!allSources.some((s) => s.url === src.url)) {
-            allSources.push(src);
-            citations.push({
-              url: src.url,
-              title: src.title || '',
-              source: 'duckduckgo_html',
-              confidence: src.confidence || 'temporary'
-            });
-          }
-        }
-      }
-    } catch { /* DDG unavailable */ }
-  }
-
-  // 4. Persist results to memory
-  if (allSources.length > 0) {
-    persistResearchResult(query, allSources);
-  }
-
-  recordHectorActivity('multi_source_research', {
-    query,
-    sourceCount: allSources.length,
-    citationCount: citations.length,
-    providerChain,
-    preferredProvider
-  });
-
-  const ok = allSources.length > 0;
-
+  const { searchChain } = await import('./hector/searchChain');
+  const found = await searchChain([query.trim()], { limit: 8 });
+  const sources = found.sources.map((s) => ({ ...s, sourceType: 'public_web' }));
   return {
-    ok,
-    query,
-    sources: allSources,
-    citations,
-    providerChain,
-    preferredProvider,
-    summary: ok
-      ? `Found ${allSources.length} source(s) via ${providerChain.join(' -> ')} with ${citations.length} citation(s).`
-      : 'No sources found from any provider. Try refining the query.',
-    totalSources: allSources.length,
-    totalCitations: citations.length
+    ok: sources.length > 0,
+    error: sources.length ? undefined : (found.errors.join('; ') || 'No results.'),
+    sources,
+    citations: sources.map((s) => ({ url: s.url, title: s.title, source: s.provider, confidence: 'inferred' })),
+    providerChain: found.providers,
+    preferredProvider: found.providers[0] || null,
   };
 }

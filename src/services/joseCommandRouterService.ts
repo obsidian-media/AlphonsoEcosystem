@@ -88,6 +88,8 @@ export interface JoseCommandAssignment {
   effects?: JoseEffect[];
   /** Step ids this step waits for. The splitter's fixed agent order unless given. */
   needs?: string[];
+  /** For a review step: the step it reviews (the splitter's check of the writing, agent phase 1). */
+  reviewOf?: string;
   title: string;
   rationale: string;
   actionType: string;
@@ -232,8 +234,18 @@ function riskRank(risk: string): number {
   return { low: 1, medium: 2, high: 3, critical: 4 }[risk] || 0;
 }
 
+/**
+ * A term matches at the start of a word (agent phase 1): "test" matches "tests"
+ * but not "latest", "file" matches "files" but not "profile". Until 2026-10-25
+ * any substring matched.
+ */
 function matchesAny(text: string, terms: string[]): boolean {
-  return terms.some((term) => text.includes(term));
+  return terms.some((term) => new RegExp(`(^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(text));
+}
+
+/** "Do not send it anywhere" asks for the opposite of sending: such phrases are left out of the intents. */
+function withoutNegations(lower: string): string {
+  return lower.replace(/\b(do not|don't|dont|never|without)\s+(send|publish|post|upload|share)[^.!?\n]*/g, ' ');
 }
 
 function shorten(text: string): string {
@@ -321,22 +333,31 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
   const clean = String(commandText || '').trim();
   const lower = clean.toLowerCase();
   const connectorCost = classifyCommandCost(lower);
+  const asked = withoutNegations(lower);
+  const localExecution = matchesAny(asked, ['build', 'runtime', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package', 'function', 'code', 'bug', 'repo', 'compile', 'refactor', 'npm']);
+  const creative = matchesAny(asked, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative', 'image', 'generate image', 'generate an image', 'picture', 'visual', 'miya', 'maia']);
   const intents: JoseCommandParserIntents = {
-    research: matchesAny(lower, ['research', 'lookup', 'docs', 'pricing', 'market', 'source', 'citation', 'latest']),
-    creative: matchesAny(lower, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative', 'image', 'generate image', 'generate an image', 'picture', 'visual', 'miya', 'maia']),
-    localExecution: matchesAny(lower, ['build', 'runtime', 'ollama', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package']),
-    governanceAudit: matchesAny(lower, ['audit', 'compliance', 'policy', 'approval', 'governance', 'risk']),
-    securityMonitoring: matchesAny(lower, ['security', 'secrets', 'permission', 'vulnerability', 'unsafe', 'incident']),
-    memoryPreservation: matchesAny(lower, ['remember', 'archive', 'knowledge', 'timeline', 'document decision', 'history']),
-    opportunityScoring: matchesAny(lower, ['opportunity', 'priority', 'prioritize', 'score', 'roi', 'value', 'timing']),
-    distributionExecution: matchesAny(lower, ['distribute', 'schedule', 'engage', 'community', 'publish queue']),
-    publishing: matchesAny(lower, ['upload', 'publish', 'post', 'youtube', 'tiktok', 'instagram']),
-    riskyLocal: matchesAny(lower, ['delete', 'remove', 'deploy', 'write', 'modify']),
-    connector: matchesAny(lower, ['telegram', 'whatsapp', 'youtube', 'connector', 'api key', 'token']),
+    research: matchesAny(asked, ['research', 'lookup', 'docs', 'pricing', 'market', 'source', 'citation', 'latest']),
+    creative,
+    localExecution,
+    // Everyday writing (agent phase 1): a writing verb, when it isn't creative or code work.
+    writing: !creative && !localExecution && matchesAny(asked, ['write', 'draft', 'compose', 'rewrite', 'summarise', 'summarize']),
+    // A check of the writing for accuracy (agent phase 1).
+    check: matchesAny(asked, ['check', 'accuracy', 'accurate', 'fact-check', 'proofread']),
+    governanceAudit: matchesAny(asked, ['audit', 'compliance', 'policy', 'approval', 'governance', 'risk']),
+    securityMonitoring: matchesAny(asked, ['security', 'secrets', 'permission', 'vulnerability', 'unsafe', 'incident']),
+    memoryPreservation: matchesAny(asked, ['remember', 'archive', 'knowledge', 'timeline', 'document decision']),
+    opportunityScoring: matchesAny(asked, ['opportunity', 'priority', 'prioritize', 'score', 'roi', 'value', 'timing']),
+    distributionExecution: matchesAny(asked, ['distribute', 'schedule', 'engage', 'community', 'publish queue']),
+    // "post" alone is a piece of writing, not publishing (agent phase 1): a platform or a send word is needed.
+    publishing: matchesAny(asked, ['upload', 'publish', 'send', 'youtube', 'tiktok', 'instagram', 'facebook', 'telegram', 'whatsapp', 'slack']),
+    riskyLocal: matchesAny(asked, ['delete', 'remove', 'deploy', 'write', 'modify']),
+    connector: matchesAny(asked, ['telegram', 'whatsapp', 'youtube', 'connector', 'api key', 'token']),
     paidConnector: connectorCost.class === 'paid_or_metered',
-    planning: matchesAny(lower, ['plan', 'roadmap', 'batch', 'decompose', 'break down', 'milestones', 'sprint', 'backlog', 'boardroom']),
-    boardroomExecute: matchesAny(lower, ['execute batch', 'run batch', 'start batch', 'begin batch', 'dispatch batch']),
-    boardroomAdvance: matchesAny(lower, ['next batch', 'advance batch', 'continue batch', 'proceed batch'])
+    // "plan" alone ("audit this plan") is not a planning request (agent phase 1).
+    planning: matchesAny(asked, ['plan the', 'plan out', 'make a plan', 'roadmap', 'batch', 'decompose', 'break down', 'milestones', 'sprint', 'backlog', 'boardroom']),
+    boardroomExecute: matchesAny(asked, ['execute batch', 'run batch', 'start batch', 'begin batch', 'dispatch batch']),
+    boardroomAdvance: matchesAny(asked, ['next batch', 'advance batch', 'continue batch', 'proceed batch'])
   };
   const fragments = clean
     .split(/(?:\band\b|,|->|then|\.)/i)
@@ -479,6 +500,38 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       commandPreview: 'Distribution handoff requires user approval before connector execution.',
       fragments: fragments.filter((fragment) => /distribute|schedule|engage|community|publish/i.test(fragment))
     });
+  }
+
+  // Everyday writing is Alphonso's (agent phase 1); it reads the research when there is some.
+  if (intents.writing) {
+    const research = assignments.find((a) => a.agent === AGENTS.HECTOR);
+    assignments.push({
+      agent: AGENTS.ALPHONSO,
+      stepId: 'write',
+      title: `Alphonso writes: ${shorten(clean)}`,
+      rationale: 'Writing language detected. Everyday writing is Alphonso\'s (owner, 2026-10-24).',
+      actionType: 'assistant_write',
+      riskLevel: 'low',
+      requiresApproval: false,
+      commandPreview: 'A piece of everyday writing.',
+      fragments,
+      ...(research ? { needs: ['hector'] } : { needs: [] }),
+    });
+    if (intents.check) {
+      assignments.push({
+        agent: AGENTS.MARIA,
+        stepId: 'check',
+        title: `Maria checks the writing: ${shorten(clean)}`,
+        rationale: 'A check of the writing was asked for.',
+        actionType: 'audit_quality',
+        riskLevel: 'low',
+        requiresApproval: false,
+        commandPreview: 'Reviews the writing; changes nothing.',
+        fragments,
+        needs: ['write'],
+        reviewOf: 'write',
+      });
+    }
   }
 
   if (!assignments.length) {
