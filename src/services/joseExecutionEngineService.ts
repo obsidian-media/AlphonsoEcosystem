@@ -992,7 +992,7 @@ async function executeMiyaAssignment(commandText: any, assignment: any, options:
 
 async function executeHectorAssignment(commandText: any, assignment: any, options: any = {}) {
   // Earlier steps' work (agent roles Part A): Hector researches with it in view.
-  const context = options.stepInput?.needs?.length ? stepInputText({ ...options.stepInput, others: [], memory: '' }) : '';
+  const context = options.stepInput?.needs?.length ? stepInputText({ ...options.stepInput, others: [], memory: '', skill: null }) : '';
   const draft = createResearchDraft({
     researchQuestion: context ? `${commandText}\n\n${context.slice(0, 1500)}` : commandText,
     sourceUrls: [],

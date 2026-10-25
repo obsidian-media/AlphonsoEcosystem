@@ -834,3 +834,19 @@ describe('every step runs with its skill (agent roles Part B)', () => {
     expect(getJoseRequest(`jose-request-${result.commandId}`).steps[0].skill).toBeUndefined();
   });
 });
+
+describe("Hector's research question (agent roles Part B review)", () => {
+  beforeEach(() => localStorage.clear());
+
+  it('never carries his skill text into the search', async () => {
+    const hector = await import('../../../services/hectorResearchService');
+    vi.mocked(hector.createResearchDraft).mockClear();
+    const result = await run([
+      { agent: 'miya', actionType: 'creative_package', stepId: 'draft', needs: [], title: 'Draft', rationale: 'test', riskLevel: 'low', requiresApproval: false, commandPreview: 'Writes.', fragments: [] },
+      { agent: 'hector', actionType: 'research_report', stepId: 'facts', needs: ['draft'], title: 'Facts', rationale: 'test', riskLevel: 'low', requiresApproval: false, commandPreview: 'Reads.', fragments: [] },
+    ]);
+    const question = String(vi.mocked(hector.createResearchDraft).mock.calls[0][0].researchQuestion);
+    expect(question).not.toContain('Your skill');
+    expect(question).toContain("From Miya's step (draft)");
+  });
+});
