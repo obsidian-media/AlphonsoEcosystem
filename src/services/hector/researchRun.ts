@@ -83,6 +83,8 @@ export async function planQuestion(question: string, request?: string, signal?: 
       queries: strings(p?.queries).filter((q) => q.length <= HECTOR_LIMITS.queryChars).slice(0, HECTOR_LIMITS.maxQueriesPerSubQuestion),
     }))
     .filter((p: { question: string; queries: string[] }) => p.question && p.queries.length)
+    // A small model can list one part twice; keep it once.
+    .filter((p: { question: string }, i: number, all: { question: string }[]) => all.findIndex((o) => o.question.trim().toLowerCase() === p.question.trim().toLowerCase()) === i)
     .slice(0, HECTOR_LIMITS.maxSubQuestions);
   return plan.length ? plan : fallback;
 }
@@ -205,6 +207,14 @@ export async function runResearch(
     const reply: any = await generateAgentLlmResponse('hector', { prompt: writeUpPrompt(question, parts, usable, opts.large), format: 'json', signal: opts.signal } as any).catch(() => null);
     const parsed = parseWriteUp(String(reply?.response || ''), usable.map((r) => r.source.kind));
     if (!parsed) return { ok: false, reason: NO_REPORT };
+    // A part counts as answered only when a finding rests on a page Hector read or a primary
+    // source: a search snippet of an ordinary page (a social post, a blocked page) isn't enough,
+    // so the part gets a follow-up round (agent phase 1 live check: "9.4 million" from a Facebook snippet).
+    const solid = (n: number) => usable[n - 1]?.label === 'read' || usable[n - 1]?.source.kind === 'primary';
+    parsed.subQuestions = parsed.subQuestions.map((sq) => {
+      const status = sq.status === 'answered' && !sq.findings.some((f) => f.sources.some(solid)) ? 'partly' : sq.status;
+      return status === 'answered' ? sq : { ...sq, status, followUp: sq.followUp || cutAtWord(sq.question, HECTOR_LIMITS.queryChars) };
+    });
     written = parsed;
     const missing = parsed.subQuestions.filter((sq) => sq.status !== 'answered' && sq.followUp).map((sq) => sq.followUp as string);
     queries = [...new Set(missing)].slice(0, HECTOR_LIMITS.maxSubQuestions);

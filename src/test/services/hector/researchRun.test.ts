@@ -223,3 +223,24 @@ describe('a refused free search is said plainly', () => {
     expect(out).toEqual({ ok: false, reason: 'The free search (DuckDuckGo) refused: too many searches from this computer. Try again later, or add a search key in Settings → Connectors → Search & Research.' });
   });
 });
+
+describe('a part is answered only by a page read or a primary source', () => {
+  it('a part resting on a snippet of an ordinary page gets a follow-up round', async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'How many colonies?', queries: ['eu honeybee colonies'] }] }));
+    search.mockResolvedValueOnce(found(['https://social.example/blocked-post'])).mockResolvedValueOnce(found(['https://stats.example.gov/bees']));
+    const writeUp = (n: number) => json({ answer: 'About 9.4 million.', subQuestions: [{ question: 'How many colonies?', status: 'answered', findings: [{ text: 'About 9.4 million', sources: [n] }] }] });
+    llm.mockResolvedValueOnce(writeUp(1)).mockResolvedValueOnce(writeUp(2));
+    const out = await runResearch('How many colonies?', { large: false, reportId: 'hector-report-9-e' });
+    expect(out.ok).toBe(true);
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(search.mock.calls[1][0]).toEqual(['How many colonies?']);
+    if (out.ok) expect(out.report.rounds).toBe(2);
+  });
+});
+
+describe('planQuestion drops a repeated part', () => {
+  it('keeps each question once', async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'Causes of losses?', queries: ['a'] }, { question: 'How many?', queries: ['b'] }, { question: 'causes of losses? ', queries: ['c'] }] }));
+    expect((await planQuestion('Q', 'Q')).map((p) => p.question)).toEqual(['Causes of losses?', 'How many?']);
+  });
+});
