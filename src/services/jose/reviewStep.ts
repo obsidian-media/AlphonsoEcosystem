@@ -6,7 +6,7 @@
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { describeResponsibility } from './agentPermissionTable';
 import { agentName } from './agentNames';
-import type { StepInput } from './stepInput';
+import { skillSection, type StepInput } from './stepInput';
 
 export interface ReviewStepResult {
   summary: string;
@@ -44,6 +44,7 @@ export async function runReviewStep(agent: string, input: StepInput | null | und
   const role = describeResponsibility(agent);
   const prompt = [
     `You are ${agentName(agent)}. You own: ${role?.owns || ''} You never: ${role?.never || ''}`,
+    skillSection(input),
     input?.instruction ? `Your task: ${input.instruction}` : '',
     `The request: ${input?.request || ''}`,
     `The work to review (${agentName(work.agent)}'s step):\n${work.text}`,
