@@ -53,6 +53,7 @@ mod post_metrics;
 mod runtime_manager;
 mod runway;
 mod search;
+mod skills_store;
 mod telegram;
 mod utils;
 mod voice_sidecar;
@@ -781,6 +782,11 @@ pub fn run() {
       media_tools::content_ready_to_post,
       media_tools::content_cut_short,
       post_metrics::content_read_metrics,
+      skills_store::skills_list_user,
+      skills_store::skills_save_user,
+      skills_store::skills_delete_user,
+      skills_store::skills_import_user,
+      skills_store::skills_open_folder,
       elevenlabs::elevenlabs_voices,
       elevenlabs::elevenlabs_models,
       elevenlabs::elevenlabs_speak,
