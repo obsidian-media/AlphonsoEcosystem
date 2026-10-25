@@ -67,12 +67,13 @@ async function ask(prompt: string, signal?: AbortSignal): Promise<any> {
 }
 
 /** What the question needs answered, each with up to 3 short search queries (one model call). */
-export async function planQuestion(question: string, request?: string, signal?: AbortSignal): Promise<{ question: string; queries: string[] }[]> {
+export async function planQuestion(question: string, request?: string, signal?: AbortSignal, focus?: string): Promise<{ question: string; queries: string[] }[]> {
   const fallback = [{ question, queries: [fallbackQuery(request || question)].filter(Boolean) }];
   const answer = await ask([
     'You are Hector, a researcher. Break the research question into the parts that must be answered (at most 5), and for each write up to 3 short web search queries (a few words each, like a person types into a search engine).',
     `Question: ${question}`,
     request && request !== question ? `The request it came from: ${fallbackQuery(request)}` : '',
+    focus ? `Jose's note for this research: ${focus.slice(0, 300)}` : '',
     'Answer with JSON only: {"subQuestions": [{"question": "...", "queries": ["...", "..."]}]}',
   ].filter(Boolean).join('\n\n'), signal);
   const parts = Array.isArray(answer?.subQuestions) ? answer.subQuestions : [];
@@ -148,9 +149,9 @@ function writeUpPrompt(question: string, parts: { question: string }[], reads: R
 
 export async function runResearch(
   question: string,
-  opts: { request?: string; urls?: string[]; large: boolean; reportId: string; onProgress?: (note: string) => void; signal?: AbortSignal },
+  opts: { request?: string; focus?: string; urls?: string[]; large: boolean; reportId: string; onProgress?: (note: string) => void; signal?: AbortSignal },
 ): Promise<{ ok: true; report: ResearchReport } | { ok: false; reason: string }> {
-  const parts = await planQuestion(question, opts.request, opts.signal);
+  const parts = await planQuestion(question, opts.request, opts.signal, opts.focus);
   const maxRounds = 1 + (opts.large ? HECTOR_LIMITS.followUpRoundsLarge : HECTOR_LIMITS.followUpRoundsSmall);
   const reads: Read[] = [];
   const seen = new Set<string>();

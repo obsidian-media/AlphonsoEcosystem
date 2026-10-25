@@ -18,7 +18,7 @@ function saveOnStep(packetId: string | undefined, stepId: string | undefined, sk
 }
 
 export async function prepareSkill(
-  packet: { id?: string } | null | undefined,
+  packet: { id?: string; payload?: { joseCommandId?: string } } | null | undefined,
   assignment: any,
   stepInput: StepInput,
   opts: { workspaceRoot?: string } = {},
@@ -34,7 +34,8 @@ export async function prepareSkill(
     recordSkillUse(agent, picked.skill.name);
     // A content step's skill is already its prompt (its ask); adding it again would repeat it.
     if (contentStep) return { ...stepInput, skill: null };
-    const gathered = await gatherForSkill(picked.skill, { agent, stepInput, workspaceRoot: opts.workspaceRoot }, { ownCalls: usesOwnToolCalls(assignment) });
+    const commandId = packet?.payload?.joseCommandId;
+    const gathered = await gatherForSkill(picked.skill, { agent, stepInput, workspaceRoot: opts.workspaceRoot, commandId }, { ownCalls: usesOwnToolCalls(assignment) });
     return {
       ...stepInput,
       skill: {

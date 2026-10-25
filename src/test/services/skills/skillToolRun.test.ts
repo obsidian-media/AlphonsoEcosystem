@@ -5,7 +5,11 @@ const research = vi.fn();
 const addMemory = vi.fn();
 const fetchUrl = vi.fn();
 const sendSlack = vi.fn();
-vi.mock('../../../services/hectorResearchService', () => ({ runMultiSourceResearch: (...a: unknown[]) => research(...a) }));
+vi.mock('../../../services/hector/searchChain', () => ({ searchChain: (...a: unknown[]) => research(...a) }));
+const invoke = vi.fn();
+vi.mock('@tauri-apps/api/core', () => ({ invoke: (...a: unknown[]) => invoke(...a) }));
+const bookmarks = vi.fn(() => [{ title: 'EU bee report', url: 'https://ec.europa.eu/bees', summary: 'Colony numbers' }]);
+vi.mock('../../../services/hectorBookmarkService', () => ({ getBookmarks: (...a: unknown[]) => bookmarks(...(a as [])) }));
 vi.mock('../../../services/unifiedMemoryService', () => ({
   addMemoryItem: (...a: unknown[]) => addMemory(...a),
   listMemoryItems: () => [{ title: 'Honeybees decision', content: 'We chose honeybees for the launch video.' }],
@@ -21,7 +25,7 @@ const input: StepInput = {
   needs: [{ stepId: 'post', agent: 'miya', text: 'Bees make honey.', files: [], sources: ['https://bees.example/a'], cut: 0, main: 'Bees make honey.' }],
 };
 
-beforeEach(() => { research.mockReset(); addMemory.mockReset(); fetchUrl.mockReset(); sendSlack.mockReset(); });
+beforeEach(() => { research.mockReset(); addMemory.mockReset(); fetchUrl.mockReset(); sendSlack.mockReset(); invoke.mockReset(); localStorage.clear(); });
 
 describe('runSkillTool', () => {
   it("refuses a tool the agent can't use", async () => {
@@ -52,10 +56,10 @@ describe('runSkillTool', () => {
   });
 
   it('web_search returns titles and links', async () => {
-    research.mockResolvedValueOnce({ ok: true, sources: [{ title: 'All about bees', url: 'https://bees.example', snippet: 'Bees are insects.' }] });
+    research.mockResolvedValueOnce({ sources: [{ title: 'All about bees', url: 'https://bees.example', snippet: 'Bees are insects.', provider: 'duckduckgo', kind: 'general' }], providers: ['duckduckgo'], errors: [] });
     expect(await runSkillTool('web_search', { query: 'bees' }, { agent: 'hector', stepInput: input }))
       .toEqual({ ok: true, text: '- All about bees (https://bees.example): Bees are insects.' });
-    expect(research).toHaveBeenCalledWith('bees');
+    expect(research).toHaveBeenCalledWith(['bees'], { limit: 8 });
   });
 
   it('read_memory finds matching notes', async () => {
@@ -87,5 +91,32 @@ describe('runSkillTool', () => {
   it('read_project_file needs a project folder', async () => {
     expect(await runSkillTool('read_project_file', { path: 'a.txt' }, { agent: 'alphonso', stepInput: input }))
       .toEqual({ ok: false, text: 'No project folder is set.' });
+  });
+
+  it('read_sources gives a research step\'s numbered sources with excerpts (agent phase 1)', async () => {
+    const { setStepOutput } = await import('../../../services/jose/joseStepOutputs');
+    setStepOutput('c1', 'research', 'hector', {
+      summary: 'Answer', artifacts: [{ type: 'hector_report', reportId: 'hector-report-1-a' }],
+      schema: { sources: [{ n: 1, title: 'EU report', url: 'https://ec.europa.eu/bees', label: 'read', excerpt: 'About 17 million colonies.' }] },
+    } as never);
+    const withResearch = { ...input, needs: [{ stepId: 'research', agent: 'hector', text: 'Answer', files: [], sources: ['https://ec.europa.eu/bees'], cut: 0, main: 'Answer' }] };
+    expect(await runSkillTool('read_sources', {}, { agent: 'maria', stepInput: withResearch, commandId: 'c1' }))
+      .toEqual({ ok: true, text: '[1] EU report — https://ec.europa.eu/bees (read)\nAbout 17 million colonies.' });
+  });
+
+  it('read_source_page reads a saved page by number', async () => {
+    const { setStepOutput } = await import('../../../services/jose/joseStepOutputs');
+    setStepOutput('c2', 'research', 'hector', { summary: 'Answer', artifacts: [{ type: 'hector_report', reportId: 'hector-report-2-b' }] } as never);
+    invoke.mockImplementation(async (cmd: string) => (cmd === 'research_read_page' ? 'The full page text.' : null));
+    const withResearch = { ...input, needs: [{ stepId: 'research', agent: 'hector', text: 'Answer', files: [], sources: [], cut: 0, main: 'Answer' }] };
+    expect(await runSkillTool('read_source_page', { n: 2 }, { agent: 'maria', stepInput: withResearch, commandId: 'c2' }))
+      .toEqual({ ok: true, text: 'The full page text.' });
+    expect(invoke).toHaveBeenCalledWith('research_read_page', { reportId: 'hector-report-2-b', n: 2 });
+  });
+
+  it('read_bookmarks lists the sources you saved (Hector only)', async () => {
+    expect(await runSkillTool('read_bookmarks', {}, { agent: 'hector', stepInput: input }))
+      .toEqual({ ok: true, text: '- EU bee report (https://ec.europa.eu/bees): Colony numbers' });
+    expect((await runSkillTool('read_bookmarks', {}, { agent: 'maria', stepInput: input })).ok).toBe(false);
   });
 });

@@ -25,9 +25,13 @@ vi.mock('../services/verificationService', () => ({
 
 vi.mock('../services/hectorResearchService', () => ({
   createResearchDraft: vi.fn(() => ({ id: 'hector-report-draft' })),
+  // A finished research run (agent phase 1): status, the report and its hand-over text.
   runHectorLiveResearch: vi.fn(async () => ({
     id: 'hector-report-draft',
+    status: 'research_done',
     summary: 'Hector mock summary',
+    text: 'Hector mock summary\n\nSources:\n[1] Mock — https://example.com (Read)',
+    research: { answer: 'Hector mock summary', subQuestions: [], disagreements: [], notFound: [], sources: [{ n: 1, title: 'Mock', url: 'https://example.com', kind: 'general', label: 'read', excerpt: '' }], rounds: 1, providers: [] },
     confidenceLevel: 'inferred',
     sources: []
   }))
@@ -38,7 +42,8 @@ vi.mock('../lib/ollama', () => ({
     response: JSON.stringify({ title: 'mock', hook: 'mock', script: 'mock', scenes: [], prompts: [] })
   })),
   fetchOllamaModels: vi.fn(async () => ({ models: [] })),
-  PREFERRED_MODEL: 'llama3.2:3b'
+  PREFERRED_MODEL: 'llama3.2:3b',
+  getConfiguredOllamaModel: () => 'llama3.2:3b'
 }));
 
 vi.mock('../services/sentinelGateService', () => ({
