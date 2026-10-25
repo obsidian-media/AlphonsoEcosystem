@@ -25,7 +25,7 @@ const input: StepInput = {
   needs: [{ stepId: 'post', agent: 'miya', text: 'Bees make honey.', files: [], sources: ['https://bees.example/a'], cut: 0, main: 'Bees make honey.' }],
 };
 
-beforeEach(() => { research.mockReset(); addMemory.mockReset(); fetchUrl.mockReset(); sendSlack.mockReset(); invoke.mockReset(); localStorage.clear(); });
+beforeEach(() => { research.mockReset(); addMemory.mockReset(); fetchUrl.mockReset(); sendSlack.mockReset(); invoke.mockReset(); invoke.mockResolvedValue(null); localStorage.clear(); });
 
 describe('runSkillTool', () => {
   it("refuses a tool the agent can't use", async () => {
