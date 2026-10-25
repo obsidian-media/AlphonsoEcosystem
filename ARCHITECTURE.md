@@ -258,7 +258,7 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
 - Playwright E2E wired into CI (8 spec files under `e2e/`) — runs the web build with the Tauri bridge mocked, so it never exercises the Rust backend
 - Desktop E2E suite (`e2e-desktop/`, `npm run test:e2e:desktop`) — WebdriverIO + tauri-driver against the real built binary on isolated test data; 34 spec files; runs in CI as `Desktop E2E (real Tauri binary)` on Windows (not a required check)
-- Coverage floors 48% lines / 38% branches / 30% functions / 48% statements (`npm run test:coverage`); 540 test files, 6,722 tests, all passing (verified 2026-10-25 — this line is not covered by `scripts/verify-doc-counts.mjs`'s ARCHITECTURE.md checks, so it can drift silently; cross-check against AGENTS.md's Project Identity line before trusting it)
+- Coverage floors 48% lines / 38% branches / 30% functions / 48% statements (`npm run test:coverage`); 544 test files, 6,719 tests, all passing (verified 2026-10-25 — this line is not covered by `scripts/verify-doc-counts.mjs`'s ARCHITECTURE.md checks, so it can drift silently; cross-check against AGENTS.md's Project Identity line before trusting it)
 - GitHub connector tests: 20 tests in `githubConnector.test.js`; Slack connector tests: 16 tests in `slackConnector.test.js`
 - `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI; `cargo clippy -- -D warnings` clean (verified 2026-07-08)
 - **Last reconciled with the code:** 2026-10-25 (first full audit 2026-07-08 — see `docs/AUDIT_REPORT_2026-07-08.md`).

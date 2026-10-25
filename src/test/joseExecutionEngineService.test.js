@@ -680,7 +680,8 @@ describe('nova feedback integration', () => {
     restoreSetTimeout();
   });
 
-  it('calls storeNovaScore after Nova executes successfully', async () => {
+  // Agent phase 2: Nova's keyword score is gone, so nothing is stored after her step.
+  it('stores no keyword score after a Nova step', async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: score opportunity for this task',
       source: 'user',
@@ -688,7 +689,7 @@ describe('nova feedback integration', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(mockStoreNovaScore).toHaveBeenCalled();
+    expect(mockStoreNovaScore).not.toHaveBeenCalled();
   });
 
   it('includes novaFeedback in pipeline return value', async () => {
