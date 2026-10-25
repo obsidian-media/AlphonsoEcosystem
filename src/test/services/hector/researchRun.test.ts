@@ -13,7 +13,7 @@ import { runResearch, fallbackQuery, parseWriteUp, reportText, planQuestion } fr
 import { HECTOR_LIMITS } from '../../../services/hector/researchLimits';
 
 const json = (v: unknown) => ({ response: JSON.stringify(v) });
-const found = (urls: string[]) => ({ sources: urls.map((url) => ({ url, title: `T ${url}`, snippet: `snippet of ${url}`, provider: 'duckduckgo', kind: url.includes('.gov') ? 'primary' : 'general' })), providers: ['duckduckgo'], errors: [] });
+const found = (urls: string[]) => ({ sources: urls.map((url) => ({ url, title: `T ${url} honeybee colonies`, snippet: `snippet of ${url}`, provider: 'duckduckgo', kind: url.includes('.gov') ? 'primary' : 'general' })), providers: ['duckduckgo'], errors: [] });
 const PAGE = (topic: string) => `Europe has about 17 million managed honeybee colonies. ${topic} colonies decline because of the varroa mite and pesticides, the report says in detail. Beekeepers across the continent report heavier winter losses than a decade ago, and national surveys track them every year.`;
 let fetched: string[] = [];
 
@@ -162,5 +162,55 @@ describe('runResearch', () => {
     expect(fetched[0]).toBe('https://mine.example/report');
     expect(new Set(fetched).size).toBeLessThanOrEqual(HECTOR_LIMITS.maxSourcesRead);
     expect(out.ok).toBe(true);
+  });
+});
+
+describe('only sources about the question (agent phase 1 review)', () => {
+  const plan = json({ subQuestions: [{ question: 'How many honeybee colonies in Europe?', queries: ['honeybee colonies Europe'] }] });
+  const answered = json({ answer: 'About 17 million.', subQuestions: [{ question: 'How many honeybee colonies in Europe?', status: 'answered', findings: [{ text: '17 million colonies', sources: [1] }] }], disagreements: [], notFound: [] });
+
+  it('drops a page that is not about the question, before and after reading', async () => {
+    invoke.mockImplementation(async (cmd: string, args: any) => {
+      if (cmd !== 'fetch_research_sources') return null;
+      return args.sources.map((s: { url: string }) => ({
+        url: s.url, ok: true, httpStatus: 200, pdf: false, title: null,
+        snippet: s.url.includes('roi')
+          ? 'Automation ROI: a developer guide to replacing manual processes with scripts, measuring time saved and cost per task across many teams in a company.'
+          : PAGE(s.url),
+      }));
+    });
+    llm.mockResolvedValueOnce(plan).mockResolvedValueOnce(answered);
+    search.mockResolvedValue({ sources: [
+      { url: 'https://bees.example/colonies', title: 'Honeybee colonies in Europe', snippet: 'colonies', provider: 'duckduckgo', kind: 'general' },
+      { url: 'https://dev.example/roi', title: 'Automation ROI', snippet: 'replacing manual processes', provider: 'duckduckgo', kind: 'general' },
+      { url: 'https://news.example/2026/10/23/phone-review', title: 'Phone review', snippet: 'a tablet phone', provider: 'news feeds', kind: 'news' },
+    ], providers: ['duckduckgo'], errors: [] });
+    const out = await runResearch('How many honeybee colonies are in Europe?', { large: false, reportId: 'hector-report-9-a' });
+    if (!out.ok) throw new Error(String((out as { reason?: string }).reason));
+    expect(out.report.sources.map((s) => s.url)).toEqual(['https://bees.example/colonies']);
+    expect(fetched).not.toContain('https://news.example/2026/10/23/phone-review');
+  });
+
+  it('keeps a page you supplied even when it is short', async () => {
+    invoke.mockImplementation(async (cmd: string, args: any) => (cmd === 'fetch_research_sources'
+      ? args.sources.map((s: { url: string }) => ({ url: s.url, ok: true, httpStatus: 200, pdf: false, title: 'Example Domain', snippet: 'Example Domain. This domain is for use in illustrative examples in documents.' }))
+      : null));
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'What is the example domain for?', queries: ['example domain'] }] }))
+      .mockResolvedValueOnce(json({ answer: 'It is for examples in documents.', subQuestions: [{ question: 'What is the example domain for?', status: 'answered', findings: [{ text: 'For illustrative examples in documents', sources: [1] }] }], disagreements: [], notFound: [] }));
+    search.mockResolvedValue({ sources: [], providers: ['duckduckgo'], errors: [] });
+    const out = await runResearch('What is the IANA example domain used for?', { large: false, reportId: 'hector-report-9-b', urls: ['https://example.com/'] });
+    if (!out.ok) throw new Error(String((out as { reason?: string }).reason));
+    expect(out.report.sources[0]).toMatchObject({ url: 'https://example.com/', label: 'read' });
+  });
+
+  it('a part with no findings is open, so a follow-up round runs', async () => {
+    llm.mockResolvedValueOnce(plan)
+      .mockResolvedValueOnce(json({ answer: 'Not in the sources.', subQuestions: [{ question: 'How many honeybee colonies in Europe?', status: 'answered', findings: [], followUp: 'EU beehives statistics Eurostat' }], disagreements: [], notFound: [] }))
+      .mockResolvedValueOnce(answered);
+    let n = 0;
+    search.mockImplementation(async () => found([`https://s${n++}.example/honeybee-colonies`]));
+    const out = await runResearch('How many honeybee colonies are in Europe?', { large: false, reportId: 'hector-report-9-c' });
+    expect(out.ok && out.report.rounds).toBe(2);
+    expect(search.mock.calls[1][0]).toEqual(['EU beehives statistics Eurostat']);
   });
 });

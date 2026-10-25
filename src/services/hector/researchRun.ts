@@ -102,12 +102,30 @@ export function parseWriteUp(text: string, kinds: SourceKind[]): Omit<ResearchRe
         ...f,
         support: f.sources.length >= 2 ? 'several sources' : kinds[f.sources[0] - 1] === 'primary' ? 'one source' : 'one source, not primary',
       }));
-    return { question: str(sq?.question), status, findings, ...(str(sq?.followUp) ? { followUp: str(sq.followUp) } : {}) };
+    // A part with no findings isn't answered, whatever the model says: it gets a follow-up round.
+    const checked = findings.length ? status : 'open';
+    return { question: str(sq?.question), status: checked, findings, ...(str(sq?.followUp) ? { followUp: str(sq.followUp) } : {}) };
   }).filter((sq: SubQuestion) => sq.question);
   return { answer, subQuestions, disagreements: strings(data?.disagreements), notFound: strings(data?.notFound) };
 }
 
-interface Read { source: FoundSource; label: ReportSource['label']; reason?: string; text: string }
+interface Read { source: FoundSource; label: ReportSource['label'] | 'off_topic'; reason?: string; text: string }
+
+/** How many of the question's word stems a text shares (agent phase 1 review: off-topic pages were cited). */
+function sharedStems(text: string, terms: string[]): number {
+  const lower = String(text || '').toLowerCase();
+  const stems = [...new Set(terms.map((t) => t.slice(0, 5)))];
+  return stems.filter((stem) => new RegExp(`(^|[^a-z0-9])${stem}`).test(lower)).length;
+}
+
+/** A page is about the question when it shares enough of the question's word stems. */
+function isAboutQuestion(read: Read, terms: string[]): boolean {
+  if (read.source.provider === 'supplied' || !terms.length) return true;
+  // A read page shares two stems; a search snippet (a blocked page, a PDF) is short, so one will do.
+  const needed = read.label === 'read' ? Math.min(2, [...new Set(terms.map((t) => t.slice(0, 5)))].length) : 1;
+  const text = read.label === 'read' ? relevantText(read.text, terms, 3000) : read.text;
+  return sharedStems(`${read.source.title} ${text}`, terms) >= needed;
+}
 
 async function fetchSources(list: FoundSource[]): Promise<Read[]> {
   if (!list.length) return [];
@@ -121,7 +139,8 @@ async function fetchSources(list: FoundSource[]): Promise<Read[]> {
   return list.map((source) => {
     const proof = (proofs || []).find((p) => p?.url === source.url || String(p?.url || '').replace(/\/$/, '') === source.url.replace(/\/$/, ''));
     const text = str(proof?.snippet);
-    if (proof?.ok && !proof?.pdf && text.length >= 200) return { source, label: 'read', text };
+    // A page you supplied counts however short it is; a found page under 200 characters is likely a wall.
+    if (proof?.ok && !proof?.pdf && (text.length >= 200 || (source.provider === 'supplied' && text))) return { source, label: 'read', text };
     const reason = proof?.pdf ? 'PDF' : proof?.httpStatus ? `blocked (HTTP ${proof.httpStatus})` : 'not reached';
     if (source.snippet) return { source, label: 'snippet', reason, text: source.snippet };
     return { source, label: 'unreadable', reason, text: '' };
@@ -141,6 +160,7 @@ function writeUpPrompt(question: string, parts: { question: string }[], reads: R
     `Question: ${question}`,
     `Parts to answer:\n${parts.map((p, i) => `${i + 1}. ${p.question}`).join('\n')}`,
     blocks.join('\n\n'),
+    'Look for the exact figures, names and dates the sources give, and quote them. Write the answer from your findings: state what the sources say, with numbers; only say something is missing when no source has it.',
     'For each part: its findings, each citing the numbers of the sources that state it; status "answered", "partly" or "open"; and for "partly" or "open" one followUp: a different search to try (an official statistic, a named report, a year).',
     'When sources give different figures, list each with its source under disagreements. List what no source covered under notFound.',
     'Answer with JSON only: {"answer": "the direct answer in two or three sentences", "subQuestions": [{"question": "...", "status": "answered", "findings": [{"text": "...", "sources": [1, 3]}], "followUp": "..."}], "disagreements": ["..."], "notFound": ["..."]}',
@@ -152,6 +172,7 @@ export async function runResearch(
   opts: { request?: string; focus?: string; urls?: string[]; large: boolean; reportId: string; onProgress?: (note: string) => void; signal?: AbortSignal },
 ): Promise<{ ok: true; report: ResearchReport } | { ok: false; reason: string }> {
   const parts = await planQuestion(question, opts.request, opts.signal, opts.focus);
+  const topicTerms = questionTerms([question, ...parts.map((p) => p.question)].join(' '));
   const maxRounds = 1 + (opts.large ? HECTOR_LIMITS.followUpRoundsLarge : HECTOR_LIMITS.followUpRoundsSmall);
   const reads: Read[] = [];
   const seen = new Set<string>();
@@ -171,12 +192,15 @@ export async function runResearch(
     found.providers.forEach((p) => providers.add(p));
     errors.push(...found.errors);
     const room = HECTOR_LIMITS.maxSourcesRead - reads.length;
-    const fresh = [...(rounds === 1 ? supplied : []), ...found.sources].filter((s) => !seen.has(s.url)).slice(0, room);
+    // Results that don't share a word with the question aren't fetched.
+    const onTopic = found.sources.filter((s) => !topicTerms.length || sharedStems(`${s.title} ${s.snippet} ${s.url}`, topicTerms) > 0);
+    const fresh = [...(rounds === 1 ? supplied : []), ...onTopic].filter((s) => !seen.has(s.url)).slice(0, room);
     fresh.forEach((s) => seen.add(s.url));
     if (!fresh.length && rounds > 1) { rounds -= 1; break; }
     opts.onProgress?.(`Reading ${fresh.length} source(s)…`);
-    reads.push(...(await fetchSources(fresh)));
-    const usable = reads.filter((r) => r.label !== 'unreadable');
+    const fetchedNow = await fetchSources(fresh);
+    reads.push(...fetchedNow.map((r) => (r.label !== 'unreadable' && !isAboutQuestion(r, topicTerms) ? { ...r, label: 'off_topic' as const, reason: 'not about the question' } : r)));
+    const usable = reads.filter((r) => r.label === 'read' || r.label === 'snippet');
     if (!usable.length) break;
     const reply: any = await generateAgentLlmResponse('hector', { prompt: writeUpPrompt(question, parts, usable, opts.large), format: 'json', signal: opts.signal } as any).catch(() => null);
     const parsed = parseWriteUp(String(reply?.response || ''), usable.map((r) => r.source.kind));
@@ -187,12 +211,13 @@ export async function runResearch(
     if (reads.length >= HECTOR_LIMITS.maxSourcesRead) break;
   }
 
-  const usable = reads.filter((r) => r.label !== 'unreadable');
+  const usable = reads.filter((r) => r.label === 'read' || r.label === 'snippet');
   if (!written || !usable.length) {
     const blocked = reads.filter((r) => r.label === 'unreadable').length;
-    if (!reads.length) {
+    const offTopic = reads.filter((r) => r.label === 'off_topic').length;
+    if (!reads.length || offTopic === reads.length) {
       const why = errors.length ? ` (${errors.join('; ')})` : '';
-      return { ok: false, reason: `No search engine found anything for "${question}"${why}. Add a search key in Settings → Connectors → Search & Research, or rephrase the question.` };
+      return { ok: false, reason: `No search engine found anything about "${question}"${why}. Add a search key in Settings → Connectors → Search & Research, or rephrase the question.` };
     }
     return { ok: false, reason: `Every source Hector found blocked him (${blocked} of ${reads.length}). Try again later or supply addresses on the Research Desk.` };
   }
@@ -205,7 +230,7 @@ export async function runResearch(
     title: r.source.title || r.source.url,
     url: r.source.url,
     kind: r.source.kind,
-    label: r.label,
+    label: r.label as ReportSource['label'],
     ...(r.reason ? { reason: r.reason } : {}),
     excerpt: (r.label === 'read' ? relevantText(r.text, terms, HECTOR_LIMITS.excerptChars) || r.text : r.text).slice(0, HECTOR_LIMITS.excerptChars),
   }));
