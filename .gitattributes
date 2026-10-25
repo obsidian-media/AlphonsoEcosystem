@@ -13,4 +13,4 @@
 # it back with autocrlf=true active, and --check failed with 246 lines
 # converted to CRLF and zero real content changes.
 docs/AGENT_SKILL_PERMISSION_MATRIX.md text eol=lf
-scripts/generate-skill-permission-matrix.mjs text eol=lf
+archive/MIGHTBEUSEDLATER/skillPacks/generate-skill-permission-matrix.mjs text eol=lf

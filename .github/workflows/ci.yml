@@ -548,9 +548,6 @@ jobs:
       - name: Verify doc counts are fresh
         run: npm run verify:docs
 
-      - name: Verify agent skill-pack permission matrix is fresh
-        run: npm run verify:skill-matrix
-
       - name: Verify generated Do Not Duplicate inventory is fresh
         run: npm run verify:dnd-map
 
