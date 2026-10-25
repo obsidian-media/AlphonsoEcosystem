@@ -108,7 +108,10 @@ export function parseWriteUp(text: string, kinds: SourceKind[]): Omit<ResearchRe
     const checked = findings.length ? status : 'open';
     return { question: str(sq?.question), status: checked, findings, ...(str(sq?.followUp) ? { followUp: str(sq.followUp) } : {}) };
   }).filter((sq: SubQuestion) => sq.question);
-  return { answer, subQuestions, disagreements: strings(data?.disagreements), notFound: strings(data?.notFound) };
+  // A small model sometimes leaves broken JSON in a list (agent phase 2: `notFound": [{` shown
+  // under "Sources disagree"); those entries aren't words for anyone.
+  const readable = (list: string[]) => list.filter((item) => !/":|^\s*[{[]/.test(item));
+  return { answer, subQuestions, disagreements: readable(strings(data?.disagreements)), notFound: readable(strings(data?.notFound)) };
 }
 
 interface Read { source: FoundSource; label: ReportSource['label'] | 'off_topic'; reason?: string; text: string }
@@ -143,7 +146,8 @@ async function fetchSources(list: FoundSource[]): Promise<Read[]> {
     const text = str(proof?.snippet);
     // A page you supplied counts however short it is; a found page under 200 characters is likely a wall.
     if (proof?.ok && !proof?.pdf && (text.length >= 200 || (source.provider === 'supplied' && text))) return { source, label: 'read', text };
-    const reason = proof?.pdf ? 'PDF' : proof?.httpStatus ? `blocked (HTTP ${proof.httpStatus})` : 'not reached';
+    // A page that answered but had too little text isn't blocked (agent phase 2: "blocked (HTTP 200)").
+    const reason = proof?.pdf ? 'PDF' : proof?.ok ? 'too short to read' : proof?.httpStatus ? `blocked (HTTP ${proof.httpStatus})` : 'not reached';
     if (source.snippet) return { source, label: 'snippet', reason, text: source.snippet };
     return { source, label: 'unreadable', reason, text: '' };
   });

@@ -266,3 +266,23 @@ describe('a snippet is never enough, and no planned part is lost', () => {
     expect(out.ok && out.report.subQuestions.map((q) => q.question)).toEqual(['How many colonies?', 'Causes of losses?']);
   });
 });
+
+describe("Hector's two leftovers (agent phase 2)", () => {
+  it('drops broken model text from disagreements', () => {
+    const parsed = parseWriteUp(JSON.stringify({ answer: 'About 17 million.', subQuestions: [], disagreements: ['notFound": [{', 'A says 17 million, B says 20 million'], notFound: ['[{"x": 1}]', 'the 2024 figure'] }), ['general']);
+    expect(parsed?.disagreements).toEqual(['A says 17 million, B says 20 million']);
+    expect(parsed?.notFound).toEqual(['the 2024 figure']);
+  });
+
+  it('a short page that answered is too short, not blocked', async () => {
+    invoke.mockImplementation(async (cmd: string, args: any) => (cmd === 'fetch_research_sources'
+      ? args.sources.map((s: { url: string }) => ({ url: s.url, ok: true, httpStatus: 200, snippet: 'Bees.', pdf: false, title: 'Short' }))
+      : null));
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'How many colonies?', queries: ['honeybee colonies'] }] }));
+    search.mockResolvedValueOnce(found(['https://short.example.org/honeybee']));
+    llm.mockResolvedValueOnce(json({ answer: 'Unknown.', subQuestions: [{ question: 'How many colonies?', status: 'open', findings: [] }] }));
+    search.mockResolvedValue({ sources: [], providers: [], errors: [] });
+    const out = await runResearch('How many colonies?', { large: false, reportId: 'hector-report-9-h' });
+    expect(out.ok && out.report.sources[0]).toMatchObject({ label: 'snippet', reason: 'too short to read' });
+  });
+});
