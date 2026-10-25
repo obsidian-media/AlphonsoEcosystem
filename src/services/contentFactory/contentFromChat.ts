@@ -7,7 +7,7 @@ import { createProject, emptyBrief } from './contentProjectService';
 import { requireOutputRoot } from './contentProjectFiles';
 import { runContentProject } from './contentStepRunner';
 
-export const NEEDS_OUTPUT_FOLDER = 'Choose an output folder in Settings first, then ask again.';
+export const NEEDS_OUTPUT_FOLDER = 'I took this as a content video for Miya Studio. Choose an output folder in Settings → Runtime → Local Services first, then ask again, or say "plan this fresh" to have it planned normally.';
 
 const MAX_NAME = 60;
 

@@ -5,7 +5,8 @@
 // Alphonso as code.
 import { describe, it, expect } from 'vitest';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
-import { scoreTemplateFit, TEMPLATE_FIT_THRESHOLD } from '../../../services/jose/joseTemplates';
+import { scoreTemplateFit, TEMPLATE_FIT_THRESHOLD, asksToMake } from '../../../services/jose/joseTemplates';
+import { NEEDS_OUTPUT_FOLDER } from '../../../services/contentFactory/contentFromChat';
 
 type Part = [agent: string, actionType: string];
 
@@ -87,5 +88,36 @@ describe('Nova runs after Hector (agent phase 2)', () => {
     const nova = steps.find((s) => s.agent === 'nova');
     expect(nova?.actionType).toBe('opportunity_analysis');
     expect(nova?.needs).toEqual(['hector']);
+  });
+});
+
+describe('the video shortcut needs a request to make something (agent phase 2)', () => {
+  const shortcut = (text: string) => {
+    const best = scoreTemplateFit(text)[0];
+    return best?.templateId === 'content_video' && best.score >= TEMPLATE_FIT_THRESHOLD && asksToMake(text);
+  };
+  for (const text of ['Make a YouTube video script about our launch', 'Make three Shorts for our launch', 'Make a promo video comparing a newsletter and a podcast']) {
+    it(`takes the shortcut: ${text}`, () => expect(shortcut(text)).toBe(true));
+  }
+  for (const text of [
+    'Which of these should a small bakery do first: a weekly email newsletter, a YouTube channel, or a podcast? Prioritize them.',
+    'Should we start a YouTube channel or a podcast?',
+    'How many YouTube channel posts a week is too many?',
+  ]) {
+    it(`does not take it: ${text}`, () => expect(shortcut(text)).toBe(false));
+  }
+  it('the bakery question goes to Nova', () => {
+    expect(sorted(partsOf('Which of these should a small bakery do first: a weekly email newsletter, a YouTube channel, or a podcast? Prioritize them.'))).toEqual(['nova:opportunity_analysis']);
+  });
+  it('the reply says what Jose understood', () => {
+    expect(NEEDS_OUTPUT_FOLDER).toBe('I took this as a content video for Miya Studio. Choose an output folder in Settings → Runtime → Local Services first, then ask again, or say "plan this fresh" to have it planned normally.');
+  });
+});
+
+describe('publishing needs a send word; turning into counts as making (agent phase 2)', () => {
+  it('post this to Instagram is publishing', () => expect(sorted(partsOf('Post this to Instagram'))).toContain('marcus:distribution_readiness'));
+  it('turn … into is a request to make something', () => {
+    expect(asksToMake('Turn my blog post into a YouTube video script')).toBe(true);
+    expect(asksToMake('What is a good return on a YouTube channel?')).toBe(false);
   });
 });

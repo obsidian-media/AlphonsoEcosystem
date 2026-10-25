@@ -45,7 +45,7 @@ describe('startContentProjectFromChat', () => {
   it('without an output folder it says to choose one and creates nothing', async () => {
     const result = await startContentProjectFromChat('Make a YouTube video about tea', {});
     expect(result).toEqual({ ok: false, note: NEEDS_OUTPUT_FOLDER });
-    expect(NEEDS_OUTPUT_FOLDER).toBe('Choose an output folder in Settings first, then ask again.');
+    expect(NEEDS_OUTPUT_FOLDER).toContain('Choose an output folder in Settings → Runtime → Local Services first');
     expect(listProjects()).toEqual([]);
     expect(runContentProject).not.toHaveBeenCalled();
   });

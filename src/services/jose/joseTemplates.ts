@@ -90,6 +90,15 @@ export const JOSE_TEMPLATES: JoseTemplate[] = [
   },
 ];
 
+/** Words that ask for something to be made (agent phase 2): the Content video shortcut needs one. */
+export const MAKING_WORDS = ['make', 'makes', 'making', 'create', 'produce', 'film', 'shoot', 'record', 'edit', 'script', 'write'];
+
+/** Does the request ask for something to be made, not only mention a platform? */
+export function asksToMake(text: string): boolean {
+  const value = String(text || '');
+  return MAKING_WORDS.some((word) => hasWord(value, word)) || /\bturn\b[\s\S]*\binto\b/i.test(value);
+}
+
 function hasWord(text: string, word: string): boolean {
   return new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text);
 }
