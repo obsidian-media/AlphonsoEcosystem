@@ -29,6 +29,12 @@ async function installedModels() {
   }
 }
 
+/** The test never approves anything: any approval window is denied. */
+async function denyAnyApproval() {
+  const deny = await $('button[aria-label="Deny action"]');
+  if (await deny.isExisting() && await deny.isDisplayed()) await deny.click();
+}
+
 async function lastReplyText() {
   const replies = await $$('[data-testid="chat-message-assistant"]');
   return replies.length ? replies[replies.length - 1].getText() : '';
@@ -65,6 +71,7 @@ describe('Alphonso desktop: each agent does only its own work', () => {
     await (await $('[data-testid="chat-send-button"]')).click();
 
     await browser.waitUntil(async () => {
+      await denyAnyApproval();
       const request = await lastRequest();
       return request && ['done', 'failed', 'waiting_approval', 'waiting_setup'].includes(request.status);
     }, { timeout: 1400000, interval: 3000, timeoutMsg: 'the request never finished' }).catch(async (e) => {
