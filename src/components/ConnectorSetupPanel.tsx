@@ -597,6 +597,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
   const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
+  const [webRiskApiKey, setWebRiskApiKey] = useState(() => getConnectorCredential('web_risk', 'WEB_RISK_API_KEY') || '');
   const [pexelsApiKey, setPexelsApiKey] = useState(() => getConnectorCredential('pexels', 'PEXELS_API_KEY') || '');
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState(() => getConnectorCredential('elevenlabs', 'ELEVENLABS_API_KEY') || '');
   const [pixabayApiKey, setPixabayApiKey] = useState(() => getConnectorCredential('pixabay', 'PIXABAY_API_KEY') || '');
@@ -644,6 +645,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setQwenApiKey((prev) => prev || getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
       setBraveApiKey((prev) => prev || getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
       setTavilyApiKey((prev) => prev || getConnectorCredential('tavily', 'TAVILY_API_KEY'));
+      setWebRiskApiKey((prev) => prev || getConnectorCredential('web_risk', 'WEB_RISK_API_KEY'));
       setPexelsApiKey((prev) => prev || getConnectorCredential('pexels', 'PEXELS_API_KEY'));
       setElevenLabsApiKey((prev) => prev || getConnectorCredential('elevenlabs', 'ELEVENLABS_API_KEY'));
       setPixabayApiKey((prev) => prev || getConnectorCredential('pixabay', 'PIXABAY_API_KEY'));
@@ -1139,6 +1141,12 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('tavily', { TAVILY_API_KEY: tavilyApiKey })}
             hint="Free tier: 1,000 searches/month. Sign up at app.tavily.com. Hector uses this when Brave Search is unavailable. Designed for AI agents — returns clean summaries + sources."
             savedLabel="Tavily key saved" />
+
+          <CredentialSection title="Google Web Risk (link safety)" icon={Search} borderColor="border-rose-300/20" bgColor="bg-rose-500/8" accentColor="text-rose-400"
+            fields={[{ label: 'API Key', placeholder: 'AIza...', value: webRiskApiKey, onChange: setWebRiskApiKey, key: 'WEB_RISK_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('web_risk', { WEB_RISK_API_KEY: webRiskApiKey })}
+            hint="Optional. Hector doesn't open, and Alphonso warns before you open, a link on Google's phishing or malware lists. Only the link's address is sent to Google. Uses Google Cloud's Web Risk API (Google's free Safe Browsing API is for non-commercial use only): the first 100,000 checks a month are free, then $0.50 per 1,000 (Google's pricing, October 2026). Without a key, Sentinel's own checks still run."
+            savedLabel="Web Risk key saved" />
 
           <CredentialSection title="Perplexity" icon={Search} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
             fields={[{ label: 'API Key', placeholder: 'pplx-...', value: perplexityApiKey, onChange: setPerplexityApiKey, key: 'PERPLEXITY_API_KEY' }]}

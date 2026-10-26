@@ -135,6 +135,9 @@ async function run(name: string, args: Record<string, unknown>, ctx: ToolContext
       const { checkLink } = await import('../sentinel/exactChecks');
       const disguised = checkLink(url);
       if (disguised) return { ok: false, text: `Not read: looks disguised (${disguised.detail}).` };
+      const { checkLinksWithWebRisk } = await import('../sentinel/webRisk');
+      const threat = (await checkLinksWithWebRisk([url])).get(url);
+      if (threat) return { ok: false, text: `Not read: listed as ${threat} by Google Web Risk.` };
       const { fetchUrlContent } = await import('../browserAutomationService');
       const page: any = await fetchUrlContent(url);
       const text = typeof page === 'string' ? page : str(page?.content) || str(page?.text);

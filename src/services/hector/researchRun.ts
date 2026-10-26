@@ -7,6 +7,7 @@
 // Spec: docs/superpowers/specs/2026-10-25-agent-phase-hector-design.md
 import { invoke } from '@tauri-apps/api/core';
 import { checkLink } from '../sentinel/exactChecks';
+import { checkLinksWithWebRisk } from '../sentinel/webRisk';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { searchChain, type FoundSource } from './searchChain';
 import { relevantText, pageBudget, questionTerms } from './relevantText';
@@ -138,9 +139,13 @@ async function fetchSources(all: FoundSource[]): Promise<Read[]> {
   // A link that looks disguised isn't opened (agent phase 4, owner 2026-10-25).
   const skipped: Read[] = [];
   const list: FoundSource[] = [];
+  // With a Google Web Risk key, a listed link isn't opened either.
+  const listed = await checkLinksWithWebRisk(all.map((s) => s.url));
   for (const source of all) {
     const disguised = checkLink(source.url);
+    const threat = listed.get(source.url);
     if (disguised) skipped.push({ source, label: 'unreadable', reason: `looks disguised (${disguised.detail})`, text: '' });
+    else if (threat) skipped.push({ source, label: 'unreadable', reason: `listed as ${threat} by Google Web Risk`, text: '' });
     else list.push(source);
   }
   if (!list.length) return skipped;
@@ -270,7 +275,7 @@ export async function runResearch(
   }));
   // Links he didn't open because they look disguised (agent phase 4) are listed after the
   // sources he cites, so their numbers don't change.
-  for (const r of reads.filter((x) => x.label === 'unreadable' && String(x.reason || '').startsWith('looks disguised'))) {
+  for (const r of reads.filter((x) => x.label === 'unreadable' && /^(looks disguised|listed as )/.test(String(x.reason || '')))) {
     sources.push({ n: sources.length + 1, title: r.source.title || r.source.url, url: r.source.url, kind: r.source.kind, label: 'unreadable', reason: r.reason, excerpt: '' });
   }
   return { ok: true, report: { question, ...written, sources, rounds, providers: [...providers] } };
