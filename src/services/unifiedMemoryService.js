@@ -444,6 +444,22 @@ export function pushMemoryItem(partial) {
   return pushMemory({ ...partial, namespace: 'shared' });
 }
 
+/** Agent phase 7: clears the old health-check and screen-observer notes, once. Returns how many. */
+const CHECK_NOTE_SOURCES = ['ollama-health-check', 'screen-observer'];
+const CHECKS_REMOVED_KEY = 'alphonso_memory_checks_removed_v1';
+export function removeCheckNotes() {
+  try {
+    if (localStorage.getItem(CHECKS_REMOVED_KEY) === '1') return 0;
+    const items = readLocal('shared');
+    const kept = items.filter((m) => !CHECK_NOTE_SOURCES.includes(m?.source));
+    if (kept.length !== items.length) writeLocal('shared', kept);
+    localStorage.setItem(CHECKS_REMOVED_KEY, '1');
+    return items.length - kept.length;
+  } catch {
+    return 0;
+  }
+}
+
 /** @deprecated Use listMemory({ namespace: 'shared', ... }) */
 export function listMemoryItems() {
   return listMemory({ namespace: 'shared' });

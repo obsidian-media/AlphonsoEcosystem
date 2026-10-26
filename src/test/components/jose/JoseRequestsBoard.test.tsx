@@ -20,7 +20,15 @@ vi.mock('../../../services/joseExecutionEngineService', () => ({
   pickAlphonsoProject: vi.fn(async (_r: string, _s: string, name: string) => ({ ok: true, summary: `Working in ${name}.` })),
 }));
 
+vi.mock('../../../services/echo/echoPicks', () => ({
+  pickForget: vi.fn(async () => ({ ok: true, summary: 'Forgot: The launch is on Friday.' })),
+  applyCleanupStep: vi.fn(async () => ({ ok: true, summary: 'Applied 1 changes to memory.' })),
+  dismissCleanupStep: vi.fn(async () => ({ ok: true, summary: 'Left memory as it is.' })),
+}));
+
 import { JoseRequestsBoard } from '../../../components/jose/JoseRequestsBoard';
+import { pickForget } from '../../../services/echo/echoPicks';
+import { saveCleanupSet } from '../../../services/echo/cleanup';
 import { approveRequestStep, carryOnRequest, rejectRequestStep, pickAlphonsoProject } from '../../../services/joseExecutionEngineService';
 import { createJoseRequest, setJoseRequestStatus, updateJoseStep } from '../../../services/jose/joseRequestStore';
 import { JosePlanEditor } from '../../../components/jose/JosePlanEditor';
@@ -159,6 +167,35 @@ describe('JosePlanEditor', () => {
     fireEvent.click(screen.getByTestId('alphonso-pick-blog'));
     await waitFor(() => expect(pickAlphonsoProject).toHaveBeenCalledWith(request.id, 'build', 'blog'));
     expect(await screen.findByText('Working in blog.')).toBeTruthy();
+  });
+
+  // Agent phase 7: Echo's pickers on the board.
+  it('asks which decision to forget with one button each, and hides Carry on', async () => {
+    const request = createJoseRequest({
+      commandId: 'c-forget', source: 'user', text: 'Forget the launch', kind: 'normal',
+      steps: [{ stepId: 'echo', agent: 'echo', actionType: 'memory_forget', effects: ['write_own_work'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'echo', { status: 'setup_needed', error: 'Which one should I forget?', decisionChoices: [{ id: 'd1', text: 'The launch is on Friday.' }, { id: 'd2', text: 'The launch party is at the shop.' }] } as never);
+    setJoseRequestStatus(request.id, 'waiting_setup');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    expect(screen.getByText('Which one should I forget?')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Carry on' })).toBeNull();
+    fireEvent.click(screen.getByTestId('echo-forget-d1'));
+    await waitFor(() => expect(pickForget).toHaveBeenCalledWith(request.id, 'echo', 'd1'));
+    expect(await screen.findByText('Forgot: The launch is on Friday.')).toBeTruthy();
+  });
+
+  it("shows Echo's cleanup proposals under his waiting step", () => {
+    const set = saveCleanupSet({ requestId: 'x', proposals: [{ id: 'p0', kind: 'drop', ids: ['d1'], reason: 'It is stale.' }] } as never);
+    const request = createJoseRequest({
+      commandId: 'c-clean', source: 'schedule', text: 'Tidy memory', kind: 'normal',
+      steps: [{ stepId: 'echo', agent: 'echo', actionType: 'memory_cleanup', effects: ['write_own_work'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'echo', { status: 'setup_needed', error: 'Echo proposes 1 changes to memory: tick the ones to apply.', cleanupSetId: set.id } as never);
+    setJoseRequestStatus(request.id, 'waiting_setup');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    expect(screen.getByTestId('echo-cleanup').textContent).toContain('It is stale.');
+    expect(screen.queryByRole('button', { name: 'Carry on' })).toBeNull();
   });
 
   it('shows what a step produced when you pick it in the map (phase 6a)', () => {

@@ -42,6 +42,14 @@ export function useBootEffects({
     };
   }, []);
 
+  // Agent phase 7: the old health-check and screen-observer notes are cleared once.
+  useEffect(() => {
+    const id = onIdle(() => {
+      import('../services/unifiedMemoryService').then((m) => m.removeCheckNotes()).catch(() => {});
+    });
+    return () => cancelIdle(id);
+  }, []);
+
   // Phase 0 (immediate): Hydrate settings from SQLite
   useEffect(() => {
     if (settingsHydratedRef.current) return;

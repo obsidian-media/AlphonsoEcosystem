@@ -36,6 +36,12 @@ export interface JoseRequestStep extends PlanStep {
   folder?: string;
   /** "Which project": the names to pick from. */
   projectChoices?: string[];
+  /** Echo's "Which one should I forget?" (agent phase 7). */
+  decisionChoices?: Array<{ id: string; text: string }>;
+  /** The decision you picked to forget. */
+  forgetId?: string;
+  /** Echo's waiting cleanup proposals (agent phase 7). */
+  cleanupSetId?: string;
   /** Waiting for another request to finish with this project folder. */
   waitingForFolder?: string;
 }

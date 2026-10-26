@@ -8,6 +8,9 @@ import { JosePlanMap } from './JosePlanMap';
 import { JosePlanEditor } from './JosePlanEditor';
 import { JoseStepOutput } from './JoseStepOutput';
 import { CodePreviewView } from '../alphonso/CodePreviewView';
+import { EchoRemembered } from '../echo/EchoRemembered';
+import { CleanupProposals } from '../echo/CleanupProposals';
+import { pickForget } from '../../services/echo/echoPicks';
 import { describePlanSource, type JosePlan } from '../../services/jose/josePlanner';
 import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
@@ -117,6 +120,24 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
   const waitingSteps = selected?.status === 'waiting_approval' ? selected.steps.filter((s) => s.status === 'waiting_approval') : [];
   // "Which project" (agent phase 6).
   const choosingStep = selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.projectChoices?.length) : undefined;
+  // Echo's pickers (agent phase 7): which decision to forget, or his cleanup proposals.
+  const forgetStep = selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.decisionChoices?.length) : undefined;
+  const cleanupStep = selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.cleanupSetId) : undefined;
+  const asking = Boolean(choosingStep || forgetStep || cleanupStep);
+  const forget = async (decisionId: string) => {
+    if (!selected || !forgetStep || runningRef.current) return;
+    runningRef.current = true;
+    setRunning(true);
+    try {
+      setMessage((await pickForget(selected.id, forgetStep.stepId, decisionId)).summary);
+    } catch (error) {
+      setMessage(`It could not carry on: ${String(error)}`);
+    } finally {
+      runningRef.current = false;
+      setRunning(false);
+      refresh();
+    }
+  };
   const pick = async (project: string) => {
     if (!selected || !choosingStep || runningRef.current) return;
     runningRef.current = true;
@@ -194,6 +215,21 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
             </div>
           )}
 
+          {forgetStep && (
+            <div className="space-y-2 rounded-xl bg-(--surface-2) p-3 text-xs">
+              <div className="text-(--text-1)">{forgetStep.error}</div>
+              <div className="flex flex-wrap gap-2">
+                {forgetStep.decisionChoices!.map((c) => (
+                  <Button key={c.id} data-testid={`echo-forget-${c.id}`} disabled={running} onClick={() => forget(c.id)}>{c.text}</Button>
+                ))}
+              </div>
+            </div>
+          )}
+          {cleanupStep && (
+            <CleanupProposals key={cleanupStep.cleanupSetId} requestId={selected.id} stepId={cleanupStep.stepId} setId={cleanupStep.cleanupSetId!} onDone={(summary) => { setMessage(summary); refresh(); }} />
+          )}
+          <EchoRemembered requestId={selected.id} />
+
           <div className="flex flex-wrap gap-2">
             {waiting && !editing && (
               <>
@@ -202,7 +238,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
             )}
-            {(selected.status === 'interrupted' || (selected.status === 'waiting_setup' && !choosingStep)) && (
+            {(selected.status === 'interrupted' || (selected.status === 'waiting_setup' && !asking)) && (
               <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
             )}
             {waitingSteps.map((step) => (

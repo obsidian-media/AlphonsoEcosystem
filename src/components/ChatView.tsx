@@ -26,6 +26,7 @@ import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
 import { JosePlanCard } from './jose/JosePlanCard'
 import { MariaOfferButton } from './maria/MariaOfferButton'
 import { JoseRequestOutcome } from './jose/JoseRequestOutcome'
+import { EchoRemembered } from './echo/EchoRemembered'
 import { getJoseRequest, listJoseRequests } from '../services/jose/joseRequestStore'
 import type { PlanFirstSetting } from '../services/jose/josePlanApproval';
 import {
@@ -1486,6 +1487,8 @@ export function ChatView({
                   )}
                   {/* Agent phase 5: what happened once a waiting request was approved elsewhere. */}
                   {message.joseRequestId && <JoseRequestOutcome requestId={message.joseRequestId} />}
+                  {/* Agent phase 7: what Echo remembered from this request, with Edit and Forget. */}
+                  {message.joseRequestId && <EchoRemembered requestId={message.joseRequestId} />}
                   {/* Agent phase 3: after Maria reviews a plan, offer to have Marcus prepare it. */}
                   {message.joseRequestId && (
                     <MariaOfferButton

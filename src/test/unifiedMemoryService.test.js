@@ -286,3 +286,20 @@ describe('unifiedMemoryService', () => {
     });
   });
 });
+
+// Agent phase 7: the old health-check and screen-observer notes are cleared once.
+describe('removeCheckNotes', () => {
+  it('drops the check notes once and keeps everything else', async () => {
+    const { removeCheckNotes } = await import('../services/unifiedMemoryService');
+    localStorage.setItem('alphonso_memory_items_v1', JSON.stringify([
+      { id: 'a', content: 'Ollama check: Connected (connected)', source: 'ollama-health-check' },
+      { id: 'b', content: 'Screen observer', source: 'screen-observer' },
+      { id: 'c', title: 'Pricing', content: 'We price at $29.', source: 'user' },
+    ]));
+    localStorage.removeItem('alphonso_memory_checks_removed_v1');
+    expect(removeCheckNotes()).toBe(2);
+    expect(JSON.parse(localStorage.getItem('alphonso_memory_items_v1')).map((m) => m.id)).toEqual(['c']);
+    localStorage.setItem('alphonso_memory_items_v1', JSON.stringify([{ id: 'd', source: 'ollama-health-check' }]));
+    expect(removeCheckNotes()).toBe(0);
+  });
+});
