@@ -13,6 +13,7 @@ const LEGACY_COLOR_TO_VARIANT: Record<string, 'default' | 'success' | 'warning' 
   red: 'error',
   zinc: 'default',
 };
+import { AlphonsoProjectsSection } from './alphonso/AlphonsoProjectsSection';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
 import { getAgentMascotPath } from '../services/agentVisualService';
@@ -1584,6 +1585,10 @@ export function SettingsView({
             <AgentAvatarCard key={agent.id} agentId={agent.id} label={agent.label} />
           ))}
         </div>
+      </section>
+      <section className="space-y-4">
+        <SectionHeader icon={FolderOpen} label="Alphonso's projects" />
+        <AlphonsoProjectsSection settings={settings} setSettings={(patch) => setSettings({ ...settings, ...patch })} />
       </section>
       <section className="space-y-4">
         <SectionHeader icon={Bot} label="Agent Skills" />
