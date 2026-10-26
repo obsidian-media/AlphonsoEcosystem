@@ -86,14 +86,16 @@
     unregisterListener: function () {}
   };
 
-  // Suppress setTimeout delays >= 3000ms to prevent Ollama health check polling.
+  // Suppress setTimeout delays >= 5000ms to prevent Ollama health check polling.
   // The first health check runs from useEffect, but the scheduled polling via
   // setTimeout (5000ms / 10000ms / 15000ms / 30000ms) would re-trigger state
   // cascades. Blocking long timers stops this without affecting React internals.
+  // Shorter one-off waits must still fire: Jose's step retries wait 1, 2 and 4 s,
+  // and a 3 s cut stalled every request whose step failed (agent phase 3, 2026-10-26).
   var _origSetTimeout = window.setTimeout;
   var _dummyTimerCounter = 0;
   window.setTimeout = function (fn, delay) {
-    if (delay >= 3000) {
+    if (delay >= 5000) {
       var id = -1 * (++_dummyTimerCounter);
       return id;
     }
