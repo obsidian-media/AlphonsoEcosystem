@@ -80,3 +80,11 @@ describe('the rest', () => {
     expect(exactRiskText({ kind: 'key', where: '[hidden key, ends …efgh]', detail: 'a live key' })).toMatch(/^A key/);
   });
 });
+
+describe('a key already hidden', () => {
+  it('the placeholder still counts as a key, and is not hidden twice', () => {
+    const text = 'Our test key is [hidden key, ends …efgh].';
+    expect(findExactRisks(text)).toEqual([expect.objectContaining({ kind: 'key', where: '[hidden key, ends …efgh]' })]);
+    expect(hideSecrets(text)).toBe(text);
+  });
+});

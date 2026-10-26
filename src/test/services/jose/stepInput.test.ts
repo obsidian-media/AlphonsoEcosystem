@@ -10,6 +10,15 @@ import { buildEchoSynthesisPrompt } from '../../../services/echoMemoryService';
 const step = (stepId: string, agent: string, needs: string[] = [], extra: Record<string, unknown> = {}) =>
   ({ stepId, agent, actionType: 'x', needs, effects: ['read'], ...extra }) as any;
 
+// Agent phase 4: a key in your request is hidden from every agent's model.
+describe('keys in the request', () => {
+  it('a key in the request is hidden from every step', () => {
+    const input = buildStepInput('ck', { stepId: 'a', agent: 'alphonso', actionType: 'assistant_write', effects: ['read'], needs: [], instruction: 'Use sk-live-1234abcd5678efgh to test.' } as never, 'Our test key is sk-live-1234abcd5678efgh.');
+    expect(input.request).toBe('Our test key is [hidden key, ends …efgh].');
+    expect(input.instruction).toBe('Use [hidden key, ends …efgh] to test.');
+  });
+});
+
 describe('buildStepInput', () => {
   beforeEach(() => localStorage.clear());
 

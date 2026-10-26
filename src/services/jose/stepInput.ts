@@ -7,6 +7,7 @@ import type { PlanStep } from './stepGraph';
 import { getStepOutput, listStepOutputs, type StepOutput } from './joseStepOutputs';
 import { toReadableText } from '../../lib/readableValue';
 import { agentName } from './agentNames';
+import { hideSecrets } from '../sentinel/exactChecks';
 
 export interface NeededWork {
   stepId: string;
@@ -132,8 +133,9 @@ export function buildStepInput(
     .slice(0, STEP_INPUT_LIMITS.otherLines)
     .map(oneLine);
   return {
-    instruction: String(assignment.instruction || '').trim(),
-    request: String(request || ''),
+    // Keys are hidden from every agent's model (agent phase 4, owner 2026-10-25).
+    instruction: hideSecrets(String(assignment.instruction || '').trim()),
+    request: hideSecrets(String(request || '')),
     needs,
     others,
     memory: String(opts.memory || '').trim(),

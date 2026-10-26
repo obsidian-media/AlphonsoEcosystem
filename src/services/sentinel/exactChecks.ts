@@ -87,6 +87,10 @@ export function findExactRisks(text: string, opts: { trustedDomains?: string[]; 
   const source = String(text || '');
   const risks: ExactRisk[] = [];
   for (const h of keyHits(source)) risks.push({ kind: 'key', where: h.hidden, detail: 'a key or password written in the text' });
+  // A key already hidden (every step's request is, agent phase 4) is still a key in the text.
+  for (const m of source.matchAll(/\[hidden (?:private )?key(?:, ends …[^\]]{1,8})?\]/g)) {
+    risks.push({ kind: 'key', where: m[0], detail: 'a key or password written in the text' });
+  }
   const ask = source.match(PASSWORD_ASK);
   if (ask) risks.push({ kind: 'password_request', where: ask[0].trim(), detail: `asks for a ${ask[1].toLowerCase()}` });
   const seen = new Set<string>();
