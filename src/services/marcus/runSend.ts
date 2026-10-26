@@ -1,0 +1,114 @@
+// Sending what you approved (agent phase 5): exactly the prepared preview, once, through the
+// connector, with no model call and no second approval. The result says what the platform said.
+import { getConnectorCredential } from '../connectors/connectorAuth';
+import { getJoseRequest, updateJoseStep } from '../jose/joseRequestStore';
+import { listedN8nWorkflows, telegramOwnerChatId } from './destinations';
+import type { SendPreview, SendResult } from './types';
+
+export const ALREADY_SENT = 'Already sent.';
+export const WHATSAPP_24H = 'WhatsApp only lets you message someone within 24 hours of their last message to you; outside that it needs an approved template.';
+export const COMPOSIO_NOT_READY = "Composio sending isn't ready yet.";
+
+const setting = (connector: string, key: string) => String(getConnectorCredential(connector, key) || '').trim();
+const message = (error: unknown) => String((error as Error)?.message || error || 'it failed').replace(/\.$/, '');
+const notSent = (label: string, reason: string): SendResult => ({ ok: false, sentence: `Not sent to ${label}: ${reason.replace(/\.$/, '')}.` });
+
+/** Whether a step's send already went out; sets the mark before sending when not. */
+function claim(commandId: string, stepId: string): boolean {
+  const requestId = `jose-request-${commandId}`;
+  const request = getJoseRequest(requestId);
+  const step = request?.steps.find((s) => s.stepId === stepId);
+  if (!request || !step) return true;
+  if (step.sentAtMs) return false;
+  updateJoseStep(requestId, stepId, { sentAtMs: Date.now() });
+  return true;
+}
+
+async function send(preview: SendPreview, commandId: string): Promise<SendResult> {
+  const { connector, target, text, label } = preview;
+  const options = { approved: true, commandId };
+  switch (connector) {
+    case 'slack': {
+      const slack = await import('../connectors/slackConnector');
+      const token = setting('slack', 'SLACK_BOT_TOKEN');
+      const channel = target.startsWith('#') || /^[CGD][A-Z0-9]{6,}$/.test(target) ? target : `#${target}`;
+      const result = await slack.sendMessage({ token, defaultChannel: channel } as never, channel, text);
+      return { ok: true, sentence: `Sent to ${label}.`, link: null, platformId: (result as { ts?: string })?.ts || null };
+    }
+    case 'discord': {
+      const discord = await import('../connectors/discordConnector');
+      const botToken = setting('discord', 'DISCORD_BOT_TOKEN');
+      const guild = setting('discord', 'DISCORD_GUILD_ID');
+      let channelId = target;
+      if (!/^\d+$/.test(target)) {
+        const name = target.replace(/^#/, '').toLowerCase();
+        const found = (await discord.listGuildChannels({ botToken } as never, guild)).find((c) => String(c.name).toLowerCase() === name);
+        if (!found) return notSent(label, `there is no channel #${name} in your Discord server`);
+        channelId = found.id;
+      }
+      const sent = await discord.sendMessage({ botToken } as never, channelId, text);
+      const link = guild && sent?.id ? `https://discord.com/channels/${guild}/${channelId}/${sent.id}` : null;
+      return { ok: true, sentence: link ? `Sent to ${label}: ${link}` : `Sent to ${label}.`, link, platformId: sent?.id || null };
+    }
+    case 'telegram': {
+      const { sendTelegramConnectorMessage } = await import('../connectors/connectorOutbound');
+      const chatId = target === 'me' ? telegramOwnerChatId() : setting('telegram', 'TELEGRAM_TEAM_CHAT_ID');
+      if (!chatId) return notSent(label, target === 'me' ? 'pair Telegram first with /start' : 'set your team chat in Settings → Connectors → Telegram');
+      const r = await sendTelegramConnectorMessage(chatId, text, options) as { ok?: boolean; error?: string; externalId?: string };
+      return r?.ok ? { ok: true, sentence: `Sent to ${label}.`, link: null, platformId: r.externalId || null } : notSent(label, String(r?.error || 'Telegram refused it'));
+    }
+    case 'whatsapp': {
+      const { sendWhatsAppConnectorMessage } = await import('../connectors/connectorOutbound');
+      const r = await sendWhatsAppConnectorMessage(target.replace(/\D/g, ''), text, options) as { ok?: boolean; error?: string; externalId?: string };
+      if (r?.ok) return { ok: true, sentence: `Sent to ${label}.`, link: null, platformId: r.externalId || null };
+      const error = String(r?.error || 'WhatsApp refused it');
+      return notSent(label, /131047|re-engagement|24 hours/i.test(error) ? WHATSAPP_24H : error);
+    }
+    case 'github': {
+      const github = await import('../connectors/githubConnector');
+      const [owner, repo] = target.split('/');
+      const config = { token: setting('github', 'GITHUB_TOKEN'), owner, repo };
+      if (preview.kind === 'release') {
+        const version = preview.title || '';
+        const release = await github.createRelease(config as never, version, version, text, true, false);
+        const link = `https://github.com/${owner}/${repo}/releases`;
+        return { ok: true, sentence: `Draft release ${version} made on ${label}: ${link}. Publish it on GitHub.`, link, platformId: release?.id ? String(release.id) : null };
+      }
+      const issue = await github.createIssue(config as never, preview.title || text.split('\n')[0].slice(0, 80), text, []);
+      const link = `https://github.com/${owner}/${repo}/issues/${issue.number}`;
+      return { ok: true, sentence: `Issue #${issue.number} opened on ${label}: ${link}.`, link, platformId: String(issue.number) };
+    }
+    case 'notion': {
+      const { sendNotionConnectorEntry } = await import('../connectors/connectorOutbound');
+      const r = await sendNotionConnectorEntry({ title: preview.title || text.split('\n')[0].slice(0, 80), content: text, parentPageId: target || setting('notion', 'NOTION_PARENT_PAGE_ID') }, options) as { ok?: boolean; error?: string; externalId?: string };
+      if (!r?.ok) return notSent(label, String(r?.error || 'Notion refused it'));
+      const link = r.externalId ? `https://www.notion.so/${String(r.externalId).replace(/-/g, '')}` : null;
+      return { ok: true, sentence: link ? `Notion page made: ${link}` : 'Notion page made.', link, platformId: r.externalId || null };
+    }
+    case 'clickup': {
+      const { sendClickUpConnectorTask } = await import('../connectors/connectorOutbound');
+      const r = await sendClickUpConnectorTask({ title: preview.title || text.split('\n')[0].slice(0, 80), content: text, listId: target || setting('clickup', 'CLICKUP_LIST_ID') }, options) as { ok?: boolean; error?: string; externalId?: string };
+      if (!r?.ok) return notSent(label, String(r?.error || 'ClickUp refused it'));
+      const link = r.externalId ? `https://app.clickup.com/t/${r.externalId}` : null;
+      return { ok: true, sentence: link ? `ClickUp task made: ${link}` : 'ClickUp task made.', link, platformId: r.externalId || null };
+    }
+    case 'n8n': {
+      const workflow = listedN8nWorkflows().find((w) => w.name.toLowerCase() === target.toLowerCase());
+      if (!workflow) return notSent(label, 'that workflow is not in your list in Settings → Connectors → n8n');
+      const n8n = await import('../connectors/n8nConnector');
+      const r = await n8n.triggerN8nWebhook(workflow.path, { text, title: preview.title || '', source: 'alphonso' });
+      return r?.ok ? { ok: true, sentence: `Started your ${label}.`, link: null, platformId: null } : notSent(label, String(r?.error || 'n8n refused it'));
+    }
+    default:
+      return notSent(label, COMPOSIO_NOT_READY);
+  }
+}
+
+export async function runMarcusSend(commandId: string, stepId: string, preview: SendPreview): Promise<SendResult> {
+  if (!claim(commandId, stepId)) return { ok: false, sentence: ALREADY_SENT };
+  try {
+    return await send(preview, commandId);
+  } catch (error) {
+    return notSent(preview.label, message(error));
+  }
+}

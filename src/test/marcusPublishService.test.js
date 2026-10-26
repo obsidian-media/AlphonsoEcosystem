@@ -182,17 +182,12 @@ describe('executeMarcusPublish', () => {
     expect(publishMetaContent).toHaveBeenCalled();
   });
 
-  it('returns ok:false and denial reason when approval is rejected', async () => {
+  // Agent phase 5: the send was approved once, on Marcus's step; there is no second approval
+  // in Project Execution's store (it failed every send Maria hadn't reviewed).
+  it('never asks a second approval', async () => {
     const { requireApproval } = await import('../services/approval/approvalService');
-    requireApproval.mockResolvedValueOnce({ ok: false, reason: 'Rejected by policy' });
-
-    const result = await executeMarcusPublish({
-      platform: 'telegram',
-      payload: { chatId: '123', text: 'blocked' },
-      preApproved: false
-    });
-    expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/denied|Rejected|policy/i);
+    await executeMarcusPublish({ platform: 'telegram', payload: { chatId: '123', text: 'hi' }, preApproved: false });
+    expect(requireApproval).not.toHaveBeenCalled();
   });
 
   it('returns ok:false for unsupported platform', async () => {
