@@ -1,6 +1,7 @@
 // Every request Jose runs, saved with its steps and their status: the base for
 // the live board (phase 3) and resuming after a restart (phase 5).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §5
+import type { SendPreview } from '../marcus/types';
 import { durableGet, durableSet } from '../../lib/durableStore.js';
 import type { PlanStep } from './stepGraph';
 import { rewireNeeds } from './josePlanEdits';
@@ -24,6 +25,10 @@ export interface JoseRequestStep extends PlanStep {
   /** The skill the step ran with, and why (agent roles Part B). */
   skill?: string;
   skillReason?: string;
+  /** A Marcus send prepared before it asked you (agent phase 5): what goes where. */
+  sendPreview?: SendPreview;
+  /** When that send went out; a second run says it was already sent. */
+  sentAtMs?: number;
 }
 
 export interface JoseRequest {
