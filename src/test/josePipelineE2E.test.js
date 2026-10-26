@@ -49,6 +49,8 @@ vi.mock('../lib/ollama', () => ({
   generateAgentLlmResponse: vi.fn(async (agent) => {
     if (agent === 'nova') return { response: JSON.stringify({ doFirst: 'the launch', options: [{ name: 'The launch', rank: 1, why: 'ready', value: 'high', effort: 'low', risk: 'low' }] }) };
     // Maria's plan review (agent phase 3).
+    // Sentinel's check (agent phase 4).
+    if (agent === 'sentinel') return { response: JSON.stringify({ verdict: 'safe', summary: 'Nothing risky.', findings: [] }) };
     if (agent === 'maria') return { response: JSON.stringify({ risk: 'low', why: 'Nothing is sent.', rules: [], points: ['Nothing leaves this computer.'], needsApproval: false, approvalReasons: [], offer: '' }) };
     throw new Error('no agent model in this test');
   })

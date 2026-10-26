@@ -7,6 +7,7 @@ import { appendOrchestrationReceipt, listOrchestrationReceipts } from './orchest
 import { listAgentActivity } from './agentActivityService';
 import { classifyMissionRoomRisk, redactMissionRoomSecrets } from './missionRoomService';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
+import { runSentinelReview, type SentinelStepResult } from './sentinel/sentinelReview';
 
 export interface ThreatPattern {
   pattern: RegExp;
@@ -210,112 +211,14 @@ export function buildSentinelFallbackAlert(commandText: string, scanResult: Scan
   };
 }
 
-export async function runSentinelSecurityScan(commandText: string, assignment: SentinelAssignment, options: SentinelScanOptions = {}): Promise<SentinelScanResult> {
-  const startMs = timestampMs();
-  const priorOutputs = options.priorOutputs || {};
-
-  const scanResult = scanForThreats(commandText, priorOutputs);
-
-  let ollamaResult: SentinelThreatAnalysis | null = null;
-  const shouldRunOllama = scanResult.findings.length > 0 || String(commandText || '').length > 80;
-  if (shouldRunOllama) {
-    try {
-      const prompt = buildSentinelThreatPrompt(commandText, priorOutputs, scanResult, (options as { stepInput?: StepInput | null }).stepInput || null);
-      const response = await generateAgentLlmResponse('sentinel', { endpoint: getConfiguredOllamaEndpoint(), model: getConfiguredOllamaModel(), prompt, sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined });
-      ollamaResult = parseSentinelThreatResponse(response?.response || '');
-    } catch {
-      // Ollama unavailable — use deterministic fallback
-    }
-  }
-
-  const fallback = buildSentinelFallbackAlert(commandText, scanResult);
-  const merged = ollamaResult || fallback;
-
-  const finalBlocked = scanResult.blocked || merged.severity === 'critical';
-  const finalSeverity = finalBlocked && merged.severity !== 'critical'
-    ? (scanResult.severity === 'critical' ? 'critical' : merged.severity)
-    : merged.severity;
-  const finalRequiresApproval = merged.requiresApproval || finalBlocked;
-
-  const alertId = `sentinel_${assignment?.commandId || ''}_${startMs}`;
-  const schema: SentinelAlertSchema = {
-    alertId,
-    scope: 'global',
-    severity: finalSeverity,
-    summary: merged.summary,
-    findings: [
-      ...scanResult.findings.map((f) => `[SCAN] ${f.type}: ${f.detail}`),
-      ...(ollamaResult?.findings || []).map((f) => `[ANALYSIS] ${f}`)
-    ],
-    recommendedAction: merged.recommendedAction,
-    requiresApproval: finalRequiresApproval,
-    confidenceLevel: ollamaResult ? TRUST_STATES.VERIFIED : TRUST_STATES.INFERRED,
-    verificationState: ollamaResult ? TRUST_STATES.VERIFIED : TRUST_STATES.INFERRED,
-    detectedAtMs: startMs
-  };
-
-  pushMemoryItem({
-    title: `Sentinel scan: ${String(commandText || '').slice(0, 80)}`,
-    category: 'runtime_memory',
-    content: { schema, riskScore: scanResult.riskScore, blocked: finalBlocked },
-    source: 'sentinel-security-service',
-    sourceAgent: 'sentinel',
-    confidence: schema.confidenceLevel,
-    verificationState: schema.verificationState
-  });
-
-  appendSessionEvent({
-    category: 'security',
-    title: finalBlocked ? `Sentinel BLOCKED (${finalSeverity})` : `Sentinel cleared (${finalSeverity})`,
-    details: { riskScore: scanResult.riskScore, severity: finalSeverity, findings: schema.findings.length, blocked: finalBlocked },
-    agent: 'sentinel',
-    confidence: schema.confidenceLevel,
-    verificationState: schema.verificationState
-  });
-
-  appendOrchestrationReceipt({
-    workflowId: assignment?.commandId || 'sentinel_scan',
-    commandId: assignment?.commandId || null,
-    packetId: assignment?.packetId || null,
-    eventType: finalBlocked ? 'sentinel_scan_blocked' : 'sentinel_scan_cleared',
-    status: finalBlocked ? 'pending_review' : 'completed',
-    agent: 'sentinel',
-    actionType: assignment?.actionType || 'security_monitor',
-    riskLevel: finalSeverity,
-    approved: !finalRequiresApproval,
-    blocked: finalBlocked,
-    details: { riskScore: scanResult.riskScore, findingsCount: schema.findings.length, ollamaUsed: !!ollamaResult, durationMs: timestampMs() - startMs },
-    confidence: schema.confidenceLevel,
-    verificationState: schema.verificationState
-  });
-
-  const summaryParts = [
-    `Sentinel security scan: risk ${scanResult.riskScore}/100 (${finalSeverity}).`,
-    `${schema.findings.length} finding(s).`,
-    finalBlocked ? 'BLOCKED — operator approval required before execution.' : 'Cleared for execution.',
-    merged.recommendedAction
-  ].filter(Boolean).join(' ');
-
-  return {
-    summary: summaryParts,
-    resultState: finalBlocked ? 'pending_review' : 'completed',
-    resultUrl: null,
-    artifacts: [
-      {
-        type: 'security_assessment',
-        riskScore: scanResult.riskScore,
-        severity: finalSeverity,
-        blocked: finalBlocked,
-        findings: scanResult.findings,
-        secretDetected: scanResult.findings.some((f) => f.type === 'secret_detected' || f.type === 'credential_in_command'),
-        approvalRequired: finalRequiresApproval
-      },
-      { type: 'sentinel_alert_schema', schema }
-    ],
-    sources: [],
-    contractAction: assignment?.actionType || 'security_monitor',
-    schema
-  };
+/**
+ * Sentinel's step (agent phase 4): his own review of the real work, the exact checks handed
+ * to him as facts (`sentinel/sentinelReview.ts`). The keyword score below is no longer used
+ * for his steps.
+ */
+export async function runSentinelSecurityScan(commandText: string, assignment: SentinelAssignment, options: SentinelScanOptions & { stepInput?: StepInput | null; commandId?: string; projectDirectory?: string; workspaceRoot?: string; signal?: AbortSignal } = {}): Promise<SentinelStepResult> {
+  const input: StepInput = options.stepInput || { instruction: '', request: String(commandText || ''), needs: [], others: [], memory: '', review: null };
+  return runSentinelReview(assignment as never, input, { commandId: options.commandId || assignment?.commandId || undefined, workspaceRoot: options.projectDirectory || options.workspaceRoot, signal: options.signal });
 }
 
 export function startScheduledScans(intervalMs: number, onResult: (result: ScanResult) => void): () => void {

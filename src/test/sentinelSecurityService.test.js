@@ -12,6 +12,7 @@ import {
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 vi.mock('../services/memoryService', () => ({ pushMemoryItem: vi.fn() }));
+vi.mock('../services/sentinel/sentinelReview', () => ({ runSentinelReview: vi.fn(async () => ({ summary: 'Safe.', resultState: 'completed', schema: { kind: 'security' } })) }));
 vi.mock('../services/sessionIntelligenceService', () => ({ appendSessionEvent: vi.fn() }));
 vi.mock('../services/orchestrationReceiptService', () => ({ appendOrchestrationReceipt: vi.fn() }));
 vi.mock('../services/missionRoomService', () => ({
@@ -181,77 +182,21 @@ describe('buildSentinelFallbackAlert', () => {
 
 // ── runSentinelSecurityScan ───────────────────────────────────────────────────
 
+// Agent phase 4: his step is his own review (sentinel/sentinelReview.ts), not the keyword score.
 describe('runSentinelSecurityScan', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('returns summary string', async () => {
-    const result = await runSentinelSecurityScan('build a feature', {}, {});
-    expect(typeof result.summary).toBe('string');
+  it('runs his review with the step input, the command and the project folder', async () => {
+    const { runSentinelReview } = await import('../services/sentinel/sentinelReview');
+    runSentinelReview.mockClear();
+    const stepInput = { instruction: 'Check it.', request: 'r', needs: [], others: [], memory: '', review: null };
+    await runSentinelSecurityScan('the request', { agent: 'sentinel', commandId: 'c1' }, { stepInput, projectDirectory: 'D:/p' });
+    expect(runSentinelReview).toHaveBeenCalledWith(expect.objectContaining({ agent: 'sentinel' }), stepInput, expect.objectContaining({ commandId: 'c1', workspaceRoot: 'D:/p' }));
   });
 
-  it('returns artifacts array', async () => {
-    const result = await runSentinelSecurityScan('build a feature', {}, {});
-    expect(Array.isArray(result.artifacts)).toBe(true);
-  });
-
-  it('includes security_assessment artifact', async () => {
-    const result = await runSentinelSecurityScan('build', {}, {});
-    const types = result.artifacts.map((a) => a.type);
-    expect(types).toContain('security_assessment');
-  });
-
-  it('includes sentinel_alert_schema artifact', async () => {
-    const result = await runSentinelSecurityScan('build', {}, {});
-    const types = result.artifacts.map((a) => a.type);
-    expect(types).toContain('sentinel_alert_schema');
-  });
-
-  it('schema includes alertId', async () => {
-    const result = await runSentinelSecurityScan('build', {}, {});
-    const schemaArtifact = result.artifacts.find((a) => a.type === 'sentinel_alert_schema');
-    expect(schemaArtifact?.schema).toHaveProperty('alertId');
-  });
-
-  it('schema includes severity', async () => {
-    const result = await runSentinelSecurityScan('build', {}, {});
-    const schemaArtifact = result.artifacts.find((a) => a.type === 'sentinel_alert_schema');
-    expect(schemaArtifact?.schema).toHaveProperty('severity');
-  });
-
-  it('returns pending_review when blocked', async () => {
-    const { classifyMissionRoomRisk } = await import('../services/missionRoomService');
-    classifyMissionRoomRisk.mockReturnValueOnce({ secretDetected: true, flags: [], approvalRequired: true });
-    const result = await runSentinelSecurityScan('api_key: sk-abc123', {}, {});
-    expect(result.resultState).toBe('pending_review');
-  });
-
-  it('returns completed for safe command', async () => {
-    const result = await runSentinelSecurityScan('write a blog post about cats', {}, {});
-    expect(result.resultState).toBe('completed');
-  });
-
-  it('uses fallback when Ollama throws', async () => {
-    const { generateOllamaResponse } = await import('../lib/ollama');
-    generateOllamaResponse.mockRejectedValueOnce(new Error('Ollama offline'));
-    const result = await runSentinelSecurityScan('test', {}, {});
-    expect(result).toHaveProperty('summary');
-  });
-
-  it('handles null assignment gracefully', async () => {
-    const result = await runSentinelSecurityScan('test', null, {});
-    expect(result).toHaveProperty('summary');
+  it('without a step input, the command text is what he checks', async () => {
+    const { runSentinelReview } = await import('../services/sentinel/sentinelReview');
+    runSentinelReview.mockClear();
+    await runSentinelSecurityScan('Check this link', {}, {});
+    expect(runSentinelReview.mock.calls[0][1]).toMatchObject({ request: 'Check this link', review: null });
   });
 });
 
-describe('runSentinelSecurityScan model choice', () => {
-  // Same bug as Nova: a hardcoded model and endpoint (QA Bug 25).
-  it('asks the model and endpoint the user configured', async () => {
-    generateAgentLlmResponse.mockClear();
-    const longCommand = 'Review this deployment plan carefully and flag anything that touches credentials or production data before it runs.';
-    await runSentinelSecurityScan(longCommand, { packetId: 'p1' });
-    expect(generateAgentLlmResponse).toHaveBeenCalledWith(
-      'sentinel',
-      expect.objectContaining({ endpoint: 'http://configured-host:11434', model: 'picked-by-user:3b' })
-    );
-  });
-});
