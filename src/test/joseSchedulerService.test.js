@@ -19,8 +19,9 @@ vi.mock('../services/nova/novaDaily', () => ({
 vi.mock('../services/sentinelSecurityService', () => ({
   runSentinelSecurityScan: vi.fn(async () => ({ summary: 'Sentinel: risk 10/100, 0 findings.' })),
 }));
-vi.mock('../services/mariaAuditService', () => ({
-  runMariaGovernanceAudit: vi.fn(async () => ({ summary: 'Maria: low risk.', schema: { riskLevel: 'low' } })),
+// Agent phase 3: the weekly Maria job asks her through Jose about the week's risks.
+vi.mock('../services/maria/mariaWeekly', () => ({
+  askMariaWeeklyRisks: vi.fn(async () => ({ state: 'done', summary: 'Maria: low risk.' })),
 }));
 vi.mock('../services/agentActivityService', () => ({
   appendAgentActivity: vi.fn(),
@@ -243,6 +244,24 @@ describe('running schedules', () => {
       expect(result.summary).toContain(text);
     }
     expect(appendAgentActivity).toHaveBeenCalledTimes(3);
+  });
+
+  it('the weekly Maria job is a request to her', async () => {
+    const { listAgentActivity } = await import('../services/agentActivityService');
+    listAgentActivity.mockReturnValue([{ agent: 'marcus', action: 'executed', detail: 'sent a post', ts: Date.now() }]);
+    const { askMariaWeeklyRisks } = await import('../services/maria/mariaWeekly');
+    startScheduler({ runCommand: vi.fn() });
+    const job = createSchedule({ name: 'Maria', presetId: 'maria_weekly_audit' });
+    await runSchedule(job.id);
+    expect(askMariaWeeklyRisks).toHaveBeenCalledWith(expect.stringContaining('sent a post'));
+    expect(SCHEDULE_PRESETS.find((p) => p.id === 'maria_weekly_audit').label).toBe("Maria: the week's risks");
+  });
+
+  it('App starts no weekly report of its own', async () => {
+    const { readFileSync } = await import('node:fs');
+    const app = readFileSync('src/App.tsx', 'utf8');
+    expect(app).not.toContain('scheduleWeeklyGeneration');
+    expect(app).not.toContain('Maria weekly report ready');
   });
 
   it('says so when a built-in job has nothing to review', async () => {

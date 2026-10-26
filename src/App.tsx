@@ -491,7 +491,6 @@ function AppShell() {
   // Wire background services: Sentinel scheduled scans + Maria weekly report
   useEffect(() => {
     let scanStop: (() => void) | null = null;
-    let weeklyStop: (() => void) | null = null;
     (async () => {
       try {
         const { startScheduledScans } = await import('./services/sentinelSecurityService');
@@ -501,18 +500,10 @@ function AppShell() {
           }
         });
       } catch { /* non-critical */ }
-      try {
-        const { scheduleWeeklyGeneration } = await import('./services/mariaWeeklyReportService');
-        weeklyStop = scheduleWeeklyGeneration((report: any) => {
-          if (report) {
-            addNotification({ type: 'info', title: 'Maria weekly report ready', message: report.summary || 'Governance report generated.' });
-          }
-        });
-      } catch { /* non-critical */ }
+      // Maria's weekly review is a schedule now (agent phase 3: "Maria: the week's risks").
     })();
     return () => {
       try { scanStop?.(); } catch { /* ignore */ }
-      try { weeklyStop?.(); } catch { /* ignore */ }
     };
   }, []);
 
