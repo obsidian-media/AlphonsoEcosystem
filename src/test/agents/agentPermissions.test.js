@@ -165,8 +165,10 @@ describe('agentPermissions', () => {
       expect(MARCUS_PERMISSIONS.agentId).toBe('marcus');
     });
 
-    it('MARCUS_ALLOWED_ACTIONS includes generate_audit_report', () => {
-      expect(MARCUS_ALLOWED_ACTIONS).toContain('generate_audit_report');
+    // Agent phase 5: sending and publishing approved work; audits and risk are Maria's.
+    it('MARCUS_ALLOWED_ACTIONS includes sending approved work', () => {
+      expect(MARCUS_ALLOWED_ACTIONS).toContain('send_approved_message');
+      expect(MARCUS_ALLOWED_ACTIONS).toContain('create_draft_release');
     });
 
     it('MARCUS_ALLOWED_ACTIONS includes release_readiness_check', () => {
@@ -182,9 +184,10 @@ describe('agentPermissions', () => {
     });
 
     it('canMarcusPerform returns true for allowed actions', () => {
-      expect(canMarcusPerform('generate_audit_report')).toBe(true);
-      expect(canMarcusPerform('security_review')).toBe(true);
-      expect(canMarcusPerform('risk_detection')).toBe(true);
+      expect(canMarcusPerform('send_approved_message')).toBe(true);
+      expect(canMarcusPerform('publish_approved_post')).toBe(true);
+      expect(canMarcusPerform('security_review')).toBe(false);
+      expect(canMarcusPerform('risk_detection')).toBe(false);
     });
 
     it('canMarcusPerform returns false for blocked actions', () => {
