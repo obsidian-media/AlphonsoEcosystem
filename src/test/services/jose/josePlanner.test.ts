@@ -347,6 +347,8 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(missingAsked('Clean up my memory', plan as never))
       .toEqual(['The request asks to clean up memory: add an echo step with the task type memory_cleanup.']);
     expect(missingAsked('Remember that I prefer short emails', [{ agent: 'echo', effects: ['write_own_work'], actionType: 'memory_preservation' }] as never)).toEqual([]);
+    // Asking whether something is remembered is not asking to save it.
+    expect(missingAsked('Do you remember what we decided about the launch?', plan as never)).toEqual([]);
     // A note to post is not something to remember.
     expect(missingAsked('Post a short note that we open at 9 to Slack #news.', [{ agent: 'marcus', effects: ['publish_or_send'], actionType: 'distribution_execution' }] as never)).toEqual([]);
   });

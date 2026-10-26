@@ -385,7 +385,9 @@ export function asksReadiness(commandText: string): boolean {
 /** "Audit this plan …": a review of a plan by Maria, not doing the plan (agent phase 3). */
 /** A request to remember something (agent phase 7). */
 export function asksToRemember(text: string): boolean {
-  return /\b(remember|don'?t forget|keep in mind)\b/i.test(String(text || '')) && !asksToForget(text);
+  // "Remember that …", "Please remember …", or a message that starts with "Remember"; not "Do you remember …?".
+  const t = String(text || '');
+  return /^\s*(?:\/jose\s+)?(?:please\s+)?remember\b|\b(?:remember that|please remember|don'?t forget that|keep in mind that)\b/i.test(t) && !asksToForget(t);
 }
 
 /** A request to forget a saved decision (agent phase 7). */
@@ -400,7 +402,7 @@ export function asksToCleanUpMemory(text: string): boolean {
 
 /** A question about what was decided before (agent phase 7). */
 export function asksWhatWasDecided(text: string): boolean {
-  return /\bwhat (?:did (?:we|i) (?:decide|say|agree)|was decided|have we decided)\b|\bremind me what\b/i.test(String(text || ''));
+  return /\bwhat (?:did (?:we|i) (?:decide|say|agree)|was decided|have we decided)\b|\bremind me what\b|\bdo you remember what\b/i.test(String(text || ''));
 }
 
 export function asksPlanReview(commandText: string): boolean {
