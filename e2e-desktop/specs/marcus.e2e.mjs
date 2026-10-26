@@ -34,7 +34,10 @@ async function ask(text) {
   const input = await $('[data-testid="chat-compose-input"]');
   await input.waitForDisplayed();
   await input.setValue(text);
-  await (await $('[data-testid="chat-send-button"]')).click();
+  // A long chat re-renders slowly: click only once Send has taken the text.
+  const send = await $('[data-testid="chat-send-button"]');
+  await send.waitForEnabled({ timeout: 30000 });
+  await send.click();
   let asked = false;
   try {
     await browser.waitUntil(async () => {

@@ -37,7 +37,10 @@ async function ask(text) {
   const input = await $('[data-testid="chat-compose-input"]');
   await input.waitForDisplayed();
   await input.setValue(text);
-  await (await $('[data-testid="chat-send-button"]')).click();
+  // A long chat re-renders slowly: click only once Send has taken the text.
+  const send = await $('[data-testid="chat-send-button"]');
+  await send.waitForEnabled({ timeout: 30000 });
+  await send.click();
   try {
     await browser.waitUntil(async () => {
       await denyAnyApproval();
@@ -46,6 +49,8 @@ async function ask(text) {
     }, { timeout: 1500000, interval: 4000 });
   } catch {
     const r = (await requests())[0];
+    console.log('MARIA-E2E chat', (await mainText()).slice(-1500));
+    await browser.saveScreenshot('D:/Temp/claude/maria-fail.png').catch(() => undefined);
     throw new Error(`the request never finished: ${JSON.stringify({ status: r?.status, steps: (r?.steps || []).map((s) => [s.stepId, s.agent, s.actionType, s.status]) })}`);
   }
   return (await requests())[0];
@@ -65,7 +70,10 @@ async function saveTavilyKey() {
   await browser.waitUntil(async () => /Tavily key saved/i.test(await mainText()), { timeout: 30000, timeoutMsg: 'the Tavily key was not saved' });
 }
 
-const textOf = (output) => [output?.summary, ...(output?.artifacts || []).map((a) => (typeof a?.raw === 'string' ? a.raw : ''))].filter(Boolean).join('\n');
+// The work as Maria reads it (readableOutput()): summary, schema and artifacts, compared the way
+// her quote check compares (quoteIn(): letters and digits only).
+const textOf = (output) => [output?.summary, JSON.stringify(output?.schema || {}), ...(output?.artifacts || []).map((a) => (typeof a?.raw === 'string' ? a.raw : JSON.stringify(a?.data ?? '')))].filter(Boolean).join('\n');
+const plain = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 describe("Alphonso desktop: Maria reviews the work and the plan", () => {
   before(async function () {
@@ -108,7 +116,7 @@ describe("Alphonso desktop: Maria reviews the work and the plan", () => {
       const work = textOf(outputs[review.reviewOf]);
       for (const finding of out?.schema?.findings || []) {
         const quote = /^"([^"]+)":/.exec(finding)?.[1];
-        if (quote) expect(work).toContain(quote);
+        if (quote) expect(plain(work)).toContain(plain(quote));
       }
     }
   }).timeout(1600000);
