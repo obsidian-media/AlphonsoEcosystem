@@ -568,6 +568,13 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [githubToken, setGithubToken] = useState(() => getConnectorCredential('github', 'GITHUB_TOKEN'));
   const [slackBotToken, setSlackBotToken] = useState(() => getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
   const [discordBotToken, setDiscordBotToken] = useState(() => getConnectorCredential('discord', 'DISCORD_BOT_TOKEN'));
+  // Where Marcus sends (agent phase 5): each connector's default destination.
+  const [slackDefaultChannel, setSlackDefaultChannel] = useState(() => getConnectorCredential('slack', 'SLACK_DEFAULT_CHANNEL'));
+  const [discordGuildId, setDiscordGuildId] = useState(() => getConnectorCredential('discord', 'DISCORD_GUILD_ID'));
+  const [discordDefaultChannelId, setDiscordDefaultChannelId] = useState(() => getConnectorCredential('discord', 'DISCORD_DEFAULT_CHANNEL_ID'));
+  const [telegramTeamChatId, setTelegramTeamChatId] = useState(() => getConnectorCredential('telegram', 'TELEGRAM_TEAM_CHAT_ID'));
+  const [githubDefaultRepo, setGithubDefaultRepo] = useState(() => getConnectorCredential('github', 'GITHUB_DEFAULT_REPO'));
+  const [n8nWorkflows, setN8nWorkflows] = useState(() => getConnectorCredential('n8n', 'N8N_WORKFLOWS'));
   const [calleApiKey, setCalleApiKey] = useState(() => getConnectorCredential('calle', 'CALLE_API_KEY'));
   const [genericWebhookDrainUrl, setGenericWebhookDrainUrl] = useState(() => getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_DRAIN_URL'));
   const [genericWebhookToken, setGenericWebhookToken] = useState(() => getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_TOKEN'));
@@ -624,6 +631,12 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setGithubToken((prev) => prev || getConnectorCredential('github', 'GITHUB_TOKEN'));
       setSlackBotToken((prev) => prev || getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
       setDiscordBotToken((prev) => prev || getConnectorCredential('discord', 'DISCORD_BOT_TOKEN'));
+      setSlackDefaultChannel((prev) => prev || getConnectorCredential('slack', 'SLACK_DEFAULT_CHANNEL'));
+      setDiscordGuildId((prev) => prev || getConnectorCredential('discord', 'DISCORD_GUILD_ID'));
+      setDiscordDefaultChannelId((prev) => prev || getConnectorCredential('discord', 'DISCORD_DEFAULT_CHANNEL_ID'));
+      setTelegramTeamChatId((prev) => prev || getConnectorCredential('telegram', 'TELEGRAM_TEAM_CHAT_ID'));
+      setGithubDefaultRepo((prev) => prev || getConnectorCredential('github', 'GITHUB_DEFAULT_REPO'));
+      setN8nWorkflows((prev) => prev || getConnectorCredential('n8n', 'N8N_WORKFLOWS'));
       setCalleApiKey((prev) => prev || getConnectorCredential('calle', 'CALLE_API_KEY'));
       setGenericWebhookDrainUrl((prev) => prev || getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_DRAIN_URL'));
       setGenericWebhookToken((prev) => prev || getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_TOKEN'));
@@ -700,6 +713,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
     if (!token) { showNotice('Bot token is required.', 'error'); return; }
     saveConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN', token);
     saveConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS', telegramChatIds.trim());
+    saveConnectorCredential('telegram', 'TELEGRAM_TEAM_CHAT_ID', telegramTeamChatId.trim());
     updateConnectorAuthProfile('telegram', {
       enabled: true,
       allowlist: telegramChatIds.split(/[,\n]/).map((s) => s.trim()).filter(Boolean)
@@ -1016,6 +1030,12 @@ export function ConnectorSetupPanel(): React.JSX.Element {
                   className="w-full rounded-xl bg-(--surface-2) px-3 py-2.5 text-sm text-(--text-1) placeholder-(--text-4) focus:outline-hidden"
                   placeholder="e.g. 123456789, 987654321" />
               </div>
+              <div>
+                <label className="mb-1.5 block text-[11px] font-medium text-(--text-3)">Where Marcus sends: team chat</label>
+                <input type="text" value={telegramTeamChatId} onChange={(e) => setTelegramTeamChatId(e.target.value)}
+                  className="w-full rounded-xl bg-(--surface-2) px-3 py-2.5 text-sm text-(--text-1) placeholder-(--text-4) focus:outline-hidden"
+                  placeholder="Chat ID of a group the bot is in, e.g. -1001234567890" aria-label="Telegram team chat" />
+              </div>
             </div>
             <p className="mt-3 text-[11px] text-(--text-3)">
               Create a bot with <span className="text-(--text-3)">@BotFather</span> on Telegram to get your bot token, then message <span className="text-(--text-3)">@userinfobot</span> to get your own numeric chat ID. Set it here <span className="text-(--text-3)">before</span> sending <span className="text-(--text-3)">/start</span> to your bot — Alphonso will only let a chat ID on this list claim ownership, closing the window where anyone who finds your bot first could take control.
@@ -1044,21 +1064,28 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
               { label: 'Webhook Verify Token', placeholder: 'Your custom verify string', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false },
               { label: 'Cloud Gateway Drain URL', placeholder: 'https://your-gateway.up.railway.app/queue/drain', value: whatsappGatewayDrainUrl, onChange: setWhatsappGatewayDrainUrl, key: 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL', secret: false },
-              { label: 'Allowed Numbers (owner pairing)', placeholder: 'e.g. 15551234567 (digits only, no +)', value: whatsappAllowedNumbers, onChange: setWhatsappAllowedNumbers, key: 'WHATSAPP_ALLOWED_NUMBERS', secret: false }
+              { label: 'Allowed Numbers (owner pairing; where Marcus sends)', placeholder: 'e.g. 15551234567 (digits only, no +)', value: whatsappAllowedNumbers, onChange: setWhatsappAllowedNumbers, key: 'WHATSAPP_ALLOWED_NUMBERS', secret: false }
             ]}
             onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken, WHATSAPP_CLOUD_GATEWAY_DRAIN_URL: whatsappGatewayDrainUrl, WHATSAPP_ALLOWED_NUMBERS: whatsappAllowedNumbers })}
             hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The Verify Token is a string you choose when setting up your webhook. Cloud Gateway Drain URL is required for inbound messages/commands to work — deploy gateway/whatsapp-cloud/ and paste its drain endpoint here. Allowed Numbers gates who can pair as the companion owner via /start (same protection as Telegram's allowlist)."
             savedLabel="WhatsApp credentials saved" />
 
           <CredentialSection title="Slack" icon={Hash} borderColor="border-green-300/20" bgColor="bg-green-500/8" accentColor="text-green-400"
-            fields={[{ label: 'Bot Token', placeholder: 'xoxb-...', value: slackBotToken, onChange: setSlackBotToken, key: 'SLACK_BOT_TOKEN' }]}
-            onSave={() => saveConnectorApiKey('slack', { SLACK_BOT_TOKEN: slackBotToken })}
+            fields={[
+              { label: 'Bot Token', placeholder: 'xoxb-...', value: slackBotToken, onChange: setSlackBotToken, key: 'SLACK_BOT_TOKEN' },
+              { label: 'Where Marcus sends: default channel', placeholder: '#team (optional)', value: slackDefaultChannel, onChange: setSlackDefaultChannel, key: 'SLACK_DEFAULT_CHANNEL', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('slack', { SLACK_BOT_TOKEN: slackBotToken, SLACK_DEFAULT_CHANNEL: slackDefaultChannel })}
             hint="Create a Slack app at api.slack.com/apps, add the chat:write scope, install to your workspace, and copy the Bot User OAuth Token."
             savedLabel="Slack token saved" />
 
           <CredentialSection title="Discord" icon={AtSign} borderColor="border-indigo-300/20" bgColor="bg-indigo-500/8" accentColor="text-indigo-400"
-            fields={[{ label: 'Bot Token', placeholder: 'Bot token from the Discord Developer Portal', value: discordBotToken, onChange: setDiscordBotToken, key: 'DISCORD_BOT_TOKEN' }]}
-            onSave={() => saveConnectorApiKey('discord', { DISCORD_BOT_TOKEN: discordBotToken })}
+            fields={[
+              { label: 'Bot Token', placeholder: 'Bot token from the Discord Developer Portal', value: discordBotToken, onChange: setDiscordBotToken, key: 'DISCORD_BOT_TOKEN' },
+              { label: 'Where Marcus sends: server ID', placeholder: 'Right-click your server, then Copy Server ID', value: discordGuildId, onChange: setDiscordGuildId, key: 'DISCORD_GUILD_ID', secret: false },
+              { label: 'Where Marcus sends: default channel ID', placeholder: 'Right-click a channel, then Copy Channel ID (optional)', value: discordDefaultChannelId, onChange: setDiscordDefaultChannelId, key: 'DISCORD_DEFAULT_CHANNEL_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('discord', { DISCORD_BOT_TOKEN: discordBotToken, DISCORD_GUILD_ID: discordGuildId, DISCORD_DEFAULT_CHANNEL_ID: discordDefaultChannelId })}
             hint="Create an application at discord.com/developers/applications, add a Bot, enable the Message Content intent, invite it to your server, and copy the Bot Token."
             savedLabel="Discord token saved" />
 
@@ -1190,15 +1217,18 @@ export function ConnectorSetupPanel(): React.JSX.Element {
           <MediaStorageSection />
 
           <CredentialSection title="GitHub" icon={GitBranch} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
-            fields={[{ label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }]}
-            onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken })}
+            fields={[
+              { label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' },
+              { label: 'Where Marcus sends: default repository', placeholder: 'owner/repo (optional)', value: githubDefaultRepo, onChange: setGithubDefaultRepo, key: 'GITHUB_DEFAULT_REPO', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken, GITHUB_DEFAULT_REPO: githubDefaultRepo })}
             hint="Create a token at github.com/settings/tokens with repo and workflow scopes. Used by Marcus for releases and issue management."
             savedLabel="GitHub token saved" />
 
           <CredentialSection title="Notion" icon={Database} borderColor="border-pink-300/20" bgColor="bg-pink-500/8" accentColor="text-pink-400"
             fields={[
               { label: 'Integration Secret', placeholder: 'secret_...', value: notionApiKey, onChange: setNotionApiKey, key: 'NOTION_API_KEY' },
-              { label: 'Default Page ID', placeholder: 'Page UUID (optional)', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
+              { label: 'Where Marcus sends: default page ID', placeholder: 'Page UUID (optional)', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
             ]}
             onSave={() => saveConnectorApiKey('notion', { NOTION_API_KEY: notionApiKey, NOTION_PARENT_PAGE_ID: notionParentPageId })}
             hint="Create an integration at notion.so/my-integrations, then share the pages you want Alphonso to write to with your integration."
@@ -1207,7 +1237,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
           <CredentialSection title="ClickUp" icon={ListTodo} borderColor="border-purple-300/20" bgColor="bg-purple-500/8" accentColor="text-purple-400"
             fields={[
               { label: 'API Key', placeholder: 'pk_...', value: clickupApiKey, onChange: setClickupApiKey, key: 'CLICKUP_API_KEY' },
-              { label: 'Default List ID', placeholder: 'Found in the list URL (optional)', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
+              { label: 'Where Marcus sends: default list ID', placeholder: 'Found in the list URL (optional)', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
             ]}
             onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
             hint="Find your API key under ClickUp Settings → Apps. The Default List ID is optional — Alphonso can target any list per task."
@@ -1255,8 +1285,11 @@ export function ConnectorSetupPanel(): React.JSX.Element {
         <CollapsibleCategory id="automation" label="Automation" icon={Zap} defaultOpen={false}>
 
           <CredentialSection title="n8n Automation (Docker)" icon={Zap} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
-            fields={[{ label: 'n8n Base URL', placeholder: 'http://localhost:5678', value: n8nBaseUrl, onChange: setN8nBaseUrl, key: 'N8N_BASE_URL', secret: false }]}
-            onSave={() => saveConnectorApiKey('n8n', { N8N_BASE_URL: n8nBaseUrl })}
+            fields={[
+              { label: 'n8n Base URL', placeholder: 'http://localhost:5678', value: n8nBaseUrl, onChange: setN8nBaseUrl, key: 'N8N_BASE_URL', secret: false },
+              { label: 'Where Marcus sends: your workflows', placeholder: 'Team notes: team-notes; Releases: release-hook', value: n8nWorkflows, onChange: setN8nWorkflows, key: 'N8N_WORKFLOWS', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('n8n', { N8N_BASE_URL: n8nBaseUrl, N8N_WORKFLOWS: n8nWorkflows })}
             hint="n8n must be running in Docker. Default: http://localhost:5678. Used by Marcus for workflow automation triggers."
             savedLabel="n8n URL saved" />
 

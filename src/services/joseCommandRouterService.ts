@@ -1,4 +1,5 @@
 import { listJoseRequests } from './jose/joseRequestStore';
+import { withoutQuotedContent } from './jose/quotedContent';
 import { closingSummary } from './jose/joseSummary';
 import type { ContentStepPayload } from './contentFactory/contentTypes';
 import { invoke } from '@tauri-apps/api/core';
@@ -333,20 +334,6 @@ export interface ParsedJoseCommand {
 const NOT_CODE = /\b(?:discount|promo|promotional|coupon|voucher|referral|gift)\s+codes?\b/gi;
 /** Asking to audit, review, assess or check a plan, an idea, a campaign or a proposal (agent phase 3). */
 const PLAN_REVIEW = /\b(?:audit|review|assess|evaluate|check)\b[^.?!:]*\b(?:plan|plans|idea|ideas|campaign|proposal|strategy)\b/i;
-
-/** "Check this post …: <the post>": what follows the colon is the content (agent phase 4). */
-const CONTENT_AFTER = /\b(?:this|the|my|our)\s+(?:post|email|message|text|tweet|caption|ad|copy|reply|page)\b[^:\n]{0,80}:/i;
-const QUOTED = /"[^"]*"|“[^”]*”/g;
-/** "before I publish it" says when, it doesn't ask for a send (agent phase 4). */
-const NOT_A_SEND = /\bbefore (?:i |we |you )?(?:publish|post|send|share)(?:ing)?(?: it| this| them)?\b/gi;
-
-/** The request without the content it quotes: words inside a post aren't instructions. */
-function withoutQuotedContent(text: string): string {
-  let out = text.replace(QUOTED, ' ');
-  const m = out.match(CONTENT_AFTER);
-  if (m && m.index !== undefined) out = out.slice(0, m.index + m[0].length);
-  return out.replace(NOT_A_SEND, ' ');
-}
 
 export function parseJoseCommand(commandText: string): ParsedJoseCommand {
   const clean = String(commandText || '').trim();
