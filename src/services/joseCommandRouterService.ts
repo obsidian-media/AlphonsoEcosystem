@@ -53,6 +53,9 @@ export interface JoseCommandParserIntents {
   governanceAudit: boolean;
   securityMonitoring: boolean;
   memoryPreservation: boolean;
+  memoryForget: boolean;
+  memoryCleanup: boolean;
+  memoryRecall: boolean;
   opportunityScoring: boolean;
   distributionExecution: boolean;
   publishing: boolean;
@@ -380,6 +383,26 @@ export function asksReadiness(commandText: string): boolean {
 }
 
 /** "Audit this plan …": a review of a plan by Maria, not doing the plan (agent phase 3). */
+/** A request to remember something (agent phase 7). */
+export function asksToRemember(text: string): boolean {
+  return /\b(remember|don'?t forget|keep in mind)\b/i.test(String(text || '')) && !asksToForget(text);
+}
+
+/** A request to forget a saved decision (agent phase 7). */
+export function asksToForget(text: string): boolean {
+  return /\b(forget|stop remembering)\b/i.test(String(text || '')) && !/\bdon'?t forget\b/i.test(String(text || ''));
+}
+
+/** A request to tidy memory (agent phase 7). */
+export function asksToCleanUpMemory(text: string): boolean {
+  return /\b(clean(?:\s|-)?up|tidy(?:\s+up)?)\s+(?:my\s+|the\s+)?memory\b|\bmerge (?:my\s+)?notes\b/i.test(String(text || ''));
+}
+
+/** A question about what was decided before (agent phase 7). */
+export function asksWhatWasDecided(text: string): boolean {
+  return /\bwhat (?:did (?:we|i) (?:decide|say|agree)|was decided|have we decided)\b|\bremind me what\b/i.test(String(text || ''));
+}
+
 export function asksPlanReview(commandText: string): boolean {
   return PLAN_REVIEW.test(withoutQuotedContent(withoutNegations(String(commandText || '').toLowerCase())));
 }
@@ -411,7 +434,11 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
     check: !planReview && matchesAny(asked, ['check', 'accuracy', 'accurate', 'fact-check', 'proofread']) && (!securityMonitoring || accuracyCheck),
     governanceAudit: planReview || matchesAny(asked, ['audit', 'compliance', 'policy', 'approval', 'governance', 'risk']),
     securityMonitoring,
-    memoryPreservation: matchesAny(asked, ['remember', 'archive', 'knowledge', 'timeline', 'document decision']),
+    memoryPreservation: !asksToForget(asked) && !asksToCleanUpMemory(asked) && matchesAny(asked, ['remember', 'archive', 'knowledge', 'timeline', 'document decision']),
+    // Agent phase 7: forget, clean up and "what did we decide" are Echo's too.
+    memoryForget: asksToForget(asked),
+    memoryCleanup: asksToCleanUpMemory(asked),
+    memoryRecall: asksWhatWasDecided(asked),
     opportunityScoring: matchesAny(asked, ['opportunity', 'priority', 'prioritize', 'score', 'roi', 'value', 'timing']),
     distributionExecution: !planReview && matchesAny(asked, ['distribute', 'schedule', 'engage', 'community', 'publish queue']),
     // "post" alone is a piece of writing, not publishing (agent phase 1), and naming a platform
@@ -542,6 +569,24 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       requiresApproval: false,
       commandPreview: 'Preserve decisions/workflow context only.',
       fragments: fragments.filter((fragment) => /remember|archive|knowledge|timeline|history|decision/i.test(fragment))
+    });
+  }
+
+  for (const [on, actionType, title] of [
+    [intents.memoryForget, 'memory_forget', 'Echo forgets a saved decision'],
+    [intents.memoryCleanup, 'memory_cleanup', 'Echo proposes a memory cleanup'],
+    [intents.memoryRecall, 'memory_recall', 'Echo answers from the saved decisions'],
+  ] as const) {
+    if (!on) continue;
+    assignments.push({
+      agent: AGENTS.ECHO,
+      title: `${title}: ${shorten(clean)}`,
+      rationale: 'Memory request.',
+      actionType,
+      riskLevel: 'low',
+      requiresApproval: false,
+      commandPreview: actionType === 'memory_recall' ? 'Reads the saved decisions.' : 'Changes memory only.',
+      fragments: [clean],
     });
   }
 

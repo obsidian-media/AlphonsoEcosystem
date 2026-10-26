@@ -5,7 +5,7 @@
 // (owner, 2026-10-23).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.3–2.4, §5
 import { generateAgentLlmResponse } from '../../lib/ollama';
-import { asksPlanReview, asksReadiness, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
+import { asksPlanReview, asksReadiness, asksToCleanUpMemory, asksToForget, asksToRemember, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
 import { CODE_TASK_PREFIXES, isCodeRequest, needsFacts, planningMenu } from './taskTypeMeanings';
 import { isPlainQuestion } from '../../lib/chatUtils';
@@ -81,6 +81,17 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   const problems: string[] = [];
   if (parsed.intents.check && parsed.intents.writing && !has('maria')) {
     problems.push('The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.');
+  }
+  // Agent phase 7: remembering, forgetting and tidying memory are Echo's steps.
+  const echoDoes = (types: string[]) => has('echo', (st) => types.includes(String(st.actionType)));
+  if (asksToRemember(text) && !echoDoes(['memory_preservation', 'memory_workflow_step'])) {
+    problems.push('The request asks to remember something: add an echo step with the task type memory_preservation.');
+  }
+  if (asksToForget(text) && !echoDoes(['memory_forget'])) {
+    problems.push('The request asks to forget something: add an echo step with the task type memory_forget.');
+  }
+  if (asksToCleanUpMemory(text) && !echoDoes(['memory_cleanup', 'knowledge_curation'])) {
+    problems.push('The request asks to clean up memory: add an echo step with the task type memory_cleanup.');
   }
   // Agent phase 6: a code request needs Alphonso's code step; plain writing needs no research.
   const codeStep = (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) =>

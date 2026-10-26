@@ -43,6 +43,7 @@ export async function decideJoseRoute(text: string, options: { history?: { role:
   const prompt = [
     'You are Jose, the orchestrator. Decide whether to answer this message directly, or to plan work for your agents.',
     'Answer directly for conversation, questions and anything one reply can do. Plan when something must be researched, written, made, built, checked or sent.',
+    'Plan when the message asks to remember or forget something, or to clean up memory: Echo does that.',
     recent ? `Recent conversation:\n${recent}` : '',
     `Message: ${value}`,
     'Answer with JSON only: {"route": "direct" or "plan", "reason": "<short reason>"}',

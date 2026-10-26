@@ -25,6 +25,13 @@ describe('decideJoseRoute: answer directly or plan', () => {
     expect(llm).not.toHaveBeenCalled();
   });
 
+  // Agent phase 7: remembering and forgetting are Echo's work, so they are planned.
+  it("tells Jose's model that remember, forget and clean up are planned", async () => {
+    llm.mockResolvedValueOnce(says('plan'));
+    await decideJoseRoute('Remember that our launch is on Friday the 14th.');
+    expect(String((llm.mock.calls[0][1] as any).prompt)).toContain('Plan when the message asks to remember or forget something, or to clean up memory: Echo does that.');
+  });
+
   it('lets the model decide everything else', async () => {
     llm.mockResolvedValueOnce(says('plan'));
     expect(await decideJoseRoute('Make a launch video for my app')).toMatchObject({ route: 'plan', source: 'model' });

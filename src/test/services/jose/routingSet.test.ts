@@ -60,6 +60,12 @@ const RULE_PLAN: [string, Part[]][] = [
   ['Create a todo app with React', [['alphonso', 'local_operation']]],
   ['Summarize this file for me', [['alphonso', 'assistant_write']]],
   ['Create a small Node.js script hello.js that prints the date', [['alphonso', 'local_operation']]],
+  // Agent phase 7: remember, forget, ask and clean up are Echo's.
+  ['Remember that I prefer short emails without emojis', [['echo', 'memory_preservation']]],
+  ['Remember that our launch is on Friday the 14th and the price is $29.', [['echo', 'memory_preservation']]],
+  ['Forget that the launch is on Friday', [['echo', 'memory_forget']]],
+  ['Clean up my memory', [['echo', 'memory_cleanup']]],
+  ['What did we decide about the launch?', [['echo', 'memory_recall']]],
 ];
 
 const TEMPLATES: [string, string | null][] = [
