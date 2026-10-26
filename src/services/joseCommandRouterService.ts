@@ -334,16 +334,33 @@ const NOT_CODE = /\b(?:discount|promo|promotional|coupon|voucher|referral|gift)\
 /** Asking to audit, review, assess or check a plan, an idea, a campaign or a proposal (agent phase 3). */
 const PLAN_REVIEW = /\b(?:audit|review|assess|evaluate|check)\b[^.?!:]*\b(?:plan|plans|idea|ideas|campaign|proposal|strategy)\b/i;
 
+/** "Check this post …: <the post>": what follows the colon is the content (agent phase 4). */
+const CONTENT_AFTER = /\b(?:this|the|my|our)\s+(?:post|email|message|text|tweet|caption|ad|copy|reply|page)\b[^:\n]{0,80}:/i;
+const QUOTED = /"[^"]*"|“[^”]*”/g;
+/** "before I publish it" says when, it doesn't ask for a send (agent phase 4). */
+const NOT_A_SEND = /\bbefore (?:i |we |you )?(?:publish|post|send|share)(?:ing)?(?: it| this| them)?\b/gi;
+
+/** The request without the content it quotes: words inside a post aren't instructions. */
+function withoutQuotedContent(text: string): string {
+  let out = text.replace(QUOTED, ' ');
+  const m = out.match(CONTENT_AFTER);
+  if (m && m.index !== undefined) out = out.slice(0, m.index + m[0].length);
+  return out.replace(NOT_A_SEND, ' ');
+}
+
 export function parseJoseCommand(commandText: string): ParsedJoseCommand {
   const clean = String(commandText || '').trim();
   const lower = clean.toLowerCase();
   const connectorCost = classifyCommandCost(lower);
   // A discount, promo or referral code is not code (agent phase 3: "a 30 percent discount code").
-  const asked = withoutNegations(lower).replace(NOT_CODE, ' offer ');
+  const asked = withoutQuotedContent(withoutNegations(lower)).replace(NOT_CODE, ' offer ');
   // Auditing or reviewing a plan is Maria's review, not doing what the plan says (agent
   // phase 3: "audit this plan … and post it on Instagram" also planned a send and a code step).
   const planReview = PLAN_REVIEW.test(asked);
   const localExecution = !planReview && matchesAny(asked, ['build', 'runtime', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package', 'function', 'code', 'bug', 'repo', 'compile', 'refactor', 'npm']);
+  const securityMonitoring = matchesAny(asked, ['security', 'secrets', 'permission', 'vulnerability', 'unsafe', 'incident']);
+  // A check for security is Sentinel's, not Maria's accuracy check (agent phase 4).
+  const accuracyCheck = matchesAny(asked, ['accuracy', 'accurate', 'fact-check', 'proofread', 'facts', 'quality']);
   const creative = !planReview && matchesAny(asked, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative', 'image', 'generate image', 'generate an image', 'picture', 'visual', 'miya', 'maia']);
   const intents: JoseCommandParserIntents = {
     research: matchesAny(asked, ['research', 'lookup', 'docs', 'pricing', 'market', 'source', 'citation', 'latest']),
@@ -352,9 +369,9 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
     // Everyday writing (agent phase 1): a writing verb, when it isn't creative or code work.
     writing: !planReview && !creative && !localExecution && matchesAny(asked, ['write', 'draft', 'compose', 'rewrite', 'summarise', 'summarize']),
     // A check of the writing for accuracy (agent phase 1).
-    check: !planReview && matchesAny(asked, ['check', 'accuracy', 'accurate', 'fact-check', 'proofread']),
+    check: !planReview && matchesAny(asked, ['check', 'accuracy', 'accurate', 'fact-check', 'proofread']) && (!securityMonitoring || accuracyCheck),
     governanceAudit: planReview || matchesAny(asked, ['audit', 'compliance', 'policy', 'approval', 'governance', 'risk']),
-    securityMonitoring: matchesAny(asked, ['security', 'secrets', 'permission', 'vulnerability', 'unsafe', 'incident']),
+    securityMonitoring,
     memoryPreservation: matchesAny(asked, ['remember', 'archive', 'knowledge', 'timeline', 'document decision']),
     opportunityScoring: matchesAny(asked, ['opportunity', 'priority', 'prioritize', 'score', 'roi', 'value', 'timing']),
     distributionExecution: !planReview && matchesAny(asked, ['distribute', 'schedule', 'engage', 'community', 'publish queue']),
@@ -545,6 +562,9 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
         reviewOf: 'write',
       });
     }
+    // A security check of the writing reviews it, after it is written (agent phase 4).
+    const sentinelStep = assignments.find((a) => a.agent === AGENTS.SENTINEL);
+    if (sentinelStep) Object.assign(sentinelStep, { needs: ['write'], reviewOf: 'write' });
   }
 
   if (!assignments.length) {
