@@ -65,7 +65,7 @@ function scratchByName(name: string): WorkPlace | null {
   return { kind: 'new', name, folder: `${root.replace(/[\\/]+$/, '')}/${prefix.replace(/\/$/, '')}`, root, prefix };
 }
 
-async function ask(prompt: string, model: string): Promise<string> {
+export async function askAlphonso(prompt: string, model: string): Promise<string> {
   const call = async () => String(((await generateAgentLlmResponse('alphonso', { prompt, format: 'json' })) as { response?: string } | null)?.response || '');
   return model ? withAgentModel('alphonso', model, call) : call();
 }
@@ -91,7 +91,7 @@ async function choosePlace(requestText: string, requestStep: any, assignment: As
       problem,
       'Answer with JSON only: {"project": one of the names above, or "new" for a new small program, or "unknown" when the request is about a project but doesn\'t say which}.',
     ].filter(Boolean).join('\n\n');
-    const raw = await ask(prompt, model);
+    const raw = await askAlphonso(prompt, model);
     let project = '';
     try { project = String(JSON.parse((/\{[\s\S]*\}/.exec(raw) || ['{}'])[0])?.project || '').trim(); } catch { project = ''; }
     if (project.toLowerCase() === 'new') return 'new';
@@ -184,7 +184,7 @@ export async function prepareAlphonsoCode(commandId: string, assignment: Assignm
   let problem = '';
   let readAsked = false;
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const raw = await ask(codePrompt(requestText, workPlace, listing, read, previous, input, problem), model);
+    const raw = await askAlphonso(codePrompt(requestText, workPlace, listing, read, previous, input, problem), model);
     const parsed = parseCodeAnswer(raw);
     if (!parsed) {
       problem = 'Your last answer could not be read as the JSON asked for.';
