@@ -1,5 +1,5 @@
 import React from 'react';
-import { openExternalUrl } from '../../services/browserAutomationService';
+import { openSourceLink } from '../../services/browserAutomationService';
 import { Zone } from '../ui/Zone';
 
 interface Source {
@@ -38,7 +38,7 @@ export function SourceBoard({ report }: Props): React.JSX.Element {
             <div key={source.url} className="rounded-xl bg-(--surface-1) p-3">
               <button
                 type="button"
-                onClick={() => openExternalUrl(source.url)}
+                onClick={() => openSourceLink(source.url)}
                 className="block truncate text-xs font-semibold text-(--agent-hector) underline decoration-(--agent-hector) hover:decoration-(--agent-hector) transition-colors text-left"
                 title={source.url}
               >

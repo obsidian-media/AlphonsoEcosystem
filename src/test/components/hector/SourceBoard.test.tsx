@@ -3,10 +3,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('../../../services/browserAutomationService', () => ({
-  openExternalUrl: vi.fn(),
+  openSourceLink: vi.fn(),
 }));
 
-import { openExternalUrl } from '../../../services/browserAutomationService';
+import { openSourceLink } from '../../../services/browserAutomationService';
 import { SourceBoard } from '../../../components/hector/SourceBoard';
 
 describe('SourceBoard', () => {
@@ -22,9 +22,9 @@ describe('SourceBoard', () => {
     expect(screen.getByText(/official_docs.*verified.*HTTP 200/)).toBeTruthy();
   });
 
-  it('clicking a source url calls openExternalUrl with that url', () => {
+  it('clicking a source url calls openSourceLink with that url', () => {
     render(<SourceBoard report={{ sources: [{ url: 'https://example.com' }] }} />);
     fireEvent.click(screen.getByText('https://example.com'));
-    expect(openExternalUrl).toHaveBeenCalledWith('https://example.com');
+    expect(openSourceLink).toHaveBeenCalledWith('https://example.com');
   });
 });

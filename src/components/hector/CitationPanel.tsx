@@ -1,5 +1,5 @@
 import React from 'react';
-import { openExternalUrl } from '../../services/browserAutomationService';
+import { openSourceLink } from '../../services/browserAutomationService';
 import { Zone } from '../ui/Zone';
 
 interface SourceProof {
@@ -37,7 +37,7 @@ export function CitationPanel({ report }: Props): React.JSX.Element {
                 [{index + 1}]{' '}
                 <button
                   type="button"
-                  onClick={() => openExternalUrl(url)}
+                  onClick={() => openSourceLink(url)}
                   className="text-(--agent-hector) underline decoration-(--agent-hector) hover:decoration-(--agent-hector) transition-colors break-all text-left"
                   title={url}
                 >

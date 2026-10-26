@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { openExternalUrl } from '../../services/browserAutomationService';
+import { openSourceLink } from '../../services/browserAutomationService';
 import { Zone } from '../ui/Zone';
 import { exportHectorReportAsMarkdown, exportHectorReportAsPdf, exportHectorReportAsPowerPoint } from '../../services/hectorExportService';
 import { resynthesizeHectorReport } from '../../services/hectorResearchService';
@@ -205,7 +205,7 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
                   <span className={proof.ok ? 'text-(--success)' : 'text-(--error)'}>{proof.ok ? 'Verified' : 'Failed'}</span>{' '}
                   <button
                     type="button"
-                    onClick={() => openExternalUrl(proof.url)}
+                    onClick={() => openSourceLink(proof.url)}
                     className="text-(--agent-hector) underline decoration-(--agent-hector) hover:decoration-(--agent-hector) transition-colors break-all text-left"
                     title={proof.url}
                   >

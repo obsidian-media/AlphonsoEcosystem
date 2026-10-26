@@ -10,6 +10,7 @@ import { checkAppUpdate, getLastUpdateNotice, setLastUpdateNotice } from './serv
 import { logApprovalEvent } from './services/agentAuditService';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { UpdaterNotification } from './components/UpdaterNotification';
+import { LinkWarningHost } from './components/sentinel/LinkWarning';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { MemorySearch } from './components/MemorySearch';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -834,6 +835,8 @@ function AppShell() {
 
   return (
     <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-(--accent-dim) bg-(--surface-0) text-(--text-1) ${settings.colorScheme === 'light' ? 'light' : ''} ${themeClassFromSettings(settings)}`}>
+      {/* Sentinel asks before a disguised source link opens (agent phase 4). */}
+      <LinkWarningHost />
       <UpdaterNotification
         version={updaterVersion}
         onDismiss={() => setUpdaterVersion(null)}

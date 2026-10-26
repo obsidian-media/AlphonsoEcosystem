@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('../../../services/jose/joseStepOutputs', () => ({ getStepOutput: vi.fn() }));
-vi.mock('../../../services/browserAutomationService', () => ({ openExternalUrl: vi.fn() }));
+vi.mock('../../../services/browserAutomationService', () => ({ openSourceLink: vi.fn() }));
 
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
-import { openExternalUrl } from '../../../services/browserAutomationService';
+import { openSourceLink } from '../../../services/browserAutomationService';
 import { JoseStepOutput } from '../../../components/jose/JoseStepOutput';
 
 beforeEach(() => vi.clearAllMocks());
@@ -26,7 +26,7 @@ describe('JoseStepOutput', () => {
     expect(screen.getByText('style.css')).toBeTruthy();
     // In the app window a link opens through the backend (open_url), not target="_blank".
     fireEvent.click(screen.getByRole('button', { name: 'IANA example domains' }));
-    expect(openExternalUrl).toHaveBeenCalledWith('https://www.iana.org/help/example-domains');
+    expect(openSourceLink).toHaveBeenCalledWith('https://www.iana.org/help/example-domains');
   });
 
   it("shows a step's structured result as text, cut at 2,000 characters with Show all", () => {

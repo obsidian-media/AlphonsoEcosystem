@@ -3,7 +3,7 @@
 // on the Requests board when you pick a step in the map.
 import React, { useMemo, useState } from 'react';
 import { getStepOutput } from '../../services/jose/joseStepOutputs';
-import { openExternalUrl } from '../../services/browserAutomationService';
+import { openSourceLink } from '../../services/browserAutomationService';
 import { ResearchFindings } from '../hector/ResearchFindings';
 import { toReadableText } from '../../lib/readableValue';
 
@@ -50,7 +50,7 @@ export function JoseStepOutput({ commandId, stepId }: { commandId: string; stepI
             {sources.map((s, i) => (
               <li key={`${s.url || s.title}-${i}`}>
                 {s.url
-                  ? <button type="button" title={s.url} className="text-left underline" onClick={() => { openExternalUrl(s.url); }}>{s.title || s.url}</button>
+                  ? <button type="button" title={s.url} className="text-left underline" onClick={() => { openSourceLink(s.url); }}>{s.title || s.url}</button>
                   : s.title}
               </li>
             ))}

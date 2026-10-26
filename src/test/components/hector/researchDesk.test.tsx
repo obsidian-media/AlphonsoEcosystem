@@ -7,7 +7,7 @@ const submit = vi.fn(async () => ({ ok: true, commandId: 'c1' }));
 vi.mock('../../../services/jose/submitToJose', () => ({ submitStepsToJose: (...a: unknown[]) => submit(...(a as [])) }));
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn(async () => null) }));
 const openUrl = vi.fn();
-vi.mock('../../../services/browserAutomationService', () => ({ openExternalUrl: (...a: unknown[]) => openUrl(...a), writeClipboard: vi.fn(async () => null) }));
+vi.mock('../../../services/browserAutomationService', () => ({ openSourceLink: (...a: unknown[]) => openUrl(...a), writeClipboard: vi.fn(async () => null) }));
 
 import { askOnResearchDesk, DESK_LABEL } from '../../../services/hector/deskRequest';
 import { ResearchFindings } from '../../../components/hector/ResearchFindings';
