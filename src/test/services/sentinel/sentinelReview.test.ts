@@ -130,3 +130,11 @@ describe('his model, keys and memory', () => {
     expect(r.schema?.confidenceLevel).toBe('inferred');
   });
 });
+
+describe('text handed to Marcus directly', () => {
+  it('checks the text his step carries', async () => {
+    llm.mockResolvedValue(answer({ verdict: 'safe', summary: 'Fine.', findings: [] }));
+    await runSentinelReview({ agent: 'sentinel', payload: { sending: true, text: 'THE SLACK MESSAGE' } }, input({ request: 'Distribute' }));
+    expect(llm.mock.calls[0][1].prompt).toContain('THE SLACK MESSAGE');
+  });
+});

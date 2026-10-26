@@ -160,3 +160,16 @@ describe('assessCommandRisk', () => {
     expect(r.reasons.join(' ')).toMatch(/does not know/);
   });
 });
+
+// Agent phase 4: the approval window lists Sentinel's exact checks of each command.
+describe("Sentinel's exact checks in the command approval", () => {
+  beforeEach(() => setCommandApprovalHandler(null));
+  it("each command's exact checks are in the approval reasons", async () => {
+    const handler = vi.fn(async () => true);
+    setCommandApprovalHandler(handler);
+    await requestWorkspaceCommandApproval([{ program: 'git', args: ['clean', '-fd'] }, { program: 'npm', args: ['run', 'test'] }]);
+    const reasons = handler.mock.calls[0][0].riskReasons;
+    expect(reasons).toContain('Sentinel: deletes files: git clean -fd');
+    expect(reasons).toContain('Sentinel: runs code: npm run test');
+  });
+});

@@ -26,7 +26,7 @@ export interface SentinelAssignment {
   packetId?: string;
   commandId?: string;
   reviewOf?: string;
-  payload?: { sending?: boolean } | null;
+  payload?: { sending?: boolean; text?: string } | null;
   [key: string]: unknown;
 }
 
@@ -67,7 +67,10 @@ function readJson(text: string): any {
 }
 
 /** The text he checks, whose it is, and the step it came from. */
-function checkedWork(input: StepInput): { text: string; agent: string; stepId: string } {
+function checkedWork(input: StepInput, assignment: SentinelAssignment): { text: string; agent: string; stepId: string } {
+  // Text handed to Marcus directly (Boardroom's Distribute): his check carries it.
+  const given = (assignment.payload as { text?: unknown } | null | undefined)?.text;
+  if (typeof given === 'string' && given.trim()) return { text: given, agent: 'marcus', stepId: '' };
   if (input.review?.text?.trim()) return { text: input.review.text, agent: input.review.agent, stepId: input.review.stepId };
   const needed = (input.needs || []).filter((n) => String(n.text || '').trim());
   if (needed.length) {
@@ -146,7 +149,7 @@ export async function runSentinelReview(
 ): Promise<SentinelStepResult> {
   const contractAction = String(assignment.actionType || 'security_review');
   const base = { resultUrl: null, artifacts: [] as [], sources: [] as string[], contractAction };
-  const work = checkedWork(input);
+  const work = checkedWork(input, assignment);
   const commandId = opts.commandId || assignment.commandId || '';
   const code = Boolean(commandId && work.agent === 'alphonso' && work.stepId);
   const files = code && opts.workspaceRoot ? await workFiles(commandId, work.stepId, opts.workspaceRoot) : [];
