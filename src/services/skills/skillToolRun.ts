@@ -131,6 +131,10 @@ async function run(name: string, args: Record<string, unknown>, ctx: ToolContext
     case 'fetch_source': {
       const url = str(args.url);
       if (!/^https:\/\//i.test(url)) return { ok: false, text: 'fetch_source needs an https address.' };
+      // A link that looks disguised isn't opened (agent phase 4).
+      const { checkLink } = await import('../sentinel/exactChecks');
+      const disguised = checkLink(url);
+      if (disguised) return { ok: false, text: `Not read: looks disguised (${disguised.detail}).` };
       const { fetchUrlContent } = await import('../browserAutomationService');
       const page: any = await fetchUrlContent(url);
       const text = typeof page === 'string' ? page : str(page?.content) || str(page?.text);

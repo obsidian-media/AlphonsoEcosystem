@@ -3,6 +3,7 @@
 // itself, at most 5 times, each result going back to it. Only tools the skill
 // lists are offered, and runSkillTool refuses anything that needs approval.
 import { generateAgentLlmResponse } from '../../lib/ollama';
+import { fenced, UNTRUSTED_RULE } from '../sentinel/fence';
 import { agentName } from '../jose/agentNames';
 import { stepInputText } from '../jose/stepInput';
 import { ACTION_TOOLS, SKILL_TOOLS } from './skillTools';
@@ -54,7 +55,8 @@ export async function gatherForSkill(skill: Skill, ctx: ToolContext, opts: { own
       context,
       'Tools you can call:',
       ...callable.map((t) => `- ${t}: ${SKILL_TOOLS[t].label}`),
-      results.length ? `What your tools found so far:\n${results.map((r) => `${r.tool}: ${r.text}`).join('\n\n')}` : '',
+      // Tool results are page text: marked untrusted (agent phase 4).
+      results.length ? `What your tools found so far:\n${UNTRUSTED_RULE}\n${fenced('TOOL RESULTS', results.map((r) => `${r.tool}: ${r.text}`).join('\n\n'))}` : '',
       `You may call ${max - call} more tool(s). Answer with JSON only: {"tool": "a tool name", "args": {"query": "...", "stepId": "...", "url": "...", "path": "..."}} to call one, or {"done": true} when you have what you need.`,
     ].filter(Boolean).join('\n\n');
     let answer: ReturnType<typeof readCall> = null;

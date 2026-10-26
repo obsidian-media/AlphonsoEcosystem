@@ -286,3 +286,28 @@ describe("Hector's two leftovers (agent phase 2)", () => {
     expect(out.ok && out.report.sources[0]).toMatchObject({ label: 'snippet', reason: 'too short to read' });
   });
 });
+
+// Agent phase 4 (Sentinel): Hector doesn't open a link that looks disguised.
+describe('disguised links', () => {
+  const answered = json({ answer: 'About 17 million.', subQuestions: [{ question: 'How many?', status: 'answered', findings: [{ text: '17 million', sources: [1] }] }], disagreements: [], notFound: [] });
+
+  it("a disguised link isn't fetched and is listed with its reason", async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'How many?', queries: ['colonies'] }] })).mockResolvedValueOnce(answered);
+    search.mockResolvedValue(found(['https://a.example/x', 'http://paypa1-secure-login.com/verify']));
+    const out = await runResearch('How many honeybee colonies?', { large: false, reportId: 'hector-report-d-1' });
+    expect(fetched).not.toContain('http://paypa1-secure-login.com/verify');
+    if (!out.ok) throw new Error('research failed');
+    const src = out.report.sources.find((s) => s.url.includes('paypa1'));
+    expect(src).toMatchObject({ label: 'unreadable', excerpt: '' });
+    expect(src?.reason).toMatch(/^looks disguised \(/);
+  });
+
+  it('a disguised link you gave is skipped with the reason', async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'How many?', queries: ['colonies'] }] })).mockResolvedValueOnce(answered);
+    search.mockResolvedValue(found(['https://a.example/x']));
+    const out = await runResearch('How many honeybee colonies?', { large: false, reportId: 'hector-report-d-2', urls: ['https://xn--pypal-4ve.com/login'] });
+    expect(fetched).not.toContain('https://xn--pypal-4ve.com/login');
+    if (!out.ok) throw new Error('research failed');
+    expect(out.report.sources.find((s) => s.url.includes('xn--'))?.reason).toMatch(/^looks disguised/);
+  });
+});
