@@ -5,7 +5,7 @@
 // (owner, 2026-10-23).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.3–2.4, §5
 import { generateAgentLlmResponse } from '../../lib/ollama';
-import { decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
+import { asksReadiness, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
 import { planningMenu } from './taskTypeMeanings';
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
@@ -64,7 +64,11 @@ const PLACEHOLDER_TASKS = new Set(['normal', 'project', 'task type', 'tasktype']
  * A request that asks to send needs Marcus's send step (agent phase 5): a 7B model planned only
  * the writing for "post it to Slack #news", and the reply read as if it was posted.
  */
-export function missingSend(text: string, steps: Array<Pick<PlanStep, 'agent' | 'effects'>>): string[] {
+export function missingSend(text: string, steps: Array<Pick<PlanStep, 'agent' | 'effects' | 'actionType'>>): string[] {
+  if (asksReadiness(text)) {
+    return steps.some((st) => st.agent === 'marcus' && st.actionType === 'distribution_readiness')
+      ? [] : ['The request asks whether it is ready to send: add a marcus step with the task type distribution_readiness.'];
+  }
   const sends = parseJoseCommand(text).sends;
   if (!sends) return [];
   if (steps.some((st) => st.agent === 'marcus' && (st.effects || []).includes('publish_or_send'))) return [];

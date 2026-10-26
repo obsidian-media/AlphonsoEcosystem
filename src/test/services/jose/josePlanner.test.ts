@@ -16,7 +16,7 @@ vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
 }));
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
-import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders } from '../../../services/jose/josePlanner';
+import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders, missingSend } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 
@@ -284,6 +284,12 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(promptOf(1)).toContain('The request asks to send to Slack: add a marcus step that sends it.');
     expect(plan.source).toBe('rules');
     expect(plan.steps.some((s) => s.agent === 'marcus')).toBe(true);
+  });
+
+  it('a readiness question needs the readiness check', () => {
+    const plan = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }];
+    expect(missingSend('/jose Is my announcement ready to post on Slack?', plan as never)).toEqual(['The request asks whether it is ready to send: add a marcus step with the task type distribution_readiness.']);
+    expect(missingSend('/jose Is my announcement ready to post on Slack?', [{ agent: 'marcus', effects: ['read'], actionType: 'distribution_readiness' }] as never)).toEqual([]);
   });
 
   it('a plan with the send is used as it is', async () => {

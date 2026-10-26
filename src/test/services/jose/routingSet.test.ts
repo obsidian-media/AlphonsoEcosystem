@@ -88,6 +88,13 @@ describe('Marcus gets the text and the channel (agent phase 5)', () => {
     expect(sends.map((s) => [s.stepId, (s as { payload?: { connector?: string } }).payload?.connector, s.needs])).toEqual([['marcus', 'slack', ['write']], ['marcus-2', 'discord', ['write']]]);
   });
 
+  // The desktop run (2026-10-26): the writer added "[Note: … this note has been sent …]".
+  it('the writing step writes only the text to send', () => {
+    const steps = decomposeJoseCommand(parseJoseCommand('Write a one-line note that the shop opens at 9 and send it to my n8n workflow Team notes.'));
+    const write = steps.find((s) => s.stepId === 'write') as { instruction?: string };
+    expect(write.instruction).toBe('Write only the text that will be sent, exactly as it should read. Do not say that it was sent or where it goes: Marcus sends it after you approve it.');
+  });
+
   it('a quoted message is sent as written: no writing step', () => {
     const steps = decomposeJoseCommand(parseJoseCommand('Tell my team on Telegram "meeting moved to 3pm"'));
     expect(steps.map((s) => s.agent)).toEqual(['marcus']);

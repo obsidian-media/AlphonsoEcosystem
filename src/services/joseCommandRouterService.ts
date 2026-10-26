@@ -350,6 +350,7 @@ const NOT_CODE = /\b(?:discount|promo|promotional|coupon|voucher|referral|gift)\
 /** Asking to audit, review, assess or check a plan, an idea, a campaign or a proposal (agent phase 3). */
 const PLAN_REVIEW = /\b(?:audit|review|assess|evaluate|check)\b[^.?!:]*\b(?:plan|plans|idea|ideas|campaign|proposal|strategy)\b/i;
 
+export const WRITE_FOR_SEND = 'Write only the text that will be sent, exactly as it should read. Do not say that it was sent or where it goes: Marcus sends it after you approve it.';
 const SEND_WORD = /\b(?:send|post|tell|message|announce|notify|share|publish|release)\b|\b(?:open|create|file)\s+an?\s+issue\b/;
 const CHANNEL_WORDS = ['slack', 'discord', 'telegram', 'whatsapp', 'notion', 'clickup', 'n8n', 'github'];
 const READINESS_QUESTION = /\bready\b|\bcan i (?:post|publish|send)\b/;
@@ -368,6 +369,12 @@ function parseSends(asked: string, clean: string, planReview: boolean): ParsedSe
   const channels = found.length ? found : (/\b(?:my|our|the) team\b/.test(asked) ? ['team'] : []);
   if (!channels.length) return undefined;
   return { channels, kind: release ? 'release' : issue ? 'issue' : 'message', quoted: quotedPieces(clean).length === 1 };
+}
+
+/** "Is my announcement ready to post on Slack?": a readiness check, not a send (agent phase 5). */
+export function asksReadiness(commandText: string): boolean {
+  const asked = withoutQuotedContent(withoutNegations(String(commandText || '').toLowerCase())).replace(NOT_CODE, ' offer ');
+  return !PLAN_REVIEW.test(asked) && READINESS_QUESTION.test(asked) && SEND_WORD.test(asked);
 }
 
 export function parseJoseCommand(commandText: string): ParsedJoseCommand {
@@ -573,6 +580,8 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       fragments,
       // It also reads Nova's verdict when she is in the plan (agent phase 3).
       needs: [...(research ? ['hector'] : []), ...(assignments.some((a) => a.agent === AGENTS.NOVA) ? ['nova'] : [])],
+      // What Marcus sends is exactly this text (agent phase 5), so it says nothing about sending.
+      ...(sends ? { instruction: WRITE_FOR_SEND } : {}),
     });
     if (intents.check) {
       assignments.push({
