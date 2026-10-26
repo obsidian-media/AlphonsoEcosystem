@@ -73,10 +73,39 @@ describe('judgeReview', () => {
     expect(llm).toHaveBeenCalledWith('nova', expect.objectContaining({ format: 'json' }));
   });
 
-  it('carries on (pass, with a note) when the verdict cannot be read', async () => {
+  // Agent phase 3: an unreadable review is never a pass.
+  it('an unreadable review is never a pass', async () => {
     llm.mockResolvedValueOnce({ response: 'Looks fine to me!' } as never);
-    expect(await judgeReview(review, { summary: 'ok' })).toMatchObject({ verdict: 'pass', note: "Couldn't read the review's verdict; carried on." });
+    expect(await judgeReview(review, { summary: 'ok' })).toMatchObject({ verdict: 'fix', findings: ['The review could not be read: check it on the board.'] });
     llm.mockRejectedValueOnce(new Error('down'));
-    expect((await judgeReview(review, { summary: 'ok' })).verdict).toBe('pass');
+    expect((await judgeReview(review, { summary: 'ok' })).verdict).toBe('fix');
+  });
+
+  // Agent phase 3: a content quality review's verdict comes from her own scores and the
+  // brand's threshold, with no second model call.
+  it("a content review under the brand's threshold is fix, without a model call", async () => {
+    localStorage.clear();
+    const { saveBrand } = await import('../../../services/contentFactory/contentBrandService');
+    const { createProject, emptyBrief } = await import('../../../services/contentFactory/contentProjectService');
+    const brand = saveBrand({ name: 'B', qualityThreshold: 7 } as never);
+    const project = createProject(brand.id, 'P', { ...emptyBrief(), idea: 'Idea' });
+    const quality = { ...byId(plan, 'review_quality'), contentStep: { projectId: project.id, step: 'review' } } as PlanStep;
+    const output = (data: unknown) => ({ summary: 's', artifacts: [{ type: 'content_step_output', actionType: 'audit_content_quality', data }] });
+    const low = await judgeReview(quality, output({ pieces: [{ pieceId: 'script', score: 5, weakPoints: ['The hook is slow.'] }], honestyIssues: [] }));
+    expect(low).toEqual({ verdict: 'fix', findings: ['script: 5/10 (under 7): The hook is slow.'] });
+    const fine = await judgeReview(quality, output({ pieces: [{ pieceId: 'script', score: 8, weakPoints: [] }], honestyIssues: [] }));
+    expect(fine.verdict).toBe('pass');
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  it('a content review with an honesty issue is fix', async () => {
+    localStorage.clear();
+    const { saveBrand } = await import('../../../services/contentFactory/contentBrandService');
+    const { createProject, emptyBrief } = await import('../../../services/contentFactory/contentProjectService');
+    const brand = saveBrand({ name: 'B', qualityThreshold: 7 } as never);
+    const project = createProject(brand.id, 'P', { ...emptyBrief(), idea: 'Idea' });
+    const quality = { ...byId(plan, 'review_quality'), contentStep: { projectId: project.id, step: 'review' } } as PlanStep;
+    const out = await judgeReview(quality, { summary: 's', artifacts: [{ type: 'content_step_output', actionType: 'audit_content_quality', data: { pieces: [{ pieceId: 'script', score: 9, weakPoints: [] }], honestyIssues: ['It promises results it cannot show.'] } }] });
+    expect(out).toEqual({ verdict: 'fix', findings: ['Honesty: It promises results it cannot show.'] });
   });
 });
