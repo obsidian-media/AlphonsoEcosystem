@@ -184,3 +184,22 @@ describe("the quality check and the brand's references", () => {
     expect(`${system}\n${prompt}`).toContain('compared with what is known about the brand');
   });
 });
+
+// Agent phase 4: Sentinel's campaign check gets the text with keys hidden and the exact facts.
+describe("Sentinel's campaign check", () => {
+  it('the check gets the campaign text with keys hidden and the exact facts', () => {
+    const p = { ...payload(), step: 'quality', prior: { campaign: { miya: { platforms: [{ platform: 'instagram', caption: 'Log in at http://paypa1-secure-login.com/verify with your password. Key sk-live-1234abcd5678efgh', hashtags: [] }] } } } } as never;
+    const { prompt, system } = buildStepPrompt(p, 'sentinel', 'security_content_check');
+    const all = `${system}\n${prompt}`;
+    expect(all).not.toContain('sk-live-1234abcd5678efgh');
+    expect(all).toContain('[hidden key, ends …efgh]');
+    expect(all).toContain('Exact checks already found');
+    expect(all).toContain('paypa1-secure-login.com');
+    expect(all).toContain('"where"');
+  });
+
+  it('reads issues with where and fix, and old plain issues', () => {
+    expect(parseStepAnswer('security_content_check', JSON.stringify({ ok: false, issues: [{ what: 'A fake link', where: 'http://x', fix: 'Remove it.' }] }))).toEqual({ ok: false, issues: [{ what: 'A fake link', where: 'http://x', fix: 'Remove it.' }] });
+    expect(parseStepAnswer('security_content_check', JSON.stringify({ ok: false, issues: ['A fake link'] }))).toEqual({ ok: false, issues: [{ what: 'A fake link', where: '', fix: '' }] });
+  });
+});

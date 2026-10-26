@@ -21,3 +21,16 @@ describe('a fix left after the rounds', () => {
     expect(sentinelHoldFor({ agent: 'sentinel', round: 2 }, fix, 2)).toBe('Sentinel asked for changes: "Log in": asks for a password → Remove it.');
   });
 });
+
+describe("the content factory's campaign check", () => {
+  const check = (data: unknown) => ({ resultState: 'completed', artifacts: [{ type: 'content_step_output', actionType: 'security_content_check', data }] });
+  it('an issue keeps Publish waiting with his issues', async () => {
+    const { SECURITY_WAIT } = await import('../../../services/sentinel/sentinelHolds');
+    const reason = sentinelHoldFor({ agent: 'sentinel', actionType: 'security_content_check' } as never, check({ ok: false, issues: [{ what: 'A fake login link', where: 'http://paypa1.com', fix: 'Remove it.' }] }));
+    expect(reason).toBe(SECURITY_WAIT(['http://paypa1.com: A fake login link → Remove it.']));
+    expect(reason).toContain('Approve to post anyway, or fix the campaign.');
+  });
+  it('a campaign that passes holds nothing', () => {
+    expect(sentinelHoldFor({ agent: 'sentinel', actionType: 'security_content_check' } as never, check({ ok: true, issues: [] }))).toBeNull();
+  });
+});

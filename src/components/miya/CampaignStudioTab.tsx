@@ -39,6 +39,11 @@ export function CampaignStudioTab({ project, brand, runStep, chooseVersion, appr
   };
   const pieces = brand ? visiblePieces(project, brand) : [];
   const hidden = pieces.filter((p) => !p.visible).length;
+  // Sentinel's check of the campaign (agent phase 4), saved with the quality step.
+  const qualitySentinel = (chosenVersionOf(project, 'quality')?.output as { sentinel?: { issues?: unknown[] } } | undefined)?.sentinel;
+  const sentinelCheck = qualitySentinel
+    ? { issues: (qualitySentinel.issues || []).map((i: any) => (typeof i === 'string' ? { what: i, where: '', fix: '' } : { what: String(i?.what || ''), where: String(i?.where || ''), fix: String(i?.fix || '') })).filter((i) => i.what) }
+    : null;
   return (
     <div className="space-y-4">
       <h2 className="font-serif text-lg font-bold text-(--text-1)">Campaign Studio</h2>
@@ -111,7 +116,7 @@ export function CampaignStudioTab({ project, brand, runStep, chooseVersion, appr
         onApprove={() => approve('quality')}
         onSendBack={(reason) => sendBack('quality', reason)}
       >
-        {pieces.length > 0 && (
+        {(pieces.length > 0 || sentinelCheck) && (
           <div className="space-y-1 text-[12px]">
             <div className="text-[11px] text-(--text-3)">Scored by Maria against your references. Threshold: {brand?.qualityThreshold ?? 7}/10.</div>
             {pieces.filter((p) => p.visible).map((p) => (
@@ -119,6 +124,16 @@ export function CampaignStudioTab({ project, brand, runStep, chooseVersion, appr
                 {p.pieceId}: <strong>{p.score}/10</strong>{p.comparedTo ? ` (compared to ${p.comparedTo})` : ''}{p.weakPoints.length ? ` — ${p.weakPoints.join('; ')}` : ''}
               </div>
             ))}
+            {sentinelCheck && (
+              <div className="pt-1">
+                <div className="text-[11px] text-(--text-3)">Checked by Sentinel</div>
+                {sentinelCheck.issues.length === 0
+                  ? <div className="text-(--success)">Nothing unsafe found.</div>
+                  : sentinelCheck.issues.map((issue, i) => (
+                    <div key={i} className="text-(--warning)">{issue.what}{issue.where ? ` (${issue.where})` : ''}{issue.fix ? ` — ${issue.fix}` : ''}</div>
+                  ))}
+              </div>
+            )}
             {hidden > 0 && <div className="text-(--warning)">{hidden} piece{hidden === 1 ? '' : 's'} scored below {brand?.qualityThreshold}/10 and {hidden === 1 ? 'is' : 'are'} hidden. Turn on “Show everything” in the brief to see {hidden === 1 ? 'it' : 'them'}.</div>}
           </div>
         )}
