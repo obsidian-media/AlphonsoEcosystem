@@ -19,7 +19,6 @@ export const ALPHONSO_PROFILE = {
     'refactoring and simplification',
     'debugging and root-cause analysis',
     'GitHub code search and exploration',
-    'GitHub issue and PR management',
     'repository analysis and optimization'
   ],
   limitations: [
@@ -39,8 +38,6 @@ export const ALPHONSO_PROFILE = {
     'refactor_code',
     'debug_code',
     'github_search_code',
-    'github_create_issue',
-    'github_create_pr',
     'github_review_pr',
     'github_analyze_repo'
   ],
@@ -54,8 +51,6 @@ export const ALPHONSO_PROFILE = {
     'CodeProposal',
     'TestSuite',
     'BuildVerificationReport',
-    'ReleaseReadinessReport',
-    'RiskReport',
     'DebugReport',
     'GitHubCodeSearchResult',
     'GitHubIssueReport',
@@ -63,12 +58,13 @@ export const ALPHONSO_PROFILE = {
   ],
   requiresApprovalFor: ['file_write', 'dependency_install', 'terminal_command', 'deployment'],
   defaultPrompt: 'Act as Alphonso, a hands-on local coder and operator. Write clean, working code. Produce implementation-ready plans with verification steps and explicit risks. Always show what you changed and why.',
-  skillFocus: 'Codex Professional Coding + Full-Stack Coding + TDD + TypeScript + Rust + React + Python + Code Review + Build Verification + Refactoring + Debugging + Runtime Diagnostics + Security Audit + GitHub Integration + Performance Optimization + API Integration + Error Handling',
+  skillFocus: 'Codex Professional Coding + Full-Stack Coding + TDD + TypeScript + Rust + React + Python + Code Review + Build Verification + Refactoring + Debugging + Runtime Diagnostics + Performance Optimization + API Integration + Error Handling',
   exampleTasks: [
     'Generate local setup + build/test checklist for Next.js + Firebase stack.',
     'Produce verification receipts required before release.',
     'Search GitHub for similar implementations of authentication middleware.',
-    'Create GitHub issue with detailed bug report and reproduction steps.',
+    'Add a dark mode toggle to my website, then run the tests.',
+    'Write a short email to my landlord about the broken heating.',
     'Review pull request and provide code feedback with suggestions.'
   ],
   hierarchyRank: 3,

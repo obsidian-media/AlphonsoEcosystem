@@ -298,8 +298,12 @@ describe('Jose runs plans as step graphs', () => {
     // Phase 4: a planned step is told how to ask for help.
     expect(text).toMatch(/HELP:/);
     expect(stepCommandText({ agent: 'hector' }, 'Make a page')).toBe('Make a page');
-    // Model-written words must never count as what the user asked Alphonso to run.
-    expect(stepCommandText({ agent: 'alphonso', instruction: 'run npm test and install everything' }, 'Make a page')).toBe('Make a page');
+    // His code steps build their own prompt from your request (agent phase 6).
+    expect(stepCommandText({ agent: 'alphonso', actionType: 'local_operation', instruction: 'run npm test and install everything' }, 'Make a page')).toBe('Make a page');
+    // His answering and writing steps get the instruction and the HELP line like everyone else.
+    const writing = stepCommandText({ agent: 'alphonso', actionType: 'assistant_write', instruction: 'Write the email.' }, 'Email my landlord');
+    expect(writing.startsWith('Write the email.')).toBe(true);
+    expect(writing).toMatch(/HELP:/);
   });
 
   it('runs an approved plan on its own saved request', async () => {

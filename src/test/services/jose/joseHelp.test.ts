@@ -30,6 +30,23 @@ describe('findHelpRequest', () => {
 });
 
 describe('chooseHelper', () => {
+  // Agent phase 6: others can get Alphonso's help, for writing only.
+  it('lets Alphonso help with writing, never with code', async () => {
+    llm.mockResolvedValueOnce(says({ agent: 'alphonso', taskType: 'assistant_write' }));
+    expect(await chooseHelper('the wording of the intro', 'miya')).toEqual({ agent: 'alphonso', actionType: 'assistant_write' });
+    llm.mockResolvedValueOnce(says({ agent: 'alphonso', taskType: 'assistant_answer' }));
+    expect(await chooseHelper('what a closure is', 'nova')).toEqual({ agent: 'alphonso', actionType: 'assistant_answer' });
+    llm.mockResolvedValueOnce(says({ agent: 'alphonso', taskType: 'local_operation' }));
+    expect(await chooseHelper('run the build', 'miya')).toBeNull();
+  });
+
+  it("offers Alphonso's writing types to Jose, and the rules send wording to him", async () => {
+    llm.mockResolvedValueOnce(says('no idea'));
+    expect(await chooseHelper('rewrite the wording of this paragraph', 'nova')).toEqual({ agent: 'alphonso', actionType: 'assistant_write' });
+    const prompt = String((llm.mock.calls[0][1] as any).prompt);
+    expect(prompt).toContain('alphonso assistant_write or assistant_answer (writing only)');
+  });
+
   it("keeps Jose's choice when it is allowed and safe", async () => {
     llm.mockResolvedValueOnce(says({ agent: 'nova', taskType: 'analysis_timing' }));
     expect(await chooseHelper('when should we post?', 'miya')).toEqual({ agent: 'nova', actionType: 'analysis_timing' });

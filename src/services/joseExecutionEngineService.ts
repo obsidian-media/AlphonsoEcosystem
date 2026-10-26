@@ -69,7 +69,7 @@ import { prepareSkill } from './skills/prepareSkill';
 import { runHectorStep } from './hector/hectorStep';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint, withAgentModel } from '../lib/ollama';
-import { CHAT_ASSISTANT_PROMPT } from '../lib/chatUtils';
+import { ALPHONSO_ANSWER_PROMPT } from './alphonso/answerPrompt';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { getAgentProvider } from './modelSelectionService';
 import { getRuntimePolicySettings } from './policyEnforcementService';
@@ -829,7 +829,7 @@ async function executeHectorAssignment(commandText: any, assignment: any, option
  */
 export function assistantPrompt(commandText: string, stepInput: any): string {
   return [
-    CHAT_ASSISTANT_PROMPT,
+    ALPHONSO_ANSWER_PROMPT,
     skillSection(stepInput),
     stepInput ? stepInputText({ ...stepInput, skill: null }) : '',
     "Answer the request below, or do the everyday writing it asks for, in text. Use the earlier steps' work when there is some.",
@@ -1119,13 +1119,14 @@ function toPlanStep(assignment: any): PlanStep {
 
 /**
  * The text a step's executor works from (phase 2, 2026-10-23): a planned
- * step's instruction followed by the request. Alphonso always gets only the
- * user's own words, because he reads build, test, install and run intents
- * from them; a model-written instruction must never count as one.
+ * step's instruction followed by the request and, for a first round, how to ask
+ * for help. Alphonso's code steps get only the request: their prompt is built by
+ * prepareAlphonsoCode(), which offers help itself (agent phase 6).
  */
 export function stepCommandText(assignment: any, commandText: string): string {
   const instruction = typeof assignment?.instruction === 'string' ? assignment.instruction.trim() : '';
-  if (!instruction || assignment?.agent === AGENTS.ALPHONSO) return commandText;
+  if (!instruction) return commandText;
+  if (assignment?.agent === AGENTS.ALPHONSO && !String(assignment?.actionType || '').startsWith('assistant_')) return commandText;
   const help = assignment?.helpRound ? '' : `\n\n${HELP_INSTRUCTION}`;
   return `${instruction}\n\nThe request: ${commandText}${help}`;
 }

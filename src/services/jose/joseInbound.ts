@@ -4,7 +4,7 @@
 import { decideJoseRoute } from './joseDecision';
 import { submitToJose } from './submitToJose';
 import { generateAgentLlmResponse } from '../../lib/ollama';
-import { CHAT_ASSISTANT_PROMPT } from '../../lib/chatUtils';
+import { ALPHONSO_ANSWER_PROMPT } from '../alphonso/answerPrompt';
 import type { PlanFirstSetting } from './josePlanApproval';
 
 export interface AnswerOrPlanOptions {
@@ -27,12 +27,21 @@ export type AnswerOrPlanResult =
   | { kind: 'request'; requestId: string | null; waitingForPlan: boolean; result: any }
   | { kind: 'started'; done: Promise<any> };
 
+/** The answer's prompt: his instructions, the last 6 messages, then the message (agent phase 6). */
+function answerPromptWithHistory(text: string, history: unknown): string {
+  const turns = (Array.isArray(history) ? history : [])
+    .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && String(m.content || '').trim())
+    .slice(-6)
+    .map((m: any) => `${m.role === 'user' ? 'User' : 'Alphonso'}: ${String(m.content).slice(0, 2000)}`);
+  return [ALPHONSO_ANSWER_PROMPT, ...turns, `User: ${text}\nAlphonso:`].join('\n\n');
+}
+
 export async function answerOrPlan(text: string, options: AnswerOrPlanOptions): Promise<AnswerOrPlanResult> {
   const decision = await decideJoseRoute(text, { history: options.history });
   if (decision.route === 'direct') {
     const reply: any = await generateAgentLlmResponse('alphonso', {
       ...(options.endpoint ? { endpoint: options.endpoint } : {}),
-      prompt: `${CHAT_ASSISTANT_PROMPT}\n\nUser: ${text}\nAlphonso:`,
+      prompt: answerPromptWithHistory(text, options.history),
     });
     const answer = String(reply?.response || '').trim();
     if (!answer) throw new Error('The model returned an empty reply.');

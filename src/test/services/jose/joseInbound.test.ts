@@ -8,6 +8,7 @@ import { decideJoseRoute } from '../../../services/jose/joseDecision';
 import { submitToJose } from '../../../services/jose/submitToJose';
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { answerOrPlan, inboundReply, outcomeLine } from '../../../services/jose/joseInbound';
+import { ALPHONSO_ANSWER_PROMPT } from '../../../services/alphonso/answerPrompt';
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -18,6 +19,21 @@ describe('answerOrPlan', () => {
     expect(await answerOrPlan('What is the capital of France?', { source: 'telegram' })).toEqual({ kind: 'answer', text: 'Paris.' });
     expect(submitToJose).not.toHaveBeenCalled();
     expect(vi.mocked(generateAgentLlmResponse).mock.calls[0][0]).toBe('alphonso');
+  });
+
+  // Agent phase 6: his own prompt, with the conversation.
+  it('answers with his prompt and the last 6 messages of the conversation', async () => {
+    vi.mocked(decideJoseRoute).mockResolvedValueOnce({ route: 'direct', source: 'rule', reason: 'q' } as never);
+    vi.mocked(generateAgentLlmResponse).mockResolvedValueOnce({ response: 'It was 1066.' } as never);
+    const history = Array.from({ length: 8 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: `message ${i}` }));
+    await answerOrPlan('And when was that?', { source: 'telegram', history });
+    const prompt = String((vi.mocked(generateAgentLlmResponse).mock.calls[0][1] as any).prompt);
+    expect(prompt).toContain(ALPHONSO_ANSWER_PROMPT);
+    expect(prompt).not.toMatch(/direct mode/i);
+    expect(prompt).not.toContain('message 1');
+    expect(prompt).toContain('message 2');
+    expect(prompt).toContain('message 7');
+    expect(prompt).toContain('User: And when was that?');
   });
 
   it('says so when the model gives no answer', async () => {

@@ -40,11 +40,15 @@ export function findHelpRequest(output: any): string | null {
   return null;
 }
 
+const ALPHONSO_HELP_TYPES = ['assistant_write', 'assistant_answer'];
+
 function safeHelper(helper: Helper, askingAgent: string): Helper | null {
   if (!helper.agent || !helper.actionType || helper.agent === askingAgent) return null;
   if (!isTaskTypeAllowed(helper.agent, helper.actionType)) return null;
   // Only the agent who owns the work helps with it (agent roles Part A).
   if (ownerOf(helper.actionType) !== helper.agent) return null;
+  // Alphonso helps with writing only, never code (agent phase 6).
+  if (helper.agent === 'alphonso' && !ALPHONSO_HELP_TYPES.includes(helper.actionType)) return null;
   if (!inferEffects(helper.actionType).every((effect) => SAFE_HELP_EFFECTS.includes(effect))) return null;
   return helper;
 }
@@ -57,6 +61,8 @@ function ruleHelper(request: string): Helper {
   if (/\b(accura|correct|check|verify|quality|review|honest)/.test(text)) return { agent: 'maria', actionType: 'audit_quality' };
   // Hector finds facts (markets, competitors and trends too); Nova judges them (2026-10-24).
   if (/\b(when|timing|score|priorit|worth|judge|value)/.test(text)) return { agent: 'nova', actionType: 'analysis_findings' };
+  // Wording is Alphonso's everyday writing (agent phase 6).
+  if (/\b(wording|rewrite|reword|phrasing|draft|summar|explain)/.test(text)) return { agent: 'alphonso', actionType: 'assistant_write' };
   return { agent: 'hector', actionType: 'research_report' };
 }
 
@@ -69,7 +75,7 @@ export async function chooseHelper(request: string, askingAgent: string): Promis
     `An agent (${askingAgent}) asked for help: ${request}`,
     'Which agent owns what is needed, and with which task type? Each agent helps only with its own work:',
     responsibilityLines().join('\n'),
-    'Task types: hector research_, nova analysis_, maria audit_, sentinel security_, miya creative_, echo memory_.',
+    'Task types: hector research_, nova analysis_, maria audit_, sentinel security_, miya creative_, echo memory_, alphonso assistant_write or assistant_answer (writing only).',
     'Answer with JSON only: {"agent": "<agent>", "taskType": "<task type>"}',
   ].join('\n\n');
   try {
