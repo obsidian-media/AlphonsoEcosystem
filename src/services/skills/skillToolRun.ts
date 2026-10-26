@@ -7,6 +7,7 @@ import { SKILL_TOOLS, ACTION_TOOLS } from './skillTools';
 import { effectsNeedingApproval } from '../jose/joseEffects';
 import { agentName } from '../jose/agentNames';
 import type { StepInput } from '../jose/stepInput';
+import { workSteps } from '../maria/workContext';
 import { getStepOutput } from '../jose/joseStepOutputs';
 
 export interface ToolContext {
@@ -45,8 +46,13 @@ function matchMemory(query: string, items: any[]): any[] {
 /** The outputs of the steps this one needs (all, or one by id). */
 function neededOutputs(ctx: ToolContext, stepId = ''): any[] {
   if (!ctx.commandId) return [];
+  const commandId = ctx.commandId;
   const needs = (ctx.stepInput?.needs || []).filter((n) => !stepId || n.stepId === stepId);
-  return needs.map((n) => getStepOutput(ctx.commandId as string, n.stepId)).filter(Boolean);
+  // The work's own steps, up to three back (agent phase 3): reviewing a post, Maria reads
+  // the sources the post was built from, not only the steps her own step needs.
+  const starts = ctx.stepInput?.review && !stepId ? [ctx.stepInput.review.stepId, ...needs.map((n) => n.stepId)] : needs.map((n) => n.stepId);
+  const ids = [...new Set(starts.flatMap((id) => workSteps(commandId, id)))];
+  return ids.map((id) => getStepOutput(commandId, id)).filter(Boolean);
 }
 
 /** A needed research step's numbered sources (agent phase 1). */
