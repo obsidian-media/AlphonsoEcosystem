@@ -73,7 +73,8 @@ export const AGENT_PERMISSION_TABLE: Record<string, AgentPermissions> = {
     role: 'distribution_execution',
     owns: 'Sending and publishing approved work, and placing calls.',
     never: 'Decides what to say.',
-    taskTypes: ['approved_', 'distribution_', 'engagement_', 'performance_', 'outreach_', 'agent_report'],
+    // engagement_ and performance_ went in agent phase 5: nothing used them (Nova owns analysis_performance).
+    taskTypes: ['approved_', 'distribution_', 'outreach_', 'agent_report'],
     blockedTaskTypes: ['execute_command', 'filesystem_write', 'purchase'],
     effects: ['read', 'write_own_work', 'publish_or_send', 'spend'],
   },

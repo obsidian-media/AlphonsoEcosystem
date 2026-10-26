@@ -2,7 +2,7 @@
 // rule plan and Marcus's destinations (agent phase 5).
 
 /** "Check this post …: <the post>": what follows the colon is the content. */
-export const CONTENT_AFTER = /\b(?:this|the|my|our)\s+(?:post|email|message|text|tweet|caption|ad|copy|reply|page)\b[^:\n]{0,80}:/i;
+export const CONTENT_AFTER = /\b(?:this|the|my|our)\s+(?:post|email|message|text|tweet|caption|ad|copy|reply|page|notes|release notes)\b[^:\n]{0,80}:/i;
 export const QUOTED = /"[^"]*"|“[^”]*”/g;
 /** "before I publish it" says when, it doesn't ask for a send. */
 export const NOT_A_SEND = /\bbefore (?:i |we |you )?(?:publish|post|send|share)(?:ing)?(?: it| this| them)?\b/gi;

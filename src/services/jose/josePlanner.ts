@@ -203,6 +203,8 @@ function rulesPlan(text: string): PlanStep[] {
       effects: inferEffects(a.actionType),
       needs: Array.isArray(a.needs) ? a.needs as string[] : null,
       ...(a.reviewOf ? { reviewOf: a.reviewOf as string } : {}),
+      // Where Marcus sends (agent phase 5).
+      ...(a.payload ? { payload: a.payload } : {}),
     };
   });
   const order = legacyNeeds(steps.map((s) => ({ agent: s.agent, stepId: s.stepId })));

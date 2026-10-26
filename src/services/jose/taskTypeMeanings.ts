@@ -61,8 +61,10 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   security_workflow_step: 'a security step in a workflow',
   permission_audit: 'check what an agent, tool or connector is allowed to do',
   // Marcus
-  distribution_execution: 'send approved text to a channel',
-  distribution_review: 'review what would be sent; sends nothing',
+  distribution_execution: 'send what an earlier step wrote; Marcus picks where',
+  distribution_release: 'make a draft GitHub release with notes an earlier step wrote',
+  distribution_issue: 'open a GitHub issue an earlier step wrote',
+  distribution_review: 'check what would be sent and where; sends nothing',
   distribution_readiness: 'check that something is ready to send; sends nothing',
   distribution_schedule_posts: 'publish or schedule approved posts',
   outreach_call: 'place an approved phone call',
