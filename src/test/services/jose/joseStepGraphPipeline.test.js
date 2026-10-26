@@ -961,6 +961,18 @@ describe('Marcus sends what you approved', () => {
     expect(packet.policyReason).toBe('Waiting for your approval: Send to Slack #news: “Open Saturday.”');
   });
 
+  // The desktop run (2026-10-26): Chat runs with preview on, which used to catch the step first.
+  it('with preview on, the send is still prepared and waits with its text', async () => {
+    globalThis.__alphonsoTexts = ['Open Saturday.'];
+    const result = await runJoseCommandExecutionPipeline({ commandText: 'Write a note and post it to Slack #news', source: 'test', zeroCostMode: true, assignments: [writeStep(), sendStep()] });
+    const marcus = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'marcus');
+    expect(marcus.status).toBe('waiting_approval');
+    expect(marcus.sendPreview).toMatchObject({ connector: 'slack', target: '#news', text: 'Open Saturday.' });
+    const { listAgentPackets } = await import('../../../services/agentBusService');
+    const packet = listAgentPackets().find((p) => p.payload?.joseCommandId === result.commandId && p.toAgent === 'marcus');
+    expect(packet.policyReason).toBe('Waiting for your approval: Send to Slack #news: “Open Saturday.”');
+  });
+
   it('after approval it sends once', async () => {
     globalThis.__alphonsoTexts = ['Open Saturday.'];
     const result = await runPlan([writeStep(), sendStep()]);

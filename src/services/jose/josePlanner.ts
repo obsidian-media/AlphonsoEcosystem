@@ -14,6 +14,8 @@ import { JOSE_LIMITS, checkPlan, legacyNeeds, type PlanStep } from './stepGraph'
 import { listInstalledModels } from './joseModels';
 import { paidModelAvailable, paidModelId, estimateCostUsd, PAID_MAX_OUTPUT_TOKENS, PAID_PROMPT_ALLOWANCE_CHARS } from './joseSpend';
 import { getAgentProvider } from '../modelSelectionService';
+import { CONNECTOR_NAMES } from '../marcus/destinations';
+import type { MarcusConnector } from '../marcus/types';
 
 export interface JosePlan {
   steps: PlanStep[];
@@ -58,6 +60,18 @@ const PLACEHOLDER_AGENTS = new Set(['none', 'agent', 'null', '']);
 const PLACEHOLDER_TASKS = new Set(['normal', 'project', 'task type', 'tasktype']);
 
 /** Values a model copied from an example or a schema instead of planning (agent phase 5). */
+/**
+ * A request that asks to send needs Marcus's send step (agent phase 5): a 7B model planned only
+ * the writing for "post it to Slack #news", and the reply read as if it was posted.
+ */
+export function missingSend(text: string, steps: Array<Pick<PlanStep, 'agent' | 'effects'>>): string[] {
+  const sends = parseJoseCommand(text).sends;
+  if (!sends) return [];
+  if (steps.some((st) => st.agent === 'marcus' && (st.effects || []).includes('publish_or_send'))) return [];
+  const where = sends.channels.map((c) => (c === 'team' ? 'your team' : CONNECTOR_NAMES[c as MarcusConnector] || c)).join(' and ');
+  return [`The request asks to send to ${where}: add a marcus step that sends it.`];
+}
+
 export function copiedPlaceholders(steps: Array<{ id?: string; agent?: string; taskType?: string }>): string[] {
   const problems: string[] = [];
   for (const step of steps) {
@@ -245,8 +259,9 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     // and no code step for a request that isn't about code (agent phase 1).
     const check = checkPlan(plan.steps, { taskTypes: true, request: text });
     const copied = copiedPlaceholders(plan.steps.map((st) => ({ id: st.stepId, agent: st.agent, taskType: st.actionType })));
-    if (!check.ok || copied.length) {
-      problems = [...copied, ...(check.ok ? [] : check.problems)];
+    const unsent = missingSend(text, plan.steps);
+    if (!check.ok || copied.length || unsent.length) {
+      problems = [...copied, ...unsent, ...(check.ok ? [] : check.problems)];
       continue;
     }
     const offered = template && plan.basedOnTemplate === template.id ? template : null;

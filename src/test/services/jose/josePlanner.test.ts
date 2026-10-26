@@ -275,6 +275,27 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(copiedPlaceholders([{ id: 'research', agent: 'hector', taskType: 'research_report' }])).toEqual([]);
   });
 
+  // The desktop run (2026-10-26): the model planned only the writing for "post it to Slack".
+  it('a plan that leaves out the send is sent back; still missing → the simple plan with Marcus', async () => {
+    const SLACK = '/jose Post a short note that we open at 9 to Slack #news.';
+    const writeOnly = answer([{ id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: [] }]);
+    llm.mockResolvedValueOnce(writeOnly).mockResolvedValueOnce(writeOnly);
+    const plan = await planJoseRequest(SLACK);
+    expect(promptOf(1)).toContain('The request asks to send to Slack: add a marcus step that sends it.');
+    expect(plan.source).toBe('rules');
+    expect(plan.steps.some((s) => s.agent === 'marcus')).toBe(true);
+  });
+
+  it('a plan with the send is used as it is', async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: [] },
+      { id: 'send', agent: 'marcus', taskType: 'distribution_execution', instruction: 'Post it.', effects: ['publish_or_send'], needs: ['write'] },
+    ]));
+    const plan = await planJoseRequest('/jose Post a short note that we open at 9 to Slack #news.');
+    expect(plan.source).toBe('fresh');
+    expect(llm).toHaveBeenCalledTimes(1);
+  });
+
   it('a plan with short_id ids is fixed once, the problem named, then used', async () => {
     llm
       .mockResolvedValueOnce(answer([{ id: 'short_id', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'] }]))

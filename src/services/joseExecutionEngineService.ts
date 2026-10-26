@@ -1812,8 +1812,52 @@ export async function runJoseCommandExecutionPipeline({
         continue;
       }
 
+      // Marcus's send is prepared before it asks you (agent phase 5): the approval shows exactly
+      // what goes where. A problem ends the step right here without asking, since the bus never
+      // runs an unapproved send: nothing to send, a connector to set up, or text too long.
+      let sendLine = '';
+      if (isMarcusSendStep(assignment) && packet.status !== 'approved') {
+        const requestNow = joseRequestId ? getJoseRequest(joseRequestId) : null;
+        const saved = requestNow?.steps.find((s) => s.stepId === assignment.stepId)?.sendPreview;
+        if (saved) {
+          sendLine = describeSend(saved);
+        } else {
+          const prepared = await prepareMarcusSend(command.id, assignment, requestNow || { text: commandText });
+          if (prepared.ok === false) {
+            if (prepared.outcome === 'setup') {
+              updatePacketStatus(assignment.packetId, 'queued', { failureReason: prepared.reason });
+              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'setup_needed', reason: prepared.reason });
+              onProgress?.({ stage: 'setup_needed', assignment, packetId: assignment.packetId, reason: prepared.reason });
+            } else if (prepared.outcome === 'fix') {
+              // Sent back to the writer: Jose's fix loop revises it and Marcus prepares again.
+              const stepOutput = {
+                summary: prepared.reason, resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType,
+                schema: { kind: 'send', status: 'checked', reviewVerdict: 'fix', findings: [prepared.reason] },
+              };
+              setAgentOutput(command.id, assignment.agent, stepOutput);
+              setStepOutput(command.id, assignment.stepId, assignment.agent, stepOutput);
+              updatePacketStatus(assignment.packetId, 'executed', { verificationState: TRUST_STATES.INFERRED });
+              executedCount += 1;
+              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'executed', resultState: 'completed' });
+              onProgress?.({ stage: 'executed', assignment, packetId: assignment.packetId, result: stepOutput });
+            } else {
+              failedCount += 1;
+              updatePacketStatus(assignment.packetId, 'failed', { failureReason: prepared.reason, retryable: false });
+              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'failed', reason: prepared.reason });
+              onProgress?.({ stage: 'step_failed', assignment, packetId: assignment.packetId, reason: prepared.reason });
+            }
+            continue;
+          }
+          sendLine = describeSend(prepared.preview);
+          if (joseRequestId) {
+            try { updateJoseStep(joseRequestId, assignment.stepId, { sendPreview: prepared.preview, note: sendLine } as any); } catch { /* display aid */ }
+          }
+        }
+      }
+
       // A packet you approved has been previewed already.
-      if (isRiskyAssignment(assignment) && previewMode && packet.status !== 'approved') {
+      // A prepared send waits below with its exact text instead.
+      if (isRiskyAssignment(assignment) && previewMode && packet.status !== 'approved' && !sendLine) {
         const previewPriorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
         const previewContent = buildPreviewContent(previewPriorOutputs);
         pendingApprovalCount += 1;
@@ -1856,49 +1900,6 @@ export async function runJoseCommandExecutionPipeline({
           verificationState: TRUST_STATES.PENDING
         });
         continue;
-      }
-
-      // Marcus's send is prepared before it asks you (agent phase 5): the approval shows exactly
-      // what goes where. A problem ends the step right here without asking, since the bus never
-      // runs an unapproved send: nothing to send, a connector to set up, or text too long.
-      let sendLine = '';
-      if (isMarcusSendStep(assignment) && packet.status !== 'approved') {
-        const requestNow = joseRequestId ? getJoseRequest(joseRequestId) : null;
-        const saved = requestNow?.steps.find((s) => s.stepId === assignment.stepId)?.sendPreview;
-        if (saved) {
-          sendLine = describeSend(saved);
-        } else {
-          const prepared = await prepareMarcusSend(command.id, assignment, requestNow || { text: commandText });
-          if (prepared.ok === false) {
-            if (prepared.outcome === 'setup') {
-              updatePacketStatus(assignment.packetId, 'queued', { failureReason: prepared.reason });
-              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'setup_needed', reason: prepared.reason });
-              onProgress?.({ stage: 'setup_needed', assignment, packetId: assignment.packetId, reason: prepared.reason });
-            } else if (prepared.outcome === 'fix') {
-              // Sent back to the writer: Jose's fix loop revises it and Marcus prepares again.
-              const stepOutput = {
-                summary: prepared.reason, resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType,
-                schema: { kind: 'send', status: 'checked', reviewVerdict: 'fix', findings: [prepared.reason] },
-              };
-              setAgentOutput(command.id, assignment.agent, stepOutput);
-              setStepOutput(command.id, assignment.stepId, assignment.agent, stepOutput);
-              updatePacketStatus(assignment.packetId, 'executed', { verificationState: TRUST_STATES.INFERRED });
-              executedCount += 1;
-              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'executed', resultState: 'completed' });
-              onProgress?.({ stage: 'executed', assignment, packetId: assignment.packetId, result: stepOutput });
-            } else {
-              failedCount += 1;
-              updatePacketStatus(assignment.packetId, 'failed', { failureReason: prepared.reason, retryable: false });
-              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'failed', reason: prepared.reason });
-              onProgress?.({ stage: 'step_failed', assignment, packetId: assignment.packetId, reason: prepared.reason });
-            }
-            continue;
-          }
-          sendLine = describeSend(prepared.preview);
-          if (joseRequestId) {
-            try { updateJoseStep(joseRequestId, assignment.stepId, { sendPreview: prepared.preview, note: sendLine } as any); } catch { /* display aid */ }
-          }
-        }
       }
 
       // A step whose effects need the user's approval waits for it; Jose never
