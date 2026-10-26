@@ -38,7 +38,7 @@ vi.mock('../services/chromaDbService', () => ({ addMemoryToChroma: vi.fn(), isCh
 
 import { resolveSecureSessionId } from '../services/connectors/hermesAgentConnector';
 import { runMariaGovernanceAudit } from '../services/mariaAuditService';
-import { runEchoPreservation } from '../services/echoMemoryService';
+import { runEchoStep } from '../services/echo/echoSteps';
 import { runNovaAnalysis } from '../services/novaAnalysisService';
 import { runSentinelSecurityScan } from '../services/sentinelSecurityService';
 import { synthesizeHectorResearch } from '../services/hectorResearchService';
@@ -69,7 +69,7 @@ describe('Hermes sessionId is passed from every per-agent call site', () => {
   });
 
   it('Echo passes the assignment packet as the session', async () => {
-    await runEchoPreservation('remember this decision', { packetId: 'pkt-echo', commandId: 'c1' }, {});
+    await runEchoStep({ stepId: 'echo', agent: 'echo', actionType: 'memory_preservation' }, { instruction: '', request: 'remember this decision', needs: [], others: [], memory: '', review: null }, { surface: 'chat', packetId: 'pkt-echo' });
     expect(mockGenerate.mock.calls[0][0]).toBe('echo');
     expect(sessionIdOf()).toBe(resolveSecureSessionId('pkt-echo'));
   });

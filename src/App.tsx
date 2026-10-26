@@ -377,37 +377,6 @@ function AppShell() {
   usePollingEffects({ isCoachWindow, operatorMode, toast, setDurableAuditLogs, setBraveSearchConfigured, screenObserverRunRef });
   useTrayEffects({ settings, coachMode, coachAlwaysOnTop, approvalRequiredNotice, setApprovalRequiredNotice, setCoachMode, setLastTaskCompletedAt, setVerificationLogs, createNewChat, voice });
 
-  // Echo end-of-session synthesis on window close
-  useEffect(() => {
-    let unlisten = null;
-    let registered = false;
-    (async () => {
-      try {
-        const { listen } = await import('@tauri-apps/api/event');
-        const { synthesizeSession } = await import('./services/echoMemoryService');
-        unlisten = await listen('tauri://close-requested', async () => {
-          try {
-            const rawMessages = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith('alphonso_messages_')) {
-                try {
-                  const parsed = JSON.parse(localStorage.getItem(key) || '[]');
-                  if (Array.isArray(parsed)) rawMessages.push(...parsed.slice(-20));
-                } catch { /* skip */ }
-              }
-            }
-            await synthesizeSession(rawMessages.slice(-20));
-          } catch { /* non-critical */ }
-        });
-        registered = true;
-      } catch { /* Tauri API not available in browser */ }
-    })();
-    return () => {
-      if (registered && unlisten) { try { unlisten(); } catch { /* ignore */ } }
-    };
-  }, []);
-
   // Boot-time autostart: start tools the user enabled autostart for
   useEffect(() => {
     (async () => {

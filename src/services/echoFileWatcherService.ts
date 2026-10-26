@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { generateAgentLlmResponse, getConfiguredOllamaModel, getConfiguredOllamaEndpoint } from '../lib/ollama';
-import { runEchoPreservation } from './echoMemoryService';
+import { addMemoryItem } from './unifiedMemoryService';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 
 const WATCHER_CONFIG_KEY = 'alphonso_echo_watcher_config_v1';
@@ -85,11 +85,8 @@ async function processFile(relativePath: string, workspaceRoot: string): Promise
       summary = content.slice(0, 500);
     }
 
-    await runEchoPreservation(
-      `Auto-ingested file: ${relativePath}`,
-      { commandId: `inbox_${Date.now()}`, actionType: 'file_ingestion' },
-      { 'file-watcher': { summary: `Ingested from ${relativePath}: ${summary.slice(0, 300)}`, resultState: 'completed' } }
-    );
+    // An ingested file is an ordinary note, not a decision (agent phase 7).
+    addMemoryItem({ title: `File: ${relativePath}`, content: summary.slice(0, 1000), agentId: 'echo', type: 'file_note', tags: ['inbox'] });
 
     return { ok: true, relativePath, summary };
   } catch (error) {

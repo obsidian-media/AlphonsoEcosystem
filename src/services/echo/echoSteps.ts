@@ -188,5 +188,9 @@ export async function runEchoStep(assignment: any, input: StepInput | null, ctx:
   const type = String(assignment?.actionType || '');
   if (type === 'memory_recall') return recall(assignment, input, ctx);
   if (type === 'memory_forget') return forget(assignment, input, ctx);
+  if (type === 'memory_cleanup' || type === 'knowledge_curation') {
+    const { proposeCleanup } = await import('./cleanup');
+    return proposeCleanup(assignment, ctx);
+  }
   return save(assignment, input, ctx);
 }

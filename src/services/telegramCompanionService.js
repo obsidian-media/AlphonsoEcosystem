@@ -585,6 +585,16 @@ export async function handleJoseButton(token, update) {
     quietly(plans.runApprovedPlan(request.id));
     return 'Running the plan.';
   }
+  // Echo's waiting steps (agent phase 7): pick what to forget, apply or leave a cleanup.
+  if (button.action === 'pick_forget' || button.action === 'apply_cleanup' || button.action === 'dismiss_cleanup') {
+    const picks = await import('./echo/echoPicks');
+    const result = button.action === 'pick_forget'
+      ? await picks.pickForget(request.id, button.stepId, button.decisionId)
+      : button.action === 'apply_cleanup'
+        ? await picks.applyCleanupStep(request.id, button.stepId)
+        : await picks.dismissCleanupStep(request.id, button.stepId);
+    return result.summary;
+  }
   // "Which project" (agent phase 6): the step works in the project pressed.
   if (button.action === 'pick_project') {
     const step = request.steps.find((s) => s.stepId === button.stepId);

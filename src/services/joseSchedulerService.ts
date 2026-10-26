@@ -31,7 +31,7 @@ export const SCHEDULE_PRESETS: SchedulePreset[] = [
   { id: 'weekly', label: 'Every week', intervalMs: 7 * 24 * 60 * 60 * 1000 },
   { id: 'nova_daily_scan', cron: '0 9 * * *', label: 'Nova: what to do next', handler: 'nova_scan', description: "Every day at 9:00, Nova looks over the last week's work and what is still waiting, and says what to do next." },
   { id: 'sentinel_daily_summary', cron: '0 8 * * *', label: "Sentinel: the week's security", handler: 'sentinel_summary', description: "Every day at 8:00, Sentinel reviews the last week's work for keys, unsafe links and risky commands." },
-  { id: 'echo_nightly_consolidation', cron: '0 2 * * *', label: 'Echo Nightly Memory Consolidation', handler: 'echo_consolidate', description: 'Every night at 2:00, Echo summarises memories older than a week.' },
+  { id: 'echo_weekly_cleanup', cron: '0 20 * * 0', label: 'Echo: tidy memory', handler: 'echo_cleanup', description: 'Every Sunday at 20:00, Echo proposes merges and replacements in memory; nothing changes until you apply them.' },
   { id: 'hector_morning_briefing', cron: '0 7 * * *', label: 'Hector Morning Research Briefing', handler: 'hector_brief', description: 'Every day at 7:00, Hector collects the top headlines from his news feeds.' },
   { id: 'maria_weekly_audit', cron: '0 9 * * 1', label: "Maria: the week's risks", handler: 'maria_audit', description: "Every Monday at 9:00, Maria reviews the week's risks: what went out, what failed and what is still waiting." },
 ];
@@ -164,17 +164,13 @@ async function runBuiltInJob(handler: string): Promise<Omit<ScheduleRunResult, '
     await recordActivity('sentinel', 'daily_summary', result.summary);
     return { state: result.state, summary: result.summary };
   }
-  if (handler === 'echo_consolidate') {
-    const { listMemory } = await import('./unifiedMemoryService.js') as unknown as { listMemory: (f: object) => Array<{ title?: string; content?: string; timestampMs?: number }> };
-    const old = listMemory({ namespace: 'shared' })
-      .filter((m) => Number(m.timestampMs || 0) < Date.now() - RECENT_WINDOW_MS)
-      .slice(-30);
-    if (old.length === 0) return { state: 'skipped', summary: 'No memories older than 7 days to consolidate.' };
-    const { synthesizeSession } = await import('./echoMemoryService');
-    const result = await synthesizeSession(old.map((m) => ({ role: 'note', content: `${m.title || ''}: ${String(m.content || '').slice(0, 400)}` })));
-    const summary = result?.summary || `Echo consolidated ${old.length} older memories.`;
-    await recordActivity('echo', 'nightly_consolidation', summary);
-    return { state: 'done', summary };
+  // Agent phase 7: Echo proposes a cleanup as a request (a schedule saved with the old nightly
+  // job runs this too).
+  if (handler === 'echo_cleanup' || handler === 'echo_consolidate') {
+    const { askEchoCleanup } = await import('./echo/cleanup');
+    const result = await askEchoCleanup();
+    await recordActivity('echo', 'weekly_cleanup', result.summary);
+    return { state: result.state, summary: result.summary };
   }
   if (handler === 'hector_brief') {
     const { fetchRssSources } = await import('./hectorResearchService.js') as unknown as { fetchRssSources: (q: string, n: number) => Promise<Array<{ title?: string; url?: string }>> };

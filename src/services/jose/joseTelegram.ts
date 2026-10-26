@@ -6,11 +6,12 @@
 // keeps anything from being sent twice, also after a restart.
 import { describeSend } from '../marcus/describeSend';
 import { describeCodeChange } from '../alphonso/changeSet';
+import { getCleanup as readCleanupSet } from '../echo/cleanupStore';
 import { EFFECT_LABELS, type JoseEffect } from './joseEffects';
 import { agentName } from './agentNames';
 import type { JoseRequest } from './joseRequestStore';
 
-export type JoseButtonAction = 'approve' | 'reject' | 'run' | 'cancel' | 'carry_on' | 'pick_project';
+export type JoseButtonAction = 'approve' | 'reject' | 'run' | 'cancel' | 'carry_on' | 'pick_project' | 'pick_forget' | 'apply_cleanup' | 'dismiss_cleanup';
 
 export interface JoseButton {
   text: string;
@@ -19,6 +20,8 @@ export interface JoseButton {
   stepId?: string;
   /** "Which project" (agent phase 6): the project this button picks. */
   project?: string;
+  /** Echo's "Which one should I forget?" (agent phase 7): the decision this button picks. */
+  decisionId?: string;
 }
 
 export interface JoseNotification {
@@ -132,6 +135,30 @@ export function collectJoseNotifications(requests: JoseRequest[], sent: Set<stri
     }
     if (request.status === 'waiting_setup') {
       for (const s of request.steps.filter((x) => x.status === 'setup_needed')) {
+        // Echo's "Which one should I forget?" (agent phase 7): one button per decision.
+        if (Array.isArray((s as any).decisionChoices) && (s as any).decisionChoices.length) {
+          add({
+            key: `${request.id}:forget:${s.stepId}:${request.updatedAtMs}`,
+            kind: 'setup_needed',
+            text: `${agentName(s.agent)} asks: ${cut(String(s.error || ''), 300)}\nFor: ${cut(request.text, 200)}`,
+            buttons: [(s as any).decisionChoices.map((c: { id: string; text: string }) => ({ text: cut(c.text, 40), action: 'pick_forget' as const, requestId: request.id, stepId: s.stepId, decisionId: c.id }))],
+          });
+          continue;
+        }
+        // Echo's cleanup (agent phase 7): Apply all / Not now.
+        if ((s as any).cleanupSetId) {
+          const set = readCleanupSet(String((s as any).cleanupSetId));
+          add({
+            key: `${request.id}:cleanup:${s.stepId}:${request.updatedAtMs}`,
+            kind: 'setup_needed',
+            text: `Echo proposes ${set?.proposals?.length ?? 0} changes to memory: ${(set?.proposals || []).slice(0, 3).map((p: { reason: string }) => p.reason).join(' ')}`.trim(),
+            buttons: [[
+              { text: 'Apply all', action: 'apply_cleanup', requestId: request.id, stepId: s.stepId },
+              { text: 'Not now', action: 'dismiss_cleanup', requestId: request.id, stepId: s.stepId },
+            ]],
+          });
+          continue;
+        }
         // "Which project" (agent phase 6): one button per project.
         if (Array.isArray(s.projectChoices) && s.projectChoices.length) {
           add({
@@ -187,7 +214,7 @@ export function seedSentLog(requests: JoseRequest[]): boolean {
   return true;
 }
 
-type SavedButton = { action: JoseButtonAction; requestId: string; stepId?: string; project?: string; atMs: number };
+type SavedButton = { action: JoseButtonAction; requestId: string; stepId?: string; project?: string; decisionId?: string; atMs: number };
 
 function randomCode(length: number): string {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -200,16 +227,16 @@ function randomCode(length: number): string {
 export function buttonToken(button: JoseButton): string {
   const saved = readJson<Record<string, SavedButton>>(BUTTONS_KEY, {});
   const token = `j:${randomCode(8)}`;
-  saved[token] = { action: button.action, requestId: button.requestId, ...(button.stepId ? { stepId: button.stepId } : {}), ...(button.project ? { project: button.project } : {}), atMs: Date.now() };
+  saved[token] = { action: button.action, requestId: button.requestId, ...(button.stepId ? { stepId: button.stepId } : {}), ...(button.project ? { project: button.project } : {}), ...(button.decisionId ? { decisionId: button.decisionId } : {}), atMs: Date.now() };
   const kept = Object.entries(saved).sort((a, b) => b[1].atMs - a[1].atMs).slice(0, BUTTONS_KEPT);
   writeJson(BUTTONS_KEY, Object.fromEntries(kept));
   return token;
 }
 
 /** What a pressed button means, or null when it is unknown or older than 7 days. */
-export function readButtonToken(data: string, nowMs: number = Date.now()): { action: JoseButtonAction; requestId: string; stepId?: string; project?: string } | null {
+export function readButtonToken(data: string, nowMs: number = Date.now()): { action: JoseButtonAction; requestId: string; stepId?: string; project?: string; decisionId?: string } | null {
   if (!/^j:[A-Za-z0-9]{8}$/.test(String(data || ''))) return null;
   const saved = readJson<Record<string, SavedButton>>(BUTTONS_KEY, {})[data];
   if (!saved || nowMs - saved.atMs > BUTTON_TTL_MS) return null;
-  return { action: saved.action, requestId: saved.requestId, ...(saved.stepId ? { stepId: saved.stepId } : {}), ...(saved.project ? { project: saved.project } : {}) };
+  return { action: saved.action, requestId: saved.requestId, ...(saved.stepId ? { stepId: saved.stepId } : {}), ...(saved.project ? { project: saved.project } : {}), ...(saved.decisionId ? { decisionId: saved.decisionId } : {}) };
 }

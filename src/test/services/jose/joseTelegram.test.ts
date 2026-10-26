@@ -190,3 +190,38 @@ describe("Alphonso's code steps on Telegram", () => {
     expect(readButtonToken(token)).toEqual({ action: 'pick_project', requestId: 'r1', stepId: 'build', project: 'blog' });
   });
 });
+
+// Agent phase 7: Echo's pickers on Telegram.
+describe("Echo's buttons on Telegram", () => {
+  it('a forget with several matches: one button per decision', () => {
+    const out = collectJoseNotifications([request({
+      status: 'waiting_setup',
+      steps: [{ stepId: 'echo', agent: 'echo', actionType: 'memory_forget', effects: ['write_own_work'], needs: [], status: 'setup_needed', error: 'Which one should I forget?', decisionChoices: [{ id: 'd1', text: 'The launch is on Friday the 14th at $29, after the venue confirmed.' }, { id: 'd2', text: 'The launch party is at the shop.' }] } as any],
+    })], new Set(), getJoseTelegramSettings());
+    const note = out.find((n) => n.kind === 'setup_needed');
+    expect(note?.text).toBe('Echo asks: Which one should I forget?\nFor: Post the launch video');
+    expect(note?.buttons).toEqual([[
+      { text: 'The launch is on Friday the 14th at $29…', action: 'pick_forget', requestId: 'r1', stepId: 'echo', decisionId: 'd1' },
+      { text: 'The launch party is at the shop.', action: 'pick_forget', requestId: 'r1', stepId: 'echo', decisionId: 'd2' },
+    ]]);
+  });
+
+  it('a cleanup: Apply all and Not now', () => {
+    localStorage.setItem('alphonso_echo_cleanup_v1', JSON.stringify([{ id: 's1', atMs: 1, status: 'open', proposals: [{ id: 'p0', kind: 'drop', ids: ['d1'], reason: 'It is stale.' }, { id: 'p1', kind: 'merge', ids: ['d2', 'd3'], text: 'x', reason: 'They say the same.' }] }]));
+    const out = collectJoseNotifications([request({
+      status: 'waiting_setup',
+      steps: [{ stepId: 'echo', agent: 'echo', actionType: 'memory_cleanup', effects: ['write_own_work'], needs: [], status: 'setup_needed', error: 'Echo proposes 2 changes to memory: tick the ones to apply.', cleanupSetId: 's1' } as any],
+    })], new Set(), getJoseTelegramSettings());
+    const note = out.find((n) => n.kind === 'setup_needed');
+    expect(note?.text).toBe('Echo proposes 2 changes to memory: It is stale. They say the same.');
+    expect(note?.buttons).toEqual([[
+      { text: 'Apply all', action: 'apply_cleanup', requestId: 'r1', stepId: 'echo' },
+      { text: 'Not now', action: 'dismiss_cleanup', requestId: 'r1', stepId: 'echo' },
+    ]]);
+  });
+
+  it('a decision button keeps its decision', () => {
+    const token = buttonToken({ text: 'x', action: 'pick_forget', requestId: 'r1', stepId: 'echo', decisionId: 'd1' });
+    expect(readButtonToken(token)).toEqual({ action: 'pick_forget', requestId: 'r1', stepId: 'echo', decisionId: 'd1' });
+  });
+});

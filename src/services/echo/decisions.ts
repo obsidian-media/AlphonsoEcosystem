@@ -36,6 +36,9 @@ export const ECHO_LIMITS = {
   perStep: 8,
   shownToModel: 12,
   recallMax: 20,
+  /** Cleanup: how many decisions and old notes Echo looks over at once. */
+  cleanupDecisions: 60,
+  cleanupNotes: 40,
 };
 
 export const DECISIONS_KEY = 'alphonso_echo_decisions_v1';
@@ -105,6 +108,12 @@ function change(id: string, patch: (d: Decision) => void): Decision | null {
 
 export function editDecision(id: string, text: string): Decision | null {
   return change(id, (d) => { d.text = redactText(String(text || '').trim()); });
+}
+
+/** Marks a decision replaced by another (cleanup's merges and contradictions). */
+export function replaceWith(oldId: string, newId: string): boolean {
+  if (oldId === newId) return false;
+  return change(oldId, (d) => { d.status = 'replaced'; d.replacedBy = newId; }) !== null;
 }
 
 export function forgetDecision(id: string): boolean {

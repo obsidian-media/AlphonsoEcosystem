@@ -24,6 +24,10 @@ vi.mock('../services/sentinel/sentinelWeekly', () => ({
 vi.mock('../services/maria/mariaWeekly', () => ({
   askMariaWeeklyRisks: vi.fn(async () => ({ state: 'done', summary: 'Maria: low risk.' })),
 }));
+// Agent phase 7: the weekly Echo job asks him to tidy memory.
+vi.mock('../services/echo/cleanup', () => ({
+  askEchoCleanup: vi.fn(async () => ({ state: 'done', summary: 'Echo proposes 2 changes to memory.' })),
+}));
 vi.mock('../services/agentActivityService', () => ({
   appendAgentActivity: vi.fn(),
   listAgentActivity: vi.fn(() => []),
@@ -237,6 +241,7 @@ describe('running schedules', () => {
       ['nova_daily_scan', 'What to do first: approve the launch video.'],
       ['sentinel_daily_summary', 'Safe. Nothing else found.'],
       ['maria_weekly_audit', 'Maria: low risk.'],
+      ['echo_weekly_cleanup', 'Echo proposes 2 changes to memory.'],
     ];
     for (const [presetId, text] of cases) {
       const job = createSchedule({ name: presetId, presetId });
@@ -244,7 +249,9 @@ describe('running schedules', () => {
       expect(result.state).toBe('done');
       expect(result.summary).toContain(text);
     }
-    expect(appendAgentActivity).toHaveBeenCalledTimes(3);
+    expect(appendAgentActivity).toHaveBeenCalledTimes(4);
+    expect(SCHEDULE_PRESETS.find((p) => p.id === 'echo_weekly_cleanup')).toMatchObject({ cron: '0 20 * * 0', label: 'Echo: tidy memory', handler: 'echo_cleanup' });
+    expect(SCHEDULE_PRESETS.some((p) => p.id === 'echo_nightly_consolidation')).toBe(false);
   });
 
   it('the weekly Maria job is a request to her', async () => {
