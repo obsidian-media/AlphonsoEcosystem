@@ -16,7 +16,7 @@ vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
 }));
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
-import { planJoseRequest, describePlanSource } from '../../../services/jose/josePlanner';
+import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 
@@ -252,5 +252,36 @@ describe("the planner refuses a code step for writing (agent phase 1)", () => {
     const plan = await planJoseRequest('Write a paragraph about honeybees');
     expect(promptOf(1)).toContain('write is writing, not code: give it to Alphonso as assistant_write.');
     expect(plan.steps[0].actionType).toBe('assistant_write');
+  });
+});
+
+// Agent phase 5: the example had placeholders ("short_id", "<agent>") that a 7B model
+// copied, so Jose's own plans failed his checks on every live request.
+describe('the example plan has nothing a small model can copy', () => {
+  it('the prompt has no placeholders', async () => {
+    llm.mockResolvedValueOnce(answer([{ id: 'a', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'] }]));
+    await planJoseRequest(PARTY);
+    const prompt = promptOf(0);
+    for (const p of ['short_id', '<agent>', '<task type>', '<step id>', '"normal" or']) expect(prompt).not.toContain(p);
+    expect(prompt).toContain(PLAN_EXAMPLE);
+  });
+
+  it('names copied placeholders so the fix round can say so', () => {
+    expect(copiedPlaceholders([{ id: 'short_id', agent: 'none', taskType: 'normal' }])).toEqual([
+      'Step id "short_id" is the example\'s placeholder: use your own ids.',
+      'Agent "none" is not one of the agents.',
+      'Task type "normal" is not a task type.',
+    ]);
+    expect(copiedPlaceholders([{ id: 'research', agent: 'hector', taskType: 'research_report' }])).toEqual([]);
+  });
+
+  it('a plan with short_id ids is fixed once, the problem named, then used', async () => {
+    llm
+      .mockResolvedValueOnce(answer([{ id: 'short_id', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'] }]))
+      .mockResolvedValueOnce(answer([{ id: 'judge', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'] }]));
+    const plan = await planJoseRequest(PARTY);
+    expect(llm).toHaveBeenCalledTimes(2);
+    expect(promptOf(1)).toContain('is the example\'s placeholder');
+    expect(plan.source).toBe('fresh');
   });
 });
