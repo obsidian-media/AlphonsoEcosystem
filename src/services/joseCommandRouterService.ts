@@ -349,8 +349,9 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
     memoryPreservation: matchesAny(asked, ['remember', 'archive', 'knowledge', 'timeline', 'document decision']),
     opportunityScoring: matchesAny(asked, ['opportunity', 'priority', 'prioritize', 'score', 'roi', 'value', 'timing']),
     distributionExecution: matchesAny(asked, ['distribute', 'schedule', 'engage', 'community', 'publish queue']),
-    // "post" alone is a piece of writing, not publishing (agent phase 1): a platform or a send word is needed.
-    publishing: matchesAny(asked, ['upload', 'publish', 'send', 'youtube', 'tiktok', 'instagram', 'facebook', 'telegram', 'whatsapp', 'slack']),
+    // "post" alone is a piece of writing, not publishing (agent phase 1), and naming a platform
+    // isn't publishing either (agent phase 2: "a YouTube channel or a podcast?"): a send word is needed.
+    publishing: matchesAny(asked, ['upload', 'publish', 'send', 'share']) || /\bpost (?:it |this |them |that )?(?:to|on)\b/i.test(asked),
     riskyLocal: matchesAny(asked, ['delete', 'remove', 'deploy', 'write', 'modify']),
     connector: matchesAny(asked, ['telegram', 'whatsapp', 'youtube', 'connector', 'api key', 'token']),
     paidConnector: connectorCost.class === 'paid_or_metered',
@@ -484,8 +485,10 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       actionType: 'opportunity_analysis',
       riskLevel: 'low',
       requiresApproval: false,
-      commandPreview: 'Opportunity scoring only. No execution.',
-      fragments: fragments.filter((fragment) => /opportunity|priority|score|roi|value|timing/i.test(fragment))
+      commandPreview: 'Judging value, priority and timing. No execution.',
+      fragments: fragments.filter((fragment) => /opportunity|priority|score|roi|value|timing/i.test(fragment)),
+      // Nova judges what Hector found, so she waits for him (agent phase 2).
+      ...(assignments.some((a) => a.agent === AGENTS.HECTOR) ? { needs: ['hector'] } : {}),
     });
   }
 

@@ -11,7 +11,7 @@ import { listJoseCommands } from './joseCommandRouterService';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { scanForThreats } from './sentinelSecurityService';
-import { getOpportunityHistory } from './novaAnalysisService';
+import { listVerdicts, verdictsText } from './nova/novaVerdicts';
 import { listOrchestrationReceipts } from './orchestrationReceiptService';
 import { getConfiguredOllamaEndpoint } from '../lib/ollama';
 
@@ -136,7 +136,7 @@ function formatCommandList() {
 🔍 Research & Memory:
 /research <topic> — live web research via Hector
 /memory [query] — search or list recent memories
-/nova — latest opportunity score + trend
+/nova — Nova's last verdicts
 
 📡 Agents & Security:
 /agents — show all 9 agent statuses
@@ -327,15 +327,10 @@ export async function handleAgentsCommand(token, chatId) {
 }
 
 export async function handleNovaCommand(token, chatId) {
-  const history = getOpportunityHistory();
-  if (!history || history.length === 0) {
-    return sendTelegramMessageInternal({ token, chatId, text: '📊 No Nova analysis history yet. Send a command to Jose to generate one.' });
-  }
-  const latest = history[history.length - 1];
-  const score = latest.score ?? 0;
-  const rec = latest.recommendation || 'No recommendation';
-  const trend = history.slice(-5).map(h => h.score ?? 0).join(' → ');
-  return sendTelegramMessageInternal({ token, chatId, text: `📊 Nova Opportunity\n\nLatest score: ${score}/100\nRecommendation: ${rec}\n\nTrend (last 5): ${trend}` });
+  // Nova's last verdicts (agent phase 2): what each was about and what to do first.
+  return sendTelegramMessageInternal({ token, chatId, text: `📊 Nova's last verdicts
+
+${verdictsText(listVerdicts(5))}` });
 }
 
 export async function handleScanCommand(token, chatId) {

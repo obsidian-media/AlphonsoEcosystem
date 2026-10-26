@@ -48,6 +48,13 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - **Desktop check** `agent-roles.e2e.mjs` depends on the local model's plan; it checks owners, not the exact steps.
   - Status: OPEN.
 
+- [2026-10-25] **Agent phase 2 (Nova): what it leaves.**
+  - **Her verdicts are judged by a 7B model** on this machine (the largest a 6 GB card runs); a stronger model's ranking hasn't been run live.
+  - **Options are read from the request's wording** (`namedOptions()`: a list after a colon, a bulleted list, or "start A or B?"). Options written in other ways are ranked as she finds them, without the "left out" check.
+  - **Sentinel passes the Settings model explicitly too**, so he ignores Jose's step model; fixed in Sentinel's phase.
+  - **`novaFeedbackService.ts`** (decomposition hints) no longer receives scores; it stays (R14) and returns no hints.
+  - Status: OPEN.
+
 - [2026-10-25] **Agent phase 1 (Hector): what it leaves.**
   - **Sites that block any non-browser** (Cloudflare checks) still block Hector; he keeps their search snippet. A real browser for those pages was offered and not chosen.
   - **PDF text** isn't read; a PDF keeps its search snippet.

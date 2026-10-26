@@ -70,12 +70,12 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 **When to use:** Automatic — Sentinel monitors all external interactions for security risks.
 
 ### Nova — Opportunity Analyst
-**Role:** Opportunity scoring, prioritization, and strategic analysis
-**Runtime:** `src/services/novaAnalysisService.ts` — 4-dimension scoring + Ollama strategic analysis
+**Role:** Judging value, priority and timing from what Hector found
+**Runtime:** `src/services/novaAnalysisService.ts` and `src/services/nova/` (since 2026-10-25) — her model judges what she was given and answers with a ranked verdict; no keyword scores
 **Skills (6, `src/skills/nova/`):** Best time to post, Follow-up ideas, Judge the market, Read the results, Review the script, Value and priority.
-**Can do:** Score opportunities across 4 dimensions (valueScore/riskScore/timingScore/effortScore), classify priority tier (watchlist/medium/high/critical), generate strategic recommendations, store scores for decomposition hints, identify favorable opportunity/risk ratios
+**Can do:** Rank the options a request names or Hector found: each with why, value / effort / risk (high, medium, low) and the sources that support it; say what to do first and what would change her mind. A single option also gets a 0–100 score. With nothing to judge she asks Hector to research first. Her last verdicts are in Settings and on Telegram (`/nova`)
 **Cannot:** Execute actions — analysis and recommendation only
-**Schema:** `opportunityId`, `valueScore`, `riskScore`, `timingScore`, `effortScore`, `priorityTier`, `recommendation`, `analyzedAtMs`
+**Schema:** `doFirst`, `options` (`name`, `rank`, `why`, `value`, `effort`, `risk`, `sources`, `notJudged`), `wouldChange`, `score` (one option only), `fromRequestOnly`
 **When to use:** "Which of these is most promising?", "Prioritize these tasks", "Analyze this opportunity". In Miya Studio, Nova checks the market, reviews the script's value, suggests post times, and turns each post's results into lessons and follow-up ideas.
 
 ## Hermes agent backend (opt-in, per agent)

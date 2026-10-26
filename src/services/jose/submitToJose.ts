@@ -10,7 +10,7 @@ import { needsPlanApproval, type PlanFirstSetting } from './josePlanApproval';
 import { appendRequestNote, cancelJoseRequest, claimPlanForRun, createWaitingPlanRequest, returnPlanToWaiting, type JoseRequest } from './joseRequestStore';
 import { checkPlan, type PlanStep } from './stepGraph';
 import { agentName } from './agentNames';
-import { scoreTemplateFit, TEMPLATE_FIT_THRESHOLD } from './joseTemplates';
+import { asksToMake, scoreTemplateFit, TEMPLATE_FIT_THRESHOLD } from './joseTemplates';
 
 /** The output folder chosen in Settings, for a project started from Chat. */
 function savedOutputFolder(): { outputFolder?: string | null } {
@@ -96,7 +96,8 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   // shortcuts: the creative one would answer "videos aren't available" first.
   if (source === 'user' && !planFresh) {
     const best = scoreTemplateFit(text)[0];
-    if (best?.templateId === 'content_video' && best.score >= TEMPLATE_FIT_THRESHOLD) {
+    // Only a request to make something; naming YouTube in a question isn't one (agent phase 2).
+    if (best?.templateId === 'content_video' && best.score >= TEMPLATE_FIT_THRESHOLD && asksToMake(text)) {
       const { startContentProjectFromChat } = await import('../contentFactory/contentFromChat');
       const started = await startContentProjectFromChat(text, savedOutputFolder());
       return { ok: started.ok, reason: started.ok ? undefined : started.note, contentProjectId: started.projectId || null, plan: null, planNote: started.note };

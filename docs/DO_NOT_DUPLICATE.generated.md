@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 296 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 299 services and 181 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -122,6 +122,7 @@ Source-backed inventory: 296 services and 180 components. Human purpose descript
 | component | `src/components/ModeToggle.tsx` | `ModeToggle` |
 | component | `src/components/NotificationCenter.tsx` | `clearPersistedNotifications`, `loadPersistedNotifications`, `NotificationCenter` |
 | component | `src/components/NotionSyncPanel.tsx` | `default`, `NotionSyncPanel` |
+| component | `src/components/nova/NovaVerdictCard.tsx` | `NovaVerdictCard` |
 | component | `src/components/NovaHistoryChart.tsx` | `NovaHistoryChart` |
 | component | `src/components/OllamaOfflineBanner.tsx` | `OllamaOfflineBanner` |
 | component | `src/components/OllamaPreflightPanel.tsx` | `default`, `OllamaPreflightPanel` |
@@ -364,7 +365,7 @@ Source-backed inventory: 296 services and 180 components. Human purpose descript
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `listStepOutputs`, `priorOutputsForNeeds`, `setStepOutput`, `StepOutput` |
 | service | `src/services/jose/joseSummary.ts` | `closingSummary` |
 | service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
-| service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
+| service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `asksToMake`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `MAKING_WORDS`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
 | service | `src/services/jose/joseUserTemplates.ts` | `deleteUserTemplate`, `listUserTemplates`, `saveUserTemplate` |
 | service | `src/services/jose/movedTaskTypes.ts` | `dropRetiredSteps`, `MOVED_TASK_TYPES`, `moveToOwner`, `RETIRED_TASK_TYPES`, `toCurrentOwners` |
 | service | `src/services/jose/reviewStep.ts` | `ReviewStepResult`, `runReviewStep` |
@@ -400,7 +401,10 @@ Source-backed inventory: 296 services and 180 components. Human purpose descript
 | service | `src/services/nativeSelfDevelopmentAutostartService.ts` | `isNativeSelfDevelopmentAutostartRunning`, `startNativeSelfDevelopmentAutostart` |
 | service | `src/services/notificationService.ts` | `appendNotification`, `clearNotifications`, `getNotifications`, `sendNativeNotification` |
 | service | `src/services/notionSyncService.js` | `buildConflictRecord`, `buildCorrelationId`, `buildNotionPageProperties`, `buildNotionSyncMemoryRecord`, `buildNotionSyncRecordId`, `buildPullReconcilePlan`, `buildReconcilePlan`, `buildSyncMetadata`, `correlationKey`, `default`, `detectFieldConflict`, `extractCorrelationFromMemoryRecord`, `extractNotionPageIdFromUrl`, `fetchNotionApi`, `fetchNotionDatabasePages`, `fetchNotionPage`, `findLatestNotionSyncRecord`, `getNotionSyncStatus`, `ingestAlphonsoTaskFromNotionPage`, `isNotionConnectorReady`, `isNotionPullEnabled`, `isNotionSyncMemoryRecord`, `listNotionSyncRecords`, `normalizeAssignedAgent`, `normalizeNotionPhase`, `normalizePortfolio`, `normalizeRiskLevel`, `NOTION_AGENT_OPTIONS`, `NOTION_APPROVAL_STATES`, `NOTION_CONFLICT_STATES`, `NOTION_PORTFOLIO_OPTIONS`, `NOTION_PROPERTY_TYPES`, `NOTION_RISK_LEVELS`, `NOTION_SYNC_PUBLIC_API`, `NOTION_SYNC_SCOPE`, `NOTION_SYNC_SOURCES`, `NOTION_WORKFLOW_DATABASE_SCHEMA`, `NOTION_WORKFLOW_PHASES`, `notionSyncWeeklyReport`, `parseNotionPageId`, `persistNotionSyncRecord`, `pullNotionDatabase`, `pullNotionPage`, `pushAlphonsoTaskToNotion`, `recordNotionConflict` |
-| service | `src/services/novaAnalysisService.ts` | `buildNovaAnalysisPrompt`, `buildNovaFallbackAnalysis`, `classifyPriorityTier`, `computeOpportunityScores`, `getAlertThreshold`, `getOpportunityHistory`, `NovaOpportunitySchema`, `parseNovaAnalysisResponse`, `PriorityTier`, `runNovaAnalysis`, `saveOpportunityScore`, `setAlertThreshold` |
+| service | `src/services/nova/novaDaily.ts` | `askNovaWhatNext`, `NOVA_DAILY_LABEL` |
+| service | `src/services/nova/novaVerdict.ts` | `Level`, `missingOptions`, `namedOptions`, `NovaVerdict`, `novaVerdictPrompt`, `parseNovaVerdict`, `VerdictOption`, `verdictText`, `withNotJudged` |
+| service | `src/services/nova/novaVerdicts.ts` | `listVerdicts`, `NO_VERDICTS`, `SavedVerdict`, `saveVerdict`, `verdictForCommand`, `verdictsText` |
+| service | `src/services/novaAnalysisService.ts` | `NOVA_NO_VERDICT`, `NovaResult`, `runNovaAnalysis` |
 | service | `src/services/novaFeedbackService.ts` | `clearNovaScores`, `computeScoreTrend`, `getDecompositionHints`, `getNovaScore`, `listRecentScores`, `NOVA_SCORE_SCOPE`, `storeNovaScore` |
 | service | `src/services/offlineChatService.ts` | `clearOfflineMessages`, `getOfflineMessages`, `getPendingSyncMessages`, `markSynced`, `OfflineMessageInput`, `saveMessageOffline` |
 | service | `src/services/orchestrationGovernanceService.ts` | `GOVERNANCE_SCOPE`, `listGovernanceDecisions`, `recordGovernanceDecision`, `summarizeAgentWorkload` |

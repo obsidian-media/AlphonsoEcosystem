@@ -43,7 +43,13 @@ vi.mock('../lib/ollama', () => ({
   })),
   fetchOllamaModels: vi.fn(async () => ({ models: [] })),
   PREFERRED_MODEL: 'llama3.2:3b',
-  getConfiguredOllamaModel: () => 'llama3.2:3b'
+  getConfiguredOllamaModel: () => 'llama3.2:3b',
+  // Nova answers with a ranked verdict from her model (agent phase 2); the other agents
+  // keep the path they had in this test (no agent model call).
+  generateAgentLlmResponse: vi.fn(async (agent) => {
+    if (agent === 'nova') return { response: JSON.stringify({ doFirst: 'the launch', options: [{ name: 'The launch', rank: 1, why: 'ready', value: 'high', effort: 'low', risk: 'low' }] }) };
+    throw new Error('no agent model in this test');
+  })
 }));
 
 vi.mock('../services/sentinelGateService', () => ({

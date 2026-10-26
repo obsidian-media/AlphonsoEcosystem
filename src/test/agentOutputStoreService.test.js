@@ -174,11 +174,12 @@ describe('agentOutputStoreService', () => {
         { agent: 'nova', actionType: 'opportunity_analysis' }
       ];
       const plan = buildExecutionPlan(assignments);
-      expect(plan.waves).toHaveLength(1);
+      // Nova judges what Hector found, so she is in the next wave (agent phase 2).
+      expect(plan.waves).toHaveLength(2);
+      expect(plan.waves[1]).toEqual(['nova']);
       expect(plan.waves[0]).toContain('hector');
       expect(plan.waves[0]).toContain('maria');
       expect(plan.waves[0]).toContain('sentinel');
-      expect(plan.waves[0]).toContain('nova');
     });
 
     it('sequences miya after hector in separate waves', async () => {
@@ -262,7 +263,7 @@ describe('agentOutputStoreService', () => {
       expect(AGENT_DEPENDENCIES.hector).toEqual([]);
       expect(AGENT_DEPENDENCIES.maria).toEqual([]);
       expect(AGENT_DEPENDENCIES.sentinel).toEqual([]);
-      expect(AGENT_DEPENDENCIES.nova).toEqual([]);
+      expect(AGENT_DEPENDENCIES.nova).toEqual(['hector']);
       expect(AGENT_DEPENDENCIES.jose).toEqual([]);
       expect(AGENT_DEPENDENCIES.miya).toEqual(['hector']);
       expect(AGENT_DEPENDENCIES.alphonso).toEqual(['miya']);

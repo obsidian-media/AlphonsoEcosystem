@@ -97,7 +97,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_PRODUCT_DEV',
     name: 'Product Development',
     purpose: 'Build products.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR, AGENTS.MIYA, AGENTS.ALPHONSO, AGENTS.MARIA],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA, AGENTS.MIYA, AGENTS.ALPHONSO, AGENTS.MARIA],
     tasks: [
       'Research',
       'Requirements',
@@ -113,7 +113,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_REVENUE_GEN',
     name: 'Revenue Generation',
     purpose: 'Generate income.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR, AGENTS.MARCUS],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA, AGENTS.MARCUS],
     tasks: [
       'Lead Discovery',
       'Client Prospecting',
@@ -128,7 +128,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_CONSTRUCTION_OPS',
     name: 'Construction Operations',
     purpose: 'Run construction business.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR, AGENTS.ALPHONSO, AGENTS.MARIA],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA, AGENTS.ALPHONSO, AGENTS.MARIA],
     tasks: [
       'Estimating',
       'Scheduling',
@@ -144,7 +144,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_CONTENT_EMPIRE',
     name: 'Content Empire',
     purpose: 'Manage media channels.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR, AGENTS.MIYA, AGENTS.MARCUS],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA, AGENTS.MIYA, AGENTS.MARCUS],
     tasks: [
       'Content Planning',
       'Script Writing',
@@ -158,7 +158,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_OPPORTUNITY_RADAR',
     name: 'Opportunity Radar',
     purpose: 'Scan world continuously.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA],
     tasks: [
       'Trends',
       'Competitors',
@@ -186,7 +186,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_LEARNING_MASTERY',
     name: 'Learning & Mastery',
     purpose: 'Skill development.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA],
     tasks: [
       'Courses',
       'Certifications',
@@ -239,7 +239,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_YOUTUBE_CHANNEL',
     name: 'YouTube Channel Management',
     purpose: 'Grow YouTube channel.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR, AGENTS.MIYA, AGENTS.MARCUS],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA, AGENTS.MIYA, AGENTS.MARCUS],
     tasks: [
       'Research',
       'Scripts',
@@ -278,7 +278,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_CLIENT_ACQUISITION',
     name: 'Client Acquisition',
     purpose: 'Acquire new clients.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR, AGENTS.MARCUS],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA, AGENTS.MARCUS],
     tasks: [
       'Lead Discovery',
       'Outreach',
@@ -339,7 +339,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_STARTUP_LAUNCH',
     name: 'Startup Launch Engine',
     purpose: 'Launch new ventures.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR, AGENTS.MIYA, AGENTS.ALPHONSO, AGENTS.MARCUS],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA, AGENTS.MIYA, AGENTS.ALPHONSO, AGENTS.MARCUS],
     tasks: [
       'Validation',
       'MVP',
@@ -352,7 +352,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_INVESTMENT_INTEL',
     name: 'Investment Intelligence',
     purpose: 'Evaluate investments.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA],
     tasks: [
       'Market Analysis',
       'Risk Analysis',
@@ -364,7 +364,7 @@ export const WORKFLOWS: Record<string, WorkflowDefinition> = {
     id: 'WF_REAL_ESTATE_OPS',
     name: 'Real Estate Operations',
     purpose: 'Run real estate.',
-    chain: [AGENTS.JOSE, AGENTS.NOVA, AGENTS.HECTOR, AGENTS.ALPHONSO],
+    chain: [AGENTS.JOSE, AGENTS.HECTOR, AGENTS.NOVA, AGENTS.ALPHONSO],
     tasks: [
       'Property Research',
       'Deal Analysis',

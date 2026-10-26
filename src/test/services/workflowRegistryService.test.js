@@ -54,3 +54,11 @@ describe('workflowRegistryService', () => {
     expect(WORKFLOW_EXECUTION_SCOPE).toBe('workflow_execution_v1');
   });
 });
+
+describe('Nova judges after Hector (agent phase 2)', () => {
+  it('every chain with Hector has Nova after him', () => {
+    for (const w of listWorkflows()) {
+      if (w.chain.includes('hector') && w.chain.includes('nova')) expect(w.chain.indexOf('nova'), w.id).toBeGreaterThan(w.chain.indexOf('hector'));
+    }
+  });
+});

@@ -1749,28 +1749,8 @@ export function SettingsView({
       </section>
 
       <section className="space-y-4">
-        <SectionHeader icon={TrendingUp} label="Nova Opportunity History" />
+        <SectionHeader icon={TrendingUp} label="Nova's last verdicts" />
         <NovaHistoryChart />
-      </section>
-      <section className="space-y-4">
-        <SectionHeader icon={TrendingUp} label="Nova Insight Threshold" />
-        <div className="p-4 bg-(--surface-2) rounded-2xl space-y-3">
-          <div>
-            <div className="text-sm font-semibold text-(--text-1)">Insight Score Threshold</div>
-            <div className="text-xs text-(--text-3) mt-0.5">Minimum Nova score (0–100) to show an insight card after pipeline completion. Default: 65.</div>
-          </div>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            defaultValue={(() => { try { return Number(localStorage.getItem('alphonso_nova_threshold') || '65'); } catch { return 65; } })()}
-            onBlur={(e) => {
-              const val = Math.min(100, Math.max(0, Number(e.target.value) || 65));
-              try { localStorage.setItem('alphonso_nova_threshold', String(val)); } catch { /* ignore */ }
-            }}
-            className="w-24 bg-(--surface-2) rounded-xl px-4 py-2.5 text-sm font-mono text-(--text-1) focus:outline-hidden focus:ring-1 focus:ring-(--accent-border)"
-          />
-        </div>
       </section>
     </div>
   )}

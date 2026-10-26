@@ -57,7 +57,7 @@ import { PipelineResultCard } from './PipelineResultCard';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShortcuts';
 import { startProactiveWatcher } from '../services/proactiveAgentService';
-import { runNovaAnalysis, computeOpportunityScores, type NovaOpportunitySchema } from '../services/novaAnalysisService';
+import { NovaVerdictCard } from './nova/NovaVerdictCard';
 import { saveMessageOffline } from '../services/offlineChatService';
 import { useJarvisVoice } from '../hooks/useJarvisVoice';
 
@@ -324,7 +324,8 @@ export function ChatView({
   const [streamingElapsed, setStreamingElapsed] = useState(0);
   const [proactiveSuggestion, setProactiveSuggestion] = useState(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
-  const [novaInsight, setNovaInsight] = useState<NovaOpportunitySchema | null>(null);
+  // The request whose Nova verdict the card shows (agent phase 2).
+  const [novaCommandId, setNovaCommandId] = useState<string | null>(null);
   const jarvis = useJarvisVoice();
   const [ollamaBannerDismissed, setOllamaBannerDismissed] = useState(false);
   const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
@@ -874,17 +875,8 @@ export function ChatView({
       );
       onTaskComplete();
 
-      // Fire Nova analysis in background — non-blocking
-      try {
-        const novaScores = computeOpportunityScores(cleanInput, {});
-        if (novaScores.valueScore > 60) {
-          let novaThreshold = 65;
-          try { novaThreshold = Number(localStorage.getItem('alphonso_nova_threshold') || '65') || 65; } catch { /* ignore */ }
-          runNovaAnalysis(cleanInput, null, {}, { skipOllama: true }).then(novaResult => {
-            if (novaResult?.schema?.valueScore > novaThreshold) setNovaInsight(novaResult.schema);
-          }).catch(() => {});
-        }
-      } catch { /* non-critical */ }
+      // Nova's verdict for this request, when it had a Nova step (agent phase 2): no extra call.
+      setNovaCommandId(result?.commandId || null);
     } catch (error) {
       setMessages((current) => [...current, {
         id: nextMsgId(),
@@ -902,7 +894,7 @@ export function ChatView({
   const handleSend = async (overrideInput?: string) => {
     const effectiveInput = typeof overrideInput === 'string' ? overrideInput : inputValue;
     if (!effectiveInput.trim() || isGenerating || decidingRef.current) return;
-    setNovaInsight(null);
+    setNovaCommandId(null);
     const filesSuffix = attachedFiles.length
       ? `\n\n[Attached files: ${attachedFiles.map((f) => f.name).join(', ')}]`
       : '';
@@ -1668,18 +1660,8 @@ export function ChatView({
                 />
               </div>
             )}
-            {isLastAssistantMessage && novaInsight && !isGenerating && (
-              <div className="w-full mt-2 rounded-2xl bg-(--surface-2) p-4 space-y-2" style={{ boxShadow: '0 0 20px var(--agent-nova-glow)' }}>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-(--accent) shrink-0" />
-                    <span className="text-xs font-bold text-(--accent) uppercase tracking-widest">Nova Insight</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(novaInsight.valueScore as number) >= 80 ? 'bg-(--success-dim) border-(--success-border) text-(--success)' : (novaInsight.valueScore as number) >= 60 ? 'bg-(--warning-dim) border-(--warning-border) text-(--warning)' : 'bg-(--surface-3) border-(--border) text-(--text-2)'}`}>Score {novaInsight.valueScore as number}/100</span>
-                  </div>
-                  <button onClick={() => setNovaInsight(null)} className="text-(--text-4) hover:text-(--text-2) rounded-sm"><X className="w-3.5 h-3.5" /></button>
-                </div>
-                {novaInsight.recommendation && <p className="text-xs text-(--text-1) leading-relaxed">{novaInsight.recommendation as string}</p>}
-              </div>
+            {isLastAssistantMessage && novaCommandId && !isGenerating && (
+              <NovaVerdictCard commandId={novaCommandId} onDismiss={() => setNovaCommandId(null)} />
             )}
           </div>
           </motion.div>
