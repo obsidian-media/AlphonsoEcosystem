@@ -33,7 +33,7 @@ export const SCHEDULE_PRESETS: SchedulePreset[] = [
   { id: 'sentinel_daily_summary', cron: '0 8 * * *', label: 'Sentinel Daily Threat Summary', handler: 'sentinel_summary', description: "Every day at 8:00, Sentinel checks the last week's work for risky actions." },
   { id: 'echo_nightly_consolidation', cron: '0 2 * * *', label: 'Echo Nightly Memory Consolidation', handler: 'echo_consolidate', description: 'Every night at 2:00, Echo summarises memories older than a week.' },
   { id: 'hector_morning_briefing', cron: '0 7 * * *', label: 'Hector Morning Research Briefing', handler: 'hector_brief', description: 'Every day at 7:00, Hector collects the top headlines from his news feeds.' },
-  { id: 'maria_weekly_audit', cron: '0 9 * * 1', label: 'Maria Weekly Governance Audit', handler: 'maria_audit', description: "Every Monday at 9:00, Maria reviews the past week's agent actions." },
+  { id: 'maria_weekly_audit', cron: '0 9 * * 1', label: "Maria: the week's risks", handler: 'maria_audit', description: "Every Monday at 9:00, Maria reviews the week's risks: what went out, what failed and what is still waiting." },
 ];
 
 export type ScheduleRunState = 'done' | 'waiting_approval' | 'failed' | 'skipped';
@@ -143,12 +143,6 @@ async function recordActivity(agent: string, action: string, detail: string): Pr
   } catch { /* activity log unavailable */ }
 }
 
-function toast(type: string, message: string): void {
-  try {
-    window.dispatchEvent(new CustomEvent('alphonso:toast', { detail: { type, message } }));
-  } catch { /* no window */ }
-}
-
 const NOTHING_RECENT = 'No agent activity in the last 7 days, so there was nothing to review.';
 
 async function runBuiltInJob(handler: string): Promise<Omit<ScheduleRunResult, 'atMs'>> {
@@ -192,13 +186,11 @@ async function runBuiltInJob(handler: string): Promise<Omit<ScheduleRunResult, '
   if (handler === 'maria_audit') {
     const work = await recentWorkText();
     if (!work) return { state: 'skipped', summary: NOTHING_RECENT };
-    const { runMariaGovernanceAudit } = await import('./mariaAuditService');
-    const { getConfiguredOllamaEndpoint } = await import('../lib/ollama');
-    const result = await runMariaGovernanceAudit(`Weekly governance audit of the last week's agent actions:\n${work}`, {} as never, { endpoint: getConfiguredOllamaEndpoint() });
-    const risk = String(result.schema?.riskLevel || '').toLowerCase();
-    if (risk === 'high' || risk === 'critical') toast('warning', `Maria's weekly audit found ${risk} risk. Review recommended.`);
+    // Agent phase 3: Maria is asked, as a request, about the week's risks.
+    const { askMariaWeeklyRisks } = await import('./maria/mariaWeekly');
+    const result = await askMariaWeeklyRisks(work);
     await recordActivity('maria', 'weekly_audit', result.summary);
-    return { state: 'done', summary: result.summary };
+    return result;
   }
   return { state: 'failed', summary: `Unknown built-in job "${handler}".` };
 }

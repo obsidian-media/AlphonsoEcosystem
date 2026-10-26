@@ -160,19 +160,23 @@ function sameShape(steps: PlanStep[], template: JoseTemplate): boolean {
 function rulesPlan(text: string): PlanStep[] {
   const assignments = decomposeJoseCommand(parseJoseCommand(text));
   const seen: Record<string, number> = {};
-  const steps = assignments.map((a) => {
+  // The simple plan's own links are kept (agent phase 3): until then this dropped every
+  // step's stepId, needs and reviewOf, so the writing didn't read the research and the
+  // check wasn't a review of the writing. The fixed order fills in only missing needs.
+  const steps = assignments.map((a: any) => {
     seen[a.agent] = (seen[a.agent] || 0) + 1;
     return {
-      stepId: seen[a.agent] === 1 ? a.agent : `${a.agent}-${seen[a.agent]}`,
+      stepId: a.stepId || (seen[a.agent] === 1 ? a.agent : `${a.agent}-${seen[a.agent]}`),
       agent: a.agent,
       actionType: a.actionType,
-      instruction: a.title,
+      instruction: a.instruction || a.title,
       effects: inferEffects(a.actionType),
-      needs: [] as string[],
+      needs: Array.isArray(a.needs) ? a.needs as string[] : null,
+      ...(a.reviewOf ? { reviewOf: a.reviewOf as string } : {}),
     };
   });
-  const needs = legacyNeeds(steps);
-  return steps.map((s) => ({ ...s, needs: needs[s.stepId] || [] }));
+  const order = legacyNeeds(steps.map((s) => ({ agent: s.agent, stepId: s.stepId })));
+  return steps.map((s) => ({ ...s, needs: s.needs ?? order[s.stepId] ?? [] })) as PlanStep[];
 }
 
 function fallback(text: string, template: JoseTemplate | null, note: string): JosePlan {

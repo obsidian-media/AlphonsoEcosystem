@@ -50,6 +50,7 @@ import { listInstalledModels, pickLargerModel, usesOwnToolCalls } from './jose/j
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
+import { holdStepsAfter, mariaHoldFor } from './maria/mariaHolds';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
 import { runVisualWorkflow } from './workflowExecutionService';
@@ -891,16 +892,9 @@ async function executeMiyaAssignment(commandText: any, assignment: any, options:
       };
     }
   }
-  const hectorContext = options.priorOutputs?.hector;
-  let enrichedOptions = options;
-  if (hectorContext) {
-    const researchSnippet = [
-      hectorContext.summary,
-      hectorContext.sources?.length ? `Sources: ${hectorContext.sources.join(', ')}` : '',
-      hectorContext.artifacts?.length ? `Research artifacts: ${hectorContext.artifacts.map((a) => a.type || a.reportId || 'report').join(', ')}` : ''
-    ].filter(Boolean).join('\n');
-    enrichedOptions = { ...options, retrievedContext: { snippet: researchSnippet, items: [] } };
-  }
+  // The steps she is linked to (Hector's research, Nova's verdict), agent phase 3.
+  const researchSnippet = miyaResearchSnippet(options.stepInput, options.priorOutputs);
+  const enrichedOptions = researchSnippet ? { ...options, retrievedContext: { snippet: researchSnippet, items: [] } } : options;
   const creativePackage = await buildMiyaPackage(commandText, assignment, enrichedOptions);
   const shouldGenerateImages = creativePackage.prompts?.length > 0
     && !options.draftDisabled
@@ -991,6 +985,38 @@ async function executeHectorAssignment(commandText: any, assignment: any, option
  * Alphonso's work (owner, 2026-10-24). Until then Jose answered these himself.
  * If the model can't answer, it says so; nothing else is produced.
  */
+/**
+ * Alphonso's answering and everyday-writing prompt (agent phase 3, owner 2026-10-25): every
+ * step it is linked to is in it, not only what his skill's tool happened to read.
+ */
+export function assistantPrompt(commandText: string, stepInput: any): string {
+  return [
+    CHAT_ASSISTANT_PROMPT,
+    skillSection(stepInput),
+    stepInput ? stepInputText({ ...stepInput, skill: null }) : '',
+    "Answer the request below, or do the everyday writing it asks for, in text. Use the earlier steps' work when there is some.",
+    `Request: ${String(commandText || '').slice(0, 4000)}`
+  ].filter(Boolean).join('\n\n');
+}
+
+/**
+ * The research Miya's package is built from (agent phase 3): the steps she is linked to,
+ * else, for a step without a step input, Hector's latest output as before.
+ */
+export function miyaResearchSnippet(stepInput: any, priorOutputs: any): string {
+  const needs = (stepInput?.needs || []).filter((n: any) => String(n?.text || '').trim());
+  if (needs.length) {
+    return needs.map((n: any) => [`From ${agentName(n.agent)}'s step (${n.stepId}):\n${n.text}`, n.sources?.length ? `Sources: ${n.sources.join(', ')}` : ''].filter(Boolean).join('\n')).join('\n\n');
+  }
+  const hectorContext = priorOutputs?.hector;
+  if (!hectorContext) return '';
+  return [
+    hectorContext.summary,
+    hectorContext.sources?.length ? `Sources: ${hectorContext.sources.join(', ')}` : '',
+    hectorContext.artifacts?.length ? `Research artifacts: ${hectorContext.artifacts.map((a: any) => a.type || a.reportId || 'report').join(', ')}` : ''
+  ].filter(Boolean).join('\n');
+}
+
 async function executeAssistantAssignment(commandText: any, assignment: any, options: any = {}) {
   const base = {
     resultUrl: null,
@@ -998,15 +1024,9 @@ async function executeAssistantAssignment(commandText: any, assignment: any, opt
     contractAction: assignment?.actionType || 'assistant_answer'
   };
   try {
-    const prompt = [
-      CHAT_ASSISTANT_PROMPT,
-      skillSection(options.stepInput),
-      'Answer the request below, or do the everyday writing it asks for, in text.',
-      `Request: ${String(commandText || '').slice(0, 4000)}`
-    ].filter(Boolean).join('\n\n');
+    const prompt = assistantPrompt(commandText, options.stepInput || null);
+    // No model or address: the model Jose picked for this step (agent phase 3).
     const reply = await generateAgentLlmResponse('alphonso', {
-      endpoint: options.endpoint || getConfiguredOllamaEndpoint(),
-      model: options.model || getConfiguredOllamaModel(),
       prompt,
       sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
     }) as { response?: string } | null;
@@ -1336,6 +1356,10 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   // A picture asked for in words: Miya makes it with ComfyUI (agent roles Part A).
   if (assignment?.agent === AGENTS.MIYA && assignment?.actionType === 'creative_image') {
     return executeImageStep(requestText, assignment);
+  }
+  // Maria reviews with her own two reviews, the work or the plan (agent phase 3).
+  if (assignment?.agent === AGENTS.MARIA) {
+    return executeMariaAssignment(commandText, assignment, options);
   }
   // A review judges the work it reviews (agent roles Part A).
   if (assignment?.reviewOf) {
@@ -2081,6 +2105,13 @@ export async function runJoseCommandExecutionPipeline({
       // By agent (that agent's latest step, as before) and by step.
       setAgentOutput(command.id, assignment.agent, stepOutput);
       setStepOutput(command.id, assignment.stepId, assignment.agent, stepOutput);
+      // Maria asked for your approval, or a "fix" is left after the review rounds: the steps
+      // after hers wait for you, with her reasons (agent phase 3).
+      const mariaHold = mariaHoldFor(assignment, result, JOSE_LIMITS.maxFixRounds);
+      if (mariaHold) {
+        const held = holdStepsAfter(planAssignments, assignment.stepId, mariaHold);
+        if (held.length && joseRequestId) appendRequestNote(joseRequestId, mariaHold);
+      }
       // A content-factory step is saved to its Miya Studio project as it finishes (phase 6b),
       // whichever way the request is run or carried on.
       const contentData = assignment.contentStep

@@ -35,10 +35,10 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 
 ### Maria — Governance & Risk Lead
 **Role:** Governance, risk and quality reviews
-**Runtime:** `src/services/mariaAuditService.ts` — Ollama-powered with deterministic fallback
-**Can do:** Run governance audits, score risk (low/medium/high/critical), flag policy violations, emit compliance notes; review scripts and run the quality gate in Miya Studio; Boardroom's Conclude. She says when her verdict came from the rule-based check because the model's reply couldn't be read
+**Runtime:** `src/services/mariaAuditService.ts` (dispatcher) and `src/services/maria/` — her own model only, no rule-based fallback (agent phase 3)
+**Can do:** Review work (pass or fix, quoting the words to change; unbacked claims are a fix; Alphonso's files and results with file and line), review a plan (risk and why, the rules that apply, what needs your approval, an offer to have Marcus prepare it), score a video's pieces against what is known about the brand's references and run the quality gate in Miya Studio, Boardroom's Conclude, the weekly review of the week's risks. When she asks for approval, or work still needs changes after two rounds, the steps after hers wait for you. Security matters go to Sentinel
 **Cannot:** Perform destructive execution
-**Schema:** `riskLevel`, `approvalRequired`, `policyFindings[]`, `complianceNotes[]`, `summary`
+**Schema:** work review `kind: 'work'`, `verdict`, `findings[]`, `review`; plan review `kind: 'plan'`, `risk`, `why`, `rules[]`, `points[]`, `needsApproval`, `approvalReasons[]`, `offer`; both keep `riskLevel`, `approvalRequired`, `summary`
 **When to use:** Jose plans her review steps; a review that finds problems sends the work back (at most 2 rounds).
 **Skills (4, `src/skills/maria/`):** Claim check, Governance review, Quality against the references, Quality review.
 

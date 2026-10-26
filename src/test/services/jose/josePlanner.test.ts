@@ -114,6 +114,20 @@ describe('the rules check every plan, with one fix and then a fallback', () => {
     expect(plan.steps.map((s) => s.agent)).toEqual(decomposeJoseCommand(parseJoseCommand(text)).map((a) => a.agent));
   });
 
+  // Agent phase 3: the fallback used to drop each step's links, so the writing
+  // didn't read the research and the check wasn't a review of the writing.
+  it('the fallback keeps the links', async () => {
+    const text = 'Research three facts about honeybees, write a short post about them, and have the post checked for accuracy';
+    llm.mockResolvedValueOnce(answer(cycle)).mockResolvedValueOnce(answer(cycle));
+    const plan = await planJoseRequest(text);
+    expect(plan.source).toBe('rules');
+    const byId = Object.fromEntries(plan.steps.map((s) => [s.stepId, s]));
+    expect(Object.keys(byId)).toEqual(['hector', 'write', 'check']);
+    expect(byId.write.needs).toEqual(['hector']);
+    expect(byId.check.needs).toEqual(['write']);
+    expect(byId.check.reviewOf).toBe('write');
+  });
+
   it('falls back to a fitting template unchanged', async () => {
     llm.mockResolvedValueOnce(answer(cycle)).mockResolvedValueOnce(answer(cycle));
     const plan = await planJoseRequest(VIDEO);

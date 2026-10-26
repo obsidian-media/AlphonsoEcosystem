@@ -5,6 +5,8 @@
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { JOSE_LIMITS, type PlanStep } from './stepGraph';
 import type { PlanChange } from './joseAdapt';
+import { getProject } from '../contentFactory/contentProjectService';
+import { getBrand } from '../contentFactory/contentBrandService';
 
 export interface ReviewJudgement {
   verdict: 'pass' | 'fix';
@@ -12,7 +14,35 @@ export interface ReviewJudgement {
   note?: string;
 }
 
-const UNREADABLE = "Couldn't read the review's verdict; carried on.";
+// An unreadable review is never a pass (agent phase 3): the work goes back, and after the
+// rounds Jose asks you.
+const UNREADABLE_FINDING = 'The review could not be read: check it on the board.';
+
+/**
+ * A content-factory quality review's verdict from Maria's own scores (agent phase 3): fix when
+ * a piece is under the brand's threshold or she listed an honesty problem. Null when the review
+ * isn't one (another agent's, or no scores).
+ */
+function contentQualityVerdict(review: PlanStep, output: any): ReviewJudgement | null {
+  if (review.actionType !== 'audit_content_quality') return null;
+  const data = (output?.artifacts || []).find((a: any) => a?.type === 'content_step_output')?.data;
+  if (!data || !Array.isArray(data.pieces)) return null;
+  const projectId = (review as { contentStep?: { projectId?: string } }).contentStep?.projectId;
+  const project = projectId ? getProject(projectId) : null;
+  const threshold = Number((project ? getBrand(project.brandId) : null)?.qualityThreshold) || 7;
+  const findings: string[] = [];
+  for (const piece of data.pieces) {
+    const score = Number(piece?.score);
+    if (Number.isFinite(score) && score < threshold) {
+      const weak = (Array.isArray(piece.weakPoints) ? piece.weakPoints : []).filter(Boolean).join(' ');
+      findings.push(`${piece.pieceId || 'piece'}: ${score}/10 (under ${threshold})${weak ? `: ${weak}` : ''}`);
+    }
+  }
+  for (const issue of Array.isArray(data.honestyIssues) ? data.honestyIssues : []) {
+    if (typeof issue === 'string' && issue.trim()) findings.push(`Honesty: ${issue.trim()}`);
+  }
+  return findings.length ? { verdict: 'fix', findings } : { verdict: 'pass', findings: [] };
+}
 
 function outputText(output: any): string {
   if (!output) return '';
@@ -23,7 +53,7 @@ function outputText(output: any): string {
   return parts.filter(Boolean).join('\n').slice(0, 3000);
 }
 
-/** Ask the reviewer's own model whether its review asked for changes. Unreadable → pass, with a note. */
+/** The review's verdict: its own, a content review's from its scores, else its model is asked. Unreadable → fix. */
 export async function judgeReview(review: PlanStep, output: any): Promise<ReviewJudgement> {
   // A review step gives its verdict in its own answer (agent roles Part A); ask only when it didn't.
   const saved = output?.schema?.verdict;
@@ -32,6 +62,8 @@ export async function judgeReview(review: PlanStep, output: any): Promise<Review
     const findings = Array.isArray(output.schema.findings) ? output.schema.findings.filter((f: unknown) => typeof f === 'string' && f.trim()) : [];
     return { verdict: 'fix', findings: findings.length ? findings : ['The review asked for changes.'] };
   }
+  const fromScores = contentQualityVerdict(review, output);
+  if (fromScores) return fromScores;
   const prompt = [
     'You wrote the review below.',
     `Your review:\n${outputText(output) || '(empty)'}`,
@@ -49,8 +81,8 @@ export async function judgeReview(review: PlanStep, output: any): Promise<Review
       const findings = Array.isArray(parsed.findings) ? parsed.findings.filter((f: unknown) => typeof f === 'string' && f.trim()).map((f: string) => f.trim()) : [];
       return { verdict: 'fix', findings: findings.length ? findings : ['The review asked for changes.'] };
     }
-  } catch { /* unreadable: carry on */ }
-  return { verdict: 'pass', findings: [], note: UNREADABLE };
+  } catch { /* unreadable: not a pass */ }
+  return { verdict: 'fix', findings: [UNREADABLE_FINDING] };
 }
 
 const baseReviewId = (id: string) => id.replace(/-r\d+$/, '');

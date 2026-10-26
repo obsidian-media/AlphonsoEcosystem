@@ -104,6 +104,23 @@ describe('runSkillTool', () => {
       .toEqual({ ok: true, text: '[1] EU report — https://ec.europa.eu/bees (read)\nAbout 17 million colonies.' });
   });
 
+  // Agent phase 3: reviewing a post, Maria reads the sources the post was built from.
+  it("read_sources in a review reads the reviewed work's sources", async () => {
+    const { setStepOutput } = await import('../../../services/jose/joseStepOutputs');
+    const { createJoseRequest } = await import('../../../services/jose/joseRequestStore');
+    createJoseRequest({ commandId: 'c9', source: 'user', text: 't', kind: 'normal', steps: [
+      { stepId: 'hector', agent: 'hector', actionType: 'research', effects: ['read'], needs: [] },
+      { stepId: 'write', agent: 'alphonso', actionType: 'assistant_write', effects: ['read'], needs: ['hector'] },
+      { stepId: 'check', agent: 'maria', actionType: 'audit_quality', effects: ['read'], needs: ['write'], reviewOf: 'write' },
+    ] } as never);
+    setStepOutput('c9', 'hector', 'hector', { summary: 'Answer', schema: { sources: [{ n: 1, title: 'Bee facts', url: 'https://bees.example/facts', label: 'read', excerpt: 'Wings beat 11,400 times a minute.' }] } } as never);
+    setStepOutput('c9', 'write', 'alphonso', { summary: 'The post' } as never);
+    const review = { stepId: 'write', agent: 'alphonso', text: 'The post', files: [], sources: [], cut: 0, main: 'The post' };
+    const reviewing = { ...input, needs: [review], review };
+    expect(await runSkillTool('read_sources', {}, { agent: 'maria', stepInput: reviewing, commandId: 'c9' }))
+      .toEqual({ ok: true, text: '[1] Bee facts — https://bees.example/facts (read)\nWings beat 11,400 times a minute.' });
+  });
+
   it('read_source_page reads a saved page by number', async () => {
     const { setStepOutput } = await import('../../../services/jose/joseStepOutputs');
     setStepOutput('c2', 'research', 'hector', { summary: 'Answer', artifacts: [{ type: 'hector_report', reportId: 'hector-report-2-b' }] } as never);

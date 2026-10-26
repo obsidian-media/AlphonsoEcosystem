@@ -52,6 +52,8 @@ function safeHelper(helper: Helper, askingAgent: string): Helper | null {
 /** The rules' choice when Jose's model gives no usable answer. */
 function ruleHelper(request: string): Helper {
   const text = request.toLowerCase();
+  // Security is Sentinel's (agent phase 3: Maria hands a security matter to him).
+  if (/\b(security|secret|password|token|credential|unsafe|link|permission)/.test(text)) return { agent: 'sentinel', actionType: 'security_review' };
   if (/\b(accura|correct|check|verify|quality|review|honest)/.test(text)) return { agent: 'maria', actionType: 'audit_quality' };
   // Hector finds facts (markets, competitors and trends too); Nova judges them (2026-10-24).
   if (/\b(when|timing|score|priorit|worth|judge|value)/.test(text)) return { agent: 'nova', actionType: 'analysis_findings' };

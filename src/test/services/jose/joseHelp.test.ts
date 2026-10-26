@@ -42,6 +42,14 @@ describe('chooseHelper', () => {
     expect(await chooseHelper('is this accurate?', 'miya')).toEqual({ agent: 'maria', actionType: 'audit_quality' });
   });
 
+  // Agent phase 3: Maria hands a security matter to Sentinel.
+  it('a security help request goes to Sentinel', async () => {
+    llm.mockRejectedValueOnce(new Error('down'));
+    expect(await chooseHelper('security check of the link in the post', 'maria')).toEqual({ agent: 'sentinel', actionType: 'security_review' });
+    llm.mockRejectedValueOnce(new Error('down'));
+    expect(await chooseHelper('a password appears in the draft', 'maria')).toEqual({ agent: 'sentinel', actionType: 'security_review' });
+  });
+
   it('never lets a help request publish, spend, delete or run code', async () => {
     llm.mockResolvedValueOnce(says({ agent: 'marcus', taskType: 'distribution_execution' }));
     expect(await chooseHelper('publish it to YouTube now', 'miya')).toBeNull();

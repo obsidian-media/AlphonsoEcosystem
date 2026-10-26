@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 import { scoreTemplateFit, TEMPLATE_FIT_THRESHOLD, asksToMake } from '../../../services/jose/joseTemplates';
+import { isCodeRequest } from '../../../services/jose/taskTypeMeanings';
 import { NEEDS_OUTPUT_FOLDER } from '../../../services/contentFactory/contentFromChat';
 
 type Part = [agent: string, actionType: string];
@@ -119,5 +120,36 @@ describe('publishing needs a send word; turning into counts as making (agent pha
   it('turn … into is a request to make something', () => {
     expect(asksToMake('Turn my blog post into a YouTube video script')).toBe(true);
     expect(asksToMake('What is a good return on a YouTube channel?')).toBe(false);
+  });
+});
+
+describe('a write-up and Miya wait for Nova (agent phase 3)', () => {
+  it('a write-up waits for Nova when she is in the plan', () => {
+    const steps = decomposeJoseCommand(parseJoseCommand('Research coffee subscriptions, tell me which opportunity is best, and write a short summary'));
+    const write = steps.find((s) => s.actionType === 'assistant_write');
+    expect(steps.some((s) => s.agent === 'nova')).toBe(true);
+    expect(write?.needs).toEqual(expect.arrayContaining(['hector', 'nova']));
+  });
+
+  it("Miya's package waits for Hector and Nova when they are in the plan", () => {
+    const steps = decomposeJoseCommand(parseJoseCommand('Research the coffee market, tell me which angle is the best opportunity, and design a thumbnail for it'));
+    const miya = steps.find((s) => s.agent === 'miya');
+    expect(miya?.needs).toEqual(['hector', 'nova']);
+  });
+});
+
+describe('an audit of a plan is a review (agent phase 3)', () => {
+  const cases: [string, string[]][] = [
+    ['Audit this plan for compliance risks: tomorrow we email all 500 customers a 30 percent discount code and post it on Instagram.', ['maria:governance_audit']],
+    ['Review our campaign idea: a referral code posted on TikTok', ['maria:governance_audit']],
+    ['Research the market and review our launch plan', ['hector:research', 'maria:governance_audit']],
+  ];
+  for (const [text, expected] of cases) {
+    it(text, () => expect(sorted(partsOf(text))).toEqual(sorted(expected.map((p) => p.split(':') as Part))));
+  }
+  it('sending is still sending', () => expect(sorted(partsOf('Post this to Instagram'))).toContain('marcus:distribution_readiness'));
+  it('"discount code" is not code', () => {
+    expect(isCodeRequest('a 30 percent discount code')).toBe(false);
+    expect(isCodeRequest('fix the code in my app')).toBe(true);
   });
 });

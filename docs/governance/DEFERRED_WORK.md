@@ -7,6 +7,9 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-25] **Agent phase 3 (Maria): the live desktop check is owed** — `e2e-desktop/specs/maria.e2e.mjs` is written but not run: since 2026-10-25 19:45 Windows Code Integrity blocks rustc from loading the build's proc-macro DLLs (events 3033/3077), so the app can't be built on the dev machine, and it must not be worked around. Nova's `nova.e2e.mjs` live check is owed for the same reason. Resume: once `npm run tauri build -- --debug --no-bundle` works, run `maria.e2e.mjs`, `nova.e2e.mjs`, `hector.e2e.mjs`, `agent-roles.e2e.mjs`, and read Maria's actual reviews — OPEN
+- [2026-10-25] **`src/services/mariaWeeklyReportService.ts` has no caller** — the Monday schedule "Maria: the week's risks" replaced it (agent phase 3). Removing or archiving a file needs the owner (R14). Resume: ask whether to move it and its test to `archive/MIGHTBEUSEDLATER/` — OPEN
+
 - [2026-10-23] **Miya content factory phases 2, 3 and 4: not started; do them after the Jose redesign (owner, 2026-10-23).** Phase 1 shipped in PR #332 (design `docs/superpowers/specs/2026-10-22-miya-content-factory-design.md`, plan `docs/superpowers/plans/2026-10-22-miya-content-factory-phase1.md`). Order agreed: Jose redesign first, so the remaining phases are built on it instead of on the one-request-per-step workaround.
   - **Phase 2, video, audio and the finished file:**
     - scene pictures become clips through Runway or ComfyUI (chosen per project; Runway is paid and asks first), on a stock B-roll base (Pexels, Pixabay, Coverr);

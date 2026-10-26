@@ -329,29 +329,38 @@ export interface ParsedJoseCommand {
   connectorCost: ConnectorCostClassification;
 }
 
+/** A code that is an offer, not program code (agent phase 3). */
+const NOT_CODE = /\b(?:discount|promo|promotional|coupon|voucher|referral|gift)\s+codes?\b/gi;
+/** Asking to audit, review, assess or check a plan, an idea, a campaign or a proposal (agent phase 3). */
+const PLAN_REVIEW = /\b(?:audit|review|assess|evaluate|check)\b[^.?!:]*\b(?:plan|plans|idea|ideas|campaign|proposal|strategy)\b/i;
+
 export function parseJoseCommand(commandText: string): ParsedJoseCommand {
   const clean = String(commandText || '').trim();
   const lower = clean.toLowerCase();
   const connectorCost = classifyCommandCost(lower);
-  const asked = withoutNegations(lower);
-  const localExecution = matchesAny(asked, ['build', 'runtime', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package', 'function', 'code', 'bug', 'repo', 'compile', 'refactor', 'npm']);
-  const creative = matchesAny(asked, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative', 'image', 'generate image', 'generate an image', 'picture', 'visual', 'miya', 'maia']);
+  // A discount, promo or referral code is not code (agent phase 3: "a 30 percent discount code").
+  const asked = withoutNegations(lower).replace(NOT_CODE, ' offer ');
+  // Auditing or reviewing a plan is Maria's review, not doing what the plan says (agent
+  // phase 3: "audit this plan … and post it on Instagram" also planned a send and a code step).
+  const planReview = PLAN_REVIEW.test(asked);
+  const localExecution = !planReview && matchesAny(asked, ['build', 'runtime', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package', 'function', 'code', 'bug', 'repo', 'compile', 'refactor', 'npm']);
+  const creative = !planReview && matchesAny(asked, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative', 'image', 'generate image', 'generate an image', 'picture', 'visual', 'miya', 'maia']);
   const intents: JoseCommandParserIntents = {
     research: matchesAny(asked, ['research', 'lookup', 'docs', 'pricing', 'market', 'source', 'citation', 'latest']),
     creative,
     localExecution,
     // Everyday writing (agent phase 1): a writing verb, when it isn't creative or code work.
-    writing: !creative && !localExecution && matchesAny(asked, ['write', 'draft', 'compose', 'rewrite', 'summarise', 'summarize']),
+    writing: !planReview && !creative && !localExecution && matchesAny(asked, ['write', 'draft', 'compose', 'rewrite', 'summarise', 'summarize']),
     // A check of the writing for accuracy (agent phase 1).
-    check: matchesAny(asked, ['check', 'accuracy', 'accurate', 'fact-check', 'proofread']),
-    governanceAudit: matchesAny(asked, ['audit', 'compliance', 'policy', 'approval', 'governance', 'risk']),
+    check: !planReview && matchesAny(asked, ['check', 'accuracy', 'accurate', 'fact-check', 'proofread']),
+    governanceAudit: planReview || matchesAny(asked, ['audit', 'compliance', 'policy', 'approval', 'governance', 'risk']),
     securityMonitoring: matchesAny(asked, ['security', 'secrets', 'permission', 'vulnerability', 'unsafe', 'incident']),
     memoryPreservation: matchesAny(asked, ['remember', 'archive', 'knowledge', 'timeline', 'document decision']),
     opportunityScoring: matchesAny(asked, ['opportunity', 'priority', 'prioritize', 'score', 'roi', 'value', 'timing']),
-    distributionExecution: matchesAny(asked, ['distribute', 'schedule', 'engage', 'community', 'publish queue']),
+    distributionExecution: !planReview && matchesAny(asked, ['distribute', 'schedule', 'engage', 'community', 'publish queue']),
     // "post" alone is a piece of writing, not publishing (agent phase 1), and naming a platform
     // isn't publishing either (agent phase 2: "a YouTube channel or a podcast?"): a send word is needed.
-    publishing: matchesAny(asked, ['upload', 'publish', 'send', 'share']) || /\bpost (?:it |this |them |that )?(?:to|on)\b/i.test(asked),
+    publishing: !planReview && (matchesAny(asked, ['upload', 'publish', 'send', 'share']) || /\bpost (?:it |this |them |that )?(?:to|on)\b/i.test(asked)),
     riskyLocal: matchesAny(asked, ['delete', 'remove', 'deploy', 'write', 'modify']),
     connector: matchesAny(asked, ['telegram', 'whatsapp', 'youtube', 'connector', 'api key', 'token']),
     paidConnector: connectorCost.class === 'paid_or_metered',
@@ -518,7 +527,8 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       requiresApproval: false,
       commandPreview: 'A piece of everyday writing.',
       fragments,
-      ...(research ? { needs: ['hector'] } : { needs: [] }),
+      // It also reads Nova's verdict when she is in the plan (agent phase 3).
+      needs: [...(research ? ['hector'] : []), ...(assignments.some((a) => a.agent === AGENTS.NOVA) ? ['nova'] : [])],
     });
     if (intents.check) {
       assignments.push({
@@ -609,6 +619,15 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       costClass: connectorCost?.class || 'paid_or_metered',
       blockedByZeroCostMode: true
     });
+  }
+
+  // Miya's package reads Hector's research and Nova's verdict when they are in the plan
+  // (agent phase 3). Set here, not in the fixed order: there, Miya waiting for Nova would
+  // loop whenever Nova reviews Miya's work.
+  for (const step of normalized) {
+    if (step.agent !== AGENTS.MIYA || Array.isArray(step.needs)) continue;
+    const linked = [AGENTS.HECTOR, AGENTS.NOVA].filter((agent) => normalized.some((other) => other.agent === agent));
+    if (linked.length) step.needs = linked;
   }
 
   return normalized;

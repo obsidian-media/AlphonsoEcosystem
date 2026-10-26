@@ -1,277 +1,74 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  buildMariaAuditPrompt,
-  parseMariaAuditResponse,
-  buildMariaFallbackAudit,
-  runMariaGovernanceAudit
-} from '../services/mariaAuditService';
+// Maria's step (agent phase 3, owner 2026-10-25): a review of the work when her step reviews
+// one, else a review of the plan; from her model only, with one memory note.
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────────
-
-vi.mock('../services/memoryService', () => ({ pushMemoryItem: vi.fn(() => ({ id: 'mem-mock-1' })) }));
-vi.mock('../services/sessionIntelligenceService', () => ({ appendSessionEvent: vi.fn() }));
-vi.mock('../services/orchestrationReceiptService', () => ({ appendOrchestrationReceipt: vi.fn() }));
-vi.mock('../services/audit/marcusAuditService', () => ({
-  generateRiskScore: vi.fn(() => ({ level: 'low', score: 1, factors: [] })),
-  auditProjectPlan: vi.fn(() => ({ status: 'pass', items: [] }))
-}));
+const llm = vi.fn();
+const pushMemoryItem = vi.fn(() => ({ id: 'mem-1' }));
+const appendSessionEvent = vi.fn();
+vi.mock('../lib/ollama', () => ({ generateAgentLlmResponse: (...a) => llm(...a) }));
+vi.mock('../services/memoryService', () => ({ pushMemoryItem: (...a) => pushMemoryItem(...a) }));
+vi.mock('../services/sessionIntelligenceService', () => ({ appendSessionEvent: (...a) => appendSessionEvent(...a) }));
 vi.mock('../services/memoryGraphService', () => ({
-  addNode: vi.fn((nodeType, refId) => Promise.resolve(`${nodeType}:${refId}`)),
-  addEdge: vi.fn().mockResolvedValue('mock-edge-id')
+  addNode: vi.fn((type, ref) => Promise.resolve(`${type}:${ref}`)),
+  addEdge: vi.fn().mockResolvedValue('edge'),
 }));
 
-const mockOllamaResponse = { response: JSON.stringify({ riskLevel: 'low', approvalRequired: false, policyFindings: ['No issues'], complianceNotes: ['Compliant'], summary: 'Looks good' }), done: true };
+import * as maria from '../services/mariaAuditService';
+import { runMariaGovernanceAudit } from '../services/mariaAuditService';
 
-vi.mock('../lib/ollama', () => ({
-  generateOllamaResponse: vi.fn(async () => mockOllamaResponse),
-  // Default: no model reply, so Maria uses her rule-based audit (as before).
-  generateAgentLlmResponse: vi.fn(async () => { throw new Error('no model in tests'); }),
-  getConfiguredOllamaModel: vi.fn(() => 'llama3.2:3b')
-}));
+const json = (v) => ({ response: JSON.stringify(v) });
+const POST = 'Bees beat their wings 11,400 times a minute.';
+const reviewInput = { instruction: 'Check it.', request: 'Write and check a post', needs: [], others: [], memory: '', review: { stepId: 'write', agent: 'alphonso', text: POST, files: [], sources: [], cut: 0, main: POST } };
+const planInput = { instruction: '', request: 'Audit this plan: email 500 customers a discount code.', needs: [], others: [], memory: '', review: null };
 
-vi.mock('../services/connectorRegistryService', () => ({
-  appendConnectorAudit: vi.fn()
-}));
+beforeEach(() => { llm.mockReset(); pushMemoryItem.mockClear(); appendSessionEvent.mockClear(); });
 
-// ── buildMariaAuditPrompt ─────────────────────────────────────────────────────
-
-describe('buildMariaAuditPrompt', () => {
-  it('returns a non-empty string', () => {
-    const p = buildMariaAuditPrompt('publish post', {});
-    expect(typeof p).toBe('string');
-    expect(p.length).toBeGreaterThan(50);
+describe("Maria's step", () => {
+  it('a review step goes to the work review', async () => {
+    llm.mockResolvedValueOnce(json({ verdict: 'pass', summary: 'Correct.', findings: [] }));
+    const out = await runMariaGovernanceAudit('x', { agent: 'maria', actionType: 'audit_quality', reviewOf: 'write', packetId: 'p1' }, { stepInput: reviewInput, commandId: 'c1' });
+    expect(out.schema.kind).toBe('work');
+    expect(out.summary.startsWith('Pass.')).toBe(true);
   });
 
-  it('includes the command text in the prompt', () => {
-    const p = buildMariaAuditPrompt('send to github', {});
-    expect(p).toContain('send to github');
+  it('a step without reviewOf is a plan review', async () => {
+    llm.mockResolvedValueOnce(json({ risk: 'medium', why: 'It emails customers.', rules: [], points: ['No permission to email them is shown.'], needsApproval: false, approvalReasons: [], offer: '' }));
+    const out = await runMariaGovernanceAudit('x', { agent: 'maria', actionType: 'governance_audit', packetId: 'p2' }, { stepInput: planInput });
+    expect(out.schema).toMatchObject({ kind: 'plan', riskLevel: 'medium', approvalRequired: false });
   });
 
-  it('references JSON output format', () => {
-    const p = buildMariaAuditPrompt('test', {});
-    expect(p).toMatch(/json|riskLevel/i);
+  // draftDisabled only says Ollama at the Settings address didn't answer; her model may be
+  // another provider or the step's paid model, so she still asks it.
+  it('an unreachable Ollama does not stop her asking her own model', async () => {
+    llm.mockResolvedValueOnce(json({ risk: 'low', why: 'Nothing is sent.', rules: [], points: ['Nothing leaves this computer.'], needsApproval: false, approvalReasons: [], offer: '' }));
+    const out = await runMariaGovernanceAudit('x', { agent: 'maria', actionType: 'governance_audit' }, { draftDisabled: true, stepInput: planInput });
+    expect(llm).toHaveBeenCalled();
+    expect(out.resultState).toBe('completed');
   });
 
-  it('handles empty command text gracefully', () => {
-    const p = buildMariaAuditPrompt('', {});
-    expect(typeof p).toBe('string');
+  it('no fallback export', () => {
+    expect(maria).not.toHaveProperty('buildMariaFallbackAudit');
+    expect(maria).not.toHaveProperty('parseMariaAuditResponse');
   });
 
-  it('incorporates prior outputs when provided', () => {
-    const p = buildMariaAuditPrompt('command', { hector: { summary: 'Research complete' } });
-    expect(typeof p).toBe('string');
-    expect(p.length).toBeGreaterThan(50);
-  });
-});
-
-// ── parseMariaAuditResponse ───────────────────────────────────────────────────
-
-describe('parseMariaAuditResponse', () => {
-  it('parses valid JSON response', () => {
-    const result = parseMariaAuditResponse(JSON.stringify({
-      riskLevel: 'medium',
-      approvalRequired: true,
-      policyFindings: ['Finding 1'],
-      complianceNotes: ['Note 1'],
-      summary: 'Moderate risk'
-    }));
-    expect(result.riskLevel).toBe('medium');
-    expect(result.approvalRequired).toBe(true);
-    expect(result.policyFindings).toContain('Finding 1');
-    expect(result.complianceNotes).toContain('Note 1');
-    expect(result.summary).toBe('Moderate risk');
+  it('one memory note, confidence inferred, no session event', async () => {
+    llm.mockResolvedValueOnce(json({ verdict: 'fix', summary: 'One change.', findings: [{ quote: 'beat their wings', problem: 'p', change: 'c' }] }));
+    await runMariaGovernanceAudit('x', { agent: 'maria', actionType: 'audit_quality', reviewOf: 'write', packetId: 'p3' }, { stepInput: reviewInput });
+    expect(pushMemoryItem).toHaveBeenCalledTimes(1);
+    expect(pushMemoryItem.mock.calls[0][0]).toMatchObject({ title: 'Maria: Write and check a post — Fix', confidence: 'inferred' });
+    expect(appendSessionEvent).not.toHaveBeenCalled();
   });
 
-  it('extracts JSON from text with prose around it', () => {
-    const text = 'Here is my analysis: {"riskLevel":"low","approvalRequired":false,"policyFindings":[],"complianceNotes":[],"summary":"ok"} end';
-    const result = parseMariaAuditResponse(text);
-    expect(result.riskLevel).toBe('low');
+  it('no artifacts dump', async () => {
+    llm.mockResolvedValueOnce(json({ verdict: 'pass', summary: 'Correct.', findings: [] }));
+    const out = await runMariaGovernanceAudit('x', { agent: 'maria', actionType: 'audit_quality', reviewOf: 'write' }, { stepInput: reviewInput });
+    expect(out.artifacts).toEqual([]);
   });
 
-  it('defaults riskLevel to medium on parse failure', () => {
-    const result = parseMariaAuditResponse('not json at all !!');
-    expect(result.riskLevel).toBe('medium');
-    expect(Array.isArray(result.policyFindings)).toBe(true);
-    expect(Array.isArray(result.complianceNotes)).toBe(true);
-  });
-
-  it('coerces policyFindings to array when missing', () => {
-    const result = parseMariaAuditResponse(JSON.stringify({ riskLevel: 'low' }));
-    expect(Array.isArray(result.policyFindings)).toBe(true);
-  });
-
-  it('coerces complianceNotes to array when missing', () => {
-    const result = parseMariaAuditResponse(JSON.stringify({ riskLevel: 'low' }));
-    expect(Array.isArray(result.complianceNotes)).toBe(true);
-  });
-
-  it('handles critical risk level correctly', () => {
-    const result = parseMariaAuditResponse(JSON.stringify({ riskLevel: 'critical', approvalRequired: true, policyFindings: [], complianceNotes: [], summary: 'critical' }));
-    expect(result.riskLevel).toBe('critical');
-    expect(result.approvalRequired).toBe(true);
-  });
-});
-
-// ── buildMariaFallbackAudit ───────────────────────────────────────────────────
-
-describe('buildMariaFallbackAudit', () => {
-  it('returns a result with riskLevel field', () => {
-    const result = buildMariaFallbackAudit('test command', {}, {});
-    expect(result).toHaveProperty('riskLevel');
-  });
-
-  it('returns approvalRequired field', () => {
-    const result = buildMariaFallbackAudit('test command', {}, {});
-    expect(result).toHaveProperty('approvalRequired');
-  });
-
-  it('returns policyFindings as array', () => {
-    const result = buildMariaFallbackAudit('test command', {}, {});
-    expect(Array.isArray(result.policyFindings)).toBe(true);
-  });
-
-  it('returns complianceNotes as array', () => {
-    const result = buildMariaFallbackAudit('test command', {}, {});
-    expect(Array.isArray(result.complianceNotes)).toBe(true);
-  });
-
-  it('returns a summary string', () => {
-    const result = buildMariaFallbackAudit('publish release', {}, {});
-    expect(typeof result.summary).toBe('string');
-    expect(result.summary.length).toBeGreaterThan(0);
-  });
-
-  it('includes confidenceLevel field', () => {
-    const result = buildMariaFallbackAudit('test', {}, {});
-    expect(result).toHaveProperty('confidenceLevel');
-  });
-});
-
-// ── runMariaGovernanceAudit ───────────────────────────────────────────────────
-
-describe('runMariaGovernanceAudit', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('returns a result with summary', async () => {
-    const result = await runMariaGovernanceAudit('review project plan', {}, {});
-    expect(result).toHaveProperty('summary');
-    expect(typeof result.summary).toBe('string');
-  });
-
-  // QA Bug 49 (2026-10-21): an unreadable model reply used to be reported as
-  // Maria's model review ("Maria audit failed to parse"); the rule-based audit
-  // must run instead, and the model must be asked for JSON.
-  it('uses the rule-based audit, not a parse-failure placeholder, when the model reply is unreadable', async () => {
-    const { generateAgentLlmResponse } = await import('../lib/ollama');
-    generateAgentLlmResponse.mockResolvedValueOnce({ response: 'Sure! Here is my assessment of the plan.' });
-    const result = await runMariaGovernanceAudit('review project plan', {}, {});
-    expect(generateAgentLlmResponse.mock.calls[0][1].format).toBe('json');
-    expect(result.schema.summary).not.toMatch(/failed to parse/i);
-    expect(result.schema.confidenceLevel).toBe('temporary');
-  });
-
-  it("uses the model's review when the reply is valid JSON", async () => {
-    const { generateAgentLlmResponse } = await import('../lib/ollama');
-    generateAgentLlmResponse.mockResolvedValueOnce({ response: JSON.stringify({ riskLevel: 'low', approvalRequired: false, summary: 'Plan is internal and reversible.' }) });
-    const result = await runMariaGovernanceAudit('review project plan', {}, {});
-    expect(result.schema.summary).toBe('Plan is internal and reversible.');
-    expect(result.schema.confidenceLevel).toBe('inferred');
-  });
-
-  it('returns artifacts array', async () => {
-    const result = await runMariaGovernanceAudit('review', {}, {});
-    expect(Array.isArray(result.artifacts)).toBe(true);
-  });
-
-  it('includes governance_audit artifact type', async () => {
-    const result = await runMariaGovernanceAudit('review', {}, {});
-    const types = result.artifacts.map((a) => a.type);
-    expect(types).toContain('governance_audit');
-  });
-
-  it('includes maria_audit_schema artifact type', async () => {
-    const result = await runMariaGovernanceAudit('review', {}, {});
-    const types = result.artifacts.map((a) => a.type);
-    expect(types).toContain('maria_audit_schema');
-  });
-
-  it('returns contractAction field', async () => {
-    const result = await runMariaGovernanceAudit('review', { actionType: 'publish' }, {});
-    expect(result).toHaveProperty('contractAction');
-  });
-
-  it('returns resultState field', async () => {
-    const result = await runMariaGovernanceAudit('review', {}, {});
-    expect(result).toHaveProperty('resultState');
-  });
-
-  it('uses fallback when Ollama throws', async () => {
-    const { generateOllamaResponse } = await import('../lib/ollama');
-    generateOllamaResponse.mockRejectedValueOnce(new Error('Ollama offline'));
-    const result = await runMariaGovernanceAudit('review', {}, {});
-    expect(result).toHaveProperty('summary');
-    expect(Array.isArray(result.artifacts)).toBe(true);
-  });
-
-  it('handles empty assignment gracefully', async () => {
-    const result = await runMariaGovernanceAudit('', null, {});
-    expect(result).toHaveProperty('summary');
-  });
-
-  it('schema includes riskLevel', async () => {
-    const result = await runMariaGovernanceAudit('review', {}, {});
-    const schemaArtifact = result.artifacts.find((a) => a.type === 'maria_audit_schema');
-    expect(schemaArtifact?.schema).toHaveProperty('riskLevel');
-  });
-
-  it('schema includes approvalRequired', async () => {
-    const result = await runMariaGovernanceAudit('review', {}, {});
-    const schemaArtifact = result.artifacts.find((a) => a.type === 'maria_audit_schema');
-    expect(schemaArtifact?.schema).toHaveProperty('approvalRequired');
-  });
-});
-
-describe('runMariaGovernanceAudit graph integration', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('writes an audits edge to a packet node when packetId is present', async () => {
-    const graph = await import('../services/memoryGraphService');
-    await runMariaGovernanceAudit('do the thing', { packetId: 'packet-1' }, {});
-
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(graph.addNode).toHaveBeenCalledWith('memory_item', 'mem-mock-1');
-    expect(graph.addNode).toHaveBeenCalledWith('packet', 'packet-1');
-    expect(graph.addEdge).toHaveBeenCalledWith(
-      'memory_item:mem-mock-1',
-      'packet:packet-1',
-      'audits',
-      expect.objectContaining({ createdBy: 'maria' })
-    );
-  });
-
-  it('falls back to commandId when packetId is absent', async () => {
-    const graph = await import('../services/memoryGraphService');
-    await runMariaGovernanceAudit('do the thing', { commandId: 'cmd-1' }, {});
-
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(graph.addNode).toHaveBeenCalledWith('packet', 'cmd-1');
-  });
-
-  it('writes no edge when neither packetId nor commandId is present', async () => {
-    const graph = await import('../services/memoryGraphService');
-    await runMariaGovernanceAudit('do the thing', {}, {});
-
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(graph.addEdge).not.toHaveBeenCalled();
+  it('a failed review writes no memory note', async () => {
+    llm.mockResolvedValue({ response: 'fine' });
+    const out = await runMariaGovernanceAudit('x', { agent: 'maria', actionType: 'governance_audit' }, { stepInput: planInput });
+    expect(out.resultState).toBe('failed');
+    expect(pushMemoryItem).not.toHaveBeenCalled();
   });
 });

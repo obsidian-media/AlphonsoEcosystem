@@ -10,6 +10,16 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent phase 3: Maria reviews the real work (2026-10-25)
+- **Maria reviews the work itself.** A check of a post or a script answers **Pass** or **Fix**, quoting the exact words that need to change and how; a claim no source backs makes it a fix. She reads what the work was built from: Hector's sources, and for Alphonso's code his files and test results, with file and line.
+- **A plan review says the risk and why**, the rules that apply, what needs your approval and why, and offers to have Marcus prepare it (**Have Marcus prepare this** in Chat; nothing is sent). "Audit this plan" no longer starts the plan's own steps, and "discount code" is no longer code.
+- **Her word stops the next steps.** When she asks for your approval, or the work still needs changes after two rounds, what comes after her waits for you with her reasons. Marcus follows her review of the exact text he sends; his own keyword risk score is gone.
+- **No more keyword verdicts.** Her answers come from her model only; an unreadable review is never counted as a pass. Boardroom's Conclude shows her review, never "(rule-based)".
+- **Security goes to Sentinel**: when she sees a secret, an unsafe link or a permission problem she asks him to check it.
+- **The content factory's quality check** compares with what is known about your reference posts (what Hector found about them), and her scores against your brand's threshold decide whether the script goes back.
+- **The weekly Maria schedule** is now "Maria: the week's risks": what went out, what failed and what is still waiting.
+- **Hand-overs**: the simple plan keeps which step needs which, a write-up waits for Nova, and Miya waits for Hector and Nova.
+
 ### Agent phase 2: Nova judges what was found (2026-10-25)
 - **Nova answers with a ranked verdict**: what to do first, then every option in order with why, its value, effort and risk in words, and the sources that support it. Her scores no longer come from counting words in your request ("email" used to count as a risk).
 - **She judges after Hector's research**, in the simple plan and in workflows, and uses the model Jose picks for her step. With nothing to judge she asks Hector to research first.

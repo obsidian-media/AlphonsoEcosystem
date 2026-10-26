@@ -1,11 +1,12 @@
 import type { StepInput } from './jose/stepInput';
-import { listStepOutputs } from './jose/joseStepOutputs';
+import { getStepOutput } from './jose/joseStepOutputs';
+import { getJoseRequest } from './jose/joseRequestStore';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { readDueMetrics } from './contentFactory/postMetrics';
 import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
-import { auditProjectPlan, auditReleaseReadiness, generateRiskScore } from './audit/marcusAuditService';
+import { auditProjectPlan, auditReleaseReadiness } from './audit/marcusAuditService';
 import { executeMarcusPublish, MARCUS_PUBLISH_PLATFORMS } from './marcusPublishService';
 import { getConnectorCredential } from './connectors/connectorAuth';
 import { isConnectorAuthenticated } from './connectorRegistryService';
@@ -90,11 +91,6 @@ interface MarcusResult {
 }
 
 interface AuditReport {
-  [key: string]: unknown;
-}
-
-interface QuickAudit {
-  level: string;
   [key: string]: unknown;
 }
 
@@ -343,11 +339,18 @@ export function textToSend(assignment: Assignment, stepInput: StepInput | null |
   return written || null;
 }
 
-/** Maria's review in the same request, when the step Marcus needs is not hers. */
-function mariaInRequest(commandId: unknown): PriorOutputs['maria'] {
-  if (typeof commandId !== 'string' || !commandId) return undefined;
-  const found = listStepOutputs(commandId).filter((o) => o.agent === 'maria').sort((a, b) => b.storedAtMs - a.storedAtMs)[0];
-  return found as unknown as PriorOutputs['maria'];
+/**
+ * Maria's review of the very work Marcus sends (agent phase 3): the Maria step that reviewed
+ * one of the steps he needs, else a Maria step he needs (a plan review); null when none.
+ */
+export function mariaReviewFor(commandId: unknown, needs: string[] | undefined): PriorOutputs['maria'] | null {
+  if (typeof commandId !== 'string' || !commandId) return null;
+  const linked = new Set(needs || []);
+  const steps = getJoseRequest(`jose-request-${commandId}`)?.steps || [];
+  const reviewer = steps.find((s) => s.agent === 'maria' && s.reviewOf && linked.has(s.reviewOf))
+    || steps.find((s) => s.agent === 'maria' && linked.has(s.stepId));
+  if (!reviewer) return null;
+  return (getStepOutput(commandId, reviewer.stepId) as unknown as PriorOutputs['maria']) || null;
 }
 
 export async function runMarcusDistribution(commandText: string, assignment: Assignment, priorOutputs: PriorOutputs | null, options: Record<string, unknown> = {}): Promise<MarcusResult> {
@@ -363,43 +366,17 @@ export async function runMarcusDistribution(commandText: string, assignment: Ass
       schema: buildMarcusExecutionRecord({ ok: false }, assignment),
     };
   }
-  const mariaOutput = priorOutputs?.maria || mariaInRequest(options.commandId);
+  // Maria's review of the exact work he sends (agent phase 3). Her approval and an unfixed
+  // review already made this step wait for you (maria/mariaHolds.ts), so Marcus no longer
+  // blocks on his own, and no keyword score stands in when she didn't review it.
+  const mariaOutput = mariaReviewFor(options.commandId, (assignment as { needs?: string[] })?.needs)
+    // Outside a Jose request, a review handed to him directly (older callers).
+    || (options.commandId ? undefined : priorOutputs?.maria) || undefined;
   const startMs = timestampMs();
-
-  // 1. Governance gate — Maria must not have flagged critical/high with approvalRequired
-  const mariaRisk = String(mariaOutput?.schema?.riskLevel || mariaOutput?.artifacts?.find((a) => a.type === 'risk_assessment')?.riskLevel || 'unknown').toLowerCase();
-  const mariaApprovalRequired = mariaOutput?.schema?.approvalRequired
-    ?? mariaOutput?.artifacts?.find((a) => a.type === 'governance_audit')?.approvalRequired as boolean
-    ?? true;
-
-  if (!mariaOutput) {
-    // Maria didn't run — run a quick deterministic audit inline
-    const quickAudit = generateRiskScore({ commandText, actionType: assignment?.actionType }) as QuickAudit;
-    if (quickAudit.level === 'critical' || quickAudit.level === 'high') {
-      return {
-        summary: `Marcus blocked: no Maria governance approval found and risk assessed as ${quickAudit.level}. Run Maria audit first.`,
-        resultState: 'pending_review',
-        resultUrl: null,
-        artifacts: [{ type: 'distribution_blocked', reason: 'no_governance_approval', quickRisk: quickAudit.level }],
-        sources: [],
-        contractAction: assignment?.actionType || 'distribution_execution',
-        schema: buildMarcusExecutionRecord({ ok: false }, assignment)
-      };
-    }
-  } else if (mariaApprovalRequired && (mariaRisk === 'critical' || mariaRisk === 'high')) {
-    return {
-      summary: `Marcus blocked: Maria governance audit requires approval (risk: ${mariaRisk}). Obtain operator approval before distribution.`,
-      resultState: 'pending_review',
-      resultUrl: null,
-      artifacts: [
-        { type: 'distribution_blocked', reason: 'governance_approval_required', mariaRisk },
-        ...(mariaOutput?.artifacts || [])
-      ],
-      sources: [],
-      contractAction: assignment?.actionType || 'distribution_execution',
-      schema: buildMarcusExecutionRecord({ ok: false }, assignment)
-    };
-  }
+  const mariaRisk = String(mariaOutput?.schema?.riskLevel || 'none').toLowerCase();
+  const mariaApprovalRequired = mariaOutput
+    ? Boolean(mariaOutput.schema?.approvalRequired) || (mariaOutput.schema as { verdict?: string } | undefined)?.verdict === 'fix'
+    : true;
 
   // 2. Select distribution target
   const target = selectDistributionTarget(assignment);
@@ -503,7 +480,7 @@ export async function runMarcusDistribution(commandText: string, assignment: Ass
   });
 
   const summaryParts = [
-    mariaOutput ? `Governance cleared by Maria (risk: ${mariaRisk}).` : 'Quick governance check passed.',
+    mariaOutput ? `Maria reviewed it (risk: ${mariaRisk}).` : 'No review by Maria; you approved sending it.',
     execResult?.ok
       ? `Marcus executed ${target.type} distribution successfully.${target.platform ? ` Platform: ${target.platform}.` : ''}`
       : `Marcus distribution failed: ${String(execResult?.error || 'unknown').slice(0, 150)}`,

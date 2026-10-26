@@ -48,6 +48,8 @@ vi.mock('../lib/ollama', () => ({
   // keep the path they had in this test (no agent model call).
   generateAgentLlmResponse: vi.fn(async (agent) => {
     if (agent === 'nova') return { response: JSON.stringify({ doFirst: 'the launch', options: [{ name: 'The launch', rank: 1, why: 'ready', value: 'high', effort: 'low', risk: 'low' }] }) };
+    // Maria's plan review (agent phase 3).
+    if (agent === 'maria') return { response: JSON.stringify({ risk: 'low', why: 'Nothing is sent.', rules: [], points: ['Nothing leaves this computer.'], needsApproval: false, approvalReasons: [], offer: '' }) };
     throw new Error('no agent model in this test');
   })
 }));

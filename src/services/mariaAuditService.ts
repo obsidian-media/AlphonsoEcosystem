@@ -1,284 +1,68 @@
-import { stepInputText, type StepInput } from './jose/stepInput';
-import { TRUST_STATES, timestampMs } from './trustModel';
-import { generateAgentLlmResponse, getConfiguredOllamaModel } from '../lib/ollama';
+// Maria's step (agent phase 3, owner 2026-10-25): when her step reviews another step's work,
+// a review of that work (pass or fix, quoting it, with unbacked claims); otherwise a review
+// of the plan or action (risk, rules, points, what needs your approval). Her model only: the
+// keyword check that used to stand in silently is gone. One memory note per review.
+import type { StepInput } from './jose/stepInput';
+import { TRUST_STATES } from './trustModel';
 import { pushMemoryItem } from './memoryService';
-import { appendSessionEvent } from './sessionIntelligenceService';
-import { generateRiskScore } from './audit/marcusAuditService';
 import { addNode, addEdge } from './memoryGraphService';
-import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
-
-export interface MariaAuditResult {
-  riskLevel: string;
-  approvalRequired: boolean;
-  policyFindings: string[];
-  complianceNotes: string[];
-  summary: string;
-  confidenceLevel?: string;
-  /** True when the model's reply could not be read; the result is a placeholder, not a review. */
-  parseFailed?: boolean;
-}
-
-export interface MariaAuditAssignment {
-  commandId?: string;
-  packetId?: string;
-  actionType?: string;
-  commandText?: string;
-}
+import { runMariaWorkReview } from './maria/mariaWorkReview';
+import { runMariaPlanReview } from './maria/mariaPlanReview';
+import type { MariaAssignment, MariaStepResult } from './maria/mariaTypes';
 
 export interface MariaAuditOptions {
-  priorOutputs?: Record<string, { summary?: string; trust?: string; verificationState?: string; resultState?: string; blocked?: boolean }>;
+  stepInput?: StepInput | null;
+  commandId?: string;
+  projectDirectory?: string;
+  workspaceRoot?: string;
   draftDisabled?: boolean;
-  endpoint?: string;
-  model?: string;
+  signal?: AbortSignal;
+  [key: string]: unknown;
 }
 
-export interface MariaAuditResponse {
-  summary: string;
-  resultState: string;
-  resultUrl: string | null;
-  artifacts: Array<Record<string, unknown>>;
-  sources: unknown[];
-  contractAction: string;
-  trust: string;
-  verificationState: string;
-  schema: MariaAuditResult;
+function emptyInput(request: string): StepInput {
+  return { instruction: '', request, needs: [], others: [], memory: '', review: null };
 }
 
-// ── Prompt ────────────────────────────────────────────────────────────────────
-
-export function buildMariaAuditPrompt(commandText: string, priorOutputs: Record<string, { summary?: string }> = {}, stepInput: StepInput | null = null): string {
-  // The full work of the steps this one needs (agent roles Part A), else the old short summaries.
-  const agentSummary = stepInput ? stepInputText(stepInput) : Object.entries(priorOutputs || {})
-    .map(([agent, output]) => `[${agent}] ${String(output?.summary || 'no output').slice(0, 300)}`)
-    .join('\n');
-
-  return [
-    'You are Maria, an AI governance auditor for a local AI desktop companion.',
-    'Analyze the command and prior agent outputs below for governance risks, policy compliance, and approval requirements.',
-    'Return ONLY valid JSON with exactly these keys (no extra keys, no markdown fences):',
-    '{',
-    '  "riskLevel": "low"|"medium"|"high"|"critical",',
-    '  "approvalRequired": true|false,',
-    '  "policyFindings": ["finding 1", ...],',
-    '  "complianceNotes": ["note 1", ...],',
-    '  "summary": "2-3 sentence governance assessment"',
-    '}',
-    '',
-    `Command: ${String(commandText || '').slice(0, 500)}`,
-    agentSummary ? `\nPrior agent outputs:\n${agentSummary}` : ''
-  ].filter(Boolean).join('\n');
+function aboutOf(request: string): string {
+  const line = String(request || '').replace(/^\s*\/jose\s+/i, '').split('\n')[0].trim();
+  return line.length <= 80 ? line : line.slice(0, 80).replace(/\s+\S*$/, '');
 }
 
-// ── JSON parser with fallback ─────────────────────────────────────────────────
-
-export function parseMariaAuditResponse(text: string | undefined): MariaAuditResult {
-  try {
-    const raw = String(text || '').trim();
-    const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-    const jsonMatch = fenceMatch ? null : raw.match(/\{[\s\S]*\}/);
-    const cleaned = fenceMatch ? fenceMatch[1].trim() : jsonMatch ? jsonMatch[0] : raw;
-    const parsed = JSON.parse(cleaned);
-
-    const validLevels = ['low', 'medium', 'high', 'critical'];
-    return {
-      riskLevel: validLevels.includes(parsed.riskLevel) ? parsed.riskLevel : 'medium',
-      approvalRequired: typeof parsed.approvalRequired === 'boolean' ? parsed.approvalRequired : true,
-      policyFindings: Array.isArray(parsed.policyFindings) ? parsed.policyFindings.map(String) : [],
-      complianceNotes: Array.isArray(parsed.complianceNotes) ? parsed.complianceNotes.map(String) : [],
-      summary: String(parsed.summary || '').slice(0, 500) || 'Maria governance audit completed.'
-    };
-  } catch {
-    return {
-      riskLevel: 'medium',
-      approvalRequired: true,
-      policyFindings: ['Analysis failed — defaulting to cautious posture.'],
-      complianceNotes: [],
-      summary: 'Maria audit failed to parse — manual review required.',
-      parseFailed: true
-    };
-  }
+function outcomeOf(result: MariaStepResult): string {
+  const schema = result.schema || {};
+  if (schema.kind === 'work') return schema.verdict === 'fix' ? 'Fix' : 'Pass';
+  return `Risk ${schema.riskLevel}${schema.approvalRequired ? ', needs approval' : ''}`;
 }
 
-// ── Deterministic fallback ────────────────────────────────────────────────────
-
-export function buildMariaFallbackAudit(commandText: string, assignment: MariaAuditAssignment, priorOutputs: Record<string, { trust?: string; verificationState?: string; resultState?: string; blocked?: boolean }> = {}): MariaAuditResult & { confidenceLevel: string } {
-  const actionType = String(assignment?.actionType || '').toLowerCase();
-  const text = String(commandText || '').toLowerCase();
-
-  const policyFindings: string[] = [];
-  const complianceNotes: string[] = [];
-  let approvalRequired = false;
-
-  if (/delete|remove|drop|destroy|wipe/.test(actionType + ' ' + text)) {
-    policyFindings.push('Destructive action detected — irreversible operation requires operator sign-off.');
-    approvalRequired = true;
-  }
-  if (/publish|deploy|send|post|upload|broadcast/.test(actionType + ' ' + text)) {
-    policyFindings.push('External publish or deploy action detected — supervisor review required.');
-    approvalRequired = true;
-  }
-  if (/file_write|filesystem|overwrite/.test(actionType)) {
-    policyFindings.push('Filesystem modification detected — change log and rollback path must be confirmed.');
-    approvalRequired = true;
-  }
-  if (/secret|token|password|api.?key|credential/.test(text)) {
-    policyFindings.push('Credential or secret reference in command — confirm no exposure in output artifacts.');
-    approvalRequired = true;
-  }
-  if (/production|live|real users/.test(text)) {
-    policyFindings.push('Production environment reference — elevated approval threshold applies.');
-    approvalRequired = true;
-  }
-
-  for (const [agent, output] of Object.entries(priorOutputs || {})) {
-    const trust = String(output?.trust || output?.verificationState || '').toLowerCase();
-    if (trust === 'failed' || output?.resultState === 'failed') {
-      policyFindings.push(`Prior agent ${agent} reported a failure — chain integrity at risk.`);
-    }
-    if (output?.blocked) {
-      complianceNotes.push(`Agent ${agent} was blocked — downstream action depends on blocked output.`);
-      approvalRequired = true;
-    }
-  }
-
-  const inputForScore = { commandText, actionType, policyFindings };
-  const scoreResult = generateRiskScore(inputForScore);
-  const derivedLevel = policyFindings.length >= 3 ? 'high'
-    : policyFindings.length >= 1 ? 'medium'
-    : (scoreResult as { level?: string }).level || 'medium';
-
-  if (complianceNotes.length === 0) {
-    complianceNotes.push('No explicit compliance violations found. Standard review guidelines apply.');
-  }
-
-  const summaryParts = [
-    `Maria governance audit for "${String(commandText || '').slice(0, 80)}".`,
-    `Risk level: ${derivedLevel}.`,
-    `${policyFindings.length} policy finding(s).`,
-    approvalRequired ? 'Operator approval required before execution.' : 'Cleared for auto-execution within policy bounds.'
-  ];
-
-  return {
-    riskLevel: derivedLevel,
-    approvalRequired,
-    policyFindings,
-    complianceNotes,
-    summary: summaryParts.join(' '),
-    confidenceLevel: 'UNVERIFIED'
-  };
-}
-
-// ── Main entry ────────────────────────────────────────────────────────────────
-
-export async function runMariaGovernanceAudit(commandText: string, assignment: MariaAuditAssignment, options: MariaAuditOptions = {}): Promise<MariaAuditResponse> {
-  const priorOutputs = options.priorOutputs || {};
-  const startMs = timestampMs();
-
-  let auditResult: (MariaAuditResult & { confidenceLevel?: string }) | null = null;
-  let ollamaUsed = false;
-
-  if (!options.draftDisabled) {
-    try {
-      const prompt = buildMariaAuditPrompt(commandText, priorOutputs, (options as { stepInput?: StepInput | null }).stepInput || null);
-      const response = await generateAgentLlmResponse('maria', {
-        endpoint: options.endpoint,
-        model: options.model || getConfiguredOllamaModel(),
-        prompt,
-        // The reply is parsed as JSON; ask the model to guarantee it.
-        format: 'json',
-        sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
-      });
-      const parsed = parseMariaAuditResponse(response?.response);
-      // An unreadable reply used to pass this check (its placeholder summary
-      // is long enough) and was reported as a model review; the rule-based
-      // audit below now runs instead (QA Bug 49, 2026-10-21).
-      if (parsed && !parsed.parseFailed && parsed.summary.length > 10) {
-        auditResult = parsed;
-        ollamaUsed = true;
-      }
-    } catch {
-      // fall through to deterministic fallback
-    }
-  }
-
-  if (!auditResult) {
-    auditResult = buildMariaFallbackAudit(commandText, assignment, priorOutputs);
-  }
-
-  const schema: MariaAuditResult = {
-    workflowId: (assignment?.commandId || assignment?.packetId || '') as unknown as string,
-    packetId: (assignment?.packetId || '') as unknown as string,
-    summary: auditResult.summary,
-    riskLevel: auditResult.riskLevel,
-    approvalRequired: auditResult.approvalRequired,
-    policyFindings: auditResult.policyFindings,
-    complianceNotes: auditResult.complianceNotes,
-    confidenceLevel: ollamaUsed ? TRUST_STATES.INFERRED : TRUST_STATES.TEMPORARY,
-    verificationState: TRUST_STATES.UNVERIFIED,
-    auditedAtMs: startMs
-  } as unknown as MariaAuditResult;
+export async function runMariaGovernanceAudit(commandText: string, assignment: MariaAssignment, options: MariaAuditOptions = {}): Promise<MariaStepResult> {
+  const input = options.stepInput || emptyInput(String(commandText || ''));
+  // draftDisabled only says Ollama at the Settings address didn't answer: her model may be
+  // another provider or the step's paid model, so she asks it; an unreachable model fails
+  // her step as an unreadable review.
+  const result = input.review
+    ? await runMariaWorkReview(assignment || {}, input, { commandId: options.commandId, workspaceRoot: options.projectDirectory || options.workspaceRoot, signal: options.signal })
+    : await runMariaPlanReview(assignment || {}, input, { signal: options.signal });
+  if (result.resultState !== 'completed') return result;
 
   const memoryItem = pushMemoryItem({
-    title: `Maria audit: ${String(commandText || '').slice(0, 80)}`,
+    title: `Maria: ${aboutOf(input.request)} — ${outcomeOf(result)}`,
     category: 'governance_memory',
-    content: schema,
+    content: result.schema,
     source: 'maria-audit-service',
     sourceAgent: 'maria',
-    confidence: schema.confidenceLevel,
-    verificationState: (schema as unknown as { verificationState: string }).verificationState
+    confidence: TRUST_STATES.INFERRED,
+    verificationState: TRUST_STATES.INFERRED,
   });
-
+  // The memory graph keeps which packet she reviewed (phase 2 writer).
   const packetRefId = assignment?.packetId ?? assignment?.commandId;
-  if (memoryItem?.id) {
-    addNode('memory_item', memoryItem.id).then((memoryItemNodeId) => {
-      if (!memoryItemNodeId || !packetRefId) return;
-      addNode('packet', packetRefId).then((packetNodeId) => {
-        if (!packetNodeId) return;
-        addEdge(memoryItemNodeId, packetNodeId, 'audits', {
-          confidence: TRUST_STATES.VERIFIED,
-          createdBy: 'maria',
-          createdEvent: memoryItem.id
-        });
-      }).catch(() => {});
+  if (memoryItem?.id && packetRefId) {
+    addNode('memory_item', memoryItem.id).then((memoryNode) => {
+      if (!memoryNode) return;
+      return addNode('packet', String(packetRefId)).then((packetNode) => {
+        if (packetNode) addEdge(memoryNode, packetNode, 'audits', { confidence: TRUST_STATES.INFERRED, createdBy: 'maria', createdEvent: memoryItem.id });
+      });
     }).catch(() => {});
   }
-
-  appendSessionEvent({
-    category: 'governance',
-    title: 'Maria governance audit completed',
-    details: {
-      riskLevel: schema.riskLevel,
-      approvalRequired: schema.approvalRequired,
-      findingCount: schema.policyFindings.length,
-      ollamaUsed
-    },
-    agent: 'maria',
-    confidence: schema.confidenceLevel,
-    verificationState: (schema as unknown as { verificationState: string }).verificationState
-  });
-
-  const approved = !schema.approvalRequired && schema.riskLevel !== 'high' && schema.riskLevel !== 'critical';
-
-  return {
-    summary: schema.summary,
-    resultState: approved ? 'completed' : 'pending_review',
-    resultUrl: null,
-    artifacts: [
-      {
-        type: 'governance_audit',
-        action: assignment?.actionType || 'governance_audit',
-        riskLevel: schema.riskLevel,
-        approvalRequired: schema.approvalRequired,
-        findingCount: schema.policyFindings.length
-      },
-      { type: 'risk_assessment', riskLevel: schema.riskLevel, policyFindings: schema.policyFindings },
-      { type: 'compliance_notes', notes: schema.complianceNotes },
-      { type: 'maria_audit_schema', schema }
-    ],
-    sources: [],
-    contractAction: assignment?.actionType || 'governance_audit',
-    trust: approved ? TRUST_STATES.VERIFIED : TRUST_STATES.PENDING,
-    verificationState: approved ? TRUST_STATES.VERIFIED : TRUST_STATES.PENDING,
-    schema
-  };
+  return { ...result, schema: { ...result.schema, confidenceLevel: TRUST_STATES.INFERRED } };
 }
