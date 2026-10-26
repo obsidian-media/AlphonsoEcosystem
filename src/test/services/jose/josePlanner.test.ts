@@ -16,7 +16,7 @@ vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
 }));
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
-import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders, missingSend } from '../../../services/jose/josePlanner';
+import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders, missingAsked } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 
@@ -288,8 +288,19 @@ describe('the example plan has nothing a small model can copy', () => {
 
   it('a readiness question needs the readiness check', () => {
     const plan = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }];
-    expect(missingSend('/jose Is my announcement ready to post on Slack?', plan as never)).toEqual(['The request asks whether it is ready to send: add a marcus step with the task type distribution_readiness.']);
-    expect(missingSend('/jose Is my announcement ready to post on Slack?', [{ agent: 'marcus', effects: ['read'], actionType: 'distribution_readiness' }] as never)).toEqual([]);
+    expect(missingAsked('/jose Is my announcement ready to post on Slack?', plan as never)).toEqual(['The request asks whether it is ready to send: add a marcus step with the task type distribution_readiness.']);
+    expect(missingAsked('/jose Is my announcement ready to post on Slack?', [{ agent: 'marcus', effects: ['read'], actionType: 'distribution_readiness' }] as never)).toEqual([]);
+  });
+
+  // The Maria desktop run (2026-10-26): with working plans, the 7B model left out the check asked for.
+  it('a check or a plan audit asked for needs Maria', () => {
+    const noMaria = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }, { agent: 'sentinel', effects: ['read'], actionType: 'security_content_check' }];
+    expect(missingAsked('/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy', noMaria as never))
+      .toEqual(['The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.']);
+    expect(missingAsked('/jose Audit this plan for compliance risks: tomorrow we email all 500 customers a 30 percent discount code.', noMaria as never))
+      .toEqual(['The request asks for a review of a plan: add a maria step with the task type audit_governance.']);
+    const withMaria = [...noMaria, { agent: 'maria', effects: ['read'], actionType: 'audit_quality' }];
+    expect(missingAsked('/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy', withMaria as never)).toEqual([]);
   });
 
   it('a plan with the send is used as it is', async () => {

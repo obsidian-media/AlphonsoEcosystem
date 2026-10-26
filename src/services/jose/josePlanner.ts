@@ -5,7 +5,7 @@
 // (owner, 2026-10-23).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.3–2.4, §5
 import { generateAgentLlmResponse } from '../../lib/ollama';
-import { asksReadiness, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
+import { asksPlanReview, asksReadiness, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
 import { planningMenu } from './taskTypeMeanings';
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
@@ -61,19 +61,32 @@ const PLACEHOLDER_TASKS = new Set(['normal', 'project', 'task type', 'tasktype']
 
 /** Values a model copied from an example or a schema instead of planning (agent phase 5). */
 /**
- * A request that asks to send needs Marcus's send step (agent phase 5): a 7B model planned only
- * the writing for "post it to Slack #news", and the reply read as if it was posted.
+ * What a request explicitly asks for must be in the plan (agent phase 5): a 7B model planned only
+ * the writing for "post it to Slack #news", and once plans stopped falling back it also left out
+ * the accuracy check asked for. The same words the simple plan reads: a send, a readiness check, a
+ * check of the writing, a review of a plan.
  */
-export function missingSend(text: string, steps: Array<Pick<PlanStep, 'agent' | 'effects' | 'actionType'>>): string[] {
+export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' | 'effects' | 'actionType'>>): string[] {
+  const has = (agent: string, test: (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) => boolean = () => true) =>
+    steps.some((st) => st.agent === agent && test(st));
+  if (asksPlanReview(text)) {
+    return has('maria') ? [] : ['The request asks for a review of a plan: add a maria step with the task type audit_governance.'];
+  }
   if (asksReadiness(text)) {
-    return steps.some((st) => st.agent === 'marcus' && st.actionType === 'distribution_readiness')
+    return has('marcus', (st) => st.actionType === 'distribution_readiness')
       ? [] : ['The request asks whether it is ready to send: add a marcus step with the task type distribution_readiness.'];
   }
-  const sends = parseJoseCommand(text).sends;
-  if (!sends) return [];
-  if (steps.some((st) => st.agent === 'marcus' && (st.effects || []).includes('publish_or_send'))) return [];
-  const where = sends.channels.map((c) => (c === 'team' ? 'your team' : CONNECTOR_NAMES[c as MarcusConnector] || c)).join(' and ');
-  return [`The request asks to send to ${where}: add a marcus step that sends it.`];
+  const parsed = parseJoseCommand(text);
+  const problems: string[] = [];
+  if (parsed.intents.check && parsed.intents.writing && !has('maria')) {
+    problems.push('The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.');
+  }
+  const sends = parsed.sends;
+  if (sends && !has('marcus', (st) => (st.effects || []).includes('publish_or_send'))) {
+    const where = sends.channels.map((c) => (c === 'team' ? 'your team' : CONNECTOR_NAMES[c as MarcusConnector] || c)).join(' and ');
+    problems.push(`The request asks to send to ${where}: add a marcus step that sends it.`);
+  }
+  return problems;
 }
 
 export function copiedPlaceholders(steps: Array<{ id?: string; agent?: string; taskType?: string }>): string[] {
@@ -263,7 +276,7 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     // and no code step for a request that isn't about code (agent phase 1).
     const check = checkPlan(plan.steps, { taskTypes: true, request: text });
     const copied = copiedPlaceholders(plan.steps.map((st) => ({ id: st.stepId, agent: st.agent, taskType: st.actionType })));
-    const unsent = missingSend(text, plan.steps);
+    const unsent = missingAsked(text, plan.steps);
     if (!check.ok || copied.length || unsent.length) {
       problems = [...copied, ...unsent, ...(check.ok ? [] : check.problems)];
       continue;

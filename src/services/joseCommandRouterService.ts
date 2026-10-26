@@ -377,6 +377,11 @@ export function asksReadiness(commandText: string): boolean {
   return !PLAN_REVIEW.test(asked) && READINESS_QUESTION.test(asked) && SEND_WORD.test(asked);
 }
 
+/** "Audit this plan …": a review of a plan by Maria, not doing the plan (agent phase 3). */
+export function asksPlanReview(commandText: string): boolean {
+  return PLAN_REVIEW.test(withoutQuotedContent(withoutNegations(String(commandText || '').toLowerCase())));
+}
+
 export function parseJoseCommand(commandText: string): ParsedJoseCommand {
   const clean = String(commandText || '').trim();
   const lower = clean.toLowerCase();
