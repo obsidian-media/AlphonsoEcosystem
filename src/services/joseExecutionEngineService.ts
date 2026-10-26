@@ -24,14 +24,13 @@ import { listMiyaComfyWorkflowPresets } from './miyaComfyWorkflowPresetService';
 import { listMiyaWorkflowTemplates, getMiyaWorkflowTemplate } from './miyaWorkflowTemplates';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from './trustModel';
-import { verifyOllamaRuntimeProof, verifyProcessProof, verifyCommandExecution } from './verificationService';
 import { classifyMissionRoomRisk, redactMissionRoomSecrets } from './missionRoomService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput } from './agentOutputStoreService';
 import { checkPlan, JOSE_LIMITS } from './jose/stepGraph';
-import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus, getJoseRequest, findRequestByPacket } from './jose/joseRequestStore';
+import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus, getJoseRequest, findRequestByPacket, listJoseRequests } from './jose/joseRequestStore';
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
@@ -45,13 +44,19 @@ import { buildStepInput, skillSection, stepInputText } from './jose/stepInput';
 import { runReviewStep } from './jose/reviewStep';
 import { isEffectAllowed } from './jose/agentPermissionTable';
 import type { PlanStep } from './jose/stepGraph';
-import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
+import { EFFECT_LABELS, effectsNeedingApproval, stepEffectsToWaitFor } from './jose/joseEffects';
 import { listInstalledModels, pickLargerModel, usesOwnToolCalls } from './jose/joseModels';
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
 import { runMariaGovernanceAudit } from './mariaAuditService';
 import { holdStepsAfter, mariaHoldFor } from './maria/mariaHolds';
 import { sentinelHoldFor } from './sentinel/sentinelHolds';
 import { describeSend, isMarcusSendStep, prepareMarcusSend } from './marcus/prepareSend';
+import { isAlphonsoCodeStep } from './alphonso/codeStep';
+import { prepareAlphonsoCode } from './alphonso/prepareCode';
+import { runAlphonsoCode } from './alphonso/runCode';
+import { describeCodeChange, previewNeeds } from './alphonso/changeSet';
+import { onProjectReleased, releaseProject } from './alphonso/projectLock';
+import { reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
 import { runVisualWorkflow } from './workflowExecutionService';
@@ -63,9 +68,6 @@ import { getDecompositionHints } from './novaFeedbackService';
 import { prepareSkill } from './skills/prepareSkill';
 import { runHectorStep } from './hector/hectorStep';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
-import { getProjectDirectoryPath } from './projectDirectoryService';
-import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
-import { executeWithBrain } from './agentBrainService';
 import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint, withAgentModel } from '../lib/ollama';
 import { CHAT_ASSISTANT_PROMPT } from '../lib/chatUtils';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
@@ -492,8 +494,12 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
     return result;
   };
   const stepModel = typeof assignment?.model === 'string' && assignment.model ? assignment.model : null;
+  // An Alphonso code step runs once (agent phase 6): its change was approved as prepared, and
+  // its own fix rounds already ran; a rerun would only find its files changed since the preview.
+  const runsOnce = isAlphonsoCodeStep(assignment);
+  const attempts = runsOnce ? 1 : MAX_TASK_RETRIES + 1;
 
-  for (let attempt = 1; attempt <= MAX_TASK_RETRIES + 1; attempt += 1) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       const result = await attemptWith(stepModel);
       _resetEscalationCount(commandText);
@@ -506,7 +512,7 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
       };
     } catch (error) {
       lastError = error;
-      if (attempt <= MAX_TASK_RETRIES) {
+      if (attempt < attempts) {
         await delay(TASK_RETRY_BACKOFF_MS[attempt - 1]);
       }
     }
@@ -515,7 +521,7 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
   // Then the same agent with the next larger installed model (owner: Q15).
   // Local Ollama models only; a step is never handed to another agent.
   let escalatedTo: string | null = null;
-  if (getAgentProvider(assignment?.agent)?.provider === 'ollama') {
+  if (!runsOnce && getAgentProvider(assignment?.agent)?.provider === 'ollama') {
     let current = stepModel;
     if (!current) {
       try { current = getConfiguredOllamaModel(); } catch { current = null; }
@@ -681,169 +687,13 @@ async function buildMiyaPackage(commandText: any, assignment: any, options: any 
   return fallback;
 }
 
+/**
+ * Alphonso steps that are neither code nor writing (older task types such as agent_report):
+ * answered in words (agent phase 6). His code runs through the prepared change set
+ * (runAlphonsoCode); the keyword commands, scaffolding and runtime proofs are gone.
+ */
 async function executeAlphonsoAssignment(commandText: any, assignment: any, options: any = {}) {
-  const miyaContext = options.priorOutputs?.miya;
-  const lower = String(commandText || '').toLowerCase();
-  const artifacts = [];
-  const results = [];
-  const filesWritten = [];
-
-  // 1. Determine project directory
-  const projectDir = options.projectDirectory || getProjectDirectoryPath(assignment?.commandId) || null;
-
-  // 2. Intent detection
-  const isBuildIntent = /\b(build|compile|bundle|package)\b/.test(lower);
-  const isTestIntent = /\b(test|verify|check|lint)\b/.test(lower);
-  const isInstallIntent = /\b(install|setup|add)\b/.test(lower);
-  const isRunIntent = /\b(run|start|launch|serve|dev)\b/.test(lower);
-  const isCodeGeneration = /\b(create|build|make|generate|scaffold|write|code|app|full stack|project|implement|develop)\b/.test(lower);
-  const hasCodeContext = isBuildIntent || isTestIntent || isInstallIntent || isRunIntent;
-
-  // 3. If code generation intent, use LLM to generate files + plan
-  if (isCodeGeneration && !hasCodeContext) {
-    // 3a. Scaffold project structure first if a stack template matches
-    const stackTemplate = detectStackTemplate(commandText);
-    if (stackTemplate && projectDir) {
-      options.onProgress?.({ stage: 'scaffolding', agent: 'alphonso', detail: `Scaffolding ${stackTemplate.name}` });
-      const scaffoldResult = await scaffoldProject(commandText, projectDir);
-      if (scaffoldResult && scaffoldResult.filesWritten.length > 0) {
-        filesWritten.push(...scaffoldResult.filesWritten);
-        results.push(`Scaffolded ${scaffoldResult.templateName}: ${scaffoldResult.filesWritten.length} files`);
-        artifacts.push({
-          type: 'project_scaffold',
-          template: scaffoldResult.templateName,
-          files: scaffoldResult.filesWritten
-        });
-
-        // Execute scaffold install commands
-        for (const cmd of scaffoldResult.commands || []) {
-          options.onProgress?.({ stage: 'executing_command', agent: 'alphonso', detail: `Running ${cmd.program} ${cmd.args.join(' ')}` });
-          const execProof = await verifyCommandExecution(cmd.program, cmd.args, projectDir);
-          const payload: any = execProof?.payload || {};
-          results.push(`Scaffold install: ${cmd.program} ${cmd.args.join(' ')} — exit ${payload.exitCode ?? '?'}`);
-        }
-      }
-    }
-
-    // 3b. Use brain-based execution: context → plan → generate → validate → fix
-    const brainResult = await executeWithBrain(commandText, {
-      endpoint: options.endpoint,
-      // Jose's instruction for this step, as a note only (phase 4).
-      stepInstruction: options.stepInstruction,
-      projectDirectory: projectDir,
-      onProgress: options.onProgress,
-      onToken: options.onToken,
-      conversationHistory: options.conversationHistory,
-      sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
-    });
-
-    if (brainResult.filesWritten.length > 0) {
-      filesWritten.push(...brainResult.filesWritten);
-      results.push(`Brain generated ${brainResult.filesWritten.length} files across ${brainResult.steps} steps`);
-    }
-    artifacts.push(...brainResult.artifacts);
-  }
-
-  // 4. Execute direct commands when build/test/install/run intent detected
-  if (hasCodeContext) {
-    const program = 'npm';
-    let args = ['run', 'build'];
-    let intentLabel = 'build';
-
-    if (isTestIntent) {
-      args = ['run', 'test'];
-      intentLabel = 'test';
-    } else if (isInstallIntent) {
-      const pkgMatch = commandText.match(/install\s+(\S+)/i);
-      args = pkgMatch ? ['install', pkgMatch[1]] : ['install'];
-      intentLabel = 'install';
-    } else if (isRunIntent) {
-      if (/dev|serve|start/.test(lower)) {
-        args = ['run', 'dev'];
-        intentLabel = 'dev server';
-      } else {
-        args = ['run', 'start'];
-        intentLabel = 'start';
-      }
-    }
-
-    options.onProgress?.({ stage: 'executing_command', agent: 'alphonso', detail: `Running ${intentLabel}: ${program} ${args.join(' ')}` });
-
-    const executionProof = await verifyCommandExecution(program, args, projectDir);
-    const payload: any = executionProof?.payload || {};
-    const exitCode = payload.exitCode ?? null;
-    const stdout = payload.stdout || '';
-    const stderr = payload.stderr || '';
-    const success = payload.success === true || exitCode === 0;
-
-    results.push(`Command: ${program} ${args.join(' ')}`);
-    results.push(`Exit code: ${exitCode}`);
-    if (stdout) results.push(`stdout: ${stdout.slice(0, 500)}`);
-    if (stderr) results.push(`stderr: ${stderr.slice(0, 500)}`);
-
-    artifacts.push({
-      type: 'command_execution',
-      program,
-      args,
-      exitCode,
-      success,
-      stdout: stdout.slice(0, 2000),
-      stderr: stderr.slice(0, 2000),
-      trust: executionProof?.trust || 'unverified'
-    });
-  }
-
-  // 5. Always verify runtime state
-  const runtimeProof: any = await verifyOllamaRuntimeProof(options.endpoint);
-  const processProof: any = await verifyProcessProof(['ollama']);
-  const runtimeReachable = runtimeProof?.payload?.reachable === true;
-  const processRunning = Array.isArray(processProof?.payload)
-    ? processProof.payload.some((item) => item?.running)
-    : false;
-
-  artifacts.push({ type: 'runtime_proof', id: runtimeProof?.id || null });
-  artifacts.push({ type: 'process_proof', id: processProof?.id || null });
-
-  if (miyaContext) {
-    artifacts.push({ type: 'miya_creative_input', summary: miyaContext.summary });
-    results.push(`Miya creative package available: ${miyaContext.summary}`);
-  }
-
-  // 6. Determine final state
-  const commandResult = artifacts.find((a) => a.type === 'command_execution');
-  const codeGenResult = artifacts.find((a) => a.type === 'code_generation');
-  let resultState;
-  if (commandResult) {
-    resultState = commandResult.success ? 'verified' : 'failed';
-  } else if (codeGenResult) {
-    resultState = filesWritten.length > 0 ? 'verified' : 'failed';
-  } else {
-    resultState = runtimeReachable ? 'verified' : 'failed';
-  }
-
-  const summaryParts = [];
-  if (codeGenResult) {
-    summaryParts.push(`Alphonso generated ${filesWritten.length} file(s): ${filesWritten.join(', ')}.`);
-    if (codeGenResult.plan) summaryParts.push(`Plan: ${codeGenResult.plan}`);
-  }
-  if (commandResult) {
-    summaryParts.push(`Executed ${commandResult.program} ${commandResult.args.join(' ')} (exit ${commandResult.exitCode ?? 'unknown'}). ${commandResult.success ? 'Succeeded.' : 'Failed.'}`);
-  }
-  summaryParts.push(runtimeReachable ? 'Runtime reachable.' : 'Runtime unreachable.');
-  if (results.length > 0) {
-    summaryParts.push(results.join(' | '));
-  }
-
-  return {
-    summary: summaryParts.join(' ') || `Alphonso completed execution for "${commandText}".`,
-    resultState,
-    resultUrl: null,
-    artifacts,
-    sources: [],
-    contractAction: assignment?.actionType || 'local_operation',
-    runtimeReachable,
-    processRunning
-  };
+  return executeAssistantAssignment(commandText, assignment, options);
 }
 
 async function executeMiyaAssignment(commandText: any, assignment: any, options: any = {}) {
@@ -1315,9 +1165,12 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
       }),
     };
   }
+  // Whoever reads Alphonso's work reads it where he worked (agent phase 6).
+  const workFolder = commandId ? reviewedFolder(commandId, assignment) : null;
+  if (workFolder && !options.workspaceRoot && !options.projectDirectory) options = { ...options, workspaceRoot: workFolder };
   // The step's skill (agent roles Part B): picked, its tools run, put in the step input.
   if (options.stepInput) {
-    options = { ...options, stepInput: await prepareSkill(packet, assignment, options.stepInput, { workspaceRoot: options.projectDirectory }) };
+    options = { ...options, stepInput: await prepareSkill(packet, assignment, options.stepInput, { workspaceRoot: options.projectDirectory || options.workspaceRoot }) };
   }
   if (assignment?.agent === AGENTS.ALPHONSO && (assignment?.instruction || options.stepInput?.skill)) {
     options = { ...options, stepInstruction: [assignment?.instruction, skillSection(options.stepInput)].filter(Boolean).join('\n\n') };
@@ -1370,6 +1223,14 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   }
   if (assignment?.actionType === 'boardroom_advance') {
     return executeBoardroomAdvance(assignment, commandText, options);
+  }
+  if (isAlphonsoCodeStep(assignment)) {
+    const request: any = commandId ? getJoseRequest(`jose-request-${commandId}`) : null;
+    const preview = request?.steps?.find((s: any) => s.stepId === assignment.stepId)?.codePreview;
+    if (!preview) {
+      return { summary: 'Nothing was prepared for this step.', resultState: 'failed', resultUrl: null, artifacts: [], sources: [], contractAction: assignment.actionType };
+    }
+    return runAlphonsoCode(commandId, assignment, preview, options.stepInput || null);
   }
   if (assignment?.agent === AGENTS.ALPHONSO && String(assignment?.actionType || '').startsWith('assistant_')) {
     return executeAssistantAssignment(requestText, assignment, options);
@@ -1812,6 +1673,58 @@ export async function runJoseCommandExecutionPipeline({
         continue;
       }
 
+      // Alphonso's code step is prepared before it asks you (agent phase 6): which project, and
+      // exactly what changes and runs. A problem ends or parks the step here without asking.
+      let codeLine = '';
+      let codeNeeds: any[] = [];
+      if (isAlphonsoCodeStep(assignment) && packet.status !== 'approved') {
+        const requestNow: any = joseRequestId ? getJoseRequest(joseRequestId) : null;
+        const saved = requestNow?.steps?.find((s: any) => s.stepId === assignment.stepId)?.codePreview;
+        let codePreview = saved || null;
+        if (!codePreview) {
+          const input = buildStepInput(command.id, assignment, String(commandText || ''), { large: usesLargeModel(assignment) });
+          const prepared: any = await prepareAlphonsoCode(command.id, assignment, joseRequestId || `jose-request-${command.id}`, input);
+          if (prepared.ok === false) {
+            if (prepared.outcome === 'help') {
+              const stepOutput = { summary: `HELP: ${prepared.reason}`, resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+              setAgentOutput(command.id, assignment.agent, stepOutput);
+              setStepOutput(command.id, assignment.stepId, assignment.agent, stepOutput);
+              updatePacketStatus(assignment.packetId, 'executed', { verificationState: TRUST_STATES.INFERRED });
+              executedCount += 1;
+              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'executed', resultState: 'completed' });
+              onProgress?.({ stage: 'executed', assignment, packetId: assignment.packetId, result: stepOutput });
+            } else if (prepared.outcome === 'failed') {
+              failedCount += 1;
+              updatePacketStatus(assignment.packetId, 'failed', { failureReason: prepared.reason, retryable: false });
+              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'failed', reason: prepared.reason });
+              onProgress?.({ stage: 'step_failed', assignment, packetId: assignment.packetId, reason: prepared.reason });
+            } else {
+              if (joseRequestId) {
+                const extra = prepared.outcome === 'choose' ? { projectChoices: prepared.choices || [] } : prepared.outcome === 'busy' ? { waitingForFolder: prepared.folder } : {};
+                try { updateJoseStep(joseRequestId, assignment.stepId, extra as any); } catch { /* display aid */ }
+              }
+              updatePacketStatus(assignment.packetId, 'queued', { failureReason: prepared.reason });
+              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'setup_needed', reason: prepared.reason });
+              onProgress?.({ stage: 'setup_needed', assignment, packetId: assignment.packetId, reason: prepared.reason });
+            }
+            continue;
+          }
+          codePreview = prepared.preview;
+          if (joseRequestId) {
+            try {
+              updateJoseStep(joseRequestId, assignment.stepId, {
+                codePreview, note: describeCodeChange(codePreview), folder: codePreview.place.root,
+                ...(codePreview.place.kind === 'project' ? { project: codePreview.place.name } : {}),
+                ...(codePreview.model ? { model: codePreview.model } : {}),
+                projectChoices: undefined, waitingForFolder: undefined,
+              } as any);
+            } catch { /* display aid */ }
+          }
+        }
+        codeLine = describeCodeChange(codePreview);
+        codeNeeds = effectsNeedingApproval(previewNeeds(codePreview));
+      }
+
       // Marcus's send is prepared before it asks you (agent phase 5): the approval shows exactly
       // what goes where. A problem ends the step right here without asking, since the bus never
       // runs an unapproved send: nothing to send, a connector to set up, or text too long.
@@ -1857,7 +1770,7 @@ export async function runJoseCommandExecutionPipeline({
 
       // A packet you approved has been previewed already.
       // A prepared send waits below with its exact text instead.
-      if (isRiskyAssignment(assignment) && previewMode && packet.status !== 'approved' && !sendLine) {
+      if (isRiskyAssignment(assignment) && previewMode && packet.status !== 'approved' && !sendLine && !codeLine) {
         const previewPriorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
         const previewContent = buildPreviewContent(previewPriorOutputs);
         pendingApprovalCount += 1;
@@ -1904,7 +1817,8 @@ export async function runJoseCommandExecutionPipeline({
 
       // A step whose effects need the user's approval waits for it; Jose never
       // approves those himself (2026-10-23). Resumed by executeApprovedPackets.
-      const effectsToWaitFor = Array.isArray(assignment.effects) ? stepEffectsToWaitFor(assignment.effects) : [];
+      // A prepared code step waits on what its change needs, not on its declared effects (agent phase 6).
+      const effectsToWaitFor = codeLine ? codeNeeds : Array.isArray(assignment.effects) ? stepEffectsToWaitFor(assignment.effects) : [];
       // A step can also wait for a reason of its own (phase 6b: Miya Studio's review).
       const waitFor = typeof assignment.waitFor === 'string' && assignment.waitFor.trim() ? assignment.waitFor.trim() : '';
       if ((effectsToWaitFor.length > 0 || waitFor) && packet.status !== 'approved') {
@@ -1912,13 +1826,13 @@ export async function runJoseCommandExecutionPipeline({
         const cost = Number.isFinite(assignment.costEstimateUsd) ? ` (about $${Number(assignment.costEstimateUsd).toFixed(2)})` : '';
         const reason = waitFor
           ? `Waiting for you: ${waitFor}`
-          : sendLine
-            ? `Waiting for your approval: ${sendLine}`
+          : sendLine || codeLine
+            ? `Waiting for your approval: ${sendLine || codeLine}`
             : `Waiting for your approval: ${effectsToWaitFor.map((e) => EFFECT_LABELS[e]).join(', ')}${cost}.`;
         pendingApprovalCount += 1;
         updatePacketStatus(assignment.packetId, 'pending_approval', {
           policyReason: reason,
-          ...(sendLine ? { commandPreview: sendLine } : {}),
+          ...(sendLine || codeLine ? { commandPreview: sendLine || codeLine } : {}),
           verificationState: TRUST_STATES.PENDING
         });
         executionReceipts.push({
@@ -2507,10 +2421,43 @@ export function rejectRequestStep(requestId: string, stepId: string) {
   // The request is cancelled, so its other waiting steps leave the queue too.
   rejectWaitingPackets(request.commandId, 'The request was cancelled.');
   updateJoseStep(requestId, stepId, { status: 'rejected', endedAtMs: timestampMs() });
+  // A rejected code step writes nothing and frees its project (agent phase 6).
+  for (const s of request.steps || []) {
+    if (s.codePreview?.place?.folder) releaseProject(s.codePreview.place.folder, requestId);
+  }
   setJoseRequestStatus(requestId, 'cancelled');
   appendRequestNote(requestId, `You rejected ${agentName(step.agent)}'s step.`);
   return { ok: true, summary: 'Rejected. The request was cancelled.' };
 }
+
+/**
+ * "Which project" answered (agent phase 6): the step works in that project and carries on.
+ */
+export async function pickAlphonsoProject(requestId: string, stepId: string, name: string) {
+  const request: any = getJoseRequest(requestId);
+  const step = request?.steps?.find((s: any) => s.stepId === stepId);
+  if (!request || request.status !== 'waiting_setup' || !Array.isArray(step?.projectChoices) || !step.projectChoices.includes(name)) {
+    return { ok: false, summary: 'Already done.' };
+  }
+  updateJoseStep(requestId, stepId, { project: name, projectChoices: undefined } as any);
+  appendRequestNote(requestId, `You chose ${name} for ${agentName(step.agent)}'s step.`);
+  await carryOnRequest(requestId);
+  return { ok: true, summary: `Working in ${name}.` };
+}
+
+/** When a project is free again, the oldest request waiting for it carries on (agent phase 6). */
+function wakeWaitingFor(folder: string) {
+  const norm = (f: string) => String(f || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  const waiting = listJoseRequests()
+    .filter((r: any) => r.status === 'waiting_setup' && r.steps?.some((s: any) => s.waitingForFolder && norm(s.waitingForFolder) === norm(folder)))
+    .sort((a: any, b: any) => (a.createdAtMs || 0) - (b.createdAtMs || 0));
+  if (waiting[0]) {
+    const step = waiting[0].steps.find((s: any) => s.waitingForFolder && norm(s.waitingForFolder) === norm(folder));
+    updateJoseStep(waiting[0].id, step.stepId, { waitingForFolder: undefined } as any);
+    carryOnRequest(waiting[0].id).catch(() => { /* the request shows what happened */ });
+  }
+}
+onProjectReleased(wakeWaitingFor);
 
 /** Carry on a request the app was closed on (phase 5): steps already done are kept; a step that needs approval asks again. */
 export async function carryOnRequest(requestId: string, options: any = {}) {

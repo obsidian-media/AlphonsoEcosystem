@@ -28,5 +28,7 @@ describe('codeStep', () => {
     expect(isAlphonsoCodeStep({ agent: 'alphonso', actionType: 'verification_workflow_step' })).toBe(true);
     expect(isAlphonsoCodeStep({ agent: 'alphonso', actionType: 'assistant_write' })).toBe(false);
     expect(isAlphonsoCodeStep({ agent: 'miya', actionType: 'local_operation' })).toBe(false);
+    // A content-factory step runs through the factory's own executor.
+    expect(isAlphonsoCodeStep({ agent: 'alphonso', actionType: 'local_operation', contentStep: { projectId: 'p', step: 'assemble' } } as never)).toBe(false);
   });
 });

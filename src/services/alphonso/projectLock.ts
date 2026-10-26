@@ -33,11 +33,19 @@ export function projectHolder(folder: string): string | null {
   return read()[key(folder)]?.requestId || null;
 }
 
+const releaseListeners: ((folder: string) => void)[] = [];
+
+/** Called with the folder whenever a project is freed (Jose carries a waiting request on). */
+export function onProjectReleased(listener: (folder: string) => void): void {
+  if (!releaseListeners.includes(listener)) releaseListeners.push(listener);
+}
+
 /** Frees the project; returns whether this request held it. */
 export function releaseProject(folder: string, requestId: string): boolean {
   const locks = read();
   if (locks[key(folder)]?.requestId !== requestId) return false;
   delete locks[key(folder)];
   write(locks);
+  for (const listener of releaseListeners) setTimeout(() => listener(folder), 0);
   return true;
 }

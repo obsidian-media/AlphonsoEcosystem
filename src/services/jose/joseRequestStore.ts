@@ -29,6 +29,15 @@ export interface JoseRequestStep extends PlanStep {
   sendPreview?: SendPreview;
   /** When that send went out; a second run says it was already sent. */
   sentAtMs?: number;
+  /** An Alphonso code step prepared before it asked you (agent phase 6). */
+  codePreview?: import('../alphonso/types').CodePreview;
+  /** The project it works in (a listed name), and the folder its files are relative to. */
+  project?: string;
+  folder?: string;
+  /** "Which project": the names to pick from. */
+  projectChoices?: string[];
+  /** Waiting for another request to finish with this project folder. */
+  waitingForFolder?: string;
 }
 
 export interface JoseRequest {

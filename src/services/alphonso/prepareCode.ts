@@ -11,7 +11,7 @@ import { getStepOutput } from '../jose/joseStepOutputs';
 import { STEP_INPUT_LIMITS, skillSection, stepInputText, type StepInput } from '../jose/stepInput';
 import { classifyCommand, classifyFile } from './changeSet';
 import { parseCodeAnswer, type CodeAnswer } from './codeStep';
-import { claimProject, busyLine } from './projectLock';
+import { claimProject, busyLine, releaseProject } from './projectLock';
 import {
   NO_PROJECT, getCodeModel, listProjects, projectNamedIn, projectPlace, scratchPlace, type WorkPlace,
 } from './projects';
@@ -21,12 +21,13 @@ import type { CodePreview } from './types';
 export const ALPHONSO_NO_PLAN = "Alphonso's model didn't give a change he could use.";
 export const WHICH_PROJECT = (names: string[]) => `Which project: ${names.join(', ')}?`;
 export const FOLDER_GONE = (name: string, folder: string) => `The folder for ${name} is gone: ${folder}. Change it in Settings → Agents → Alphonso's projects.`;
+export const MODEL_DIDNT_ANSWER = (why: string) => `Alphonso's model didn't answer (${why}). Nothing was changed.`;
 export const NEEDS_TO_KNOW = (questions: string[]) => `Alphonso needs to know: ${questions.join(' ')}`;
 const RECENT_SCRATCH = 10;
 
 export type PrepareCode =
   | { ok: true; preview: CodePreview }
-  | { ok: false; outcome: 'setup' | 'choose' | 'busy' | 'failed'; reason: string; choices?: string[]; folder?: string };
+  | { ok: false; outcome: 'setup' | 'choose' | 'busy' | 'failed' | 'help'; reason: string; choices?: string[]; folder?: string };
 
 type Assignment = { stepId?: string; agent?: string; actionType?: string; model?: string; revises?: string };
 
@@ -107,7 +108,7 @@ async function choosePlace(requestText: string, requestStep: any, assignment: As
   return { ok: false, outcome: 'setup', reason: NO_PROJECT };
 }
 
-function codePrompt(requestText: string, place: WorkPlace, listing: string, files: { path: string; text: string }[], previous: { path: string; text: string }[], input: StepInput | null, problem: string): string {
+function codePrompt(requestText: string, place: WorkPlace, listing: string, files: { path: string; text: string }[], previous: { path: string; text: string }[], input: StepInput | null, problem: string, mayAskHelp: boolean): string {
   const shown = (list: { path: string; text: string }[]) => list.map((f) => `--- ${f.path}\n${f.text}`).join('\n\n');
   return [
     `You are Alphonso. You write code in ${place.kind === 'project' ? `the project "${place.name}"` : 'a new folder for a small program'}. You change only what the request needs, write complete files, and follow the project's style.`,
@@ -123,6 +124,7 @@ function codePrompt(requestText: string, place: WorkPlace, listing: string, file
       '- "read": paths from the list you need to see first (only when you need them; then nothing else),',
       '- or "title" (a few words), "plan" (one or two sentences), "files" (each {"path": relative to the folder, "content": the whole file}), and "commands" (each {"program", "args", "why"}: only checks that prove the change works, or what the request asks to run; never a commit or a dev server unless the request asks),',
       '- or "questions" (what you must know first) when you can\'t do it.',
+      ...(mayAskHelp ? ['- or "help" (what another agent should find or check first, e.g. the docs of a library) when you need that before writing.'] : []),
     ].join('\n'),
   ].filter(Boolean).join('\n\n');
 }
@@ -143,7 +145,20 @@ async function readWhole(place: WorkPlace, path: string): Promise<string | null>
   }
 }
 
+/** Prepares the step; a failure after the project was claimed frees it again. */
 export async function prepareAlphonsoCode(commandId: string, assignment: Assignment, requestId: string, input: StepInput | null): Promise<PrepareCode> {
+  const claimed: string[] = [];
+  let result: PrepareCode;
+  try {
+    result = await prepare(commandId, assignment, requestId, input, claimed);
+  } catch (error) {
+    result = { ok: false, outcome: 'failed', reason: MODEL_DIDNT_ANSWER(error instanceof Error ? error.message : String(error)) };
+  }
+  if (result.ok === false && result.outcome !== 'busy') for (const folder of claimed) releaseProject(folder, requestId);
+  return result;
+}
+
+async function prepare(commandId: string, assignment: Assignment, requestId: string, input: StepInput | null, claimed: string[]): Promise<PrepareCode> {
   const request: any = getJoseRequest(requestId);
   const requestText = String(request?.text || input?.request || '');
   const requestStep = request?.steps?.find((s: any) => s.stepId === assignment.stepId) || null;
@@ -168,6 +183,7 @@ export async function prepareAlphonsoCode(commandId: string, assignment: Assignm
   if (place !== 'new') {
     const lock = claimProject(place.folder, requestId);
     if (lock.ok === false) return { ok: false, outcome: 'busy', reason: busyLine(place.name), folder: place.folder };
+    claimed.push(place.folder);
     try {
       listing = (await listProjectFiles(place.folder, listChars)).text;
     } catch {
@@ -184,12 +200,13 @@ export async function prepareAlphonsoCode(commandId: string, assignment: Assignm
   let problem = '';
   let readAsked = false;
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const raw = await askAlphonso(codePrompt(requestText, workPlace, listing, read, previous, input, problem), model);
+    const raw = await askAlphonso(codePrompt(requestText, workPlace, listing, read, previous, input, problem, !(assignment as any).helpRound), model);
     const parsed = parseCodeAnswer(raw);
     if (!parsed) {
       problem = 'Your last answer could not be read as the JSON asked for.';
       continue;
     }
+    if (parsed.help && !parsed.files.length) return { ok: false, outcome: 'help', reason: parsed.help };
     if (!parsed.files.length && !parsed.questions.length && parsed.read.length && !readAsked && place !== 'new') {
       readAsked = true;
       const known = new Set(listing.split('\n'));
@@ -209,6 +226,7 @@ export async function prepareAlphonsoCode(commandId: string, assignment: Assignm
     if ('ok' in scratch) return { ok: false, outcome: 'setup', reason: scratch.reason };
     const lock = claimProject(scratch.folder, requestId);
     if (lock.ok === false) return { ok: false, outcome: 'busy', reason: busyLine(scratch.name), folder: scratch.folder };
+    claimed.push(scratch.folder);
     finalPlace = scratch;
   } else {
     finalPlace = place;

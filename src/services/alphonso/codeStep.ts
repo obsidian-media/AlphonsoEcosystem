@@ -9,10 +9,14 @@ export interface CodeAnswer {
   commands: { program: string; args: string[]; why: string }[];
   questions: string[];
   read: string[];
+  /** What another agent should provide first (agent phase 6): the step ends with a HELP line. */
+  help?: string;
 }
 
-export function isAlphonsoCodeStep(assignment: { agent?: string; actionType?: string } | null | undefined): boolean {
+export function isAlphonsoCodeStep(assignment: { agent?: string; actionType?: string; contentStep?: unknown } | null | undefined): boolean {
   const type = String(assignment?.actionType || '');
+  // A content-factory step runs through the factory's own executor.
+  if (assignment?.contentStep) return false;
   return assignment?.agent === 'alphonso' && CODE_TASK_PREFIXES.some((prefix) => type.startsWith(prefix));
 }
 
@@ -38,11 +42,13 @@ export function parseCodeAnswer(raw: string): CodeAnswer | null {
     .map((c: any) => ({ program: c.program.trim(), args: strings(c.args), why: typeof c.why === 'string' ? c.why.trim() : '' }));
   const questions = strings(data.questions);
   const read = strings(data.read);
-  if (!files.length && !questions.length && !read.length) return null;
+  const help = typeof data.help === 'string' ? data.help.trim() : '';
+  if (!files.length && !questions.length && !read.length && !help) return null;
   return {
     ...(typeof data.project === 'string' && data.project.trim() ? { project: data.project.trim() } : {}),
     title: typeof data.title === 'string' ? data.title.trim() : '',
     plan: typeof data.plan === 'string' ? data.plan.trim() : '',
     files, commands, questions, read,
+    ...(help ? { help } : {}),
   };
 }

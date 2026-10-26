@@ -149,6 +149,36 @@ describe('prepareAlphonsoCode', () => {
     expect(llm).toHaveBeenCalledTimes(2);
   });
 
+  it('a failed preparation frees the project it claimed', async () => {
+    llm.mockResolvedValue({ response: 'nope' });
+    const r = request('In shop, add a toggle');
+    await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never);
+    expect(claimProject('D:/shop', 'another')).toEqual({ ok: true });
+  });
+
+  it('asking for help → help, and the project is freed', async () => {
+    llm.mockResolvedValueOnce(say({ help: 'the docs of the payments library' }));
+    const r = request('In shop, add payments');
+    expect(await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never)).toEqual({ ok: false, outcome: 'help', reason: 'the docs of the payments library' });
+    expect(claimProject('D:/shop', 'another')).toEqual({ ok: true });
+    expect(String(llm.mock.calls[0][1].prompt)).toContain('"help"');
+  });
+
+  it('a help round may not ask for help again', async () => {
+    llm.mockResolvedValueOnce(code());
+    const r = request('In shop, add payments');
+    await prepareAlphonsoCode(r.commandId, step({ helpRound: 1 }), r.requestId, input() as never);
+    expect(String(llm.mock.calls[0][1].prompt)).not.toContain('"help"');
+  });
+
+  it("his model not answering fails the step plainly, never throws", async () => {
+    llm.mockRejectedValue(new Error('Ollama is not running'));
+    const r = request('In shop, add a toggle');
+    expect(await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never))
+      .toEqual({ ok: false, outcome: 'failed', reason: "Alphonso's model didn't answer (Ollama is not running). Nothing was changed." });
+    expect(claimProject('D:/shop', 'another')).toEqual({ ok: true });
+  });
+
   it('the files he asks to read are read, then he writes', async () => {
     llm.mockResolvedValueOnce(say({ read: ['src/App.tsx'] })).mockResolvedValueOnce(code());
     const r = request('In shop, add a toggle');
