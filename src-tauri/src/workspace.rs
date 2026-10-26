@@ -158,6 +158,14 @@ pub(crate) struct WorkspaceDirEntry {
   pub(crate) modified_ms: Option<u64>,
 }
 
+/// A project's files as git sees them (agent phase 6): what `.gitignore` skips is left out.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProjectListing {
+  pub files: Vec<String>,
+  pub truncated: bool,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct WorkspaceDirectoryProof {
@@ -1359,6 +1367,43 @@ pub(crate) fn search_workspace_files(
   })
 }
 
+/// Alphonso's project listing (agent phase 6): files only, relative with `/`, sorted, skipping
+/// what the project's own `.gitignore` skips and `.git`. At most `max_entries` paths.
+#[tauri::command]
+pub(crate) fn list_project_files(
+  workspace_root: String,
+  max_entries: usize,
+) -> Result<ProjectListing, String> {
+  let root = PathBuf::from(workspace_root.trim());
+  if root.as_os_str().is_empty() {
+    return Err("Workspace root is required.".to_string());
+  }
+  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  if !root_abs.is_dir() {
+    return Err("Path is not a directory.".to_string());
+  }
+  let mut files = Vec::new();
+  let walker = ignore::WalkBuilder::new(&root_abs)
+    .hidden(false)
+    .git_ignore(true)
+    .git_exclude(true)
+    .require_git(false)
+    .filter_entry(|entry| entry.file_name() != ".git")
+    .build();
+  for entry in walker.flatten() {
+    if !entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+      continue;
+    }
+    if let Ok(rel) = entry.path().strip_prefix(&root_abs) {
+      files.push(rel.to_string_lossy().replace('\\', "/"));
+    }
+  }
+  files.sort();
+  let truncated = files.len() > max_entries;
+  files.truncate(max_entries);
+  Ok(ProjectListing { files, truncated })
+}
+
 #[tauri::command]
 pub(crate) fn list_workspace_directory(
   workspace_root: String,
@@ -2177,6 +2222,43 @@ pub(crate) fn mark_inbox_file_processed(
 mod tests {
   use super::*;
   use std::path::Component;
+
+  fn project_dir(name: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("alphonso-list-{name}-{}", now_ms()));
+    fs::create_dir_all(dir.join("out")).unwrap();
+    fs::create_dir_all(dir.join(".git")).unwrap();
+    fs::write(dir.join(".gitignore"), "out/\n").unwrap();
+    fs::write(dir.join("a.js"), "a").unwrap();
+    fs::write(dir.join("out/b.js"), "b").unwrap();
+    fs::write(dir.join(".git/x"), "x").unwrap();
+    dir
+  }
+
+  #[test]
+  fn list_project_files_respects_gitignore() {
+    let dir = project_dir("ignore");
+    let listing = list_project_files(dir.to_string_lossy().to_string(), 100).unwrap();
+    assert_eq!(
+      listing.files,
+      vec![".gitignore".to_string(), "a.js".to_string()]
+    );
+    assert!(!listing.truncated);
+    let _ = fs::remove_dir_all(&dir);
+  }
+
+  #[test]
+  fn list_project_files_caps_entries() {
+    let dir = project_dir("cap");
+    let listing = list_project_files(dir.to_string_lossy().to_string(), 1).unwrap();
+    assert_eq!(listing.files.len(), 1);
+    assert!(listing.truncated);
+    let _ = fs::remove_dir_all(&dir);
+  }
+
+  #[test]
+  fn list_project_files_rejects_empty_root() {
+    assert!(list_project_files("  ".to_string(), 10).is_err());
+  }
 
   #[test]
   fn git_dir_writes_are_detected_case_insensitively() {
