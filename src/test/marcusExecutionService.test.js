@@ -151,21 +151,20 @@ describe('runMarcusDistribution', () => {
     expect(Array.isArray(result.artifacts)).toBe(true);
   });
 
-  it('blocks execution when maria flags critical with approvalRequired', async () => {
-    const mariaOutput = {
-      schema: { riskLevel: 'critical', approvalRequired: true },
-      artifacts: [{ type: 'governance_audit', riskLevel: 'critical', approvalRequired: true }]
-    };
+  // Agent phase 3: Maria's approval already made the step wait for you (her hold), so Marcus
+  // doesn't block again on his own; and no keyword score stands in when she didn't review.
+  it("doesn't block on his own when Maria flagged high risk (her hold already asked you)", async () => {
+    const mariaOutput = { schema: { riskLevel: 'critical', approvalRequired: true }, artifacts: [] };
     const result = await runMarcusDistribution('dangerous action', { actionType: 'delete_all' }, { maria: mariaOutput });
-    expect(result.resultState).toBe('pending_review');
-    expect(result.summary).toMatch(/blocked|approval/i);
+    expect(result.summary).not.toMatch(/Marcus blocked/);
   });
 
-  it('blocks when no maria output and quick risk is critical', async () => {
+  it('uses no keyword score when Maria did not review', async () => {
     const { generateRiskScore } = await import('../services/audit/marcusAuditService');
-    generateRiskScore.mockReturnValueOnce({ level: 'critical', score: 10, factors: ['delete all'] });
+    generateRiskScore.mockClear();
     const result = await runMarcusDistribution('delete everything', { actionType: 'delete_all' }, {});
-    expect(result.resultState).toBe('pending_review');
+    expect(generateRiskScore).not.toHaveBeenCalled();
+    expect(result.summary).not.toMatch(/Marcus blocked/);
   });
 
   it('proceeds when maria clears as low risk', async () => {
@@ -318,5 +317,30 @@ describe('post numbers in the runner', () => {
     expect(readDueMetrics).toHaveBeenCalledTimes(2);
     stopScheduler();
     vi.useRealTimers();
+  });
+});
+
+// Agent phase 3: Marcus reads Maria's review of the very work he sends, and no keyword score.
+describe("Marcus and Maria's review", () => {
+  it('Marcus reads the review of the work he sends, not another', async () => {
+    const { mariaReviewFor } = await import('../services/marcusExecutionService');
+    const { createJoseRequest } = await import('../services/jose/joseRequestStore');
+    const { setStepOutput } = await import('../services/jose/joseStepOutputs');
+    localStorage.clear();
+    createJoseRequest({ commandId: 'cm1', source: 'user', text: 't', kind: 'normal', steps: [
+      { stepId: 'post', agent: 'alphonso', actionType: 'assistant_write', effects: ['read'], needs: [] },
+      { stepId: 'check', agent: 'maria', actionType: 'audit_quality', effects: ['read'], needs: ['post'], reviewOf: 'post' },
+      { stepId: 'other', agent: 'maria', actionType: 'governance_audit', effects: ['read'], needs: [] },
+      { stepId: 'marcus', agent: 'marcus', actionType: 'distribution_slack', effects: ['publish_or_send'], needs: ['post', 'check'] },
+    ] });
+    setStepOutput('cm1', 'check', 'maria', { summary: 'Pass.', schema: { kind: 'work', verdict: 'pass', riskLevel: 'low', approvalRequired: false } });
+    setStepOutput('cm1', 'other', 'maria', { summary: 'Risk: high.', schema: { kind: 'plan', riskLevel: 'high', approvalRequired: true } });
+    expect(mariaReviewFor('cm1', ['post', 'check'])?.schema?.verdict).toBe('pass');
+    expect(mariaReviewFor('cm1', ['nothing'])).toBeNull();
+  });
+
+  it('Marcus uses no keyword score', async () => {
+    const { readFileSync } = await import('node:fs');
+    expect(readFileSync('src/services/marcusExecutionService.ts', 'utf8')).not.toContain('generateRiskScore');
   });
 });

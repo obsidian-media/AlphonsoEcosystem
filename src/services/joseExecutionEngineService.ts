@@ -50,6 +50,7 @@ import { listInstalledModels, pickLargerModel, usesOwnToolCalls } from './jose/j
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
+import { holdStepsAfter, mariaHoldFor } from './maria/mariaHolds';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
 import { runVisualWorkflow } from './workflowExecutionService';
@@ -2104,6 +2105,13 @@ export async function runJoseCommandExecutionPipeline({
       // By agent (that agent's latest step, as before) and by step.
       setAgentOutput(command.id, assignment.agent, stepOutput);
       setStepOutput(command.id, assignment.stepId, assignment.agent, stepOutput);
+      // Maria asked for your approval, or a "fix" is left after the review rounds: the steps
+      // after hers wait for you, with her reasons (agent phase 3).
+      const mariaHold = mariaHoldFor(assignment, result, JOSE_LIMITS.maxFixRounds);
+      if (mariaHold) {
+        const held = holdStepsAfter(planAssignments, assignment.stepId, mariaHold);
+        if (held.length && joseRequestId) appendRequestNote(joseRequestId, mariaHold);
+      }
       // A content-factory step is saved to its Miya Studio project as it finishes (phase 6b),
       // whichever way the request is run or carried on.
       const contentData = assignment.contentStep

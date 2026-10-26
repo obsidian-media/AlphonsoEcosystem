@@ -54,7 +54,9 @@ vi.mock('../../../lib/ollama', () => ({
     if (_agent === 'maria' && /You are Maria/.test(prompt)) {
       return /The work to review/.test(prompt)
         ? { response: JSON.stringify({ verdict: 'pass', summary: 'Ready to use.', findings: [] }) }
-        : { response: JSON.stringify({ risk: 'low', why: 'Nothing is sent.', rules: [], points: ['Nothing leaves this computer.'], needsApproval: false, approvalReasons: [], offer: '' }) };
+        : globalThis.__mariaAsksApproval
+          ? { response: JSON.stringify({ risk: 'medium', why: 'It emails customers.', rules: [], points: ['Emailing all customers needs their permission.'], needsApproval: true, approvalReasons: ['Emailing all customers needs their permission.'], offer: '' }) }
+          : { response: JSON.stringify({ risk: 'low', why: 'Nothing is sent.', rules: [], points: ['Nothing leaves this computer.'], needsApproval: false, approvalReasons: [], offer: '' }) };
     }
     // Nova's ranked verdict (agent phase 2).
     if (_agent === 'nova' && /You are Nova/.test(prompt)) {
@@ -695,6 +697,27 @@ describe('Jose runs plans as step graphs', () => {
     });
     const output = getStepOutput(result.commandId, 'maria');
     expect(output.schema.riskLevel).toBeTruthy();
+  });
+
+  // Agent phase 3: when Maria asks for your approval, the steps after hers wait with her reasons.
+  it('holds the steps after Maria when she asks for approval, and carries on once approved', async () => {
+    globalThis.__mariaAsksApproval = true;
+    try {
+      const result = await run([
+        step('maria', 'governance_audit', { stepId: 'review', effects: ['read'], contentStep: undefined }),
+        step('alphonso', 'assistant_write', { stepId: 'email', effects: ['read'], needs: ['review'], contentStep: undefined }),
+      ]);
+      const requestId = `jose-request-${result.commandId}`;
+      const email = getJoseRequest(requestId).steps.find((s) => s.stepId === 'email');
+      expect(email.status).toBe('waiting_approval');
+      const receipt = result.executionReceipts.find((r) => r.agent === 'alphonso');
+      expect(receipt.reason).toContain('Maria asks for your approval: Emailing all customers needs their permission.');
+      globalThis.__mariaAsksApproval = false;
+      await approveRequestStep(requestId, 'email');
+      expect(getJoseRequest(requestId).steps.find((s) => s.stepId === 'email').status).toBe('done');
+    } finally {
+      globalThis.__mariaAsksApproval = false;
+    }
   });
 
   // Phase 6b: a step can wait for you for a reason of its own (Miya Studio's review approval).

@@ -46,11 +46,12 @@ describe('Marcus sends the work', () => {
     expect(result.summary).toBe('Nothing to send: no earlier step wrote the text.');
   });
 
-  it("still blocks on Maria's high-risk verdict found in the same request", async () => {
+  // Agent phase 3: a Maria review of something else in the request no longer stops the send;
+  // her review of this work already made the step wait for you (maria/mariaHolds.ts).
+  it("doesn't block on a Maria review of other work in the same request", async () => {
     setStepOutput('c9', 'maria', 'maria', { summary: 'Risky', schema: { riskLevel: 'high', approvalRequired: true } });
     const result = await runMarcusDistribution('Send it', { actionType: 'slack_message_send' }, {}, { stepInput: stepInput('The post'), commandId: 'c9' });
-    expect(sendMessage).not.toHaveBeenCalled();
-    expect(result.summary).toMatch(/Maria governance audit requires approval/);
+    expect(result.summary).not.toMatch(/Marcus blocked/);
   });
 });
 
