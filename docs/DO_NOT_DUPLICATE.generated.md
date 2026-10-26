@@ -446,7 +446,7 @@ Source-backed inventory: 313 services and 183 components. Human purpose descript
 | service | `src/services/secureStorageService.ts` | `secureDelete`, `secureGet`, `secureSet` |
 | service | `src/services/selfDevelopmentService.ts` | `DevCycle`, `DevCyclePacket`, `DevPacketSummary`, `getCurrentSelfDevelopmentPacketBundle`, `getLastSelfDevelopmentCycle`, `listSelfDevelopmentCycles`, `runSelfDevelopmentCycle`, `SELF_DEVELOPMENT_SCOPE`, `SelfDevelopmentOptions` |
 | service | `src/services/sentinel/addSecurityChecks.ts` | `addSecurityChecks`, `KEY_IN_REQUEST` |
-| service | `src/services/sentinel/exactChecks.ts` | `checkLink`, `ExactRisk`, `ExactRiskKind`, `exactRiskText`, `findExactRisks`, `hideSecrets` |
+| service | `src/services/sentinel/exactChecks.ts` | `checkLink`, `ExactRisk`, `ExactRiskKind`, `exactRiskText`, `findExactRisks`, `redactText` |
 | service | `src/services/sentinel/fence.ts` | `fenced`, `UNTRUSTED_END`, `UNTRUSTED_RULE`, `UNTRUSTED_START` |
 | service | `src/services/sentinel/sentinelHolds.ts` | `SECURITY_WAIT`, `sentinelHoldFor` |
 | service | `src/services/sentinel/sentinelReview.ts` | `runSentinelReview`, `SecurityFinding`, `SENTINEL_NO_CHECK`, `SentinelAssignment`, `sentinelPrompt`, `SentinelStepResult`, `Severity`, `Verdict` |

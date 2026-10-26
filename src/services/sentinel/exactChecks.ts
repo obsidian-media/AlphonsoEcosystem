@@ -42,7 +42,7 @@ function keyHits(text: string): Array<{ start: number; end: number; hidden: stri
 }
 
 /** Every key replaced with "[hidden key, ends …XXXX]", for prompts, memory and receipts. */
-export function hideSecrets(text: string): string {
+export function redactText(text: string): string {
   const source = String(text || '');
   let out = '';
   let at = 0;

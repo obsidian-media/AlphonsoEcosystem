@@ -4,7 +4,7 @@
 // scans that read an empty string.
 import { listJoseRequests } from '../jose/joseRequestStore';
 import { getStepOutput } from '../jose/joseStepOutputs';
-import { hideSecrets } from './exactChecks';
+import { redactText } from './exactChecks';
 
 export const SENTINEL_WEEKLY_LABEL = "Asked by Sentinel's review of the week.";
 
@@ -12,7 +12,7 @@ export async function askSentinelWeekReview(work: string, opts: { source?: 'sche
   const source = opts.source || 'user';
   const text = [
     "Review the last week's activity for security and safety: keys or passwords written down, unsafe or disguised links, commands that delete or run code, and anything asking for permissions it shouldn't.",
-    `The week's activity:\n${hideSecrets(work)}`,
+    `The week's activity:\n${redactText(work)}`,
   ].join('\n\n');
   const { submitStepsToJose } = await import('../jose/submitToJose');
   const result = await submitStepsToJose({

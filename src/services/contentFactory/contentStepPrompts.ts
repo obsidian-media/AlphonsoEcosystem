@@ -4,7 +4,7 @@
 import { extractJsonObject } from '../../lib/jsonUtils.js';
 import { type ContentStepPayload, type StepId } from './contentTypes';
 import { contentAsk } from '../skills/skillLibrary';
-import { exactRiskText, findExactRisks, hideSecrets } from '../sentinel/exactChecks';
+import { exactRiskText, findExactRisks, redactText } from '../sentinel/exactChecks';
 
 type Json = Record<string, unknown>;
 
@@ -176,7 +176,7 @@ export function buildStepPrompt(payload: ContentStepPayload, agent: string, acti
     parts.push(facts.length ? `Exact checks already found (facts; list each as an issue):\n${facts.map((f) => `- ${exactRiskText(f)}`).join('\n')}` : 'Exact checks found nothing.');
   }
   for (const step of action?.uses || []) {
-    if (payload.prior[step] !== undefined && actionType === 'security_content_check') parts.push(`${step} (earlier step):\n${hideSecrets(JSON.stringify(payload.prior[step])).slice(0, 8000)}`);
+    if (payload.prior[step] !== undefined && actionType === 'security_content_check') parts.push(`${step} (earlier step):\n${redactText(JSON.stringify(payload.prior[step])).slice(0, 8000)}`);
     else if (payload.prior[step] !== undefined) parts.push(`${step} (earlier step):\n${JSON.stringify(payload.prior[step]).slice(0, 8000)}`);
   }
   if (actionType === 'creative_script' && brief.writeInMyVoice && payload.brand.pastScripts) {

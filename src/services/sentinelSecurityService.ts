@@ -6,7 +6,7 @@ import type { StepInput } from './jose/stepInput';
 import { listOrchestrationReceipts } from './orchestrationReceiptService';
 import { listAgentActivity } from './agentActivityService';
 import { runSentinelReview, type SentinelAssignment, type SentinelStepResult } from './sentinel/sentinelReview';
-import { hideSecrets } from './sentinel/exactChecks';
+import { redactText } from './sentinel/exactChecks';
 
 export interface SentinelScanOptions {
   stepInput?: StepInput | null;
@@ -45,5 +45,5 @@ export function recentActivityText(days = 7): { text: string; items: number } {
       lines.push(`- ${a.agent} ${a.action} ${a.detail || ''}`.replace(/\s+/g, ' ').trim());
     }
   } catch { /* activity unavailable */ }
-  return { text: hideSecrets(lines.join('\n')), items: lines.length };
+  return { text: redactText(lines.join('\n')), items: lines.length };
 }

@@ -1,6 +1,6 @@
 // Agent phase 4: Sentinel's exact checks are facts handed to his model, never a score.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { findExactRisks, checkLink, hideSecrets, exactRiskText } from '../../../services/sentinel/exactChecks';
+import { findExactRisks, checkLink, redactText, exactRiskText } from '../../../services/sentinel/exactChecks';
 
 const KEY = 'sk-live-1234abcd5678efgh';
 beforeEach(() => localStorage.clear());
@@ -9,15 +9,15 @@ describe('keys', () => {
   it('finds a key and hides it with its last four characters', () => {
     const risks = findExactRisks(`Our test key is ${KEY}.`);
     expect(risks).toEqual([expect.objectContaining({ kind: 'key', where: '[hidden key, ends …efgh]' })]);
-    expect(hideSecrets(`Our test key is ${KEY}.`)).toBe('Our test key is [hidden key, ends …efgh].');
+    expect(redactText(`Our test key is ${KEY}.`)).toBe('Our test key is [hidden key, ends …efgh].');
     for (const k of ['ghp_' + 'a'.repeat(36), 'xoxb-1234567890-abcdefghij', 'AKIA' + 'ABCDEFGHIJKLMNOP', '-----BEGIN RSA PRIVATE KEY-----']) {
       expect(findExactRisks(`x ${k} y`).map((r) => r.kind)).toContain('key');
-      expect(hideSecrets(`x ${k} y`)).not.toContain(k);
+      expect(redactText(`x ${k} y`)).not.toContain(k);
     }
   });
 
   it('hides a key at the start of the text', () => {
-    expect(hideSecrets(`${KEY} is the key`)).toBe('[hidden key, ends …efgh] is the key');
+    expect(redactText(`${KEY} is the key`)).toBe('[hidden key, ends …efgh] is the key');
   });
 
   it('never puts the key itself in a finding', () => {
@@ -85,6 +85,6 @@ describe('a key already hidden', () => {
   it('the placeholder still counts as a key, and is not hidden twice', () => {
     const text = 'Our test key is [hidden key, ends …efgh].';
     expect(findExactRisks(text)).toEqual([expect.objectContaining({ kind: 'key', where: '[hidden key, ends …efgh]' })]);
-    expect(hideSecrets(text)).toBe(text);
+    expect(redactText(text)).toBe(text);
   });
 });

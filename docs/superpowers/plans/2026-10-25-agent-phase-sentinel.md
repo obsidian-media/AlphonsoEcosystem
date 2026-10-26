@@ -55,9 +55,9 @@
 - Test: `src/test/services/sentinel/exactChecks.test.ts`, `src/test/services/sentinel/sentinelTrust.test.ts`
 
 **Interfaces:**
-- Produces: `type ExactRiskKind = 'key' | 'password_request' | 'disguised_link' | 'untrusted_link' | 'deleting_command' | 'code_command'`; `interface ExactRisk { kind: ExactRiskKind; where: string; detail: string }`; `findExactRisks(text: string, opts?: { trustedDomains?: string[]; links?: 'all' | 'sent' }): ExactRisk[]`; `checkLink(url: string, trustedDomains?: string[]): ExactRisk | null` (disguised only); `hideSecrets(text: string): string`; `exactRiskText(r: ExactRisk): string` (plain wording). `listTrustedDomains(): string[]` (allowlist domains plus connected services' domains), `isTrustedDomain(host: string): boolean`, `addTrustedDomain(domain: string, note?: string)`, `removeTrustedDomain(id: string)`.
+- Produces: `type ExactRiskKind = 'key' | 'password_request' | 'disguised_link' | 'untrusted_link' | 'deleting_command' | 'code_command'`; `interface ExactRisk { kind: ExactRiskKind; where: string; detail: string }`; `findExactRisks(text: string, opts?: { trustedDomains?: string[]; links?: 'all' | 'sent' }): ExactRisk[]`; `checkLink(url: string, trustedDomains?: string[]): ExactRisk | null` (disguised only); `redactText(text: string): string`; `exactRiskText(r: ExactRisk): string` (plain wording). `listTrustedDomains(): string[]` (allowlist domains plus connected services' domains), `isTrustedDomain(host: string): boolean`, `addTrustedDomain(domain: string, note?: string)`, `removeTrustedDomain(id: string)`.
 
-- [ ] **Step 1: Failing tests.** `finds a key and hides it with its last four characters` (`sk-live-1234abcd5678efgh` → kind `key`, `hideSecrets` gives `[hidden key, ends …efgh]`; also `ghp_`, `xoxb-`, `AKIA…`, a PEM private key); `hides a key at the start of the text`; `the fake PayPal login is disguised` (`http://paypa1-secure-login.com/verify` → `disguised_link`, detail mentions digits for letters and http); `punycode, a bare IP and a different link text are disguised`; `asks for a password` (`password_request`); `a trusted domain is not untrusted` and `a subdomain of a trusted domain is trusted`; `untrusted links are listed only for sent text` (`links: 'sent'`); `deleting and code commands` (`git clean -fd` → `deleting_command`, `npm run test` → `code_command`, via `assessCommandRisk()`); `no score anywhere` (result objects have only `kind`, `where`, `detail`). `sentinelTrust`: `the panel's saved domains are trusted`, `connected services' domains are trusted`.
+- [ ] **Step 1: Failing tests.** `finds a key and hides it with its last four characters` (`sk-live-1234abcd5678efgh` → kind `key`, `redactText` gives `[hidden key, ends …efgh]`; also `ghp_`, `xoxb-`, `AKIA…`, a PEM private key); `hides a key at the start of the text`; `the fake PayPal login is disguised` (`http://paypa1-secure-login.com/verify` → `disguised_link`, detail mentions digits for letters and http); `punycode, a bare IP and a different link text are disguised`; `asks for a password` (`password_request`); `a trusted domain is not untrusted` and `a subdomain of a trusted domain is trusted`; `untrusted links are listed only for sent text` (`links: 'sent'`); `deleting and code commands` (`git clean -fd` → `deleting_command`, `npm run test` → `code_command`, via `assessCommandRisk()`); `no score anywhere` (result objects have only `kind`, `where`, `detail`). `sentinelTrust`: `the panel's saved domains are trusted`, `connected services' domains are trusted`.
 - [ ] **Step 2: Run** `npx vitest run src/test/services/sentinel` — Expected: FAIL (modules missing).
 - [ ] **Step 3: Implement.** Key patterns: `redactMissionRoomSecrets()`'s patterns (export `SECRET_PATTERNS` from `missionRoomService.ts`) plus `ghp_[A-Za-z0-9]{20,}`, `github_pat_\w{20,}`, `xox[bp]-[\w-]{10,}`, `AKIA[0-9A-Z]{16}`, `-----BEGIN [A-Z ]*PRIVATE KEY-----`. Disguised: a domain label mixing letters and digits where a digit stands for a letter (`0→o, 1→l/i, 3→e, 5→s`), `xn--`, an IP host, `http://` with login/sign-in/verify/password/pay in the path or domain, Markdown/HTML link text showing another domain. Commands: `deletesThings()` (export it) and `assessCommandRisk()` from `commandApprovalService.ts`. Connected services' domains come from `DEFAULT_CONNECTORS` entries that are set up (their `endpoint`/`baseUrl` hosts). The panel keeps its look and uses the service.
 - [ ] **Step 4: Run** the tests, `npx tsc --noEmit -p .`, eslint — Expected: PASS.
@@ -73,7 +73,7 @@
 - Test: `src/test/services/sentinel/sentinelReview.test.ts`, `src/test/services/sentinel/sentinelHolds.test.ts`, `src/test/sentinelSecurityService.test.js` (rewritten), `src/test/services/jose/joseStepGraphPipeline.test.js`
 
 **Interfaces:**
-- Consumes: Task 2's `findExactRisks`, `hideSecrets`, `exactRiskText`, `listTrustedDomains`; phase 3's `workSteps`, `workFiles`, `workResults`, `holdStepsAfter`.
+- Consumes: Task 2's `findExactRisks`, `redactText`, `exactRiskText`, `listTrustedDomains`; phase 3's `workSteps`, `workFiles`, `workResults`, `holdStepsAfter`.
 - Produces: `runSentinelReview(assignment, input: StepInput | null, opts: { commandId?: string; workspaceRoot?: string; signal?: AbortSignal }): Promise<SentinelStepResult>`; schema `{ kind: 'security', verdict: 'safe' | 'risky' | 'unsafe', findings: string[], summary: string, severity: 'low' | 'medium' | 'high', requiresApproval: boolean }` (plus `verdict: 'pass' | 'fix'` saved as `reviewVerdict` and mirrored for the review loop when `reviewOf`); `SENTINEL_NO_CHECK = "Sentinel's model didn't give a readable check."`; `sentinelHoldFor(assignment, result): string | null`; `recentActivityText(days?: number): { text: string; items: number }`.
 
 - [ ] **Step 1: Failing tests.** `checks the reviewed work, else the needed work, else the request`; `quotes are checked, one retry asks to copy the words exactly`; `quotes match the hidden text`; `every exact fact is in the findings, whatever the model says`; `unsafe needs a high finding, safe has none (one retry, then risky)`; `unreadable twice fails with the exact facts in the reason`; `uses Jose's step model` (no `model`/`endpoint` in the call); `keys are hidden in the prompt and the memory title`; `reviewing Alphonso's work reads his files, results and dependency files, with the security prompt` (prompt contains "You check security and safety only" and the file contents; never "what is good"); `hand-over starts Safe. / Risky: / Unsafe:`; `confidence is inferred`. Holds: `a high finding holds the next steps with his reasons`; `safe holds nothing`. Pipeline: `a high Sentinel finding makes later steps wait, and approving carries on` (mock answers Sentinel with an unsafe JSON when `__sentinelUnsafe` is set).
@@ -85,10 +85,10 @@
 ### Task 4: Hide keys from every agent
 
 **Files:**
-- Modify: `src/services/jose/stepInput.ts` (`request` and `instruction` through `hideSecrets()`)
+- Modify: `src/services/jose/stepInput.ts` (`request` and `instruction` through `redactText()`)
 - Test: `src/test/services/jose/stepInput.test.ts`
 
-**Interfaces:** Consumes `hideSecrets`.
+**Interfaces:** Consumes `redactText`.
 
 - [ ] **Step 1: Failing test** `a key in the request is hidden from every step` (`buildStepInput(...).request` has `[hidden key, ends …efgh]`, not the key).
 - [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** `npx vitest run src/test/services/jose` — PASS.
@@ -171,7 +171,7 @@
 - Modify: `src/components/miya/CampaignStudioTab.tsx` ("Checked by Sentinel" under Maria's scores)
 - Test: `src/test/services/contentFactory/contentStepPrompts.test.ts`, `contentProjectPlan.test.ts`, `src/test/components/miya/campaignStudio.test.jsx`
 
-**Interfaces:** Consumes `findExactRisks`, `hideSecrets`. Produces `SECURITY_WAIT`.
+**Interfaces:** Consumes `findExactRisks`, `redactText`. Produces `SECURITY_WAIT`.
 
 - [ ] **Step 1: Failing tests** `the check gets the campaign text with keys hidden and the exact facts`; `an issue keeps Publish waiting with his issues`; `a fixed campaign clears the wait`; `Campaign Studio shows his issues`.
 - [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** `npx vitest run src/test/services/contentFactory src/test/components/miya` — PASS.

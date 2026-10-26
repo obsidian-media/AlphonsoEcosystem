@@ -61,7 +61,7 @@ Live (old build, small local model):
 
 No scores. These are facts Sentinel's model must address; they appear in his answer whatever the model says.
 
-`hideSecrets(text) → string`: every `key` replaced by `[hidden key, ends …5efgh]`. Used for every prompt (his and, through `stepInput.request`, every agent's), his memory and his receipts.
+`redactText(text) → string`: every `key` replaced by `[hidden key, ends …5efgh]`. Used for every prompt (his and, through `stepInput.request`, every agent's), his memory and his receipts.
 
 ### Trusted domains (`sentinelTrust.ts`)
 
