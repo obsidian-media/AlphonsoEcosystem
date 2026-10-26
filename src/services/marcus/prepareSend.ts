@@ -54,7 +54,7 @@ export async function prepareMarcusSend(commandId: string, assignment: SendAssig
   if (!picked) return { ok: false, outcome: 'failed', reason: NOTHING_TO_SEND };
   const hint = (assignment.payload?.connector as Destination['connector'] | undefined) || hintFromTaskType(assignment.actionType);
   const where = await pickDestination(requestText, picked.text, { given: given(assignment.payload), hint, actionType: assignment.actionType });
-  if (!where.ok) return { ok: false, outcome: where.outcome, reason: where.reason };
+  if (where.ok === false) return { ok: false, outcome: where.outcome, reason: where.reason };
   const limit = CHANNEL_LIMITS[`${where.destination.connector}:${where.destination.kind}`];
   if (limit && picked.text.length > limit) {
     return { ok: false, outcome: 'fix', reason: tooLongReason(where.destination.label, picked.text.length, limit), sourceStepId: picked.sourceStepId };
