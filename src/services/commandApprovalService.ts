@@ -162,7 +162,7 @@ const NETWORK_SUBCOMMANDS: Record<string, Set<string>> = {
   pip3: new Set(['install', 'download']),
 };
 
-function deletesThings(prog: string, args: string[]): boolean {
+export function deletesThings(prog: string, args: string[]): boolean {
   const a = args.map((x) => String(x).toLowerCase());
   const first = a[0] || '';
   if (prog === 'git') {

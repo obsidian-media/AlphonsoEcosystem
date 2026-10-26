@@ -1,16 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Shield, CheckCircle, XCircle } from 'lucide-react';
 import { randomHex } from '../lib/randomId';
-
-const ALLOWLIST_KEY = 'alphonso_sentinel_allowlist_v1';
-
-interface AllowlistEntry {
-  id: string;
-  pattern: string;
-  type: 'domain' | 'path' | 'ip';
-  note: string;
-  addedAt: number;
-}
+// Sentinel reads the same list (agent phase 4): one place for it.
+import { readAllowlist, writeAllowlist, type AllowlistEntry } from '../services/sentinel/sentinelTrust';
 
 interface MatchResult {
   matched: boolean;
@@ -25,20 +17,6 @@ interface FormData {
   pattern: string;
   type: 'domain' | 'path' | 'ip';
   note: string;
-}
-
-function readAllowlist(): AllowlistEntry[] {
-  try {
-    const raw = localStorage.getItem(ALLOWLIST_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeAllowlist(list: AllowlistEntry[]): void {
-  localStorage.setItem(ALLOWLIST_KEY, JSON.stringify(list));
 }
 
 function matchesAllowlist(url: string, list: AllowlistEntry[]): MatchResult {
