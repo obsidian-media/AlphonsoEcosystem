@@ -1,6 +1,6 @@
 # Agent phase 6: Alphonso writes real code in a folder you chose, and asks before he changes it
 
-> **Status (2026-10-26):** design, written with the owner after the Alphonso inspection of 2026-10-26 (code reading, a routing probe of ten everyday requests, and five live requests in the real app). Not built yet. Builds on agent roles Part A (`buildStepInput()`), Part B (skills), agent phase 4 (Sentinel's `sentinel-code-<step>` check after every Alphonso code step) and agent phase 5 (Marcus: a step prepared before its approval, `missingAsked()` in the planner).
+> **Status (2026-10-26):** design, written with the owner after the Alphonso inspection of 2026-10-26 (code reading, a routing probe of ten everyday requests, and five live requests in the real app). Built on branch `feat/agent-phase-alphonso` (plan `docs/superpowers/plans/2026-10-26-agent-phase-alphonso.md`). Builds on agent roles Part A (`buildStepInput()`), Part B (skills), agent phase 4 (Sentinel's `sentinel-code-<step>` check after every Alphonso code step) and agent phase 5 (Marcus: a step prepared before its approval, `missingAsked()` in the planner).
 
 ## Why
 

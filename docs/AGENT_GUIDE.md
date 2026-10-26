@@ -5,10 +5,10 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 ## Agent Roster
 
 ### Alphonso — Local Operator
-**Role:** General execution, verification, packaging
-**Can do:** Run commands, read/write files, build projects, verify outputs
-**Cannot:** Bypass approval gates (commands that run code ask according to Settings; commands that delete always ask); spend or publish
-**When to use:** Building, fixing, testing; plain questions and everyday writing (emails, notes).
+**Role:** Code in your projects, commands, plain questions, everyday writing
+**Can do:** Work in a project you listed in Settings → Agents → Alphonso's projects (or a new folder under your output folder for small code), plan the change from your files, show it before it happens, write it, run the checks and fix up to two rounds, report plainly; answer questions and write emails and notes; help other agents with writing
+**Cannot:** Change a project or run a command that isn't read-only without your approval (one per step, with the preview); commit to git or start a dev server unless you asked; work on two requests in the same project at once; spend or publish
+**When to use:** Building, fixing, testing in your projects; plain questions and everyday writing (emails, notes).
 **Skills (4, `src/skills/alphonso/`):** Answer a question, Code change, Everyday writing, Verify a build.
 
 ### Jose — Orchestrator
