@@ -60,7 +60,8 @@ import { reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
 import { runVisualWorkflow } from './workflowExecutionService';
-import { runEchoPreservation } from './echoMemoryService';
+import { runEchoStep } from './echo/echoSteps';
+import { surfaceOf } from './echo/decisions';
 import { runMarcusDistribution } from './marcusExecutionService';
 import { runSentinelSecurityScan } from './sentinelSecurityService';
 import { runNovaAnalysis } from './novaAnalysisService';
@@ -909,8 +910,17 @@ async function executeMariaAssignment(commandText: any, assignment: any, options
   return runMariaGovernanceAudit(commandText, assignment, options);
 }
 
+/** Echo's steps (agent phase 7): save, recall, forget or clean up, by task type. */
 async function executeEchoAssignment(commandText: any, assignment: any, options: any = {}) {
-  return runEchoPreservation(commandText, assignment, options.priorOutputs || {}, options);
+  const request: any = options.commandId ? requestForCommand(options.commandId) : null;
+  const input = options.stepInput || { instruction: assignment?.instruction || '', request: String(commandText || ''), needs: [], others: [], memory: '', review: null };
+  return runEchoStep(assignment, input, {
+    commandId: options.commandId,
+    requestId: request?.id,
+    surface: surfaceOf(request?.source),
+    packetId: assignment?.packetId,
+    requestStep: request?.steps?.find((s: any) => s.stepId === assignment?.stepId) || null,
+  });
 }
 
 async function executeSentinelAssignment(commandText: any, assignment: any, options: any = {}) {
@@ -2000,6 +2010,10 @@ export async function runJoseCommandExecutionPipeline({
       // The owner can't work until something is set up: no retry, no other agent,
       // nothing saved for later steps; Carry on runs it again (agent roles Part A).
       if (result?.resultState === 'setup_required') {
+        // What the step waits with (Echo's choices, agent phase 7) is kept on the request step.
+        if (result.stepFields && typeof result.stepFields === 'object' && joseRequestId) {
+          try { updateJoseStep(joseRequestId, assignment.stepId, result.stepFields); } catch { /* display aid only */ }
+        }
         updatePacketStatus(assignment.packetId, 'queued', { failureReason: result.summary });
         executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'setup_needed', reason: String(result.summary || 'Something needs setting up.') });
         onProgress?.({ stage: 'setup_needed', assignment, packetId: assignment.packetId, reason: result.summary });

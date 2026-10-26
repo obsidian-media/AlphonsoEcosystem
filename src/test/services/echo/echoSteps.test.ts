@@ -1,0 +1,136 @@
+// Agent phase 7 (Echo): his own steps — save, recall, forget.
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+const llm = vi.fn();
+vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: (...a: unknown[]) => llm(...a) }));
+vi.mock('../../../services/memoryGraphService', () => ({ addNode: vi.fn(async () => null), addEdge: vi.fn(async () => null) }));
+vi.mock('../../../services/chromaDbService', () => ({ isChromaHealthy: vi.fn(async () => false), semanticSearchMemory: vi.fn(async () => null), addMemoryToChroma: vi.fn(async () => undefined) }));
+
+import { extractDecisions, runEchoStep, NOTHING_TO_REMEMBER } from '../../../services/echo/echoSteps';
+import { addDecision, listDecisions, getDecision } from '../../../services/echo/decisions';
+
+const say = (o: unknown) => ({ response: typeof o === 'string' ? o : JSON.stringify(o) });
+const input = (request: string, extra: Record<string, unknown> = {}) => ({ instruction: '', request, needs: [], others: [], memory: '', review: null, skill: null, ...extra }) as never;
+const ctx = (extra: Record<string, unknown> = {}) => ({ commandId: 'c1', requestId: 'r1', surface: 'chat', packetId: 'pkt-1', ...extra }) as never;
+const step = (actionType: string) => ({ stepId: 'echo', agent: 'echo', actionType }) as never;
+const launch = () => addDecision({ kind: 'decision', text: 'The launch is on Friday the 14th at $29.', topics: ['launch', 'price'], source: { surface: 'chat', by: 'you' } } as never);
+
+beforeEach(() => {
+  localStorage.clear();
+  llm.mockReset();
+});
+
+describe('saving', () => {
+  it('"Remember that our launch is on Friday the 14th and the price is $29." saves one decision', async () => {
+    llm.mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'The launch is on Friday the 14th; the price is $29.', topics: ['launch', 'price'] }] }));
+    const r = await runEchoStep(step('memory_preservation'), input('Remember that our launch is on Friday the 14th and the price is $29.'), ctx());
+    expect(r.resultState).toBe('completed');
+    expect(r.summary).toBe('Remembered: The launch is on Friday the 14th; the price is $29.');
+    expect(listDecisions()[0]).toMatchObject({ kind: 'decision', source: { surface: 'chat', requestId: 'r1', by: 'you' } });
+    expect(r.artifacts).toEqual([{ type: 'echo_decision', id: listDecisions()[0].id }]);
+  });
+
+  it('nothing decided → nothing saved', async () => {
+    llm.mockResolvedValueOnce(say({ decisions: [] }));
+    const r = await runEchoStep(step('memory_preservation'), input('Tell me a joke'), ctx());
+    expect(r.summary).toBe(NOTHING_TO_REMEMBER);
+    expect(listDecisions()).toEqual([]);
+  });
+
+  it('unreadable twice → the step fails and nothing is saved', async () => {
+    llm.mockResolvedValue(say('not json'));
+    const r = await runEchoStep(step('memory_preservation'), input('Remember X'), ctx());
+    expect(r.resultState).toBe('failed');
+    expect(r.summary.startsWith("Echo couldn't save what was decided:")).toBe(true);
+    expect(listDecisions()).toEqual([]);
+    expect(llm).toHaveBeenCalledTimes(2);
+  });
+
+  it('a replaces id he was not shown changes nothing (Review Focus 2)', async () => {
+    const a = launch();
+    llm.mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'Price is $35.', topics: ['price'], replaces: 'invented-id' }] }));
+    await extractDecisions({ request: 'Remember the price is $35', work: '', surface: 'chat' });
+    expect(getDecision(a.id)!.status).toBe('active');
+  });
+
+  it('a replaces id he was shown marks the old one replaced', async () => {
+    const a = launch();
+    llm.mockImplementationOnce(async (_agent: string, opts: any) => {
+      expect(opts.prompt).toContain(a.id);
+      return say({ decisions: [{ kind: 'decision', text: 'The launch moved to Saturday the 15th.', topics: ['launch'], replaces: a.id }] });
+    });
+    await extractDecisions({ request: 'Remember the launch moved to Saturday the 15th', work: '', surface: 'chat' });
+    expect(getDecision(a.id)!.status).toBe('replaced');
+  });
+
+  it('calls his model with no model or endpoint of his own, and his packet as the session', async () => {
+    llm.mockResolvedValueOnce(say({ decisions: [] }));
+    await runEchoStep(step('memory_preservation'), input('Remember nothing'), ctx());
+    const opts = llm.mock.calls[0][1];
+    expect(llm.mock.calls[0][0]).toBe('echo');
+    expect(opts.model).toBeUndefined();
+    expect(opts.endpoint).toBeUndefined();
+    expect(opts.sessionId).toBeTruthy();
+  });
+});
+
+describe('recall', () => {
+  it('nothing saved → says so and asks no model (Review Focus 1)', async () => {
+    const r = await runEchoStep(step('memory_recall'), input('What did we decide about the launch?'), ctx());
+    expect(r.summary.startsWith('I have nothing saved about')).toBe(true);
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  it('answers from the records, with a replaced one and its history in the prompt', async () => {
+    const a = launch();
+    const b = addDecision({ kind: 'decision', text: 'The launch moved to Saturday the 15th.', topics: ['launch'], replaces: a.id, source: { surface: 'telegram', by: 'you' } } as never);
+    llm.mockResolvedValueOnce(say('It was Friday the 14th, then moved to Saturday the 15th.'));
+    const r = await runEchoStep(step('memory_recall'), input('What did we decide about the launch?'), ctx());
+    const prompt = String(llm.mock.calls[0][1].prompt);
+    expect(prompt).toContain('Friday the 14th');
+    expect(prompt).toContain('Saturday the 15th');
+    expect(prompt).toContain('replaced');
+    expect(r.summary).toBe('It was Friday the 14th, then moved to Saturday the 15th.');
+    expect(b.id).toBeTruthy();
+  });
+
+  it("his model failing still gives the records, nothing made up", async () => {
+    launch();
+    llm.mockRejectedValueOnce(new Error('down'));
+    const r = await runEchoStep(step('memory_recall'), input('What did we decide about the launch?'), ctx());
+    expect(r.summary).toContain('The launch is on Friday the 14th at $29.');
+  });
+});
+
+describe('forget', () => {
+  it('a clear match is forgotten', async () => {
+    const a = launch();
+    llm.mockResolvedValueOnce(say({ forget: [a.id] }));
+    const r = await runEchoStep(step('memory_forget'), input('Forget the launch decision'), ctx());
+    expect(r.summary).toBe('Forgot: The launch is on Friday the 14th at $29.');
+    expect(getDecision(a.id)!.status).toBe('forgotten');
+  });
+
+  it('two possible matches → the step waits with a button for each, nothing forgotten', async () => {
+    const a = launch();
+    const b = addDecision({ kind: 'decision', text: 'The launch party is at the shop.', topics: ['launch'], source: { surface: 'chat', by: 'you' } } as never);
+    llm.mockResolvedValueOnce(say({ forget: [a.id, b.id], unclear: true }));
+    const r: any = await runEchoStep(step('memory_forget'), input('Forget the launch decision'), ctx());
+    expect(r.resultState).toBe('setup_required');
+    expect(r.summary).toBe('Which one should I forget?');
+    expect(r.stepFields.decisionChoices.map((c: any) => c.id).sort()).toEqual([a.id, b.id].sort());
+    expect(listDecisions()).toHaveLength(2);
+  });
+
+  it('the one you picked is forgotten', async () => {
+    const a = launch();
+    const r = await runEchoStep(step('memory_forget'), input('Forget the launch decision'), ctx({ requestStep: { forgetId: a.id } }));
+    expect(r.summary).toBe('Forgot: The launch is on Friday the 14th at $29.');
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  it('nothing matches → says so', async () => {
+    const r = await runEchoStep(step('memory_forget'), input('Forget the tea order'), ctx());
+    expect(r.summary.startsWith('I have nothing saved about')).toBe(true);
+  });
+});

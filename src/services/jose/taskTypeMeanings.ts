@@ -69,10 +69,12 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   distribution_schedule_posts: 'publish or schedule approved posts',
   outreach_call: 'place an approved phone call',
   // Echo
-  memory_preservation: 'save what was decided to memory',
+  memory_preservation: 'save what was decided, or what you asked to remember',
   memory_workflow_step: 'a memory step in a workflow',
-  memory_recall: 'answer from what memory holds',
-  knowledge_curation: 'find duplicate or stale notes in memory to merge',
+  memory_recall: 'answer what was decided before, from the saved decisions',
+  memory_forget: 'forget a saved decision you name',
+  memory_cleanup: 'propose merges and replacements in memory; nothing changes until you apply them',
+  knowledge_curation: 'propose merges and replacements in memory; nothing changes until you apply them',
 };
 
 /** The task types an agent owns, with their meanings. */
