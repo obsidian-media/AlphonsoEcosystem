@@ -29,20 +29,6 @@ function cut(text: string): string {
 const str = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 /** Notes whose title or text shares words with the query, best first. */
-function matchMemory(query: string, items: any[]): any[] {
-  const words = query.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
-  if (!words.length) return [];
-  return items
-    .map((item) => {
-      const hay = `${String(item?.title || '')} ${typeof item?.content === 'string' ? item.content : ''}`.toLowerCase();
-      return { item, score: words.filter((w) => hay.includes(w)).length };
-    })
-    .filter((row) => row.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
-    .map((row) => row.item);
-}
-
 /** The outputs of the steps this one needs (all, or one by id). */
 function neededOutputs(ctx: ToolContext, stepId = ''): any[] {
   if (!ctx.commandId) return [];
@@ -107,10 +93,11 @@ async function run(name: string, args: Record<string, unknown>, ctx: ToolContext
       return { ok: true, text: saved.map((b) => `- ${b.title} (${b.url})${b.summary ? `: ${b.summary}` : ''}`).join('\n') };
     }
     case 'read_memory': {
-      const { listMemoryItems } = await import('../unifiedMemoryService');
-      const found = matchMemory(str(args.query) || input?.request || '', listMemoryItems() || []);
+      // The decisions Echo keeps (agent phase 7).
+      const { searchDecisions, decisionsText } = await import('../echo/recall');
+      const found = await searchDecisions(str(args.query) || input?.request || '');
       if (!found.length) return { ok: true, text: 'Memory holds nothing about this.' };
-      return { ok: true, text: found.map((item) => `- ${String(item.title || 'Note')}: ${typeof item.content === 'string' ? item.content : ''}`).join('\n') };
+      return { ok: true, text: decisionsText(found) };
     }
     case 'save_note': {
       const title = str(args.title) || 'Note';

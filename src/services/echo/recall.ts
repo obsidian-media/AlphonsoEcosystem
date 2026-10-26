@@ -87,6 +87,12 @@ export function decisionLine(d: Decision): string {
   return `${label} ${day} (${surfaceName(d.source.surface)}): ${d.text}${d.why ? ` — because ${d.why}` : ''}`;
 }
 
+/** For a direct answer (Chat, channels): "Decisions you saved:" with what matters, or ''. */
+export async function answerDecisionsBlock(text: string): Promise<string> {
+  const lines = decisionsText(await decisionsFor(text, { agent: 'alphonso', actionType: 'assistant_answer' }));
+  return lines ? `Decisions you saved:\n${lines}` : '';
+}
+
 /** The block a step's input carries, cut at ECHO_LIMITS.stepChars (largeStepChars for large models). */
 export function decisionsText(list: Decision[], large = false): string {
   const limit = large ? ECHO_LIMITS.largeStepChars : ECHO_LIMITS.stepChars;

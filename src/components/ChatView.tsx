@@ -63,6 +63,7 @@ import { startProactiveWatcher } from '../services/proactiveAgentService';
 import { NovaVerdictCard } from './nova/NovaVerdictCard';
 import { saveMessageOffline } from '../services/offlineChatService';
 import { useJarvisVoice } from '../hooks/useJarvisVoice';
+import { answerDecisionsBlock } from '../services/echo/recall'
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
@@ -982,7 +983,8 @@ export function ChatView({
 
     const chatMessages = [
       // Direct Mode keeps its own prompt; Jose's direct answers are Alphonso's (agent phase 6).
-      { role: 'system', content: directMode ? CHAT_ASSISTANT_PROMPT : ALPHONSO_ANSWER_PROMPT },
+      // Jose's direct answers also know what you decided (agent phase 7).
+      { role: 'system', content: directMode ? CHAT_ASSISTANT_PROMPT : [ALPHONSO_ANSWER_PROMPT, await answerDecisionsBlock(cleanInput)].filter(Boolean).join('\n\n') },
       ...historySnapshot.map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: cleanInput }
     ];

@@ -19,6 +19,7 @@ vi.mock('../../../services/marcusExecutionService', () => ({ runMarcusDistributi
 
 import { runSkillTool } from '../../../services/skills/skillToolRun';
 import type { StepInput } from '../../../services/jose/stepInput';
+import { addDecision } from '../../../services/echo/decisions';
 
 const input: StepInput = {
   instruction: 'Check it', request: 'Write about bees', others: [], memory: '', review: null,
@@ -62,10 +63,14 @@ describe('runSkillTool', () => {
     expect(research).toHaveBeenCalledWith(['bees'], { limit: 8 });
   });
 
-  it('read_memory finds matching notes', async () => {
+  // Agent phase 7: read_memory reads the decision records.
+  it('read_memory finds matching decisions', async () => {
+    addDecision({ kind: 'decision', text: 'We use honeybees in the launch video.', topics: ['honeybees', 'launch'], source: { surface: 'chat', by: 'you' } } as never);
     const result = await runSkillTool('read_memory', { query: 'honeybees launch' }, { agent: 'echo', stepInput: input });
     expect(result.ok).toBe(true);
-    expect(result.text).toContain('Honeybees decision');
+    expect(result.text).toContain('We use honeybees in the launch video.');
+    localStorage.clear();
+    expect((await runSkillTool('read_memory', { query: 'honeybees' }, { agent: 'echo', stepInput: input })).text).toBe('Memory holds nothing about this.');
   });
 
   it('save_note saves a memory item for the agent', async () => {

@@ -18,7 +18,7 @@ import {
   appendCommandAssignments,
   listJoseCommands
 } from './joseCommandRouterService';
-import { pushMemoryItem, listMemoryItems } from './memoryService';
+import { pushMemoryItem } from './memoryService';
 import { pushMiyaMemory } from './miyaMemoryService';
 import { listMiyaComfyWorkflowPresets } from './miyaComfyWorkflowPresetService';
 import { listMiyaWorkflowTemplates, getMiyaWorkflowTemplate } from './miyaWorkflowTemplates';
@@ -82,6 +82,7 @@ import { parseJsonResponse } from '../lib/jsonUtils';
 import { executeParallel } from './parallelExecutionService';
 import { agentCache } from './cacheService';
 import { randomHex } from '../lib/randomId';
+import { decisionsFor, decisionsText } from './echo/recall';
 
 // This pipeline still crosses a few dynamic JS-era payload boundaries.
 // Keep the `any` usage below scoped to those runtime edges so behavior stays unchanged.
@@ -1174,7 +1175,10 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
       ...options,
       commandId,
       stepInput: buildStepInput(commandId, assignment, String(requestText || ''), {
-        memory: options.retrievedContext?.snippet,
+        // Each step gets the decisions and preferences that matter to its own work (agent phase 7).
+        memory: decisionsText(await decisionsFor(`${String(requestText || '')} ${String(assignment?.instruction || '')}`, {
+          agent: assignment?.agent, actionType: assignment?.actionType, large: usesLargeModel(assignment),
+        }), usesLargeModel(assignment)),
         large: usesLargeModel(assignment),
       }),
     };
@@ -1371,8 +1375,8 @@ export async function runJoseCommandExecutionPipeline({
     if (shortcut) return shortcut;
   }
 
-  const memoryItems = listMemoryItems();
-  const retrievedContext = retrieveRelevantContext(commandText, memoryItems);
+  // The decisions that matter to the request (agent phase 7), not the step notes.
+  const retrievedContext = { snippet: decisionsText(await decisionsFor(String(commandText || ''), {})), items: [] };
 
   const command: any = resumeCommand || await createJoseCommandRoute({ commandText, source, zeroCostMode, assignments });
   if (!command) {

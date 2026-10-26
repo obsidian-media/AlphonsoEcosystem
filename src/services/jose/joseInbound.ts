@@ -6,6 +6,7 @@ import { submitToJose } from './submitToJose';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { ALPHONSO_ANSWER_PROMPT } from '../alphonso/answerPrompt';
 import type { PlanFirstSetting } from './josePlanApproval';
+import { answerDecisionsBlock } from '../echo/recall';
 
 export interface AnswerOrPlanOptions {
   source: string;
@@ -28,12 +29,12 @@ export type AnswerOrPlanResult =
   | { kind: 'started'; done: Promise<any> };
 
 /** The answer's prompt: his instructions, the last 6 messages, then the message (agent phase 6). */
-function answerPromptWithHistory(text: string, history: unknown): string {
+function answerPromptWithHistory(text: string, history: unknown, decisions = ''): string {
   const turns = (Array.isArray(history) ? history : [])
     .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && String(m.content || '').trim())
     .slice(-6)
     .map((m: any) => `${m.role === 'user' ? 'User' : 'Alphonso'}: ${String(m.content).slice(0, 2000)}`);
-  return [ALPHONSO_ANSWER_PROMPT, ...turns, `User: ${text}\nAlphonso:`].join('\n\n');
+  return [ALPHONSO_ANSWER_PROMPT, decisions, ...turns, `User: ${text}\nAlphonso:`].filter(Boolean).join('\n\n');
 }
 
 export async function answerOrPlan(text: string, options: AnswerOrPlanOptions): Promise<AnswerOrPlanResult> {
@@ -41,7 +42,7 @@ export async function answerOrPlan(text: string, options: AnswerOrPlanOptions): 
   if (decision.route === 'direct') {
     const reply: any = await generateAgentLlmResponse('alphonso', {
       ...(options.endpoint ? { endpoint: options.endpoint } : {}),
-      prompt: answerPromptWithHistory(text, options.history),
+      prompt: answerPromptWithHistory(text, options.history, await answerDecisionsBlock(text)),
     });
     const answer = String(reply?.response || '').trim();
     if (!answer) throw new Error('The model returned an empty reply.');

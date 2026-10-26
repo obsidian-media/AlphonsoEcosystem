@@ -40,6 +40,13 @@ describe('chooseHelper', () => {
     expect(await chooseHelper('run the build', 'miya')).toBeNull();
   });
 
+  // Agent phase 7: help about something decided before goes to Echo.
+  it('the rules send help about an earlier decision to Echo', async () => {
+    llm.mockResolvedValueOnce(says('no idea'));
+    expect(await chooseHelper('what we decided about pricing', 'nova')).toEqual({ agent: 'echo', actionType: 'memory_recall' });
+    expect(String((llm.mock.calls[0][1] as any).prompt)).toContain('echo memory_recall (what was decided before)');
+  });
+
   it("offers Alphonso's writing types to Jose, and the rules send wording to him", async () => {
     llm.mockResolvedValueOnce(says('no idea'));
     expect(await chooseHelper('rewrite the wording of this paragraph', 'nova')).toEqual({ agent: 'alphonso', actionType: 'assistant_write' });

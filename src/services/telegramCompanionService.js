@@ -6,7 +6,6 @@ import { getJoseRequest, listJoseRequests, findRequestByPacket } from './jose/jo
 import { agentName } from './jose/agentNames';
 import { answerOrPlan, inboundReply } from './jose/joseInbound';
 import { listAgentActivity } from './agentActivityService';
-import { listMemoryItems } from './memoryService';
 import { listJoseCommands } from './joseCommandRouterService';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { listAgentProfiles } from '../agents/agentRegistry';
@@ -282,22 +281,7 @@ ${lines.join('\n')}`;
 }
 
 async function handleMemoryCommand(token, chatId) {
-  const memory = listMemoryItems().slice(-5).reverse();
-  
-  const lines = memory.map(m => {
-    const title = m.title || 'Untitled';
-    const category = m.category || 'unknown';
-    const ts = m.timestampMs ? new Date(m.timestampMs).toISOString() : '';
-    return `${title} | ${category} | ${ts}`;
-  });
-
-  const memoryText = lines.length
-    ? `🧠 Last 5 Memory Items
-
-${lines.join('\n')}`
-    : '🧠 No memory items found.';
-
-  return sendTelegramMessageInternal({ token, chatId, text: memoryText });
+  return handleMemorySearchCommand(token, chatId, '');
 }
 
 export async function handleHelpCommand(token, chatId) {
@@ -486,29 +470,17 @@ async function handleResearchCommand(token, chatId, query) {
   return sendToJose(token, chatId, `Ask Jose: research ${query}`);
 }
 
+/** /memory: the decisions Echo keeps (agent phase 7) — matching ones, or the newest. */
 async function handleMemorySearchCommand(token, chatId, query) {
-  const items = listMemoryItems();
-  const filtered = query
-    ? items.filter(m => {
-        const haystack = `${m.title || ''} ${m.content || ''} ${m.category || ''}`.toLowerCase();
-        return query.toLowerCase().split(' ').every(word => haystack.includes(word));
-      }).slice(-8)
-    : items.slice(-8);
-
-  if (filtered.length === 0) {
-    return sendTelegramMessageInternal({ token, chatId, text: query ? `🧠 No memories matching "${query}".` : '🧠 No memory items yet.' });
+  const { searchDecisions, decisionLine } = await import('./echo/recall');
+  const { listDecisions } = await import('./echo/decisions');
+  const found = query ? await searchDecisions(query, { limit: 8 }) : listDecisions().slice(0, 8);
+  if (found.length === 0) {
+    return sendTelegramMessageInternal({ token, chatId, text: query ? `🧠 Nothing saved about "${query}".` : '🧠 Nothing saved yet.' });
   }
-
-  const lines = filtered.reverse().map(m => {
-    const title = m.title || 'Untitled';
-    const cat = m.category || m.namespace || 'general';
-    const ago = m.timestampMs ? Math.round((Date.now() - m.timestampMs) / 60000) + 'm ago' : '';
-    return `• ${title} [${cat}]${ago ? ' — ' + ago : ''}`;
-  });
-
   return sendTelegramMessageInternal({
     token, chatId,
-    text: `🧠 Memory${query ? ` — "${query}"` : ' (recent)'}\n\n${lines.join('\n')}`
+    text: `🧠 ${query ? `Decisions about "${query}"` : 'Newest decisions'}\n\n${found.map((d) => `• ${decisionLine(d)}`).join('\n')}`
   });
 }
 
