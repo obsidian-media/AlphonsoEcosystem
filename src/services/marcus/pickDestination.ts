@@ -2,7 +2,7 @@
 // model picks one from the connectors you set up. Every answer is checked with isAllowedTarget().
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { redactText } from '../sentinel/exactChecks';
-import { MARCUS_CONNECTORS, destinationsFor, isAllowedTarget, targetLabel } from './destinations';
+import { MARCUS_CONNECTORS, destinationsFor, isAllowedTarget, requestWithoutQuotes, targetLabel } from './destinations';
 import { checkComposioAnswer, composioSendTools, describeComposioTools } from './composioChannel';
 import type { ComposioTool } from '../composioService';
 import type { Destination, MarcusConnector, SendKind } from './types';
@@ -99,7 +99,10 @@ export async function pickDestination(
     const got = check({ ...opts.given, kind: opts.given.kind || kindHint }, request, text);
     return 'picked' in got ? got.picked : { ok: false, outcome: 'failed', reason: `${got.problem} ${NO_DESTINATION}` };
   }
-  const hint = opts.given?.connector || opts.hint;
+  // A connector the request names but that isn't set up says so, without asking the model.
+  const asked = requestWithoutQuotes(request).toLowerCase();
+  const named = MARCUS_CONNECTORS.filter((c) => c !== 'composio' && new RegExp(`\\b${c}\\b`).test(asked));
+  const hint = opts.given?.connector || opts.hint || (named.length === 1 ? named[0] : undefined);
   if (hint) {
     const info = destinationsFor(hint);
     if (!info.setUp) return { ok: false, outcome: 'setup', reason: info.setUpSentence as string };

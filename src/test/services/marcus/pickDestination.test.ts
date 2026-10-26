@@ -57,6 +57,12 @@ describe('pickDestination', () => {
     expect(got).toEqual({ ok: false, outcome: 'setup', reason: "Telegram isn't set up: add the bot token in Settings → Connectors → Telegram." });
   });
 
+  it('a connector the request names but that is not set up → setup, without asking the model', async () => {
+    const got = await pickDestination('/jose post a short note that we open at 9 to Discord #news', 'We open at 9.', {});
+    expect(got).toEqual({ ok: false, outcome: 'setup', reason: "Discord isn't set up: add the bot token in Settings → Connectors → Discord." });
+    expect(llm).not.toHaveBeenCalled();
+  });
+
   it('Instagram asked from Chat → CAMPAIGN_STUDIO_ONLY', async () => {
     llm.mockResolvedValueOnce(say({ connector: 'instagram', target: 'feed', kind: 'message' }));
     const got = await pickDestination('/jose post this on Instagram', 'Hi', {});
