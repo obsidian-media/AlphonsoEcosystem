@@ -95,7 +95,9 @@ const CODE_WORDS = ['code', 'coding', 'app', 'apps', 'website', 'build', 'compil
 
 /** Whether the text asks for work on code (whole words). */
 export function isCodeRequest(text: string): boolean {
-  const words = new Set(String(text || '').toLowerCase().split(/[^a-z0-9']+/).filter(Boolean));
+  // A discount, promo or referral code is an offer, not code (agent phase 3).
+  const value = String(text || '').toLowerCase().replace(/\b(?:discount|promo|promotional|coupon|voucher|referral|gift)\s+codes?\b/g, ' offer ');
+  const words = new Set(value.split(/[^a-z0-9']+/).filter(Boolean));
   return CODE_WORDS.some((word) => words.has(word));
 }
 
