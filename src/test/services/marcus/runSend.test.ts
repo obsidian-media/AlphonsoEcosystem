@@ -52,6 +52,16 @@ describe('runMarcusSend', () => {
     expect(requireApproval).not.toHaveBeenCalled();
   });
 
+  // Final review: a refused send is tried again by the step's retries, not reported as "Already sent.".
+  it('a send the platform refused can be tried again', async () => {
+    const commandId = fresh();
+    vi.mocked(slack.sendMessage).mockRejectedValueOnce(new Error('channel_not_found')).mockResolvedValueOnce({ ts: '1.3' } as never);
+    expect(await runMarcusSend(commandId, 'marcus', p())).toEqual({ ok: false, sentence: 'Not sent to Slack #news: channel_not_found.' });
+    expect(getJoseRequest(`jose-request-${commandId}`).steps[0].sentAtMs).toBeUndefined();
+    expect((await runMarcusSend(commandId, 'marcus', p())).sentence).toBe('Sent to Slack #news.');
+    expect((await runMarcusSend(commandId, 'marcus', p())).sentence).toBe(ALREADY_SENT);
+  });
+
   it('each result sentence', async () => {
     vi.mocked(discord.listGuildChannels).mockResolvedValue([{ id: 'C', name: 'news' }] as never);
     vi.mocked(discord.sendMessage).mockResolvedValue({ id: 'M', channelId: 'C' } as never);

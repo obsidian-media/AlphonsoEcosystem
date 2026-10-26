@@ -112,11 +112,19 @@ async function send(preview: SendPreview, commandId: string): Promise<SendResult
   }
 }
 
+/** A send that didn't go out may be tried again (the step's retries, Carry on). */
+function release(commandId: string, stepId: string): void {
+  try { updateJoseStep(`jose-request-${commandId}`, stepId, { sentAtMs: undefined }); } catch { /* no request */ }
+}
+
 export async function runMarcusSend(commandId: string, stepId: string, preview: SendPreview): Promise<SendResult> {
   if (!claim(commandId, stepId)) return { ok: false, sentence: ALREADY_SENT };
+  let result: SendResult;
   try {
-    return await send(preview, commandId);
+    result = await send(preview, commandId);
   } catch (error) {
-    return notSent(preview.label, message(error));
+    result = notSent(preview.label, message(error));
   }
+  if (!result.ok) release(commandId, stepId);
+  return result;
 }
