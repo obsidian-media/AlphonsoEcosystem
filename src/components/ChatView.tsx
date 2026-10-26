@@ -23,6 +23,7 @@ import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughCalleMcp } from '..
 import { decideJoseRoute } from '../services/jose/joseDecision'
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
 import { JosePlanCard } from './jose/JosePlanCard'
+import { MariaOfferButton } from './maria/MariaOfferButton'
 import { getJoseRequest, listJoseRequests } from '../services/jose/joseRequestStore'
 import type { PlanFirstSetting } from '../services/jose/josePlanApproval';
 import {
@@ -1477,6 +1478,13 @@ export function ChatView({
                         Open on the board
                       </button>
                     </div>
+                  )}
+                  {/* Agent phase 3: after Maria reviews a plan, offer to have Marcus prepare it. */}
+                  {message.joseRequestId && (
+                    <MariaOfferButton
+                      requestId={message.joseRequestId}
+                      onReply={(reply, requestId) => setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: reply, ...(requestId ? { joseRequestId: requestId } : {}) }])}
+                    />
                   )}
                   {/* CALL-E MCP call-plan confirmation -- mirrors the open_runtime_hub action-button pattern above */}
                   {message.pendingConfirmChatId && (
