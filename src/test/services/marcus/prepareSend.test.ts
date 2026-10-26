@@ -33,7 +33,7 @@ describe('isMarcusSendStep', () => {
     expect(isMarcusSendStep(marcus({ actionType: 'distribution_readiness', effects: ['read'] }))).toBe(false);
     expect(isMarcusSendStep(marcus({ actionType: 'outreach_call', effects: ['publish_or_send', 'spend'] }))).toBe(false);
     expect(isMarcusSendStep(marcus({ contentStep: { projectId: 'p', step: 'publish' } }))).toBe(false);
-    expect(isMarcusSendStep({ ...marcus(), agent: 'alphonso' } as never)).toBe(false);
+    expect(isMarcusSendStep({ ...(marcus() as object), agent: 'alphonso' } as never)).toBe(false);
   });
 });
 
@@ -41,7 +41,7 @@ describe('prepareMarcusSend', () => {
   it('otherwise the preview and the approval line', async () => {
     const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
     expect(got).toMatchObject({ ok: true, preview: { connector: 'slack', target: '#news', label: 'Slack #news', text: 'Open Saturday.', sourceStepId: 'write' } });
-    expect(describeSend((got as { preview: never }).preview)).toBe('Send to Slack #news: “Open Saturday.”');
+    expect(describeSend((got as unknown as { preview: never }).preview)).toBe('Send to Slack #news: “Open Saturday.”');
   });
 
   it('too long → fix for the step he sends from, nothing asked', async () => {
@@ -65,7 +65,7 @@ describe('prepareMarcusSend', () => {
     setStepOutput('c1', 'write', 'alphonso', { summary: 'Log in with your password at our site.' } as never);
     const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
     expect(got.ok).toBe(true);
-    const p = (got as { preview: { exactFacts: string[] } }).preview;
+    const p = (got as unknown as { preview: { exactFacts: string[] } }).preview;
     expect(p.exactFacts.length).toBeGreaterThan(0);
     expect(describeSend(p as never)).toMatch(/ Sentinel's checks found: It asks for a password or payment details\.$/);
   });
