@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 299 services and 181 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 305 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -85,6 +85,7 @@ Source-backed inventory: 299 services and 181 components. Human purpose descript
 | component | `src/components/JoseCompanionWidget.tsx` | `JoseCompanionWidget` |
 | component | `src/components/JoseTaskQueue.tsx` | `JoseTaskQueue` |
 | component | `src/components/KeyboardShortcutsModal.tsx` | `KeyboardShortcutsModal` |
+| component | `src/components/maria/MariaOfferButton.tsx` | `MARIA_OFFER_LABEL`, `MariaOfferButton` |
 | component | `src/components/MarkdownMessage.tsx` | `MarkdownMessage` |
 | component | `src/components/MarketingLandingPage.tsx` | `default` |
 | component | `src/components/MediaStorageSection.tsx` | `MediaStorageSection` |
@@ -374,13 +375,19 @@ Source-backed inventory: 299 services and 181 components. Human purpose descript
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/jose/taskTypeMeanings.ts` | `CODE_TASK_PREFIXES`, `isCodeRequest`, `isCodeTask`, `planningMenu`, `TASK_TYPE_MEANINGS`, `taskTypesFor` |
 | service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals` |
-| service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `parseJsonResponse`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
+| service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `assistantPrompt`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `miyaResearchSnippet`, `parseJsonResponse`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
 | service | `src/services/licenseService.ts` | `__setTrustedPublicKeyForTests`, `activateLicense`, `canUseConnector`, `clearLicenseDenialLog`, `deactivateLicense`, `getLicenseDenialLog`, `getLicenseInfo`, `initLicense`, `isPremiumConnector`, `isPremiumGatingEnabled`, `LicenseDenialEntry`, `LicenseInfo`, `LicenseTier` |
 | service | `src/services/localMarketplaceService.ts` | `DEFAULT_CATALOGUE_URL`, `fetchRemoteCatalogue`, `getRemoteCatalogueUrl`, `listMarketplaceItems`, `setMarketplaceItemStatus`, `setRemoteCatalogueUrl` |
-| service | `src/services/marcusExecutionService.ts` | `buildMarcusExecutionRecord`, `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `executeMarcusGitHubAction`, `executeMarcusN8nAction`, `executeMarcusSlackAction`, `getScheduledPublishes`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `selectDistributionTarget`, `startPostScheduler`, `startScheduler`, `stopScheduler`, `textToSend` |
+| service | `src/services/marcusExecutionService.ts` | `buildMarcusExecutionRecord`, `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `executeMarcusGitHubAction`, `executeMarcusN8nAction`, `executeMarcusSlackAction`, `getScheduledPublishes`, `mariaReviewFor`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `selectDistributionTarget`, `startPostScheduler`, `startScheduler`, `stopScheduler`, `textToSend` |
 | service | `src/services/marcusPublishService.ts` | `buildMarcusPublishPacket`, `executeMarcusPublish`, `MARCUS_PUBLISH_PLATFORMS` |
-| service | `src/services/mariaAuditService.ts` | `buildMariaAuditPrompt`, `buildMariaFallbackAudit`, `MariaAuditAssignment`, `MariaAuditOptions`, `MariaAuditResponse`, `MariaAuditResult`, `parseMariaAuditResponse`, `runMariaGovernanceAudit` |
+| service | `src/services/maria/mariaHolds.ts` | `holdStepsAfter`, `mariaHoldFor` |
+| service | `src/services/maria/mariaPlanReview.ts` | `contradiction`, `LOW_WITH_APPROVAL`, `parsePlanReview`, `PlanReview`, `planReviewPrompt`, `planReviewText`, `Risk`, `runMariaPlanReview` |
+| service | `src/services/maria/mariaTypes.ts` | `MARIA_SECURITY_LINE`, `MariaAssignment`, `MariaStepResult` |
+| service | `src/services/maria/mariaWeekly.ts` | `askMariaWeeklyRisks`, `MARIA_WEEKLY_LABEL` |
+| service | `src/services/maria/mariaWorkReview.ts` | `findingStrings`, `MARIA_NO_REVIEW`, `parseWorkReview`, `runMariaWorkReview`, `WorkFinding`, `WorkReview`, `workReviewPrompt`, `workReviewText` |
+| service | `src/services/maria/workContext.ts` | `FILE_LIMITS`, `NO_SOURCES`, `WorkFile`, `workFiles`, `workResults`, `WorkSource`, `workSources`, `workSteps` |
+| service | `src/services/mariaAuditService.ts` | `MariaAuditOptions`, `runMariaGovernanceAudit` |
 | service | `src/services/mariaWeeklyReportService.ts` | `generateWeeklyReport`, `getLatestReport`, `getReports`, `saveReport`, `scheduleWeeklyGeneration` |
 | service | `src/services/mediaStorageService.ts` | `cleanOldStaged`, `NO_STORAGE`, `removeStaged`, `STAGED_PREFIX`, `stagedKey`, `stageFile`, `StageResult`, `STORAGE_CONNECTOR`, `storageConfig`, `StorageConfig`, `storageConfigured`, `StoragePart`, `StorageTestResult`, `testStorage` |
 | service | `src/services/memory/ecosystemMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `ECOSYSTEM_MEMORY_CATEGORIES`, `exportMemoryItems`, `getAllMemorySizes`, `getMemorySize`, `importMemoryItems`, `listMemory`, `listMemoryItems`, `MEMORY_CONFIDENCE`, `MEMORY_NAMESPACES`, `pushMemory`, `tickExpiry` |
