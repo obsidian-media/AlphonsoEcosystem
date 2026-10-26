@@ -108,6 +108,14 @@ export async function pickDestination(
     if (!info.setUp) return { ok: false, outcome: 'setup', reason: info.setUpSentence as string };
   }
   const offered = (hint ? [hint] : MARCUS_CONNECTORS).filter((c) => destinationsFor(c).setUp);
+  // One connector, and the request names one of its defaults or listed workflows: no model needed.
+  if (hint && hint !== 'composio' && offered.length === 1) {
+    const namedTargets = destinationsFor(hint).defaults.filter((d) => d && asked.includes(d.toLowerCase()));
+    if (namedTargets.length === 1) {
+      const got = check({ connector: hint, target: namedTargets[0], kind: kindHint }, request, text);
+      if ('picked' in got) return got.picked;
+    }
+  }
   // Composio's send tools (agent phase 5), only from the toolkits you switched on.
   const composioTools = offered.includes('composio') ? await composioSendTools().catch(() => []) : [];
   if (!offered.filter((c) => c !== 'composio').length && !composioTools.length) return { ok: false, outcome: 'failed', reason: NO_DESTINATION };
@@ -126,6 +134,11 @@ export async function pickDestination(
       const c = checkComposioAnswer(answer, composioTools, request, text);
       if ('destination' in c) return { ok: true, destination: c.destination };
       problem = c.problem;
+      continue;
+    }
+    const answered = String(answer.connector || '').toLowerCase().trim();
+    if (MARCUS_CONNECTORS.includes(answered as MarcusConnector) && !offered.includes(answered as MarcusConnector)) {
+      problem = `"${answered}" is not one of the connectors offered.`;
       continue;
     }
     const got = check({ ...answer, kind: answer.kind || kindHint }, request, text);

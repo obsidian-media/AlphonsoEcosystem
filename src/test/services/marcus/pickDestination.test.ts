@@ -63,6 +63,27 @@ describe('pickDestination', () => {
     expect(llm).not.toHaveBeenCalled();
   });
 
+  // The desktop run (2026-10-26): offered only n8n, the 7B model answered Slack.
+  it('a model answer naming a connector it was not offered is asked again', async () => {
+    saveConnectorCredential('discord', 'DISCORD_BOT_TOKEN', 'd-1');
+    saveConnectorCredential('discord', 'DISCORD_GUILD_ID', 'G');
+    llm.mockResolvedValueOnce(say({ connector: 'telegram', target: 'team', kind: 'message' }))
+      .mockResolvedValueOnce(say({ connector: 'slack', target: '#news', kind: 'message' }));
+    const got = await pickDestination(REQ, 'Open Saturday.', {});
+    expect(got).toMatchObject({ ok: true, destination: { connector: 'slack', target: '#news' } });
+    expect(String((llm.mock.calls[1][1] as { prompt: string }).prompt)).toContain('"telegram" is not one of the connectors offered.');
+  });
+
+  it('a listed n8n workflow the request names is used without asking the model', async () => {
+    saveConnectorCredential('n8n', 'N8N_BASE_URL', 'http://127.0.0.1:5678');
+    saveConnectorCredential('n8n', 'N8N_WORKFLOWS', 'Team notes: team-notes; Releases: release-hook');
+    const got = await pickDestination('/jose Write a one-line note that the shop opens at 9 and send it to my n8n workflow Team notes.', 'We open at 9.', {});
+    expect(got).toMatchObject({ ok: true, destination: { connector: 'n8n', target: 'Team notes', label: 'n8n workflow Team notes' } });
+    expect(llm).not.toHaveBeenCalled();
+    saveConnectorCredential('n8n', 'N8N_BASE_URL', '');
+    saveConnectorCredential('n8n', 'N8N_WORKFLOWS', '');
+  });
+
   it('Instagram asked from Chat → CAMPAIGN_STUDIO_ONLY', async () => {
     llm.mockResolvedValueOnce(say({ connector: 'instagram', target: 'feed', kind: 'message' }));
     const got = await pickDestination('/jose post this on Instagram', 'Hi', {});
