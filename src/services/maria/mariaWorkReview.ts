@@ -150,7 +150,7 @@ export async function runMariaWorkReview(
     if (!next) continue;
     parsed = next;
     if (!next.badQuotes.length) break;
-    ask = 'Quote the words you mean, exactly as they are in the work.\nQuote the words you mean.';
+    ask = 'Quote the words you mean. Copy them exactly as they are in the work.';
   }
   if (!parsed) return { ...base, summary: MARIA_NO_REVIEW, resultState: 'failed', schema: null, failureReason: MARIA_NO_REVIEW };
 
