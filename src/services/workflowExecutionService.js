@@ -19,7 +19,7 @@ import { appendWorkflowReceipt } from './workflowReceiptService';
 import { listWorkflowOperations } from './workflowOperationsRegistryService';
 import { searchBrave } from './hectorResearchService';
 import { searchWorkspaceFiles } from './workspaceFileService';
-import { executeMarcusPublish } from './marcusPublishService';
+import { askMarcusToSend, NOTHING_TO_PUBLISH } from './marcus/askMarcus';
 import { appendWorkflowTelemetryEvent } from './workflowTelemetryService';
 import { buildMiyaExportPacket } from './miyaExportPacketService';
 import { listMiyaMemory } from './miyaMemoryService';
@@ -206,7 +206,7 @@ export async function executeWorkflowStep(packet) {
       ok: false,
       actionType: packet.actionType,
       result: 'execution_failed',
-      output: String(error)
+      output: error instanceof Error ? error.message : String(error)
     };
   }
 }
@@ -433,22 +433,15 @@ async function executeMiyaStrategy(packet) {
   return strategy;
 }
 
+// A workflow's Publishing task asks Marcus to send the workflow's text (agent phase 5): one
+// Marcus step, approved like any send. It used to send the instruction to Telegram unasked.
 async function executePublishing(packet) {
-  const platform = packet.payload?.platform || packet.currentStage?.actionType || 'telegram';
-  const payload = {
-    text: packet.payload?.originalCommand || packet.title || packet.payload?.text || '',
-    caption: packet.payload?.caption || '',
-    title: packet.payload?.title || ''
-  };
-  const result = await executeMarcusPublish({
-    platform,
-    payload,
-    workflowId: packet.workflowId || '',
-    preApproved: true
-  });
-  const output = result?.ok
-    ? `Published to ${platform}: ${payload.text.slice(0, 100)}`
-    : `Publish to ${platform} queued (setup may be required): ${result?.error || 'pending'}`;
+  const text = String(packet.payload?.context?.text || packet.payload?.text || '').trim();
+  if (!text) throw new Error(NOTHING_TO_PUBLISH);
+  const result = await askMarcusToSend({ text, source: 'a workflow' });
+  const output = result.ok
+    ? 'Asked Marcus to send it: waiting for your approval on the board.'
+    : `Not sent: ${result.reason || 'it could not be set up'}.`;
   updatePacketAsDone(packet.id, output);
   return output;
 }

@@ -1,47 +1,18 @@
 import React, { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Send, Zap } from 'lucide-react';
-import { buildMarcusPublishPacket, executeMarcusPublish, MARCUS_PUBLISH_PLATFORMS } from '../../services/marcusPublishService';
-import { logApprovalEvent } from '../../services/agentAuditService';
+import { askMarcusToSend } from '../../services/marcus/askMarcus';
 
-interface PlatformFields {
-  caption?: string;
-  imageUrl?: string;
-  videoUrl?: string;
-  mediaType?: string;
-  message?: string;
-  link?: string;
-  filePath?: string;
-  title?: string;
-  description?: string;
-  tags?: string;
-  privacyStatus?: string;
-  chatId?: string;
-  text?: string;
-  to?: string;
-  content?: string;
-  parentPageId?: string;
-  listId?: string;
-}
-
-type PlatformId = keyof typeof PLATFORM_DEFAULTS;
-
-const PLATFORM_DEFAULTS = {
-  instagram: { caption: '', imageUrl: '', videoUrl: '', mediaType: '' },
-  facebook:  { message: '', link: '', imageUrl: '' },
-  youtube:   { filePath: '', title: '', description: '', tags: '', privacyStatus: 'private' },
-  telegram:  { chatId: '', text: '' },
-  whatsapp:  { to: '', text: '' },
-  notion:    { title: '', content: '', parentPageId: '' },
-  clickup:   { title: '', content: '', listId: '' },
-} as const;
-
-function buildPayload(platform: string, fields: PlatformFields): PlatformFields {
-  const base: PlatformFields = { ...(PLATFORM_DEFAULTS as Record<string, PlatformFields>)[platform], ...fields };
-  if (platform === 'youtube' && typeof base.tags === 'string') {
-    (base as unknown as { tags: string[] }).tags = base.tags.split(',').map((t) => t.trim()).filter(Boolean);
-  }
-  return base;
-}
+// Agent phase 5: the panel asks Marcus. The send is one Marcus step, prepared and shown with the
+// exact text, approved on the board, and checked by Sentinel first. It used to send at once
+// after a tick box, with no Sentinel check.
+const CHANNELS = [
+  { id: 'slack', label: 'Slack', where: '#channel (optional: your default)' },
+  { id: 'discord', label: 'Discord', where: '#channel (optional: your default)' },
+  { id: 'telegram', label: 'Telegram', where: 'team or me' },
+  { id: 'whatsapp', label: 'WhatsApp', where: 'Phone number' },
+  { id: 'notion', label: 'Notion', where: 'Page ID (optional: your default)' },
+  { id: 'clickup', label: 'ClickUp', where: 'List ID (optional: your default)' },
+] as const;
 
 interface AuditReport {
   title?: string;
@@ -50,56 +21,8 @@ interface AuditReport {
   status?: string;
 }
 
-interface Receipt {
-  ok?: boolean;
-  packetOnly?: boolean;
-  packetId?: string;
-  platform?: string;
-  error?: string;
-  result?: { externalId?: string; videoId?: string; url?: string };
-}
-
 interface Props {
   auditReport?: AuditReport | null;
-}
-
-interface FieldInputProps {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  multiline?: boolean;
-}
-
-interface FieldSelectProps {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}
-
-function FieldInput({ label, value, onChange, placeholder = '', multiline = false }: FieldInputProps): React.JSX.Element {
-  const cls = 'w-full rounded-lg bg-(--surface-2) px-3 py-2 text-sm text-(--text-1) placeholder-(--text-4) focus:outline-hidden focus:border-(--warning-border)';
-  return (
-    <div>
-      <label className="block text-[10px] uppercase tracking-widest text-(--text-3) mb-1">{label}</label>
-      {multiline
-        ? <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} placeholder={placeholder} className={cls} />
-        : <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cls} />}
-    </div>
-  );
-}
-
-function FieldSelect({ label, value, onChange, options }: FieldSelectProps): React.JSX.Element {
-  return (
-    <div>
-      <label className="block text-[10px] uppercase tracking-widest text-(--text-3) mb-1">{label}</label>
-      <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg bg-(--surface-2) px-3 py-2 text-sm text-(--text-1) focus:outline-hidden focus:border-(--warning-border)">
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </div>
-  );
 }
 
 function riskColor(level?: string): string {
@@ -109,57 +32,29 @@ function riskColor(level?: string): string {
   return 'text-(--success)';
 }
 
+const fieldCls = 'w-full rounded-lg bg-(--surface-2) px-3 py-2 text-sm text-(--text-1) placeholder-(--text-4) focus:outline-hidden focus:border-(--warning-border)';
+const labelCls = 'block text-[10px] uppercase tracking-widest text-(--text-3) mb-1';
+
 export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
-  const [platform, setPlatform] = useState<string>('instagram');
-  const [fields, setFields] = useState<PlatformFields>({ ...PLATFORM_DEFAULTS.instagram });
-  const [approved, setApproved] = useState(false);
+  const [channel, setChannel] = useState<string>('slack');
+  const [where, setWhere] = useState('');
+  const [title, setTitle] = useState('');
+  const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
-  const [error, setError] = useState('');
-  const [createPacketOnly, setCreatePacketOnly] = useState(false);
+  const [reply, setReply] = useState<{ ok: boolean; text: string } | null>(null);
+  const def = CHANNELS.find((c) => c.id === channel)!;
+  const needsTitle = channel === 'notion' || channel === 'clickup';
 
-  const platformDef = MARCUS_PUBLISH_PLATFORMS.find((p: { id: string }) => p.id === platform);
-
-  const handlePlatformChange = (id: string) => {
-    setPlatform(id);
-    setFields({ ...(PLATFORM_DEFAULTS as Record<string, PlatformFields>)[id] });
-    setReceipt(null);
-    setError('');
-    setApproved(false);
-  };
-
-  const handleApprovalToggle = (checked: boolean) => {
-    if (checked) {
-      logApprovalEvent(
-        `marcus-publish-${platform}-${Date.now()}`,
-        'marcus',
-        `Publish to ${platform}`,
-        'approved',
-        'high',
-        0.8
-      );
-    }
-    setApproved(checked);
-  };
-
-  const setField = (key: keyof PlatformFields, value: string) => setFields((prev) => ({ ...prev, [key]: value }));
-
-  const handlePublish = async () => {
-    if (!approved) { setError('You must check the approval box before publishing.'); return; }
-    setError('');
+  const ask = async () => {
     setBusy(true);
-    setReceipt(null);
+    setReply(null);
     try {
-      if (createPacketOnly) {
-        const packet = buildMarcusPublishPacket({ platform, payload: buildPayload(platform, fields) });
-        setReceipt({ ok: true, packetOnly: true, packetId: packet.id, platform });
-      } else {
-        const result = await executeMarcusPublish({ platform, payload: buildPayload(platform, fields), preApproved: true });
-        setReceipt(result);
-        if (!result.ok) setError(result.error ?? 'Publish failed.');
-      }
+      const result = await askMarcusToSend({
+        text, connector: channel, ...(where.trim() ? { target: where.trim() } : {}), ...(needsTitle && title.trim() ? { title: title.trim() } : {}), source: 'Project Execution',
+      });
+      setReply(result.ok ? { ok: true, text: 'Waiting for your approval on the board.' } : { ok: false, text: result.reason || 'Marcus could not be asked.' });
     } catch (err) {
-      setError(String(err));
+      setReply({ ok: false, text: String(err) });
     } finally {
       setBusy(false);
     }
@@ -180,108 +75,56 @@ export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
       )}
 
       <div className="rounded-xl bg-(--surface-2) p-4">
-        <div className="flex items-center gap-2 mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-(--warning)">
+        <div className="flex items-center gap-2 mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-(--warning)">
           <Zap className="h-4 w-4" />
-          Marcus Publish — Approval-Gated Distribution
+          Ask Marcus to send
         </div>
+        <p className="text-[11px] text-(--text-3)">Marcus sends it once you approve it on the board, after Sentinel checks it.</p>
+        <p className="mb-4 text-[11px] text-(--text-3)">Posts to Instagram, Facebook and YouTube go through Miya Studio's Campaign Studio.</p>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          {MARCUS_PUBLISH_PLATFORMS.map((p: { id: string; label: string }) => (
+          {CHANNELS.map((c) => (
             <button
-              key={p.id}
-              onClick={() => handlePlatformChange(p.id)}
+              key={c.id}
+              onClick={() => { setChannel(c.id); setWhere(''); setReply(null); }}
               className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest border transition-colors ${
-                platform === p.id
+                channel === c.id
                   ? 'bg-(--warning-dim) border-(--warning-border) text-(--warning)'
                   : 'bg-(--surface-2) border-(--border) text-(--text-3) hover:border-(--border-strong)'
               }`}
             >
-              {p.label}
+              {c.label}
             </button>
           ))}
         </div>
 
         <div className="space-y-2 mb-4">
-          {platform === 'instagram' && (<>
-            <FieldInput label="Caption" value={fields.caption ?? ''} onChange={(v) => setField('caption', v)} multiline />
-            <FieldInput label="Image URL (public)" value={fields.imageUrl ?? ''} onChange={(v) => setField('imageUrl', v)} placeholder="https://..." />
-            <FieldInput label="Video URL (public, optional)" value={fields.videoUrl ?? ''} onChange={(v) => setField('videoUrl', v)} placeholder="https://..." />
-            <FieldSelect label="Media type" value={fields.mediaType ?? ''} onChange={(v) => setField('mediaType', v)}
-              options={[{ value: '', label: 'Auto-detect' }, { value: 'IMAGE', label: 'IMAGE' }, { value: 'REELS', label: 'REELS' }, { value: 'VIDEO', label: 'VIDEO' }]} />
-          </>)}
-          {platform === 'facebook' && (<>
-            <FieldInput label="Message" value={fields.message ?? ''} onChange={(v) => setField('message', v)} multiline />
-            <FieldInput label="Link (optional)" value={fields.link ?? ''} onChange={(v) => setField('link', v)} placeholder="https://..." />
-            <FieldInput label="Image URL (optional)" value={fields.imageUrl ?? ''} onChange={(v) => setField('imageUrl', v)} placeholder="https://..." />
-          </>)}
-          {platform === 'youtube' && (<>
-            <FieldInput label="Local file path" value={fields.filePath ?? ''} onChange={(v) => setField('filePath', v)} placeholder="/path/to/video.mp4" />
-            <FieldInput label="Title" value={fields.title ?? ''} onChange={(v) => setField('title', v)} />
-            <FieldInput label="Description" value={fields.description ?? ''} onChange={(v) => setField('description', v)} multiline />
-            <FieldInput label="Tags (comma-separated)" value={fields.tags ?? ''} onChange={(v) => setField('tags', v)} />
-            <FieldSelect label="Privacy" value={fields.privacyStatus ?? 'private'} onChange={(v) => setField('privacyStatus', v)}
-              options={[{ value: 'private', label: 'Private' }, { value: 'unlisted', label: 'Unlisted' }, { value: 'public', label: 'Public' }]} />
-          </>)}
-          {platform === 'telegram' && (<>
-            <FieldInput label="Chat ID" value={fields.chatId ?? ''} onChange={(v) => setField('chatId', v)} placeholder="Your Telegram chat id" />
-            <FieldInput label="Message" value={fields.text ?? ''} onChange={(v) => setField('text', v)} multiline />
-          </>)}
-          {platform === 'whatsapp' && (<>
-            <FieldInput label="To (E.164)" value={fields.to ?? ''} onChange={(v) => setField('to', v)} placeholder="+16475551234" />
-            <FieldInput label="Message" value={fields.text ?? ''} onChange={(v) => setField('text', v)} multiline />
-          </>)}
-          {platform === 'notion' && (<>
-            <FieldInput label="Title" value={fields.title ?? ''} onChange={(v) => setField('title', v)} />
-            <FieldInput label="Content" value={fields.content ?? ''} onChange={(v) => setField('content', v)} multiline />
-            <FieldInput label="Parent page ID (optional override)" value={fields.parentPageId ?? ''} onChange={(v) => setField('parentPageId', v)} />
-          </>)}
-          {platform === 'clickup' && (<>
-            <FieldInput label="Title" value={fields.title ?? ''} onChange={(v) => setField('title', v)} />
-            <FieldInput label="Description" value={fields.content ?? ''} onChange={(v) => setField('content', v)} multiline />
-            <FieldInput label="List ID (optional override)" value={fields.listId ?? ''} onChange={(v) => setField('listId', v)} />
-          </>)}
-        </div>
-
-        <div className="flex items-start gap-2 rounded-xl bg-(--warning-dim) p-3 mb-4">
-          <input id="marcus-approval" type="checkbox" checked={approved} onChange={(e) => handleApprovalToggle(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-(--warning)" />
-          <label htmlFor="marcus-approval" className="cursor-pointer text-[11px] text-(--warning) leading-relaxed">
-            <span className="font-bold">I explicitly approve this external publish action.</span>
-            {' '}Marcus will execute the distribution immediately through the {platformDef?.label} connector. This cannot be undone.
-          </label>
-        </div>
-
-        <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={handlePublish} disabled={busy || !approved}
-            className="flex items-center gap-2 rounded-xl bg-(--warning-dim) px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-(--warning) hover:bg-(--warning-dim) disabled:opacity-40 transition-colors">
-            <Send className="h-3.5 w-3.5" />
-            {busy ? 'Publishing…' : `Publish to ${platformDef?.label}`}
-          </button>
-          <label className="flex items-center gap-2 cursor-pointer text-[11px] text-(--text-3)">
-            <input type="checkbox" checked={createPacketOnly} onChange={(e) => setCreatePacketOnly(e.target.checked)} className="h-3 w-3 accent-(--text-3)" />
-            Queue as packet only (no immediate execution)
-          </label>
-        </div>
-
-        {error && (
-          <div className="mt-3 flex items-start gap-2 rounded-xl bg-(--error-dim) p-3 text-[11px] text-(--error)">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-            {error}
+          <div>
+            <label className={labelCls} htmlFor="marcus-where">Where</label>
+            <input id="marcus-where" value={where} onChange={(e) => setWhere(e.target.value)} placeholder={def.where} className={fieldCls} />
           </div>
-        )}
-
-        {receipt && (
-          <div className={`mt-3 rounded-xl p-3 text-[11px] ${receipt.ok ? 'bg-(--success-dim) text-(--success)' : 'bg-(--error-dim) text-(--error)'}`}>
-            <div className="flex items-center gap-2 font-bold mb-1">
-              {receipt.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-              {receipt.ok
-                ? receipt.packetOnly ? `Packet queued for ${receipt.platform} — awaiting execution` : `Published to ${receipt.platform}`
-                : `Publish failed: ${receipt.platform}`}
+          {needsTitle && (
+            <div>
+              <label className={labelCls} htmlFor="marcus-title">Title</label>
+              <input id="marcus-title" value={title} onChange={(e) => setTitle(e.target.value)} className={fieldCls} />
             </div>
-            {receipt.packetOnly && <div className="text-(--text-3)">Packet ID: {receipt.packetId}</div>}
-            {receipt.result?.externalId && <div>External ID: {receipt.result.externalId}</div>}
-            {receipt.result?.videoId && <div>Video ID: {receipt.result.videoId}</div>}
-            {receipt.result?.url && <div>URL: <span className="font-mono text-[10px] break-all">{receipt.result.url}</span></div>}
-            {receipt.error && <div>Error: {receipt.error}</div>}
+          )}
+          <div>
+            <label className={labelCls} htmlFor="marcus-text">Message</label>
+            <textarea id="marcus-text" value={text} onChange={(e) => setText(e.target.value)} rows={3} className={fieldCls} />
+          </div>
+        </div>
+
+        <button onClick={ask} disabled={busy || !text.trim()}
+          className="flex items-center gap-2 rounded-xl bg-(--warning-dim) px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-(--warning) hover:bg-(--warning-dim) disabled:opacity-40 transition-colors">
+          <Send className="h-3.5 w-3.5" />
+          {busy ? 'Asking…' : 'Ask Marcus to send'}
+        </button>
+
+        {reply && (
+          <div className={`mt-3 flex items-start gap-2 rounded-xl p-3 text-[11px] ${reply.ok ? 'bg-(--success-dim) text-(--success)' : 'bg-(--error-dim) text-(--error)'}`}>
+            {reply.ok ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
+            {reply.text}
           </div>
         )}
       </div>

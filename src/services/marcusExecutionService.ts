@@ -4,7 +4,6 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { readDueMetrics } from './contentFactory/postMetrics';
 import { pushMemoryItem } from './memoryService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
-import { executeMarcusPublish } from './marcusPublishService';
 import { publishPost } from './contentFactory/publishPost';
 import { contentAppSettings } from './contentFactory/contentStepRecorder';
 import { getProject } from './contentFactory/contentProjectService';
@@ -85,7 +84,7 @@ interface ScheduledPublish {
   agentId: string;
   createdAt: number;
   /** `posting`: claimed and being sent; `check`: the app closed mid-send; `ask`: more than 7 days late. */
-  status: 'pending' | 'executed' | 'cancelled' | 'posting' | 'done' | 'failed' | 'check' | 'ask';
+  status: 'pending' | 'executed' | 'cancelled' | 'posting' | 'done' | 'failed' | 'check' | 'ask' | 'asked';
   executedAt?: number;
   /** Phase 3a: a project's post (sent through publishPost), or a reminder. Missing = text, as before. */
   kind?: 'text' | 'content_post' | 'reminder';
@@ -460,7 +459,8 @@ export async function runScheduledPublishes(nowMs = Date.now()): Promise<void> {
     const items = _loadSchedule();
     const due = items.filter((i) => i.status === 'pending' && i.scheduledAt <= nowMs);
     for (const item of due) {
-      item.status = item.kind === 'content_post' ? 'posting' : item.kind === 'reminder' ? 'done' : 'executed';
+      // A text send asks Marcus at its time (agent phase 5): approved like any send, never sent blindly.
+      item.status = item.kind === 'content_post' ? 'posting' : item.kind === 'reminder' ? 'done' : 'asked';
       item.executedAt = nowMs;
     }
     if (due.length) _saveSchedule(items);
@@ -472,14 +472,10 @@ export async function runScheduledPublishes(nowMs = Date.now()): Promise<void> {
         await tell('info', 'Time to publish on YouTube', item.message || '');
       } else {
         try {
-          await executeMarcusPublish({
-            platform: item.platform,
-            payload: { text: item.content, content: item.content },
-            commandId: item.id,
-            workflowId: `scheduler_${item.id}`,
-            preApproved: false
-          });
-        } catch { /* best-effort; item is already marked executed */ }
+          const { askMarcusToSend } = await import('./marcus/askMarcus');
+          const asked = await askMarcusToSend({ text: item.content, connector: item.platform, source: "Marcus's schedule" });
+          if (!asked.ok) await tell('error', 'A scheduled message was not sent', String(asked.reason || 'It could not be set up.'));
+        } catch { /* the item is already marked asked */ }
       }
     }
   } finally {

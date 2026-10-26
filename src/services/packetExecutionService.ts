@@ -4,7 +4,6 @@ import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES } from './trustModel';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { requireApproval } from './approval/approvalService';
-import { executeMarcusPublish } from './marcusPublishService';
 
 interface ExecutionPayload {
   packetId: string;
@@ -166,27 +165,21 @@ export async function executeApprovedPacket(packet: Packet): Promise<{ ok: boole
       return { ok: true, executionResult, result };
     }
 
+    // An old Marcus handoff packet asks Marcus (agent phase 5): one step, approved with the exact
+    // text and checked by Sentinel, instead of sending at once.
     if (packet.packetType === 'marcus_publish_handoff') {
-      const platform = (packet?.payload?.platform as string) || '';
-      const result = await executeMarcusPublish({
-        platform,
-        payload: (packet?.payload || {}) as Record<string, unknown>,
-        packetId: packet.id,
-        commandId: (packet?.payload?.commandId as string) || null,
-        workflowId: (packet?.payload?.workflowId as string) || 'packet_execution',
-        preApproved: true,
-      }) as { ok: boolean; error?: string; result?: { externalId?: string; videoId?: string; url?: string } };
-      if (!result.ok) {
-        return { ok: false, error: result.error || 'Marcus publish failed.', result };
-      }
-      const executionResult = buildExecutionResult(packet, {
-        connectorId: platform,
-        platform,
-        externalId: result.result?.externalId || result.result?.videoId || null,
-        url: result.result?.url || null,
-      });
-      markPacketExecuted(packet.id, executionResult, TRUST_STATES.VERIFIED);
-      return { ok: true, executionResult, result };
+      const p = (packet?.payload || {}) as Record<string, unknown>;
+      const platform = String(p.platform || '');
+      const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : '');
+      const text = str(p.text) || str(p.caption) || str(p.message) || str(p.content) || str(p.description);
+      const target = str(p.to) || str(p.parentPageId) || str(p.listId);
+      const title = str(p.title);
+      const { askMarcusToSend } = await import('./marcus/askMarcus');
+      const asked = await askMarcusToSend({ text, connector: platform, ...(target ? { target } : {}), ...(title ? { title } : {}), source: 'Project Execution' });
+      if (!asked.ok) return { ok: false, error: asked.reason || 'Marcus could not be asked.', result: asked };
+      const executionResult = buildExecutionResult(packet, { connectorId: platform, platform, note: 'Asked Marcus: waiting for your approval on the board.' });
+      markPacketExecuted(packet.id, executionResult, TRUST_STATES.TEMPORARY);
+      return { ok: true, executionResult, result: asked };
     }
 
     const executionResult = buildExecutionResult(packet, {
