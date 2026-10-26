@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setStepOutput } from '../../../services/jose/joseStepOutputs';
 import { buildStepInput, stepInputText, readableOutput, STEP_INPUT_LIMITS } from '../../../services/jose/stepInput';
-import { buildMariaAuditPrompt } from '../../../services/mariaAuditService';
+import { planReviewPrompt } from '../../../services/maria/mariaPlanReview';
 import { novaVerdictPrompt } from '../../../services/nova/novaVerdict';
 import { buildSentinelThreatPrompt } from '../../../services/sentinelSecurityService';
 import { buildEchoSynthesisPrompt } from '../../../services/echoMemoryService';
@@ -55,7 +55,7 @@ describe('buildStepInput', () => {
   it("puts the needed work into Maria's, Nova's, Sentinel's and Echo's prompts", () => {
     setStepOutput('c1', 'miya', 'miya', { summary: 'Bees pollinate a third of our food.' });
     const input = buildStepInput('c1', step('x', 'maria', ['miya']), 'r', {});
-    expect(buildMariaAuditPrompt('r', {}, input)).toContain('Bees pollinate a third of our food.');
+    expect(planReviewPrompt(input, {})).toContain('Bees pollinate a third of our food.');
     expect(novaVerdictPrompt(input, { sourceCount: 0, mayAskForHelp: false })).toContain('Bees pollinate');
     expect(buildSentinelThreatPrompt('r', {}, { findings: [] } as any, input)).toContain('Bees pollinate');
     expect(buildEchoSynthesisPrompt('r', {}, input)).toContain('Bees pollinate');

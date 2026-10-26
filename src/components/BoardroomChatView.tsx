@@ -359,9 +359,8 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
         return;
       }
       if (!review?.riskLevel) throw new Error('Maria returned no review');
-      // confidenceLevel 'temporary' means Maria's model review could not be
-      // used and her rule-based check produced this verdict; say which.
-      const source: 'model' | 'rules' = review.confidenceLevel === 'temporary' ? 'rules' : 'model';
+      // Always her model's review now (agent phase 3): the rule-based check is gone.
+      const source = 'model' as const;
       const governance = {
         riskLevel: String(review.riskLevel),
         approvalRequired: Boolean(review.approvalRequired),
@@ -370,9 +369,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
         source
       };
       setThreadGovernance(activeThreadId, governance);
-      const label = source === 'rules'
-        ? "Maria's rule-based check (her model review could not be read)"
-        : "Maria's governance review";
+      const label = "Maria's governance review";
       postThreadNote(
         'maria',
         `${label}: risk ${governance.riskLevel}${governance.approvalRequired ? ', approval required before anything is sent out' : ''}. ${governance.summary}`,
@@ -583,7 +580,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
               </button>
               {activeThread.governance && (
                 <span className="text-[10px] text-(--text-3)" data-testid="boardroom-governance-badge">
-                  Maria{activeThread.governance.source === 'rules' ? ' (rule-based)' : ''}: risk {activeThread.governance.riskLevel}
+                  Maria: risk {activeThread.governance.riskLevel}
                   {activeThread.governance.approvalRequired ? ' · approval required' : ''}
                 </span>
               )}

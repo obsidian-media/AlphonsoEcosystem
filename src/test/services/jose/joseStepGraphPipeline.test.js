@@ -50,6 +50,12 @@ vi.mock('../../../lib/ollama', () => ({
       const verdict = (globalThis.__joseVerdicts || []).shift() || 'pass';
       return { response: JSON.stringify({ verdict, findings: verdict === 'fix' ? ['The hook is weak.'] : [] }) };
     }
+    // Maria's two reviews (agent phase 3): the work, or the plan.
+    if (_agent === 'maria' && /You are Maria/.test(prompt)) {
+      return /The work to review/.test(prompt)
+        ? { response: JSON.stringify({ verdict: 'pass', summary: 'Ready to use.', findings: [] }) }
+        : { response: JSON.stringify({ risk: 'low', why: 'Nothing is sent.', rules: [], points: ['Nothing leaves this computer.'], needsApproval: false, approvalReasons: [], offer: '' }) };
+    }
     // Nova's ranked verdict (agent phase 2).
     if (_agent === 'nova' && /You are Nova/.test(prompt)) {
       return { response: JSON.stringify({ doFirst: 'the first option', options: [{ name: 'The first option', rank: 1, why: 'it is ready', value: 'high', effort: 'low', risk: 'low' }] }) };
@@ -684,7 +690,7 @@ describe('Jose runs plans as step graphs', () => {
   it("keeps a step's structured result (Maria's review) in its output", async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'Boardroom discussion: launch plan', source: 'boardroom', zeroCostMode: true, previewMode: false,
-      // Maria's own executor (no contentStep), with her model mocked away: her rule-based review.
+      // Maria's own executor (no contentStep): her plan review from the mocked model.
       assignments: [step('maria', 'audit_governance', { stepId: 'maria', effects: ['read'], contentStep: undefined })],
     });
     const output = getStepOutput(result.commandId, 'maria');
@@ -823,7 +829,7 @@ describe('every step runs with its skill (agent roles Part B)', () => {
       plain('maria', 'audit_quality', { stepId: 'check', needs: ['draft'], reviewOf: 'draft', effects: ['read'] }),
     ]);
     const prompts = vi.mocked(generateAgentLlmResponse).mock.calls.filter((c) => c[0] === 'maria').map((c) => String(c[1].prompt));
-    const reviewPrompt = prompts.find((p) => p.includes('Review it.'));
+    const reviewPrompt = prompts.find((p) => p.includes('The work to review'));
     expect(reviewPrompt).toContain('Your skill: Claim check');
     const steps = getJoseRequest(`jose-request-${result.commandId}`).steps;
     expect(steps.find((s) => s.stepId === 'draft')).toMatchObject({ skill: 'Creative package', skillReason: 'The only skill for this task.' });

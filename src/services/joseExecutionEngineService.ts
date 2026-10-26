@@ -1356,6 +1356,10 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (assignment?.agent === AGENTS.MIYA && assignment?.actionType === 'creative_image') {
     return executeImageStep(requestText, assignment);
   }
+  // Maria reviews with her own two reviews, the work or the plan (agent phase 3).
+  if (assignment?.agent === AGENTS.MARIA) {
+    return executeMariaAssignment(commandText, assignment, options);
+  }
   // A review judges the work it reviews (agent roles Part A).
   if (assignment?.reviewOf) {
     return runReviewStep(assignment.agent, options.stepInput, assignment.actionType);

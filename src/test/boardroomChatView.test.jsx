@@ -717,11 +717,13 @@ describe('BoardroomChatView thread actions', () => {
     expect(concludeOnJose.mock.calls[0][0]).toBe('Launch plan');
   });
 
-  it("says when the verdict came from Maria's rule-based check, not her model review", async () => {
+  // Agent phase 3: Maria's rule-based check is gone, so Conclude never says "(rule-based)".
+  it('Conclude shows her review, never "(rule-based)"', async () => {
     await openThread();
-    await conclude({ riskLevel: 'low', approvalRequired: false, summary: 'Rule check passed.', confidenceLevel: 'temporary' });
-    expect(screen.getByText(/Maria's rule-based check \(her model review could not be read\): risk low\./)).toBeInTheDocument();
-    expect(screen.getByTestId('boardroom-governance-badge')).toHaveTextContent('Maria (rule-based): risk low');
+    await conclude({ riskLevel: 'low', approvalRequired: false, summary: 'Nothing is sent.', confidenceLevel: 'temporary' });
+    expect(screen.getByText(/Maria's governance review: risk low\./)).toBeInTheDocument();
+    expect(screen.getByTestId('boardroom-governance-badge')).toHaveTextContent('Maria: risk low');
+    expect(screen.getByTestId('boardroom-governance-badge').textContent).not.toContain('rule-based');
   });
 
   it('a failed review says so and leaves the thread open', async () => {
