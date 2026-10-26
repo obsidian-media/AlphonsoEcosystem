@@ -28,11 +28,12 @@ vi.mock('../../services/joseExecutionEngineService', () => ({
   rejectRequestStep: vi.fn(() => ({ ok: true, summary: 'Rejected.' })),
   carryOnRequest: vi.fn(async () => ({ ok: true })),
   executeApprovedPackets: vi.fn(async () => ({ ok: true, summary: 'done' })),
+  pickAlphonsoProject: vi.fn(async (_r, _s, name) => ({ ok: true, summary: `Working in ${name}.` })),
 }));
 vi.mock('../../services/jose/submitToJose', () => ({ runApprovedPlan: vi.fn(async () => ({ ok: true })), cancelPlan: vi.fn() }));
 
 import { handleJoseButton, runPushWatcher, handleApproveCommand, handleRejectCommand, stopTelegramCompanion } from '../../services/telegramCompanionService';
-import { approveRequestStep, rejectRequestStep, carryOnRequest, executeApprovedPackets } from '../../services/joseExecutionEngineService';
+import { approveRequestStep, rejectRequestStep, carryOnRequest, executeApprovedPackets, pickAlphonsoProject } from '../../services/joseExecutionEngineService';
 import { runApprovedPlan, cancelPlan } from '../../services/jose/submitToJose';
 import { approvePacket } from '../../services/agentBusService';
 import { buttonToken } from '../../services/jose/joseTelegram';
@@ -57,6 +58,35 @@ beforeEach(() => {
   globalThis.__tgActivity = [];
   globalThis.__tgCommands = [];
   stopTelegramCompanion();
+});
+
+// Agent phase 6: "Which project" on Telegram.
+function whichProjectRequest() {
+  const request = createJoseRequest({ commandId: 'c9', source: 'user', text: 'Add a README', kind: 'normal',
+    steps: [{ stepId: 'build', agent: 'alphonso', actionType: 'local_operation', effects: ['run'], needs: [] }] });
+  updateJoseStep(request.id, 'build', { status: 'setup_needed', error: 'Which project: shop, blog?', projectChoices: ['shop', 'blog'] });
+  setJoseRequestStatus(request.id, 'waiting_setup');
+  return request.id;
+}
+
+describe('Which project on Telegram', () => {
+  it('sends one button per project, and a press picks it', async () => {
+    const id = whichProjectRequest();
+    await runPushWatcher('tok');
+    const sent = sends().find((s) => /Which project/.test(s.text));
+    expect(sent.buttons.map((row) => row.map((b) => b.text))).toEqual([['shop', 'blog']]);
+    expect(await press(sent.buttons[0][1].data)).toBe('Working in blog.');
+    expect(pickAlphonsoProject).toHaveBeenCalledWith(id, 'build', 'blog');
+  });
+
+  it('a press after it was answered says Already done', async () => {
+    const id = whichProjectRequest();
+    await runPushWatcher('tok');
+    const sent = sends().find((s) => /Which project/.test(s.text));
+    setJoseRequestStatus(id, 'running');
+    expect(await press(sent.buttons[0][0].data)).toBe('Already done.');
+    expect(pickAlphonsoProject).not.toHaveBeenCalled();
+  });
 });
 
 describe('Jose notifications on Telegram', () => {
