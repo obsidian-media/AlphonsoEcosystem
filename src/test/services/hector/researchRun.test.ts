@@ -8,6 +8,8 @@ const invoke = vi.fn();
 vi.mock('../../../lib/ollama', async (orig) => ({ ...(await orig() as object), generateAgentLlmResponse: (...a: unknown[]) => llm(...a) }));
 vi.mock('../../../services/hector/searchChain', () => ({ searchChain: (...a: unknown[]) => search(...a) }));
 vi.mock('@tauri-apps/api/core', () => ({ invoke: (...a: unknown[]) => invoke(...a) }));
+const webRisk = vi.fn(async (): Promise<Map<string, string>> => new Map());
+vi.mock('../../../services/sentinel/webRisk', () => ({ checkLinksWithWebRisk: (...a: unknown[]) => webRisk(...(a as [])) }));
 
 import { runResearch, fallbackQuery, parseWriteUp, reportText, planQuestion } from '../../../services/hector/researchRun';
 import { HECTOR_LIMITS } from '../../../services/hector/researchLimits';
@@ -284,5 +286,43 @@ describe("Hector's two leftovers (agent phase 2)", () => {
     search.mockResolvedValue({ sources: [], providers: [], errors: [] });
     const out = await runResearch('How many colonies?', { large: false, reportId: 'hector-report-9-h' });
     expect(out.ok && out.report.sources[0]).toMatchObject({ label: 'snippet', reason: 'too short to read' });
+  });
+});
+
+// Agent phase 4 (Sentinel): Hector doesn't open a link that looks disguised.
+describe('disguised links', () => {
+  const answered = json({ answer: 'About 17 million.', subQuestions: [{ question: 'How many?', status: 'answered', findings: [{ text: '17 million', sources: [1] }] }], disagreements: [], notFound: [] });
+
+  it("a disguised link isn't fetched and is listed with its reason", async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'How many?', queries: ['colonies'] }] })).mockResolvedValueOnce(answered);
+    search.mockResolvedValue(found(['https://a.example/x', 'http://paypa1-secure-login.com/verify']));
+    const out = await runResearch('How many honeybee colonies?', { large: false, reportId: 'hector-report-d-1' });
+    expect(fetched).not.toContain('http://paypa1-secure-login.com/verify');
+    if (!out.ok) throw new Error('research failed');
+    const src = out.report.sources.find((s) => s.url.includes('paypa1'));
+    expect(src).toMatchObject({ label: 'unreadable', excerpt: '' });
+    expect(src?.reason).toMatch(/^looks disguised \(/);
+  });
+
+  it('a disguised link you gave is skipped with the reason', async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'How many?', queries: ['colonies'] }] })).mockResolvedValueOnce(answered);
+    search.mockResolvedValue(found(['https://a.example/x']));
+    const out = await runResearch('How many honeybee colonies?', { large: false, reportId: 'hector-report-d-2', urls: ['https://xn--pypal-4ve.com/login'] });
+    expect(fetched).not.toContain('https://xn--pypal-4ve.com/login');
+    if (!out.ok) throw new Error('research failed');
+    expect(out.report.sources.find((s) => s.url.includes('xn--'))?.reason).toMatch(/^looks disguised/);
+  });
+});
+
+describe('Google Web Risk (agent phase 4)', () => {
+  it("a listed link isn't read", async () => {
+    const answered = json({ answer: 'About 17 million.', subQuestions: [{ question: 'How many?', status: 'answered', findings: [{ text: '17 million', sources: [1] }] }], disagreements: [], notFound: [] });
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'How many?', queries: ['colonies'] }] })).mockResolvedValueOnce(answered);
+    search.mockResolvedValue(found(['https://a.example/x', 'https://listed.example/y']));
+    webRisk.mockResolvedValueOnce(new Map([['https://listed.example/y', 'malware']]));
+    const out = await runResearch('How many honeybee colonies?', { large: false, reportId: 'hector-report-w-1' });
+    expect(fetched).not.toContain('https://listed.example/y');
+    if (!out.ok) throw new Error('research failed');
+    expect(out.report.sources.find((s) => s.url.includes('listed'))?.reason).toBe('listed as malware by Google Web Risk');
   });
 });

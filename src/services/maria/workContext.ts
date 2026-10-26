@@ -61,6 +61,35 @@ export async function workFiles(commandId: string, stepId: string, workspaceRoot
   return files;
 }
 
+const DEPENDENCY_FILES = ['package.json', 'package-lock.json', 'requirements.txt', 'Cargo.toml'];
+
+/**
+ * The project's dependency files (agent phase 4, Sentinel reviews dependencies): the ones the
+ * step wrote, else those in the project folder; within the same limits as `workFiles()`.
+ */
+export async function workDependencyFiles(commandId: string, stepId: string, workspaceRoot: string): Promise<WorkFile[]> {
+  if (!workspaceRoot) return [];
+  const artifacts: any[] = ((getStepOutput(commandId, stepId) as any)?.artifacts || []);
+  const written = artifacts.map((a) => String(a?.relativePath || a?.path || '')).filter((p) => DEPENDENCY_FILES.some((name) => p === name || p.endsWith(`/${name}`)));
+  const paths = written.length ? [...new Set(written)] : DEPENDENCY_FILES;
+  const { invoke } = await import('@tauri-apps/api/core');
+  const files: WorkFile[] = [];
+  let used = 0;
+  for (const path of paths) {
+    const room = Math.min(FILE_LIMITS.eachChars, FILE_LIMITS.totalChars - used);
+    if (room <= 0) break;
+    try {
+      const proof: any = await invoke('read_workspace_file', { workspaceRoot, relativePath: path });
+      const content = typeof proof?.content === 'string' ? proof.content : '';
+      if (!content) continue;
+      const text = cutText(content, room);
+      used += text.length;
+      files.push({ path, text, cut: content.length - text.length });
+    } catch { /* not in this project */ }
+  }
+  return files;
+}
+
 /** The build and test output a step recorded (its validation artifacts). */
 export function workResults(commandId: string, stepId: string): string {
   const artifacts: any[] = ((getStepOutput(commandId, stepId) as any)?.artifacts || []);

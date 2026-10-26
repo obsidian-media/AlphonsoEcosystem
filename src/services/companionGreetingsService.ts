@@ -55,7 +55,8 @@ export const COMPANION_CONTENT: Record<string, CompanionAgentContent> = {
   sentinel: {
     emoji: '🔒',
     greeting: "I'm Sentinel. I watch for anything risky before it becomes a problem.",
-    quickStarts: ['Is anything unsafe right now?', 'Check this command before I run it', 'What are my security settings?']
+    // Things he can do from what you give him (agent phase 4); he can't see your settings.
+    quickStarts: ['Check this text for anything unsafe...', 'Check this link before I open it...', 'Check this command before I run it']
   },
   nova: {
     emoji: '💡',

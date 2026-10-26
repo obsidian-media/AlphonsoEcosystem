@@ -73,6 +73,13 @@ describe('judgeReview', () => {
     expect(llm).toHaveBeenCalledWith('nova', expect.objectContaining({ format: 'json' }));
   });
 
+  // Agent phase 4: Sentinel's verdict is safe/risky/unsafe; the loop reads his pass/fix.
+  it("reads Sentinel's review verdict", async () => {
+    expect(await judgeReview(review, { summary: 'Risky:', schema: { kind: 'security', verdict: 'risky', reviewVerdict: 'fix', findings: ['"Log in": asks for a password → Remove it.'] } })).toEqual({ verdict: 'fix', findings: ['"Log in": asks for a password → Remove it.'] });
+    expect((await judgeReview(review, { summary: 'Safe.', schema: { kind: 'security', verdict: 'safe', reviewVerdict: 'pass', findings: [] } })).verdict).toBe('pass');
+    expect(llm).not.toHaveBeenCalled();
+  });
+
   // Agent phase 3: an unreadable review is never a pass.
   it('an unreadable review is never a pass', async () => {
     llm.mockResolvedValueOnce({ response: 'Looks fine to me!' } as never);

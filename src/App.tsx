@@ -10,6 +10,7 @@ import { checkAppUpdate, getLastUpdateNotice, setLastUpdateNotice } from './serv
 import { logApprovalEvent } from './services/agentAuditService';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { UpdaterNotification } from './components/UpdaterNotification';
+import { LinkWarningHost } from './components/sentinel/LinkWarning';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { MemorySearch } from './components/MemorySearch';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -488,24 +489,8 @@ function AppShell() {
     })();
   }, []);
 
-  // Wire background services: Sentinel scheduled scans + Maria weekly report
-  useEffect(() => {
-    let scanStop: (() => void) | null = null;
-    (async () => {
-      try {
-        const { startScheduledScans } = await import('./services/sentinelSecurityService');
-        scanStop = startScheduledScans(10 * 60 * 1000, (result: any) => {
-          if (result?.findings?.length) {
-            addNotification({ type: 'warning', title: 'Sentinel scan complete', message: `${result.findings.length} finding(s) detected.` });
-          }
-        });
-      } catch { /* non-critical */ }
-      // Maria's weekly review is a schedule now (agent phase 3: "Maria: the week's risks").
-    })();
-    return () => {
-      try { scanStop?.(); } catch { /* ignore */ }
-    };
-  }, []);
+  // Sentinel's review of the week is a schedule and the sidebar's Re-scan (agent phase 4);
+  // Maria's weekly review is a schedule (agent phase 3). No background scans here.
 
   // Jose scheduler background service. The ref keeps the scheduler on the
   // latest endpoint / Zero-Cost Mode without restarting it on every change.
@@ -834,6 +819,8 @@ function AppShell() {
 
   return (
     <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-(--accent-dim) bg-(--surface-0) text-(--text-1) ${settings.colorScheme === 'light' ? 'light' : ''} ${themeClassFromSettings(settings)}`}>
+      {/* Sentinel asks before a disguised source link opens (agent phase 4). */}
+      <LinkWarningHost />
       <UpdaterNotification
         version={updaterVersion}
         onDismiss={() => setUpdaterVersion(null)}

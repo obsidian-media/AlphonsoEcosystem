@@ -48,9 +48,9 @@ import type { PlanStep } from './jose/stepGraph';
 import { EFFECT_LABELS, stepEffectsToWaitFor } from './jose/joseEffects';
 import { listInstalledModels, pickLargerModel, usesOwnToolCalls } from './jose/joseModels';
 import { executeContentStepAssignment } from './contentFactory/contentAgentExecutor';
-import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
 import { holdStepsAfter, mariaHoldFor } from './maria/mariaHolds';
+import { sentinelHoldFor } from './sentinel/sentinelHolds';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
 import { runVisualWorkflow } from './workflowExecutionService';
@@ -93,7 +93,6 @@ const PIPELINE_MAX_DURATION_MS = JOSE_LIMITS.normalMs;
 const STEP_STATUS_BY_RECEIPT: Record<string, string> = {
   executed: 'done',
   approval_required: 'waiting_approval',
-  sentinel_blocked: 'failed',
   failed: 'failed',
   dead_letter: 'failed',
   not_run: 'not_run',
@@ -212,19 +211,6 @@ function isBlockedByZeroCostMode(packet, assignment) {
 function isBlockedByHermesApproval(assignment) {
   if (getAgentProvider(assignment?.agent)?.provider !== 'hermes') return false;
   return Boolean(getRuntimePolicySettings().approvalMode);
-}
-
-function checkSentinelGate(commandId, assignment) {
-  const risk = String(assignment?.riskLevel || '').toLowerCase();
-  const sentinelAlerts = checkSentinelAlerts(commandId);
-  if (!sentinelAlerts.found) {
-    return { blocked: false, reason: '' };
-  }
-  if (risk !== 'high' && risk !== 'critical') {
-    return { blocked: false, reason: '' };
-  }
-  const blockResult = sentinelShouldBlock(assignment, sentinelAlerts.output);
-  return blockResult;
 }
 
 export function draftPrompt(agent, task, context: any = {}) {
@@ -1361,6 +1347,10 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   if (assignment?.agent === AGENTS.MARIA) {
     return executeMariaAssignment(commandText, assignment, options);
   }
+  // Sentinel checks with his own review, the work or the request (agent phase 4).
+  if (assignment?.agent === AGENTS.SENTINEL) {
+    return executeSentinelAssignment(commandText, assignment, options);
+  }
   // A review judges the work it reviews (agent roles Part A).
   if (assignment?.reviewOf) {
     return runReviewStep(assignment.agent, options.stepInput, assignment.actionType);
@@ -1815,56 +1805,6 @@ export async function runJoseCommandExecutionPipeline({
         continue;
       }
 
-      const sentinelGate = checkSentinelGate(command.id, assignment);
-      if (sentinelGate.blocked) {
-        pendingApprovalCount += 1;
-        executionReceipts.push({
-          packetId: assignment.packetId,
-          agent: assignment.agent,
-          status: 'sentinel_blocked',
-          reason: sentinelGate.reason
-        });
-        onProgress?.({
-          stage: 'sentinel_blocked',
-          assignment,
-          packetId: assignment.packetId,
-          reason: sentinelGate.reason
-        });
-        updatePacketStatus(assignment.packetId, 'pending_approval', {
-          sentinelBlocked: true,
-          sentinelReason: sentinelGate.reason,
-          verificationState: TRUST_STATES.PENDING
-        });
-        recordOrchestrationQueueTransition({
-          commandId: command.id,
-          packetId: assignment.packetId,
-          agent: AGENTS.JOSE,
-          fromStatus: packet.status || 'unknown',
-          toStatus: 'pending_approval',
-          reason: sentinelGate.reason,
-          retryCount: packet.retryCount || 0,
-          confidence: TRUST_STATES.VERIFIED,
-          verificationState: TRUST_STATES.PENDING
-        });
-        appendOrchestrationReceipt({
-          workflowId: 'jose_execution_pipeline',
-          commandId: command.id,
-          packetId: assignment.packetId,
-          eventType: 'sentinel_gate_blocked',
-          status: 'pending_approval',
-          agent: AGENTS.JOSE,
-          actionType: assignment.actionType,
-          riskLevel: assignment.riskLevel || 'high',
-          approved: false,
-          blocked: true,
-          setupRequired: false,
-          details: { reason: sentinelGate.reason },
-          confidence: TRUST_STATES.VERIFIED,
-          verificationState: TRUST_STATES.PENDING
-        });
-        continue;
-      }
-
       // A packet you approved has been previewed already.
       if (isRiskyAssignment(assignment) && previewMode && packet.status !== 'approved') {
         const previewPriorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
@@ -2111,6 +2051,12 @@ export async function runJoseCommandExecutionPipeline({
       if (mariaHold) {
         const held = holdStepsAfter(planAssignments, assignment.stepId, mariaHold);
         if (held.length && joseRequestId) appendRequestNote(joseRequestId, mariaHold);
+      }
+      // A serious Sentinel finding holds the steps after his (agent phase 4).
+      const sentinelHold = sentinelHoldFor(assignment, result, JOSE_LIMITS.maxFixRounds);
+      if (sentinelHold) {
+        const held = holdStepsAfter(planAssignments, assignment.stepId, sentinelHold);
+        if (held.length && joseRequestId) appendRequestNote(joseRequestId, sentinelHold);
       }
       // A content-factory step is saved to its Miya Studio project as it finishes (phase 6b),
       // whichever way the request is run or carried on.

@@ -238,6 +238,17 @@ export const DEFAULT_CONNECTORS = [
     permissions: ['web_search'],
     disabledReason: 'Tavily API key is not configured.'
   },
+  // Google Web Risk (agent phase 4): an optional check of links against phishing and malware lists.
+  // Free for the first 100,000 checks a month (Google's pricing, 2026-10-26), so not paid.
+  {
+    id: 'web_risk',
+    name: 'Google Web Risk',
+    status: 'not_configured',
+    transport: 'web_risk_lookup_api',
+    requiredEnv: ['WEB_RISK_API_KEY'],
+    permissions: ['link_check'],
+    disabledReason: 'Google Web Risk key is not configured.'
+  },
   // ElevenLabs (content factory phase 4b): paid voices, the user's cloned voice and sound effects.
   {
     id: 'elevenlabs',

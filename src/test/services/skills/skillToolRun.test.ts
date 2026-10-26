@@ -137,3 +137,13 @@ describe('runSkillTool', () => {
     expect((await runSkillTool('read_bookmarks', {}, { agent: 'maria', stepInput: input })).ok).toBe(false);
   });
 });
+
+describe('fetch_source and disguised links (agent phase 4)', () => {
+  it('fetch_source refuses a disguised address', async () => {
+    fetchUrl.mockClear();
+    const result = await runSkillTool('fetch_source', { url: 'https://185.23.4.9/login' }, { agent: 'hector', stepInput: input });
+    expect(result.ok).toBe(false);
+    expect(result.text).toMatch(/^Not read: looks disguised/);
+    expect(fetchUrl).not.toHaveBeenCalled();
+  });
+});

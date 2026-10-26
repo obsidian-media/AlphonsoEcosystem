@@ -40,7 +40,10 @@ export function closingSummary(request: JoseRequest): string {
   const steps = request.steps || [];
   if (steps.length === 1 && steps[0].status === 'done') {
     const output = getStepOutput(request.commandId, steps[0].stepId);
-    const full = output ? readableOutput(output) : '';
+    // A review's hand-over says everything; its data (with a kind) is for the board (agent phase 4).
+    const handOver = typeof output?.summary === 'string' ? output.summary.trim() : '';
+    const isReview = Boolean(output?.schema && typeof output.schema === 'object' && (output.schema as { kind?: unknown }).kind);
+    const full = output ? (isReview && handOver ? handOver : readableOutput(output)) : '';
     if (full) return full;
   }
   const lines = steps.map((step) => stepLine(request, step));

@@ -410,6 +410,56 @@ const BROWSER_USER_AGENT: &str =
 /// Statuses worth one more try: refused, too many requests, briefly unavailable.
 const RETRY_STATUSES: [u16; 3] = [403, 429, 503];
 const RETRY_DELAY_MS: u64 = 1500;
+/// The most a page fetch reads (agent phase 4): a site can't make Alphonso hold gigabytes.
+pub(crate) const PAGE_MAX_BYTES: usize = 2 * 1024 * 1024;
+
+/// Reads a response body up to `max` bytes and stops there; `true` when it was cut.
+pub(crate) async fn read_capped(
+  mut response: reqwest::Response,
+  max: usize,
+) -> Result<(Vec<u8>, bool), String> {
+  let mut bytes: Vec<u8> = Vec::new();
+  while let Some(chunk) = response.chunk().await.map_err(|error| error.to_string())? {
+    let room = max - bytes.len();
+    if chunk.len() >= room {
+      bytes.extend_from_slice(&chunk[..room]);
+      return Ok((
+        bytes,
+        chunk.len() > room || response.chunk().await.ok().flatten().is_some(),
+      ));
+    }
+    bytes.extend_from_slice(&chunk);
+  }
+  Ok((bytes, false))
+}
+
+/// A page through the redirect-checked fetch, read up to `PAGE_MAX_BYTES`: its status and
+/// HTML. The caller checks the first address (`is_private_host`).
+pub(crate) async fn fetch_page_text(
+  client: &reqwest::Client,
+  url: reqwest::Url,
+) -> Result<(u16, String), String> {
+  let response = fetch_page_with_retry(client, url, RETRY_DELAY_MS).await?;
+  let status = response.status().as_u16();
+  let (bytes, _) = read_capped(response, PAGE_MAX_BYTES).await?;
+  Ok((status, String::from_utf8_lossy(&bytes).into_owned()))
+}
+
+/// The page's title and its visible text (200 lines, 10,000 characters at most).
+pub(crate) fn page_title_and_text(html: &str) -> (String, String) {
+  let title = extract_title(html).unwrap_or_default();
+  let text = strip_html_tags(html)
+    .lines()
+    .map(|l| l.trim())
+    .filter(|l| !l.is_empty())
+    .take(200)
+    .collect::<Vec<_>>()
+    .join("\n")
+    .chars()
+    .take(10000)
+    .collect();
+  (title, text)
+}
 
 /// The languages to ask pages in: the app passes the user's own; a neutral default otherwise.
 fn accept_language(passed: Option<&str>) -> String {
@@ -566,8 +616,8 @@ pub(crate) async fn fetch_research_sources(
           .get(reqwest::header::CONTENT_TYPE)
           .and_then(|value| value.to_str().ok())
           .map(str::to_string);
-        match response.bytes().await {
-          Ok(bytes) => {
+        match read_capped(response, PAGE_MAX_BYTES).await {
+          Ok((bytes, _)) => {
             let pdf = is_pdf(content_type.as_deref(), &bytes);
             let max_len = bytes.len().min(200_000);
             let body = if pdf {
@@ -821,9 +871,8 @@ pub(crate) async fn fetch_rss_feed(url: String) -> Result<serde_json::Value, Str
     .map_err(|error| error.to_string())?;
   let response = fetch_with_ssrf_guard(&client, parsed).await?;
   let status = response.status().as_u16();
-  let bytes = response.bytes().await.map_err(|error| error.to_string())?;
-  let truncated = bytes.len() > RSS_MAX_BYTES;
-  let text = String::from_utf8_lossy(&bytes[..bytes.len().min(RSS_MAX_BYTES)]).into_owned();
+  let (bytes, truncated) = read_capped(response, RSS_MAX_BYTES).await?;
+  let text = String::from_utf8_lossy(&bytes).into_owned();
   Ok(serde_json::json!({
     "ok": (200..300).contains(&status),
     "status": status,
@@ -1093,5 +1142,38 @@ mod tests {
       "<a class=\"result__a\" href=\"x\">Bees</a> anomaly"
     ));
     assert!(!ddg_refused(200, "<html>no results</html>"));
+  }
+
+  // Agent phase 4 (Sentinel): one guarded, size-capped fetch for every page.
+  #[tokio::test]
+  async fn fetch_url_content_refuses_redirect_to_private_address() {
+    let port = spawn_redirect_server("http://169.254.169.254/latest/meta-data/").await;
+    let client = research_client(None).unwrap();
+    let url = reqwest::Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    let error = fetch_page_text(&client, url)
+      .await
+      .expect_err("a redirect to a private address must be refused");
+    assert!(error.contains("SSRF blocked"), "{error}");
+  }
+
+  #[tokio::test]
+  async fn read_capped_stops_at_its_limit() {
+    let body = "a".repeat(5 * 1024 * 1024);
+    let (port, _seen) = spawn_scripted_server(vec![reply("200 OK", "text/plain", &body)]).await;
+    let client = research_client(None).unwrap();
+    let url = reqwest::Url::parse(&format!("http://127.0.0.1:{port}/big")).unwrap();
+    let response = fetch_page_with_retry(&client, url, 1).await.unwrap();
+    let (bytes, truncated) = read_capped(response, 1024 * 1024).await.unwrap();
+    assert_eq!(bytes.len(), 1024 * 1024);
+    assert!(truncated);
+  }
+
+  #[test]
+  fn title_of_a_non_english_page_does_not_crash() {
+    let (title, text) = page_title_and_text(
+      "<html><head><TITLE>İstanbul ÇAY</TITLE></head><body><p>Merhaba</p></body>",
+    );
+    assert_eq!(title, "İstanbul ÇAY");
+    assert!(text.contains("Merhaba"));
   }
 }

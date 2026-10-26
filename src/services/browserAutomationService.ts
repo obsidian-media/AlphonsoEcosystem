@@ -26,6 +26,34 @@ export async function openExternalUrl(url: string) {
   }
 }
 
+// A source link you click (agent phase 4, owner 2026-10-25: "warn on disguised links only").
+// LinkWarningHost (mounted once in App) registers the window that asks.
+type LinkConfirm = (reason: string, url: string) => Promise<boolean>;
+let linkConfirm: LinkConfirm | null = null;
+
+export function setLinkConfirmHandler(next: LinkConfirm | null): void {
+  linkConfirm = next;
+}
+
+/** Opens a source link: at once when normal; a disguised or listed one asks first. */
+export async function openSourceLink(url: string): Promise<boolean> {
+  if (!url) return false;
+  const { checkLink } = await import('./sentinel/exactChecks');
+  const disguised = checkLink(url);
+  let reason = disguised ? `This link looks disguised: ${disguised.detail}.` : '';
+  if (!reason) {
+    const { checkLinksWithWebRisk } = await import('./sentinel/webRisk');
+    const threat = (await checkLinksWithWebRisk([url])).get(url);
+    if (threat) reason = `Google Web Risk lists this link as ${threat}.`;
+  }
+  if (reason) {
+    // No window to ask in: a suspicious link doesn't open.
+    if (!linkConfirm || !(await linkConfirm(reason, url))) return false;
+  }
+  await openExternalUrl(url);
+  return true;
+}
+
 export async function fetchUrlContent(url: string) {
   return invoke('fetch_url_content', { url });
 }

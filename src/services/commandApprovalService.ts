@@ -162,7 +162,7 @@ const NETWORK_SUBCOMMANDS: Record<string, Set<string>> = {
   pip3: new Set(['install', 'download']),
 };
 
-function deletesThings(prog: string, args: string[]): boolean {
+export function deletesThings(prog: string, args: string[]): boolean {
   const a = args.map((x) => String(x).toLowerCase());
   const first = a[0] || '';
   if (prog === 'git') {
@@ -278,7 +278,10 @@ export async function requestWorkspaceCommandApproval(
   try {
     const ratings = gated.map((c) => assessCommandRisk(c.program, c.args || []));
     const riskLevel: CommandRiskLevel = ratings.some((r) => r.level === 'high') ? 'high' : ratings.some((r) => r.level === 'medium') ? 'medium' : 'low';
-    const riskReasons = [...new Set(ratings.flatMap((r) => r.reasons))];
+    // Sentinel's exact checks of each command (agent phase 4), named plainly in the window.
+    const line = (c: { program: string; args?: string[] }) => [c.program, ...(c.args || [])].join(' ');
+    const sentinelLines = gated.map((c) => (deleting.includes(c) ? `Sentinel: deletes files: ${line(c)}` : runsCode.includes(c) ? `Sentinel: runs code: ${line(c)}` : '')).filter(Boolean);
+    const riskReasons = [...new Set([...sentinelLines, ...ratings.flatMap((r) => r.reasons)])];
     approved = (await handler({ actionLabel, agent: 'alphonso', riskLevel, riskReasons, requireApproval: true, alwaysAsk: deleting.length > 0 })) === true;
   } catch {
     approved = false; // a failing approval UI must never read as consent

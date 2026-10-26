@@ -58,6 +58,12 @@ vi.mock('../../../lib/ollama', () => ({
           ? { response: JSON.stringify({ risk: 'medium', why: 'It emails customers.', rules: [], points: ['Emailing all customers needs their permission.'], needsApproval: true, approvalReasons: ['Emailing all customers needs their permission.'], offer: '' }) }
           : { response: JSON.stringify({ risk: 'low', why: 'Nothing is sent.', rules: [], points: ['Nothing leaves this computer.'], needsApproval: false, approvalReasons: [], offer: '' }) };
     }
+    // Sentinel's check (agent phase 4).
+    if (_agent === 'sentinel' && /You are Sentinel/.test(prompt)) {
+      return globalThis.__sentinelUnsafe
+        ? { response: JSON.stringify({ verdict: 'unsafe', summary: 'A fake login.', findings: [{ what: 'A fake PayPal login', where: 'Step graph test', severity: 'high', fix: 'Remove the link.' }] }) }
+        : { response: JSON.stringify({ verdict: 'safe', summary: 'Nothing risky.', findings: [] }) };
+    }
     // Nova's ranked verdict (agent phase 2).
     if (_agent === 'nova' && /You are Nova/.test(prompt)) {
       return { response: JSON.stringify({ doFirst: 'the first option', options: [{ name: 'The first option', rank: 1, why: 'it is ready', value: 'high', effort: 'low', risk: 'low' }] }) };
@@ -697,6 +703,27 @@ describe('Jose runs plans as step graphs', () => {
     });
     const output = getStepOutput(result.commandId, 'maria');
     expect(output.schema.riskLevel).toBeTruthy();
+  });
+
+  // Agent phase 4: a serious Sentinel finding holds the steps after his.
+  it('holds the steps after Sentinel when he finds something serious, and carries on once approved', async () => {
+    globalThis.__sentinelUnsafe = true;
+    try {
+      const result = await run([
+        step('sentinel', 'security_review', { stepId: 'check', effects: ['read'], contentStep: undefined }),
+        step('alphonso', 'assistant_write', { stepId: 'email', effects: ['read'], needs: ['check'], contentStep: undefined }),
+      ]);
+      const requestId = `jose-request-${result.commandId}`;
+      expect(getJoseRequest(requestId).steps.find((s) => s.stepId === 'email').status).toBe('waiting_approval');
+      const receipt = result.executionReceipts.find((r) => r.agent === 'alphonso');
+      expect(receipt.reason).toContain('Sentinel asks for your approval:');
+      expect(receipt.reason).toContain('A fake PayPal login');
+      globalThis.__sentinelUnsafe = false;
+      await approveRequestStep(requestId, 'email');
+      expect(getJoseRequest(requestId).steps.find((s) => s.stepId === 'email').status).toBe('done');
+    } finally {
+      globalThis.__sentinelUnsafe = false;
+    }
   });
 
   // Agent phase 3: when Maria asks for your approval, the steps after hers wait with her reasons.

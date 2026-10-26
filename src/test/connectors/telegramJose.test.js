@@ -19,7 +19,7 @@ vi.mock('../../services/agentBusService', () => ({
 vi.mock('../../services/joseCommandRouterService', () => ({ createJoseCommandRoute: vi.fn(), listJoseCommands: vi.fn(() => globalThis.__tgCommands || []) }));
 vi.mock('../../services/memoryService', () => ({ listMemoryItems: vi.fn(() => []) }));
 vi.mock('../../services/agentActivityService', () => ({ listAgentActivity: vi.fn(() => globalThis.__tgActivity || []) }));
-vi.mock('../../services/sentinelSecurityService', () => ({ scanForThreats: vi.fn() }));
+vi.mock('../../services/sentinelSecurityService', () => ({ recentActivityText: vi.fn(() => ({ text: '', items: 0 })) }));
 vi.mock('../../services/novaAnalysisService', () => ({ getOpportunityHistory: vi.fn(() => []) }));
 vi.mock('../../services/orchestrationReceiptService', () => ({ listOrchestrationReceipts: vi.fn(() => []) }));
 vi.mock('../../agents/agentRegistry', () => ({ listAgentProfiles: vi.fn(() => []) }));

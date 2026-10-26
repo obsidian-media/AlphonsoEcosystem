@@ -3,7 +3,8 @@ import { Activity, Bot, ChevronLeft, ChevronRight, Cpu, Network, RefreshCw, Shie
 import { AgentStatusStrip } from './AgentStatusStrip';
 import { AgentDock } from './AgentDock';
 import { formatModelSize } from '../lib/ollama';
-import { scanRecentActivity } from '../services/sentinelSecurityService';
+import { recentActivityText } from '../services/sentinelSecurityService';
+import { askSentinelWeekReview, lastSentinelReview } from '../services/sentinel/sentinelWeekly';
 import { getAuditLog } from '../services/agentAuditService';
 import { SentinelFindingModal } from './SentinelFindingModal';
 import { SentinelAllowlistPanel } from './SentinelAllowlistPanel';
@@ -54,12 +55,6 @@ interface SentinelFinding {
   [key: string]: unknown;
 }
 
-interface SentinelScan {
-  riskLevel?: string;
-  findings?: SentinelFinding[];
-  scannedAt?: number;
-  itemsScanned?: number;
-}
 
 interface AuditEntry {
   agent: string;
@@ -152,30 +147,25 @@ export function RightPanel({
     return v.length <= max ? v : `${v.slice(0, max - 1)}...`;
   };
 
-  const [sentinelScan, setSentinelScan] = useState<SentinelScan | null>(() => {
-    try {
-      const stored = localStorage.getItem('alphonso_sentinel_last_scan_v1');
-      return stored ? JSON.parse(stored) : null;
-    } catch { return null; }
-  });
-
+  // Agent phase 4: Sentinel's last review of the week, from its request; Re-scan asks for a
+  // new one (as a request on the board). Nothing starts on its own.
+  const [sentinelReview, setSentinelReview] = useState(() => lastSentinelReview());
+  const [sentinelNote, setSentinelNote] = useState('');
   const [selectedFinding, setSelectedFinding] = useState<SentinelFinding | null>(null);
 
   const runQuickScan = () => {
-    // The last week's agent work; scanning '' always said all clear (QA Bug 71).
-    const result = scanRecentActivity(7);
-    const scan: SentinelScan = { ...result, scannedAt: Date.now() };
-    setSentinelScan(scan);
-    localStorage.setItem('alphonso_sentinel_last_scan_v1', JSON.stringify(scan));
+    const { text, items } = recentActivityText(7);
+    if (!items) { setSentinelNote('Nothing to review yet: no agent activity in the last 7 days.'); return; }
+    setSentinelNote('Sentinel is reviewing the last 7 days…');
+    void askSentinelWeekReview(text, { source: 'user' }).then((r) => {
+      setSentinelReview(lastSentinelReview());
+      setSentinelNote(r.state === 'failed' ? r.summary : '');
+    });
   };
 
   useEffect(() => {
-    if (!sentinelScan) runQuickScan();
-  }, []);
-
-  useEffect(() => {
     if (activeTab !== 'system') return;
-    const id = setInterval(runQuickScan, 10 * 60 * 1000);
+    const id = setInterval(() => setSentinelReview(lastSentinelReview()), 5000);
     return () => clearInterval(id);
   }, [activeTab]);
 
@@ -301,56 +291,51 @@ export function RightPanel({
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
             </div>
-            {sentinelScan ? (
-              <div className="space-y-1">
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
-                  sentinelScan.riskLevel === 'critical' ? 'bg-(--error-dim)' :
-                  sentinelScan.riskLevel === 'high' ? 'bg-(--warning-dim)' :
-                  sentinelScan.riskLevel === 'medium' ? 'bg-(--warning-dim)' : 'bg-(--success-dim)'
-                }`}>
-                  <Shield className={`w-3 h-3 shrink-0 ${
-                    sentinelScan.riskLevel === 'critical' ? 'text-(--error)' :
-                    sentinelScan.riskLevel === 'high' ? 'text-(--warning)' :
-                    sentinelScan.riskLevel === 'medium' ? 'text-(--warning)' : 'text-(--success)'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-(--text-3)">Threat Level</p>
-                    <p className="text-xs font-medium text-(--text-1) capitalize">{sentinelScan.riskLevel || 'clean'}</p>
+            {sentinelReview ? (() => {
+              // Fixed class names, so Tailwind sees them.
+              const tones = {
+                error: { bg: 'bg-(--error-dim)', text: 'text-(--error)', line: 'border-(--error) text-(--error)' },
+                warning: { bg: 'bg-(--warning-dim)', text: 'text-(--warning)', line: 'border-(--warning) text-(--warning)' },
+                success: { bg: 'bg-(--success-dim)', text: 'text-(--success)', line: 'border-(--success) text-(--success)' },
+              };
+              const tone = tones[sentinelReview.verdict === 'unsafe' ? 'error' : sentinelReview.verdict === 'safe' ? 'success' : 'warning'];
+              const label = sentinelReview.verdict === 'unsafe' ? 'Unsafe' : sentinelReview.verdict === 'risky' ? 'Risky' : sentinelReview.verdict === 'safe' ? 'Safe' : 'Not finished';
+              return (
+                <div className="space-y-1">
+                  <div data-testid="sentinel-review-card" data-verdict={sentinelReview.verdict || 'none'} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${tone.bg}`}>
+                    <Shield className={`w-3 h-3 shrink-0 ${tone.text}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-(--text-3)">Sentinel's review of the week</p>
+                      <p className="text-xs font-medium text-(--text-1)">{label}</p>
+                    </div>
                   </div>
+                  {sentinelReview.findings.length > 0 ? (
+                    <div className="px-3 py-1.5">
+                      <p className="text-[10px] text-(--text-3)">{sentinelReview.findings.length} finding{sentinelReview.findings.length > 1 ? 's' : ''}</p>
+                      {sentinelReview.findings.slice(0, 2).map((f, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedFinding({ type: f.split(' → ')[0], recommendation: f.split(' → ')[1] || '', severity: sentinelReview.verdict === 'unsafe' ? 'high' : 'medium' })}
+                          className={`block w-full text-left text-[10px] truncate cursor-pointer hover:text-(--text-2) transition-colors pl-2 border-l-2 my-0.5 ${tone.line}`}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-3 text-[10px] text-(--text-4)">{sentinelReview.verdict === 'safe' ? 'Nothing found in the last 7 days.' : 'See the request on the board.'}</p>
+                  )}
+                  {sentinelReview.atMs > 0 && (
+                    <p className="px-3 text-[10px] text-(--text-4)">
+                      {new Date(sentinelReview.atMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
                 </div>
-                {sentinelScan.findings && sentinelScan.findings.length > 0 ? (
-                  <div className="px-3 py-1.5">
-                    <p className="text-[10px] text-(--text-3)">{sentinelScan.findings.length} finding{sentinelScan.findings.length > 1 ? 's' : ''}</p>
-                    {sentinelScan.findings.slice(0, 2).map((f, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setSelectedFinding(sentinelScan.findings![i])}
-                        className={`block w-full text-left text-[10px] truncate cursor-pointer hover:text-(--text-2) transition-colors pl-2 border-l-2 my-0.5 ${
-                          f.severity === 'critical' || f.severity === 'high' ? 'border-(--error) text-(--error)' :
-                          f.severity === 'medium' ? 'border-(--warning) text-(--warning)' :
-                          'border-(--border-strong) text-(--text-4)'
-                        }`}
-                      >
-                        {f.type || f.pattern || 'threat'}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="px-3 text-[10px] text-(--text-4)">
-                    {sentinelScan.itemsScanned === 0
-                      ? 'Nothing to scan yet: no agent activity in the last 7 days.'
-                      : `No threats found in the last 7 days of agent activity${sentinelScan.itemsScanned ? ` (${sentinelScan.itemsScanned} items)` : ''}.`}
-                  </p>
-                )}
-                {sentinelScan.scannedAt && (
-                  <p className="px-3 text-[10px] text-(--text-4)">
-                    {new Date(sentinelScan.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="px-3 text-[10px] text-(--text-4)">Click the refresh button to scan</p>
+              );
+            })() : (
+              <p className="px-3 text-[10px] text-(--text-4)">No review yet: Re-scan asks Sentinel to review the last 7 days.</p>
             )}
+            {sentinelNote && <p className="px-3 text-[10px] text-(--text-4)">{sentinelNote}</p>}
           </div>
 
           <div className="p-3 border-t border-(--border) space-y-1.5">

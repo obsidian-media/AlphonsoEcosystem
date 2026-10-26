@@ -548,123 +548,17 @@ describe('dependency-aware execution', () => {
   });
 });
 
-describe('sentinel gate integration', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    runtimeReachable = true;
-    ollamaAvailable = true;
-    mockSetTimeout();
-    mockShouldBlock.mockReset();
-    mockCheckSentinelAlerts.mockReset();
-    mockShouldBlock.mockReturnValue({ blocked: false, reason: '' });
-    mockCheckSentinelAlerts.mockReturnValue({ found: false, alerts: [], output: null });
-  });
-  afterEach(() => {
-    restoreSetTimeout();
-  });
-
-  it('routes sentinel-blocked assignments to pending_approval', async () => {
-    mockCheckSentinelAlerts.mockReturnValue({
-      found: true,
-      alerts: [{ type: 'summary_signal', signal: 'blocked' }],
-      output: { summary: 'Sentinel blocked the assignment', resultState: 'completed', artifacts: [] }
-    });
-    mockShouldBlock.mockReturnValue({
-      blocked: true,
-      reason: 'Sentinel flagged risk for marcus (external_publish): summary_signal — blocked'
-    });
-
-    const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: publish content to external platform',
-      source: 'user',
-      zeroCostMode: true
-    });
-
-    expect(result.ok).toBe(true);
-    const sentinelReceipts = result.executionReceipts.filter((r) => r.status === 'sentinel_blocked');
-    expect(sentinelReceipts.length).toBeGreaterThanOrEqual(1);
-    expect(result.pendingApprovalCount).toBeGreaterThanOrEqual(1);
-  });
-
-  it('does not block when sentinel gate returns not blocked', async () => {
-    mockCheckSentinelAlerts.mockReturnValue({
-      found: false,
-      alerts: [],
-      output: null
-    });
-    mockShouldBlock.mockReturnValue({ blocked: false, reason: '' });
-
-    const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: verify local runtime package',
-      source: 'user',
-      zeroCostMode: true
-    });
-
-    expect(result.ok).toBe(true);
-    const sentinelReceipts = result.executionReceipts.filter((r) => r.status === 'sentinel_blocked');
-    expect(sentinelReceipts).toHaveLength(0);
-  });
-
-  it('calls checkSentinelAlerts for each assignment', async () => {
-    mockCheckSentinelAlerts.mockReturnValue({
-      found: false,
-      alerts: [],
-      output: null
-    });
-    mockShouldBlock.mockReturnValue({ blocked: false, reason: '' });
-
-    await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: verify local runtime package',
-      source: 'user',
-      zeroCostMode: true
-    });
-
-    expect(mockCheckSentinelAlerts).toHaveBeenCalled();
-  });
-
-  it('increments pendingApprovalCount for sentinel-blocked assignments', async () => {
-    mockCheckSentinelAlerts.mockReturnValue({
-      found: true,
-      alerts: [{ type: 'summary_signal', signal: 'blocked' }],
-      output: { summary: 'Sentinel blocked the action', resultState: 'completed', artifacts: [] }
-    });
-    mockShouldBlock.mockReturnValue({
-      blocked: true,
-      reason: 'Sentinel flagged risk'
-    });
-
-    const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: publish content to external platform',
-      source: 'user',
-      zeroCostMode: true
-    });
-
-    expect(result.pendingApprovalCount).toBeGreaterThanOrEqual(1);
-  });
-
-  it('calls onProgress with sentinel_blocked stage when gate blocks', async () => {
-    mockCheckSentinelAlerts.mockReturnValue({
-      found: true,
-      alerts: [{ type: 'summary_signal', signal: 'blocked' }],
-      output: { summary: 'Sentinel blocked the action', resultState: 'completed', artifacts: [] }
-    });
-    mockShouldBlock.mockReturnValue({
-      blocked: true,
-      reason: 'Sentinel flagged risk'
-    });
-
-    const onProgress = vi.fn();
-    await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: publish content to external platform',
-      source: 'user',
-      zeroCostMode: true,
-      onProgress
-    });
-
-    const sentinelProgress = onProgress.mock.calls.filter((call) => call[0].stage === 'sentinel_blocked');
-    expect(sentinelProgress.length).toBeGreaterThanOrEqual(1);
+// Agent phase 4: no keyword gate; a serious Sentinel finding holds the next steps instead.
+describe('sentinel gate', () => {
+  it('the engine no longer reads Sentinel keywords', async () => {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync('src/services/joseExecutionEngineService.ts', 'utf8');
+    expect(src).not.toContain('sentinelGateService');
+    expect(src).not.toContain('sentinel_blocked');
+    expect(src).toContain('sentinelHoldFor');
   });
 });
+
 
 describe('nova feedback integration', () => {
   beforeEach(() => {

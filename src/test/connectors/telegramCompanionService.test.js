@@ -48,7 +48,11 @@ vi.mock('../../lib/appStorage', () => ({
 }));
 
 vi.mock('../../services/sentinelSecurityService', () => ({
-  scanForThreats: vi.fn().mockReturnValue({ riskScore: 0, severity: 'low', findings: [], blocked: false, redactedText: '' })
+  recentActivityText: vi.fn().mockReturnValue({ text: '- jose executed', items: 3 })
+}));
+// Agent phase 4: /scan asks Sentinel for one real review of the week.
+vi.mock('../../services/sentinel/sentinelWeekly', () => ({
+  askSentinelWeekReview: vi.fn(async () => ({ state: 'done', summary: 'Safe. Nothing else found.' }))
 }));
 
 vi.mock('../../services/novaAnalysisService', () => ({
@@ -517,16 +521,23 @@ describe('telegramCompanionService', () => {
   });
 
   describe('handleScanCommand', () => {
-    it('runs Sentinel scan and reports low severity', async () => {
-      const { scanForThreats } = await import('../../services/sentinelSecurityService');
-      scanForThreats.mockReturnValue({ riskScore: 0, severity: 'low', findings: [], blocked: false, redactedText: '' });
-
+    it('/scan starts a review and reports how it ended', async () => {
+      const { askSentinelWeekReview } = await import('../../services/sentinel/sentinelWeekly');
       await service.handleScanCommand('test-token', 'chat-123');
+      expect(askSentinelWeekReview).toHaveBeenCalledWith('- jose executed', { source: 'telegram' });
+      await vi.waitFor(() => {
+        const texts = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram').map(c => c[1].text);
+        expect(texts.some(t => t.includes('Sentinel is reviewing the last 7 days'))).toBe(true);
+        expect(texts.some(t => t.includes('Safe. Nothing else found.'))).toBe(true);
+      }, { timeout: 5000 });
+    });
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
-      const scanMsg = calls.find(c => c[1].text.includes('Sentinel Scan'));
-      expect(scanMsg).toBeTruthy();
-      expect(scanMsg[1].text).toContain('low');
+    it('with no activity it says there is nothing to review', async () => {
+      const { recentActivityText } = await import('../../services/sentinelSecurityService');
+      recentActivityText.mockReturnValueOnce({ text: '', items: 0 });
+      await service.handleScanCommand('test-token', 'chat-123');
+      const texts = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram').map(c => c[1].text);
+      expect(texts.some(t => t.includes('Nothing for Sentinel to review'))).toBe(true);
     });
   });
 

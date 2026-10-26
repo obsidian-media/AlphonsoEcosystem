@@ -4,6 +4,7 @@
 import { extractJsonObject } from '../../lib/jsonUtils.js';
 import { type ContentStepPayload, type StepId } from './contentTypes';
 import { contentAsk } from '../skills/skillLibrary';
+import { exactRiskText, findExactRisks, redactText } from '../sentinel/exactChecks';
 
 type Json = Record<string, unknown>;
 
@@ -92,7 +93,7 @@ const ACTIONS: Record<string, { role: string; keys: string; uses: StepId[] }> = 
   },
   security_content_check: {
     role: 'Sentinel, Alphonso\'s security agent',
-    keys: '{"ok":"true or false: whether everything is fine","issues":["a problem found, if any"]}',
+    keys: '{"ok":"true or false: whether everything is fine","issues":[{"what":"the problem","where":"the exact words or link","fix":"what to do"}]}',
     uses: ['campaign'],
   },
 };
@@ -169,8 +170,14 @@ export function buildStepPrompt(payload: ContentStepPayload, agent: string, acti
     const known = referenceKnowledge(payload);
     if (known) parts.push(known);
   }
+  // Sentinel's campaign check (agent phase 4): the exact checks as facts; keys hidden below.
+  if (actionType === 'security_content_check') {
+    const facts = findExactRisks(JSON.stringify(payload.prior.campaign ?? ''), { links: 'sent' });
+    parts.push(facts.length ? `Exact checks already found (facts; list each as an issue):\n${facts.map((f) => `- ${exactRiskText(f)}`).join('\n')}` : 'Exact checks found nothing.');
+  }
   for (const step of action?.uses || []) {
-    if (payload.prior[step] !== undefined) parts.push(`${step} (earlier step):\n${JSON.stringify(payload.prior[step]).slice(0, 8000)}`);
+    if (payload.prior[step] !== undefined && actionType === 'security_content_check') parts.push(`${step} (earlier step):\n${redactText(JSON.stringify(payload.prior[step])).slice(0, 8000)}`);
+    else if (payload.prior[step] !== undefined) parts.push(`${step} (earlier step):\n${JSON.stringify(payload.prior[step]).slice(0, 8000)}`);
   }
   if (actionType === 'creative_script' && brief.writeInMyVoice && payload.brand.pastScripts) {
     parts.push(`Write in this voice (the brand's past scripts):\n${payload.brand.pastScripts.slice(0, 6000)}`);
@@ -318,6 +325,12 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
     // Only links Hector actually found; a model without internet invents them.
     const allowed = new Set(options.allowedUrls.map((u) => u.trim()));
     answer = { ...answer, references: (answer.references as Json[]).filter((r) => allowed.has(String(r?.url || '').trim())) };
+  }
+  if (actionType === 'security_content_check' && Array.isArray(answer.issues)) {
+    // Each issue says what, where and the fix (agent phase 4); a plain string is still read.
+    answer = { ...answer, issues: (answer.issues as unknown[]).map((i) => (typeof i === 'string'
+      ? { what: i.trim(), where: '', fix: '' }
+      : { what: String((i as Json)?.what ?? '').trim(), where: String((i as Json)?.where ?? '').trim(), fix: String((i as Json)?.fix ?? '').trim() })).filter((i) => i.what) };
   }
   if (actionType === 'creative_sfx') {
     // At most one per scene, 0.5–30 s, with a description (phase 4b).

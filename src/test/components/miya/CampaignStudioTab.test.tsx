@@ -49,3 +49,18 @@ describe('CampaignStudioTab', () => {
     expect(screen.getByRole('region', { name: 'Posts' })).toBeInTheDocument();
   });
 });
+
+// Agent phase 4: Sentinel's check of the campaign is shown under Maria's scores.
+describe("Sentinel's campaign check", () => {
+  it('Campaign Studio shows his issues', () => {
+    const { brand, project } = setup();
+    const withCheck = saveStepVersion(project.id, 'quality', {
+      output: { maria: { pieces: [], honestyIssues: [] }, sentinel: { ok: false, issues: [{ what: 'A fake login link', where: 'http://paypa1-secure-login.com/verify', fix: 'Remove the link.' }] } },
+      summary: 'q', joseCommandId: null,
+    });
+    render(<CampaignStudioTab {...props} project={withCheck} brand={brand} outputRoot="D:\Content" onChange={vi.fn()} />);
+    expect(screen.getByText('Checked by Sentinel')).toBeTruthy();
+    expect(screen.getByText(/A fake login link/)).toBeTruthy();
+    expect(screen.getByText(/Remove the link\./)).toBeTruthy();
+  });
+});

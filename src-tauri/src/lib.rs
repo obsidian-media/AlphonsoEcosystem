@@ -58,6 +58,7 @@ mod skills_store;
 mod telegram;
 mod utils;
 mod voice_sidecar;
+mod web_risk;
 mod whatsapp_webhook;
 mod workspace;
 mod youtube;
@@ -795,6 +796,7 @@ pub fn run() {
       elevenlabs::elevenlabs_models,
       elevenlabs::elevenlabs_speak,
       elevenlabs::elevenlabs_sound,
+      web_risk::web_risk_check,
       higgsfield::higgsfield_estimate,
       higgsfield::higgsfield_run,
       higgsfield::higgsfield_check,

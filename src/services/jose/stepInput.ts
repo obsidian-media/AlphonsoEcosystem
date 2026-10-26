@@ -7,6 +7,8 @@ import type { PlanStep } from './stepGraph';
 import { getStepOutput, listStepOutputs, type StepOutput } from './joseStepOutputs';
 import { toReadableText } from '../../lib/readableValue';
 import { agentName } from './agentNames';
+import { redactText } from '../sentinel/exactChecks';
+import { fenced, UNTRUSTED_RULE } from '../sentinel/fence';
 
 export interface NeededWork {
   stepId: string;
@@ -132,8 +134,9 @@ export function buildStepInput(
     .slice(0, STEP_INPUT_LIMITS.otherLines)
     .map(oneLine);
   return {
-    instruction: String(assignment.instruction || '').trim(),
-    request: String(request || ''),
+    // Keys are hidden from every agent's model (agent phase 4, owner 2026-10-25).
+    instruction: redactText(String(assignment.instruction || '').trim()),
+    request: redactText(String(request || '')),
     needs,
     others,
     memory: String(opts.memory || '').trim(),
@@ -147,7 +150,7 @@ export function skillSection(input: StepInput | null | undefined): string {
   const skill = input?.skill;
   if (!skill) return '';
   const found = skill.results.length
-    ? `\n\nWhat your tools found:\n${skill.results.map((r) => `- ${r.tool}: ${r.text}`).join('\n')}`
+    ? `\n\nWhat your tools found:\n${UNTRUSTED_RULE}\n${fenced('TOOL RESULTS', skill.results.map((r) => `- ${r.tool}: ${r.text}`).join('\n'))}`
     : '';
   return `Your skill: ${skill.name}\n${skill.instructions}${found}`;
 }
@@ -160,7 +163,11 @@ export function stepInputText(input: StepInput): string {
   for (const need of input.needs) {
     if (input.review && need.stepId === input.review.stepId) continue;
     const extra = [need.files.length ? `Files: ${need.files.join(', ')}` : '', need.sources.length ? `Sources: ${need.sources.join(', ')}` : ''].filter(Boolean).join('\n');
-    parts.push(`From ${agentName(need.agent)}'s step (${need.stepId}):\n${need.text || '(nothing saved)'}${extra ? `\n${extra}` : ''}`);
+    const body = `${need.text || '(nothing saved)'}${extra ? `\n${extra}` : ''}`;
+    // Hector's research carries page text: marked untrusted (agent phase 4).
+    parts.push(need.agent === 'hector'
+      ? `From ${agentName(need.agent)}'s step (${need.stepId}):\n${UNTRUSTED_RULE}\n${fenced(`HECTOR'S RESEARCH (${need.stepId})`, body)}`
+      : `From ${agentName(need.agent)}'s step (${need.stepId}):\n${body}`);
   }
   if (input.others.length) parts.push(`Other steps done so far:\n${input.others.map((l) => `- ${l}`).join('\n')}`);
   if (input.memory) parts.push(`From memory:\n${input.memory}`);

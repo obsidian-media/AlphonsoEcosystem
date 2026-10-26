@@ -38,11 +38,16 @@ async function ask(text) {
   await input.waitForDisplayed();
   await input.setValue(text);
   await (await $('[data-testid="chat-send-button"]')).click();
-  await browser.waitUntil(async () => {
-    await denyAnyApproval();
+  try {
+    await browser.waitUntil(async () => {
+      await denyAnyApproval();
+      const r = (await requests())[0];
+      return r && r.id !== before && !r.steps.some((s) => ['running', 'pending', 'queued'].includes(s.status)) && r.status !== 'running';
+    }, { timeout: 1500000, interval: 4000 });
+  } catch {
     const r = (await requests())[0];
-    return r && r.id !== before && !r.steps.some((s) => ['running', 'pending', 'queued'].includes(s.status)) && r.status !== 'running';
-  }, { timeout: 1500000, interval: 4000, timeoutMsg: 'the request never finished' });
+    throw new Error(`the request never finished: ${JSON.stringify({ status: r?.status, steps: (r?.steps || []).map((s) => [s.stepId, s.agent, s.actionType, s.status]) })}`);
+  }
   return (await requests())[0];
 }
 
@@ -120,6 +125,8 @@ describe("Alphonso desktop: Maria reviews the work and the plan", () => {
     if (outputs[maria.stepId]?.schema?.needsApproval) {
       for (const step of request.steps.filter((s) => (s.needs || []).includes(maria.stepId))) expect(step.status).not.toBe('done');
     }
+    // The request is saved as done a moment before Chat shows the reply.
+    await browser.waitUntil(async () => (await mainText()).includes('Risk:'), { timeout: 120000, interval: 2000 }).catch(() => undefined);
     const text = await mainText();
     expect(text).toContain('Risk:');
     expect(text).not.toContain('MARIA_AUDIT_SCHEMA');

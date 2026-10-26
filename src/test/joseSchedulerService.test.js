@@ -16,8 +16,9 @@ import {
 vi.mock('../services/nova/novaDaily', () => ({
   askNovaWhatNext: vi.fn(async () => ({ state: 'done', summary: 'Nova: What to do first: approve the launch video.' })),
 }));
-vi.mock('../services/sentinelSecurityService', () => ({
-  runSentinelSecurityScan: vi.fn(async () => ({ summary: 'Sentinel: risk 10/100, 0 findings.' })),
+// Agent phase 4: the daily Sentinel job asks him through Jose to review the week.
+vi.mock('../services/sentinel/sentinelWeekly', () => ({
+  askSentinelWeekReview: vi.fn(async () => ({ state: 'done', summary: 'Safe. Nothing else found.' })),
 }));
 // Agent phase 3: the weekly Maria job asks her through Jose about the week's risks.
 vi.mock('../services/maria/mariaWeekly', () => ({
@@ -234,7 +235,7 @@ describe('running schedules', () => {
     startScheduler({ runCommand: vi.fn() });
     const cases = [
       ['nova_daily_scan', 'What to do first: approve the launch video.'],
-      ['sentinel_daily_summary', 'Sentinel: risk 10/100'],
+      ['sentinel_daily_summary', 'Safe. Nothing else found.'],
       ['maria_weekly_audit', 'Maria: low risk.'],
     ];
     for (const [presetId, text] of cases) {
@@ -255,6 +256,22 @@ describe('running schedules', () => {
     await runSchedule(job.id);
     expect(askMariaWeeklyRisks).toHaveBeenCalledWith(expect.stringContaining('sent a post'));
     expect(SCHEDULE_PRESETS.find((p) => p.id === 'maria_weekly_audit').label).toBe("Maria: the week's risks");
+  });
+
+  it("the daily Sentinel job is a review of the week", async () => {
+    const { listAgentActivity } = await import('../services/agentActivityService');
+    listAgentActivity.mockReturnValue([{ agent: 'marcus', action: 'executed', detail: 'sent a post', ts: Date.now() }]);
+    const { askSentinelWeekReview } = await import('../services/sentinel/sentinelWeekly');
+    startScheduler({ runCommand: vi.fn() });
+    const job = createSchedule({ name: 'Sentinel', presetId: 'sentinel_daily_summary' });
+    await runSchedule(job.id);
+    expect(askSentinelWeekReview).toHaveBeenCalledWith(expect.stringContaining('sent a post'), { source: 'schedule' });
+    expect(SCHEDULE_PRESETS.find((p) => p.id === 'sentinel_daily_summary').label).toBe("Sentinel: the week's security");
+  });
+
+  it('App starts no background scan', async () => {
+    const { readFileSync } = await import('node:fs');
+    expect(readFileSync('src/App.tsx', 'utf8')).not.toContain('startScheduledScans');
   });
 
   it('App starts no weekly report of its own', async () => {

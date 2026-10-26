@@ -2,7 +2,7 @@
 // each part with its findings and their sources, disagreements, what could not
 // be found, then the numbered sources with how each was read and "Save source".
 import React, { useState } from 'react';
-import { openExternalUrl } from '../../services/browserAutomationService';
+import { openSourceLink } from '../../services/browserAutomationService';
 import { saveBookmark, getBookmarks } from '../../services/hectorBookmarkService';
 import type { ResearchReport } from '../../services/hector/researchRun';
 
@@ -14,7 +14,7 @@ export function ResearchFindings({ research }: { research: ResearchReport }): Re
   const cite = (n: number) => {
     const source = byNumber.get(n);
     return (
-      <button key={n} type="button" title={source?.title} onClick={() => source && openExternalUrl(source.url)}
+      <button key={n} type="button" title={source?.title} onClick={() => source && openSourceLink(source.url)}
         className="text-(--agent-hector) underline decoration-dotted hover:opacity-80">[{n}]</button>
     );
   };
@@ -47,7 +47,7 @@ export function ResearchFindings({ research }: { research: ResearchReport }): Re
           {research.sources.map((s) => (
             <li key={s.n} className="rounded-lg bg-(--surface-1) px-3 py-2">
               [{s.n}]{' '}
-              <button type="button" onClick={() => openExternalUrl(s.url)} className="text-(--agent-hector) underline break-all text-left">{s.title}</button>
+              <button type="button" onClick={() => openSourceLink(s.url)} className="text-(--agent-hector) underline break-all text-left">{s.title}</button>
               <span className="text-(--text-3)"> · {LABELS[s.label]}{s.reason ? `: ${s.reason}` : ''} · {s.kind}</span>
               <button type="button" disabled={saved.has(s.url)} onClick={() => save(s)}
                 className="ml-2 rounded-sm bg-(--surface-2) px-2 py-0.5 text-[10px] disabled:opacity-40">{saved.has(s.url) ? 'Saved' : 'Save source'}</button>

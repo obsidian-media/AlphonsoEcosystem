@@ -56,7 +56,8 @@ function outputText(output: any): string {
 /** The review's verdict: its own, a content review's from its scores, else its model is asked. Unreadable → fix. */
 export async function judgeReview(review: PlanStep, output: any): Promise<ReviewJudgement> {
   // A review step gives its verdict in its own answer (agent roles Part A); ask only when it didn't.
-  const saved = output?.schema?.verdict;
+  // Sentinel's verdict is safe/risky/unsafe; his pass/fix is reviewVerdict (agent phase 4).
+  const saved = output?.schema?.reviewVerdict ?? output?.schema?.verdict;
   if (saved === 'pass') return { verdict: 'pass', findings: [] };
   if (saved === 'fix') {
     const findings = Array.isArray(output.schema.findings) ? output.schema.findings.filter((f: unknown) => typeof f === 'string' && f.trim()) : [];

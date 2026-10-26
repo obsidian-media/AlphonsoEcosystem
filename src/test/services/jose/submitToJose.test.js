@@ -42,6 +42,33 @@ beforeEach(() => {
   planner.mockReset();
 });
 
+// Agent phase 4: Sentinel's automatic checks are added to every plan before it runs.
+describe("Sentinel's checks in every plan", () => {
+  const sendPlan = { ...freshPlan, steps: [
+    { stepId: 'write', agent: 'alphonso', actionType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: [] },
+    { stepId: 'send', agent: 'marcus', actionType: 'distribution_slack', instruction: 'Post it.', effects: ['publish_or_send'], needs: ['write'] },
+  ] };
+
+  it("Jose's plan gets a check before Marcus sends, said in the note", async () => {
+    planner.mockResolvedValueOnce(sendPlan);
+    const result = await submitToJose({ text: 'Write a note and post it to Slack', source: 'user' });
+    const ids = pipeline.mock.calls[0][0].assignments.map((a) => a.stepId);
+    expect(ids).toContain('sentinel-send-send');
+    expect(result.planNote).toContain('Sentinel checks added');
+  });
+
+  it('a key in the request is said in the note', async () => {
+    planner.mockResolvedValueOnce(freshPlan);
+    const result = await submitToJose({ text: 'Use sk-live-1234abcd5678efgh to fetch the data', source: 'user' });
+    expect(result.planNote).toContain('Your request contains a key (ends …efgh); it was hidden from every agent.');
+  });
+
+  it('given steps get the checks too', async () => {
+    await submitStepsToJose({ text: 'Distribute', source: 'boardroom', label: 'Steps set by Boardroom.', steps: sendPlan.steps });
+    expect(pipeline.mock.calls[0][0].assignments.map((a) => a.stepId)).toContain('sentinel-send-send');
+  });
+});
+
 describe('submitToJose', () => {
   it('lets a shortcut (an image request) answer without planning', async () => {
     vi.mocked(runPipelineShortcuts).mockResolvedValueOnce({ ok: true, executedCount: 1, creativeResult: { ok: true } });

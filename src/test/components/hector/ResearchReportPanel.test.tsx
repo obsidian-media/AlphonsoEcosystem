@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 vi.mock('../../../services/browserAutomationService', () => ({
-  openExternalUrl: vi.fn(),
+  openSourceLink: vi.fn(),
 }));
 
 import { ResearchReportPanel } from '../../../components/hector/ResearchReportPanel';
