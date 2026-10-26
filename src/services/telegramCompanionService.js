@@ -10,7 +10,6 @@ import { listMemoryItems } from './memoryService';
 import { listJoseCommands } from './joseCommandRouterService';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { listAgentProfiles } from '../agents/agentRegistry';
-import { scanForThreats } from './sentinelSecurityService';
 import { listVerdicts, verdictsText } from './nova/novaVerdicts';
 import { listOrchestrationReceipts } from './orchestrationReceiptService';
 import { getConfiguredOllamaEndpoint } from '../lib/ollama';
@@ -334,23 +333,21 @@ ${verdictsText(listVerdicts(5))}` });
 }
 
 export async function handleScanCommand(token, chatId) {
+  // Agent phase 4: /scan asks Sentinel for one real review of the last week, as a request on
+  // the board, and says how it ended. It used to scan an empty string and always say ✅.
   try {
-    await sendTelegramMessageInternal({ token, chatId, text: '🔍 Running Sentinel security scan…' });
-    // Regression fix: this imported a nonexistent `runQuickScan` export from
-    // sentinelSecurityService.ts (the real name is scanForThreats — the
-    // `runQuickScan` this was modeled on is a *local* function in
-    // RightPanel.tsx, not a service export) and read fields (threatLevel,
-    // summary) that don't exist on the real ScanResult shape either. Never
-    // caught because this module was unreachable from any production entry
-    // point until useBootEffects.js's Telegram auto-start was restored
-    // (see docs/governance/DEFERRED_WORK.md, 2026-08-22) — a build with
-    // this module actually bundled had never run before.
-    const result = scanForThreats('', {});
-    const severity = result?.severity || 'unknown';
-    const findings = Array.isArray(result?.findings) ? result.findings.length : 0;
-    const summary = result?.blocked ? 'Action blocked pending review.' : 'Scan complete.';
-    const icon = severity === 'low' ? '✅' : severity === 'medium' ? '🟡' : severity === 'high' ? '🟠' : '🔴';
-    return sendTelegramMessageInternal({ token, chatId, text: `${icon} Sentinel Scan\n\nSeverity: ${severity}\nFindings: ${findings}\n${summary}` });
+    const { recentActivityText } = await import('./sentinelSecurityService');
+    const { text, items } = recentActivityText(7);
+    if (!items) {
+      return sendTelegramMessageInternal({ token, chatId, text: '🔍 Nothing for Sentinel to review: no agent activity in the last 7 days.' });
+    }
+    await sendTelegramMessageInternal({ token, chatId, text: "🔍 Sentinel is reviewing the last 7 days. I'll tell you when he's done." });
+    const { askSentinelWeekReview } = await import('./sentinel/sentinelWeekly');
+    // Not awaited, so other commands keep being answered while he works.
+    void askSentinelWeekReview(text, { source: 'telegram' })
+      .then((result) => sendTelegramMessageInternal({ token, chatId, text: `🛡️ ${result.summary}` }))
+      .catch(() => sendTelegramMessageInternal({ token, chatId, text: "⚠️ Sentinel's review didn't finish. See the board." }));
+    return undefined;
   } catch {
     return sendTelegramMessageInternal({ token, chatId, text: '⚠️ Scan failed. Ensure Alphonso is running.' });
   }

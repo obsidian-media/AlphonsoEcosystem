@@ -1,14 +1,14 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('../services/sentinelSecurityService', () => ({
-  scanRecentActivity: vi.fn(() => ({
-    riskLevel: 'low',
-    findings: [],
-    score: 10,
-    itemsScanned: 3
-  }))
+  recentActivityText: vi.fn(() => ({ text: '- jose executed', items: 3 }))
+}));
+// Agent phase 4: the card shows Sentinel's last review of the week; Re-scan asks for a new one.
+vi.mock('../services/sentinel/sentinelWeekly', () => ({
+  lastSentinelReview: vi.fn(() => null),
+  askSentinelWeekReview: vi.fn(async () => ({ state: 'done', summary: 'Safe.' }))
 }));
 
 vi.mock('../lib/ollama', () => ({
@@ -25,7 +25,8 @@ vi.mock('../services/missionRoomService', () => ({
 }));
 
 import { RightPanel } from '../components/RightPanel.jsx';
-import { scanRecentActivity } from '../services/sentinelSecurityService';
+import { recentActivityText } from '../services/sentinelSecurityService';
+import { lastSentinelReview, askSentinelWeekReview } from '../services/sentinel/sentinelWeekly';
 
 const defaultProps = {
   settings: { selectedModel: 'llama3.2:3b' },
@@ -42,8 +43,9 @@ describe('RightPanel', () => {
   beforeEach(() => {
     // Clear localStorage before each test so mount effect always runs
     localStorage.clear();
-    scanRecentActivity.mockClear();
-    scanRecentActivity.mockReturnValue({ riskLevel: 'low', findings: [], score: 10, itemsScanned: 3 });
+    recentActivityText.mockReturnValue({ text: '- jose executed', items: 3 });
+    lastSentinelReview.mockReturnValue(null);
+    askSentinelWeekReview.mockClear();
     defaultProps.onCheckOllama.mockClear();
   });
 
@@ -57,24 +59,28 @@ describe('RightPanel', () => {
     expect(document.body.firstChild).toBeTruthy();
   });
 
-  // QA 2026-10-22 (Bug 71): this used to scan '' and so always say all clear.
-  it('scans the last week of agent activity on mount when no stored scan', () => {
+  // Agent phase 4: the card is Sentinel's last review of the week, from its request.
+  it('no review starts on its own', () => {
     render(<RightPanel {...defaultProps} />);
-    expect(scanRecentActivity).toHaveBeenCalledWith(7);
-    expect(screen.getByText(/No threats found in the last 7 days of agent activity \(3 items\)/)).toBeTruthy();
+    expect(askSentinelWeekReview).not.toHaveBeenCalled();
+    expect(screen.getByText(/No review yet/)).toBeTruthy();
   });
 
-  it('says there was nothing to scan when there was no activity', () => {
-    scanRecentActivity.mockReturnValue({ riskLevel: 'low', findings: [], score: 0, itemsScanned: 0 });
-    render(<RightPanel {...defaultProps} />);
-    expect(screen.getByText(/Nothing to scan yet/)).toBeTruthy();
+  it('a risky review shows amber, unsafe red, safe green', () => {
+    for (const [verdict, color] of [['risky', 'warning'], ['unsafe', 'error'], ['safe', 'success']]) {
+      lastSentinelReview.mockReturnValue({ requestId: 'r', verdict, findings: verdict === 'safe' ? [] : ['http://x: a fake login → remove it'], summary: '', atMs: Date.now() });
+      const { unmount } = render(<RightPanel {...defaultProps} />);
+      const card = screen.getByTestId('sentinel-review-card');
+      expect(card.getAttribute('data-verdict')).toBe(verdict);
+      expect(card.className).toContain(`--${color}-dim`);
+      unmount();
+    }
   });
 
-  it('does not run sentinel scan on mount when stored scan exists', () => {
-    const storedScan = JSON.stringify({ riskLevel: 'low', findings: [], score: 10, scannedAt: Date.now() });
-    localStorage.setItem('alphonso_sentinel_last_scan_v1', storedScan);
+  it('shows his findings', () => {
+    lastSentinelReview.mockReturnValue({ requestId: 'r', verdict: 'unsafe', findings: ['http://paypa1.com: a fake login → remove it'], summary: '', atMs: Date.now() });
     render(<RightPanel {...defaultProps} />);
-    expect(scanRecentActivity).not.toHaveBeenCalled();
+    expect(screen.getByText(/a fake login/)).toBeTruthy();
   });
 
   it('shows Security section header', () => {
@@ -89,20 +95,18 @@ describe('RightPanel', () => {
     expect(reScanBtn.getAttribute('aria-label')).toBe('Re-scan for security threats');
   });
 
-  it('clicking re-scan button scans again', () => {
+  it("Re-scan asks Sentinel to review the week's activity", async () => {
     render(<RightPanel {...defaultProps} />);
-    // Initial mount call
-    const initialCallCount = scanRecentActivity.mock.calls.length;
-    const reScanBtn = screen.getByTitle('Re-scan');
-    fireEvent.click(reScanBtn);
-    expect(scanRecentActivity.mock.calls.length).toBe(initialCallCount + 1);
+    fireEvent.click(screen.getByTitle('Re-scan'));
+    await waitFor(() => expect(askSentinelWeekReview).toHaveBeenCalledWith('- jose executed', { source: 'user' }));
   });
 
-  it('shows threat level from scan result', () => {
-    scanRecentActivity.mockReturnValue({ riskLevel: 'low', findings: [], score: 10 });
+  it('with no activity, Re-scan says there is nothing to review', () => {
+    recentActivityText.mockReturnValue({ text: '', items: 0 });
     render(<RightPanel {...defaultProps} />);
-    expect(screen.getByText('Threat Level')).toBeTruthy();
-    expect(screen.getByText('low')).toBeTruthy();
+    fireEvent.click(screen.getByTitle('Re-scan'));
+    expect(askSentinelWeekReview).not.toHaveBeenCalled();
+    expect(screen.getByText(/Nothing to review yet/)).toBeTruthy();
   });
 
   it('collapsed state toggle button exists and collapses the panel', () => {

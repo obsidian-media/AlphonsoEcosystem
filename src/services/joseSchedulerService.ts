@@ -30,7 +30,7 @@ export const SCHEDULE_PRESETS: SchedulePreset[] = [
   { id: 'daily', label: 'Every day', intervalMs: 24 * 60 * 60 * 1000 },
   { id: 'weekly', label: 'Every week', intervalMs: 7 * 24 * 60 * 60 * 1000 },
   { id: 'nova_daily_scan', cron: '0 9 * * *', label: 'Nova: what to do next', handler: 'nova_scan', description: "Every day at 9:00, Nova looks over the last week's work and what is still waiting, and says what to do next." },
-  { id: 'sentinel_daily_summary', cron: '0 8 * * *', label: 'Sentinel Daily Threat Summary', handler: 'sentinel_summary', description: "Every day at 8:00, Sentinel checks the last week's work for risky actions." },
+  { id: 'sentinel_daily_summary', cron: '0 8 * * *', label: "Sentinel: the week's security", handler: 'sentinel_summary', description: "Every day at 8:00, Sentinel reviews the last week's work for keys, unsafe links and risky commands." },
   { id: 'echo_nightly_consolidation', cron: '0 2 * * *', label: 'Echo Nightly Memory Consolidation', handler: 'echo_consolidate', description: 'Every night at 2:00, Echo summarises memories older than a week.' },
   { id: 'hector_morning_briefing', cron: '0 7 * * *', label: 'Hector Morning Research Briefing', handler: 'hector_brief', description: 'Every day at 7:00, Hector collects the top headlines from his news feeds.' },
   { id: 'maria_weekly_audit', cron: '0 9 * * 1', label: "Maria: the week's risks", handler: 'maria_audit', description: "Every Monday at 9:00, Maria reviews the week's risks: what went out, what failed and what is still waiting." },
@@ -158,10 +158,11 @@ async function runBuiltInJob(handler: string): Promise<Omit<ScheduleRunResult, '
   if (handler === 'sentinel_summary') {
     const work = await recentWorkText();
     if (!work) return { state: 'skipped', summary: NOTHING_RECENT };
-    const { runSentinelSecurityScan } = await import('./sentinelSecurityService');
-    const result = await runSentinelSecurityScan(`Daily threat summary of the last week's work:\n${work}`, {} as never);
+    // Agent phase 4: Sentinel is asked, as a request, to review the week.
+    const { askSentinelWeekReview } = await import('./sentinel/sentinelWeekly');
+    const result = await askSentinelWeekReview(work, { source: 'schedule' });
     await recordActivity('sentinel', 'daily_summary', result.summary);
-    return { state: 'done', summary: result.summary };
+    return { state: result.state, summary: result.summary };
   }
   if (handler === 'echo_consolidate') {
     const { listMemory } = await import('./unifiedMemoryService.js') as unknown as { listMemory: (f: object) => Array<{ title?: string; content?: string; timestampMs?: number }> };

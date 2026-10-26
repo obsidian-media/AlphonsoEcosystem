@@ -489,24 +489,8 @@ function AppShell() {
     })();
   }, []);
 
-  // Wire background services: Sentinel scheduled scans + Maria weekly report
-  useEffect(() => {
-    let scanStop: (() => void) | null = null;
-    (async () => {
-      try {
-        const { startScheduledScans } = await import('./services/sentinelSecurityService');
-        scanStop = startScheduledScans(10 * 60 * 1000, (result: any) => {
-          if (result?.findings?.length) {
-            addNotification({ type: 'warning', title: 'Sentinel scan complete', message: `${result.findings.length} finding(s) detected.` });
-          }
-        });
-      } catch { /* non-critical */ }
-      // Maria's weekly review is a schedule now (agent phase 3: "Maria: the week's risks").
-    })();
-    return () => {
-      try { scanStop?.(); } catch { /* ignore */ }
-    };
-  }, []);
+  // Sentinel's review of the week is a schedule and the sidebar's Re-scan (agent phase 4);
+  // Maria's weekly review is a schedule (agent phase 3). No background scans here.
 
   // Jose scheduler background service. The ref keeps the scheduler on the
   // latest endpoint / Zero-Cost Mode without restarting it on every change.
