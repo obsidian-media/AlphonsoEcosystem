@@ -36,6 +36,16 @@ describe('closingSummary', () => {
     expect(closingSummary(request([s('alphonso', 'alphonso', 'done')]))).toBe('Dear landlord,\nThe heating is broken.\nThanks.');
   });
 
+  it("shows a single review's hand-over, not its data (agent phase 4)", () => {
+    setStepOutput('c1', 'maria', 'maria', {
+      summary: 'Risk: low.\nNo rule applies.',
+      schema: { kind: 'plan', risk: 'low', needsApproval: false, confidenceLevel: 'inferred', summary: 'Risk: low.' },
+    });
+    const text = closingSummary(request([s('maria', 'maria', 'done')]));
+    expect(text).toBe('Risk: low.\nNo rule applies.');
+    expect(text).not.toContain('Confidence Level');
+  });
+
   it("gives a waiting or failed single step's reason, not an empty answer", () => {
     expect(closingSummary(request([s('send', 'marcus', 'waiting_approval')]))).toBe('Marcus: waiting for your approval\nOpen on the board.');
     expect(closingSummary(request([s('send', 'marcus', 'failed', { error: 'No key.' })]))).toBe('Marcus: failed (No key.)\nOpen on the board.');
