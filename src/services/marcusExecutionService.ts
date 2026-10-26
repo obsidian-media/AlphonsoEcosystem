@@ -1,15 +1,10 @@
-import type { StepInput } from './jose/stepInput';
 import { getStepOutput } from './jose/joseStepOutputs';
 import { getJoseRequest } from './jose/joseRequestStore';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { readDueMetrics } from './contentFactory/postMetrics';
 import { pushMemoryItem } from './memoryService';
-import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
-import { auditProjectPlan, auditReleaseReadiness } from './audit/marcusAuditService';
-import { executeMarcusPublish, MARCUS_PUBLISH_PLATFORMS } from './marcusPublishService';
-import { getConnectorCredential } from './connectors/connectorAuth';
-import { isConnectorAuthenticated } from './connectorRegistryService';
+import { executeMarcusPublish } from './marcusPublishService';
 import { publishPost } from './contentFactory/publishPost';
 import { contentAppSettings } from './contentFactory/contentStepRecorder';
 import { getProject } from './contentFactory/contentProjectService';
@@ -22,53 +17,25 @@ import { BY_HAND_REMINDER } from './contentFactory/readyToPost';
 import { SIGN_IN_NAME } from './contentFactory/signInExpiry';
 import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
 import { randomHex } from '../lib/randomId';
+import { redactText } from './sentinel/exactChecks';
+import { prepareMarcusSend } from './marcus/prepareSend';
+import { runMarcusSend } from './marcus/runSend';
+import { checkReadiness } from './marcus/readiness';
+import type { SendPreview, SendResult } from './marcus/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Assignment {
+  stepId?: string;
+  agent?: string;
   actionType?: string;
+  effects?: string[];
+  needs?: string[];
   payload?: Record<string, unknown>;
   commandId?: string;
   packetId?: string;
   workflowId?: string;
   [key: string]: unknown;
-}
-
-interface DistributionTarget {
-  type: string;
-  action: string;
-  platform: string | null;
-}
-
-interface ExecutionResult {
-  ok: boolean;
-  type?: string;
-  platform?: string | null;
-  error?: string;
-  setupRequired?: boolean;
-  url?: string | null;
-  release?: { htmlUrl?: string; [key: string]: unknown };
-  id?: string;
-  htmlUrl?: string;
-  number?: number;
-  ts?: string | null;
-  data?: unknown;
-  auditReport?: unknown;
-  count?: number;
-  [key: string]: unknown;
-}
-
-interface MarcusExecutionRecord {
-  workflowId: string;
-  assignmentId: string;
-  connectorId: string;
-  approvedBy: string;
-  status: string;
-  resultUrl: string | null;
-  summary: string;
-  confidenceLevel: string;
-  verificationState: string;
-  executedAtMs: number;
 }
 
 interface PriorOutputs {
@@ -80,6 +47,25 @@ interface PriorOutputs {
   [key: string]: unknown;
 }
 
+/** What Marcus's step records (agent phase 5): where it went, who approved and reviewed it. */
+export interface MarcusRecord {
+  kind: 'send';
+  connector: string | null;
+  target: string | null;
+  sendKind: string | null;
+  status: 'sent' | 'failed' | 'checked';
+  link: string | null;
+  platformId: string | null;
+  approvedBy: 'you' | null;
+  approvedAtMs: number | null;
+  reviewedBy: string[];
+  sentAtMs: number | null;
+  confidenceLevel: string;
+  /** Read by Jose's review loop (`judgeReview()`): `fix` only when the text was too long. */
+  reviewVerdict: 'pass' | 'fix';
+  findings?: string[];
+}
+
 interface MarcusResult {
   summary: string;
   resultState: string;
@@ -87,30 +73,7 @@ interface MarcusResult {
   artifacts: Array<Record<string, unknown>>;
   sources: never[];
   contractAction: string;
-  schema: MarcusExecutionRecord;
-}
-
-interface AuditReport {
-  [key: string]: unknown;
-}
-
-interface GitHubConfig {
-  token: string;
-  owner: string;
-  repo: string;
-}
-
-interface SlackConfig {
-  token: string;
-  defaultChannel: string;
-}
-
-interface PublishParams {
-  platform: string;
-  payload: Record<string, unknown>;
-  commandId?: string | null;
-  workflowId?: string | null;
-  preApproved?: boolean;
+  schema: MarcusRecord;
 }
 
 /** @typedef {{ id: string, content: string, platform: string, scheduledAt: number, agentId: string, createdAt: number, status: 'pending' | 'executed' | 'cancelled', executedAt?: number }} ScheduledPublish */
@@ -132,212 +95,7 @@ interface ScheduledPublish {
   message?: string;
 }
 
-interface PublishResult {
-  ok: boolean;
-  type?: string;
-  platform?: string;
-  error?: string;
-  [key: string]: unknown;
-}
-
-// ── Distribution target selector ─────────────────────────────────────────────
-
-export function selectDistributionTarget(assignment: Assignment): DistributionTarget {
-  const actionType = String(assignment?.actionType || '').toLowerCase();
-  const payload = assignment?.payload || {};
-
-  if (/github.*release|create.*release|upload.*asset/.test(actionType)) {
-    return { type: 'github', action: 'release', platform: null };
-  }
-  if (/github.*issue/.test(actionType)) {
-    return { type: 'github', action: 'issue', platform: null };
-  }
-  if (/github.*pr|pull.?request/.test(actionType)) {
-    return { type: 'github', action: 'pr', platform: null };
-  }
-  if (/slack/.test(actionType)) {
-    return { type: 'slack', action: 'message', platform: null };
-  }
-  if (/instagram|facebook|meta/.test(actionType)) {
-    return { type: 'publish', action: 'publish', platform: /facebook/.test(actionType) ? 'facebook' : 'instagram' };
-  }
-  if (/youtube/.test(actionType)) {
-    return { type: 'publish', action: 'publish', platform: 'youtube' };
-  }
-  if (/telegram/.test(actionType)) {
-    return { type: 'publish', action: 'publish', platform: 'telegram' };
-  }
-  if (/whatsapp/.test(actionType)) {
-    return { type: 'publish', action: 'publish', platform: 'whatsapp' };
-  }
-  if (/notion/.test(actionType)) {
-    return { type: 'publish', action: 'publish', platform: 'notion' };
-  }
-  if (/clickup/.test(actionType)) {
-    return { type: 'publish', action: 'publish', platform: 'clickup' };
-  }
-  if (/n8n|workflow.*trigger|automation.*trigger/.test(actionType)) {
-    return { type: 'n8n', action: 'trigger_webhook', platform: null };
-  }
-
-  // Infer from payload
-  const platform = (payload.platform as string) || null;
-  if (platform && MARCUS_PUBLISH_PLATFORMS.some((p: { id: string }) => p.id === platform)) {
-    return { type: 'publish', action: 'publish', platform };
-  }
-
-  return { type: 'review', action: 'distribution_review', platform: null };
-}
-
-// ── GitHub execution ──────────────────────────────────────────────────────────
-
-export async function executeMarcusGitHubAction(commandText: string, assignment: Assignment, options: Record<string, unknown> = {}): Promise<ExecutionResult> {
-  const token = getConnectorCredential('github', 'GITHUB_TOKEN') as string | null;
-  const auth = isConnectorAuthenticated('github') as { ok: boolean };
-
-  if (!auth.ok || !token) {
-    return {
-      ok: false,
-      error: 'GitHub connector not authenticated. Add GITHUB_TOKEN in Connector Setup.',
-      setupRequired: true
-    };
-  }
-
-  const actionType = String(assignment?.actionType || '').toLowerCase();
-  const payload = assignment?.payload || {};
-
-  // Dynamic import to avoid circular deps and keep connector tree-shakeable
-  const github = await import('./connectors/githubConnector');
-  const config: GitHubConfig = {
-    token,
-    owner: (payload.owner as string) || (options.owner as string) || '',
-    repo: (payload.repo as string) || (options.repo as string) || ''
-  };
-
-  try {
-    if (/create.*release|github.*release/.test(actionType)) {
-      const release = await github.createRelease(
-        config,
-        (payload.tagName as string) || `v${Date.now()}`,
-        (payload.name as string) || String(commandText || '').slice(0, 100),
-        (payload.body as string) || String(commandText || ''),
-        (payload.draft as boolean) ?? true,
-        (payload.prerelease as boolean) ?? false
-      );
-      return { ok: true, type: 'github_release', releaseId: release.id, url: null, release: release as unknown as Record<string, unknown> };
-    }
-
-    if (/github.*issue|create.*issue/.test(actionType)) {
-      const issue = await github.createIssue(
-        config,
-        (payload.title as string) || String(commandText || '').slice(0, 140),
-        (payload.body as string) || String(commandText || ''),
-        Array.isArray(payload.labels) ? payload.labels as string[] : []
-      );
-      return { ok: true, type: 'github_issue', issueNumber: issue.number, url: null, issue: issue as unknown as Record<string, unknown> };
-    }
-
-    // Default: list releases as a dry-run to confirm connectivity
-    const releases = await github.listReleases(config);
-    return { ok: true, type: 'github_list_releases', count: releases.length };
-  } catch (error: unknown) {
-    return { ok: false, error: String((error as Error)?.message || error) };
-  }
-}
-
-// ── Slack execution ───────────────────────────────────────────────────────────
-
-export async function executeMarcusSlackAction(commandText: string, assignment: Assignment, options: Record<string, unknown> = {}): Promise<ExecutionResult> {
-  const token = getConnectorCredential('slack', 'SLACK_BOT_TOKEN') as string | null;
-  const auth = isConnectorAuthenticated('slack') as { ok: boolean };
-
-  if (!auth.ok || !token) {
-    return {
-      ok: false,
-      error: 'Slack connector not authenticated. Add SLACK_BOT_TOKEN in Connector Setup.',
-      setupRequired: true
-    };
-  }
-
-  const payload = assignment?.payload || {};
-  const channel = (payload.channel as string) || (options.channel as string) || '#general';
-  const text = (payload.text as string) || String(commandText || '').slice(0, 3000);
-
-  const slack = await import('./connectors/slackConnector');
-  const config: SlackConfig = { token, defaultChannel: channel };
-
-  try {
-    const result = await slack.sendMessage(config, channel, text);
-    return { ok: true, type: 'slack_message', channel, ts: (result as { ts?: string })?.ts || null };
-  } catch (error: unknown) {
-    return { ok: false, error: String((error as Error)?.message || error) };
-  }
-}
-
-// ── n8n execution ────────────────────────────────────────────────────────────
-
-export async function executeMarcusN8nAction(commandText: string, assignment: Assignment, options: Record<string, unknown> = {}): Promise<ExecutionResult> {
-  const token = getConnectorCredential('n8n', 'N8N_BASE_URL') as string | null;
-  const auth = isConnectorAuthenticated('n8n') as { ok: boolean };
-
-  if (!auth.ok || !token) {
-    return {
-      ok: false,
-      error: 'n8n connector not authenticated. Add N8N_BASE_URL in Connector Setup.',
-      setupRequired: true
-    };
-  }
-
-  const payload = assignment?.payload || {};
-  const webhookPath = (payload.webhookPath as string) || (options.webhookPath as string) || 'default';
-
-  const n8n = await import('./connectors/n8nConnector');
-
-  try {
-    const result = await n8n.triggerN8nWebhook(webhookPath, {
-      commandText: String(commandText || '').slice(0, 2000),
-      assignment,
-      ...payload
-    }) as { ok: boolean; data?: unknown; error?: string };
-    return { ok: result.ok, type: 'n8n_webhook', webhookPath, data: result.data, error: result.error };
-  } catch (error: unknown) {
-    return { ok: false, error: String((error as Error)?.message || error) };
-  }
-}
-
-// ── Schema builder ────────────────────────────────────────────────────────────
-
-export function buildMarcusExecutionRecord(result: ExecutionResult, assignment: Assignment): MarcusExecutionRecord {
-  return {
-    workflowId: assignment?.commandId || '',
-    assignmentId: assignment?.packetId || '',
-    connectorId: (result?.platform as string) || result?.type || 'none',
-    approvedBy: 'maria-governance',
-    status: result?.ok ? 'executed' : 'failed',
-    resultUrl: result?.url || result?.release?.htmlUrl || null,
-    summary: result?.ok
-      ? `Marcus executed ${result.type || 'distribution'} successfully.`
-      : `Marcus distribution failed: ${String(result?.error || 'unknown').slice(0, 200)}`,
-    confidenceLevel: result?.ok ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED,
-    verificationState: result?.ok ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED,
-    executedAtMs: timestampMs()
-  };
-}
-
-// ── Main entry ────────────────────────────────────────────────────────────────
-
-/**
- * What Marcus sends inside a Jose request (agent roles Part A, 2026-10-24): the
- * text he was given, else what the step he needs wrote. Never the step's
- * instruction or the request. Null when no earlier step wrote anything.
- */
-export function textToSend(assignment: Assignment, stepInput: StepInput | null | undefined): string | null {
-  const given = assignment?.payload?.text;
-  if (typeof given === 'string' && given.trim()) return given;
-  // The piece of work itself (a post, a letter), else the step's readable output.
-  const written = (stepInput?.needs || []).map((n) => n.main || n.text).find((t) => typeof t === 'string' && t.trim());
-  return written || null;
-}
+// ── Maria's review ────────────────────────────────────────────────────────────
 
 /**
  * Maria's review of the very work Marcus sends (agent phase 3): the Maria step that reviewed
@@ -353,154 +111,116 @@ export function mariaReviewFor(commandId: unknown, needs: string[] | undefined):
   return (getStepOutput(commandId, reviewer.stepId) as unknown as PriorOutputs['maria']) || null;
 }
 
-export async function runMarcusDistribution(commandText: string, assignment: Assignment, priorOutputs: PriorOutputs | null, options: Record<string, unknown> = {}): Promise<MarcusResult> {
-  // A publishing readiness check publishes nothing (Hector's until 2026-10-24).
-  if (assignment?.actionType === 'distribution_readiness') {
-    return {
-      summary: 'Marcus checked publishing readiness. Nothing was published; posting still asks for approval.',
-      resultState: 'pending_review',
-      resultUrl: null,
-      artifacts: [{ type: 'publish_handoff', status: 'approval_required' }],
-      sources: [] as never[],
-      contractAction: 'distribution_readiness',
-      schema: buildMarcusExecutionRecord({ ok: false }, assignment),
-    };
-  }
-  // Maria's review of the exact work he sends (agent phase 3). Her approval and an unfixed
-  // review already made this step wait for you (maria/mariaHolds.ts), so Marcus no longer
-  // blocks on his own, and no keyword score stands in when she didn't review it.
-  const mariaOutput = mariaReviewFor(options.commandId, (assignment as { needs?: string[] })?.needs)
-    // Outside a Jose request, a review handed to him directly (older callers).
-    || (options.commandId ? undefined : priorOutputs?.maria) || undefined;
-  const startMs = timestampMs();
-  const mariaRisk = String(mariaOutput?.schema?.riskLevel || 'none').toLowerCase();
-  const mariaApprovalRequired = mariaOutput
-    ? Boolean(mariaOutput.schema?.approvalRequired) || (mariaOutput.schema as { verdict?: string } | undefined)?.verdict === 'fix'
-    : true;
+// ── His step (agent phase 5) ──────────────────────────────────────────────────
 
-  // 2. Select distribution target
-  const target = selectDistributionTarget(assignment);
+const READ_ONLY = new Set(['distribution_readiness', 'distribution_review']);
 
-  // Inside a Jose request Marcus sends the work, never the instruction (agent roles Part A).
-  const stepInput = (options as { stepInput?: StepInput | null }).stepInput;
-  if (stepInput && ['github', 'slack', 'n8n'].includes(target.type)) {
-    const text = textToSend(assignment, stepInput);
-    if (!text) {
-      return {
-        summary: 'Nothing to send: no earlier step wrote the text.',
-        resultState: 'failed',
-        resultUrl: null,
-        artifacts: [{ type: 'distribution_blocked', reason: 'nothing_to_send' }],
-        sources: [],
-        contractAction: assignment?.actionType || 'distribution_execution',
-        schema: buildMarcusExecutionRecord({ ok: false }, assignment)
-      };
-    }
-    commandText = text;
-  }
+/** The Maria and Sentinel steps that reviewed what he sends (or that he needs), finished. */
+function reviewersOf(commandId: string, assignment: Assignment, sourceStepId: string | null): string[] {
+  const steps = getJoseRequest(`jose-request-${commandId}`)?.steps || [];
+  const needs = new Set(assignment.needs || []);
+  return steps
+    .filter((s) => (s.agent === 'maria' || s.agent === 'sentinel') && s.status === 'done'
+      && ((sourceStepId && s.reviewOf === sourceStepId) || needs.has(s.stepId)))
+    .map((s) => s.stepId);
+}
 
-  // 3. Execute based on target type
-  let execResult: ExecutionResult = { ok: false };
-
-  if (target.type === 'github') {
-    execResult = await executeMarcusGitHubAction(commandText, assignment, options);
-  } else if (target.type === 'slack') {
-    execResult = await executeMarcusSlackAction(commandText, assignment, options);
-  } else if (target.type === 'n8n') {
-    execResult = await executeMarcusN8nAction(commandText, assignment, options);
-  } else if (target.type === 'publish' && target.platform) {
-    const payload = assignment?.payload || {};
-    const publishResult = await executeMarcusPublish({
-      platform: target.platform,
-      payload,
-      commandId: assignment?.commandId || null,
-      workflowId: assignment?.workflowId || null,
-      preApproved: !mariaApprovalRequired
-    }) as PublishResult;
-    execResult = publishResult;
-    execResult.type = `publish_${target.platform}`;
-    execResult.platform = target.platform;
-  } else {
-    // No specific connector target — return review summary using existing audit services
-    const auditReport = mariaOutput
-      ? auditProjectPlan({ id: assignment?.commandId, projectName: String(commandText || '').slice(0, 80) })
-      : auditReleaseReadiness({ id: assignment?.commandId, projectName: String(commandText || '').slice(0, 80) });
-    execResult = {
-      ok: true,
-      type: 'distribution_review',
-      platform: null,
-      auditReport
-    };
-  }
-
-  // 4. Build schema record
-  const schema = buildMarcusExecutionRecord(execResult, assignment);
-
-  // 5. Persist memory
-  pushMemoryItem({
-    title: `Marcus distribution: ${String(commandText || '').slice(0, 80)}`,
-    category: 'orchestration_memory',
-    content: {
-      target,
-      schema,
-      mariaRisk,
-      execOk: execResult?.ok ?? false
-    },
-    source: 'marcus-execution-service',
-    sourceAgent: 'marcus',
-    confidence: schema.confidenceLevel,
-    verificationState: schema.verificationState
-  });
-
-  appendSessionEvent({
-    category: 'distribution',
-    title: execResult?.ok ? `Marcus executed ${target.type}` : `Marcus distribution failed`,
-    details: { target, mariaRisk, ok: execResult?.ok ?? false, error: execResult?.error || null },
-    agent: 'marcus',
-    confidence: schema.confidenceLevel,
-    verificationState: schema.verificationState
-  });
-
-  appendOrchestrationReceipt({
-    workflowId: assignment?.commandId || 'marcus_distribution',
-    commandId: assignment?.commandId || null,
-    packetId: assignment?.packetId || null,
-    eventType: execResult?.ok ? 'marcus_distribution_completed' : 'marcus_distribution_failed',
-    status: execResult?.ok ? 'executed' : 'failed',
-    agent: 'marcus',
-    connectorId: target.platform || target.type || 'none',
-    actionType: assignment?.actionType || 'distribution_execution',
-    riskLevel: mariaRisk || 'medium',
-    approved: !mariaApprovalRequired,
-    blocked: !execResult?.ok,
-    setupRequired: execResult?.setupRequired ?? false,
-    details: { target, execResult, mariaRisk, durationMs: timestampMs() - startMs },
-    confidence: schema.confidenceLevel,
-    verificationState: schema.verificationState
-  });
-
-  const summaryParts = [
-    mariaOutput ? `Maria reviewed it (risk: ${mariaRisk}).` : 'No review by Maria; you approved sending it.',
-    execResult?.ok
-      ? `Marcus executed ${target.type} distribution successfully.${target.platform ? ` Platform: ${target.platform}.` : ''}`
-      : `Marcus distribution failed: ${String(execResult?.error || 'unknown').slice(0, 150)}`,
-    execResult?.setupRequired ? 'Connector setup required — add credentials in Connector Setup panel.' : ''
-  ].filter(Boolean).join(' ');
-
+function record(patch: Partial<MarcusRecord>): MarcusRecord {
   return {
-    summary: summaryParts,
-    resultState: execResult?.ok ? 'completed' : execResult?.setupRequired ? 'setup_required' : 'failed',
-    resultUrl: schema.resultUrl,
-    artifacts: [
-      { type: 'distribution_execution', status: schema.status, target, connectorId: schema.connectorId },
-      { type: 'marcus_execution_schema', schema },
-      ...(mariaOutput?.artifacts || []),
-      ...(execResult?.auditReport ? [{ type: 'audit_report', report: execResult.auditReport }] : [])
-    ],
-    sources: [],
-    contractAction: assignment?.actionType || 'distribution_execution',
-    schema
+    kind: 'send', connector: null, target: null, sendKind: null, status: 'failed', link: null, platformId: null,
+    approvedBy: null, approvedAtMs: null, reviewedBy: [], sentAtMs: null, confidenceLevel: TRUST_STATES.FAILED, reviewVerdict: 'pass',
+    ...patch,
   };
+}
+
+function result(summary: string, resultState: string, schema: MarcusRecord, actionType: string): MarcusResult {
+  return { summary, resultState, resultUrl: schema.link, artifacts: [{ type: 'marcus_record', record: schema }], sources: [], contractAction: actionType, schema };
+}
+
+/**
+ * Marcus's step. A readiness check reads and asks nothing; a send sends the preview prepared
+ * before you approved it (or prepares one when called outside Jose's gate). `priorOutputs` is
+ * kept for older callers and no longer used.
+ */
+export async function runMarcusDistribution(commandText: string, assignment: Assignment, _priorOutputs: PriorOutputs | null, options: Record<string, unknown> = {}): Promise<MarcusResult> {
+  const actionType = String(assignment?.actionType || 'distribution_execution');
+  const commandId = String(options.commandId || assignment?.commandId || '');
+  const request = getJoseRequest(`jose-request-${commandId}`);
+  const requestText = request?.text || String(commandText || '');
+
+  if (READ_ONLY.has(actionType)) {
+    const check = await checkReadiness(commandId, assignment, { text: requestText });
+    return result(check.text, 'completed', record({ status: 'checked', confidenceLevel: TRUST_STATES.INFERRED }), actionType);
+  }
+
+  const stepId = String(assignment?.stepId || 'marcus');
+  let preview: SendPreview | undefined = request?.steps.find((s) => s.stepId === stepId)?.sendPreview;
+  if (!preview) {
+    const prepared = await prepareMarcusSend(commandId, assignment as never, { text: requestText });
+    if (prepared.ok === false) {
+      if (prepared.outcome === 'setup') return result(prepared.reason, 'setup_required', record({}), actionType);
+      if (prepared.outcome === 'fix') {
+        return result(prepared.reason, 'completed', record({ status: 'checked', reviewVerdict: 'fix', findings: [prepared.reason], confidenceLevel: TRUST_STATES.INFERRED }), actionType);
+      }
+      return result(prepared.reason, 'failed', record({}), actionType);
+    }
+    preview = prepared.preview;
+  }
+
+  const startMs = timestampMs();
+  const sent: SendResult = await runMarcusSend(commandId, stepId, preview);
+  const reviewedBy = reviewersOf(commandId, assignment, preview.sourceStepId);
+  const steps = request?.steps || [];
+  const prefix = [
+    reviewedBy.some((id) => steps.find((s) => s.stepId === id)?.agent === 'maria') ? 'Maria reviewed it.' : '',
+    reviewedBy.some((id) => steps.find((s) => s.stepId === id)?.agent === 'sentinel') ? 'Sentinel checked it.' : '',
+  ].filter(Boolean).join(' ');
+  const schema = record({
+    connector: preview.connector,
+    target: preview.target,
+    sendKind: preview.kind,
+    status: sent.ok ? 'sent' : 'failed',
+    link: sent.link || null,
+    platformId: sent.platformId || null,
+    approvedBy: 'you',
+    approvedAtMs: startMs,
+    reviewedBy,
+    sentAtMs: sent.ok ? timestampMs() : null,
+    // Verified only when the platform said it went out.
+    confidenceLevel: sent.ok ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED,
+  });
+
+  if (sent.ok) {
+    const firstLine = redactText(preview.text).split('\n').map((l) => l.trim()).find(Boolean) || '';
+    pushMemoryItem({
+      title: `Marcus: sent to ${preview.label} — ${firstLine.slice(0, 120)}`,
+      category: 'orchestration_memory',
+      content: { connector: preview.connector, target: preview.target, kind: preview.kind, link: schema.link, text: redactText(preview.text).slice(0, 2000) },
+      source: 'marcus-execution-service',
+      sourceAgent: 'marcus',
+      confidence: schema.confidenceLevel,
+      verificationState: schema.confidenceLevel,
+    });
+  }
+  appendOrchestrationReceipt({
+    workflowId: commandId || 'marcus_distribution',
+    commandId: commandId || null,
+    packetId: assignment?.packetId || null,
+    eventType: sent.ok ? 'marcus_sent' : 'marcus_send_failed',
+    status: sent.ok ? 'executed' : 'failed',
+    agent: 'marcus',
+    connectorId: preview.connector,
+    actionType,
+    riskLevel: 'high',
+    approved: true,
+    blocked: !sent.ok,
+    setupRequired: false,
+    details: { target: preview.target, kind: preview.kind, sentence: sent.sentence, durationMs: timestampMs() - startMs },
+    confidence: schema.confidenceLevel,
+    verificationState: schema.confidenceLevel,
+  });
+
+  return result([prefix, sent.sentence].filter(Boolean).join(' '), sent.ok ? 'completed' : 'failed', schema, actionType);
 }
 
 // ── Scheduled Publishing ──────────────────────────────────────────────────────

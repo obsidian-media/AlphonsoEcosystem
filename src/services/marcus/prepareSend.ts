@@ -53,7 +53,12 @@ export async function prepareMarcusSend(commandId: string, assignment: SendAssig
   const picked = textToSend(assignment, input);
   if (!picked) return { ok: false, outcome: 'failed', reason: NOTHING_TO_SEND };
   const hint = (assignment.payload?.connector as Destination['connector'] | undefined) || hintFromTaskType(assignment.actionType);
-  const where = await pickDestination(requestText, picked.text, { given: given(assignment.payload), hint, actionType: assignment.actionType });
+  const fixed = given(assignment.payload);
+  if (fixed?.target && !fixed.connector && hint) fixed.connector = hint;
+  // A destination set by the screen that asked (Boardroom's channel, the Marcus panel's field)
+  // was chosen by you there, so it counts as named.
+  const named = fixed?.target ? `${requestText} ${fixed.target}` : requestText;
+  const where = await pickDestination(named, picked.text, { given: fixed, hint, actionType: assignment.actionType });
   if (where.ok === false) return { ok: false, outcome: where.outcome, reason: where.reason };
   const limit = CHANNEL_LIMITS[`${where.destination.connector}:${where.destination.kind}`];
   if (limit && picked.text.length > limit) {
