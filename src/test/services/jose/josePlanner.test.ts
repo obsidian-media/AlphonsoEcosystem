@@ -303,6 +303,17 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(missingAsked('/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy', withMaria as never)).toEqual([]);
   });
 
+  // The Maria desktop run (2026-10-26): the model's check needed nothing and reviewed nothing.
+  it('a review step that needs nothing reviews the one piece of work', async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'research', agent: 'hector', taskType: 'research_report', instruction: 'Find facts.', effects: ['read'], needs: [] },
+      { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: ['research'] },
+      { id: 'audit_quality', agent: 'maria', taskType: 'audit_quality', instruction: 'Check it.', effects: ['read'], needs: [] },
+    ]));
+    const plan = await planJoseRequest('/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy');
+    expect(plan.steps.find((s) => s.stepId === 'audit_quality')).toMatchObject({ needs: ['write'], reviewOf: 'write' });
+  });
+
   it('a plan with the send is used as it is', async () => {
     llm.mockResolvedValueOnce(answer([
       { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: [] },

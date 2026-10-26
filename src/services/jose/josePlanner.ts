@@ -206,8 +206,11 @@ const isReviewType = (actionType: string) => actionType.startsWith('audit_') || 
  */
 function inferReviewOf(steps: PlanStep[]): PlanStep[] {
   const byId = new Map(steps.map((s) => [s.stepId, s]));
+  // The one piece of work in the plan (Alphonso's or Miya's), for a review that names nothing (agent phase 5).
+  const work = steps.filter((s) => (s.agent === 'alphonso' || s.agent === 'miya') && !isReviewType(s.actionType));
   return steps.map((step) => {
     if (step.reviewOf || !isReviewType(step.actionType)) return step;
+    if (!step.needs.length && work.length === 1) return { ...step, needs: [work[0].stepId], reviewOf: work[0].stepId };
     const reviewed = step.needs.filter((n) => byId.has(n) && !isReviewType(byId.get(n)!.actionType));
     return reviewed.length === 1 ? { ...step, reviewOf: reviewed[0] } : step;
   });
