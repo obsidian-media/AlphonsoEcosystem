@@ -3,6 +3,8 @@
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { redactText } from '../sentinel/exactChecks';
 import { MARCUS_CONNECTORS, destinationsFor, isAllowedTarget, targetLabel } from './destinations';
+import { checkComposioAnswer, composioSendTools, describeComposioTools } from './composioChannel';
+import type { ComposioTool } from '../composioService';
 import type { Destination, MarcusConnector, SendKind } from './types';
 
 export const NO_DESTINATION = "Marcus couldn't tell where to send this: name the channel, or set a default in Settings → Connectors.";
@@ -59,8 +61,8 @@ function check(candidate: { connector?: unknown; target?: unknown; kind?: unknow
   return { picked: { ok: true, destination } };
 }
 
-function prompt(request: string, text: string, offered: MarcusConnector[], problem: string | null): string {
-  const lines = offered.map((c) => {
+function prompt(request: string, text: string, offered: MarcusConnector[], problem: string | null, composioTools: ComposioTool[] = []): string {
+  const lines = offered.filter((c) => c !== 'composio').map((c) => {
     const info = destinationsFor(c);
     return `- ${c}: makes ${info.kinds.join(' or ')}; defaults: ${info.defaults.length ? info.defaults.join(', ') : 'none'}`;
   });
@@ -68,6 +70,7 @@ function prompt(request: string, text: string, offered: MarcusConnector[], probl
     'You are Marcus. You choose where an approved piece of work is sent; you never change what is said.',
     'Pick one destination from the connectors below. The target must be named in the request or be one of the defaults. For Telegram the target is "team" (the team chat) or "me".',
     `Connectors that are set up:\n${lines.join('\n')}`,
+    composioTools.length ? `Composio tools you may use (answer with "connector": "composio", the "tool", the recipient as "target", and "arguments"; the text goes in for you):\n${describeComposioTools(composioTools)}` : '',
     `Request: ${redactText(request)}`,
     `What will be sent (start): ${redactText(String(text || '').slice(0, 500))}`,
     problem ? `Your last answer could not be used: ${problem} Choose again.` : '',
@@ -101,19 +104,27 @@ export async function pickDestination(
     const info = destinationsFor(hint);
     if (!info.setUp) return { ok: false, outcome: 'setup', reason: info.setUpSentence as string };
   }
-  const offered = (hint ? [hint] : MARCUS_CONNECTORS).filter((c) => c !== 'composio' && destinationsFor(c).setUp);
-  if (!offered.length) return { ok: false, outcome: 'failed', reason: NO_DESTINATION };
+  const offered = (hint ? [hint] : MARCUS_CONNECTORS).filter((c) => destinationsFor(c).setUp);
+  // Composio's send tools (agent phase 5), only from the toolkits you switched on.
+  const composioTools = offered.includes('composio') ? await composioSendTools().catch(() => []) : [];
+  if (!offered.filter((c) => c !== 'composio').length && !composioTools.length) return { ok: false, outcome: 'failed', reason: NO_DESTINATION };
   let problem: string | null = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let raw = '';
     try {
-      const result = await generateAgentLlmResponse('marcus', { prompt: prompt(request, text, offered, problem), format: 'json' });
+      const result = await generateAgentLlmResponse('marcus', { prompt: prompt(request, text, offered, problem, composioTools), format: 'json' });
       raw = String((result as { response?: unknown })?.response || '');
     } catch {
       return { ok: false, outcome: 'failed', reason: NO_DESTINATION };
     }
     const answer = readAnswer(raw);
     if (!answer) { problem = 'It was not JSON.'; continue; }
+    if (String(answer.connector || '').toLowerCase() === 'composio') {
+      const c = checkComposioAnswer(answer, composioTools, request, text);
+      if ('destination' in c) return { ok: true, destination: c.destination };
+      problem = c.problem;
+      continue;
+    }
     const got = check({ ...answer, kind: answer.kind || kindHint }, request, text);
     if ('picked' in got) return got.picked;
     problem = got.problem;

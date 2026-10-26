@@ -1,5 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
-import { pushMemory } from './unifiedMemoryService';
+import { evaluatePolicyGate } from './policyEnforcementService';
 import { secureGet, secureSet } from './secureStorageService';
 
 const COMPOSIO_CONFIG_KEY = 'alphonso_composio_config_v1';
@@ -61,7 +61,8 @@ export async function hydrateComposioApiKeyFromKeychain(): Promise<void> {
   }
 }
 
-const COMPOSIO_API_BASE = 'https://backend.composio.dev/api/v3';
+/** Composio's current API (agent phase 5); the old `/v1/actions` paths are gone. */
+const COMPOSIO_API_BASE = 'https://backend.composio.dev/api/v3.1';
 
 export interface ComposioConfig {
   enabled: boolean;
@@ -84,6 +85,7 @@ export interface ComposioTool {
   toolkit: string;
   parameters: Record<string, unknown>;
   enabled: boolean;
+  tags?: string[];
 }
 
 export interface ComposioActionResult {
@@ -145,12 +147,9 @@ export async function fetchComposioToolkits(): Promise<{ toolkits: ComposioToolk
   if (!config.apiKey) return { toolkits: [], error: 'No API key configured' };
 
   try {
-    const response = await fetch(`${COMPOSIO_API_BASE}/v1/apps`, {
+    const response = await fetch(`${COMPOSIO_API_BASE}/toolkits`, {
       method: 'GET',
-      headers: {
-        'X-API-Key': config.apiKey,
-        'Content-Type': 'application/json'
-      }
+      headers: { 'x-api-key': config.apiKey, 'Content-Type': 'application/json' }
     });
 
     if (!response.ok) {
@@ -159,14 +158,20 @@ export async function fetchComposioToolkits(): Promise<{ toolkits: ComposioToolk
 
     const data = await response.json();
     const toolkits: ComposioToolkit[] = Array.isArray(data?.items)
-      ? data.items.map((item: Record<string, unknown>) => ({
-          key: (item.key as string) || (item.name as string)?.toLowerCase(),
-          name: item.name as string,
-          description: (item.description as string) || '',
-          logo: (item.logo as string) || '',
-          categories: (item.categories as string[]) || [],
-          enabled: item.enabled !== false
-        }))
+      ? data.items.map((item: Record<string, unknown>) => {
+          const meta = (item.meta as Record<string, unknown>) || {};
+          const categories = Array.isArray(meta.categories)
+            ? (meta.categories as Array<{ name?: string } | string>).map((c) => (typeof c === 'string' ? c : String(c?.name || ''))).filter(Boolean)
+            : (item.categories as string[]) || [];
+          return {
+            key: String(item.slug || item.key || (item.name as string)?.toLowerCase() || ''),
+            name: item.name as string,
+            description: String(meta.description || item.description || ''),
+            logo: String(meta.logo || item.logo || ''),
+            categories,
+            enabled: item.enabled !== false
+          };
+        })
       : [];
 
     localStorage.setItem(COMPOSIO_TOOLS_CACHE_KEY, JSON.stringify({
@@ -192,175 +197,97 @@ export function getCachedToolkits(): ComposioToolkit[] | null {
   }
 }
 
-// ── Tool Execution ──────────────────────────────────────────────────────────
+// ── Toolkits you switched on (Settings → Composio) ─────────────────────────
 
-export async function executeComposioAction({ toolkit, actionName, params }: { toolkit: string; actionName: string; params?: Record<string, unknown> }): Promise<ComposioActionResult> {
-  const config = getComposioConfig();
-  if (!config.apiKey) return { error: 'No API key configured', success: false, data: null };
+const COMPOSIO_ENABLED_TOOLKITS_KEY = 'alphonso_composio_toolkits_enabled_v1';
 
+export function enabledComposioToolkits(): string[] {
   try {
-    const response = await fetch(`${COMPOSIO_API_BASE}/v1/actions/${actionName}/execute`, {
-      method: 'POST',
-      headers: {
-        'X-API-Key': config.apiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        entity_id: config.userId,
-        app_name: toolkit,
-        input: params || {}
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error((errorData?.message as string) || `Composio action returned HTTP ${response.status}`);
-    }
-
-    const result = await response.json();
-    return { success: true, data: result, error: null };
-  } catch (error) {
-    return { success: false, data: null, error: String((error as Error)?.message || error) };
+    const list = JSON.parse(localStorage.getItem(COMPOSIO_ENABLED_TOOLKITS_KEY) || '[]');
+    return Array.isArray(list) ? list.map((t) => String(t).toLowerCase()) : [];
+  } catch {
+    return [];
   }
 }
 
-// ── Agent Integration ───────────────────────────────────────────────────────
+// ── Tools (agent phase 5: Composio's v3.1 API) ──────────────────────────────
 
-export async function getComposioToolsForAgent(agentName: string, toolkitFilter: string[] = []): Promise<{ tools: ComposioTool[]; error: string | null }> {
+/** A toolkit's tools: `GET /tools?toolkit_slug=`. */
+export async function listToolkitTools(toolkit: string): Promise<{ tools: ComposioTool[]; error: string | null }> {
   const config = getComposioConfig();
   if (!config.apiKey) return { tools: [], error: 'No API key configured' };
-
   try {
-    const toolkitsParam = toolkitFilter.length > 0 ? `&toolkits=${toolkitFilter.join(',')}` : '';
-    const response = await fetch(`${COMPOSIO_API_BASE}/v1/actions?entity_id=${config.userId}${toolkitsParam}`, {
+    const response = await fetch(`${COMPOSIO_API_BASE}/tools?toolkit_slug=${encodeURIComponent(toolkit)}&limit=100`, {
       method: 'GET',
-      headers: {
-        'X-API-Key': config.apiKey,
-        'Content-Type': 'application/json'
-      }
+      headers: { 'x-api-key': config.apiKey, 'Content-Type': 'application/json' }
     });
-
-    if (!response.ok) {
-      throw new Error(`Composio API returned HTTP ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`Composio API returned HTTP ${response.status}`);
     const data = await response.json();
     const tools: ComposioTool[] = Array.isArray(data?.items)
       ? data.items.map((item: Record<string, unknown>) => ({
-          name: item.name as string,
-          description: (item.description as string) || '',
-          toolkit: (item.app_name as string) || (item.toolkit as string) || '',
-          parameters: (item.parameters as Record<string, unknown>) || {},
-          enabled: item.enabled !== false
+          name: String(item.slug || item.name || ''),
+          description: String(item.description || item.human_description || ''),
+          toolkit: String((item.toolkit as { slug?: string })?.slug || toolkit).toLowerCase(),
+          parameters: (item.input_parameters as Record<string, unknown>) || {},
+          enabled: item.is_deprecated !== true,
+          tags: Array.isArray(item.tags) ? (item.tags as unknown[]).map(String) : [],
         }))
       : [];
-
     return { tools, error: null };
   } catch (error) {
     return { tools: [], error: String((error as Error)?.message || error) };
   }
 }
 
-// ── Execution via Agent Brain ───────────────────────────────────────────────
+const READ_VERBS = new Set(['GET', 'LIST', 'FETCH', 'SEARCH', 'FIND', 'READ']);
 
-export async function executeViaComposio(commandText: string, agentName: string, options: { toolkits?: string[]; endpoint?: string } = {}): Promise<ComposioActionResult & { fallback?: boolean; note?: string; tool?: string; toolkit?: string; reasoning?: string }> {
-  if (!isComposioEnabled()) {
-    return {
-      success: false,
-      error: 'Composio not enabled',
-      fallback: true,
-      note: 'Configure API key in Settings to enable external tool access',
-      data: null
-    };
-  }
+/**
+ * True only when Composio's tags say the tool only reads, or (without such a tag) its action
+ * word is a read verb. Anything else counts as sending or changing something; an unknown tool too.
+ */
+export function isReadOnlyTool(tool: { name: string; toolkit?: string; tags?: string[] }): boolean {
+  const tags = (tool.tags || []).map((t) => String(t).toLowerCase());
+  if (tags.includes('destructivehint')) return false;
+  if (tags.includes('readonlyhint')) return true;
+  const words = String(tool.name || '').toUpperCase().split('_').filter(Boolean);
+  const prefix = String(tool.toolkit || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  // The action word follows the toolkit's own prefix (GMAIL_FETCH_EMAILS, GOOGLECALENDAR_LIST_EVENTS).
+  const action = prefix && words[0] === prefix ? words[1] : words.length > 1 ? words[1] : undefined;
+  return Boolean(action && READ_VERBS.has(action));
+}
 
+/**
+ * Runs one Composio tool: `POST /tools/execute/{tool}` with its arguments. Only toolkits you
+ * switched on. Every call goes through the policy gate; a send runs only from Marcus's
+ * approved step (`approved: true`).
+ */
+export async function executeComposioTool(
+  tool: string,
+  args: Record<string, unknown>,
+  opts: { toolkit?: string; approved?: boolean } = {},
+): Promise<ComposioActionResult> {
   const config = getComposioConfig();
-  const toolkits = options.toolkits || [];
-
-  const { tools, error: toolsError } = await getComposioToolsForAgent(agentName, toolkits);
-  if (toolsError) {
-    return { success: false, error: toolsError, data: null };
+  if (!config.apiKey) return { error: 'No API key configured', success: false, data: null };
+  const toolkit = String(opts.toolkit || String(tool).split('_')[0] || '').toLowerCase();
+  if (!enabledComposioToolkits().includes(toolkit)) {
+    return { success: false, data: null, error: `The ${toolkit} toolkit is not switched on in Settings → Composio.` };
   }
-
-  if (tools.length === 0) {
-    return { success: false, error: 'No tools available for this agent', data: null };
-  }
-
-  const toolDescriptions = tools
-    .slice(0, 20)
-    .map((t) => `- ${t.name}: ${t.description}`)
-    .join('\n');
-
-  const { generateOllamaResponse } = await import('../lib/ollama');
-  const { parseJsonResponse } = await import('../lib/jsonUtils');
-  const { getModelForTask } = await import('./modelSelectionService');
-
-  const prompt = [
-    'You are Alphonso. The user wants to execute a command using external tools.',
-    'Choose the best tool from the available list.',
-    '',
-    'COMMAND: ' + commandText,
-    '',
-    'AVAILABLE TOOLS:',
-    toolDescriptions,
-    '',
-    'Return ONLY a JSON object with:',
-    '{ "tool": "tool_name", "toolkit": "toolkit_name", "params": {}, "reasoning": "why this tool" }',
-    '',
-    'If no tool is appropriate, return: { "tool": null, "reasoning": "why no tool fits" }',
-    '',
-    'Return ONLY the JSON object.'
-  ].join('\n');
-
+  const gate = evaluatePolicyGate({ connectorId: 'composio', actionType: String(tool).toLowerCase(), commandPreview: JSON.stringify({ tool, args }).slice(0, 500), approved: Boolean(opts.approved) });
+  if (!gate.ok) return { success: false, data: null, error: gate.reason || 'The policy gate blocked it.' };
   try {
-    const response = await generateOllamaResponse({
-      endpoint: options.endpoint,
-      prompt,
-      model: getModelForTask('reason')
+    const response = await fetch(`${COMPOSIO_API_BASE}/tools/execute/${encodeURIComponent(tool)}`, {
+      method: 'POST',
+      headers: { 'x-api-key': config.apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ arguments: args || {}, user_id: config.userId })
     });
-
-    const parsed = parseJsonResponse(response?.response);
-    if (!parsed || !parsed.tool) {
-      return {
-        success: false,
-        error: 'No suitable tool found',
-        reasoning: parsed?.reasoning || 'LLM did not select a tool',
-        data: null
-      };
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { success: false, data: null, error: String(body?.message || body?.error || `Composio returned HTTP ${response.status}`) };
     }
-
-    const result = await executeComposioAction({
-      toolkit: parsed.toolkit,
-      actionName: parsed.tool,
-      params: parsed.params || {}
-    });
-
-    pushMemory({
-      namespace: 'shared',
-      title: `Composio action: ${parsed.tool}`,
-      category: 'orchestration_memory',
-      content: {
-        command: commandText.slice(0, 200),
-        tool: parsed.tool,
-        toolkit: parsed.toolkit,
-        success: result.success,
-        error: result.error
-      },
-      source: 'composio-connector',
-      sourceAgent: agentName,
-      confidence: result.success ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED
-    } as Parameters<typeof pushMemory>[0]);
-
-    return {
-      success: result.success,
-      data: result.data,
-      tool: parsed.tool,
-      toolkit: parsed.toolkit,
-      reasoning: parsed.reasoning,
-      error: result.error
-    };
+    if (body?.successful === false) return { success: false, data: body?.data ?? null, error: String(body?.error || 'Composio refused it.') };
+    return { success: true, data: body?.data ?? body, error: null };
   } catch (error) {
-    return { success: false, error: String((error as Error)?.message || error), data: null };
+    return { success: false, data: null, error: String((error as Error)?.message || error) };
   }
 }
 
@@ -373,9 +300,10 @@ export async function checkComposioHealth(): Promise<ComposioHealthResult> {
   }
 
   try {
-    const response = await fetch(`${COMPOSIO_API_BASE}/health`, {
+    // A real authenticated call (v3.1 has no /health).
+    const response = await fetch(`${COMPOSIO_API_BASE}/toolkits?limit=1`, {
       method: 'GET',
-      headers: { 'X-API-Key': config.apiKey }
+      headers: { 'x-api-key': config.apiKey }
     });
 
     if (response.ok) {

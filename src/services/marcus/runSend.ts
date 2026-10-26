@@ -99,6 +99,14 @@ async function send(preview: SendPreview, commandId: string): Promise<SendResult
       const r = await n8n.triggerN8nWebhook(workflow.path, { text, title: preview.title || '', source: 'alphonso' });
       return r?.ok ? { ok: true, sentence: `Started your ${label}.`, link: null, platformId: null } : notSent(label, String(r?.error || 'n8n refused it'));
     }
+    case 'composio': {
+      if (!preview.composio) return notSent(label, COMPOSIO_NOT_READY);
+      const { executeComposioTool } = await import('../composioService');
+      const { toolkit, tool, args } = preview.composio;
+      const r = await executeComposioTool(tool, args, { toolkit, approved: true });
+      const words = tool.toLowerCase().split('_').filter((w, i) => !(i === 0 && w === toolkit.toLowerCase())).join(' ');
+      return r.success ? { ok: true, sentence: `Done on ${label}: ${words}${target ? ` to ${target}` : ''}.`, link: null, platformId: null } : notSent(label, String(r.error || 'Composio refused it'));
+    }
     default:
       return notSent(label, COMPOSIO_NOT_READY);
   }

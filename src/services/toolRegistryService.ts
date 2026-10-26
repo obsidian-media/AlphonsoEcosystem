@@ -166,19 +166,6 @@ const TOOLS: Record<string, ToolDefinition> = {
     }
   },
 
-  use_composio_tool: {
-    name: 'use_composio_tool',
-    description: 'Use an external tool via Composio (GitHub, Slack, Notion, Jira, etc.)',
-    parameters: {
-      type: 'object',
-      properties: {
-        toolkit: { type: 'string', description: 'Toolkit name (github, slack, notion, etc.)' },
-        action: { type: 'string', description: 'Action to perform' },
-        params: { type: 'object', description: 'Action parameters' }
-      },
-      required: ['toolkit', 'action']
-    }
-  },
 
   save_memory: {
     name: 'save_memory',
@@ -337,14 +324,6 @@ export async function executeTool(name: string, args: ToolArgs, context: ToolCon
     case 'write_clipboard': {
       const { writeClipboard } = await import('./browserAutomationService');
       return writeClipboard(args.content as string) as unknown as ToolExecutionResult;
-    }
-
-    case 'use_composio_tool': {
-      const { executeViaComposio } = await import('./composioService');
-      return executeViaComposio(`${args.action} with ${JSON.stringify(args.params || {})}`, 'alphonso', {
-        toolkits: [args.toolkit as string],
-        endpoint: context.endpoint
-      }) as unknown as ToolExecutionResult;
     }
 
     case 'save_memory': {

@@ -5,11 +5,13 @@ import {
   isComposioEnabled,
   fetchComposioToolkits,
   getCachedToolkits,
-  executeComposioAction,
+  executeComposioTool,
   getComposioStatus,
   checkComposioHealth,
   hydrateComposioApiKeyFromKeychain,
-  __resetComposioApiKeyCacheForTests
+  __resetComposioApiKeyCacheForTests,
+  listToolkitTools,
+  isReadOnlyTool
 } from '../services/composioService';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -260,49 +262,81 @@ describe('fetchComposioToolkits', () => {
   });
 });
 
-// ── executeComposioAction ─────────────────────────────────────────────────────
+// ── executeComposioTool (agent phase 5: Composio's v3.1 API) ─────────────────
 
-describe('executeComposioAction', () => {
+describe('executeComposioTool', () => {
+  const configured = () => {
+    localStorageStore['alphonso_composio_config_v1'] = JSON.stringify({ enabled: true, apiKey: 'valid-key-12345', userId: 'user-1' });
+    localStorageStore['alphonso_composio_toolkits_enabled_v1'] = JSON.stringify(['github', 'gmail']);
+  };
+
   it('returns error when no API key configured', async () => {
-    const result = await executeComposioAction({ toolkit: 'github', actionName: 'CREATE_ISSUE', params: {} });
+    const result = await executeComposioTool('GITHUB_CREATE_ISSUE', {}, { toolkit: 'github' });
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/No API key/i);
   });
 
-  it('returns success and data on successful action', async () => {
-    localStorageStore['alphonso_composio_config_v1'] = JSON.stringify({
-      enabled: true, apiKey: 'valid-key-12345', userId: 'user'
-    });
+  it('v3.1 address and fields', async () => {
+    configured();
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ data: { issue_number: 42 }, error: null, successful: true }) });
+    const result = await executeComposioTool('GITHUB_CREATE_ISSUE', { title: 'Bug fix' }, { toolkit: 'github', approved: true });
+    expect(mockFetch).toHaveBeenCalledWith('https://backend.composio.dev/api/v3.1/tools/execute/GITHUB_CREATE_ISSUE', expect.objectContaining({ method: 'POST' }));
+    const init = mockFetch.mock.calls[0][1];
+    expect(init.headers['x-api-key']).toBe('valid-key-12345');
+    expect(JSON.parse(init.body)).toEqual({ arguments: { title: 'Bug fix' }, user_id: 'user-1' });
+    expect(result).toEqual({ success: true, data: { issue_number: 42 }, error: null });
+  });
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ issue_number: 42, url: 'https://github.com/...' })
-    });
+  it("Composio's own refusal is the error", async () => {
+    configured();
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ data: {}, error: 'No connected account for gmail', successful: false }) });
+    const result = await executeComposioTool('GMAIL_SEND_EMAIL', {}, { toolkit: 'gmail', approved: true });
+    expect(result).toEqual({ success: false, data: {}, error: 'No connected account for gmail' });
+  });
 
-    const result = await executeComposioAction({
-      toolkit: 'github',
-      actionName: 'GITHUB_CREATE_ISSUE',
-      params: { title: 'Bug fix', body: 'Description' }
-    });
-    expect(result.success).toBe(true);
-    expect(result.data).toHaveProperty('issue_number', 42);
-    expect(result.error).toBeNull();
+  it('a toolkit not switched on is refused', async () => {
+    configured();
+    const result = await executeComposioTool('SLACK_SEND_MESSAGE', {}, { toolkit: 'slack', approved: true });
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('The slack toolkit is not switched on in Settings → Composio.');
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('returns error on non-ok HTTP response', async () => {
-    localStorageStore['alphonso_composio_config_v1'] = JSON.stringify({
-      enabled: true, apiKey: 'valid-key-12345', userId: 'user'
-    });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: async () => ({ message: 'Forbidden' })
-    });
-
-    const result = await executeComposioAction({ toolkit: 'github', actionName: 'CREATE_ISSUE', params: {} });
+    configured();
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({ message: 'Forbidden' }) });
+    const result = await executeComposioTool('GITHUB_CREATE_ISSUE', {}, { toolkit: 'github', approved: true });
     expect(result.success).toBe(false);
-    expect(result.error).toBeTruthy();
+    expect(result.error).toBe('Forbidden');
+  });
+});
+
+describe('listToolkitTools and isReadOnlyTool', () => {
+  it('lists a toolkit\'s tools from v3.1', async () => {
+    localStorageStore['alphonso_composio_config_v1'] = JSON.stringify({ enabled: true, apiKey: 'valid-key-12345', userId: 'user-1' });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ items: [
+      { slug: 'GMAIL_SEND_EMAIL', name: 'Send email', description: 'Send an email', toolkit: { slug: 'gmail' }, input_parameters: { properties: { recipient_email: {}, body: {} } }, tags: [] },
+    ] }) });
+    const { tools, error } = await listToolkitTools('gmail');
+    expect(error).toBeNull();
+    expect(mockFetch.mock.calls[0][0]).toBe('https://backend.composio.dev/api/v3.1/tools?toolkit_slug=gmail&limit=100');
+    expect(tools[0]).toMatchObject({ name: 'GMAIL_SEND_EMAIL', toolkit: 'gmail', description: 'Send an email', parameters: { properties: { recipient_email: {}, body: {} } } });
+  });
+
+  it('read or send', () => {
+    expect(isReadOnlyTool({ name: 'GMAIL_FETCH_EMAILS', toolkit: 'gmail' })).toBe(true);
+    expect(isReadOnlyTool({ name: 'GOOGLECALENDAR_LIST_EVENTS', toolkit: 'googlecalendar' })).toBe(true);
+    expect(isReadOnlyTool({ name: 'GMAIL_SEND_EMAIL', toolkit: 'gmail' })).toBe(false);
+    expect(isReadOnlyTool({ name: 'SOMETHING', toolkit: '' })).toBe(false);
+    expect(isReadOnlyTool({ name: 'GMAIL_SEND_EMAIL', toolkit: 'gmail', tags: ['readOnlyHint'] })).toBe(true);
+    expect(isReadOnlyTool({ name: 'GMAIL_GET_AND_DELETE', toolkit: 'gmail', tags: ['destructiveHint'] })).toBe(false);
+  });
+
+  it('Alphonso no longer reaches Composio', async () => {
+    const { readFileSync } = await import('node:fs');
+    expect(readFileSync('src/services/agentBrainService.js', 'utf8')).not.toContain('executeViaComposio');
+    expect(readFileSync('src/services/toolRegistryService.ts', 'utf8')).not.toContain('use_composio_tool');
+    expect(readFileSync('src/services/composioService.ts', 'utf8')).not.toContain('executeViaComposio');
   });
 });
 

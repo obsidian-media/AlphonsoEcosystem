@@ -128,6 +128,16 @@ async function run(name: string, args: Record<string, unknown>, ctx: ToolContext
       if (!sources.length) return { ok: false, text: result.errors.length ? `No results: ${result.errors.join('; ')}` : 'No results.' };
       return { ok: true, text: sources.slice(0, 8).map((s: any) => `- ${s.title || s.url} (${s.url})${s.snippet ? `: ${s.snippet}` : ''}`).join('\n') };
     }
+    case 'composio_read': {
+      const toolName = str(args.tool);
+      const toolkit = str(args.toolkit).toLowerCase();
+      const { isReadOnlyTool, executeComposioTool } = await import('../composioService');
+      if (!isReadOnlyTool({ name: toolName, toolkit })) return { ok: false, text: `composio_read only reads; ${toolName} sends or changes something, so it is Marcus's step.` };
+      const result = await executeComposioTool(toolName, args.args && typeof args.args === 'object' ? args.args as Record<string, unknown> : {}, { toolkit, approved: false });
+      if (!result.success) return { ok: false, text: `Composio: ${result.error}` };
+      const { fenced } = await import('../sentinel/fence');
+      return { ok: true, text: fenced(`Composio ${toolName}`, JSON.stringify(result.data ?? {}, null, 1)) };
+    }
     case 'fetch_source': {
       const url = str(args.url);
       if (!/^https:\/\//i.test(url)) return { ok: false, text: 'fetch_source needs an https address.' };

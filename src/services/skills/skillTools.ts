@@ -32,6 +32,8 @@ export const SKILL_TOOLS: Record<string, SkillTool> = {
   publish_post: { effects: ['publish_or_send'], agents: ['marcus'], label: 'Publish a post' },
   place_call: { effects: ['publish_or_send', 'spend'], agents: ['marcus'], label: 'Place a call' },
   organise_memory: { effects: ['read'], agents: ['echo'], label: 'Look over memory for duplicates' },
+  // Read-only Composio actions (agent phase 5); anything that sends is Marcus's step.
+  composio_read: { effects: ['read'], agents: ['hector', 'echo', 'alphonso'], label: 'Read from a Composio app' },
 };
 
 /** Tools that make or send something: they run as the step's own action, after its approval. */
