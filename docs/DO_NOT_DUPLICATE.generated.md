@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 313 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 324 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -80,6 +80,7 @@ Source-backed inventory: 313 services and 183 components. Human purpose descript
 | component | `src/components/jose/JosePlanCard.tsx` | `JosePlanCard`, `JosePlanCardProps` |
 | component | `src/components/jose/JosePlanEditor.tsx` | `JosePlanEditor` |
 | component | `src/components/jose/JosePlanMap.tsx` | `JosePlanMap`, `JosePlanMapProps` |
+| component | `src/components/jose/JoseRequestOutcome.tsx` | `JoseRequestOutcome` |
 | component | `src/components/jose/JoseRequestsBoard.tsx` | `JoseRequestsBoard`, `requestPlanLabel`, `runResultText`, `STATUS_LABELS` |
 | component | `src/components/jose/JoseStepOutput.tsx` | `JoseStepOutput` |
 | component | `src/components/JoseCompanionWidget.tsx` | `JoseCompanionWidget` |
@@ -247,7 +248,7 @@ Source-backed inventory: 313 services and 183 components. Human purpose descript
 | service | `src/services/commandApprovalService.ts` | `assessCommandRisk`, `CommandApprovalHandler`, `CommandApprovalOutcome`, `CommandApprovalRequest`, `CommandRiskAssessment`, `CommandRiskLevel`, `deletesThings`, `isWorkspaceCodeExecuting`, `PlannedCommand`, `requestWorkspaceCommandApproval`, `setCommandApprovalHandler` |
 | service | `src/services/companionCommandService.ts` | `CompanionCommand`, `CompanionDeps`, `handleCompanionCommand` |
 | service | `src/services/companionGreetingsService.ts` | `COMPANION_CONTENT`, `CompanionAgentContent`, `getCompanionContent` |
-| service | `src/services/composioService.ts` | `__resetComposioApiKeyCacheForTests`, `checkComposioHealth`, `ComposioActionResult`, `ComposioConfig`, `ComposioHealthResult`, `ComposioStatusResult`, `ComposioTool`, `ComposioToolkit`, `executeComposioAction`, `executeViaComposio`, `fetchComposioToolkits`, `getCachedToolkits`, `getComposioConfig`, `getComposioStatus`, `getComposioToolsForAgent`, `hydrateComposioApiKeyFromKeychain`, `isComposioEnabled`, `setComposioConfig` |
+| service | `src/services/composioService.ts` | `__resetComposioApiKeyCacheForTests`, `checkComposioHealth`, `ComposioActionResult`, `ComposioConfig`, `ComposioHealthResult`, `ComposioStatusResult`, `ComposioTool`, `ComposioToolkit`, `enabledComposioToolkits`, `executeComposioTool`, `fetchComposioToolkits`, `getCachedToolkits`, `getComposioConfig`, `getComposioStatus`, `hydrateComposioApiKeyFromKeychain`, `isComposioEnabled`, `isReadOnlyTool`, `listToolkitTools`, `setComposioConfig` |
 | service | `src/services/connectorAuditLogService.ts` | `appendConnectorAuditEntry`, `ConnectorAuditEntry`, `getConnectorAuditLog`, `getLastEntryForConnector` |
 | service | `src/services/connectorCircuitBreakerService.ts` | `configure`, `getAll`, `getCircuitState`, `isOpen`, `recordFailure`, `recordSuccess`, `resetAllConfigs`, `resetCircuit` |
 | service | `src/services/connectorHealthCheckService.ts` | `checkConnectorHealth`, `checkDiscordConnection`, `checkGeminiConnection`, `checkGenericWebhookConnection`, `checkGitHubConnection`, `checkHermesAgentsConnection`, `checkMobileBridgeConnection`, `checkN8nConnection`, `checkNvidiaConnection`, `checkSlackConnection`, `checkTelegramConnection`, `checkWhatsAppConnection` |
@@ -360,7 +361,7 @@ Source-backed inventory: 313 services and 183 components. Human purpose descript
 | service | `src/services/jose/josePlanApproval.ts` | `getPlanFirstSetting`, `needsPlanApproval`, `PlanFirstSetting` |
 | service | `src/services/jose/josePlanEdits.ts` | `addStep`, `changeStepAgent`, `removeStep`, `rewireNeeds`, `setStepInstruction`, `setStepNeeds` |
 | service | `src/services/jose/josePlanLayout.ts` | `DEFAULT_BOX`, `layoutPlan`, `PlanLayout` |
-| service | `src/services/jose/josePlanner.ts` | `describePlanSource`, `JosePlan`, `planJoseRequest` |
+| service | `src/services/jose/josePlanner.ts` | `copiedPlaceholders`, `describePlanSource`, `JosePlan`, `missingAsked`, `PLAN_EXAMPLE`, `planJoseRequest` |
 | service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `replacePlanSteps`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `updateJoseStep` |
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
 | service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `estimateEffectsUsd`, `estimateElevenLabsUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd` |
@@ -370,17 +371,28 @@ Source-backed inventory: 313 services and 183 components. Human purpose descript
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `asksToMake`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `MAKING_WORDS`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
 | service | `src/services/jose/joseUserTemplates.ts` | `deleteUserTemplate`, `listUserTemplates`, `saveUserTemplate` |
 | service | `src/services/jose/movedTaskTypes.ts` | `dropRetiredSteps`, `MOVED_TASK_TYPES`, `moveToOwner`, `RETIRED_TASK_TYPES`, `toCurrentOwners` |
+| service | `src/services/jose/quotedContent.ts` | `CONTENT_AFTER`, `NOT_A_SEND`, `QUOTED`, `quotedPieces`, `withoutQuotedContent` |
 | service | `src/services/jose/reviewStep.ts` | `ReviewStepResult`, `runReviewStep` |
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
 | service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/jose/taskTypeMeanings.ts` | `CODE_TASK_PREFIXES`, `isCodeRequest`, `isCodeTask`, `planningMenu`, `TASK_TYPE_MEANINGS`, `taskTypesFor` |
-| service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals` |
+| service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `asksPlanReview`, `asksReadiness`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `ParsedSend`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals`, `WRITE_FOR_SEND` |
 | service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `assistantPrompt`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `miyaResearchSnippet`, `parseJsonResponse`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
 | service | `src/services/licenseService.ts` | `__setTrustedPublicKeyForTests`, `activateLicense`, `canUseConnector`, `clearLicenseDenialLog`, `deactivateLicense`, `getLicenseDenialLog`, `getLicenseInfo`, `initLicense`, `isPremiumConnector`, `isPremiumGatingEnabled`, `LicenseDenialEntry`, `LicenseInfo`, `LicenseTier` |
 | service | `src/services/localMarketplaceService.ts` | `DEFAULT_CATALOGUE_URL`, `fetchRemoteCatalogue`, `getRemoteCatalogueUrl`, `listMarketplaceItems`, `setMarketplaceItemStatus`, `setRemoteCatalogueUrl` |
-| service | `src/services/marcusExecutionService.ts` | `buildMarcusExecutionRecord`, `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `executeMarcusGitHubAction`, `executeMarcusN8nAction`, `executeMarcusSlackAction`, `getScheduledPublishes`, `mariaReviewFor`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `selectDistributionTarget`, `startPostScheduler`, `startScheduler`, `stopScheduler`, `textToSend` |
+| service | `src/services/marcus/askMarcus.ts` | `AskMarcus`, `askMarcusToSend`, `MARCUS_LABEL`, `NOTHING_TO_PUBLISH` |
+| service | `src/services/marcus/composioChannel.ts` | `checkComposioAnswer`, `composioSendTools`, `describeComposioTools` |
+| service | `src/services/marcus/describeSend.ts` | `describeSend` |
+| service | `src/services/marcus/destinations.ts` | `CHANNEL_LIMITS`, `CONNECTOR_NAMES`, `DESTINATION_KEYS`, `destinationsFor`, `isAllowedTarget`, `listedN8nWorkflows`, `MARCUS_CONNECTORS`, `requestWithoutQuotes`, `targetLabel`, `telegramOwnerChatId` |
+| service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `NEEDS_VERSION`, `NO_DESTINATION`, `pickDestination` |
+| service | `src/services/marcus/prepareSend.ts` | `describeSend`, `isMarcusSendStep`, `prepareMarcusSend`, `tooLongReason` |
+| service | `src/services/marcus/readiness.ts` | `checkReadiness` |
+| service | `src/services/marcus/runSend.ts` | `ALREADY_SENT`, `COMPOSIO_NOT_READY`, `runMarcusSend`, `WHATSAPP_24H` |
+| service | `src/services/marcus/sendText.ts` | `NOTHING_TO_SEND`, `sourceStep`, `textToSend` |
+| service | `src/services/marcus/types.ts` | `Destination`, `MarcusConnector`, `PrepareResult`, `SendKind`, `SendPreview`, `SendResult` |
+| service | `src/services/marcusExecutionService.ts` | `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `getScheduledPublishes`, `MarcusRecord`, `mariaReviewFor`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
 | service | `src/services/marcusPublishService.ts` | `buildMarcusPublishPacket`, `executeMarcusPublish`, `MARCUS_PUBLISH_PLATFORMS` |
 | service | `src/services/maria/mariaHolds.ts` | `holdStepsAfter`, `mariaHoldFor` |
 | service | `src/services/maria/mariaPlanReview.ts` | `contradiction`, `LOW_WITH_APPROVAL`, `parsePlanReview`, `PlanReview`, `planReviewPrompt`, `planReviewText`, `Risk`, `runMariaPlanReview` |

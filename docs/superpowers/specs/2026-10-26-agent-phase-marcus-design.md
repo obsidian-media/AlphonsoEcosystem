@@ -1,6 +1,6 @@
 # Agent phase 5: Marcus sends what was written, where you said
 
-> **Status (2026-10-26):** design, written with the owner after the Marcus inspection of 2026-10-26 (code reading, a check of his send path against the real code, and four live requests in the real app). Not built yet. Builds on agent phase 3 (Maria: her holds and `mariaReviewFor()`) and agent phase 4 (Sentinel: `addSecurityChecks()` puts a `sentinel-send-<step>` check before every Marcus send).
+> **Status (2026-10-26):** built on `feat/agent-phase-marcus` (plan `docs/superpowers/plans/2026-10-26-agent-phase-marcus.md`). Design written with the owner after the Marcus inspection of 2026-10-26 (code reading, a check of his send path against the real code, and four live requests in the real app). Builds on agent phase 3 (Maria: her holds and `mariaReviewFor()`) and agent phase 4 (Sentinel: `addSecurityChecks()` puts a `sentinel-send-<step>` check before every Marcus send).
 
 ## Why
 

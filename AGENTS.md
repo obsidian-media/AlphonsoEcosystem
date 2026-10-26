@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 19 (Vite 8, Tailwind 4) + Ollama (local LLM)
-- **Version**: 2.10.0 (on `main`, not tagged yet; latest release 2.9.0. 544 test files, 6,719 tests, 290 services)
+- **Version**: 2.10.0 (on `main`, not tagged yet; latest release 2.9.0. 544 test files, 6,876 tests, 290 services)
 - **Now**: the Jose redesign (phases 1–6b: plans as step graphs, approval by effect, the Requests board) and Miya's content factory (phases 1–4c: from an idea to finished, posted videos, Shorts and carousels, with results, paid engines, brand characters and motion) are on `main`. Jose phase 7 is next.
 
 ## Directory Structure
@@ -26,13 +26,13 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and older services)
   agents/              9 agent profiles and schemas (what each may do is src/services/jose/agentPermissionTable.ts)
   components/          175 UI components (incl. miya/, jose/, calendar/ for the content factory, Jose's board and the Calendar)
-  services/            313 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
+  services/            324 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
     jose/              Jose's planner, step graphs, effects, requests, Telegram, paid models
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                560 test files, 6,719 tests (Vitest; see ground truth for current verification status)
+  test/                573 test files, 6,876 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -88,7 +88,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,719 tests (560 files; also runs bridge/)
+npm run test             # 6,876 tests (573 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
