@@ -31,6 +31,16 @@ describe('collectJoseNotifications', () => {
     ]]);
   });
 
+  // Agent phase 5: a prepared Marcus send shows exactly what goes where.
+  it('a waiting send shows its preview', () => {
+    const [n] = collectJoseNotifications([request({
+      status: 'waiting_approval',
+      steps: [{ stepId: 'marcus', agent: 'marcus', actionType: 'distribution_execution', effects: ['publish_or_send'], needs: [], instruction: 'Send it.', status: 'waiting_approval', startedAtMs: 5,
+        sendPreview: { connector: 'slack', target: '#news', kind: 'message', label: 'Slack #news', text: 'Open Saturday.', sourceStepId: 'write', preparedAtMs: 1 } }],
+    })], new Set(), ALL_ON);
+    expect(n.text).toBe('Marcus wants to: Send to Slack #news: “Open Saturday.”\nFor: Post the launch video');
+  });
+
   it('a step waiting for you says why (phase 6b)', () => {
     const [n] = collectJoseNotifications([request({
       status: 'waiting_approval',

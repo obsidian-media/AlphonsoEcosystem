@@ -17,6 +17,14 @@ describe('addSecurityChecks', () => {
     expect(added).toEqual(['sentinel-send-marcus']);
   });
 
+  // Agent phase 5: a Marcus send names the step it sends from, so a too-long text goes back to it.
+  it('a Marcus send step reviews the step he sends from', () => {
+    const { steps } = addSecurityChecks([s('write', 'alphonso', 'assistant_write', ['write_own_work']), s('marcus', 'marcus', 'distribution_execution', ['publish_or_send'], ['write'])], 'Write it and post it to Slack #news');
+    expect(byId(steps, 'marcus').reviewOf).toBe('write');
+    const call = addSecurityChecks([s('marcus', 'marcus', 'outreach_call', ['publish_or_send', 'spend'], [])], 'Call them').steps;
+    expect(byId(call, 'marcus').reviewOf).toBeUndefined();
+  });
+
   it('a send with text handed to Marcus directly: the check carries that text', () => {
     const { steps } = addSecurityChecks([s('marcus', 'marcus', 'distribution_slack', ['publish_or_send'], [], { payload: { channel: '#a', text: 'Hello team' } } as never)], 'Distribute');
     expect(byId(steps, 'sentinel-send-marcus')).toMatchObject({ needs: [], payload: { sending: true, text: 'Hello team' } });

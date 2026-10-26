@@ -143,6 +143,8 @@ export function planReviewRound(
       round,
       ...(r.review.model ? { model: r.review.model } : {}),
       ...(r.review.contentStep ? { contentStep: r.review.contentStep } : {}),
+      // A re-check keeps what the step was given, e.g. where Marcus sends (agent phase 5).
+      ...((r.review as PlanStep & { payload?: unknown }).payload ? { payload: (r.review as PlanStep & { payload?: unknown }).payload } : {}),
     }));
     changes.push({
       add: [revision, ...reReviews],
