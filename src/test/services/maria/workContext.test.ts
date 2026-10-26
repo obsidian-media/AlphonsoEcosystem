@@ -16,6 +16,8 @@ const SOURCES = [{ n: 1, title: 'Bees', url: 'https://bees.example', label: 'rea
 beforeEach(() => {
   localStorage.clear();
   invoke.mockReset();
+  // Other modules (durableStore) call invoke(...).catch: always answer with a promise.
+  invoke.mockResolvedValue(undefined);
   createJoseRequest({ commandId: CMD, source: 'user', text: 'Research, write, check', steps: [step('hector', 'hector'), step('nova', 'nova', ['hector']), step('write', 'alphonso', ['nova']), step('far', 'alphonso', ['write']), step('check', 'maria', ['far'])] } as never);
   setStepOutput(CMD, 'hector', 'hector', { summary: 'Bees beat their wings fast [1].', schema: { sources: SOURCES } });
   setStepOutput(CMD, 'nova', 'nova', { summary: 'What to do first: the post.' });
