@@ -202,7 +202,8 @@ describe('decomposeJoseCommand — agent assignment routing', () => {
     const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
     const readiness = assignments.find((a) => a.agent === 'marcus' && a.actionType === 'distribution_readiness');
     expect(readiness).toBeTruthy();
-    expect(readiness.requiresApproval).toBe(true);
+    // A read-only check: it asks nothing (agent phase 5).
+    expect(readiness.requiresApproval).toBe(false);
   });
 
   it('marks local execution as high risk when riskyLocal is true', () => {

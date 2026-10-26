@@ -158,10 +158,11 @@ it("a locked YouTube video's reminder comes at its time, with the Studio link", 
   expect(getScheduledPublishes()[0].status).toBe('done');
 });
 
-it('text items still go through executeMarcusPublish as before', async () => {
+// Agent phase 5: a text item asks Marcus at its time (marcus/sidePaths.test.ts covers the ask).
+it('a text item is marked asked, not executed', async () => {
   schedulePublish({ content: 'Hello', platform: 'telegram', scheduledAt: NOW - 1000, agentId: 'marcus' });
   await runScheduledPublishes(NOW);
-  expect(getScheduledPublishes()[0].status).toBe('executed');
+  expect(getScheduledPublishes()[0].status).toBe('asked');
   expect(publishPost).not.toHaveBeenCalled();
 });
 

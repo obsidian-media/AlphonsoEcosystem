@@ -27,6 +27,12 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.addInitScript({ path: resolve(__dirname, 'tauri-mock.js') });
+    // A send is a locked effect, so by default Jose shows its plan first (agent phase 5: Marcus
+    // now gets a real send step). This test is about the request entering the pipeline.
+    await page.addInitScript(() => {
+      const existing = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
+      localStorage.setItem('alphonso_settings', JSON.stringify({ ...existing, showPlanFirst: 'never' }));
+    });
     await page.goto('/');
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
   });

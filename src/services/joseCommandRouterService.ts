@@ -1,4 +1,5 @@
 import { listJoseRequests } from './jose/joseRequestStore';
+import { quotedPieces, withoutQuotedContent } from './jose/quotedContent';
 import { closingSummary } from './jose/joseSummary';
 import type { ContentStepPayload } from './contentFactory/contentTypes';
 import { invoke } from '@tauri-apps/api/core';
@@ -103,6 +104,8 @@ export interface JoseCommandAssignment {
   packetId?: string;
   /** A content-factory step (Miya Studio): run by executeContentStepAssignment. */
   contentStep?: ContentStepPayload;
+  /** Data handed to the step's agent, e.g. where Marcus sends (agent phase 5). */
+  payload?: Record<string, unknown>;
   status?: string;
   retries?: number;
   lastUpdatedAtMs?: number;
@@ -288,13 +291,16 @@ function defaultContractsForAssignments(assignments: JoseCommandAssignment[]): A
 
 function dedupeAssignments(assignments: JoseCommandAssignment[]): JoseCommandAssignment[] {
   const byAgent = new Map<string, JoseCommandAssignment>();
+  // Marcus's numbered sends (one per channel, agent phase 5) stay separate steps.
+  const keyOf = (a: JoseCommandAssignment) => (a.agent === AGENTS.MARCUS && /^marcus-\d+$/.test(a.stepId || '') ? a.stepId! : a.agent);
   assignments.forEach((assignment) => {
-    if (!byAgent.has(assignment.agent)) {
-      byAgent.set(assignment.agent, assignment);
+    const key = keyOf(assignment);
+    if (!byAgent.has(key)) {
+      byAgent.set(key, assignment);
       return;
     }
-    const current = byAgent.get(assignment.agent)!;
-    byAgent.set(assignment.agent, {
+    const current = byAgent.get(key)!;
+    byAgent.set(key, {
       ...current,
       title: `${current.title} + ${assignment.actionType.replace(/_/g, ' ')}`,
       rationale: `${current.rationale} ${assignment.rationale}`,
@@ -320,10 +326,20 @@ export function listJoseCommands(): JoseCommand[] {
   return readCommands();
 }
 
+/** A send to a channel the request names (agent phase 5): which channels, and what Marcus makes. */
+export interface ParsedSend {
+  /** In the order they are named; `team` when only "my team" is. */
+  channels: string[];
+  kind: 'message' | 'release' | 'issue';
+  /** The request quotes the text to send: no writing step. */
+  quoted: boolean;
+}
+
 export interface ParsedJoseCommand {
   clean: string;
   lower: string;
   intents: JoseCommandParserIntents;
+  sends?: ParsedSend;
   fragments: string[];
   parsedAtMs: number;
   connectorCost: ConnectorCostClassification;
@@ -334,18 +350,36 @@ const NOT_CODE = /\b(?:discount|promo|promotional|coupon|voucher|referral|gift)\
 /** Asking to audit, review, assess or check a plan, an idea, a campaign or a proposal (agent phase 3). */
 const PLAN_REVIEW = /\b(?:audit|review|assess|evaluate|check)\b[^.?!:]*\b(?:plan|plans|idea|ideas|campaign|proposal|strategy)\b/i;
 
-/** "Check this post …: <the post>": what follows the colon is the content (agent phase 4). */
-const CONTENT_AFTER = /\b(?:this|the|my|our)\s+(?:post|email|message|text|tweet|caption|ad|copy|reply|page)\b[^:\n]{0,80}:/i;
-const QUOTED = /"[^"]*"|“[^”]*”/g;
-/** "before I publish it" says when, it doesn't ask for a send (agent phase 4). */
-const NOT_A_SEND = /\bbefore (?:i |we |you )?(?:publish|post|send|share)(?:ing)?(?: it| this| them)?\b/gi;
+export const WRITE_FOR_SEND = 'Write only the text that will be sent, exactly as it should read. Do not say that it was sent or where it goes: Marcus sends it after you approve it.';
+const SEND_WORD = /\b(?:send|post|tell|message|announce|notify|share|publish|release)\b|\b(?:open|create|file)\s+an?\s+issue\b/;
+const CHANNEL_WORDS = ['slack', 'discord', 'telegram', 'whatsapp', 'notion', 'clickup', 'n8n', 'github'];
+const READINESS_QUESTION = /\bready\b|\bcan i (?:post|publish|send)\b/;
 
-/** The request without the content it quotes: words inside a post aren't instructions. */
-function withoutQuotedContent(text: string): string {
-  let out = text.replace(QUOTED, ' ');
-  const m = out.match(CONTENT_AFTER);
-  if (m && m.index !== undefined) out = out.slice(0, m.index + m[0].length);
-  return out.replace(NOT_A_SEND, ' ');
+/** The channels a request sends to, in the order it names them (agent phase 5). */
+function parseSends(asked: string, clean: string, planReview: boolean): ParsedSend | undefined {
+  if (planReview || READINESS_QUESTION.test(asked) || !SEND_WORD.test(asked)) return undefined;
+  const issue = /\b(?:open|create|file)\s+an?\s+issue\b/.test(asked);
+  const release = !issue && /\brelease\b/.test(asked) && (/\bgithub\b/.test(asked) || /\bv?\d+\.\d+/.test(asked));
+  const found = CHANNEL_WORDS
+    .map((word) => ({ word, at: asked.search(new RegExp(`\\b${word}\\b`)) }))
+    .filter((c) => c.at >= 0)
+    .sort((a, b) => a.at - b.at)
+    .map((c) => c.word);
+  if ((release || issue) && !found.includes('github')) found.unshift('github');
+  const channels = found.length ? found : (/\b(?:my|our|the) team\b/.test(asked) ? ['team'] : []);
+  if (!channels.length) return undefined;
+  return { channels, kind: release ? 'release' : issue ? 'issue' : 'message', quoted: quotedPieces(clean).length === 1 };
+}
+
+/** "Is my announcement ready to post on Slack?": a readiness check, not a send (agent phase 5). */
+export function asksReadiness(commandText: string): boolean {
+  const asked = withoutQuotedContent(withoutNegations(String(commandText || '').toLowerCase())).replace(NOT_CODE, ' offer ');
+  return !PLAN_REVIEW.test(asked) && READINESS_QUESTION.test(asked) && SEND_WORD.test(asked);
+}
+
+/** "Audit this plan …": a review of a plan by Maria, not doing the plan (agent phase 3). */
+export function asksPlanReview(commandText: string): boolean {
+  return PLAN_REVIEW.test(withoutQuotedContent(withoutNegations(String(commandText || '').toLowerCase())));
 }
 
 export function parseJoseCommand(commandText: string): ParsedJoseCommand {
@@ -357,7 +391,8 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
   // Auditing or reviewing a plan is Maria's review, not doing what the plan says (agent
   // phase 3: "audit this plan … and post it on Instagram" also planned a send and a code step).
   const planReview = PLAN_REVIEW.test(asked);
-  const localExecution = !planReview && matchesAny(asked, ['build', 'runtime', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package', 'function', 'code', 'bug', 'repo', 'compile', 'refactor', 'npm']);
+  const sends = parseSends(asked, clean, planReview);
+  const localExecution = !planReview && !(sends && sends.kind !== 'message') && matchesAny(asked, ['build', 'runtime', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package', 'function', 'code', 'bug', 'repo', 'compile', 'refactor', 'npm']);
   const securityMonitoring = matchesAny(asked, ['security', 'secrets', 'permission', 'vulnerability', 'unsafe', 'incident']);
   // A check for security is Sentinel's, not Maria's accuracy check (agent phase 4).
   const accuracyCheck = matchesAny(asked, ['accuracy', 'accurate', 'fact-check', 'proofread', 'facts', 'quality']);
@@ -396,6 +431,7 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
     lower,
     intents,
     fragments,
+    ...(sends ? { sends } : {}),
     parsedAtMs: timestampMs(),
     connectorCost
   };
@@ -423,14 +459,16 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
     });
   }
 
-  if (intents.publishing) {
+  const sends = parsed.sends;
+  if (intents.publishing && !sends) {
     assignments.push({
       agent: AGENTS.MARCUS,
       title: `Marcus publishing readiness check: ${shorten(clean)}`,
-      rationale: 'Publishing language detected. Marcus checks connector and sign-in readiness; nothing is published.',
+      rationale: 'Publishing language detected. Marcus checks that it is ready; nothing is published.',
       actionType: 'distribution_readiness',
-      riskLevel: 'high',
-      requiresApproval: true,
+      riskLevel: 'low',
+      // A read-only check: it asks nothing (agent phase 5).
+      requiresApproval: false,
       commandPreview: 'No automatic upload. Requires connector auth + Jose/user approval before any external posting.',
       fragments: fragments.filter((fragment) => /upload|publish|post|youtube|tiktok|instagram/i.test(fragment))
     });
@@ -518,7 +556,7 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
     });
   }
 
-  if (intents.distributionExecution) {
+  if (intents.distributionExecution && !sends) {
     assignments.push({
       agent: AGENTS.MARCUS,
       title: `Marcus distribution handoff: ${shorten(clean)}`,
@@ -532,7 +570,8 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
   }
 
   // Everyday writing is Alphonso's (agent phase 1); it reads the research when there is some.
-  if (intents.writing) {
+  // A send names no text of its own, so Alphonso writes it first, unless it is quoted (agent phase 5).
+  if (intents.writing || (sends && !sends.quoted)) {
     const research = assignments.find((a) => a.agent === AGENTS.HECTOR);
     assignments.push({
       agent: AGENTS.ALPHONSO,
@@ -546,6 +585,8 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       fragments,
       // It also reads Nova's verdict when she is in the plan (agent phase 3).
       needs: [...(research ? ['hector'] : []), ...(assignments.some((a) => a.agent === AGENTS.NOVA) ? ['nova'] : [])],
+      // What Marcus sends is exactly this text (agent phase 5), so it says nothing about sending.
+      ...(sends ? { instruction: WRITE_FOR_SEND } : {}),
     });
     if (intents.check) {
       assignments.push({
@@ -565,6 +606,27 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
     // A security check of the writing reviews it, after it is written (agent phase 4).
     const sentinelStep = assignments.find((a) => a.agent === AGENTS.SENTINEL);
     if (sentinelStep) Object.assign(sentinelStep, { needs: ['write'], reviewOf: 'write' });
+  }
+
+  // One Marcus step per channel named, each sending what was written (agent phase 5).
+  if (sends) {
+    const written = assignments.some((a) => a.stepId === 'write');
+    const actionType = sends.kind === 'release' ? 'distribution_release' : sends.kind === 'issue' ? 'distribution_issue' : 'distribution_execution';
+    sends.channels.forEach((channel, i) => {
+      assignments.push({
+        agent: AGENTS.MARCUS,
+        stepId: i === 0 ? 'marcus' : `marcus-${i + 1}`,
+        title: `Marcus sends it${channel === 'team' ? '' : ` to ${channel}`}: ${shorten(clean)}`,
+        rationale: 'A send to a channel. Marcus sends what was written, once you approve it.',
+        actionType,
+        riskLevel: 'high',
+        requiresApproval: false,
+        commandPreview: 'Sends what was written, after your approval.',
+        fragments,
+        needs: written ? ['write'] : [],
+        ...(channel === 'team' ? {} : { payload: { connector: channel } }),
+      });
+    });
   }
 
   if (!assignments.length) {

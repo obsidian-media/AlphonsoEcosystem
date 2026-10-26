@@ -4,12 +4,15 @@
 import { createPermissionProfile } from '../shared/permissionModel';
 
 export const MARCUS_PERMISSIONS = createPermissionProfile('marcus', {
+  // Agent phase 5: sending and publishing approved work only.
   allowed: [
-    'generate_audit_report',
-    'security_review',
-    'risk_detection',
-    'integration_validation',
-    'release_readiness_check'
+    'release_readiness_check',
+    'send_approved_message',
+    'publish_approved_post',
+    'create_draft_release',
+    'open_issue',
+    'trigger_listed_workflow',
+    'place_approved_call'
   ],
   blocked: [
     'strategy_override',

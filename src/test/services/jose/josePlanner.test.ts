@@ -16,7 +16,7 @@ vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
 }));
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
-import { planJoseRequest, describePlanSource } from '../../../services/jose/josePlanner';
+import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders, missingAsked } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 
@@ -252,5 +252,85 @@ describe("the planner refuses a code step for writing (agent phase 1)", () => {
     const plan = await planJoseRequest('Write a paragraph about honeybees');
     expect(promptOf(1)).toContain('write is writing, not code: give it to Alphonso as assistant_write.');
     expect(plan.steps[0].actionType).toBe('assistant_write');
+  });
+});
+
+// Agent phase 5: the example had placeholders ("short_id", "<agent>") that a 7B model
+// copied, so Jose's own plans failed his checks on every live request.
+describe('the example plan has nothing a small model can copy', () => {
+  it('the prompt has no placeholders', async () => {
+    llm.mockResolvedValueOnce(answer([{ id: 'a', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'] }]));
+    await planJoseRequest(PARTY);
+    const prompt = promptOf(0);
+    for (const p of ['short_id', '<agent>', '<task type>', '<step id>', '"normal" or']) expect(prompt).not.toContain(p);
+    expect(prompt).toContain(PLAN_EXAMPLE);
+  });
+
+  it('names copied placeholders so the fix round can say so', () => {
+    expect(copiedPlaceholders([{ id: 'short_id', agent: 'none', taskType: 'normal' }])).toEqual([
+      'Step id "short_id" is the example\'s placeholder: use your own ids.',
+      'Agent "none" is not one of the agents.',
+      'Task type "normal" is not a task type.',
+    ]);
+    expect(copiedPlaceholders([{ id: 'research', agent: 'hector', taskType: 'research_report' }])).toEqual([]);
+  });
+
+  // The desktop run (2026-10-26): the model planned only the writing for "post it to Slack".
+  it('a plan that leaves out the send is sent back; still missing → the simple plan with Marcus', async () => {
+    const SLACK = '/jose Post a short note that we open at 9 to Slack #news.';
+    const writeOnly = answer([{ id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: [] }]);
+    llm.mockResolvedValueOnce(writeOnly).mockResolvedValueOnce(writeOnly);
+    const plan = await planJoseRequest(SLACK);
+    expect(promptOf(1)).toContain('The request asks to send to Slack: add a marcus step that sends it.');
+    expect(plan.source).toBe('rules');
+    expect(plan.steps.some((s) => s.agent === 'marcus')).toBe(true);
+  });
+
+  it('a readiness question needs the readiness check', () => {
+    const plan = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }];
+    expect(missingAsked('/jose Is my announcement ready to post on Slack?', plan as never)).toEqual(['The request asks whether it is ready to send: add a marcus step with the task type distribution_readiness.']);
+    expect(missingAsked('/jose Is my announcement ready to post on Slack?', [{ agent: 'marcus', effects: ['read'], actionType: 'distribution_readiness' }] as never)).toEqual([]);
+  });
+
+  // The Maria desktop run (2026-10-26): with working plans, the 7B model left out the check asked for.
+  it('a check or a plan audit asked for needs Maria', () => {
+    const noMaria = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }, { agent: 'sentinel', effects: ['read'], actionType: 'security_content_check' }];
+    expect(missingAsked('/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy', noMaria as never))
+      .toEqual(['The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.']);
+    expect(missingAsked('/jose Audit this plan for compliance risks: tomorrow we email all 500 customers a 30 percent discount code.', noMaria as never))
+      .toEqual(['The request asks for a review of a plan: add a maria step with the task type audit_governance.']);
+    const withMaria = [...noMaria, { agent: 'maria', effects: ['read'], actionType: 'audit_quality' }];
+    expect(missingAsked('/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy', withMaria as never)).toEqual([]);
+  });
+
+  // The Maria desktop run (2026-10-26): the model's check needed nothing and reviewed nothing.
+  it('a review step that needs nothing reviews the one piece of work', async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'research', agent: 'hector', taskType: 'research_report', instruction: 'Find facts.', effects: ['read'], needs: [] },
+      { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: ['research'] },
+      { id: 'audit_quality', agent: 'maria', taskType: 'audit_quality', instruction: 'Check it.', effects: ['read'], needs: [] },
+    ]));
+    const plan = await planJoseRequest('/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy');
+    expect(plan.steps.find((s) => s.stepId === 'audit_quality')).toMatchObject({ needs: ['write'], reviewOf: 'write' });
+  });
+
+  it('a plan with the send is used as it is', async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: [] },
+      { id: 'send', agent: 'marcus', taskType: 'distribution_execution', instruction: 'Post it.', effects: ['publish_or_send'], needs: ['write'] },
+    ]));
+    const plan = await planJoseRequest('/jose Post a short note that we open at 9 to Slack #news.');
+    expect(plan.source).toBe('fresh');
+    expect(llm).toHaveBeenCalledTimes(1);
+  });
+
+  it('a plan with short_id ids is fixed once, the problem named, then used', async () => {
+    llm
+      .mockResolvedValueOnce(answer([{ id: 'short_id', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'] }]))
+      .mockResolvedValueOnce(answer([{ id: 'judge', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'] }]));
+    const plan = await planJoseRequest(PARTY);
+    expect(llm).toHaveBeenCalledTimes(2);
+    expect(promptOf(1)).toContain('is the example\'s placeholder');
+    expect(plan.source).toBe('fresh');
   });
 });

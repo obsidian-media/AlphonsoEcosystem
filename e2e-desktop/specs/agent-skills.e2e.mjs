@@ -3,7 +3,7 @@
 // a skill that gives an agent another agent's work is refused with the reason,
 // and with a local model a request's steps show the skill and why on the
 // board. Nothing is sent. The spec deletes the skill it saves.
-import { enterShell, invoke, openPage, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
+import { enterShell, invoke, openPage, ollamaHasModels, warmSelectedModel, clickSend } from '../helpers.mjs';
 
 const MINE = 'e2e-short-answers.md';
 // Small models write unusable plans more often (agent-roles.e2e.mjs uses the same choice).
@@ -114,7 +114,7 @@ describe('Alphonso desktop: agent skills', () => {
     const input = await $('[data-testid="chat-compose-input"]');
     await input.waitForDisplayed();
     await input.setValue('/jose Research three facts about honeybees and write a brief paragraph from them. Do not send it anywhere.');
-    await (await $('[data-testid="chat-send-button"]')).click();
+    await clickSend();
     let denied = 0;
     await browser.waitUntil(async () => {
       denied += await denyAnyApproval();

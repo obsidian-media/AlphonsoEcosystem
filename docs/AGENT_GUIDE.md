@@ -45,11 +45,11 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 ### Marcus — Distribution & Release Manager
 **Role:** The only agent that publishes or sends — always after your approval
 **Runtime:** `src/services/marcusExecutionService.ts` — also the one scheduler for posts
-**Can do:** Post a project's videos, Shorts and carousels to YouTube, Instagram and Facebook at their times (YouTube and Facebook are scheduled on the platform; Instagram is sent by his runner, also after the app was closed), remind you of posts to make by hand, create GitHub releases and issues, send Slack messages
-**Cannot:** Publish or send anything you haven't approved
-**Skills (4, `src/skills/marcus/`):** Place a call, Publish a post, Release readiness, Send a message.
-**Schema:** `workflowId`, `connectorId`, `approvedBy: "maria-governance"`, `status`, `resultUrl`, `executedAtMs`
-**When to use:** "Post this to Slack", "Create a GitHub release", or Campaign Studio's **Approve and schedule**.
+**Can do:** Send exactly what the step before him wrote (or what you quoted) to Slack, Discord, Telegram (your team chat or you), WhatsApp, Notion, ClickUp, your listed n8n workflows and Composio apps you switched on; make GitHub draft releases and issues; check whether something is ready to send (read-only, asks nothing); post a project's videos, Shorts and carousels to YouTube, Instagram and Facebook at their times; remind you of posts to make by hand
+**Cannot:** Change the words, send anywhere you didn't name or set as a default, or send anything you haven't approved. The approval shows the exact text and destination, and Sentinel checks it first
+**Skills (5, `src/skills/marcus/`):** Place a call, Publish a post, Release or issue, Release readiness, Send a message.
+**Schema:** `kind: "send"`, `connector`, `target`, `approvedBy: "you"`, `reviewedBy`, `reviewVerdict`, `status`, `resultUrl`
+**When to use:** "Write an announcement and post it to Slack #news", "Make a draft GitHub release v1.2.0", "Is this ready to post?", Project Execution's **Ask Marcus to send**, or Campaign Studio's **Approve and schedule**.
 
 ### Echo — Knowledge Historian
 **Role:** Memory synthesis and archival across all agent outputs
@@ -144,7 +144,7 @@ Each agent (Jose aside: he plans) has its own skills: know-how for one kind of j
 | Nova | Value and priority, Judge the market, Review the script, Best time to post, Read the results, Follow-up ideas |
 | Maria | Quality review, Claim check, Governance review, Quality against the references |
 | Sentinel | Text and link check, Permission audit, Content safety check |
-| Marcus | Send a message, Publish a post, Place a call, Release readiness |
+| Marcus | Send a message, Publish a post, Place a call, Release readiness, Release or issue |
 | Echo | Save decisions, Answer from memory, Merge and clean memory |
 
 You can add your own on All Agents → Skills (a form, or a skill file), and they sit beside the built-in ones.

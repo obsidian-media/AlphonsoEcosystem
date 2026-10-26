@@ -85,6 +85,8 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   memory_preservation: ['write_own_work'],
   opportunity_analysis: ['read'],
   distribution_execution: ['publish_or_send'],
+  distribution_release: ['publish_or_send'],
+  distribution_issue: ['publish_or_send'],
   distribution_schedule_posts: ['publish_or_send'],
   boardroom_planning: ['write_own_work'],
   boardroom_execute: ['write_own_work'],
@@ -118,6 +120,8 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   creative_image: ['write_own_work'],
   design_ui: ['write_own_work'],
   distribution_readiness: ['read'],
+  // A check of what would be sent; it sends nothing (agent phase 5).
+  distribution_review: ['read'],
   outreach_call: ['publish_or_send', 'spend'],
   research_broll: ['read'],
   // AI clips (phase 2b): local clips write files; a Runway run adds `spend` in the plan.
@@ -157,7 +161,6 @@ const FAMILY_EFFECTS: [string, JoseEffect[]][] = [
   ['knowledge_', ['write_own_work']],
   ['timeline_', ['write_own_work']],
   ['distribution_', ['publish_or_send']],
-  ['engagement_', ['publish_or_send']],
 ];
 
 function familyEffects(part: string): JoseEffect[] | null {

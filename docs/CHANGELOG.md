@@ -10,6 +10,17 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent phase 5: Marcus sends what was written, where you said (2026-10-26)
+- **"Post it to Slack #news" now posts it.** Marcus sends exactly what the step before him wrote, to the channel you named or a default you set in Settings → Connectors ("Where Marcus sends"); his model picks among the connectors you set up, and a channel nobody named (the old `#general`) is never used.
+- **One approval with the exact text**: "Send to Slack #news: “…”" on the approval, the board and Telegram. Sentinel checks it first. The second approval store that failed sends is gone.
+- **Channels**: Slack, Discord, Telegram (a team chat you set, or you), WhatsApp (Meta's 24-hour rule explained), GitHub draft releases and issues, Notion pages, ClickUp tasks, your listed n8n workflows, and Composio apps you switched on. A connector you name but haven't set up says what to set up and asks nothing. Text too long for the channel goes back to the writer.
+- **"Is it ready to post?" is a real, read-only check** ("Ready." or "Not ready:" with the reasons) and asks nothing.
+- **Every other send path is one Marcus step**: Project Execution's Marcus panel ("Ask Marcus to send"), its handoff packets, a workflow's Publishing task and old scheduled text sends. Before, they sent without asking or Sentinel's check.
+- **Composio** uses its current API; sends are Marcus's, read-only actions are a tool Hector, Echo and Alphonso may use. Alphonso's automatic Composio path is gone.
+- **Chat shows what happened** ("Now: Sent to Slack #news.") after you approve on the board or Telegram; it used to keep saying "waiting".
+- **Jose's own plans work again**: the planner's example no longer has placeholders the model copied ("short_id", "normal"), so requests stop falling back to the simple plan. A plan that leaves out something you asked for (a send, a readiness check, a check of the writing, a plan review) is sent back to Jose's model to add it, and a check that names nothing reviews the one piece of work.
+- **Marcus's profile is his own** (sending and publishing); audits and risk were Maria's.
+
 ### Agent phase 4: Sentinel checks the real thing (2026-10-25)
 - **Sentinel answers Safe, Risky or Unsafe** from his own model, each finding with what, where, how serious and the fix. Exact checks (a key, a password request, a disguised link, a deleting or code command) are always in his answer. His keyword score is gone.
 - **A serious finding makes the next steps wait for you**; "BLOCKED" used to hold nothing.

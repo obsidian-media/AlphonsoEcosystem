@@ -4,6 +4,7 @@
 // kind can be switched off in Settings. A request cut off when the app closed
 // is always sent, with Carry on. Built from the saved requests; a durable log
 // keeps anything from being sent twice, also after a restart.
+import { describeSend } from '../marcus/describeSend';
 import { EFFECT_LABELS, type JoseEffect } from './joseEffects';
 import { agentName } from './agentNames';
 import type { JoseRequest } from './joseRequestStore';
@@ -68,6 +69,9 @@ export function getJoseTelegramSettings(): JoseTelegramSettings {
 
 function stepText(request: JoseRequest, step: JoseRequest['steps'][number]): string {
   if (step.waitFor) return `${agentName(step.agent)}'s next step waits for you: ${cut(step.waitFor, 300)}\nFor: ${cut(request.text, 200)}`;
+  // A prepared Marcus send says exactly what goes where (agent phase 5).
+  if (step.sendPreview) return `${agentName(step.agent)} wants to: ${cut(describeSend(step.sendPreview), 600)}
+For: ${cut(request.text, 200)}`;
   const effects = (step.effects || []).filter((e) => e !== 'read').map((e) => EFFECT_LABELS[e as JoseEffect].toLowerCase());
   const what = cut(step.instruction || step.actionType, 300);
   const cost = Number.isFinite(step.costEstimateUsd) ? ` (about $${Number(step.costEstimateUsd).toFixed(2)})` : '';

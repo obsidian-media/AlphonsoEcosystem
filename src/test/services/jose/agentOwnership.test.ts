@@ -68,4 +68,11 @@ describe('one owner per kind of work', () => {
   it("Marcus's profile no longer claims security or risk work", () => {
     expect(MARCUS_PROFILE.skillFocus).not.toMatch(/Security Audit|Risk Detection/);
   });
+
+  // Agent phase 5: his profile is distribution only; audits and risk registers are Maria's.
+  it('Marcus does distribution only', () => {
+    expect(MARCUS_PROFILE.allowedActions).not.toContain('generate_audit_report');
+    expect(MARCUS_PROFILE.allowedActions).not.toContain('generate_risk_register');
+    expect(JSON.stringify(MARCUS_PROFILE)).not.toMatch(/risk-first|fraud risk|AuditReport|RiskReport/i);
+  });
 });

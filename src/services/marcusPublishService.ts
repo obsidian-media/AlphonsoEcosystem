@@ -1,5 +1,4 @@
 import { AGENTS, createAgentPacket, updatePacketStatus } from './agentBusService';
-import { requireApproval } from './approval/approvalService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from './trustModel';
@@ -68,29 +67,6 @@ export function buildMarcusPublishPacket({ platform, payload, workflowId = '', c
   });
 }
 
-interface RequireApprovalOptions {
-  platform: string;
-  summary: string;
-  packetId: string | null;
-  commandId: string | null;
-  workflowId: string | null;
-}
-
-async function requireMarcusApproval({ platform, summary, packetId, commandId, workflowId }: RequireApprovalOptions) {
-  return requireApproval({
-    actionType: 'external_publish',
-    approved: false,
-    force: true,
-    summary: `Marcus publish to ${platform}: ${summary}`.slice(0, 300),
-    riskLevel: 'high',
-    requestedBy: AGENTS.MARCUS,
-    workflowId: workflowId || 'marcus_publish',
-    commandId: commandId || null,
-    packetId: packetId || null,
-    metadata: { platform },
-  } as Record<string, unknown>);
-}
-
 interface PublishReceiptOptions {
   ok: boolean;
   platform: string;
@@ -147,24 +123,17 @@ interface ExecutePublishResult {
   approval?: { ok: boolean; reason?: string };
 }
 
-export async function executeMarcusPublish({ platform, payload, packetId = null, commandId = null, workflowId = null, preApproved = false }: ExecutePublishOptions): Promise<ExecutePublishResult> {
-  const summary = payload.caption || payload.message || payload.title || payload.text || platform;
-
+/**
+ * Sends one approved publish. Since agent phase 5 the approval is Marcus's step (prepared, shown
+ * with the exact text, approved once); there is no second approval here.
+ */
+export async function executeMarcusPublish({ platform, payload, packetId = null, commandId = null, workflowId = null }: ExecutePublishOptions): Promise<ExecutePublishResult> {
   if (packetId) {
     updatePacketStatus(packetId, 'executing', {
       executor: AGENTS.MARCUS,
       executionStartedAtMs: timestampMs(),
       verificationState: TRUST_STATES.PENDING,
     });
-  }
-
-  if (!preApproved) {
-    const approval = await requireMarcusApproval({ platform, summary, packetId, commandId, workflowId });
-    if (!approval.ok) {
-      if (packetId) updatePacketStatus(packetId, 'rejected', { failureReason: approval.reason || 'approval_denied', verificationState: TRUST_STATES.FAILED });
-      publishReceipt({ ok: false, platform, packetId, commandId, workflowId, error: approval.reason || 'Approval denied.' });
-      return { ok: false, error: approval.reason || 'Approval denied.', approval };
-    }
   }
 
   try {

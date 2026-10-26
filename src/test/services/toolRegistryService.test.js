@@ -70,10 +70,11 @@ describe('toolRegistryService', () => {
       expect(first).toHaveProperty('parameters');
     });
 
-    it('returns 16 tools', async () => {
+    // 15 since agent phase 5: use_composio_tool went (Composio sends go through Marcus).
+    it('returns 15 tools', async () => {
       const { getToolDefinitions } = await import('../../services/toolRegistryService');
       const tools = getToolDefinitions();
-      expect(tools.length).toBe(16);
+      expect(tools.length).toBe(15);
     });
   });
 

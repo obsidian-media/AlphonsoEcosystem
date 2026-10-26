@@ -7,6 +7,11 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-26] **Three content-factory desktop specs fail in CI on `main`** — `content-carousel.e2e.mjs` ("Cover" not found, then a 3-minute timeout approving), `content-publish.e2e.mjs` (timeout at "Approve and schedule", then a TypeError) and `content-video.e2e.mjs` (assembling) fail in the `Desktop E2E (real Tauri binary)` job on `main` since at least run 40249022636 (2026-10-26), and on PR 362 the same way; the job is not a required check, so nobody saw it. Not caused by agent phase 5 (`main`'s 8c7b86d fails identically). Resume: run the three specs locally, then compare with CI's WebView2 131 — OPEN
+
+- [2026-10-26] **Marcus's sends have no live check with real accounts** — Slack, Discord, Telegram team chats, WhatsApp, GitHub draft releases and issues, Notion, ClickUp and Composio are tested with their requests mocked; the desktop spec sends only to a local n8n stand-in. Resume: with your own keys, ask Jose to post a note to each and approve it — OPEN
+- [2026-10-26] **A remote n8n workflow and live Composio v3.1** — the n8n send is checked against a local server only; Composio's v3.1 execute and tool list are written from its docs (2026-10-26) with no key here, and it documents no read-only field, so `isReadOnlyTool()` uses tags, then the action word. Resume: run one send and one read with a real Composio key — OPEN
+
 - [2026-10-26] **`src/services/sentinelGateService.ts` has no caller** — the engine's keyword gate was replaced by Sentinel's hold (agent phase 4). Removing or archiving a file needs the owner (R14). Resume: ask whether to move it and its test to `archive/MIGHTBEUSEDLATER/` — OPEN
 - [2026-10-26] **Google Web Risk has no live check** — `web_risk_check` is tested with its request and answers, never against Google with a real key (none on the dev machine). Resume: add a key in Connectors → Search & Research and open Google's own test address `http://testsafebrowsing.appspot.com/s/phishing.html` from a report — OPEN
 

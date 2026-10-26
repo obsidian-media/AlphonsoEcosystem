@@ -35,7 +35,15 @@ const RULE_PLAN: [string, Part[]][] = [
   ['Design a thumbnail for my channel', [['miya', 'creative_package']]],
   ['Write a script for a 30 second ad', [['miya', 'creative_package']]],
   ['Publish this post to Instagram', [['marcus', 'distribution_readiness']]],
-  ['Send the summary to Slack', [['marcus', 'distribution_readiness']]],
+  ['Send the summary to Slack', [['alphonso', 'assistant_write'], ['marcus', 'distribution_execution']]],
+  // Agent phase 5: a send gets its text written first, and a release or an issue is Marcus's.
+  ['/jose Write a two-sentence announcement that our bakery opens on Saturday, then post it to our Slack channel #news.', [['alphonso', 'assistant_write'], ['marcus', 'distribution_execution']]],
+  ['/jose Send a Telegram message to my team saying the meeting moved to 3pm.', [['alphonso', 'assistant_write'], ['marcus', 'distribution_execution']]],
+  ['/jose Tell my team on Telegram "meeting moved to 3pm"', [['marcus', 'distribution_execution']]],
+  ['/jose Create a GitHub release v1.2.0 for my repo with the notes: fixed the login bug.', [['alphonso', 'assistant_write'], ['marcus', 'distribution_release']]],
+  ['/jose Open an issue on GitHub acme/shop: the login page fails on Safari', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
+  ['/jose Is my new post ready to publish on Instagram?', [['marcus', 'distribution_readiness']]],
+  ['Is my announcement ready to post on Slack?', [['marcus', 'distribution_readiness']]],
   ['Scan my last week for security issues', [['sentinel', 'security_monitor']]],
   ['Which of these ideas should we prioritize?', [['nova', 'opportunity_analysis']]],
   ['Remember that the launch is on Friday', [['echo', 'memory_preservation']]],
@@ -70,6 +78,43 @@ describe('the routing set: the rule plan gives each part to its owner', () => {
     expect(write.needs).toEqual(['hector']);
     expect(check.reviewOf).toBe(write.stepId);
     expect(check.needs).toEqual([write.stepId]);
+  });
+});
+
+describe('Marcus gets the text and the channel (agent phase 5)', () => {
+  it('two channels → two Marcus steps, both after the writing', () => {
+    const steps = decomposeJoseCommand(parseJoseCommand('Write a note that we open at 9 and post it to Slack #news and Discord #updates'));
+    const sends = steps.filter((s) => s.agent === 'marcus');
+    expect(sends.map((s) => [s.stepId, (s as { payload?: { connector?: string } }).payload?.connector, s.needs])).toEqual([['marcus', 'slack', ['write']], ['marcus-2', 'discord', ['write']]]);
+  });
+
+  // The desktop run (2026-10-26): the writer added "[Note: … this note has been sent …]".
+  it('the writing step writes only the text to send', () => {
+    const steps = decomposeJoseCommand(parseJoseCommand('Write a one-line note that the shop opens at 9 and send it to my n8n workflow Team notes.'));
+    const write = steps.find((s) => s.stepId === 'write') as { instruction?: string };
+    expect(write.instruction).toBe('Write only the text that will be sent, exactly as it should read. Do not say that it was sent or where it goes: Marcus sends it after you approve it.');
+  });
+
+  it('a quoted message is sent as written: no writing step', () => {
+    const steps = decomposeJoseCommand(parseJoseCommand('Tell my team on Telegram "meeting moved to 3pm"'));
+    expect(steps.map((s) => s.agent)).toEqual(['marcus']);
+    expect(steps[0]).toMatchObject({ payload: { connector: 'telegram' }, needs: [] });
+  });
+
+  it('a readiness step asks nothing', () => {
+    const [ready] = decomposeJoseCommand(parseJoseCommand('Is my announcement ready to post on Slack?'));
+    expect(ready.requiresApproval).toBeFalsy();
+  });
+
+  it('a release is never a local operation', () => {
+    expect(partsOf('Create a GitHub release v1.2.0 for my repo with the notes: fixed the login bug.').some(([a, t]) => a === 'alphonso' && t === 'local_operation')).toBe(false);
+  });
+
+  it('the menu explains the send task types', async () => {
+    const { TASK_TYPE_MEANINGS } = await import('../../../services/jose/taskTypeMeanings');
+    expect(TASK_TYPE_MEANINGS.distribution_execution).toBe('send what an earlier step wrote; Marcus picks where');
+    expect(TASK_TYPE_MEANINGS.distribution_release).toBe('make a draft GitHub release with notes an earlier step wrote');
+    expect(TASK_TYPE_MEANINGS.distribution_issue).toBe('open a GitHub issue an earlier step wrote');
   });
 });
 

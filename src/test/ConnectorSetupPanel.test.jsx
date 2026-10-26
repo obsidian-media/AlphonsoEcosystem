@@ -131,6 +131,19 @@ describe('ConnectorSetupPanel', () => {
     expect(screen.getByText('Telegram')).toBeTruthy();
   });
 
+  // Agent phase 5: each connector says where Marcus sends by default.
+  it('the Slack section saves where Marcus sends', async () => {
+    localStorage.clear();
+    const { saveConnectorCredential } = await import('../services/connectors/connectorAuth');
+    render(<ConnectorSetupPanel />);
+    const field = screen.getByLabelText('Where Marcus sends: default channel');
+    fireEvent.change(screen.getAllByLabelText('Bot Token').find((el) => el.getAttribute('placeholder') === 'xoxb-...'), { target: { value: 'xoxb-1' } });
+    fireEvent.change(field, { target: { value: '#team' } });
+    const section = field.closest('div.rounded-2xl');
+    await act(async () => { fireEvent.click(within(section).getByRole('button')); });
+    expect(saveConnectorCredential).toHaveBeenCalledWith('slack', 'SLACK_DEFAULT_CHANNEL', '#team');
+  });
+
   it('shows GitHub credential section', () => {
     render(<ConnectorSetupPanel />);
     // GitHub lives in the "Content & Productivity" collapsible category,

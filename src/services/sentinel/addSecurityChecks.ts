@@ -37,6 +37,13 @@ export function addSecurityChecks(input: PlanStep[], request: string): { steps: 
   const original = [...steps];
 
   for (const step of original) {
+    // A Marcus send names the step it sends from (agent phase 5), so a text too long for the
+    // channel goes back to that step through the fix loop. Not a call, not the content factory.
+    if (step.agent === 'marcus' && (step.effects || []).includes('publish_or_send') && !step.reviewOf
+      && step.actionType !== 'outreach_call' && step.actionType !== 'distribution_schedule_posts' && !(step as { contentStep?: unknown }).contentStep) {
+      const from = [...step.needs].reverse().find((id) => { const n = byId(id); return n && !['maria', 'sentinel', 'nova'].includes(n.agent); });
+      if (from) step.reviewOf = from;
+    }
     // Before Marcus sends: a check of the exact text he sends from.
     if (step.agent === 'marcus' && (step.effects || []).includes('publish_or_send') && !needsSentinel(step)) {
       const source = step.needs.find((id) => !isSentinel(byId(id))) || null;

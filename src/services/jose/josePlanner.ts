@@ -5,7 +5,7 @@
 // (owner, 2026-10-23).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.3–2.4, §5
 import { generateAgentLlmResponse } from '../../lib/ollama';
-import { decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
+import { asksPlanReview, asksReadiness, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
 import { planningMenu } from './taskTypeMeanings';
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
@@ -14,6 +14,8 @@ import { JOSE_LIMITS, checkPlan, legacyNeeds, type PlanStep } from './stepGraph'
 import { listInstalledModels } from './joseModels';
 import { paidModelAvailable, paidModelId, estimateCostUsd, PAID_MAX_OUTPUT_TOKENS, PAID_PROMPT_ALLOWANCE_CHARS } from './joseSpend';
 import { getAgentProvider } from '../modelSelectionService';
+import { CONNECTOR_NAMES } from '../marcus/destinations';
+import type { MarcusConnector } from '../marcus/types';
 
 export interface JosePlan {
   steps: PlanStep[];
@@ -43,6 +45,63 @@ function templateForPrompt(template: JoseTemplate): string {
   return `Starting point: ${template.name} (template "${template.id}"). Adapt it to the request, or ignore it if it does not fit:\n${JSON.stringify(steps, null, 2)}`;
 }
 
+/** The example plan in the prompt (agent phase 5): real values, since a small model copied placeholders. */
+export const PLAN_EXAMPLE = JSON.stringify({
+  basedOnTemplate: null,
+  kind: 'normal',
+  steps: [
+    { id: 'research', agent: 'hector', taskType: 'research_report', instruction: 'Find three facts about honeybees, with sources.', effects: ['read'], needs: [] },
+    { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write a short post from the research.', effects: ['write_own_work'], needs: ['research'] },
+  ],
+});
+
+const PLACEHOLDER_IDS = new Set(['short_id', 'step_id', 'id']);
+const PLACEHOLDER_AGENTS = new Set(['none', 'agent', 'null', '']);
+const PLACEHOLDER_TASKS = new Set(['normal', 'project', 'task type', 'tasktype']);
+
+/** Values a model copied from an example or a schema instead of planning (agent phase 5). */
+/**
+ * What a request explicitly asks for must be in the plan (agent phase 5): a 7B model planned only
+ * the writing for "post it to Slack #news", and once plans stopped falling back it also left out
+ * the accuracy check asked for. The same words the simple plan reads: a send, a readiness check, a
+ * check of the writing, a review of a plan.
+ */
+export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' | 'effects' | 'actionType'>>): string[] {
+  const has = (agent: string, test: (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) => boolean = () => true) =>
+    steps.some((st) => st.agent === agent && test(st));
+  if (asksPlanReview(text)) {
+    return has('maria') ? [] : ['The request asks for a review of a plan: add a maria step with the task type audit_governance.'];
+  }
+  if (asksReadiness(text)) {
+    return has('marcus', (st) => st.actionType === 'distribution_readiness')
+      ? [] : ['The request asks whether it is ready to send: add a marcus step with the task type distribution_readiness.'];
+  }
+  const parsed = parseJoseCommand(text);
+  const problems: string[] = [];
+  if (parsed.intents.check && parsed.intents.writing && !has('maria')) {
+    problems.push('The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.');
+  }
+  const sends = parsed.sends;
+  if (sends && !has('marcus', (st) => (st.effects || []).includes('publish_or_send'))) {
+    const where = sends.channels.map((c) => (c === 'team' ? 'your team' : CONNECTOR_NAMES[c as MarcusConnector] || c)).join(' and ');
+    problems.push(`The request asks to send to ${where}: add a marcus step that sends it.`);
+  }
+  return problems;
+}
+
+export function copiedPlaceholders(steps: Array<{ id?: string; agent?: string; taskType?: string }>): string[] {
+  const problems: string[] = [];
+  for (const step of steps) {
+    const id = String(step.id ?? '').trim().toLowerCase();
+    const agent = String(step.agent ?? '').trim().toLowerCase();
+    const task = String(step.taskType ?? '').trim().toLowerCase();
+    if (PLACEHOLDER_IDS.has(id) || id.includes('<')) problems.push(`Step id "${step.id}" is the example's placeholder: use your own ids.`);
+    if (PLACEHOLDER_AGENTS.has(agent) || agent.includes('<')) problems.push(`Agent "${step.agent}" is not one of the agents.`);
+    if (PLACEHOLDER_TASKS.has(task) || task.includes('<')) problems.push(`Task type "${step.taskType}" is not a task type.`);
+  }
+  return [...new Set(problems)];
+}
+
 function buildPrompt(text: string, template: JoseTemplate | null, history: PlanOptions['history'], problems: string[], installed: string[] = [], paidModel: string | null = null): string {
   const recent = (history || []).slice(-6).map((m) => `${m.role}: ${String(m.content).slice(0, 400)}`).join('\n');
   return [
@@ -57,7 +116,9 @@ function buildPrompt(text: string, template: JoseTemplate | null, history: PlanO
     recent ? `Recent conversation:\n${recent}` : '',
     `Request: ${text}`,
     problems.length ? `Your last plan did not pass the checks:\n- ${problems.join('\n- ')}\nFix these problems.` : '',
-    'Answer with JSON only: {"basedOnTemplate": "<template id>" or null, "kind": "normal" or "project", "steps": [{"id": "short_id", "agent": "<agent>", "taskType": "<task type>", "instruction": "<what to do>", "effects": ["<effect>"], "needs": ["<step id>"], "model": "<installed model, optional>", "reviewOf": "<step id this step reviews, for a review step>"}]}',
+    'Answer with JSON only, in this shape. This is an example for a different request; use your own steps, ids and agents:',
+    PLAN_EXAMPLE,
+    'Give each step a short id of your own. "basedOnTemplate" is the id of the starting point when you used it, else null. Add "model" to a step only to choose an installed model, and "reviewOf" only to a step that reviews another step.',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -145,8 +206,11 @@ const isReviewType = (actionType: string) => actionType.startsWith('audit_') || 
  */
 function inferReviewOf(steps: PlanStep[]): PlanStep[] {
   const byId = new Map(steps.map((s) => [s.stepId, s]));
+  // The one piece of work in the plan (Alphonso's or Miya's), for a review that names nothing (agent phase 5).
+  const work = steps.filter((s) => (s.agent === 'alphonso' || s.agent === 'miya') && !isReviewType(s.actionType));
   return steps.map((step) => {
     if (step.reviewOf || !isReviewType(step.actionType)) return step;
+    if (!step.needs.length && work.length === 1) return { ...step, needs: [work[0].stepId], reviewOf: work[0].stepId };
     const reviewed = step.needs.filter((n) => byId.has(n) && !isReviewType(byId.get(n)!.actionType));
     return reviewed.length === 1 ? { ...step, reviewOf: reviewed[0] } : step;
   });
@@ -173,6 +237,8 @@ function rulesPlan(text: string): PlanStep[] {
       effects: inferEffects(a.actionType),
       needs: Array.isArray(a.needs) ? a.needs as string[] : null,
       ...(a.reviewOf ? { reviewOf: a.reviewOf as string } : {}),
+      // Where Marcus sends (agent phase 5).
+      ...(a.payload ? { payload: a.payload } : {}),
     };
   });
   const order = legacyNeeds(steps.map((s) => ({ agent: s.agent, stepId: s.stepId })));
@@ -212,8 +278,10 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     // Each step only to the agent who owns its kind of work (owner, 2026-10-24),
     // and no code step for a request that isn't about code (agent phase 1).
     const check = checkPlan(plan.steps, { taskTypes: true, request: text });
-    if (!check.ok) {
-      problems = check.problems;
+    const copied = copiedPlaceholders(plan.steps.map((st) => ({ id: st.stepId, agent: st.agent, taskType: st.actionType })));
+    const unsent = missingAsked(text, plan.steps);
+    if (!check.ok || copied.length || unsent.length) {
+      problems = [...copied, ...unsent, ...(check.ok ? [] : check.problems)];
       continue;
     }
     const offered = template && plan.basedOnTemplate === template.id ? template : null;

@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { enterShell, invoke, mainText, buttonByText, openPage, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
+import { enterShell, invoke, mainText, buttonByText, openPage, ollamaHasModels, warmSelectedModel, clickSend } from '../helpers.mjs';
 
 const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
 const REVIEW_WAIT = 'Approve the review in Miya Studio first.';
@@ -116,7 +116,7 @@ describe('Alphonso desktop: a Miya Studio project is one Jose request', () => {
     const input = await $('[data-testid="chat-compose-input"]');
     await input.waitForDisplayed();
     await input.setValue('Ask Jose: make a YouTube video script about brewing coffee at home');
-    await (await $('[data-testid="chat-send-button"]')).click();
+    await clickSend();
     const open = await $('//main//button[normalize-space(.)="Open in Miya Studio"]');
     await open.waitForClickable({ timeout: 120000 });
     expect(await mainText()).toMatch(/Started the Miya Studio project "Make a YouTube video script about brewing/);

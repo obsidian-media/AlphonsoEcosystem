@@ -37,6 +37,10 @@ vi.mock('../../../services/hectorResearchService', () => ({
   }))
 }));
 
+// Marcus's connectors (agent phase 5): nothing leaves the test.
+vi.mock('../../../services/connectors/slackConnector', () => ({ sendMessage: vi.fn(async () => ({ ts: '1.2' })) }));
+vi.mock('../../../services/connectors/discordConnector', () => ({ sendMessage: vi.fn(async () => ({ id: 'M' })), listGuildChannels: vi.fn(async () => [{ id: 'C', name: 'news' }]) }));
+
 vi.mock('../../../lib/ollama', () => ({
   generateOllamaResponse: vi.fn(async () => ({
     response: JSON.stringify({ title: 'mock', hook: 'mock', script: 'mock', scenes: [], prompts: [] })
@@ -46,6 +50,8 @@ vi.mock('../../../lib/ollama', () => ({
   getConfiguredOllamaModel: () => 'llama3.2:3b',
   // Review verdicts (phase 4): a queue the tests fill; anything else gets a plain answer.
   generateAgentLlmResponse: vi.fn(async (_agent, { prompt }) => {
+    // Alphonso's writing for Marcus's sends (agent phase 5): a queue the tests fill.
+    if (_agent === 'alphonso' && (globalThis.__alphonsoTexts || []).length) return { response: globalThis.__alphonsoTexts.shift() };
     if (/Did your review ask for changes/.test(prompt)) {
       const verdict = (globalThis.__joseVerdicts || []).shift() || 'pass';
       return { response: JSON.stringify({ verdict, findings: verdict === 'fix' ? ['The hook is weak.'] : [] }) };
@@ -913,5 +919,116 @@ describe("Hector's research question (agent roles Part B review)", () => {
     expect(question).not.toContain('Your skill');
     expect(question).not.toContain("From Miya's step");
     expect(question).toBe('Step graph test');
+  });
+});
+
+// Agent phase 5: a Marcus send is prepared before it asks you; the approval shows the exact text
+// and destination, and after you approve it is sent once.
+describe('Marcus sends what you approved', () => {
+  const writeStep = (extra = {}) => ({
+    agent: 'alphonso', actionType: 'assistant_write', stepId: 'write', title: 'Write', rationale: 'test', riskLevel: 'low',
+    requiresApproval: false, commandPreview: 'Writes text only.', fragments: [], effects: ['write_own_work'], needs: [], ...extra,
+  });
+  const sendStep = (extra = {}) => ({
+    agent: 'marcus', actionType: 'distribution_execution', stepId: 'marcus', title: 'Send', rationale: 'test', riskLevel: 'high',
+    requiresApproval: false, commandPreview: 'Sends.', fragments: [], effects: ['publish_or_send'], needs: ['write'], reviewOf: 'write',
+    payload: { connector: 'slack', target: '#news' }, ...extra,
+  });
+  const runPlan = (assignments, commandText = 'Write a note and post it to Slack #news') =>
+    runJoseCommandExecutionPipeline({ commandText, source: 'test', zeroCostMode: true, previewMode: false, assignments });
+
+  beforeEach(async () => {
+    localStorage.clear();
+    globalThis.__alphonsoTexts = [];
+    const { saveConnectorCredential } = await import('../../../services/connectors/connectorAuth');
+    saveConnectorCredential('slack', 'SLACK_BOT_TOKEN', 'xoxb-1');
+    saveConnectorCredential('discord', 'DISCORD_BOT_TOKEN', 'd-1');
+    saveConnectorCredential('discord', 'DISCORD_GUILD_ID', 'G');
+    saveConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN', '');
+    const slack = await import('../../../services/connectors/slackConnector');
+    vi.mocked(slack.sendMessage).mockClear();
+  });
+
+  it('a Marcus send step is prepared before its gate and waits with the preview', async () => {
+    globalThis.__alphonsoTexts = ['Open Saturday.'];
+    const result = await runPlan([writeStep(), sendStep()]);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    const marcus = request.steps.find((s) => s.stepId === 'marcus');
+    expect(marcus.status).toBe('waiting_approval');
+    expect(marcus.sendPreview).toMatchObject({ connector: 'slack', target: '#news', text: 'Open Saturday.', sourceStepId: 'write' });
+    const { listAgentPackets } = await import('../../../services/agentBusService');
+    const packet = listAgentPackets().find((p) => p.payload?.joseCommandId === result.commandId && p.toAgent === 'marcus');
+    expect(packet.policyReason).toBe('Waiting for your approval: Send to Slack #news: “Open Saturday.”');
+  });
+
+  // The desktop run (2026-10-26): Chat runs with preview on, which used to catch the step first.
+  it('with preview on, the send is still prepared and waits with its text', async () => {
+    globalThis.__alphonsoTexts = ['Open Saturday.'];
+    const result = await runJoseCommandExecutionPipeline({ commandText: 'Write a note and post it to Slack #news', source: 'test', zeroCostMode: true, assignments: [writeStep(), sendStep()] });
+    const marcus = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'marcus');
+    expect(marcus.status).toBe('waiting_approval');
+    expect(marcus.sendPreview).toMatchObject({ connector: 'slack', target: '#news', text: 'Open Saturday.' });
+    const { listAgentPackets } = await import('../../../services/agentBusService');
+    const packet = listAgentPackets().find((p) => p.payload?.joseCommandId === result.commandId && p.toAgent === 'marcus');
+    expect(packet.policyReason).toBe('Waiting for your approval: Send to Slack #news: “Open Saturday.”');
+  });
+
+  it('after approval it sends once', async () => {
+    globalThis.__alphonsoTexts = ['Open Saturday.'];
+    const result = await runPlan([writeStep(), sendStep()]);
+    const requestId = `jose-request-${result.commandId}`;
+    await approveRequestStep(requestId, 'marcus');
+    await approveRequestStep(requestId, 'marcus');
+    const slack = await import('../../../services/connectors/slackConnector');
+    expect(slack.sendMessage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(slack.sendMessage).mock.calls[0][2]).toBe('Open Saturday.');
+    expect(getStepOutput(result.commandId, 'marcus').summary).toBe('Sent to Slack #news.');
+  });
+
+  it('nothing to send ends the step failed without asking', async () => {
+    const result = await runPlan([sendStep({ needs: [], reviewOf: undefined })]);
+    expect(result.pendingApprovalCount).toBe(0);
+    const marcus = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'marcus');
+    expect(marcus.status).toBe('failed');
+  });
+
+  it('not set up → setup_needed without asking', async () => {
+    globalThis.__alphonsoTexts = ['Meeting moved to 3pm.'];
+    const result = await runPlan([writeStep(), sendStep({ payload: { connector: 'telegram', target: 'team' } })], 'Tell my team on Telegram');
+    expect(result.pendingApprovalCount).toBe(0);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.steps.find((s) => s.stepId === 'marcus').status).toBe('setup_needed');
+    expect(request.status).toBe('waiting_setup');
+  });
+
+  it('too long → a fix round revises the writer and prepares again', async () => {
+    globalThis.__alphonsoTexts = ['x'.repeat(2413), 'Short enough.'];
+    const result = await runPlan([writeStep(), sendStep({ payload: { connector: 'discord', target: '#news' } })], 'Write a note and post it to Discord #news');
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    const ids = request.steps.map((s) => s.stepId);
+    expect(ids).toContain('write-fix-1');
+    expect(ids).toContain('marcus-r1');
+    const again = request.steps.find((s) => s.stepId === 'marcus-r1');
+    expect(again.status).toBe('waiting_approval');
+    expect(again.sendPreview.text).toBe('Short enough.');
+    expect(getStepOutput(result.commandId, 'marcus').summary).toBe('Too long for Discord #news: 2,413 characters; the limit is 2,000.');
+  });
+
+  it('a readiness step is not held in preview mode either', async () => {
+    globalThis.__alphonsoTexts = ['Open Saturday.'];
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'Is my note ready to post on Slack #news?', source: 'test', zeroCostMode: true, previewMode: true,
+      assignments: [writeStep(), sendStep({ actionType: 'distribution_readiness', effects: ['read'], reviewOf: undefined })],
+    });
+    expect(result.pendingApprovalCount).toBe(0);
+  });
+
+  it('a readiness step never waits', async () => {
+    globalThis.__alphonsoTexts = ['Open Saturday.'];
+    const result = await runPlan([writeStep(), sendStep({ actionType: 'distribution_readiness', effects: ['read'], reviewOf: undefined })], 'Is my note ready to post on Slack #news?');
+    expect(result.pendingApprovalCount).toBe(0);
+    const marcus = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'marcus');
+    expect(marcus.status).toBe('done');
+    expect(getStepOutput(result.commandId, 'marcus').summary).toMatch(/^(Ready\.|Not ready:)/);
   });
 });
