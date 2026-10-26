@@ -3,7 +3,7 @@
 // check that answers Unsafe or Risky, names them (the key hidden), and holds what comes after;
 // a written email is checked after it is written. Nothing is sent. Needs a local model; uses
 // qwen2.5:7b when installed.
-import { enterShell, invoke, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
+import { enterShell, invoke, ollamaHasModels, warmSelectedModel, clickSend } from '../helpers.mjs';
 
 const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
 const KEY = 'sk-live-1234abcd5678efgh';
@@ -37,7 +37,7 @@ async function ask(text) {
   const input = await $('[data-testid="chat-compose-input"]');
   await input.waitForDisplayed();
   await input.setValue(text);
-  await (await $('[data-testid="chat-send-button"]')).click();
+  await clickSend();
   await browser.waitUntil(async () => {
     await denyAnyApproval();
     const r = (await requests())[0];

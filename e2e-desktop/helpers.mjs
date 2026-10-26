@@ -150,3 +150,11 @@ export async function openPage(space, item) {
   await nav.waitForDisplayed();
   await nav.click();
 }
+
+/** Clicks Chat's Send once it has taken the typed text: a long chat re-renders slowly, and a
+ * click on the still-disabled button sends nothing (found by the Maria and Sentinel runs, 2026-10-26). */
+export async function clickSend() {
+  const send = await $('[data-testid="chat-send-button"]');
+  await send.waitForEnabled({ timeout: 30000 });
+  await send.click();
+}

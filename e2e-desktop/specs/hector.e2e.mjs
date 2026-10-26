@@ -6,7 +6,7 @@
 //
 // Optional: ALPHONSO_LIVE_TAVILY_API_KEY (your own Tavily key, set only for the run) is typed
 // into Settings → Connectors as a user would, so the search doesn't depend on the free search.
-import { buttonByText, enterShell, invoke, mainText, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
+import { buttonByText, enterShell, invoke, mainText, ollamaHasModels, warmSelectedModel, clickSend } from '../helpers.mjs';
 
 const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
 const TAVILY_KEY = process.env.ALPHONSO_LIVE_TAVILY_API_KEY || '';
@@ -66,7 +66,7 @@ describe('Alphonso desktop: Hector researches properly', () => {
     const input = await $('[data-testid="chat-compose-input"]');
     await input.waitForDisplayed();
     await input.setValue(`/jose Research this: ${QUESTION}`);
-    await (await $('[data-testid="chat-send-button"]')).click();
+    await clickSend();
     await browser.waitUntil(async () => {
       await denyAnyApproval();
       const request = await lastRequest();

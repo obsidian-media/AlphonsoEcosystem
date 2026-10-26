@@ -5,7 +5,7 @@
 // profile. Needs you: send /start to your bot when asked, then press Approve on
 // the message Jose sends. Run on its own:
 //   npx wdio run e2e-desktop/wdio.conf.mjs --spec e2e-desktop/specs/jose-telegram-live.e2e.mjs
-import { enterShell, invoke, mainText, buttonByText, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
+import { enterShell, invoke, mainText, buttonByText, ollamaHasModels, warmSelectedModel, clickSend } from '../helpers.mjs';
 
 const BOT = process.env.ALPHONSO_LIVE_TELEGRAM_TOKEN || '';
 const CHAT = process.env.ALPHONSO_LIVE_TELEGRAM_OWNER_CREDENTIAL || '';
@@ -74,7 +74,7 @@ describe('Alphonso desktop: Jose on your Telegram (live)', () => {
     const input = await $('[data-testid="chat-compose-input"]');
     await input.waitForDisplayed();
     await input.setValue('Plan this fresh: suggest three names for a small coffee shop.');
-    await (await $('[data-testid="chat-send-button"]')).click();
+    await clickSend();
     await browser.waitUntil(async () => {
       const latest = (await savedRequests()).slice(-1)[0];
       return (await savedRequests()).length > before && latest.status === 'waiting_approval';

@@ -3,7 +3,7 @@
 // gives its verdict with the review, and the request ends with the closing
 // summary ("Open on the board."). Nothing is sent. Skipped without a local
 // model; uses qwen2.5:7b when installed (small models write unusable plans more often).
-import { enterShell, invoke, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
+import { enterShell, invoke, ollamaHasModels, warmSelectedModel, clickSend } from '../helpers.mjs';
 
 const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
 // The task-type prefixes each agent owns (src/services/jose/agentPermissionTable.ts).
@@ -68,7 +68,7 @@ describe('Alphonso desktop: each agent does only its own work', () => {
     const input = await $('[data-testid="chat-compose-input"]');
     await input.waitForDisplayed();
     await input.setValue('Research three facts about honeybees, write a short post about them, and have the post checked for accuracy. Do not send it anywhere.');
-    await (await $('[data-testid="chat-send-button"]')).click();
+    await clickSend();
 
     await browser.waitUntil(async () => {
       await denyAnyApproval();
