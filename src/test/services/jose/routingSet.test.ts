@@ -121,3 +121,18 @@ describe('publishing needs a send word; turning into counts as making (agent pha
     expect(asksToMake('What is a good return on a YouTube channel?')).toBe(false);
   });
 });
+
+describe('a write-up and Miya wait for Nova (agent phase 3)', () => {
+  it('a write-up waits for Nova when she is in the plan', () => {
+    const steps = decomposeJoseCommand(parseJoseCommand('Research coffee subscriptions, tell me which opportunity is best, and write a short summary'));
+    const write = steps.find((s) => s.actionType === 'assistant_write');
+    expect(steps.some((s) => s.agent === 'nova')).toBe(true);
+    expect(write?.needs).toEqual(expect.arrayContaining(['hector', 'nova']));
+  });
+
+  it("Miya's package waits for Hector and Nova when they are in the plan", () => {
+    const steps = decomposeJoseCommand(parseJoseCommand('Research the coffee market, tell me which angle is the best opportunity, and design a thumbnail for it'));
+    const miya = steps.find((s) => s.agent === 'miya');
+    expect(miya?.needs).toEqual(['hector', 'nova']);
+  });
+});

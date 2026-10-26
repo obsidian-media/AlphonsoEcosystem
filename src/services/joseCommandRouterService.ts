@@ -518,7 +518,8 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       requiresApproval: false,
       commandPreview: 'A piece of everyday writing.',
       fragments,
-      ...(research ? { needs: ['hector'] } : { needs: [] }),
+      // It also reads Nova's verdict when she is in the plan (agent phase 3).
+      needs: [...(research ? ['hector'] : []), ...(assignments.some((a) => a.agent === AGENTS.NOVA) ? ['nova'] : [])],
     });
     if (intents.check) {
       assignments.push({
@@ -609,6 +610,15 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       costClass: connectorCost?.class || 'paid_or_metered',
       blockedByZeroCostMode: true
     });
+  }
+
+  // Miya's package reads Hector's research and Nova's verdict when they are in the plan
+  // (agent phase 3). Set here, not in the fixed order: there, Miya waiting for Nova would
+  // loop whenever Nova reviews Miya's work.
+  for (const step of normalized) {
+    if (step.agent !== AGENTS.MIYA || Array.isArray(step.needs)) continue;
+    const linked = [AGENTS.HECTOR, AGENTS.NOVA].filter((agent) => normalized.some((other) => other.agent === agent));
+    if (linked.length) step.needs = linked;
   }
 
   return normalized;
