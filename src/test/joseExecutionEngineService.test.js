@@ -80,6 +80,19 @@ vi.mock('../lib/ollama', () => ({
 
 const mockAgentLlm = vi.fn(async () => { throw new Error('model unavailable'); });
 
+// Alphonso's code steps (agent phase 6) are prepared and run through their change set.
+vi.mock('../services/alphonso/prepareCode', async (orig) => ({
+  ...(await orig()),
+  prepareAlphonsoCode: vi.fn(async () => ({ ok: true, preview: {
+    place: { kind: 'project', name: 'shop', folder: 'D:/shop', root: 'D:/shop', prefix: '' }, plan: 'p', title: 't',
+    files: [{ path: 'a.js', content: 'x', status: 'new', added: 1, removed: 0, firstDiff: [] }], commands: [], dropped: [], model: '', preparedAtMs: 1,
+  } })),
+}));
+vi.mock('../services/alphonso/runCode', async (orig) => ({
+  ...(await orig()),
+  runAlphonsoCode: vi.fn(async () => ({ summary: 'Wrote 1 file in shop: a.js.', resultState: 'completed', resultUrl: null, sources: [], contractAction: 'local_operation', artifacts: [] })),
+}));
+
 const mockMemoryItems = [
   { id: 'mem-1', title: 'Space exploration project plan', category: 'project_memory', content: 'Mars colony timeline' },
   { id: 'mem-2', title: 'Creative video about AI', category: 'creative_memory', content: 'Script for AI documentary' },
@@ -177,7 +190,7 @@ describe('jose execution retries and dlq', () => {
     });
 
     const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: verify local runtime package',
+      commandText: 'ask jose: write a short note about the weather',
       source: 'user',
       zeroCostMode: true
     });
@@ -193,7 +206,8 @@ describe('jose execution retries and dlq', () => {
     expect(dlq[0].attempts).toBe(4);
     expect(dlq[0].error).toBeTruthy();
 
-    runtimeReachable = true;
+    // Alphonso's model answers now (agent phase 6: his writing is retried; his code steps run once).
+    mockAgentLlm.mockImplementation(async () => ({ response: 'A short note.' }));
 
     const retrySpy = vi.spyOn(globalThis, 'setTimeout').mockImplementation((callback) => {
       callback();
@@ -204,6 +218,7 @@ describe('jose execution retries and dlq', () => {
 
     expect(retryResult.ok).toBe(true);
     expect(getDLQ()).toHaveLength(0);
+    mockAgentLlm.mockImplementation(async () => { throw new Error('model unavailable'); });
   });
 });
 
@@ -458,7 +473,7 @@ describe('dependency-aware execution', () => {
 
   it('calls setAgentOutput after each successful agent execution', async () => {
     const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: verify local runtime package',
+      commandText: 'ask jose: fix the bug in my app',
       source: 'user',
       zeroCostMode: true
     });

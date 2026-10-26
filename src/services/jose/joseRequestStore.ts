@@ -29,6 +29,15 @@ export interface JoseRequestStep extends PlanStep {
   sendPreview?: SendPreview;
   /** When that send went out; a second run says it was already sent. */
   sentAtMs?: number;
+  /** An Alphonso code step prepared before it asked you (agent phase 6). */
+  codePreview?: import('../alphonso/types').CodePreview;
+  /** The project it works in (a listed name), and the folder its files are relative to. */
+  project?: string;
+  folder?: string;
+  /** "Which project": the names to pick from. */
+  projectChoices?: string[];
+  /** Waiting for another request to finish with this project folder. */
+  waitingForFolder?: string;
 }
 
 export interface JoseRequest {
@@ -206,7 +215,10 @@ export function appendRequestNote(requestId: string, text: string): JoseRequest 
 export function updateJoseStep(requestId: string, stepId: string, patch: Partial<JoseRequestStep>): JoseRequest {
   return update(requestId, (r) => {
     const step = r.steps.find((s) => s.stepId === stepId);
-    if (step) Object.assign(step, patch);
+    if (!step) return;
+    // A step running or done again no longer shows the reason it waited or failed before.
+    if ((patch.status === 'running' || patch.status === 'done') && !('error' in patch)) delete step.error;
+    Object.assign(step, patch);
   });
 }
 
@@ -216,6 +228,15 @@ export function setJoseRequestStatus(requestId: string, status: JoseRequestStatu
 
 export function getJoseRequest(id: string): JoseRequest | null {
   return readAll().find((r) => r.id === id) || null;
+}
+
+/**
+ * The request a command runs on: `jose-request-<commandId>`, or a plan you approved first,
+ * which keeps its own id when it runs (`attachRunToRequest`). Use this, not the derived id.
+ */
+export function requestForCommand(commandId: string): JoseRequest | null {
+  if (!commandId) return null;
+  return getJoseRequest(`jose-request-${commandId}`) || readAll().find((r) => r.commandId === commandId) || null;
 }
 
 /** The request a packet's step belongs to (phase 4), or null for a packet made outside Jose's requests. */

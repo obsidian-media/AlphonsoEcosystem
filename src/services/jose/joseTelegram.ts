@@ -5,17 +5,20 @@
 // is always sent, with Carry on. Built from the saved requests; a durable log
 // keeps anything from being sent twice, also after a restart.
 import { describeSend } from '../marcus/describeSend';
+import { describeCodeChange } from '../alphonso/changeSet';
 import { EFFECT_LABELS, type JoseEffect } from './joseEffects';
 import { agentName } from './agentNames';
 import type { JoseRequest } from './joseRequestStore';
 
-export type JoseButtonAction = 'approve' | 'reject' | 'run' | 'cancel' | 'carry_on';
+export type JoseButtonAction = 'approve' | 'reject' | 'run' | 'cancel' | 'carry_on' | 'pick_project';
 
 export interface JoseButton {
   text: string;
   action: JoseButtonAction;
   requestId: string;
   stepId?: string;
+  /** "Which project" (agent phase 6): the project this button picks. */
+  project?: string;
 }
 
 export interface JoseNotification {
@@ -72,6 +75,9 @@ function stepText(request: JoseRequest, step: JoseRequest['steps'][number]): str
   // A prepared Marcus send says exactly what goes where (agent phase 5).
   if (step.sendPreview) return `${agentName(step.agent)} wants to: ${cut(describeSend(step.sendPreview), 600)}
 For: ${cut(request.text, 200)}`;
+  // A prepared Alphonso change says exactly what changes and runs (agent phase 6).
+  if (step.codePreview) return `${agentName(step.agent)} wants to: ${cut(describeCodeChange(step.codePreview), 600)}
+For: ${cut(request.text, 200)}`;
   const effects = (step.effects || []).filter((e) => e !== 'read').map((e) => EFFECT_LABELS[e as JoseEffect].toLowerCase());
   const what = cut(step.instruction || step.actionType, 300);
   const cost = Number.isFinite(step.costEstimateUsd) ? ` (about $${Number(step.costEstimateUsd).toFixed(2)})` : '';
@@ -126,6 +132,16 @@ export function collectJoseNotifications(requests: JoseRequest[], sent: Set<stri
     }
     if (request.status === 'waiting_setup') {
       for (const s of request.steps.filter((x) => x.status === 'setup_needed')) {
+        // "Which project" (agent phase 6): one button per project.
+        if (Array.isArray(s.projectChoices) && s.projectChoices.length) {
+          add({
+            key: `${request.id}:project:${s.stepId}:${request.updatedAtMs}`,
+            kind: 'setup_needed',
+            text: `${agentName(s.agent)} asks: ${cut(String(s.error || ''), 300)}\nFor: ${cut(request.text, 200)}`,
+            buttons: [s.projectChoices.map((project) => ({ text: project, action: 'pick_project' as const, requestId: request.id, stepId: s.stepId, project }))],
+          });
+          continue;
+        }
         add({
           key: `${request.id}:setup:${s.stepId}:${request.updatedAtMs}`,
           kind: 'setup_needed',
@@ -171,7 +187,7 @@ export function seedSentLog(requests: JoseRequest[]): boolean {
   return true;
 }
 
-type SavedButton = { action: JoseButtonAction; requestId: string; stepId?: string; atMs: number };
+type SavedButton = { action: JoseButtonAction; requestId: string; stepId?: string; project?: string; atMs: number };
 
 function randomCode(length: number): string {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -184,16 +200,16 @@ function randomCode(length: number): string {
 export function buttonToken(button: JoseButton): string {
   const saved = readJson<Record<string, SavedButton>>(BUTTONS_KEY, {});
   const token = `j:${randomCode(8)}`;
-  saved[token] = { action: button.action, requestId: button.requestId, ...(button.stepId ? { stepId: button.stepId } : {}), atMs: Date.now() };
+  saved[token] = { action: button.action, requestId: button.requestId, ...(button.stepId ? { stepId: button.stepId } : {}), ...(button.project ? { project: button.project } : {}), atMs: Date.now() };
   const kept = Object.entries(saved).sort((a, b) => b[1].atMs - a[1].atMs).slice(0, BUTTONS_KEPT);
   writeJson(BUTTONS_KEY, Object.fromEntries(kept));
   return token;
 }
 
 /** What a pressed button means, or null when it is unknown or older than 7 days. */
-export function readButtonToken(data: string, nowMs: number = Date.now()): { action: JoseButtonAction; requestId: string; stepId?: string } | null {
+export function readButtonToken(data: string, nowMs: number = Date.now()): { action: JoseButtonAction; requestId: string; stepId?: string; project?: string } | null {
   if (!/^j:[A-Za-z0-9]{8}$/.test(String(data || ''))) return null;
   const saved = readJson<Record<string, SavedButton>>(BUTTONS_KEY, {})[data];
   if (!saved || nowMs - saved.atMs > BUTTON_TTL_MS) return null;
-  return { action: saved.action, requestId: saved.requestId, ...(saved.stepId ? { stepId: saved.stepId } : {}) };
+  return { action: saved.action, requestId: saved.requestId, ...(saved.stepId ? { stepId: saved.stepId } : {}), ...(saved.project ? { project: saved.project } : {}) };
 }

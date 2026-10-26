@@ -113,7 +113,7 @@ describe('jose execution pipeline e2e', () => {
 
   it('decomposes, executes safe assignments, and emits merge report receipts', async () => {
     const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: create a launch script and verify local runtime package',
+      commandText: 'ask jose: create a launch script and research launch positioning',
       source: 'user',
       zeroCostMode: true
     });

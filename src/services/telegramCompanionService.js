@@ -613,6 +613,13 @@ export async function handleJoseButton(token, update) {
     quietly(plans.runApprovedPlan(request.id));
     return 'Running the plan.';
   }
+  // "Which project" (agent phase 6): the step works in the project pressed.
+  if (button.action === 'pick_project') {
+    const step = request.steps.find((s) => s.stepId === button.stepId);
+    if (request.status !== 'waiting_setup' || !Array.isArray(step?.projectChoices) || !step.projectChoices.includes(button.project)) return 'Already done.';
+    const result = await engine.pickAlphonsoProject(request.id, button.stepId, button.project);
+    return result.summary;
+  }
   if (button.action === 'carry_on') {
     if (request.status !== 'interrupted' && request.status !== 'waiting_setup') return 'Already done.';
     quietly(engine.carryOnRequest(request.id));

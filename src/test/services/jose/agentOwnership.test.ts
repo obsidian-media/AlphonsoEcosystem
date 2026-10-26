@@ -13,8 +13,19 @@ import { JOSE_TEMPLATES } from '../../../services/jose/joseTemplates';
 import { STEP_AGENTS } from '../../../services/contentFactory/contentStepAgents';
 import { WORKFLOW_STEP_TASK } from '../../../services/workflowRegistryService';
 import { MARCUS_PROFILE } from '../../../agents/marcus/marcusProfile';
+import { ALPHONSO_PROFILE } from '../../../agents/alphonso/alphonsoProfile';
 
 const agents = Object.keys(AGENT_PERMISSION_TABLE);
+
+describe("Alphonso's profile (agent phase 6)", () => {
+  it('claims no GitHub issues or pull requests, and no risk or release reports', () => {
+    expect(ALPHONSO_PROFILE.allowedActions).not.toContain('github_create_issue');
+    expect(ALPHONSO_PROFILE.allowedActions).not.toContain('github_create_pr');
+    expect(ALPHONSO_PROFILE.outputTypes).not.toContain('ReleaseReadinessReport');
+    expect(ALPHONSO_PROFILE.outputTypes).not.toContain('RiskReport');
+    expect(ALPHONSO_PROFILE.skillFocus).not.toMatch(/Security Audit|GitHub Integration/);
+  });
+});
 
 describe('one owner per kind of work', () => {
   it('no task-type prefix belongs to two agents', () => {

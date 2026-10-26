@@ -41,7 +41,8 @@ describe('parseJoseCommand', () => {
   });
 
   it('detects local execution intent', () => {
-    const parsed = parseJoseCommand('verify the ollama runtime build');
+    // Agent phase 6: code only when it's code.
+    const parsed = parseJoseCommand('fix the build error in my app');
     expect(parsed.intents.localExecution).toBe(true);
   });
 
@@ -215,7 +216,7 @@ describe('decomposeJoseCommand — agent assignment routing', () => {
   });
 
   it('marks local execution as medium risk when riskyLocal is false', () => {
-    const parsed = parseJoseCommand('verify ollama runtime diagnostics');
+    const parsed = parseJoseCommand('run the tests in my app');
     const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
     const alphonso = assignments.find((a) => a.agent === 'alphonso');
     expect(alphonso).toBeTruthy();

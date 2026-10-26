@@ -48,6 +48,18 @@ const RULE_PLAN: [string, Part[]][] = [
   ['Which of these ideas should we prioritize?', [['nova', 'opportunity_analysis']]],
   ['Remember that the launch is on Friday', [['echo', 'memory_preservation']]],
   ['Audit this plan for compliance risks', [['maria', 'governance_audit']]],
+  // Agent phase 6 (the Alphonso probe, 2026-10-26): code only when it's code.
+  ['Write five quiz questions to test my students on fractions', [['alphonso', 'assistant_write']]],
+  ['Check my cover letter for typos', [['alphonso', 'assistant_answer']]],
+  ['Fix the bug where the login button does nothing in my React app', [['alphonso', 'local_operation']]],
+  ['Run the tests in my project', [['alphonso', 'local_operation']]],
+  ['Add a dark mode toggle to my website', [['alphonso', 'local_operation']]],
+  ['What is a closure in JavaScript?', [['alphonso', 'assistant_answer']]],
+  ['Write a Python script that renames photos by date', [['alphonso', 'local_operation']]],
+  ['Install express in my project', [['alphonso', 'local_operation']]],
+  ['Create a todo app with React', [['alphonso', 'local_operation']]],
+  ['Summarize this file for me', [['alphonso', 'assistant_write']]],
+  ['Create a small Node.js script hello.js that prints the date', [['alphonso', 'local_operation']]],
 ];
 
 const TEMPLATES: [string, string | null][] = [
@@ -196,6 +208,20 @@ describe('an audit of a plan is a review (agent phase 3)', () => {
   it('"discount code" is not code', () => {
     expect(isCodeRequest('a 30 percent discount code')).toBe(false);
     expect(isCodeRequest('fix the code in my app')).toBe(true);
+    // Agent phase 6: test, check, run, add, install, file, verify alone are not code.
+    expect(isCodeRequest('Write five quiz questions to test my students')).toBe(false);
+    expect(isCodeRequest('Check the file I sent and verify the dates')).toBe(false);
+    expect(isCodeRequest('Add a note to run on Monday')).toBe(false);
+    expect(isCodeRequest('Write a script for my video')).toBe(false);
+    expect(isCodeRequest('Write a script that renames the files in a folder')).toBe(true);
+    expect(isCodeRequest('Write a short post about our new app')).toBe(false);
+    expect(isCodeRequest('Recommend a budgeting app')).toBe(false);
+    expect(isCodeRequest('Write a Python script that renames photos')).toBe(true);
+    expect(isCodeRequest('Make hello.js print the date')).toBe(true);
+    expect(isCodeRequest('Add dark mode to my website')).toBe(true);
+    expect(isCodeRequest('Run the tests')).toBe(true);
+    expect(isCodeRequest('Create a todo app with React')).toBe(true);
+    expect(isCodeRequest('Build an app that tracks habits')).toBe(true);
   });
 });
 

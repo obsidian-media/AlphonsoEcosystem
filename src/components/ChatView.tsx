@@ -20,6 +20,7 @@ import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Mic, MicOff
 import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughCalleMcp } from '../lib/chatUtils'
+import { ALPHONSO_ANSWER_PROMPT } from '../services/alphonso/answerPrompt'
 import { decideJoseRoute } from '../services/jose/joseDecision'
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
 import { JosePlanCard } from './jose/JosePlanCard'
@@ -980,7 +981,8 @@ export function ChatView({
     setMessages((current) => [...current, { id: assistantMsgId, role: 'assistant', agentId: assistantAgentId, content: '' }]);
 
     const chatMessages = [
-      { role: 'system', content: CHAT_ASSISTANT_PROMPT },
+      // Direct Mode keeps its own prompt; Jose's direct answers are Alphonso's (agent phase 6).
+      { role: 'system', content: directMode ? CHAT_ASSISTANT_PROMPT : ALPHONSO_ANSWER_PROMPT },
       ...historySnapshot.map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: cleanInput }
     ];

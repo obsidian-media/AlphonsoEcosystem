@@ -93,14 +93,42 @@ export function planningMenu(): string {
 /** Task types that write or run code (agent phase 1): only for a request about code. */
 export const CODE_TASK_PREFIXES = ['local_operation', 'verification_', 'execute_command', 'filesystem_'];
 
-const CODE_WORDS = ['code', 'coding', 'app', 'apps', 'website', 'build', 'compile', 'test', 'tests', 'bug', 'bugs', 'fix', 'function', 'script', 'scripts', 'repo', 'repository', 'install', 'deploy', 'file', 'files', 'api', 'component', 'refactor', 'npm', 'cargo', 'program', 'typescript', 'javascript', 'python', 'rust', 'react'];
+// The simple plan's fallback rule for code (agent phase 6, owner 2026-10-26): used only when
+// Jose's model can't plan. Words like test, check, run, add, install, file or verify alone are
+// not code: "quiz questions to test my students" is writing.
+/** Words that mean code on their own. */
+const CODE_WORDS = ['code', 'coding', 'bug', 'bugs', 'compile', 'refactor', 'repo', 'repository', 'npm', 'cargo', 'pip', 'function', 'functions', 'api', 'component', 'frontend', 'backend', 'endpoint', 'deploy', 'debug'];
+/** Programming languages and frameworks: a script or an app in one is code. */
+const CODE_LANGUAGES = ['typescript', 'javascript', 'python', 'rust', 'java', 'golang', 'ruby', 'php', 'kotlin', 'swift', 'c#', 'c++', 'html', 'css', 'sql', 'bash', 'powershell', 'node', 'nodejs', 'node.js', 'react', 'vue', 'angular', 'svelte', 'next.js', 'django', 'flask', 'tauri', 'electron'];
+/** Things that are code when you make them or when they are yours. */
+const CODE_THINGS = 'app|apps|website|site|program|programs|extension|plugin|bot|cli';
+const CODE_FILE = /\b[\w-]+\.(?:js|mjs|cjs|ts|tsx|jsx|py|rs|go|java|rb|php|cs|cpp|c|h|html|css|json|sh|ps1|sql|toml|ya?ml|vue|svelte|kt|swift)\b/;
+const YOUR_PROJECT = /\b(?:my|our)\s+(?:app|apps|website|site|project|repo|repository|codebase|code|program|extension|plugin|bot)\b|\b(?:the|this)\s+(?:project|repo|repository|codebase)\b/;
+const MAKE_A_THING = new RegExp(`\\b(?:build|create|make|develop|implement|code|program|scaffold)\\s+(?:me\\s+)?(?:a|an|the|my|our)?\\s*(?:[\\w-]+\\s+){0,2}(?:${CODE_THINGS})\\b`);
+/** A script or program that works on files, folders or data is code; a script for a video is not. */
+const SCRIPT_ON_DATA = /\b(?:script|program)s?\b[^.?!]*\b(?:files?|folders?|director(?:y|ies)|csv|json|spreadsheets?|automat\w*|command\s+line|terminal)\b/;
+const RUN_CHECKS = /\b(?:run|fix)\s+(?:the\s+|all\s+|my\s+)?(?:failing\s+|unit\s+)?tests\b|\b(?:failing|unit|integration)\s+tests?\b|\btest\s+suite\b|\blinter\b/;
 
-/** Whether the text asks for work on code (whole words). */
+/** Whether the text talks about an existing project of yours ("this project", "my app"). */
+export function refersToAProject(text: string): boolean {
+  return YOUR_PROJECT.test(String(text || '').toLowerCase());
+}
+
+/** Whether the text asks for work on code. */
 export function isCodeRequest(text: string): boolean {
   // A discount, promo or referral code is an offer, not code (agent phase 3).
   const value = String(text || '').toLowerCase().replace(/\b(?:discount|promo|promotional|coupon|voucher|referral|gift)\s+codes?\b/g, ' offer ');
-  const words = new Set(value.split(/[^a-z0-9']+/).filter(Boolean));
-  return CODE_WORDS.some((word) => words.has(word));
+  const words = new Set(value.split(/[^a-z0-9'#+.]+/).map((w) => w.replace(/\.+$/, '')).filter(Boolean));
+  if (CODE_WORDS.some((word) => words.has(word))) return true;
+  if (CODE_LANGUAGES.some((lang) => words.has(lang))) return true;
+  return CODE_FILE.test(value) || YOUR_PROJECT.test(value) || MAKE_A_THING.test(value) || RUN_CHECKS.test(value) || SCRIPT_ON_DATA.test(value);
+}
+
+/** Words that ask for facts, sources or current information (agent phase 6): writing needs research only then. */
+const FACT_WORDS = /\b(?:research|sources?|facts?|latest|current|news|prices?|pricing|statistics|stats|compare|comparison|look\s+up|find\s+out|data\s+on)\b/;
+
+export function needsFacts(text: string): boolean {
+  return FACT_WORDS.test(String(text || '').toLowerCase());
 }
 
 export function isCodeTask(actionType: string, effects: string[] = []): boolean {

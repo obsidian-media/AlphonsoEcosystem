@@ -10,6 +10,19 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent phase 6: Alphonso writes real code in a folder you chose, and asks before he changes it (2026-10-26)
+- **Your projects**: list them in **Settings → Agents → Alphonso's projects** (a name and a folder each). A request that names a project works there; with one project he uses it; with several and none named, the step asks **"Which project: shop, blog?"** with a button per project on the board and Telegram. Two requests never change the same project at once: the second waits and carries on when the first is done. Your old Workspace Root becomes your first project.
+- **Small code with no project** ("a script that renames my photos") goes in its own folder: `<output folder>/Alphonso/<name>/`.
+- **He plans from your files**: his model reads the project's file list (respecting `.gitignore`) and the files it needs, plus the earlier steps' work, then writes the change. A step that needs to know something asks for help or says what it needs.
+- **You see the change before it happens**: the board shows each file (new or changed, lines added and removed, the first changed lines) and each command with why; Telegram says "Alphonso wants to: Change 2 files in shop (src/App.tsx +12 −3) …". One approval per step. A file that changed since the preview is not overwritten.
+- **Commands**: his model proposes them; read-only ones run without asking, others are listed in the preview. Git and dev servers only when you ask. After writing he runs the checks and fixes up to two rounds, then reports plainly what was written, changed and run, with each command's result. No more "verified" without a check.
+- **Code only when it's code**: quiz questions "to test my students" are writing; "Run the tests in my project" is his; a question about code is answered. Writing gets Hector's research only when it needs facts.
+- **Answers** use the conversation and no longer mention Direct Mode. Others can ask him for help with writing; he can ask them for facts or checks.
+- **Model for Alphonso's code** in Settings: any installed model, or the same as Alphonso.
+- Maria and Sentinel review the files in the folder he worked in.
+- **Fix**: `npm` commands failed with "program not found" on Windows; npm, npx, yarn and pnpm now start as their `.cmd` files. A command the app's command policy would refuse is no longer offered for approval: Alphonso is asked for another one, or it is left out with the reason.
+- **Fix**: a plan you approved first ("Show Jose's plan first") runs on its own saved request, and several steps looked for the request under another name: Alphonso's change wasn't found, his project stayed locked, and Marcus's send lost its one-send guard and Sentinel's and Maria's reviews. They all find it now.
+
 ### Agent phase 5: Marcus sends what was written, where you said (2026-10-26)
 - **"Post it to Slack #news" now posts it.** Marcus sends exactly what the step before him wrote, to the channel you named or a default you set in Settings → Connectors ("Where Marcus sends"); his model picks among the connectors you set up, and a channel nobody named (the old `#general`) is never used.
 - **One approval with the exact text**: "Send to Slack #news: “…”" on the approval, the board and Telegram. Sentinel checks it first. The second approval store that failed sends is gone.

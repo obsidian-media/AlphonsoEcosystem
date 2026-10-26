@@ -21,6 +21,8 @@ import { recordOrchestrationQueueTransition } from './orchestrationQueueService'
 import { inferEffects, stepEffectsToWaitFor, type JoseEffect } from './jose/joseEffects';
 import { legacyNeeds } from './jose/stepGraph';
 import { randomHex } from '../lib/randomId';
+import { isCodeRequest } from './jose/taskTypeMeanings';
+import { isPlainQuestion } from '../lib/chatUtils';
 
 const COMMAND_KEY = 'alphonso_jose_command_routes_v2';
 const SETTINGS_KEY = 'alphonso_settings';
@@ -392,11 +394,13 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
   // phase 3: "audit this plan … and post it on Instagram" also planned a send and a code step).
   const planReview = PLAN_REVIEW.test(asked);
   const sends = parseSends(asked, clean, planReview);
-  const localExecution = !planReview && !(sends && sends.kind !== 'message') && matchesAny(asked, ['build', 'runtime', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package', 'function', 'code', 'bug', 'repo', 'compile', 'refactor', 'npm']);
+  // Code only when it's code (agent phase 6): the one rule in taskTypeMeanings.ts. A question
+  // about code is answered, not built.
+  const localExecution = !planReview && !(sends && sends.kind !== 'message') && isCodeRequest(asked) && !isPlainQuestion(clean);
   const securityMonitoring = matchesAny(asked, ['security', 'secrets', 'permission', 'vulnerability', 'unsafe', 'incident']);
   // A check for security is Sentinel's, not Maria's accuracy check (agent phase 4).
   const accuracyCheck = matchesAny(asked, ['accuracy', 'accurate', 'fact-check', 'proofread', 'facts', 'quality']);
-  const creative = !planReview && matchesAny(asked, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative', 'image', 'generate image', 'generate an image', 'picture', 'visual', 'miya', 'maia']);
+  const creative = !planReview && !localExecution && matchesAny(asked, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative', 'image', 'generate image', 'generate an image', 'picture', 'visual', 'miya', 'maia']);
   const intents: JoseCommandParserIntents = {
     research: matchesAny(asked, ['research', 'lookup', 'docs', 'pricing', 'market', 'source', 'citation', 'latest']),
     creative,

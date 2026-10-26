@@ -192,6 +192,7 @@ import { getMcpOutreachRecord, isAwaitingMcpOutreachInput, handleMcpOutreachMess
 import { loadChatMessages } from '../services/chatPersistenceService';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 import { decideJoseRoute } from '../services/jose/joseDecision';
+import { ALPHONSO_ANSWER_PROMPT } from '../services/alphonso/answerPrompt';
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose';
 import { createWaitingPlanRequest, createJoseRequest, setJoseRequestStatus } from '../services/jose/joseRequestStore';
 import { carryOnRequest } from '../services/joseExecutionEngineService';
@@ -775,6 +776,17 @@ describe('ChatView: everything goes to Jose', () => {
     await waitFor(() => expect(generateOllamaChatStream).toHaveBeenCalled());
     expect(decideJoseRoute).toHaveBeenCalledWith('Thanks, that helps', expect.anything());
     expect(submitToJose).not.toHaveBeenCalled();
+  });
+
+  // Agent phase 6: Jose's direct answers are Alphonso's, with his own prompt (no Direct Mode talk).
+  it("answers with Alphonso's prompt, not Direct Mode's", async () => {
+    decideJoseRoute.mockResolvedValueOnce({ route: 'direct', source: 'model', reason: 'chat' });
+    generateOllamaChatStream.mockImplementationOnce(({ onToken }) => { onToken?.('Hi!', 'Hi!'); return Promise.resolve('Hi!'); });
+    render(<ChatView {...makeProps()} />);
+    send('What is a closure?');
+    await waitFor(() => expect(generateOllamaChatStream).toHaveBeenCalled());
+    const system = generateOllamaChatStream.mock.calls.at(-1)[0].messages[0];
+    expect(system).toEqual({ role: 'system', content: ALPHONSO_ANSWER_PROMPT });
   });
 
   it('hands the request to Jose when he decides to plan, and shows how he planned', async () => {

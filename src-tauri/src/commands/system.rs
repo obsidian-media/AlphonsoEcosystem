@@ -55,6 +55,40 @@ pub(crate) struct ProcessProof {
   trust: String,
 }
 
+/// Why the command policy refuses a command, or None when it may run. The one place both
+/// `execute_command_verified` and `command_allowed` ask, so a preview never offers a command
+/// that would be refused when it runs.
+pub(crate) fn command_policy_refusal(program: &str, args: &[String]) -> Option<String> {
+  if !allowed_program(program) {
+    return Some("Program is not allowed by Alphonso supervised command policy.".to_string());
+  }
+  if !allowed_args(program, args) {
+    return Some(format!(
+      "Arguments are not permitted for program '{}' by Alphonso policy.",
+      program
+    ));
+  }
+  None
+}
+
+/// The name to start a program by: on Windows the package managers are `.cmd` files, which a
+/// plain `npm` can't be started as (agent phase 6, live run: "program not found").
+pub(crate) fn spawn_name(program: &str, windows: bool) -> String {
+  if windows && matches!(program, "npm" | "npx" | "yarn" | "pnpm") {
+    return format!("{program}.cmd");
+  }
+  program.to_string()
+}
+
+/// Read-only: whether a command would be allowed to run (agent phase 6). Runs nothing.
+#[tauri::command]
+pub(crate) fn command_allowed(program: String, args: Vec<String>) -> serde_json::Value {
+  match command_policy_refusal(&program, &args) {
+    Some(reason) => serde_json::json!({ "allowed": false, "reason": reason }),
+    None => serde_json::json!({ "allowed": true }),
+  }
+}
+
 #[tauri::command]
 pub(crate) fn execute_command_verified(
   program: String,
@@ -63,17 +97,11 @@ pub(crate) fn execute_command_verified(
 ) -> Result<CommandProof, String> {
   let started = now_ms();
 
-  if !allowed_program(&program) {
-    return Err("Program is not allowed by Alphonso supervised command policy.".to_string());
-  }
-  if !allowed_args(&program, &args) {
-    return Err(format!(
-      "Arguments are not permitted for program '{}' by Alphonso policy.",
-      program
-    ));
+  if let Some(reason) = command_policy_refusal(&program, &args) {
+    return Err(reason);
   }
 
-  let mut command = Command::new(&program);
+  let mut command = Command::new(spawn_name(&program, cfg!(windows)));
   command.args(&args);
   utils::no_window(&mut command);
 
@@ -317,5 +345,52 @@ fn parse_tasklist(tasklist_output: &str, query: &str) -> Vec<ProcessMatch> {
         Some(ProcessMatch { name, pid })
       })
       .collect()
+  }
+}
+
+#[cfg(test)]
+mod command_policy_tests {
+  use super::*;
+
+  fn v(items: &[&str]) -> Vec<String> {
+    items.iter().map(|s| s.to_string()).collect()
+  }
+
+  #[test]
+  fn command_allowed_reports_the_policy_without_running_anything() {
+    assert_eq!(command_allowed("npm".into(), v(&["test"]))["allowed"], true);
+    let refused = command_allowed("node".into(), v(&["hello.js"]));
+    assert_eq!(refused["allowed"], false);
+    assert_eq!(
+      refused["reason"],
+      "Arguments are not permitted for program 'node' by Alphonso policy."
+    );
+    let unknown = command_allowed("hello.js".into(), v(&[]));
+    assert_eq!(unknown["allowed"], false);
+    assert_eq!(
+      unknown["reason"],
+      "Program is not allowed by Alphonso supervised command policy."
+    );
+  }
+
+  // Live run (2026-10-26): `npm test` failed with "program not found" on Windows.
+  #[test]
+  fn package_managers_start_as_their_cmd_files_on_windows() {
+    assert_eq!(spawn_name("npm", true), "npm.cmd");
+    assert_eq!(spawn_name("npx", true), "npx.cmd");
+    assert_eq!(spawn_name("yarn", true), "yarn.cmd");
+    assert_eq!(spawn_name("pnpm", true), "pnpm.cmd");
+    assert_eq!(spawn_name("npm.cmd", true), "npm.cmd");
+    assert_eq!(spawn_name("git", true), "git");
+    assert_eq!(spawn_name("npm", false), "npm");
+  }
+
+  #[test]
+  fn execute_refuses_with_the_same_reason() {
+    let err = execute_command_verified("node".into(), v(&["hello.js"]), None).err();
+    assert_eq!(
+      err.as_deref(),
+      command_policy_refusal("node", &v(&["hello.js"])).as_deref()
+    );
   }
 }

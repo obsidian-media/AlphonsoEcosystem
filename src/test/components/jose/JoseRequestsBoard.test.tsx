@@ -17,10 +17,11 @@ vi.mock('../../../services/joseExecutionEngineService', () => ({
   approveRequestStep: vi.fn(async () => ({ ok: true, summary: 'Marcus did it; the request carried on.' })),
   carryOnRequest: vi.fn(async () => ({ ok: true, command: { userReport: { summary: 'Carried on to the end.' } } })),
   rejectRequestStep: vi.fn(() => ({ ok: true, summary: 'Rejected. The request was cancelled.' })),
+  pickAlphonsoProject: vi.fn(async (_r: string, _s: string, name: string) => ({ ok: true, summary: `Working in ${name}.` })),
 }));
 
 import { JoseRequestsBoard } from '../../../components/jose/JoseRequestsBoard';
-import { approveRequestStep, carryOnRequest, rejectRequestStep } from '../../../services/joseExecutionEngineService';
+import { approveRequestStep, carryOnRequest, rejectRequestStep, pickAlphonsoProject } from '../../../services/joseExecutionEngineService';
 import { createJoseRequest, setJoseRequestStatus, updateJoseStep } from '../../../services/jose/joseRequestStore';
 import { JosePlanEditor } from '../../../components/jose/JosePlanEditor';
 import { runApprovedPlan } from '../../../services/jose/submitToJose';
@@ -129,6 +130,35 @@ describe('JosePlanEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approve and carry on: Marcus distribution_execution' }));
     await waitFor(() => expect(approveRequestStep).toHaveBeenCalledWith(request.id, 'post'));
     expect(await screen.findByText('Marcus did it; the request carried on.')).toBeTruthy();
+  });
+
+  // Agent phase 6: Alphonso's prepared change, and "Which project".
+  it("shows Alphonso's prepared change under his waiting step", () => {
+    const request = createJoseRequest({
+      commandId: 'c-code', source: 'user', text: 'In shop, add a toggle', kind: 'normal',
+      steps: [{ stepId: 'build', agent: 'alphonso', actionType: 'local_operation', effects: ['run'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'build', { status: 'waiting_approval', codePreview: {
+      place: { kind: 'project', name: 'shop', folder: 'D:/shop', root: 'D:/shop', prefix: '' }, plan: 'Add a toggle.', title: 't',
+      files: [{ path: 'src/App.tsx', content: 'x', status: 'changed', added: 1, removed: 1, firstDiff: ['- a', '+ b'] }], commands: [], dropped: [], model: '', preparedAtMs: 1,
+    } } as never);
+    setJoseRequestStatus(request.id, 'waiting_approval');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    expect(screen.getByTestId('alphonso-code-preview').textContent).toContain('src/App.tsx');
+  });
+
+  it('asks which project with one button per project', async () => {
+    const request = createJoseRequest({
+      commandId: 'c-pick', source: 'user', text: 'Add a README', kind: 'normal',
+      steps: [{ stepId: 'build', agent: 'alphonso', actionType: 'local_operation', effects: ['run'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'build', { status: 'setup_needed', error: 'Which project: shop, blog?', projectChoices: ['shop', 'blog'] } as never);
+    setJoseRequestStatus(request.id, 'waiting_setup');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    expect(screen.getByText('Which project: shop, blog?')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('alphonso-pick-blog'));
+    await waitFor(() => expect(pickAlphonsoProject).toHaveBeenCalledWith(request.id, 'build', 'blog'));
+    expect(await screen.findByText('Working in blog.')).toBeTruthy();
   });
 
   it('shows what a step produced when you pick it in the map (phase 6a)', () => {

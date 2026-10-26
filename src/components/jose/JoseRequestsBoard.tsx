@@ -7,12 +7,13 @@ import { Button } from '../ui';
 import { JosePlanMap } from './JosePlanMap';
 import { JosePlanEditor } from './JosePlanEditor';
 import { JoseStepOutput } from './JoseStepOutput';
+import { CodePreviewView } from '../alphonso/CodePreviewView';
 import { describePlanSource, type JosePlan } from '../../services/jose/josePlanner';
 import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
 import { agentName } from '../../services/jose/agentNames';
-import { approveRequestStep, carryOnRequest, rejectRequestStep } from '../../services/joseExecutionEngineService';
+import { approveRequestStep, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
 
 export const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
@@ -114,6 +115,22 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
     }
   };
   const waitingSteps = selected?.status === 'waiting_approval' ? selected.steps.filter((s) => s.status === 'waiting_approval') : [];
+  // "Which project" (agent phase 6).
+  const choosingStep = selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.projectChoices?.length) : undefined;
+  const pick = async (project: string) => {
+    if (!selected || !choosingStep || runningRef.current) return;
+    runningRef.current = true;
+    setRunning(true);
+    try {
+      setMessage((await pickAlphonsoProject(selected.id, choosingStep.stepId, project)).summary);
+    } catch (error) {
+      setMessage(`It could not carry on: ${String(error)}`);
+    } finally {
+      runningRef.current = false;
+      setRunning(false);
+      refresh();
+    }
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-[260px_1fr]">
@@ -165,6 +182,18 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
               </>
             )}
 
+          {waitingSteps.filter((s) => s.codePreview).map((s) => <CodePreviewView key={`preview-${s.stepId}`} preview={s.codePreview!} />)}
+          {choosingStep && (
+            <div className="space-y-2 rounded-xl bg-(--surface-2) p-3 text-xs">
+              <div className="text-(--text-1)">{choosingStep.error}</div>
+              <div className="flex flex-wrap gap-2">
+                {choosingStep.projectChoices!.map((project) => (
+                  <Button key={project} data-testid={`alphonso-pick-${project}`} disabled={running} onClick={() => pick(project)}>{project}</Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2">
             {waiting && !editing && (
               <>
@@ -173,7 +202,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
             )}
-            {(selected.status === 'interrupted' || selected.status === 'waiting_setup') && (
+            {(selected.status === 'interrupted' || (selected.status === 'waiting_setup' && !choosingStep)) && (
               <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
             )}
             {waitingSteps.map((step) => (

@@ -2,7 +2,7 @@
 // there, was it reviewed, where would it go, does the connector answer, does it fit.
 import { checkConnectorHealth } from '../connectorHealthCheckService';
 import { buildStepInput } from '../jose/stepInput';
-import { getJoseRequest } from '../jose/joseRequestStore';
+import { requestForCommand } from '../jose/joseRequestStore';
 import { getStepOutput } from '../jose/joseStepOutputs';
 import { agentName } from '../jose/agentNames';
 import { CHANNEL_LIMITS, CONNECTOR_NAMES } from './destinations';
@@ -23,7 +23,7 @@ const count = (n: number) => n.toLocaleString('en-US');
 
 /** The Sentinel and Maria verdicts on the work, from the request's review steps. */
 function reviewsOf(commandId: string, sourceStepId: string | null): Array<{ agent: string; verdict: string }> {
-  const request = getJoseRequest(`jose-request-${commandId}`);
+  const request = requestForCommand(commandId);
   if (!request || !sourceStepId) return [];
   return request.steps
     .filter((s) => (s.agent === 'sentinel' || s.agent === 'maria') && s.reviewOf === sourceStepId)

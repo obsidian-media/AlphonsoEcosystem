@@ -159,3 +159,34 @@ describe('a request waiting for setup (agent roles Part A)', () => {
     expect(note?.buttons?.[0]?.[0]).toMatchObject({ text: 'Carry on', action: 'carry_on', requestId: 'r-setup' });
   });
 });
+
+// Agent phase 6: Alphonso's prepared change, and "Which project".
+describe("Alphonso's code steps on Telegram", () => {
+  it('a waiting code step says exactly what changes', () => {
+    const [n] = collectJoseNotifications([request({
+      status: 'waiting_approval',
+      steps: [{ stepId: 'build', agent: 'alphonso', actionType: 'local_operation', effects: ['run'], needs: [], status: 'waiting_approval', startedAtMs: 5,
+        codePreview: { place: { kind: 'project', name: 'shop', folder: 'D:/shop', root: 'D:/shop', prefix: '' }, plan: 'p', title: 't',
+          files: [{ path: 'src/App.tsx', content: 'x', status: 'changed', added: 2, removed: 1, firstDiff: [] }], commands: [], dropped: [], model: '', preparedAtMs: 1 } } as any],
+    })], new Set(), ALL_ON);
+    expect(n.text).toBe('Alphonso wants to: Change 1 file in shop (src/App.tsx +2 −1)\nFor: Post the launch video');
+  });
+
+  it('which project: one button per project, no Carry on', () => {
+    const out = collectJoseNotifications([request({
+      status: 'waiting_setup',
+      steps: [{ stepId: 'build', agent: 'alphonso', actionType: 'local_operation', effects: ['run'], needs: [], status: 'setup_needed', error: 'Which project: shop, blog?', projectChoices: ['shop', 'blog'] } as any],
+    })], new Set(), getJoseTelegramSettings());
+    const note = out.find((n) => n.kind === 'setup_needed');
+    expect(note?.text).toBe('Alphonso asks: Which project: shop, blog?\nFor: Post the launch video');
+    expect(note?.buttons).toEqual([[
+      { text: 'shop', action: 'pick_project', requestId: 'r1', stepId: 'build', project: 'shop' },
+      { text: 'blog', action: 'pick_project', requestId: 'r1', stepId: 'build', project: 'blog' },
+    ]]);
+  });
+
+  it('a project button keeps its project', () => {
+    const token = buttonToken({ text: 'blog', action: 'pick_project', requestId: 'r1', stepId: 'build', project: 'blog' });
+    expect(readButtonToken(token)).toEqual({ action: 'pick_project', requestId: 'r1', stepId: 'build', project: 'blog' });
+  });
+});

@@ -1,5 +1,5 @@
 import { getStepOutput } from './jose/joseStepOutputs';
-import { getJoseRequest } from './jose/joseRequestStore';
+import { getJoseRequest, requestForCommand } from './jose/joseRequestStore';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { readDueMetrics } from './contentFactory/postMetrics';
 import { pushMemoryItem } from './memoryService';
@@ -103,7 +103,7 @@ interface ScheduledPublish {
 export function mariaReviewFor(commandId: unknown, needs: string[] | undefined): PriorOutputs['maria'] | null {
   if (typeof commandId !== 'string' || !commandId) return null;
   const linked = new Set(needs || []);
-  const steps = getJoseRequest(`jose-request-${commandId}`)?.steps || [];
+  const steps = requestForCommand(commandId)?.steps || [];
   const reviewer = steps.find((s) => s.agent === 'maria' && s.reviewOf && linked.has(s.reviewOf))
     || steps.find((s) => s.agent === 'maria' && linked.has(s.stepId));
   if (!reviewer) return null;
@@ -116,7 +116,7 @@ const READ_ONLY = new Set(['distribution_readiness', 'distribution_review']);
 
 /** The Maria and Sentinel steps that reviewed what he sends (or that he needs), finished. */
 function reviewersOf(commandId: string, assignment: Assignment, sourceStepId: string | null): string[] {
-  const steps = getJoseRequest(`jose-request-${commandId}`)?.steps || [];
+  const steps = requestForCommand(commandId)?.steps || [];
   const needs = new Set(assignment.needs || []);
   return steps
     .filter((s) => (s.agent === 'maria' || s.agent === 'sentinel') && s.status === 'done'

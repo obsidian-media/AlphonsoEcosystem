@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 324 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 334 services and 186 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -22,6 +22,8 @@ Source-backed inventory: 324 services and 184 components. Human purpose descript
 | component | `src/components/agentWorkshop/FinalExecutionPacket.tsx` | `FinalExecutionPacket` |
 | component | `src/components/agentWorkshop/ProjectIntakePanel.tsx` | `ProjectIntakePanel` |
 | component | `src/components/agentWorkshop/SystemHealthPanel.tsx` | `SystemHealthPanel` |
+| component | `src/components/alphonso/AlphonsoProjectsSection.tsx` | `AlphonsoProjectsSection` |
+| component | `src/components/alphonso/CodePreviewView.tsx` | `CodePreviewView` |
 | component | `src/components/approval/ApprovalCenterPanel.tsx` | `ApprovalCenterPanel` |
 | component | `src/components/ApprovalModal.tsx` | `ApprovalModal` |
 | component | `src/components/ApprovalPanel.tsx` | `ApprovalItemDetail`, `ApprovalPanel`, `PendingApprovalItem` |
@@ -217,6 +219,16 @@ Source-backed inventory: 324 services and 184 components. Human purpose descript
 | service | `src/services/agentWorkshop/traceabilityService.js` | `appendTraceEvent`, `getTraceSummary`, `listTraceEvents`, `TRACE_STAGES` |
 | service | `src/services/agentWorkshop/verificationChainService.js` | `createDefaultCrossVerificationChain`, `createVerificationChain`, `listVerificationChains`, `updateVerificationStage` |
 | service | `src/services/agentWorkshop/workContractService.js` | `archiveWorkContract`, `createWorkContractDraft`, `listWorkContracts`, `signWorkContract`, `updateWorkContract` |
+| service | `src/services/alphonso/answerPrompt.ts` | `ALPHONSO_ANSWER_PROMPT` |
+| service | `src/services/alphonso/changeSet.ts` | `classifyCommand`, `classifyFile`, `contentHash`, `describeCodeChange`, `previewNeeds` |
+| service | `src/services/alphonso/codeStep.ts` | `CodeAnswer`, `isAlphonsoCodeStep`, `parseCodeAnswer` |
+| service | `src/services/alphonso/prepareCode.ts` | `ALPHONSO_NO_PLAN`, `askAlphonso`, `codeModelFor`, `FOLDER_GONE`, `MODEL_DIDNT_ANSWER`, `NEEDS_TO_KNOW`, `prepareAlphonsoCode`, `PrepareCode`, `safePath`, `WHICH_PROJECT` |
+| service | `src/services/alphonso/projectLock.ts` | `busyLine`, `claimProject`, `onProjectReleased`, `projectHolder`, `releaseProject` |
+| service | `src/services/alphonso/projects.ts` | `AlphonsoProject`, `getCodeModel`, `listProjects`, `NEEDS_OUTPUT_FOLDER`, `NO_PROJECT`, `projectNamedIn`, `projectPlace`, `saveProjects`, `scratchPlace`, `WorkPlace` |
+| service | `src/services/alphonso/readProject.ts` | `listProjectFiles`, `ProjectFile`, `readProjectFiles` |
+| service | `src/services/alphonso/runCode.ts` | `applyChangeSet`, `CommandRun`, `runAlphonsoCode`, `runApprovedCommands` |
+| service | `src/services/alphonso/stepFolder.ts` | `reviewedFolder`, `stepFolder` |
+| service | `src/services/alphonso/types.ts` | `CodeCommand`, `CodeFile`, `CodePreview` |
 | service | `src/services/approval/approvalService.js` | `approveRequest`, `createApprovalRequest`, `getApprovalReason`, `listAllApprovals`, `listApprovalsByTrace`, `listPendingApprovals`, `listPendingApprovalsByTrace`, `rejectRequest`, `requireApproval`, `requiresApproval` |
 | service | `src/services/appUpdateService.ts` | `checkAppUpdate`, `getLastUpdateNotice`, `getLastUpdateNoticeAsync`, `notifyUpdateAvailable`, `setLastUpdateNotice`, `UpdateCheckInput`, `UpdateCheckResult`, `UpdateNotice` |
 | service | `src/services/attentionAggregatorService.ts` | `AttentionItem`, `AttentionSeverity`, `AttentionSource`, `getAttentionItems` |
@@ -362,7 +374,7 @@ Source-backed inventory: 324 services and 184 components. Human purpose descript
 | service | `src/services/jose/josePlanEdits.ts` | `addStep`, `changeStepAgent`, `removeStep`, `rewireNeeds`, `setStepInstruction`, `setStepNeeds` |
 | service | `src/services/jose/josePlanLayout.ts` | `DEFAULT_BOX`, `layoutPlan`, `PlanLayout` |
 | service | `src/services/jose/josePlanner.ts` | `copiedPlaceholders`, `describePlanSource`, `JosePlan`, `missingAsked`, `PLAN_EXAMPLE`, `planJoseRequest` |
-| service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `replacePlanSteps`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `updateJoseStep` |
+| service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `replacePlanSteps`, `requestForCommand`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `updateJoseStep` |
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
 | service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `estimateEffectsUsd`, `estimateElevenLabsUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd` |
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `listStepOutputs`, `priorOutputsForNeeds`, `setStepOutput`, `StepOutput` |
@@ -376,9 +388,9 @@ Source-backed inventory: 324 services and 184 components. Human purpose descript
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
 | service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
-| service | `src/services/jose/taskTypeMeanings.ts` | `CODE_TASK_PREFIXES`, `isCodeRequest`, `isCodeTask`, `planningMenu`, `TASK_TYPE_MEANINGS`, `taskTypesFor` |
+| service | `src/services/jose/taskTypeMeanings.ts` | `CODE_TASK_PREFIXES`, `isCodeRequest`, `isCodeTask`, `needsFacts`, `planningMenu`, `refersToAProject`, `TASK_TYPE_MEANINGS`, `taskTypesFor` |
 | service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `asksPlanReview`, `asksReadiness`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `ParsedSend`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals`, `WRITE_FOR_SEND` |
-| service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `assistantPrompt`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `miyaResearchSnippet`, `parseJsonResponse`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
+| service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `assistantPrompt`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `miyaResearchSnippet`, `parseJsonResponse`, `pickAlphonsoProject`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
 | service | `src/services/licenseService.ts` | `__setTrustedPublicKeyForTests`, `activateLicense`, `canUseConnector`, `clearLicenseDenialLog`, `deactivateLicense`, `getLicenseDenialLog`, `getLicenseInfo`, `initLicense`, `isPremiumConnector`, `isPremiumGatingEnabled`, `LicenseDenialEntry`, `LicenseInfo`, `LicenseTier` |
 | service | `src/services/localMarketplaceService.ts` | `DEFAULT_CATALOGUE_URL`, `fetchRemoteCatalogue`, `getRemoteCatalogueUrl`, `listMarketplaceItems`, `setMarketplaceItemStatus`, `setRemoteCatalogueUrl` |

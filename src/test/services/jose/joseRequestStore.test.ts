@@ -1,16 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  createJoseRequest,
-  updateJoseStep,
-  setJoseRequestStatus,
-  getJoseRequest,
-  listJoseRequests,
-  markRunningRequestsInterrupted,
-  createWaitingPlanRequest,
-  replacePlanSteps,
-  claimPlanForRun,
-  cancelJoseRequest,
-} from '../../../services/jose/joseRequestStore';
+import { createJoseRequest, updateJoseStep, setJoseRequestStatus, getJoseRequest, listJoseRequests, markRunningRequestsInterrupted, createWaitingPlanRequest, replacePlanSteps, claimPlanForRun, cancelJoseRequest, requestForCommand, attachRunToRequest } from '../../../services/jose/joseRequestStore';
 
 const steps = [
   { stepId: 'hector', agent: 'hector', actionType: 'research', effects: ['read' as const], needs: [] },
@@ -22,6 +11,34 @@ function make(text = 'Make a launch video') {
 }
 
 beforeEach(() => localStorage.clear());
+
+// Final review (agent phase 6): a plan approved first keeps its own id when it runs.
+// Live run (2026-10-26): a step picked into blog finished but still said "Which project: shop, blog?".
+describe('a step that runs again', () => {
+  it('drops its old error once it is running or done', () => {
+    localStorage.clear();
+    const r = createJoseRequest({ commandId: 'c-err', source: 'user', text: 'x', kind: 'normal', steps: [{ stepId: 'a', agent: 'alphonso', actionType: 'local_operation', effects: ['run'], needs: [] }] } as never);
+    updateJoseStep(r.id, 'a', { status: 'setup_needed', error: 'Which project: shop, blog?' } as never);
+    updateJoseStep(r.id, 'a', { status: 'done' } as never);
+    expect(getJoseRequest(r.id)!.steps[0].error).toBeUndefined();
+    updateJoseStep(r.id, 'a', { status: 'failed', error: 'It broke.' } as never);
+    expect(getJoseRequest(r.id)!.steps[0].error).toBe('It broke.');
+  });
+});
+
+describe('requestForCommand', () => {
+  it("finds a command's request, also one that was a plan approved first", () => {
+    localStorage.clear();
+    const plain = createJoseRequest({ commandId: 'c-plain', source: 'user', text: 'x', kind: 'normal', steps: [] } as never);
+    expect(requestForCommand('c-plain')?.id).toBe(plain.id);
+    const waiting = createWaitingPlanRequest({ text: 'y', source: 'user', kind: 'normal', steps: [], plan: { source: 'fresh' }, runOptions: { source: 'user' } } as never);
+    attachRunToRequest(waiting.id, { commandId: 'c-plan', steps: [] } as never);
+    expect(requestForCommand('c-plan')?.id).toBe(waiting.id);
+    expect(waiting.id.startsWith('jose-request-plan-')).toBe(true);
+    expect(requestForCommand('nope')).toBeNull();
+    expect(requestForCommand('')).toBeNull();
+  });
+});
 
 describe('joseRequestStore', () => {
   it('saves a request with its steps waiting', () => {
