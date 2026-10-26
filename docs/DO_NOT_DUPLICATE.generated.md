@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 305 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 313 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -142,6 +142,7 @@ Source-backed inventory: 305 services and 182 components. Human purpose descript
 | component | `src/components/RuntimeManagerView.tsx` | `default` |
 | component | `src/components/RuntimeNotice.tsx` | `RuntimeNotice` |
 | component | `src/components/SelfDevelopmentPanel.tsx` | `SelfDevelopmentPanel` |
+| component | `src/components/sentinel/LinkWarning.tsx` | `LinkWarningHost` |
 | component | `src/components/SentinelAllowlistPanel.tsx` | `default`, `SentinelAllowlistPanel` |
 | component | `src/components/SentinelFindingModal.tsx` | `SentinelFindingModal` |
 | component | `src/components/SessionHistoryView.tsx` | `default`, `SessionHistoryView` |
@@ -225,7 +226,7 @@ Source-backed inventory: 305 services and 182 components. Human purpose descript
 | service | `src/services/boardroomFacilitatorService.ts` | `buildFacilitatorPrompt`, `detectLowConfidence`, `FacilitatorResult`, `generateAgentResponse`, `generateAlphonsoResponse` |
 | service | `src/services/boardroomJoseService.ts` | `BOARDROOM_LABEL`, `BoardroomReview`, `concludeOnJose`, `creativeBriefOnJose`, `distributeOnJose` |
 | service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BoardroomGovernance`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `setThreadGovernance`, `THREADS_KEY`, `updateThreadStatus` |
-| service | `src/services/browserAutomationService.ts` | `fetchUrlContent`, `openAndScrape`, `openExternalUrl`, `openUrl`, `readClipboard`, `scrapeWebPage`, `writeClipboard` |
+| service | `src/services/browserAutomationService.ts` | `fetchUrlContent`, `openAndScrape`, `openExternalUrl`, `openSourceLink`, `openUrl`, `readClipboard`, `scrapeWebPage`, `setLinkConfirmHandler`, `writeClipboard` |
 | service | `src/services/cacheService.ts` | `agentCache`, `cached`, `CacheEntry`, `CacheOptions`, `connectorCache`, `createCacheKey`, `globalCache`, `MemoryCache` |
 | service | `src/services/calleCallStep.ts` | `askMarcusToCall`, `CALL_LABEL`, `CallToPlace`, `executeOutreachCall` |
 | service | `src/services/calleMcpAuthService.ts` | `CallePendingLogin`, `disconnectCalleMcp`, `getCalleMcpToken`, `isCalleMcpConfigured`, `pollBrokerLogin`, `startBrokerLogin` |
@@ -243,7 +244,7 @@ Source-backed inventory: 305 services and 182 components. Human purpose descript
 | service | `src/services/coachSoundCueService.ts` | `getCoachSoundCuePattern`, `getCoachSoundCueSettings`, `playCoachSoundCue`, `shouldPlayCoachSoundCue`, `updateCoachSoundCueSettings` |
 | service | `src/services/codingAgentService.ts` | `isCodingRequest`, `runCodingAgent` |
 | service | `src/services/comfyuiSettingsService.ts` | `ComfyUiInstall`, `ComfyUiSearchResult`, `findComfyuiInstalls`, `resolveComfyuiDirectory`, `resolveComfyuiPython`, `searchComputerForComfyui` |
-| service | `src/services/commandApprovalService.ts` | `assessCommandRisk`, `CommandApprovalHandler`, `CommandApprovalOutcome`, `CommandApprovalRequest`, `CommandRiskAssessment`, `CommandRiskLevel`, `isWorkspaceCodeExecuting`, `PlannedCommand`, `requestWorkspaceCommandApproval`, `setCommandApprovalHandler` |
+| service | `src/services/commandApprovalService.ts` | `assessCommandRisk`, `CommandApprovalHandler`, `CommandApprovalOutcome`, `CommandApprovalRequest`, `CommandRiskAssessment`, `CommandRiskLevel`, `deletesThings`, `isWorkspaceCodeExecuting`, `PlannedCommand`, `requestWorkspaceCommandApproval`, `setCommandApprovalHandler` |
 | service | `src/services/companionCommandService.ts` | `CompanionCommand`, `CompanionDeps`, `handleCompanionCommand` |
 | service | `src/services/companionGreetingsService.ts` | `COMPANION_CONTENT`, `CompanionAgentContent`, `getCompanionContent` |
 | service | `src/services/composioService.ts` | `__resetComposioApiKeyCacheForTests`, `checkComposioHealth`, `ComposioActionResult`, `ComposioConfig`, `ComposioHealthResult`, `ComposioStatusResult`, `ComposioTool`, `ComposioToolkit`, `executeComposioAction`, `executeViaComposio`, `fetchComposioToolkits`, `getCachedToolkits`, `getComposioConfig`, `getComposioStatus`, `getComposioToolsForAgent`, `hydrateComposioApiKeyFromKeychain`, `isComposioEnabled`, `setComposioConfig` |
@@ -386,7 +387,7 @@ Source-backed inventory: 305 services and 182 components. Human purpose descript
 | service | `src/services/maria/mariaTypes.ts` | `MARIA_SECURITY_LINE`, `MariaAssignment`, `MariaStepResult` |
 | service | `src/services/maria/mariaWeekly.ts` | `askMariaWeeklyRisks`, `MARIA_WEEKLY_LABEL` |
 | service | `src/services/maria/mariaWorkReview.ts` | `findingStrings`, `MARIA_NO_REVIEW`, `parseWorkReview`, `runMariaWorkReview`, `WorkFinding`, `WorkReview`, `workReviewPrompt`, `workReviewText` |
-| service | `src/services/maria/workContext.ts` | `FILE_LIMITS`, `NO_SOURCES`, `WorkFile`, `workFiles`, `workResults`, `WorkSource`, `workSources`, `workSteps` |
+| service | `src/services/maria/workContext.ts` | `FILE_LIMITS`, `NO_SOURCES`, `workDependencyFiles`, `WorkFile`, `workFiles`, `workResults`, `WorkSource`, `workSources`, `workSteps` |
 | service | `src/services/mariaAuditService.ts` | `MariaAuditOptions`, `runMariaGovernanceAudit` |
 | service | `src/services/mariaWeeklyReportService.ts` | `generateWeeklyReport`, `getLatestReport`, `getReports`, `saveReport`, `scheduleWeeklyGeneration` |
 | service | `src/services/mediaStorageService.ts` | `cleanOldStaged`, `NO_STORAGE`, `removeStaged`, `STAGED_PREFIX`, `stagedKey`, `stageFile`, `StageResult`, `STORAGE_CONNECTOR`, `storageConfig`, `StorageConfig`, `storageConfigured`, `StoragePart`, `StorageTestResult`, `testStorage` |
@@ -444,8 +445,16 @@ Source-backed inventory: 305 services and 182 components. Human purpose descript
 | service | `src/services/searchService.ts` | `getSearchSuggestions`, `searchMemory`, `searchProjects` |
 | service | `src/services/secureStorageService.ts` | `secureDelete`, `secureGet`, `secureSet` |
 | service | `src/services/selfDevelopmentService.ts` | `DevCycle`, `DevCyclePacket`, `DevPacketSummary`, `getCurrentSelfDevelopmentPacketBundle`, `getLastSelfDevelopmentCycle`, `listSelfDevelopmentCycles`, `runSelfDevelopmentCycle`, `SELF_DEVELOPMENT_SCOPE`, `SelfDevelopmentOptions` |
+| service | `src/services/sentinel/addSecurityChecks.ts` | `addSecurityChecks`, `KEY_IN_REQUEST` |
+| service | `src/services/sentinel/exactChecks.ts` | `checkLink`, `ExactRisk`, `ExactRiskKind`, `exactRiskText`, `findExactRisks`, `hideSecrets` |
+| service | `src/services/sentinel/fence.ts` | `fenced`, `UNTRUSTED_END`, `UNTRUSTED_RULE`, `UNTRUSTED_START` |
+| service | `src/services/sentinel/sentinelHolds.ts` | `SECURITY_WAIT`, `sentinelHoldFor` |
+| service | `src/services/sentinel/sentinelReview.ts` | `runSentinelReview`, `SecurityFinding`, `SENTINEL_NO_CHECK`, `SentinelAssignment`, `sentinelPrompt`, `SentinelStepResult`, `Severity`, `Verdict` |
+| service | `src/services/sentinel/sentinelTrust.ts` | `addTrustedDomain`, `ALLOWLIST_KEY`, `AllowlistEntry`, `isTrustedDomain`, `listTrustedDomains`, `readAllowlist`, `removeTrustedDomain`, `writeAllowlist` |
+| service | `src/services/sentinel/sentinelWeekly.ts` | `askSentinelWeekReview`, `lastSentinelReview`, `SENTINEL_WEEKLY_LABEL`, `SentinelReviewCard` |
+| service | `src/services/sentinel/webRisk.ts` | `checkLinksWithWebRisk`, `webRiskSetUp` |
 | service | `src/services/sentinelGateService.ts` | `checkSentinelAlerts`, `evaluateRisk`, `getGateStatus`, `shouldBlock` |
-| service | `src/services/sentinelSecurityService.ts` | `buildSentinelFallbackAlert`, `buildSentinelThreatPrompt`, `parseSentinelThreatResponse`, `runSentinelSecurityScan`, `scanForThreats`, `scanRecentActivity`, `ScanResult`, `SentinelAlertSchema`, `SentinelAssignment`, `SentinelScanOptions`, `SentinelScanResult`, `SentinelThreatAnalysis`, `startScheduledScans`, `ThreatFinding`, `ThreatPattern` |
+| service | `src/services/sentinelSecurityService.ts` | `recentActivityText`, `runSentinelSecurityScan`, `SentinelScanOptions` |
 | service | `src/services/serviceScopes.ts` | `AGENT_OUTPUT_SCOPE`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_SCOPE`, `DEV_PACKET_SCOPE`, `GOVERNANCE_SCOPE`, `JOSE_COMMAND_SCOPE`, `MIYA_MEMORY_SCOPE`, `NOVA_SCORE_SCOPE`, `ORCHESTRATION_QUEUE_SCOPE`, `ORCHESTRATION_RECEIPT_SCOPE`, `PACKET_SCOPE`, `PLUGIN_AUDIT_SCOPE`, `PLUGINS_SCOPE`, `PRODUCTION_READINESS_SCOPE`, `PROOF_AUTHORITY`, `REPO_AUDIT_SCOPE`, `SELF_DEVELOPMENT_SCOPE`, `SESSION_EVENT_SCOPE`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `VERIFICATION_SCOPE`, `WORKFLOW_OPS_SCOPE`, `WORKFLOW_RECEIPT_SCOPE`, `WORKFLOW_RUN_SCOPE`, `WORKFLOW_TELEMETRY_SCOPE` |
 | service | `src/services/sessionIntelligenceService.ts` | `appendSessionEvent`, `listSessionEvents`, `SESSION_EVENT_SCOPE`, `summarizeSession` |
 | service | `src/services/setupFlowService.ts` | `checkDiskSpace`, `ComponentProgress`, `DiskSpaceCheck`, `getUnmetPrereq`, `hardwareForInstallLocation`, `HardwareProfile`, `installComponent`, `isComponentAlreadyInstalled`, `isSetupComplete`, `markSetupComplete`, `needsInstallLocation`, `PrereqKind`, `sameInstallVolume`, `SCAN_TIMEOUT_MS`, `scanHardware`, `SelectableComponent`, `STARTER_MODEL_ID`, `STARTER_MODEL_TAG`, `withTimeout` |

@@ -10,6 +10,15 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent phase 4: Sentinel checks the real thing (2026-10-25)
+- **Sentinel answers Safe, Risky or Unsafe** from his own model, each finding with what, where, how serious and the fix. Exact checks (a key, a password request, a disguised link, a deleting or code command) are always in his answer. His keyword score is gone.
+- **A serious finding makes the next steps wait for you**; "BLOCKED" used to hold nothing.
+- **He checks without being asked**: before anything Marcus sends, after Alphonso's code, the research a step acts on, and a request with a key or a link. **Keys are hidden** from every agent's model and from memory.
+- **The scans are real**: the sidebar's Re-scan, Telegram's `/scan` and the daily schedule ask him to review the last week as a request. Before, two of them scanned nothing and always said all clear, and the sidebar showed green for a critical result.
+- **Hector's links**: a page can no longer redirect him to services on your computer, a page can't make Alphonso hold gigabytes, disguised links aren't opened, and page text stays marked as data in every prompt. Clicking a disguised source link asks first. Optional: a Google Web Risk key skips links on Google's phishing and malware lists.
+- **The content factory**: Campaign Studio shows Sentinel's check, and an issue keeps Publish waiting.
+- **Fixes**: a quoted post is no longer read as instructions (it made Alphonso run tests), a security check reviews the writing it follows, the allowlist panel is what Sentinel trusts, and Simple mode suggests things he can do.
+
 ### Agent phase 3: Maria reviews the real work (2026-10-25)
 - **Maria reviews the work itself.** A check of a post or a script answers **Pass** or **Fix**, quoting the exact words that need to change and how; a claim no source backs makes it a fix. She reads what the work was built from: Hector's sources, and for Alphonso's code his files and test results, with file and line.
 - **A plan review says the risk and why**, the rules that apply, what needs your approval and why, and offers to have Marcus prepare it (**Have Marcus prepare this** in Chat; nothing is sent). "Audit this plan" no longer starts the plan's own steps, and "discount code" is no longer code.

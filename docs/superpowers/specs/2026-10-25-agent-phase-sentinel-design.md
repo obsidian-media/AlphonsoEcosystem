@@ -1,6 +1,6 @@
 # Agent phase 4: Sentinel checks the real thing
 
-> **Status (2026-10-25):** design, written with the owner after the Sentinel inspection of 2026-10-25 (code reading plus three live runs in the real app). Not built yet. Builds on agent phase 3 (Maria): her holds (`maria/mariaHolds.ts`) and work context (`maria/workContext.ts`).
+> **Status (2026-10-26):** design, written with the owner after the Sentinel inspection of 2026-10-25 (code reading plus three live runs in the real app). Built on `feat/agent-phase-sentinel` (plan `docs/superpowers/plans/2026-10-25-agent-phase-sentinel.md`). Google's Safe Browsing API turned out to be non-commercial only, so the optional check uses Google Web Risk. Builds on agent phase 3 (Maria): her holds (`maria/mariaHolds.ts`) and work context (`maria/workContext.ts`).
 
 ## Why
 

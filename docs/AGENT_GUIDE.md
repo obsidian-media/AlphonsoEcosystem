@@ -63,11 +63,11 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 ### Sentinel — Security Monitor
 **Role:** Security monitoring and automation safety
 **Note:** security only (risk and quality reviews are Maria's)
-**Runtime:** `src/services/sentinelSecurityService.ts` — two-layer detection: deterministic + Ollama
+**Runtime:** `src/services/sentinel/` (agent phase 4) — his own model judges; exact checks (keys, password requests, disguised links, deleting or code commands) are handed to him as facts
 **Skills (3, `src/skills/sentinel/`):** Content safety check, Permission audit, Text and link check.
-**Can do:** Monitor for threats, validate safety of automated actions, scan the last week of activity (the sidebar's quick scan says how much it looked at), check content before it's posted
-**Cannot:** Perform destructive execution
-**When to use:** Automatic — Sentinel monitors all external interactions for security risks.
+**Can do:** Check work, a post, an email, code (with its files, results and dependencies) or a request: Safe, Risky or Unsafe, each finding with what, where, how serious and the fix. A serious finding makes the next steps wait for you. Reviews the last week of activity on request (the sidebar's Re-scan, Telegram `/scan`, the daily schedule). Checks a campaign before it's posted. Uses your trusted-domain list.
+**Cannot:** Perform destructive execution; decide what commands may run (the backend gate does)
+**When to use:** Ask him ("check this post for security problems"). He also checks without being asked: before anything Marcus sends, after Alphonso changes or runs code, the research a step acts on, and a request that contains a key or a link (keys are hidden from every agent's model).
 
 ### Nova — Opportunity Analyst
 **Role:** Judging value, priority and timing from what Hector found
