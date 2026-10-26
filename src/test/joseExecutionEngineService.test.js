@@ -473,7 +473,7 @@ describe('dependency-aware execution', () => {
 
   it('calls setAgentOutput after each successful agent execution', async () => {
     const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: verify local runtime package',
+      commandText: 'ask jose: fix the bug in my app',
       source: 'user',
       zeroCostMode: true
     });

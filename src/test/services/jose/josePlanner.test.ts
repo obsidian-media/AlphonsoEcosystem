@@ -314,6 +314,22 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(plan.steps.find((s) => s.stepId === 'audit_quality')).toMatchObject({ needs: ['write'], reviewOf: 'write' });
   });
 
+  // Agent phase 6: a code request needs Alphonso's code step; plain writing needs no research.
+  it('a code request planned without an Alphonso code step is sent back', () => {
+    const plan = [{ agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_answer' }];
+    expect(missingAsked('Add a dark mode toggle to my website', plan as never))
+      .toEqual(['The request asks for code: add an alphonso step with the task type local_operation.']);
+    expect(missingAsked('Add a dark mode toggle to my website', [{ agent: 'alphonso', effects: ['run'], actionType: 'local_operation' }] as never)).toEqual([]);
+    expect(missingAsked('What is a closure in JavaScript?', plan as never)).toEqual([]);
+  });
+
+  it('plain writing planned with research is sent back; writing that needs facts keeps it', () => {
+    const plan = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }];
+    expect(missingAsked('Write a short email to my landlord saying the heating is broken', plan as never))
+      .toEqual(["The request doesn't need research: remove the hector step."]);
+    expect(missingAsked('Research the latest prices and write an email about them', plan as never)).toEqual([]);
+  });
+
   it('a plan with the send is used as it is', async () => {
     llm.mockResolvedValueOnce(answer([
       { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: [] },

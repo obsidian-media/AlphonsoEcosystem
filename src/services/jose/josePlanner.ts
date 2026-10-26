@@ -7,7 +7,8 @@
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { asksPlanReview, asksReadiness, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
-import { planningMenu } from './taskTypeMeanings';
+import { CODE_TASK_PREFIXES, isCodeRequest, needsFacts, planningMenu } from './taskTypeMeanings';
+import { isPlainQuestion } from '../../lib/chatUtils';
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
 import { TEMPLATE_FIT_THRESHOLD, getTemplate, scoreTemplateFit, type JoseTemplate } from './joseTemplates';
 import { JOSE_LIMITS, checkPlan, legacyNeeds, type PlanStep } from './stepGraph';
@@ -80,6 +81,15 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   const problems: string[] = [];
   if (parsed.intents.check && parsed.intents.writing && !has('maria')) {
     problems.push('The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.');
+  }
+  // Agent phase 6: a code request needs Alphonso's code step; plain writing needs no research.
+  const codeStep = (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) =>
+    CODE_TASK_PREFIXES.some((prefix) => String(st.actionType || '').startsWith(prefix));
+  if (isCodeRequest(text) && !isPlainQuestion(text) && !has('alphonso', codeStep)) {
+    problems.push('The request asks for code: add an alphonso step with the task type local_operation.');
+  }
+  if (parsed.intents.writing && !needsFacts(text) && has('hector')) {
+    problems.push("The request doesn't need research: remove the hector step.");
   }
   const sends = parsed.sends;
   if (sends && !has('marcus', (st) => (st.effects || []).includes('publish_or_send'))) {
