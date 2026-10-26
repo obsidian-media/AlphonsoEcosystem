@@ -2168,12 +2168,9 @@ export async function runJoseCommandExecutionPipeline({
     recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
     // Echo saves what was decided (phase 4). Never changes the outcome.
     const finished = getJoseRequest(joseRequestId);
-    // Once, when the request is done (phase 5), not again after an approval.
-    if (saveDecisions && finished && finished.status === 'done') {
-      const outputs = Object.fromEntries(finished.steps
-        .filter((s) => s.status === 'done')
-        .map((s) => [s.stepId, getStepOutput(command.id, s.stepId) || {}]));
-      await saveRequestDecisions(finished, outputs, { draftDisabled, endpoint });
+    // Once, when the request ends (phase 5; done or failed since agent phase 7), not again after an approval.
+    if (saveDecisions && finished && (finished.status === 'done' || finished.status === 'failed')) {
+      await saveRequestDecisions(finished, doneStepOutputs(finished), { draftDisabled, endpoint });
     }
   }
 
@@ -2445,6 +2442,9 @@ export function rejectRequestStep(requestId: string, stepId: string) {
   }
   setJoseRequestStatus(requestId, 'cancelled');
   appendRequestNote(requestId, `You rejected ${agentName(step.agent)}'s step.`);
+  // What you turned down is a decision too (agent phase 7); saved in the background.
+  const cancelled = getJoseRequest(requestId);
+  if (cancelled) void saveRequestDecisions(cancelled, doneStepOutputs(cancelled)).catch(() => undefined);
   return { ok: true, summary: 'Rejected. The request was cancelled.' };
 }
 
@@ -2461,6 +2461,13 @@ export async function pickAlphonsoProject(requestId: string, stepId: string, nam
   appendRequestNote(requestId, `You chose ${name} for ${agentName(step.agent)}'s step.`);
   await carryOnRequest(requestId);
   return { ok: true, summary: `Working in ${name}.` };
+}
+
+/** The outputs of a request's finished steps, by step id. */
+function doneStepOutputs(request: any): Record<string, any> {
+  return Object.fromEntries((request.steps || [])
+    .filter((s: any) => s.status === 'done')
+    .map((s: any) => [s.stepId, getStepOutput(request.commandId, s.stepId) || {}]));
 }
 
 /** When a project is free again, the oldest request waiting for it carries on (agent phase 6). */

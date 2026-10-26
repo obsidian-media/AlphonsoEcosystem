@@ -3,6 +3,7 @@ import { durableGet, durableSet } from '../../lib/durableStore.js';
 import { listMiyaMemory } from '../miyaMemoryService';
 import { slugForFolder } from './contentProjectFiles';
 import { secureId, type BrandLesson, type ContentBrand } from './contentTypes';
+import { addDecision } from '../echo/decisions';
 
 const BRANDS_KEY = 'alphonso_content_brands_v1';
 export const DEFAULT_QUALITY_THRESHOLD = 7;
@@ -118,8 +119,23 @@ function decideLesson(brandId: string, lessonId: string, change: (l: BrandLesson
   saveBrand({ ...brand, lessons: brand.lessons.flatMap((l) => (l.id === lessonId ? (next ? [next] : []) : [l])) });
   return { ok: true };
 }
-export const keepLesson = (brandId: string, lessonId: string) => decideLesson(brandId, lessonId, (l) => ({ ...l, status: 'kept' }));
-export const editLesson = (brandId: string, lessonId: string, text: string) => decideLesson(brandId, lessonId, (l) => ({ ...l, text: text.trim() || l.text, status: 'kept' }));
+/** A lesson you keep is a decision for the whole ecosystem too (agent phase 7). */
+function rememberKept(brandId: string, lesson: BrandLesson | undefined): void {
+  if (!lesson) return;
+  addDecision({ kind: 'decision', text: lesson.text, topics: ['content', getBrand(brandId)?.name || ''].filter(Boolean), source: { surface: 'miya', by: 'you' } });
+}
+export const keepLesson = (brandId: string, lessonId: string) => {
+  let kept: BrandLesson | undefined;
+  const r = decideLesson(brandId, lessonId, (l) => (kept = { ...l, status: 'kept' }));
+  if (r.ok) rememberKept(brandId, kept);
+  return r;
+};
+export const editLesson = (brandId: string, lessonId: string, text: string) => {
+  let kept: BrandLesson | undefined;
+  const r = decideLesson(brandId, lessonId, (l) => (kept = { ...l, text: text.trim() || l.text, status: 'kept' }));
+  if (r.ok) rememberKept(brandId, kept);
+  return r;
+};
 export const dropLesson = (brandId: string, lessonId: string) => decideLesson(brandId, lessonId, () => null);
 
 /** The first brand: made from the old single Miya brand kit, if there was one. */

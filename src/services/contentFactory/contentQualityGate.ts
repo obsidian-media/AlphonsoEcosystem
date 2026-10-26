@@ -2,7 +2,7 @@
 // Maria scores each piece against the brand's references; pieces below the
 // brand's threshold are hidden unless the user asks to see everything. A
 // rejection becomes a brand lesson (fed into later prompts) and an Echo memory.
-import { pushMemory } from '../unifiedMemoryService';
+import { addDecision } from '../echo/decisions';
 import { addBrandLesson, getBrand } from './contentBrandService';
 import { chosenVersionOf, getProject, sendBackStep } from './contentProjectService';
 import { runContentStep } from './contentStepRunner';
@@ -34,16 +34,12 @@ export function rejectPiece(projectId: string, step: StepId, pieceId: string, re
   const lesson = `${step}: ${reason.trim()}`;
   const brand = getBrand(project.brandId);
   if (brand) addBrandLesson(brand.id, lesson, 'rejection');
-  // pushMemory is plain JS; its inferred type lists only `namespace`.
-  (pushMemory as unknown as (item: Record<string, unknown>) => unknown)({
-    namespace: 'shared',
-    title: `Content feedback for ${brand?.name || 'a brand'}`,
-    category: 'preference_memory',
-    sourceAgent: 'echo',
-    source: 'content-factory',
-    projectId,
-    content: `${lesson} (piece ${pieceId}, project "${project.name}")`,
-    tags: ['content-factory', 'lesson', step],
+  // What you turned down is a decision for the whole ecosystem, not only this brand (agent phase 7).
+  addDecision({
+    kind: 'rejection',
+    text: `Turned down a ${step} piece for ${brand?.name || 'a brand'} in "${project.name}": ${reason.trim()}`,
+    topics: ['content', step, ...(brand?.name ? [brand.name] : [])],
+    source: { surface: 'miya', by: 'you' },
   });
   return sendBackStep(projectId, step, reason.trim());
 }
