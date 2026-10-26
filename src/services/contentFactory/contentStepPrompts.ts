@@ -37,7 +37,7 @@ const ACTIONS: Record<string, { role: string; keys: string; uses: StepId[] }> = 
   },
   audit_content_quality: {
     role: 'Maria, Alphonso\'s quality and governance agent',
-    keys: '{"pieces":[{"pieceId":"which piece, e.g. script or thumbnail-t1","score":"a whole number from 1 to 10","comparedTo":"the reference post you compared it with","weakPoints":["a weak point"]}],"honestyIssues":["an honesty problem, if any"]}',
+    keys: '{"pieces":[{"pieceId":"which piece, e.g. script or thumbnail-t1","score":"a whole number from 1 to 10","comparedTo":"the reference post you compared it with, or no reference known","weakPoints":["a weak point"]}],"honestyIssues":["an honesty problem, if any"]}',
     uses: ['research', 'script', 'scenes', 'thumbnail', 'carousel', 'campaign'],
   },
   creative_scenes: {
@@ -117,6 +117,34 @@ function brandText(payload: ContentStepPayload): string {
   return lines.join('\n');
 }
 
+const sameLink = (a: unknown, b: unknown) =>
+  typeof a === 'string' && typeof b === 'string' && a.trim().replace(/\/+$/, '').toLowerCase() === b.trim().replace(/\/+$/, '').toLowerCase();
+
+/**
+ * What is known about the brand's reference posts (agent phase 3): Maria never sees the posts
+ * themselves, so she is given what Hector found about each (title, hook, why it works) and,
+ * for a reference he didn't find, only its link and note.
+ */
+function referenceKnowledge(payload: ContentStepPayload): string {
+  const found = ((payload.prior as any)?.research?.hector?.references || []) as Array<Record<string, unknown>>;
+  const lines: string[] = [];
+  for (const ref of payload.brand.references) {
+    const match = found.find((f) => sameLink(f?.url, ref.url));
+    const note = ref.note ? ` (your note: ${ref.note})` : '';
+    if (match) {
+      lines.push(`- ${match.title || ref.url} (${ref.url})${note}. Hook: "${match.hook || ''}". Why it works: ${match.whyItWorks || 'not said'}`);
+    } else {
+      lines.push(`- ${ref.url}: only its link is known${note}`);
+    }
+  }
+  for (const f of found) {
+    if (!payload.brand.references.some((r) => sameLink(r.url, f?.url)) && f?.title) {
+      lines.push(`- ${f.title} (${f.url || 'no link'}), found by Hector. Hook: "${f.hook || ''}". Why it works: ${f.whyItWorks || 'not said'}`);
+    }
+  }
+  return lines.length ? `What is known about the reference posts:\n${lines.join('\n').slice(0, 6000)}` : '';
+}
+
 export function buildStepPrompt(payload: ContentStepPayload, agent: string, actionType: string): { system: string; prompt: string } {
   const action = ACTION_MAP.get(actionType);
   const ask = contentAsk(actionType);
@@ -136,6 +164,10 @@ export function buildStepPrompt(payload: ContentStepPayload, agent: string, acti
       .join('\n')
       .slice(0, 8000);
     parts.push(`Web search results Hector found (the only sources you may use):\n${list}`);
+  }
+  if (actionType === 'audit_content_quality') {
+    const known = referenceKnowledge(payload);
+    if (known) parts.push(known);
   }
   for (const step of action?.uses || []) {
     if (payload.prior[step] !== undefined) parts.push(`${step} (earlier step):\n${JSON.stringify(payload.prior[step]).slice(0, 8000)}`);

@@ -154,3 +154,33 @@ describe('unknown action types', () => {
   });
 });
 
+
+// Agent phase 3: Maria compares with what is known about the brand's references, not posts she never saw.
+describe("the quality check and the brand's references", () => {
+  const withRefs = (): ContentStepPayload => ({
+    ...payload(),
+    step: 'quality',
+    brand: { ...brand, references: [{ url: 'https://yt.example/a', note: 'great hook' }, { url: 'https://yt.example/b', note: '' }] },
+    prior: { research: { hector: { references: [{ title: 'Ref A', url: 'https://yt.example/a/', whyItWorks: 'It opens with tension.', hook: 'Stop scrolling now' }] } } },
+  } as never);
+
+  it('the quality prompt has what Hector found about each reference', () => {
+    const { prompt } = buildStepPrompt(withRefs(), 'maria', 'audit_content_quality');
+    expect(prompt).toContain('What is known about the reference posts:');
+    expect(prompt).toContain('Ref A');
+    expect(prompt).toContain('Stop scrolling now');
+    expect(prompt).toContain('It opens with tension.');
+    expect(prompt).toContain('great hook');
+  });
+
+  it("a reference he didn't find says only its link and note", () => {
+    const { prompt } = buildStepPrompt(withRefs(), 'maria', 'audit_content_quality');
+    expect(prompt).toContain('https://yt.example/b: only its link is known');
+  });
+
+  it('the prompt no longer says side by side', () => {
+    const { system, prompt } = buildStepPrompt(withRefs(), 'maria', 'audit_content_quality');
+    expect(`${system}\n${prompt}`).not.toMatch(/side by side/i);
+    expect(`${system}\n${prompt}`).toContain('compared with what is known about the brand');
+  });
+});
