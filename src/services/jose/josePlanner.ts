@@ -88,7 +88,8 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   if (isCodeRequest(text) && !isPlainQuestion(text) && !has('alphonso', codeStep)) {
     problems.push('The request asks for code: add an alphonso step with the task type local_operation.');
   }
-  if (parsed.intents.writing && !needsFacts(text) && has('hector')) {
+  // Writing or code that needs no facts gets no research step (agent phase 6).
+  if ((parsed.intents.writing || isCodeRequest(text)) && !needsFacts(text) && has('hector')) {
     problems.push("The request doesn't need research: remove the hector step.");
   }
   const sends = parsed.sends;

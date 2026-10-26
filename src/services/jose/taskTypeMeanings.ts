@@ -109,6 +109,11 @@ const MAKE_A_THING = new RegExp(`\\b(?:build|create|make|develop|implement|code|
 const SCRIPT_ON_DATA = /\b(?:script|program)s?\b[^.?!]*\b(?:files?|folders?|director(?:y|ies)|csv|json|spreadsheets?|automat\w*|command\s+line|terminal)\b/;
 const RUN_CHECKS = /\b(?:run|fix)\s+(?:the\s+|all\s+|my\s+)?(?:failing\s+|unit\s+)?tests\b|\b(?:failing|unit|integration)\s+tests?\b|\btest\s+suite\b|\blinter\b/;
 
+/** Whether the text talks about an existing project of yours ("this project", "my app"). */
+export function refersToAProject(text: string): boolean {
+  return YOUR_PROJECT.test(String(text || '').toLowerCase());
+}
+
 /** Whether the text asks for work on code. */
 export function isCodeRequest(text: string): boolean {
   // A discount, promo or referral code is an offer, not code (agent phase 3).

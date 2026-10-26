@@ -30,7 +30,7 @@ import { recordOrchestrationQueueTransition } from './orchestrationQueueService'
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput } from './agentOutputStoreService';
 import { checkPlan, JOSE_LIMITS } from './jose/stepGraph';
-import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus, getJoseRequest, findRequestByPacket, listJoseRequests } from './jose/joseRequestStore';
+import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus, getJoseRequest, findRequestByPacket, listJoseRequests, requestForCommand } from './jose/joseRequestStore';
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
@@ -540,7 +540,10 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
   _recordEscalationFailure(commandText);
 
   const reason = String(lastError?.message || lastError || `Task "${instruction}" failed.`);
-  const errorMessage = `Tried ${MAX_TASK_RETRIES + 1} times${escalatedTo ? `, and with ${escalatedTo}` : ''}; it still failed: ${reason.replace(/\.$/, '')}. Tell me how to go on.`;
+  // A step that ran once (an Alphonso code step) says what happened, not "Tried N times".
+  const errorMessage = runsOnce
+    ? `${reason.replace(/\.$/, '')}. Tell me how to go on.`
+    : `Tried ${MAX_TASK_RETRIES + 1} times${escalatedTo ? `, and with ${escalatedTo}` : ''}; it still failed: ${reason.replace(/\.$/, '')}. Tell me how to go on.`;
   const dlqEntry = upsertJoseExecutionDlqEntry({
     taskId,
     instruction,
@@ -1226,7 +1229,7 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
     return executeBoardroomAdvance(assignment, commandText, options);
   }
   if (isAlphonsoCodeStep(assignment)) {
-    const request: any = commandId ? getJoseRequest(`jose-request-${commandId}`) : null;
+    const request: any = commandId ? requestForCommand(commandId) : null;
     const preview = request?.steps?.find((s: any) => s.stepId === assignment.stepId)?.codePreview;
     if (!preview) {
       return { summary: 'Nothing was prepared for this step.', resultState: 'failed', resultUrl: null, artifacts: [], sources: [], contractAction: assignment.actionType };

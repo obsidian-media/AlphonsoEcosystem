@@ -3,6 +3,23 @@ import { describe, it, expect } from 'vitest';
 import { parseCodeAnswer, isAlphonsoCodeStep } from '../../../services/alphonso/codeStep';
 
 describe('codeStep', () => {
+  // Live run (2026-10-26): a 7B model wrote "npm test" as one program, "None" as a command, and
+  // had to invent a file change for "Run the tests" because commands alone weren't an answer.
+  it('reads commands in the shape small models write them, and commands alone are an answer', () => {
+    const a = parseCodeAnswer(JSON.stringify({ title: 't', plan: 'p', commands: [
+      { program: 'npm test', args: [], why: 'run the tests' },
+      { program: 'npm run lint', args: ['--fix'] },
+      { program: 'None', args: [] },
+      { program: '  ', args: [] },
+    ] }));
+    expect(a?.files).toEqual([]);
+    expect(a?.commands).toEqual([
+      { program: 'npm', args: ['test'], why: 'run the tests' },
+      { program: 'npm', args: ['run', 'lint', '--fix'], why: '' },
+    ]);
+    expect(parseCodeAnswer(JSON.stringify({ commands: [{ program: 'none' }] }))).toBeNull();
+  });
+
   it('reads a fenced answer', () => {
     const raw = '```json\n{"title":"Hello","plan":"Print the date.","files":[{"path":"hello.js","content":"console.log(new Date())"}],"commands":[{"program":"node","args":["hello.js"],"why":"run it"}]}\n```';
     expect(parseCodeAnswer(raw)).toEqual({

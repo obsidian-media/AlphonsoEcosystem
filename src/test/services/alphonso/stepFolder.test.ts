@@ -1,6 +1,6 @@
 // Agent phase 6: the folder an Alphonso step worked in, for whoever reads his files.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createJoseRequest } from '../../../services/jose/joseRequestStore';
+import { createJoseRequest, createWaitingPlanRequest, attachRunToRequest } from '../../../services/jose/joseRequestStore';
 import { stepFolder, reviewedFolder } from '../../../services/alphonso/stepFolder';
 
 const place = { kind: 'new', name: 'hello', folder: 'D:/out/Alphonso/hello', root: 'D:/out', prefix: 'Alphonso/hello/' };
@@ -15,6 +15,13 @@ beforeEach(() => {
 });
 
 describe('stepFolder', () => {
+  it('finds the folder in a plan you approved first (final review)', () => {
+    const steps = [{ stepId: 'build', agent: 'alphonso', actionType: 'local_operation', effects: ['run'], needs: [], codePreview: { place: { ...place, root: 'D:/plan' } } }];
+    const waiting = createWaitingPlanRequest({ text: 'x', source: 'user', kind: 'normal', steps, plan: { source: 'fresh' }, runOptions: { source: 'user' } } as never);
+    attachRunToRequest(waiting.id, { commandId: 'c-plan', steps } as never);
+    expect(stepFolder('c-plan', 'build')).toBe('D:/plan');
+  });
+
   it("the step's own place root, else the step it revises", () => {
     expect(stepFolder('c1', 'build')).toBe('D:/out');
     expect(stepFolder('c1', 'build-fix-1')).toBe('D:/out');

@@ -23,6 +23,11 @@ vi.mock('@tauri-apps/api/core', () => ({
     }
     if (cmd === 'list_workspace_directory') return { entries: [] };
     if (cmd === 'path_exists') return { exists: dirs.has(args.path), is_dir: dirs.has(args.path) };
+    if (cmd === 'command_allowed') {
+      return args.program === 'node' && args.args?.[0] === 'src/App.tsx'
+        ? { allowed: false, reason: "Arguments are not permitted for program 'node' by Alphonso policy." }
+        : { allowed: true };
+    }
     return null;
   }),
 }));
@@ -79,12 +84,68 @@ describe('prepareAlphonsoCode', () => {
     expect(WHICH_PROJECT(['shop', 'blog'])).toBe('Which project: shop, blog?');
   });
 
+  // Live run (2026-10-26): "Add a README file that says what this project is" got a new folder.
+  it('several projects, the request is about "this project", and the model says new → choose', async () => {
+    llm.mockResolvedValueOnce(say({ project: 'new' }));
+    const r = request('Add a README file that says what this project is');
+    expect(await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never))
+      .toMatchObject({ ok: false, outcome: 'choose', choices: ['shop', 'blog'] });
+  });
+
+  it('a command that runs a file as if it were a program is sent back once', async () => {
+    llm.mockResolvedValueOnce(code({ files: [{ path: 'hello.js', content: 'x' }], commands: [{ program: 'hello.js', args: [], why: 'run it' }] }))
+      .mockResolvedValueOnce(code({ files: [{ path: 'hello.js', content: 'x' }], commands: [{ program: 'node', args: ['hello.js'], why: 'run it' }] }));
+    const r = request('In shop, add hello.js and run it');
+    const out: any = await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never);
+    expect(out.ok).toBe(true);
+    expect(out.preview.commands.map((c: any) => [c.program, c.args])).toEqual([['node', ['hello.js']]]);
+    expect(String(llm.mock.calls[1][1].prompt)).toContain('hello.js is a file, not a program');
+  });
+
+  it('a request only to run something can answer with commands and no files', async () => {
+    llm.mockResolvedValueOnce(say({ title: 'Tests', plan: 'Run them.', commands: [{ program: 'npm', args: ['test'], why: 'run the tests' }] }));
+    const r = request('Run the tests in shop');
+    const out: any = await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never);
+    expect(out.ok).toBe(true);
+    expect(out.preview.files).toEqual([]);
+    expect(out.preview.commands[0]).toMatchObject({ program: 'npm', args: ['test'] });
+    expect(String(llm.mock.calls[0][1].prompt)).toContain('Write files only when the request asks for a change');
+  });
+
+  // Live run (2026-10-26): "Create a small Node.js script hello.js" named no project, and his
+  // model put it in shop. With several projects and none named he asks; he never picks one.
+  it('several projects, none named, and the model names one → choose, never that project', async () => {
+    llm.mockResolvedValueOnce(say({ project: 'shop' }));
+    const r = request('Create a small Node.js script hello.js that prints the date');
+    expect(await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never))
+      .toMatchObject({ ok: false, outcome: 'choose', choices: ['shop', 'blog'] });
+  });
+
   it('one project and the model says unknown → that project', async () => {
     saveProjects([{ name: 'shop', folder: 'D:/shop' }]);
     llm.mockResolvedValueOnce(say({ project: 'unknown' })).mockResolvedValueOnce(code());
     const r = request('Add a README');
     const got = await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never);
     expect(got.ok && got.preview.place.name).toBe('shop');
+  });
+
+  // Live run (2026-10-26): "node hello.js" was approved, then refused by the command policy.
+  it('a command the app would refuse is sent back once, then left out with the reason', async () => {
+    llm.mockResolvedValueOnce(code({ commands: [{ program: 'node', args: ['src/App.tsx'], why: 'run it' }] }))
+      .mockResolvedValueOnce(code({ commands: [{ program: 'node', args: ['src/App.tsx'], why: 'run it' }, { program: 'npm', args: ['run', 'test'], why: 'check' }] }));
+    const r = request('In shop, run the app file');
+    const out: any = await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never);
+    expect(String(llm.mock.calls[1][1].prompt)).toContain("node src/App.tsx isn't allowed here: Arguments are not permitted for program 'node' by Alphonso policy.");
+    expect(out.preview.commands.map((c: any) => c.program)).toEqual(['npm']);
+    expect(out.preview.dropped).toContainEqual({ path: 'node src/App.tsx', reason: "The app doesn't allow this command: Arguments are not permitted for program 'node' by Alphonso policy." });
+  });
+
+  it('a file name of only dots is left out', async () => {
+    llm.mockResolvedValueOnce(code({ files: [{ path: '...', content: 'x' }, { path: 'src/App.tsx', content: 'new app' }] }));
+    const r = request('In shop, change the app');
+    const out: any = await prepareAlphonsoCode(r.commandId, step(), r.requestId, input() as never);
+    expect(out.preview.files.map((f: any) => f.path)).toEqual(['src/App.tsx']);
+    expect(out.preview.dropped.map((d: any) => d.path)).toContain('...');
   });
 
   it('a saved choice on the request step wins', async () => {
@@ -203,6 +264,18 @@ describe('prepareAlphonsoCode', () => {
     const got = await prepareAlphonsoCode(r.commandId, step({ stepId: 'build-fix-1', revises: 'build' }), r.requestId, input() as never);
     expect(got.ok && got.preview.place.name).toBe('shop');
     expect(String(llm.mock.calls[0][1].prompt)).toContain('old app');
+  });
+
+  // Live run (2026-10-26): a fix round for a new program whose folder had nothing in it yet
+  // said "The folder … is gone".
+  it("a fix round in a new program's folder that has nothing in it yet starts from empty", async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ outputFolder: 'D:/out' }));
+    const place = { kind: 'new', name: 'hello', folder: 'D:/out/Alphonso/hello', root: 'D:/out', prefix: 'Alphonso/hello/' };
+    const r = request('Create hello.js', [step({ codePreview: { place } }), step({ stepId: 'build-fix-1', revises: 'build' })]);
+    llm.mockResolvedValueOnce(code({ files: [{ path: 'hello.js', content: 'x' }], commands: [] }));
+    const got: any = await prepareAlphonsoCode(r.commandId, step({ stepId: 'build-fix-1', revises: 'build' }), r.requestId, input() as never);
+    expect(got.ok).toBe(true);
+    expect(got.preview.place.folder).toBe('D:/out/Alphonso/hello');
   });
 
   it('the code model setting is used', async () => {

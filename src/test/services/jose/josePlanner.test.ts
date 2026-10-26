@@ -330,6 +330,13 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(missingAsked('Research the latest prices and write an email about them', plan as never)).toEqual([]);
   });
 
+  // Live run (2026-10-26): "In shop, change test.js so it prints 'ok'" was planned with research first.
+  it('a code request planned with research it does not need is sent back', () => {
+    const plan = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }, { agent: 'alphonso', effects: ['run'], actionType: 'local_operation' }];
+    expect(missingAsked("In shop, change test.js so it prints 'ok'", plan as never)).toEqual(["The request doesn't need research: remove the hector step."]);
+    expect(missingAsked('Research the latest React release and update my app to it', plan as never)).toEqual([]);
+  });
+
   it('a plan with the send is used as it is', async () => {
     llm.mockResolvedValueOnce(answer([
       { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: [] },

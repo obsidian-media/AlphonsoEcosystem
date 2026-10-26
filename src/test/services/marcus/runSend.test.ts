@@ -20,7 +20,7 @@ import * as github from '../../../services/connectors/githubConnector';
 import * as n8n from '../../../services/connectors/n8nConnector';
 import * as outbound from '../../../services/connectors/connectorOutbound';
 import { saveConnectorCredential } from '../../../services/connectors/connectorAuth';
-import { createJoseRequest, getJoseRequest } from '../../../services/jose/joseRequestStore';
+import { createJoseRequest, getJoseRequest, createWaitingPlanRequest, attachRunToRequest } from '../../../services/jose/joseRequestStore';
 import { runMarcusSend, ALREADY_SENT, WHATSAPP_24H } from '../../../services/marcus/runSend';
 
 const p = (extra: Record<string, unknown> = {}) => ({
@@ -50,6 +50,17 @@ describe('runMarcusSend', () => {
     expect(r).toEqual({ ok: true, sentence: 'Sent to Slack #news.', link: null, platformId: '1.2' });
     expect(generateAgentLlmResponse).not.toHaveBeenCalled();
     expect(requireApproval).not.toHaveBeenCalled();
+  });
+
+  // Final review (agent phase 6): a plan approved first keeps its own request id; the send is still sent once.
+  it('a send in a plan you approved first is sent once', async () => {
+    const steps = [{ stepId: 'marcus', agent: 'marcus', actionType: 'distribution_execution', effects: ['publish_or_send'], needs: [] }];
+    const waiting = createWaitingPlanRequest({ text: 'x', source: 'user', kind: 'normal', steps, plan: { source: 'fresh' }, runOptions: { source: 'user' } } as never);
+    attachRunToRequest(waiting.id, { commandId: 'c-plan', steps } as never);
+    vi.mocked(slack.sendMessage).mockResolvedValue({ ts: '1.4' } as never);
+    expect((await runMarcusSend('c-plan', 'marcus', p())).ok).toBe(true);
+    expect(await runMarcusSend('c-plan', 'marcus', p())).toEqual({ ok: false, sentence: ALREADY_SENT });
+    expect(slack.sendMessage).toHaveBeenCalledTimes(1);
   });
 
   // Final review: a refused send is tried again by the step's retries, not reported as "Already sent.".

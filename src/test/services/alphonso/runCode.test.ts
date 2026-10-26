@@ -10,6 +10,7 @@ vi.mock('../../../lib/ollama', () => ({
 const disk: Record<string, string> = {};
 const runs: { program: string; args: string[]; cwd: string }[] = [];
 let exitCodes: number[] = [];
+let refuse = '';
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(async (cmd: string, args: any) => {
     if (cmd === 'read_workspace_file') {
@@ -19,6 +20,7 @@ vi.mock('@tauri-apps/api/core', () => ({
     }
     if (cmd === 'write_workspace_text_file') { disk[`${args.workspaceRoot}/${args.relativePath}`] = args.content; return { ok: true }; }
     if (cmd === 'execute_command_verified') {
+      if (refuse && args.program === 'hello.js') throw new Error(refuse);
       runs.push({ program: args.program, args: args.args, cwd: args.cwd });
       const code = exitCodes.length ? exitCodes.shift()! : 0;
       return { success: code === 0, exit_code: code, stdout: 'out', stderr: code ? '1 test failed' : '' };
@@ -33,6 +35,7 @@ import { applyChangeSet, runAlphonsoCode } from '../../../services/alphonso/runC
 import { classifyCommand, classifyFile } from '../../../services/alphonso/changeSet';
 import { claimProject, projectHolder } from '../../../services/alphonso/projectLock';
 import { JOSE_LIMITS } from '../../../services/jose/stepGraph';
+import { createWaitingPlanRequest, attachRunToRequest } from '../../../services/jose/joseRequestStore';
 import type { CodePreview } from '../../../services/alphonso/types';
 
 const place = { kind: 'project' as const, name: 'shop', folder: 'D:/shop', root: 'D:/shop', prefix: '' };
@@ -48,6 +51,7 @@ beforeEach(() => {
   for (const k of Object.keys(disk)) delete disk[k];
   runs.length = 0;
   exitCodes = [];
+  refuse = '';
   disk['D:/shop/src/App.tsx'] = 'old app';
 });
 
@@ -118,6 +122,38 @@ describe('runAlphonsoCode', () => {
     const bad = await runAlphonsoCode('c1', assignment, preview(undefined, []), null);
     expect(bad.resultState).toBe('failed');
     expect(bad.summary).toContain('src/App.tsx was not written: it changed since the preview.');
+  });
+
+  // Final review (agent phase 6).
+  it('releases the lock of a plan you approved first, which keeps its own request id', async () => {
+    const waiting = createWaitingPlanRequest({ text: 'x', source: 'user', kind: 'normal', steps: [], plan: { source: 'fresh' }, runOptions: { source: 'user' } } as never);
+    attachRunToRequest(waiting.id, { commandId: 'c-plan', steps: [] } as never);
+    claimProject('D:/shop', waiting.id);
+    await runAlphonsoCode('c-plan', assignment, preview(undefined, []), null);
+    expect(projectHolder('D:/shop')).toBeNull();
+  });
+
+  it('a fix round never writes outside the folder or into .git', async () => {
+    exitCodes = [1, 0];
+    llm.mockResolvedValueOnce({ response: JSON.stringify({ files: [
+      { path: '../escape.js', content: 'x' }, { path: 'C:/Windows/evil.js', content: 'x' }, { path: '.git/hooks/pre-commit', content: 'x' }, { path: 'src/App.tsx', content: 'fixed' },
+    ] }) });
+    const r = await runAlphonsoCode('c1', assignment, preview(), null);
+    expect(Object.keys(disk).filter((k) => /escape|evil|\.git/.test(k))).toEqual([]);
+    expect(disk['D:/shop/src/App.tsx']).toBe('fixed');
+    expect(r.summary).toContain('.git/hooks/pre-commit was left out: Inside .git, which Alphonso never changes.');
+  });
+
+  // Live run (2026-10-26): a command the policy refused lost every result.
+  it('a command that is refused is a failed run with the reason; the others still run', async () => {
+    refuse = 'Program not allowed: hello.js';
+    const r = await runAlphonsoCode('c1', assignment, preview(undefined, [classifyCommand('hello.js', [], 'run'), classifyCommand('npm', ['run', 'test'], 'check')]), null);
+    expect(r.summary).toContain('hello.js: failed: Program not allowed: hello.js');
+    expect(r.artifacts).toEqual(expect.arrayContaining([
+      { type: 'command_result', program: 'hello.js', args: [], exitCode: null, ok: false },
+      { type: 'command_result', program: 'npm', args: ['run', 'test'], exitCode: 0, ok: true },
+    ]));
+    expect(r.resultState).toBe('failed');
   });
 
   it('the lock is released even when something throws', async () => {

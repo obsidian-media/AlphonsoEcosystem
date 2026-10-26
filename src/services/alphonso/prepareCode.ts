@@ -7,6 +7,7 @@ import { sanitizeRelativePath } from '../agentBrainService';
 import { getAgentProvider } from '../modelSelectionService';
 import { agentName } from '../jose/agentNames';
 import { getJoseRequest } from '../jose/joseRequestStore';
+import { refersToAProject } from '../jose/taskTypeMeanings';
 import { getStepOutput } from '../jose/joseStepOutputs';
 import { STEP_INPUT_LIMITS, skillSection, stepInputText, type StepInput } from '../jose/stepInput';
 import { classifyCommand, classifyFile } from './changeSet';
@@ -90,15 +91,20 @@ async function choosePlace(requestText: string, requestStep: any, assignment: As
       scratch.length ? `Earlier small programs of yours: ${scratch.join(', ')}.` : '',
       `Request: ${requestText}`,
       problem,
+      'Answer "new" when the request asks for a new small program, script or file of its own, not a change to one of the projects.',
       'Answer with JSON only: {"project": one of the names above, or "new" for a new small program, or "unknown" when the request is about a project but doesn\'t say which}.',
     ].filter(Boolean).join('\n\n');
     const raw = await askAlphonso(prompt, model);
     let project = '';
     try { project = String(JSON.parse((/\{[\s\S]*\}/.exec(raw) || ['{}'])[0])?.project || '').trim(); } catch { project = ''; }
-    if (project.toLowerCase() === 'new') return 'new';
+    // A request about "this project" or "my app" is not a new program while projects are listed.
+    if (project.toLowerCase() === 'new' && !(projects.length && refersToAProject(requestText))) return 'new';
+    if (project.toLowerCase() === 'new') break;
     if (project.toLowerCase() === 'unknown') break;
     const listed = projects.find((p) => p.name.toLowerCase() === project.toLowerCase());
-    if (listed) return projectPlace(listed);
+    // The request named no project: with several listed he asks which, never picks one (owner).
+    if (listed && projects.length === 1) return projectPlace(listed);
+    if (listed) break;
     const earlier = scratch.find((s) => s.toLowerCase() === project.toLowerCase());
     if (earlier) return scratchByName(earlier) || 'new';
     problem = `Your last answer "${project || 'nothing'}" is not one of the names. Choose one of: ${names.join(', ') || 'new, unknown'}.`;
@@ -122,16 +128,18 @@ function codePrompt(requestText: string, place: WorkPlace, listing: string, file
     [
       'Answer with JSON only:',
       '- "read": paths from the list you need to see first (only when you need them; then nothing else),',
-      '- or "title" (a few words), "plan" (one or two sentences), "files" (each {"path": relative to the folder, "content": the whole file}), and "commands" (each {"program", "args", "why"}: only checks that prove the change works, or what the request asks to run; never a commit or a dev server unless the request asks),',
+      '- or "title" (a few words), "plan" (one or two sentences), "files" (each {"path": relative to the folder, "content": the whole file}), and "commands" (each {"program", "args", "why"}, the program alone and its arguments in args, e.g. {"program": "node", "args": ["hello.js"]}: only checks that prove the change works, or what the request asks to run; never a commit or a dev server unless the request asks),',
+      'Write files only when the request asks for a change; a request to run something needs only "commands".',
       '- or "questions" (what you must know first) when you can\'t do it.',
       ...(mayAskHelp ? ['- or "help" (what another agent should find or check first, e.g. the docs of a library) when you need that before writing.'] : []),
     ].join('\n'),
   ].filter(Boolean).join('\n\n');
 }
 
-function safePath(raw: string): { path: string } | { reason: string } {
+export function safePath(raw: string): { path: string } | { reason: string } {
   if (/^[a-zA-Z]:/.test(raw) || raw.startsWith('/') || raw.startsWith('\\')) return { reason: 'Outside the project folder.' };
   if (raw.split(/[\\/]/).some((s) => s.toLowerCase() === '.git')) return { reason: "Inside .git, which Alphonso never changes." };
+  if (raw.split(/[\\/]/).some((s) => /^\.{3,}$/.test(s))) return { reason: 'Not a file name.' };
   const clean = sanitizeRelativePath(raw);
   return clean ? { path: clean } : { reason: 'Outside the project folder.' };
 }
@@ -143,6 +151,18 @@ async function readWhole(place: WorkPlace, path: string): Promise<string | null>
   } catch {
     return null;
   }
+}
+
+/** The commands the app's command policy would refuse, with its reason (agent phase 6). */
+async function policyRefusals(commands: CodeAnswer['commands']): Promise<{ line: string; reason: string }[]> {
+  const refused: { line: string; reason: string }[] = [];
+  for (const c of commands) {
+    try {
+      const answer: any = await invoke('command_allowed', { program: c.program, args: c.args });
+      if (answer && answer.allowed === false) refused.push({ line: [c.program, ...c.args].join(' '), reason: String(answer.reason || '') });
+    } catch { /* outside the desktop app: the run itself checks */ }
+  }
+  return refused;
 }
 
 /** Prepares the step; a failure after the project was claimed frees it again. */
@@ -187,7 +207,9 @@ async function prepare(commandId: string, assignment: Assignment, requestId: str
     try {
       listing = (await listProjectFiles(place.folder, listChars)).text;
     } catch {
-      return { ok: false, outcome: 'setup', reason: FOLDER_GONE(place.name, place.folder) };
+      // A new program's folder exists only once something is written to it.
+      if (place.kind !== 'new') return { ok: false, outcome: 'setup', reason: FOLDER_GONE(place.name, place.folder) };
+      listing = '';
     }
   }
   const workPlace: WorkPlace = place === 'new'
@@ -199,6 +221,7 @@ async function prepare(commandId: string, assignment: Assignment, requestId: str
   let read: { path: string; text: string }[] = [];
   let problem = '';
   let readAsked = false;
+  let refusedCommands: { line: string; reason: string }[] = [];
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const raw = await askAlphonso(codePrompt(requestText, workPlace, listing, read, previous, input, problem, !(assignment as any).helpRound), model);
     const parsed = parseCodeAnswer(raw);
@@ -214,10 +237,24 @@ async function prepare(commandId: string, assignment: Assignment, requestId: str
       attempt -= 1;
       continue;
     }
+    // A program that is one of the files: the model ran the file itself (live run, 2026-10-26).
+    const fileNames = new Set([...parsed.files.map((f) => f.path), ...listing.split('\n')].map((p) => p.trim()).filter(Boolean));
+    const fileAsProgram = parsed.commands.find((c) => fileNames.has(c.program));
+    if (fileAsProgram && attempt === 0) {
+      problem = `${fileAsProgram.program} is a file, not a program: name the program that runs it in "program" and the file in "args".`;
+      continue;
+    }
+    // A command the app would refuse is sent back once with the reason, then left out.
+    const refused = await policyRefusals(parsed.commands);
+    if (refused.length && attempt === 0) {
+      problem = refused.map((r) => `${r.line} isn't allowed here: ${r.reason}`).join('\n') + '\nUse a command the app allows instead, or leave it out.';
+      continue;
+    }
+    refusedCommands = refused;
     answer = parsed;
     break;
   }
-  if (!answer || (!answer.files.length && !answer.questions.length)) return { ok: false, outcome: 'failed', reason: ALPHONSO_NO_PLAN };
+  if (!answer || (!answer.files.length && !answer.commands.length && !answer.questions.length)) return { ok: false, outcome: 'failed', reason: ALPHONSO_NO_PLAN };
   if (answer.questions.length) return { ok: false, outcome: 'failed', reason: NEEDS_TO_KNOW(answer.questions) };
 
   let finalPlace: WorkPlace;
@@ -246,8 +283,10 @@ async function prepare(commandId: string, assignment: Assignment, requestId: str
     plan: answer.plan,
     title: answer.title,
     files,
-    commands: answer.commands.map((c) => classifyCommand(c.program, c.args, c.why)),
-    dropped,
+    commands: answer.commands
+      .filter((c) => !refusedCommands.some((r) => r.line === [c.program, ...c.args].join(' ')))
+      .map((c) => classifyCommand(c.program, c.args, c.why)),
+    dropped: [...dropped, ...refusedCommands.map((r) => ({ path: r.line, reason: `The app doesn't allow this command: ${r.reason}` }))],
     model,
     preparedAtMs: Date.now(),
   };

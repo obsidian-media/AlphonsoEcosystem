@@ -143,6 +143,9 @@ describe("Alphonso's code steps", () => {
     const result = await run();
     expect(runAlphonsoCode).toHaveBeenCalledTimes(1);
     expect(stepOf(result).status).toBe('failed');
+    // Live run (2026-10-26): it said "Tried 4 times" for a step that ran once.
+    expect(stepOf(result).error).not.toMatch(/Tried \d+ times/);
+    expect(stepOf(result).error).toContain('npm run test: failed: 1 test failed');
   });
 
   it('a help request ends the step with a HELP line for Jose', async () => {

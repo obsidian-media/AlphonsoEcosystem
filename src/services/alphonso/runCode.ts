@@ -13,6 +13,8 @@ import { contentHash } from './changeSet';
 import { parseCodeAnswer } from './codeStep';
 import { askAlphonso } from './prepareCode';
 import { releaseProject } from './projectLock';
+import { requestForCommand } from '../jose/joseRequestStore';
+import { safePath } from './prepareCode';
 import type { CodeCommand, CodePreview } from './types';
 
 export interface CommandRun { command: CodeCommand; exitCode: number | null; ok: boolean; tail: string }
@@ -58,10 +60,18 @@ export async function applyChangeSet(p: CodePreview): Promise<{ written: string[
 export async function runApprovedCommands(p: CodePreview, commands: CodeCommand[] = p.commands): Promise<CommandRun[]> {
   const runs: CommandRun[] = [];
   for (const command of commands) {
-    const proof: any = await verifyCommandExecution(command.program, command.args, p.place.folder);
+    let proof: any;
+    try {
+      proof = await verifyCommandExecution(command.program, command.args, p.place.folder);
+    } catch (error) {
+      // A command the policy refuses (or that can't start) is a failed run, never a lost result.
+      runs.push({ command, exitCode: null, ok: false, tail: error instanceof Error ? error.message : String(error) });
+      continue;
+    }
     const payload = proof?.payload || {};
     const exitCode = typeof payload.exitCode === 'number' ? payload.exitCode : null;
-    const output = String(payload.stderr || payload.stdout || '');
+    // A command that couldn't start (the policy refused it) says why in `error`.
+    const output = String(payload.stderr || payload.stdout || String(payload.error || '').replace(/^Error:\s*/, ''));
     runs.push({ command, exitCode, ok: payload.success === true || exitCode === 0, tail: output.slice(-FILE_LIMITS.eachChars) });
   }
   return runs;
@@ -80,17 +90,22 @@ function fixPrompt(p: CodePreview, failed: CommandRun[], current: { path: string
 }
 
 export async function runAlphonsoCode(commandId: string, assignment: any, preview: CodePreview, input: StepInput | null) {
-  const requestId = `jose-request-${commandId}`;
+  const requestId = requestForCommand(commandId)?.id || `jose-request-${commandId}`;
   const base = { resultUrl: null, sources: [], contractAction: assignment?.actionType || 'local_operation' };
   try {
     const { written, refused } = await applyChangeSet(preview);
     let runs = await runApprovedCommands(preview);
     const notDone = new Set<string>();
+    const leftOut = [...preview.dropped];
     const approvedPaths = new Set(preview.files.map((f) => f.path));
     for (let round = 0; round < JOSE_LIMITS.maxFixRounds && runs.some((r) => !r.ok); round += 1) {
       const current = await Promise.all(preview.files.map(async (f) => ({ path: f.path, text: String(await readCurrent(preview, f.path) ?? '').slice(0, FILE_LIMITS.eachChars) })));
       const answer = parseCodeAnswer(await askAlphonso(fixPrompt(preview, runs.filter((r) => !r.ok), current, input), preview.model));
-      for (const file of answer?.files || []) {
+      for (const raw of answer?.files || []) {
+        // The same path checks as the preview: never outside the folder or into .git.
+        const checked = safePath(raw.path);
+        if ('reason' in checked) { leftOut.push({ path: raw.path, reason: checked.reason }); continue; }
+        const file = { path: checked.path, content: raw.content };
         const exists = (await readCurrent(preview, file.path)) !== null;
         if (!approvedPaths.has(file.path) && exists) { notDone.add(`change ${file.path}`); continue; }
         await write(preview, file.path, file.content);
@@ -106,7 +121,7 @@ export async function runAlphonsoCode(commandId: string, assignment: any, previe
     if (newOnes.length) parts.push(`Wrote ${plural(newOnes.length, 'file')} in ${preview.place.name}: ${newOnes.join(', ')}.`);
     if (changedOnes.length) parts.push(`Changed ${changedOnes.join(', ')}.`);
     for (const r of refused) parts.push(`${r.path} was not written: ${r.reason}.`);
-    for (const d of preview.dropped) parts.push(`${d.path} was left out: ${d.reason}`);
+    for (const d of leftOut) parts.push(`${d.path} was left out: ${d.reason}`);
     for (const r of runs) parts.push(r.ok ? `${line(r.command)}: passed.` : `${line(r.command)}: failed: ${r.tail.trim().slice(-STEP_INPUT_LIMITS.otherLineChars)}`);
     if (notDone.size) parts.push(`Needs your approval: ${[...notDone].join(', ')}.`);
     if (preview.place.kind === 'new' && written.length) parts.push(`Folder: ${preview.place.folder}`);

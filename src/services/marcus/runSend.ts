@@ -1,7 +1,7 @@
 // Sending what you approved (agent phase 5): exactly the prepared preview, once, through the
 // connector, with no model call and no second approval. The result says what the platform said.
 import { getConnectorCredential } from '../connectors/connectorAuth';
-import { getJoseRequest, updateJoseStep } from '../jose/joseRequestStore';
+import { requestForCommand, updateJoseStep } from '../jose/joseRequestStore';
 import { listedN8nWorkflows, telegramOwnerChatId } from './destinations';
 import type { SendPreview, SendResult } from './types';
 
@@ -15,12 +15,11 @@ const notSent = (label: string, reason: string): SendResult => ({ ok: false, sen
 
 /** Whether a step's send already went out; sets the mark before sending when not. */
 function claim(commandId: string, stepId: string): boolean {
-  const requestId = `jose-request-${commandId}`;
-  const request = getJoseRequest(requestId);
+  const request = requestForCommand(commandId);
   const step = request?.steps.find((s) => s.stepId === stepId);
   if (!request || !step) return true;
   if (step.sentAtMs) return false;
-  updateJoseStep(requestId, stepId, { sentAtMs: Date.now() });
+  updateJoseStep(request.id, stepId, { sentAtMs: Date.now() });
   return true;
 }
 
@@ -114,7 +113,7 @@ async function send(preview: SendPreview, commandId: string): Promise<SendResult
 
 /** A send that didn't go out may be tried again (the step's retries, Carry on). */
 function release(commandId: string, stepId: string): void {
-  try { updateJoseStep(`jose-request-${commandId}`, stepId, { sentAtMs: undefined }); } catch { /* no request */ }
+  try { const request = requestForCommand(commandId); if (request) updateJoseStep(request.id, stepId, { sentAtMs: undefined }); } catch { /* no request */ }
 }
 
 export async function runMarcusSend(commandId: string, stepId: string, preview: SendPreview): Promise<SendResult> {

@@ -1,9 +1,9 @@
 // Where an Alphonso step worked (agent phase 6), so Maria, Sentinel and a fix round read the
 // same files. Code artifacts are relative to this folder (a scratch program's is the output folder).
-import { getJoseRequest } from '../jose/joseRequestStore';
+import { requestForCommand } from '../jose/joseRequestStore';
 
 export function stepFolder(commandId: string, stepId: string): string | null {
-  const request: any = getJoseRequest(`jose-request-${commandId}`);
+  const request: any = requestForCommand(commandId);
   const steps: any[] = request?.steps || [];
   let step = steps.find((s) => s.stepId === stepId);
   for (let hops = 0; step && hops < steps.length; hops += 1) {

@@ -825,6 +825,7 @@ pub fn run() {
       comfyui_proxy::comfyui_upload_image,
       comfyui_proxy::comfyui_save_output,
       execute_command_verified,
+      command_allowed,
       run_native_rc0_proof,
       runway_generate_video,
       runway_list_pending_jobs,
