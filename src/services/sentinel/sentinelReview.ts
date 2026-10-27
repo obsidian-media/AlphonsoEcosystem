@@ -44,6 +44,8 @@ export interface SentinelStepResult {
 const FACT_SEVERITY: Record<ExactRisk['kind'], Severity> = {
   key: 'high', password_request: 'high', disguised_link: 'high',
   deleting_command: 'medium', code_command: 'medium', untrusted_link: 'low',
+  // Private details about a person hold the next steps (agent roles Part C2).
+  personal_data: 'high',
 };
 const FACT_FIX: Record<ExactRisk['kind'], string> = {
   key: 'Remove the key and replace it (change it where it was issued if it was shared).',
@@ -52,6 +54,7 @@ const FACT_FIX: Record<ExactRisk['kind'], string> = {
   deleting_command: 'Check what it deletes before it runs.',
   code_command: 'Check what it runs before it runs.',
   untrusted_link: 'Check the site, or add it to your trusted list.',
+  personal_data: 'Remove it: keep only work details people publish themselves.',
 };
 const RANK: Record<Severity, number> = { low: 0, medium: 1, high: 2 };
 
@@ -156,7 +159,7 @@ export async function runSentinelReview(
   const deps = code && opts.workspaceRoot ? await workDependencyFiles(commandId, work.stepId, opts.workspaceRoot) : [];
   const results = code ? workResults(commandId, work.stepId) : '';
   const sending = Boolean(assignment.payload?.sending) || String(assignment.stepId || '').startsWith('sentinel-send-');
-  const facts = findExactRisks([work.text, ...files.map((f) => f.text)].join('\n'), { links: sending ? 'sent' : 'all' });
+  const facts = findExactRisks([work.text, ...files.map((f) => f.text)].join('\n'), { links: sending ? 'sent' : 'all', personalData: contractAction === 'security_personal_data' });
   const hiddenWork = redactText(work.text);
   const hiddenFiles = files.map((f) => ({ ...f, text: redactText(f.text) }));
   const ctx = { work: hiddenWork, whose: work.agent === 'user' ? 'the request' : `${agentName(work.agent)}'s work`, files: filesText(files), results: redactText(results), deps: filesText(deps), facts };

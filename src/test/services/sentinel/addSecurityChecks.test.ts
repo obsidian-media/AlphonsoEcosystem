@@ -77,3 +77,24 @@ describe('addSecurityChecks', () => {
     expect(addSecurityChecks(plan, 'Research note-taking apps').steps).toEqual(plan);
   });
 });
+
+// Agent roles Part C2: a people search is checked for personal data before anything uses it.
+describe('a people search', () => {
+  it('gets a personal-data check, and the step that uses it waits for it', () => {
+    const { steps } = addSecurityChecks([
+      s('hector', 'hector', 'research_people', ['read']),
+      s('alphonso', 'alphonso', 'assistant_write', ['write_own_work'], ['hector']),
+    ], 'Find five bakeries in Leeds with their owners and write a short list');
+    expect(byId(steps, 'sentinel-people-hector')).toMatchObject({ agent: 'sentinel', actionType: 'security_personal_data', reviewOf: 'hector', needs: ['hector'] });
+    expect(byId(steps, 'alphonso').needs).toEqual(['hector', 'sentinel-people-hector']);
+    expect(checkPlan(steps, { taskTypes: true }).ok).toBe(true);
+  });
+
+  it('is not checked twice when an acting step also uses it', () => {
+    const { steps } = addSecurityChecks([
+      s('hector', 'hector', 'research_people', ['read']),
+      s('marcus', 'marcus', 'distribution_slack', ['publish_or_send'], ['hector']),
+    ], 'Find bakeries and post the list to Slack');
+    expect(steps.filter((x) => x.agent === 'sentinel' && x.reviewOf === 'hector').map((x) => x.stepId)).toEqual(['sentinel-people-hector']);
+  });
+});
