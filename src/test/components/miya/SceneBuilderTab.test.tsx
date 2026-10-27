@@ -23,7 +23,8 @@ import { createProject, emptyBrief, getProject, saveStepVersion } from '../../..
 
 beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); vi.mocked(allowMediaFolder).mockImplementation(async () => true); });
 
-function setup(options: { musicSkipped?: boolean; sfx?: unknown } = {}) {
+// Miya makes the finished video since agent roles Part A; older projects saved it under Alphonso.
+function setup(options: { musicSkipped?: boolean; sfx?: unknown; assembledBy?: 'miya' | 'alphonso' } = {}) {
   const p = createProject('b', 'P', emptyBrief());
   const save = (step: any, output: unknown) => saveStepVersion(p.id, step, { output, summary: '', joseCommandId: null });
   save('scenes', { miya: { style: 'warm', scenes: [{ id: 's1', description: 'A barista pours coffee' }] } });
@@ -35,7 +36,7 @@ function setup(options: { musicSkipped?: boolean; sfx?: unknown } = {}) {
     { sceneId: 's1', path: 'b/p/broll/v1-s1.mp4', source: 'pexels', author: 'Ana', pageUrl: 'https://www.pexels.com/video/7', license: 'Pexels License' },
   ] } });
   if (options.sfx) save('sfx', { miya: options.sfx });
-  save('assemble', { alphonso: {
+  save('assemble', { [options.assembledBy || 'miya']: {
     outputs: [
       { aspect: '16x9', path: 'b/p/output/v1-16x9.mp4', durationSec: 8, frames: ['b/p/output/v1-16x9-10.jpg', 'b/p/output/v1-16x9-50.jpg', 'b/p/output/v1-16x9-90.jpg'] },
       { aspect: '9x16', path: 'b/p/output/v1-9x16.mp4', durationSec: 8, frames: [] },
@@ -65,6 +66,11 @@ describe('SceneBuilderTab: the finished video', () => {
     expect(audio).toEqual(['asset-test://b/p/audio/voice-v1/full.wav', 'asset-test://b/p/audio/music-v1.wav']);
     await waitFor(() => expect(screen.getAllByRole('img', { name: /Frame/ })).toHaveLength(3));
     expect(screen.getByText(/Whisper is not installed/)).toBeTruthy();
+  });
+
+  it("still plays an older project's video, made before Miya took the step over", async () => {
+    const { container } = render(<SceneBuilderTab {...props(setup({ assembledBy: 'alphonso' }))} />);
+    await waitFor(() => expect(container.querySelectorAll('video')).toHaveLength(2));
   });
 
   it("names each stock clip's source and author, and opens its license page", () => {

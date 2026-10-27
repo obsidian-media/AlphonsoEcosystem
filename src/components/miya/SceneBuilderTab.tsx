@@ -70,7 +70,8 @@ export function SceneBuilderTab({
   const music = agentOutput<MusicOut>(project, 'music', 'miya');
   const sfx = agentOutput<{ skipped?: string; effects?: { sceneId: string; text: string; status: string; path?: string; reason?: string }[] }>(project, 'sfx', 'miya');
   const broll = agentOutput<BrollOut>(project, 'broll', 'hector');
-  const video = agentOutput<AssembleOut>(project, 'assemble', 'alphonso');
+  // Miya makes the finished video since agent roles Part A; older projects saved it under Alphonso.
+  const video = agentOutput<AssembleOut>(project, 'assemble', 'miya') || agentOutput<AssembleOut>(project, 'assemble', 'alphonso');
   // A video or audio player refused its first load never tries again, so the players wait
   // until the current output folder is allowed (phase 3b: a new folder works without reopening).
   const [allowedRoot, setAllowedRoot] = useState<string | null>(null);

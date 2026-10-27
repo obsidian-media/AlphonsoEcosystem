@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { enterShell, invoke, buttonByText, openPage } from '../helpers.mjs';
+import { enterShell, invoke, buttonByText, openPage, keepOutputFolder } from '../helpers.mjs';
 
 const savedProjects = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_projects_v1') || '[]'));
 const savedBrands = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_brands_v1') || '[]'));
@@ -14,14 +14,6 @@ const projectById = async (id) => (await savedProjects()).find((p) => p.id === i
 // A 1×1 PNG.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 
-async function keepOutputFolder(folder) {
-  await browser.waitUntil(async () => browser.execute((wanted) => {
-    const settings = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
-    if (settings.outputFolder === wanted) return true;
-    localStorage.setItem('alphonso_settings', JSON.stringify({ ...settings, outputFolder: wanted }));
-    return false;
-  }, folder), { timeout: 30000, interval: 1000, timeoutMsg: 'the output folder setting did not stick' });
-}
 
 async function reopen(tab, projectId, outputFolder) {
   await browser.refresh();
@@ -97,7 +89,8 @@ describe('Alphonso desktop: carousels', () => {
     await $('[data-testid="carousel-slide-c5"]').waitForDisplayed({ timeout: 30000 });
     const text = await $('main').getText();
     for (let n = 1; n <= 5; n += 1) expect(text).toContain(`HABIT ${n}`);
-    expect(text).toContain('Cover');
+    // The label is upper-cased by its style, so the window's text says COVER.
+    expect(text).toMatch(/\bcover\b/i);
   });
 
   it('the Posts list has the Instagram carousel with its own caption', async function () {

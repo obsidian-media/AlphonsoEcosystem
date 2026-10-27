@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { enterShell, invoke, buttonByText, openPage } from '../helpers.mjs';
+import { enterShell, invoke, buttonByText, openPage, keepOutputFolder } from '../helpers.mjs';
 
 const VENDOR_FFMPEG = path.resolve('src-tauri/vendor/ffmpeg');
 
@@ -30,15 +30,6 @@ const savedBrands = async () => JSON.parse(await browser.execute(() => localStor
 const stepState = async (id, step) => (await savedProjects()).find((p) => p.id === id)?.steps?.[step];
 const sectionText = async (label) => browser.execute((name) => document.querySelector(`section[aria-label="${name}"]`)?.innerText || '', label);
 
-/** The app can write its settings over ours while it starts; wait until the output folder sticks. */
-async function keepOutputFolder(folder) {
-  await browser.waitUntil(async () => browser.execute((wanted) => {
-    const settings = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
-    if (settings.outputFolder === wanted) return true;
-    localStorage.setItem('alphonso_settings', JSON.stringify({ ...settings, outputFolder: wanted }));
-    return false;
-  }, folder), { timeout: 30000, interval: 1000, timeoutMsg: 'the output folder setting did not stick' });
-}
 
 async function runStep(label) {
   const button = await $(`//section[@aria-label="${label}"]//button[normalize-space(.)="Run" or normalize-space(.)="Retry" or normalize-space(.)="Run again"]`);
