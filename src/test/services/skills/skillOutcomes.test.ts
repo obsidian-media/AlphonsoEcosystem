@@ -18,6 +18,17 @@ describe('recording', () => {
     expect(JSON.stringify(listSkillOutcomes())).not.toContain('sk-secret');
   });
 
+  it('keeps only names the app knows: agent, task type and skill; no model', () => {
+    recordStepOutcome({ ...base, agent: 'sk-agent' as never, outcome: 'done' });
+    expect(listSkillOutcomes()).toEqual([]);
+    recordStepOutcome({ ...base, stepId: 's2', skill: 'sk-skill', actionType: 'sk-type', model: 'sk-model', outcome: 'done' });
+    const saved = listSkillOutcomes()[0] as any;
+    expect(saved.skill).toBeNull();
+    expect(saved.actionType).toBe('');
+    expect(saved.model).toBeUndefined();
+    expect(JSON.stringify(listSkillOutcomes())).not.toMatch(/sk-/);
+  });
+
   it('one record per step: a step carried on after an approval is not counted twice', () => {
     recordStepOutcome({ ...base, outcome: 'setup_needed' }, 1000);
     recordStepOutcome({ ...base, outcome: 'done' }, 2000);

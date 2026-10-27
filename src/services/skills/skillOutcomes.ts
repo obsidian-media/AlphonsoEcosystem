@@ -1,6 +1,9 @@
 // What each skill's work achieved (agent roles Part C1): one record per finished step, with the
 // skill it ran with and, once reviewed, the review's verdict. The Skills page shows the numbers;
 // the Coach's "never used" check reads the last use from here.
+import { AGENT_PERMISSION_TABLE } from '../jose/agentPermissionTable';
+import { TASK_TYPE_MEANINGS } from '../jose/taskTypeMeanings';
+import { listSkills } from './skillLibrary';
 export interface SkillOutcome {
   requestId: string;
   stepId: string;
@@ -8,7 +11,6 @@ export interface SkillOutcome {
   agent: string;
   skill: string | null;
   actionType: string;
-  model: string | null;
   outcome: 'done' | 'failed' | 'setup_needed' | 'rejected';
   verdict?: 'pass' | 'fix';
 }
@@ -28,16 +30,27 @@ function writeAll(list: SkillOutcome[]): void {
   try { localStorage.setItem(KEY, JSON.stringify(list.slice(-KEEP))); } catch { /* storage full: the record is a convenience */ }
 }
 
+const same = (a: string | null | undefined, b: string) => String(a || '').toLowerCase() === b.toLowerCase();
+
 export function listSkillOutcomes(): SkillOutcome[] {
   return readAll();
 }
 
 /** One record per request step: a later outcome replaces the earlier one (a step carried on after an approval). */
-export function recordStepOutcome(o: Omit<SkillOutcome, 'atMs'>, nowMs = Date.now()): void {
-  const outcome = known(OUTCOMES, o.outcome);
-  if (!outcome) return;
-  const verdict = 'verdict' in o ? known(VERDICTS, o.verdict) : undefined;
-  o = { ...o, outcome, ...('verdict' in o ? { verdict } : {}) };
+export function recordStepOutcome(given: Omit<SkillOutcome, 'atMs'> & { model?: string | null }, nowMs = Date.now()): void {
+  // Every name stored is one the app knows (its agents, task types and that agent's skills), never the caller's text.
+  const outcome = known(OUTCOMES, given.outcome);
+  const agent = known(Object.keys(AGENT_PERMISSION_TABLE), given.agent);
+  if (!outcome || !agent) return;
+  const o: Omit<SkillOutcome, 'atMs'> = {
+    requestId: String(given.requestId),
+    stepId: String(given.stepId),
+    agent,
+    skill: listSkills(agent).map((x) => x.name).find((name) => same(name, String(given.skill || ''))) ?? null,
+    actionType: known(Object.keys(TASK_TYPE_MEANINGS), given.actionType) || '',
+    outcome,
+    ...('verdict' in given ? { verdict: known(VERDICTS, given.verdict) } : {}),
+  };
   const all = readAll();
   const old = all.find((x) => x.requestId === o.requestId && x.stepId === o.stepId);
   const next: SkillOutcome = { ...old, ...o, atMs: nowMs, ...(old?.verdict && !('verdict' in o) ? { verdict: old.verdict } : {}) };
@@ -51,13 +64,11 @@ export function recordReviewVerdict(requestId: string, reviewedStepId: string, g
   // The review can end before the run records the reviewed step's outcome: keep the verdict, and
   // recordStepOutcome() fills in the rest.
   if (!all.some((x) => x.requestId === requestId && x.stepId === reviewedStepId)) {
-    writeAll([...all, { requestId, stepId: reviewedStepId, atMs: Date.now(), agent: '', skill: null, actionType: '', model: null, outcome: 'done', verdict }]);
+    writeAll([...all, { requestId, stepId: reviewedStepId, atMs: Date.now(), agent: '', skill: null, actionType: '', outcome: 'done', verdict }]);
     return;
   }
   writeAll(all.map((x) => (x.requestId === requestId && x.stepId === reviewedStepId ? { ...x, verdict } : x)));
 }
-
-const same = (a: string | null | undefined, b: string) => String(a || '').toLowerCase() === b.toLowerCase();
 
 export function skillStats(agent: string, skill: string): { used: number; reviewed: number; passed: number; lastUsedMs: number | null } {
   const mine = readAll().filter((x) => x.agent === agent && same(x.skill, skill));
