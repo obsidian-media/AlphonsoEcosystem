@@ -6,6 +6,7 @@ import { Button, Badge } from '../ui';
 import { agentName } from '../../services/jose/agentNames';
 import { listSkills, refusedSkills } from '../../services/skills/skillLibrary';
 import { deleteUserSkill, exportSkill, importUserSkill, loadUserSkills, openSkillsFolder } from '../../services/skills/userSkills';
+import { skillStats, statsLine } from '../../services/skills/skillOutcomes';
 import { skillLastUsed } from '../../services/skills/skillUse';
 import { SKILL_TOOLS } from '../../services/skills/skillTools';
 import { SkillForm } from './SkillForm';
@@ -74,7 +75,7 @@ export function SkillsPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-(--text-2)">{skill.name}</span>
                     {skill.source === 'user' && <Badge variant="info">Yours</Badge>}
-                    <span className="ml-auto text-[10px] text-(--text-3)">{used ? `Last used ${new Date(used).toLocaleString()}` : 'Not used yet'}</span>
+                    <span data-testid="skill-stats" className="ml-auto text-[10px] text-(--text-3)">{skillStats(agent, skill.name).used ? statsLine(skillStats(agent, skill.name)) : used ? `Last used ${new Date(used).toLocaleString()}` : 'Not used yet'}</span>
                   </div>
                   <div className="text-[11px] text-(--text-3)">{skill.useWhen}</div>
                   {skill.tools.length > 0 && <div className="text-[10px] text-(--text-3)">Tools: {skill.tools.map((t) => SKILL_TOOLS[t]?.label || t).join(', ')}</div>}

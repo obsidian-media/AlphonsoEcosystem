@@ -898,6 +898,21 @@ describe('every step runs with its skill (agent roles Part B)', () => {
     expect(steps.find((s) => s.stepId === 'check')).toMatchObject({ skill: 'Claim check', skillReason: "Matches this step's task." });
   });
 
+  // Agent roles Part C1: each finished step's result is recorded with its skill.
+  it("records each finished step's result with its skill, and the review's verdict on the reviewed step", async () => {
+    const { listSkillOutcomes } = await import('../../../services/skills/skillOutcomes');
+    const result = await run([
+      plain('miya', 'creative_package', { stepId: 'draft' }),
+      plain('maria', 'audit_quality', { stepId: 'check', needs: ['draft'], reviewOf: 'draft', effects: ['read'] }),
+    ]);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    const mine = listSkillOutcomes().filter((o) => o.requestId === request.id);
+    expect(mine.find((o) => o.stepId === 'draft')).toMatchObject({ agent: 'miya', skill: 'Creative package', outcome: 'done' });
+    expect(mine.find((o) => o.stepId === 'check')).toMatchObject({ agent: 'maria', skill: 'Claim check' });
+    const verdict = request.steps.find((s) => s.stepId === 'check').verdict;
+    if (verdict) expect(mine.find((o) => o.stepId === 'draft').verdict).toBe(verdict);
+  });
+
   it("a content step records its skill but its prompt carries the ask only once", async () => {
     const result = await run([step('miya', 'creative_script', { stepId: 'script' })]);
     const options = vi.mocked(executeContentStepAssignment).mock.calls[0][1];

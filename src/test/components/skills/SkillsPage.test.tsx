@@ -47,6 +47,16 @@ describe('SkillsPage', () => {
     expect(files.size).toBe(0);
   });
 
+  // Agent roles Part C1: each skill's results.
+  it("shows each skill's results", async () => {
+    const { recordStepOutcome, recordReviewVerdict } = await import('../../../services/skills/skillOutcomes');
+    recordStepOutcome({ requestId: 'r', stepId: 'a', agent: 'hector', skill: 'Web research with sources', actionType: 'research_report', model: null, outcome: 'done' });
+    recordReviewVerdict('r', 'a', 'pass');
+    render(<SkillsPage />);
+    const row = screen.getAllByTestId('skill-row').find((r) => r.textContent?.includes('Web research with sources'))!;
+    expect(row.textContent).toContain('Used once · 1 of 1 reviews passed · last used today');
+  });
+
   it('refused files are listed with their reasons', () => {
     setUserSkillFiles([{ agent: 'maria', file: 'snoop.md', text: '---\nname: Snoop\nagent: maria\nuse_when: x\ntask_types: [research_report]\n---\nResearch.' }]);
     render(<SkillsPage />);

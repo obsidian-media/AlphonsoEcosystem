@@ -37,6 +37,7 @@ import { HELP_INSTRUCTION } from './jose/joseHelp';
 import { agentName } from './jose/agentNames';
 import { rejectWaitingPackets } from './jose/joseExpiry';
 import { saveRequestDecisions } from './jose/joseFinish';
+import { recordReviewVerdict, recordStepOutcome } from './skills/skillOutcomes';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
 import { moveToOwner } from './jose/movedTaskTypes';
@@ -119,6 +120,14 @@ function recordStepOutcomes(requestId: string, assignments: any[], receipts: any
         endedAtMs: timestampMs(),
         ...(receipt?.reason ? { error: String(receipt.reason) } : {}),
       });
+      // What the step's skill achieved (agent roles Part C1); a step that waits isn't finished yet.
+      if (status === 'done' || status === 'failed' || status === 'setup_needed') {
+        const requestStep: any = getJoseRequest(requestId)?.steps?.find((s: any) => s.stepId === assignment.stepId);
+        recordStepOutcome({
+          requestId, stepId: assignment.stepId, agent: String(assignment.agent || requestStep?.agent || ''),
+          skill: requestStep?.skill || null, actionType: String(assignment.actionType || ''), model: assignment.model || null, outcome: status,
+        });
+      }
     }
     // A step whose owner can't work yet waits for setup (agent roles Part A).
     const requestStatus = cutShort || statuses.includes('failed')
@@ -1500,6 +1509,9 @@ export async function runJoseCommandExecutionPipeline({
       // A review's verdict: on its step and in the change log only.
       if (joseRequestId) {
         try { updateJoseStep(joseRequestId, change.verdict.stepId, { verdict: change.verdict.verdict }); } catch { /* display aid only */ }
+        // The verdict counts for the skill of the step that was reviewed (agent roles Part C1).
+        const reviewed = planSteps.find((s: any) => s.stepId === change.verdict!.stepId)?.reviewOf;
+        if (reviewed) recordReviewVerdict(joseRequestId, reviewed, change.verdict.verdict);
       }
       noteOnRequest(change.reason);
       return;
@@ -2441,6 +2453,7 @@ export function rejectRequestStep(requestId: string, stepId: string) {
   // The request is cancelled, so its other waiting steps leave the queue too.
   rejectWaitingPackets(request.commandId, 'The request was cancelled.');
   updateJoseStep(requestId, stepId, { status: 'rejected', endedAtMs: timestampMs() });
+  recordStepOutcome({ requestId, stepId, agent: String(step.agent || ''), skill: step.skill || null, actionType: String(step.actionType || ''), model: null, outcome: 'rejected' });
   // A rejected code step writes nothing and frees its project (agent phase 6).
   for (const s of request.steps || []) {
     if (s.codePreview?.place?.folder) releaseProject(s.codePreview.place.folder, requestId);
