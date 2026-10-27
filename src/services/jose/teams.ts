@@ -91,8 +91,16 @@ export function parseTeamRequest(text: string): { name: string; rest: string } |
     return { name: first, rest: more.join(' ') };
   }
   const use = /^use\s+team\s+(.+?)(?:\s+to\s+|\s*:\s*)(.+)$/i.exec(t);
-  if (use) return { name: use[1].trim(), rest: use[2].trim() };
-  return null;
+  if (!use) return null;
+  // A saved name may itself contain " to " ("Back to school"): try saved names first, longest first.
+  const after = t.replace(/^use\s+team\s+/i, '');
+  const saved = listUserTemplates().map((x) => x.name).sort((a, b) => b.length - a.length);
+  for (const name of saved) {
+    if (!after.toLowerCase().startsWith(name.toLowerCase())) continue;
+    const tail = /^(?:\s+to\s+|\s*:\s*)(.+)$/i.exec(after.slice(name.length));
+    if (tail) return { name, rest: tail[1].trim() };
+  }
+  return { name: use[1].trim(), rest: use[2].trim() };
 }
 
 export async function runTeam(templateId: string, text: string, opts: { source: string; endpoint?: string; zeroCostMode?: boolean }): Promise<any> {

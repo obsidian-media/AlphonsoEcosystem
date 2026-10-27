@@ -68,6 +68,12 @@ describe('parseTeamRequest', () => {
     expect(parseTeamRequest('Use team Launch party: plan the party')).toEqual({ name: 'Launch party', rest: 'plan the party' });
     expect(parseTeamRequest("use the team's notes for the report")).toBeNull();
   });
+
+  it('a saved team whose name has " to " in it is read whole', () => {
+    saveTeam({ name: 'Back to school', job: 'x', members: [hector] });
+    expect(parseTeamRequest('use team Back to school to plan the trip')).toEqual({ name: 'Back to school', rest: 'plan the trip' });
+    expect(parseTeamRequest('use team back to school: plan the trip')).toEqual({ name: 'Back to school', rest: 'plan the trip' });
+  });
 });
 
 describe('runTeam', () => {
