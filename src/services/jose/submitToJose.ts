@@ -24,6 +24,9 @@ function savedOutputFolder(): { outputFolder?: string | null } {
   }
 }
 
+/** Where a content video starts a Miya Studio project (Chat since phase 6b; Telegram and schedules since Jose phase 7). */
+export const CONTENT_PROJECT_SOURCES = ['user', 'telegram', 'schedule'];
+
 export const CONTENT_VIDEO_STUDIO_NOTE = 'For the full project with pictures and a saved folder, open Miya Studio.';
 
 
@@ -112,12 +115,12 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   // From Chat, a content video becomes a Miya Studio project run as one request
   // (phase 6b, owner). "Plan this fresh" still plans it. Checked before the
   // shortcuts: the creative one would answer "videos aren't available" first.
-  if (source === 'user' && !planFresh) {
+  if (CONTENT_PROJECT_SOURCES.includes(source) && !planFresh) {
     const best = scoreTemplateFit(text)[0];
     // Only a request to make something; naming YouTube in a question isn't one (agent phase 2).
     if (best?.templateId === 'content_video' && best.score >= TEMPLATE_FIT_THRESHOLD && asksToMake(text)) {
       const { startContentProjectFromChat } = await import('../contentFactory/contentFromChat');
-      const started = await startContentProjectFromChat(text, savedOutputFolder());
+      const started = await startContentProjectFromChat(text, savedOutputFolder(), { source, allowPaidModels: input.allowPaidModels });
       return { ok: started.ok, reason: started.ok ? undefined : started.note, contentProjectId: started.projectId || null, plan: null, planNote: started.note };
     }
   }

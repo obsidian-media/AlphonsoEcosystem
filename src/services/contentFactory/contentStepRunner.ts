@@ -48,6 +48,8 @@ export interface RunStepOptions {
   /** Extra instruction, e.g. the reason the user sent the step back with. */
   extraTask?: string;
   onProgress?: (message: string) => void;
+  /** False for a project a schedule started (Jose phase 7): no paid model is offered. */
+  allowPaidModels?: boolean;
 }
 
 /** Why the project can't run now, or null. */
@@ -84,6 +86,8 @@ export async function runContentProject(projectId: string, options: RunStepOptio
     label: PROJECT_LABEL,
     // The factory saves its own lessons; Echo does not save each step.
     saveDecisions: false,
+    // A project a schedule started offers no paid model (Jose phase 7).
+    ...(options.allowPaidModels === false ? { allowPaidModels: false } : {}),
     // The plan knows which engine AI clips will use here, so a Runway run asks for its cost (phase 2b).
     steps: contentProjectPlanSteps(project, brand, 'research', { clipEngine: (await resolveProjectClipEngine(project)).engine }),
   });
