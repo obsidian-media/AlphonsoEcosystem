@@ -1,6 +1,6 @@
 # Agent phase 1: Hector (and the routing guards)
 
-> **Status (2026-10-25):** built (plan `docs/superpowers/plans/2026-10-25-agent-phase-hector.md`). Design written with the owner after the Hector inspection of 2026-10-25 (code reading plus two live runs in the real app). First of the per-agent phases agreed on 2026-10-25 (Hector, Nova, Maria, Sentinel, Marcus, Alphonso, Echo; then agent roles Part C; then Jose phase 7).
+> **Status (2026-10-25):** built (plan `docs/superpowers/plans/2026-10-25-agent-phase-hector.md`). Design written with the owner after the Hector inspection of 2026-10-25 (code reading plus two live runs in the real app). First of the per-agent phases agreed on 2026-10-25 (Hector, Nova, Maria, Sentinel, Marcus, Alphonso, Echo; then agent roles Part C; then Jose phase 7). Merged and released in 2.10.0 (2026-10-27).
 
 ## Why
 

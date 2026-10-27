@@ -1,6 +1,6 @@
 # Bridges: SessionGuard and ACC — design (owner decisions, 2026-10-22)
 
-> **Status (2026-10-25):** built (PR #321, 2026-10-22): Settings → Bridges with the ACC bridge, Test, and Start/Stop for ACC on this computer. SessionGuard sign-in is not available yet.
+> **Status (2026-10-25):** built (PR #321, 2026-10-22): Settings → Bridges with the ACC bridge, Test, and Start/Stop for ACC on this computer. SessionGuard sign-in is not available yet. Merged and released in 2.10.0 (2026-10-27).
 
 Status: **agreed with the owner. Phase 1 done 2026-10-22 (batch 14). Phases 2–4 deferred by the owner on 2026-10-22** (too large; it would pull the QA pass away from Alphonso). Read "Findings before deferring" first when resuming. The decisions are the owner's
 answers to QA questions Q27–Q31 (`docs/qa/DESKTOP_QA_COVERAGE.md`). Build in

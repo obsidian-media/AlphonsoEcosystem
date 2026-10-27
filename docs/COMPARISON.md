@@ -2,7 +2,7 @@
 
 A feature-by-feature comparison of Alphonso against other local-first AI desktop tools, agent frameworks, and coding assistants.
 
-> Alphonso's column was updated on 2026-10-25 to match the app on `main` (2.10.0, not released yet). The other tools' columns are from when this page was first written and have not been re-checked.
+> Alphonso's column was updated on 2026-10-25 to match the app on `main` (2.10.0, released 2026-10-27). The other tools' columns are from when this page was first written and have not been re-checked.
 
 ---
 
@@ -12,7 +12,7 @@ A feature-by-feature comparison of Alphonso against other local-first AI desktop
 |-----------|----------|-----------|--------|-------|------|--------|-------|-------|
 | **Architecture** | Tauri+Rust+React | Electron | Unknown | Tauri+Rust | Rust | Tauri+Rust+Vue | Electron | Tauri+Rust |
 | **Multi-Agent** | 9 role-based | Lead+workers | Multi-team | Sub-agents | Single | Profiles | Single | Chain |
-| **Connectors** | 33 | 0 | 15+ providers | 3 | MCP only | MCP | 4 | 5 |
+| **Connectors** | 34 | 0 | 15+ providers | 3 | MCP only | MCP | 4 | 5 |
 | **Policy Gate** | Fail-closed | None | None | None | None | None | None | None |
 | **License Enforce** | Built in, inactive (free at launch) | None | None | None | None | None | None | None |
 | **Platform** | Windows, macOS (Apple Silicon), Linux | Cross-platform | Desktop+Android | Cross-platform | Cross-platform | Cross-platform | Cross-platform | Cross-platform |
@@ -60,7 +60,7 @@ A feature-by-feature comparison of Alphonso against other local-first AI desktop
 | ElevenLabs, Higgsfield, Runway (paid, opt-in) | Yes | No | No | No |
 | CALL-E phone calls | Yes | No | No | — |
 
-**Alphonso wins on**: breadth (33 connectors, all policy-gated).
+**Alphonso wins on**: breadth (34 connectors, all policy-gated).
 
 ### Security & Governance
 
@@ -80,7 +80,7 @@ Alphonso (Tauri v2, Rust) produces a small app; the Windows installer is larger 
 |-------------|----------------|---------------------|
 | 9 specialized AI agents with governance | ✓ | |
 | Fail-closed security on every action | ✓ | |
-| 33 connectors (not just providers) | ✓ | |
+| 34 connectors (not just providers) | ✓ | |
 | From an idea to posted videos, Shorts and carousels | ✓ | |
 | Free, local-first, with paid services only if you choose them | ✓ | |
 | Durable task queue with dead-letter replay | ✓ | |
@@ -96,4 +96,4 @@ Alphonso (Tauri v2, Rust) produces a small app; the Windows installer is larger 
 
 ## Summary
 
-Alphonso is a local-first AI companion with **role-specialized agents that Jose plans and runs as checked step graphs, approval by effect, and 33 policy-gated connectors**, free at launch. It is strongest for users who need structured agent collaboration, approval workflows, and content production and distribution from a single desktop app. It runs on Windows, macOS (Apple Silicon, not yet signed by Apple) and Linux, with an iOS companion.
+Alphonso is a local-first AI companion with **role-specialized agents that Jose plans and runs as checked step graphs, approval by effect, and 34 policy-gated connectors**, free at launch. It is strongest for users who need structured agent collaboration, approval workflows, and content production and distribution from a single desktop app. It runs on Windows, macOS (Apple Silicon, not yet signed by Apple) and Linux, with an iOS companion.

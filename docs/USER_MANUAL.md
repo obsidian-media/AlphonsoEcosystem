@@ -2,7 +2,7 @@
 
 **Version**: 2.10.0
 **Last Updated**: 2026-10-25 (every section checked against the app on `main`: Jose's requests, Miya's content factory, the Calendar, publishing, Telegram, approvals by effect, connectors)
-**Status**: 2.10.0 is on `main`, not released yet; the latest release is 2.9.0. Features marked "not checked with real accounts" work in tests but have not been tried with a real account.
+**Status**: this manual describes 2.10.0, released 2026-10-27. Features marked "not checked with real accounts" work in tests but have not been tried with a real account.
 
 ---
 
@@ -483,7 +483,7 @@ Each post's numbers are read 1 hour, 1 day, 7 days and 30 days after it goes out
 
 ## 9. Connector System
 
-Alphonso has 33 connectors, all set up in **Settings → Connectors** and all policy-gated. Keys are kept in your system's keychain, never in a file; an environment variable still works as a fallback.
+Alphonso has 34 connectors, all set up in **Settings → Connectors** and all policy-gated. Keys are kept in your system's keychain, never in a file; an environment variable still works as a fallback.
 
 | Group | Connectors | Cost |
 |-------|-----------|------|
@@ -610,7 +610,7 @@ The Operator Dashboard is a developer tool: it appears in the sidebar and on Hom
 | Panel | Shows |
 |-------|-------|
 | **System Health** | Build status, verification, Ollama connection (polls every 3s) |
-| **Connector Health** | Status of all 33 connectors |
+| **Connector Health** | Status of all 34 connectors |
 | **Approval Center** | Pending approvals across all agents |
 | **Memory Confidence** | Memory item quality scores |
 | **Session Intelligence** | Real-time activity feed |

@@ -1,6 +1,6 @@
 # Jose orchestration redesign: design
 
-> **Status (2026-10-27):** phases 1 to 6b built (PRs #336 to #342, 2026-10-23); phase 7 built on `feat/jose-phase7` (design `docs/superpowers/specs/2026-10-27-jose-phase7-design.md`). Not released yet.
+> **Status (2026-10-27):** phases 1 to 6b built (PRs #336 to #342, 2026-10-23); phase 7 merged in PR #367 (design `docs/superpowers/specs/2026-10-27-jose-phase7-design.md`). All released in 2.10.0 (2026-10-27).
 
 Status: approved by the owner (2026-10-23). Phase 1 is planned in `docs/superpowers/plans/2026-10-23-jose-redesign-phase1.md`.
 

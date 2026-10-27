@@ -1,5 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-10-25 — every document reconciled with the code (§11.38). Version 2.10.0 is on `main` and **not tagged**; the latest release is v2.9.0 (2026-10-12). Since 2026-10-21, `main` gained the Jose redesign (phases 1–6b, §11.36) and Miya's content factory (phases 1–4c, §11.37). Current numbers: 9 agents, 33 connectors, 290 services, 175 components, 21 hooks, 556 test files with 6,832 Vitest tests, 357 Rust `#[test]`s (370 with the async ones), 189 Tauri commands, 50 Rust modules, 34 desktop end-to-end spec files.
+**Last verified:** 2026-10-27 — **v2.10.0 tagged and released** (§11.51) after a whole documentation pass. Current numbers: 9 agents, 34 connectors, 328 services, 175 components, 21 hooks, 593 test files with 6,886 Vitest tests (594 with `bridge/tests`), 384 Rust `#[test]`s, 201 Tauri commands, 53 Rust source files, 45 desktop end-to-end spec files with 129 checks, 60 built-in skills.
+
+**Last verified before that:** 2026-10-25 — every document reconciled with the code (§11.38). Version 2.10.0 is on `main` and **not tagged**; the latest release is v2.9.0 (2026-10-12). Since 2026-10-21, `main` gained the Jose redesign (phases 1–6b, §11.36) and Miya's content factory (phases 1–4c, §11.37). Current numbers: 9 agents, 34 connectors, 290 services, 175 components, 21 hooks, 556 test files with 6,832 Vitest tests, 357 Rust `#[test]`s (370 with the async ones), 189 Tauri commands, 50 Rust modules, 34 desktop end-to-end spec files.
 
 **Last verified before that:** 2026-09-30 — pre-launch all-angle audit and fix pass on branch `fix/prelaunch-audit-2026-09-30` (see §11.28). Version is still 2.8.0; nothing has been released since. Work between 2026-09-09 and 2026-09-21 (SSRF redirect fix, ChatView hydration race, Hermes loopback check, Cloud Voice model pin, macOS boot-crash build target, Runway gate, fan-out budget) is recorded in `CLAUDE.md`'s dated entries and `docs/CHANGELOG.md`.
 
@@ -189,7 +191,7 @@ Key services that past audits missed or underestimated:
 
 ### Policy & Approval (fully implemented, fail-closed)
 - `policyEnforcementService.ts` — **centralized policy gate** enforcing: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks. Fails closed with a blocked result object when uncertain or unauthorized.
-- `connectorRegistryService.ts` — all 33 connectors' send paths run through policy gate before any external call
+- `connectorRegistryService.ts` — all 34 connectors' send paths run through policy gate before any external call
 
 ### Agent Contracts (fully implemented)
 - `agentContractService.ts` — per-agent allowed/blocked action prefixes, checked before packet execution
@@ -2439,6 +2441,14 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **The closing summary.** One line per step and "Open on the board." (`joseSummary.ts`).
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
+
+## 11.51 v2.10.0 released (2026-10-27)
+
+The owner asked for a whole documentation pass after Jose phase 7, then the tag, the release and the installers.
+- **What 2.10.0 holds** (since 2.9.0, 2026-10-12): the deferred-work batches of PRs 304 and 305 and macOS back in the release; the Jose redesign (phases 1–7, PRs 336–342 and 367); Miya's content factory (phases 1–4c, PRs 332 and 343–354); agent roles Parts A–C (PRs 356, 357, 365, 366); agent phases 1–7 (Hector, Nova, Maria, Sentinel, Marcus, Alphonso, Echo).
+- **Documentation pass:** every document describing the app now says 2.10.0 is released (README, AGENTS.md, USER_MANUAL, RELEASE, CHANGELOG, COMPARISON, REDIT_POSTS, this file); the README's What's New covers the agent phases, Projects and Teams and Jose phase 7; AGENTS.md's connector count (34, with Google Web Risk) and service count (328) were corrected, and its line about the archived `externalAgentAdapter.js` removed; the dated specs carry a status line saying they were released.
+- **Release:** PR 367 merged on green required checks, `v2.10.0` tagged on `main`, and `release.yml` builds, signs and publishes the Windows (NSIS, MSI), macOS (Apple Silicon DMG, not signed by Apple) and Linux installers with the updater manifest.
+- **Not checked live before release (owner, 2026-10-27):** the live check with the owner's keys (Telegram, a Marcus channel, ElevenLabs, Higgsfield), deferred to the doc pass after 2.10.0; a paid-model step (Claude or ChatGPT); auto-update from 2.9.0 to 2.10.0. See `docs/governance/DEFERRED_WORK.md`.
 
 ## 11.50 Jose phase 7: stop, cancel, a queue, and Jose for everything (2026-10-27)
 

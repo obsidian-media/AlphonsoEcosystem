@@ -1,6 +1,6 @@
 # Agent phase 3: Maria reviews the real work
 
-> **Status (2026-10-25):** design, written with the owner after the Maria inspection of 2026-10-25 (code reading plus two live runs in the real app). Built on `feat/agent-phase-maria` (plan `docs/superpowers/plans/2026-10-25-agent-phase-maria.md`); not live-checked, because Windows Code Integrity blocks building the app on the dev machine.
+> **Status (2026-10-25):** design, written with the owner after the Maria inspection of 2026-10-25 (code reading plus two live runs in the real app). Built on `feat/agent-phase-maria` (plan `docs/superpowers/plans/2026-10-25-agent-phase-maria.md`); not live-checked, because Windows Code Integrity blocks building the app on the dev machine. Merged and released in 2.10.0 (2026-10-27).
 
 ## Why
 

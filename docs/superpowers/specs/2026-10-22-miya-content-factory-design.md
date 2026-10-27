@@ -1,6 +1,6 @@
 # Miya content factory: design
 
-> **Status (2026-10-25):** phase 1 built (PR #332); phases 2a to 4c followed (PRs #343 to #354). On `main`, not released yet.
+> **Status (2026-10-25):** phase 1 built (PR #332); phases 2a to 4c followed (PRs #343 to #354). Released in 2.10.0 (2026-10-27).
 
 Status: draft for the owner's approval (2026-10-22). Nothing is built yet.
 

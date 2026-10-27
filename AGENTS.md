@@ -18,8 +18,8 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 19 (Vite 8, Tailwind 4) + Ollama (local LLM)
-- **Version**: 2.10.0 (on `main`, not tagged yet; latest release 2.9.0. 593 test files, 6,886 tests, 290 services)
-- **Now**: the Jose redesign (phases 1–6b: plans as step graphs, approval by effect, the Requests board) and Miya's content factory (phases 1–4c: from an idea to finished, posted videos, Shorts and carousels, with results, paid engines, brand characters and motion) are on `main`. Jose phase 7 is next.
+- **Version**: 2.10.0 (released 2026-10-27; 593 test files, 6,886 tests, 328 services)
+- **Released in 2.10.0**: the Jose redesign (phases 1–7: plans as step graphs, approval by effect, the Requests board, Stop, a local-model queue), agent roles Parts A–C (one owner per kind of work, 60 skills, Projects and Teams), agent phases 1–7 (each agent rebuilt around its own model's judgment) and Miya's content factory (phases 1–4c: from an idea to finished, posted videos, Shorts and carousels, with results, paid engines, brand characters and motion) Next (owner, 2026-10-27): the live check with the owner's keys, then the resource manager, OpenRouter, a real MCP server and the Hermes gateway, each a phase of its own.
 
 ## Directory Structure
 ```text
@@ -124,12 +124,11 @@ What each agent may do is one table, `src/services/jose/agentPermissionTable.ts`
 - **parallelExecutionService.ts** — parallel task execution with concurrency control and retry
 - **cacheService.ts** — memory caching with TTL and LRU eviction
 - **orchestrationQueueService.js** manages durable queue with dead-letter replay
-- All 33 connectors (ElevenLabs and Higgsfield since content factory phase 4b; Telegram, WhatsApp Cloud, YouTube, Meta (Facebook and Instagram), mobile_bridge, ChatGPT, Claude, Qwen, Notion, ClickUp, SD WebUI, ComfyUI Video, Runway, GitHub, Slack, Discord, Generic Webhook, Ollama, Brave Search, Perplexity, Tavily, DeepSeek, NVIDIA NIM, Gemini, n8n, Hermes Agents, CALL-E, Pexels, Pixabay, Coverr, Your storage) are policy-gated
-- `externalAgentAdapter.js` (Agent Workshop) returns `not_wired` for any provider other than deepseek, openai, claude and ollama
+- All 34 connectors (ElevenLabs and Higgsfield since content factory phase 4b, Google Web Risk since agent phase 4; Telegram, WhatsApp Cloud, YouTube, Meta (Facebook and Instagram), mobile_bridge, ChatGPT, Claude, Qwen, Notion, ClickUp, SD WebUI, ComfyUI Video, Runway, GitHub, Slack, Discord, Generic Webhook, Ollama, Brave Search, Perplexity, Tavily, DeepSeek, NVIDIA NIM, Gemini, n8n, Hermes Agents, CALL-E, Pexels, Pixabay, Coverr, Your storage, Google Web Risk) are policy-gated
 - Window close now calls `std::process::exit(0)` to prevent WebView2 zombie process leak
 
 ## Do Not Duplicate
-Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 290 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 328 services already exist.
 
 ## Truth Source
 `docs/ALPHONSO_GROUND_TRUTH.md` is the single source of truth. If any other document conflicts, trust the ground truth file.
@@ -148,7 +147,7 @@ required verification evidence.
 - v2.0.0: enhanced agents, GitHub/Slack connectors, performance optimizations — achieved
 - v2.0.2: WhatsApp Cloud end-to-end, auto-updater live, 1,100 tests — achieved
 - v2.6.0–v2.9.0: Boardroom rebuild, in-app updates, memory knowledge graph, Smart Installer, desktop end-to-end suite — released
-- v2.10.0: Jose redesign and Miya's content factory — on `main`, not tagged yet
+- v2.10.0: Jose redesign, agent roles and agent phases, Miya's content factory — released 2026-10-27
 - Never fake readiness — use truth labels: COMPLETE / PARTIAL / PLACEHOLDER / FAKE
 
 ## Known Staleness

@@ -8,7 +8,7 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ---
 
-## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
+## [2.10.0] — 2026-10-27 (PR 304 and PR 305's deferred-work batches and macOS back in the release; the Jose redesign, PRs 336–342 and 367; Miya's content factory, PRs 332 and 343–354; agent roles Parts A–C, PRs 356, 357, 365 and 366; agent phases 1–7)
 
 ### Jose phase 7: stop, cancel, a queue, and Jose for everything (2026-10-27)
 - **Stop a running request** from the board, Chat's progress line or Telegram (`/stop`). Finished work is kept and nothing new starts; a send that already went out stays sent.
