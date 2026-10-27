@@ -23,7 +23,7 @@ import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughCalleMcp } from '..
 import { ALPHONSO_ANSWER_PROMPT } from '../services/alphonso/answerPrompt'
 import { decideJoseRoute } from '../services/jose/joseDecision'
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
-import { stopRequest } from '../services/jose/joseStop'
+import { stopRequest, STOPPED_LINE } from '../services/jose/joseStop'
 import { WAITING_FOR_TURN } from '../services/jose/joseQueue'
 import { JosePlanCard } from './jose/JosePlanCard'
 import { MariaOfferButton } from './maria/MariaOfferButton'
@@ -801,7 +801,9 @@ export function ChatView({
       const rejectedPlan = result?.reason === 'plan_rejected'
         ? `The plan didn't pass the checks: ${(result.problems || []).join(' ')} It is still waiting on the board.`
         : '';
-      const baseSummary = userReport?.summary || rejectedPlan || (stoppedEarly ? result.reason.trim() : 'Jose processed the command.');
+      // A request you stopped (Jose phase 7) says so in words, not its reason code.
+      const stoppedByYou = result?.reason === 'stopped' ? STOPPED_LINE : '';
+      const baseSummary = stoppedByYou || userReport?.summary || rejectedPlan || (stoppedEarly ? result.reason.trim() : 'Jose processed the command.');
       const hintLine = (result?.pendingApprovalCount || 0) > 0
         ? '\nApprove the pending tasks below to continue.'
         : '';

@@ -959,6 +959,16 @@ describe('ChatView: everything goes to Jose', () => {
     await waitFor(() => expect(carryOnRequest).toHaveBeenCalledWith(request.id));
   });
 
+  // Jose phase 7: a request you stopped says so in plain words, not its reason code.
+  it('a stopped request says "Stopped by you."', async () => {
+    decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
+    submitToJose.mockResolvedValueOnce({ ok: false, reason: 'stopped', commandId: 'c-s', requestId: 'jose-request-c-s', executionReceipts: [], plan: null, planNote: '' });
+    render(<ChatView {...makeProps()} />);
+    send('Research tea and write a long report');
+    expect(await screen.findByText('Stopped by you.')).toBeInTheDocument();
+    expect(screen.queryByText(/^stopped$/)).toBeNull();
+  });
+
   it('passes the plan-first setting to Jose', async () => {
     decideJoseRoute.mockResolvedValueOnce({ route: 'plan', source: 'model', reason: 'work' });
     render(<ChatView {...makeProps({ settings: { selectedModel: 'llama3.2:3b', colorScheme: 'dark', showPlanFirst: 'always' } })} />);
