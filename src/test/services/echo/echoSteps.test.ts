@@ -174,6 +174,13 @@ describe('recall', () => {
 
   // Found in the real app: the Friday decision (which also held the price) stayed active next to "moved
   // to Saturday", and the answer gave only Saturday.
+  it('the records carry the time, so two the same day read in order', async () => {
+    launch();
+    llm.mockResolvedValueOnce(say('Friday the 14th.'));
+    await runEchoStep(step('memory_recall'), input('What did we decide about the launch?'), ctx());
+    expect(String(llm.mock.calls[0][1].prompt)).toMatch(/Decided \d{1,2} \w{3} \d{2}:\d{2} \(Chat\)/);
+  });
+
   it('lists the records oldest first and says the newer one stands when two disagree', async () => {
     launch();
     await new Promise((r) => setTimeout(r, 5));
@@ -214,6 +221,25 @@ describe('forget', () => {
     const r = await runEchoStep(step('memory_forget'), input('Forget the launch decision'), ctx());
     expect(r.summary).toBe('Forgot: The launch is on Friday the 14th at $29.');
     expect(getDecision(a.id)!.status).toBe('forgotten');
+  });
+
+  // Found in the real app: with five launch decisions, the model called "the launch decision" clear.
+  it('several matches and the request names only the topic → asks, even when his model calls it clear', async () => {
+    const a = launch();
+    const b = addDecision({ kind: 'decision', text: 'The launch party is at the shop.', topics: ['launch'], source: { surface: 'chat', by: 'you' } } as never);
+    llm.mockResolvedValueOnce(say({ forget: [a.id], unclear: false }));
+    const r: any = await runEchoStep(step('memory_forget'), input('Forget the launch decision'), ctx());
+    expect(r.resultState).toBe('setup_required');
+    expect(r.stepFields.decisionChoices.map((c: any) => c.id)).toEqual([a.id, b.id]);
+    expect(getDecision(a.id)!.status).toBe('active');
+  });
+
+  it('several matches but the request says which → forgotten directly', async () => {
+    launch();
+    const venue = addDecision({ kind: 'decision', text: 'The launch venue is the Blue Room.', topics: ['launch', 'venue'], source: { surface: 'chat', by: 'you' } } as never);
+    llm.mockResolvedValueOnce(say({ forget: [venue.id] }));
+    const r = await runEchoStep(step('memory_forget'), input('Forget that the venue is the Blue Room'), ctx());
+    expect(r.summary).toBe('Forgot: The launch venue is the Blue Room.');
   });
 
   it('two possible matches → the step waits with a button for each, nothing forgotten', async () => {

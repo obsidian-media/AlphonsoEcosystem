@@ -190,7 +190,9 @@ async function save(assignment: any, input: StepInput | null, ctx: EchoCtx): Pro
 
 function historyLine(d: Decision): string {
   const replacedBy = d.replacedBy ? getDecision(d.replacedBy) : null;
-  return `${decisionLine(d)}${d.status === 'replaced' && replacedBy ? ` (replaced by: ${replacedBy.text})` : d.status === 'forgotten' ? ' (forgotten)' : ''}`;
+  // With the time, two decisions made the same day read in order (found in the real app).
+  const time = new Date(d.atMs).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return `${decisionLine(d).replace(/^(\S+(?: turned down)? \d{1,2} \w{3})/, `$1 ${time}`)}${d.status === 'replaced' && replacedBy ? ` (replaced by: ${replacedBy.text})` : d.status === 'forgotten' ? ' (forgotten)' : ''}`;
 }
 
 async function recall(assignment: any, input: StepInput | null, ctx: EchoCtx): Promise<EchoStepResult> {
@@ -234,6 +236,14 @@ async function forget(assignment: any, input: StepInput | null, ctx: EchoCtx): P
     ids = (Array.isArray(data?.forget) ? data.forget : []).map(String).filter((id: string) => known.has(id));
     unclear = data?.unclear === true || !ids.length;
   } catch { /* unclear: you pick */ }
+  // Several possible matches: forget directly only when the request says which, not just the topic
+  // (found in the real app: "the launch decision" with five launch decisions was called clear).
+  if (!unclear && candidates.length > 1) {
+    const words = [...contentWords(asked.replace(/\b(forget|stop remembering|decisions?|that|the)\b/gi, ' '))];
+    const matchesAll = (text: string) => { const have = contentWords(text); return words.every((w) => have.has(w)); };
+    // The request's words fit the pick and no other candidate.
+    unclear = ids.length !== 1 || !words.length || !matchesAll(getDecision(ids[0])?.text || '') || candidates.some((d) => d.id !== ids[0] && matchesAll(d.text));
+  }
   if (!unclear) {
     const gone = ids.map((id) => getDecision(id)!).filter(Boolean);
     gone.forEach((d) => forgetDecision(d.id));
