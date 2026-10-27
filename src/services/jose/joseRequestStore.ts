@@ -11,7 +11,7 @@ import { randomHex } from '../../lib/randomId';
 const REQUESTS_KEY = 'alphonso_jose_requests_v1';
 const MAX_REQUESTS = 200;
 
-export type JoseRequestStatus = 'waiting_plan_approval' | 'running' | 'waiting_approval' | 'waiting_setup' | 'done' | 'failed' | 'interrupted' | 'cancelled' | 'expired' | 'stopped';
+export type JoseRequestStatus = 'waiting_plan_approval' | 'running' | 'waiting_approval' | 'waiting_setup' | 'done' | 'failed' | 'interrupted' | 'cancelled' | 'expired' | 'stopped' | 'queued';
 
 export interface JoseRequestStep extends PlanStep {
   status: string;
@@ -60,8 +60,16 @@ export interface JoseRequest {
   changeLog?: { atMs: number; text: string }[];
   /** How to run a plan that waits for approval (phase 3). */
   runOptions?: { source: string; previewMode?: boolean; zeroCostMode?: boolean; endpoint?: string; allowPaidModels?: boolean };
+  /** When it started waiting its turn (Jose phase 7); the order a restart keeps. */
+  queuedAtMs?: number;
   createdAtMs: number;
   updatedAtMs: number;
+}
+
+// Told whenever a request's status changes (Jose phase 7: the queue gives a turn back).
+const statusListeners: ((requestId: string, status: string) => void)[] = [];
+export function onRequestStatusChange(listener: (requestId: string, status: string) => void): void {
+  if (!statusListeners.includes(listener)) statusListeners.push(listener);
 }
 
 function readAll(): JoseRequest[] {
@@ -81,10 +89,21 @@ function update(id: string, change: (request: JoseRequest) => void): JoseRequest
   const all = readAll();
   const request = all.find((r) => r.id === id);
   if (!request) throw new Error(`Jose request not found: ${id}`);
+  const before = request.status;
   change(request);
   request.updatedAtMs = Date.now();
   writeAll(all);
+  if (request.status !== before) {
+    for (const listener of statusListeners) {
+      try { listener(id, request.status); } catch { /* one listener never breaks a write */ }
+    }
+  }
   return request;
+}
+
+/** When a request started waiting its turn (Jose phase 7). */
+export function setRequestQueuedAt(requestId: string, atMs: number): JoseRequest {
+  return update(requestId, (r) => { r.queuedAtMs = atMs; });
 }
 
 /** A step as the board saves it: the content data (brief, brand) stays on the command (phase 6b). */

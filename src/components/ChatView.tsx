@@ -24,6 +24,7 @@ import { ALPHONSO_ANSWER_PROMPT } from '../services/alphonso/answerPrompt'
 import { decideJoseRoute } from '../services/jose/joseDecision'
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
 import { stopRequest } from '../services/jose/joseStop'
+import { WAITING_FOR_TURN } from '../services/jose/joseQueue'
 import { JosePlanCard } from './jose/JosePlanCard'
 import { MariaOfferButton } from './maria/MariaOfferButton'
 import { JoseRequestOutcome } from './jose/JoseRequestOutcome'
@@ -1773,6 +1774,7 @@ export function ChatView({
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-(--accent) rounded-full animate-pulse" />
                 <span className="text-xs text-(--text-2) font-medium">
+                  {liveProgress.stage === 'queued' && WAITING_FOR_TURN}
                   {liveProgress.stage === 'wave_start' && `Wave ${(liveProgress.wave || 0) + 1}: ${(liveProgress.agents || []).join(', ')}`}
                   {liveProgress.stage === 'executed' && `${liveProgress.assignment?.agent || 'Agent'} completed`}
                   {liveProgress.stage === 'generating_images' && `Generating ${liveProgress.promptCount || 0} image(s)...`}

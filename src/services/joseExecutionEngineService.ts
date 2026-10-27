@@ -58,6 +58,7 @@ import { runAlphonsoCode } from './alphonso/runCode';
 import { describeCodeChange, previewNeeds } from './alphonso/changeSet';
 import { onProjectReleased, releaseProject, releaseProjectsHeldBy } from './alphonso/projectLock';
 import { clearStop, isStopRequested, stopSignal, stopWaitsFor, STOPPED_LINE } from './jose/joseStop';
+import { giveBackTurn, takeTurn, usesLocalModel } from './jose/joseQueue';
 import { readingFolder, reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
@@ -1344,7 +1345,24 @@ export async function runPipelineShortcuts({ commandText, onProgress }: { comman
   return null;
 }
 
-export async function runJoseCommandExecutionPipeline({
+/**
+ * Jose's pipeline. However a run ends (done, waiting, stopped, or an error), its request gives
+ * back its turn in the local-model queue (Jose phase 7), so a crash never holds every later request.
+ */
+export async function runJoseCommandExecutionPipeline(input: any = {}) {
+  let requestId: string | null = null;
+  const onProgress = (event: any) => {
+    if (event?.stage === 'request_started' && event.requestId) requestId = event.requestId;
+    input?.onProgress?.(event);
+  };
+  try {
+    return await runPipeline({ ...input, onProgress });
+  } finally {
+    if (requestId) giveBackTurn(requestId);
+  }
+}
+
+async function runPipeline({
   commandText,
   source = 'user',
   endpoint,
@@ -1473,6 +1491,13 @@ export async function runJoseCommandExecutionPipeline({
   }
   // Chat shows "Open on the board" from here on (phase 4).
   if (joseRequestId) onProgress?.({ stage: 'request_started', requestId: joseRequestId, commandId: command.id });
+  // One local-model request at a time (Jose phase 7): wait for the turn. The queue takes it back
+  // when the request stops running (done, failed, waiting for you, stopped).
+  if (joseRequestId && usesLocalModel(planSteps)) {
+    const turn = takeTurn(joseRequestId);
+    if (getJoseRequest(joseRequestId)?.status === 'queued') onProgress?.({ stage: 'queued', requestId: joseRequestId, commandId: command.id });
+    await turn;
+  }
 
   // Loop-guard + budget: hard ceiling on a single pipeline run so a malformed
   // command graph or a stuck agent can never spin unbounded iterations or
@@ -2454,7 +2479,7 @@ export async function retryDLQ(taskId) {
 export async function resumeJoseRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
   // A waiting request, or one the app was closed on (phase 5).
-  if (!request || !['waiting_approval', 'interrupted', 'waiting_setup'].includes(request.status)) {
+  if (!request || !['waiting_approval', 'interrupted', 'waiting_setup', 'queued'].includes(request.status)) {
     return { ok: false, reason: request ? `This request is ${String(request.status).replace(/_/g, ' ')}, not waiting for an approval.` : 'Request not found.', requestId };
   }
   setJoseRequestStatus(requestId, 'running');
@@ -2557,7 +2582,8 @@ export function cancelRequest(requestId: string) {
 /** Carry on a request the app was closed on (phase 5): steps already done are kept; a step that needs approval asks again. */
 export async function carryOnRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
-  if (!request || (request.status !== 'interrupted' && request.status !== 'waiting_setup')) {
+  // A request queued when the app closed carries on too (Jose phase 7): it queues again.
+  if (!request || (request.status !== 'interrupted' && request.status !== 'waiting_setup' && request.status !== 'queued')) {
     return { ok: false, reason: 'Only a request that was cut off, or that waits for something to be set up, can be carried on.', requestId };
   }
   return resumeJoseRequest(requestId, options);

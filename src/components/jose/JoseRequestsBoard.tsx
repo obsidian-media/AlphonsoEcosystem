@@ -18,6 +18,7 @@ import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../servic
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
 import { stopRequest } from '../../services/jose/joseStop';
+import { QUEUED_LINE, queuePosition } from '../../services/jose/joseQueue';
 import { agentName } from '../../services/jose/agentNames';
 import { approveRequestStep, cancelRequest, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
 
@@ -34,6 +35,13 @@ export const STATUS_LABELS: Record<string, string> = {
   stopped: 'Stopped by you',
   queued: 'Queued',
 };
+
+/** A request's status in words; a queued one with its place in the queue (Jose phase 7). */
+export function statusLabel(request: JoseRequest): string {
+  const place = request.status === 'queued' ? queuePosition(request.id) : null;
+  if (place) return QUEUED_LINE(place);
+  return STATUS_LABELS[request.status] || request.status;
+}
 
 export function requestPlanLabel(request: JoseRequest): string {
   if (!request.plan) return '';
@@ -172,7 +180,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
               className={`w-full rounded-md px-2 py-1.5 text-left text-xs ${request.id === selectedId ? 'bg-(--surface-3)' : 'bg-(--surface-2) hover:bg-(--surface-3)'}`}
             >
               <div className="truncate font-medium text-(--text-1)">{request.text}</div>
-              <div className="text-[10px] text-(--text-3)">{STATUS_LABELS[request.status] || request.status} · {new Date(request.createdAtMs).toLocaleString()}</div>
+              <div className="text-[10px] text-(--text-3)">{statusLabel(request)} · {new Date(request.createdAtMs).toLocaleString()}</div>
             </button>
           </li>
         ))}
@@ -182,7 +190,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
         <div className="space-y-3 min-w-0">
           <div>
             <div className="text-sm font-semibold text-(--text-1)">{selected.text}</div>
-            <div className="text-xs text-(--text-3)">{STATUS_LABELS[selected.status] || selected.status}</div>
+            <div className="text-xs text-(--text-3)">{statusLabel(selected)}</div>
             {requestPlanLabel(selected) && <div className="text-xs text-(--text-2) mt-1">{requestPlanLabel(selected)}</div>}
           </div>
 

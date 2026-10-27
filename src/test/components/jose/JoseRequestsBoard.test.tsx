@@ -304,3 +304,21 @@ describe('Cancel a cut-off request on the board', () => {
     expect(screen.getByText('Cancelled.')).toBeTruthy();
   });
 });
+
+// Jose phase 7: a queued request shows its place in the queue.
+describe('Queued requests on the board', () => {
+  it('shows "Queued (1st)." for the first one waiting, and offers Stop', async () => {
+    const { takeTurn, resetQueueForTests } = await import('../../../services/jose/joseQueue');
+    resetQueueForTests();
+    const holder = createJoseRequest({ commandId: 'c-hold', source: 'user', text: 'Holder', kind: 'normal', steps });
+    const waitingOne = createJoseRequest({ commandId: 'c-wait', source: 'user', text: 'Waiting one', kind: 'normal', steps });
+    setJoseRequestStatus(holder.id, 'running');
+    setJoseRequestStatus(waitingOne.id, 'running');
+    await takeTurn(holder.id);
+    void takeTurn(waitingOne.id);
+    render(<JoseRequestsBoard selectedRequestId={waitingOne.id} />);
+    expect(screen.getAllByText('Queued (1st).').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('jose-stop')).toBeTruthy();
+    resetQueueForTests();
+  });
+});

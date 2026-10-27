@@ -177,6 +177,10 @@ function markInterruptedRequestsOnce(): void {
   interruptedRequestsChecked = true;
   try { markRunningRequestsInterrupted(); } catch { /* display aid only */ }
   try { expireWaitingRequests(); } catch { /* checked again every hour */ }
+  // Requests that were waiting their turn when the app closed queue again, oldest first (Jose phase 7).
+  void Promise.all([import('./services/jose/joseQueue'), import('./services/joseExecutionEngineService')])
+    .then(([queue, engine]) => queue.requeueAtStart((id) => engine.carryOnRequest(id)))
+    .catch(() => {});
   // Your own agent skills from the skills folder (agent roles Part B).
   void loadUserSkills();
   // Research reports saved before 2026-10-25 kept whole pages in app storage: moved to files once (agent phase 1).

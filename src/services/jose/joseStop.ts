@@ -40,7 +40,7 @@ export function onStopRequested(listener: (requestId: string) => void): void {
 /** Stop a request that is running or waiting its turn. */
 export function stopRequest(requestId: string): { ok: boolean; summary: string } {
   const request = getJoseRequest(requestId);
-  if (!request || (request.status !== 'running' && request.status !== ('queued' as string))) return { ok: false, summary: NOT_RUNNING };
+  if (!request || (request.status !== 'running' && request.status !== 'queued')) return { ok: false, summary: NOT_RUNNING };
   stopSignal(requestId);
   controllers.get(requestId)!.abort();
   for (const listener of listeners) {
