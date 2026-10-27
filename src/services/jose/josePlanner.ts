@@ -31,6 +31,8 @@ export interface JosePlan {
 
 interface PlanOptions {
   planFresh?: boolean;
+  /** This template is the starting point, whatever else fits (agent roles Part C1: Projects). */
+  templateId?: string;
   /** False for a caller that may never spend (a schedule); paid models are then not offered (phase 6a). */
   allowPaidModels?: boolean;
   history?: { role: string; content: string }[];
@@ -293,8 +295,8 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
       source: 'rules', templateId: null, kind: 'normal', note: 'Echo does this.',
     };
   }
-  const best = options.planFresh ? null : scoreTemplateFit(text).find((s) => s.score >= TEMPLATE_FIT_THRESHOLD);
-  const template = best ? getTemplate(best.templateId) : null;
+  const best = options.planFresh || options.templateId ? null : scoreTemplateFit(text).find((s) => s.score >= TEMPLATE_FIT_THRESHOLD);
+  const template = options.templateId ? getTemplate(options.templateId) : best ? getTemplate(best.templateId) : null;
   let problems: string[] = [];
   const installed = await listInstalledModels();
   const paidModel = options.allowPaidModels !== false && paidModelAvailable().ok ? paidModelId() : null;

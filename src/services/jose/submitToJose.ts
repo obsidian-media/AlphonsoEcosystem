@@ -40,6 +40,8 @@ export interface SubmitToJoseInput {
   showPlanFirst?: PlanFirstSetting;
   /** False for a caller that may never spend (a schedule, phase 6a). */
   allowPaidModels?: boolean;
+  /** Start from this template (agent roles Part C1: Projects uses Build an app). */
+  templateId?: string;
 }
 
 /** The plan note, plus what changed while it ran (a review that still found problems). */
@@ -126,7 +128,7 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
 
   onProgress?.({ stage: 'planning' });
   const allowPaidModels = input.allowPaidModels !== false;
-  const planned: JosePlan = await planJoseRequest(text, { planFresh, history, allowPaidModels });
+  const planned: JosePlan = await planJoseRequest(text, { planFresh, history, allowPaidModels, templateId: input.templateId });
   // Sentinel looks without being asked (agent phase 4): his checks join every plan.
   const secured = addSecurityChecks(planned.steps, text);
   const plan: JosePlan = { ...planned, steps: secured.steps };
