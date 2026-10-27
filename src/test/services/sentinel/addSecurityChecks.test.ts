@@ -98,3 +98,20 @@ describe('a people search', () => {
     expect(steps.filter((x) => x.agent === 'sentinel' && x.reviewOf === 'hector').map((x) => x.stepId)).toEqual(['sentinel-people-hector']);
   });
 });
+
+// Jose phase 7: the content factory's Publish is checked by its own Sentinel campaign check (the
+// "security" step), so no second check is put in front of it (found by CI: with no model the extra
+// check failed four times and Publish never ran).
+describe("the content factory's Publish", () => {
+  it('gets no extra check before it', () => {
+    const publish = { stepId: 'publish', agent: 'marcus', actionType: 'distribution_schedule_posts', effects: ['publish_or_send'], needs: [], contentStep: { projectId: 'p1', step: 'publish' } } as any;
+    const out = addSecurityChecks([publish], 'Content factory: publish for "Bees"');
+    expect(out.added).toEqual([]);
+    expect(out.steps.find((s) => s.stepId === 'publish')!.needs).toEqual([]);
+  });
+
+  it('an ordinary Marcus send still gets one', () => {
+    const send = { stepId: 'send', agent: 'marcus', actionType: 'distribution_execution', effects: ['publish_or_send'], needs: [] } as any;
+    expect(addSecurityChecks([send], 'Post hello to Slack #news').added).toEqual(['sentinel-send-send']);
+  });
+});

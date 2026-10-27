@@ -55,8 +55,10 @@ export function addSecurityChecks(input: PlanStep[], request: string): { steps: 
       const from = [...step.needs].reverse().find((id) => { const n = byId(id); return n && !['maria', 'sentinel', 'nova'].includes(n.agent); });
       if (from) step.reviewOf = from;
     }
-    // Before Marcus sends: a check of the exact text he sends from.
-    if (step.agent === 'marcus' && (step.effects || []).includes('publish_or_send') && !needsSentinel(step)) {
+    // Before Marcus sends: a check of the exact text he sends from. The content factory's Publish is
+    // checked by its own Sentinel campaign check (its "security" step; Jose phase 7).
+    const factoryPublish = Boolean((step as { contentStep?: unknown }).contentStep) || step.actionType === 'distribution_schedule_posts';
+    if (step.agent === 'marcus' && (step.effects || []).includes('publish_or_send') && !needsSentinel(step) && !factoryPublish) {
       const source = step.needs.find((id) => !isSentinel(byId(id))) || null;
       const text = (step as { payload?: { text?: unknown } }).payload?.text;
       const id = `sentinel-send-${step.stepId}`;
