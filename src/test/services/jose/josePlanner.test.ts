@@ -337,6 +337,26 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(missingAsked('Research the latest React release and update my app to it', plan as never)).toEqual([]);
   });
 
+  // Found in the real app: "Remember that the launch moved to Saturday" was planned with research, writing and a check.
+  it('a request that only asks to remember, forget or tidy is one Echo step, without asking the model', async () => {
+    for (const [text, actionType] of [
+      ['Remember that the launch moved to Saturday the 15th.', 'memory_preservation'],
+      ['/jose Forget the launch decision', 'memory_forget'],
+      ['Clean up my memory', 'memory_cleanup'],
+    ]) {
+      const plan = await planJoseRequest(text);
+      expect(plan.steps.map((st) => [st.agent, st.actionType])).toEqual([['echo', actionType]]);
+      expect(plan.note).toBe('Echo does this.');
+    }
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  it('remembering plus other work is still planned by the model', async () => {
+    llm.mockResolvedValueOnce({ response: '' } as never);
+    await planJoseRequest('Remember that the launch is Friday and write an email to Sam about it.');
+    expect(llm).toHaveBeenCalled();
+  });
+
   // Agent phase 7: remember, forget and clean up need Echo's step.
   it("a request to remember, forget or clean up without Echo's step is sent back", () => {
     const plan = [{ agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_answer' }];

@@ -4,6 +4,7 @@
 // the model is unavailable, the simple rule-based plan runs and Jose says so
 // (owner, 2026-10-23).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.3–2.4, §5
+import { memoryOnlyTask } from '../echo/memoryIntents';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { asksPlanReview, asksReadiness, asksToCleanUpMemory, asksToForget, asksToRemember, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
@@ -283,6 +284,15 @@ function fallback(text: string, template: JoseTemplate | null, note: string): Jo
 
 /** Plan `text`: Jose's model, checked by the rules, one fix, then the fallback. */
 export async function planJoseRequest(text: string, options: PlanOptions = {}): Promise<JosePlan> {
+  // Agent phase 7: a request that only asks to remember, forget or tidy is one Echo step (found in the
+  // real app: "Remember that the launch moved" got research, writing and a check from the model).
+  const memoryTask = memoryOnlyTask(text);
+  if (memoryTask) {
+    return {
+      steps: [{ stepId: 'echo', agent: 'echo', actionType: memoryTask, effects: inferEffects(memoryTask), needs: [], instruction: 'Do what the request asks with memory.' }],
+      source: 'rules', templateId: null, kind: 'normal', note: 'Echo does this.',
+    };
+  }
   const best = options.planFresh ? null : scoreTemplateFit(text).find((s) => s.score >= TEMPLATE_FIT_THRESHOLD);
   const template = best ? getTemplate(best.templateId) : null;
   let problems: string[] = [];
