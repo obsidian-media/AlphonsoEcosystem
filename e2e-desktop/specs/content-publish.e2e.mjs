@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { enterShell, invoke, buttonByText, openPage, keepOutputFolder } from '../helpers.mjs';
+import { enterShell, invoke, buttonByText, openPage, keepOutputFolder, printContentDiag } from '../helpers.mjs';
 
 const savedProjects = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_projects_v1') || '[]'));
 const savedBrands = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_brands_v1') || '[]'));
@@ -100,9 +100,10 @@ describe('Alphonso desktop: publishing', () => {
   it('"Approve and schedule" asks once and hands the Reel to Marcus for its time', async function () {
     this.timeout(300000);
     await (await buttonByText('approve and schedule')).click();
+    // Under the runner's 180 s per test, so the diagnostic prints when this times out in CI.
     await browser.waitUntil(async () => (await projectById(projectId)).posts[0].status === 'scheduled', {
-      timeout: 240000, interval: 2000, timeoutMsg: 'the post was not scheduled',
-    });
+      timeout: 150000, interval: 2000, timeoutMsg: 'the post was not scheduled',
+    }).catch(async (error) => { await printContentDiag('publish', projectId); throw error; });
     const project = await projectById(projectId);
     const item = (await schedule()).find((i) => i.postId === project.posts[0].id);
     expect(item).toMatchObject({ kind: 'content_post', platform: 'instagram', status: 'pending', scheduledAt: project.posts[0].scheduledAtMs });

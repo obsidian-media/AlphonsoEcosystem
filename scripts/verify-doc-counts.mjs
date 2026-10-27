@@ -84,6 +84,33 @@ const CLAIMS = [
     pattern: /lib\.rs ~[\d,]+ lines · (\d+) Tauri commands/,
     actualFn: () => getAllCounts().tauriCommands
   },
+  // Desktop E2E counts (agent roles Part C2), in both places CLAUDE.md states them.
+  {
+    file: 'CLAUDE.md',
+    label: 'desktop E2E spec files (build commands)',
+    pattern: /isolated test data \((\d+) spec files, (\d+) checks\)/,
+    actualFn: () => getAllCounts().desktop.specs
+  },
+  {
+    file: 'CLAUDE.md',
+    label: 'desktop E2E checks (build commands)',
+    pattern: /isolated test data \((\d+) spec files, (\d+) checks\)/,
+    actualFn: () => getAllCounts().desktop.checks,
+    group: 2
+  },
+  {
+    file: 'CLAUDE.md',
+    label: 'desktop E2E spec files (suite row)',
+    pattern: /Full suite: (\d+) spec files, (\d+) checks/,
+    actualFn: () => getAllCounts().desktop.specs
+  },
+  {
+    file: 'CLAUDE.md',
+    label: 'desktop E2E checks (suite row)',
+    pattern: /Full suite: (\d+) spec files, (\d+) checks/,
+    actualFn: () => getAllCounts().desktop.checks,
+    group: 2
+  },
   {
     file: 'README.md',
     label: 'architecture modules',

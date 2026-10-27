@@ -139,6 +139,10 @@ export function getAllCounts() {
   const rustTests = countRustTests('src-tauri/src');
   const rustFilesPaths = walk(join(PROJECT_ROOT, 'src-tauri/src'), byExt(RUST_EXT));
   const rustModules = rustFilesPaths.map((f) => relative(join(PROJECT_ROOT, 'src-tauri/src'), f));
+  // Desktop E2E (agent roles Part C2): spec files, and checks = lines that start an \`it(\` in them.
+  // Counted, not kept by hand: the hand-kept number had drifted.
+  const desktopSpecs = walk(join(PROJECT_ROOT, 'e2e-desktop/specs'), (p) => p.endsWith('.e2e.mjs'));
+  const desktopChecks = desktopSpecs.reduce((acc, f) => acc + (readFileSync(f, 'utf8').match(/^\s*it\(/gm) || []).length, 0);
 
   return {
     libRs: { nonEmptyLines: libRsNonEmpty, totalLines: libRsTotal },
@@ -151,6 +155,7 @@ export function getAllCounts() {
     docs: { files: docs.files, lines: docs.lines },
     scripts: { files: scripts.files, lines: scripts.lines },
     tauriCommands,
-    rustTests
+    rustTests,
+    desktop: { specs: desktopSpecs.length, checks: desktopChecks }
   };
 }
