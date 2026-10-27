@@ -166,7 +166,10 @@ async function run(name: string, args: Record<string, unknown>, ctx: ToolContext
       return { ok: true, text: clips.slice(0, 8).map((c) => `- ${c.source} ${c.id}: ${c.durationSec}s, ${c.width}x${c.height}, ${c.pageUrl}`).join('\n') };
     }
     case 'read_project_file': {
-      if (!ctx.workspaceRoot) return { ok: false, text: 'No project folder is set.' };
+      if (!ctx.workspaceRoot) {
+        const { NAME_A_PROJECT } = await import('../alphonso/projects');
+        return { ok: false, text: NAME_A_PROJECT };
+      }
       const relativePath = str(args.path);
       if (!relativePath) return { ok: false, text: 'read_project_file needs a path.' };
       const { readWorkspaceFile } = await import('../workspaceFileService');

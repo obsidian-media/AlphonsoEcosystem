@@ -18,6 +18,7 @@ vi.mock('../../../services/browserAutomationService', () => ({ fetchUrlContent: 
 vi.mock('../../../services/marcusExecutionService', () => ({ runMarcusDistribution: (...a: unknown[]) => sendSlack(...a) }));
 
 import { runSkillTool } from '../../../services/skills/skillToolRun';
+import { NAME_A_PROJECT } from '../../../services/alphonso/projects';
 import type { StepInput } from '../../../services/jose/stepInput';
 import { addDecision } from '../../../services/echo/decisions';
 
@@ -95,7 +96,7 @@ describe('runSkillTool', () => {
 
   it('read_project_file needs a project folder', async () => {
     expect(await runSkillTool('read_project_file', { path: 'a.txt' }, { agent: 'alphonso', stepInput: input }))
-      .toEqual({ ok: false, text: 'No project folder is set.' });
+      .toEqual({ ok: false, text: NAME_A_PROJECT });
   });
 
   it('read_sources gives a research step\'s numbered sources with excerpts (agent phase 1)', async () => {
