@@ -11,6 +11,7 @@ import { CodePreviewView } from '../alphonso/CodePreviewView';
 import { EchoRemembered } from '../echo/EchoRemembered';
 import { CleanupProposals } from '../echo/CleanupProposals';
 import { pickForget } from '../../services/echo/echoPicks';
+import { templateProblems } from '../../services/jose/teams';
 import { describePlanSource, type JosePlan } from '../../services/jose/josePlanner';
 import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
@@ -66,6 +67,8 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
 
   const selected = selectedId ? requests.find((r) => r.id === selectedId) || getJoseRequest(selectedId) : null;
   const waiting = selected?.status === 'waiting_plan_approval';
+  // A waiting plan that breaks the rules says so before you run it (agent roles Part C1).
+  const planProblems = waiting && selected ? templateProblems({ steps: selected.steps as never }) : [];
 
   const run = async () => {
     if (!selected || runningRef.current) return;
@@ -230,10 +233,17 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
           )}
           <EchoRemembered requestId={selected.id} />
 
+          {planProblems.length > 0 && (
+            <ul data-testid="jose-plan-problems" className="rounded-xl bg-(--surface-2) p-3 text-xs text-(--warning)">
+              {planProblems.map((p) => <li key={p}>{p}</li>)}
+              <li className="text-(--text-3)">Edit the plan to fix this before running it.</li>
+            </ul>
+          )}
+
           <div className="flex flex-wrap gap-2">
             {waiting && !editing && (
               <>
-                <Button variant="primary" disabled={running} onClick={run}>Run this plan</Button>
+                <Button variant="primary" disabled={running || planProblems.length > 0} onClick={run}>Run this plan</Button>
                 <Button onClick={() => setEditing(true)}>Edit</Button>
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
