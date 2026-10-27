@@ -42,7 +42,8 @@ describe('runSkillTool', () => {
 
   it('action tools never run', async () => {
     const result = await runSkillTool('send_message', { text: 'hi' }, { agent: 'marcus', stepInput: input });
-    expect(result).toEqual({ ok: false, text: "This tool runs as the step's own action, after its approval." });
+    // Jose phase 7: the agent is told how to ask for it instead.
+    expect(result).toEqual({ ok: false, text: "This tool is another step's action. End your answer with an ACTION: line and Jose adds it, after your approval." });
     expect(sendSlack).not.toHaveBeenCalled();
   });
 

@@ -34,6 +34,7 @@ import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestSt
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
+import { ACTION_INSTRUCTION } from './jose/joseHandoff';
 import { agentName } from './jose/agentNames';
 import { rejectWaitingPackets } from './jose/joseExpiry';
 import { saveRequestDecisions } from './jose/joseFinish';
@@ -1155,7 +1156,8 @@ export function stepCommandText(assignment: any, commandText: string): string {
   const instruction = typeof assignment?.instruction === 'string' ? assignment.instruction.trim() : '';
   if (!instruction) return commandText;
   if (assignment?.agent === AGENTS.ALPHONSO && !String(assignment?.actionType || '').startsWith('assistant_')) return commandText;
-  const help = assignment?.helpRound ? '' : `\n\n${HELP_INSTRUCTION}`;
+  // Help and hand-offs (Jose phase 7) are offered to every planned step except on a help round.
+  const help = assignment?.helpRound ? '' : `\n\n${HELP_INSTRUCTION}\n${ACTION_INSTRUCTION}`;
   return `${instruction}\n\nThe request: ${commandText}${help}`;
 }
 
