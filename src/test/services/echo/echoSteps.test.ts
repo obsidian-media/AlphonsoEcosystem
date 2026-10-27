@@ -98,7 +98,6 @@ describe('saving: what the real run showed', () => {
     launch();
     llm.mockResolvedValueOnce(say({ decisions: [] })).mockResolvedValueOnce(say({ decisions: [] }));
     const r = await runEchoStep(step('memory_preservation'), input('Remember that the launch moved to Saturday the 15th.'), ctx());
-    expect(llm).toHaveBeenCalledTimes(2);
     expect(String(llm.mock.calls[1][1].prompt)).toContain('The user asked you to remember something');
     expect(r.summary).toBe('Remembered: The launch moved to Saturday the 15th.');
     expect(listDecisions().find((d) => d.kind === 'instruction')).toMatchObject({ text: 'The launch moved to Saturday the 15th.', source: { by: 'you' } });
@@ -110,6 +109,43 @@ describe('saving: what the real run showed', () => {
       .mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'The launch is on Saturday the 15th.', topics: ['launch'], replaces: old.id }] }));
     await runEchoStep(step('memory_preservation'), input('Remember that the launch moved to Saturday the 15th.'), ctx());
     expect(getDecision(old.id)!.status).toBe('replaced');
+  });
+});
+
+describe('saving: the second real run', () => {
+  it('a near-repeat of a saved decision is not saved; a different date or price is', async () => {
+    addDecision({ kind: 'decision', text: 'Our launch is on Friday the 14th at $29.', topics: ['launch'], source: { surface: 'chat', by: 'you' } } as never);
+    addDecision({ kind: 'preference', text: 'I prefer short emails without emojis', topics: ['email'], appliesTo: ['all'], source: { surface: 'chat', by: 'you' } } as never);
+    llm.mockResolvedValueOnce(say({ decisions: [
+      { kind: 'decision', text: 'The launch is on Friday the 14th at $29.', topics: ['launch'] },
+      { kind: 'preference', text: 'Short email without emojis', topics: ['email'] },
+      { kind: 'decision', text: 'The price is $35.', topics: ['price'] },
+    ] })).mockResolvedValue(say({ replaces: null }));
+    const out: any = await extractDecisions({ request: 'Write a short email to Sam about the launch.', work: '[alphonso] Dear Sam …', surface: 'chat' } as never);
+    expect(out.saved.map((d: any) => d.text)).toEqual(['The price is $35.']);
+  });
+
+  it('a new decision on a saved topic is checked once more for what it replaces', async () => {
+    const old = launch();
+    llm.mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'The launch moved to Saturday the 15th.', topics: ['launch'] }] }))
+      .mockResolvedValueOnce(say({ replaces: old.id }));
+    await runEchoStep(step('memory_preservation'), input('Remember that the launch moved to Saturday the 15th.'), ctx());
+    expect(String(llm.mock.calls[1][1].prompt)).toContain(old.id);
+    expect(getDecision(old.id)).toMatchObject({ status: 'replaced' });
+  });
+
+  it("a replaces answer naming an id he wasn't shown changes nothing", async () => {
+    const old = launch();
+    llm.mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'The launch moved to Saturday the 15th.', topics: ['launch'] }] }))
+      .mockResolvedValueOnce(say({ replaces: 'made-up' }));
+    await runEchoStep(step('memory_preservation'), input('Remember that the launch moved to Saturday the 15th.'), ctx());
+    expect(getDecision(old.id)!.status).toBe('active');
+  });
+
+  it("the answer format's own hint is never saved as a decision", async () => {
+    llm.mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'one plain sentence', topics: [] }] }));
+    const r = await runEchoStep(step('memory_preservation'), input('Tell me a joke'), ctx());
+    expect(r.summary).toBe(NOTHING_TO_REMEMBER);
   });
 });
 

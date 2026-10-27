@@ -1,6 +1,7 @@
 // Echo's steps (agent phase 7): save what was decided, answer from it, forget on request.
 // His model decides what is a decision and what it replaces; nothing is made up when it fails.
 import { asksToRemember } from './memoryIntents';
+import { contentWords, nearlySame } from './recall';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { extractJsonObject } from '../../lib/jsonUtils.js';
 import { resolveSecureSessionId } from '../connectors/hermesAgentConnector';
@@ -65,7 +66,7 @@ export function echoSavePrompt(input: { request: string; work: string; changeLog
     known.length ? `Decisions already saved (id: text):\n${known.map((d) => `${d.id}: ${d.text}`).join('\n')}\nWhen a new decision changes one of these, set "replaces" to its id. Do not save one that is already there.` : '',
     `For a preference, "appliesTo" lists who or what work it is for: agent ids or their task-type prefixes from: ${appliesToChoices()}; or ["all"].`,
     problem,
-    'Answer with JSON only: {"decisions": [{"kind": "decision" | "preference" | "instruction" | "rejection", "text": "one plain sentence", "why": "the reason, if one was given", "topics": ["two or three words to find it again"], "appliesTo": [], "replaces": "id or omit"}]}',
+    `Answer with JSON only: {"decisions": [{"kind": "decision" | "preference" | "instruction" | "rejection", "text": "${TEXT_HINT}", "why": "${WHY_HINT}", "topics": ["${TOPICS_HINT}"], "appliesTo": [], "replaces": "id or omit"}]}`,
   ].filter(Boolean).join('\n\n');
 }
 
@@ -87,6 +88,31 @@ export function withoutRememberWords(text: string): string {
   const t = String(text || '').trim().replace(/^(?:\/jose\s+)?(?:please\s+)?(?:remember|keep in mind|don'?t forget)(?:\s+that)?[,:]?\s+/i, '');
   return t ? t[0].toUpperCase() + t.slice(1) : t;
 }
+/** The answer format's own hints: a small model sometimes copies one as the text (found in the real app). */
+const TEXT_HINT = 'one plain sentence';
+const WHY_HINT = 'the reason, if one was given';
+const TOPICS_HINT = 'two or three words to find it again';
+const isHint = (text: string) => [TEXT_HINT, WHY_HINT, TOPICS_HINT].some((h) => flat(h) === flat(text));
+
+/** One small question when a new decision shares words with saved ones: does it replace one of them? */
+async function findReplaced(text: string, known: Decision[], packetId?: string): Promise<string | undefined> {
+  const words = contentWords(text);
+  const near = known.filter((k) => k.status === 'active' && !nearlySame(k.text, text) && [...contentWords(`${k.text} ${k.topics.join(' ')}`)].some((w) => words.has(w)));
+  if (!near.length) return undefined;
+  try {
+    const data: any = extractJsonObject(await ask([
+      'You are Echo. A new decision was just made. Does it change one of the saved decisions below (a new date, price, place or choice for the same thing)? Only when it really replaces it.',
+      `Saved decisions (id: text):\n${near.map((k) => `${k.id}: ${k.text}`).join('\n')}`,
+      `New decision: ${text}`,
+      'Answer with JSON only: {"replaces": "the id it replaces, or null"}',
+    ].join('\n\n'), packetId));
+    const id = typeof data?.replaces === 'string' ? data.replaces : '';
+    return near.some((k) => k.id === id) ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const ASKED_TO_REMEMBER = 'The user asked you to remember something: save it as a decision, preference or instruction. When it changes a decision already saved, set "replaces" to its id.';
 
 /** Echo's model writes down what was decided; each is saved and indexed. */
@@ -106,20 +132,27 @@ export async function extractDecisions(input: {
     }
     const read = readDecisions(raw);
     if (!read) { problem = 'Your last answer could not be read as the JSON asked for.'; continue; }
-    const already = new Set(known.filter((k) => k.status === 'active').map((k) => flat(k.text)));
-    const found = read
-      .map((d): Record<string, any> => ({ ...d, text: withoutRememberWords(d.text) }))
-      .filter((d) => d.text && !copiesWork(d.text, input.work, input.request) && !already.has(flat(d.text)));
+    const active = known.filter((k) => k.status === 'active');
+    const found: Array<Record<string, any>> = [];
+    for (const d of read.map((x): Record<string, any> => ({ ...x, text: withoutRememberWords(x.text) }))) {
+      if (!d.text || isHint(d.text) || copiesWork(d.text, input.work, input.request)) continue;
+      // A repeat of a saved decision, or of one just found, in other words.
+      if (active.some((k) => nearlySame(k.text, d.text)) || found.some((f) => nearlySame(f.text, d.text))) continue;
+      found.push(d);
+    }
     if (!found.length && asked) {
       if (attempt === 0) { problem = ASKED_TO_REMEMBER; continue; }
       // You said to remember it: keep your own words rather than nothing.
       found.push({ kind: 'instruction', text: withoutRememberWords(input.request), topics: [] });
     }
+    for (const d of found) {
+      if (!(typeof d.replaces === 'string' && shown.has(d.replaces))) d.replaces = await findReplaced(d.text, known, input.packetId);
+    }
     const saved = found.map((d) => {
       const decision = addDecision({
         kind: d.kind,
         text: d.text,
-        ...(typeof d.why === 'string' && d.why.trim() ? { why: d.why } : {}),
+        ...(typeof d.why === 'string' && d.why.trim() && !isHint(d.why) ? { why: d.why } : {}),
         topics: Array.isArray(d.topics) ? d.topics.filter((t: unknown) => typeof t === 'string').slice(0, 5) : [],
         ...(d.kind === 'preference' && Array.isArray(d.appliesTo) && d.appliesTo.length ? { appliesTo: d.appliesTo.map(String) } : d.kind === 'preference' ? { appliesTo: ['all'] } : {}),
         ...(typeof d.replaces === 'string' && shown.has(d.replaces) ? { replaces: d.replaces } : {}),

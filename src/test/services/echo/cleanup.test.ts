@@ -53,6 +53,17 @@ describe('proposeCleanup', () => {
     expect(getCleanup(r.stepFields.cleanupSetId)!.proposals.map((p) => p.ids)).toEqual([[a.id]]);
   });
 
+  it("a proposal whose text is the answer format's own hint is dropped (found in the real app)", async () => {
+    const a = add('Short email without emojis.');
+    const b = add('Newsletter every Monday.');
+    llm.mockResolvedValueOnce(say({ proposals: [
+      { kind: 'merge', ids: [a.id, b.id], text: 'for merge and promote', reason: 'x' },
+      { kind: 'drop', ids: [b.id], reason: 'stale' },
+    ] }));
+    const r: any = await proposeCleanup(step, ctx());
+    expect(getCleanup(r.stepFields.cleanupSetId)!.proposals.map((p) => p.kind)).toEqual(['drop']);
+  });
+
   it('nothing to tidy → done, "Memory looks tidy."', async () => {
     add('A.');
     llm.mockResolvedValueOnce(say({ proposals: [] }));

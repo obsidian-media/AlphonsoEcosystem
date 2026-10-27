@@ -14,6 +14,23 @@ function stem(word: string): string {
   return word;
 }
 
+/** The words that carry a decision's meaning: numbers and prices always, other words over three letters. */
+export function contentWords(text: string): Set<string> {
+  return new Set(String(text || '').toLowerCase().split(/[^a-z0-9$€£]+/)
+    .filter((w) => /\d/.test(w) || (w.length > 3 && !STOP_WORDS.has(w)))
+    .map(stem));
+}
+
+/** Two decisions that say the same thing in other words ("The launch …" / "Our launch …"). */
+export const NEAR_REPEAT = 0.75;
+export function nearlySame(a: string, b: string): boolean {
+  const x = contentWords(a);
+  const y = contentWords(b);
+  if (!x.size || !y.size) return false;
+  const shared = [...x].filter((w) => y.has(w)).length;
+  return shared / new Set([...x, ...y]).size >= NEAR_REPEAT;
+}
+
 function stems(text: string): Set<string> {
   return new Set(String(text || '').toLowerCase().split(/[^a-z0-9$€£]+/)
     .filter((w) => w.length > 3 && !STOP_WORDS.has(w))

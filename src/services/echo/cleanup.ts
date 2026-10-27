@@ -14,6 +14,11 @@ export { getCleanup, openCleanup, saveCleanupSet, CLEANUP_KEY, type CleanupPropo
 const NOTES_REVIEWED_KEY = 'alphonso_echo_notes_reviewed_v1';
 export const ECHO_CLEANUP_LABEL = 'Steps set by Echo.';
 const KINDS = ['merge', 'replace', 'contradiction', 'drop', 'promote'];
+/** The answer format's own hints: a small model sometimes copies one as the text (found in the real app). */
+const TEXT_HINT = 'for merge and promote';
+const KEEP_HINT = 'for replace and contradiction';
+const REASON_HINT = 'one short sentence';
+const isHint = (value: unknown) => [TEXT_HINT, KEEP_HINT, REASON_HINT, 'ids from above'].includes(String(value || '').trim().toLowerCase());
 
 const notesReviewed = () => { try { return localStorage.getItem(NOTES_REVIEWED_KEY) === '1'; } catch { return true; } };
 
@@ -48,7 +53,7 @@ export async function proposeCleanup(assignment: any, ctx: EchoCtx): Promise<Ech
         'You are Echo. Tidy the saved decisions: find ones that say the same thing (merge, with one text), one that a later one replaced (replace: keep is the one that stands), ones that contradict each other (contradiction: keep is the one that stands), stale ones nobody needs (drop), and old notes that record a real decision (promote, with its text). Propose nothing when memory is tidy. You change nothing: the user applies what they tick.',
         decisions.length ? `Decisions (id: text):\n${decisions.map((d) => `${d.id}: ${d.text}`).join('\n')}` : '',
         notes.length ? `Old notes (id: text):\n${notes.map((n) => `${n.id}: ${n.text}`).join('\n')}` : '',
-        'Answer with JSON only: {"proposals": [{"kind": "merge" | "replace" | "contradiction" | "drop" | "promote", "ids": ["ids from above"], "text": "for merge and promote", "keep": "for replace and contradiction", "reason": "one short sentence"}]}',
+        `Answer with JSON only: {"proposals": [{"kind": "merge" | "replace" | "contradiction" | "drop" | "promote", "ids": ["ids from above"], "text": "${TEXT_HINT}", "keep": "${KEEP_HINT}", "reason": "${REASON_HINT}"}]}`,
       ].filter(Boolean).join('\n\n'),
       format: 'json',
       ...(ctx.packetId ? { sessionId: resolveSecureSessionId(ctx.packetId) } : {}),
@@ -56,6 +61,7 @@ export async function proposeCleanup(assignment: any, ctx: EchoCtx): Promise<Ech
     const data: any = extractJsonObject(String(reply?.response || ''));
     proposals = (Array.isArray(data?.proposals) ? data.proposals : [])
       .filter((p: any) => p && KINDS.includes(p.kind) && Array.isArray(p.ids) && p.ids.length && p.ids.every((id: unknown) => shown.has(String(id))))
+      .filter((p: any) => !isHint(p.text) && !isHint(p.keep))
       .filter((p: any) => (p.kind !== 'merge' && p.kind !== 'promote') || (typeof p.text === 'string' && p.text.trim()))
       .filter((p: any) => (p.kind !== 'replace' && p.kind !== 'contradiction') || shown.has(String(p.keep)))
       .map((p: any, i: number) => ({ id: `p${i}`, kind: p.kind, ids: p.ids.map(String), ...(p.text ? { text: String(p.text) } : {}), ...(p.keep ? { keep: String(p.keep) } : {}), reason: String(p.reason || '') }));
