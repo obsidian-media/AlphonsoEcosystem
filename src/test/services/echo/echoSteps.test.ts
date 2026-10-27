@@ -6,7 +6,7 @@ vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: (...a: unknown
 vi.mock('../../../services/memoryGraphService', () => ({ addNode: vi.fn(async () => null), addEdge: vi.fn(async () => null) }));
 vi.mock('../../../services/chromaDbService', () => ({ isChromaHealthy: vi.fn(async () => false), semanticSearchMemory: vi.fn(async () => null), addMemoryToChroma: vi.fn(async () => undefined) }));
 
-import { extractDecisions, runEchoStep, NOTHING_TO_REMEMBER } from '../../../services/echo/echoSteps';
+import { extractDecisions, runEchoStep, NOTHING_TO_REMEMBER, NO_DECISIONS_THIS_WEEK } from '../../../services/echo/echoSteps';
 import { addDecision, listDecisions, getDecision } from '../../../services/echo/decisions';
 
 const say = (o: unknown) => ({ response: typeof o === 'string' ? o : JSON.stringify(o) });
@@ -263,5 +263,40 @@ describe('forget', () => {
   it('nothing matches → says so', async () => {
     const r = await runEchoStep(step('memory_forget'), input('Forget the tea order'), ctx());
     expect(r.summary.startsWith('I have nothing saved about')).toBe(true);
+  });
+});
+
+// Agent roles Part C2: the weekly decisions digest, with no model call.
+describe('weekly decisions digest', () => {
+  it("lists this week's decisions by topic, oldest first, with where each was made", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 9, 18, 10, 0)); // Sun 18 Oct, 9 days before
+      addDecision({ kind: 'decision', text: 'Old: logo stays blue.', topics: ['brand'], source: { surface: 'chat', by: 'you' } } as never);
+      vi.setSystemTime(new Date(2026, 9, 26, 9, 0)); // Mon 26 Oct
+      addDecision({ kind: 'decision', text: 'The launch is on Friday.', topics: ['launch'], source: { surface: 'telegram', by: 'you' } } as never);
+      vi.setSystemTime(new Date(2026, 9, 27, 9, 0)); // Tue 27 Oct
+      addDecision({ kind: 'decision', text: 'Use the green logo.', topics: ['brand'], source: { surface: 'chat', by: 'you' } } as never);
+      addDecision({ kind: 'preference', text: 'Launch posts go out at 9.', topics: ['launch'], source: { surface: 'boardroom', by: 'you' } } as never);
+      llm.mockClear();
+      const r = await runEchoStep(step('memory_digest'), input("What did we decide this week?"), ctx());
+      expect(llm).not.toHaveBeenCalled();
+      expect(r.resultState).toBe('completed');
+      expect(r.summary).toBe([
+        "This week's decisions (3):",
+        'launch',
+        '- The launch is on Friday. (telegram, Mon)',
+        '- Launch posts go out at 9. (boardroom, Tue)',
+        'brand',
+        '- Use the green logo. (chat, Tue)',
+      ].join('\n'));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says when nothing was decided this week', async () => {
+    const r = await runEchoStep(step('memory_digest'), input('This week?'), ctx());
+    expect(r.summary).toBe(NO_DECISIONS_THIS_WEEK);
   });
 });

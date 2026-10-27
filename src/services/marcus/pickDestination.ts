@@ -8,6 +8,14 @@ import type { ComposioTool } from '../composioService';
 import type { Destination, MarcusConnector, SendKind } from './types';
 
 export const NO_DESTINATION = "Marcus couldn't tell where to send this: name the channel, or set a default in Settings → Connectors.";
+// A newsletter (agent roles Part C2) goes through an n8n workflow or a mail app in Composio only.
+export const NEWSLETTER_NEEDS = 'A newsletter goes through an n8n workflow or a mail app in Composio. Set one up in Settings → Connectors, then carry on.';
+const MAIL_TOOLKITS = new Set(['gmail', 'outlook', 'mailchimp', 'sendgrid', 'brevo']);
+const NEWSLETTER_CONNECTORS: MarcusConnector[] = ['n8n', 'composio'];
+/** Composio's tools from mail apps only. */
+export function mailTools(tools: ComposioTool[]): ComposioTool[] {
+  return tools.filter((t) => MAIL_TOOLKITS.has(String(t.toolkit || '').toLowerCase()));
+}
 export const CAMPAIGN_STUDIO_ONLY = "Marcus posts to Instagram, Facebook and YouTube from Miya Studio's Campaign Studio.";
 export const NEEDS_VERSION = 'Say which version to release.';
 
@@ -95,19 +103,25 @@ export async function pickDestination(
   opts: { given?: Partial<Destination>; hint?: MarcusConnector; actionType?: string } = {},
 ): Promise<Picked> {
   const kindHint = kindFromTaskType(opts.actionType);
+  const newsletter = opts.actionType === 'distribution_newsletter';
+  if (newsletter && opts.given?.connector && !NEWSLETTER_CONNECTORS.includes(opts.given.connector)) {
+    return { ok: false, outcome: 'setup', reason: NEWSLETTER_NEEDS };
+  }
   if (opts.given?.connector && (opts.given.target || opts.given.connector === 'notion' || opts.given.connector === 'clickup')) {
     const got = check({ ...opts.given, kind: opts.given.kind || kindHint }, request, text);
     return 'picked' in got ? got.picked : { ok: false, outcome: 'failed', reason: `${got.problem} ${NO_DESTINATION}` };
   }
   // A connector the request names but that isn't set up says so, without asking the model.
   const asked = requestWithoutQuotes(request).toLowerCase();
-  const named = MARCUS_CONNECTORS.filter((c) => c !== 'composio' && new RegExp(`\\b${c}\\b`).test(asked));
+  const named = MARCUS_CONNECTORS.filter((c) => c !== 'composio' && new RegExp(`\\b${c}\\b`).test(asked))
+    .filter((c) => !newsletter || NEWSLETTER_CONNECTORS.includes(c));
   const hint = opts.given?.connector || opts.hint || (named.length === 1 ? named[0] : undefined);
   if (hint) {
     const info = destinationsFor(hint);
     if (!info.setUp) return { ok: false, outcome: 'setup', reason: info.setUpSentence as string };
   }
-  const offered = (hint ? [hint] : MARCUS_CONNECTORS).filter((c) => destinationsFor(c).setUp);
+  const offered = (hint ? [hint] : MARCUS_CONNECTORS).filter((c) => destinationsFor(c).setUp)
+    .filter((c) => !newsletter || NEWSLETTER_CONNECTORS.includes(c));
   // One connector, and the request names one of its defaults or listed workflows: no model needed.
   if (hint && hint !== 'composio' && offered.length === 1) {
     const namedTargets = destinationsFor(hint).defaults.filter((d) => d && asked.includes(d.toLowerCase()));
@@ -117,8 +131,11 @@ export async function pickDestination(
     }
   }
   // Composio's send tools (agent phase 5), only from the toolkits you switched on.
-  const composioTools = offered.includes('composio') ? await composioSendTools().catch(() => []) : [];
-  if (!offered.filter((c) => c !== 'composio').length && !composioTools.length) return { ok: false, outcome: 'failed', reason: NO_DESTINATION };
+  const allTools = offered.includes('composio') ? await composioSendTools().catch(() => []) : [];
+  const composioTools = newsletter ? mailTools(allTools) : allTools;
+  if (!offered.filter((c) => c !== 'composio').length && !composioTools.length) {
+    return newsletter ? { ok: false, outcome: 'setup', reason: NEWSLETTER_NEEDS } : { ok: false, outcome: 'failed', reason: NO_DESTINATION };
+  }
   let problem: string | null = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let raw = '';

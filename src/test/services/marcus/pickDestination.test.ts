@@ -6,7 +6,7 @@ vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: vi.fn() }));
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { saveConnectorCredential } from '../../../services/connectors/connectorAuth';
-import { pickDestination, hintFromTaskType, NO_DESTINATION, CAMPAIGN_STUDIO_ONLY } from '../../../services/marcus/pickDestination';
+import { pickDestination, hintFromTaskType, NO_DESTINATION, CAMPAIGN_STUDIO_ONLY, NEWSLETTER_NEEDS, mailTools } from '../../../services/marcus/pickDestination';
 
 const llm = vi.mocked(generateAgentLlmResponse);
 const say = (o: unknown) => ({ response: JSON.stringify(o) }) as never;
@@ -103,5 +103,38 @@ describe('pickDestination', () => {
     expect(hintFromTaskType('distribution_slack')).toBe('slack');
     expect(hintFromTaskType('distribution_release')).toBe('github');
     expect(hintFromTaskType('distribution_execution')).toBeUndefined();
+  });
+});
+
+// Agent roles Part C2: a newsletter goes through an n8n workflow or a mail app in Composio only.
+describe('a newsletter', () => {
+  const NEWS = 'Write our October newsletter and send it to our subscribers through n8n workflow Newsletter.';
+  const opts = { actionType: 'distribution_newsletter' };
+
+  it('says what to set up when neither n8n nor a mail app is', async () => {
+    expect(await pickDestination('Write our October newsletter and send it to our subscribers.', 'Hello readers.', opts))
+      .toEqual({ ok: false, outcome: 'setup', reason: NEWSLETTER_NEEDS });
+    // Naming n8n while it isn't set up says that more exactly.
+    expect(await pickDestination(NEWS, 'Hello readers.', opts)).toMatchObject({ ok: false, outcome: 'setup', reason: expect.stringContaining("n8n isn't set up") });
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  it('goes to the n8n workflow the request names', async () => {
+    saveConnectorCredential('n8n', 'N8N_BASE_URL', 'http://127.0.0.1:5678');
+    saveConnectorCredential('n8n', 'N8N_WORKFLOWS', 'Newsletter: news-hook');
+    const got = await pickDestination(NEWS, 'Hello readers.', opts);
+    expect(got).toMatchObject({ ok: true, destination: { connector: 'n8n', target: 'Newsletter' } });
+  });
+
+  it('is never sent to Slack, even when Slack is named', async () => {
+    saveConnectorCredential('n8n', 'N8N_BASE_URL', 'http://127.0.0.1:5678');
+    saveConnectorCredential('n8n', 'N8N_WORKFLOWS', 'Newsletter: news-hook');
+    expect(await pickDestination('Send the newsletter to Slack #news', 'Hello readers.', { ...opts, given: { connector: 'slack', target: '#news' } }))
+      .toEqual({ ok: false, outcome: 'setup', reason: NEWSLETTER_NEEDS });
+  });
+
+  it("offers only mail apps' tools from Composio", () => {
+    const tool = (toolkit: string) => ({ name: `${toolkit}_send`, description: '', toolkit, parameters: {}, enabled: true });
+    expect(mailTools([tool('gmail'), tool('slack'), tool('mailchimp'), tool('notion')]).map((t) => t.toolkit)).toEqual(['gmail', 'mailchimp']);
   });
 });

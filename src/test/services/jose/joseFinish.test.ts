@@ -65,7 +65,7 @@ describe('saveRequestDecisions', () => {
 
   // Found in the real app: a cleanup (or a forget) request then saved new decisions from its own result.
   it("a request that was only Echo's memory work (recall, forget, cleanup) is not saved from", async () => {
-    for (const actionType of ['memory_recall', 'memory_forget', 'memory_cleanup']) {
+    for (const actionType of ['memory_recall', 'memory_forget', 'memory_cleanup', 'memory_digest']) {
       const only = newRequest([{ stepId: 'echo', agent: 'echo', actionType, effects: ['write_own_work'], needs: [] }]);
       expect(await saveRequestDecisions(only, { echo: { summary: 'Forgot: The launch is on Friday.' } })).toMatchObject({ saved: false });
     }
@@ -94,6 +94,15 @@ describe('saveRequestDecisions', () => {
     await saveRequestDecisions(mixed, { ...outputs, ask: { summary: 'Decided 26 Oct (Chat): the launch is Friday.' } });
     expect(String(echo.mock.calls[0][0].work)).not.toContain('Decided 26 Oct');
     expect(String(echo.mock.calls[0][0].work)).toContain('Price it at $29.');
+  });
+
+  // Agent roles Part C2: the weekly digest is his own memory work too.
+  it('a weekly digest beside other work is left out the same way', async () => {
+    echo.mockResolvedValueOnce({ ok: true, saved: [] } as never);
+    const mixed = newRequest([...steps, { stepId: 'digest', agent: 'echo', actionType: 'memory_digest', effects: ['read'], needs: [] }]);
+    await saveRequestDecisions(mixed, { ...outputs, digest: { summary: "This week's decisions (1): launch" } });
+    expect(echo).toHaveBeenCalled();
+    expect(String(echo.mock.calls[0][0].work)).not.toContain("This week's decisions");
   });
 
   it("notes Echo's failure and leaves the request as it was", async () => {
