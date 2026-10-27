@@ -2,6 +2,7 @@
 // records (no model call), plus ChromaDB's meaning-based matches when it is running, and the
 // standing preferences for a step's kind of work.
 import { addMemoryToChroma, isChromaHealthy, semanticSearchMemory } from '../chromaDbService';
+import { ensureMeaning, indexDecisionMeaning, meaningEnabled, meaningMatches } from './meaning';
 import { ECHO_LIMITS, listDecisions, activePreferences, type Decision, type Surface } from './decisions';
 
 const STOP_WORDS = new Set(['what', 'when', 'where', 'which', 'with', 'that', 'this', 'about', 'from', 'have', 'they', 'them', 'there', 'their', 'your', 'were', 'will', 'would', 'should', 'could', 'into', 'than', 'then', 'also', 'just', 'like', 'make', 'write', 'tell', 'please']);
@@ -72,6 +73,15 @@ export async function searchDecisions(query: string, opts: { limit?: number; sta
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s || b.d.atMs - a.d.atMs)
     .map((x) => x.d);
+  // Matches by meaning (agent roles Part C2), when the small embedding model is ready.
+  if (meaningEnabled()) {
+    void ensureMeaning();
+    const byId = new Map(pool.map((d) => [d.id, d]));
+    for (const id of await meaningMatches(query, pool, limit)) {
+      const d = byId.get(id);
+      if (d && !found.includes(d)) found.push(d);
+    }
+  }
   try {
     if (await chromaRunning()) {
       const byId = new Map(pool.map((d) => [d.id, d]));
@@ -86,6 +96,7 @@ export async function searchDecisions(query: string, opts: { limit?: number; sta
 
 /** Sends a decision to ChromaDB for meaning-based search; never throws. */
 export function indexDecision(d: Decision): void {
+  indexDecisionMeaning(d);
   void Promise.resolve(addMemoryToChroma({ id: d.id, title: d.topics.join(', ') || d.kind, content: d.text, category: `decision_${d.kind}`, sourceAgent: 'echo', timestampMs: d.atMs } as never)).catch(() => undefined);
 }
 

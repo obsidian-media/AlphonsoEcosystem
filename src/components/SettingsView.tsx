@@ -23,6 +23,7 @@ import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, 
 import { resolveComfyuiDirectory, resolveComfyuiPython } from '../services/comfyuiSettingsService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
 import { DecisionsPanel } from './echo/DecisionsPanel';
+import { MeaningSearchStatus } from './echo/MeaningSearchStatus';
 import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 import { NovaHistoryChart } from './NovaHistoryChart';
 import { CrashLogView } from './CrashLogView';
@@ -1702,6 +1703,7 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Activity} label="What Echo remembers" />
         <ChromaDbStatus />
+        <MeaningSearchStatus settings={settings} setSettings={setSettings} />
         <DecisionsPanel />
       </section>
       <section className="space-y-4">
