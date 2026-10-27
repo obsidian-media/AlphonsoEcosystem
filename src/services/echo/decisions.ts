@@ -52,8 +52,12 @@ function readAll(): Decision[] {
   }
 }
 
+/** Sent on every change, so screens update without polling. */
+export const DECISIONS_CHANGED = 'alphonso:echo-decisions';
+
 function writeAll(list: Decision[]): void {
   durableSet(DECISIONS_KEY, JSON.stringify(list));
+  try { window.dispatchEvent(new Event(DECISIONS_CHANGED)); } catch { /* no window (tests, workers) */ }
 }
 
 function link(d: Decision): void {

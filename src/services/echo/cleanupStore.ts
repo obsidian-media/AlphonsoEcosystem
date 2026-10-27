@@ -15,6 +15,8 @@ export interface CleanupSet {
   id: string;
   atMs: number;
   requestId?: string;
+  /** The waiting step that proposed it, so Settings can apply it through that step. */
+  stepId?: string;
   proposals: CleanupProposal[];
   status: 'open' | 'applied' | 'dismissed';
   applied?: number;

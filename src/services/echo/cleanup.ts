@@ -66,7 +66,7 @@ export async function proposeCleanup(assignment: any, ctx: EchoCtx): Promise<Ech
     if (notes.length) { try { localStorage.setItem(NOTES_REVIEWED_KEY, '1'); } catch { /* storage full */ } }
     return result('Memory looks tidy.', 'completed', actionType);
   }
-  const set = saveCleanupSet({ requestId: ctx.requestId, proposals, withNotes: notes.length > 0 });
+  const set = saveCleanupSet({ requestId: ctx.requestId, stepId: String(assignment?.stepId || 'echo'), proposals, withNotes: notes.length > 0 });
   return result(`Echo proposes ${proposals.length} changes to memory: tick the ones to apply.`, 'setup_required', actionType, { cleanupSetId: set.id });
 }
 

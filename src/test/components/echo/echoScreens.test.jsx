@@ -48,6 +48,13 @@ describe('EchoRemembered', () => {
     expect(screen.getByTestId('echo-remembered').textContent).toContain('The launch is on Saturday.');
   });
 
+  it('shows a decision saved after it appeared, without polling', async () => {
+    render(<EchoRemembered requestId="r1" />);
+    expect(screen.queryByTestId('echo-remembered')).toBeNull();
+    add('The venue is the Blue Room.');
+    expect(await screen.findByText('Echo remembered: The venue is the Blue Room.')).toBeTruthy();
+  });
+
   it('shows nothing when Echo remembered nothing', () => {
     const { container } = render(<EchoRemembered requestId="r9" />);
     expect(container.textContent).toBe('');
@@ -67,6 +74,13 @@ describe('DecisionsPanel', () => {
     expect(panel.textContent).not.toContain('Old price $19.');
     fireEvent.click(screen.getByLabelText('Show replaced and forgotten'));
     expect(screen.getByTestId('echo-decisions').textContent).toContain('Old price $19.');
+  });
+
+  it("applies an open cleanup through the step that asked for it", async () => {
+    saveCleanupSet({ requestId: 'r7', stepId: 'memory_cleanup', proposals: [{ id: 'p0', kind: 'drop', ids: ['d1'], reason: 'It is stale.' }] });
+    render(<DecisionsPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(applyCleanupStep).toHaveBeenCalledWith('r7', 'memory_cleanup', ['p0']));
   });
 
   it('says so when nothing is saved', () => {

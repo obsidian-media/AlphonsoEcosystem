@@ -2,7 +2,7 @@
 // board: "Echo remembered: …" with Edit and Forget.
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '../ui';
-import { editDecision, forgetDecision, listDecisions, type Decision } from '../../services/echo/decisions';
+import { DECISIONS_CHANGED, editDecision, forgetDecision, listDecisions, type Decision } from '../../services/echo/decisions';
 
 const forRequest = (requestId: string): Decision[] => listDecisions().filter((d) => d.source.requestId === requestId);
 
@@ -37,8 +37,8 @@ export function EchoRemembered({ requestId }: { requestId: string }) {
   const refresh = useCallback(() => setItems(forRequest(requestId)), [requestId]);
   useEffect(() => {
     refresh();
-    const timer = setInterval(refresh, 2000);
-    return () => clearInterval(timer);
+    window.addEventListener(DECISIONS_CHANGED, refresh);
+    return () => window.removeEventListener(DECISIONS_CHANGED, refresh);
   }, [refresh]);
   if (!items.length) return null;
   return (

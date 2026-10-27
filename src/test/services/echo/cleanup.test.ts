@@ -39,6 +39,13 @@ describe('proposeCleanup', () => {
     expect(listDecisions()).toHaveLength(2);
   });
 
+  it('the set remembers the step that asked, so Settings can apply it', async () => {
+    add('A.');
+    llm.mockResolvedValueOnce(say({ proposals: [{ kind: 'drop', ids: [listDecisions()[0].id], reason: 'stale' }] }));
+    const r: any = await proposeCleanup({ stepId: 'memory_cleanup', agent: 'echo', actionType: 'memory_cleanup' }, ctx());
+    expect(getCleanup(r.stepFields.cleanupSetId)).toMatchObject({ requestId: 'r1', stepId: 'memory_cleanup' });
+  });
+
   it('a proposal naming an id he was not shown is dropped', async () => {
     const a = add('A.');
     llm.mockResolvedValueOnce(say({ proposals: [{ kind: 'drop', ids: ['nope'], reason: 'x' }, { kind: 'drop', ids: [a.id], reason: 'stale' }] }));

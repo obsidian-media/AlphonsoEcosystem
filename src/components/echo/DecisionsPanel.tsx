@@ -1,8 +1,8 @@
 // Settings → Memory: every decision Echo keeps (agent phase 7), replacing the old note timeline.
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DecisionRow } from './EchoRemembered';
 import { CleanupProposals } from './CleanupProposals';
-import { ECHO_LIMITS, listDecisions, type Decision } from '../../services/echo/decisions';
+import { DECISIONS_CHANGED, ECHO_LIMITS, listDecisions, type Decision } from '../../services/echo/decisions';
 import { surfaceName } from '../../services/echo/recall';
 import { openCleanup } from '../../services/echo/cleanup';
 import { agentName } from '../../services/jose/agentNames';
@@ -19,6 +19,11 @@ export function DecisionsPanel() {
   const [all, setAll] = useState(false);
   const [, setTick] = useState(0);
   const refresh = () => setTick((n) => n + 1);
+  useEffect(() => {
+    const onChange = () => setTick((n) => n + 1);
+    window.addEventListener(DECISIONS_CHANGED, onChange);
+    return () => window.removeEventListener(DECISIONS_CHANGED, onChange);
+  }, []);
   const items = listDecisions({ status: all ? 'all' : 'active' });
   const active = all ? items.filter((d) => d.status === 'active').length : items.length;
   const cleanup = openCleanup();
@@ -43,7 +48,7 @@ export function DecisionsPanel() {
           </li>
         ))}
       </ul>
-      {cleanup?.requestId && <CleanupProposals requestId={cleanup.requestId} stepId="echo" setId={cleanup.id} />}
+      {cleanup?.requestId && <CleanupProposals key={cleanup.id} requestId={cleanup.requestId} stepId={cleanup.stepId || 'echo'} setId={cleanup.id} onDone={refresh} />}
     </div>
   );
 }
