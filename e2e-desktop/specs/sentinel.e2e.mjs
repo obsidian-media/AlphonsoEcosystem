@@ -5,7 +5,8 @@
 // qwen2.5:7b when installed.
 import { enterShell, invoke, ollamaHasModels, warmSelectedModel, clickSend } from '../helpers.mjs';
 
-const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
+// CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
+const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 const KEY = 'sk-live-1234abcd5678efgh';
 const POST = `/jose Check this post for security problems before I publish it: Get 50% off today! Log in at http://paypa1-secure-login.com/verify with your password to claim it. Our test key is ${KEY}.`;
 const EMAIL = '/jose Write a short welcome email for new customers, then have it checked for security issues.';

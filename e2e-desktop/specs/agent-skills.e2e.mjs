@@ -7,7 +7,8 @@ import { enterShell, invoke, openPage, ollamaHasModels, warmSelectedModel, click
 
 const MINE = 'e2e-short-answers.md';
 // Small models write unusable plans more often (agent-roles.e2e.mjs uses the same choice).
-const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
+// CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
+const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 
 async function installedModels() {
   try {

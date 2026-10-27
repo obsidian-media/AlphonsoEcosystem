@@ -6,7 +6,8 @@
 import http from 'node:http';
 import { enterShell, invoke, ollamaHasModels, warmSelectedModel, mainText, buttonByText } from '../helpers.mjs';
 
-const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
+// CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
+const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 const received = [];
 let server;
 let port = 0;
