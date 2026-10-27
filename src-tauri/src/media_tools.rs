@@ -245,9 +245,7 @@ pub async fn content_tts_kokoro(
   let python = venv_python_of("kokoro");
   let models = crate::runtime_manager::tool_dir("kokoro").join("models");
   if !python.is_file() || !models.join(KOKORO_MODEL_FILE).is_file() {
-    return Ok(
-      serde_json::json!({ "ok": false, "error": "Kokoro is not installed. Install Kokoro in Runtime Hub." }),
-    );
+    return Ok(kokoro_missing());
   }
   let out = checked_dir(&request.workspace_root, &request.out_dir)?;
   let job = out.join(".kokoro-job.json");
@@ -292,6 +290,13 @@ pub(crate) fn checked_file(
     .filter(|p| !p.as_os_str().is_empty())
     .ok_or_else(|| "A folder is required.".to_string())?;
   Ok(checked_dir(workspace_root, &parent.to_string_lossy())?.join(name))
+}
+
+pub(crate) const KOKORO_MISSING: &str = "Kokoro is not installed. Install Kokoro in Runtime Hub.";
+
+/// Kokoro isn't installed (agent roles Part C2): the voice step reads the `missing` flag, not the words.
+pub(crate) fn kokoro_missing() -> serde_json::Value {
+  serde_json::json!({ "ok": false, "missing": true, "error": KOKORO_MISSING })
 }
 
 pub(crate) const AUDIOCRAFT_MISSING: &str =
@@ -1685,6 +1690,14 @@ pub async fn content_save_motion_clip(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn kokoro_missing_says_so_by_flag() {
+    let v = kokoro_missing();
+    assert_eq!(v["ok"], false);
+    assert_eq!(v["missing"], true);
+    assert_eq!(v["error"], KOKORO_MISSING);
+  }
 
   #[test]
   fn a_brand_font_name_is_cleaned_before_it_reaches_the_filter() {

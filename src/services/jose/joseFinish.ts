@@ -10,7 +10,7 @@ import { appendRequestNote, type JoseRequest } from './joseRequestStore';
 export const NOTHING_NEW = 'Echo found nothing new to remember.';
 
 const DRAFT_WORK = /^(assistant_write|creative_|design_)/;
-const NOT_A_SAVE = new Set(['memory_recall', 'memory_forget', 'memory_cleanup', 'knowledge_curation']);
+const NOT_A_SAVE = new Set(['memory_recall', 'memory_forget', 'memory_cleanup', 'knowledge_curation', 'memory_digest']);
 
 export async function saveRequestDecisions(
   request: JoseRequest,

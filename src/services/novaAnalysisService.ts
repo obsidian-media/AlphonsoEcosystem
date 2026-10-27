@@ -10,7 +10,7 @@ import { pushMemoryItem } from './memoryService';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { findHelpRequest } from './jose/joseHelp';
 import { findRequestByPacket } from './jose/joseRequestStore';
-import { missingOptions, namedOptions, novaVerdictPrompt, parseNovaVerdict, verdictText, withNotJudged, type NovaVerdict } from './nova/novaVerdict';
+import { findOptions, missingOptions, novaVerdictPrompt, parseNovaVerdict, verdictText, withNotJudged, type NovaVerdict } from './nova/novaVerdict';
 import { saveVerdict } from './nova/novaVerdicts';
 
 export const NOVA_NO_VERDICT = "Nova's model didn't give a readable verdict.";
@@ -71,7 +71,8 @@ export async function runNovaAnalysis(
   const input = options.stepInput || emptyInput(String(commandText || ''));
   const contractAction = String(assignment?.actionType || 'opportunity_analysis');
   const usableNeeds = input.needs.filter((n) => !(n as { failed?: boolean }).failed && n.text.trim() && n.text.trim() !== '(nothing saved)');
-  const named = namedOptions(input.request);
+  // The options the request names, in any wording (agent roles Part C2).
+  const named = await findOptions(input.request, (prompt) => ask(prompt, assignment, options.signal));
   const nothingToJudge = !usableNeeds.length && !input.review && !named.length;
   const sourceCount = Math.max(0, ...usableNeeds.map((n) => n.sources.length));
   const sources = usableNeeds.flatMap((n) => n.sources);
@@ -80,7 +81,7 @@ export async function runNovaAnalysis(
   let leftOut: string[] = [];
   let verdict: NovaVerdict | null = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const text = await ask(novaVerdictPrompt(input, { sourceCount, mayAskForHelp: nothingToJudge && !assignment?.helpRound, leftOut }), assignment, options.signal);
+    const text = await ask(novaVerdictPrompt(input, { sourceCount, mayAskForHelp: nothingToJudge && !assignment?.helpRound, leftOut, named }), assignment, options.signal);
     // Nothing to judge: she asks for research, and Jose's help loop adds a Hector step.
     const help = nothingToJudge && !assignment?.helpRound ? findHelpRequest({ summary: text }) : null;
     if (help) return { ...base, summary: `HELP: ${help}`, resultState: 'completed', schema: null };

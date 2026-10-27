@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { enterShell, invoke, buttonByText, openPage, keepOutputFolder } from '../helpers.mjs';
+import { enterShell, invoke, buttonByText, openPage, keepOutputFolder, printContentDiag } from '../helpers.mjs';
 
 const savedProjects = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_projects_v1') || '[]'));
 const savedBrands = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_brands_v1') || '[]'));
@@ -114,9 +114,10 @@ describe('Alphonso desktop: carousels', () => {
     await reopen('campaign studio', projectId, outputFolder);
     await $('section[aria-label="Posts"]').waitForDisplayed({ timeout: 60000 });
     await (await buttonByText('approve and schedule')).click();
+    // Under the runner's 180 s per test, so the diagnostic prints when this times out in CI.
     await browser.waitUntil(async () => (await projectById(projectId)).posts[0].status === 'by_hand', {
-      timeout: 240000, interval: 2000, timeoutMsg: 'the carousel was not saved to post by hand',
-    });
+      timeout: 150000, interval: 2000, timeoutMsg: 'the carousel was not saved to post by hand',
+    }).catch(async (error) => { await printContentDiag('carousel', projectId); throw error; });
     const post = (await projectById(projectId)).posts[0];
     expect(post.folder).toBe(`${dir}/ready-to-post/instagram-carousel-v1`);
     const folder = path.join(outputFolder, ...post.folder.split('/'));

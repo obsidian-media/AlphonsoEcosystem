@@ -57,7 +57,7 @@ import { prepareAlphonsoCode } from './alphonso/prepareCode';
 import { runAlphonsoCode } from './alphonso/runCode';
 import { describeCodeChange, previewNeeds } from './alphonso/changeSet';
 import { onProjectReleased, releaseProject } from './alphonso/projectLock';
-import { reviewedFolder } from './alphonso/stepFolder';
+import { readingFolder, reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
 import { runVisualWorkflow } from './workflowExecutionService';
@@ -1122,7 +1122,7 @@ async function executeBoardroomAdvance(assignment: any, commandText: any, option
 
 // waitFor, contentStep and payload (phase 6b) so a saved request knows why a step waits and a
 // review-loop revision of a content step keeps the project's data.
-const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'replaces', 'costEstimateUsd', 'waitFor', 'contentStep', 'payload'];
+const PLAN_STEP_FIELDS = ['instruction', 'model', 'reviewOf', 'round', 'revises', 'helpRound', 'replaces', 'costEstimateUsd', 'waitFor', 'contentStep', 'payload', 'project'];
 
 /** A routed assignment as a plan step, with every field Jose's adapters read (phase 4). */
 function toPlanStep(assignment: any): PlanStep {
@@ -1194,6 +1194,9 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   // Whoever reads Alphonso's work reads it where he worked (agent phase 6).
   const workFolder = commandId ? reviewedFolder(commandId, assignment) : null;
   if (workFolder && !options.workspaceRoot && !options.projectDirectory) options = { ...options, workspaceRoot: workFolder };
+  // Explaining code or summarising a file reads from the project the request names (agent roles Part C2).
+  const readFrom = readingFolder(assignment, String(requestText || ''));
+  if (readFrom && !options.workspaceRoot && !options.projectDirectory) options = { ...options, workspaceRoot: readFrom };
   // The step's skill (agent roles Part B): picked, its tools run, put in the step input.
   if (options.stepInput) {
     options = { ...options, stepInput: await prepareSkill(packet, assignment, options.stepInput, { workspaceRoot: options.projectDirectory || options.workspaceRoot }) };

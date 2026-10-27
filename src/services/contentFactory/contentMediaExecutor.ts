@@ -30,6 +30,7 @@ import { brandFontName, darkestColour, headlineColour } from './thumbnailRendere
 import type { ContentBrand, ContentProject, SceneMotion, StepId } from './contentTypes';
 import type { ContentStepResult } from './contentAgentExecutor';
 
+const KOKORO_MISSING = 'Kokoro is not installed. Install Kokoro in Runtime Hub.';
 export const MEDIA_ACTIONS = new Set(['creative_voice', 'creative_music', 'creative_sfx', 'research_broll', 'creative_video_clips', 'creative_assemble_video']);
 
 export const SFX_OFF = 'Sound effects are off for this brand (Brands tab).';
@@ -189,15 +190,15 @@ async function runVoice(assignment: MediaAssignment, ctx: Context): Promise<Cont
     }
   } else if (choice.note) note = choice.note;
 
-  const result = await invoke<{ ok?: boolean; error?: string; full?: { durationSec: number } | null; files?: { id: string; path: string | null; durationSec: number; startSec: number }[] }>(
+  const result = await invoke<{ ok?: boolean; missing?: boolean; error?: string; full?: { durationSec: number } | null; files?: { id: string; path: string | null; durationSec: number; startSec: number }[] }>(
     'content_tts_kokoro',
     { request: {
       workspaceRoot: ctx.root, outDir, voiceId: ctx.brand.voice?.voiceId || 'af_heart',
       lines: lines.map((l) => (l.text ? { id: l.id, text: l.text } : { id: l.id, text: '', pauseSec: l.seconds })),
     } },
   );
-  // Kokoro not installed: the request waits until it is (the backend says "is not installed").
-  if (!result?.ok && /is not installed/i.test(String(result?.error || ''))) return setupNeeded(assignment, String(result?.error));
+  // Kokoro not installed: the request waits until it is (the backend's `missing` flag, agent roles Part C2).
+  if (!result?.ok && result?.missing) return setupNeeded(assignment, String(result?.error || KOKORO_MISSING));
   if (!result?.ok || !result.full) return failed(assignment, result?.error || 'Kokoro made no voice-over.');
   const output: VoiceOutput = {
     full: `${outDir}/full.wav`,

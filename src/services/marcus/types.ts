@@ -22,6 +22,8 @@ export interface SendPreview extends Destination {
   preparedAtMs: number;
   /** Sentinel's exact checks on the final text (it may be a revision he didn't review). */
   exactFacts?: string[];
+  /** When to send it (agent roles Part C2), read from the request; none = now. */
+  sendAtMs?: number;
 }
 
 export type PrepareResult =

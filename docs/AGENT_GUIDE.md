@@ -137,16 +137,18 @@ Each agent (Jose aside: he plans) has its own skills: know-how for one kind of j
 
 | Agent | Built-in skills |
 |-------|-----------------|
-| Alphonso | Answer a question, Everyday writing, Code change, Verify a build |
+| Alphonso | Answer a question, Everyday writing, Code change, Verify a build, Fix a bug from an error, Write tests, Explain code, Summarise a document, API and tool integration, Plan and build a feature |
 | Miya | Write the script, Plan the scenes, Design thumbnails, Plan the Shorts, Choose sound effects, Write a carousel, Write the campaign, Creative lessons, Creative package, UI design, Edit the video, Make a picture |
-| Hector | Web research with sources, Competitor material, Find what works, Stock footage |
-| Nova | Value and priority, Judge the market, Review the script, Best time to post, Read the results, Follow-up ideas |
-| Maria | Quality review, Claim check, Governance review, Quality against the references |
-| Sentinel | Text and link check, Permission audit, Content safety check |
-| Marcus | Send a message, Publish a post, Place a call, Release readiness, Release or issue |
-| Echo | Save decisions, Answer from memory, Merge and clean memory |
+| Hector | Web research with sources, Competitor material, Find what works, Stock footage, Compare products and prices, Find companies or people |
+| Nova | Value and priority, Judge the market, Review the script, Best time to post, Read the results, Follow-up ideas, Pros and cons, Pricing |
+| Maria | Quality review, Claim check, Governance review, Quality against the references, Review code, Brand voice check |
+| Sentinel | Text and link check, Permission audit, Content safety check, Dependency check, Personal-data check |
+| Marcus | Send a message, Publish a post, Place a call, Release readiness, Release or issue, Email newsletter, Follow-up reminder |
+| Echo | Save decisions, Answer from memory, Merge and clean memory, Weekly decisions digest, Project memory summary |
 
 You can add your own on All Agents → Skills (a form, or a skill file), and they sit beside the built-in ones.
+
+What else changed in agent roles Part C2: Marcus sends at a time you name ("send it tomorrow at 9"), approved once; a request that names two of your projects gets one Alphonso step in each; you can edit Alphonso's change on the board before approving it; Hector reads a PDF's text and follows his skill when he writes up; Nova finds the options in an ordinary sentence; Sentinel checks people research for personal data; Echo finds a decision worded differently, with a small model on your computer.
 
 The Skills page shows how each skill has done: how often it was used, how many of its reviewed steps passed, and when it was last used.
 

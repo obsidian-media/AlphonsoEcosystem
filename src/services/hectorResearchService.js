@@ -494,6 +494,7 @@ export async function runHectorLiveResearch(reportId, onProgress, options = {}) 
     large,
     reportId,
     signal: options.signal,
+    skill: options.skill,
     onProgress: (note) => {
       working = updateReport(reportId, { runLog: appendRunLog(working || report, { level: 'info', message: note }) });
       onProgress?.(working);

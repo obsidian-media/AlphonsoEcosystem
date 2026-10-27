@@ -13,7 +13,7 @@ import {
   listHectorReports
 } from '../../services/hectorResearchService';
 import { askOnResearchDesk } from '../../services/hector/deskRequest';
-import { writeClipboard } from '../../services/browserAutomationService';
+import { fillChat } from '../../lib/chatDraft';
 import { SavedSources } from '../hector/SavedSources';
 import { SourceBoard } from '../hector/SourceBoard';
 import { CitationPanel } from '../hector/CitationPanel';
@@ -247,7 +247,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
                   <SourceBoard report={selectedReport as never} />
                   <CitationPanel report={selectedReport as never} />
                   <ResearchReportPanel report={selectedReport as never} />
-                  <HectorApprovalHandoff report={selectedReport as never} onCopy={writeClipboard} />
+                  <HectorApprovalHandoff report={selectedReport as never} onUse={fillChat} />
                   <p className="text-[11px] text-(--text-4)">Each run is a Jose request: it also shows on the Requests board.</p>
                   <SavedSources />
                 </div>

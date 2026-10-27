@@ -44,6 +44,8 @@ export interface PlanStep {
   contentStep?: ContentStepPayload;
   /** Wait for you before this step runs, saying why (phase 6b: "Approve the review in Miya Studio first."). */
   waitFor?: string;
+  /** The project an Alphonso code step works in (agent roles Part C2: one step per project). */
+  project?: string;
 }
 
 const NAMES: Record<string, string> = {

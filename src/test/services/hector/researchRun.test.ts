@@ -15,7 +15,7 @@ import { runResearch, fallbackQuery, parseWriteUp, reportText, planQuestion } fr
 import { HECTOR_LIMITS } from '../../../services/hector/researchLimits';
 
 const json = (v: unknown) => ({ response: JSON.stringify(v) });
-const found = (urls: string[]) => ({ sources: urls.map((url) => ({ url, title: `T ${url} honeybee colonies`, snippet: `snippet of ${url}`, provider: 'duckduckgo', kind: url.includes('.gov') ? 'primary' : 'general' })), providers: ['duckduckgo'], errors: [] });
+const found = (urls: string[]) => ({ sources: urls.map((url) => ({ url, title: `T ${url} honeybee colonies declining losses`, snippet: `snippet of ${url}`, provider: 'duckduckgo', kind: url.includes('.gov') ? 'primary' : 'general' })), providers: ['duckduckgo'], errors: [] });
 const PAGE = (topic: string) => `Europe has about 17 million managed honeybee colonies. ${topic} colonies decline because of the varroa mite and pesticides, the report says in detail. Beekeepers across the continent report heavier winter losses than a decade ago, and national surveys track them every year.`;
 let fetched: string[] = [];
 
@@ -100,6 +100,31 @@ describe('runResearch', () => {
     expect(reportText(out.report).startsWith('Europe has about 17 million colonies')).toBe(true);
   });
 
+  // Agent roles Part C2: his write-up follows his skill; his searches stay the request's own words.
+  it("puts his skill's instructions in the write-up, not in the searches", async () => {
+    const skill = 'Your skill: Compare products and prices\nPut the options side by side, each price with its source and date.';
+    llm.mockResolvedValueOnce(plan).mockResolvedValueOnce(writeUp('answered'));
+    search.mockResolvedValue(found(['https://a.example/x', 'https://www.usda.gov/y']));
+    await runResearch('How many colonies and why declining?', { large: false, reportId: 'hector-report-1-s', skill });
+    const writeUpPrompt = String(llm.mock.calls[1][1].prompt);
+    expect(writeUpPrompt).toContain('Put the options side by side, each price with its source and date.');
+    expect(writeUpPrompt.indexOf('Your skill:')).toBeLessThan(writeUpPrompt.indexOf('Question:'));
+    for (const call of search.mock.calls) expect(String(call[0])).not.toContain('side by side');
+  });
+
+  // Agent roles Part C2: a result must share more than one word with the question to be read.
+  it('reads only results that share at least two words with the question', async () => {
+    llm.mockResolvedValueOnce(json({ subQuestions: [{ question: 'Solar panel battery storage costs', queries: ['solar battery storage cost'] }] }))
+      .mockResolvedValueOnce(writeUp('answered'));
+    search.mockResolvedValue({ sources: [
+      { url: 'https://living.example/costs', title: 'Costs of living', snippet: 'Rent and food prices', provider: 'duckduckgo', kind: 'general' },
+      { url: 'https://energy.example/solar', title: 'Solar battery storage guide', snippet: 'What home batteries cost', provider: 'duckduckgo', kind: 'general' },
+    ], providers: ['duckduckgo'], errors: [] });
+    await runResearch('Solar panel battery storage costs', { large: false, reportId: 'hector-report-1-t' });
+    expect(fetched).toContain('https://energy.example/solar');
+    expect(fetched).not.toContain('https://living.example/costs');
+  });
+
   it('a follow-up round only for what is missing, never re-reading a source', async () => {
     llm.mockResolvedValueOnce(plan).mockResolvedValueOnce(writeUp('partly', 'varroa losses Europe official statistics')).mockResolvedValueOnce(writeUp('answered', undefined, [1, 3]));
     search.mockResolvedValueOnce(found(['https://a.example/x', 'https://b.example/y'])).mockResolvedValueOnce(found(['https://a.example/x', 'https://c.example/z']));
@@ -129,6 +154,24 @@ describe('runResearch', () => {
     expect(blocked.label).toBe('snippet');
     expect(blocked.excerpt).toBe('snippet of https://blocked.example/x');
     expect(reportText(out.report)).toMatch(/Snippet only/);
+  });
+
+  // Agent roles Part C2: a PDF whose text the backend read is read like a page.
+  it("reads a PDF's text when the backend could, else keeps its snippet and says why", async () => {
+    invoke.mockImplementation(async (cmd: string, args: any) => {
+      if (cmd !== 'fetch_research_sources') return null;
+      return args.sources.map((s: { url: string }) => s.url.includes('read.pdf')
+        ? { url: s.url, ok: true, httpStatus: 200, pdf: true, pdfTextRead: true, snippet: PAGE(s.url), title: null }
+        : { url: s.url, ok: true, httpStatus: 200, pdf: true, pdfTextRead: false, snippet: null, title: null });
+    });
+    llm.mockResolvedValueOnce(plan).mockResolvedValueOnce(writeUp('answered'));
+    search.mockResolvedValue(found(['https://a.example/read.pdf', 'https://b.example/scan.pdf']));
+    const out = await runResearch('Q?', { large: false, reportId: 'hector-report-1-p' });
+    if (!out.ok) throw new Error(String((out as { reason?: string }).reason));
+    expect(out.report.sources.find((s) => s.url.includes('read.pdf'))!.label).toBe('read');
+    const scanned = out.report.sources.find((s) => s.url.includes('scan.pdf'))!;
+    expect(scanned.label).toBe('snippet');
+    expect(scanned.reason).toBe("couldn't read the PDF's text");
   });
 
   it('saves page text to files and keeps short excerpts', async () => {

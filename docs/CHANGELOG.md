@@ -10,6 +10,16 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent roles Part C2: more skills and better agents (2026-10-27)
+- **18 new skills** (60 in all): bugs, tests, explaining code, summaries and integrations for Alphonso; comparing products and finding companies or people for Hector; pros and cons and pricing for Nova; code reviews and brand voice for Maria; dependency and personal-data checks for Sentinel; newsletters and follow-up reminders for Marcus; a weekly digest and a project's memory for Echo.
+- **Marcus sends at a time you name**, approved once with the time in the approval; it shows on the Calendar.
+- **Two projects in one request**: one Alphonso step per project. **Edit Alphonso's change** on the board before approving it.
+- **Hector** reads a PDF's text, keeps only results that share two of the question's words, follows his skill when he writes up, and the PowerPoint export now shows the answer, the cited parts and each source's label.
+- **Nova** finds the options in an ordinary sentence ("torn between A and B").
+- **Echo** finds decisions worded differently, with a small local model (Settings → Memory → Match decisions by meaning).
+- Chat's notice lists requests waiting for setup; Hector's "Use in a request" fills Chat; Kokoro's missing install is recognised by a flag, not the message's wording.
+- The desktop check count is counted from the specs (it had drifted); the two content specs print what their request was doing when they time out in CI.
+
 ### Agent roles Part C1: Projects, Teams and skill results (2026-10-27)
 - **Projects is real now.** Work → Projects starts a request for the agents from your description and shows its plan, steps, what waits for you and the results. It used to show fixed example output with no model.
 - **Teams**: System → Teams builds teams of agents for a kind of job, lists every saved template with Run, Edit and Delete, and says what's wrong with one that can't run. "use team <name> to …" in Chat runs it. Old Agent Pairing pairs are offered once as teams.

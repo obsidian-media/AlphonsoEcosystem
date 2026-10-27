@@ -85,11 +85,20 @@ describe('executeMediaStep', () => {
 
   it('Voice waits for setup, with the way to fix it, when Kokoro is missing (agent roles Part A)', async () => {
     const { brand, project } = setup();
-    backend.content_tts_kokoro = () => ({ ok: false, error: 'Kokoro is not installed. Install Kokoro in Runtime Hub.' });
+    backend.content_tts_kokoro = () => ({ ok: false, missing: true, error: 'Kokoro is not installed. Install Kokoro in Runtime Hub.' });
     const result = await executeMediaStep(assignment(project, brand, 'miya', 'creative_voice', 'voice'));
     expect(result.resultState).toBe('setup_required');
     expect(result.summary).toBe('Kokoro is not installed. Install Kokoro in Runtime Hub.');
     expect(result.failureReason).toContain('Install Kokoro in Runtime Hub.');
+  });
+
+  // Agent roles Part C2: the backend's flag decides, not its wording.
+  it('the missing flag decides, whatever the message says', async () => {
+    const { brand, project } = setup();
+    backend.content_tts_kokoro = () => ({ ok: false, missing: true, error: 'Kokoro needs installing first.' });
+    expect((await executeMediaStep(assignment(project, brand, 'miya', 'creative_voice', 'voice'))).resultState).toBe('setup_required');
+    backend.content_tts_kokoro = () => ({ ok: false, error: 'The voice is not installed in this model.' });
+    expect((await executeMediaStep(assignment(project, brand, 'miya', 'creative_voice', 'voice'))).resultState).toBe('failed');
   });
 
   it('Music is skipped, with a note, when AudioCraft is not installed', async () => {

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 18 new built-in skills, timed Marcus sends, one request across two projects, editing Alphonso's change before approving it, Hector writing up with his skill, Echo matching decisions by meaning, and the three small leftovers.
+**Goal:** 18 new built-in skills, timed Marcus sends, one request across two projects, editing Alphonso's change before approving it, Hector writing up with his skill, Echo matching decisions by meaning, the three small leftovers, and four leftovers from the agent phases the owner folded in on 2026-10-27 (Hector's research gaps, Nova finding options in any wording, automatic desktop-check counts, closing settled deferred lines).
 
 **Architecture:** Skills are Markdown files checked by `checkSkill()`; the few that need new behaviour get a new task type with a small handler in the agent's own module. Timed sends ride on Marcus's existing runner as a new item kind. Two projects is a pure plan rewrite applied where security checks are added. Echo's meaning search is a backend embedding command plus a small TypeScript module beside his word search.
 
@@ -223,7 +223,37 @@ Add to `skillToolRun.test.ts`: `read_brand` returns a seeded brand's tone, avoid
 - [ ] **Step 4: Run** the tests and `cargo test media_tools` — Expected: PASS.
 - [ ] **Step 5: Commit** `fix: Chat lists requests waiting for setup; Hector's report fills Chat; Kokoro says it's missing by flag`.
 
-### Task 11: Desktop checks and docs
+### Task 11: Hector's research gaps
+
+**Files:** Modify `src-tauri/src/search.rs`, `src-tauri/Cargo.toml`, `src/services/hectorExportService.ts`, `src/services/hector/researchRun.ts`; Test Rust tests in `search.rs`, `src/test/services/hectorExportService.test.ts`, `src/test/services/hector/researchRun.test.ts`.
+
+**Interfaces:**
+- PDF text: `pdf_text(bytes: &[u8]) -> Option<String>` in `search.rs` using the `pdf-extract` crate (confirm its licence is MIT or Apache-2.0 and `npm run audit:cargo` / `scripts/cargo-audit.sh` stays clean before adding it), run in `spawn_blocking` with a 20 s limit, text capped at 200,000 characters. A PDF source's text and snippet come from it; no text (scanned, encrypted, too slow) → the search snippet as today, with `reason: "Couldn't read the PDF's text."`. Tests: a small PDF built in the test (or a fixture under `src-tauri/tests/fixtures/`, a few KB) gives its sentence; garbage bytes give `None`.
+- PowerPoint: a report with `research` gets an answer slide, one slide per part with its cited findings (`[n]` and support), and a Sources slide listing `[n] title — url (Read / Snippet only / Couldn't read)` from `SOURCE_LABELS`; older reports keep today's slides. Test with a mocked `pptxgenjs` capturing `addText` calls.
+- Topic filter in `runResearch()`: a source is kept when it shares at least `Math.min(2, topicTerms.length)` stems with the question, not one. Test: for "solar panel battery storage costs", a result sharing only "costs" is dropped, one sharing "solar" and "battery" is kept.
+
+- [ ] **Step 1: Tests** as above. **Step 2: Run** `cargo test search` and `npx vitest run src/test/services/hector src/test/services/hectorExportService.test.ts` — Expected: FAIL. **Step 3: Implement.** **Step 4: Run** the same plus `cargo clippy -- -D warnings` — Expected: PASS. **Step 5: Commit** `feat(hector): reads PDF text, labels sources in PowerPoint, keeps only on-topic results`.
+
+### Task 12: Nova finds the options in any wording
+
+**Files:** Modify `src/services/nova/novaVerdict.ts`, `src/services/novaAnalysisService.ts`; Test `src/test/services/nova/novaVerdict.test.ts`.
+
+**Interfaces:** `findOptions(text: string, ask?: (prompt: string) => Promise<string>): Promise<string[]>` — `namedOptions(text)` first; when it finds none and the text has a choice word (`or`, `between`, `which`, `whether`, `versus`, `vs`), Nova's model is asked once for `{"options": [...]}`; only options found in the request's own words are kept (case-insensitive), 2 to 6 of them, else `[]`. `runNovaAnalysis()` and `novaVerdictPrompt()` use it where they used `namedOptions()`, so the "left out" check covers them.
+
+- [ ] **Step 1: Tests**: "I'm torn between opening a second shop in Leeds and selling online through Etsy, which is better?" gives the two options from the model's answer; an option the model invents that isn't in the request is dropped; a list after a colon makes no model call; no choice word makes no call. **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** `npx vitest run src/test/services/nova src/test/novaAnalysisService.test.js` — PASS. **Step 5: Commit** `feat(nova): she finds the options a request names in any wording`.
+
+### Task 13: Housekeeping
+
+**Files:** Modify `scripts/shared/counters.mjs`, `scripts/verify-doc-counts.mjs`, `docs/governance/DEFERRED_WORK.md`, `CLAUDE.md`.
+
+- Desktop counts: `countDesktopSpecs()` (files `e2e-desktop/specs/*.e2e.mjs`) and `countDesktopChecks()` (lines matching `/^\s*it\(/m` in them) in `counters.mjs`; `verify-doc-counts.mjs` checks both numbers in CLAUDE.md's two "N spec files, M checks" places. The hand-kept 136 and the counted number differ (123 by this rule on 2026-10-27): the counted number replaces it, and the rule is said in the script's comment.
+- Close in DEFERRED_WORK with the date and why: `read_memory` already uses Echo's decision search (agent phase 7); "Sentinel passes the Settings model explicitly" (fixed in agent phase 4); `novaFeedbackService.ts`, `sentinelGateService.ts`, `mariaWeeklyReportService.ts` (archived in C1); the three content specs (fixed in C1, once CI's desktop job confirms them); "Use in a request" pre-fill and the Kokoro flag (Task 10).
+
+- The two content specs that still time out in CI (owner, 2026-10-27, when C1 merged): `content-carousel.e2e.mjs` ("with no storage, approving it saves the slides…") and `content-publish.e2e.mjs` ("Approve and schedule…") wait about 180 s after the approve click on CI's machine, which has no Ollama, and pass locally with a model. Add a diagnostic print on timeout to both (the request's steps with status and error, the project's posts, the step's progress lines), run CI, find the step that waits on a model it doesn't need or on a timeout, and fix it with a unit test that fails first. Keep their DEFERRED line open until both pass in CI.
+
+- [ ] **Step 1: Test**: `node scripts/verify-doc-counts.mjs` fails while CLAUDE.md says 136 and passes once it says the counted number. **Step 2: Implement and update.** **Step 3: Commit** `chore: count desktop checks automatically; close settled deferred lines`.
+
+### Task 14: Desktop checks and docs
 
 **Files:** Modify `e2e-desktop/specs/alphonso.e2e.mjs`, `e2e-desktop/specs/marcus.e2e.mjs`, `e2e-desktop/specs/echo.e2e.mjs`; docs listed in Global Constraints.
 
@@ -231,6 +261,6 @@ Add to `skillToolRun.test.ts`: `read_brand` returns a seeded brand's tone, avoid
   - `alphonso.e2e.mjs`: an edited preview is what's written (Edit on the board, Save, approve, read the file); "Change the title in shop and blog" gets two steps with two previews.
   - `marcus.e2e.mjs`: "post it to my n8n workflow Team notes in 2 minutes" waits on the Calendar as a Marcus send and reaches the local stand-in once after its time.
   - `echo.e2e.mjs`: with `all-minilm` installed, "when do we launch?" finds the launch decision worded differently; skipped without it; with the switch off, word search.
-- [ ] **Step 2: Build and run** them plus `agent-skills.e2e.mjs`. If Windows Code Integrity refuses the rebuilt app again, record it and leave them to CI's desktop job; never work around it.
+- [ ] **Step 2: Build and run** them plus `agent-skills.e2e.mjs`, `hector.e2e.mjs` and `maria.e2e.mjs` (never run live since agent phase 3). If Windows Code Integrity refuses the rebuilt app again, record it and leave them to CI's desktop job; never work around it.
 - [ ] **Step 3: Docs and checks**: CLAUDE.md rows (skills list, timed sends, two projects, editing a change, Echo by meaning, chat draft), Ground Truth §11.49, USER_MANUAL, AGENT_GUIDE (skills table), CHANGELOG, DEFERRED_WORK (close the C2 line from C1; what remains), the spec status; then `node scripts/verify-doc-counts.mjs`, `npm run generate:dnd-map`, `npm run verify:dnd-coverage`, `npx tsc --noEmit -p .`, `npm run lint`, full `npm test`, Rust checks.
 - [ ] **Step 4: Commit** `test(part-c2): the real app's edited change, timed send and meaning search` and `docs(part-c2): new skills and agent improvements`.

@@ -135,4 +135,21 @@ describe('export functions', () => {
       expect(options.fit).toBe('shrink');
     }
   });
+
+  // Agent roles Part C2: a report made since agent phase 1 gets its answer, cited findings and labelled sources.
+  it("exportHectorReportAsPowerPoint shows a newer report's answer, its cited parts and its labelled sources", async () => {
+    mockPptxAddText.mockClear();
+    const research = {
+      question: 'How many bee colonies?', answer: 'About 17 million [1].',
+      subQuestions: [{ question: 'How many?', findings: [{ text: 'About 17 million', sources: [1], support: 'one source' }] }],
+      disagreements: [], notFound: [],
+      sources: [{ n: 1, title: 'EU bees', url: 'https://ec.europa.eu/bees', label: 'read' }, { n: 2, title: 'Blog', url: 'https://b.example', label: 'snippet' }],
+    };
+    await exportHectorReportAsPowerPoint({ ...REPORT, research } as never);
+    const texts = mockPptxAddText.mock.calls.map(([t]) => String(t)).join('\n');
+    expect(texts).toContain('About 17 million [1].');
+    expect(texts).toContain('About 17 million [1] (one source)');
+    expect(texts).toContain('[1] EU bees — https://ec.europa.eu/bees (Read)');
+    expect(texts).toContain('[2] Blog — https://b.example (Snippet only)');
+  });
 });

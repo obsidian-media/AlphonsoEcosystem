@@ -28,6 +28,8 @@ import { MariaOfferButton } from './maria/MariaOfferButton'
 import { JoseRequestOutcome } from './jose/JoseRequestOutcome'
 import { EchoRemembered } from './echo/EchoRemembered'
 import { getJoseRequest, listJoseRequests } from '../services/jose/joseRequestStore'
+import { agentName } from '../services/jose/agentNames'
+import { OPEN_CHAT_EVENT, takeChatDraft } from '../lib/chatDraft'
 import type { PlanFirstSetting } from '../services/jose/josePlanApproval';
 import {
   getMcpOutreachRecord,
@@ -302,6 +304,13 @@ export function ChatView({
 }: ChatViewProps) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
+  // Text handed over from elsewhere, such as Hector's "Use in a request" (agent roles Part C2).
+  useEffect(() => {
+    const take = () => { const draft = takeChatDraft(); if (draft) setInputValue(draft); };
+    take();
+    window.addEventListener(OPEN_CHAT_EVENT, take);
+    return () => window.removeEventListener(OPEN_CHAT_EVENT, take);
+  }, []);
   const [isGenerating, setIsGenerating] = useState(false);
   const [attachedFile, setAttachedFile] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
@@ -322,7 +331,13 @@ export function ChatView({
   const [liveRequestId, setLiveRequestId] = useState<string | null>(null);
   // Requests cut off when the app closed (phase 5), shown above the messages.
   const [interruptedRequests, setInterruptedRequests] = useState(() => listJoseRequests().filter((r) => r.status === 'interrupted'));
-  const refreshInterrupted = () => setInterruptedRequests(listJoseRequests().filter((r) => r.status === 'interrupted'));
+  // Requests waiting for something to be set up show here too (agent roles Part C2).
+  const [setupRequests, setSetupRequests] = useState(() => listJoseRequests().filter((r) => r.status === 'waiting_setup'));
+  const refreshInterrupted = () => {
+    const all = listJoseRequests();
+    setInterruptedRequests(all.filter((r) => r.status === 'interrupted'));
+    setSetupRequests(all.filter((r) => r.status === 'waiting_setup'));
+  };
   const [streamingText, setStreamingText] = useState('');
   const [streamingTokens, setStreamingTokens] = useState(0);
   const [streamingStartTime, setStreamingStartTime] = useState(null);
@@ -1357,11 +1372,44 @@ export function ChatView({
             </button>
           </div>
         )}
-        {interruptedRequests.length > 0 && (
+        {(interruptedRequests.length > 0 || setupRequests.length > 0) && (
           <div data-testid="chat-interrupted-notice" className="max-w-3xl mx-auto w-full rounded-xl border border-(--warning-border) bg-(--surface-1) px-3 py-2 text-xs text-(--text-2)">
+            {setupRequests.length > 0 && (
+              <>
+                <div className="font-medium text-(--text-1)">
+                  {setupRequests.length === 1 ? '1 request needs' : `${setupRequests.length} requests need`} something set up.
+                </div>
+                <ul className="mt-1 space-y-1">
+                  {setupRequests.map((request) => {
+                    const step = request.steps.find((st) => st.status === 'setup_needed');
+                    return (
+                      <li key={request.id} className="flex items-center justify-between gap-2">
+                        <span className="truncate">{step ? `${agentName(step.agent)} needs something set up: ${step.error || request.text}` : request.text}</span>
+                        <span className="flex shrink-0 gap-2">
+                          <button
+                            type="button"
+                            className="font-medium text-(--accent) hover:underline"
+                            onClick={async () => { await carryOnRequest(request.id); refreshInterrupted(); }}
+                          >
+                            Carry on
+                          </button>
+                          {onOpenJoseBoard && (
+                            <button type="button" className="text-(--text-3) hover:underline" onClick={() => onOpenJoseBoard(request.id)}>
+                              Open on the board
+                            </button>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
+            {interruptedRequests.length > 0 && (
             <div className="font-medium text-(--text-1)">
               {interruptedRequests.length === 1 ? '1 request was' : `${interruptedRequests.length} requests were`} cut off when the app closed.
             </div>
+            )}
             <ul className="mt-1 space-y-1">
               {interruptedRequests.map((request) => (
                 <li key={request.id} className="flex items-center justify-between gap-2">

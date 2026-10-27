@@ -46,7 +46,7 @@ const TRUTH_PATTERNS = [
 // not a local count. Earlier comments/commits referenced 3,831 and 5,147 --
 // both stale as of this reconciliation; this is the one number to trust going
 // forward until the next materially-different `npm test` run.
-const CURRENT_TOTAL_TESTS = '6,725';
+const CURRENT_TOTAL_TESTS = '6,824';
 
 // Each entry defines a claim to verify:
 //   file        — relative path from project root
@@ -83,6 +83,33 @@ const CLAIMS = [
     label: 'architecture Tauri commands',
     pattern: /lib\.rs ~[\d,]+ lines · (\d+) Tauri commands/,
     actualFn: () => getAllCounts().tauriCommands
+  },
+  // Desktop E2E counts (agent roles Part C2), in both places CLAUDE.md states them.
+  {
+    file: 'CLAUDE.md',
+    label: 'desktop E2E spec files (build commands)',
+    pattern: /isolated test data \((\d+) spec files, (\d+) checks\)/,
+    actualFn: () => getAllCounts().desktop.specs
+  },
+  {
+    file: 'CLAUDE.md',
+    label: 'desktop E2E checks (build commands)',
+    pattern: /isolated test data \((\d+) spec files, (\d+) checks\)/,
+    actualFn: () => getAllCounts().desktop.checks,
+    group: 2
+  },
+  {
+    file: 'CLAUDE.md',
+    label: 'desktop E2E spec files (suite row)',
+    pattern: /Full suite: (\d+) spec files, (\d+) checks/,
+    actualFn: () => getAllCounts().desktop.specs
+  },
+  {
+    file: 'CLAUDE.md',
+    label: 'desktop E2E checks (suite row)',
+    pattern: /Full suite: (\d+) spec files, (\d+) checks/,
+    actualFn: () => getAllCounts().desktop.checks,
+    group: 2
   },
   {
     file: 'README.md',

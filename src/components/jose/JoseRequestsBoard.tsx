@@ -8,6 +8,7 @@ import { JosePlanMap } from './JosePlanMap';
 import { JosePlanEditor } from './JosePlanEditor';
 import { JoseStepOutput } from './JoseStepOutput';
 import { CodePreviewView } from '../alphonso/CodePreviewView';
+import { editCodeFile } from '../../services/alphonso/editChange';
 import { EchoRemembered } from '../echo/EchoRemembered';
 import { CleanupProposals } from '../echo/CleanupProposals';
 import { pickForget } from '../../services/echo/echoPicks';
@@ -206,7 +207,13 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
               </>
             )}
 
-          {waitingSteps.filter((s) => s.codePreview).map((s) => <CodePreviewView key={`preview-${s.stepId}`} preview={s.codePreview!} />)}
+          {waitingSteps.filter((s) => s.codePreview).map((s) => (
+            <CodePreviewView
+              key={`preview-${s.stepId}`}
+              preview={s.codePreview!}
+              onEdit={(path, content) => { const out = editCodeFile(selected.id, s.stepId, path, content); refresh(); return out; }}
+            />
+          ))}
           {choosingStep && (
             <div className="space-y-2 rounded-xl bg-(--surface-2) p-3 text-xs">
               <div className="text-(--text-1)">{choosingStep.error}</div>

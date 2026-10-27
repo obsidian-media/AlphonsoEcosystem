@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 320 services and 175 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 324 services and 176 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -55,6 +55,7 @@ Source-backed inventory: 320 services and 175 components. Human purpose descript
 | component | `src/components/echo/CleanupProposals.tsx` | `CleanupProposals` |
 | component | `src/components/echo/DecisionsPanel.tsx` | `DecisionsPanel` |
 | component | `src/components/echo/EchoRemembered.tsx` | `DecisionRow`, `EchoRemembered` |
+| component | `src/components/echo/MeaningSearchStatus.tsx` | `MeaningSearchStatus` |
 | component | `src/components/EcosystemHub.tsx` | `EcosystemHub` |
 | component | `src/components/EcosystemMaturityPanels.tsx` | `ApprovalCenterPanel`, `EcosystemMapPanel`, `MemoryConfidencePanel`, `OperatorModesPanel`, `PrivacyShieldPanel`, `SessionIntelligencePanel`, `TrustLayerPanel`, `WorkflowOperationsPanel` |
 | component | `src/components/EcosystemMaturityPanelsGate.tsx` | `EcosystemMaturityPanelsGate` |
@@ -195,12 +196,14 @@ Source-backed inventory: 320 services and 175 components. Human purpose descript
 | service | `src/services/alphonso/answerPrompt.ts` | `ALPHONSO_ANSWER_PROMPT` |
 | service | `src/services/alphonso/changeSet.ts` | `classifyCommand`, `classifyFile`, `contentHash`, `describeCodeChange`, `previewNeeds` |
 | service | `src/services/alphonso/codeStep.ts` | `CodeAnswer`, `isAlphonsoCodeStep`, `parseCodeAnswer` |
+| service | `src/services/alphonso/editChange.ts` | `EDIT_NOT_IN_CHANGE`, `EDIT_TOO_LATE`, `editCodeFile` |
 | service | `src/services/alphonso/prepareCode.ts` | `ALPHONSO_NO_PLAN`, `askAlphonso`, `codeModelFor`, `FOLDER_GONE`, `MODEL_DIDNT_ANSWER`, `NEEDS_TO_KNOW`, `prepareAlphonsoCode`, `PrepareCode`, `safePath`, `WHICH_PROJECT` |
 | service | `src/services/alphonso/projectLock.ts` | `busyLine`, `claimProject`, `onProjectReleased`, `projectHolder`, `releaseProject` |
-| service | `src/services/alphonso/projects.ts` | `AlphonsoProject`, `getCodeModel`, `listProjects`, `NEEDS_OUTPUT_FOLDER`, `NO_PROJECT`, `projectNamedIn`, `projectPlace`, `saveProjects`, `scratchPlace`, `WorkPlace` |
+| service | `src/services/alphonso/projects.ts` | `AlphonsoProject`, `getCodeModel`, `listProjects`, `NAME_A_PROJECT`, `NEEDS_OUTPUT_FOLDER`, `NO_PROJECT`, `projectNamedIn`, `projectPlace`, `projectsNamedIn`, `saveProjects`, `scratchPlace`, `WorkPlace` |
 | service | `src/services/alphonso/readProject.ts` | `listProjectFiles`, `ProjectFile`, `readProjectFiles` |
 | service | `src/services/alphonso/runCode.ts` | `applyChangeSet`, `CommandRun`, `runAlphonsoCode`, `runApprovedCommands` |
-| service | `src/services/alphonso/stepFolder.ts` | `reviewedFolder`, `stepFolder` |
+| service | `src/services/alphonso/splitProjects.ts` | `splitPerProject` |
+| service | `src/services/alphonso/stepFolder.ts` | `readingFolder`, `reviewedFolder`, `stepFolder` |
 | service | `src/services/alphonso/types.ts` | `CodeCommand`, `CodeFile`, `CodePreview` |
 | service | `src/services/approval/approvalService.js` | `approveRequest`, `createApprovalRequest`, `getApprovalReason`, `listAllApprovals`, `listApprovalsByTrace`, `listPendingApprovals`, `listPendingApprovalsByTrace`, `rejectRequest`, `requireApproval`, `requiresApproval` |
 | service | `src/services/appUpdateService.ts` | `checkAppUpdate`, `getLastUpdateNotice`, `getLastUpdateNoticeAsync`, `notifyUpdateAvailable`, `setLastUpdateNotice`, `UpdateCheckInput`, `UpdateCheckResult`, `UpdateNotice` |
@@ -316,7 +319,8 @@ Source-backed inventory: 320 services and 175 components. Human purpose descript
 | service | `src/services/echo/cleanupStore.ts` | `CLEANUP_KEY`, `CleanupProposal`, `CleanupSet`, `finishCleanup`, `getCleanup`, `openCleanup`, `saveCleanupSet` |
 | service | `src/services/echo/decisions.ts` | `activePreferences`, `addDecision`, `Decision`, `decisionIds`, `DecisionKind`, `DECISIONS_CHANGED`, `DECISIONS_KEY`, `ECHO_LIMITS`, `editDecision`, `forgetDecision`, `getDecision`, `listDecisions`, `NewDecision`, `replaceWith`, `Surface`, `surfaceOf` |
 | service | `src/services/echo/echoPicks.ts` | `applyCleanupStep`, `dismissCleanupStep`, `pickForget` |
-| service | `src/services/echo/echoSteps.ts` | `COULDNT_SAVE`, `EchoCtx`, `echoSavePrompt`, `EchoStepResult`, `extractDecisions`, `NOTHING_SAVED_ABOUT`, `NOTHING_TO_REMEMBER`, `runEchoStep`, `WHICH_TO_FORGET`, `withoutRememberWords` |
+| service | `src/services/echo/echoSteps.ts` | `COULDNT_SAVE`, `EchoCtx`, `echoSavePrompt`, `EchoStepResult`, `extractDecisions`, `NO_DECISIONS_THIS_WEEK`, `NOTHING_SAVED_ABOUT`, `NOTHING_TO_REMEMBER`, `runEchoStep`, `WHICH_TO_FORGET`, `withoutRememberWords` |
+| service | `src/services/echo/meaning.ts` | `ECHO_EMBED_MODEL`, `ensureMeaning`, `indexDecisionMeaning`, `MEANING_MIN_SIMILARITY`, `MEANING_QUERY_WAIT_MS`, `meaningEnabled`, `meaningMatches`, `meaningState`, `MeaningState`, `onMeaningState`, `resetMeaningForTests` |
 | service | `src/services/echo/memoryIntents.ts` | `asksToCleanUpMemory`, `asksToForget`, `asksToRemember`, `asksWhatWasDecided`, `memoryOnlyTask` |
 | service | `src/services/echo/recall.ts` | `answerDecisionsBlock`, `contentWords`, `decisionLine`, `decisionsFor`, `decisionsText`, `indexDecision`, `NEAR_REPEAT`, `nearlySame`, `resetChromaCheckForTests`, `searchDecisions`, `surfaceName` |
 | service | `src/services/echoFileWatcherService.ts` | `getWatcherConfig`, `saveWatcherConfig`, `startFileWatcher`, `stopFileWatcher`, `WatcherConfig` |
@@ -377,13 +381,14 @@ Source-backed inventory: 320 services and 175 components. Human purpose descript
 | service | `src/services/marcus/composioChannel.ts` | `checkComposioAnswer`, `composioSendTools`, `describeComposioTools` |
 | service | `src/services/marcus/describeSend.ts` | `describeSend` |
 | service | `src/services/marcus/destinations.ts` | `CHANNEL_LIMITS`, `CONNECTOR_NAMES`, `DESTINATION_KEYS`, `destinationsFor`, `isAllowedTarget`, `listedN8nWorkflows`, `MARCUS_CONNECTORS`, `requestWithoutQuotes`, `targetLabel`, `telegramOwnerChatId` |
-| service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `NEEDS_VERSION`, `NO_DESTINATION`, `pickDestination` |
-| service | `src/services/marcus/prepareSend.ts` | `describeSend`, `isMarcusSendStep`, `prepareMarcusSend`, `tooLongReason` |
+| service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `pickDestination` |
+| service | `src/services/marcus/prepareSend.ts` | `describeSend`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason` |
 | service | `src/services/marcus/readiness.ts` | `checkReadiness` |
 | service | `src/services/marcus/runSend.ts` | `ALREADY_SENT`, `COMPOSIO_NOT_READY`, `runMarcusSend`, `WHATSAPP_24H` |
 | service | `src/services/marcus/sendText.ts` | `NOTHING_TO_SEND`, `sourceStep`, `textToSend` |
+| service | `src/services/marcus/sendTime.ts` | `formatSendTime`, `readSendTime`, `SendTime` |
 | service | `src/services/marcus/types.ts` | `Destination`, `MarcusConnector`, `PrepareResult`, `SendKind`, `SendPreview`, `SendResult` |
-| service | `src/services/marcusExecutionService.ts` | `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `getScheduledPublishes`, `MarcusRecord`, `mariaReviewFor`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
+| service | `src/services/marcusExecutionService.ts` | `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `getScheduledPublishes`, `MarcusRecord`, `mariaReviewFor`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleApprovedSend`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
 | service | `src/services/marcusPublishService.ts` | `buildMarcusPublishPacket`, `executeMarcusPublish`, `MARCUS_PUBLISH_PLATFORMS` |
 | service | `src/services/maria/mariaHolds.ts` | `holdStepsAfter`, `mariaHoldFor` |
 | service | `src/services/maria/mariaPlanReview.ts` | `contradiction`, `LOW_WITH_APPROVAL`, `parsePlanReview`, `PlanReview`, `planReviewPrompt`, `planReviewText`, `Risk`, `runMariaPlanReview` |
@@ -412,7 +417,7 @@ Source-backed inventory: 320 services and 175 components. Human purpose descript
 | service | `src/services/notificationService.ts` | `appendNotification`, `clearNotifications`, `getNotifications`, `sendNativeNotification` |
 | service | `src/services/notionSyncService.js` | `buildConflictRecord`, `buildCorrelationId`, `buildNotionPageProperties`, `buildNotionSyncMemoryRecord`, `buildNotionSyncRecordId`, `buildPullReconcilePlan`, `buildReconcilePlan`, `buildSyncMetadata`, `correlationKey`, `default`, `detectFieldConflict`, `extractCorrelationFromMemoryRecord`, `extractNotionPageIdFromUrl`, `fetchNotionApi`, `fetchNotionDatabasePages`, `fetchNotionPage`, `findLatestNotionSyncRecord`, `getNotionSyncStatus`, `ingestAlphonsoTaskFromNotionPage`, `isNotionConnectorReady`, `isNotionPullEnabled`, `isNotionSyncMemoryRecord`, `listNotionSyncRecords`, `normalizeAssignedAgent`, `normalizeNotionPhase`, `normalizePortfolio`, `normalizeRiskLevel`, `NOTION_AGENT_OPTIONS`, `NOTION_APPROVAL_STATES`, `NOTION_CONFLICT_STATES`, `NOTION_PORTFOLIO_OPTIONS`, `NOTION_PROPERTY_TYPES`, `NOTION_RISK_LEVELS`, `NOTION_SYNC_PUBLIC_API`, `NOTION_SYNC_SCOPE`, `NOTION_SYNC_SOURCES`, `NOTION_WORKFLOW_DATABASE_SCHEMA`, `NOTION_WORKFLOW_PHASES`, `notionSyncWeeklyReport`, `parseNotionPageId`, `persistNotionSyncRecord`, `pullNotionDatabase`, `pullNotionPage`, `pushAlphonsoTaskToNotion`, `recordNotionConflict` |
 | service | `src/services/nova/novaDaily.ts` | `askNovaWhatNext`, `NOVA_DAILY_LABEL` |
-| service | `src/services/nova/novaVerdict.ts` | `Level`, `missingOptions`, `namedOptions`, `NovaVerdict`, `novaVerdictPrompt`, `parseNovaVerdict`, `VerdictOption`, `verdictText`, `withNotJudged` |
+| service | `src/services/nova/novaVerdict.ts` | `findOptions`, `Level`, `missingOptions`, `namedOptions`, `NovaVerdict`, `novaVerdictPrompt`, `parseNovaVerdict`, `VerdictOption`, `verdictText`, `withNotJudged` |
 | service | `src/services/nova/novaVerdicts.ts` | `listVerdicts`, `NO_VERDICTS`, `SavedVerdict`, `saveVerdict`, `verdictForCommand`, `verdictsText` |
 | service | `src/services/novaAnalysisService.ts` | `NOVA_NO_VERDICT`, `NovaResult`, `runNovaAnalysis` |
 | service | `src/services/offlineChatService.ts` | `clearOfflineMessages`, `getOfflineMessages`, `getPendingSyncMessages`, `markSynced`, `OfflineMessageInput`, `saveMessageOffline` |

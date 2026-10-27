@@ -7,7 +7,7 @@ vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: vi.fn() }));
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { saveConnectorCredential } from '../../../services/connectors/connectorAuth';
 import { setStepOutput } from '../../../services/jose/joseStepOutputs';
-import { prepareMarcusSend, describeSend, isMarcusSendStep, tooLongReason } from '../../../services/marcus/prepareSend';
+import { prepareMarcusSend, describeSend, isMarcusSendStep, tooLongReason, SEND_TIME_UNCLEAR } from '../../../services/marcus/prepareSend';
 import { NOTHING_TO_SEND } from '../../../services/marcus/sendText';
 
 const llm = vi.mocked(generateAgentLlmResponse);
@@ -42,6 +42,34 @@ describe('prepareMarcusSend', () => {
     const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
     expect(got).toMatchObject({ ok: true, preview: { connector: 'slack', target: '#news', label: 'Slack #news', text: 'Open Saturday.', sourceStepId: 'write' } });
     expect(describeSend((got as unknown as { preview: never }).preview)).toBe('Send to Slack #news: “Open Saturday.”');
+  });
+
+  // Agent roles Part C2: a send can have a time.
+  it('a time in the request goes on the preview and the approval line', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(2026, 10, 2, 10, 0));
+      const timed = { text: '/jose Write a note that we open Saturday, then post it to our Slack channel #news tomorrow at 9.' };
+      const got: any = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), timed);
+      expect(got.preview.sendAtMs).toBe(new Date(2026, 10, 3, 9, 0).getTime());
+      expect(describeSend(got.preview)).toBe('Send to Slack #news at Tue 09:00: “Open Saturday.”');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Final review: a time inside the words being sent is part of the message, not when to send it.
+  it('a time in the quoted message, or after the colon, sends now', async () => {
+    for (const text of ['/jose Send “We open at 9 tomorrow” to Slack #news.', '/jose Post this to Slack #news: we open tomorrow at 9.']) {
+      const got: any = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), { text });
+      expect(got.ok).toBe(true);
+      expect(got.preview.sendAtMs).toBeUndefined();
+    }
+  });
+
+  it('an unclear time asks again, and nothing is prepared', async () => {
+    const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), { text: '/jose post it to Slack #news later' });
+    expect(got).toEqual({ ok: false, outcome: 'failed', reason: SEND_TIME_UNCLEAR });
   });
 
   it('too long → fix for the step he sends from, nothing asked', async () => {

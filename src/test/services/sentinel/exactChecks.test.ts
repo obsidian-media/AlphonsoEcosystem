@@ -88,3 +88,21 @@ describe('a key already hidden', () => {
     expect(redactText(text)).toBe(text);
   });
 });
+
+// Agent roles Part C2: Sentinel's personal-data check.
+describe('personal data', () => {
+  const text = 'Call Ana on +44 7700 900123 or ana.k@gmail.com, 12 Baker Street.';
+  it('finds a private phone number, a personal email and a home address', () => {
+    const found = findExactRisks(text, { personalData: true }).filter((r) => r.kind === 'personal_data');
+    expect(found.map((r) => r.detail).sort()).toEqual(['a home address', 'a personal email', 'a private phone number']);
+  });
+  it('an ID number is found too', () => {
+    expect(findExactRisks('Her account number is 123456789012.', { personalData: true }).map((r) => r.detail)).toContain('an ID number');
+  });
+  it('leaves work details alone', () => {
+    expect(findExactRisks('sales@acme.com, Acme Ltd, Head of Sales', { personalData: true }).filter((r) => r.kind === 'personal_data')).toEqual([]);
+  });
+  it('is off unless asked for', () => {
+    expect(findExactRisks(text).filter((r) => r.kind === 'personal_data')).toEqual([]);
+  });
+});

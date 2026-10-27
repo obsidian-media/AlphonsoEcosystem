@@ -19,6 +19,7 @@ import { randomHex } from '../lib/randomId';
 import { redactText } from './sentinel/exactChecks';
 import { prepareMarcusSend } from './marcus/prepareSend';
 import { runMarcusSend } from './marcus/runSend';
+import { formatSendTime } from './marcus/sendTime';
 import { checkReadiness } from './marcus/readiness';
 import type { SendPreview, SendResult } from './marcus/types';
 
@@ -52,7 +53,7 @@ export interface MarcusRecord {
   connector: string | null;
   target: string | null;
   sendKind: string | null;
-  status: 'sent' | 'failed' | 'checked';
+  status: 'sent' | 'failed' | 'checked' | 'scheduled';
   link: string | null;
   platformId: string | null;
   approvedBy: 'you' | null;
@@ -86,8 +87,12 @@ interface ScheduledPublish {
   /** `posting`: claimed and being sent; `check`: the app closed mid-send; `ask`: more than 7 days late. */
   status: 'pending' | 'executed' | 'cancelled' | 'posting' | 'done' | 'failed' | 'check' | 'ask' | 'asked';
   executedAt?: number;
-  /** Phase 3a: a project's post (sent through publishPost), or a reminder. Missing = text, as before. */
-  kind?: 'text' | 'content_post' | 'reminder';
+  /** Phase 3a: a project's post (sent through publishPost), or a reminder. Missing = text, as before.
+   *  `approved_send` (agent roles Part C2): a send you approved with a time; sent once, as approved. */
+  kind?: 'text' | 'content_post' | 'reminder' | 'approved_send';
+  commandId?: string;
+  stepId?: string;
+  preview?: SendPreview;
   projectId?: string;
   postId?: string;
   /** A reminder's text. */
@@ -166,6 +171,18 @@ export async function runMarcusDistribution(commandText: string, assignment: Ass
     preview = prepared.preview;
   }
 
+  // A send with a time (agent roles Part C2) waits in the runner; a time already past goes now.
+  const nowMs = typeof options.nowMs === 'number' ? options.nowMs : Date.now();
+  if (preview.sendAtMs && preview.sendAtMs - nowMs > TIMED_SEND_SLACK_MS) {
+    scheduleApprovedSend({ commandId, stepId, preview });
+    const when = formatSendTime(preview.sendAtMs, nowMs);
+    return result(`Marcus will send it to ${preview.label} at ${when}.`, 'completed', record({
+      connector: preview.connector, target: preview.target, sendKind: preview.kind, status: 'scheduled',
+      approvedBy: 'you', approvedAtMs: nowMs, confidenceLevel: TRUST_STATES.INFERRED,
+    }), actionType);
+  }
+  const lateNote = preview.sendAtMs && preview.sendAtMs < nowMs ? 'The time had passed, so it was sent now.' : '';
+
   const startMs = timestampMs();
   const sent: SendResult = await runMarcusSend(commandId, stepId, preview);
   const reviewedBy = reviewersOf(commandId, assignment, preview.sourceStepId);
@@ -219,7 +236,7 @@ export async function runMarcusDistribution(commandText: string, assignment: Ass
     verificationState: schema.confidenceLevel,
   });
 
-  return result([prefix, sent.sentence].filter(Boolean).join(' '), sent.ok ? 'completed' : 'failed', schema, actionType);
+  return result([lateNote, prefix, sent.sentence].filter(Boolean).join(' '), sent.ok ? 'completed' : 'failed', schema, actionType);
 }
 
 // ── Scheduled Publishing ──────────────────────────────────────────────────────
@@ -305,6 +322,18 @@ function newItem(patch: Partial<ScheduledPublish> & { platform: string; schedule
   };
 }
 
+/** A timed send is sent by the runner when it is due more than this far ahead. */
+const TIMED_SEND_SLACK_MS = 60_000;
+
+/** A send you approved with a time (agent roles Part C2): the runner sends exactly this preview once. */
+export function scheduleApprovedSend({ commandId, stepId, preview }: { commandId: string; stepId: string; preview: SendPreview }): ScheduledPublish {
+  const item = newItem({ kind: 'approved_send', commandId, stepId, preview, content: preview.text, platform: preview.label, scheduledAt: Number(preview.sendAtMs) });
+  const items = _loadSchedule();
+  items.push(item);
+  _saveSchedule(items);
+  return item;
+}
+
 /** Schedules a project's post; scheduling the same post again moves it. */
 export function scheduleContentPost({ projectId, postId, platform, scheduledAt }: { projectId: string; postId: string; platform: PostPlatform; scheduledAt: number }): ScheduledPublish {
   const items = _loadSchedule();
@@ -388,6 +417,13 @@ export function recoverScheduledPublishes(nowMs = Date.now()): void {
   const items = _loadSchedule();
   let changed = false;
   for (const item of items) {
+    // A timed send cut off mid-send may or may not have gone: never sent again by itself.
+    if (item.kind === 'approved_send' && item.status === 'posting') {
+      item.status = 'check';
+      changed = true;
+      void tell('error', `Check your send to ${item.platform}`, `Alphonso closed while this was being sent to ${item.platform}, so it may or may not have gone out. Check before sending it again.`);
+      continue;
+    }
     if (item.kind !== 'content_post') continue;
     if (item.status === 'posting') {
       item.status = 'check';
@@ -460,7 +496,7 @@ export async function runScheduledPublishes(nowMs = Date.now()): Promise<void> {
     const due = items.filter((i) => i.status === 'pending' && i.scheduledAt <= nowMs);
     for (const item of due) {
       // A text send asks Marcus at its time (agent phase 5): approved like any send, never sent blindly.
-      item.status = item.kind === 'content_post' ? 'posting' : item.kind === 'reminder' ? 'done' : 'asked';
+      item.status = item.kind === 'content_post' || item.kind === 'approved_send' ? 'posting' : item.kind === 'reminder' ? 'done' : 'asked';
       item.executedAt = nowMs;
     }
     if (due.length) _saveSchedule(items);
@@ -470,6 +506,13 @@ export async function runScheduledPublishes(nowMs = Date.now()): Promise<void> {
         try { await sendContentPost(item, nowMs); } catch { /* sendContentPost never throws; keep the loop going */ }
       } else if (item.kind === 'reminder') {
         await tell('info', 'Time to publish on YouTube', item.message || '');
+      } else if (item.kind === 'approved_send' && item.preview) {
+        let sent: SendResult = { ok: false, sentence: 'It could not be sent.' };
+        try { sent = await runMarcusSend(String(item.commandId || ''), String(item.stepId || 'marcus'), item.preview); } catch { /* reported below */ }
+        const after = _loadSchedule();
+        const mine = after.find((i) => i.id === item.id);
+        if (mine) { mine.status = sent.ok ? 'done' : 'failed'; _saveSchedule(after); }
+        if (!sent.ok) await tell('error', `A scheduled send to ${item.platform} was not sent`, sent.sentence);
       } else {
         try {
           const { askMarcusToSend } = await import('./marcus/askMarcus');

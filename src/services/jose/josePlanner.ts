@@ -142,6 +142,7 @@ function buildPrompt(text: string, template: JoseTemplate | null, history: PlanO
     `Effects a step can have: ${JOSE_EFFECTS.map((e) => `${e} (${EFFECT_LABELS[e]})`).join(', ')}. Only alphonso may run; only marcus may publish_or_send.`,
     `A review step names the step it reviews ("reviewOf"); if it finds problems the work goes back for at most ${JOSE_LIMITS.maxFixRounds} rounds, so plan one review, not several.`,
     `Limits: at most ${JOSE_LIMITS.maxSteps} steps. Use "kind": "project" for long work such as building an app, otherwise "normal".`,
+    "When the request names several of the user's projects, plan one alphonso local_operation step per project.",
     installed.length ? `Installed models you may choose for a step ("model"; leave it out to use the agent's own): ${installed.join(', ')}. Use a larger one only where the step needs it.` : '',
     paidModel ? `A paid model is also allowed: ${paidModel}. Use it only where no local model would do; a step given it costs money and waits for approval.` : '',
     template ? templateForPrompt(template) : '',

@@ -223,6 +223,29 @@ describe('Alphonso desktop: Echo remembers what you decide', () => {
     console.log('ECHO-E2E applied', JSON.stringify((await decisions()).map((d) => [d.id, d.status, d.text])));
   }).timeout(1600000);
 
+  // Agent roles Part C2: Echo finds a decision worded differently, with the small meaning model.
+  it('finds a decision by meaning when the words differ', async () => {
+    await seed([decision('e2e-meaning', 'We serve breakfast until eleven.', ['kitchen'])]);
+    // A fresh start, so the meaning search reads the seeded decision when it gets ready.
+    await browser.refresh();
+    await $('[data-alphonso-shell-ready="true"]').waitForExist({ timeout: 60000 });
+    await ask('/jose What did we decide about the newsletter?');
+    await $('[aria-label="Open settings"]').click();
+    const memory = await $('//nav//button[normalize-space(.)="Memory"]');
+    await memory.waitForClickable({ timeout: 30000 });
+    await memory.click();
+    const status = await $('[data-testid="echo-meaning-status"]');
+    await status.waitForDisplayed({ timeout: 30000 });
+    await browser.waitUntil(async () => /^On\.$|Couldn't|Needs Ollama/.test(await status.getText()), { timeout: 600000, interval: 3000, timeoutMsg: 'the meaning search never got ready' });
+    const shown = await status.getText();
+    console.log('ECHO-E2E meaning status', shown);
+    expect(shown).toBe('On.');
+    const request = await ask('/jose What did we decide about morning meals?');
+    const said = await stepSummary(request, 'echo');
+    console.log('ECHO-E2E meaning', JSON.stringify(said.slice(0, 600)));
+    expect(said.toLowerCase()).toContain('breakfast');
+  }).timeout(1600000);
+
   it('no health-check notes were saved during the run', async () => {
     const items = JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_memory_items_v1') || '[]'));
     expect(items.filter((m) => m.source === 'ollama-health-check')).toHaveLength(0);

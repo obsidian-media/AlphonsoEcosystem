@@ -4,7 +4,7 @@
 // nothing → the step waits for setup with the reason; no facts from memory.
 import { createResearchDraft, listHectorReports, runHectorLiveResearch } from '../hectorResearchService';
 import { fallbackQuery, NO_REPORT } from './researchRun';
-import type { StepInput } from '../jose/stepInput';
+import { skillSection, type StepInput } from '../jose/stepInput';
 
 export async function runHectorStep(assignment: any, stepInput: StepInput | null, opts: { large: boolean; signal?: AbortSignal }) {
   const instruction = String(assignment?.instruction || stepInput?.instruction || '').trim();
@@ -20,6 +20,7 @@ export async function runHectorStep(assignment: any, stepInput: StepInput | null
     focus: instruction && instruction !== question ? instruction : undefined,
     large: opts.large,
     signal: opts.signal,
+    skill: skillSection(stepInput),
   });
   if (report?.status === 'research_done' && report.research) {
     return {

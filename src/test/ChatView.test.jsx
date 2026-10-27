@@ -194,7 +194,7 @@ import { listOrchestrationReceipts } from '../services/orchestrationReceiptServi
 import { decideJoseRoute } from '../services/jose/joseDecision';
 import { ALPHONSO_ANSWER_PROMPT } from '../services/alphonso/answerPrompt';
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose';
-import { createWaitingPlanRequest, createJoseRequest, setJoseRequestStatus } from '../services/jose/joseRequestStore';
+import { createWaitingPlanRequest, createJoseRequest, setJoseRequestStatus, updateJoseStep } from '../services/jose/joseRequestStore';
 import { carryOnRequest } from '../services/joseExecutionEngineService';
 import { higgsfieldResultsDoneSince, markShownInChat } from '../services/contentFactory/higgsfieldByName';
 import { addDecision } from '../services/echo/decisions';
@@ -923,6 +923,23 @@ describe('ChatView: everything goes to Jose', () => {
     const notice = await screen.findByTestId('chat-interrupted-notice');
     expect(notice.textContent).toMatch(/1 request was cut off when the app closed/);
     expect(notice.textContent).toMatch(/Research the launch/);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Carry on' }));
+    await waitFor(() => expect(carryOnRequest).toHaveBeenCalledWith(request.id));
+  });
+
+  // Agent roles Part C2: a request waiting for something to be set up shows there too.
+  it('tells you about a request waiting for setup, with what to set up and Carry on', async () => {
+    localStorage.removeItem('alphonso_jose_requests_v1');
+    const request = createJoseRequest({
+      commandId: 'c-setup', source: 'user', text: 'Post it to Slack #news', kind: 'normal',
+      steps: [{ stepId: 'marcus', agent: 'marcus', actionType: 'distribution_slack', effects: ['publish_or_send'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'marcus', { status: 'setup_needed', error: 'Slack isn\'t set up: add the Slack token in Settings → Connectors → Slack.' });
+    setJoseRequestStatus(request.id, 'waiting_setup');
+    render(<ChatView {...makeProps()} />);
+    const notice = await screen.findByTestId('chat-interrupted-notice');
+    expect(notice.textContent).toMatch(/1 request needs something set up/);
+    expect(notice.textContent).toContain("Marcus needs something set up: Slack isn't set up: add the Slack token in Settings → Connectors → Slack.");
     fireEvent.click(within(notice).getByRole('button', { name: 'Carry on' }));
     await waitFor(() => expect(carryOnRequest).toHaveBeenCalledWith(request.id));
   });

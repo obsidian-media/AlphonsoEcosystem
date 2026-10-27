@@ -73,6 +73,7 @@ import {
   themeClassFromSettings,
   getCompanionState,
 } from './constants/appConstants';
+import { OPEN_CHAT_EVENT } from './lib/chatDraft';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { OllamaProvider, useOllama } from './contexts/OllamaContext';
 import { PluginProvider, usePlugins } from './contexts/PluginContext';
@@ -341,6 +342,12 @@ function AppShell() {
   }, [requestApproval]);
 
   useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab, setShowKeyboardShortcuts });
+  // Something filled Chat's message box (agent roles Part C2: Hector's "Use in a request"): open Chat.
+  useEffect(() => {
+    const open = () => switchTab('chat');
+    window.addEventListener(OPEN_CHAT_EVENT, open);
+    return () => window.removeEventListener(OPEN_CHAT_EVENT, open);
+  }, [switchTab]);
   useKeyboardShortcuts({ toggle_search: () => setShowMemorySearch((prev) => !prev) });
   useIdleLock({ idleTimeoutMinutes: settings.idleTimeoutMinutes, setIsLocked, idleTimerRef });
 

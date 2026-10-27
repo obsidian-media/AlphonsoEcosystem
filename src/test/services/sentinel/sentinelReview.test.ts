@@ -67,6 +67,19 @@ describe('his answer', () => {
     expect(llm).toHaveBeenCalledTimes(1);
   });
 
+  // Agent roles Part C2: his personal-data check finds private details, and they hold what comes next.
+  it('a personal-data check finds private details and asks for approval', async () => {
+    llm.mockResolvedValue(answer({ verdict: 'safe', summary: 'Fine.', findings: [] }));
+    const list = 'Acme Bakery, owner Ana Kovac, ana.kovac@gmail.com, +44 7700 900123';
+    const r = await runSentinelReview({ agent: 'sentinel', actionType: 'security_personal_data' }, input({ review: reviewOf(list, 'hector', 'hector') }));
+    const all = (r.schema?.findings || []).join('\n');
+    expect(all).toContain('ana.kovac@gmail.com');
+    expect(all).toContain('+44 7700 900123');
+    expect(r.schema?.requiresApproval).toBe(true);
+    const plain = await runSentinelReview({ agent: 'sentinel', actionType: 'security_review' }, input({ review: reviewOf(list, 'hector', 'hector') }));
+    expect((plain.schema?.findings || []).join('\n')).not.toContain('ana.kovac@gmail.com');
+  });
+
   it('every exact fact is in the findings, whatever the model says', async () => {
     llm.mockResolvedValue(answer({ verdict: 'risky', summary: 'Hmm.', findings: [] }));
     const r = await runSentinelReview({ agent: 'sentinel' }, input({ review: reviewOf(POST) }));

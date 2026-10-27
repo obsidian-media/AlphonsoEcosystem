@@ -5,7 +5,7 @@
 import { deletesThings, isWorkspaceCodeExecuting } from '../commandApprovalService';
 import { isTrustedDomain } from './sentinelTrust';
 
-export type ExactRiskKind = 'key' | 'password_request' | 'disguised_link' | 'untrusted_link' | 'deleting_command' | 'code_command';
+export type ExactRiskKind = 'key' | 'password_request' | 'disguised_link' | 'untrusted_link' | 'deleting_command' | 'code_command' | 'personal_data';
 export interface ExactRisk { kind: ExactRiskKind; where: string; detail: string }
 
 // Key-shaped strings. The value is hidden; only its last four characters are shown.
@@ -82,8 +82,38 @@ const COMMAND = /`([^`\n]+)`|^\s*\$\s+(.+)$/gm;
 const CODE_PROGRAMS = new Set(['npm', 'yarn', 'pnpm', 'npx', 'node', 'python', 'python3', 'py', 'pip', 'pip3', 'cargo', 'bash', 'sh', 'zsh', 'powershell', 'pwsh', 'cmd', 'curl', 'wget']);
 const DELETE_PROGRAMS = new Set(['rm', 'del', 'rmdir', 'rd', 'format']);
 
-/** The facts in a text. `links: 'sent'` also lists links not on your trusted list. */
-export function findExactRisks(text: string, opts: { trustedDomains?: string[]; links?: 'all' | 'sent' } = {}): ExactRisk[] {
+// Personal data (agent roles Part C2): private details about people, for Sentinel's personal-data check.
+// Work details people publish themselves (a company address, a work email) are not flagged.
+const FREE_MAIL = /@(gmail\.com|googlemail\.com|yahoo\.[a-z.]+|hotmail\.[a-z.]+|outlook\.com|live\.com|icloud\.com|me\.com|proton\.me|protonmail\.[a-z.]+|gmx\.[a-z.]+|aol\.com|mail\.ru)$/i;
+const EMAIL = /\b[\w.+-]+@(?:[\w-]+\.)+[a-z]{2,}\b/gi;
+const PHONE = /(?<![\w+])(?:\+\d{1,3}[\s.-]?)?(?:\(\d{1,4}\)[\s.-]?)?\d{2,6}(?:[\s.-]\d{2,6}){1,4}(?!\w)/g;
+const ADDRESS = /\b\d{1,5}\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Boulevard|Blvd)\b/g;
+const ID_NUMBER = /\b\d{9,}\b/g;
+
+function personalData(text: string): ExactRisk[] {
+  const found: ExactRisk[] = [];
+  for (const m of text.matchAll(EMAIL)) {
+    if (FREE_MAIL.test(m[0])) found.push({ kind: 'personal_data', where: m[0], detail: 'a personal email' });
+  }
+  const phones = new Set<string>();
+  for (const m of text.matchAll(PHONE)) {
+    const value = m[0].trim();
+    const digits = value.replace(/\D/g, '').length;
+    // A phone number has a + , brackets or a space between its groups; dates and versions don't count.
+    if (digits < 7 || digits > 15 || !/[+(\s]/.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value)) continue;
+    phones.add(value);
+    found.push({ kind: 'personal_data', where: value, detail: 'a private phone number' });
+  }
+  for (const m of text.matchAll(ADDRESS)) found.push({ kind: 'personal_data', where: m[0], detail: 'a home address' });
+  for (const m of text.matchAll(ID_NUMBER)) {
+    if ([...phones].some((p) => p.replace(/\D/g, '').includes(m[0]))) continue;
+    found.push({ kind: 'personal_data', where: m[0], detail: 'an ID number' });
+  }
+  return found;
+}
+
+/** The facts in a text. `links: 'sent'` also lists links not on your trusted list; `personalData` adds private details. */
+export function findExactRisks(text: string, opts: { trustedDomains?: string[]; links?: 'all' | 'sent'; personalData?: boolean } = {}): ExactRisk[] {
   const source = String(text || '');
   const risks: ExactRisk[] = [];
   for (const h of keyHits(source)) risks.push({ kind: 'key', where: h.hidden, detail: 'a key or password written in the text' });
@@ -128,6 +158,7 @@ export function findExactRisks(text: string, opts: { trustedDomains?: string[]; 
       risks.push({ kind: 'code_command', where: line, detail: 'a command that runs code' });
     }
   }
+  if (opts.personalData) risks.push(...personalData(source));
   return risks;
 }
 
@@ -138,6 +169,7 @@ const LABELS: Record<ExactRiskKind, string> = {
   untrusted_link: "A link goes to a site you haven't marked trusted",
   deleting_command: 'A command deletes things',
   code_command: 'A command runs code',
+  personal_data: 'It holds private details about a person',
 };
 
 /** One fact in plain words: "<label>: <where> (<detail>)". */

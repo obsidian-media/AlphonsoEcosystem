@@ -7,10 +7,11 @@ import { extractJsonObject } from '../../lib/jsonUtils.js';
 import { resolveSecureSessionId } from '../connectors/hermesAgentConnector';
 import { skillSection, type StepInput } from '../jose/stepInput';
 import { AGENT_PERMISSION_TABLE } from '../jose/agentPermissionTable';
-import { addDecision, forgetDecision, getDecision, ECHO_LIMITS, type Decision, type DecisionKind, type Surface } from './decisions';
+import { addDecision, forgetDecision, getDecision, listDecisions, ECHO_LIMITS, type Decision, type DecisionKind, type Surface } from './decisions';
 import { searchDecisions, indexDecision, decisionLine } from './recall';
 
 export const NOTHING_TO_REMEMBER = 'Nothing to remember here.';
+export const NO_DECISIONS_THIS_WEEK = 'No decisions this week.';
 export const COULDNT_SAVE = (reason: string) => `Echo couldn't save what was decided: ${reason}`;
 export const NOTHING_SAVED_ABOUT = (what: string) => `I have nothing saved about "${what}".`;
 export const WHICH_TO_FORGET = 'Which one should I forget?';
@@ -255,11 +256,33 @@ async function forget(assignment: any, input: StepInput | null, ctx: EchoCtx): P
   return result(WHICH_TO_FORGET, 'setup_required', actionType, [], { decisionChoices: choices });
 }
 
+const WEEK_MS = 7 * 24 * 3600 * 1000;
+
+/** This week's decisions by topic (agent roles Part C2): the saved records as they are, no model call. */
+function digest(assignment: any): EchoStepResult {
+  const actionType = String(assignment?.actionType || 'memory_digest');
+  const since = Date.now() - WEEK_MS;
+  const week = listDecisions({ status: 'active' }).filter((d) => d.atMs >= since).sort((a, b) => a.atMs - b.atMs);
+  if (!week.length) return result(NO_DECISIONS_THIS_WEEK, 'completed', actionType);
+  const groups = new Map<string, Decision[]>();
+  for (const d of week) {
+    const topic = d.topics[0] || 'Other';
+    groups.set(topic, [...(groups.get(topic) || []), d]);
+  }
+  const day = (ms: number) => new Date(ms).toLocaleDateString('en-US', { weekday: 'short' });
+  const lines = [`This week's decisions (${week.length}):`];
+  for (const [topic, list] of groups) {
+    lines.push(topic, ...list.map((d) => `- ${d.text} (${d.source.surface}, ${day(d.atMs)})`));
+  }
+  return result(lines.join('\n'), 'completed', actionType, week.map((d) => d.id));
+}
+
 /** Echo's step: recall, forget, or save, by its task type. */
 export async function runEchoStep(assignment: any, input: StepInput | null, ctx: EchoCtx): Promise<EchoStepResult> {
   const type = String(assignment?.actionType || '');
   if (type === 'memory_recall') return recall(assignment, input, ctx);
   if (type === 'memory_forget') return forget(assignment, input, ctx);
+  if (type === 'memory_digest') return digest(assignment);
   if (type === 'memory_cleanup' || type === 'knowledge_curation') {
     const { proposeCleanup } = await import('./cleanup');
     return proposeCleanup(assignment, ctx);

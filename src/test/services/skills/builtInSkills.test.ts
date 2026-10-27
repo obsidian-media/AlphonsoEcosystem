@@ -4,7 +4,7 @@ import { listSkills, refusedSkills, skillsForTask, contentAsk } from '../../../s
 import { JOSE_TEMPLATES } from '../../../services/jose/joseTemplates';
 import { STEP_AGENTS } from '../../../services/contentFactory/contentStepAgents';
 import { WORKFLOW_STEP_TASK } from '../../../services/workflowRegistryService';
-import { ACTION_EFFECTS } from '../../../services/jose/joseEffects';
+import { ACTION_EFFECTS, inferEffects } from '../../../services/jose/joseEffects';
 import { ownerOf } from '../../../services/jose/agentPermissionTable';
 import asks from './fixtures/contentAsks.json';
 
@@ -38,6 +38,43 @@ describe('built-in skills', () => {
       const names = listSkills(agent).map((s) => s.name);
       expect(new Set(names).size, agent).toBe(names.length);
     }
+  });
+
+  // Agent roles Part C2: 18 more skills, and the kinds of work they need.
+  it('has the 18 skills Part C2 adds, 60 in all', () => {
+    expect(listSkills().length).toBe(60);
+  });
+
+  it.each([
+    ['alphonso', 'local_operation', 'Fix a bug from an error'],
+    ['alphonso', 'local_operation', 'Write tests'],
+    ['alphonso', 'local_operation', 'API and tool integration'],
+    ['alphonso', 'local_operation', 'Plan and build a feature'],
+    ['alphonso', 'assistant_explain_code', 'Explain code'],
+    ['alphonso', 'assistant_summarize', 'Summarise a document'],
+    ['hector', 'research_compare', 'Compare products and prices'],
+    ['hector', 'research_people', 'Find companies or people'],
+    ['nova', 'analysis_pros_cons', 'Pros and cons'],
+    ['nova', 'analysis_pricing', 'Pricing'],
+    ['maria', 'audit_code', 'Review code'],
+    ['maria', 'audit_brand_voice', 'Brand voice check'],
+    ['sentinel', 'security_dependencies', 'Dependency check'],
+    ['sentinel', 'security_personal_data', 'Personal-data check'],
+    ['marcus', 'distribution_newsletter', 'Email newsletter'],
+    ['marcus', 'distribution_execution', 'Follow-up reminder'],
+    ['echo', 'memory_digest', 'Weekly decisions digest'],
+    ['echo', 'memory_recall', 'Project memory summary'],
+  ])('%s does "%s" work with the skill "%s"', (agent, task, name) => {
+    expect(ownerOf(task)).toBe(agent);
+    expect(skillsForTask(agent, task).map((s) => s.name)).toContain(name);
+  });
+
+  it('the new kinds of work only read, except the newsletter, which sends', () => {
+    for (const t of ['assistant_explain_code', 'assistant_summarize', 'research_compare', 'research_people', 'analysis_pros_cons',
+      'analysis_pricing', 'audit_code', 'audit_brand_voice', 'security_dependencies', 'security_personal_data', 'memory_digest']) {
+      expect(inferEffects(t), t).toEqual(['read']);
+    }
+    expect(inferEffects('distribution_newsletter')).toEqual(['publish_or_send']);
   });
 
   it("each content action's skill body is its ask, word for word", () => {

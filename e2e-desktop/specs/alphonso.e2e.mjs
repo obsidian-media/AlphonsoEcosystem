@@ -247,4 +247,36 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     expect(findFile(BLOG, 'README.md') || findFile(BLOG, 'README')).toBeTruthy();
     expect(findFile(SHOP, 'README.md')).toBeNull();
   }).timeout(3200000);
+
+  // Agent roles Part C2: you can edit his change before approving it; your edit is what is written.
+  it('an edited preview is what gets written', async () => {
+    const { request } = await ask('/jose In shop, add a file notes.txt that says hello.');
+    const step = codeStep(request);
+    console.log('ALPHONSO-E2E edit', JSON.stringify({ steps: steps(request), files: step?.codePreview?.files?.map((f) => [f.path, f.status]) }));
+    expect(step?.status).toBe('waiting_approval');
+    const file = step.codePreview.files[0];
+    await openBoard();
+    await (await $(`[data-testid="alphonso-edit-${file.path}"]`)).click();
+    const box = await $(`//textarea[@aria-label="Edit ${file.path}"]`);
+    await box.waitForDisplayed({ timeout: 30000 });
+    await box.setValue('Edited by the test.');
+    await (await $('[data-testid="alphonso-edit-save"]')).click();
+    await browser.waitUntil(async () => /Edited by you/.test(await (await $('[data-testid="alphonso-code-preview"]')).getText()), { timeout: 30000 });
+    await (await $('//main//button[starts-with(normalize-space(.), "Approve and carry on")]')).click();
+    const done = (await settle(request.id, 'edit')).request;
+    const fixed = done.steps.some((x) => x.revises === step.stepId);
+    if (!fixed) expect(fs.readFileSync(path.join(SHOP, file.path), 'utf8')).toBe('Edited by the test.');
+  }).timeout(3200000);
+
+  // Agent roles Part C2: naming two projects gives one step per project.
+  it('naming shop and blog gives a code step in each', async () => {
+    const { request } = await ask('/jose Add a file hello.txt that says hi in shop and in blog.');
+    const code = request.steps.filter((s) => s.agent === 'alphonso' && !String(s.actionType || '').startsWith('assistant_'));
+    console.log('ALPHONSO-E2E two', JSON.stringify({ steps: steps(request), projects: code.map((s) => s.project) }));
+    expect(code.map((s) => s.project).sort()).toEqual(['blog', 'shop']);
+    // Nothing is approved: the request is rejected, so its locks are let go.
+    await openBoard();
+    const reject = await $('//main//button[normalize-space(.)="Reject"]');
+    if (await reject.isExisting()) await reject.click();
+  }).timeout(3200000);
 });

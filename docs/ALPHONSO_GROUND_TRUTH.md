@@ -2440,6 +2440,19 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.49 Agent roles Part C2: more skills and better agents (2026-10-27)
+
+The second half of Part C (plan `docs/superpowers/plans/2026-10-27-agent-roles-part-c2.md`).
+- **Skills**: 18 new built-in skills (60 in all) with their task types in `taskTypeMeanings.ts` and `ACTION_EFFECTS` (all read-only except `distribution_newsletter`, a send), and the `read_brand` tool. Reading skills get a folder from `readingFolder()`; without one they ask to name a project.
+- **Sentinel**: `personal_data` facts, checked after every Hector `research_people` step (`sentinel-people-<step>`).
+- **Marcus**: timed sends (`src/services/marcus/sendTime.ts`, `scheduleApprovedSend()`), newsletters only through n8n or a Composio mail app; **Echo**: `memory_digest` without a model call.
+- **Alphonso**: one code step per named project (`splitProjects.ts`), editing a waiting change (`editChange.ts`).
+- **Hector**: PDF text through `pdf-extract` 0.12.1 (its `ttf-parser` is marked unmaintained, RUSTSEC-2026-0192, and is on `.cargo/audit.toml` with the reason, owner approved; pdf-extract 0.9 was rejected for lopdf's RUSTSEC-2026-0187), the two-word topic filter, his skill in the write-up, the PowerPoint export of newer reports.
+- **Nova**: `findOptions()`; a request with options in plain sentences can take one extra short model call.
+- **Echo by meaning**: `src/services/echo/meaning.ts` and the backend `ollama_embed`.
+- **Leftovers**: Chat's setup notice, Chat's draft (`src/lib/chatDraft.ts`), Kokoro's `missing` flag.
+- **Checks**: the desktop check count is now counted (`countDesktopChecks` in `scripts/shared/counters.mjs`, checked in two places in CLAUDE.md); the hand-kept 136 was really 123 before this phase's new checks. `alphonso.e2e.mjs` (an edited preview; two projects), `marcus.e2e.mjs` (a timed n8n send) and `echo.e2e.mjs` (meaning search) gained checks. They could not run on this machine: Windows' Code Integrity policy refuses to start the rebuilt app, so CI's desktop job is their first run, and that job skips the specs that need a model. The two content specs that time out only in CI now print `CONTENT-DIAG` with the request's steps on a timeout.
+
 ## 11.48 Agent roles Part C1: Projects, Teams and skill results (2026-10-27)
 
 The first half of Part C (spec `docs/superpowers/specs/2026-10-26-agent-roles-part-c-design.md`, plan `docs/superpowers/plans/2026-10-26-agent-roles-part-c1.md`). The inspection found Work → Projects ran a simulation (`runProjectWorkshop()`: fixed outputs, no model, the owner's own example project), Agent Pairing saved pairs nothing read, no screen listed saved templates, and skill use wasn't recorded.

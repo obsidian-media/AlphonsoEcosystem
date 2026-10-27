@@ -160,6 +160,24 @@ export async function keepOutputFolder(folder) {
   await browser.waitUntil(async () => (await saved()) === folder, { timeout: 30000, timeoutMsg: 'the output folder was not saved' });
 }
 
+/** Prints what a content project's request was doing (agent roles Part C2): the steps with their
+ *  status and error, the posts, and the step's last progress lines. For timeouts seen only in CI. */
+export async function printContentDiag(label, projectId) {
+  const seen = await browser.execute((id) => {
+    const projects = JSON.parse(localStorage.getItem('alphonso_content_projects_v1') || '[]');
+    const project = projects.find((p) => p.id === id) || null;
+    const requests = JSON.parse(localStorage.getItem('alphonso_jose_requests_v1') || '[]');
+    const request = project ? requests.find((r) => r.id === project.joseRequestId) : null;
+    const steps = project ? Object.fromEntries(Object.entries(project.steps || {}).map(([k, v]) => [k, { status: v.status, error: v.error, progress: (v.progress || []).slice(-4) }])) : null;
+    return JSON.stringify({
+      posts: project ? (project.posts || []).map((p) => ({ platform: p.platform, piece: p.piece, status: p.status, reason: p.reason })) : null,
+      factorySteps: steps,
+      request: request ? { status: request.status, steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status, s.error]), log: (request.changeLog || []).slice(-6) } : null,
+    });
+  }, projectId);
+  console.log(`CONTENT-DIAG ${label} ${seen.slice(0, 4000)}`);
+}
+
 /** Open a sidebar page by its Space id and nav item id (see Sidebar.tsx). */
 export async function openPage(space, item) {
   await $(`[data-testid="space-pill-${space}"]`).click();

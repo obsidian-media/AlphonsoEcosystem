@@ -569,6 +569,86 @@ pub(crate) async fn ollama_chat(
   Ok(ollama_post(base, model, "/api/chat", body).await)
 }
 
+/// One embedding request's limits (agent roles Part C2): Echo sends decisions in small batches.
+pub(crate) const EMBED_MAX_INPUTS: usize = 64;
+pub(crate) const EMBED_MAX_CHARS: usize = 8_000;
+
+/// Why a batch of texts can't be embedded, or `None`.
+pub(crate) fn embed_inputs_problem(inputs: &[String]) -> Option<String> {
+  if inputs.is_empty() {
+    return Some("Nothing to embed.".to_string());
+  }
+  if inputs.len() > EMBED_MAX_INPUTS {
+    return Some(format!("At most {EMBED_MAX_INPUTS} texts at a time."));
+  }
+  if inputs.iter().any(|t| t.chars().count() > EMBED_MAX_CHARS) {
+    return Some(format!(
+      "Each text may be at most {EMBED_MAX_CHARS} characters."
+    ));
+  }
+  None
+}
+
+/// Ollama's `/api/embed` answer: one vector per text, or its own error message.
+pub(crate) fn parse_embed_response(body: &Value) -> Result<Vec<Vec<f32>>, String> {
+  if let Some(error) = body.get("error").and_then(Value::as_str) {
+    return Err(error.to_string());
+  }
+  let rows = body
+    .get("embeddings")
+    .and_then(Value::as_array)
+    .ok_or_else(|| "Ollama gave no embeddings.".to_string())?;
+  rows
+    .iter()
+    .map(|row| {
+      row
+        .as_array()
+        .ok_or_else(|| "Ollama gave an embedding that isn't a list.".to_string())?
+        .iter()
+        .map(|v| {
+          v.as_f64()
+            .map(|f| f as f32)
+            .ok_or_else(|| "Ollama gave an embedding with a value that isn't a number.".to_string())
+        })
+        .collect()
+    })
+    .collect()
+}
+
+/// Turns texts into vectors with a local embedding model, so Echo can match decisions by meaning
+/// (agent roles Part C2). From the backend, since the window is refused by an Ollama the user started.
+#[tauri::command]
+pub(crate) async fn ollama_embed(
+  endpoint: Option<String>,
+  model: String,
+  inputs: Vec<String>,
+) -> Result<Vec<Vec<f32>>, String> {
+  let model = model.trim().to_string();
+  if model.is_empty() {
+    return Err("Name the embedding model.".to_string());
+  }
+  if let Some(problem) = embed_inputs_problem(&inputs) {
+    return Err(problem);
+  }
+  let base = ollama_base(endpoint);
+  let response = reqwest::Client::new()
+    .post(format!("{base}/api/embed"))
+    .json(&serde_json::json!({ "model": model, "input": inputs }))
+    .timeout(Duration::from_secs(30))
+    .send()
+    .await
+    .map_err(|error| format!("Ollama didn't answer: {error}"))?;
+  let body: Value = response
+    .json()
+    .await
+    .map_err(|error| format!("Ollama's answer couldn't be read: {error}"))?;
+  let rows = parse_embed_response(&body)?;
+  if rows.len() != inputs.len() {
+    return Err("Ollama gave a different number of embeddings than texts.".to_string());
+  }
+  Ok(rows)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -721,5 +801,31 @@ mod tests {
       serde_json::to_value(&message).unwrap(),
       serde_json::json!({ "role": "user", "content": "hey" })
     );
+  }
+
+  // Agent roles Part C2: Echo's meaning search.
+  #[test]
+  fn parse_embed_response_reads_ollamas_vectors_and_errors() {
+    let body =
+      serde_json::json!({ "model": "all-minilm", "embeddings": [[0.1, -0.2], [0.3, 0.4]] });
+    assert_eq!(
+      parse_embed_response(&body).unwrap(),
+      vec![vec![0.1_f32, -0.2], vec![0.3, 0.4]]
+    );
+    let refused = serde_json::json!({ "error": "this model does not support embeddings" });
+    assert_eq!(
+      parse_embed_response(&refused).unwrap_err(),
+      "this model does not support embeddings"
+    );
+    assert!(parse_embed_response(&serde_json::json!({})).is_err());
+  }
+
+  #[test]
+  fn embed_inputs_problem_keeps_requests_small() {
+    assert!(embed_inputs_problem(&["one".to_string()]).is_none());
+    assert!(embed_inputs_problem(&[]).is_some());
+    let many: Vec<String> = (0..EMBED_MAX_INPUTS + 1).map(|i| i.to_string()).collect();
+    assert!(embed_inputs_problem(&many).is_some());
+    assert!(embed_inputs_problem(&["x".repeat(EMBED_MAX_CHARS + 1)]).is_some());
   }
 }

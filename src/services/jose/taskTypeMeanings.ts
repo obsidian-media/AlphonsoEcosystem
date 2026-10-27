@@ -10,6 +10,8 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   assistant_answer: 'answer a plain question in words; no code',
   assistant_write: 'everyday writing (an email, a note, a letter, a paragraph, a summary); no code',
   local_operation: 'write or change code in a project, run its commands',
+  assistant_explain_code: 'explain how code in one of your projects works, in plain words; changes nothing',
+  assistant_summarize: 'summarise a file in one of your projects: main points, decisions, open questions',
   verification_workflow_step: 'check that code works: build, tests, lint',
   // Miya
   creative_package: 'a quick creative idea: title, hook, short script, scenes, picture prompts',
@@ -37,6 +39,8 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   research_market: 'find who competes and what they make, with sources',
   research_virality: 'find posts that do well for a content idea',
   research_broll: 'find stock video clips for scenes',
+  research_compare: 'compare products or services side by side: prices and features, each with its source and date',
+  research_people: "find companies or people's public work details (name, role, company, public work page); never private contact details",
   research_workflow_step: 'a research step in a workflow',
   // Nova
   analysis_findings: 'judge what research found: what matters, in what order',
@@ -45,6 +49,8 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   analysis_content_review: "judge a video's hook and script",
   analysis_performance: "read how a post did against the brand's usual numbers",
   analysis_ideas: 'suggest follow-up videos from a post that did well',
+  analysis_pros_cons: 'the gains, costs and risks of one decision, and what would change the answer',
+  analysis_pricing: "what to charge, from what rivals charge and the value, using Hector's findings",
   analysis_workflow_step: 'an analysis step in a workflow',
   strategy_timing: 'when to post on each platform',
   // Maria
@@ -52,6 +58,8 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   audit_claims: 'check facts and numbers in work against its sources',
   audit_content_quality: "score a video's pieces against the brand's reference posts",
   audit_workflow_step: 'a review step in a workflow',
+  audit_code: "review Alphonso's changed code; findings with file and line",
+  audit_brand_voice: "check writing against a brand's tone, audience, rules and kept lessons",
   governance_audit: 'check an action for policy, approval and risk',
   risk_review: 'judge the risk of an action',
   // Sentinel
@@ -60,6 +68,8 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   security_content_check: "check a video's text and links before posting",
   security_workflow_step: 'a security step in a workflow',
   permission_audit: 'check what an agent, tool or connector is allowed to do',
+  security_dependencies: "check a project's dependency files for unknown, unmaintained or risky packages",
+  security_personal_data: 'check text for private contact details, home addresses, phone numbers or ID numbers before it is sent or saved',
   // Marcus
   distribution_execution: 'send what an earlier step wrote; Marcus picks where',
   distribution_release: 'make a draft GitHub release with notes an earlier step wrote',
@@ -68,6 +78,7 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   distribution_readiness: 'check that something is ready to send; sends nothing',
   distribution_schedule_posts: 'publish or schedule approved posts',
   outreach_call: 'place an approved phone call',
+  distribution_newsletter: 'send an email newsletter through an n8n workflow or a mail app in Composio',
   // Echo
   memory_preservation: 'save what was decided, or what you asked to remember',
   memory_workflow_step: 'a memory step in a workflow',
@@ -75,6 +86,7 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   memory_forget: 'forget a saved decision you name',
   memory_cleanup: 'propose merges and replacements in memory; nothing changes until you apply them',
   knowledge_curation: 'propose merges and replacements in memory; nothing changes until you apply them',
+  memory_digest: "this week's decisions by topic, with where each was made",
 };
 
 /** The task types an agent owns, with their meanings. */

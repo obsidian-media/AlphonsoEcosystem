@@ -10,11 +10,11 @@ const ACTING = ['run', 'change_project', 'publish_or_send'];
 const acts = (step: PlanStep) => (step.effects || []).some((e) => ACTING.includes(e));
 const isSentinel = (step: PlanStep | undefined) => step?.agent === 'sentinel';
 
-function check(stepId: string, reviewOf: string | null, instruction: string, payload?: Record<string, unknown>): PlanStep {
+function check(stepId: string, reviewOf: string | null, instruction: string, payload?: Record<string, unknown>, actionType = 'security_review'): PlanStep {
   return {
     stepId,
     agent: 'sentinel',
-    actionType: 'security_review',
+    actionType,
     effects: ['read'],
     needs: reviewOf ? [reviewOf] : [],
     ...(reviewOf ? { reviewOf } : {}),
@@ -35,6 +35,17 @@ export function addSecurityChecks(input: PlanStep[], request: string): { steps: 
   };
   const needsSentinel = (step: PlanStep) => step.needs.some((id) => isSentinel(byId(id)));
   const original = [...steps];
+
+  // A people search (agent roles Part C2): checked for private details before anything uses it,
+  // first, so the research check below doesn't check the same work again.
+  for (const step of original) {
+    if (step.agent !== 'hector' || step.actionType !== 'research_people') continue;
+    if (steps.some((s) => isSentinel(s) && s.reviewOf === step.stepId)) continue;
+    const id = `sentinel-people-${step.stepId}`;
+    if (add(check(id, step.stepId, 'Check the list for private details about people before it is used.', undefined, 'security_personal_data'))) {
+      for (const later of steps) if (later.stepId !== id && later.needs.includes(step.stepId)) later.needs.push(id);
+    }
+  }
 
   for (const step of original) {
     // A Marcus send names the step it sends from (agent phase 5), so a text too long for the

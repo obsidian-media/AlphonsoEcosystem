@@ -17,6 +17,8 @@ export interface WorkPlace {
 
 export const NEEDS_OUTPUT_FOLDER = 'Set the output folder in Settings → General so Alphonso has somewhere to put new code.';
 export const NO_PROJECT = "Add a project in Settings → Agents → Alphonso's projects.";
+/** A reading skill with no folder to read from (agent roles Part C2). */
+export const NAME_A_PROJECT = "Name one of your projects in Settings → Agents → Alphonso's projects, or the file's project in the request.";
 
 const PROJECTS_KEY = 'alphonso_code_projects_v1';
 
@@ -64,6 +66,25 @@ export function projectNamedIn(request: string, list: AlphonsoProject[] = listPr
   const text = String(request || '');
   const hits = list.filter((p) => new RegExp(`(^|[^\\w-])${escape(p.name)}(?=$|[^\\w-])`, 'i').test(text));
   return hits.sort((a, b) => b.name.length - a.name.length)[0] || null;
+}
+
+/** Every project a request names (agent roles Part C2), in the order they appear; a short name
+ *  inside a longer one that was named ("shop" in "shop-admin") is not counted again. */
+export function projectsNamedIn(request: string, list: AlphonsoProject[] = listProjects()): AlphonsoProject[] {
+  const text = String(request || '');
+  const taken: [number, number][] = [];
+  const found: { project: AlphonsoProject; at: number }[] = [];
+  for (const project of [...list].sort((a, b) => b.name.length - a.name.length)) {
+    const re = new RegExp(`(^|[^\\w-])(${escape(project.name)})(?=$|[^\\w-])`, 'gi');
+    for (const m of text.matchAll(re)) {
+      const start = (m.index || 0) + m[1].length;
+      const end = start + m[2].length;
+      if (taken.some(([a, b]) => start < b && end > a)) continue;
+      taken.push([start, end]);
+      if (!found.some((f) => f.project === project)) found.push({ project, at: start });
+    }
+  }
+  return found.sort((a, b) => a.at - b.at).map((f) => f.project);
 }
 
 /** A new scratch folder: `<output folder>/<agent name>/<slug>/`, `-2` … when taken. */
