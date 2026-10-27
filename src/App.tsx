@@ -101,7 +101,7 @@ const CompanionMode = lazy(() => import('./components/CompanionMode').then((mod)
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
 const BoardroomView = lazy(() => import('./components/BoardroomChatView').then((mod) => ({ default: mod.BoardroomChatView })));
 
-function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprovalRequest: () => void }) {
+function MissionRoomBoardroomTabs({ onCreateApprovalRequest, onOpenJoseBoard }: { onCreateApprovalRequest: () => void; onOpenJoseBoard?: (requestId: string) => void }) {
   const [subTab, setSubTab] = React.useState<'mission' | 'boardroom'>('mission');
   const approval = useRequestApprovalBridge();
   return (
@@ -123,7 +123,7 @@ function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprova
         {subTab === 'mission' ? (
           <MissionRoom onCreateApprovalRequest={onCreateApprovalRequest} />
         ) : (
-          <Suspense fallback={null}><BoardroomView requestApproval={approval?.requestApproval} /></Suspense>
+          <Suspense fallback={null}><BoardroomView requestApproval={approval?.requestApproval} onOpenJoseBoard={onOpenJoseBoard} /></Suspense>
         )}
       </div>
     </div>
@@ -896,7 +896,7 @@ function AppShell() {
                   <MissionControlHome settings={settings} ollamaStatus={ollamaStatus} operatorMode={operatorMode} coachMode={coachMode} coachIntervention={coachIntervention} verificationLogs={verificationLogs} memoryItems={memoryItems} updateCheckState={updateCheckState} onNavigate={switchTab} />
                 )}
                 {activeTab === 'mission_room' && (
-                  <MissionRoomBoardroomTabs onCreateApprovalRequest={() => setApprovalRequiredNotice(true)} />
+                  <MissionRoomBoardroomTabs onCreateApprovalRequest={() => setApprovalRequiredNotice(true)} onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} />
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState activeTab="Chat" />}>
