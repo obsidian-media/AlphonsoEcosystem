@@ -10,8 +10,8 @@ vi.mock('../../../services/chromaDbService', () => ({
 }));
 
 import { addDecision, forgetDecision } from '../../../services/echo/decisions';
-import { searchDecisions, decisionsFor, decisionsText, indexDecision } from '../../../services/echo/recall';
-import { addMemoryToChroma } from '../../../services/chromaDbService';
+import { searchDecisions, decisionsFor, decisionsText, indexDecision, resetChromaCheckForTests } from '../../../services/echo/recall';
+import { addMemoryToChroma, isChromaHealthy } from '../../../services/chromaDbService';
 
 const add = (text: string, extra: Record<string, unknown> = {}) => addDecision({
   kind: 'decision', text, topics: [], source: { surface: 'chat', by: 'you' }, ...extra,
@@ -21,6 +21,35 @@ beforeEach(() => {
   localStorage.clear();
   chroma.healthy = false;
   chroma.results = [];
+  resetChromaCheckForTests();
+});
+
+// Found in CI: each search waited up to 1.5 s for ChromaDB's heartbeat, and a request searches many times.
+describe('the ChromaDB check', () => {
+  it('is asked once a minute, not on every search', async () => {
+    add('The launch is on Friday.', { topics: ['launch'] });
+    vi.mocked(isChromaHealthy).mockClear();
+    await searchDecisions('launch');
+    await searchDecisions('launch date');
+    await decisionsFor('the launch', {});
+    expect(isChromaHealthy).toHaveBeenCalledTimes(1);
+  });
+
+
+  // Found in the Playwright check: the first check held a request back 1.5 s.
+  it("the first search doesn't wait for the check; ChromaDB joins once it's known to run", async () => {
+    const d = add('The launch is on Friday.', { topics: ['launch'] });
+    chroma.healthy = true;
+    chroma.results = [{ id: d.id, score: 0.9, metadata: {} }];
+    vi.mocked(isChromaHealthy).mockImplementationOnce(() => new Promise((r) => setTimeout(() => r(true), 50)));
+    const first = await Promise.race([searchDecisions('launch'), new Promise((r) => setTimeout(() => r('waited'), 20))]);
+    expect(first).not.toBe('waited');
+    await new Promise((r) => setTimeout(r, 80));
+    const { semanticSearchMemory } = await import('../../../services/chromaDbService');
+    vi.mocked(semanticSearchMemory).mockClear();
+    await searchDecisions('launch');
+    expect(semanticSearchMemory).toHaveBeenCalled();
+  });
 });
 
 describe('searchDecisions', () => {
@@ -40,8 +69,12 @@ describe('searchDecisions', () => {
     const d = add('Prices are shown with tax included.', { topics: ['pricing'] });
     chroma.healthy = true;
     chroma.results = [{ id: d.id, score: 0.2, metadata: {} }, { id: 'not-a-decision', score: 0.1, metadata: {} }];
+    const known = async () => { await searchDecisions('warm up'); await new Promise((r) => setTimeout(r, 0)); };
+    await known();
     expect((await searchDecisions('what customers pay')).map((x) => x.id)).toEqual([d.id]);
     chroma.healthy = false;
+    resetChromaCheckForTests();
+    await known();
     expect(await searchDecisions('what customers pay')).toEqual([]);
   });
 

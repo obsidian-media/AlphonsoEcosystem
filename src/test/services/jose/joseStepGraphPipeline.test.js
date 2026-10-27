@@ -556,7 +556,8 @@ describe('Jose runs plans as step graphs', () => {
     const request = getJoseRequest(`jose-request-${result.commandId}`);
     expect(request.status).toBe('done');
     // Agent phase 7: Echo notes what he remembered, that nothing was new, or why he couldn't.
-    expect((request.changeLog || []).map((c) => c.text).some((t) => /^Echo (remembered|found nothing new|couldn't save)/.test(t))).toBe(true);
+    // Echo saves in the background, after the result.
+    await vi.waitFor(() => expect((getJoseRequest(request.id).changeLog || []).map((c) => c.text).some((t) => /^Echo (remembered|found nothing new|couldn't save)/.test(t))).toBe(true));
   });
 
   // Phase 4: a step that keeps failing can be tried by a paid model you approve.

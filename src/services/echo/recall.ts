@@ -14,6 +14,20 @@ function stem(word: string): string {
   return word;
 }
 
+/** Whether ChromaDB runs, checked at most once a minute and never waited for: a search uses the
+ *  last answer and starts a new check in the background (each check can wait 1.5 s; found in CI). */
+const CHROMA_CHECK_MS = 60_000;
+let chromaCheck: { atMs: number; running: boolean; pending: boolean } | null = null;
+function chromaRunning(): Promise<boolean> {
+  if (!chromaCheck || (!chromaCheck.pending && Date.now() - chromaCheck.atMs > CHROMA_CHECK_MS)) {
+    const check = { atMs: Date.now(), running: chromaCheck?.running ?? false, pending: true };
+    chromaCheck = check;
+    isChromaHealthy().catch(() => false).then((running) => { check.running = running; check.pending = false; check.atMs = Date.now(); });
+  }
+  return Promise.resolve(chromaCheck.running);
+}
+export function resetChromaCheckForTests(): void { chromaCheck = null; }
+
 /** The words that carry a decision's meaning: numbers and prices always, other words over three letters. */
 export function contentWords(text: string): Set<string> {
   return new Set(String(text || '').toLowerCase().split(/[^a-z0-9$€£]+/)
@@ -59,7 +73,7 @@ export async function searchDecisions(query: string, opts: { limit?: number; sta
     .sort((a, b) => b.s - a.s || b.d.atMs - a.d.atMs)
     .map((x) => x.d);
   try {
-    if (await isChromaHealthy()) {
+    if (await chromaRunning()) {
       const byId = new Map(pool.map((d) => [d.id, d]));
       for (const hit of (await semanticSearchMemory(query, limit)) || []) {
         const d = byId.get(hit.id);

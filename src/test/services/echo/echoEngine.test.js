@@ -56,6 +56,17 @@ describe("Echo's steps in the engine", () => {
     expect(step.decisionChoices).toEqual([{ id: 'd1', text: 'A' }, { id: 'd2', text: 'B' }]);
   });
 
+  // Found in CI: with no model reachable, the request's result waited for Echo's save to time out.
+  it("the request's result doesn't wait for Echo's save", async () => {
+    vi.mocked(saveRequestDecisions).mockImplementationOnce(() => new Promise(() => {}));
+    const result = await Promise.race([
+      run('What did we decide about the launch?', 'memory_recall'),
+      new Promise((resolve) => setTimeout(() => resolve('waited'), 2000)),
+    ]);
+    expect(result).not.toBe('waited');
+    expect(saveRequestDecisions).toHaveBeenCalledTimes(1);
+  });
+
   // Agent phase 7, Task 4: decisions are saved from a failed request and a rejected step too.
   it('a failed request still has its decisions saved', async () => {
     // Every attempt fails (a failed step is retried).

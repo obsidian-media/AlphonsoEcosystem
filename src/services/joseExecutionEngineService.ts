@@ -2173,8 +2173,9 @@ export async function runJoseCommandExecutionPipeline({
     // Echo saves what was decided (phase 4). Never changes the outcome.
     const finished = getJoseRequest(joseRequestId);
     // Once, when the request ends (phase 5; done or failed since agent phase 7), not again after an approval.
+    // In the background: the result never waits for Echo (found in CI: with no model it waited for a timeout).
     if (saveDecisions && finished && (finished.status === 'done' || finished.status === 'failed')) {
-      await saveRequestDecisions(finished, doneStepOutputs(finished), { draftDisabled, endpoint });
+      void saveRequestDecisions(finished, doneStepOutputs(finished), { draftDisabled, endpoint }).catch(() => undefined);
     }
   }
 
