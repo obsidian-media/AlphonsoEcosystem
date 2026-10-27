@@ -19,7 +19,13 @@ export async function saveRequestDecisions(
   if (request.steps.some((step) => step.agent === 'echo' && !NOT_A_SAVE.has(String(step.actionType)))) {
     return { saved: false, note: 'The plan had its own Echo step.' };
   }
-  const stepIds = Object.keys(outputs || {});
+  // Echo's own memory work (recall, forget, cleanup) is not something to save again; a request that
+  // was only that is not saved from (found in the real app: a cleanup then saved new decisions).
+  const echoWork = new Set(request.steps.filter((s) => s.agent === 'echo').map((s) => s.stepId));
+  if (request.steps.every((s) => echoWork.has(s.stepId) || s.agent === 'jose')) {
+    return { saved: false, note: "The request was Echo's own memory work." };
+  }
+  const stepIds = Object.keys(outputs || {}).filter((id) => !echoWork.has(id));
   const agentOf = (stepId: string) => request.steps.find((s) => s.stepId === stepId)?.agent || '';
   const work = stepIds
     .map((id) => `${agentName(agentOf(id))}: ${String(outputs[id]?.summary || '').trim()}`)

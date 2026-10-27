@@ -57,14 +57,27 @@ describe('saveRequestDecisions', () => {
     expect(NOTHING_NEW).toBe('Echo found nothing new to remember.');
   });
 
-  it("does not ask again when the plan had Echo's own save step, but does after a recall step", async () => {
+  it("does not ask again when the plan had Echo's own save step", async () => {
     const withSave = newRequest([...steps, { stepId: 'remember', agent: 'echo', actionType: 'memory_preservation', effects: ['write_own_work'], needs: ['value'] }]);
     expect((await saveRequestDecisions(withSave, {})).saved).toBe(false);
     expect(echo).not.toHaveBeenCalled();
+  });
+
+  // Found in the real app: a cleanup (or a forget) request then saved new decisions from its own result.
+  it("a request that was only Echo's memory work (recall, forget, cleanup) is not saved from", async () => {
+    for (const actionType of ['memory_recall', 'memory_forget', 'memory_cleanup']) {
+      const only = newRequest([{ stepId: 'echo', agent: 'echo', actionType, effects: ['write_own_work'], needs: [] }]);
+      expect(await saveRequestDecisions(only, { echo: { summary: 'Forgot: The launch is on Friday.' } })).toMatchObject({ saved: false });
+    }
+    expect(echo).not.toHaveBeenCalled();
+  });
+
+  it("with other work too, Echo's own memory step is left out of what he saves from", async () => {
     echo.mockResolvedValueOnce({ ok: true, saved: [] } as never);
-    const withRecall = newRequest([{ stepId: 'ask', agent: 'echo', actionType: 'memory_recall', effects: ['read'], needs: [] }]);
-    await saveRequestDecisions(withRecall, {});
-    expect(echo).toHaveBeenCalledTimes(1);
+    const mixed = newRequest([...steps, { stepId: 'ask', agent: 'echo', actionType: 'memory_recall', effects: ['read'], needs: [] }]);
+    await saveRequestDecisions(mixed, { ...outputs, ask: { summary: 'Decided 26 Oct (Chat): the launch is Friday.' } });
+    expect(String(echo.mock.calls[0][0].work)).not.toContain('Decided 26 Oct');
+    expect(String(echo.mock.calls[0][0].work)).toContain('Price it at $29.');
   });
 
   it("notes Echo's failure and leaves the request as it was", async () => {
