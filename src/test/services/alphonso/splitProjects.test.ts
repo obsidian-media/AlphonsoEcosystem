@@ -26,6 +26,19 @@ describe('projectsNamedIn', () => {
 });
 
 describe('splitPerProject', () => {
+  // Final review: a copy's id must not clash with a step already in the plan.
+  it("a copy's id never clashes with another step's, so the plan still passes", () => {
+    saveProjects([shop, blog]);
+    const steps = splitPerProject([
+      s('alphonso', 'alphonso', 'local_operation', ['run']),
+      s('alphonso-2', 'alphonso', 'assistant_write', ['write_own_work'], ['alphonso']),
+    ], 'Update the footer in shop and blog');
+    const ids = steps.map((x) => x.stepId);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(steps.filter((x) => x.project).map((x) => x.project)).toEqual(['shop', 'blog']);
+    expect(checkPlan(steps).problems || []).toEqual([]);
+  });
+
   it('one code step becomes one per project, and what needed it needs them all', () => {
     saveProjects([shop, blog]);
     const steps = splitPerProject([

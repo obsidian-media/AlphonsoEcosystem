@@ -19,9 +19,18 @@ export function splitPerProject(steps: PlanStep[], request: string): PlanStep[] 
   }
   if (code.length !== 1) return steps;
   const original = code[0];
+  // Each copy gets the next id not already in the plan, so two steps never share one.
+  const taken = new Set(steps.map((x) => x.stepId));
+  const freeId = (): string => {
+    let n = 2;
+    while (taken.has(`${original.stepId}-${n}`)) n += 1;
+    const id = `${original.stepId}-${n}`;
+    taken.add(id);
+    return id;
+  };
   const copies = projects.map((project, i) => ({
     ...original,
-    stepId: i === 0 ? original.stepId : `${original.stepId}-${i + 1}`,
+    stepId: i === 0 ? original.stepId : freeId(),
     project: project.name,
     instruction: `In ${project.name}: ${original.instruction || ''}`.trim(),
     needs: [...original.needs],

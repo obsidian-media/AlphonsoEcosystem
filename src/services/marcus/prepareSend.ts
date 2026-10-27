@@ -7,6 +7,7 @@ import { CHANNEL_LIMITS } from './destinations';
 import { hintFromTaskType, pickDestination } from './pickDestination';
 import { NOTHING_TO_SEND, textToSend } from './sendText';
 import { readSendTime } from './sendTime';
+import { withoutQuotedContent } from '../jose/quotedContent';
 import type { Destination, PrepareResult, SendPreview } from './types';
 
 interface SendAssignment {
@@ -53,7 +54,8 @@ export const SEND_TIME_UNCLEAR = 'When should Marcus send it? Ask again with a d
 
 export async function prepareMarcusSend(commandId: string, assignment: SendAssignment, request: { text: string } | null): Promise<PrepareResult> {
   const requestText = String(request?.text || '');
-  const when = readSendTime(requestText, Date.now());
+  // The words being sent (quoted, or after a colon) are the message: a time in them isn't when to send.
+  const when = readSendTime(withoutQuotedContent(requestText), Date.now());
   if (when && 'unclear' in when) return { ok: false, outcome: 'failed', reason: SEND_TIME_UNCLEAR };
   const input = buildStepInput(commandId, assignment as never, requestText);
   const picked = textToSend(assignment, input);

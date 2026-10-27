@@ -41,7 +41,8 @@ export function readSendTime(text: string, nowMs: number): SendTime {
   for (const sentence of String(text || '').split(/[!?\n]+|\.(?!\d)/)) {
     const verb = SEND_WORD.exec(sentence);
     if (!verb) continue;
-    const after = sentence.slice(verb.index + verb[0].length);
+    // What follows a colon is the message ("post to Slack #news: we open at 9"); "9:30" is a time.
+    const after = sentence.slice(verb.index + verb[0].length).split(/:(?!\d)/)[0];
 
     const rel = /\bin\s+(\d+)\s*(minute|min|hour|hr|day)s?\b/i.exec(after);
     if (rel) {

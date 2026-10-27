@@ -58,6 +58,15 @@ describe('prepareMarcusSend', () => {
     }
   });
 
+  // Final review: a time inside the words being sent is part of the message, not when to send it.
+  it('a time in the quoted message, or after the colon, sends now', async () => {
+    for (const text of ['/jose Send “We open at 9 tomorrow” to Slack #news.', '/jose Post this to Slack #news: we open tomorrow at 9.']) {
+      const got: any = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), { text });
+      expect(got.ok).toBe(true);
+      expect(got.preview.sendAtMs).toBeUndefined();
+    }
+  });
+
   it('an unclear time asks again, and nothing is prepared', async () => {
     const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), { text: '/jose post it to Slack #news later' });
     expect(got).toEqual({ ok: false, outcome: 'failed', reason: SEND_TIME_UNCLEAR });
