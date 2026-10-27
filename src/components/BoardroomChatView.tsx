@@ -74,12 +74,14 @@ function MessageBubble({
   message,
   onRetry,
   onAcknowledge,
-  onConfirm
+  onConfirm,
+  onOpenBoard
 }: {
   message: BoardroomThreadMessage;
   onRetry: (message: BoardroomThreadMessage) => void;
   onAcknowledge: (message: BoardroomThreadMessage) => void;
   onConfirm: (message: BoardroomThreadMessage) => void;
+  onOpenBoard?: (requestId: string) => void;
 }) {
   const isEscalation = message.kind === 'escalation';
   const isFailure = message.kind === 'failure';
@@ -119,6 +121,16 @@ function MessageBubble({
           {message.model} · {formatLatency(message.latencyMs || 0)}
         </div>
       )}
+      {message.requestId && onOpenBoard && (
+        <button
+          type="button"
+          data-testid="boardroom-open-board"
+          onClick={() => onOpenBoard(message.requestId!)}
+          className="mt-1.5 rounded-md border border-(--accent-border) px-2 py-0.5 text-[10px] font-semibold text-(--accent) hover:bg-(--accent-dim)"
+        >
+          Open on the board
+        </button>
+      )}
       {isFailure && message.retryContext && (
         <button
           onClick={() => onRetry(message)}
@@ -152,7 +164,7 @@ function MessageBubble({
   );
 }
 
-export function BoardroomChatView({ requestApproval }: { requestApproval?: BoardroomRequestApproval } = {}) {
+export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { requestApproval?: BoardroomRequestApproval; onOpenJoseBoard?: (requestId: string) => void } = {}) {
   const [threads, setThreads] = useState<BoardroomThread[]>(() => {
     migrateLegacySessions();
     return listThreads();
@@ -336,9 +348,9 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
     if (activeThreadId) setMessages(listThreadMessages(activeThreadId));
   }
 
-  function postThreadNote(speaker: string, content: string, kind: BoardroomThreadMessage['kind'] = 'system') {
+  function postThreadNote(speaker: string, content: string, kind: BoardroomThreadMessage['kind'] = 'system', requestId?: string | null) {
     if (!activeThreadId) return;
-    addThreadMessage({ threadId: activeThreadId, speaker, content, kind });
+    addThreadMessage({ threadId: activeThreadId, speaker, content, kind, ...(requestId ? { requestId } : {}) });
   }
 
   async function handleConclude() {
@@ -353,9 +365,9 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
         .slice(0, 6000);
       // Phase 6a: Maria's review is a step in a Jose request (shown on the board).
       const { concludeOnJose } = await import('../services/boardroomJoseService');
-      const { review, waiting } = await concludeOnJose(activeThread.topic, transcript);
+      const { review, waiting, requestId } = await concludeOnJose(activeThread.topic, transcript);
       if (waiting) {
-        postThreadNote('maria', "Maria's review is waiting for your approval. Follow it on the Orchestrator page, Requests tab.");
+        postThreadNote('maria', "Maria's review is waiting for your approval.", 'system', requestId);
         return;
       }
       if (!review?.riskLevel) throw new Error('Maria returned no review');
@@ -407,7 +419,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
       const { distributeOnJose } = await import('../services/boardroomJoseService');
       const result = await distributeOnJose(activeThread.topic, governance.summary, mode, channel);
       if (result.waiting) {
-        postThreadNote('marcus', `Posting to Slack ${channel} is waiting for your approval. Nothing is sent until you approve it. Follow it on the Orchestrator page, Requests tab.`);
+        postThreadNote('marcus', `Posting to Slack ${channel} is waiting for your approval. Nothing is sent until you approve it.`, 'system', result.requestId);
       } else {
         const summary = result.summary || 'Marcus returned no summary.';
         postThreadNote('marcus', mode === 'review' ? `Distribution review only, nothing was sent. ${summary}` : summary);
@@ -431,10 +443,12 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
       postThreadNote(
         'miya',
         result.waiting
-          ? `Miya's creative brief is waiting for your approval. Follow it on the Orchestrator page, Requests tab.`
+          ? "Miya's creative brief is waiting for your approval."
           : result.summary
             ? `Creative brief: ${result.summary}`
-            : `Miya's creative brief did not produce anything. Follow it on the Orchestrator page, Requests tab.`
+            : "Miya's creative brief did not produce anything.",
+        'system',
+        result.requestId
       );
     } catch (error) {
       postThreadNote('jose', `The creative brief request failed: ${error instanceof Error ? error.message : String(error)}`, 'failure');
@@ -613,7 +627,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: Board
             )}
             <div className="flex-1 overflow-y-auto space-y-2 p-4">
               {messages.map((m) => (
-                <MessageBubble key={m.id} message={m} onRetry={handleRetry} onAcknowledge={handleAcknowledge} onConfirm={handleConfirm} />
+                <MessageBubble key={m.id} message={m} onRetry={handleRetry} onAcknowledge={handleAcknowledge} onConfirm={handleConfirm} onOpenBoard={onOpenJoseBoard} />
               ))}
             </div>
             {facilitatorPending && (

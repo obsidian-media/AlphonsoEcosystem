@@ -11,7 +11,7 @@ import { EFFECT_LABELS, type JoseEffect } from './joseEffects';
 import { agentName } from './agentNames';
 import type { JoseRequest } from './joseRequestStore';
 
-export type JoseButtonAction = 'approve' | 'reject' | 'run' | 'cancel' | 'carry_on' | 'pick_project' | 'pick_forget' | 'apply_cleanup' | 'dismiss_cleanup';
+export type JoseButtonAction = 'approve' | 'reject' | 'run' | 'cancel' | 'carry_on' | 'cancel_request' | 'pick_project' | 'pick_forget' | 'apply_cleanup' | 'dismiss_cleanup';
 
 export interface JoseButton {
   text: string;
@@ -173,7 +173,7 @@ export function collectJoseNotifications(requests: JoseRequest[], sent: Set<stri
           key: `${request.id}:setup:${s.stepId}:${request.updatedAtMs}`,
           kind: 'setup_needed',
           text: `${agentName(s.agent)} needs something set up: ${cut(String(s.error || ''), 300)}`,
-          buttons: [[{ text: 'Carry on', action: 'carry_on', requestId: request.id }]],
+          buttons: [[{ text: 'Carry on', action: 'carry_on', requestId: request.id }, { text: 'Cancel', action: 'cancel_request', requestId: request.id }]],
         });
       }
     }
@@ -182,7 +182,7 @@ export function collectJoseNotifications(requests: JoseRequest[], sent: Set<stri
         key: `${request.id}:interrupted:${request.updatedAtMs}`,
         kind: 'interrupted',
         text: `Cut off when the app closed: ${cut(request.text, 200)}`,
-        buttons: [[{ text: 'Carry on', action: 'carry_on', requestId: request.id }]],
+        buttons: [[{ text: 'Carry on', action: 'carry_on', requestId: request.id }, { text: 'Cancel', action: 'cancel_request', requestId: request.id }]],
       });
     }
   }

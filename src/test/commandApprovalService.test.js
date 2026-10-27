@@ -173,3 +173,14 @@ describe("Sentinel's exact checks in the command approval", () => {
     expect(reasons).toContain('Sentinel: runs code: npm run test');
   });
 });
+
+// Jose phase 7: a node script Alphonso wrote runs project code, so it is asked for with the change.
+describe('node <script>', () => {
+  it('is high risk, not read-only, and runs workspace code', async () => {
+    const { assessCommandRisk, isWorkspaceCodeExecuting } = await import('../services/commandApprovalService');
+    const risk = assessCommandRisk('node', ['hello.js']);
+    expect(risk.level).toBe('high');
+    expect(risk.readOnly).toBe(false);
+    expect(isWorkspaceCodeExecuting('node', ['hello.js'])).toBe(true);
+  });
+});

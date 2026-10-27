@@ -5,7 +5,8 @@
 // model; uses qwen2.5:7b when installed (small models write unusable plans more often).
 import { enterShell, invoke, ollamaHasModels, warmSelectedModel, clickSend } from '../helpers.mjs';
 
-const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
+// CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
+const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 // The task-type prefixes each agent owns (src/services/jose/agentPermissionTable.ts).
 const OWNS = {
   jose: ['orchestration_', 'remote_message_route', 'boardroom_', 'cost_policy_'],

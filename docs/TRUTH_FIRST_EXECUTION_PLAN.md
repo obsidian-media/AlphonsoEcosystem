@@ -1785,6 +1785,7 @@ The code is merged and tested (Jose: PRs #336–#342; content factory: PRs #332,
 
 | Date | Change | Evidence |
 |---|---|---|
+| 2026-10-27 | **v2.10.0 released** after a whole documentation pass (Jose phase 7 merged in PR 367). The live check with the owner's keys is deferred to after the release (owner). | `docs/ALPHONSO_GROUND_TRUTH.md` §11.51; `docs/CHANGELOG.md` [2.10.0]; the `v2.10.0` GitHub release. |
 | 2026-10-25 | Added Section K (Jose redesign and Miya's content factory: K0 verified, K1–K10 open live checks). Every document in the repo reconciled with the code the same day (Ground Truth §11.38). | PRs #336–#342, #332, #343–#354; `docs/qa/DESKTOP_QA_COVERAGE.md` live check steps 1–15. |
 | 2026-07-21 | Created as the repository-wide remediation and truth-tracking backlog. | Initial baseline recorded above. |
 | 2026-07-25 | Closed C2 and C3 — per-pack least-privilege enforcement fixed and verified; generated permission matrix + CI-enforced contract regression test added. | See C2/C3 evidence above; `agentContractService.ts`, `docs/AGENT_SKILL_PERMISSION_MATRIX.md`, `scripts/generate-skill-permission-matrix.mjs`, `src/test/services/skillPackContractMatrix.test.ts`. |

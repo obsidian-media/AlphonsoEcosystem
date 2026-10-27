@@ -155,3 +155,27 @@ describe('executeContentStepAssignment', () => {
     expect(prompt).toContain('HECTOR-PATTERN-1');
   });
 });
+
+// Jose phase 7: a content step that asks for help ends its summary with a HELP line Jose reads.
+describe('help from a content step', () => {
+  it('ends the summary with HELP: <what it needs>', async () => {
+    const { findHelpRequest } = await import('../../../services/jose/joseHelp');
+    vi.mocked(generateAgentLlmResponse).mockResolvedValue({ response: JSON.stringify({ hookScore: 8, scriptScore: 7, notes: ['clear'], mustFix: [], help: 'the latest numbers on honeybee losses' }), done: true });
+    const result = await executeContentStepAssignment(assignment());
+    expect(result.resultState).toBe('completed');
+    expect(result.summary.split('\n').at(-1)).toBe('HELP: the latest numbers on honeybee losses');
+    expect(findHelpRequest(result)).toBe('the latest numbers on honeybee losses');
+  });
+});
+
+describe('a content step on its help round', () => {
+  it("gets the helper's answer in its task and isn't offered help again", async () => {
+    vi.mocked(generateAgentLlmResponse).mockResolvedValue({ response: good, done: true });
+    const helped = { ...(assignment() as object), helpRound: 1 } as never;
+    const stepInput = { instruction: '', request: '', needs: [{ stepId: 'review-help', agent: 'hector', text: 'Honeybee losses were 48% last winter [1].', files: [], sources: [], cut: 0, main: '' }], others: [], memory: '', review: null };
+    await executeContentStepAssignment(helped, { stepInput });
+    const prompt = String(vi.mocked(generateAgentLlmResponse).mock.calls[0][1].prompt);
+    expect(prompt).toContain("Help from Hector:\nHoneybee losses were 48% last winter [1].");
+    expect(prompt).not.toContain('add "help"');
+  });
+});

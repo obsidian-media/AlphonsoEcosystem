@@ -726,6 +726,19 @@ describe('BoardroomChatView thread actions', () => {
     expect(screen.getByTestId('boardroom-governance-badge').textContent).not.toContain('rule-based');
   });
 
+  // Jose phase 7: a note about a request opens it on the board.
+  it('a waiting review note opens its request on the board', async () => {
+    const onOpenJoseBoard = vi.fn();
+    await openThread({ onOpenJoseBoard });
+    const { concludeOnJose } = await import('../services/boardroomJoseService');
+    concludeOnJose.mockResolvedValue({ requestId: 'jose-request-c9', review: null, waiting: true });
+    fireEvent.click(screen.getByRole('button', { name: /^conclude$/i }));
+    const open = await screen.findByTestId('boardroom-open-board');
+    fireEvent.click(open);
+    expect(onOpenJoseBoard).toHaveBeenCalledWith('jose-request-c9');
+    expect(screen.queryByText(/Follow it on the Orchestrator page/)).toBeNull();
+  });
+
   it('a failed review says so and leaves the thread open', async () => {
     await openThread();
     const { concludeOnJose } = await import('../services/boardroomJoseService');
@@ -748,7 +761,7 @@ describe('BoardroomChatView thread actions', () => {
     const { concludeOnJose } = await import('../services/boardroomJoseService');
     concludeOnJose.mockResolvedValue({ requestId: 'r', review: null, waiting: true });
     fireEvent.click(screen.getByRole('button', { name: /^conclude$/i }));
-    expect(await screen.findByText(/Maria's review is waiting for your approval\. Follow it on the Orchestrator page, Requests tab\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Maria's review is waiting for your approval\./)).toBeInTheDocument();
     expect(screen.queryByText(/did not complete/)).toBeNull();
   });
 
@@ -812,6 +825,6 @@ describe('BoardroomChatView thread actions', () => {
     const { creativeBriefOnJose } = await import('../services/boardroomJoseService');
     creativeBriefOnJose.mockResolvedValue({ requestId: 'r', waiting: true, summary: '' });
     fireEvent.click(screen.getByRole('button', { name: /creative brief/i }));
-    expect(await screen.findByText(/Miya's creative brief is waiting for your approval\. Follow it on the Orchestrator page, Requests tab\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Miya's creative brief is waiting for your approval\./)).toBeInTheDocument();
   });
 });

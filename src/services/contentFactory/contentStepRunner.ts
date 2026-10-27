@@ -48,6 +48,8 @@ export interface RunStepOptions {
   /** Extra instruction, e.g. the reason the user sent the step back with. */
   extraTask?: string;
   onProgress?: (message: string) => void;
+  /** False for a project a schedule started (Jose phase 7): no paid model is offered. */
+  allowPaidModels?: boolean;
 }
 
 /** Why the project can't run now, or null. */
@@ -82,8 +84,11 @@ export async function runContentProject(projectId: string, options: RunStepOptio
     text: `Content project "${project.name}": ${project.brief.idea}`,
     source: 'content-factory',
     label: PROJECT_LABEL,
+    group: { id: project.id, label: project.name },
     // The factory saves its own lessons; Echo does not save each step.
     saveDecisions: false,
+    // A project a schedule started offers no paid model (Jose phase 7).
+    ...(options.allowPaidModels === false ? { allowPaidModels: false } : {}),
     // The plan knows which engine AI clips will use here, so a Runway run asks for its cost (phase 2b).
     steps: contentProjectPlanSteps(project, brand, 'research', { clipEngine: (await resolveProjectClipEngine(project)).engine }),
   });
@@ -120,6 +125,7 @@ export async function runContentStep(projectId: string, step: StepId, options: R
       text: `Content factory: ${step} for "${started.name}"`,
       source: 'content-factory',
       label: PROJECT_LABEL,
+      group: { id: started.id, label: started.name },
       saveDecisions: false,
       steps,
       onProgress: (event: { stage?: string; agents?: string[] }) => {
@@ -222,6 +228,7 @@ export async function addMiniShort(projectId: string, settings: RunStepOptions['
     const result: any = await submitStepsToJose({
       text: `Content factory: one more Short for "${project.name}"`,
       source: 'content-factory', label: PROJECT_LABEL, saveDecisions: false, steps,
+      group: { id: project.id, label: project.name },
     });
     if (result?.requestId) setProjectRequest(projectId, result.requestId);
     return { ok: result?.ok !== false };

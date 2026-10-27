@@ -269,15 +269,23 @@ jobs:
           retention-days: 14
 
   desktop-e2e:
-    name: Desktop E2E (real Tauri binary)
+    name: Desktop E2E (real Tauri binary)${{ matrix.suite == 'model' && ' with a local model' || '' }}
     needs: [test, rust-quality]
+    # Jose phase 7: the specs that need a model ran nowhere in CI (they skip without Ollama). The
+    # "model" run starts Ollama with one small model and runs just those specs.
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [plain, model]
+    env:
+      CI_TEST_MODEL: qwen2.5:1.5b
     # windows-latest now resolves to the Windows Server 2025 image, whose
     # WebView2/EdgeDriver stack fails every tauri-driver session with
     # "DevToolsActivePort file doesn't exist". Keep real desktop coverage on
     # the known-good Windows 2022 image until the runner-image regression is
     # resolved upstream.
     runs-on: windows-2022
-    timeout-minutes: 35
+    timeout-minutes: ${{ matrix.suite == 'model' && 150 || 35 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -348,7 +356,41 @@ jobs:
         run: npm run tauri build -- --debug --no-bundle
 
       - name: Run desktop E2E suite
+        if: matrix.suite == 'plain'
         run: npm run test:e2e:desktop
+
+      # The model run: Ollama from the pinned runtime, one small model, then only the model specs.
+      # OLLAMA_ORIGINS lets the app window reach it (never tauri://localhost: Ollama panics on it).
+      - name: Start Ollama with the test model
+        if: matrix.suite == 'model'
+        shell: pwsh
+        run: |
+          node scripts/fetch-ollama-runtime.mjs windows-amd64
+          $ollama = Get-ChildItem -Path src-tauri/vendor/ollama -Filter ollama.exe -Recurse -File | Select-Object -First 1
+          if (-not $ollama) { throw 'ollama.exe was not found after fetching the runtime.' }
+          $env:OLLAMA_ORIGINS = 'http://tauri.localhost'
+          Start-Process -FilePath $ollama.FullName -ArgumentList 'serve' -WindowStyle Hidden
+          for ($i = 0; $i -lt 60; $i++) {
+            try { Invoke-RestMethod -Uri http://127.0.0.1:11434/api/tags | Out-Null; break } catch { Start-Sleep -Seconds 2 }
+          }
+          & $ollama.FullName pull $env:CI_TEST_MODEL
+          "ALPHONSO_E2E_MODEL=$env:CI_TEST_MODEL" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Run the model specs
+        if: matrix.suite == 'model'
+        run: >-
+          npm run test:e2e:desktop --
+          --spec e2e-desktop/specs/chat.e2e.mjs
+          --spec e2e-desktop/specs/jose-planner.e2e.mjs
+          --spec e2e-desktop/specs/agent-roles.e2e.mjs
+          --spec e2e-desktop/specs/agent-skills.e2e.mjs
+          --spec e2e-desktop/specs/hector.e2e.mjs
+          --spec e2e-desktop/specs/nova.e2e.mjs
+          --spec e2e-desktop/specs/maria.e2e.mjs
+          --spec e2e-desktop/specs/marcus.e2e.mjs
+          --spec e2e-desktop/specs/echo.e2e.mjs
+          --spec e2e-desktop/specs/alphonso.e2e.mjs
+          --spec e2e-desktop/specs/jose-phase7.e2e.mjs
 
   desktop-macos:
     name: Tauri Desktop Build (macOS)

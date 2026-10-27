@@ -1,5 +1,5 @@
 import React from 'react';
-import { listWorkflows, runWorkflow, executeWorkflowTasks } from '../services/workflowRegistryService';
+import { listWorkflows, runWorkflow } from '../services/workflowRegistryService';
 import { Play, ListChecks, X } from 'lucide-react';
 
 interface WorkflowItem {
@@ -25,10 +25,11 @@ export function WorkflowPanel({ onClose, onRunWorkflow }: Props) {
 
   const handleRun = async (workflow: WorkflowItem) => {
     setActive(workflow.id);
-    setStatus('Running workflow...');
+    setStatus('Running through Jose; it shows on the board.');
     try {
-      const result = await executeWorkflowTasks(workflow.id);
-      setStatus(result.ok ? 'Completed. Check Mission Room for outputs.' : 'Failed. See logs.');
+      // Jose phase 7: the workflow's agents run as a Jose request (approvals by effect, on the board).
+      const result = await runWorkflow(workflow.id, { source: 'workflow_panel' });
+      setStatus(result.ok ? 'Done: see it on the board.' : (result.error || 'It stopped: see it on the board.'));
       onRunWorkflow?.(workflow.id);
     } catch (error) {
       setStatus(`Failed: ${String(error)}`);

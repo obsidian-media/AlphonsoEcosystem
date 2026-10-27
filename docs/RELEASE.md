@@ -20,7 +20,7 @@ The release pipeline is fully automated via `.github/workflows/release.yml`. The
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` GitHub Secret | **Done** |
 | In-app download, install and restart | **Done** — merged in v2.6.0, confirmed against a real release on 2026-09-05 (v2.7.0 → v2.7.1) |
 | Apple Developer ID signing (`APPLE_*` secrets) | **Not set** — the Mac build ships unsigned; see `docs/MACOS_SIGNING.md` |
-| Latest release | v2.9.0 (2026-10-12). 2.10.0 is on `main`, not tagged yet |
+| Latest release | v2.10.0 (2026-10-27) |
 
 ---
 

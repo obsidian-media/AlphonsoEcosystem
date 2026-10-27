@@ -1,6 +1,6 @@
 # Agent phase 2: Nova judges what was found
 
-> **Status (2026-10-25):** built (plan `docs/superpowers/plans/2026-10-25-agent-phase-nova.md`). Design written with the owner after the Nova inspection of 2026-10-25 (code reading plus live runs in the real app).
+> **Status (2026-10-25):** built (plan `docs/superpowers/plans/2026-10-25-agent-phase-nova.md`). Design written with the owner after the Nova inspection of 2026-10-25 (code reading plus live runs in the real app). Merged and released in 2.10.0 (2026-10-27).
 
 ## Why
 

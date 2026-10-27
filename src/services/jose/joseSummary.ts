@@ -47,6 +47,8 @@ export function closingSummary(request: JoseRequest): string {
     if (full) return full;
   }
   const lines = steps.map((step) => stepLine(request, step));
+  // A stopped request says so first (Jose phase 7).
+  if (request.status === 'stopped') lines.unshift('Stopped by you.');
   const waiting = steps.filter((step) => step.status === 'waiting_approval' || step.status === 'setup_needed').length;
   if (waiting && steps.length > 1) lines.push(`Waiting for you: ${waiting}`);
   lines.push('Open on the board.');

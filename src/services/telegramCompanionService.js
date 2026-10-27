@@ -130,6 +130,7 @@ function formatCommandList() {
 /queue — pending approvals
 /approve <id> — approve a packet
 /reject <id> — reject a packet
+/stop — stop the request that is running
 
 🔍 Research & Memory:
 /research <topic> — live web research via Hector
@@ -235,6 +236,19 @@ export async function handleApproveCommand(token, chatId, id) {
 
   approvePacket(packetId, 'telegram_operator');
   return sendTelegramMessageInternal({ token, chatId, text: '✅ Approved. Jose will proceed.' });
+}
+
+/** /stop (Jose phase 7): stops the newest request that is running or waiting its turn. */
+export async function handleStopCommand(token, chatId) {
+  const { stopRequest } = await import('./jose/joseStop');
+  const newest = listJoseRequests().find((r) => r.status === 'running' || r.status === 'queued');
+  if (!newest) {
+    await sendTelegramMessageInternal({ token, chatId, text: 'Nothing is running.' });
+    return;
+  }
+  const result = stopRequest(newest.id);
+  const what = String(newest.text || '').replace(/^\s*\/jose\s+/i, '').slice(0, 60);
+  await sendTelegramMessageInternal({ token, chatId, text: result.ok ? `Stopped: ${what}.` : result.summary });
 }
 
 export async function handleRejectCommand(token, chatId, id) {
@@ -607,6 +621,10 @@ export async function handleJoseButton(token, update) {
     quietly(engine.carryOnRequest(request.id));
     return 'Carrying on.';
   }
+  if (button.action === 'cancel_request') {
+    const result = engine.cancelRequest(request.id);
+    return result.ok ? 'Cancelled.' : 'Already done.';
+  }
   return 'That button has expired.';
 }
 
@@ -728,6 +746,11 @@ export async function processInboundCommands(token, updates) {
 
       if (cmd === 'reject' && argument) {
         await handleRejectCommand(token, chatId, argument);
+        continue;
+      }
+
+      if (cmd === 'stop') {
+        await handleStopCommand(token, chatId);
         continue;
       }
 

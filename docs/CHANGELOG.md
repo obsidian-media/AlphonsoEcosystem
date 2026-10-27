@@ -8,7 +8,17 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ---
 
-## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
+## [2.10.0] — 2026-10-27 (PR 304 and PR 305's deferred-work batches and macOS back in the release; the Jose redesign, PRs 336–342 and 367; Miya's content factory, PRs 332 and 343–354; agent roles Parts A–C, PRs 356, 357, 365 and 366; agent phases 1–7)
+
+### Jose phase 7: stop, cancel, a queue, and Jose for everything (2026-10-27)
+- **Stop a running request** from the board, Chat's progress line or Telegram (`/stop`). Finished work is kept and nothing new starts; a send that already went out stays sent.
+- **Cancel** a request that was cut off when the app closed, or that waits for something to be set up (board, Chat's notice, Telegram).
+- **One request at a time on your computer's model:** the others wait, shown as "Queued (2nd)."; plain answers never wait.
+- **Jose plans from what you asked:** earlier messages in the chat are background only.
+- **Agents can ask for an action** partway through their work (a send, a code change); it becomes a Marcus or Alphonso step that waits for your approval, checked by Sentinel first. Miya Studio's steps can ask for help.
+- The Workflows panel's Run and the phone's "run workflow" go through Jose; Boardroom's notes open their request on the board; a content video asked on Telegram or by a schedule starts a Miya Studio project; a project's requests are grouped on the board; a batch is planned in one call.
+- A skill whose reviewed work keeps failing is offered last. Alphonso may run a small node script he wrote, with your approval.
+- **Fix:** Miya Studio's Publish no longer waits on a second Sentinel check (its own campaign check covers it); with no model that check blocked Publish. CI now also runs the agent checks with a small local model.
 
 ### Agent roles Part C2: more skills and better agents (2026-10-27)
 - **18 new skills** (60 in all): bugs, tests, explaining code, summaries and integrations for Alphonso; comparing products and finding companies or people for Hector; pros and cons and pricing for Nova; code reviews and brand voice for Maria; dependency and personal-data checks for Sentinel; newsletters and follow-up reminders for Marcus; a weekly digest and a project's memory for Echo.

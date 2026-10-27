@@ -3,6 +3,8 @@
 // steps to wait for them. The runner checks every change with checkPlan()
 // and the limits before applying it, and logs the reason.
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.6–2.8
+import { addSecurityChecks } from '../sentinel/addSecurityChecks';
+import { findActionRequest, handoffReason, handoffSteps } from './joseHandoff';
 import { isPaidModelId, type PlanStep } from './stepGraph';
 import { agentName } from './agentNames';
 import { judgeReview, planReviewRound } from './joseReviewLoop';
@@ -104,6 +106,20 @@ export async function adaptPlan(ctx: AdaptContext): Promise<PlanChange[]> {
     const helper = await chooseHelper(request, step.agent);
     const change = helper ? planHelp(ctx.steps, step, request, helper) : null;
     changes.push(change || note(`${step.agent} asked for help (${request}), but no agent can safely help with that here.`));
+  }
+
+  // Hand-offs (Jose phase 7): a step that just ran and ends with "ACTION: send|code …".
+  for (const step of ctx.steps) {
+    if (!ctx.justRan.includes(step.stepId) || ctx.done[step.stepId]?.status !== 'executed') continue;
+    const request = findActionRequest(ctx.done[step.stepId]?.output);
+    if (!request) continue;
+    const current = [...ctx.steps, ...changes.flatMap((c) => c.add || [])];
+    const added = handoffSteps(step, request, current);
+    if (!added.length) continue;
+    // Sentinel checks a hand-off like any send or code change (addSecurityChecks), before it runs.
+    const known = new Set(current.map((s) => s.stepId));
+    const checked = addSecurityChecks([...current, ...added], ctx.requestText).steps.filter((s) => !known.has(s.stepId));
+    changes.push({ add: checked, reason: handoffReason(step, request) });
   }
 
   // Paid retries: a step that just failed, when you allow paid models.

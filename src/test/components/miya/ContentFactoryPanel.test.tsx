@@ -28,6 +28,7 @@ import { renderCarouselSlides } from '../../../services/contentFactory/contentIm
 import { redoShort } from '../../../services/contentFactory/shortMaker';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief, markStepStatus, saveStepVersion, setProjectRequest } from '../../../services/contentFactory/contentProjectService';
+import { savePosts } from '../../../services/contentFactory/contentPosts';
 
 const settings = { outputFolder: 'D:\\Content' };
 
@@ -113,4 +114,17 @@ it('the Shorts tab shows Shorts Studio, and Redo makes that Short again', async 
   expect(screen.getByRole('heading', { name: 'Shorts Studio' })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Redo Short 1' }));
   await waitFor(() => expect(redoShort).toHaveBeenCalledWith(project.id, 'sh1', settings));
+});
+
+// Jose phase 7 (found by CI): Publish runs in the background after Approve and schedule; the
+// Posts list has to keep refreshing until the approved post has gone out or been handed on.
+describe('ContentFactoryPanel while approved posts go out', () => {
+  it('shows the new status of a post without a reload', async () => {
+    const { project } = setup();
+    const post = { id: 'p1', platform: 'instagram', piece: 'reel', status: 'approved', caption: 'Slow coffee', hashtags: [], scheduledAtMs: Date.now() - 1000 } as never;
+    savePosts(project.id, [post]);
+    render(<ContentFactoryPanel tab="campaign" settings={settings} />);
+    savePosts(project.id, [{ ...(post as object), status: 'by_hand', folder: 'x' } as never]);
+    expect(await screen.findByText(/Post by hand/, undefined, { timeout: 4000 })).toBeTruthy();
+  });
 });

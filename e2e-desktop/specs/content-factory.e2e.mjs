@@ -12,7 +12,8 @@ const STEP_TIMEOUT = 15 * 60 * 1000;
 // The factory's answers need a model that follows a JSON format reliably;
 // measured 2026-10-22: qwen2.5:7b 20/20, llama3.2:3b 13/20. Use it when it is
 // installed (test profile only).
-const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
+// CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
+const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 
 async function installedModels() {
   try {

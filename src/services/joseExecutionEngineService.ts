@@ -34,6 +34,7 @@ import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestSt
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
+import { ACTION_INSTRUCTION } from './jose/joseHandoff';
 import { agentName } from './jose/agentNames';
 import { rejectWaitingPackets } from './jose/joseExpiry';
 import { saveRequestDecisions } from './jose/joseFinish';
@@ -56,7 +57,9 @@ import { isAlphonsoCodeStep } from './alphonso/codeStep';
 import { prepareAlphonsoCode } from './alphonso/prepareCode';
 import { runAlphonsoCode } from './alphonso/runCode';
 import { describeCodeChange, previewNeeds } from './alphonso/changeSet';
-import { onProjectReleased, releaseProject } from './alphonso/projectLock';
+import { onProjectReleased, releaseProject, releaseProjectsHeldBy } from './alphonso/projectLock';
+import { clearStop, isStopRequested, stopSignal, stopWaitsFor, STOPPED_LINE } from './jose/joseStop';
+import { giveBackTurn, takeTurn, usesLocalModel } from './jose/joseQueue';
 import { readingFolder, reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
@@ -70,6 +73,7 @@ import { prepareSkill } from './skills/prepareSkill';
 import { runHectorStep } from './hector/hectorStep';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint, withAgentModel } from '../lib/ollama';
+import { withAgentSignal } from '../lib/agentSignals';
 import { ALPHONSO_ANSWER_PROMPT } from './alphonso/answerPrompt';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { getAgentProvider } from './modelSelectionService';
@@ -102,10 +106,11 @@ const STEP_STATUS_BY_RECEIPT: Record<string, string> = {
   dead_letter: 'failed',
   not_run: 'not_run',
   setup_needed: 'setup_needed',
+  stopped: 'stopped',
 };
 
 /** Save each step's final status on the request (jose/joseRequestStore). Never breaks the run. */
-function recordStepOutcomes(requestId: string, assignments: any[], receipts: any[], cutShort: boolean): void {
+function recordStepOutcomes(requestId: string, assignments: any[], receipts: any[], cutShort: boolean, stopped = false): void {
   try {
     const statuses: string[] = [];
     // A failed step a paid retry took over does not fail the request (phase 4).
@@ -129,7 +134,7 @@ function recordStepOutcomes(requestId: string, assignments: any[], receipts: any
       }
     }
     // A step whose owner can't work yet waits for setup (agent roles Part A).
-    const requestStatus = cutShort || statuses.includes('failed')
+    const requestStatus = stopped ? 'stopped' : cutShort || statuses.includes('failed')
       ? 'failed'
       : statuses.includes('waiting_approval') ? 'waiting_approval'
         : statuses.includes('setup_needed') ? 'waiting_setup' : 'done';
@@ -522,6 +527,8 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
       };
     } catch (error) {
       lastError = error;
+      // Stopped by you (Jose phase 7): no retry, no larger model.
+      if (options.isStopped?.()) return { ok: false, stopped: true, attempts: attempt, error: STOPPED_LINE, taskId, instruction };
       if (attempt < attempts) {
         await delay(TASK_RETRY_BACKOFF_MS[attempt - 1]);
       }
@@ -1149,7 +1156,8 @@ export function stepCommandText(assignment: any, commandText: string): string {
   const instruction = typeof assignment?.instruction === 'string' ? assignment.instruction.trim() : '';
   if (!instruction) return commandText;
   if (assignment?.agent === AGENTS.ALPHONSO && !String(assignment?.actionType || '').startsWith('assistant_')) return commandText;
-  const help = assignment?.helpRound ? '' : `\n\n${HELP_INSTRUCTION}`;
+  // Help and hand-offs (Jose phase 7) are offered to every planned step except on a help round.
+  const help = assignment?.helpRound ? '' : `\n\n${HELP_INSTRUCTION}\n${ACTION_INSTRUCTION}`;
   return `${instruction}\n\nThe request: ${commandText}${help}`;
 }
 
@@ -1339,7 +1347,24 @@ export async function runPipelineShortcuts({ commandText, onProgress }: { comman
   return null;
 }
 
-export async function runJoseCommandExecutionPipeline({
+/**
+ * Jose's pipeline. However a run ends (done, waiting, stopped, or an error), its request gives
+ * back its turn in the local-model queue (Jose phase 7), so a crash never holds every later request.
+ */
+export async function runJoseCommandExecutionPipeline(input: any = {}) {
+  let requestId: string | null = null;
+  const onProgress = (event: any) => {
+    if (event?.stage === 'request_started' && event.requestId) requestId = event.requestId;
+    input?.onProgress?.(event);
+  };
+  try {
+    return await runPipeline({ ...input, onProgress });
+  } finally {
+    if (requestId) giveBackTurn(requestId);
+  }
+}
+
+async function runPipeline({
   commandText,
   source = 'user',
   endpoint,
@@ -1356,7 +1381,9 @@ export async function runJoseCommandExecutionPipeline({
   // Echo saves what a request decided (phase 4); the content factory keeps its own lessons.
   saveDecisions = true,
   // False for a request that may never spend (a schedule, phase 6a). Saved on the request.
-  allowPaidModels = true
+  allowPaidModels = true,
+  // The project the request belongs to (Jose phase 7): the board groups its requests.
+  group = null
 }: any) {
   // Resuming a saved request after an approval (phase 4): same loop, the saved
   // command and packets, the steps already done kept as they are.
@@ -1462,12 +1489,19 @@ export async function runJoseCommandExecutionPipeline({
     // An approved plan (phase 3) runs on the request it was saved as.
     joseRequestId = resumeRequest ? resumeRequestId : existingRequestId
       ? attachRunToRequest(existingRequestId, { commandId: command.id, steps: planSteps }).id
-      : createJoseRequest({ commandId: command.id, source, text: commandText, kind: requestKind === 'project' ? 'project' : 'normal', steps: planSteps, ...(planInfo ? { plan: planInfo } : {}), ...(allowPaidModels === false ? { runOptions: { source, allowPaidModels: false } } : {}) }).id;
+      : createJoseRequest({ commandId: command.id, source, text: commandText, kind: requestKind === 'project' ? 'project' : 'normal', steps: planSteps, ...(planInfo ? { plan: planInfo } : {}), ...(allowPaidModels === false ? { runOptions: { source, allowPaidModels: false } } : {}), ...(group ? { group } : {}) }).id;
   } catch {
     joseRequestId = null;
   }
   // Chat shows "Open on the board" from here on (phase 4).
   if (joseRequestId) onProgress?.({ stage: 'request_started', requestId: joseRequestId, commandId: command.id });
+  // One local-model request at a time (Jose phase 7): wait for the turn. The queue takes it back
+  // when the request stops running (done, failed, waiting for you, stopped).
+  if (joseRequestId && usesLocalModel(planSteps)) {
+    const turn = takeTurn(joseRequestId);
+    if (getJoseRequest(joseRequestId)?.status === 'queued') onProgress?.({ stage: 'queued', requestId: joseRequestId, commandId: command.id });
+    await turn;
+  }
 
   // Loop-guard + budget: hard ceiling on a single pipeline run so a malformed
   // command graph or a stuck agent can never spin unbounded iterations or
@@ -1477,6 +1511,9 @@ export async function runJoseCommandExecutionPipeline({
   const maxDurationMs = requestKind === 'project' ? JOSE_LIMITS.projectMs : PIPELINE_MAX_DURATION_MS;
   let processedAssignmentCount = 0;
   let budgetExceeded = false;
+  // Stop pressed (Jose phase 7): checked before every wave and step.
+  let stopped = false;
+  const stopWanted = () => Boolean(joseRequestId && isStopRequested(joseRequestId));
 
   // Run every step whose needs are done, then let Jose adapt the plan, and
   // again until nothing is left (phase 4: the plan can grow while it runs).
@@ -1566,12 +1603,20 @@ export async function runJoseCommandExecutionPipeline({
       .filter((step) => !processedSteps.has(step.stepId) && step.needs.every((need) => processedSteps.has(need) || !knownIds.has(need)))
       .map((step) => step.stepId);
     if (wave.length === 0) break;
+    if (stopWanted()) {
+      stopped = true;
+      break;
+    }
     for (const stepId of wave) processedSteps.add(stepId);
     const waveAssignments: any[] = wave.map((stepId) => assignmentMap[stepId]).filter(Boolean);
     onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: waveAssignments.map((a) => a.agent), steps: wave, commandId: command.id });
     for (const assignment of waveAssignments) {
       if (processedAssignmentCount >= PIPELINE_MAX_ASSIGNMENTS || (timestampMs() - pipelineStartMs) >= maxDurationMs) {
         budgetExceeded = true;
+        break waveLoop;
+      }
+      if (stopWanted()) {
+        stopped = true;
         break waveLoop;
       }
       processedAssignmentCount += 1;
@@ -1974,7 +2019,17 @@ export async function runJoseCommandExecutionPipeline({
 
       // The outputs of the steps this step needs, keyed by agent as agents read them.
       const priorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
-      const taskResult: any = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory });
+      const runStep = () => executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory, isStopped: stopWanted });
+      // A send or an approved code change finishes its one action before a stop (Jose phase 7).
+      const taskResult: any = joseRequestId && !stopWaitsFor(assignment, packet)
+        ? await withAgentSignal(assignment.agent, stopSignal(joseRequestId), runStep)
+        : await runStep();
+      if (taskResult.stopped) {
+        rejectPacket(assignment.packetId, STOPPED_LINE);
+        executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'stopped', reason: STOPPED_LINE });
+        stopped = true;
+        break waveLoop;
+      }
 
       if (!taskResult.ok) {
         failedCount += 1;
@@ -2180,6 +2235,17 @@ export async function runJoseCommandExecutionPipeline({
       command
     };
   }
+
+  if (joseRequestId && stopped) {
+    recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false, true);
+    rejectWaitingPackets(command.id, STOPPED_LINE);
+    releaseProjectsHeldBy(joseRequestId);
+    appendRequestNote(joseRequestId, STOPPED_LINE);
+    clearStop(joseRequestId);
+    onProgress?.({ stage: 'stopped', requestId: joseRequestId, commandId: command.id });
+    return { ok: false, reason: 'stopped', executedCount, pendingApprovalCount, failedCount, executionReceipts, command, commandId: command.id };
+  }
+  if (joseRequestId) clearStop(joseRequestId);
 
   if (joseRequestId) {
     recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
@@ -2417,7 +2483,7 @@ export async function retryDLQ(taskId) {
 export async function resumeJoseRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
   // A waiting request, or one the app was closed on (phase 5).
-  if (!request || !['waiting_approval', 'interrupted', 'waiting_setup'].includes(request.status)) {
+  if (!request || !['waiting_approval', 'interrupted', 'waiting_setup', 'queued'].includes(request.status)) {
     return { ok: false, reason: request ? `This request is ${String(request.status).replace(/_/g, ' ')}, not waiting for an approval.` : 'Request not found.', requestId };
   }
   setJoseRequestStatus(requestId, 'running');
@@ -2502,10 +2568,26 @@ function wakeWaitingFor(folder: string) {
 }
 onProjectReleased(wakeWaitingFor);
 
+export const CANCELLED_LINE = 'Cancelled by you.';
+
+/** Cancel a request that was cut off or waits for setup (Jose phase 7): it ends cancelled, its waiting packets are rejected and its projects freed. */
+export function cancelRequest(requestId: string) {
+  const request: any = getJoseRequest(requestId);
+  if (!request || (request.status !== 'interrupted' && request.status !== 'waiting_setup')) {
+    return { ok: false, summary: 'Only a request that was cut off, or that waits for something to be set up, can be cancelled here.' };
+  }
+  rejectWaitingPackets(request.commandId, CANCELLED_LINE);
+  releaseProjectsHeldBy(requestId);
+  setJoseRequestStatus(requestId, 'cancelled');
+  appendRequestNote(requestId, CANCELLED_LINE);
+  return { ok: true, summary: 'Cancelled.' };
+}
+
 /** Carry on a request the app was closed on (phase 5): steps already done are kept; a step that needs approval asks again. */
 export async function carryOnRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);
-  if (!request || (request.status !== 'interrupted' && request.status !== 'waiting_setup')) {
+  // A request queued when the app closed carries on too (Jose phase 7): it queues again.
+  if (!request || (request.status !== 'interrupted' && request.status !== 'waiting_setup' && request.status !== 'queued')) {
     return { ok: false, reason: 'Only a request that was cut off, or that waits for something to be set up, can be carried on.', requestId };
   }
   return resumeJoseRequest(requestId, options);

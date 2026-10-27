@@ -9,7 +9,7 @@ _Last updated: 2026-10-25 (first written 2026-09-30). This replaces an earlier d
 ## What "free" covers today
 
 - All 9 agents (Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova)
-- All 33 connectors, including the ones the code classifies as "premium" (Claude, ChatGPT, YouTube, Notion, ClickUp, WhatsApp, SD WebUI, ComfyUI)
+- All 34 connectors, including the ones the code classifies as "premium" (Claude, ChatGPT, YouTube, Notion, ClickUp, WhatsApp, SD WebUI, ComfyUI)
 - Local Ollama inference, Jose's requests and plans, Miya Studio's content factory (from an idea to finished, posted videos, Shorts and carousels), the Calendar, memory, workflows, Boardroom, voice, and the auto-updater
 
 Connecting to a third-party service still means you bring your own account and API key. Any usage that provider bills is between you and them: for example Claude or ChatGPT for a step, Runway, ElevenLabs or Higgsfield in Miya Studio, or a CALL-E phone call. Alphonso's Zero-Cost Mode and Approval Mode (both on by default) block paid or metered calls until you approve them; spending always asks first with an estimate from the prices you enter, and a monthly cap you set stops spending past it.

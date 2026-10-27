@@ -1,6 +1,6 @@
 # Alphonso Connectors Reference
 
-Alphonso has **33 connectors** (`DEFAULT_CONNECTORS` in `src/services/connectors/connectorRegistry.js`). All outbound connector calls run through `policyEnforcementService.ts` before any external API is contacted. The gate fails closed: missing credentials, zero-cost mode, or unauthorized senders all result in a blocked result with an audit receipt. No raw stubs — every listed path is wired through the policy gate.
+Alphonso has **34 connectors** (`DEFAULT_CONNECTORS` in `src/services/connectors/connectorRegistry.js`). All outbound connector calls run through `policyEnforcementService.ts` before any external API is contacted. The gate fails closed: missing credentials, zero-cost mode, or unauthorized senders all result in a blocked result with an audit receipt. No raw stubs — every listed path is wired through the policy gate.
 
 **Setup flow for every connector:**
 
@@ -126,7 +126,7 @@ Twilio was never supported for setup, and its leftover code and fields were remo
 | Variable | Description |
 |---|---|
 | `ANTHROPIC_API_KEY` | API key from `console.anthropic.com` |
-| `CLAUDE_CONNECTOR_MODEL` | Optional; default `claude-3-5-sonnet-latest` |
+| `CLAUDE_MODEL` | Optional; the **Model** dropdown (from Anthropic's live list). Default `claude-haiku-5-5` |
 
 **How to get credentials:**
 1. Sign up / log in at `console.anthropic.com`
@@ -155,7 +155,7 @@ Twilio was never supported for setup, and its leftover code and fields were remo
 | Variable | Description |
 |---|---|
 | `OPENAI_API_KEY` | API key from `platform.openai.com` |
-| `OPENAI_CONNECTOR_MODEL` | Optional; default `gpt-4.1-mini` |
+| `OPENAI_MODEL` | Optional; the **Model** dropdown (from OpenAI's live list). Default `gpt-6-luna` |
 
 **How to get credentials:**
 1. Log in at `platform.openai.com`
@@ -762,3 +762,12 @@ Without storage, such a post is saved in the project's `ready-to-post` folder wi
 | Extra settings (JSON) for each | Optional; must be a JSON object, and can't set the prompt or the input picture |
 
 **Test picture / clip model** gives Higgsfield's estimate without making anything. **Open the Higgsfield Console** opens it in your browser.
+
+## 33. Google Web Risk (link check)
+
+**Status:** Optional, not paid for the first 100,000 checks a month (then $0.50 per 1,000, Google's price). Sentinel checks links against Google's phishing and malware lists (`web_risk.rs`, `sentinel/webRisk.ts`); only the address is sent, and answers are kept 30 minutes. Without a key, Sentinel's own exact checks still run. Google's free Safe Browsing API is for non-commercial use only, so it is not used.
+
+**Credentials (Settings → Connectors → Search & Research):**
+| Field | Description |
+|---|---|
+| `WEB_RISK_API_KEY` | A Google Cloud API key with the Web Risk API enabled |

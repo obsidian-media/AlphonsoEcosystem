@@ -1,6 +1,6 @@
 # Agent phase 7: Echo remembers the ecosystem's decisions, and every agent can ask him
 
-> **Status (2026-10-26):** design, written with the owner after the Echo inspection of 2026-10-26 (code reading, the memory graph, every memory writer and reader, and six live requests in the real app). Built 2026-10-26 on `feat/agent-phase-echo` (plan `docs/superpowers/plans/2026-10-26-agent-phase-echo.md`). Builds on agent roles Part A (`buildStepInput()`, one owner per kind of work), Part B (skills), agent phase 4 (`redactText()`: no key reaches memory) and agent phase 6 (`ALPHONSO_ANSWER_PROMPT`, `requestForCommand()`).
+> **Status (2026-10-26):** design, written with the owner after the Echo inspection of 2026-10-26 (code reading, the memory graph, every memory writer and reader, and six live requests in the real app). Built 2026-10-26 on `feat/agent-phase-echo` (plan `docs/superpowers/plans/2026-10-26-agent-phase-echo.md`). Builds on agent roles Part A (`buildStepInput()`, one owner per kind of work), Part B (skills), agent phase 4 (`redactText()`: no key reaches memory) and agent phase 6 (`ALPHONSO_ANSWER_PROMPT`, `requestForCommand()`). Merged and released in 2.10.0 (2026-10-27).
 
 ## Why
 

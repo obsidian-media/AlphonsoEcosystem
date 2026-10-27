@@ -1,6 +1,6 @@
 # Miya content factory, phase 2a: the finished video file
 
-> **Status (2026-10-25):** built and merged in PR #343 (phase 2a); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+> **Status (2026-10-25):** built and merged in PR #343 (phase 2a); released in 2.10.0 (2026-10-27). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
 
 Builds on the content factory design (`2026-10-22-miya-content-factory-design.md`,
 §6 "Audio, video and assembly", §8 phase 2) and the Jose redesign phase 6b

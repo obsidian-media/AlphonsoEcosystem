@@ -101,7 +101,7 @@ const CompanionMode = lazy(() => import('./components/CompanionMode').then((mod)
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
 const BoardroomView = lazy(() => import('./components/BoardroomChatView').then((mod) => ({ default: mod.BoardroomChatView })));
 
-function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprovalRequest: () => void }) {
+function MissionRoomBoardroomTabs({ onCreateApprovalRequest, onOpenJoseBoard }: { onCreateApprovalRequest: () => void; onOpenJoseBoard?: (requestId: string) => void }) {
   const [subTab, setSubTab] = React.useState<'mission' | 'boardroom'>('mission');
   const approval = useRequestApprovalBridge();
   return (
@@ -123,7 +123,7 @@ function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprova
         {subTab === 'mission' ? (
           <MissionRoom onCreateApprovalRequest={onCreateApprovalRequest} />
         ) : (
-          <Suspense fallback={null}><BoardroomView requestApproval={approval?.requestApproval} /></Suspense>
+          <Suspense fallback={null}><BoardroomView requestApproval={approval?.requestApproval} onOpenJoseBoard={onOpenJoseBoard} /></Suspense>
         )}
       </div>
     </div>
@@ -177,6 +177,10 @@ function markInterruptedRequestsOnce(): void {
   interruptedRequestsChecked = true;
   try { markRunningRequestsInterrupted(); } catch { /* display aid only */ }
   try { expireWaitingRequests(); } catch { /* checked again every hour */ }
+  // Requests that were waiting their turn when the app closed queue again, oldest first (Jose phase 7).
+  void Promise.all([import('./services/jose/joseQueue'), import('./services/joseExecutionEngineService')])
+    .then(([queue, engine]) => queue.requeueAtStart((id) => engine.carryOnRequest(id)))
+    .catch(() => {});
   // Your own agent skills from the skills folder (agent roles Part B).
   void loadUserSkills();
   // Research reports saved before 2026-10-25 kept whole pages in app storage: moved to files once (agent phase 1).
@@ -692,8 +696,9 @@ function AppShell() {
           const { workflowId } = payload;
           console.warn(`[App] Received companion://run_workflow for: ${workflowId}`);
           try {
-            const { executeWorkflowTasks } = await import('./services/workflowRegistryService');
-            await executeWorkflowTasks(workflowId);
+            // Jose phase 7: the workflow's agents run as a Jose request.
+            const { runWorkflow } = await import('./services/workflowRegistryService');
+            await runWorkflow(workflowId, { source: 'companion' });
             
             // Send back completed notification to iOS
             invoke('companion_broadcast', {
@@ -891,7 +896,7 @@ function AppShell() {
                   <MissionControlHome settings={settings} ollamaStatus={ollamaStatus} operatorMode={operatorMode} coachMode={coachMode} coachIntervention={coachIntervention} verificationLogs={verificationLogs} memoryItems={memoryItems} updateCheckState={updateCheckState} onNavigate={switchTab} />
                 )}
                 {activeTab === 'mission_room' && (
-                  <MissionRoomBoardroomTabs onCreateApprovalRequest={() => setApprovalRequiredNotice(true)} />
+                  <MissionRoomBoardroomTabs onCreateApprovalRequest={() => setApprovalRequiredNotice(true)} onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} />
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState activeTab="Chat" />}>

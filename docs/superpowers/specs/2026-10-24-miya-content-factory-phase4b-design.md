@@ -1,6 +1,6 @@
 # Miya content factory, phase 4b: ElevenLabs and Higgsfield
 
-> **Status (2026-10-25):** built and merged in PR #353 (phase 4b); on `main`, not released yet (2.10.0 isn't tagged). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
+> **Status (2026-10-25):** built and merged in PR #353 (phase 4b); released in 2.10.0 (2026-10-27). What it leaves open is in `docs/governance/DEFERRED_WORK.md`; the current behaviour is described in `CLAUDE.md`'s Do Not Duplicate rows and `docs/USER_MANUAL.md` section 8.
 
 Date: 2026-10-24. Builds on phases 1–4a (`2026-10-22-miya-content-factory-design.md` §8 phase 4;
 `2026-10-24-miya-content-factory-phase4a-design.md` §13, where the owner's first answers for 4b were recorded).

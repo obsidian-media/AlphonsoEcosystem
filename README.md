@@ -4,7 +4,7 @@
 
 # Alphonso
 
-> **v2.10.0** — Local-first AI desktop companion with 9 agents that Jose plans and runs as step-by-step requests, Miya's content factory (from an idea to finished, posted videos, Shorts and carousels), 33 connectors, a first-run Smart Installer, an iOS companion app and Boardroom multi-agent sessions — powered by Ollama
+> **v2.10.0** — Local-first AI desktop companion with 9 agents that Jose plans and runs as step-by-step requests, Miya's content factory (from an idea to finished, posted videos, Shorts and carousels), 34 connectors, a first-run Smart Installer, an iOS companion app and Boardroom multi-agent sessions — powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.10.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-6777%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
@@ -14,9 +14,9 @@
 
 [**Download the latest release**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
-## What's New in v2.10.0 (on `main`, not released yet)
+## What's New in v2.10.0 (2026-10-27)
 
-2.10.0 is not tagged yet; the latest release is 2.9.0. Everything below is on `main`. The full list is in [docs/CHANGELOG.md](docs/CHANGELOG.md).
+The full list is in [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 ### Jose plans and runs every request (Jose redesign, phases 1–6b)
 
@@ -40,7 +40,29 @@
 ### Agent roles and skills (Parts A and B)
 
 - **One owner per kind of work:** Jose only plans and approves; research is Hector's, judging it Nova's, content and design Miya's, code and plain questions Alphonso's, sending Marcus's. Every step gets the full work of the steps it needs, reviews judge the actual draft, and a request ends with a short summary.
-- **Real skills:** each agent has its own (40 built in), picks one per step and the board says why; skills use tools (web search, sources, memory, earlier steps). Add your own on All Agents → Skills.
+- **Real skills:** each agent has its own (60 built in), picks one per step and the board says why; skills use tools (web search, sources, memory, earlier steps). A skill whose reviewed work keeps failing is offered last. Add your own on All Agents → Skills.
+
+### Every agent does its own job properly (agent phases 1–7)
+
+- **Hector** researches in rounds and comes back with an answer, cited findings and labelled sources (Read, Snippet only, Couldn't read), never facts from memory. He reads PDF sources too.
+- **Nova** judges what Hector found and ranks the options you named, with reasons and source numbers; no keyword scores.
+- **Maria** reviews the actual work, quoting exactly what to change; a plan gets a risk level with reasons, and when she asks for approval, the steps after hers wait.
+- **Sentinel** checks the real text, code and links: keys are hidden from every agent's model, disguised links and password requests are named, and a high finding holds the steps after it. An optional Google Web Risk check covers links.
+- **Marcus** sends exactly the text you approved, once, to a place you named or set as a default, now or at the time you said ("send it Tuesday at 9").
+- **Alphonso** writes real code in a project folder you chose (or several), shows the change, lets you edit it, asks once, then writes and runs it.
+- **Echo** remembers the decisions, preferences and instructions from every request, and every agent gets the ones that apply. Edit, forget or tidy them in Settings → Memory; he can also match them by meaning.
+
+### Projects and Teams (Part C)
+
+- **Projects** (Work → Projects) start a real Jose request from a short intake, with the plan, steps, approvals and results in one place.
+- **Teams** (System → Teams) save a set of agents for a job; run one by name, e.g. "use team Launch to …". The simulated Project Execution page and Agent Pairing are retired (old pairs are offered once as teams).
+
+### Stop, cancel and one at a time (Jose phase 7)
+
+- **Stop** a running request from the board, Chat's progress line or Telegram (`/stop`); finished work is kept. **Cancel** one cut off when the app closed.
+- **One request at a time** on your computer's model; the others wait, shown as "Queued (2nd)."; plain answers never wait.
+- **Agents can ask for an action** partway through their work (a send, a code change); it becomes a step that waits for your approval, checked by Sentinel first.
+- **Everything through Jose:** the Workflows panel, Boardroom's notes (which open their request), Telegram and schedules (a content video from either starts a Miya Studio project); a project's requests are grouped on the board.
 
 ### Fixes and the rest
 
@@ -51,10 +73,10 @@
 - **Updates relaunch the app on macOS and Linux.** The restart plugin's Rust half was missing, so the app could not restart itself after installing an update.
 - **Chat works with an Ollama you started yourself.** When Ollama refuses the app window, chat now goes through the backend with the whole conversation (the reply arrives in one piece rather than streamed). Before, it sent only a flattened prompt.
 - **Perplexity search works again**, on Perplexity's current Search API, and Hector uses it as an extra research source.
-- **Smaller fixes:** provider tabs lock while a reply is generating; Project Execution approval gates name their real owner agent; the Setup disk checks agree when Ollama keeps its models on another drive.
+- **Smaller fixes:** provider tabs lock while a reply is generating; the Setup disk checks agree when Ollama keeps its models on another drive.
 - **CI:** a weekly npm and Rust security audit; a check that Tauri's JavaScript and Rust packages match; a check that the Windows installer really contains Ollama; the real desktop app's end-to-end suite now runs on every PR.
 
-Not tested with real accounts yet: Perplexity, the paid models, publishing and reading results on YouTube, Instagram and Facebook, ElevenLabs, Higgsfield, and auto-update from 2.9.0 to 2.10.0. The live checks are listed in [docs/qa/DESKTOP_QA_COVERAGE.md](docs/qa/DESKTOP_QA_COVERAGE.md).
+Not tested with real accounts yet: Perplexity, the paid models, publishing and reading results on YouTube, Instagram and Facebook, ElevenLabs, Higgsfield, Telegram's new Stop and Cancel buttons, a real send through Marcus, and auto-update from 2.9.0 to 2.10.0. The live check with your own keys is planned after this release ([docs/governance/DEFERRED_WORK.md](docs/governance/DEFERRED_WORK.md)); the checks are listed in [docs/qa/DESKTOP_QA_COVERAGE.md](docs/qa/DESKTOP_QA_COVERAGE.md).
 
 ## What's New in v2.9.0 (2026-10-12)
 
@@ -441,7 +463,7 @@ All agents are registered in `src/agents/agentRegistry.js`; what each may do is 
 
 ## Connectors
 
-All 33 connectors are set up in **Settings → Connectors**; keys are kept in the system keychain, never in a file. An environment variable still works as a fallback.
+All 34 connectors are set up in **Settings → Connectors**; keys are kept in the system keychain, never in a file. An environment variable still works as a fallback.
 
 | Group | Connectors |
 |-------|-----------|
@@ -457,7 +479,7 @@ Every outbound call goes through the policy gate; paid connectors (Claude, ChatG
 
 ## License Tiers
 
-**Free at launch: every agent and all 33 connectors, no license key.** Paid tiers are not on sale. The licensing code (`licenseService.ts`) stays dormant until a vendor signing key is configured. Third-party services you connect bill you directly through your own API keys, and Zero-Cost Mode blocks paid calls until you approve them.
+**Free at launch: every agent and all 34 connectors, no license key.** Paid tiers are not on sale. The licensing code (`licenseService.ts`) stays dormant until a vendor signing key is configured. Third-party services you connect bill you directly through your own API keys, and Zero-Cost Mode blocks paid calls until you approve them.
 
 See [docs/PRICING.md](docs/PRICING.md) for details.
 
@@ -468,7 +490,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 6,824 tests across 585 files (src + bridge)
+npm run test           # 6,886 tests across 593 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -481,7 +503,7 @@ npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app 
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 383 Rust unit tests across 53 modules
+cargo test                     # 384 Rust unit tests across 53 modules
                                 # (cargo test runs a few more: the async
                                 # #[tokio::test] cases, 370 in all)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
@@ -506,7 +528,7 @@ is the last full release-verification record.
 |---------------------------------------------|----------------------------------------------|
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Quick setup guide |
 | [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | What each agent does and when to use them |
-| [CONNECTORS.md](docs/CONNECTORS.md) | Setup for all 33 connectors (keys entered in Settings) |
+| [CONNECTORS.md](docs/CONNECTORS.md) | Setup for all 34 connectors (keys entered in Settings) |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
 | [USER_MANUAL.md](docs/USER_MANUAL.md) | Full feature reference (current) |
 | [RELEASE.md](docs/RELEASE.md) | Auto-updater signing and release pipeline |
@@ -524,7 +546,7 @@ is the last full release-verification record.
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| 2.10.0 | not released yet | Jose redesign (plans as steps, approval by effect, Requests board, Telegram approvals); Miya's content factory (finished videos, Shorts, carousels, publishing, Calendar, results, paid engines, characters and motion); macOS back |
+| **v2.10.0** | October 27, 2026 | Jose redesign (plans as steps, approval by effect, Requests board, Telegram approvals, Stop and a queue); every agent rebuilt around real judgment, 60 skills, Projects and Teams; Miya's content factory (finished videos, Shorts, carousels, publishing, Calendar, results, paid engines, characters and motion); macOS back |
 | **v2.9.0** | October 12, 2026 | First end-to-end test of the real desktop app and the fixes it found; approval hardening; Tailwind v4 |
 | **v2.8.0** | September 9, 2026 | Smart Installer, UI/UX redesign, CALL-E outreach connector, bundled starter model |
 | v2.7.1 | September 5, 2026 | Auto-updater installer fix |
@@ -559,7 +581,7 @@ is the last full release-verification record.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 324 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 328 services already exist.
 
 ## Third-party notices
 

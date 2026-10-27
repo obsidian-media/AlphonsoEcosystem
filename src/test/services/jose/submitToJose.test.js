@@ -155,7 +155,7 @@ describe('submitToJose', () => {
   // other places (Telegram, schedules) still run the template's steps.
   it('from Chat, a content video starts a Miya Studio project instead of planning', async () => {
     const result = await submitToJose({ text: 'Make a YouTube video script about home coffee', source: 'user' });
-    expect(startFromChat).toHaveBeenCalledWith('Make a YouTube video script about home coffee', expect.anything());
+    expect(startFromChat).toHaveBeenCalledWith('Make a YouTube video script about home coffee', expect.anything(), { source: 'user', allowPaidModels: undefined });
     expect(planner).not.toHaveBeenCalled();
     expect(result).toMatchObject({ ok: true, contentProjectId: 'p1', planNote: 'Started the project.' });
   });
@@ -175,9 +175,20 @@ describe('submitToJose', () => {
     expect(startFromChat).not.toHaveBeenCalled();
   });
 
+  // Jose phase 7: Telegram and schedules start a project too; other places still run the steps.
+  it('from Telegram or a schedule, a content video starts a Miya Studio project too', async () => {
+    for (const source of ['telegram', 'schedule']) {
+      startFromChat.mockClear();
+      const result = await submitToJose({ text: 'Make a YouTube video script about home coffee', source, allowPaidModels: source !== 'schedule' });
+      expect(startFromChat).toHaveBeenCalledWith('Make a YouTube video script about home coffee', expect.anything(), { source, allowPaidModels: source !== 'schedule' });
+      expect(result.contentProjectId).toBe('p1');
+    }
+    expect(planner).not.toHaveBeenCalled();
+  });
+
   it('points to Miya Studio for a content video asked elsewhere', async () => {
     planner.mockResolvedValueOnce({ steps: getTemplate('content_video').steps, source: 'template', templateId: 'content_video', kind: 'normal', note: '' });
-    const result = await submitToJose({ text: 'Make a YouTube video script', source: 'telegram' });
+    const result = await submitToJose({ text: 'Make a YouTube video script', source: 'whatsapp' });
     expect(result.planNote).toContain('Based on template Content video.');
     expect(result.planNote).toContain(CONTENT_VIDEO_STUDIO_NOTE);
   });

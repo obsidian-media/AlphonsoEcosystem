@@ -44,3 +44,25 @@ describe('a batch task goes to Jose (phase 6a)', () => {
     expect(statuses[2]).toBe('completed');
   });
 });
+
+// Jose phase 7: the batch is planned in one call; planned tasks run their steps, the rest as before.
+describe('a batch planned in one call', () => {
+  it('runs planned tasks as given steps and the others through answerOrPlan', async () => {
+    const planner = await import('../../services/jose/josePlanner');
+    const submit = await import('../../services/jose/submitToJose');
+    const steps = [{ stepId: 'facts', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [] }];
+    const goal = createProjectGoal('Analytics dashboard', 'A dashboard');
+    const batch = await generateBatch(goal.id);
+    const spyPlan = vi.spyOn(planner, 'planBatch').mockResolvedValue(batch.tasks.map((_t, i) => (i === 0 ? steps : null)));
+    const spySubmit = vi.spyOn(submit, 'submitStepsToJose').mockResolvedValue({ ok: true, executionReceipts: [] });
+    vi.mocked(answerOrPlan).mockResolvedValue({ kind: 'request', requestId: 'r', waitingForPlan: false, result: { ok: true, executionReceipts: [] } });
+    await executeBatch(batch.id, { endpoint: 'http://e', zeroCostMode: true });
+    expect(spyPlan).toHaveBeenCalledTimes(1);
+    expect(spySubmit).toHaveBeenCalledTimes(1);
+    expect(spySubmit.mock.calls[0][0]).toMatchObject({ source: 'batch', label: 'Steps planned for a batch.', steps });
+    expect(vi.mocked(answerOrPlan)).toHaveBeenCalledTimes(batch.tasks.length - 1);
+    expect(getBatchById(batch.id).tasks.every((t) => t.status === 'completed')).toBe(true);
+    spyPlan.mockRestore();
+    spySubmit.mockRestore();
+  });
+});

@@ -50,3 +50,15 @@ describe('startContentProjectFromChat', () => {
     expect(runContentProject).not.toHaveBeenCalled();
   });
 });
+
+// Jose phase 7: started from Telegram or a schedule.
+describe('a content project from Telegram or a schedule', () => {
+  it('says where to follow it, and a schedule never allows paid models', async () => {
+    saveBrand({ name: 'Coffee Corner' });
+    const telegram = await startContentProjectFromChat('Make a YouTube video about tea', { outputFolder: 'D:\Content' }, { source: 'telegram' });
+    expect(telegram.note).toBe('Started a Miya Studio project: Make a YouTube video about tea. Open Miya Studio to follow it.');
+    const scheduled = await startContentProjectFromChat('Make a YouTube video about coffee', { outputFolder: 'D:\Content' }, { source: 'schedule', allowPaidModels: false });
+    expect(scheduled.note).toBe('Started a Miya Studio project: Make a YouTube video about coffee. Open Miya Studio to follow it.');
+    expect(vi.mocked(runContentProject).mock.calls.at(-1)?.[1]).toEqual({ settings: { outputFolder: 'D:\Content' }, allowPaidModels: false });
+  });
+});

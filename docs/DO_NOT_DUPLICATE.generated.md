@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 324 services and 176 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 328 services and 176 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -75,7 +75,7 @@ Source-backed inventory: 324 services and 176 components. Human purpose descript
 | component | `src/components/jose/JosePlanEditor.tsx` | `JosePlanEditor` |
 | component | `src/components/jose/JosePlanMap.tsx` | `JosePlanMap`, `JosePlanMapProps` |
 | component | `src/components/jose/JoseRequestOutcome.tsx` | `JoseRequestOutcome` |
-| component | `src/components/jose/JoseRequestsBoard.tsx` | `JoseRequestsBoard`, `requestPlanLabel`, `runResultText`, `STATUS_LABELS` |
+| component | `src/components/jose/JoseRequestsBoard.tsx` | `JoseRequestsBoard`, `requestPlanLabel`, `runResultText`, `STATUS_LABELS`, `statusLabel` |
 | component | `src/components/jose/JoseStepOutput.tsx` | `JoseStepOutput` |
 | component | `src/components/JoseCompanionWidget.tsx` | `JoseCompanionWidget` |
 | component | `src/components/JoseTaskQueue.tsx` | `JoseTaskQueue` |
@@ -198,7 +198,7 @@ Source-backed inventory: 324 services and 176 components. Human purpose descript
 | service | `src/services/alphonso/codeStep.ts` | `CodeAnswer`, `isAlphonsoCodeStep`, `parseCodeAnswer` |
 | service | `src/services/alphonso/editChange.ts` | `EDIT_NOT_IN_CHANGE`, `EDIT_TOO_LATE`, `editCodeFile` |
 | service | `src/services/alphonso/prepareCode.ts` | `ALPHONSO_NO_PLAN`, `askAlphonso`, `codeModelFor`, `FOLDER_GONE`, `MODEL_DIDNT_ANSWER`, `NEEDS_TO_KNOW`, `prepareAlphonsoCode`, `PrepareCode`, `safePath`, `WHICH_PROJECT` |
-| service | `src/services/alphonso/projectLock.ts` | `busyLine`, `claimProject`, `onProjectReleased`, `projectHolder`, `releaseProject` |
+| service | `src/services/alphonso/projectLock.ts` | `busyLine`, `claimProject`, `onProjectReleased`, `projectHolder`, `releaseProject`, `releaseProjectsHeldBy` |
 | service | `src/services/alphonso/projects.ts` | `AlphonsoProject`, `getCodeModel`, `listProjects`, `NAME_A_PROJECT`, `NEEDS_OUTPUT_FOLDER`, `NO_PROJECT`, `projectNamedIn`, `projectPlace`, `projectsNamedIn`, `saveProjects`, `scratchPlace`, `WorkPlace` |
 | service | `src/services/alphonso/readProject.ts` | `listProjectFiles`, `ProjectFile`, `readProjectFiles` |
 | service | `src/services/alphonso/runCode.ts` | `applyChangeSet`, `CommandRun`, `runAlphonsoCode`, `runApprovedCommands` |
@@ -290,7 +290,7 @@ Source-backed inventory: 324 services and 176 components. Human purpose descript
 | service | `src/services/contentFactory/contentPublishExecutor.ts` | `executePublishStep`, `NO_APPROVED_POSTS` |
 | service | `src/services/contentFactory/contentQualityGate.ts` | `PieceRow`, `rejectPiece`, `retryWithReason`, `sendBackTarget`, `visiblePieces` |
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
-| service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `parseStepAnswer` |
+| service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `CONTENT_HELP_LINE`, `helpFromAnswer`, `parseStepAnswer` |
 | service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
 | service | `src/services/contentFactory/contentStepRunner.ts` | `addMiniShort`, `approveContentStep`, `CONTENT_TASK_PREVIEW`, `ONE_MORE_SHORT`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
 | service | `src/services/contentFactory/contentTelegram.ts` | `collectContentNotifications`, `ContentButton`, `ContentButtonAction`, `contentButtonToken`, `ContentNotification`, `ContentTelegramSettings`, `getContentTelegramSettings`, `handleContentButton`, `readContentButtonToken` |
@@ -349,31 +349,35 @@ Source-backed inventory: 324 services and 176 components. Human purpose descript
 | service | `src/services/jose/joseEffects.ts` | `ACTION_EFFECTS`, `COMMAND_CHECKED_EFFECTS`, `DEFAULT_EFFECT_APPROVALS`, `EFFECT_LABELS`, `effectsNeedingApproval`, `getEffectApprovals`, `inferEffects`, `JOSE_EFFECTS`, `JoseEffect`, `LOCKED_EFFECTS`, `stepEffectsToWaitFor` |
 | service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets` |
 | service | `src/services/jose/joseFinish.ts` | `NOTHING_NEW`, `saveRequestDecisions` |
+| service | `src/services/jose/joseHandoff.ts` | `ACTION_INSTRUCTION`, `ActionRequest`, `findActionRequest`, `handoffReason`, `handoffSteps` |
 | service | `src/services/jose/joseHelp.ts` | `chooseHelper`, `findHelpRequest`, `HELP_INSTRUCTION`, `Helper`, `planHelp` |
 | service | `src/services/jose/joseInbound.ts` | `answerOrPlan`, `AnswerOrPlanOptions`, `AnswerOrPlanResult`, `inboundReply`, `outcomeLine` |
 | service | `src/services/jose/joseModels.ts` | `DEFAULT_TOOL_CALL_MIN_SIZE`, `getToolCallMinSize`, `listInstalledModels`, `modelSize`, `pickLargerModel`, `stepModel`, `usesOwnToolCalls` |
 | service | `src/services/jose/josePlanApproval.ts` | `getPlanFirstSetting`, `needsPlanApproval`, `PlanFirstSetting` |
 | service | `src/services/jose/josePlanEdits.ts` | `addStep`, `changeStepAgent`, `removeStep`, `rewireNeeds`, `setStepInstruction`, `setStepNeeds` |
 | service | `src/services/jose/josePlanLayout.ts` | `DEFAULT_BOX`, `layoutPlan`, `PlanLayout` |
-| service | `src/services/jose/josePlanner.ts` | `copiedPlaceholders`, `describePlanSource`, `JosePlan`, `missingAsked`, `PLAN_EXAMPLE`, `planJoseRequest` |
-| service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `replacePlanSteps`, `requestForCommand`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `updateJoseStep` |
+| service | `src/services/jose/josePlanner.ts` | `BATCH_LABEL`, `buildPromptForTests`, `copiedPlaceholders`, `describePlanSource`, `HISTORY_HEADING`, `historyOnlyDestinations`, `JosePlan`, `missingAsked`, `PLAN_EXAMPLE`, `planBatch`, `planJoseRequest` |
+| service | `src/services/jose/joseQueue.ts` | `giveBackTurn`, `leaveQueue`, `QUEUED_LINE`, `queuePosition`, `requeueAtStart`, `resetQueueForTests`, `takeTurn`, `usesLocalModel`, `WAITING_FOR_TURN` |
+| service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `onRequestStatusChange`, `replacePlanSteps`, `requestForCommand`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `setRequestGroup`, `setRequestQueuedAt`, `updateJoseStep` |
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
 | service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `estimateEffectsUsd`, `estimateElevenLabsUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd` |
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `listStepOutputs`, `priorOutputsForNeeds`, `setStepOutput`, `StepOutput` |
+| service | `src/services/jose/joseStop.ts` | `clearStop`, `isStopRequested`, `NOT_RUNNING`, `onStopRequested`, `STOPPED_LINE`, `stopRequest`, `stopSignal`, `stopWaitsFor` |
 | service | `src/services/jose/joseSummary.ts` | `closingSummary` |
 | service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `asksToMake`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `MAKING_WORDS`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
 | service | `src/services/jose/joseUserTemplates.ts` | `deleteUserTemplate`, `listUserTemplates`, `saveUserTemplate` |
 | service | `src/services/jose/movedTaskTypes.ts` | `dropRetiredSteps`, `MOVED_TASK_TYPES`, `moveToOwner`, `RETIRED_TASK_TYPES`, `toCurrentOwners` |
 | service | `src/services/jose/quotedContent.ts` | `CONTENT_AFTER`, `NOT_A_SEND`, `QUOTED`, `quotedPieces`, `withoutQuotedContent` |
+| service | `src/services/jose/requestGroups.ts` | `groupRequests`, `RequestGroup` |
 | service | `src/services/jose/reviewStep.ts` | `ReviewStepResult`, `runReviewStep` |
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
 | service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
-| service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
+| service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_PROJECT_SOURCES`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/jose/taskTypeMeanings.ts` | `CODE_TASK_PREFIXES`, `isCodeRequest`, `isCodeTask`, `needsFacts`, `planningMenu`, `refersToAProject`, `TASK_TYPE_MEANINGS`, `taskTypesFor` |
 | service | `src/services/jose/teams.ts` | `dismissOldPair`, `findTeam`, `NO_STEPS`, `OldPairOffer`, `oldPairOffers`, `parseTeamRequest`, `runNamedTeam`, `runTeam`, `saveTeam`, `takeOldPair`, `TEAM_LABEL`, `TEAM_NEEDS_TEXT`, `TEAM_NOT_FOUND`, `TeamMember`, `teamSteps`, `templateProblems`, `WHICH_TEAM` |
 | service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `asksPlanReview`, `asksReadiness`, `asksToCleanUpMemory`, `asksToForget`, `asksToRemember`, `asksWhatWasDecided`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `ParsedSend`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals`, `WRITE_FOR_SEND` |
-| service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `assistantPrompt`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `miyaResearchSnippet`, `parseJsonResponse`, `pickAlphonsoProject`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
+| service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `assistantPrompt`, `CANCELLED_LINE`, `cancelRequest`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `miyaResearchSnippet`, `parseJsonResponse`, `pickAlphonsoProject`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
 | service | `src/services/licenseService.ts` | `__setTrustedPublicKeyForTests`, `activateLicense`, `canUseConnector`, `clearLicenseDenialLog`, `deactivateLicense`, `getLicenseDenialLog`, `getLicenseInfo`, `initLicense`, `isPremiumConnector`, `isPremiumGatingEnabled`, `LicenseDenialEntry`, `LicenseInfo`, `LicenseTier` |
 | service | `src/services/localMarketplaceService.ts` | `DEFAULT_CATALOGUE_URL`, `fetchRemoteCatalogue`, `getRemoteCatalogueUrl`, `listMarketplaceItems`, `setMarketplaceItemStatus`, `setRemoteCatalogueUrl` |
@@ -469,7 +473,7 @@ Source-backed inventory: 324 services and 176 components. Human purpose descript
 | service | `src/services/skills/skillGather.ts` | `GatheredResult`, `gatherForSkill`, `MAX_TOOL_CALLS` |
 | service | `src/services/skills/skillLibrary.ts` | `contentAsk`, `listSkills`, `RefusedSkill`, `refusedSkills`, `setUserSkillFiles`, `skillsForTask` |
 | service | `src/services/skills/skillOutcomes.ts` | `listSkillOutcomes`, `recordReviewVerdict`, `recordStepOutcome`, `SkillOutcome`, `skillStats`, `statsLine` |
-| service | `src/services/skills/skillPick.ts` | `NO_SKILL`, `PickedSkill`, `pickSkill`, `skillLabel` |
+| service | `src/services/skills/skillPick.ts` | `MIN_REVIEWS`, `NO_SKILL`, `PickedSkill`, `pickSkill`, `rankByResults`, `skillLabel`, `WEAK_PASS_RATE` |
 | service | `src/services/skills/skillToolRun.ts` | `ACTION_TOOL_REFUSAL`, `runSkillTool`, `ToolContext`, `ToolResult` |
 | service | `src/services/skills/skillTools.ts` | `ACTION_TOOLS`, `SKILL_TOOLS`, `SkillTool`, `toolsFor` |
 | service | `src/services/skills/skillUse.ts` | `recordSkillUse`, `skillLastUsed` |
@@ -478,7 +482,7 @@ Source-backed inventory: 324 services and 176 components. Human purpose descript
 | service | `src/services/streamingService.ts` | `abortStream`, `clearStreamHistory`, `getActiveStreams`, `getStreamState`, `startStream`, `StreamEvent`, `subscribeToStreams` |
 | service | `src/services/telegramAutoPollService.ts` | `getTelegramAutoPollState`, `getTelegramEnvSafe`, `runSingleTelegramPoll` |
 | service | `src/services/telegramBrowserConnector.ts` | `browserPollTelegram`, `browserSendTelegram`, `getTelegramPollCursor`, `handleTelegramBotCommand`, `parseTelegramCommand`, `setTelegramPollCursor`, `TelegramAuditEntry`, `TelegramBotVerifyResult`, `TelegramMessage`, `TelegramPollResult`, `TelegramSendResult`, `verifyTelegramBotEnvironment` |
-| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
+| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `handleStopCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
 | service | `src/services/toolConnectionService.ts` | `buildToolConnectionPayload`, `listToolConnectionAudit`, `listToolConnections`, `listToolConnectionTypes`, `proveToolConnectionPath`, `removeToolConnection`, `sendToolConnectionMessage`, `SendToolConnectionOptions`, `setToolConnectionStatus`, `testToolConnection`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `ToolConnection`, `ToolConnectionAuditEntry`, `ToolConnectionPatch`, `ToolConnectionResult`, `ToolConnectionType`, `upsertToolConnection` |
 | service | `src/services/toolNotificationDispatcher.ts` | `dispatchReceiptNotifications` |
 | service | `src/services/toolRegistryService.ts` | `executeTool`, `formatToolsForPrompt`, `getAllToolNames`, `getToolDefinition`, `getToolDefinitions`, `ToolArgs`, `ToolContext`, `ToolDefinition`, `ToolExecutionResult`, `ToolParameterSchema` |

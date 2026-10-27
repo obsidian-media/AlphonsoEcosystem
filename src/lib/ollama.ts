@@ -1,3 +1,4 @@
+import { getAgentSignal } from './agentSignals';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { joinThinking, splitThinking } from './thinking';
 import type { OllamaModelsProof, OllamaGenerateProof } from '../types/tauri-commands';
@@ -826,7 +827,10 @@ async function generatePaidResponse(paidModel: string, options: AgentGenerateOpt
 
 const isPaidModel = (model: unknown): model is string => isPaidModelId(model);
 
-export async function generateAgentLlmResponse(agentId: string, options: AgentGenerateOptions): Promise<AgentGenerateResult> {
+export async function generateAgentLlmResponse(agentId: string, rawOptions: AgentGenerateOptions): Promise<AgentGenerateResult> {
+  // A step being stopped cancels its model call (Jose phase 7).
+  const stepSignal = getAgentSignal(agentId);
+  const options: AgentGenerateOptions = rawOptions.signal || !stepSignal ? rawOptions : { ...rawOptions, signal: stepSignal };
   // A paid model Jose chose for this step goes first, whatever the agent's own provider.
   const stepModel = options.model || getAgentModelOverride(agentId);
   if (isPaidModel(stepModel)) return generatePaidResponse(stepModel, options);

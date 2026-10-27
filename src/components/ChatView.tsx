@@ -23,6 +23,8 @@ import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughCalleMcp } from '..
 import { ALPHONSO_ANSWER_PROMPT } from '../services/alphonso/answerPrompt'
 import { decideJoseRoute } from '../services/jose/joseDecision'
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
+import { stopRequest, STOPPED_LINE } from '../services/jose/joseStop'
+import { WAITING_FOR_TURN } from '../services/jose/joseQueue'
 import { JosePlanCard } from './jose/JosePlanCard'
 import { MariaOfferButton } from './maria/MariaOfferButton'
 import { JoseRequestOutcome } from './jose/JoseRequestOutcome'
@@ -39,7 +41,7 @@ import {
   cancelMcpOutreachCall,
   markMcpOutreachDelivered
 } from '../services/calleMcpOutreachService';
-import { executeApprovedPackets, carryOnRequest } from '../services/joseExecutionEngineService';
+import { executeApprovedPackets, carryOnRequest, cancelRequest } from '../services/joseExecutionEngineService';
 import { higgsfieldResultsDoneSince, higgsfieldResultsFor, markShownInChat, type HiggsfieldResult } from '../services/contentFactory/higgsfieldByName';
 import { HiggsfieldMedia } from './miya/HiggsfieldResults';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
@@ -799,7 +801,9 @@ export function ChatView({
       const rejectedPlan = result?.reason === 'plan_rejected'
         ? `The plan didn't pass the checks: ${(result.problems || []).join(' ')} It is still waiting on the board.`
         : '';
-      const baseSummary = userReport?.summary || rejectedPlan || (stoppedEarly ? result.reason.trim() : 'Jose processed the command.');
+      // A request you stopped (Jose phase 7) says so in words, not its reason code.
+      const stoppedByYou = result?.reason === 'stopped' ? STOPPED_LINE : '';
+      const baseSummary = stoppedByYou || userReport?.summary || rejectedPlan || (stoppedEarly ? result.reason.trim() : 'Jose processed the command.');
       const hintLine = (result?.pendingApprovalCount || 0) > 0
         ? '\nApprove the pending tasks below to continue.'
         : '';
@@ -1393,6 +1397,14 @@ export function ChatView({
                           >
                             Carry on
                           </button>
+                          <button
+                            type="button"
+                            data-testid={`chat-notice-cancel-${request.id}`}
+                            className="text-(--text-3) hover:underline"
+                            onClick={() => { cancelRequest(request.id); refreshInterrupted(); }}
+                          >
+                            Cancel
+                          </button>
                           {onOpenJoseBoard && (
                             <button type="button" className="text-(--text-3) hover:underline" onClick={() => onOpenJoseBoard(request.id)}>
                               Open on the board
@@ -1421,6 +1433,14 @@ export function ChatView({
                       onClick={async () => { await carryOnRequest(request.id); refreshInterrupted(); }}
                     >
                       Carry on
+                    </button>
+                    <button
+                      type="button"
+                      data-testid={`chat-notice-cancel-${request.id}`}
+                      className="text-(--text-3) hover:underline"
+                      onClick={() => { cancelRequest(request.id); refreshInterrupted(); }}
+                    >
+                      Cancel
                     </button>
                     {onOpenJoseBoard && (
                       <button type="button" className="text-(--text-3) hover:underline" onClick={() => onOpenJoseBoard(request.id)}>
@@ -1756,12 +1776,23 @@ export function ChatView({
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-(--accent) rounded-full animate-pulse" />
                 <span className="text-xs text-(--text-2) font-medium">
+                  {liveProgress.stage === 'queued' && WAITING_FOR_TURN}
                   {liveProgress.stage === 'wave_start' && `Wave ${(liveProgress.wave || 0) + 1}: ${(liveProgress.agents || []).join(', ')}`}
                   {liveProgress.stage === 'executed' && `${liveProgress.assignment?.agent || 'Agent'} completed`}
                   {liveProgress.stage === 'generating_images' && `Generating ${liveProgress.promptCount || 0} image(s)...`}
                   {liveProgress.stage === 'approval_required' && `${liveProgress.assignment?.agent || 'Agent'} needs approval`}
                   {!['wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
                 </span>
+                {liveRequestId && (
+                  <button
+                    type="button"
+                    data-testid="chat-live-stop"
+                    onClick={() => { stopRequest(liveRequestId); }}
+                    className="text-xs font-medium text-(--text-2) hover:underline"
+                  >
+                    Stop
+                  </button>
+                )}
                 {liveRequestId && onOpenJoseBoard && (
                   <button
                     type="button"

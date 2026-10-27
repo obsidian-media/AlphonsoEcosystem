@@ -6,7 +6,8 @@
 // own key, set only for the run) is typed into Settings → Connectors.
 import { buttonByText, enterShell, invoke, mainText, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
 
-const PREFERRED_TEST_MODEL = 'qwen2.5:7b';
+// CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
+const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 const TAVILY_KEY = process.env.ALPHONSO_LIVE_TAVILY_API_KEY || '';
 const POST = '/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy';
 const PLAN = '/jose Audit this plan for compliance risks: tomorrow we email all 500 customers a 30 percent discount code and post it on Instagram.';

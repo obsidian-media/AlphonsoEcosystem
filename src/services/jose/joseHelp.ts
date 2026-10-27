@@ -117,7 +117,9 @@ export function planHelp(steps: PlanStep[], step: PlanStep, request: string, hel
     helpRound: 1,
     ...(step.model ? { model: step.model } : {}),
     ...(step.reviewOf ? { reviewOf: step.reviewOf } : {}),
-  };
+    // A content-factory step runs again as that step (Jose phase 7).
+    ...((step as { contentStep?: unknown }).contentStep ? { contentStep: (step as { contentStep?: unknown }).contentStep } : {}),
+  } as PlanStep;
   return {
     add: [help, again],
     rewire: { from: [step.stepId], to: [againId] },

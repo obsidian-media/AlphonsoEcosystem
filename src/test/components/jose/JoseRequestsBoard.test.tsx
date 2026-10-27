@@ -16,6 +16,7 @@ vi.mock('../../../services/jose/submitToJose', async () => {
 vi.mock('../../../services/joseExecutionEngineService', () => ({
   approveRequestStep: vi.fn(async () => ({ ok: true, summary: 'Marcus did it; the request carried on.' })),
   carryOnRequest: vi.fn(async () => ({ ok: true, command: { userReport: { summary: 'Carried on to the end.' } } })),
+  cancelRequest: vi.fn(() => ({ ok: true, summary: 'Cancelled.' })),
   rejectRequestStep: vi.fn(() => ({ ok: true, summary: 'Rejected. The request was cancelled.' })),
   pickAlphonsoProject: vi.fn(async (_r: string, _s: string, name: string) => ({ ok: true, summary: `Working in ${name}.` })),
 }));
@@ -270,5 +271,68 @@ describe('the skill under a step (agent roles Part B)', () => {
     render(<JoseRequestsBoard selectedRequestId={request.id} />);
     fireEvent.click(screen.getAllByTestId('jose-plan-step')[0]);
     expect(screen.getByTestId('jose-step-skill').textContent).toBe('No skill for this task.');
+  });
+});
+
+// Jose phase 7: a running request can be stopped from the board.
+describe('Stop on the board', () => {
+  it('a running request shows Stop, which stops it', () => {
+    const request = createJoseRequest({ commandId: 'c-stop', source: 'user', text: 'Write three notes', kind: 'normal', steps });
+    setJoseRequestStatus(request.id, 'running');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    fireEvent.click(screen.getByTestId('jose-stop'));
+    expect(screen.getByText('Stopped by you.')).toBeTruthy();
+  });
+
+  it('a finished request has no Stop', () => {
+    const request = createJoseRequest({ commandId: 'c-done', source: 'user', text: 'Done one', kind: 'normal', steps });
+    setJoseRequestStatus(request.id, 'done');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    expect(screen.queryByTestId('jose-stop')).toBeNull();
+  });
+});
+
+// Jose phase 7: Cancel beside Carry on.
+describe('Cancel a cut-off request on the board', () => {
+  it('shows Cancel beside Carry on, which cancels it', async () => {
+    const { cancelRequest } = await import('../../../services/joseExecutionEngineService');
+    const request = createJoseRequest({ commandId: 'c-cut', source: 'user', text: 'Cut off', kind: 'normal', steps });
+    setJoseRequestStatus(request.id, 'interrupted');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    fireEvent.click(screen.getByTestId('jose-cancel-request'));
+    expect(cancelRequest).toHaveBeenCalledWith(request.id);
+    expect(screen.getByText('Cancelled.')).toBeTruthy();
+  });
+});
+
+// Jose phase 7: a queued request shows its place in the queue.
+describe('Queued requests on the board', () => {
+  it('shows "Queued (1st)." for the first one waiting, and offers Stop', async () => {
+    const { takeTurn, resetQueueForTests } = await import('../../../services/jose/joseQueue');
+    resetQueueForTests();
+    const holder = createJoseRequest({ commandId: 'c-hold', source: 'user', text: 'Holder', kind: 'normal', steps });
+    const waitingOne = createJoseRequest({ commandId: 'c-wait', source: 'user', text: 'Waiting one', kind: 'normal', steps });
+    setJoseRequestStatus(holder.id, 'running');
+    setJoseRequestStatus(waitingOne.id, 'running');
+    await takeTurn(holder.id);
+    void takeTurn(waitingOne.id);
+    render(<JoseRequestsBoard selectedRequestId={waitingOne.id} />);
+    expect(screen.getAllByText('Queued (1st).').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('jose-stop')).toBeTruthy();
+    resetQueueForTests();
+  });
+});
+
+// Jose phase 7: a project's requests are grouped under the project's name.
+describe("A project's requests on the board", () => {
+  it('shows them under a heading with the project name', async () => {
+    const store = await import('../../../services/jose/joseRequestStore');
+    const one = createJoseRequest({ commandId: 'c-g1', source: 'content-factory', text: 'Content factory: script', kind: 'normal', steps });
+    const two = createJoseRequest({ commandId: 'c-g2', source: 'content-factory', text: 'Content factory: scenes', kind: 'normal', steps });
+    store.setRequestGroup(one.id, { id: 'p1', label: 'Honeybees' });
+    store.setRequestGroup(two.id, { id: 'p1', label: 'Honeybees' });
+    render(<JoseRequestsBoard selectedRequestId={one.id} />);
+    const heading = screen.getByTestId('jose-group-p1');
+    expect(heading.textContent).toContain('Honeybees');
   });
 });

@@ -467,6 +467,19 @@ export async function executeBatch(batchId, { endpoint, zeroCostMode, onProgress
   let executedCount = 0;
   let failedCount = 0;
 
+  // Jose phase 7: every task is planned in one call first; a task without a usable plan is asked
+  // of Jose on its own, as before.
+  const commandFor = (task) => `Ask Jose: ${task.title} — ${task.description}${projectDir ? ` Work in directory: ${projectDir}.` : ''} Suggested agent: ${task.agent}.`;
+  const open = batch.tasks.filter((t) => t.status !== 'completed' && t.status !== 'failed');
+  let planned = [];
+  try {
+    const { planBatch } = await import('./jose/josePlanner');
+    planned = await planBatch(open.map(commandFor));
+  } catch {
+    planned = [];
+  }
+  const planFor = new Map(open.map((t, i) => [t.id, planned[i] || null]));
+
   for (const task of batch.tasks) {
     if (task.status === 'completed' || task.status === 'failed') continue;
 
@@ -480,16 +493,24 @@ export async function executeBatch(batchId, { endpoint, zeroCostMode, onProgress
     const commandText = `Ask Jose: ${task.title} — ${task.description}${dirContext} Suggested agent: ${task.agent}.`;
 
     try {
-      const { answerOrPlan } = await import('./jose/joseInbound');
-      const outcome = await answerOrPlan(commandText, {
-        source: 'batch',
-        endpoint,
-        zeroCostMode,
-        showPlanFirst: 'never',
-        onProgress
-      });
-      // Only a request that ran counts; a direct answer did no work.
-      const result = outcome.kind === 'request' ? outcome.result : null;
+      const steps = planFor.get(task.id);
+      let result = null;
+      if (steps) {
+        const { submitStepsToJose } = await import('./jose/submitToJose');
+        const { BATCH_LABEL } = await import('./jose/josePlanner');
+        result = await submitStepsToJose({ text: commandText, source: 'batch', steps, label: BATCH_LABEL, endpoint, zeroCostMode, onProgress });
+      } else {
+        const { answerOrPlan } = await import('./jose/joseInbound');
+        const outcome = await answerOrPlan(commandText, {
+          source: 'batch',
+          endpoint,
+          zeroCostMode,
+          showPlanFirst: 'never',
+          onProgress
+        });
+        // Only a request that ran counts; a direct answer did no work.
+        result = outcome.kind === 'request' ? outcome.result : null;
+      }
 
       if (result?.ok) {
         updateTaskStatus(task.id, 'completed', result.executionReceipts || []);

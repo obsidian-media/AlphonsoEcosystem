@@ -63,3 +63,41 @@ describe('pickSkill', () => {
     expect((await pickSkill('maria', 'audit_quality', null, { contentStep: false })).reason.length).toBe(160);
   });
 });
+
+// Jose phase 7: a skill whose reviewed work keeps failing is offered last.
+describe('skill results guide the pick', () => {
+  const record = async (skill: string, verdicts: ('pass' | 'fix')[]) => {
+    const { recordStepOutcome, recordReviewVerdict } = await import('../../../services/skills/skillOutcomes');
+    verdicts.forEach((v, i) => {
+      recordStepOutcome({ requestId: `r-${skill}-${i}`, stepId: 's', agent: 'maria', skill, actionType: 'audit_quality', outcome: 'done' });
+      recordReviewVerdict(`r-${skill}-${i}`, 's', v);
+    });
+  };
+  beforeEach(() => localStorage.clear());
+
+  it('a skill that failed review 3 of 4 times is listed last, with why, and is not the fallback', async () => {
+    await record('Claim check', ['pass', 'fix', 'fix', 'fix']);
+    llm.mockResolvedValueOnce(says('unreadable'));
+    const picked = await pickSkill('maria', 'audit_quality', null, { contentStep: false });
+    const prompt = String(llm.mock.calls[0][1].prompt);
+    expect(prompt.indexOf('Quality review:')).toBeLessThan(prompt.indexOf('Claim check:'));
+    expect(prompt).toContain('(its reviewed work failed 3 of 4 times)');
+    expect(picked.skill?.name).toBe('Quality review');
+    expect(picked.reason).toBe("Picked Quality review; Claim check's reviewed work failed 3 of 4 times.");
+  });
+
+  it('fewer than 3 reviews is not enough to hold a skill back', async () => {
+    await record('Claim check', ['fix', 'fix']);
+    llm.mockResolvedValueOnce(says('unreadable'));
+    expect((await pickSkill('maria', 'audit_quality', null, { contentStep: false })).skill?.name).toBe('Claim check');
+  });
+
+  it('a single skill is used whatever its record', async () => {
+    const { recordStepOutcome, recordReviewVerdict } = await import('../../../services/skills/skillOutcomes');
+    for (let i = 0; i < 4; i += 1) {
+      recordStepOutcome({ requestId: `a${i}`, stepId: 's', agent: 'alphonso', skill: 'Answer a question', actionType: 'assistant_answer', outcome: 'done' });
+      recordReviewVerdict(`a${i}`, 's', 'fix');
+    }
+    expect((await pickSkill('alphonso', 'assistant_answer', null, { contentStep: false })).skill?.name).toBe('Answer a question');
+  });
+});

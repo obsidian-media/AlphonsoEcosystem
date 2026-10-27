@@ -28,4 +28,13 @@ describe("Jose's entry points", () => {
       .filter((rel) => OLD_ENTRY.test(readFileSync(join(SRC, rel), 'utf8')));
     expect(callers).toEqual([]);
   });
+
+  // Jose phase 7: the Workflows panel's Run and the phone's "run workflow" go through Jose.
+  it('no screen or App runs workflow tasks outside Jose', () => {
+    const callers = sourceFiles(SRC)
+      .map((path) => relative(SRC, path).replace(/\\/g, '/'))
+      .filter((rel) => rel.startsWith('components/') || rel === 'App.tsx')
+      .filter((rel) => /\bexecuteWorkflowTasks\s*\(/.test(readFileSync(join(SRC, rel), 'utf8')));
+    expect(callers).toEqual([]);
+  });
 });

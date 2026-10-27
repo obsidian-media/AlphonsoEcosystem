@@ -46,6 +46,8 @@ export interface BoardroomThreadMessage {
   confirmed: boolean;
   model?: string;
   latencyMs?: number;
+  /** The Jose request a thread action started (Jose phase 7): the note opens it on the board. */
+  requestId?: string;
   createdAt: string;
   createdAtMs: number;
   seq: number;
@@ -226,7 +228,8 @@ export function addThreadMessage({
   retryContext,
   model,
   latencyMs,
-  informedByMessageId
+  informedByMessageId,
+  requestId
 }: {
   threadId: string;
   speaker: string;
@@ -236,6 +239,7 @@ export function addThreadMessage({
   model?: string;
   latencyMs?: number;
   informedByMessageId?: string;
+  requestId?: string;
 }): BoardroomThreadMessage | null {
   const originalText = String(content || '').trim();
   if (!originalText) return null;
@@ -256,6 +260,7 @@ export function addThreadMessage({
     retryContext,
     model,
     latencyMs,
+    ...(requestId ? { requestId } : {}),
     acknowledged: false,
     confirmed: false,
     createdAt: nowIso(),

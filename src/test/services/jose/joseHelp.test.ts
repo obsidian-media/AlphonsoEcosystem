@@ -124,3 +124,14 @@ describe('planHelp', () => {
     expect(planHelp([...plan, again], again, 'more', { agent: 'hector', actionType: 'research_report' })).toBeNull();
   });
 });
+
+// Jose phase 7: a content step's re-run keeps its content data.
+describe('help for a content-factory step', () => {
+  it('the step that runs again keeps contentStep', () => {
+    const step = { stepId: 'script', agent: 'miya', actionType: 'creative_script', effects: ['write_own_work'], needs: [], instruction: 'Write it.', contentStep: { projectId: 'p1', step: 'script' } } as any;
+    const change = planHelp([step], step, 'facts on honeybees', { agent: 'hector', actionType: 'research_report' } as any)!;
+    const again = change.add.find((s: any) => s.stepId === 'script-again') as any;
+    expect(again.contentStep).toEqual({ projectId: 'p1', step: 'script' });
+    expect(again.helpRound).toBe(1);
+  });
+});

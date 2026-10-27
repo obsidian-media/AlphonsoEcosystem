@@ -23,6 +23,7 @@ function projectName(text: string): string {
 export async function startContentProjectFromChat(
   text: string,
   settings: { outputFolder?: string | null },
+  from: { source?: string; allowPaidModels?: boolean } = {},
 ): Promise<{ ok: boolean; projectId?: string; note: string }> {
   try {
     requireOutputRoot(settings);
@@ -36,10 +37,15 @@ export async function startContentProjectFromChat(
   const name = projectName(idea);
   const project = createProject(brand.id, name, { ...emptyBrief(), idea });
   // Runs on in the background: Chat answers now; a refusal shows in Miya Studio.
-  void runContentProject(project.id, { settings }).catch(() => undefined);
+  // A schedule never allows paid models (Jose phase 7, as for its other requests).
+  void runContentProject(project.id, { settings, ...(from.allowPaidModels === false ? { allowPaidModels: false } : {}) }).catch(() => undefined);
+  // Telegram and schedules have no "Open in Miya Studio" button (Jose phase 7).
+  const away = from.source && from.source !== 'user';
   return {
     ok: true,
     projectId: project.id,
-    note: `Started the Miya Studio project "${name}" for ${brand.name}. Jose runs it step by step and stops after the review for your approval.`,
+    note: away
+      ? `Started a Miya Studio project: ${name}. Open Miya Studio to follow it.`
+      : `Started the Miya Studio project "${name}" for ${brand.name}. Jose runs it step by step and stops after the review for your approval.`,
   };
 }

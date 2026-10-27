@@ -40,6 +40,13 @@ export function onProjectReleased(listener: (folder: string) => void): void {
   if (!releaseListeners.includes(listener)) releaseListeners.push(listener);
 }
 
+/** Frees every project the request holds (a stopped request, Jose phase 7); returns the folders. */
+export function releaseProjectsHeldBy(requestId: string): string[] {
+  const held = Object.entries(read()).filter(([, lock]) => lock.requestId === requestId).map(([folder]) => folder);
+  for (const folder of held) releaseProject(folder, requestId);
+  return held;
+}
+
 /** Frees the project; returns whether this request held it. */
 export function releaseProject(folder: string, requestId: string): boolean {
   const locks = read();

@@ -20,7 +20,7 @@ export interface ToolContext {
 export interface ToolResult { ok: boolean; text: string }
 
 const MAX_TOOL_TEXT = 4000;
-export const ACTION_TOOL_REFUSAL = "This tool runs as the step's own action, after its approval.";
+export const ACTION_TOOL_REFUSAL = 'This tool is another step\'s action. End your answer with an ACTION: line and Jose adds it, after your approval.';
 
 function cut(text: string): string {
   return text.length > MAX_TOOL_TEXT ? `${text.slice(0, MAX_TOOL_TEXT)}\n(cut)` : text;

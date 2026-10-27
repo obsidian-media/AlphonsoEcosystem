@@ -359,7 +359,8 @@ mod command_policy_tests {
   #[test]
   fn command_allowed_reports_the_policy_without_running_anything() {
     assert_eq!(command_allowed("npm".into(), v(&["test"]))["allowed"], true);
-    let refused = command_allowed("node".into(), v(&["hello.js"]));
+    // `node hello.js` is allowed since Jose phase 7; inline code never is.
+    let refused = command_allowed("node".into(), v(&["-e", "1"]));
     assert_eq!(refused["allowed"], false);
     assert_eq!(
       refused["reason"],

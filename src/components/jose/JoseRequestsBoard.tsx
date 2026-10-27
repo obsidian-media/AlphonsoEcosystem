@@ -17,8 +17,11 @@ import { describePlanSource, type JosePlan } from '../../services/jose/josePlann
 import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
+import { stopRequest } from '../../services/jose/joseStop';
+import { QUEUED_LINE, queuePosition } from '../../services/jose/joseQueue';
+import { groupRequests } from '../../services/jose/requestGroups';
 import { agentName } from '../../services/jose/agentNames';
-import { approveRequestStep, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
+import { approveRequestStep, cancelRequest, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
 
 export const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
@@ -30,7 +33,16 @@ export const STATUS_LABELS: Record<string, string> = {
   interrupted: 'Interrupted',
   cancelled: 'Cancelled',
   expired: 'Expired',
+  stopped: 'Stopped by you',
+  queued: 'Queued',
 };
+
+/** A request's status in words; a queued one with its place in the queue (Jose phase 7). */
+export function statusLabel(request: JoseRequest): string {
+  const place = request.status === 'queued' ? queuePosition(request.id) : null;
+  if (place) return QUEUED_LINE(place);
+  return STATUS_LABELS[request.status] || request.status;
+}
 
 export function requestPlanLabel(request: JoseRequest): string {
   if (!request.plan) return '';
@@ -161,7 +173,26 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
     <div className="grid gap-4 md:grid-cols-[260px_1fr]">
       <ul className="space-y-1" aria-label="Jose requests">
         {requests.length === 0 && <li className="text-xs text-(--text-3)">No requests yet. Ask Jose something in Chat.</li>}
-        {requests.map((request) => (
+        {/* A project's requests together under its name (Jose phase 7). */}
+        {groupRequests(requests).map((entry) => entry.group ? (
+          <li key={`group-${entry.group.id}`} data-testid={`jose-group-${entry.group.id}`}>
+            <div className="px-1 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-(--text-3)">{entry.group.label}</div>
+            <ul className="space-y-1 border-l border-(--border) pl-2">
+              {entry.requests.map((request) => (
+              <li key={request.id}>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedId(request.id); setEditing(false); setMessage(''); setStepId(null); }}
+                  className={`w-full rounded-md px-2 py-1.5 text-left text-xs ${request.id === selectedId ? 'bg-(--surface-3)' : 'bg-(--surface-2) hover:bg-(--surface-3)'}`}
+                >
+                  <div className="truncate font-medium text-(--text-1)">{request.text}</div>
+                  <div className="text-[10px] text-(--text-3)">{statusLabel(request)} · {new Date(request.createdAtMs).toLocaleString()}</div>
+                </button>
+              </li>
+              ))}
+            </ul>
+          </li>
+        ) : entry.requests.map((request) => (
           <li key={request.id}>
             <button
               type="button"
@@ -169,17 +200,17 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
               className={`w-full rounded-md px-2 py-1.5 text-left text-xs ${request.id === selectedId ? 'bg-(--surface-3)' : 'bg-(--surface-2) hover:bg-(--surface-3)'}`}
             >
               <div className="truncate font-medium text-(--text-1)">{request.text}</div>
-              <div className="text-[10px] text-(--text-3)">{STATUS_LABELS[request.status] || request.status} · {new Date(request.createdAtMs).toLocaleString()}</div>
+              <div className="text-[10px] text-(--text-3)">{statusLabel(request)} · {new Date(request.createdAtMs).toLocaleString()}</div>
             </button>
           </li>
-        ))}
+        )))}
       </ul>
 
       {selected && (
         <div className="space-y-3 min-w-0">
           <div>
             <div className="text-sm font-semibold text-(--text-1)">{selected.text}</div>
-            <div className="text-xs text-(--text-3)">{STATUS_LABELS[selected.status] || selected.status}</div>
+            <div className="text-xs text-(--text-3)">{statusLabel(selected)}</div>
             {requestPlanLabel(selected) && <div className="text-xs text-(--text-2) mt-1">{requestPlanLabel(selected)}</div>}
           </div>
 
@@ -255,8 +286,14 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
             )}
+            {(selected.status === 'running' || selected.status === ('queued' as string)) && (
+              <Button variant="ghost" data-testid="jose-stop" onClick={() => { setMessage(stopRequest(selected.id).summary); refresh(); }}>Stop</Button>
+            )}
             {(selected.status === 'interrupted' || (selected.status === 'waiting_setup' && !asking)) && (
-              <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
+              <>
+                <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
+                <Button variant="ghost" data-testid="jose-cancel-request" disabled={running} onClick={() => { setMessage(cancelRequest(selected.id).summary); refresh(); }}>Cancel</Button>
+              </>
             )}
             {waitingSteps.map((step) => (
               <React.Fragment key={step.stepId}>

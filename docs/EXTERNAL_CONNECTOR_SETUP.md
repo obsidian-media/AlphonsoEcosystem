@@ -1,6 +1,6 @@
 # Alphonso External Connector Setup
 
-Status: this documents the real connector setup path for the most-used external connectors; [CONNECTORS.md](CONNECTORS.md) covers all 33. Nothing is "live" until the Connector Health Monitor's **Test** says "Live check passed" (the service itself answered) or a supervised action succeeded.
+Status: this documents the real connector setup path for the most-used external connectors; [CONNECTORS.md](CONNECTORS.md) covers all 34. Nothing is "live" until the Connector Health Monitor's **Test** says "Live check passed" (the service itself answered) or a supervised action succeeded.
 
 ## Truth rules
 

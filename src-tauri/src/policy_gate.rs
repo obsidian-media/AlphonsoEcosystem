@@ -103,6 +103,25 @@ fn pip_args_allowed(args: &[String]) -> bool {
     })
 }
 
+/// `node <file>`: exactly one argument, a .js/.mjs/.cjs file given relative to the folder the
+/// command runs in. No flags (they can load other code: `-r`, `--import`, `--inspect`), no drive
+/// letter or leading slash, and no `..` part, so the file can't be outside the folder.
+fn node_script_allowed(args: &[String]) -> bool {
+  let [file] = args else { return false };
+  let lower = file.to_ascii_lowercase();
+  if file.starts_with('-') || file.starts_with('/') || file.starts_with('\\') || file.contains(':')
+  {
+    return false;
+  }
+  if file
+    .split(['/', '\\'])
+    .any(|part| part == ".." || part.is_empty())
+  {
+    return false;
+  }
+  lower.ends_with(".js") || lower.ends_with(".mjs") || lower.ends_with(".cjs")
+}
+
 /// Validate a program's arguments against its allowlist. Every allowed program
 /// has an explicit rule; anything else is refused (fail closed). Interpreters
 /// are the critical case: `node -e`, `python -c`, and `npx <anything>` are
@@ -146,11 +165,13 @@ pub(crate) fn allowed_args(program: &str, args: &[String]) -> bool {
       first_is(args, &allowed) && !args.iter().any(|a| git_arg_is_dangerous(a))
     }
     "node" | "node.exe" => {
-      // Only version checks and syntax checks (`node --check <file>`).
+      // Version checks, syntax checks (`node --check <file>`), and since Jose phase 7 a script
+      // file inside the folder the command runs in (owner, 2026-10-27; approved with the change).
       is_version(args)
         || (args.len() == 2
           && matches!(args[0].as_str(), "--check" | "-c")
           && !args[1].starts_with('-'))
+        || node_script_allowed(args)
     }
     "python" | "python3" | "python.exe" | "pythonw.exe" => {
       if is_version(args) {
@@ -388,12 +409,39 @@ mod tests {
     ));
     assert!(!allowed_args("node", &v(&["--eval", "1"])));
     assert!(!allowed_args("node", &v(&["-p", "1"])));
-    assert!(!allowed_args("node", &v(&["script.js"])));
     assert!(!allowed_args("python", &v(&["-c", "import os"])));
     assert!(!allowed_args("python", &v(&["-m", "http.server"])));
     assert!(!allowed_args("python", &v(&["evil.py"])));
     assert!(!allowed_args("npx", &v(&["some-random-package"])));
     assert!(!allowed_args("npx", &v(&["tsc", "--package", "evil"])));
+  }
+
+  // Jose phase 7 (owner, 2026-10-27): Alphonso may run a script file inside the step's folder,
+  // approved with his change; never inline code, flags, or a path outside the folder.
+  #[test]
+  fn node_runs_a_script_in_the_folder_only() {
+    assert!(allowed_args("node", &v(&["hello.js"])));
+    assert!(allowed_args("node", &v(&["scripts/build.mjs"])));
+    assert!(allowed_args("node", &v(&["tools\\gen.cjs"])));
+    let refused: &[&[&str]] = &[
+      &["-e", "1"],
+      &["-p", "1"],
+      &["--eval", "1"],
+      &["--require", "x", "y.js"],
+      &["-r", "x", "y.js"],
+      &["--import", "x", "y.js"],
+      &["../other/x.js"],
+      &["scripts/../../x.js"],
+      &["C:\\x.js"],
+      &["/x.js"],
+      &["\\x.js"],
+      &["hello.txt"],
+      &["a.js", "b.js"],
+      &["hello.js", "--inspect"],
+    ];
+    for bad in refused {
+      assert!(!allowed_args("node", &v(bad)), "{bad:?}");
+    }
   }
 
   #[test]
