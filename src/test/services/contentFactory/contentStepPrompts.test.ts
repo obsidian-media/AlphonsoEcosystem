@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildStepPrompt, parseStepAnswer } from '../../../services/contentFactory/contentStepPrompts';
+import { buildStepPrompt, parseStepAnswer, CONTENT_HELP_LINE, helpFromAnswer } from '../../../services/contentFactory/contentStepPrompts';
 import type { ContentStepPayload } from '../../../services/contentFactory/contentTypes';
 
 const brand = {
@@ -201,5 +201,18 @@ describe("Sentinel's campaign check", () => {
   it('reads issues with where and fix, and old plain issues', () => {
     expect(parseStepAnswer('security_content_check', JSON.stringify({ ok: false, issues: [{ what: 'A fake link', where: 'http://x', fix: 'Remove it.' }] }))).toEqual({ ok: false, issues: [{ what: 'A fake link', where: 'http://x', fix: 'Remove it.' }] });
     expect(parseStepAnswer('security_content_check', JSON.stringify({ ok: false, issues: ['A fake link'] }))).toEqual({ ok: false, issues: [{ what: 'A fake link', where: '', fix: '' }] });
+  });
+});
+
+// Jose phase 7: content-factory steps can ask for help through Jose.
+describe('help in content steps', () => {
+  it('a step is told it may ask for help, unless it is a help round', () => {
+    expect(buildStepPrompt(payload(), 'miya', 'creative_script').prompt).toContain(CONTENT_HELP_LINE);
+    expect(buildStepPrompt(payload(), 'miya', 'creative_script', { helpRound: true }).prompt).not.toContain(CONTENT_HELP_LINE);
+  });
+  it('reads the help a JSON answer asks for', () => {
+    expect(helpFromAnswer('{"script": "x", "help": "the latest numbers on honeybee losses"}')).toBe('the latest numbers on honeybee losses');
+    expect(helpFromAnswer('{"script": "x"}')).toBeNull();
+    expect(helpFromAnswer('not json')).toBeNull();
   });
 });

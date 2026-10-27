@@ -146,7 +146,24 @@ function referenceKnowledge(payload: ContentStepPayload): string {
   return lines.length ? `What is known about the reference posts:\n${lines.join('\n').slice(0, 6000)}` : '';
 }
 
-export function buildStepPrompt(payload: ContentStepPayload, agent: string, actionType: string): { system: string; prompt: string } {
+/** Content steps may ask for help through Jose (Jose phase 7), the JSON wording of HELP_INSTRUCTION. */
+export const CONTENT_HELP_LINE = 'If you need something another agent could provide (facts, a check), add "help": "<what you need>" to your JSON.';
+
+/** The help a content step's JSON answer asks for, or null. */
+export function helpFromAnswer(raw: string): string | null {
+  const text = String(raw || '');
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try {
+    const help = (JSON.parse(text.slice(start, end + 1)) as { help?: unknown })?.help;
+    return typeof help === 'string' && help.trim() ? help.trim().slice(0, 500) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function buildStepPrompt(payload: ContentStepPayload, agent: string, actionType: string, opts: { helpRound?: boolean } = {}): { system: string; prompt: string } {
   const action = ACTION_MAP.get(actionType);
   const ask = contentAsk(actionType);
   const brief = payload.brief;
@@ -182,6 +199,7 @@ export function buildStepPrompt(payload: ContentStepPayload, agent: string, acti
   if (actionType === 'creative_script' && brief.writeInMyVoice && payload.brand.pastScripts) {
     parts.push(`Write in this voice (the brand's past scripts):\n${payload.brand.pastScripts.slice(0, 6000)}`);
   }
+  if (!opts.helpRound) parts.push(CONTENT_HELP_LINE);
   parts.push(`Return JSON only: ${action?.keys || '{}'}`);
   return { system, prompt: parts.filter(Boolean).join('\n\n') };
 }

@@ -1,9 +1,10 @@
 // The agents' content-factory work, run by Jose (executeAssignment) for any
 // assignment that carries a `contentStep`. Each agent answers with its own
 // model (per-agent providers in Settings apply).
+import { agentName } from '../jose/agentNames';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { runMultiSourceResearch } from '../hectorResearchService';
-import { buildStepPrompt, parseStepAnswer, CONTENT_ACTION_KEYS } from './contentStepPrompts';
+import { buildStepPrompt, parseStepAnswer, CONTENT_ACTION_KEYS, helpFromAnswer } from './contentStepPrompts';
 import { hasOwnKey, type ContentStepPayload } from './contentTypes';
 import { getProject } from './contentProjectService';
 import { priorOutputs } from './contentStepAgents';
@@ -51,6 +52,19 @@ interface ContentAssignment {
   contentStep: ContentStepPayload;
   /** Jose's instruction; a review-loop revision adds the findings after "Fix what the review found:". */
   instruction?: string;
+  /** Set on the step that runs again with another agent's help (Jose phase 7). */
+  helpRound?: number;
+}
+
+interface ContentOptions {
+  stepInput?: { needs?: { stepId: string; agent: string; text: string }[] } | null;
+}
+
+/** The helper's answer for a step that runs again with help (Jose phase 7). */
+function helpText(assignment: ContentAssignment, options: ContentOptions): string {
+  if (!assignment.helpRound) return '';
+  const help = (options.stepInput?.needs || []).find((n) => n.stepId.endsWith('-help') && n.text.trim());
+  return help ? `Help from ${agentName(help.agent)}:\n${help.text.trim()}` : '';
 }
 
 const FINDINGS_MARK = 'Fix what the review found:';
@@ -59,7 +73,7 @@ const FINDINGS_MARK = 'Fix what the review found:';
  * The payload as the step should see it now (phase 6b): earlier steps' outputs
  * read from the project when the step runs, and a revision's findings added.
  */
-function livePayload(assignment: ContentAssignment): ContentStepPayload {
+function livePayload(assignment: ContentAssignment, options: ContentOptions = {}): ContentStepPayload {
   const payload = assignment.contentStep;
   const project = getProject(payload.projectId);
   const prior = project ? { ...payload.prior, ...priorOutputs(project, payload.step) } : payload.prior;
@@ -69,8 +83,9 @@ function livePayload(assignment: ContentAssignment): ContentStepPayload {
   // Hector's research answer from the same research step.
   const hector = assignment.actionType === 'analysis_market' ? project?.steps?.research?.pendingAgents?.hector : undefined;
   const fromHector = hector ? `Hector's research:\n${JSON.stringify(hector).slice(0, 6000)}` : '';
-  const task = [payload.task, fromHector, findings].filter(Boolean).join('\n\n');
-  return { ...payload, prior, ...(fromHector || findings ? { task } : {}) };
+  const helped = helpText(assignment, options);
+  const task = [payload.task, fromHector, findings, helped].filter(Boolean).join('\n\n');
+  return { ...payload, prior, ...(fromHector || findings || helped ? { task } : {}) };
 }
 
 export interface ContentStepResult {
@@ -94,23 +109,23 @@ function failed(assignment: ContentAssignment, reason: string, raw: string): Con
   };
 }
 
-export async function executeContentStepAssignment(assignment: ContentAssignment, _options: unknown = {}): Promise<ContentStepResult> {
+export async function executeContentStepAssignment(assignment: ContentAssignment, options: ContentOptions = {}): Promise<ContentStepResult> {
   // Miya Studio shows the step running, and a failure with its reason (phase 6b).
   const { projectId, step, purpose } = assignment.contentStep;
   // Lessons and ideas from real numbers (phase 4a) are not a factory step: nothing is shown running.
-  if (purpose) return runContentAgent(assignment);
+  if (purpose) return runContentAgent(assignment, options);
   beginContentStep(projectId, step);
   // Voice, Music, B-roll and Assemble make files rather than asking a model for text (phase 2a).
   const result = assignment.actionType === 'distribution_schedule_posts'
     ? await executePublishStep(assignment)
-    : MEDIA_ACTIONS.has(assignment.actionType) ? await executeMediaStep(assignment) : await runContentAgent(assignment);
+    : MEDIA_ACTIONS.has(assignment.actionType) ? await executeMediaStep(assignment) : await runContentAgent(assignment, options);
   if ((result.resultState === 'failed' || result.resultState === 'setup_required') && getProject(projectId)) failStep(projectId, step, String(result.failureReason || 'An agent could not finish this step.'));
   return result;
 }
 
-async function runContentAgent(assignment: ContentAssignment): Promise<ContentStepResult> {
+async function runContentAgent(assignment: ContentAssignment, options: ContentOptions = {}): Promise<ContentStepResult> {
   const { agent, actionType } = assignment;
-  let contentStep = livePayload(assignment);
+  let contentStep = livePayload(assignment, options);
   let allowedUrls: string[] | undefined;
   if (SEARCH_ACTIONS.has(actionType)) {
     const sources = await searchOnce(contentStep);
@@ -118,7 +133,7 @@ async function runContentAgent(assignment: ContentAssignment): Promise<ContentSt
     contentStep = { ...contentStep, sources };
     allowedUrls = sources.map((s) => s.url);
   }
-  const { system, prompt } = buildStepPrompt(contentStep, agent, actionType);
+  const { system, prompt } = buildStepPrompt(contentStep, agent, actionType, { helpRound: Boolean((assignment as { helpRound?: unknown }).helpRound) });
   const sessionId = `content:${contentStep.projectId}:${contentStep.step}`;
   const ask = async (text: string) => {
     const reply = await generateAgentLlmResponse(agent, { prompt: text, format: 'json', sessionId });
@@ -138,8 +153,10 @@ async function runContentAgent(assignment: ContentAssignment): Promise<ContentSt
     }
     if (data === null) return failed(assignment, UNREADABLE_ANSWER, raw);
     const references = (data as { references?: { url?: string }[] }).references;
+    // Asked for help (Jose phase 7): the summary's last line is the HELP line Jose's help loop reads.
+    const help = helpFromAnswer(raw);
     return {
-      summary: `${agent} finished ${actionType.replace(/_/g, ' ')}.`,
+      summary: `${agent} finished ${actionType.replace(/_/g, ' ')}.${help ? `\nHELP: ${help}` : ''}`,
       resultState: 'completed',
       artifacts: [{ type: 'content_step_output', actionType, data, raw }],
       sources: Array.isArray(references) ? references.map((r) => String(r?.url || '')).filter(Boolean) : [],
