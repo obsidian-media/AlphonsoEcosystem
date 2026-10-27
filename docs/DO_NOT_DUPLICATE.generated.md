@@ -350,7 +350,7 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/echo/echoPicks.ts` | `applyCleanupStep`, `dismissCleanupStep`, `pickForget` |
 | service | `src/services/echo/echoSteps.ts` | `COULDNT_SAVE`, `EchoCtx`, `echoSavePrompt`, `EchoStepResult`, `extractDecisions`, `NOTHING_SAVED_ABOUT`, `NOTHING_TO_REMEMBER`, `runEchoStep`, `WHICH_TO_FORGET`, `withoutRememberWords` |
 | service | `src/services/echo/memoryIntents.ts` | `asksToCleanUpMemory`, `asksToForget`, `asksToRemember`, `asksWhatWasDecided`, `memoryOnlyTask` |
-| service | `src/services/echo/recall.ts` | `answerDecisionsBlock`, `contentWords`, `decisionLine`, `decisionsFor`, `decisionsText`, `indexDecision`, `NEAR_REPEAT`, `nearlySame`, `searchDecisions`, `surfaceName` |
+| service | `src/services/echo/recall.ts` | `answerDecisionsBlock`, `contentWords`, `decisionLine`, `decisionsFor`, `decisionsText`, `indexDecision`, `NEAR_REPEAT`, `nearlySame`, `resetChromaCheckForTests`, `searchDecisions`, `surfaceName` |
 | service | `src/services/echoFileWatcherService.ts` | `getWatcherConfig`, `saveWatcherConfig`, `startFileWatcher`, `stopFileWatcher`, `WatcherConfig` |
 | service | `src/services/echoMemoryService.ts` | `activePreferences`, `addDecision`, `decisionsFor`, `decisionsText`, `ECHO_LIMITS`, `editDecision`, `extractDecisions`, `forgetDecision`, `getDecision`, `isChromaHealthy`, `listDecisions`, `runEchoStep`, `searchDecisions` |
 | service | `src/services/escalationCallService.ts` | `EscalationCallRecord`, `EscalationDecision`, `EscalationSettings`, `getEscalationSettings`, `listEscalationCallRecords`, `runEscalationCheck`, `saveEscalationSettings`, `startEscalationPolling` |
