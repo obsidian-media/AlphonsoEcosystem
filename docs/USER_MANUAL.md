@@ -22,7 +22,7 @@
 10. [Approval & Governance](#10-approval--governance)
 11. [Memory & Knowledge](#11-memory--knowledge)
 12. [Operator Dashboard](#12-operator-dashboard)
-13. [Project Execution Mode](#13-project-execution-mode)
+13. [Projects](#13-projects)
 14. [All Chat Commands](#14-all-chat-commands)
 15. [Keyboard Shortcuts](#15-keyboard-shortcuts)
 16. [License Tiers](#16-license-tiers)
@@ -257,7 +257,7 @@ On by default. It blocks every paid or metered connector (Claude, ChatGPT, Runwa
 
 ## 6. 9 Agents — Who Does What
 
-Each kind of work has exactly one owner, and Jose gives every step to the agent who owns it; no agent does another's work. What each agent may do is one table, shown in Project Execution's capability matrix and on the Hector desk. Everyone may read and create new files of its own; only **Alphonso** may run code or change project files; only **Marcus** may publish or send. Spending (a paid model, or Miya's paid voices, pictures and clips) is allowed only on certain steps, and always asks.
+Each kind of work has exactly one owner, and Jose gives every step to the agent who owns it; no agent does another's work. What each agent may do is one table, shown on the Hector desk. Everyone may read and create new files of its own; only **Alphonso** may run code or change project files; only **Marcus** may publish or send. Spending (a paid model, or Miya's paid voices, pictures and clips) is allowed only on certain steps, and always asks.
 
 | Agent | Owns | Never does | In Miya Studio |
 |-------|------|------------|----------------|
@@ -608,25 +608,21 @@ Toggle between **Focus** (compact) and **Full** (detailed) views. Focus mode col
 
 ---
 
-## 13. Project Execution Mode
+## 13. Projects
 
-A structured workflow for complex projects.
+**Work → Projects** turns a project description into a real request for the agents.
 
-### Steps
+1. Give it a **name** and say **what it should do**; add the stack, features, what it must not do, risks, a deadline and a priority if you like.
+2. Press **Start**. Jose plans it from the Build an app template and the agents do the work, asking you first wherever they would change files, run commands, spend or send.
+3. The page shows the latest run: **Plan** (the map), **Steps** (each agent's step and what it produced), **Approval** (steps waiting for you: Approve and carry on, or Reject) and **Results** (the closing summary, available once nothing waits and the run has ended). **Open on the board** shows the same request on the Requests board.
 
-1. **Project Intake** — Name, description, stack, deadline, features
-2. **Agent Selection** — Choose which agents participate
-3. **Decomposition** — Jose breaks the project into agent tasks
-4. **Execution** — Agents work in dependency order
-5. **Audit** — Maria reviews governance and risk
-6. **Final Packet** — Complete execution report with all artifacts
+Projects are saved; start one again to run it again.
 
-### Access
+### Teams
 
-Navigate to the Project Execution panel in the dashboard, or use:
-```
-/jose build a project with <description>
-```
+**System → Teams** keeps teams of agents for a kind of job you do often. **New team**: a name, the job, then the agents in order, each with one kind of work it owns and what it should do; tick "Starts after" to make a step wait for the one before. A team that would give an agent another agent's work can't be saved, and says why. Every template you saved (from the board's Save as template too) is listed with **Run**, **Edit** and **Delete**. In Chat or on Telegram, "use team Weekly report to cover October" or "/team Weekly report October" runs it.
+
+If you used Agent Pairing before, each old pair is offered once as **Make this a team** or **Dismiss**.
 
 ---
 

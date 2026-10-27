@@ -7,6 +7,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-10-27] **Agent roles Part C1: what it leaves for C2** — the 18 new built-in skills, timed Marcus sends, one request working in two projects, editing Alphonso's change before approving it, Hector reading his skill's instructions, Echo's meaning search without ChromaDB, the Chat notice for requests waiting for setup, Hector's "Use in a request" filling the Chat box, and Kokoro's `missing` flag — planned in `docs/superpowers/specs/2026-10-26-agent-roles-part-c-design.md`, built in C2. Skill results don't yet change which skill is picked (only shown). — Status: OPEN.
 - [2026-10-26] **Jose's planner sometimes follows the chat's history over the request** — in one `marcus.e2e.mjs` run (agent phase 7 regression check) "send it to my n8n workflow Team notes" was planned as "Send the note to Slack #news", the channel two earlier messages in the same chat named; the rerun passed. Resume: give the planner the request first and the history as background only, then rerun `marcus.e2e.mjs` a few times — OPEN
 - [2026-10-26] **Echo's decisions stay on one computer** — they are stored on this computer (`alphonso_echo_decisions_v1`, durable store), so a second computer or the phone app keeps its own. Resume: a sync through the user's own storage, owner decides — OPEN
 - [2026-10-26] **Echo finds decisions by words without ChromaDB** — `searchDecisions()` matches word stems and topics; meaning-based search needs ChromaDB running. Resume: a small local embedding model through Ollama when ChromaDB isn't installed — OPEN
@@ -61,7 +62,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 - [2026-10-24] **Agent roles Part A: what it leaves for Parts B and C.**
   - **Real skills (Part B):** CLOSED 2026-10-25 (see the Part B entry below).
-  - **Projects, Teams, learning (Part C):** Work → Projects still shows template outputs; Agent Pairing still saves pairs nothing reads; skill use is not recorded.
+  - **Projects, Teams, learning (Part C):** CLOSED 2026-10-27 by agent roles Part C1 (Projects is a real request, Teams, skill results).
   - **Not enforceable from Alphonso:** what a Hermes-backed agent does with Hermes's own tools; the board only notes it.
   - **Chat's notice** lists requests cut off when the app closed, not requests waiting for setup (the summary and the board say it).
   - **Kokoro's missing install** is recognised from the backend's "is not installed" message; a `missing` flag from `content_tts_kokoro` would be sturdier.
@@ -91,7 +92,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   - **`read_memory` uses its own word match**, not the engine's `retrieveRelevantContext()` (an import cycle); results can differ slightly from a step's memory snippet.
   - **The tool-call loop is checked with unit tests and a 3B model only** on this machine; a 14B-plus model's own tool calls have not been run live.
   - **Hector's research run doesn't read his skill's instructions yet.** His step records the skill and reason, but `runHectorLiveResearch()` searches and writes up with its own prompt; his skill text is kept out of the search question on purpose (it is the search query). Feeding the instructions into his synthesis prompt is the next step.
-  - **Skill outcomes** (how often each skill's work passed review) are Part C.
+  - **Skill outcomes** (how often each skill's work passed review): CLOSED 2026-10-27 (Part C1, `skillOutcomes.ts`).
   - Status: OPEN.
 
 - [2026-10-25] **Every document reconciled with the code: what it leaves open.**
