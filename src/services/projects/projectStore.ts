@@ -70,7 +70,14 @@ export function deleteProject(id: string): void {
 }
 
 /** One real request; the run is kept on the project when Jose accepted it. */
-export async function startProject(id: string, opts: { settings?: any } = {}): Promise<{ ok: boolean; requestId?: string; reason?: string }> {
+/** Keeps a run once; called when the request starts and again when it ends. */
+function keepRun(id: string, requestId: string): void {
+  writeAll(readAll().map((p) => (p.id === id && !p.runs.some((r) => r.requestId === requestId)
+    ? { ...p, runs: [...p.runs, { requestId, atMs: Date.now() }] }
+    : p)));
+}
+
+export async function startProject(id: string, opts: { settings?: any; onStarted?: (requestId: string) => void } = {}): Promise<{ ok: boolean; requestId?: string; reason?: string }> {
   const project = getProject(id);
   if (!project) return { ok: false, reason: PROJECT_NOT_FOUND };
   if (!project.intake.name.trim() || !project.intake.description.trim()) return { ok: false, reason: PROJECT_NEEDS_TEXT };
@@ -79,6 +86,12 @@ export async function startProject(id: string, opts: { settings?: any } = {}): P
     text: intakeText(project.intake),
     source: 'user',
     templateId: PROJECT_TEMPLATE,
+    // The request id arrives before the run ends: keep it now so the page can follow the run.
+    onProgress: (event: any) => {
+      if (event?.stage !== 'request_started' || typeof event.requestId !== 'string') return;
+      keepRun(id, event.requestId);
+      opts.onStarted?.(event.requestId);
+    },
     ...(opts.settings?.endpoint ? { endpoint: opts.settings.endpoint } : {}),
     ...(typeof opts.settings?.zeroCostMode === 'boolean' ? { zeroCostMode: opts.settings.zeroCostMode } : {}),
   });
@@ -86,7 +99,6 @@ export async function startProject(id: string, opts: { settings?: any } = {}): P
   if (!requestId || result?.ok === false && !result?.waitingForPlan) {
     return { ok: false, reason: String(result?.reason || 'Jose could not start this project.') };
   }
-  const latest = getProject(id);
-  if (latest) writeAll(readAll().map((p) => (p.id === id ? { ...p, runs: [...p.runs, { requestId, atMs: Date.now() }] } : p)));
+  keepRun(id, requestId);
   return { ok: true, requestId };
 }

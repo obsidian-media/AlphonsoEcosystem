@@ -51,6 +51,21 @@ describe('ProjectsPage', () => {
     await waitFor(() => expect(submitToJose).toHaveBeenCalledWith(expect.objectContaining({ templateId: 'build_app', source: 'user' })));
   });
 
+  it('shows the request while it is still running', async () => {
+    const live = createJoseRequest({ commandId: 'c-live', source: 'user', text: 'Build Recipe box', kind: 'project', steps } as never);
+    setJoseRequestStatus(live.id, 'running');
+    vi.mocked(submitToJose).mockImplementationOnce(((input: any) => {
+      input.onProgress?.({ stage: 'request_started', requestId: live.id });
+      return new Promise(() => undefined);
+    }) as never);
+    render(<ProjectsPage />);
+    fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'Recipe box' } });
+    fireEvent.change(screen.getByLabelText('What it should do'), { target: { value: 'A small app to save recipes' } });
+    fireEvent.click(screen.getByTestId('projects-start'));
+    fireEvent.click(await screen.findByRole('button', { name: /Steps/ }));
+    expect(screen.getByTestId('projects-steps').textContent).toContain('Find what is needed.');
+  });
+
   it("shows the run's steps, approves a waiting one, and keeps Results locked meanwhile", async () => {
     const requestId = seeded('waiting_approval');
     const open = vi.fn();

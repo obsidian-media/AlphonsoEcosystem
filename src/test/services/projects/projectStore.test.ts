@@ -38,6 +38,23 @@ describe('startProject', () => {
     expect(getProject(p.id)!.runs.map((r) => r.requestId)).toEqual(['jose-request-c1', 'jose-request-plan-2']);
   });
 
+  it('keeps the run as soon as the request starts, so the page can follow it while it runs', async () => {
+    const p = saveProject(intake());
+    let finish: (v: any) => void = () => undefined;
+    const { submitToJose } = await import('../../../services/jose/submitToJose');
+    vi.mocked(submitToJose).mockImplementationOnce(async (input: any) => {
+      input.onProgress?.({ stage: 'request_started', requestId: 'jose-request-live' });
+      return new Promise((resolve) => { finish = resolve; });
+    });
+    const started: string[] = [];
+    const running = startProject(p.id, { onStarted: (id: string) => started.push(id) });
+    await vi.waitFor(() => expect(started).toEqual(['jose-request-live']));
+    expect(getProject(p.id)!.runs.map((r) => r.requestId)).toEqual(['jose-request-live']);
+    finish({ ok: true, requestId: 'jose-request-live' });
+    expect(await running).toEqual({ ok: true, requestId: 'jose-request-live' });
+    expect(getProject(p.id)!.runs.map((r) => r.requestId)).toEqual(['jose-request-live']);
+  });
+
   it('a project without a name or description is not started', async () => {
     const p = saveProject(intake({ description: '  ' }));
     expect(await startProject(p.id)).toEqual({ ok: false, reason: PROJECT_NEEDS_TEXT });

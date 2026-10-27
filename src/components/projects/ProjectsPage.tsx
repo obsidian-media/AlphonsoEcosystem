@@ -57,7 +57,11 @@ export function ProjectsPage({ onOpenJoseBoard, settings }: { onOpenJoseBoard?: 
     try {
       const project = saveProject(intake, selectedId && selected?.name === intake.name ? selectedId : undefined);
       setSelectedId(project.id);
-      const out = await startProject(project.id, { settings });
+      // The run shows here as soon as Jose starts it, not only once it ends.
+      const out = await startProject(project.id, {
+        settings,
+        onStarted: () => { setProjects(listProjects()); setMessage('Jose is working on it. Follow it here or on the board.'); },
+      });
       setMessage(out.ok ? 'Jose is planning it. Follow it here or on the board.' : String(out.reason));
       setProjects(listProjects());
       if (out.ok && out.requestId) setRequest(getJoseRequest(out.requestId));
