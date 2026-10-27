@@ -383,3 +383,51 @@ export function describePlanSource(plan: JosePlan): string {
 export function buildPromptForTests(text: string, history: PlanOptions['history']): string {
   return buildPrompt(text, null, history, []);
 }
+
+// A batch planned in one call (Jose phase 7, owner 2026-10-27).
+export const BATCH_LABEL = 'Steps planned for a batch.';
+const BATCH_SIZE = 20;
+
+function batchPrompt(texts: string[], installed: string[]): string {
+  return [
+    'You are Jose, the orchestrator. Plan each task below as steps for the agents. You never do the work yourself.',
+    `Agents and the jobs each may take (use these task types):\n${agentsForPrompt()}`,
+    `Effects a step can have: ${JOSE_EFFECTS.map((e) => `${e} (${EFFECT_LABELS[e]})`).join(', ')}. Only alphonso may run; only marcus may publish_or_send.`,
+    installed.length ? `Installed models you may choose for a step ("model"): ${installed.join(', ')}.` : '',
+    `Tasks:\n${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
+    'Answer with JSON only: {"plans": [{"task": <the task number>, "steps": [ ...steps as in this example... ]}]}. One plan per task. The example is for a different request; use your own steps, ids and agents:',
+    PLAN_EXAMPLE,
+  ].filter(Boolean).join('\n\n');
+}
+
+async function planBatchChunk(texts: string[], installed: string[], signal?: AbortSignal): Promise<Array<PlanStep[] | null>> {
+  const out: Array<PlanStep[] | null> = texts.map(() => null);
+  let raw = '';
+  try {
+    const result = await generateAgentLlmResponse('jose', { prompt: batchPrompt(texts, installed), format: 'json', signal });
+    raw = String(result?.response || '');
+  } catch {
+    return out;
+  }
+  const parsed = extractJson(raw) as { plans?: unknown } | null;
+  if (!parsed || !Array.isArray(parsed.plans)) return out;
+  for (const item of parsed.plans as { task?: unknown; steps?: unknown }[]) {
+    const index = Number(item?.task) - 1;
+    if (!Number.isInteger(index) || index < 0 || index >= texts.length || out[index]) continue;
+    const plan = readModelPlan(JSON.stringify({ steps: item.steps }), installed, null);
+    if (!plan) continue;
+    const steps = toCurrentOwners(inferReviewOf(plan.steps)).steps;
+    if (checkPlan(steps, { taskTypes: true, request: texts[index] }).ok) out[index] = steps;
+  }
+  return out;
+}
+
+/** Each task's checked plan, or null (left to be planned on its own as before). One call per 20 tasks. */
+export async function planBatch(texts: string[], opts: { signal?: AbortSignal } = {}): Promise<Array<PlanStep[] | null>> {
+  const installed = await listInstalledModels();
+  const out: Array<PlanStep[] | null> = [];
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    out.push(...await planBatchChunk(texts.slice(i, i + BATCH_SIZE), installed, opts.signal));
+  }
+  return out;
+}
