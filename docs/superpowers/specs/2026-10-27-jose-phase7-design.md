@@ -1,6 +1,6 @@
 # Jose phase 7: finishing Jose, and the agent phases' leftovers
 
-> **Status (2026-10-27):** built on `feat/jose-phase7` (plan `docs/superpowers/plans/2026-10-27-jose-phase7.md`); the live check with the owner's keys (Task 16) follows.
+> **Status (2026-10-27):** built on `feat/jose-phase7` (plan `docs/superpowers/plans/2026-10-27-jose-phase7.md`); the live check with the owner's keys (Task 16) is deferred to the doc pass after 2.10.0 (owner).
 
 Alphonso is used by other people, not only its owner. Every choice below is made for a user on someone else's computer: their own projects, keys, models and graphics card.
 
