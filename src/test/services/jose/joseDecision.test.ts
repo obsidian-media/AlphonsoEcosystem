@@ -26,6 +26,13 @@ describe('decideJoseRoute: answer directly or plan', () => {
   });
 
   // Agent phase 7: remembering and forgetting are Echo's work, so they are planned.
+  // Agent roles Part C1: a team asked for by name is planned by rule.
+  it('plans a team request without asking the model', async () => {
+    expect(await decideJoseRoute('use team Launch to post the news')).toMatchObject({ route: 'plan', source: 'rule' });
+    expect(await decideJoseRoute('/team Launch post the news')).toMatchObject({ route: 'plan', source: 'rule' });
+    expect(llm).not.toHaveBeenCalled();
+  });
+
   it('plans remember, forget and clean up without asking the model', async () => {
     for (const text of ['Remember that our launch is on Friday the 14th.', 'Can you forget the launch decision?', 'Clean up my memory']) {
       expect(await decideJoseRoute(text)).toMatchObject({ route: 'plan', source: 'rule' });

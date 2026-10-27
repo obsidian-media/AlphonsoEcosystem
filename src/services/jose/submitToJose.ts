@@ -96,6 +96,11 @@ function securityNote(secured: ReturnType<typeof addSecurityChecks>): string {
 export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const { text, source, history, planFresh, endpoint, zeroCostMode, previewMode, onProgress, onToken } = input;
 
+  // A team asked for by name (agent roles Part C1): its own steps, checked, with its label.
+  const { parseTeamRequest, runNamedTeam } = await import('./teams');
+  const teamRequest = parseTeamRequest(text);
+  if (teamRequest) return runNamedTeam(teamRequest, { source, endpoint, zeroCostMode });
+
   // Asked for Higgsfield by name (phase 4b): one Miya step that asks with the estimate. Checked first:
   // "a Higgsfield video for my channel" also fits the content video template.
   const { askHiggsfieldByName } = await import('../contentFactory/higgsfieldByName');
