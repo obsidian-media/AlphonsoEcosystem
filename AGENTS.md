@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 19 (Vite 8, Tailwind 4) + Ollama (local LLM)
-- **Version**: 2.10.0 (on `main`, not tagged yet; latest release 2.9.0. 578 test files, 6,723 tests, 290 services)
+- **Version**: 2.10.0 (on `main`, not tagged yet; latest release 2.9.0. 578 test files, 6,724 tests, 290 services)
 - **Now**: the Jose redesign (phases 1–6b: plans as step graphs, approval by effect, the Requests board) and Miya's content factory (phases 1–4c: from an idea to finished, posted videos, Shorts and carousels, with results, paid engines, brand characters and motion) are on `main`. Jose phase 7 is next.
 
 ## Directory Structure
@@ -32,7 +32,7 @@ src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and ol
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                578 test files, 6,723 tests (Vitest; see ground truth for current verification status)
+  test/                578 test files, 6,724 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -88,7 +88,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,723 tests (578 files; also runs bridge/)
+npm run test             # 6,724 tests (578 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command

@@ -9,6 +9,15 @@ const DAY = 24 * 3600 * 1000;
 beforeEach(() => localStorage.clear());
 
 describe('recording', () => {
+  it('keeps only its own words: an unknown outcome or verdict is not stored', () => {
+    recordStepOutcome({ ...base, outcome: 'sk-secret' as never });
+    expect(listSkillOutcomes()).toEqual([]);
+    recordStepOutcome({ ...base, outcome: 'done' });
+    recordReviewVerdict('r1', 'draft', 'sk-secret' as never);
+    expect(listSkillOutcomes()[0].verdict).toBeUndefined();
+    expect(JSON.stringify(listSkillOutcomes())).not.toContain('sk-secret');
+  });
+
   it('one record per step: a step carried on after an approval is not counted twice', () => {
     recordStepOutcome({ ...base, outcome: 'setup_needed' }, 1000);
     recordStepOutcome({ ...base, outcome: 'done' }, 2000);

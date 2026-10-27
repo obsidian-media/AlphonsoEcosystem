@@ -14,6 +14,10 @@ export interface SkillOutcome {
 }
 
 const KEY = 'alphonso_skill_outcomes_v1';
+// The words stored come from these lists, never from the caller's value, so nothing else can be saved.
+const OUTCOMES = ['done', 'failed', 'setup_needed', 'rejected'] as const;
+const VERDICTS = ['pass', 'fix'] as const;
+const known = <T extends string>(list: readonly T[], value: unknown): T | undefined => list.find((w) => w === value);
 const KEEP = 1000;
 const DAY_MS = 24 * 3600 * 1000;
 
@@ -30,13 +34,19 @@ export function listSkillOutcomes(): SkillOutcome[] {
 
 /** One record per request step: a later outcome replaces the earlier one (a step carried on after an approval). */
 export function recordStepOutcome(o: Omit<SkillOutcome, 'atMs'>, nowMs = Date.now()): void {
+  const outcome = known(OUTCOMES, o.outcome);
+  if (!outcome) return;
+  const verdict = 'verdict' in o ? known(VERDICTS, o.verdict) : undefined;
+  o = { ...o, outcome, ...('verdict' in o ? { verdict } : {}) };
   const all = readAll();
   const old = all.find((x) => x.requestId === o.requestId && x.stepId === o.stepId);
   const next: SkillOutcome = { ...old, ...o, atMs: nowMs, ...(old?.verdict && !('verdict' in o) ? { verdict: old.verdict } : {}) };
   writeAll([...all.filter((x) => x !== old), next]);
 }
 
-export function recordReviewVerdict(requestId: string, reviewedStepId: string, verdict: 'pass' | 'fix'): void {
+export function recordReviewVerdict(requestId: string, reviewedStepId: string, given: 'pass' | 'fix'): void {
+  const verdict = known(VERDICTS, given);
+  if (!verdict) return;
   const all = readAll();
   // The review can end before the run records the reviewed step's outcome: keep the verdict, and
   // recordStepOutcome() fills in the rest.
