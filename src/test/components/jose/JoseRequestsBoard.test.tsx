@@ -272,3 +272,21 @@ describe('the skill under a step (agent roles Part B)', () => {
     expect(screen.getByTestId('jose-step-skill').textContent).toBe('No skill for this task.');
   });
 });
+
+// Jose phase 7: a running request can be stopped from the board.
+describe('Stop on the board', () => {
+  it('a running request shows Stop, which stops it', () => {
+    const request = createJoseRequest({ commandId: 'c-stop', source: 'user', text: 'Write three notes', kind: 'normal', steps });
+    setJoseRequestStatus(request.id, 'running');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    fireEvent.click(screen.getByTestId('jose-stop'));
+    expect(screen.getByText('Stopped by you.')).toBeTruthy();
+  });
+
+  it('a finished request has no Stop', () => {
+    const request = createJoseRequest({ commandId: 'c-done', source: 'user', text: 'Done one', kind: 'normal', steps });
+    setJoseRequestStatus(request.id, 'done');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    expect(screen.queryByTestId('jose-stop')).toBeNull();
+  });
+});

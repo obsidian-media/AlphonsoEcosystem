@@ -11,7 +11,7 @@ import { randomHex } from '../../lib/randomId';
 const REQUESTS_KEY = 'alphonso_jose_requests_v1';
 const MAX_REQUESTS = 200;
 
-export type JoseRequestStatus = 'waiting_plan_approval' | 'running' | 'waiting_approval' | 'waiting_setup' | 'done' | 'failed' | 'interrupted' | 'cancelled' | 'expired';
+export type JoseRequestStatus = 'waiting_plan_approval' | 'running' | 'waiting_approval' | 'waiting_setup' | 'done' | 'failed' | 'interrupted' | 'cancelled' | 'expired' | 'stopped';
 
 export interface JoseRequestStep extends PlanStep {
   status: string;

@@ -606,3 +606,31 @@ describe('telegramCompanionService', () => {
     });
   });
 });
+
+// Jose phase 7: /stop stops the newest running request.
+describe('/stop', () => {
+  let service;
+  beforeEach(async () => { localStorage.clear(); service = await import('../../services/telegramCompanionService'); });
+  it('stops the newest running request and says which', async () => {
+    const store = await import('../../services/jose/joseRequestStore');
+    const older = store.createJoseRequest({ commandId: 'c-old', source: 'telegram', text: 'Older request', kind: 'normal', steps: [] });
+    await new Promise((r) => setTimeout(r, 5));
+    const newer = store.createJoseRequest({ commandId: 'c-new', source: 'telegram', text: 'Write three notes about the launch', kind: 'normal', steps: [] });
+    store.setJoseRequestStatus(older.id, 'running');
+    store.setJoseRequestStatus(newer.id, 'running');
+    mockInvoke.mockClear();
+    await service.handleStopCommand('test-token', 'owner-chat');
+    const { isStopRequested } = await import('../../services/jose/joseStop');
+    expect(isStopRequested(newer.id)).toBe(true);
+    expect(isStopRequested(older.id)).toBe(false);
+    const sent = mockInvoke.mock.calls.find((c) => c[0] === 'connector_send_telegram');
+    expect(JSON.stringify(sent)).toContain('Stopped: Write three notes about the launch');
+  });
+
+  it('says so when nothing is running', async () => {
+    mockInvoke.mockClear();
+    await service.handleStopCommand('test-token', 'owner-chat');
+    const sent = mockInvoke.mock.calls.find((c) => c[0] === 'connector_send_telegram');
+    expect(JSON.stringify(sent)).toContain('Nothing is running.');
+  });
+});

@@ -23,6 +23,7 @@ import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughCalleMcp } from '..
 import { ALPHONSO_ANSWER_PROMPT } from '../services/alphonso/answerPrompt'
 import { decideJoseRoute } from '../services/jose/joseDecision'
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose'
+import { stopRequest } from '../services/jose/joseStop'
 import { JosePlanCard } from './jose/JosePlanCard'
 import { MariaOfferButton } from './maria/MariaOfferButton'
 import { JoseRequestOutcome } from './jose/JoseRequestOutcome'
@@ -1762,6 +1763,16 @@ export function ChatView({
                   {liveProgress.stage === 'approval_required' && `${liveProgress.assignment?.agent || 'Agent'} needs approval`}
                   {!['wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
                 </span>
+                {liveRequestId && (
+                  <button
+                    type="button"
+                    data-testid="chat-live-stop"
+                    onClick={() => { stopRequest(liveRequestId); }}
+                    className="text-xs font-medium text-(--text-2) hover:underline"
+                  >
+                    Stop
+                  </button>
+                )}
                 {liveRequestId && onOpenJoseBoard && (
                   <button
                     type="button"

@@ -56,7 +56,8 @@ import { isAlphonsoCodeStep } from './alphonso/codeStep';
 import { prepareAlphonsoCode } from './alphonso/prepareCode';
 import { runAlphonsoCode } from './alphonso/runCode';
 import { describeCodeChange, previewNeeds } from './alphonso/changeSet';
-import { onProjectReleased, releaseProject } from './alphonso/projectLock';
+import { onProjectReleased, releaseProject, releaseProjectsHeldBy } from './alphonso/projectLock';
+import { clearStop, isStopRequested, stopSignal, stopWaitsFor, STOPPED_LINE } from './jose/joseStop';
 import { readingFolder, reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
@@ -70,6 +71,7 @@ import { prepareSkill } from './skills/prepareSkill';
 import { runHectorStep } from './hector/hectorStep';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint, withAgentModel } from '../lib/ollama';
+import { withAgentSignal } from '../lib/agentSignals';
 import { ALPHONSO_ANSWER_PROMPT } from './alphonso/answerPrompt';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { getAgentProvider } from './modelSelectionService';
@@ -102,10 +104,11 @@ const STEP_STATUS_BY_RECEIPT: Record<string, string> = {
   dead_letter: 'failed',
   not_run: 'not_run',
   setup_needed: 'setup_needed',
+  stopped: 'stopped',
 };
 
 /** Save each step's final status on the request (jose/joseRequestStore). Never breaks the run. */
-function recordStepOutcomes(requestId: string, assignments: any[], receipts: any[], cutShort: boolean): void {
+function recordStepOutcomes(requestId: string, assignments: any[], receipts: any[], cutShort: boolean, stopped = false): void {
   try {
     const statuses: string[] = [];
     // A failed step a paid retry took over does not fail the request (phase 4).
@@ -129,7 +132,7 @@ function recordStepOutcomes(requestId: string, assignments: any[], receipts: any
       }
     }
     // A step whose owner can't work yet waits for setup (agent roles Part A).
-    const requestStatus = cutShort || statuses.includes('failed')
+    const requestStatus = stopped ? 'stopped' : cutShort || statuses.includes('failed')
       ? 'failed'
       : statuses.includes('waiting_approval') ? 'waiting_approval'
         : statuses.includes('setup_needed') ? 'waiting_setup' : 'done';
@@ -522,6 +525,8 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
       };
     } catch (error) {
       lastError = error;
+      // Stopped by you (Jose phase 7): no retry, no larger model.
+      if (options.isStopped?.()) return { ok: false, stopped: true, attempts: attempt, error: STOPPED_LINE, taskId, instruction };
       if (attempt < attempts) {
         await delay(TASK_RETRY_BACKOFF_MS[attempt - 1]);
       }
@@ -1477,6 +1482,9 @@ export async function runJoseCommandExecutionPipeline({
   const maxDurationMs = requestKind === 'project' ? JOSE_LIMITS.projectMs : PIPELINE_MAX_DURATION_MS;
   let processedAssignmentCount = 0;
   let budgetExceeded = false;
+  // Stop pressed (Jose phase 7): checked before every wave and step.
+  let stopped = false;
+  const stopWanted = () => Boolean(joseRequestId && isStopRequested(joseRequestId));
 
   // Run every step whose needs are done, then let Jose adapt the plan, and
   // again until nothing is left (phase 4: the plan can grow while it runs).
@@ -1566,12 +1574,20 @@ export async function runJoseCommandExecutionPipeline({
       .filter((step) => !processedSteps.has(step.stepId) && step.needs.every((need) => processedSteps.has(need) || !knownIds.has(need)))
       .map((step) => step.stepId);
     if (wave.length === 0) break;
+    if (stopWanted()) {
+      stopped = true;
+      break;
+    }
     for (const stepId of wave) processedSteps.add(stepId);
     const waveAssignments: any[] = wave.map((stepId) => assignmentMap[stepId]).filter(Boolean);
     onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: waveAssignments.map((a) => a.agent), steps: wave, commandId: command.id });
     for (const assignment of waveAssignments) {
       if (processedAssignmentCount >= PIPELINE_MAX_ASSIGNMENTS || (timestampMs() - pipelineStartMs) >= maxDurationMs) {
         budgetExceeded = true;
+        break waveLoop;
+      }
+      if (stopWanted()) {
+        stopped = true;
         break waveLoop;
       }
       processedAssignmentCount += 1;
@@ -1974,7 +1990,17 @@ export async function runJoseCommandExecutionPipeline({
 
       // The outputs of the steps this step needs, keyed by agent as agents read them.
       const priorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
-      const taskResult: any = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory });
+      const runStep = () => executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory, isStopped: stopWanted });
+      // A send or an approved code change finishes its one action before a stop (Jose phase 7).
+      const taskResult: any = joseRequestId && !stopWaitsFor(assignment, packet)
+        ? await withAgentSignal(assignment.agent, stopSignal(joseRequestId), runStep)
+        : await runStep();
+      if (taskResult.stopped) {
+        rejectPacket(assignment.packetId, STOPPED_LINE);
+        executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'stopped', reason: STOPPED_LINE });
+        stopped = true;
+        break waveLoop;
+      }
 
       if (!taskResult.ok) {
         failedCount += 1;
@@ -2180,6 +2206,17 @@ export async function runJoseCommandExecutionPipeline({
       command
     };
   }
+
+  if (joseRequestId && stopped) {
+    recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false, true);
+    rejectWaitingPackets(command.id, STOPPED_LINE);
+    releaseProjectsHeldBy(joseRequestId);
+    appendRequestNote(joseRequestId, STOPPED_LINE);
+    clearStop(joseRequestId);
+    onProgress?.({ stage: 'stopped', requestId: joseRequestId, commandId: command.id });
+    return { ok: false, reason: 'stopped', executedCount, pendingApprovalCount, failedCount, executionReceipts, command, commandId: command.id };
+  }
+  if (joseRequestId) clearStop(joseRequestId);
 
   if (joseRequestId) {
     recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);

@@ -17,6 +17,7 @@ import { describePlanSource, type JosePlan } from '../../services/jose/josePlann
 import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
+import { stopRequest } from '../../services/jose/joseStop';
 import { agentName } from '../../services/jose/agentNames';
 import { approveRequestStep, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
 
@@ -30,6 +31,8 @@ export const STATUS_LABELS: Record<string, string> = {
   interrupted: 'Interrupted',
   cancelled: 'Cancelled',
   expired: 'Expired',
+  stopped: 'Stopped by you',
+  queued: 'Queued',
 };
 
 export function requestPlanLabel(request: JoseRequest): string {
@@ -254,6 +257,9 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button onClick={() => setEditing(true)}>Edit</Button>
                 <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
               </>
+            )}
+            {(selected.status === 'running' || selected.status === ('queued' as string)) && (
+              <Button variant="ghost" data-testid="jose-stop" onClick={() => { setMessage(stopRequest(selected.id).summary); refresh(); }}>Stop</Button>
             )}
             {(selected.status === 'interrupted' || (selected.status === 'waiting_setup' && !asking)) && (
               <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>

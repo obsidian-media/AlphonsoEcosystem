@@ -51,3 +51,12 @@ describe('closingSummary', () => {
     expect(closingSummary(request([s('send', 'marcus', 'failed', { error: 'No key.' })]))).toBe('Marcus: failed (No key.)\nOpen on the board.');
   });
 });
+
+// Jose phase 7: a stopped request says so first.
+describe('closingSummary of a stopped request', () => {
+  beforeEach(() => localStorage.clear());
+  it('starts with "Stopped by you." and names the stopped step', () => {
+    const text = closingSummary({ ...request([s('a', 'alphonso', 'done'), s('b', 'alphonso', 'stopped'), s('c', 'maria', 'not_run')]), status: 'stopped' });
+    expect(text.split('\n').slice(0, 4)).toEqual(['Stopped by you.', 'Alphonso: done', 'Alphonso: stopped', 'Maria: not run']);
+  });
+});
