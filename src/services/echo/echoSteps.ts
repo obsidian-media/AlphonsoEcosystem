@@ -140,7 +140,8 @@ export async function extractDecisions(input: {
 }
 
 const workOf = (input: StepInput | null): string => (input?.needs || []).filter((n) => !n.failed).map((n) => `[${n.agent}] ${n.text}`).join('\n\n');
-const askedText = (input: StepInput | null): string => [input?.request, input?.instruction].filter(Boolean).join('\n');
+const withoutJose = (text: unknown): string => String(text || '').replace(/^\s*\/jose\s+/i, '').trim();
+const askedText = (input: StepInput | null): string => [withoutJose(input?.request), input?.instruction].filter(Boolean).join('\n');
 
 async function save(assignment: any, input: StepInput | null, ctx: EchoCtx): Promise<EchoStepResult> {
   const actionType = String(assignment?.actionType || 'memory_preservation');
@@ -161,7 +162,7 @@ function historyLine(d: Decision): string {
 
 async function recall(assignment: any, input: StepInput | null, ctx: EchoCtx): Promise<EchoStepResult> {
   const actionType = String(assignment?.actionType || 'memory_recall');
-  const question = String(input?.request || input?.instruction || '').trim();
+  const question = withoutJose(input?.request || input?.instruction);
   const found = (await searchDecisions(question, { limit: ECHO_LIMITS.recallMax, status: 'all' })).filter((d) => d.status !== 'forgotten');
   if (!found.length) return result(NOTHING_SAVED_ABOUT(question.replace(/[?.!]+$/, '')), 'completed', actionType);
   const records = found.map(historyLine).join('\n');
@@ -185,7 +186,7 @@ async function forget(assignment: any, input: StepInput | null, ctx: EchoCtx): P
   }
   const asked = askedText(input);
   const candidates = await searchDecisions(asked, { limit: 6 });
-  if (!candidates.length) return result(NOTHING_SAVED_ABOUT(String(input?.request || '').replace(/[?.!]+$/, '')), 'completed', actionType);
+  if (!candidates.length) return result(NOTHING_SAVED_ABOUT(withoutJose(input?.request).replace(/[?.!]+$/, '')), 'completed', actionType);
   let ids: string[] = [];
   let unclear = true;
   try {
@@ -204,7 +205,9 @@ async function forget(assignment: any, input: StepInput | null, ctx: EchoCtx): P
     gone.forEach((d) => forgetDecision(d.id));
     return result(gone.map((d) => `Forgot: ${d.text}`).join('\n'), 'completed', actionType, gone.map((d) => d.id));
   }
-  const choices = (ids.length ? candidates.filter((d) => ids.includes(d.id)) : candidates).map((d) => ({ id: d.id, text: d.text }));
+  // Unclear: every possible match is offered, the ones his model named first (found in the real app:
+  // he named one and the step offered only that one).
+  const choices = [...candidates.filter((d) => ids.includes(d.id)), ...candidates.filter((d) => !ids.includes(d.id))].map((d) => ({ id: d.id, text: d.text }));
   return result(WHICH_TO_FORGET, 'setup_required', actionType, [], { decisionChoices: choices });
 }
 

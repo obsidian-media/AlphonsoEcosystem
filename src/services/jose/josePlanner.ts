@@ -93,6 +93,13 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   if (asksToCleanUpMemory(text) && !echoDoes(['memory_cleanup', 'knowledge_curation'])) {
     problems.push('The request asks to clean up memory: add an echo step with the task type memory_cleanup.');
   }
+  // Found in the real app: "Clean up my memory" got a forget step too. Echo forgets or tidies only when asked.
+  if (!asksToForget(text) && echoDoes(['memory_forget'])) {
+    problems.push('The request does not ask to forget anything: remove the memory_forget step.');
+  }
+  if (!asksToCleanUpMemory(text) && echoDoes(['memory_cleanup', 'knowledge_curation'])) {
+    problems.push('The request does not ask to clean up memory: remove the memory_cleanup step.');
+  }
   // Agent phase 6: a code request needs Alphonso's code step; plain writing needs no research.
   const codeStep = (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) =>
     CODE_TASK_PREFIXES.some((prefix) => String(st.actionType || '').startsWith(prefix));

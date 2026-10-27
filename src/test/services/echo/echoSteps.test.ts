@@ -101,7 +101,7 @@ describe('saving: what the real run showed', () => {
     expect(llm).toHaveBeenCalledTimes(2);
     expect(String(llm.mock.calls[1][1].prompt)).toContain('The user asked you to remember something');
     expect(r.summary).toBe('Remembered: The launch moved to Saturday the 15th.');
-    expect(listDecisions()[0]).toMatchObject({ kind: 'instruction', text: 'The launch moved to Saturday the 15th.', source: { by: 'you' } });
+    expect(listDecisions().find((d) => d.kind === 'instruction')).toMatchObject({ text: 'The launch moved to Saturday the 15th.', source: { by: 'you' } });
   });
 
   it('the retry for a remember request can still replace a saved decision', async () => {
@@ -110,6 +110,22 @@ describe('saving: what the real run showed', () => {
       .mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'The launch is on Saturday the 15th.', topics: ['launch'], replaces: old.id }] }));
     await runEchoStep(step('memory_preservation'), input('Remember that the launch moved to Saturday the 15th.'), ctx());
     expect(getDecision(old.id)!.status).toBe('replaced');
+  });
+});
+
+describe('forget: what the real run showed', () => {
+  it('unclear with one id named → every possible match is offered, the named one first', async () => {
+    const a = launch();
+    const b = addDecision({ kind: 'decision', text: 'The launch party is at the shop.', topics: ['launch', 'party'], source: { surface: 'chat', by: 'you' } } as never);
+    llm.mockResolvedValueOnce(say({ forget: [b.id], unclear: true }));
+    const r: any = await runEchoStep(step('memory_forget'), input('/jose Forget the launch decision'), ctx());
+    expect(r.resultState).toBe('setup_required');
+    expect(r.stepFields.decisionChoices.map((c: any) => c.id)).toEqual([b.id, a.id]);
+  });
+
+  it('"/jose" is not quoted back', async () => {
+    const r = await runEchoStep(step('memory_forget'), input('/jose Forget the boat trip'), ctx());
+    expect(r.summary).toBe('I have nothing saved about "Forget the boat trip".');
   });
 });
 
