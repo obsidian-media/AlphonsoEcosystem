@@ -83,6 +83,10 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   governance_audit: ['read'],
   security_monitor: ['read'],
   memory_preservation: ['write_own_work'],
+  // Agent phase 7: asking Echo only reads.
+  memory_recall: ['read'],
+  memory_forget: ['write_own_work'],
+  memory_cleanup: ['write_own_work'],
   opportunity_analysis: ['read'],
   distribution_execution: ['publish_or_send'],
   distribution_release: ['publish_or_send'],

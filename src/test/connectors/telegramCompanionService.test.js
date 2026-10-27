@@ -333,12 +333,12 @@ describe('telegramCompanionService', () => {
       expect(pingReply).toBeTruthy();
     });
 
+    // Agent phase 7: /memory searches the decisions Echo keeps.
     it('/memory with a query searches instead of listing recent items (regression: dead second branch)', async () => {
-      const { listMemoryItems } = await import('../../services/memoryService');
-      listMemoryItems.mockReturnValue([
-        { title: 'Alpha project notes', category: 'project', timestampMs: Date.now() },
-        { title: 'Unrelated grocery list', category: 'personal', timestampMs: Date.now() }
-      ]);
+      const { addDecision } = await import('../../services/echo/decisions');
+      localStorage.removeItem('alphonso_echo_decisions_v1');
+      addDecision({ kind: 'decision', text: 'Alpha project notes are kept weekly.', topics: ['alpha'], source: { surface: 'chat', by: 'you' } });
+      addDecision({ kind: 'decision', text: 'Unrelated grocery list.', topics: ['groceries'], source: { surface: 'chat', by: 'you' } });
 
       await service.processInboundCommands('test-token', {
         ok: true,

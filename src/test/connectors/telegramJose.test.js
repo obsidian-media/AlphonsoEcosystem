@@ -31,6 +31,11 @@ vi.mock('../../services/joseExecutionEngineService', () => ({
   pickAlphonsoProject: vi.fn(async (_r, _s, name) => ({ ok: true, summary: `Working in ${name}.` })),
 }));
 vi.mock('../../services/jose/submitToJose', () => ({ runApprovedPlan: vi.fn(async () => ({ ok: true })), cancelPlan: vi.fn() }));
+vi.mock('../../services/echo/echoPicks', () => ({
+  pickForget: vi.fn(async () => ({ ok: true, summary: 'Forgot: A.' })),
+  applyCleanupStep: vi.fn(async () => ({ ok: true, summary: 'Applied 2 changes to memory.' })),
+  dismissCleanupStep: vi.fn(async () => ({ ok: true, summary: 'Left memory as it is.' })),
+}));
 
 import { handleJoseButton, runPushWatcher, handleApproveCommand, handleRejectCommand, stopTelegramCompanion } from '../../services/telegramCompanionService';
 import { approveRequestStep, rejectRequestStep, carryOnRequest, executeApprovedPackets, pickAlphonsoProject } from '../../services/joseExecutionEngineService';
@@ -68,6 +73,27 @@ function whichProjectRequest() {
   setJoseRequestStatus(request.id, 'waiting_setup');
   return request.id;
 }
+
+// Agent phase 7: Echo's buttons are routed to his picks.
+describe("Echo's buttons", () => {
+  const echoWaiting = (fields) => {
+    const request = createJoseRequest({ commandId: `ce-${Date.now()}`, source: 'user', text: 'Forget the launch', kind: 'normal',
+      steps: [{ stepId: 'echo', agent: 'echo', actionType: 'memory_forget', effects: ['write_own_work'], needs: [] }] });
+    updateJoseStep(request.id, 'echo', { status: 'setup_needed', ...fields });
+    setJoseRequestStatus(request.id, 'waiting_setup');
+    return request.id;
+  };
+  it('pick_forget, apply_cleanup and dismiss_cleanup each reach Echo', async () => {
+    const { pickForget, applyCleanupStep, dismissCleanupStep } = await import('../../services/echo/echoPicks');
+    const id = echoWaiting({ decisionChoices: [{ id: 'd1', text: 'A' }] });
+    expect(await press(buttonToken({ text: 'A', action: 'pick_forget', requestId: id, stepId: 'echo', decisionId: 'd1' }))).toBe('Forgot: A.');
+    expect(pickForget).toHaveBeenCalledWith(id, 'echo', 'd1');
+    expect(await press(buttonToken({ text: 'Apply all', action: 'apply_cleanup', requestId: id, stepId: 'echo' }))).toBe('Applied 2 changes to memory.');
+    expect(applyCleanupStep).toHaveBeenCalledWith(id, 'echo');
+    expect(await press(buttonToken({ text: 'Not now', action: 'dismiss_cleanup', requestId: id, stepId: 'echo' }))).toBe('Left memory as it is.');
+    expect(dismissCleanupStep).toHaveBeenCalledWith(id, 'echo');
+  });
+});
 
 describe('Which project on Telegram', () => {
   it('sends one button per project, and a press picks it', async () => {

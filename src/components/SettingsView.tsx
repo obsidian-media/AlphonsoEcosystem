@@ -22,7 +22,7 @@ import { listPlugins, togglePlugin } from '../services/pluginRegistryService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate, type BackupSizeEstimate } from '../services/backupService';
 import { resolveComfyuiDirectory, resolveComfyuiPython } from '../services/comfyuiSettingsService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
-import { listMemoryItems } from '../services/memoryService';
+import { DecisionsPanel } from './echo/DecisionsPanel';
 import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 import { NovaHistoryChart } from './NovaHistoryChart';
 import { CrashLogView } from './CrashLogView';
@@ -57,79 +57,6 @@ import { BridgesPanel } from './BridgesPanel';
 import { DEFAULT_EFFECT_APPROVALS, EFFECT_LABELS, JOSE_EFFECTS, LOCKED_EFFECTS, type JoseEffect } from '../services/jose/joseEffects';
 import { monthSpendUsd } from '../services/jose/joseSpend';
 import { getComfyUiEndpoint, setComfyUiEndpoint, DEFAULT_COMFYUI_ENDPOINT } from '../services/connectors/comfyUiEndpoint.js';
-
-interface MemoryItem {
-  id?: string;
-  agent?: string;
-  category?: string;
-  retentionTier?: string;
-  timestampMs?: number;
-  createdAtMs?: number;
-  title?: string;
-  content?: string;
-  [key: string]: unknown;
-}
-
-interface TierConfig {
-  label: string;
-  color: string;
-  icon: string;
-}
-
-interface TierConfigMap {
-  [key: string]: TierConfig;
-}
-
-function EchoTimeline() {
-  const items: MemoryItem[] = listMemoryItems()
-    .filter((m: MemoryItem) => m.agent === 'echo' || m.category === 'knowledge_preservation' || m.retentionTier)
-    .slice(-15)
-    .reverse();
-
-  const tierConfig: TierConfigMap = {
-    permanent: { label: 'Permanent', color: 'emerald', icon: '♾' },
-    standard_180d: { label: '180 days', color: 'info', icon: '📅' },
-    ephemeral_7d: { label: '7 days', color: 'warning', icon: '⏳' },
-  };
-
-  if (items.length === 0) {
-    return (
-      <div className="text-center py-8 text-(--text-4) text-xs">
-        No Echo-preserved memories yet. Echo synthesizes and classifies memories after agent activity.
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2 max-h-64 overflow-y-auto">
-      <p className="section-label mb-2">Echo Memory Timeline ({items.length})</p>
-      {items.map((m, i) => {
-        const tier = m.retentionTier || 'standard_180d';
-        const tc = tierConfig[tier] || tierConfig['standard_180d'];
-        const expiryMs = tier === 'ephemeral_7d' ? 7 * 24 * 3600 * 1000 : tier === 'standard_180d' ? 180 * 24 * 3600 * 1000 : null;
-        const createdAt = m.timestampMs || m.createdAtMs || 0;
-        const expiresIn = expiryMs ? Math.max(0, Math.round((createdAt + expiryMs - Date.now()) / (24 * 3600 * 1000))) : null;
-        return (
-          <div key={m.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-(--surface-2)">
-            <span className="text-base shrink-0">{tc.icon}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                  tc.color === 'success' ? 'bg-(--success-dim) border-(--success-border) text-(--success)' :
-                  tc.color === 'info' ? 'bg-(--info-dim) border-(--info-border) text-(--info)' :
-                  'bg-(--warning-dim) border-(--warning-border) text-(--warning)'
-                }`}>{tc.label}</span>
-                {expiresIn !== null && <span className="text-[10px] text-(--text-4)">expires in {expiresIn}d</span>}
-              </div>
-              <p className="text-xs text-(--text-2) truncate">{m.title || (typeof m.content === 'string' ? m.content.slice(0, 80) : 'Untitled')}</p>
-              {m.category && <p className="text-[10px] text-(--text-4)">{m.category}</p>}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 const COACH_TRIGGER_LABELS: Record<string, string> = {
   critical_override_pattern: 'Approval theater (repeated high-risk approvals)',
@@ -1773,9 +1700,9 @@ export function SettingsView({
         <MeetingTranscriptionPanel />
       </section>
       <section className="space-y-4">
-        <SectionHeader icon={Activity} label="Echo Memory Timeline" />
+        <SectionHeader icon={Activity} label="What Echo remembers" />
         <ChromaDbStatus />
-        <EchoTimeline />
+        <DecisionsPanel />
       </section>
       <section className="space-y-4">
         <SectionHeader icon={Database} label="Memory Knowledge Graph" />

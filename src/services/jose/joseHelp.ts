@@ -61,6 +61,8 @@ function ruleHelper(request: string): Helper {
   if (/\b(accura|correct|check|verify|quality|review|honest)/.test(text)) return { agent: 'maria', actionType: 'audit_quality' };
   // Hector finds facts (markets, competitors and trends too); Nova judges them (2026-10-24).
   if (/\b(when|timing|score|priorit|worth|judge|value)/.test(text)) return { agent: 'nova', actionType: 'analysis_findings' };
+  // Something decided before is Echo's to answer (agent phase 7).
+  if (/\b(decided|decision|agreed|earlier|before|last time|previous)/.test(text)) return { agent: 'echo', actionType: 'memory_recall' };
   // Wording is Alphonso's everyday writing (agent phase 6).
   if (/\b(wording|rewrite|reword|phrasing|draft|summar|explain)/.test(text)) return { agent: 'alphonso', actionType: 'assistant_write' };
   return { agent: 'hector', actionType: 'research_report' };
@@ -75,7 +77,7 @@ export async function chooseHelper(request: string, askingAgent: string): Promis
     `An agent (${askingAgent}) asked for help: ${request}`,
     'Which agent owns what is needed, and with which task type? Each agent helps only with its own work:',
     responsibilityLines().join('\n'),
-    'Task types: hector research_, nova analysis_, maria audit_, sentinel security_, miya creative_, echo memory_, alphonso assistant_write or assistant_answer (writing only).',
+    'Task types: hector research_, nova analysis_, maria audit_, sentinel security_, miya creative_, echo memory_, alphonso assistant_write or assistant_answer (writing only), echo memory_recall (what was decided before).',
     'Answer with JSON only: {"agent": "<agent>", "taskType": "<task type>"}',
   ].join('\n\n');
   try {

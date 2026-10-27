@@ -10,6 +10,15 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent phase 7: Echo remembers the ecosystem's decisions, and every agent can ask him (2026-10-26)
+- **"Remember that …" is saved.** Echo keeps decisions, preferences, instructions and what you turned down, from every surface; Chat and the board show "Echo remembered: …" with **Edit** and **Forget**. Decisions no longer expire; a changed one replaces the old.
+- **Every agent gets them**: each step is given the preferences that apply and the matching decisions, and so are Chat's and channels' answers. "What did we decide about …?" is answered from them. An agent that needs a past decision can ask Echo.
+- **Forget and tidy**: "Forget …" forgets one, or asks which with a button each (board and Telegram). "Clean up my memory" proposes merges and removals and changes nothing until you apply them; a Sunday schedule asks for it.
+- **Settings → Memory → What Echo remembers** replaces the old timeline.
+- **Echo no longer invents decisions or saves a note per request**, and the keyword fallback is gone: when his model can't answer, it says so.
+- **Fix**: health checks and the screen observer filled memory (15 of 18 items); they are no longer saved, and the old ones are cleared once. Telegram's `/memory` showed `[object Object]`; it lists decisions now.
+- **Found in the real app and fixed**: an email Alphonso wrote was saved as a decision; decisions kept the words "Remember that"; the same decision was saved again in other words; "the launch moved to Saturday" saved nothing or wasn't linked to the Friday one; a forget with several matches offered only one; "Clean up my memory" also got a forget step and then saved new decisions from its own result; a cleanup merge saved the format hint "for merge and promote"; Echo quoted "/jose" back. A request that only asks to remember, forget or tidy is now one Echo step.
+
 ### Agent phase 6: Alphonso writes real code in a folder you chose, and asks before he changes it (2026-10-26)
 - **Your projects**: list them in **Settings → Agents → Alphonso's projects** (a name and a folder each). A request that names a project works there; with one project he uses it; with several and none named, the step asks **"Which project: shop, blog?"** with a button per project on the board and Telegram. Two requests never change the same project at once: the second waits and carries on when the first is done. Your old Workspace Root becomes your first project.
 - **Small code with no project** ("a script that renames my photos") goes in its own folder: `<output folder>/Alphonso/<name>/`.

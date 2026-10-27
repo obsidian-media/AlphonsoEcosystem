@@ -13,6 +13,7 @@ export const NODE_TYPE_COLORS: Record<string, string> = {
   source: '#84cc16',
   receipt: '#ec4899',
   packet: '#8b5cf6',
+  decision: '#10b981',
   default: '#71717a'
 };
 

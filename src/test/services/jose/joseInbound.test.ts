@@ -9,6 +9,7 @@ import { submitToJose } from '../../../services/jose/submitToJose';
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { answerOrPlan, inboundReply, outcomeLine } from '../../../services/jose/joseInbound';
 import { ALPHONSO_ANSWER_PROMPT } from '../../../services/alphonso/answerPrompt';
+import { addDecision } from '../../../services/echo/decisions';
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -34,6 +35,17 @@ describe('answerOrPlan', () => {
     expect(prompt).toContain('message 2');
     expect(prompt).toContain('message 7');
     expect(prompt).toContain('User: And when was that?');
+  });
+
+  // Agent phase 7: a direct answer knows what you decided.
+  it('a direct answer gets the decisions you saved', async () => {
+    addDecision({ kind: 'decision', text: 'The launch is on Friday the 14th at $29.', topics: ['launch'], source: { surface: 'chat', by: 'you' } } as never);
+    vi.mocked(decideJoseRoute).mockResolvedValueOnce({ route: 'direct', source: 'rule', reason: 'q' } as never);
+    vi.mocked(generateAgentLlmResponse).mockResolvedValueOnce({ response: 'Friday the 14th, $29.' } as never);
+    await answerOrPlan('What did we decide about the launch?', { source: 'telegram' });
+    const prompt = String((vi.mocked(generateAgentLlmResponse).mock.calls[0][1] as any).prompt);
+    expect(prompt).toContain('Decisions you saved:');
+    expect(prompt).toContain('The launch is on Friday the 14th at $29.');
   });
 
   it('says so when the model gives no answer', async () => {

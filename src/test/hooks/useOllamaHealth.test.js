@@ -388,7 +388,7 @@ describe('useOllamaHealth', () => {
       );
     });
 
-    it('pushes memory item on each check', async () => {
+    it('no longer saves a memory note for each check', async () => {
       const settings = createMockSettings();
       const desktopBridge = createMockDesktopBridge();
       const setters = mockSetters();
@@ -401,12 +401,8 @@ describe('useOllamaHealth', () => {
         await vi.advanceTimersByTimeAsync(2000);
       });
 
-      expect(pushMemoryItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          category: 'runtime_memory',
-          source: 'ollama-health-check'
-        })
-      );
+      // Agent phase 7: a health check is not something to remember.
+      expect(pushMemoryItem).not.toHaveBeenCalled();
     });
   });
 

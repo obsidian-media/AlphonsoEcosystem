@@ -337,6 +337,51 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(missingAsked('Research the latest React release and update my app to it', plan as never)).toEqual([]);
   });
 
+  // Found in the real app: "Remember that the launch moved to Saturday" was planned with research, writing and a check.
+  it('a request that only asks to remember, forget or tidy is one Echo step, without asking the model', async () => {
+    for (const [text, actionType] of [
+      ['Remember that the launch moved to Saturday the 15th.', 'memory_preservation'],
+      ['/jose Forget the launch decision', 'memory_forget'],
+      ['Clean up my memory', 'memory_cleanup'],
+    ]) {
+      const plan = await planJoseRequest(text);
+      expect(plan.steps.map((st) => [st.agent, st.actionType])).toEqual([['echo', actionType]]);
+      expect(plan.note).toBe('Echo does this.');
+    }
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  it('remembering plus other work is still planned by the model', async () => {
+    llm.mockResolvedValueOnce({ response: '' } as never);
+    await planJoseRequest('Remember that the launch is Friday and write an email to Sam about it.');
+    expect(llm).toHaveBeenCalled();
+  });
+
+  // Agent phase 7: remember, forget and clean up need Echo's step.
+  it("a request to remember, forget or clean up without Echo's step is sent back", () => {
+    const plan = [{ agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_answer' }];
+    expect(missingAsked('Remember that I prefer short emails without emojis', plan as never))
+      .toEqual(['The request asks to remember something: add an echo step with the task type memory_preservation.']);
+    expect(missingAsked('Forget that the launch is on Friday', plan as never))
+      .toEqual(['The request asks to forget something: add an echo step with the task type memory_forget.']);
+    expect(missingAsked('Clean up my memory', plan as never))
+      .toEqual(['The request asks to clean up memory: add an echo step with the task type memory_cleanup.']);
+    expect(missingAsked('Remember that I prefer short emails', [{ agent: 'echo', effects: ['write_own_work'], actionType: 'memory_preservation' }] as never)).toEqual([]);
+    // Found in the real app: "Clean up my memory" got a forget step too, which could forget something unasked.
+    expect(missingAsked('Clean up my memory', [
+      { agent: 'echo', effects: ['write_own_work'], actionType: 'memory_forget' },
+      { agent: 'echo', effects: ['write_own_work'], actionType: 'memory_cleanup' },
+    ] as never)).toEqual(['The request does not ask to forget anything: remove the memory_forget step.']);
+    expect(missingAsked('Remember that the launch is Friday', [
+      { agent: 'echo', effects: ['write_own_work'], actionType: 'memory_preservation' },
+      { agent: 'echo', effects: ['write_own_work'], actionType: 'memory_cleanup' },
+    ] as never)).toEqual(['The request does not ask to clean up memory: remove the memory_cleanup step.']);
+    // Asking whether something is remembered is not asking to save it.
+    expect(missingAsked('Do you remember what we decided about the launch?', plan as never)).toEqual([]);
+    // A note to post is not something to remember.
+    expect(missingAsked('Post a short note that we open at 9 to Slack #news.', [{ agent: 'marcus', effects: ['publish_or_send'], actionType: 'distribution_execution' }] as never)).toEqual([]);
+  });
+
   it('a plan with the send is used as it is', async () => {
     llm.mockResolvedValueOnce(answer([
       { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write it.', effects: ['write_own_work'], needs: [] },

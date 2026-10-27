@@ -23,6 +23,9 @@ import { legacyNeeds } from './jose/stepGraph';
 import { randomHex } from '../lib/randomId';
 import { isCodeRequest } from './jose/taskTypeMeanings';
 import { isPlainQuestion } from '../lib/chatUtils';
+import { asksToCleanUpMemory, asksToForget, asksToRemember, asksWhatWasDecided } from './echo/memoryIntents';
+
+export { asksToCleanUpMemory, asksToForget, asksToRemember, asksWhatWasDecided };
 
 const COMMAND_KEY = 'alphonso_jose_command_routes_v2';
 const SETTINGS_KEY = 'alphonso_settings';
@@ -53,6 +56,9 @@ export interface JoseCommandParserIntents {
   governanceAudit: boolean;
   securityMonitoring: boolean;
   memoryPreservation: boolean;
+  memoryForget: boolean;
+  memoryCleanup: boolean;
+  memoryRecall: boolean;
   opportunityScoring: boolean;
   distributionExecution: boolean;
   publishing: boolean;
@@ -411,7 +417,11 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
     check: !planReview && matchesAny(asked, ['check', 'accuracy', 'accurate', 'fact-check', 'proofread']) && (!securityMonitoring || accuracyCheck),
     governanceAudit: planReview || matchesAny(asked, ['audit', 'compliance', 'policy', 'approval', 'governance', 'risk']),
     securityMonitoring,
-    memoryPreservation: matchesAny(asked, ['remember', 'archive', 'knowledge', 'timeline', 'document decision']),
+    memoryPreservation: !asksToForget(asked) && !asksToCleanUpMemory(asked) && matchesAny(asked, ['remember', 'archive', 'knowledge', 'timeline', 'document decision']),
+    // Agent phase 7: forget, clean up and "what did we decide" are Echo's too.
+    memoryForget: asksToForget(asked),
+    memoryCleanup: asksToCleanUpMemory(asked),
+    memoryRecall: asksWhatWasDecided(asked),
     opportunityScoring: matchesAny(asked, ['opportunity', 'priority', 'prioritize', 'score', 'roi', 'value', 'timing']),
     distributionExecution: !planReview && matchesAny(asked, ['distribute', 'schedule', 'engage', 'community', 'publish queue']),
     // "post" alone is a piece of writing, not publishing (agent phase 1), and naming a platform
@@ -542,6 +552,24 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       requiresApproval: false,
       commandPreview: 'Preserve decisions/workflow context only.',
       fragments: fragments.filter((fragment) => /remember|archive|knowledge|timeline|history|decision/i.test(fragment))
+    });
+  }
+
+  for (const [on, actionType, title] of [
+    [intents.memoryForget, 'memory_forget', 'Echo forgets a saved decision'],
+    [intents.memoryCleanup, 'memory_cleanup', 'Echo proposes a memory cleanup'],
+    [intents.memoryRecall, 'memory_recall', 'Echo answers from the saved decisions'],
+  ] as const) {
+    if (!on) continue;
+    assignments.push({
+      agent: AGENTS.ECHO,
+      title: `${title}: ${shorten(clean)}`,
+      rationale: 'Memory request.',
+      actionType,
+      riskLevel: 'low',
+      requiresApproval: false,
+      commandPreview: actionType === 'memory_recall' ? 'Reads the saved decisions.' : 'Changes memory only.',
+      fragments: [clean],
     });
   }
 

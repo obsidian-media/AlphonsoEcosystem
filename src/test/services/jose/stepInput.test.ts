@@ -5,7 +5,7 @@ import { buildStepInput, stepInputText, readableOutput, STEP_INPUT_LIMITS } from
 import { planReviewPrompt } from '../../../services/maria/mariaPlanReview';
 import { novaVerdictPrompt } from '../../../services/nova/novaVerdict';
 import { sentinelPrompt } from '../../../services/sentinel/sentinelReview';
-import { buildEchoSynthesisPrompt } from '../../../services/echoMemoryService';
+import { echoSavePrompt } from '../../../services/echo/echoSteps';
 
 const step = (stepId: string, agent: string, needs: string[] = [], extra: Record<string, unknown> = {}) =>
   ({ stepId, agent, actionType: 'x', needs, effects: ['read'], ...extra }) as any;
@@ -81,7 +81,7 @@ describe('buildStepInput', () => {
     expect(planReviewPrompt(input, {})).toContain('Bees pollinate a third of our food.');
     expect(novaVerdictPrompt(input, { sourceCount: 0, mayAskForHelp: false })).toContain('Bees pollinate');
     expect(sentinelPrompt(input, { work: input.needs.map((n) => n.text).join(" "), whose: "Miya's work", files: '', results: '', deps: '', facts: [] })).toContain('Bees pollinate');
-    expect(buildEchoSynthesisPrompt('r', {}, input)).toContain('Bees pollinate');
+    expect(echoSavePrompt({ request: 'r', work: input.needs.map((n) => n.text).join(' ') }, [])).toContain('Bees pollinate');
   });
 });
 

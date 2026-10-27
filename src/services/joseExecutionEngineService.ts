@@ -18,7 +18,7 @@ import {
   appendCommandAssignments,
   listJoseCommands
 } from './joseCommandRouterService';
-import { pushMemoryItem, listMemoryItems } from './memoryService';
+import { pushMemoryItem } from './memoryService';
 import { pushMiyaMemory } from './miyaMemoryService';
 import { listMiyaComfyWorkflowPresets } from './miyaComfyWorkflowPresetService';
 import { listMiyaWorkflowTemplates, getMiyaWorkflowTemplate } from './miyaWorkflowTemplates';
@@ -60,7 +60,8 @@ import { reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
 import { runVisualWorkflow } from './workflowExecutionService';
-import { runEchoPreservation } from './echoMemoryService';
+import { runEchoStep } from './echo/echoSteps';
+import { surfaceOf } from './echo/decisions';
 import { runMarcusDistribution } from './marcusExecutionService';
 import { runSentinelSecurityScan } from './sentinelSecurityService';
 import { runNovaAnalysis } from './novaAnalysisService';
@@ -81,6 +82,7 @@ import { parseJsonResponse } from '../lib/jsonUtils';
 import { executeParallel } from './parallelExecutionService';
 import { agentCache } from './cacheService';
 import { randomHex } from '../lib/randomId';
+import { decisionsFor, decisionsText } from './echo/recall';
 
 // This pipeline still crosses a few dynamic JS-era payload boundaries.
 // Keep the `any` usage below scoped to those runtime edges so behavior stays unchanged.
@@ -909,8 +911,17 @@ async function executeMariaAssignment(commandText: any, assignment: any, options
   return runMariaGovernanceAudit(commandText, assignment, options);
 }
 
+/** Echo's steps (agent phase 7): save, recall, forget or clean up, by task type. */
 async function executeEchoAssignment(commandText: any, assignment: any, options: any = {}) {
-  return runEchoPreservation(commandText, assignment, options.priorOutputs || {}, options);
+  const request: any = options.commandId ? requestForCommand(options.commandId) : null;
+  const input = options.stepInput || { instruction: assignment?.instruction || '', request: String(commandText || ''), needs: [], others: [], memory: '', review: null };
+  return runEchoStep(assignment, input, {
+    commandId: options.commandId,
+    requestId: request?.id,
+    surface: surfaceOf(request?.source),
+    packetId: assignment?.packetId,
+    requestStep: request?.steps?.find((s: any) => s.stepId === assignment?.stepId) || null,
+  });
 }
 
 async function executeSentinelAssignment(commandText: any, assignment: any, options: any = {}) {
@@ -1164,7 +1175,10 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
       ...options,
       commandId,
       stepInput: buildStepInput(commandId, assignment, String(requestText || ''), {
-        memory: options.retrievedContext?.snippet,
+        // Each step gets the decisions and preferences that matter to its own work (agent phase 7).
+        memory: decisionsText(await decisionsFor(`${String(requestText || '')} ${String(assignment?.instruction || '')}`, {
+          agent: assignment?.agent, actionType: assignment?.actionType, large: usesLargeModel(assignment),
+        }), usesLargeModel(assignment)),
         large: usesLargeModel(assignment),
       }),
     };
@@ -1361,8 +1375,8 @@ export async function runJoseCommandExecutionPipeline({
     if (shortcut) return shortcut;
   }
 
-  const memoryItems = listMemoryItems();
-  const retrievedContext = retrieveRelevantContext(commandText, memoryItems);
+  // The decisions that matter to the request (agent phase 7), not the step notes.
+  const retrievedContext = { snippet: decisionsText(await decisionsFor(String(commandText || ''), {})), items: [] };
 
   const command: any = resumeCommand || await createJoseCommandRoute({ commandText, source, zeroCostMode, assignments });
   if (!command) {
@@ -2000,6 +2014,10 @@ export async function runJoseCommandExecutionPipeline({
       // The owner can't work until something is set up: no retry, no other agent,
       // nothing saved for later steps; Carry on runs it again (agent roles Part A).
       if (result?.resultState === 'setup_required') {
+        // What the step waits with (Echo's choices, agent phase 7) is kept on the request step.
+        if (result.stepFields && typeof result.stepFields === 'object' && joseRequestId) {
+          try { updateJoseStep(joseRequestId, assignment.stepId, result.stepFields); } catch { /* display aid only */ }
+        }
         updatePacketStatus(assignment.packetId, 'queued', { failureReason: result.summary });
         executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'setup_needed', reason: String(result.summary || 'Something needs setting up.') });
         onProgress?.({ stage: 'setup_needed', assignment, packetId: assignment.packetId, reason: result.summary });
@@ -2154,12 +2172,10 @@ export async function runJoseCommandExecutionPipeline({
     recordStepOutcomes(joseRequestId, planAssignments, executionReceipts, false);
     // Echo saves what was decided (phase 4). Never changes the outcome.
     const finished = getJoseRequest(joseRequestId);
-    // Once, when the request is done (phase 5), not again after an approval.
-    if (saveDecisions && finished && finished.status === 'done') {
-      const outputs = Object.fromEntries(finished.steps
-        .filter((s) => s.status === 'done')
-        .map((s) => [s.stepId, getStepOutput(command.id, s.stepId) || {}]));
-      await saveRequestDecisions(finished, outputs, { draftDisabled, endpoint });
+    // Once, when the request ends (phase 5; done or failed since agent phase 7), not again after an approval.
+    // In the background: the result never waits for Echo (found in CI: with no model it waited for a timeout).
+    if (saveDecisions && finished && (finished.status === 'done' || finished.status === 'failed')) {
+      void saveRequestDecisions(finished, doneStepOutputs(finished), { draftDisabled, endpoint }).catch(() => undefined);
     }
   }
 
@@ -2431,6 +2447,9 @@ export function rejectRequestStep(requestId: string, stepId: string) {
   }
   setJoseRequestStatus(requestId, 'cancelled');
   appendRequestNote(requestId, `You rejected ${agentName(step.agent)}'s step.`);
+  // What you turned down is a decision too (agent phase 7); saved in the background.
+  const cancelled = getJoseRequest(requestId);
+  if (cancelled) void saveRequestDecisions(cancelled, doneStepOutputs(cancelled)).catch(() => undefined);
   return { ok: true, summary: 'Rejected. The request was cancelled.' };
 }
 
@@ -2447,6 +2466,13 @@ export async function pickAlphonsoProject(requestId: string, stepId: string, nam
   appendRequestNote(requestId, `You chose ${name} for ${agentName(step.agent)}'s step.`);
   await carryOnRequest(requestId);
   return { ok: true, summary: `Working in ${name}.` };
+}
+
+/** The outputs of a request's finished steps, by step id. */
+function doneStepOutputs(request: any): Record<string, any> {
+  return Object.fromEntries((request.steps || [])
+    .filter((s: any) => s.status === 'done')
+    .map((s: any) => [s.stepId, getStepOutput(request.commandId, s.stepId) || {}]));
 }
 
 /** When a project is free again, the oldest request waiting for it carries on (agent phase 6). */

@@ -52,6 +52,8 @@ vi.mock('../lib/ollama', () => ({
     // Sentinel's check (agent phase 4).
     if (agent === 'sentinel') return { response: JSON.stringify({ verdict: 'safe', summary: 'Nothing risky.', findings: [] }) };
     if (agent === 'maria') return { response: JSON.stringify({ risk: 'low', why: 'Nothing is sent.', rules: [], points: ['Nothing leaves this computer.'], needsApproval: false, approvalReasons: [], offer: '' }) };
+    // Echo's save step (agent phase 7): his model writes the decisions; without it the step fails.
+    if (agent === 'echo') return { response: JSON.stringify({ decisions: [{ kind: 'decision', text: 'The launch positioning goes ahead.', topics: ['launch'] }] }) };
     throw new Error('no agent model in this test');
   })
 }));

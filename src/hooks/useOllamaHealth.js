@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { TRUST_STATES, timestampMs } from '../services/trustModel';
+import { TRUST_STATES } from '../services/trustModel';
 import { appendVerificationLog, verifyOllamaRuntimeProof } from '../services/verificationService';
-import { pushMemoryItem } from '../services/memoryService';
 import { checkOllama, chooseDefaultModel } from '../lib/ollama';
 
 export function useOllamaHealth({
@@ -95,15 +94,7 @@ export function useOllamaHealth({
     });
     setVerificationLogs((current) => [...current, log].slice(-250));
 
-    const memory = pushMemoryItem({
-      category: 'runtime_memory',
-      confidence: trust,
-      source: 'ollama-health-check',
-      verificationState: trust,
-      expiresAt: timestampMs() + 5 * 60 * 1000,
-      content: `Ollama check: ${result.label} (${result.state})`
-    });
-    setMemoryItems((current) => [...current, memory].slice(-500));
+    // A health check is not something to remember (agent phase 7).
 
     if ((!settings.selectedModel || result.state === 'model_missing') && result.selectedModel) {
       setSettings((current) => ({

@@ -4,8 +4,9 @@
 // the model is unavailable, the simple rule-based plan runs and Jose says so
 // (owner, 2026-10-23).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.3–2.4, §5
+import { memoryOnlyTask } from '../echo/memoryIntents';
 import { generateAgentLlmResponse } from '../../lib/ollama';
-import { asksPlanReview, asksReadiness, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
+import { asksPlanReview, asksReadiness, asksToCleanUpMemory, asksToForget, asksToRemember, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
 import { CODE_TASK_PREFIXES, isCodeRequest, needsFacts, planningMenu } from './taskTypeMeanings';
 import { isPlainQuestion } from '../../lib/chatUtils';
@@ -81,6 +82,24 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   const problems: string[] = [];
   if (parsed.intents.check && parsed.intents.writing && !has('maria')) {
     problems.push('The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.');
+  }
+  // Agent phase 7: remembering, forgetting and tidying memory are Echo's steps.
+  const echoDoes = (types: string[]) => has('echo', (st) => types.includes(String(st.actionType)));
+  if (asksToRemember(text) && !echoDoes(['memory_preservation', 'memory_workflow_step'])) {
+    problems.push('The request asks to remember something: add an echo step with the task type memory_preservation.');
+  }
+  if (asksToForget(text) && !echoDoes(['memory_forget'])) {
+    problems.push('The request asks to forget something: add an echo step with the task type memory_forget.');
+  }
+  if (asksToCleanUpMemory(text) && !echoDoes(['memory_cleanup', 'knowledge_curation'])) {
+    problems.push('The request asks to clean up memory: add an echo step with the task type memory_cleanup.');
+  }
+  // Found in the real app: "Clean up my memory" got a forget step too. Echo forgets or tidies only when asked.
+  if (!asksToForget(text) && echoDoes(['memory_forget'])) {
+    problems.push('The request does not ask to forget anything: remove the memory_forget step.');
+  }
+  if (!asksToCleanUpMemory(text) && echoDoes(['memory_cleanup', 'knowledge_curation'])) {
+    problems.push('The request does not ask to clean up memory: remove the memory_cleanup step.');
   }
   // Agent phase 6: a code request needs Alphonso's code step; plain writing needs no research.
   const codeStep = (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) =>
@@ -265,6 +284,15 @@ function fallback(text: string, template: JoseTemplate | null, note: string): Jo
 
 /** Plan `text`: Jose's model, checked by the rules, one fix, then the fallback. */
 export async function planJoseRequest(text: string, options: PlanOptions = {}): Promise<JosePlan> {
+  // Agent phase 7: a request that only asks to remember, forget or tidy is one Echo step (found in the
+  // real app: "Remember that the launch moved" got research, writing and a check from the model).
+  const memoryTask = memoryOnlyTask(text);
+  if (memoryTask) {
+    return {
+      steps: [{ stepId: 'echo', agent: 'echo', actionType: memoryTask, effects: inferEffects(memoryTask), needs: [], instruction: 'Do what the request asks with memory.' }],
+      source: 'rules', templateId: null, kind: 'normal', note: 'Echo does this.',
+    };
+  }
   const best = options.planFresh ? null : scoreTemplateFit(text).find((s) => s.score >= TEMPLATE_FIT_THRESHOLD);
   const template = best ? getTemplate(best.templateId) : null;
   let problems: string[] = [];

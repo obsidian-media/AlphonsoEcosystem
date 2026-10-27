@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 vi.mock('../services/agentActivityService', () => ({ appendAgentActivity: vi.fn() }));
 vi.mock('../services/boardroomThreadService', () => ({ listAllThreadMessages: vi.fn(() => []) }));
+vi.mock('../services/echo/decisions', () => ({ decisionIds: vi.fn(() => ['d1', 'd2']) }));
 vi.mock('../services/unifiedMemoryService', () => ({
   hydrateFromDurable: vi.fn().mockResolvedValue([]),
   listMemory: vi.fn(() => [])
@@ -68,6 +69,16 @@ describe('protectedBoardroomMessageIds', () => {
       { id: 'm4', threadId: 't3', kind: 'message', acknowledged: true, confirmed: false }
     ] as never);
     expect(protectedBoardroomMessageIds().sort()).toEqual(['m1', 'm2', 'm4']);
+  });
+});
+
+// Agent phase 7: decisions are permanent, so their graph nodes are never pruned.
+describe('decision nodes', () => {
+  it('every decision id is protected', async () => {
+    vi.mocked(invoke).mockResolvedValueOnce(report() as never);
+    await previewMemoryGraphCleanup();
+    const args: any = vi.mocked(invoke).mock.calls[0][1];
+    expect(args.policy.protectedRefIds).toEqual(expect.arrayContaining(['d1', 'd2']));
   });
 });
 

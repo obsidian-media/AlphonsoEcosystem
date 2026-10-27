@@ -5,6 +5,7 @@ vi.mock('../../../services/miyaMemoryService', () => ({ listMiyaMemory: vi.fn(()
 vi.mock('../../../services/contentFactory/contentStepRunner', () => ({ runContentStep: vi.fn(async () => ({})) }));
 
 import { pushMemory } from '../../../services/unifiedMemoryService';
+import { listDecisions } from '../../../services/echo/decisions';
 import { runContentStep } from '../../../services/contentFactory/contentStepRunner';
 import { getBrand, saveBrand } from '../../../services/contentFactory/contentBrandService';
 import { createProject, emptyBrief, getProject, saveStepVersion, updateBrief } from '../../../services/contentFactory/contentProjectService';
@@ -48,14 +49,15 @@ describe('contentQualityGate', () => {
     expect(visiblePieces(project, strict).filter((r) => r.visible)).toHaveLength(0);
   });
 
-  it('a rejection becomes a brand lesson and an Echo memory', () => {
+  it('a rejection becomes a brand lesson and a decision Echo keeps (agent phase 7)', () => {
     const { brand, project } = setup();
     saveStepVersion(project.id, 'thumbnail', { output: {}, summary: '', joseCommandId: null });
     const after = rejectPiece(project.id, 'thumbnail', 't1', 'too much text');
     expect(after.steps.thumbnail.status).toBe('sent_back');
     expect(getBrand(brand.id)!.lessons[0].text).toBe('thumbnail: too much text');
-    expect(pushMemory).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(pushMemory).mock.calls[0][0]).toMatchObject({ category: 'preference_memory', sourceAgent: 'echo' });
+    expect(pushMemory).not.toHaveBeenCalled();
+    expect(listDecisions()[0]).toMatchObject({ kind: 'rejection', source: { surface: 'miya', by: 'you' } });
+    expect(listDecisions()[0].text).toContain('too much text');
   });
 
   it('retrying passes the reason to the agents', async () => {

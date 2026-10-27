@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { appendAgentActivity } from './agentActivityService';
 import { listAllThreadMessages } from './boardroomThreadService';
 import { hydrateFromDurable, listMemory } from './unifiedMemoryService';
+import { decisionIds } from './echo/decisions';
 
 /**
  * Memory knowledge graph -- Phase 4 (governance): retention + pruning policy.
@@ -126,7 +127,8 @@ async function runPrune(dryRun: boolean): Promise<PruneReport | null> {
         // No items at all usually means storage was unreadable, not that every
         // memory was deleted -- send null so Rust protects memory_item nodes.
         memoryItems: memoryItems.length > 0 ? memoryItems : null,
-        protectedRefIds: protectedBoardroomMessageIds(),
+        // Decisions never expire, so neither do their graph nodes (agent phase 7).
+        protectedRefIds: [...protectedBoardroomMessageIds(), ...decisionIds()],
         inferredEdgeDays: GRAPH_RETENTION.inferredEdgeDays,
         protectAccessedDays: GRAPH_RETENTION.protectAccessedDays,
         maxRemoveFraction: GRAPH_RETENTION.maxRemoveFraction,

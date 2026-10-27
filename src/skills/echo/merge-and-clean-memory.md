@@ -1,10 +1,10 @@
 ---
 name: Merge and clean memory
 agent: echo
-use_when: Memory has duplicates or stale notes to merge.
-task_types: [knowledge_curation]
+use_when: Memory has duplicates, contradictions or stale notes to tidy.
+task_types: [memory_cleanup, knowledge_curation]
 tools: [read_memory, organise_memory]
 steps: [organise_memory]
 output: text
 ---
-Find notes that say the same thing and propose one merged note for each group; list stale notes to drop. Change nothing yourself: say what to merge.
+Find decisions that say the same thing, that contradict each other, or that a later one replaced, and notes worth keeping as decisions. Propose one change for each, with the reason. Change nothing yourself: the user applies what they tick.

@@ -18,6 +18,10 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
  *       Ollama is mocked via tauri-mock.js so no local LLM is required.
  */
 
+// With no model here, Maria's and Sentinel's steps each try four times before the result shows:
+// about 14 s on main (measured 2026-10-26), so 15 s left no margin.
+const RESULT_CARD_MS = 30000;
+
 test.describe('Multi-Agent Orchestration Pipeline', () => {
   // Marks every test in this group as slow (Playwright triples its timeout).
   // Replaces the invalid `test.describe.slow(...)` form, which does not exist
@@ -52,7 +56,7 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     await sendBtn.click();
 
     // Jose's result card proves that the executable command entered the orchestration path.
-    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: RESULT_CARD_MS });
 
     await expect(page.getByText('Agent Activity', { exact: true })).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('jose-routing-explainer')).toBeVisible();
@@ -70,7 +74,7 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
-    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: RESULT_CARD_MS });
 
     // Navigate to Runtime / Activity tab and check for agent activity entry
     // The RightPanel should show an agent entry (e.g., "Sentinel", "Jose", or activity badge)
@@ -89,14 +93,14 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
-    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: RESULT_CARD_MS });
 
     // Reload page
     await page.reload();
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: RESULT_CARD_MS });
     await expect(page.getByTestId('jose-copy-summary-button')).toBeVisible();
     await expect(page.getByTestId('jose-rerun-command-button')).toBeVisible();
   });

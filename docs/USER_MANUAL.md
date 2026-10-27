@@ -564,13 +564,20 @@ Alphonso maintains several memory systems:
 | **Session Events** | Real-time activity log | localStorage + SQLite |
 | **Orchestration Receipts** | Execution audit trail | localStorage + SQLite |
 
-### Memory Commands
+### Echo remembers your decisions
 
-| Command | What It Does |
+Echo keeps what was decided, wherever it was decided (Chat, Telegram, WhatsApp, the phone, schedules, Boardroom, Miya Studio), and every agent gets the decisions and preferences that apply to its work.
+
+| You say | What happens |
 |---------|-------------|
-| `remember <info>` | Store information in core memory |
-| `archive <topic>` | Archive knowledge for future reference |
-| `what do you know about <topic>` | Search memory for relevant items |
+| `Remember that our launch is on Friday the 14th.` | Echo saves it. Chat shows **Echo remembered: …** with **Edit** and **Forget**. |
+| `Remember that I prefer short emails without emojis.` | A preference: every agent follows it from then on. |
+| `What did we decide about the launch?` | The answer uses what was saved. |
+| `Remember that the launch moved to Saturday.` | The new decision replaces the old one (the old one is kept as replaced). |
+| `Forget the launch decision` | Echo forgets it; when it could be more than one, the board and Telegram show a button for each. |
+| `Clean up my memory` | Echo proposes merges and removals; nothing changes until you tick and **Apply** (board, Telegram or Settings). He also proposes one every Sunday. |
+
+Echo also saves each finished request's decisions on his own, and what you turn down. **Settings → Memory → What Echo remembers** lists every decision, with **Show replaced and forgotten**. Decisions don't expire.
 
 ### Memory Persistence
 

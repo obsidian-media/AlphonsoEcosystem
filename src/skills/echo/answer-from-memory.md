@@ -7,4 +7,4 @@ tools: [read_memory]
 steps: [read_memory]
 output: text
 ---
-Answer from what memory holds, with when each note was saved. Say plainly when memory holds nothing about it. Never fill a gap with a guess.
+Answer only from the saved decisions, each point with when and where it was decided. When a decision was replaced, say what it was and what replaced it. Say plainly when nothing is saved about it. Never fill a gap with a guess.

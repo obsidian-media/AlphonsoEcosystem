@@ -2,8 +2,8 @@ import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { emit } from '@tauri-apps/api/event';
 import { getStorage, setStorage } from '../lib/appStorage';
-import { INITIAL_CONVERSATION_ID, VERIFICATION_LOG_CAP, SNAPSHOT_HISTORY_CAP, MEMORY_EXPIRY_MS, SCREEN_OBSERVER_INTERVAL_MS, companionStateFromVoice, coachMessageFromVoice } from '../constants/appConstants';
-import { listMemoryItems, pushMemoryItem } from '../services/memoryService';
+import { INITIAL_CONVERSATION_ID, VERIFICATION_LOG_CAP, SNAPSHOT_HISTORY_CAP, SCREEN_OBSERVER_INTERVAL_MS, companionStateFromVoice, coachMessageFromVoice } from '../constants/appConstants';
+import { listMemoryItems } from '../services/memoryService';
 import { listSnapshots, createSnapshot, restoreSnapshotById, backupMemoryLedger } from '../services/recoveryService';
 import { appendVerificationLog, getVerificationLogs, readDurableAuditLog } from '../services/verificationService';
 import { getScreenObserverLogs, getScreenObserverState, requestScreenNotificationPermission, startScreenObserver, stopScreenObserver, updateScreenObserverState } from '../services/screenIntelligenceService';
@@ -236,13 +236,7 @@ export function useAppShellState({
         setScreenObserverState(nextState);
         if (event) {
           setScreenObserverLogs(getScreenObserverLogs());
-          pushMemoryItem({
-            title: `Screen observer: ${event.status}`, category: 'workspace_memory',
-            content: `${event.summary} (change ${event.changeLevel})`, source: 'screen-observer',
-            sourceAgent: 'alphonso', confidence: TRUST_STATES.INFERRED,
-            verificationState: TRUST_STATES.INFERRED,
-            expiresAt: Date.now() + MEMORY_EXPIRY_MS, expiryRule: 'visual_pattern_7d'
-          });
+          // Screen changes stay in the observer's own log, not memory (agent phase 7).
           if (event.status === 'high_change_detected' || event.status === 'pattern_repeated') {
             setHectorCompanionState({ state: 'warning', message: event.summary, currentSourceUrl: null, lastRunSummary: event.summary });
           }

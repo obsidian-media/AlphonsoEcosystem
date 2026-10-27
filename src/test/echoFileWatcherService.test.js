@@ -9,8 +9,9 @@ vi.mock('../lib/ollama', () => ({
   PREFERRED_MODEL: 'test-model',
 }));
 
-vi.mock('../services/echoMemoryService', () => ({
-  runEchoPreservation: vi.fn().mockResolvedValue(true),
+// Agent phase 7: an ingested file is an ordinary note, not a decision.
+vi.mock('../services/unifiedMemoryService', () => ({
+  addMemoryItem: vi.fn(() => ({ id: 'n1' })),
 }));
 
 import {
@@ -20,7 +21,7 @@ import {
   stopFileWatcher,
 } from '../services/echoFileWatcherService';
 import { invoke } from '@tauri-apps/api/core';
-import { runEchoPreservation } from '../services/echoMemoryService';
+import { addMemoryItem } from '../services/unifiedMemoryService';
 
 beforeEach(() => {
   localStorage.clear();
@@ -100,7 +101,7 @@ describe('startFileWatcher', () => {
     startFileWatcher(cb);
     await vi.advanceTimersByTimeAsync(30_000);
     expect(cb).toHaveBeenCalledWith({ ingested: 1, files: ['file1.txt'] });
-    expect(runEchoPreservation).toHaveBeenCalled();
+    expect(addMemoryItem).toHaveBeenCalledWith(expect.objectContaining({ title: 'File: file1.txt', agentId: 'echo', type: 'file_note' }));
   });
 
   it('skips files that are too short', async () => {

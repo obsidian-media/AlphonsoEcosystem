@@ -197,6 +197,7 @@ import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose';
 import { createWaitingPlanRequest, createJoseRequest, setJoseRequestStatus } from '../services/jose/joseRequestStore';
 import { carryOnRequest } from '../services/joseExecutionEngineService';
 import { higgsfieldResultsDoneSince, markShownInChat } from '../services/contentFactory/higgsfieldByName';
+import { addDecision } from '../services/echo/decisions';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -787,6 +788,20 @@ describe('ChatView: everything goes to Jose', () => {
     await waitFor(() => expect(generateOllamaChatStream).toHaveBeenCalled());
     const system = generateOllamaChatStream.mock.calls.at(-1)[0].messages[0];
     expect(system).toEqual({ role: 'system', content: ALPHONSO_ANSWER_PROMPT });
+  });
+
+  // Agent phase 7: Chat's direct answer knows what you decided; Direct Mode is left alone.
+  it('a direct answer in Chat gets the decisions you saved', async () => {
+    addDecision({ kind: 'decision', text: 'The launch is on Friday the 14th at $29.', topics: ['launch'], source: { surface: 'chat', by: 'you' } });
+    decideJoseRoute.mockResolvedValueOnce({ route: 'direct', source: 'model', reason: 'chat' });
+    generateOllamaChatStream.mockImplementationOnce(({ onToken }) => { onToken?.('Friday.', 'Friday.'); return Promise.resolve('Friday.'); });
+    render(<ChatView {...makeProps()} />);
+    send('What did we decide about the launch?');
+    await waitFor(() => expect(generateOllamaChatStream).toHaveBeenCalled());
+    const system = generateOllamaChatStream.mock.calls.at(-1)[0].messages[0].content;
+    expect(system.startsWith(ALPHONSO_ANSWER_PROMPT)).toBe(true);
+    expect(system).toContain('Decisions you saved:');
+    expect(system).toContain('The launch is on Friday the 14th at $29.');
   });
 
   it('hands the request to Jose when he decides to plan, and shows how he planned', async () => {

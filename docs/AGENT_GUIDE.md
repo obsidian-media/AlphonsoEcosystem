@@ -52,13 +52,12 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 **When to use:** "Write an announcement and post it to Slack #news", "Make a draft GitHub release v1.2.0", "Is this ready to post?", Project Execution's **Ask Marcus to send**, or Campaign Studio's **Approve and schedule**.
 
 ### Echo — Knowledge Historian
-**Role:** Memory synthesis and archival across all agent outputs
-**Runtime:** `src/services/echoMemoryService.ts` — Ollama-powered with deterministic fallback
-**Skills (3, `src/skills/echo/`):** Answer from memory, Merge and clean memory, Save decisions.
-**Can do:** Synthesize memories from workflow outputs, classify retention policy (permanent/standard_180d/ephemeral_7d), categorize memories (project/timeline/preference/orchestration), normalize confidence levels
-**Cannot:** Modify or delete without approval
-**Schema:** `memoryId`, `category`, `retentionPolicy`, `sensitivity`, `confidenceLevel`, `archivedAtMs`
-**When to use:** Automatic — Echo saves a request's decisions when it finishes, and remembers what you reject in Miya Studio.
+**Role:** The ecosystem's memory of decisions: what was decided, preferred, instructed or turned down, wherever it was decided
+**Runtime:** `src/services/echo/` (agent phase 7) — his own model writes and finds decisions; nothing is made up
+**Skills (4, `src/skills/echo/`):** Answer from memory, Forget, Merge and clean memory, Save decisions.
+**Can do:** Save the decisions of every finished request (Chat, Telegram, WhatsApp, the phone, schedules, Boardroom, Miya Studio), your approvals and rejections, and anything you ask him to remember; give every agent the decisions and preferences that apply to its step; answer "what did we decide about …?"; forget a decision (asking which when it could be several); propose a cleanup of memory
+**Cannot:** Change memory in a cleanup until you apply it; invent a decision that isn't in the request or the work
+**When to use:** "Remember that …", "What did we decide about …?", "Forget …", "Clean up my memory". He also saves each request's decisions on his own, shown as "Echo remembered: …" with Edit and Forget.
 
 ### Sentinel — Security Monitor
 **Role:** Security monitoring and automation safety

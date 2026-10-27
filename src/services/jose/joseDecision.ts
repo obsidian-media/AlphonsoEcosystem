@@ -5,6 +5,7 @@
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §4 step 2
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { isPlainQuestion, shouldRouteThroughJose } from '../../lib/chatUtils';
+import { asksToCleanUpMemory, asksToForget, asksToRemember } from '../joseCommandRouterService';
 
 export const DECISION_TIMEOUT_MS = 20000;
 
@@ -37,12 +38,15 @@ function readDecision(raw: string): { route: 'direct' | 'plan'; reason: string }
 export async function decideJoseRoute(text: string, options: { history?: { role: string; content: string }[] } = {}): Promise<JoseRouteDecision> {
   const value = String(text || '').trim();
   if (EXPLICIT_JOSE.test(value)) return { route: 'plan', source: 'rule', reason: 'Asked Jose by name.' };
+  // Agent phase 7: remembering, forgetting and tidying memory are Echo's steps.
+  if (asksToRemember(value) || asksToForget(value) || asksToCleanUpMemory(value)) return { route: 'plan', source: 'rule', reason: 'A memory request: Echo does that.' };
   if (isPlainQuestion(value)) return { route: 'direct', source: 'rule', reason: 'A plain question.' };
 
   const recent = (options.history || []).slice(-4).map((m) => `${m.role}: ${String(m.content).slice(0, 300)}`).join('\n');
   const prompt = [
     'You are Jose, the orchestrator. Decide whether to answer this message directly, or to plan work for your agents.',
     'Answer directly for conversation, questions and anything one reply can do. Plan when something must be researched, written, made, built, checked or sent.',
+    'Plan when the message asks to remember or forget something, or to clean up memory: Echo does that.',
     recent ? `Recent conversation:\n${recent}` : '',
     `Message: ${value}`,
     'Answer with JSON only: {"route": "direct" or "plan", "reason": "<short reason>"}',
