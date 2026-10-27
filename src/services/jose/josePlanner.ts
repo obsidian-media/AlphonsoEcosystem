@@ -17,6 +17,7 @@ import { listInstalledModels } from './joseModels';
 import { paidModelAvailable, paidModelId, estimateCostUsd, PAID_MAX_OUTPUT_TOKENS, PAID_PROMPT_ALLOWANCE_CHARS } from './joseSpend';
 import { getAgentProvider } from '../modelSelectionService';
 import { CONNECTOR_NAMES } from '../marcus/destinations';
+import { listProjects } from '../alphonso/projects';
 import type { MarcusConnector } from '../marcus/types';
 
 export interface JosePlan {
@@ -134,6 +135,33 @@ export function copiedPlaceholders(steps: Array<{ id?: string; agent?: string; t
   return [...new Set(problems)];
 }
 
+export const HISTORY_HEADING = 'Earlier in this chat (background only; where it differs from the request, the request wins):';
+
+const lower = (value: string) => String(value || '').toLowerCase();
+const escapeRe = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const names = (haystack: string, needle: string) => new RegExp(`(^|[^\\w#-])${escapeRe(needle)}($|[^\\w-])`, 'i').test(haystack);
+
+/** Destinations (a #channel, a connector, one of your projects) a step names that only the chat's
+ *  history named, not the request (Jose phase 7). One problem line each, for the fix round. */
+export function historyOnlyDestinations(steps: PlanStep[], text: string, history: PlanOptions['history']): string[] {
+  const past = lower((history || []).map((m) => m.content).join('\n'));
+  if (!past) return [];
+  const asked = lower(text);
+  const known = [
+    ...Object.values(CONNECTOR_NAMES).map((n) => n.toLowerCase()),
+    ...listProjects().map((p) => p.name.toLowerCase()),
+  ];
+  const problems: string[] = [];
+  for (const step of steps) {
+    const said = lower(`${step.instruction || ''} ${JSON.stringify((step as { payload?: unknown }).payload || '')}`);
+    const channels = said.match(/#[\w-]+/g) || [];
+    for (const dest of [...new Set([...channels, ...known.filter((n) => names(said, n))])]) {
+      if (names(past, dest) && !names(asked, dest)) problems.push(`Step ${step.stepId} uses "${dest}" from earlier in the chat: use what the request names.`);
+    }
+  }
+  return [...new Set(problems)];
+}
+
 function buildPrompt(text: string, template: JoseTemplate | null, history: PlanOptions['history'], problems: string[], installed: string[] = [], paidModel: string | null = null): string {
   const recent = (history || []).slice(-6).map((m) => `${m.role}: ${String(m.content).slice(0, 400)}`).join('\n');
   return [
@@ -145,9 +173,11 @@ function buildPrompt(text: string, template: JoseTemplate | null, history: PlanO
     "When the request names several of the user's projects, plan one alphonso local_operation step per project.",
     installed.length ? `Installed models you may choose for a step ("model"; leave it out to use the agent's own): ${installed.join(', ')}. Use a larger one only where the step needs it.` : '',
     paidModel ? `A paid model is also allowed: ${paidModel}. Use it only where no local model would do; a step given it costs money and waits for approval.` : '',
-    template ? templateForPrompt(template) : '',
-    recent ? `Recent conversation:\n${recent}` : '',
+    // The request first; the chat is background (Jose phase 7: a destination named two messages
+    // earlier was planned over the one the request named).
     `Request: ${text}`,
+    template ? templateForPrompt(template) : '',
+    recent ? `${HISTORY_HEADING}\n${recent}` : '',
     problems.length ? `Your last plan did not pass the checks:\n- ${problems.join('\n- ')}\nFix these problems.` : '',
     'Answer with JSON only, in this shape. This is an example for a different request; use your own steps, ids and agents:',
     PLAN_EXAMPLE,
@@ -322,8 +352,9 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     const check = checkPlan(plan.steps, { taskTypes: true, request: text });
     const copied = copiedPlaceholders(plan.steps.map((st) => ({ id: st.stepId, agent: st.agent, taskType: st.actionType })));
     const unsent = missingAsked(text, plan.steps);
-    if (!check.ok || copied.length || unsent.length) {
-      problems = [...copied, ...unsent, ...(check.ok ? [] : check.problems)];
+    const fromHistory = historyOnlyDestinations(plan.steps, text, options.history);
+    if (!check.ok || copied.length || unsent.length || fromHistory.length) {
+      problems = [...copied, ...unsent, ...fromHistory, ...(check.ok ? [] : check.problems)];
       continue;
     }
     const offered = template && plan.basedOnTemplate === template.id ? template : null;
@@ -346,4 +377,9 @@ export function describePlanSource(plan: JosePlan): string {
       : plan.source === 'adapted' ? `Based on template ${name} (adapted).`
         : '';
   return [label, plan.note].filter(Boolean).join(' ');
+}
+
+/** For tests: the planner's prompt for a request and its chat history. */
+export function buildPromptForTests(text: string, history: PlanOptions['history']): string {
+  return buildPrompt(text, null, history, []);
 }

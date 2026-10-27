@@ -16,7 +16,7 @@ vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
 }));
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
-import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders, missingAsked } from '../../../services/jose/josePlanner';
+import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders, missingAsked, buildPromptForTests, historyOnlyDestinations } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 
@@ -422,5 +422,37 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(llm).toHaveBeenCalledTimes(2);
     expect(promptOf(1)).toContain('is the example\'s placeholder');
     expect(plan.source).toBe('fresh');
+  });
+});
+
+// Jose phase 7: the planner plans from the request; the chat history is background only.
+describe('the request over the chat history', () => {
+  const HISTORY = [{ role: 'user', content: 'Post the opening hours to Slack #news' }];
+  const ASK = '/jose Write a note and send it to my n8n workflow Team notes';
+
+  it('the request comes before the chat history, which is marked as background', () => {
+    const p = buildPromptForTests(ASK, HISTORY);
+    expect(p.indexOf('send it to my n8n workflow Team notes')).toBeLessThan(p.indexOf('Slack #news'));
+    expect(p).toContain('Earlier in this chat (background only; where it differs from the request, the request wins):');
+  });
+
+  it('a plan naming a destination only the history named is sent back once', async () => {
+    llm
+      .mockResolvedValueOnce(answer([
+        { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write the note.', effects: ['write_own_work'], needs: [] },
+        { id: 'send', agent: 'marcus', taskType: 'distribution_execution', instruction: 'Send the note to Slack #news.', effects: ['publish_or_send'], needs: ['write'] },
+      ]))
+      .mockResolvedValueOnce(answer([
+        { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write the note.', effects: ['write_own_work'], needs: [] },
+        { id: 'send', agent: 'marcus', taskType: 'distribution_execution', instruction: 'Send the note to the n8n workflow Team notes.', effects: ['publish_or_send'], needs: ['write'] },
+      ]));
+    const plan = await planJoseRequest(ASK, { history: HISTORY });
+    expect(promptOf(1)).toContain('#news');
+    expect(JSON.stringify(plan.steps)).toContain('Team notes');
+    expect(JSON.stringify(plan.steps)).not.toContain('#news');
+  });
+
+  it('a destination the request itself names is not sent back', () => {
+    expect(historyOnlyDestinations([{ instruction: 'Send it to Slack #news.' } as never], '/jose send it to Slack #news', HISTORY)).toEqual([]);
   });
 });
