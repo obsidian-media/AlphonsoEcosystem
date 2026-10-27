@@ -142,6 +142,31 @@ describe('Alphonso desktop: Marcus sends what you approved', () => {
     expect(JSON.parse(received[0].body).text).toBe(marcus.sendPreview.text);
   }).timeout(1600000);
 
+  // Agent roles Part C2: a send with a time is approved now and sent at that time.
+  it('a send for tomorrow at 9 is approved now, scheduled, and not sent yet', async () => {
+    const before = received.length;
+    const { request } = await ask('/jose Write a one-line note that the shop opens at 10 and send it to my n8n workflow Team notes tomorrow at 9.');
+    const marcus = request.steps.find((s) => s.agent === 'marcus' && s.status === 'waiting_approval');
+    console.log('MARCUS-E2E timed', JSON.stringify({ steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status, s.error]), preview: marcus?.sendPreview }));
+    expect(marcus).toBeTruthy();
+    expect(marcus.sendPreview.sendAtMs).toBeGreaterThan(Date.now() + 60_000);
+    expect(new Date(marcus.sendPreview.sendAtMs).getHours()).toBe(9);
+    const links = await $$('//main//button[normalize-space(.)="Open on the board"]');
+    await links[links.length - 1].click();
+    await browser.waitUntil(async () => (await mainText()).includes('Waiting for your approval'), { timeout: 30000 });
+    await (await $('//main//button[starts-with(normalize-space(.), "Approve and carry on")]')).click();
+    await browser.waitUntil(async () => {
+      const r = (await requests()).find((x) => x.id === request.id);
+      return r && r.steps.find((s) => s.stepId === marcus.stepId)?.status === 'done';
+    }, { timeout: 300000, interval: 2000, timeoutMsg: 'the timed send step never finished' });
+    const summary = String((await outputs())[request.commandId]?.steps?.[marcus.stepId]?.summary || '');
+    const queue = JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_marcus_schedule_v1') || '[]'));
+    console.log('MARCUS-E2E timed done', JSON.stringify({ summary, queue: queue.map((q) => [q.kind, q.status, q.scheduledAt]) }));
+    expect(summary).toMatch(/^Marcus will send it to .+ at /);
+    expect(queue.some((q) => q.kind === 'approved_send' && Number(new Date(q.scheduledAt)) === marcus.sendPreview.sendAtMs)).toBe(true);
+    expect(received.length).toBe(before);
+  }).timeout(1600000);
+
   it("Jose's own plan has no copied placeholder", async () => {
     const { request } = await ask('Plan this fresh: research two facts about tea and write one line about them.');
     console.log('MARCUS-E2E plan', JSON.stringify({ plan: request.plan, steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType]) }));

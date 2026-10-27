@@ -303,6 +303,16 @@ On the Research Desk each run is a request on the Requests board too. **Save sou
 
 Each agent works with its own skills, one per kind of job (Hector's "Web research with sources", Maria's "Claim check"). For every step the agent picks the skill that fits, and the Requests board shows it under the step: "Skill: Claim check — The post quotes numbers." A skill can give its agent only its own work and tools.
 
+There are 60 built-in skills. Among them: Alphonso fixes a bug from an error, writes tests, explains code and summarises a document (name the project: "Explain the code in shop"); Hector compares products and prices and finds companies or people (Sentinel then checks what he found for personal data); Nova weighs pros and cons and pricing; Maria reviews code and checks the brand's voice; Sentinel checks a project's dependencies; Marcus sends an email newsletter (through n8n or a Composio mail app) and follow-up reminders; Echo gives this week's decisions and a project's memory.
+
+**Sending at a time.** "Send it to Slack #news tomorrow at 9" shows the time in the approval ("Send to Slack #news at Tue 09:00: …"). After you approve, Marcus sends it at that time, once, and it shows on the Calendar. "Send it tomorrow" with no time makes him ask when.
+
+**Two projects at once.** "Add a README in shop and in blog" gives Alphonso one step in each project, each with its own preview.
+
+**Editing Alphonso's change.** On the board, his waiting step's preview has **Edit** on each file. What you save is what gets written, marked "edited by you".
+
+**Echo by meaning.** Settings → Memory → **Match decisions by meaning** (on by default) downloads a small model (46 MB) the first time Echo looks something up, so "morning meals" finds "breakfast until eleven". Word search works without it.
+
 **All Agents → Skills** lists every agent's skills, built-in and yours, with when each was last used. To add your own:
 - **New skill** under an agent: a name, when to use it, the kinds of work it does (only that agent's), its tools (only that agent's), and the instructions. Save checks it and says what is wrong if anything is.
 - **Import a skill file**: a `.md` skill file, checked the same way.
