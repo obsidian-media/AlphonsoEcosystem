@@ -9,6 +9,7 @@ import { appendRequestNote, type JoseRequest } from './joseRequestStore';
 
 export const NOTHING_NEW = 'Echo found nothing new to remember.';
 
+const DRAFT_WORK = /^(assistant_write|creative_|design_)/;
 const NOT_A_SAVE = new Set(['memory_recall', 'memory_forget', 'memory_cleanup', 'knowledge_curation']);
 
 export async function saveRequestDecisions(
@@ -25,7 +26,9 @@ export async function saveRequestDecisions(
   if (request.steps.every((s) => echoWork.has(s.stepId) || s.agent === 'jose')) {
     return { saved: false, note: "The request was Echo's own memory work." };
   }
-  const stepIds = Object.keys(outputs || {}).filter((id) => !echoWork.has(id));
+  // A draft is made from decisions, it isn't one (found in the real app: a line of an email was saved).
+  const drafts = new Set(request.steps.filter((s) => DRAFT_WORK.test(String(s.actionType))).map((s) => s.stepId));
+  const stepIds = Object.keys(outputs || {}).filter((id) => !echoWork.has(id) && !drafts.has(id));
   const agentOf = (stepId: string) => request.steps.find((s) => s.stepId === stepId)?.agent || '';
   const work = stepIds
     .map((id) => `${agentName(agentOf(id))}: ${String(outputs[id]?.summary || '').trim()}`)

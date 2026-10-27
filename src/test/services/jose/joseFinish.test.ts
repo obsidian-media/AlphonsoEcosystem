@@ -72,6 +72,22 @@ describe('saveRequestDecisions', () => {
     expect(echo).not.toHaveBeenCalled();
   });
 
+  // Found in the real app: a line of the email Alphonso wrote was saved as a decision.
+  it('a draft (writing, creative or design work) is not something to save decisions from', async () => {
+    echo.mockResolvedValueOnce({ ok: true, saved: [] } as never);
+    const drafted = newRequest([...steps, { stepId: 'write', agent: 'alphonso', actionType: 'assistant_write', effects: ['write_own_work'], needs: ['value'] }]);
+    await saveRequestDecisions(drafted, { ...outputs, write: { summary: 'Launch Announcement: Friday the 14th – $29.' } });
+    expect(String(echo.mock.calls[0][0].work)).not.toContain('Launch Announcement');
+    expect(String(echo.mock.calls[0][0].work)).toContain('Price it at $29.');
+  });
+
+  it('a request that was only a draft still gives Echo the request', async () => {
+    echo.mockResolvedValueOnce({ ok: true, saved: [] } as never);
+    const onlyDraft = newRequest([{ stepId: 'write', agent: 'alphonso', actionType: 'assistant_write', effects: ['write_own_work'], needs: [] }]);
+    await saveRequestDecisions(onlyDraft, { write: { summary: 'Dear Sam …' } });
+    expect(echo.mock.calls[0][0]).toMatchObject({ request: 'Research the launch price', work: '' });
+  });
+
   it("with other work too, Echo's own memory step is left out of what he saves from", async () => {
     echo.mockResolvedValueOnce({ ok: true, saved: [] } as never);
     const mixed = newRequest([...steps, { stepId: 'ask', agent: 'echo', actionType: 'memory_recall', effects: ['read'], needs: [] }]);

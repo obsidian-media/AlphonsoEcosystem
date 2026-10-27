@@ -172,6 +172,20 @@ describe('recall', () => {
     expect(llm).not.toHaveBeenCalled();
   });
 
+  // Found in the real app: the Friday decision (which also held the price) stayed active next to "moved
+  // to Saturday", and the answer gave only Saturday.
+  it('lists the records oldest first and says the newer one stands when two disagree', async () => {
+    launch();
+    await new Promise((r) => setTimeout(r, 5));
+    addDecision({ kind: 'decision', text: 'The launch moved to Saturday the 15th.', topics: ['launch'], source: { surface: 'chat', by: 'you' } } as never);
+    llm.mockResolvedValueOnce(say('It was Friday the 14th; it moved to Saturday the 15th.'));
+    await runEchoStep(step('memory_recall'), input('What did we decide about the launch date?'), ctx());
+    const prompt = String(llm.mock.calls[0][1].prompt);
+    expect(prompt.indexOf('Friday the 14th')).toBeLessThan(prompt.indexOf('Saturday the 15th'));
+    expect(prompt).toContain('oldest first');
+    expect(prompt).toContain('the newer one stands');
+  });
+
   it('answers from the records, with a replaced one and its history in the prompt', async () => {
     const a = launch();
     const b = addDecision({ kind: 'decision', text: 'The launch moved to Saturday the 15th.', topics: ['launch'], replaces: a.id, source: { surface: 'telegram', by: 'you' } } as never);

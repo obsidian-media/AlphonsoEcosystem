@@ -198,10 +198,11 @@ async function recall(assignment: any, input: StepInput | null, ctx: EchoCtx): P
   const question = withoutJose(input?.request || input?.instruction);
   const found = (await searchDecisions(question, { limit: ECHO_LIMITS.recallMax, status: 'all' })).filter((d) => d.status !== 'forgotten');
   if (!found.length) return result(NOTHING_SAVED_ABOUT(question.replace(/[?.!]+$/, '')), 'completed', actionType);
-  const records = found.map(historyLine).join('\n');
+  // Oldest first, so a later decision reads as the change it is.
+  const records = [...found].sort((a, b) => a.atMs - b.atMs).map(historyLine).join('\n');
   try {
     const reply: any = await generateAgentLlmResponse('echo', {
-      prompt: [skillSection(input), 'You are Echo. Answer the question only from the saved decisions below, each point with its date and where it was decided. When a decision was replaced, say what it was and what replaced it. Say plainly what the records do not cover. Answer in plain text.', `Saved decisions:\n${records}`, `Question: ${question}`].filter(Boolean).join('\n\n'),
+      prompt: [skillSection(input), 'You are Echo. Answer the question only from the saved decisions below, each point with its date and where it was decided. When a decision was replaced, say what it was and what replaced it. The records are listed oldest first: when two of them disagree about the same thing, the newer one stands, so say what it was before and what it is now. Say plainly what the records do not cover. Answer in plain text.', `Saved decisions:\n${records}`, `Question: ${question}`].filter(Boolean).join('\n\n'),
       ...(ctx.packetId ? { sessionId: resolveSecureSessionId(ctx.packetId) } : {}),
     } as never);
     const answer = String(reply?.response || '').trim();
