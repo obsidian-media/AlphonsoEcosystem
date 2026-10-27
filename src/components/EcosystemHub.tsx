@@ -34,12 +34,6 @@ import { ProductionReadinessPanel } from './ProductionReadinessPanel';
 import { SelfDevelopmentPanel } from './SelfDevelopmentPanel';
 import { EcosystemMaturityPanelsGate } from './EcosystemMaturityPanelsGate';
 import { TeamsPage } from './teams/TeamsPage';
-import { ProjectIntakePanel } from './agentWorkshop/ProjectIntakePanel';
-import { AgentAssignmentBoard } from './agentWorkshop/AgentAssignmentBoard';
-import { AgentOutputPanel } from './agentWorkshop/AgentOutputPanel';
-import { ExecutionTimeline } from './agentWorkshop/ExecutionTimeline';
-import { FinalExecutionPacket } from './agentWorkshop/FinalExecutionPacket';
-import { SystemHealthPanel } from './agentWorkshop/SystemHealthPanel';
 import { Tabs } from './ui/Tabs';
 import { SkillsPage } from './skills/SkillsPage';
 
@@ -51,7 +45,7 @@ const WorkflowOperationsDashboard = lazy(() =>
 
 interface Props {
   /** Which tab to open first. App.tsx remounts the hub (via key) per sidebar entry, so 'Agent Pairing' and 'Maturity' land directly on their tab. */
-  initialTab?: 'overview' | 'queue' | 'skills' | 'workflows' | 'pairings' | 'workshop' | 'advanced';
+  initialTab?: 'overview' | 'queue' | 'skills' | 'workflows' | 'pairings' | 'advanced';
   settings: Record<string, unknown>;
   setSettings: (settings: Record<string, unknown>) => void;
   ollamaStatus: { state: string };
@@ -170,7 +164,6 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
     { id: 'skills', label: 'Skills' },
     { id: 'workflows', label: 'Workflows' },
     { id: 'pairings', label: 'Teams' },
-    { id: 'workshop', label: 'Workshop' },
     { id: 'advanced', label: 'Advanced' },
   ];
 
@@ -290,21 +283,6 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
           {showAdvancedSections === 'pairings' && (
             <div className="space-y-4">
               <TeamsPage />
-            </div>
-          )}
-
-          {/* WORKSHOP TAB */}
-          {showAdvancedSections === 'workshop' && (
-            <div className="space-y-4">
-              <SystemHealthPanel />
-              <ProjectIntakePanel
-                intake={{ projectName: '', stack: '', deadline: '', projectType: 'web_app', projectDescription: '', targetFeaturesText: '', constraintsText: '' }}
-                setIntake={() => {}}
-              />
-              <AgentAssignmentBoard packets={[]} />
-              <AgentOutputPanel outputs={[]} />
-              <ExecutionTimeline timeline={[]} />
-              <FinalExecutionPacket finalPacket={null} />
             </div>
           )}
 

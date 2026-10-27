@@ -66,7 +66,6 @@ import { surfaceOf } from './echo/decisions';
 import { runMarcusDistribution } from './marcusExecutionService';
 import { runSentinelSecurityScan } from './sentinelSecurityService';
 import { runNovaAnalysis } from './novaAnalysisService';
-import { getDecompositionHints } from './novaFeedbackService';
 import { prepareSkill } from './skills/prepareSkill';
 import { runHectorStep } from './hector/hectorStep';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
@@ -1404,7 +1403,6 @@ export async function runJoseCommandExecutionPipeline({
   const executionReceipts = [];
   const draftDisabled = !(await checkOllamaAvailable(endpoint));
 
-  const novaHints = getDecompositionHints(command.id);
 
   // The plan as a step graph (2026-10-23): check it, then run each step as
   // soon as the steps it needs are done. The splitter's plans leave task types
@@ -2239,7 +2237,6 @@ export async function runJoseCommandExecutionPipeline({
     pendingApprovalCount,
     failedCount,
     executionReceipts,
-    novaFeedback: novaHints,
     adaptNotes
   };
 }

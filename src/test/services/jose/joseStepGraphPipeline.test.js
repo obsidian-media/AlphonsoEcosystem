@@ -95,20 +95,12 @@ vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
   paidModelAvailable: () => globalThis.__josePaid || { ok: false, reason: 'Paid models are off in Settings.' },
 }));
 
-vi.mock('../../../services/sentinelGateService', () => ({
-  shouldBlock: vi.fn(() => ({ blocked: false, reason: '' })),
-  checkSentinelAlerts: vi.fn(() => ({ found: false, alerts: [], output: null }))
-}));
 
 vi.mock('../../../services/creativeRoutingService', () => ({
   detectCreativeIntent: vi.fn(() => null),
   routeToCreativeTool: vi.fn(async () => ({ ok: true, tool: 'comfyui' }))
 }));
 
-vi.mock('../../../services/novaFeedbackService', () => ({
-  storeNovaScore: vi.fn(),
-  getDecompositionHints: vi.fn(() => ({ hints: [], score: null }))
-}));
 
 vi.mock('../../../services/runtimeLedgerService', () => ({
   persistScopeRows: vi.fn(async () => undefined)
@@ -134,15 +126,10 @@ vi.mock('../../../services/contentFactory/contentStepRecorder', () => ({
   recordContentStepResult: vi.fn(async () => 'saved'),
   beginContentStep: vi.fn(),
 }));
-vi.mock('../../../services/codingAgentService', () => ({
-  isCodingRequest: vi.fn(() => true),
-  runCodingAgent: vi.fn(async () => ({ ok: true, content: 'code' })),
-}));
 
 import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep, carryOnRequest, rejectRequestStep } from '../../../services/joseExecutionEngineService';
 import { createAgentPacket, updatePacketStatus, approvePacket, getPacketById } from '../../../services/agentBusService';
 import { fetchOllamaModels } from '../../../lib/ollama';
-import { runCodingAgent } from '../../../services/codingAgentService';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
 import { executeContentStepAssignment } from '../../../services/contentFactory/contentAgentExecutor';
 import { getStepOutput } from '../../../services/jose/joseStepOutputs';
@@ -288,8 +275,11 @@ describe('Jose runs plans as step graphs', () => {
   });
 
   it('no longer sends coding requests to the Claude shortcut (owner)', async () => {
-    await runJoseCommandExecutionPipeline({ commandText: 'write a function that adds two numbers', source: 'user', zeroCostMode: true, previewMode: false });
-    expect(runCodingAgent).not.toHaveBeenCalled();
+    // The shortcut's service is archived (agent roles Part C1); nothing in the engine reaches it.
+    const { readFileSync } = await import('node:fs');
+    expect(readFileSync('src/services/joseExecutionEngineService.ts', 'utf8')).not.toContain('codingAgentService');
+    const result = await runJoseCommandExecutionPipeline({ commandText: 'write a function that adds two numbers', source: 'user', zeroCostMode: true, previewMode: false });
+    expect(result.ok).not.toBeUndefined();
   });
 
   it("gives a step its instruction, but Alphonso only the user's own words", () => {

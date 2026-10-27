@@ -58,20 +58,12 @@ vi.mock('../lib/ollama', () => ({
   })
 }));
 
-vi.mock('../services/sentinelGateService', () => ({
-  shouldBlock: vi.fn(() => ({ blocked: false, reason: '' })),
-  checkSentinelAlerts: vi.fn(() => ({ found: false, alerts: [], output: null }))
-}));
 
 vi.mock('../services/creativeRoutingService', () => ({
   detectCreativeIntent: vi.fn(() => null),
   routeToCreativeTool: vi.fn(async () => null)
 }));
 
-vi.mock('../services/novaFeedbackService', () => ({
-  storeNovaScore: vi.fn(),
-  getDecompositionHints: vi.fn(() => ({ hints: [], score: null }))
-}));
 
 vi.mock('../services/runtimeLedgerService', () => ({
   persistScopeRows: vi.fn(async () => undefined)
