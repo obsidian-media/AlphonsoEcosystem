@@ -19,6 +19,7 @@ import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
 import { stopRequest } from '../../services/jose/joseStop';
 import { QUEUED_LINE, queuePosition } from '../../services/jose/joseQueue';
+import { groupRequests } from '../../services/jose/requestGroups';
 import { agentName } from '../../services/jose/agentNames';
 import { approveRequestStep, cancelRequest, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
 
@@ -172,7 +173,26 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
     <div className="grid gap-4 md:grid-cols-[260px_1fr]">
       <ul className="space-y-1" aria-label="Jose requests">
         {requests.length === 0 && <li className="text-xs text-(--text-3)">No requests yet. Ask Jose something in Chat.</li>}
-        {requests.map((request) => (
+        {/* A project's requests together under its name (Jose phase 7). */}
+        {groupRequests(requests).map((entry) => entry.group ? (
+          <li key={`group-${entry.group.id}`} data-testid={`jose-group-${entry.group.id}`}>
+            <div className="px-1 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-(--text-3)">{entry.group.label}</div>
+            <ul className="space-y-1 border-l border-(--border) pl-2">
+              {entry.requests.map((request) => (
+              <li key={request.id}>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedId(request.id); setEditing(false); setMessage(''); setStepId(null); }}
+                  className={`w-full rounded-md px-2 py-1.5 text-left text-xs ${request.id === selectedId ? 'bg-(--surface-3)' : 'bg-(--surface-2) hover:bg-(--surface-3)'}`}
+                >
+                  <div className="truncate font-medium text-(--text-1)">{request.text}</div>
+                  <div className="text-[10px] text-(--text-3)">{statusLabel(request)} · {new Date(request.createdAtMs).toLocaleString()}</div>
+                </button>
+              </li>
+              ))}
+            </ul>
+          </li>
+        ) : entry.requests.map((request) => (
           <li key={request.id}>
             <button
               type="button"
@@ -183,7 +203,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
               <div className="text-[10px] text-(--text-3)">{statusLabel(request)} · {new Date(request.createdAtMs).toLocaleString()}</div>
             </button>
           </li>
-        ))}
+        )))}
       </ul>
 
       {selected && (

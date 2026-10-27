@@ -1379,7 +1379,9 @@ async function runPipeline({
   // Echo saves what a request decided (phase 4); the content factory keeps its own lessons.
   saveDecisions = true,
   // False for a request that may never spend (a schedule, phase 6a). Saved on the request.
-  allowPaidModels = true
+  allowPaidModels = true,
+  // The project the request belongs to (Jose phase 7): the board groups its requests.
+  group = null
 }: any) {
   // Resuming a saved request after an approval (phase 4): same loop, the saved
   // command and packets, the steps already done kept as they are.
@@ -1485,7 +1487,7 @@ async function runPipeline({
     // An approved plan (phase 3) runs on the request it was saved as.
     joseRequestId = resumeRequest ? resumeRequestId : existingRequestId
       ? attachRunToRequest(existingRequestId, { commandId: command.id, steps: planSteps }).id
-      : createJoseRequest({ commandId: command.id, source, text: commandText, kind: requestKind === 'project' ? 'project' : 'normal', steps: planSteps, ...(planInfo ? { plan: planInfo } : {}), ...(allowPaidModels === false ? { runOptions: { source, allowPaidModels: false } } : {}) }).id;
+      : createJoseRequest({ commandId: command.id, source, text: commandText, kind: requestKind === 'project' ? 'project' : 'normal', steps: planSteps, ...(planInfo ? { plan: planInfo } : {}), ...(allowPaidModels === false ? { runOptions: { source, allowPaidModels: false } } : {}), ...(group ? { group } : {}) }).id;
   } catch {
     joseRequestId = null;
   }

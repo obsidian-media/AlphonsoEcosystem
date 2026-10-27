@@ -184,6 +184,8 @@ export async function submitStepsToJose(input: {
   allowPaidModels?: boolean;
   /** False when the caller keeps its own record (the content factory, phase 6b). */
   saveDecisions?: boolean;
+  /** The project the request belongs to, shown together on the board (Jose phase 7). */
+  group?: { id: string; label: string };
   onProgress?: (event: any) => void;
 }): Promise<any> {
   // Steps saved before 2026-10-24 go to their current owner (agent roles Part A).
@@ -206,6 +208,7 @@ export async function submitStepsToJose(input: {
     assignments: toAssignments(owned.steps, planNote),
     requestKind: plan.kind,
     planInfo: { source: 'given', templateId: null, note: input.label },
+    ...(input.group ? { group: input.group } : {}),
   });
   return { ...result, plan, planNote: withNotes(planNote, result), requestId: result?.commandId ? `jose-request-${result.commandId}` : null };
 }

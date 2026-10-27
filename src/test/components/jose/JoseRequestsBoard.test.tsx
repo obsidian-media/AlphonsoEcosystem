@@ -322,3 +322,17 @@ describe('Queued requests on the board', () => {
     resetQueueForTests();
   });
 });
+
+// Jose phase 7: a project's requests are grouped under the project's name.
+describe("A project's requests on the board", () => {
+  it('shows them under a heading with the project name', async () => {
+    const store = await import('../../../services/jose/joseRequestStore');
+    const one = createJoseRequest({ commandId: 'c-g1', source: 'content-factory', text: 'Content factory: script', kind: 'normal', steps });
+    const two = createJoseRequest({ commandId: 'c-g2', source: 'content-factory', text: 'Content factory: scenes', kind: 'normal', steps });
+    store.setRequestGroup(one.id, { id: 'p1', label: 'Honeybees' });
+    store.setRequestGroup(two.id, { id: 'p1', label: 'Honeybees' });
+    render(<JoseRequestsBoard selectedRequestId={one.id} />);
+    const heading = screen.getByTestId('jose-group-p1');
+    expect(heading.textContent).toContain('Honeybees');
+  });
+});

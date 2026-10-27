@@ -84,6 +84,7 @@ export async function runContentProject(projectId: string, options: RunStepOptio
     text: `Content project "${project.name}": ${project.brief.idea}`,
     source: 'content-factory',
     label: PROJECT_LABEL,
+    group: { id: project.id, label: project.name },
     // The factory saves its own lessons; Echo does not save each step.
     saveDecisions: false,
     // A project a schedule started offers no paid model (Jose phase 7).
@@ -124,6 +125,7 @@ export async function runContentStep(projectId: string, step: StepId, options: R
       text: `Content factory: ${step} for "${started.name}"`,
       source: 'content-factory',
       label: PROJECT_LABEL,
+      group: { id: started.id, label: started.name },
       saveDecisions: false,
       steps,
       onProgress: (event: { stage?: string; agents?: string[] }) => {
@@ -226,6 +228,7 @@ export async function addMiniShort(projectId: string, settings: RunStepOptions['
     const result: any = await submitStepsToJose({
       text: `Content factory: one more Short for "${project.name}"`,
       source: 'content-factory', label: PROJECT_LABEL, saveDecisions: false, steps,
+      group: { id: project.id, label: project.name },
     });
     if (result?.requestId) setProjectRequest(projectId, result.requestId);
     return { ok: result?.ok !== false };

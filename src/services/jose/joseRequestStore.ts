@@ -62,6 +62,8 @@ export interface JoseRequest {
   runOptions?: { source: string; previewMode?: boolean; zeroCostMode?: boolean; endpoint?: string; allowPaidModels?: boolean };
   /** When it started waiting its turn (Jose phase 7); the order a restart keeps. */
   queuedAtMs?: number;
+  /** The project this request belongs to (Jose phase 7): the board shows a project's requests together. */
+  group?: { id: string; label: string };
   createdAtMs: number;
   updatedAtMs: number;
 }
@@ -101,6 +103,11 @@ function update(id: string, change: (request: JoseRequest) => void): JoseRequest
   return request;
 }
 
+/** The project a request belongs to (Jose phase 7). */
+export function setRequestGroup(requestId: string, group: { id: string; label: string }): JoseRequest {
+  return update(requestId, (r) => { r.group = group; });
+}
+
 /** When a request started waiting its turn (Jose phase 7). */
 export function setRequestQueuedAt(requestId: string, atMs: number): JoseRequest {
   return update(requestId, (r) => { r.queuedAtMs = atMs; });
@@ -112,7 +119,7 @@ function savedStep(step: PlanStep): PlanStep {
   return rest;
 }
 
-export function createJoseRequest(input: { commandId: string; source: string; text: string; kind: 'normal' | 'project'; steps: PlanStep[]; plan?: JoseRequest['plan']; runOptions?: JoseRequest['runOptions'] }): JoseRequest {
+export function createJoseRequest(input: { commandId: string; source: string; text: string; kind: 'normal' | 'project'; steps: PlanStep[]; plan?: JoseRequest['plan']; runOptions?: JoseRequest['runOptions']; group?: JoseRequest['group'] }): JoseRequest {
   const now = Date.now();
   const request: JoseRequest = {
     id: `jose-request-${input.commandId}`,
@@ -124,6 +131,7 @@ export function createJoseRequest(input: { commandId: string; source: string; te
     steps: input.steps.map((s) => ({ ...savedStep(s), status: 'waiting' })),
     ...(input.plan ? { plan: input.plan } : {}),
     ...(input.runOptions ? { runOptions: input.runOptions } : {}),
+    ...(input.group ? { group: input.group } : {}),
     createdAtMs: now,
     updatedAtMs: now,
   };

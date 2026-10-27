@@ -256,3 +256,16 @@ describe('addMiniShort', () => {
   });
 });
 
+
+// Jose phase 7: every request of a project carries the project, so the board groups them.
+describe("a project's requests are grouped", () => {
+  it('Run project and Run this step both pass the project as the group', async () => {
+    const p = newProject();
+    vi.mocked(submitStepsToJose).mockResolvedValue(ok() as never);
+    await runContentProject(p.id, { settings });
+    await runContentStep(p.id, 'research', { settings });
+    for (const call of vi.mocked(submitStepsToJose).mock.calls) {
+      expect((call[0] as any).group).toEqual({ id: p.id, label: 'Launch' });
+    }
+  });
+});
