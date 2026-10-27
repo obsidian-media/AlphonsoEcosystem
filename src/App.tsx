@@ -696,8 +696,9 @@ function AppShell() {
           const { workflowId } = payload;
           console.warn(`[App] Received companion://run_workflow for: ${workflowId}`);
           try {
-            const { executeWorkflowTasks } = await import('./services/workflowRegistryService');
-            await executeWorkflowTasks(workflowId);
+            // Jose phase 7: the workflow's agents run as a Jose request.
+            const { runWorkflow } = await import('./services/workflowRegistryService');
+            await runWorkflow(workflowId, { source: 'companion' });
             
             // Send back completed notification to iOS
             invoke('companion_broadcast', {
