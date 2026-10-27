@@ -64,7 +64,11 @@ export function ContentFactoryPanel({ tab, settings, brandId: brandOverride, onB
 
   const request = project?.joseRequestId ? getJoseRequest(project.joseRequestId) : null;
   // The request runs on (or is carried on from the board or Telegram); keep the panel current.
-  const live = request?.status === 'running' || Boolean(project && Object.values(project.steps).some((s) => s.status === 'running'));
+  // Also while an approved post is being handed out: Publish runs in the background after
+  // "Approve and schedule", and the Posts list must show where each post ended up (Jose phase 7, found by CI).
+  const live = request?.status === 'running'
+    || Boolean(project && Object.values(project.steps).some((s) => s.status === 'running'))
+    || Boolean(project?.posts?.some((p) => p.status === 'approved' || p.status === 'posting'));
   useEffect(() => {
     if (!live) return undefined;
     const timer = window.setInterval(refresh, 2000);
