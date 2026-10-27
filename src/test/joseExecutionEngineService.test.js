@@ -109,18 +109,7 @@ vi.mock('../services/chromaDbService', () => ({
   isChromaHealthy: vi.fn(async () => false),
 }));
 
-vi.mock('../services/sentinelGateService', () => ({
-  shouldBlock: (...args) => mockShouldBlock(...args),
-  checkSentinelAlerts: (...args) => mockCheckSentinelAlerts(...args)
-}));
 
-const mockStoreNovaScore = vi.fn();
-const mockGetDecompositionHints = vi.fn(() => ({ hints: [], score: null }));
-
-vi.mock('../services/novaFeedbackService', () => ({
-  storeNovaScore: (...args) => mockStoreNovaScore(...args),
-  getDecompositionHints: (...args) => mockGetDecompositionHints(...args)
-}));
 
 vi.mock('../services/memoryService', () => ({
   pushMemoryItem: vi.fn(),
@@ -575,73 +564,15 @@ describe('sentinel gate', () => {
 });
 
 
-describe('nova feedback integration', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    runtimeReachable = true;
-    ollamaAvailable = true;
-    mockSetTimeout();
-    mockStoreNovaScore.mockClear();
-    mockGetDecompositionHints.mockClear();
-    mockGetDecompositionHints.mockReturnValue({ hints: [], score: null });
-  });
-  afterEach(() => {
-    restoreSetTimeout();
-  });
-
-  // Agent phase 2: Nova's keyword score is gone, so nothing is stored after her step.
-  it('stores no keyword score after a Nova step', async () => {
-    const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: score opportunity for this task',
-      source: 'user',
-      zeroCostMode: true
-    });
-
-    expect(result.ok).toBe(true);
-    expect(mockStoreNovaScore).not.toHaveBeenCalled();
-  });
-
-  it('includes novaFeedback in pipeline return value', async () => {
-    const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: score opportunity for this task',
-      source: 'user',
-      zeroCostMode: true
-    });
-
-    expect(result.ok).toBe(true);
-    expect(result.novaFeedback).toBeDefined();
-    expect(result.novaFeedback).toHaveProperty('hints');
-    expect(result.novaFeedback).toHaveProperty('score');
-  });
-
-  it('passes prior Nova decomposition hints into pipeline', async () => {
-    mockGetDecompositionHints.mockReturnValue({
-      hints: [{ type: 'opportunity_high', message: 'High opportunity — prioritize creative.' }],
-      score: { commandId: 'prev-cmd', score: 80 }
-    });
-
-    const result = await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: create a creative package about AI',
-      source: 'user',
-      endpoint: 'http://localhost:11434',
-      zeroCostMode: true
-    });
-
-    expect(result.ok).toBe(true);
-    expect(result.novaFeedback.hints).toHaveLength(1);
-    expect(result.novaFeedback.hints[0].type).toBe('opportunity_high');
-  });
-
-  it('calls getDecompositionHints with command id', async () => {
-    await runJoseCommandExecutionPipeline({
-      commandText: 'ask jose: verify local runtime package',
-      source: 'user',
-      zeroCostMode: true
-    });
-
-    expect(mockGetDecompositionHints).toHaveBeenCalled();
-    const firstCall = mockGetDecompositionHints.mock.calls[0];
-    expect(firstCall[0]).toBeTruthy();
+// Agent roles Part C1: Nova's old keyword scores are gone (agent phase 2), so the hints they fed were
+// always empty; the engine no longer asks for them and novaFeedbackService is archived.
+describe('nova feedback', () => {
+  it('the pipeline no longer asks for Nova decomposition hints', async () => {
+    const fs = await import('node:fs');
+    const src = fs.readFileSync('src/services/joseExecutionEngineService.ts', 'utf-8');
+    expect(src).not.toContain('novaFeedbackService');
+    const result = await runJoseCommandExecutionPipeline({ commandText: 'ask jose: score opportunity for this task', source: 'user', zeroCostMode: true });
+    expect(result).not.toHaveProperty('novaFeedback');
   });
 });
 

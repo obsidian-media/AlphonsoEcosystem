@@ -33,13 +33,7 @@ import { listSnapshots } from '../services/recoveryService';
 import { ProductionReadinessPanel } from './ProductionReadinessPanel';
 import { SelfDevelopmentPanel } from './SelfDevelopmentPanel';
 import { EcosystemMaturityPanelsGate } from './EcosystemMaturityPanelsGate';
-import { AgentPairingView } from './AgentPairingView';
-import { ProjectIntakePanel } from './agentWorkshop/ProjectIntakePanel';
-import { AgentAssignmentBoard } from './agentWorkshop/AgentAssignmentBoard';
-import { AgentOutputPanel } from './agentWorkshop/AgentOutputPanel';
-import { ExecutionTimeline } from './agentWorkshop/ExecutionTimeline';
-import { FinalExecutionPacket } from './agentWorkshop/FinalExecutionPacket';
-import { SystemHealthPanel } from './agentWorkshop/SystemHealthPanel';
+import { TeamsPage } from './teams/TeamsPage';
 import { Tabs } from './ui/Tabs';
 import { SkillsPage } from './skills/SkillsPage';
 
@@ -51,7 +45,7 @@ const WorkflowOperationsDashboard = lazy(() =>
 
 interface Props {
   /** Which tab to open first. App.tsx remounts the hub (via key) per sidebar entry, so 'Agent Pairing' and 'Maturity' land directly on their tab. */
-  initialTab?: 'overview' | 'queue' | 'skills' | 'workflows' | 'pairings' | 'workshop' | 'advanced';
+  initialTab?: 'overview' | 'queue' | 'skills' | 'workflows' | 'pairings' | 'advanced';
   settings: Record<string, unknown>;
   setSettings: (settings: Record<string, unknown>) => void;
   ollamaStatus: { state: string };
@@ -169,8 +163,7 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
     { id: 'queue', label: 'Queue' },
     { id: 'skills', label: 'Skills' },
     { id: 'workflows', label: 'Workflows' },
-    { id: 'pairings', label: 'Pairings' },
-    { id: 'workshop', label: 'Workshop' },
+    { id: 'pairings', label: 'Teams' },
     { id: 'advanced', label: 'Advanced' },
   ];
 
@@ -289,22 +282,7 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
           {/* PAIRINGS TAB */}
           {showAdvancedSections === 'pairings' && (
             <div className="space-y-4">
-              <AgentPairingView />
-            </div>
-          )}
-
-          {/* WORKSHOP TAB */}
-          {showAdvancedSections === 'workshop' && (
-            <div className="space-y-4">
-              <SystemHealthPanel />
-              <ProjectIntakePanel
-                intake={{ projectName: '', stack: '', deadline: '', projectType: 'web_app', projectDescription: '', targetFeaturesText: '', constraintsText: '' }}
-                setIntake={() => {}}
-              />
-              <AgentAssignmentBoard packets={[]} />
-              <AgentOutputPanel outputs={[]} />
-              <ExecutionTimeline timeline={[]} />
-              <FinalExecutionPacket finalPacket={null} />
+              <TeamsPage />
             </div>
           )}
 

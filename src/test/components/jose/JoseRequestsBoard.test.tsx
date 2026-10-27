@@ -65,6 +65,18 @@ describe('JoseRequestsBoard', () => {
     }
   });
 
+  // Agent roles Part C1: a waiting plan that breaks the rules says so before you run it.
+  it("shows a waiting plan's problems up front and does not offer Run", () => {
+    const bad = createWaitingPlanRequest({
+      text: 'Research tea', source: 'user', kind: 'normal',
+      steps: [{ stepId: 'nova', agent: 'nova', actionType: 'research_report', effects: ['read'], needs: [] }],
+      plan: { source: 'fresh', templateId: null, note: '' }, runOptions: { source: 'user' },
+    });
+    render(<JoseRequestsBoard selectedRequestId={bad.id} />);
+    expect(screen.getByTestId('jose-plan-problems').textContent).toContain("Gives Hector's work to Nova");
+    expect(screen.getByRole('button', { name: 'Run this plan' }).hasAttribute('disabled')).toBe(true);
+  });
+
   it('runs a plan once, even on a double click', async () => {
     const request = waiting();
     render(<JoseRequestsBoard selectedRequestId={request.id} />);

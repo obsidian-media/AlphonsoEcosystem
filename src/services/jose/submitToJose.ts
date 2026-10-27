@@ -40,6 +40,8 @@ export interface SubmitToJoseInput {
   showPlanFirst?: PlanFirstSetting;
   /** False for a caller that may never spend (a schedule, phase 6a). */
   allowPaidModels?: boolean;
+  /** Start from this template (agent roles Part C1: Projects uses Build an app). */
+  templateId?: string;
 }
 
 /** The plan note, plus what changed while it ran (a review that still found problems). */
@@ -94,6 +96,11 @@ function securityNote(secured: ReturnType<typeof addSecurityChecks>): string {
 export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const { text, source, history, planFresh, endpoint, zeroCostMode, previewMode, onProgress, onToken } = input;
 
+  // A team asked for by name (agent roles Part C1): its own steps, checked, with its label.
+  const { parseTeamRequest, runNamedTeam } = await import('./teams');
+  const teamRequest = parseTeamRequest(text);
+  if (teamRequest) return runNamedTeam(teamRequest, { source, endpoint, zeroCostMode });
+
   // Asked for Higgsfield by name (phase 4b): one Miya step that asks with the estimate. Checked first:
   // "a Higgsfield video for my channel" also fits the content video template.
   const { askHiggsfieldByName } = await import('../contentFactory/higgsfieldByName');
@@ -126,7 +133,7 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
 
   onProgress?.({ stage: 'planning' });
   const allowPaidModels = input.allowPaidModels !== false;
-  const planned: JosePlan = await planJoseRequest(text, { planFresh, history, allowPaidModels });
+  const planned: JosePlan = await planJoseRequest(text, { planFresh, history, allowPaidModels, templateId: input.templateId });
   // Sentinel looks without being asked (agent phase 4): his checks join every plan.
   const secured = addSecurityChecks(planned.steps, text);
   const plan: JosePlan = { ...planned, steps: secured.steps };

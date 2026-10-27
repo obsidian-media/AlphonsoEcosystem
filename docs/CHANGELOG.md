@@ -10,6 +10,14 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [2.10.0] — not released yet (on `main` since 2026-10-21: PR 304 and PR 305's deferred-work batches and macOS back in the release; then the Jose redesign, PRs 336–342, and Miya's content factory, PRs 332 and 343–354)
 
+### Agent roles Part C1: Projects, Teams and skill results (2026-10-27)
+- **Projects is real now.** Work → Projects starts a request for the agents from your description and shows its plan, steps, what waits for you and the results. It used to show fixed example output with no model.
+- **Teams**: System → Teams builds teams of agents for a kind of job, lists every saved template with Run, Edit and Delete, and says what's wrong with one that can't run. "use team <name> to …" in Chat runs it. Old Agent Pairing pairs are offered once as teams.
+- **Skill results**: the Skills page shows how often each skill was used and how many of its reviewed steps passed.
+- A waiting plan on the board that breaks the rules says what's wrong and can't be run until it's fixed.
+- Archived (not deleted): the simulated workshop, Agent Pairing and four services nothing used.
+- **Fix**: Miya Studio's Scene Builder never showed the finished videos after Miya took over making them; it shows them again, for older projects too.
+
 ### Agent phase 7: Echo remembers the ecosystem's decisions, and every agent can ask him (2026-10-26)
 - **"Remember that …" is saved.** Echo keeps decisions, preferences, instructions and what you turned down, from every surface; Chat and the board show "Echo remembered: …" with **Edit** and **Forget**. Decisions no longer expire; a changed one replaces the old.
 - **Every agent gets them**: each step is given the preferences that apply and the matching decisions, and so are Chat's and channels' answers. "What did we decide about …?" is answered from them. An agent that needs a past decision can ask Echo.

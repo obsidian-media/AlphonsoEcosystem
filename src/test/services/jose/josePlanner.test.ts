@@ -58,6 +58,21 @@ describe('Jose plans fresh when no template fits (owner: make sure of it)', () =
     expect(plan.templateId).toBeNull();
   });
 
+  // Agent roles Part C1: Projects always starts from the Build an app template.
+  it('a given template is the starting point even when another fits the text', async () => {
+    llm.mockResolvedValueOnce(answer(templateAsModelSteps('build_app'), 'build_app', 'project'));
+    const plan = await planJoseRequest(VIDEO, { templateId: 'build_app' });
+    expect(promptOf(0)).toMatch(/Starting point: Build an app/);
+    expect(plan.templateId).toBe('build_app');
+  });
+
+  it("a given template is used unchanged when Jose's model is down", async () => {
+    llm.mockRejectedValueOnce(new Error('offline'));
+    const plan = await planJoseRequest(PARTY, { templateId: 'build_app' });
+    expect(plan).toMatchObject({ source: 'template', templateId: 'build_app' });
+    expect(plan.steps.length).toBe(getTemplate('build_app')!.steps.length);
+  });
+
   it('uses a fitting template unchanged and says so', async () => {
     llm.mockResolvedValueOnce(answer(templateAsModelSteps('content_video'), 'content_video'));
     const plan = await planJoseRequest(VIDEO);

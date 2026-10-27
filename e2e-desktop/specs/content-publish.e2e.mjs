@@ -7,21 +7,13 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { enterShell, invoke, buttonByText, openPage } from '../helpers.mjs';
+import { enterShell, invoke, buttonByText, openPage, keepOutputFolder } from '../helpers.mjs';
 
 const savedProjects = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_projects_v1') || '[]'));
 const savedBrands = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_brands_v1') || '[]'));
 const schedule = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_marcus_schedule_v1') || '[]'));
 const projectById = async (id) => (await savedProjects()).find((p) => p.id === id);
 
-async function keepOutputFolder(folder) {
-  await browser.waitUntil(async () => browser.execute((wanted) => {
-    const settings = JSON.parse(localStorage.getItem('alphonso_settings') || '{}');
-    if (settings.outputFolder === wanted) return true;
-    localStorage.setItem('alphonso_settings', JSON.stringify({ ...settings, outputFolder: wanted }));
-    return false;
-  }, folder), { timeout: 30000, interval: 1000, timeoutMsg: 'the output folder setting did not stick' });
-}
 
 describe('Alphonso desktop: publishing', () => {
   let outputFolder = '';

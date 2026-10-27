@@ -77,3 +77,19 @@ as new work requiring its own review, not a revert.
 **Why retired:** agent roles Part B (spec `docs/superpowers/specs/2026-10-24-agent-roles-skills-handover-design.md`). The packs reached a prompt in one place only (Miya's Quick package, all at once) and carried no real know-how. They were replaced by real skills: Markdown files in `src/skills/<agent>/`, checked by `checkSkill()` in `src/services/skills/skillCheck.ts`, picked per step. The owner approved archiving them on 2026-10-24.
 
 **Before resurrecting:** the agent profiles no longer list `skillPackIds`, the Ecosystem hub's Skills tab is the new Skills page, and the Coach reads `skillLastUsed()` instead of the packs' invocation log. A pack's text could become a skill file's instructions; there is no other path back.
+
+---
+
+## partC1/ — the simulated workshop, Agent Pairing and four unused services (retired 2026-10-27)
+
+**Archived:** agent roles Part C1 (spec `docs/superpowers/specs/2026-10-26-agent-roles-part-c-design.md`), with the owner's approval of 2026-10-26. Each file keeps its original path under `partC1/` (`partC1/src/...`, `partC1/e2e-desktop/...`), with its tests beside it under `partC1/src/test/`.
+
+- **Project Execution (`src/components/projectExecution/`, `components/agentWorkshop/`, `components/agents/`, `audit/MarcusAuditPanel.tsx`, `research/HectorResearchPanel.tsx`, `services/agentWorkshop/*` except `accBridgeService.js`, `projectExecution/projectDnaService.js` and `projectExecutionService.js`, `audit/marcusAuditService.js`, `systemHealth/systemHealthService.js`, and `e2e-desktop/specs/project-execution.e2e.mjs`):** Work → Projects ran `runProjectWorkshop()`, which built fixed outputs with no model from a built-in example project (the owner's own TapCash). Replaced by `src/components/projects/ProjectsPage.tsx`, where a project starts a real Jose request. EcosystemHub's Workshop tab showed the same panels with empty data and is gone.
+- **Agent Pairing (`AgentPairingView.tsx`, `agentPairingConstants.ts`, `agentPairingExecutionService.ts`, `agentPairingRegistryService.ts`):** saved pairs were never read, and `executeAgentPairing()` marked a bus packet executed with no work; nothing called it. Replaced by Teams (`src/services/jose/teams.ts`, `src/components/teams/`); old pairs are offered once as teams.
+- **`sentinelGateService.ts`:** the engine's keyword gate, replaced by Sentinel's hold in agent phase 4; no caller.
+- **`mariaWeeklyReportService.ts`:** the old weekly report, replaced by the Monday schedule in agent phase 3; no caller.
+- **`codingAgentService.ts`:** sent coding tasks to the Claude connector; the shortcut was removed on 2026-10-23; no caller.
+- **`novaFeedbackService.ts`:** decomposition hints from Nova's old keyword scores. The scores were removed in agent phase 2, so the hints were always empty; the engine's call (`getDecompositionHints()`, `novaFeedback` on the pipeline result) was removed with it.
+- **Kept, because other features use them:** `agentWorkshop/accBridgeService.js`, `projectExecution/workshopSessionService.js`, `services/approval/approvalService.js`.
+
+**Before restoring:** don't bring the workshop back as a second way to run agents; every agent step goes through Jose. A panel's layout could be reused on the Projects page.

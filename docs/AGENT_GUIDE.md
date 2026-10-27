@@ -49,7 +49,7 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 **Cannot:** Change the words, send anywhere you didn't name or set as a default, or send anything you haven't approved. The approval shows the exact text and destination, and Sentinel checks it first
 **Skills (5, `src/skills/marcus/`):** Place a call, Publish a post, Release or issue, Release readiness, Send a message.
 **Schema:** `kind: "send"`, `connector`, `target`, `approvedBy: "you"`, `reviewedBy`, `reviewVerdict`, `status`, `resultUrl`
-**When to use:** "Write an announcement and post it to Slack #news", "Make a draft GitHub release v1.2.0", "Is this ready to post?", Project Execution's **Ask Marcus to send**, or Campaign Studio's **Approve and schedule**.
+**When to use:** "Write an announcement and post it to Slack #news", "Make a draft GitHub release v1.2.0", "Is this ready to post?", or Campaign Studio's **Approve and schedule**.
 
 ### Echo — Knowledge Historian
 **Role:** The ecosystem's memory of decisions: what was decided, preferred, instructed or turned down, wherever it was decided
@@ -147,6 +147,12 @@ Each agent (Jose aside: he plans) has its own skills: know-how for one kind of j
 | Echo | Save decisions, Answer from memory, Merge and clean memory |
 
 You can add your own on All Agents → Skills (a form, or a skill file), and they sit beside the built-in ones.
+
+The Skills page shows how each skill has done: how often it was used, how many of its reviewed steps passed, and when it was last used.
+
+### Teams
+
+A team is a saved set of steps, one agent each, for a kind of job you do often (System → Teams). Each agent in a team gets only work it owns; a team that breaks that is refused with the reason. "use team <name> to …" runs it as a request.
 
 ## Agent Permissions Matrix
 

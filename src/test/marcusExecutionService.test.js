@@ -13,11 +13,6 @@ vi.mock('../services/memoryService', () => ({ pushMemoryItem: vi.fn() }));
 vi.mock('../services/contentFactory/postMetrics', () => ({ readDueMetrics: vi.fn(async () => 0) }));
 vi.mock('../services/sessionIntelligenceService', () => ({ appendSessionEvent: vi.fn() }));
 vi.mock('../services/orchestrationReceiptService', () => ({ appendOrchestrationReceipt: vi.fn() }));
-vi.mock('../services/audit/marcusAuditService', () => ({
-  generateRiskScore: vi.fn(() => ({ level: 'low', score: 1, factors: [] })),
-  auditProjectPlan: vi.fn(() => ({ status: 'pass', items: [] })),
-  auditReleaseReadiness: vi.fn(() => ({ status: 'pass', items: [] }))
-}));
 vi.mock('../services/marcusPublishService', () => ({
   executeMarcusPublish: vi.fn(async () => ({ ok: true, platform: 'telegram', type: 'publish_telegram' })),
   MARCUS_PUBLISH_PLATFORMS: [

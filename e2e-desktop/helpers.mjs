@@ -143,6 +143,23 @@ export function buttonByText(text) {
   );
 }
 
+/** Sets the output folder the way a person does, in Settings → Runtime. Writing it into storage
+ *  alone doesn't reach the app: at start it loads its saved copy over storage (agent roles Part C1).
+ *  Does nothing when the app already has it saved. */
+export async function keepOutputFolder(folder) {
+  const saved = async () => JSON.parse(((await invoke('load_settings')).value) || '{}').outputFolder;
+  if ((await saved()) === folder) return;
+  await $('[aria-label="Open settings"]').click();
+  const section = await $('//nav//button[normalize-space(.)="Runtime"]');
+  await section.waitForClickable({ timeout: 30000 });
+  await section.click();
+  // XPath, not CSS: CSS reads the backslashes in the placeholder as escapes.
+  const input = await $('//input[@placeholder="C:\\Users\\You\\Pictures\\Alphonso"]');
+  await input.waitForDisplayed({ timeout: 30000 });
+  await input.setValue(folder);
+  await browser.waitUntil(async () => (await saved()) === folder, { timeout: 30000, timeoutMsg: 'the output folder was not saved' });
+}
+
 /** Open a sidebar page by its Space id and nav item id (see Sidebar.tsx). */
 export async function openPage(space, item) {
   await $(`[data-testid="space-pill-${space}"]`).click();

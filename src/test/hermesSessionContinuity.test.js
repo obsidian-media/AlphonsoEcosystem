@@ -29,10 +29,6 @@ vi.mock('../services/memoryGraphService', () => ({
   addEdge: vi.fn(() => Promise.resolve('edge'))
 }));
 vi.mock('../services/notificationService', () => ({ appendNotification: vi.fn() }));
-vi.mock('../services/novaFeedbackService', () => ({
-  storeNovaScore: vi.fn(),
-  getDecompositionHints: vi.fn(() => ({ hints: [] }))
-}));
 vi.mock('../services/modelSelectionService', () => ({ getModelForTask: vi.fn(() => 'llama3') }));
 vi.mock('../services/chromaDbService', () => ({ addMemoryToChroma: vi.fn(), isChromaHealthy: vi.fn(async () => false) }));
 

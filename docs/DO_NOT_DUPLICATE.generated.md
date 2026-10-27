@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 341 services and 189 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 320 services and 175 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -9,25 +9,13 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | component | `src/components/AgentAvatar.tsx` | `AgentAvatar` |
 | component | `src/components/AgentDock.tsx` | `AgentDock` |
 | component | `src/components/AgentMetricsPanel.tsx` | `AgentMetricsPanel` |
-| component | `src/components/AgentPairingView.tsx` | `AgentPairingView`, `default` |
 | component | `src/components/AgentPerformanceView.tsx` | `AgentPerformanceView` |
-| component | `src/components/agents/AgentCapabilityMatrix.tsx` | `AgentCapabilityMatrix` |
-| component | `src/components/agents/AgentCard.tsx` | `AgentCard` |
-| component | `src/components/agents/AgentDock.tsx` | `AgentDock` |
-| component | `src/components/agents/AgentProfilePanel.tsx` | `AgentProfilePanel` |
 | component | `src/components/AgentStatusStrip.tsx` | `AgentStatusStrip` |
-| component | `src/components/agentWorkshop/AgentAssignmentBoard.tsx` | `AgentAssignmentBoard` |
-| component | `src/components/agentWorkshop/AgentOutputPanel.tsx` | `AgentOutputPanel` |
-| component | `src/components/agentWorkshop/ExecutionTimeline.tsx` | `ExecutionTimeline` |
-| component | `src/components/agentWorkshop/FinalExecutionPacket.tsx` | `FinalExecutionPacket` |
-| component | `src/components/agentWorkshop/ProjectIntakePanel.tsx` | `ProjectIntakePanel` |
-| component | `src/components/agentWorkshop/SystemHealthPanel.tsx` | `SystemHealthPanel` |
 | component | `src/components/alphonso/AlphonsoProjectsSection.tsx` | `AlphonsoProjectsSection` |
 | component | `src/components/alphonso/CodePreviewView.tsx` | `CodePreviewView` |
 | component | `src/components/approval/ApprovalCenterPanel.tsx` | `ApprovalCenterPanel` |
 | component | `src/components/ApprovalModal.tsx` | `ApprovalModal` |
 | component | `src/components/ApprovalPanel.tsx` | `ApprovalItemDetail`, `ApprovalPanel`, `PendingApprovalItem` |
-| component | `src/components/audit/MarcusAuditPanel.tsx` | `MarcusAuditPanel` |
 | component | `src/components/AutomationView.tsx` | `AutomationView` |
 | component | `src/components/BoardroomChatView.tsx` | `BoardroomApprovalRequest`, `BoardroomChatView`, `BoardroomRequestApproval` |
 | component | `src/components/BootStatusBanner.tsx` | `BootStatusBanner` |
@@ -139,11 +127,7 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | component | `src/components/PipelineResultCard.tsx` | `PipelineResultCard` |
 | component | `src/components/ProductionReadinessPanel.tsx` | `ProductionReadinessPanel` |
 | component | `src/components/ProjectBatchPanel.tsx` | `default` |
-| component | `src/components/projectExecution/ProjectExecutionMode.tsx` | `ProjectExecutionMode`, `TAPCASH_PRESET` |
-| component | `src/components/projectExecution/ProjectRiskRegister.tsx` | `ProjectRiskRegister` |
-| component | `src/components/projectExecution/ProjectRoadmap.tsx` | `ProjectRoadmap` |
-| component | `src/components/projectExecution/ProjectVerificationChecklist.tsx` | `ProjectVerificationChecklist` |
-| component | `src/components/research/HectorResearchPanel.tsx` | `HectorResearchPanel` |
+| component | `src/components/projects/ProjectsPage.tsx` | `default`, `ProjectsPage` |
 | component | `src/components/RightPanel.tsx` | `RightPanel` |
 | component | `src/components/RuntimeManagerView.tsx` | `default` |
 | component | `src/components/RuntimeNotice.tsx` | `RuntimeNotice` |
@@ -166,6 +150,8 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | component | `src/components/skills/SkillForm.tsx` | `ownTaskTypes`, `SkillForm` |
 | component | `src/components/skills/SkillsPage.tsx` | `SkillsPage` |
 | component | `src/components/SmartVoiceButton.tsx` | `SmartVoiceButton` |
+| component | `src/components/teams/TeamBuilder.tsx` | `BuilderRow`, `rowsToMembers`, `TeamBuilder` |
+| component | `src/components/teams/TeamsPage.tsx` | `default`, `TeamsPage` |
 | component | `src/components/ToastProvider.tsx` | `ToastProvider`, `useToast` |
 | component | `src/components/ToolConnectionsPanel.tsx` | `ToolConnectionsPanel` |
 | component | `src/components/TopBar.tsx` | `TopBar` |
@@ -203,25 +189,9 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/agentContractService.ts` | `AGENT_EXECUTION_CONTRACTS`, `AgentContractPacket`, `AgentExecutionContract`, `AgentId`, `ContractValidationResult`, `validateAgentExecutionContract` |
 | service | `src/services/agentMetricsService.ts` | `AgentBreakdownEntry`, `AgentExecutionEntry`, `AgentExecutionInput`, `AgentMetricsFilters`, `AgentMetricsResult`, `ApprovalRateResult`, `clearAgentMetrics`, `ErrorPattern`, `exportAgentMetrics`, `getAgentApprovalRate`, `getAgentLatency`, `getAgentMetrics`, `getAgentSuccessRate`, `getPerAgentBreakdown`, `getSevenDayTrend`, `getTopCommands`, `LatencyResult`, `recordAgentExecution`, `SuccessRateResult`, `TopCommand`, `TrendEntry` |
 | service | `src/services/agentOutputStoreService.ts` | `AGENT_DEPENDENCIES`, `AGENT_OUTPUT_SCOPE`, `buildExecutionPlan`, `clearAgentOutputs`, `getAgentOutput`, `getAllAgentOutputs`, `getPriorOutputs`, `setAgentOutput`, `validateWiring` |
-| service | `src/services/agentPairingConstants.ts` | `AGENT_PAIRING_ROUTES`, `AGENT_PAIRINGS_V1`, `AgentPairingKey`, `AgentPairingRoute`, `ApprovalMode`, `PAIRING_SCOPE`, `PairingRouteType`, `RiskLevel` |
-| service | `src/services/agentPairingExecutionService.ts` | `executeAgentPairing`, `listPairingEvents`, `rejectAgentPairing` |
-| service | `src/services/agentPairingRegistryService.ts` | `isAgentPairingRoute`, `listAvailablePairings`, `resolveAgentPairingRoute` |
 | service | `src/services/agentPerformanceService.ts` | `getAgentDashboard`, `getAllAgentsDashboard`, `getPerformanceSummary`, `getPerformanceTrend`, `listPerformanceSnapshots`, `recordAgentExecutionWithPerformance`, `snapshotAgentPerformance` |
 | service | `src/services/agentVisualService.ts` | `getAgentInitials`, `getAgentMascotPath` |
 | service | `src/services/agentWorkshop/accBridgeService.js` | `checkAccBridge`, `chooseAccFolder`, `getAccBridgeConfig`, `getAccBridgeStatus`, `getAccLocalState`, `isAccBridgeConfigured`, `listAccBridgePackets`, `receiveACCResult`, `refreshAccBridgeStatus`, `resetAccBridgeConfig`, `sendTaskToACC`, `startAcc`, `stopAcc`, `syncApprovalState`, `syncBridgePacket`, `syncContentCatalystJob`, `syncProjectMemory`, `updateAccBridgeConfig` |
-| service | `src/services/agentWorkshop/agentRunnerService.js` | `collectAgentOutputs`, `createFinalExecutionPacket`, `runAgentTask`, `runProjectWorkshop`, `synthesizeAgentOutputs` |
-| service | `src/services/agentWorkshop/aiReviewPolicyService.js` | `evaluateAiReviewRequirement` |
-| service | `src/services/agentWorkshop/contentCatalystBridgeService.js` | `createAccContentCatalystBridgeRequest`, `getAccContentCatalystStatus`, `listAccContentCatalystJobs`, `submitAccContentCatalystBrief`, `submitAccContentCatalystImage`, `submitAccContentCatalystJob`, `submitAccContentCatalystNarration`, `submitAccContentCatalystPreview`, `submitAccContentCatalystPublish`, `submitAccContentCatalystVideo` |
-| service | `src/services/agentWorkshop/contextEngineeringService.js` | `buildAgentScopedContexts`, `createScopedContextPacket` |
-| service | `src/services/agentWorkshop/diffProposalService.js` | `createDiffProposal`, `listDiffProposals`, `updateDiffProposalStatus` |
-| service | `src/services/agentWorkshop/executionModeService.js` | `AGENT_MODES`, `canExecuteAction`, `getAgentMode`, `getExecutionApprovalState`, `isReadOnlyDefault`, `setAgentMode`, `setExecutionApprovalState` |
-| service | `src/services/agentWorkshop/externalAgentAdapter.js` | `getExternalAdapterUsageLog`, `listSupportedExternalProviders`, `runExternalAgentTask` |
-| service | `src/services/agentWorkshop/joseOrchestrationService.js` | `createJoseCoordinationReport`, `produceApprovalGates`, `produceExecutionSequence`, `receiveProjectIntake`, `routeProjectTasks` |
-| service | `src/services/agentWorkshop/operationalModeService.js` | `getOperationalMode`, `OPERATIONAL_MODES`, `setOperationalMode` |
-| service | `src/services/agentWorkshop/providerAdapterService.js` | `executeOptionalProviderAdapter`, `listOptionalProviderAdapters` |
-| service | `src/services/agentWorkshop/traceabilityService.js` | `appendTraceEvent`, `getTraceSummary`, `listTraceEvents`, `TRACE_STAGES` |
-| service | `src/services/agentWorkshop/verificationChainService.js` | `createDefaultCrossVerificationChain`, `createVerificationChain`, `listVerificationChains`, `updateVerificationStage` |
-| service | `src/services/agentWorkshop/workContractService.js` | `archiveWorkContract`, `createWorkContractDraft`, `listWorkContracts`, `signWorkContract`, `updateWorkContract` |
 | service | `src/services/alphonso/answerPrompt.ts` | `ALPHONSO_ANSWER_PROMPT` |
 | service | `src/services/alphonso/changeSet.ts` | `classifyCommand`, `classifyFile`, `contentHash`, `describeCodeChange`, `previewNeeds` |
 | service | `src/services/alphonso/codeStep.ts` | `CodeAnswer`, `isAlphonsoCodeStep`, `parseCodeAnswer` |
@@ -235,7 +205,6 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/approval/approvalService.js` | `approveRequest`, `createApprovalRequest`, `getApprovalReason`, `listAllApprovals`, `listApprovalsByTrace`, `listPendingApprovals`, `listPendingApprovalsByTrace`, `rejectRequest`, `requireApproval`, `requiresApproval` |
 | service | `src/services/appUpdateService.ts` | `checkAppUpdate`, `getLastUpdateNotice`, `getLastUpdateNoticeAsync`, `notifyUpdateAvailable`, `setLastUpdateNotice`, `UpdateCheckInput`, `UpdateCheckResult`, `UpdateNotice` |
 | service | `src/services/attentionAggregatorService.ts` | `AttentionItem`, `AttentionSeverity`, `AttentionSource`, `getAttentionItems` |
-| service | `src/services/audit/marcusAuditService.js` | `auditCodeProposal`, `auditProjectPlan`, `auditReleaseReadiness`, `auditSecurityModel`, `generateAuditChecklist`, `generateRiskScore` |
 | service | `src/services/autoRunService.ts` | `autoRunDevServer`, `getAutoRunEnabled`, `setAutoRunEnabled` |
 | service | `src/services/backupService.ts` | `BackupSizeEstimate`, `createBackup`, `exportBackupToFile`, `getBackupSizeEstimate`, `importBackupFromFile`, `restoreBackup` |
 | service | `src/services/batchOrchestratorService.js` | `advanceToNextBatch`, `completeGoal`, `createProjectGoal`, `executeBatch`, `generateBatch`, `generateBatchRuleBased`, `generateBatchViaLLM`, `getActiveBatch`, `getActiveGoal`, `getBatch`, `getBatchById`, `getBatchProgress`, `getGoalById`, `getGoalProgress`, `getTaskById`, `isBatchComplete`, `listBatches`, `listGoals`, `updateBatchStatus`, `updateGoal`, `updateTaskStatus` |
@@ -258,7 +227,6 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/coachModeService.ts` | `closeCoachWindow`, `openCoachWindow` |
 | service | `src/services/coachSkillService.ts` | `COACH_SKILLS`, `getCoachSkill`, `listCoachSkills` |
 | service | `src/services/coachSoundCueService.ts` | `getCoachSoundCuePattern`, `getCoachSoundCueSettings`, `playCoachSoundCue`, `shouldPlayCoachSoundCue`, `updateCoachSoundCueSettings` |
-| service | `src/services/codingAgentService.ts` | `isCodingRequest`, `runCodingAgent` |
 | service | `src/services/comfyuiSettingsService.ts` | `ComfyUiInstall`, `ComfyUiSearchResult`, `findComfyuiInstalls`, `resolveComfyuiDirectory`, `resolveComfyuiPython`, `searchComputerForComfyui` |
 | service | `src/services/commandApprovalService.ts` | `assessCommandRisk`, `CommandApprovalHandler`, `CommandApprovalOutcome`, `CommandApprovalRequest`, `CommandRiskAssessment`, `CommandRiskLevel`, `deletesThings`, `isWorkspaceCodeExecuting`, `PlannedCommand`, `requestWorkspaceCommandApproval`, `setCommandApprovalHandler` |
 | service | `src/services/companionCommandService.ts` | `CompanionCommand`, `CompanionDeps`, `handleCompanionCommand` |
@@ -399,6 +367,7 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/jose/taskTypeMeanings.ts` | `CODE_TASK_PREFIXES`, `isCodeRequest`, `isCodeTask`, `needsFacts`, `planningMenu`, `refersToAProject`, `TASK_TYPE_MEANINGS`, `taskTypesFor` |
+| service | `src/services/jose/teams.ts` | `dismissOldPair`, `findTeam`, `NO_STEPS`, `OldPairOffer`, `oldPairOffers`, `parseTeamRequest`, `runNamedTeam`, `runTeam`, `saveTeam`, `takeOldPair`, `TEAM_LABEL`, `TEAM_NEEDS_TEXT`, `TEAM_NOT_FOUND`, `TeamMember`, `teamSteps`, `templateProblems`, `WHICH_TEAM` |
 | service | `src/services/joseCommandRouterService.ts` | `AgentContract`, `AgentReportInput`, `appendCommandAssignments`, `asksPlanReview`, `asksReadiness`, `asksToCleanUpMemory`, `asksToForget`, `asksToRemember`, `asksWhatWasDecided`, `CommandRouteOptions`, `confirmJoseCommand`, `ConnectorCostClassification`, `createAgentReportToJose`, `createJoseCommandRoute`, `createJoseReportToUser`, `createStepPacket`, `decomposeJoseCommand`, `DecomposePolicy`, `getJoseWorkflowObservability`, `JOSE_COMMAND_SCOPE`, `JoseCommand`, `JoseCommandAssignment`, `JoseCommandParser`, `JoseCommandParserIntents`, `JoseCommandPolicy`, `JoseCommandReceipt`, `JoseCommandRouteResult`, `listJoseCommands`, `listJoseDeadLetters`, `ParsedJoseCommand`, `ParsedSend`, `parseJoseCommand`, `runJoseRetrySweep`, `UserReport`, `WorkflowObservability`, `WorkflowObservabilityTotals`, `WRITE_FOR_SEND` |
 | service | `src/services/joseExecutionEngineService.ts` | `approveRequestStep`, `assistantPrompt`, `carryOnRequest`, `draftPrompt`, `executeApprovedPackets`, `getDLQ`, `getEscalationLog`, `isJoseIntakeCommand`, `JOSE_EXECUTION_DLQ_SCOPE`, `miyaResearchSnippet`, `parseJsonResponse`, `pickAlphonsoProject`, `rejectRequestStep`, `resumeJoseRequest`, `retrieveRelevantContext`, `retryDLQ`, `runJoseCommandExecutionPipeline`, `runPipelineShortcuts`, `stepCommandText` |
 | service | `src/services/joseSchedulerService.ts` | `CommandRunOutcome`, `createSchedule`, `deleteSchedule`, `isBuiltInJob`, `listSchedules`, `nextCronMs`, `runSchedule`, `saveSchedule`, `Schedule`, `SCHEDULE_PRESETS`, `SchedulePreset`, `SchedulerOptions`, `ScheduleRunResult`, `ScheduleRunState`, `startScheduler`, `stopScheduler`, `tickScheduler` |
@@ -423,7 +392,6 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/maria/mariaWorkReview.ts` | `findingStrings`, `MARIA_NO_REVIEW`, `parseWorkReview`, `runMariaWorkReview`, `WorkFinding`, `WorkReview`, `workReviewPrompt`, `workReviewText` |
 | service | `src/services/maria/workContext.ts` | `FILE_LIMITS`, `NO_SOURCES`, `workDependencyFiles`, `WorkFile`, `workFiles`, `workResults`, `WorkSource`, `workSources`, `workSteps` |
 | service | `src/services/mariaAuditService.ts` | `MariaAuditOptions`, `runMariaGovernanceAudit` |
-| service | `src/services/mariaWeeklyReportService.ts` | `generateWeeklyReport`, `getLatestReport`, `getReports`, `saveReport`, `scheduleWeeklyGeneration` |
 | service | `src/services/mediaStorageService.ts` | `cleanOldStaged`, `NO_STORAGE`, `removeStaged`, `STAGED_PREFIX`, `stagedKey`, `stageFile`, `StageResult`, `STORAGE_CONNECTOR`, `storageConfig`, `StorageConfig`, `storageConfigured`, `StoragePart`, `StorageTestResult`, `testStorage` |
 | service | `src/services/memory/ecosystemMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `ECOSYSTEM_MEMORY_CATEGORIES`, `exportMemoryItems`, `getAllMemorySizes`, `getMemorySize`, `importMemoryItems`, `listMemory`, `listMemoryItems`, `MEMORY_CONFIDENCE`, `MEMORY_NAMESPACES`, `pushMemory`, `tickExpiry` |
 | service | `src/services/memoryGraphInferenceService.ts` | `runScheduledInferencePass`, `startMemoryGraphInferenceScheduler`, `stopMemoryGraphInferenceScheduler` |
@@ -447,7 +415,6 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/nova/novaVerdict.ts` | `Level`, `missingOptions`, `namedOptions`, `NovaVerdict`, `novaVerdictPrompt`, `parseNovaVerdict`, `VerdictOption`, `verdictText`, `withNotJudged` |
 | service | `src/services/nova/novaVerdicts.ts` | `listVerdicts`, `NO_VERDICTS`, `SavedVerdict`, `saveVerdict`, `verdictForCommand`, `verdictsText` |
 | service | `src/services/novaAnalysisService.ts` | `NOVA_NO_VERDICT`, `NovaResult`, `runNovaAnalysis` |
-| service | `src/services/novaFeedbackService.ts` | `clearNovaScores`, `computeScoreTrend`, `getDecompositionHints`, `getNovaScore`, `listRecentScores`, `NOVA_SCORE_SCOPE`, `storeNovaScore` |
 | service | `src/services/offlineChatService.ts` | `clearOfflineMessages`, `getOfflineMessages`, `getPendingSyncMessages`, `markSynced`, `OfflineMessageInput`, `saveMessageOffline` |
 | service | `src/services/orchestrationGovernanceService.ts` | `GOVERNANCE_SCOPE`, `listGovernanceDecisions`, `recordGovernanceDecision`, `summarizeAgentWorkload` |
 | service | `src/services/orchestrationQueueService.ts` | `forceDeadLetterPacket`, `ForceDeadLetterResult`, `getDeadLetterCount`, `getOldestDeadLetterTimestamp`, `getOrchestrationQueueSnapshot`, `listOrchestrationQueueTransitions`, `markPacketInterrupted`, `ORCHESTRATION_QUEUE_SCOPE`, `QueueSnapshot`, `QueueTransition`, `QueueTransitionFilters`, `recordOrchestrationQueueTransition`, `recoverInterruptedExecutions`, `RecoveryResult`, `replayPacketFromDeadLetter`, `ReplayResult`, `retryDeadLetter` |
@@ -462,9 +429,8 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/proactiveAgentService.ts` | `clearProactiveHistory`, `getProactiveState`, `ProactiveSuggestion`, `runProactiveCheck`, `setProactiveEnabled`, `startProactiveWatcher`, `SuggestionAction` |
 | service | `src/services/productionReadinessService.js` | `collectProductionReadinessSnapshot`, `getLastProductionReadinessReport`, `getProductionReadinessStateLabel`, `listProductionReadinessReports`, `PRODUCTION_READINESS_SCOPE`, `summarizeCommandProofs`, `summarizeProductionReadiness` |
 | service | `src/services/projectDirectoryService.ts` | `clearProjectDirectory`, `getProjectDirectory`, `getProjectDirectoryPath`, `listProjectDirectories`, `setProjectDirectory`, `validateProjectDirectory` |
-| service | `src/services/projectExecution/projectDnaService.js` | `createProjectDNA`, `getProjectDNA` |
-| service | `src/services/projectExecution/projectExecutionService.js` | `assignTasksToAgents`, `createAcceptanceCriteria`, `createProjectExecutionPlan`, `createRiskRegister`, `createVerificationChecklist`, `decomposeProjectIntoAgentTasks`, `generateExecutionTimeline` |
 | service | `src/services/projectExecution/workshopSessionService.js` | `exportExecutionPacketToFile`, `listWorkshopSessions`, `persistWorkshopSessionToDurableMemory` |
+| service | `src/services/projects/projectStore.ts` | `deleteProject`, `getProject`, `intakeText`, `listProjects`, `PROJECT_NEEDS_TEXT`, `PROJECT_NOT_FOUND`, `PROJECT_TEMPLATE`, `ProjectIntake`, `SavedProject`, `saveProject`, `startProject` |
 | service | `src/services/rc0EvidenceService.ts` | `Rc0Cycle`, `Rc0EvidencePackage`, `Rc0PacketSummary`, `Rc0ReadinessReport`, `Rc0VerificationResults`, `Rc0WorkspaceValidation`, `writeRc0EvidencePackage` |
 | service | `src/services/recoveryService.ts` | `backupMemoryLedger`, `createSnapshot`, `listSnapshots`, `restoreSnapshotById` |
 | service | `src/services/repoAuditService.ts` | `getLastRepoAudit`, `listRepoAudits`, `REPO_AUDIT_SCOPE`, `runRepoAudit`, `summarizeRepoAudit` |
@@ -487,7 +453,6 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/sentinel/sentinelTrust.ts` | `addTrustedDomain`, `ALLOWLIST_KEY`, `AllowlistEntry`, `isTrustedDomain`, `listTrustedDomains`, `readAllowlist`, `removeTrustedDomain`, `writeAllowlist` |
 | service | `src/services/sentinel/sentinelWeekly.ts` | `askSentinelWeekReview`, `lastSentinelReview`, `SENTINEL_WEEKLY_LABEL`, `SentinelReviewCard` |
 | service | `src/services/sentinel/webRisk.ts` | `checkLinksWithWebRisk`, `webRiskSetUp` |
-| service | `src/services/sentinelGateService.ts` | `checkSentinelAlerts`, `evaluateRisk`, `getGateStatus`, `shouldBlock` |
 | service | `src/services/sentinelSecurityService.ts` | `recentActivityText`, `runSentinelSecurityScan`, `SentinelScanOptions` |
 | service | `src/services/serviceScopes.ts` | `AGENT_OUTPUT_SCOPE`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_SCOPE`, `DEV_PACKET_SCOPE`, `GOVERNANCE_SCOPE`, `JOSE_COMMAND_SCOPE`, `MIYA_MEMORY_SCOPE`, `NOVA_SCORE_SCOPE`, `ORCHESTRATION_QUEUE_SCOPE`, `ORCHESTRATION_RECEIPT_SCOPE`, `PACKET_SCOPE`, `PLUGIN_AUDIT_SCOPE`, `PLUGINS_SCOPE`, `PRODUCTION_READINESS_SCOPE`, `PROOF_AUTHORITY`, `REPO_AUDIT_SCOPE`, `SELF_DEVELOPMENT_SCOPE`, `SESSION_EVENT_SCOPE`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `VERIFICATION_SCOPE`, `WORKFLOW_OPS_SCOPE`, `WORKFLOW_RECEIPT_SCOPE`, `WORKFLOW_RUN_SCOPE`, `WORKFLOW_TELEMETRY_SCOPE` |
 | service | `src/services/sessionIntelligenceService.ts` | `appendSessionEvent`, `listSessionEvents`, `SESSION_EVENT_SCOPE`, `summarizeSession` |
@@ -498,6 +463,7 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/skills/skillFile.ts` | `MAX_SKILL_BYTES`, `parseSkillFile`, `serializeSkill`, `Skill` |
 | service | `src/services/skills/skillGather.ts` | `GatheredResult`, `gatherForSkill`, `MAX_TOOL_CALLS` |
 | service | `src/services/skills/skillLibrary.ts` | `contentAsk`, `listSkills`, `RefusedSkill`, `refusedSkills`, `setUserSkillFiles`, `skillsForTask` |
+| service | `src/services/skills/skillOutcomes.ts` | `listSkillOutcomes`, `recordReviewVerdict`, `recordStepOutcome`, `SkillOutcome`, `skillStats`, `statsLine` |
 | service | `src/services/skills/skillPick.ts` | `NO_SKILL`, `PickedSkill`, `pickSkill`, `skillLabel` |
 | service | `src/services/skills/skillToolRun.ts` | `ACTION_TOOL_REFUSAL`, `runSkillTool`, `ToolContext`, `ToolResult` |
 | service | `src/services/skills/skillTools.ts` | `ACTION_TOOLS`, `SKILL_TOOLS`, `SkillTool`, `toolsFor` |
@@ -505,7 +471,6 @@ Source-backed inventory: 341 services and 189 components. Human purpose descript
 | service | `src/services/skills/userSkills.ts` | `deleteUserSkill`, `exportSkill`, `importUserSkill`, `loadUserSkills`, `openSkillsFolder`, `SaveResult`, `saveUserSkill`, `skillFileName` |
 | service | `src/services/sourceConfidenceService.ts` | `scoreSourceConfidence`, `sourceExpiryForType` |
 | service | `src/services/streamingService.ts` | `abortStream`, `clearStreamHistory`, `getActiveStreams`, `getStreamState`, `startStream`, `StreamEvent`, `subscribeToStreams` |
-| service | `src/services/systemHealth/systemHealthService.js` | `getLastBuildStatus`, `getSystemHealthSummary`, `setLastBuildStatus` |
 | service | `src/services/telegramAutoPollService.ts` | `getTelegramAutoPollState`, `getTelegramEnvSafe`, `runSingleTelegramPoll` |
 | service | `src/services/telegramBrowserConnector.ts` | `browserPollTelegram`, `browserSendTelegram`, `getTelegramPollCursor`, `handleTelegramBotCommand`, `parseTelegramCommand`, `setTelegramPollCursor`, `TelegramAuditEntry`, `TelegramBotVerifyResult`, `TelegramMessage`, `TelegramPollResult`, `TelegramSendResult`, `verifyTelegramBotEnvironment` |
 | service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |

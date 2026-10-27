@@ -166,7 +166,7 @@ const SPACES: Space[] = [
     items: [
       { id: 'orchestrator', icon: Shield, label: 'Orchestrator', showApprovalBadge: true },
       { id: 'ecosystem', icon: Bot, label: 'All Agents' },
-      { id: 'pairings', icon: Link2, label: 'Agent Pairing' },
+      { id: 'pairings', icon: Link2, label: 'Teams' },
       { id: 'maturity', icon: Layers, label: 'Maturity' },
       { id: 'agent_performance', icon: Activity, label: 'Agent Performance' },
       { id: 'runtimes', icon: Cpu, label: 'Runtimes' },

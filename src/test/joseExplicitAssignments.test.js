@@ -41,10 +41,6 @@ vi.mock('../lib/ollama', () => ({
   PREFERRED_MODEL: 'llama3.2:3b'
 }));
 
-vi.mock('../services/sentinelGateService', () => ({
-  shouldBlock: vi.fn(() => ({ blocked: false, reason: '' })),
-  checkSentinelAlerts: vi.fn(() => ({ found: false, alerts: [], output: null }))
-}));
 
 vi.mock('../services/creativeRoutingService', () => ({
   // Every command looks like an image request, so a skipped early route is visible.
@@ -52,10 +48,6 @@ vi.mock('../services/creativeRoutingService', () => ({
   routeToCreativeTool: vi.fn(async () => ({ ok: true, tool: 'comfyui' }))
 }));
 
-vi.mock('../services/novaFeedbackService', () => ({
-  storeNovaScore: vi.fn(),
-  getDecompositionHints: vi.fn(() => ({ hints: [], score: null }))
-}));
 
 vi.mock('../services/runtimeLedgerService', () => ({
   persistScopeRows: vi.fn(async () => undefined)

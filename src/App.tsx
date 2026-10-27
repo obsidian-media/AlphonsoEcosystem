@@ -137,7 +137,7 @@ const CalendarPage = lazy(() => import('./components/calendar/CalendarPage').the
 const ContentCatalystWorkspace = lazy(() => import('./features/content-catalyst').then((mod) => ({ default: mod.ContentCatalystWorkspace })));
 const OperatorDashboard = lazy(() => import('./components/OperatorDashboard').then((mod) => ({ default: mod.OperatorDashboard })));
 const OrchestratorView = lazy(() => import('./components/OrchestratorView').then((mod) => ({ default: mod.OrchestratorView })));
-const ProjectExecutionMode = lazy(() => import('./components/projectExecution/ProjectExecutionMode').then((mod) => ({ default: mod.ProjectExecutionMode })));
+const ProjectsPage = lazy(() => import('./components/projects/ProjectsPage').then((mod) => ({ default: mod.ProjectsPage })));
 const CommandRib = lazy(() => import('./components/CommandRib').then((mod) => ({ default: mod.CommandRib })));
 const AgentDock = lazy(() => import('./components/AgentDock').then((mod) => ({ default: mod.AgentDock })));
 const SettingsView = lazy(() => import('./components/SettingsView').then((mod) => ({ default: mod.SettingsView })));
@@ -908,7 +908,7 @@ function AppShell() {
                 {(activeTab === 'ecosystem' || activeTab === 'pairings' || activeTab === 'maturity') && (
                   <EcosystemHub key={activeTab} initialTab={activeTab === 'pairings' ? 'pairings' : activeTab === 'maturity' ? 'advanced' : 'overview'} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />
                 )}
-                {activeTab === 'project_execution' && <ProjectExecutionMode />}
+                {activeTab === 'project_execution' && <ProjectsPage settings={settings} onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} />}
                 {activeTab === 'orchestrator' && (
                   <OrchestratorView key={joseBoardRequestId || 'orchestrator'} settings={settings} ollamaStatus={ollamaStatus} initialTab={joseBoardRequestId ? 'requests' : undefined} selectedRequestId={joseBoardRequestId || undefined} onJoseStateChange={(state: string, message: string) => setJoseCompanionState({ state, message })} />
                 )}

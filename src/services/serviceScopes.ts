@@ -74,7 +74,7 @@ export const WORKFLOW_TELEMETRY_SCOPE  = 'workflow_telemetry_v1';
 /** Agent output store — per-command agent execution outputs (summaries, artifacts, scores). Owned by agentOutputStoreService. */
 export const AGENT_OUTPUT_SCOPE        = 'agent_outputs_v1';
 
-/** Nova scoring store — opportunity/risk scores computed by Nova for decomposition routing. Owned by novaFeedbackService. */
+/** Nova scoring store — opportunity/risk scores computed by Nova for decomposition routing. Its service, novaFeedbackService, was archived in agent roles Part C1; the scope stays so old data keeps loading. */
 export const NOVA_SCORE_SCOPE          = 'nova_scores_v1';
 
 /** Proof authority identifiers — discriminate whether a proof was produced by the Rust engine or the JS bridge. */

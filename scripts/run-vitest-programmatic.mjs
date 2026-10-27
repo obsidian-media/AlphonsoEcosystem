@@ -55,7 +55,8 @@ const ctx = await startVitest(
     // Gateway Tests" job, so keep them (and the Python voice tree) out of here.
     // `.claude/**` holds local agent worktrees (full repo copies); without it
     // the `src` filter ran their tests too, doubling local counts (2026-10-21).
-    exclude: [...configDefaults.exclude, 'gateway/**', 'voice/**', '.claude/**'],
+    // archive/ keeps retired source with its tests (agent roles Part C1); they are not part of the app.
+    exclude: [...configDefaults.exclude, 'gateway/**', 'voice/**', '.claude/**', 'archive/**'],
     pool: 'forks',
     fileParallelism: false,
     configFile: false
