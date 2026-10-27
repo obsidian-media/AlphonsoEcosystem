@@ -1,7 +1,7 @@
 // Nova's ranked verdict (agent phase 2, owner 2026-10-25): every option in order with
 // reasons in words, what to do first, what would change her mind; no keyword scores.
-import { describe, it, expect } from 'vitest';
-import { namedOptions, novaVerdictPrompt, parseNovaVerdict, missingOptions, withNotJudged, verdictText, type NovaVerdict } from '../../../services/nova/novaVerdict';
+import { describe, it, expect, vi } from 'vitest';
+import { namedOptions, findOptions, novaVerdictPrompt, parseNovaVerdict, missingOptions, withNotJudged, verdictText, type NovaVerdict } from '../../../services/nova/novaVerdict';
 import type { StepInput } from '../../../services/jose/stepInput';
 
 const BAKERY = 'Which of these should a small bakery do first: a weekly email newsletter, a loyalty card, or a podcast? Prioritize them.';
@@ -99,5 +99,33 @@ describe('novaVerdictPrompt', () => {
     expect(withHelp.indexOf('Your skill: Value and priority')).toBeLessThan(withHelp.indexOf('You are Nova'));
     expect(novaVerdictPrompt(input(), { sourceCount: 0, mayAskForHelp: false })).not.toContain('HELP:');
     expect(novaVerdictPrompt(input(), { sourceCount: 0, mayAskForHelp: false, leftOut: ['a podcast'] })).toContain('You left out: a podcast.');
+  });
+});
+
+// Agent roles Part C2: Nova finds the options a request names in any wording.
+describe('findOptions', () => {
+  const TORN = "I'm torn between opening a second shop in Leeds and selling online through Etsy, which is better?";
+
+  it('asks her model when the request has a choice in ordinary sentences, and keeps its options', async () => {
+    const ask = vi.fn(async () => JSON.stringify({ options: ['opening a second shop in Leeds', 'selling online through Etsy'] }));
+    expect(await findOptions(TORN, ask)).toEqual(['opening a second shop in Leeds', 'selling online through Etsy']);
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops an option the request never names', async () => {
+    const ask = vi.fn(async () => JSON.stringify({ options: ['opening a second shop in Leeds', 'selling online through Etsy', 'a food truck'] }));
+    expect(await findOptions(TORN, ask)).toEqual(['opening a second shop in Leeds', 'selling online through Etsy']);
+  });
+
+  it('a list makes no model call, and no choice word makes none', async () => {
+    const ask = vi.fn(async () => '{}');
+    expect(await findOptions('Which should we start first: a newsletter, a podcast, a shop?', ask)).toEqual(['a newsletter', 'a podcast', 'a shop']);
+    expect(await findOptions('Judge how the launch went.', ask)).toEqual([]);
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it('an unreadable answer, or one option only, finds none', async () => {
+    expect(await findOptions(TORN, async () => 'not json')).toEqual([]);
+    expect(await findOptions(TORN, async () => JSON.stringify({ options: ['selling online through Etsy'] }))).toEqual([]);
   });
 });

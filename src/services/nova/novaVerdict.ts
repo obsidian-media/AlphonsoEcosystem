@@ -55,6 +55,36 @@ export function namedOptions(text: string): string[] {
   return chosen ? asList(chosen[1].split(SPLIT)) : [];
 }
 
+/** A request that weighs options in ordinary sentences ("torn between A and B, which is better?"). */
+const CHOICE_WORD = /\b(or|between|which|whether|versus|vs)\b/i;
+const MAX_FOUND_OPTIONS = 6;
+
+/** The options a request names in any wording (agent roles Part C2): a list as `namedOptions()` reads
+ *  it, else, when the request has a choice word, her model's reading, keeping only options in the
+ *  request's own words. */
+export async function findOptions(text: string, ask: (prompt: string) => Promise<string>): Promise<string[]> {
+  const listed = namedOptions(text);
+  if (listed.length) return listed;
+  const request = String(text || '').replace(/^\s*\/jose\s+/i, '');
+  if (!CHOICE_WORD.test(request)) return [];
+  let raw = '';
+  try {
+    raw = await ask([
+      'You are Nova. List the options this request asks you to choose between, each in the request\'s own words. No options of your own.',
+      `Request: ${request}`,
+      'Answer with JSON only: {"options": ["...", "..."]}; an empty list when it names no options.',
+    ].join('\n\n'));
+  } catch {
+    return [];
+  }
+  let options: unknown = [];
+  try { options = JSON.parse((/\{[\s\S]*\}/.exec(raw) || ['{}'])[0])?.options; } catch { return []; }
+  if (!Array.isArray(options)) return [];
+  const lower = request.toLowerCase();
+  const kept = options.map((o) => String(o || '').trim()).filter((o) => o && lower.includes(o.toLowerCase()));
+  return kept.length >= 2 && kept.length <= MAX_FOUND_OPTIONS ? kept : [];
+}
+
 function stems(text: string): string[] {
   return String(text || '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w)).map((w) => w.slice(0, 5));
 }
@@ -71,8 +101,8 @@ export function withNotJudged(verdict: NovaVerdict, missing: string[]): NovaVerd
   return { ...verdict, options: [...verdict.options, ...extra] };
 }
 
-export function novaVerdictPrompt(input: StepInput, opts: { sourceCount: number; mayAskForHelp: boolean; leftOut?: string[] }): string {
-  const named = namedOptions(input.request);
+export function novaVerdictPrompt(input: StepInput, opts: { sourceCount: number; mayAskForHelp: boolean; leftOut?: string[]; named?: string[] }): string {
+  const named = opts.named ?? namedOptions(input.request);
   return [
     skillSection(input),
     'You are Nova. Judge only what you were given: the request and the earlier steps below. Do not look for new facts.',
