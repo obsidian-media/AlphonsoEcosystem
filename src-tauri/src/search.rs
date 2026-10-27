@@ -26,9 +26,12 @@ pub(crate) struct ResearchSourceProof {
   pub(crate) risk_level: String,
   pub(crate) verification_state: String,
   pub(crate) error: Option<String>,
-  /// The page is a PDF: its text is not decoded here (agent phase 1); the app keeps the search snippet.
+  /// The page is a PDF (agent phase 1). Since agent roles Part C2 its text is read when it can be
+  /// (`pdf_text_read`); otherwise the app keeps the search snippet.
   #[serde(default)]
   pub(crate) pdf: bool,
+  #[serde(default)]
+  pub(crate) pdf_text_read: bool,
 }
 
 #[derive(Deserialize)]
@@ -513,6 +516,38 @@ pub(crate) async fn fetch_page_with_retry(
   fetch_with_ssrf_guard(client, url).await
 }
 
+/// A PDF's text is cut here; Hector only reads the parts that match the question anyway.
+const PDF_TEXT_MAX_CHARS: usize = 200_000;
+/// A PDF that takes longer than this to read keeps its search snippet.
+const PDF_TEXT_WAIT: std::time::Duration = std::time::Duration::from_secs(20);
+
+/// The text of a PDF, or `None` (scanned pages, encrypted files, broken files). A parser panic on
+/// a strange file is caught, so one bad PDF never stops the rest of the research.
+pub(crate) fn pdf_text(bytes: &[u8]) -> Option<String> {
+  let owned = bytes.to_vec();
+  let text = std::panic::catch_unwind(move || pdf_extract::extract_text_from_mem(&owned))
+    .ok()?
+    .ok()?;
+  let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+  if text.is_empty() {
+    return None;
+  }
+  Some(text.chars().take(PDF_TEXT_MAX_CHARS).collect())
+}
+
+/// `pdf_text` off the async thread, with a time limit.
+async fn pdf_text_in_time(bytes: Vec<u8>) -> Option<String> {
+  match tokio::time::timeout(
+    PDF_TEXT_WAIT,
+    tokio::task::spawn_blocking(move || pdf_text(&bytes)),
+  )
+  .await
+  {
+    Ok(Ok(text)) => text,
+    _ => None,
+  }
+}
+
 /// Whether a response body is a PDF, by its content type or its first bytes.
 pub(crate) fn is_pdf(content_type: Option<&str>, bytes: &[u8]) -> bool {
   content_type
@@ -544,6 +579,7 @@ pub(crate) async fn fetch_research_sources(
         verification_state: "failed".to_string(),
         error: Some(error),
         pdf: false,
+        pdf_text_read: false,
       }];
     }
   };
@@ -577,6 +613,7 @@ pub(crate) async fn fetch_research_sources(
         verification_state: "failed".to_string(),
         error: Some("Only http and https URLs are supported.".to_string()),
         pdf: false,
+        pdf_text_read: false,
       });
       continue;
     }
@@ -604,6 +641,7 @@ pub(crate) async fn fetch_research_sources(
           verification_state: "blocked".to_string(),
           error: Some("SSRF blocked: private/internal IP address.".to_string()),
           pdf: false,
+          pdf_text_read: false,
         });
         continue;
       }
@@ -620,13 +658,19 @@ pub(crate) async fn fetch_research_sources(
           Ok((bytes, _)) => {
             let pdf = is_pdf(content_type.as_deref(), &bytes);
             let max_len = bytes.len().min(200_000);
+            let pdf_text = if pdf {
+              pdf_text_in_time(bytes.clone()).await
+            } else {
+              None
+            };
+            let pdf_text_read = pdf_text.is_some();
             let body = if pdf {
               String::new()
             } else {
               String::from_utf8_lossy(&bytes[..max_len]).to_string()
             };
             let title = if pdf { None } else { extract_title(&body) };
-            let text = strip_html_tags(&body);
+            let text = pdf_text.unwrap_or_else(|| strip_html_tags(&body));
             let snippet = build_snippet(&text);
             proofs.push(ResearchSourceProof {
               url: url.to_string(),
@@ -655,6 +699,7 @@ pub(crate) async fn fetch_research_sources(
                 Some(format!("HTTP status {}", status.as_u16()))
               },
               pdf,
+              pdf_text_read,
             });
           }
           Err(error) => proofs.push(ResearchSourceProof {
@@ -672,6 +717,7 @@ pub(crate) async fn fetch_research_sources(
             verification_state: "failed".to_string(),
             error: Some(error.to_string()),
             pdf: false,
+            pdf_text_read: false,
           }),
         }
       }
@@ -690,6 +736,7 @@ pub(crate) async fn fetch_research_sources(
         verification_state: "failed".to_string(),
         error: Some(error),
         pdf: false,
+        pdf_text_read: false,
       }),
     }
   }
@@ -958,6 +1005,47 @@ mod tests {
       5000,
       "snippet should no longer be capped at 420 chars"
     );
+  }
+
+  /// A one-page PDF with Helvetica text, built by hand so the test needs no file.
+  fn tiny_pdf(text: &str) -> Vec<u8> {
+    let content = format!("BT /F1 12 Tf 72 712 Td ({text}) Tj ET");
+    let objects = [
+      "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+      "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>".to_string(),
+      format!("<< /Length {} >>\nstream\n{}\nendstream", content.len(), content),
+      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".to_string(),
+    ];
+    let mut out = b"%PDF-1.4\n".to_vec();
+    let mut offsets = Vec::new();
+    for (i, object) in objects.iter().enumerate() {
+      offsets.push(out.len());
+      out.extend(format!("{} 0 obj\n{}\nendobj\n", i + 1, object).as_bytes());
+    }
+    let xref = out.len();
+    out.extend(format!("xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1).as_bytes());
+    for offset in offsets {
+      out.extend(format!("{offset:010} 00000 n \n").as_bytes());
+    }
+    out.extend(
+      format!(
+        "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{}\n%%EOF\n",
+        objects.len() + 1,
+        xref
+      )
+      .as_bytes(),
+    );
+    out
+  }
+
+  // Agent roles Part C2: Hector reads a PDF's text instead of keeping only its search snippet.
+  #[test]
+  fn pdf_text_reads_a_pdf_and_refuses_garbage() {
+    let text = pdf_text(&tiny_pdf("Hello honeybees")).expect("text from the PDF");
+    assert!(text.contains("Hello honeybees"), "{text}");
+    assert!(pdf_text(b"%PDF-1.4 this is not really a pdf").is_none());
+    assert!(pdf_text(b"plain words").is_none());
   }
 
   #[test]

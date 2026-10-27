@@ -136,6 +136,32 @@ export async function exportHectorReportAsPowerPoint(report: HectorReport): Prom
   // disproportionate effort for what's meant to be a compact export.
   const bodyBox = { x: 0.5, w: 9, h: 5.5, fit: 'shrink' as const };
 
+  // A report made since agent phase 1 (agent roles Part C2): its answer, a slide per part with the
+  // cited findings, and the numbered sources with their labels, as in the Markdown export.
+  const research = (report as { research?: any }).research;
+  if (research) {
+    const answer = pptx.addSlide();
+    answer.addText(String(report.researchQuestion ?? research.question ?? 'Hector Research Report'), { x: 0.5, y: 0.3, fontSize: 20, bold: true });
+    answer.addText(String(research.answer || ''), { ...bodyBox, y: 1.2, fontSize: 14 });
+    for (const sq of research.subQuestions || []) {
+      if (!sq.findings?.length) continue;
+      const slide = pptx.addSlide();
+      slide.addText(String(sq.question), { x: 0.5, y: 0.3, fontSize: 18, bold: true });
+      slide.addText(sq.findings.map((f: any) => `• ${f.text} ${(f.sources || []).map((n: number) => `[${n}]`).join('')} (${f.support})`).join('\n'), { ...bodyBox, y: 1, fontSize: 12 });
+    }
+    const notes = [...(research.disagreements || []).map((d: string) => `Sources disagree: ${d}`), ...(research.notFound || []).map((d: string) => `Could not find: ${d}`)];
+    if (notes.length) {
+      const slide = pptx.addSlide();
+      slide.addText('Disagreements & Gaps', { x: 0.5, y: 0.3, fontSize: 18, bold: true });
+      slide.addText(notes.map((n) => `• ${n}`).join('\n'), { ...bodyBox, y: 1, fontSize: 12 });
+    }
+    const sources = pptx.addSlide();
+    sources.addText(`Sources (${(research.sources || []).length})`, { x: 0.5, y: 0.3, fontSize: 18, bold: true });
+    sources.addText((research.sources || []).map((s: any) => `[${s.n}] ${s.title} — ${s.url} (${SOURCE_LABELS[s.label] || s.label}${s.reason ? `: ${s.reason}` : ''})`).join('\n'), { ...bodyBox, y: 1, fontSize: 11 });
+    await pptx.writeFile({ fileName: `hector-report-${safeFileBaseName(report)}.pptx` });
+    return;
+  }
+
   const overviewSlide = pptx.addSlide();
   overviewSlide.addText(String(report.researchQuestion ?? 'Hector Research Report'), { x: 0.5, y: 0.3, fontSize: 20, bold: true });
   overviewSlide.addText(s?.overview ?? report.summary ?? '', { ...bodyBox, y: 1.2, fontSize: 14 });

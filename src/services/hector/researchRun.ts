@@ -160,9 +160,11 @@ async function fetchSources(all: FoundSource[]): Promise<Read[]> {
     const proof = (proofs || []).find((p) => p?.url === source.url || String(p?.url || '').replace(/\/$/, '') === source.url.replace(/\/$/, ''));
     const text = str(proof?.snippet);
     // A page you supplied counts however short it is; a found page under 200 characters is likely a wall.
-    if (proof?.ok && !proof?.pdf && (text.length >= 200 || (source.provider === 'supplied' && text))) return { source, label: 'read', text };
+    // A PDF counts once the backend read its text (agent roles Part C2).
+    const readable = !proof?.pdf || proof?.pdfTextRead;
+    if (proof?.ok && readable && (text.length >= 200 || (source.provider === 'supplied' && text))) return { source, label: 'read', text };
     // A page that answered but had too little text isn't blocked (agent phase 2: "blocked (HTTP 200)").
-    const reason = proof?.pdf ? 'PDF' : proof?.ok ? 'too short to read' : proof?.httpStatus ? `blocked (HTTP ${proof.httpStatus})` : 'not reached';
+    const reason = proof?.pdf && !proof?.pdfTextRead ? "couldn't read the PDF's text" : proof?.ok ? 'too short to read' : proof?.httpStatus ? `blocked (HTTP ${proof.httpStatus})` : 'not reached';
     if (source.snippet) return { source, label: 'snippet', reason, text: source.snippet };
     return { source, label: 'unreadable', reason, text: '' };
   }), ...skipped];
@@ -215,8 +217,10 @@ export async function runResearch(
     found.providers.forEach((p) => providers.add(p));
     errors.push(...found.errors);
     const room = HECTOR_LIMITS.maxSourcesRead - reads.length;
-    // Results that don't share a word with the question aren't fetched.
-    const onTopic = found.sources.filter((s) => !topicTerms.length || sharedStems(`${s.title} ${s.snippet} ${s.url}`, topicTerms) > 0);
+    // Results that share fewer than two of the question's words aren't fetched (one shared word let
+    // unrelated pages in; agent roles Part C2). A one-word question needs that one word.
+    const needShared = Math.min(2, topicTerms.length);
+    const onTopic = found.sources.filter((s) => !topicTerms.length || sharedStems(`${s.title} ${s.snippet} ${s.url}`, topicTerms) >= needShared);
     const fresh = [...(rounds === 1 ? supplied : []), ...onTopic].filter((s) => !seen.has(s.url)).slice(0, room);
     fresh.forEach((s) => seen.add(s.url));
     if (!fresh.length && rounds > 1) { rounds -= 1; break; }
