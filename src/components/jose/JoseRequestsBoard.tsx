@@ -19,7 +19,7 @@ import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
 import { stopRequest } from '../../services/jose/joseStop';
 import { agentName } from '../../services/jose/agentNames';
-import { approveRequestStep, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
+import { approveRequestStep, cancelRequest, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
 
 export const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
@@ -262,7 +262,10 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
               <Button variant="ghost" data-testid="jose-stop" onClick={() => { setMessage(stopRequest(selected.id).summary); refresh(); }}>Stop</Button>
             )}
             {(selected.status === 'interrupted' || (selected.status === 'waiting_setup' && !asking)) && (
-              <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
+              <>
+                <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
+                <Button variant="ghost" data-testid="jose-cancel-request" disabled={running} onClick={() => { setMessage(cancelRequest(selected.id).summary); refresh(); }}>Cancel</Button>
+              </>
             )}
             {waitingSteps.map((step) => (
               <React.Fragment key={step.stepId}>

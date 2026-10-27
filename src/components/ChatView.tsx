@@ -40,7 +40,7 @@ import {
   cancelMcpOutreachCall,
   markMcpOutreachDelivered
 } from '../services/calleMcpOutreachService';
-import { executeApprovedPackets, carryOnRequest } from '../services/joseExecutionEngineService';
+import { executeApprovedPackets, carryOnRequest, cancelRequest } from '../services/joseExecutionEngineService';
 import { higgsfieldResultsDoneSince, higgsfieldResultsFor, markShownInChat, type HiggsfieldResult } from '../services/contentFactory/higgsfieldByName';
 import { HiggsfieldMedia } from './miya/HiggsfieldResults';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
@@ -1394,6 +1394,14 @@ export function ChatView({
                           >
                             Carry on
                           </button>
+                          <button
+                            type="button"
+                            data-testid={`chat-notice-cancel-${request.id}`}
+                            className="text-(--text-3) hover:underline"
+                            onClick={() => { cancelRequest(request.id); refreshInterrupted(); }}
+                          >
+                            Cancel
+                          </button>
                           {onOpenJoseBoard && (
                             <button type="button" className="text-(--text-3) hover:underline" onClick={() => onOpenJoseBoard(request.id)}>
                               Open on the board
@@ -1422,6 +1430,14 @@ export function ChatView({
                       onClick={async () => { await carryOnRequest(request.id); refreshInterrupted(); }}
                     >
                       Carry on
+                    </button>
+                    <button
+                      type="button"
+                      data-testid={`chat-notice-cancel-${request.id}`}
+                      className="text-(--text-3) hover:underline"
+                      onClick={() => { cancelRequest(request.id); refreshInterrupted(); }}
+                    >
+                      Cancel
                     </button>
                     {onOpenJoseBoard && (
                       <button type="button" className="text-(--text-3) hover:underline" onClick={() => onOpenJoseBoard(request.id)}>

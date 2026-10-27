@@ -16,6 +16,7 @@ vi.mock('../../../services/jose/submitToJose', async () => {
 vi.mock('../../../services/joseExecutionEngineService', () => ({
   approveRequestStep: vi.fn(async () => ({ ok: true, summary: 'Marcus did it; the request carried on.' })),
   carryOnRequest: vi.fn(async () => ({ ok: true, command: { userReport: { summary: 'Carried on to the end.' } } })),
+  cancelRequest: vi.fn(() => ({ ok: true, summary: 'Cancelled.' })),
   rejectRequestStep: vi.fn(() => ({ ok: true, summary: 'Rejected. The request was cancelled.' })),
   pickAlphonsoProject: vi.fn(async (_r: string, _s: string, name: string) => ({ ok: true, summary: `Working in ${name}.` })),
 }));
@@ -288,5 +289,18 @@ describe('Stop on the board', () => {
     setJoseRequestStatus(request.id, 'done');
     render(<JoseRequestsBoard selectedRequestId={request.id} />);
     expect(screen.queryByTestId('jose-stop')).toBeNull();
+  });
+});
+
+// Jose phase 7: Cancel beside Carry on.
+describe('Cancel a cut-off request on the board', () => {
+  it('shows Cancel beside Carry on, which cancels it', async () => {
+    const { cancelRequest } = await import('../../../services/joseExecutionEngineService');
+    const request = createJoseRequest({ commandId: 'c-cut', source: 'user', text: 'Cut off', kind: 'normal', steps });
+    setJoseRequestStatus(request.id, 'interrupted');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    fireEvent.click(screen.getByTestId('jose-cancel-request'));
+    expect(cancelRequest).toHaveBeenCalledWith(request.id);
+    expect(screen.getByText('Cancelled.')).toBeTruthy();
   });
 });

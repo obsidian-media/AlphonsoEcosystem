@@ -621,6 +621,10 @@ export async function handleJoseButton(token, update) {
     quietly(engine.carryOnRequest(request.id));
     return 'Carrying on.';
   }
+  if (button.action === 'cancel_request') {
+    const result = engine.cancelRequest(request.id);
+    return result.ok ? 'Cancelled.' : 'Already done.';
+  }
   return 'That button has expired.';
 }
 

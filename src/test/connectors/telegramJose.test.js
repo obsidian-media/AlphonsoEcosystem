@@ -27,6 +27,7 @@ vi.mock('../../services/joseExecutionEngineService', () => ({
   approveRequestStep: vi.fn(async () => ({ ok: true, summary: 'done' })),
   rejectRequestStep: vi.fn(() => ({ ok: true, summary: 'Rejected.' })),
   carryOnRequest: vi.fn(async () => ({ ok: true })),
+  cancelRequest: vi.fn(() => ({ ok: true, summary: 'Cancelled.' })),
   executeApprovedPackets: vi.fn(async () => ({ ok: true, summary: 'done' })),
   pickAlphonsoProject: vi.fn(async (_r, _s, name) => ({ ok: true, summary: `Working in ${name}.` })),
 }));
@@ -38,7 +39,7 @@ vi.mock('../../services/echo/echoPicks', () => ({
 }));
 
 import { handleJoseButton, runPushWatcher, handleApproveCommand, handleRejectCommand, stopTelegramCompanion } from '../../services/telegramCompanionService';
-import { approveRequestStep, rejectRequestStep, carryOnRequest, executeApprovedPackets, pickAlphonsoProject } from '../../services/joseExecutionEngineService';
+import { approveRequestStep, rejectRequestStep, carryOnRequest, cancelRequest, executeApprovedPackets, pickAlphonsoProject } from '../../services/joseExecutionEngineService';
 import { runApprovedPlan, cancelPlan } from '../../services/jose/submitToJose';
 import { approvePacket } from '../../services/agentBusService';
 import { buttonToken } from '../../services/jose/joseTelegram';
@@ -193,6 +194,14 @@ describe('Telegram buttons', () => {
     setJoseRequestStatus(request.id, 'interrupted');
     expect(await press(buttonToken({ text: 'Carry on', action: 'carry_on', requestId: request.id }))).toBe('Carrying on.');
     expect(carryOnRequest).toHaveBeenCalledWith(request.id);
+  });
+
+  // Jose phase 7: Cancel beside Carry on.
+  it('Cancel cancels a request cut off when the app closed', async () => {
+    const request = createJoseRequest({ commandId: 'c3', source: 'user', text: 'x', kind: 'normal', steps: [] });
+    setJoseRequestStatus(request.id, 'interrupted');
+    expect(await press(buttonToken({ text: 'Cancel', action: 'cancel_request', requestId: request.id }))).toBe('Cancelled.');
+    expect(cancelRequest).toHaveBeenCalledWith(request.id);
   });
 });
 

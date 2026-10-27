@@ -58,6 +58,7 @@ vi.mock('../services/joseExecutionEngineService', () => ({
   isJoseIntakeCommand: vi.fn().mockReturnValue(false),
   runJoseCommandExecutionPipeline: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [] }),
   carryOnRequest: vi.fn().mockResolvedValue({ ok: true }),
+  cancelRequest: vi.fn(() => ({ ok: true, summary: 'Cancelled.' })),
 }));
 
 // ── Jose's decision and entry point (phase 2): direct by default ─────────────
@@ -195,7 +196,7 @@ import { decideJoseRoute } from '../services/jose/joseDecision';
 import { ALPHONSO_ANSWER_PROMPT } from '../services/alphonso/answerPrompt';
 import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose';
 import { createWaitingPlanRequest, createJoseRequest, setJoseRequestStatus, updateJoseStep } from '../services/jose/joseRequestStore';
-import { carryOnRequest } from '../services/joseExecutionEngineService';
+import { carryOnRequest, cancelRequest } from '../services/joseExecutionEngineService';
 import { higgsfieldResultsDoneSince, markShownInChat } from '../services/contentFactory/higgsfieldByName';
 import { addDecision } from '../services/echo/decisions';
 
@@ -925,6 +926,20 @@ describe('ChatView: everything goes to Jose', () => {
     expect(notice.textContent).toMatch(/Research the launch/);
     fireEvent.click(within(notice).getByRole('button', { name: 'Carry on' }));
     await waitFor(() => expect(carryOnRequest).toHaveBeenCalledWith(request.id));
+  });
+
+  // Jose phase 7: a request cut off when the app closed can be cancelled from the notice.
+  it('a cut-off request can be cancelled from the notice', async () => {
+    localStorage.removeItem('alphonso_jose_requests_v1');
+    const request = createJoseRequest({
+      commandId: 'c-cut2', source: 'user', text: 'Research the beach', kind: 'normal',
+      steps: [{ stepId: 'a', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [] }],
+    });
+    setJoseRequestStatus(request.id, 'interrupted');
+    render(<ChatView {...makeProps()} />);
+    await screen.findByTestId('chat-interrupted-notice');
+    fireEvent.click(screen.getByTestId(`chat-notice-cancel-${request.id}`));
+    expect(cancelRequest).toHaveBeenCalledWith(request.id);
   });
 
   // Agent roles Part C2: a request waiting for something to be set up shows there too.

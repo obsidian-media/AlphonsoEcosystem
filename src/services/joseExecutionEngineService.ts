@@ -2539,6 +2539,21 @@ function wakeWaitingFor(folder: string) {
 }
 onProjectReleased(wakeWaitingFor);
 
+export const CANCELLED_LINE = 'Cancelled by you.';
+
+/** Cancel a request that was cut off or waits for setup (Jose phase 7): it ends cancelled, its waiting packets are rejected and its projects freed. */
+export function cancelRequest(requestId: string) {
+  const request: any = getJoseRequest(requestId);
+  if (!request || (request.status !== 'interrupted' && request.status !== 'waiting_setup')) {
+    return { ok: false, summary: 'Only a request that was cut off, or that waits for something to be set up, can be cancelled here.' };
+  }
+  rejectWaitingPackets(request.commandId, CANCELLED_LINE);
+  releaseProjectsHeldBy(requestId);
+  setJoseRequestStatus(requestId, 'cancelled');
+  appendRequestNote(requestId, CANCELLED_LINE);
+  return { ok: true, summary: 'Cancelled.' };
+}
+
 /** Carry on a request the app was closed on (phase 5): steps already done are kept; a step that needs approval asks again. */
 export async function carryOnRequest(requestId: string, options: any = {}) {
   const request: any = getJoseRequest(requestId);

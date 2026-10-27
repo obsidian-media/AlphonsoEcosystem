@@ -95,7 +95,8 @@ describe('collectJoseNotifications', () => {
   it('offers Carry on for a request cut off when the app closed', () => {
     const [n] = collectJoseNotifications([request({ status: 'interrupted' })], new Set(), ALL_ON);
     expect(n.text).toBe('Cut off when the app closed: Post the launch video');
-    expect(n.buttons).toEqual([[{ text: 'Carry on', action: 'carry_on', requestId: 'r1' }]]);
+    // Jose phase 7: Cancel beside Carry on.
+    expect(n.buttons).toEqual([[{ text: 'Carry on', action: 'carry_on', requestId: 'r1' }, { text: 'Cancel', action: 'cancel_request', requestId: 'r1' }]]);
   });
 
   it('skips what was sent and what you switched off', () => {
@@ -157,6 +158,7 @@ describe('a request waiting for setup (agent roles Part A)', () => {
     const note = out.find((n) => n.kind === 'setup_needed');
     expect(note?.text).toBe('Miya needs something set up: Install Kokoro in Runtime Hub.');
     expect(note?.buttons?.[0]?.[0]).toMatchObject({ text: 'Carry on', action: 'carry_on', requestId: 'r-setup' });
+    expect(note?.buttons?.[0]?.[1]).toMatchObject({ text: 'Cancel', action: 'cancel_request', requestId: 'r-setup' });
   });
 });
 
