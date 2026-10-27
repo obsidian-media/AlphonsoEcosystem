@@ -92,6 +92,22 @@ async function run(name: string, args: Record<string, unknown>, ctx: ToolContext
       if (!saved.length) return { ok: true, text: 'No saved sources.' };
       return { ok: true, text: saved.map((b) => `- ${b.title} (${b.url})${b.summary ? `: ${b.summary}` : ''}`).join('\n') };
     }
+    case 'read_brand': {
+      // A brand's voice for Maria's brand voice check (agent roles Part C2): the named brand, else the first.
+      const { listBrands } = await import('../contentFactory/contentBrandService');
+      const brands = listBrands();
+      if (!brands.length) return { ok: false, text: 'No brand is set up. Add one in Miya Studio → Brands.' };
+      const wanted = str(args.brand).toLowerCase();
+      const brand = brands.find((b) => b.name.toLowerCase() === wanted) || brands[0];
+      const kept = (brand.lessons || []).filter((l) => !l.status || l.status === 'kept').map((l) => `- ${l.text}`);
+      return { ok: true, text: [
+        `Brand: ${brand.name}`,
+        brand.tone ? `Tone: ${brand.tone}` : '',
+        brand.audience ? `Audience: ${brand.audience}` : '',
+        brand.honestyRules ? `Rules: ${brand.honestyRules}` : '',
+        kept.length ? `Lessons to keep:\n${kept.join('\n')}` : '',
+      ].filter(Boolean).join('\n') };
+    }
     case 'read_memory': {
       // The decisions Echo keeps (agent phase 7).
       const { searchDecisions, decisionsText } = await import('../echo/recall');

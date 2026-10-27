@@ -152,3 +152,23 @@ describe('fetch_source and disguised links (agent phase 4)', () => {
     expect(fetchUrl).not.toHaveBeenCalled();
   });
 });
+
+// Agent roles Part C2: Maria's brand voice check reads the brand.
+describe('read_brand', () => {
+  beforeEach(() => localStorage.removeItem('alphonso_content_brands_v1'));
+
+  it("gives the brand's tone, audience, rules and kept lessons only", async () => {
+    const { saveBrand } = await import('../../../services/contentFactory/contentBrandService');
+    saveBrand({ name: 'Bean There', tone: 'warm and plain', audience: 'coffee lovers', honestyRules: 'never say best',
+      lessons: [{ atMs: 1, text: 'short hooks work', source: 'user' }, { atMs: 2, text: 'maybe emojis', source: 'performance', status: 'proposed' }] } as never);
+    const out = await runSkillTool('read_brand', {}, { agent: 'maria', stepInput: input });
+    expect(out.ok).toBe(true);
+    for (const part of ['Bean There', 'warm and plain', 'coffee lovers', 'never say best', 'short hooks work']) expect(out.text).toContain(part);
+    expect(out.text).not.toContain('maybe emojis');
+  });
+
+  it('says when no brand is set up', async () => {
+    expect(await runSkillTool('read_brand', {}, { agent: 'maria', stepInput: input }))
+      .toEqual({ ok: false, text: 'No brand is set up. Add one in Miya Studio → Brands.' });
+  });
+});
