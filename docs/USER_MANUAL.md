@@ -236,12 +236,16 @@ Before anything runs, the plan is checked: no step can wait for itself, every st
 - **Run this plan**, **Edit** (remove or add a step, change its agent, what it needs or its instruction; a plan that breaks the rules can't be saved), or **Cancel**
 - **Approve and carry on** a waiting step, or **Reject** it (which cancels the request)
 - **Save as template** so Jose offers the plan for similar requests
-- **Carry on** a request that was cut off when the app closed
+- **Carry on** a request that was cut off when the app closed, or **Cancel** it (also for one waiting for something to be set up)
+- **Stop** a request that is running: the step working now is stopped, what's finished is kept, and nothing new starts. A send that already went out stays sent. Chat has Stop on the progress line, and on Telegram `/stop` stops the newest one.
+- **One at a time:** requests that use the model on your computer run one after another; the board says "Queued (2nd)." for one waiting. Plain answers in Chat never wait.
+- A Miya Studio project's requests are shown together under the project's name.
 
 ### While a plan runs
 
 - **Reviews can send work back:** when a review finds problems, the work goes back to its author with the findings and is reviewed again, at most 2 rounds; then Jose asks you.
-- **Agents can ask for help:** an agent that needs something asks Jose, who picks a helper (once per step).
+- **Agents can ask for help:** an agent that needs something asks Jose, who picks a helper (once per step). Miya Studio's steps can ask too.
+- **Agents can ask for an action:** an agent that needs something sent or a file changed partway through its work asks Jose, who adds a step for Marcus or Alphonso. It waits for your approval like any send or change, and Sentinel checks it first.
 - **A larger model:** a step that keeps failing is tried once with the next larger installed model.
 - **Paid models, only if you allow them:** Settings → Approvals → **Allow paid models** (off by default, and Zero-Cost Mode must be off). A step that still fails may then be given to Claude or ChatGPT at the prices you enter; it asks first with the cost, and a monthly cap stops spending past it. Not checked with a paid account yet.
 

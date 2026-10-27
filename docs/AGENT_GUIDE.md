@@ -17,6 +17,7 @@ Alphonso has 9 specialized agents. What each may do is one table, `src/services/
 **Cannot:** Run code or publish; spend only on a paid-model step, which always asks; a plan that breaks the permission table doesn't run
 **When to use:** Everything — every message reaches Jose. "Research X, write a report and post it to Slack" becomes steps for Hector, Miya and Marcus, with the Slack step waiting for your approval. Plans are on the Requests board (System → Orchestrator → Requests).
 **Skills:** none (Jose plans; planning is not a skill step).
+**Since Jose phase 7:** plans from what you asked (earlier chat is background only); one request using the local model at a time (a queue); Stop and Cancel on the board, in Chat and on Telegram; a whole batch planned in one call; an agent can ask him for a send or a code change partway through its step, which becomes a Marcus or Alphonso step that waits for your approval; workflows and Boardroom's actions run through him and open on the board.
 
 ### Hector — Researcher
 **Role:** Finds facts and sources (including competitors' public material), with citations

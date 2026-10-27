@@ -2440,6 +2440,17 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.50 Jose phase 7: stop, cancel, a queue, and Jose for everything (2026-10-27)
+
+The last phase of the Jose redesign (design `docs/superpowers/specs/2026-10-27-jose-phase7-design.md`, plan `docs/superpowers/plans/2026-10-27-jose-phase7.md`), with the agent phases' leftovers the owner folded in.
+- **Stop** (`src/services/jose/joseStop.ts`, `src/lib/agentSignals.ts`): the running step's model call is cancelled, finished work kept, nothing new starts; a Marcus send or an approved code change finishes first; final status `stopped`. **Cancel** (`cancelRequest()` in the engine) for `interrupted` and `waiting_setup`.
+- **Queue** (`src/services/jose/joseQueue.ts`): one request that uses the local model at a time; given back on any status other than running/queued and in a wrapper's `finally`; queued requests carried on at start.
+- **Planner**: the request first, history as background; a destination only the history named is sent back. **Batches** planned in one call (`planBatch()`).
+- **Hand-offs** (`src/services/jose/joseHandoff.ts`): `ACTION: send|code` lines become Marcus or Alphonso steps through `addSecurityChecks()`; content steps can ask for help (and their re-run keeps its content data).
+- Workflows (panel and phone) through `runWorkflow()`; Boardroom's notes open their request; content videos from Telegram and schedules start a project; the board groups a project's requests (`requestGroups.ts`); `rankByResults()` in `skillPick.ts`; `node <file>` inside the step's folder (`policy_gate.rs`).
+- **Found by CI**: the two content specs that timed out only in CI did so because Sentinel's pre-send check in front of the factory's Publish failed with no model, so Publish never ran (`CONTENT-DIAG`); fixed in `addSecurityChecks()`.
+- **Checks**: CI's desktop job gains a run with `qwen2.5:1.5b` for the model specs; `jose-phase7.e2e.mjs` (Cancel seeded, Stop with a model). Deferred, written up: WhatsApp and phone approvals; Echo's decisions on several computers.
+
 ## 11.49 Agent roles Part C2: more skills and better agents (2026-10-27)
 
 The second half of Part C (plan `docs/superpowers/plans/2026-10-27-agent-roles-part-c2.md`).

@@ -390,6 +390,7 @@ jobs:
           --spec e2e-desktop/specs/marcus.e2e.mjs
           --spec e2e-desktop/specs/echo.e2e.mjs
           --spec e2e-desktop/specs/alphonso.e2e.mjs
+          --spec e2e-desktop/specs/jose-phase7.e2e.mjs
 
   desktop-macos:
     name: Tauri Desktop Build (macOS)
