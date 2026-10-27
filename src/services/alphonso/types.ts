@@ -12,6 +12,8 @@ export interface CodeFile {
   removed: number;
   /** Up to six lines, "- old" / "+ new", where the file first differs. */
   firstDiff: string[];
+  /** You changed this file on the board before approving (agent roles Part C2). */
+  editedByYou?: boolean;
 }
 
 export interface CodeCommand {
@@ -33,4 +35,6 @@ export interface CodePreview {
   /** The model that wrote it ('' = Alphonso's own). */
   model: string;
   preparedAtMs: number;
+  /** A file was edited by you before approving (agent roles Part C2). */
+  edited?: boolean;
 }

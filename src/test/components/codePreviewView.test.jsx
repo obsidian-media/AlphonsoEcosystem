@@ -1,7 +1,7 @@
 // Agent phase 6: what Alphonso's prepared change shows before you approve it.
 import React from 'react';
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { CodePreviewView } from '../../components/alphonso/CodePreviewView';
 import { classifyCommand, classifyFile } from '../../services/alphonso/changeSet';
 
@@ -38,5 +38,39 @@ describe('CodePreviewView', () => {
   it("says Alphonso's own model when no code model was set", () => {
     render(<CodePreviewView preview={{ ...preview, model: '' }} />);
     expect(screen.getByTestId('alphonso-code-preview').textContent).toContain("Model: Alphonso's own");
+  });
+});
+
+// Agent roles Part C2: you can edit a file of the change before approving it.
+describe('CodePreviewView: editing', () => {
+  it('Edit opens the file, Save hands your text over, and an edited file says so', () => {
+    const onEdit = vi.fn(() => ({ ok: true }));
+    const { rerender } = render(<CodePreviewView preview={preview} onEdit={onEdit} />);
+    fireEvent.click(screen.getByTestId('alphonso-edit-src/App.tsx'));
+    const box = screen.getByLabelText('Edit src/App.tsx');
+    expect(box.value).toBe('one\nTWO');
+    fireEvent.change(box, { target: { value: 'one\nThree' } });
+    fireEvent.click(screen.getByTestId('alphonso-edit-save'));
+    expect(onEdit).toHaveBeenCalledWith('src/App.tsx', 'one\nThree');
+    const edited = { ...preview, edited: true, files: [{ ...preview.files[0], editedByYou: true }, preview.files[1]] };
+    rerender(<CodePreviewView preview={edited} onEdit={onEdit} />);
+    expect(screen.getByTestId('alphonso-code-preview').textContent).toContain('Edited by you');
+  });
+
+  it('Cancel closes it without saving; with no onEdit there is no Edit', () => {
+    const onEdit = vi.fn(() => ({ ok: true }));
+    const { rerender } = render(<CodePreviewView preview={preview} onEdit={onEdit} />);
+    fireEvent.click(screen.getByTestId('alphonso-edit-src/App.tsx'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onEdit).not.toHaveBeenCalled();
+    rerender(<CodePreviewView preview={preview} />);
+    expect(screen.queryByTestId('alphonso-edit-src/App.tsx')).toBeNull();
+  });
+
+  it("shows why a save didn't work", () => {
+    render(<CodePreviewView preview={preview} onEdit={() => ({ ok: false, reason: 'This change has already been approved or rejected.' })} />);
+    fireEvent.click(screen.getByTestId('alphonso-edit-src/App.tsx'));
+    fireEvent.click(screen.getByTestId('alphonso-edit-save'));
+    expect(screen.getByTestId('alphonso-code-preview').textContent).toContain('This change has already been approved or rejected.');
   });
 });

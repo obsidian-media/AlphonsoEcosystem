@@ -100,5 +100,6 @@ export function describeCodeChange(p: CodePreview): string {
     parts.push(`Add ${plural(added.length, 'file')} in ${p.place.name} (${added.map((f) => f.path).join(', ')})`);
   }
   if (run.length) parts.push(`${parts.length ? 'then run' : `Run in ${p.place.name}`}: ${run.join(', ')}`);
-  return parts.join(', ') || `Nothing to change in ${p.place.name}`;
+  const line = parts.join(', ') || `Nothing to change in ${p.place.name}`;
+  return p.edited ? `${line} (edited by you)` : line;
 }
