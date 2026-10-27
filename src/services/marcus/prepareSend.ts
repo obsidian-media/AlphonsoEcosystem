@@ -6,6 +6,7 @@ import { findExactRisks, exactRiskText } from '../sentinel/exactChecks';
 import { CHANNEL_LIMITS } from './destinations';
 import { hintFromTaskType, pickDestination } from './pickDestination';
 import { NOTHING_TO_SEND, textToSend } from './sendText';
+import { readSendTime } from './sendTime';
 import type { Destination, PrepareResult, SendPreview } from './types';
 
 interface SendAssignment {
@@ -47,8 +48,13 @@ function given(payload: Record<string, unknown> | undefined): Partial<Destinatio
   return Object.keys(pick).length ? pick : undefined;
 }
 
+/** A send time the request gives but doesn't make clear (agent roles Part C2). */
+export const SEND_TIME_UNCLEAR = 'When should Marcus send it? Ask again with a day and time, like “tomorrow at 9”.';
+
 export async function prepareMarcusSend(commandId: string, assignment: SendAssignment, request: { text: string } | null): Promise<PrepareResult> {
   const requestText = String(request?.text || '');
+  const when = readSendTime(requestText, Date.now());
+  if (when && 'unclear' in when) return { ok: false, outcome: 'failed', reason: SEND_TIME_UNCLEAR };
   const input = buildStepInput(commandId, assignment as never, requestText);
   const picked = textToSend(assignment, input);
   if (!picked) return { ok: false, outcome: 'failed', reason: NOTHING_TO_SEND };
@@ -72,6 +78,7 @@ export async function prepareMarcusSend(commandId: string, assignment: SendAssig
     sourceStepId: picked.sourceStepId,
     preparedAtMs: Date.now(),
     ...(exactFacts.length ? { exactFacts } : {}),
+    ...(when && 'atMs' in when ? { sendAtMs: when.atMs } : {}),
   };
   return { ok: true, preview };
 }

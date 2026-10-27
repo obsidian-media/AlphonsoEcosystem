@@ -131,7 +131,7 @@ export function listCalendarItems(
     });
   }
   for (const send of getScheduledPublishes()) {
-    if ((send.kind && send.kind !== 'text') || send.status !== 'pending') continue;
+    if ((send.kind && send.kind !== 'text' && send.kind !== 'approved_send') || send.status !== 'pending') continue;
     items.push({
       id: `send:${send.id}`, kind: 'send',
       isShort: false, brandId: null, brandName: 'Marcus', brandColor: STUDIO_COLOR, initials: 'M',

@@ -1,6 +1,7 @@
 // The approval line for a prepared Marcus send (agent phase 5). Kept apart from the preparation so
 // pure modules (Telegram's notifications) can use it.
 import type { SendPreview } from './types';
+import { formatSendTime } from './sendTime';
 
 function quote(text: string): string {
   const t = String(text || '').trim();
@@ -25,7 +26,7 @@ export function describeSend(preview: SendPreview): string {
     case 'composio_action':
       line = `${preview.label}: ${toolWords(preview.composio?.tool || '', preview.composio?.toolkit || '')}${preview.target ? ` to ${preview.target}` : ''}: ${quote(preview.text)}`;
       break;
-    default: line = `Send to ${preview.label}: ${quote(preview.text)}`;
+    default: line = `Send to ${preview.label}${preview.sendAtMs ? ` at ${formatSendTime(preview.sendAtMs, Date.now())}` : ''}: ${quote(preview.text)}`;
   }
   if (preview.exactFacts?.length) {
     line += ` Sentinel's checks found: ${preview.exactFacts.map((f) => `${f.split(':')[0]}.`).join(' ')}`;
