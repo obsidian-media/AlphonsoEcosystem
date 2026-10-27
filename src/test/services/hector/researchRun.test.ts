@@ -100,6 +100,18 @@ describe('runResearch', () => {
     expect(reportText(out.report).startsWith('Europe has about 17 million colonies')).toBe(true);
   });
 
+  // Agent roles Part C2: his write-up follows his skill; his searches stay the request's own words.
+  it("puts his skill's instructions in the write-up, not in the searches", async () => {
+    const skill = 'Your skill: Compare products and prices\nPut the options side by side, each price with its source and date.';
+    llm.mockResolvedValueOnce(plan).mockResolvedValueOnce(writeUp('answered'));
+    search.mockResolvedValue(found(['https://a.example/x', 'https://www.usda.gov/y']));
+    await runResearch('How many colonies and why declining?', { large: false, reportId: 'hector-report-1-s', skill });
+    const writeUpPrompt = String(llm.mock.calls[1][1].prompt);
+    expect(writeUpPrompt).toContain('Put the options side by side, each price with its source and date.');
+    expect(writeUpPrompt.indexOf('Your skill:')).toBeLessThan(writeUpPrompt.indexOf('Question:'));
+    for (const call of search.mock.calls) expect(String(call[0])).not.toContain('side by side');
+  });
+
   it('a follow-up round only for what is missing, never re-reading a source', async () => {
     llm.mockResolvedValueOnce(plan).mockResolvedValueOnce(writeUp('partly', 'varroa losses Europe official statistics')).mockResolvedValueOnce(writeUp('answered', undefined, [1, 3]));
     search.mockResolvedValueOnce(found(['https://a.example/x', 'https://b.example/y'])).mockResolvedValueOnce(found(['https://a.example/x', 'https://c.example/z']));
