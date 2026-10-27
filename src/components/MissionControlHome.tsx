@@ -101,7 +101,7 @@ export function MissionControlHome({
 
   const ATTENTION_SOURCE_META: Record<AttentionItem['source'], { tab: string; cta: string; icon: React.ComponentType<{ className?: string }> }> = {
     'approval-chat': { tab: 'orchestrator', cta: 'Open Jose', icon: Crown },
-    'approval-project': { tab: 'project_execution', cta: 'Open Project Exec', icon: Sparkles },
+    'approval-project': { tab: 'project_execution', cta: 'Open Projects', icon: Sparkles },
     connector: { tab: 'connectors', cta: 'Open Connectors', icon: RadioTower },
   };
 
@@ -140,7 +140,7 @@ export function MissionControlHome({
     } else if (ollamaState === 'cors' || ollamaState === 'timeout' || ollamaState === 'error') {
       items.push({ title: 'Ollama is not answering', detail: ollamaStatus?.label || 'The last check did not get an answer', cta: 'Open Runtimes', tab: 'runtimes', icon: Terminal, accent: 'text-(--text-3)' });
     }
-    items.push({ title: 'Continue your mission', detail: 'Use Project Execution for structured work packets and proof-first planning', cta: 'Open Project Exec', tab: 'project_execution', icon: Sparkles, accent: 'text-(--accent)' });
+    items.push({ title: 'Continue your mission', detail: 'Start a project and follow its real steps', cta: 'Open Projects', tab: 'project_execution', icon: Sparkles, accent: 'text-(--accent)' });
     items.push({ title: 'Talk to Alphonso', detail: 'Direct commands, research, and Jose delegation', cta: 'Open Chat', tab: 'chat', icon: MessageSquare, accent: 'text-(--agent-alphonso)' });
     return items.slice(0, 4);
   }, [attentionItems, coachIntervention, ollamaStatus]);
