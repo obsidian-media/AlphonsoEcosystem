@@ -201,10 +201,10 @@ describe('MissionControlHome — Zone-wrapped empty state', () => {
     expect(screen.queryByText('Nothing needs you right now')).toBeNull();
   });
 
-  it('offers an Agent Pairing quick-launch card that navigates to the pairings tab', async () => {
+  it('offers a Teams quick-launch card that navigates to the pairings tab', async () => {
     (getAttentionItems as any).mockResolvedValue([]);
     render(<MissionControlHome {...baseProps} />);
-    const card = await screen.findByText('Agent Pairing');
+    const card = await screen.findByText('Teams');
     card.closest('button')!.click();
     expect(baseProps.onNavigate).toHaveBeenCalledWith('pairings');
   });

@@ -33,7 +33,7 @@ import { listSnapshots } from '../services/recoveryService';
 import { ProductionReadinessPanel } from './ProductionReadinessPanel';
 import { SelfDevelopmentPanel } from './SelfDevelopmentPanel';
 import { EcosystemMaturityPanelsGate } from './EcosystemMaturityPanelsGate';
-import { AgentPairingView } from './AgentPairingView';
+import { TeamsPage } from './teams/TeamsPage';
 import { ProjectIntakePanel } from './agentWorkshop/ProjectIntakePanel';
 import { AgentAssignmentBoard } from './agentWorkshop/AgentAssignmentBoard';
 import { AgentOutputPanel } from './agentWorkshop/AgentOutputPanel';
@@ -169,7 +169,7 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
     { id: 'queue', label: 'Queue' },
     { id: 'skills', label: 'Skills' },
     { id: 'workflows', label: 'Workflows' },
-    { id: 'pairings', label: 'Pairings' },
+    { id: 'pairings', label: 'Teams' },
     { id: 'workshop', label: 'Workshop' },
     { id: 'advanced', label: 'Advanced' },
   ];
@@ -289,7 +289,7 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
           {/* PAIRINGS TAB */}
           {showAdvancedSections === 'pairings' && (
             <div className="space-y-4">
-              <AgentPairingView />
+              <TeamsPage />
             </div>
           )}
 

@@ -57,8 +57,8 @@ vi.mock('../components/EcosystemMaturityPanelsGate', () => ({
   EcosystemMaturityPanelsGate: () => <div data-testid="maturity-gate" />
 }));
 
-vi.mock('../components/AgentPairingView', () => ({
-  AgentPairingView: () => <div data-testid="agent-pairing" />
+vi.mock('../components/teams/TeamsPage', () => ({
+  TeamsPage: () => <div data-testid="teams-page" />
 }));
 
 vi.mock('../components/WorkflowOperationsDashboard', () => ({
@@ -92,16 +92,16 @@ describe('EcosystemHub', () => {
 
   it('renders all tabs', () => {
     render(<EcosystemHub {...defaultProps} />);
-    const tabs = ['Overview', 'Queue', 'Skills', 'Workflows', 'Pairings', 'Advanced'];
+    const tabs = ['Overview', 'Queue', 'Skills', 'Workflows', 'Teams', 'Advanced'];
     tabs.forEach((tab) => {
       expect(screen.getByText(tab)).toBeDefined();
     });
   });
 
-  it('switches to Pairings tab', async () => {
+  it('switches to the Teams tab', async () => {
     render(<EcosystemHub {...defaultProps} />);
-    fireEvent.click(screen.getByText('Pairings'));
-    await waitFor(() => expect(screen.getByTestId('agent-pairing')).toBeDefined(), { timeout: 3000 });
+    fireEvent.click(screen.getByText('Teams'));
+    await waitFor(() => expect(screen.getByTestId('teams-page')).toBeDefined(), { timeout: 3000 });
   });
 
   it('switches to Queue tab', async () => {
@@ -130,7 +130,7 @@ describe('EcosystemHub', () => {
 
   it('opens directly on the Pairings tab when initialTab is "pairings" (sidebar Agent Pairing entry)', () => {
     render(<EcosystemHub {...defaultProps} initialTab="pairings" />);
-    expect(screen.getByTestId('agent-pairing')).toBeDefined();
+    expect(screen.getByTestId('teams-page')).toBeDefined();
   });
 
   it('opens directly on the Advanced (maturity) tab when initialTab is "advanced" (sidebar Maturity entry)', () => {
@@ -138,7 +138,7 @@ describe('EcosystemHub', () => {
     expect(screen.getByTestId('maturity-gate')).toBeDefined();
     expect(screen.getByTestId('production-readiness')).toBeDefined();
     expect(screen.getByTestId('self-development')).toBeDefined();
-    expect(screen.queryByTestId('agent-pairing')).toBeNull();
+    expect(screen.queryByTestId('teams-page')).toBeNull();
   });
 
   it('renders overview by default', () => {

@@ -290,7 +290,7 @@ export function MissionControlHome({
             { title: 'Connectors', detail: 'Telegram, Slack, YouTube and more', tab: 'connectors', icon: RadioTower, color: 'text-cyan-400' },
             // Developer mode only (owner, 2026-10-22).
             ...(operatorMode ? [{ title: 'Operator', detail: 'Developer tools: runtime proofs, logs, recovery', tab: 'operator', icon: Bot, color: 'text-violet-400' }] : []),
-            { title: 'Agent Pairing', detail: 'Pair agents to collaborate on tasks', tab: 'pairings', icon: Link2, color: 'text-(--agent-jose)' },
+            { title: 'Teams', detail: 'Make a team of agents for a kind of job', tab: 'pairings', icon: Link2, color: 'text-(--agent-jose)' },
           ].map((item) => (
             <button
               key={item.tab}
