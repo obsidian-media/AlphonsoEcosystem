@@ -9,6 +9,7 @@ import { describePlanSource, planJoseRequest, type JosePlan } from './josePlanne
 import { needsPlanApproval, type PlanFirstSetting } from './josePlanApproval';
 import { appendRequestNote, cancelJoseRequest, claimPlanForRun, createWaitingPlanRequest, returnPlanToWaiting, type JoseRequest } from './joseRequestStore';
 import { addSecurityChecks } from '../sentinel/addSecurityChecks';
+import { splitPerProject } from '../alphonso/splitProjects';
 import { checkPlan, type PlanStep } from './stepGraph';
 import { agentName } from './agentNames';
 import { asksToMake, scoreTemplateFit, TEMPLATE_FIT_THRESHOLD } from './joseTemplates';
@@ -68,6 +69,7 @@ function toAssignments(steps: PlanStep[], planNote: string) {
     ...(step.payload ? { payload: step.payload } : {}),
     ...(step.contentStep ? { contentStep: step.contentStep } : {}),
     ...(step.waitFor ? { waitFor: step.waitFor } : {}),
+    ...(step.project ? { project: step.project } : {}),
     // The cost reaches the approval message ("about $X.XX"; phase 4b).
     ...(Number.isFinite(step.costEstimateUsd) ? { costEstimateUsd: step.costEstimateUsd } : {}),
     title: `${agentName(step.agent)} ${step.actionType}`,
@@ -134,8 +136,9 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   onProgress?.({ stage: 'planning' });
   const allowPaidModels = input.allowPaidModels !== false;
   const planned: JosePlan = await planJoseRequest(text, { planFresh, history, allowPaidModels, templateId: input.templateId });
-  // Sentinel looks without being asked (agent phase 4): his checks join every plan.
-  const secured = addSecurityChecks(planned.steps, text);
+  // Sentinel looks without being asked (agent phase 4): his checks join every plan, after a request
+  // naming several projects gets an Alphonso step in each (agent roles Part C2).
+  const secured = addSecurityChecks(splitPerProject(planned.steps, text), text);
   const plan: JosePlan = { ...planned, steps: secured.steps };
   const planNote = [noteFor(plan), securityNote(secured)].filter(Boolean).join(' ');
   onProgress?.({ stage: 'planned', plan, planNote });
@@ -182,7 +185,7 @@ export async function submitStepsToJose(input: {
 }): Promise<any> {
   // Steps saved before 2026-10-24 go to their current owner (agent roles Part A).
   const ownedSteps = toCurrentOwners(input.steps);
-  const secured = addSecurityChecks(ownedSteps.steps, input.text);
+  const secured = addSecurityChecks(splitPerProject(ownedSteps.steps, input.text), input.text);
   const owned = { ...ownedSteps, steps: secured.steps, notes: [...ownedSteps.notes, securityNote(secured)].filter(Boolean) };
   const check = checkPlan(owned.steps, { taskTypes: true });
   if (!check.ok) return { ok: false, reason: 'plan_rejected', problems: check.problems, plan: null, planNote: '' };

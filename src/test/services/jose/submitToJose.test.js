@@ -63,6 +63,19 @@ describe("Sentinel's checks in every plan", () => {
     expect(result.planNote).toContain('Your request contains a key (ends …efgh); it was hidden from every agent.');
   });
 
+  // Agent roles Part C2: a request naming two projects gets a code step in each.
+  it('a request naming two projects gets one code step per project, each with its check', async () => {
+    const { saveProjects } = await import('../../../services/alphonso/projects');
+    saveProjects([{ name: 'shop', folder: 'D:\\code\\shop' }, { name: 'blog', folder: 'D:\\code\\blog' }]);
+    planner.mockResolvedValueOnce({ ...freshPlan, steps: [
+      { stepId: 'alphonso', agent: 'alphonso', actionType: 'local_operation', instruction: 'Change the footer.', effects: ['run'], needs: [] },
+    ] });
+    await submitToJose({ text: 'Update the footer in shop and blog', source: 'user' });
+    const assignments = pipeline.mock.calls[0][0].assignments;
+    expect(assignments.filter((a) => a.agent === 'alphonso').map((a) => [a.stepId, a.project])).toEqual([['alphonso', 'shop'], ['alphonso-2', 'blog']]);
+    expect(assignments.map((a) => a.stepId)).toEqual(expect.arrayContaining(['sentinel-code-alphonso', 'sentinel-code-alphonso-2']));
+  });
+
   it('given steps get the checks too', async () => {
     await submitStepsToJose({ text: 'Distribute', source: 'boardroom', label: 'Steps set by Boardroom.', steps: sendPlan.steps });
     expect(pipeline.mock.calls[0][0].assignments.map((a) => a.stepId)).toContain('sentinel-send-send');

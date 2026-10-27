@@ -281,6 +281,13 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(prompt).toContain(PLAN_EXAMPLE);
   });
 
+  // Agent roles Part C2.
+  it('tells Jose to plan one code step per project when several are named', async () => {
+    llm.mockResolvedValueOnce(answer([{ id: 'a', agent: 'nova', taskType: 'analysis_x', instruction: 'x', effects: ['read'] }]));
+    await planJoseRequest(PARTY);
+    expect(promptOf(0)).toContain("When the request names several of the user's projects, plan one alphonso local_operation step per project.");
+  });
+
   it('names copied placeholders so the fix round can say so', () => {
     expect(copiedPlaceholders([{ id: 'short_id', agent: 'none', taskType: 'normal' }])).toEqual([
       'Step id "short_id" is the example\'s placeholder: use your own ids.',

@@ -68,6 +68,25 @@ export function projectNamedIn(request: string, list: AlphonsoProject[] = listPr
   return hits.sort((a, b) => b.name.length - a.name.length)[0] || null;
 }
 
+/** Every project a request names (agent roles Part C2), in the order they appear; a short name
+ *  inside a longer one that was named ("shop" in "shop-admin") is not counted again. */
+export function projectsNamedIn(request: string, list: AlphonsoProject[] = listProjects()): AlphonsoProject[] {
+  const text = String(request || '');
+  const taken: [number, number][] = [];
+  const found: { project: AlphonsoProject; at: number }[] = [];
+  for (const project of [...list].sort((a, b) => b.name.length - a.name.length)) {
+    const re = new RegExp(`(^|[^\\w-])(${escape(project.name)})(?=$|[^\\w-])`, 'gi');
+    for (const m of text.matchAll(re)) {
+      const start = (m.index || 0) + m[1].length;
+      const end = start + m[2].length;
+      if (taken.some(([a, b]) => start < b && end > a)) continue;
+      taken.push([start, end]);
+      if (!found.some((f) => f.project === project)) found.push({ project, at: start });
+    }
+  }
+  return found.sort((a, b) => a.at - b.at).map((f) => f.project);
+}
+
 /** A new scratch folder: `<output folder>/<agent name>/<slug>/`, `-2` … when taken. */
 export function scratchPlace(title: string, existing: string[]): WorkPlace | { ok: false; reason: string } {
   const root = String(settings().outputFolder || '').trim();
