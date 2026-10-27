@@ -1,5 +1,6 @@
 // Echo's steps (agent phase 7): save what was decided, answer from it, forget on request.
 // His model decides what is a decision and what it replaces; nothing is made up when it fails.
+import { asksToRemember } from './memoryIntents';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { extractJsonObject } from '../../lib/jsonUtils.js';
 import { resolveSecureSessionId } from '../connectors/hermesAgentConnector';
@@ -74,12 +75,27 @@ function readDecisions(raw: string): Array<Record<string, any>> | null {
   return data.decisions.filter((d: any) => d && KINDS.includes(d.kind) && typeof d.text === 'string' && d.text.trim());
 }
 
+const flat = (text: string) => String(text || '').toLowerCase().replace(/[^\p{L}\p{N}$]+/gu, ' ').trim();
+/** A piece of work an agent wrote, copied as a "decision" (found in the real app: an email saved as one). */
+const COPY_MIN_CHARS = 60;
+const copiesWork = (text: string, work: string, request: string) => {
+  const t = flat(text);
+  return t.length >= COPY_MIN_CHARS && flat(work).includes(t) && !flat(request).includes(t);
+};
+/** "Remember that our launch …" → "Our launch …". */
+export function withoutRememberWords(text: string): string {
+  const t = String(text || '').trim().replace(/^(?:\/jose\s+)?(?:please\s+)?(?:remember|keep in mind|don'?t forget)(?:\s+that)?[,:]?\s+/i, '');
+  return t ? t[0].toUpperCase() + t.slice(1) : t;
+}
+const ASKED_TO_REMEMBER = 'The user asked you to remember something: save it as a decision, preference or instruction. When it changes a decision already saved, set "replaces" to its id.';
+
 /** Echo's model writes down what was decided; each is saved and indexed. */
 export async function extractDecisions(input: {
   request: string; work: string; changeLog?: string[]; surface: Surface; requestId?: string; stepIds?: string[]; sources?: string[]; by?: string; packetId?: string; skill?: string;
 }): Promise<{ ok: true; saved: Decision[] } | { ok: false; reason: string }> {
   const known = await searchDecisions(`${input.request} ${input.work}`, { limit: ECHO_LIMITS.shownToModel });
   const shown = new Set(known.map((d) => d.id));
+  const asked = asksToRemember(input.request);
   let problem = '';
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let raw = '';
@@ -88,8 +104,17 @@ export async function extractDecisions(input: {
     } catch (error) {
       return { ok: false, reason: String((error as Error)?.message || error) };
     }
-    const found = readDecisions(raw);
-    if (!found) { problem = 'Your last answer could not be read as the JSON asked for.'; continue; }
+    const read = readDecisions(raw);
+    if (!read) { problem = 'Your last answer could not be read as the JSON asked for.'; continue; }
+    const already = new Set(known.filter((k) => k.status === 'active').map((k) => flat(k.text)));
+    const found = read
+      .map((d): Record<string, any> => ({ ...d, text: withoutRememberWords(d.text) }))
+      .filter((d) => d.text && !copiesWork(d.text, input.work, input.request) && !already.has(flat(d.text)));
+    if (!found.length && asked) {
+      if (attempt === 0) { problem = ASKED_TO_REMEMBER; continue; }
+      // You said to remember it: keep your own words rather than nothing.
+      found.push({ kind: 'instruction', text: withoutRememberWords(input.request), topics: [] });
+    }
     const saved = found.map((d) => {
       const decision = addDecision({
         kind: d.kind,
@@ -103,7 +128,7 @@ export async function extractDecisions(input: {
           ...(input.requestId ? { requestId: input.requestId } : {}),
           ...(input.stepIds?.length ? { stepIds: input.stepIds } : {}),
           ...(input.sources?.length ? { sources: input.sources } : {}),
-          by: input.by || (input.work ? 'echo' : 'you'),
+          by: input.by || (input.work && !asked ? 'echo' : 'you'),
         },
       });
       indexDecision(decision);

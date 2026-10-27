@@ -23,6 +23,9 @@ import { legacyNeeds } from './jose/stepGraph';
 import { randomHex } from '../lib/randomId';
 import { isCodeRequest } from './jose/taskTypeMeanings';
 import { isPlainQuestion } from '../lib/chatUtils';
+import { asksToCleanUpMemory, asksToForget, asksToRemember, asksWhatWasDecided } from './echo/memoryIntents';
+
+export { asksToCleanUpMemory, asksToForget, asksToRemember, asksWhatWasDecided };
 
 const COMMAND_KEY = 'alphonso_jose_command_routes_v2';
 const SETTINGS_KEY = 'alphonso_settings';
@@ -383,28 +386,6 @@ export function asksReadiness(commandText: string): boolean {
 }
 
 /** "Audit this plan …": a review of a plan by Maria, not doing the plan (agent phase 3). */
-/** A request to remember something (agent phase 7). */
-export function asksToRemember(text: string): boolean {
-  // "Remember that …", "Please remember …", or a message that starts with "Remember"; not "Do you remember …?".
-  const t = String(text || '');
-  return /^\s*(?:\/jose\s+)?(?:please\s+)?remember\b|\b(?:remember that|please remember|don'?t forget that|keep in mind that)\b/i.test(t) && !asksToForget(t);
-}
-
-/** A request to forget a saved decision (agent phase 7). */
-export function asksToForget(text: string): boolean {
-  return /\b(forget|stop remembering)\b/i.test(String(text || '')) && !/\bdon'?t forget\b/i.test(String(text || ''));
-}
-
-/** A request to tidy memory (agent phase 7). */
-export function asksToCleanUpMemory(text: string): boolean {
-  return /\b(clean(?:\s|-)?up|tidy(?:\s+up)?)\s+(?:my\s+|the\s+)?memory\b|\bmerge (?:my\s+)?notes\b/i.test(String(text || ''));
-}
-
-/** A question about what was decided before (agent phase 7). */
-export function asksWhatWasDecided(text: string): boolean {
-  return /\bwhat (?:did (?:we|i) (?:decide|say|agree)|was decided|have we decided)\b|\bremind me what\b|\bdo you remember what\b/i.test(String(text || ''));
-}
-
 export function asksPlanReview(commandText: string): boolean {
   return PLAN_REVIEW.test(withoutQuotedContent(withoutNegations(String(commandText || '').toLowerCase())));
 }

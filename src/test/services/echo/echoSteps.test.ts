@@ -74,6 +74,45 @@ describe('saving', () => {
   });
 });
 
+// Found in the real app (2026-10-26).
+describe('saving: what the real run showed', () => {
+  it('a decision that just copies the work is not saved, nor one already saved', async () => {
+    launch();
+    const email = 'Dear Sam, The launch is on Friday the 14th and the price is $29. Let me know if you need anything!';
+    llm.mockResolvedValueOnce(say({ decisions: [
+      { kind: 'decision', text: email, topics: ['email'] },
+      { kind: 'decision', text: 'The launch is on Friday the 14th at $29.', topics: ['launch'] },
+    ] }));
+    const out = await extractDecisions({ request: 'Write a short email to Sam about the launch.', work: `[alphonso] ${email}\n\nBest regards, Alphonso`, surface: 'chat' } as never);
+    expect(out).toEqual({ ok: true, saved: [] });
+    expect(listDecisions()).toHaveLength(1);
+  });
+
+  it('"Remember that …" is saved without those words', async () => {
+    llm.mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'Remember that our launch is on Friday the 14th.', topics: ['launch'] }] }));
+    await runEchoStep(step('memory_preservation'), input('Remember that our launch is on Friday the 14th.'), ctx());
+    expect(listDecisions()[0].text).toBe('Our launch is on Friday the 14th.');
+  });
+
+  it('you asked to remember and his model saves nothing: asked once more, then your words are kept', async () => {
+    launch();
+    llm.mockResolvedValueOnce(say({ decisions: [] })).mockResolvedValueOnce(say({ decisions: [] }));
+    const r = await runEchoStep(step('memory_preservation'), input('Remember that the launch moved to Saturday the 15th.'), ctx());
+    expect(llm).toHaveBeenCalledTimes(2);
+    expect(String(llm.mock.calls[1][1].prompt)).toContain('The user asked you to remember something');
+    expect(r.summary).toBe('Remembered: The launch moved to Saturday the 15th.');
+    expect(listDecisions()[0]).toMatchObject({ kind: 'instruction', text: 'The launch moved to Saturday the 15th.', source: { by: 'you' } });
+  });
+
+  it('the retry for a remember request can still replace a saved decision', async () => {
+    const old = launch();
+    llm.mockResolvedValueOnce(say({ decisions: [] }))
+      .mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'The launch is on Saturday the 15th.', topics: ['launch'], replaces: old.id }] }));
+    await runEchoStep(step('memory_preservation'), input('Remember that the launch moved to Saturday the 15th.'), ctx());
+    expect(getDecision(old.id)!.status).toBe('replaced');
+  });
+});
+
 describe('recall', () => {
   it('nothing saved → says so and asks no model (Review Focus 1)', async () => {
     const r = await runEchoStep(step('memory_recall'), input('What did we decide about the launch?'), ctx());
