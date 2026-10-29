@@ -13,6 +13,7 @@
 //   ALPHONSO_LIVE_TAVILY_KEY_FILE / ALPHONSO_LIVE_BRAVE_KEY_FILE  search keys for Hector
 //   ALPHONSO_LIVE_PEXELS_KEY_FILE / _PIXABAY_KEY_FILE / _COVERR_KEY_FILE  stock footage keys (free)
 //   ALPHONSO_LIVE_NVIDIA_KEY_FILE / ALPHONSO_LIVE_GEMINI_KEY_FILE  free-tier cloud model keys
+//   ALPHONSO_LIVE_COMPOSIO_KEY_FILE       a Composio API key (read only: its toolkits are listed)
 // Each key is read from its file here and typed into the test app's Settings, as a user would;
 // it lives only in this run's throwaway profile. The Slack check posts one real message; the
 // ElevenLabs check makes one short voice-over (one line), after its estimate is approved.
@@ -44,6 +45,7 @@ const CLOUD_KEYS = {
   nvidia_nim: { key: readKey(process.env.ALPHONSO_LIVE_NVIDIA_KEY_FILE), placeholder: 'nvapi-...', saved: /nvidia nim key saved/i, tab: 'NVIDIA NIM' },
   gemini: { key: readKey(process.env.ALPHONSO_LIVE_GEMINI_KEY_FILE), placeholder: 'AIza...', saved: /gemini key saved/i, tab: 'Gemini' },
 };
+const COMPOSIO_KEY = readKey(process.env.ALPHONSO_LIVE_COMPOSIO_KEY_FILE);
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 
 const savedRequests = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
@@ -165,7 +167,7 @@ async function marcusSends(name, text, label) {
 
 describe('Alphonso desktop: the live check with your own accounts', () => {
   before(async function () {
-    if (![...Object.values(STOCK_KEYS), ...Object.values(CLOUD_KEYS)].some((s) => s.key) && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
+    if (![...Object.values(STOCK_KEYS), ...Object.values(CLOUD_KEYS)].some((s) => s.key) && !COMPOSIO_KEY && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
     await enterShell();
   });
 
@@ -440,4 +442,26 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     console.log('LIVE cloud', JSON.stringify(results));
     for (const [id] of providers) expect(results[id].reply).toMatch(/paris/i);
   }).timeout(900000);
+
+  // Composio, read only: Save checks the key with Composio and lists the toolkits. Nothing runs.
+  it('checks your Composio key and lists its toolkits', async function () {
+    if (!COMPOSIO_KEY) this.skip();
+    await $('[aria-label="Open settings"]').click();
+    const connectors = await $('//nav//button[normalize-space(.)="Connectors"]');
+    await connectors.waitForClickable({ timeout: 30000 });
+    await connectors.click();
+    const field = await $('input[placeholder="Enter Composio API key"]');
+    await field.waitForDisplayed({ timeout: 30000 });
+    await field.scrollIntoView();
+    await field.setValue(COMPOSIO_KEY);
+    await (await $('//input[@placeholder="Enter Composio API key"]/following::button[1]')).click();
+    let text = '';
+    await browser.waitUntil(async () => {
+      text = await mainText();
+      return /Available Toolkits \((\d+)\)/.test(text) || /composio.*(fail|invalid|error|unauthor)/i.test(text);
+    }, { timeout: 120000, interval: 2000, timeoutMsg: 'Composio gave no answer' });
+    const count = Number((text.match(/Available Toolkits \((\d+)\)/) || [])[1] || 0);
+    console.log('LIVE composio', JSON.stringify({ toolkits: count, healthy: !/composio.*(fail|invalid|error|unauthor)/i.test(text) }));
+    expect(count).toBeGreaterThan(0);
+  }).timeout(300000);
 });
