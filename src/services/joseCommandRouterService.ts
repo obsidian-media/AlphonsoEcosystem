@@ -725,7 +725,10 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
   const normalized = dedupeAssignments(assignments).map((assignment) => ({
     ...assignment,
     decomposition: assignment.fragments?.length ? assignment.fragments : [clean],
-    costClass: connectorCost?.class || 'unknown'
+    // A step's own cost, never the request's: naming Notion held Alphonso's local writing step
+    // too (QA batch 1). Jose's gate below holds the paid part; the send asks anyway, and the
+    // connector gate refuses a paid call that wasn't approved.
+    costClass: 'unknown'
   }));
 
   if (zeroCostMode && intents.paidConnector) {
@@ -796,7 +799,7 @@ export function createStepPacket(command: JoseCommand, assignment: JoseCommandAs
       policy: {
         zeroCostMode: Boolean(command.policy?.zeroCostMode),
         blockedByZeroCostMode: Boolean(assignment.blockedByZeroCostMode),
-        costClass: assignment.costClass || command.parser?.connectorCost?.class || 'unknown'
+        costClass: assignment.costClass || 'unknown'
       }
     },
     source: 'jose-command-router',

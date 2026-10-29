@@ -59,12 +59,28 @@ const stepOutputs = async () => JSON.parse(await browser.execute(() => localStor
 const savedProjects = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_projects_v1') || '[]'));
 
 async function installedModels() {
-  try {
-    const r = await fetch('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(3000) });
-    return r.ok ? ((await r.json()).models || []).map((m) => m.name) : [];
-  } catch {
-    return [];
+  // A busy Ollama can take more than a few seconds to list its models: a short single try left
+  // the test model unset, and the app planned with a 0.6B model instead (QA batch 1).
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      const r = await fetch('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(10000) });
+      if (r.ok) return ((await r.json()).models || []).map((m) => m.name);
+    } catch { /* tried again below */ }
+    await new Promise((done) => setTimeout(done, 5000));
   }
+  return [];
+}
+
+/** The test model when it is installed, else {} (the app's own choice). */
+async function testModel() {
+  return (await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {};
+}
+
+/** Fails when the app isn't on the model the test set. */
+async function expectModel(model) {
+  if (!model.selectedModel) return;
+  const using = await browser.execute(() => JSON.parse(localStorage.getItem('alphonso_settings') || '{}').selectedModel);
+  if (using !== model.selectedModel) throw new Error(`the app is on ${using}, not the test model ${model.selectedModel}`);
 }
 
 async function useSettings(values) {
@@ -135,8 +151,9 @@ async function connectorLog(id) {
 
 /** Sends one Chat request and waits until `ready(request)` says it got far enough. */
 async function askInChat(text, ready, what) {
-  const model = (await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {};
+  const model = await testModel();
   await useSettings({ showPlanFirst: 'never', ...model });
+  await expectModel(model);
   await warmSelectedModel();
   const before = new Set((await savedRequests()).map((r) => r.id));
   await $('[data-testid="sidebar-chat-shortcut"]').click();
@@ -183,7 +200,7 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
 
   it('posts one approved message to your Slack channel, exactly once', async function () {
     if (!SLACK_TOKEN || !SLACK_CHANNEL || !(await ollamaHasModels())) this.skip();
-    const model = (await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {};
+    const model = await testModel();
     await useSettings({ showPlanFirst: 'never', ...model });
     await saveConnectorField('xoxb-...', SLACK_TOKEN, { '#team (optional)': SLACK_CHANNEL });
     await browser.waitUntil(async () => /slack saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'Slack was not saved' });
