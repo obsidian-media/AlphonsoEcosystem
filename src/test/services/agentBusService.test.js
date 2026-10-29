@@ -63,6 +63,14 @@ describe('agentBusService', () => {
   });
 
   describe('createAgentPacket', () => {
+    // QA batch 1: the check when a step runs needs its model to let a paid model spend.
+    it('keeps the step model, and leaves it out when there is none', () => {
+      const paid = createAgentPacket({ fromAgent: 'jose', toAgent: 'hector', title: 't', packetType: 'task', payload: {}, effects: ['read', 'spend'], model: 'claude:claude-haiku-5-5' });
+      expect(paid.model).toBe('claude:claude-haiku-5-5');
+      const plain = createAgentPacket({ fromAgent: 'jose', toAgent: 'hector', title: 't', packetType: 'task', payload: {} });
+      expect('model' in plain).toBe(false);
+    });
+
     it('creates packet with generated id', () => {
       const packet = createAgentPacket({
         fromAgent: 'jose',

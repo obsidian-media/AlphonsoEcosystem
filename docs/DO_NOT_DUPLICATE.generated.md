@@ -372,7 +372,7 @@ Source-backed inventory: 328 services and 177 components. Human purpose descript
 | service | `src/services/jose/quotedContent.ts` | `CONTENT_AFTER`, `NOT_A_SEND`, `QUOTED`, `quotedPieces`, `withoutQuotedContent` |
 | service | `src/services/jose/requestGroups.ts` | `groupRequests`, `RequestGroup` |
 | service | `src/services/jose/reviewStep.ts` | `ReviewStepResult`, `runReviewStep` |
-| service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
+| service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `MIYA_PAID_STEPS`, `PlanStep`, `stepMaySpend` |
 | service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_PROJECT_SOURCES`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/jose/taskTypeMeanings.ts` | `CODE_TASK_PREFIXES`, `isCodeRequest`, `isCodeTask`, `needsFacts`, `planningMenu`, `refersToAProject`, `TASK_TYPE_MEANINGS`, `taskTypesFor` |
@@ -387,7 +387,7 @@ Source-backed inventory: 328 services and 177 components. Human purpose descript
 | service | `src/services/marcus/describeSend.ts` | `describeSend` |
 | service | `src/services/marcus/destinations.ts` | `CHANNEL_LIMITS`, `CONNECTOR_NAMES`, `DESTINATION_KEYS`, `destinationsFor`, `isAllowedTarget`, `listedN8nWorkflows`, `MARCUS_CONNECTORS`, `requestWithoutQuotes`, `targetLabel`, `telegramOwnerChatId` |
 | service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `MARCUS_MODEL_FAILED`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `pickDestination` |
-| service | `src/services/marcus/prepareSend.ts` | `describeSend`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason` |
+| service | `src/services/marcus/prepareSend.ts` | `describeSend`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason`, `unfilledGaps`, `unfilledReason` |
 | service | `src/services/marcus/readiness.ts` | `checkReadiness` |
 | service | `src/services/marcus/runSend.ts` | `ALREADY_SENT`, `COMPOSIO_NOT_READY`, `runMarcusSend`, `WHATSAPP_24H` |
 | service | `src/services/marcus/sendText.ts` | `NOTHING_TO_SEND`, `sourceStep`, `textToSend` |
@@ -399,7 +399,7 @@ Source-backed inventory: 328 services and 177 components. Human purpose descript
 | service | `src/services/maria/mariaPlanReview.ts` | `contradiction`, `LOW_WITH_APPROVAL`, `parsePlanReview`, `PlanReview`, `planReviewPrompt`, `planReviewText`, `Risk`, `runMariaPlanReview` |
 | service | `src/services/maria/mariaTypes.ts` | `MARIA_SECURITY_LINE`, `MariaAssignment`, `MariaStepResult` |
 | service | `src/services/maria/mariaWeekly.ts` | `askMariaWeeklyRisks`, `MARIA_WEEKLY_LABEL` |
-| service | `src/services/maria/mariaWorkReview.ts` | `findingStrings`, `MARIA_NO_REVIEW`, `parseWorkReview`, `runMariaWorkReview`, `WorkFinding`, `WorkReview`, `workReviewPrompt`, `workReviewText` |
+| service | `src/services/maria/mariaWorkReview.ts` | `findingStrings`, `givenByRequest`, `MARIA_NO_REVIEW`, `parseWorkReview`, `runMariaWorkReview`, `WorkFinding`, `WorkReview`, `workReviewPrompt`, `workReviewText` |
 | service | `src/services/maria/workContext.ts` | `FILE_LIMITS`, `NO_SOURCES`, `workDependencyFiles`, `WorkFile`, `workFiles`, `workResults`, `WorkSource`, `workSources`, `workSteps` |
 | service | `src/services/mariaAuditService.ts` | `MariaAuditOptions`, `runMariaGovernanceAudit` |
 | service | `src/services/mediaStorageService.ts` | `cleanOldStaged`, `NO_STORAGE`, `removeStaged`, `STAGED_PREFIX`, `stagedKey`, `stageFile`, `StageResult`, `STORAGE_CONNECTOR`, `storageConfig`, `StorageConfig`, `storageConfigured`, `StoragePart`, `StorageTestResult`, `testStorage` |

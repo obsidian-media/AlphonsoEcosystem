@@ -89,6 +89,8 @@ export interface JoseCommandPolicy {
 }
 
 export interface JoseCommandAssignment {
+  /** The step's model (phase 4): an Ollama model or a paid `claude:`/`chatgpt:` one. */
+  model?: string;
   /** Wait for you before this step runs, saying why (phase 6b). */
   waitFor?: string;
   agent: string;
@@ -801,7 +803,9 @@ export function createStepPacket(command: JoseCommand, assignment: JoseCommandAs
     commandPreview: assignment.commandPreview,
     fileChangePreview: 'No file changes are executed by routing. Agent must report back to Jose.',
     rollbackAvailable: false,
-    effects: assignment.effects
+    effects: assignment.effects,
+    // A paid model may spend when the step runs (QA batch 1: the run check had no model).
+    ...(assignment.model ? { model: assignment.model } : {})
   });
   recordOrchestrationQueueTransition({
     commandId: command.id,

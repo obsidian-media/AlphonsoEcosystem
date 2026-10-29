@@ -85,6 +85,20 @@ function findCycle(steps: PlanStep[]): string[] {
  * contracts never allowed (recorded in DEFERRED_WORK, 2026-10-23).
  */
 /** A paid model chosen for a step: "claude:<model>" or "chatgpt:<model>" (phase 4). */
+/** Miya's steps paid through a gated connector (Runway, ElevenLabs, Higgsfield), approved once with the estimate. */
+export const MIYA_PAID_STEPS = ['creative_video_clips', 'creative_shorts', 'creative_voice', 'creative_sfx', 'creative_scenes', 'creative_thumbnails', 'creative_carousel', 'creative_higgsfield', 'creative_character_train'];
+
+/**
+ * Spending a step may do besides the permission table (phase 4, content factory 2b-4c): a step on a
+ * paid model (the model call Jose arranges) and Miya's paid content steps. Both always ask. The plan
+ * check and the check when the step runs both use this (QA batch 1: the second didn't, so every paid
+ * Miya step failed right after you approved it).
+ */
+export function stepMaySpend(step: { agent?: string; actionType?: string; model?: unknown }): boolean {
+  if (isPaidModelId(step.model)) return true;
+  return step.agent === 'miya' && MIYA_PAID_STEPS.includes(String(step.actionType || ''));
+}
+
 export function isPaidModelId(model?: unknown): boolean {
   return typeof model === 'string' && /^(claude|chatgpt):/.test(model);
 }
@@ -115,11 +129,7 @@ export function checkPlan(steps: PlanStep[], options: { taskTypes?: boolean; req
     for (const effect of s.effects) {
       if (effect === 'run' && s.agent !== 'alphonso') problems.push(`Step "${s.stepId}": only Alphonso may run code and commands.`);
       else if (effect === 'publish_or_send' && s.agent !== 'marcus') problems.push(`Step "${s.stepId}": only Marcus may publish or send anything outside.`);
-      // A paid-model step's spending is the model call Jose arranges; it always asks (phase 4).
-      else if (effect === 'spend' && isPaidModelId(s.model)) continue;
-      // Miya's AI clips through Runway (content factory phase 2b): paid through the gated Runway
-      // connector, approved once per run with the estimate. Only that step, only Miya.
-      else if (effect === 'spend' && s.agent === 'miya' && (s.actionType === 'creative_video_clips' || s.actionType === 'creative_shorts' || s.actionType === 'creative_voice' || s.actionType === 'creative_sfx' || s.actionType === 'creative_scenes' || s.actionType === 'creative_thumbnails' || s.actionType === 'creative_carousel' || s.actionType === 'creative_higgsfield' || s.actionType === 'creative_character_train')) continue;
+      else if (effect === 'spend' && stepMaySpend(s)) continue;
       else if (!isEffectAllowed(s.agent, effect)) problems.push(`Step "${s.stepId}": ${name} may not ${EFFECT_LABELS[effect].toLowerCase()}.`);
     }
     if (typeof options.request === 'string' && isCodeTask(s.actionType, s.effects) && !isCodeRequest(options.request) && !isCodeRequest(s.instruction || '')) {

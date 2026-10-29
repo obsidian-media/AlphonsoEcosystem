@@ -1,5 +1,6 @@
 import { AGENT_PERMISSION_TABLE, isEffectAllowed, taskTypePartAllowed } from './jose/agentPermissionTable';
 import { EFFECT_LABELS, type JoseEffect } from './jose/joseEffects';
+import { stepMaySpend } from './jose/stepGraph';
 
 const AGENTS: Record<string, string> = {
   ALPHONSO: 'alphonso',
@@ -36,6 +37,8 @@ export interface AgentContractPacket {
   commandPreview?: string;
   /** Declared effects (Jose steps since 2026-10-23); checked against the table instead of guessing from words. */
   effects?: JoseEffect[];
+  /** The step's model: a paid model may spend (`stepMaySpend()`). */
+  model?: string | null;
 }
 
 export interface ContractValidationResult {
@@ -67,7 +70,8 @@ export function validateAgentExecutionContract(packet: AgentContractPacket): Con
   const blockedByPrefix = parts.some((part) => !contract.allowedActionPrefixes.includes(part) && startsWithAny(part, contract.blockedActionPrefixes));
   if (Array.isArray(packet.effects)) {
     // A task that declares its effects is checked against the table, not its words.
-    const notAllowed = packet.effects.filter((effect) => !isEffectAllowed(toAgent, effect));
+    const notAllowed = packet.effects.filter((effect) => !isEffectAllowed(toAgent, effect)
+      && !(effect === 'spend' && stepMaySpend({ agent: toAgent, actionType: action, model: packet.model })));
     if (notAllowed.length > 0) {
       return { ok: false, reason: `${toAgent} may not: ${notAllowed.map((e) => EFFECT_LABELS[e]).join(', ')}.` };
     }
