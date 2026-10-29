@@ -187,9 +187,13 @@ async function askInChat(text, ready, what) {
 /** One request whose Marcus send waits with `label`, approved on the board, then finished. */
 async function marcusSends(name, text, label) {
   const settled = (s) => ['waiting_approval', 'done', 'failed', 'setup_needed'].includes(s?.status);
-  let request = await askInChat(text, (r) => settled(r.steps.find((s) => s.agent === 'marcus')), `${name}: Marcus's send`);
-  const marcus = request.steps.find((s) => s.agent === 'marcus');
-  console.log(`LIVE ${name} before`, JSON.stringify({ status: marcus.status, label: marcus.sendPreview?.label, chars: marcus.sendPreview?.text?.length, error: marcus.error }));
+  // The send step, not any Marcus step: a plan may also give him a readiness check, which is done at once.
+  const sendStep = (r) => r.steps.find((s) => s.agent === 'marcus' && (s.effects || []).includes('publish_or_send'))
+    || r.steps.find((s) => s.agent === 'marcus');
+  let request = await askInChat(text, (r) => settled(sendStep(r)), `${name}: Marcus's send`);
+  const marcus = sendStep(request);
+  console.log(`LIVE ${name} before`, JSON.stringify({ status: marcus.status, label: marcus.sendPreview?.label, chars: marcus.sendPreview?.text?.length, error: marcus.error,
+    steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, (s.effects || []).join('+'), s.status]) }));
   expect(marcus.status).toBe('waiting_approval');
   expect(marcus.sendPreview?.label).toBe(label);
   await approveOnBoard(marcus.stepId);
@@ -197,7 +201,7 @@ async function marcusSends(name, text, label) {
     request = (await savedRequests()).find((r) => r.id === request.id);
     return !['running', 'waiting_approval', 'queued'].includes(request.status);
   }, { timeout: 600000, interval: 3000, timeoutMsg: `${name}: the request did not finish after approval` });
-  const done = request.steps.find((s) => s.agent === 'marcus');
+  const done = request.steps.find((s) => s.stepId === marcus.stepId);
   const output = (await stepOutputs())[request.commandId]?.steps?.[done.stepId];
   return { done, output };
 }

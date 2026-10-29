@@ -145,11 +145,24 @@ function writeAllCredentials(creds: ConnectorCredentials): void {
   }
 }
 
+const credentialListeners = new Set<(connectorId: string) => void>();
+
+/** Called with the connector's id whenever one of its keys is saved. A screen that stays open
+ *  (Chat's provider tabs) re-checks then: inside the one app window it never gets focus back
+ *  (QA batch 1). Returns a function that stops listening. */
+export function onConnectorCredentialsChanged(listener: (connectorId: string) => void): () => void {
+  credentialListeners.add(listener);
+  return () => { credentialListeners.delete(listener); };
+}
+
 export function saveConnectorCredential(connectorId: string, key: string, value: unknown): void {
   const all = readAllCredentials();
   if (!all[connectorId]) all[connectorId] = {};
   all[connectorId][key] = String(value || '').trim();
   writeAllCredentials(all);
+  for (const listener of [...credentialListeners]) {
+    try { listener(connectorId); } catch { /* one screen's error must not stop a save */ }
+  }
 }
 
 export function getConnectorCredential(connectorId: string, key: string): string {

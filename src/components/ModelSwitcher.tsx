@@ -377,7 +377,12 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
     // (e.g. ChatView never unmounts) wouldn't otherwise be picked up until
     // a remount — re-check whenever the window regains focus.
     window.addEventListener('focus', checkConfigured);
-    return () => { cancelled = true; window.removeEventListener('focus', checkConfigured); };
+    // Inside the app window focus never comes back after Settings, so a saved key says so itself (QA batch 1).
+    let stopListening = () => {};
+    import('../services/connectors/connectorAuth')
+      .then((m) => { if (cancelled) return; stopListening = m.onConnectorCredentialsChanged(checkConfigured); })
+      .catch(() => { /* focus still re-checks */ });
+    return () => { cancelled = true; window.removeEventListener('focus', checkConfigured); stopListening(); };
   }, [agentId]);
 
   const isConfigured = (id: ModelProviderId) => {
