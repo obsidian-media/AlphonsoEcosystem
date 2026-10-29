@@ -7,7 +7,7 @@ vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: vi.fn() }));
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { saveConnectorCredential } from '../../../services/connectors/connectorAuth';
 import { setStepOutput } from '../../../services/jose/joseStepOutputs';
-import { prepareMarcusSend, describeSend, isMarcusSendStep, tooLongReason, SEND_TIME_UNCLEAR } from '../../../services/marcus/prepareSend';
+import { prepareMarcusSend, describeSend, isMarcusSendStep, tooLongReason, unfilledReason, SEND_TIME_UNCLEAR } from '../../../services/marcus/prepareSend';
 import { NOTHING_TO_SEND } from '../../../services/marcus/sendText';
 
 const llm = vi.mocked(generateAgentLlmResponse);
@@ -84,6 +84,25 @@ describe('prepareMarcusSend', () => {
     const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'discord', target: '#news' } }), { text: '/jose post it to Discord #news' });
     expect(got).toEqual({ ok: false, outcome: 'fix', reason: 'Too long for Discord #news: 2,413 characters; the limit is 2,000.', sourceStepId: 'write' });
     expect(tooLongReason('Discord #news', 2413, 2000)).toBe('Too long for Discord #news: 2,413 characters; the limit is 2,000.');
+  });
+
+  // QA batch 1 (live Slack check, 2026-10-29): a 7B model wrote "[placeholder] The check passed."
+  // and only Sentinel's garbled hold stopped it going out.
+  it('a gap left to fill → fix for the step he sends from, nothing asked', async () => {
+    for (const gap of ['[placeholder]', '[Your Name]', '[insert date]']) {
+      setStepOutput('c1', 'write', 'alphonso', { summary: `${gap} The check passed.` } as never);
+      const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
+      expect(got).toEqual({ ok: false, outcome: 'fix', reason: unfilledReason([gap]), sourceStepId: 'write' });
+    }
+    expect(unfilledReason(['[placeholder]'])).toBe('Fill in [placeholder] before it is sent: use the request, or write it without that part.');
+  });
+
+  it('brackets that are not a gap are sent as they are', async () => {
+    for (const text of ['See [the docs](https://example.com).', 'Release [v2.10] is out.', 'Open Saturday [updated].']) {
+      setStepOutput('c1', 'write', 'alphonso', { summary: text } as never);
+      const got: any = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
+      expect(got.ok).toBe(true);
+    }
   });
 
   it('not set up → setup', async () => {

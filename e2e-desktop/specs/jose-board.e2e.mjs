@@ -51,11 +51,12 @@ async function send(text) {
 
 const savedRequests = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
 
-describe('Alphonso desktop: Jose plan board', () => {
+describe('Alphonso desktop: Jose plan board', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(400000);
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(400000);
     const model = (await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {};
     await useSettings({ ...model, showPlanFirst: 'always' });
     await warmSelectedModel();
@@ -63,14 +64,13 @@ describe('Alphonso desktop: Jose plan board', () => {
   });
 
   it('stops at a plan card when the plan is shown first', async function () {
-    this.timeout(600000);
     await send(REQUEST);
     const card = await $('[data-testid="jose-plan-card"]');
     await card.waitForExist({ timeout: 550000, timeoutMsg: 'Jose never showed his plan' });
     expect((await card.$$('[data-testid="jose-plan-step"]')).length).toBeGreaterThan(0);
     const [request] = (await savedRequests()).slice(-1);
     expect(request.status).toBe('waiting_plan_approval');
-  });
+  }).timeout(600000);
 
   it('opens the plan on the board and saves an edit in the change log', async () => {
     await buttonByText('Edit on the board').click();
@@ -89,7 +89,6 @@ describe('Alphonso desktop: Jose plan board', () => {
   });
 
   it('runs the approved plan and the board shows it finish', async function () {
-    this.timeout(1200000);
     await buttonByText('Run this plan').click();
     await browser.waitUntil(async () => {
       const [request] = (await savedRequests()).slice(-1);
@@ -99,10 +98,9 @@ describe('Alphonso desktop: Jose plan board', () => {
     expect(['done', 'waiting_approval']).toContain(request.status);
     expect(request.steps.some((s) => s.status === 'done')).toBe(true);
     expect(request.changeLog.some((c) => /should do/.test(c.text))).toBe(true);
-  });
+  }).timeout(1200000);
 
   it('runs straight away when set to Never', async function () {
-    this.timeout(1200000);
     await useSettings({ showPlanFirst: 'never' });
     await openChat();
     const before = (await savedRequests()).length;
@@ -115,5 +113,5 @@ describe('Alphonso desktop: Jose plan board', () => {
     const [request] = (await savedRequests()).slice(-1);
     expect(request.status).not.toBe('waiting_plan_approval');
     expect((await $$('[data-testid="jose-plan-card"]')).length).toBe(cardsBefore);
-  });
+  }).timeout(1200000);
 });

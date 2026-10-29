@@ -21,13 +21,14 @@ async function useSettings(values) {
 
 const savedRequests = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
 
-describe('Alphonso desktop Jose approvals', () => {
+describe('Alphonso desktop Jose approvals', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(400000);
   let requestId = null;
 
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(400000);
     // Reading asks first, so the research step waits for approval.
     await useSettings({ showPlanFirst: 'never', approvalMode: true, effectApprovals: { read: true } });
     await warmSelectedModel();
@@ -35,7 +36,6 @@ describe('Alphonso desktop Jose approvals', () => {
   });
 
   it('turns a command into a request that waits for approval, and opens it on the board', async function () {
-    this.timeout(900000);
     const before = new Set((await savedRequests()).map((r) => r.id));
     const commandTab = await $('//main//button[normalize-space(.)="Command"]');
     await commandTab.click();
@@ -56,10 +56,9 @@ describe('Alphonso desktop Jose approvals', () => {
     const request = (await savedRequests()).find((r) => r.id === requestId);
     expect(request.source).toBe('user');
     expect(request.steps.some((s) => s.agent === 'hector')).toBe(true);
-  });
+  }).timeout(900000);
 
   it('runs the request to the end once its steps are approved on the board', async function () {
-    this.timeout(1800000);
     for (let round = 0; round < 10; round += 1) {
       const current = (await savedRequests()).find((r) => r.id === requestId);
       if (current.status !== 'waiting_approval') break;
@@ -75,5 +74,5 @@ describe('Alphonso desktop Jose approvals', () => {
     const finished = (await savedRequests()).find((r) => r.id === requestId);
     expect(finished.status).toBe('done');
     expect(finished.steps.find((s) => s.agent === 'hector').status).toBe('done');
-  });
+  }).timeout(1800000);
 });

@@ -55,7 +55,6 @@ describe('Alphonso desktop: Jose phase 7', () => {
   });
 
   it('a running request is stopped from Chat and ends "stopped"', async function () {
-    this.timeout(1200000);
     if (!(await ollamaHasModels())) this.skip();
     const extra = { showPlanFirst: 'never', ...((await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {}) };
     await useSettings(extra);
@@ -78,5 +77,5 @@ describe('Alphonso desktop: Jose phase 7', () => {
     expect(request.status).toBe('stopped');
     expect(request.steps.some((s) => s.status === 'stopped' || s.status === 'not_run')).toBe(true);
     expect(request.changeLog.at(-1).text).toBe('Stopped by you.');
-  });
+  }).timeout(1200000);
 });

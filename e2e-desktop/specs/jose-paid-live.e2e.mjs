@@ -84,7 +84,6 @@ describe('Alphonso desktop: a real paid-model step (live)', () => {
   });
 
   it('saves the key in Connectors, as a user would', async function () {
-    this.timeout(120000);
     await $('[aria-label="Open settings"]').click();
     await browser.waitUntil(async () => /API CREDENTIALS|General/.test(await mainText()), { timeout: 30000 });
     await buttonByText('Connectors').click();
@@ -96,10 +95,9 @@ describe('Alphonso desktop: a real paid-model step (live)', () => {
     const section = await field.$('./ancestor::div[contains(@class, "rounded-2xl")][1]');
     await (await section.$('.//button[contains(normalize-space(.), "Save")]')).click();
     await browser.waitUntil(async () => /key saved/i.test(await mainText()), { timeout: 30000, timeoutMsg: 'the key was not saved' });
-  });
+  }).timeout(120000);
 
   it('runs a paid step after you approve the spend, and records what it cost', async function () {
-    this.timeout(600000);
     await useSettings({
       zeroCostMode: false, approvalMode: true, showPlanFirst: 'always',
       paidModels: { allowed: true, provider: PROVIDER, model: '', inputPerMillionUsd: INPUT_PRICE, outputPerMillionUsd: OUTPUT_PRICE, monthlyCapUsd: 0.1 },
@@ -118,10 +116,9 @@ describe('Alphonso desktop: a real paid-model step (live)', () => {
     const done = (await savedRequests()).find((r) => r.id === requestId);
     expect(done.steps[0].status).toBe('done');
     expect(await spentThisMonth()).toBeGreaterThan(before);
-  });
+  }).timeout(600000);
 
   it('refuses a paid step that would pass the monthly cap, before sending anything', async function () {
-    this.timeout(600000);
     const spent = await spentThisMonth();
     await useSettings({
       zeroCostMode: false, approvalMode: true, showPlanFirst: 'always',
@@ -140,5 +137,5 @@ describe('Alphonso desktop: a real paid-model step (live)', () => {
     expect(request.steps[0].status).not.toBe('done');
     expect(JSON.stringify(request)).toMatch(/monthly cap/);
     expect(await spentThisMonth()).toBe(spent);
-  });
+  }).timeout(600000);
 });

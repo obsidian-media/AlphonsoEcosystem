@@ -97,7 +97,6 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
   });
 
   it('posts one approved message to your Slack channel, exactly once', async function () {
-    this.timeout(2400000);
     if (!SLACK_TOKEN || !SLACK_CHANNEL || !(await ollamaHasModels())) this.skip();
     const model = (await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {};
     await useSettings({ showPlanFirst: 'never', ...model });
@@ -131,15 +130,22 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     }, { timeout: 600000, interval: 3000, timeoutMsg: 'the request did not finish after approval' });
     const done = request.steps.find((s) => s.agent === 'marcus');
     const output = (await stepOutputs())[request.commandId]?.steps?.[done.stepId];
-    console.log('LIVE slack after', JSON.stringify({ request: request.status, step: done.status, summary: output?.summary, platformId: output?.schema?.platformId }));
+    // What stopped it, if anything: the step's own reason and the app's Slack log (event names only).
+    const audit = await browser.execute(() => {
+      try {
+        const rows = JSON.parse(localStorage.getItem('alphonso_connector_audit_v2') || '[]');
+        return rows.filter((r) => r.connectorId === 'slack' || r.connector === 'slack').slice(-8)
+          .map((r) => [r.eventType || r.event || r.type, r.details?.reason || r.details?.error || r.error || r.reason || null]);
+      } catch { return []; }
+    });
+    console.log('LIVE slack after', JSON.stringify({ request: request.status, step: done.status, error: done.error, summary: output?.summary, platformId: output?.schema?.platformId, audit }));
     expect(done.status).toBe('done');
     expect(output.summary).toContain(`Sent to Slack ${SLACK_CHANNEL}.`);
     expect(output.schema?.platformId).toBeTruthy();
     expect(done.sentAtMs).toBeGreaterThan(0);
-  });
+  }).timeout(2400000);
 
   it('makes one short ElevenLabs voice-over after its estimate is approved, and records the cost', async function () {
-    this.timeout(1800000);
     if (!ELEVEN_KEY || !(ELEVEN_PRICE > 0) || !(SPEND_CAP > 0)) this.skip();
     const outputFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'alphonso-live-voice-'));
     try {
@@ -203,10 +209,19 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
       await approveOnBoard(waiting.stepId);
 
       let voice;
-      await browser.waitUntil(async () => {
-        voice = (await savedProjects()).find((p) => p.id === project.id)?.steps?.voice;
-        return ['done', 'failed'].includes(voice?.status);
-      }, { timeout: 900000, interval: 3000, timeoutMsg: 'the voice step did not finish' });
+      try {
+        await browser.waitUntil(async () => {
+          voice = (await savedProjects()).find((p) => p.id === project.id)?.steps?.voice;
+          return ['done', 'failed'].includes(voice?.status);
+        }, { timeout: 900000, interval: 3000 });
+      } catch {
+        const after = (await savedRequests()).find((r) => r.id === request.id);
+        console.log('LIVE eleven stuck', JSON.stringify({
+          voice: { status: voice?.status, error: voice?.error, progress: voice?.progress },
+          request: after?.status, steps: after?.steps.map((s) => [s.stepId, s.status, s.error]),
+        }));
+        throw new Error('the voice step did not finish');
+      }
       const chosen = voice.versions?.[voice.versions.length - 1]?.output;
       const spent = await browser.execute(() => { try { return JSON.parse(localStorage.getItem('alphonso_jose_spend_v1') || '{}').totalUsd || 0; } catch { return 0; } });
       console.log('LIVE eleven after', JSON.stringify({ status: voice.status, error: voice.error, engine: chosen?.engine, note: chosen?.note, words: (chosen?.words || []).length, spent }));
@@ -217,5 +232,5 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     } finally {
       fs.rmSync(outputFolder, { recursive: true, force: true });
     }
-  });
+  }).timeout(1800000);
 });

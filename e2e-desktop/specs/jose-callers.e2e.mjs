@@ -22,18 +22,18 @@ const savedRequests = async () => JSON.parse(await browser.execute(() => localSt
 const newRequest = async (before) => (await savedRequests()).find((r) => !before.has(r.id));
 const settled = (request) => request && !['running', 'waiting_plan_approval'].includes(request.status);
 
-describe('Alphonso desktop: every caller goes through Jose', () => {
+describe('Alphonso desktop: every caller goes through Jose', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(400000);
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(400000);
     // Nothing but the locked kinds asks, so the requests run to the end.
     await useSettings({ showPlanFirst: 'always', approvalMode: true, effectApprovals: {} });
     await warmSelectedModel();
   });
 
   it("a schedule's Run now makes a request that runs without showing its plan first", async function () {
-    this.timeout(1200000);
     // Off and far in the future, so only Run now runs it.
     await browser.execute(() => {
       const now = Date.now();
@@ -58,10 +58,9 @@ describe('Alphonso desktop: every caller goes through Jose', () => {
     expect(request.runOptions.allowPaidModels).toBe(false);
     expect(request.steps.some((s) => String(s.model || '').includes(':'))).toBe(false);
     expect(request.status).toBe('done');
-  });
+  }).timeout(1200000);
 
   it("Boardroom's Creative brief is a one-step request set by Boardroom", async function () {
-    this.timeout(900000);
     const before = new Set((await savedRequests()).map((r) => r.id));
     await $('[data-testid="space-pill-boardroom"]').click();
     await $('[data-testid="sidebar-nav-mission_room"]').click();
@@ -80,5 +79,5 @@ describe('Alphonso desktop: every caller goes through Jose', () => {
     expect(request.plan.source).toBe('given');
     expect(request.plan.note).toBe('Steps set by Boardroom.');
     expect(request.steps.map((s) => s.agent)).toEqual(['miya']);
-  });
+  }).timeout(900000);
 });

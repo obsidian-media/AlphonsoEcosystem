@@ -51,6 +51,18 @@ function given(payload: Record<string, unknown> | undefined): Partial<Destinatio
   return Object.keys(pick).length ? pick : undefined;
 }
 
+// A gap the writer left to fill (QA batch 1: a 7B model wrote "[placeholder] The check passed.").
+// Only words that mark a gap count, so a link "[text](url)" or "[v2.10]" is sent as it is.
+const GAP = /\[(?:placeholder|insert[^\]\n]{0,40}|your [^\]\n]{1,40}|[^\]\n]{0,30}\bname|date|time|link|url|tbd|todo|x{2,})\](?!\()/gi;
+
+export function unfilledGaps(text: string): string[] {
+  return [...new Set(String(text || '').match(GAP) || [])];
+}
+
+export function unfilledReason(gaps: string[]): string {
+  return `Fill in ${gaps.join(', ')} before it is sent: use the request, or write it without that part.`;
+}
+
 /** A send time the request gives but doesn't make clear (agent roles Part C2). */
 export const SEND_TIME_UNCLEAR = 'When should Marcus send it? Ask again with a day and time, like “tomorrow at 9”.';
 
@@ -74,6 +86,9 @@ export async function prepareMarcusSend(commandId: string, assignment: SendAssig
   if (limit && picked.text.length > limit) {
     return { ok: false, outcome: 'fix', reason: tooLongReason(where.destination.label, picked.text.length, limit), sourceStepId: picked.sourceStepId };
   }
+  // A gap goes back to the step he sends from, like text too long for the channel.
+  const gaps = unfilledGaps(picked.text);
+  if (gaps.length) return { ok: false, outcome: 'fix', reason: unfilledReason(gaps), sourceStepId: picked.sourceStepId };
   // The final text may be a revision Sentinel didn't review: his exact checks run on it here.
   const exactFacts = findExactRisks(picked.text, { links: 'sent' }).filter((r) => SERIOUS.has(r.kind)).map(exactRiskText);
   const preview: SendPreview = {
