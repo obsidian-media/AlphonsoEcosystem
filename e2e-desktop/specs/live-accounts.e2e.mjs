@@ -11,6 +11,7 @@
 //   ALPHONSO_LIVE_NOTION_PAGE_FILE        a file holding the id of a page shared with it
 //   ALPHONSO_LIVE_CLICKUP_KEY_FILE / ALPHONSO_LIVE_CLICKUP_LIST_FILE  a ClickUp key and a test list id
 //   ALPHONSO_LIVE_TAVILY_KEY_FILE / ALPHONSO_LIVE_BRAVE_KEY_FILE  search keys for Hector
+//   ALPHONSO_LIVE_PEXELS_KEY_FILE / _PIXABAY_KEY_FILE / _COVERR_KEY_FILE  stock footage keys (free)
 // Each key is read from its file here and typed into the test app's Settings, as a user would;
 // it lives only in this run's throwaway profile. The Slack check posts one real message; the
 // ElevenLabs check makes one short voice-over (one line), after its estimate is approved.
@@ -33,6 +34,11 @@ const CLICKUP_KEY = readKey(process.env.ALPHONSO_LIVE_CLICKUP_KEY_FILE);
 const CLICKUP_LIST = readKey(process.env.ALPHONSO_LIVE_CLICKUP_LIST_FILE);
 const TAVILY_KEY = readKey(process.env.ALPHONSO_LIVE_TAVILY_KEY_FILE);
 const BRAVE_KEY = readKey(process.env.ALPHONSO_LIVE_BRAVE_KEY_FILE);
+const STOCK_KEYS = {
+  pexels: { key: readKey(process.env.ALPHONSO_LIVE_PEXELS_KEY_FILE), placeholder: 'Your Pexels API key', saved: /pexels key saved/i },
+  pixabay: { key: readKey(process.env.ALPHONSO_LIVE_PIXABAY_KEY_FILE), placeholder: 'Your Pixabay API key', saved: /pixabay key saved/i },
+  coverr: { key: readKey(process.env.ALPHONSO_LIVE_COVERR_KEY_FILE), placeholder: 'Your Coverr API key', saved: /coverr key saved/i },
+};
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 
 const savedRequests = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
@@ -154,7 +160,7 @@ async function marcusSends(name, text, label) {
 
 describe('Alphonso desktop: the live check with your own accounts', () => {
   before(async function () {
-    if (!SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
+    if (!Object.values(STOCK_KEYS).some((s) => s.key) && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
     await enterShell();
   });
 
@@ -345,4 +351,47 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     expect(hector.status).toBe('done');
     expect(sources.length).toBeGreaterThan(0);
   }).timeout(2400000);
+
+  // Miya's B-roll step: search each stock source you have a key for and download one clip, through
+  // the same backend commands the step uses (fixed endpoints, those download hosts only).
+  it('finds and downloads a stock clip from each source you have a key for', async function () {
+    const sources = Object.entries(STOCK_KEYS).filter(([, s]) => s.key);
+    if (!sources.length) this.skip();
+    const outputFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'alphonso-live-stock-'));
+    try {
+      await keepOutputFolder(outputFolder);
+      const results = {};
+      for (const [source, s] of sources) {
+        await saveConnectorField(s.placeholder, s.key);
+        await browser.waitUntil(async () => s.saved.test(await mainText()), { timeout: 60000, timeoutMsg: `${source} was not saved` });
+        const body = await invoke('content_stock_search', { request: { source, query: 'ocean waves', orientation: 'landscape', apiKey: s.key } });
+        const hits = source === 'pexels' ? (body?.videos || []) : (body?.hits || body?.videos || []);
+        const first = hits[0];
+        const url = source === 'pexels'
+          ? (first?.video_files || []).filter((f) => f.file_type === 'video/mp4').sort((a, b) => a.width - b.width)[0]?.link
+          : source === 'pixabay' ? (first?.videos?.small?.url || first?.videos?.medium?.url) : first?.urls?.mp4_download;
+        const relPath = `broll/live-${source}.mp4`;
+        let downloaded = 0;
+        let error = null;
+        if (url) {
+          try {
+            await invoke('content_download_media', { request: {
+              workspaceRoot: outputFolder, url, relPath,
+              ...(source === 'coverr' ? { coverrId: String(first.id), apiKey: s.key } : {}),
+            } });
+            const file = path.join(outputFolder, relPath);
+            downloaded = fs.existsSync(file) ? fs.statSync(file).size : 0;
+          } catch (e) { error = String(e?.message || e).slice(0, 200); }
+        }
+        results[source] = { hits: hits.length, downloadedBytes: downloaded, error };
+      }
+      console.log('LIVE stock', JSON.stringify(results));
+      for (const [source] of sources) {
+        expect(results[source].hits).toBeGreaterThan(0);
+        expect(results[source].downloadedBytes).toBeGreaterThan(50000);
+      }
+    } finally {
+      fs.rmSync(outputFolder, { recursive: true, force: true });
+    }
+  }).timeout(900000);
 });
