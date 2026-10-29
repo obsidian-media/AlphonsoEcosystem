@@ -13,7 +13,7 @@ vi.mock('../../../services/connectors/connectorOutbound', () => ({
   sendSlackMessage: vi.fn(),
 }));
 import { sendSlackMessage } from '../../../services/connectors/connectorOutbound';
-import { slackReason, SLACK_REASONS } from '../../../services/marcus/runSend';
+import { slackReason, SLACK_REASONS, clickupReason, CLICKUP_REASONS } from '../../../services/marcus/runSend';
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { requireApproval } from '../../../services/approval/approvalService';
@@ -130,6 +130,25 @@ describe('runMarcusSend', () => {
     expect(getJoseRequest(`jose-request-${commandId}`)?.steps[0].sentAtMs).toBeGreaterThan(0);
     expect(await runMarcusSend(commandId, 'marcus', p())).toEqual({ ok: false, sentence: ALREADY_SENT });
     expect(sendSlackMessage).toHaveBeenCalledTimes(1);
+  });
+});
+
+// QA batch 1 (live ClickUp check): the list ID field held the workspace number, and the board
+// showed ClickUp's "Team not authorized", which doesn't say what to fix.
+describe('clickupReason', () => {
+  it("turns ClickUp's refusals into what to do, and keeps anything else as ClickUp said it", () => {
+    expect(clickupReason('Team not authorized')).toBe(CLICKUP_REASONS.not_your_list);
+    expect(clickupReason('HTTP 401: {"err":"Team not authorized","ECODE":"OAUTH_027"}')).toBe(CLICKUP_REASONS.not_your_list);
+    expect(CLICKUP_REASONS.not_your_list).toContain('/li/');
+    expect(clickupReason('Oauth token not found')).toBe(CLICKUP_REASONS.bad_key);
+    expect(clickupReason('Failed to fetch')).toBe('Failed to fetch');
+  });
+
+  it('a refused ClickUp send says what to fix', async () => {
+    vi.mocked(outbound.sendClickUpConnectorTask).mockResolvedValueOnce({ ok: false, error: 'Team not authorized' } as never);
+    const result = await runMarcusSend(fresh(), 'marcus', p({ connector: 'clickup', target: '', kind: 'task', title: 'Note', label: 'ClickUp' }));
+    expect(result.ok).toBe(false);
+    expect(result.sentence).toBe(`Not sent to ClickUp: ${CLICKUP_REASONS.not_your_list}.`);
   });
 });
 

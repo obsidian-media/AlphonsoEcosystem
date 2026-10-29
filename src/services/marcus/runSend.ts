@@ -26,6 +26,20 @@ export function slackReason(error: string): string {
   return known ? SLACK_REASONS[known] : String(error || '');
 }
 
+/** What to do when ClickUp refuses a task (QA batch 1: the list ID field held the workspace
+ *  number, and the board showed ClickUp's "Team not authorized"). */
+export const CLICKUP_REASONS = {
+  not_your_list: "ClickUp says your API key can't reach that list: check the default list ID in Settings → Connectors → ClickUp. It is the number after /li/ in the list's address, not the workspace number",
+  bad_key: 'ClickUp refused the API key: paste a current personal API key (pk_…) in Settings → Connectors → ClickUp',
+} as const;
+
+export function clickupReason(error: string): string {
+  const said = String(error || '');
+  if (/team not authorized|OAUTH_02[57]/i.test(said)) return CLICKUP_REASONS.not_your_list;
+  if (/oauth token not found|token invalid|OAUTH_01[0-9]/i.test(said)) return CLICKUP_REASONS.bad_key;
+  return said;
+}
+
 const notSent = (label: string, reason: string): SendResult => ({ ok: false, sentence: `Not sent to ${label}: ${reason.replace(/\.$/, '')}.` });
 
 /** Whether a step's send already went out; sets the mark before sending when not. */
@@ -103,7 +117,7 @@ async function send(preview: SendPreview, commandId: string): Promise<SendResult
     case 'clickup': {
       const { sendClickUpConnectorTask } = await import('../connectors/connectorOutbound');
       const r = await sendClickUpConnectorTask({ title: preview.title || text.split('\n')[0].slice(0, 80), content: text, listId: target || setting('clickup', 'CLICKUP_LIST_ID') }, options) as { ok?: boolean; error?: string; externalId?: string };
-      if (!r?.ok) return notSent(label, String(r?.error || 'ClickUp refused it'));
+      if (!r?.ok) return notSent(label, clickupReason(String(r?.error || 'ClickUp refused it')));
       const link = r.externalId ? `https://app.clickup.com/t/${r.externalId}` : null;
       return { ok: true, sentence: link ? `ClickUp task made: ${link}` : 'ClickUp task made.', link, platformId: r.externalId || null };
     }

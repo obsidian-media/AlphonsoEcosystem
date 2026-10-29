@@ -474,7 +474,16 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
           for (const t of await $$(`button[title="${c.tab}"]`)) if (await t.isDisplayed({ withinViewport: true })) { tab = t; return true; }
           return false;
         }, { timeout: 30000, timeoutMsg: `Chat's ${c.tab} tab is not on screen` });
-        await tab.waitForClickable({ timeout: 30000 });
+        await tab.waitForClickable({ timeout: 30000 }).catch(async (e) => {
+          // Say what stopped it: the tab off, or something on top of it (QA batch 1).
+          const why = await browser.execute((el) => {
+            const r = el.getBoundingClientRect();
+            const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { disabled: el.disabled, title: el.title, rect: [r.left, r.top, r.width, r.height].map(Math.round),
+              onTop: top === el ? 'the tab itself' : top ? `${top.tagName} ${top.getAttribute('data-testid') || ''} ${String(top.className).slice(0, 80)} ${(top.innerText || '').slice(0, 120)}` : null };
+          }, tab);
+          throw new Error(`${e.message}; ${JSON.stringify(why)}`);
+        });
         await tab.click();
         // The picker chooses the provider's first model once its list loads.
         await browser.waitUntil(async () => {

@@ -1250,7 +1250,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               { label: 'Where Marcus sends: default list ID', placeholder: 'Found in the list URL (optional)', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
             ]}
             onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
-            hint="Find your API key under ClickUp Settings → Apps. The Default List ID is optional — Alphonso can target any list per task."
+            hint="Find your API key under ClickUp Settings → Apps. The default list ID is optional: open the list in ClickUp and copy the number after /li/ in its address (not the workspace number)."
             savedLabel="ClickUp credentials saved" />
 
           <CredentialSection title="YouTube" icon={Video} borderColor="border-red-300/20" bgColor="bg-red-500/8" accentColor="text-red-400"

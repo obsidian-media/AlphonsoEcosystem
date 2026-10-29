@@ -389,7 +389,7 @@ Source-backed inventory: 328 services and 177 components. Human purpose descript
 | service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `MARCUS_MODEL_FAILED`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `notSetUp`, `pickDestination` |
 | service | `src/services/marcus/prepareSend.ts` | `describeSend`, `FIX_ROUNDS_USED`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason`, `unfilledGaps`, `unfilledReason` |
 | service | `src/services/marcus/readiness.ts` | `checkReadiness` |
-| service | `src/services/marcus/runSend.ts` | `ALREADY_SENT`, `COMPOSIO_NOT_READY`, `runMarcusSend`, `SLACK_REASONS`, `slackReason`, `WHATSAPP_24H` |
+| service | `src/services/marcus/runSend.ts` | `ALREADY_SENT`, `CLICKUP_REASONS`, `clickupReason`, `COMPOSIO_NOT_READY`, `runMarcusSend`, `SLACK_REASONS`, `slackReason`, `WHATSAPP_24H` |
 | service | `src/services/marcus/sendText.ts` | `NOTHING_TO_SEND`, `sourceStep`, `textToSend` |
 | service | `src/services/marcus/sendTime.ts` | `formatSendTime`, `readSendTime`, `SendTime` |
 | service | `src/services/marcus/types.ts` | `Destination`, `MarcusConnector`, `PrepareResult`, `SendKind`, `SendPreview`, `SendResult` |
