@@ -932,6 +932,7 @@ pub fn run() {
       connector_check_local_runtime_health,
       connector_hermes_agent_request,
       connector_nvidia_request,
+      connector_composio_request,
       workspace::transcribe_audio_file,
       workspace::read_workspace_file,
       workspace::read_workspace_image,
