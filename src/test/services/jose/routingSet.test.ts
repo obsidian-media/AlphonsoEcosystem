@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 import { scoreTemplateFit, TEMPLATE_FIT_THRESHOLD, asksToMake } from '../../../services/jose/joseTemplates';
 import { isCodeRequest } from '../../../services/jose/taskTypeMeanings';
+import { saveProjects } from '../../../services/alphonso/projects';
 import { NEEDS_OUTPUT_FOLDER } from '../../../services/contentFactory/contentFromChat';
 
 type Part = [agent: string, actionType: string];
@@ -88,6 +89,18 @@ describe('the routing set: the rule plan gives each part to its owner', () => {
   for (const [text, expected] of RULE_PLAN) {
     it(text, () => expect(sorted(partsOf(text))).toEqual(sorted(expected)));
   }
+
+  // QA batch 0 (CI, 2026-10-27): when the model's plan fails, the rule plan must still give a file
+  // change in a saved project to Alphonso's code step, not to writing.
+  it('a file change in a saved project is code in the rule plan', () => {
+    saveProjects([{ name: 'shop', folder: 'D:\\code\\shop' }] as never);
+    try {
+      expect(partsOf('In shop, add a file notes.txt that says hello.')).toEqual([['alphonso', 'local_operation']]);
+      expect(partsOf('Write a short post about our shop opening')).toEqual([['alphonso', 'assistant_write']]);
+    } finally {
+      saveProjects([]);
+    }
+  });
 
   it('a writing step reads the research, and the check reviews the writing', () => {
     const steps = decomposeJoseCommand(parseJoseCommand('Research three facts about honeybees, write a short post about them, and have the post checked for accuracy'));

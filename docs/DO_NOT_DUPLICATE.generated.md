@@ -199,7 +199,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/alphonso/editChange.ts` | `EDIT_NOT_IN_CHANGE`, `EDIT_TOO_LATE`, `editCodeFile` |
 | service | `src/services/alphonso/prepareCode.ts` | `ALPHONSO_NO_PLAN`, `askAlphonso`, `codeModelFor`, `FOLDER_GONE`, `MODEL_DIDNT_ANSWER`, `NEEDS_TO_KNOW`, `prepareAlphonsoCode`, `PrepareCode`, `safePath`, `WHICH_PROJECT` |
 | service | `src/services/alphonso/projectLock.ts` | `busyLine`, `claimProject`, `onProjectReleased`, `projectHolder`, `releaseProject`, `releaseProjectsHeldBy` |
-| service | `src/services/alphonso/projects.ts` | `AlphonsoProject`, `getCodeModel`, `listProjects`, `NAME_A_PROJECT`, `NEEDS_OUTPUT_FOLDER`, `NO_PROJECT`, `projectNamedIn`, `projectPlace`, `projectsNamedIn`, `saveProjects`, `scratchPlace`, `WorkPlace` |
+| service | `src/services/alphonso/projects.ts` | `AlphonsoProject`, `asksForProjectWork`, `getCodeModel`, `listProjects`, `NAME_A_PROJECT`, `NEEDS_OUTPUT_FOLDER`, `NO_PROJECT`, `projectNamedIn`, `projectPlace`, `projectsNamedIn`, `saveProjects`, `scratchPlace`, `WorkPlace` |
 | service | `src/services/alphonso/readProject.ts` | `listProjectFiles`, `ProjectFile`, `readProjectFiles` |
 | service | `src/services/alphonso/runCode.ts` | `applyChangeSet`, `CommandRun`, `runAlphonsoCode`, `runApprovedCommands` |
 | service | `src/services/alphonso/splitProjects.ts` | `splitPerProject` |

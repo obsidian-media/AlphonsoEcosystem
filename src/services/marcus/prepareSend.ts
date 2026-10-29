@@ -27,7 +27,9 @@ const SERIOUS = new Set(['key', 'password_request', 'disguised_link']);
 export function isMarcusSendStep(assignment: SendAssignment | null | undefined): boolean {
   if (!assignment || String(assignment.agent || '').toLowerCase() !== 'marcus') return false;
   if (assignment.contentStep) return false;
-  if (assignment.actionType === 'outreach_call' || assignment.actionType === 'distribution_schedule_posts') return false;
+  // The content factory's posting steps carry `contentStep` (above). A planned posting step
+  // without it is an ordinary send, prepared before it asks (QA batch 0).
+  if (assignment.actionType === 'outreach_call') return false;
   return Array.isArray(assignment.effects) && assignment.effects.includes('publish_or_send');
 }
 

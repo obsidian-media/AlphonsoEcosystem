@@ -17,7 +17,7 @@ import { listInstalledModels } from './joseModels';
 import { paidModelAvailable, paidModelId, estimateCostUsd, PAID_MAX_OUTPUT_TOKENS, PAID_PROMPT_ALLOWANCE_CHARS } from './joseSpend';
 import { getAgentProvider } from '../modelSelectionService';
 import { CONNECTOR_NAMES } from '../marcus/destinations';
-import { listProjects } from '../alphonso/projects';
+import { asksForProjectWork, listProjects } from '../alphonso/projects';
 import type { MarcusConnector } from '../marcus/types';
 
 export interface JosePlan {
@@ -71,6 +71,9 @@ const PLACEHOLDER_TASKS = new Set(['normal', 'project', 'task type', 'tasktype']
  * the accuracy check asked for. The same words the simple plan reads: a send, a readiness check, a
  * check of the writing, a review of a plan.
  */
+/** A request asking which option to choose, do first or is worth it (QA batch 0); "the value of" is not one. */
+const ASKS_WHICH_FIRST = /\bprioriti[sz]e\b|\bwhich\b[^.?!]*\b(?:first|best|should|worth)\b|\bworth\s+(?:going\s+after|pursuing|doing)\b|\brank\s+(?:them|these|the\s+options)\b/i;
+
 export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' | 'effects' | 'actionType'>>): string[] {
   const has = (agent: string, test: (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) => boolean = () => true) =>
     steps.some((st) => st.agent === agent && test(st));
@@ -85,6 +88,10 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   const problems: string[] = [];
   if (parsed.intents.check && parsed.intents.writing && !has('maria')) {
     problems.push('The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.');
+  }
+  // QA batch 0: asking which option to choose or do first is Nova's judgment.
+  if (ASKS_WHICH_FIRST.test(text) && !has('nova')) {
+    problems.push('The request asks which option to choose: add a nova step with the task type opportunity_analysis.');
   }
   // Agent phase 7: remembering, forgetting and tidying memory are Echo's steps.
   const echoDoes = (types: string[]) => has('echo', (st) => types.includes(String(st.actionType)));
@@ -107,7 +114,8 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   // Agent phase 6: a code request needs Alphonso's code step; plain writing needs no research.
   const codeStep = (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) =>
     CODE_TASK_PREFIXES.some((prefix) => String(st.actionType || '').startsWith(prefix));
-  if (isCodeRequest(text) && !isPlainQuestion(text) && !has('alphonso', codeStep)) {
+  // QA batch 0: changing a file in a saved project is code work too, whatever the file type.
+  if ((isCodeRequest(text) || asksForProjectWork(text)) && !isPlainQuestion(text) && !has('alphonso', codeStep)) {
     problems.push('The request asks for code: add an alphonso step with the task type local_operation.');
   }
   // Writing or code that needs no facts gets no research step (agent phase 6).

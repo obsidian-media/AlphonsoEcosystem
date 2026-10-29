@@ -35,6 +35,13 @@ describe('isMarcusSendStep', () => {
     expect(isMarcusSendStep(marcus({ contentStep: { projectId: 'p', step: 'publish' } }))).toBe(false);
     expect(isMarcusSendStep({ ...(marcus() as object), agent: 'alphonso' } as never)).toBe(false);
   });
+
+  // QA batch 0 (CI, 2026-10-27): a planner gave "post this to Slack" the content factory's
+  // posting type; with no content data it is an ordinary send and must be prepared before it asks.
+  it('a posting step without Miya Studio data is an ordinary send', () => {
+    expect(isMarcusSendStep(marcus({ actionType: 'distribution_schedule_posts' }))).toBe(true);
+    expect(isMarcusSendStep(marcus({ actionType: 'distribution_schedule_posts', contentStep: { projectId: 'p', step: 'publish' } }))).toBe(false);
+  });
 });
 
 describe('prepareMarcusSend', () => {

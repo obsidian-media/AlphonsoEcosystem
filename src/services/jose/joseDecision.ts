@@ -5,7 +5,7 @@
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §4 step 2
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { isPlainQuestion, shouldRouteThroughJose } from '../../lib/chatUtils';
-import { asksToCleanUpMemory, asksToForget, asksToRemember } from '../joseCommandRouterService';
+import { asksToCleanUpMemory, asksToForget, asksToRemember, parseJoseCommand } from '../joseCommandRouterService';
 import { parseTeamRequest } from './teams';
 
 export const DECISION_TIMEOUT_MS = 20000;
@@ -36,6 +36,12 @@ function readDecision(raw: string): { route: 'direct' | 'plan'; reason: string }
   return null;
 }
 
+/** How many different kinds of work a message asks for: research, writing, a check, a send, code. */
+function kindsOfWork(text: string): number {
+  const { intents } = parseJoseCommand(text);
+  return [intents.research, intents.writing, intents.check, intents.publishing, intents.localExecution].filter(Boolean).length;
+}
+
 export async function decideJoseRoute(text: string, options: { history?: { role: string; content: string }[] } = {}): Promise<JoseRouteDecision> {
   const value = String(text || '').trim();
   if (EXPLICIT_JOSE.test(value)) return { route: 'plan', source: 'rule', reason: 'Asked Jose by name.' };
@@ -44,6 +50,9 @@ export async function decideJoseRoute(text: string, options: { history?: { role:
   // Agent phase 7: remembering, forgetting and tidying memory are Echo's steps.
   if (asksToRemember(value) || asksToForget(value) || asksToCleanUpMemory(value)) return { route: 'plan', source: 'rule', reason: 'A memory request: Echo does that.' };
   if (isPlainQuestion(value)) return { route: 'direct', source: 'rule', reason: 'A plain question.' };
+  // QA batch 0: research, writing, a check, a send or code: two or more of them can't be one reply,
+  // whatever the model thinks (a small model answered such a request in Chat).
+  if (kindsOfWork(value) >= 2) return { route: 'plan', source: 'rule', reason: 'Several kinds of work.' };
 
   const recent = (options.history || []).slice(-4).map((m) => `${m.role}: ${String(m.content).slice(0, 300)}`).join('\n');
   const prompt = [

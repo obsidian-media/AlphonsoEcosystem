@@ -2442,6 +2442,13 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.52 QA batch 0: main's local-model check made green (2026-10-28)
+
+The owner chose desktop QA with the deferred items folded in, in batches, before the new phases; batch 0 makes `main` green. The only red job was the desktop run with `qwen2.5:1.5b` (added in Jose phase 7), failing in five specs. Each failure was read from the run's log (run 40531686234):
+- **App bugs, fixed with a failing test first:** Echo's meaning search read `http_status` while `OllamaModelsProof` is camelCase (`meaning.ts`; never worked in the app); `isMarcusSendStep()` skipped every `distribution_schedule_posts` step, so a planned send with that type asked before Marcus prepared it (only Miya Studio's steps, which carry `contentStep`, skip it now); a file change in a saved project wasn't code work (`asksForProjectWork()` in `alphonso/projects.ts`, used by `missingAsked()` and the rule plan); a request with two or more kinds of work could be answered directly (`kindsOfWork()` in `joseDecision.ts` plans it by rule); a "which first" request planned without Nova passed (`ASKS_WHICH_FIRST` in `missingAsked()`).
+- **The small model's limits, said in the spec:** Echo's recall answers left out the price and the old date although both were given to the model; those two assertions call `needsLargerModel()` and skip below 3B.
+- **Test timing:** the carousel spec waits for the Posts list; agent-skills waits up to 120 s for the Orchestrator page (it passed on `main`, failed on the PR).
+
 ## 11.51 v2.10.0 released (2026-10-27)
 
 The owner asked for a whole documentation pass after Jose phase 7, then the tag, the release and the installers.

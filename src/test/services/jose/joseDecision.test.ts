@@ -40,6 +40,20 @@ describe('decideJoseRoute: answer directly or plan', () => {
     expect(llm).not.toHaveBeenCalled();
   });
 
+  // QA batch 0 (CI, 2026-10-27): a small model answered "research …, write …, and have it
+  // checked" in one reply. Two or more kinds of work can't be one reply: planned by rule.
+  it('plans a message asking for two or more kinds of work without asking the model', async () => {
+    for (const text of [
+      'Research three facts about honeybees, write a short post about them, and have the post checked for accuracy. Do not send it anywhere.',
+      'Write a note that we open at 9 and post it to Slack #news',
+    ]) {
+      expect(await decideJoseRoute(text)).toMatchObject({ route: 'plan', source: 'rule' });
+    }
+    expect(llm).not.toHaveBeenCalled();
+    llm.mockResolvedValueOnce(says('direct'));
+    expect(await decideJoseRoute('Write a short poem about the sea')).toMatchObject({ source: 'model' });
+  });
+
   it("tells Jose's model that remember, forget and clean up are planned", async () => {
     llm.mockResolvedValueOnce(says('plan'));
     await decideJoseRoute('Our launch is on Friday the 14th, keep that for later.');

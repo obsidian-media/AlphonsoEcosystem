@@ -186,6 +186,18 @@ export async function openPage(space, item) {
   await nav.click();
 }
 
+/** A check that judges what a model wrote (not what the app did) needs a model of at least
+ * `minB` billion parameters. CI's model run uses a 1.5B model (`ALPHONSO_E2E_MODEL`), which saves
+ * and passes on decisions correctly but leaves facts out of its answers (QA batch 0). Skips the
+ * rest of the check with the reason when the model is smaller; the checks before it still ran. */
+export function needsLargerModel(ctx, why, minB = 3) {
+  const model = String(process.env.ALPHONSO_E2E_MODEL || '');
+  const size = Number((model.match(/:(\d+(?:\.\d+)?)b/i) || [])[1]);
+  if (!model || !Number.isFinite(size) || size >= minB) return;
+  console.log(`SKIPPED (needs a ${minB}B+ model, this run uses ${model}): ${why}`);
+  ctx.skip();
+}
+
 /** Clicks Chat's Send once it has taken the typed text: a long chat re-renders slowly, and a
  * click on the still-disabled button sends nothing (found by the Maria and Sentinel runs, 2026-10-26). */
 export async function clickSend() {

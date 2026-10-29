@@ -83,9 +83,11 @@ async function index(pending: Decision[], extra?: (s: MeaningState) => void): Pr
 async function prepare(extra?: (s: MeaningState) => void): Promise<void> {
   if (!meaningEnabled()) { setState({ kind: 'off' }, extra); return; }
   const endpoint = getConfiguredOllamaEndpoint();
-  let listed: { http_status?: number | null; models?: { name: string }[] } | null = null;
+  // The backend's OllamaModelsProof is camelCase (`httpStatus`); reading `http_status` made the
+  // meaning search say "Needs Ollama running" with Ollama up (found by CI, QA batch 0).
+  let listed: { httpStatus?: number | null; models?: { name: string }[] } | null = null;
   try { listed = await invoke('ollama_list_models', { endpoint }); } catch { listed = null; }
-  if (!listed?.http_status) { setState({ kind: 'no_ollama' }, extra); return; }
+  if (!listed?.httpStatus) { setState({ kind: 'no_ollama' }, extra); return; }
   const has = (listed.models || []).some((m) => m.name === ECHO_EMBED_MODEL || m.name.startsWith(`${ECHO_EMBED_MODEL}:`));
   if (!has) {
     setState({ kind: 'downloading', pct: null }, extra);

@@ -22,6 +22,7 @@ import { inferEffects, stepEffectsToWaitFor, type JoseEffect } from './jose/jose
 import { legacyNeeds } from './jose/stepGraph';
 import { randomHex } from '../lib/randomId';
 import { isCodeRequest } from './jose/taskTypeMeanings';
+import { asksForProjectWork } from './alphonso/projects';
 import { isPlainQuestion } from '../lib/chatUtils';
 import { asksToCleanUpMemory, asksToForget, asksToRemember, asksWhatWasDecided } from './echo/memoryIntents';
 
@@ -402,7 +403,8 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
   const sends = parseSends(asked, clean, planReview);
   // Code only when it's code (agent phase 6): the one rule in taskTypeMeanings.ts. A question
   // about code is answered, not built.
-  const localExecution = !planReview && !(sends && sends.kind !== 'message') && isCodeRequest(asked) && !isPlainQuestion(clean);
+  // A file change in a saved project is code too (QA batch 0).
+  const localExecution = !planReview && !(sends && sends.kind !== 'message') && (isCodeRequest(asked) || asksForProjectWork(asked)) && !isPlainQuestion(clean);
   const securityMonitoring = matchesAny(asked, ['security', 'secrets', 'permission', 'vulnerability', 'unsafe', 'incident']);
   // A check for security is Sentinel's, not Maria's accuracy check (agent phase 4).
   const accuracyCheck = matchesAny(asked, ['accuracy', 'accurate', 'fact-check', 'proofread', 'facts', 'quality']);

@@ -18,6 +18,7 @@ vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders, missingAsked, buildPromptForTests, historyOnlyDestinations } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
+import { saveProjects } from '../../../services/alphonso/projects';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 
 const llm = vi.mocked(generateAgentLlmResponse);
@@ -343,6 +344,31 @@ describe('the example plan has nothing a small model can copy', () => {
       .toEqual(['The request asks for code: add an alphonso step with the task type local_operation.']);
     expect(missingAsked('Add a dark mode toggle to my website', [{ agent: 'alphonso', effects: ['run'], actionType: 'local_operation' }] as never)).toEqual([]);
     expect(missingAsked('What is a closure in JavaScript?', plan as never)).toEqual([]);
+  });
+
+  // QA batch 0 (CI, 2026-10-27): "In shop, add a file notes.txt" was planned as writing in Chat.
+  // Changing a file in one of your saved projects is project work, whatever the file type.
+  it('adding or changing a file in a saved project needs Alphonso\'s code step', () => {
+    saveProjects([{ name: 'shop', folder: 'D:\\code\\shop' }, { name: 'blog', folder: 'D:\\code\\blog' }] as never);
+    const writing = [{ agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }];
+    const sendBack = ['The request asks for code: add an alphonso step with the task type local_operation.'];
+    expect(missingAsked('/jose In shop, add a file notes.txt that says hello.', writing as never)).toEqual(sendBack);
+    expect(missingAsked('/jose Add a file hello.txt that says hi in shop and in blog.', writing as never)).toEqual(sendBack);
+    expect(missingAsked('/jose Rename the docs folder in blog to guides.', writing as never)).toEqual(sendBack);
+    // Reading a project, or a request that only mentions the name, is not a change.
+    expect(missingAsked('/jose Summarize README.md in shop.', [{ agent: 'alphonso', effects: ['read'], actionType: 'assistant_summarize' }] as never)).toEqual([]);
+    expect(missingAsked('/jose Write a short post about our shop opening.', writing as never)).toEqual([]);
+  });
+
+  // QA batch 0 (CI, 2026-10-27): "Research … and tell me which opportunity is worth going after
+  // first" was planned with Hector only. Asking which comes first is Nova's judgment.
+  it('a request asking which option comes first, planned without Nova, is sent back', () => {
+    const research = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }];
+    const addNova = ['The request asks which option to choose: add a nova step with the task type opportunity_analysis.'];
+    expect(missingAsked('/jose Research the coffee subscription market in Canada and tell me which opportunity is worth going after first.', research as never)).toEqual(addNova);
+    expect(missingAsked('/jose Which of these should a small bakery do first: a newsletter, a loyalty card, or a podcast? Prioritize them.', [] as never)).toEqual(addNova);
+    expect(missingAsked('/jose Research the coffee market and tell me which opportunity is worth going after first.', [...research, { agent: 'nova', effects: ['read'], actionType: 'opportunity_analysis' }] as never)).toEqual([]);
+    expect(missingAsked('/jose Research the value of honey and write a short post about it.', research as never)).not.toContain(addNova[0]);
   });
 
   it('plain writing planned with research is sent back; writing that needs facts keeps it', () => {

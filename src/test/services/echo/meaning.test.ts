@@ -17,8 +17,9 @@ function fakeVector(text: string): number[] {
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(async (cmd: string, args: any) => {
     if (cmd === 'ollama_list_models') {
-      if (!ollamaUp) return { http_status: null, models: [] };
-      return { http_status: 200, models: models.map((name) => ({ name })) };
+      // The backend sends camelCase (serde rename_all), as OllamaModelsProof in ollama.rs does (QA batch 0).
+      if (!ollamaUp) return { httpStatus: null, models: [] };
+      return { httpStatus: 200, models: models.map((name) => ({ name })) };
     }
     if (cmd === 'ollama_embed') {
       embedCalls.push(args.inputs);

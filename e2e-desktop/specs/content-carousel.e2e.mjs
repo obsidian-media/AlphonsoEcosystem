@@ -123,6 +123,9 @@ describe('Alphonso desktop: carousels', () => {
     const folder = path.join(outputFolder, ...post.folder.split('/'));
     expect(fs.readdirSync(folder).sort()).toEqual(['01-v1-c1.png', '02-v1-c2.png', '03-v1-c3.png', '04-v1-c4.png', '05-v1-c5.png', 'caption.txt']);
     expect(fs.readFileSync(path.join(folder, 'caption.txt'), 'utf8')).toBe('Swipe for five habits\n\n#coffee');
-    expect(await $('section[aria-label="Posts"]').getText()).toContain('Post by hand');
+    // The Posts list refreshes every 2 s while a post goes out; wait for it rather than read it at once (QA batch 0).
+    await browser.waitUntil(async () => (await $('section[aria-label="Posts"]').getText()).includes('Post by hand'), {
+      timeout: 30000, timeoutMsg: 'the Posts list never showed "Post by hand"',
+    });
   });
 });
