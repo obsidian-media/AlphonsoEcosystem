@@ -6,7 +6,7 @@ import {
   recordEvent,
   EVENT_OUTCOMES
 } from '../services/eventsService';
-import { checkOllama, normalizeEndpoint, getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { checkOllama, normalizeEndpoint, getConfiguredOllamaEndpoint, isChatModel } from '../lib/ollama';
 
 const PREFILIGHT_EVENT_TYPE = 'ollama.preflight';
 const PREFERRED_PRESELECT = 'llama3.2:3b';
@@ -81,7 +81,7 @@ export function OllamaPreflightPanel({ endpoint = getConfiguredOllamaEndpoint() 
       const cleanEndpoint = normalizeEndpoint(endpoint);
       const result = await checkOllama(cleanEndpoint, '');
       const ok = result.state === 'connected' || result.state === 'model_missing' || result.state === 'no_models';
-      const modelName = result.selectedModel || result.models?.[0]?.name || '';
+      const modelName = result.selectedModel || result.models?.find((m) => isChatModel(m))?.name || '';
       const correlationId = `operator-preflight-${Date.now()}`;
       const ev = buildOllamaPreflightEvent({
         endpoint: cleanEndpoint,

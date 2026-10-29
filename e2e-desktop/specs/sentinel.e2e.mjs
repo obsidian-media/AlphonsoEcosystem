@@ -52,9 +52,16 @@ describe('Alphonso desktop: Sentinel checks the real thing', () => {
     await enterShell();
   });
 
-  it('the backend refuses a redirect to this computer', async () => {
+  it('the backend refuses a redirect to this computer', async function () {
     const result = await invoke('fetch_url_content', { url: REDIRECT });
     console.log('SENTINEL-E2E redirect', JSON.stringify(result).slice(0, 400));
+    // QA batch 0 (2026-10-28): httpbin.org now refuses to redirect to an internal address itself
+    // ("Forbidden redirect target", 403), so the redirect never reaches the app's guard. The guard
+    // is covered by the Rust tests with a local server (fetch_with_ssrf_guard_* in search.rs).
+    if (result.ok && /Forbidden redirect target/i.test(String(result.value?.content || ''))) {
+      console.log('SKIPPED: httpbin.org refused the redirect itself; nothing reached the guard.');
+      return this.skip();
+    }
     expect(result.ok).toBe(false);
     expect(String(result.error)).toMatch(/SSRF blocked|private/i);
   }).timeout(120000);

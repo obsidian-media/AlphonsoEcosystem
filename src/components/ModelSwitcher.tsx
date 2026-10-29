@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Cpu } from 'lucide-react';
-import { fetchOllamaModels, getConfiguredOllamaEndpoint, pullOllamaModel } from '../lib/ollama';
+import { fetchOllamaModels, getConfiguredOllamaEndpoint, isChatModel, pullOllamaModel } from '../lib/ollama';
 
 const STORAGE_KEY = 'alphonso_selected_model_v1';
 // Computed per-call, not module-scoped constants — the configured endpoint
@@ -56,7 +56,8 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
       try {
         const { models: listed } = await fetchOllamaModels(getConfiguredOllamaEndpoint());
         if (cancelled) return;
-        const names = listed.map((m: { name?: string; model?: string }) => m.name ?? m.model ?? '').filter(Boolean);
+        // Embedding models (Echo's meaning search) can't chat, so they are not offered (QA batch 0).
+        const names = listed.map((m: { name?: string; model?: string }) => m.name ?? m.model ?? '').filter(Boolean).filter(isChatModel);
         setModels(names);
         setOllamaOnline(names.length > 0);
         if (names.length > 0) {
@@ -100,7 +101,8 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
       setPullProgress('Download complete');
       try {
         const { models: listed } = await fetchOllamaModels(getConfiguredOllamaEndpoint());
-        const names = listed.map((m: { name?: string; model?: string }) => m.name ?? m.model ?? '').filter(Boolean);
+        // Embedding models (Echo's meaning search) can't chat, so they are not offered (QA batch 0).
+        const names = listed.map((m: { name?: string; model?: string }) => m.name ?? m.model ?? '').filter(Boolean).filter(isChatModel);
         setModels(names);
         if (names.includes(modelName)) {
           setSelected(modelName);

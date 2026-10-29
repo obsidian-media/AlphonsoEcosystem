@@ -17,7 +17,8 @@ CI's new run of the agent specs with a small local model (`qwen2.5:1.5b`) failed
 - **Adding or changing a file in one of your saved projects is Alphonso's code work**, whatever the file type ("In shop, add a file notes.txt"). It was planned as writing in Chat; the planner now sends such a plan back, and the simple plan gives it to Alphonso's code step.
 - **A message asking for two or more kinds of work** (research, writing, a check, a send, code) is always planned, never answered in one reply.
 - **Asking which option to do first is Nova's job:** a plan without her step is sent back.
-- Tests: the carousel spec waits for the Posts list's refresh; agent-skills waits longer for the Orchestrator page; two Echo recall checks say they need a 3B+ model and skip on CI's 1.5B one (`needsLargerModel()` in `e2e-desktop/helpers.mjs`).
+- **An embedding model is never a chat model.** Once Echo's meaning search worked, it downloaded `all-minilm`; when your chosen model wasn't installed, the app picked the first installed model, which was `all-minilm`, and every agent failed ("does not support generate"). Embedding models are now left out of every model choice and list (`isChatModel()`).
+- Tests: the Sentinel redirect check skips when httpbin.org refuses the redirect itself (it now does, so nothing reached the guard; the Rust tests cover it); the carousel spec waits for the Posts list's refresh; agent-skills waits longer for the Orchestrator page; two Echo recall checks say they need a 3B+ model and skip on CI's 1.5B one (`needsLargerModel()` in `e2e-desktop/helpers.mjs`).
 
 ## [2.10.0] — 2026-10-27 (PR 304 and PR 305's deferred-work batches and macOS back in the release; the Jose redesign, PRs 336–342 and 367; Miya's content factory, PRs 332 and 343–354; agent roles Parts A–C, PRs 356, 357, 365 and 366; agent phases 1–7)
 

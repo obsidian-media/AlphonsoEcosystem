@@ -169,10 +169,11 @@ async function chooseHectorOllamaModel() {
     // synthesis, which reads exactly like "just gave me a bunch of links."
     // Prefer the configured model when it's actually installed; only fall
     // back to the first available model if it isn't.
-    const { getConfiguredOllamaModel } = await import('../lib/ollama');
+    const { getConfiguredOllamaModel, isChatModel } = await import('../lib/ollama');
     const configured = getConfiguredOllamaModel();
     const preferred = installed.find((m) => m?.name === configured);
-    const model = preferred?.name || installed[0]?.name || null;
+    // Never an embedding model (QA batch 0): it can't write the report.
+    const model = preferred?.name || installed.find((m) => isChatModel(m))?.name || null;
     return {
       ok: Boolean(model),
       model,
