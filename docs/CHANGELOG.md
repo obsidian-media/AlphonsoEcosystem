@@ -23,6 +23,8 @@ The owner ran Telegram's Approve, Stop and Cancel on the installed 2.10.0; what 
 - **No Slack message could be sent from the desktop app.** Slack refuses a bot token sent from the app window ("Failed to fetch"); Marcus now sends to Slack through the backend (`connector_slack_send`). Checked, not assumed: Discord and GitHub accept the window's calls and are unchanged.
 - **A failed send is tried once, then waits for you** (owner): it is never retried on its own or with a larger model (the live check's Slack send was "Tried 4 times, and with llama3.2:3b"). The step says the platform's reason and "When that is fixed, Carry on sends it again."
 - **A Slack app-level token (`xapp-…`) is refused on Save**, with which token to paste instead (the Bot User OAuth Token, `xoxb-…`); the Health Monitor's Test says the same. A section refusing a save no longer shows "saved".
+- **Nova waits for Hector** in a plan Jose's model writes: a Nova step that waits for nothing now waits for Hector's research (a 7B model planned them side by side, so she judged before anything was found).
+- Tests: the desktop runs now delete their own keychain entries (every run left one in Windows Credential Manager); a new by-hand spec, `live-accounts.e2e.mjs`, checks a real Slack send and one ElevenLabs voice-over with your own keys, read from files you name.
 - `/stop`'s reply is cut at a word with "…"; Settings' model list leaves out embedding models.
 
 ### QA batch 0: main's local-model check made green (2026-10-28)

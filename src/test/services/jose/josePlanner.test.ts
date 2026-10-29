@@ -393,6 +393,17 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(missingAsked('/jose Research the value of honey and write a short post about it.', research as never)).not.toContain(addNova[0]);
   });
 
+  // QA batch 1 (local run with qwen2.5:7b, 2026-10-29): Hector and Nova were planned side by side,
+  // so Nova judged before Hector had found anything ("Judged from your request only").
+  it("a Nova step that waits for nothing waits for Hector's research", async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'research', agent: 'hector', taskType: 'research_report', instruction: 'Research the coffee subscription market in Canada.', effects: ['read'], needs: [] },
+      { id: 'judge', agent: 'nova', taskType: 'opportunity_analysis', instruction: 'Say which opportunity to go after first.', effects: ['read'], needs: [] },
+    ]));
+    const plan = await planJoseRequest('/jose Research the coffee subscription market in Canada and tell me which opportunity is worth going after first.');
+    expect(plan.steps.find((s) => s.stepId === 'judge')?.needs).toEqual(['research']);
+  });
+
   it('plain writing planned with research is sent back; writing that needs facts keeps it', () => {
     const plan = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }];
     expect(missingAsked('Write a short email to my landlord saying the heating is broken', plan as never))

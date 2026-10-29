@@ -10,7 +10,7 @@
 //   npm run tauri build -- --debug --no-bundle
 //
 // Run: npm run test:e2e:desktop
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createConnection } from 'node:net';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
@@ -42,6 +42,27 @@ function testDataDirs(profile) {
     ...roots.map((root) => join(root, identifier)),
     ...(process.env.APPDATA ? [join(process.env.APPDATA, `Alphonso-e2e-${profile}`)] : []),
   ];
+}
+
+/** Removes this run's keychain entries (QA batch 1, 2026-10-28): a test profile's keys sit under a
+ *  service ending in `.e2e.<profile>` (`service_name()` in os_keychain_store.rs), and nothing ever
+ *  deleted them, so every run left one in Windows Credential Manager; a live run would have left real
+ *  keys. Only entries ending with this run's own profile id are touched. Windows only (CI's Linux
+ *  runners are thrown away after each run). */
+export function removeTestKeychain(profile) {
+  if (process.platform !== 'win32' || !profile) return [];
+  let listed = '';
+  try {
+    listed = execFileSync('cmdkey', ['/list'], { encoding: 'utf8', windowsHide: true });
+  } catch {
+    return [];
+  }
+  const targets = [...listed.matchAll(/Target:\s*(?:LegacyGeneric:target=)?(\S+)/g)].map((m) => m[1])
+    .filter((t) => t.endsWith(`.e2e.${profile}`));
+  for (const target of targets) {
+    try { execFileSync('cmdkey', [`/delete:${target}`], { stdio: 'ignore', windowsHide: true }); } catch { /* already gone */ }
+  }
+  return targets;
 }
 
 // The app under test must never see a real credential. The WebdriverIO CLI
@@ -146,6 +167,7 @@ export const config = {
   async afterSession() {
     // Wait for the driver to exit, so the next spec's driver can bind 4455.
     await stopProcess(tauriDriver);
+    removeTestKeychain(dataProfile);
     try {
       for (const dir of testDataDirs(dataProfile)) rmSync(dir, { recursive: true, force: true });
       rmSync(profileDir, { recursive: true, force: true });

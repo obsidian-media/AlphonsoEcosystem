@@ -290,6 +290,20 @@ const isReviewType = (actionType: string) => actionType.startsWith('audit_') || 
  * exactly one step that is not itself a review, it reviews that step (so its
  * findings can send the work back).
  */
+/**
+ * Nova judges what Hector found (QA batch 1: a 7B model planned them side by side, so she judged
+ * from the request alone). A Nova step that waits for nothing waits for every research step of
+ * Hector's in the plan, the same order as the simple plan (`AGENT_DEPENDENCIES`). A plan where
+ * Hector waits for Nova is left as it is.
+ */
+function novaWaitsForHector(steps: PlanStep[]): PlanStep[] {
+  const research = steps.filter((s) => s.agent === 'hector' && String(s.actionType || '').startsWith('research_'));
+  if (!research.length) return steps;
+  const novaIds = new Set(steps.filter((s) => s.agent === 'nova').map((s) => s.stepId));
+  if (research.some((s) => s.needs.some((n) => novaIds.has(n)))) return steps;
+  return steps.map((step) => (step.agent === 'nova' && !step.needs.length ? { ...step, needs: research.map((r) => r.stepId) } : step));
+}
+
 function inferReviewOf(steps: PlanStep[]): PlanStep[] {
   const byId = new Map(steps.map((s) => [s.stepId, s]));
   // The one piece of work in the plan (Alphonso's or Miya's), for a review that names nothing (agent phase 5).
@@ -369,7 +383,7 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     }
     const basedOn = template && plan.basedOnTemplate === template.id ? template : null;
     if (basedOn) plan.steps = fillFromTemplate(plan.steps, basedOn);
-    plan.steps = toCurrentOwners(inferReviewOf(plan.steps)).steps;
+    plan.steps = toCurrentOwners(inferReviewOf(novaWaitsForHector(plan.steps))).steps;
     // Each step only to the agent who owns its kind of work (owner, 2026-10-24),
     // and no code step for a request that isn't about code (agent phase 1).
     const check = checkPlan(plan.steps, { taskTypes: true, request: text });
