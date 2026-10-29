@@ -74,11 +74,30 @@ const PLACEHOLDER_TASKS = new Set(['normal', 'project', 'task type', 'tasktype']
 /** A request asking which option to choose, do first or is worth it (QA batch 0); "the value of" is not one. */
 const ASKS_WHICH_FIRST = /\bprioriti[sz]e\b|\bwhich\b[^.?!]*\b(?:first|best|should|worth)\b|\bworth\s+(?:going\s+after|pursuing|doing)\b|\brank\s+(?:them|these|the\s+options)\b/i;
 
+/** Work besides the review itself. */
+const WORK_BESIDES_REVIEW = /\b(?:write|draft|compose|send|post|publish|share|email|message|research|find|search|look\s+up|make|create|build|code|run|schedule|call|summari[sz]e|translate|remember)\b/i;
+/** A sentence after the plan that asks for something more ("Then post the review to Slack."). */
+const FOLLOW_ON = /^(?:then|also|after\s+that|afterwards|next|and\s+then|finally)\b/i;
+
+/** QA batch 1: a request that asks only for a plan to be reviewed. What the plan itself says (after
+ *  the colon) is not asked for; a sentence after it starting "Then …" is. */
+export function planReviewOnly(text: string): boolean {
+  const t = String(text || '').replace(/^\s*\/jose\b/i, '');
+  const colon = t.indexOf(':');
+  const ask = colon < 0 ? t : t.slice(0, colon);
+  const followOns = colon < 0 ? [] : t.slice(colon + 1).split(/(?<=[.!?])\s+/).map((x) => x.trim()).filter((x) => FOLLOW_ON.test(x));
+  return ![ask, ...followOns].some((part) => WORK_BESIDES_REVIEW.test(part));
+}
+
 export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' | 'effects' | 'actionType'>>): string[] {
   const has = (agent: string, test: (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) => boolean = () => true) =>
     steps.some((st) => st.agent === agent && test(st));
   if (asksPlanReview(text)) {
-    return has('maria') ? [] : ['The request asks for a review of a plan: add a maria step with the task type audit_governance.'];
+    if (!has('maria')) return ['The request asks for a review of a plan: add a maria step with the task type audit_governance.'];
+    // QA batch 1: the model also planned the plan's own work (writing the emails) and more audits.
+    return planReviewOnly(text) && steps.length > 1
+      ? ['The request only asks for a review of a plan: plan one maria step with the task type audit_governance and nothing else.']
+      : [];
   }
   if (asksReadiness(text)) {
     return has('marcus', (st) => st.actionType === 'distribution_readiness')

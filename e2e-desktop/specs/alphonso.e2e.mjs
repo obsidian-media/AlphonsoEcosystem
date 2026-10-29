@@ -278,7 +278,9 @@ describe('Alphonso desktop: his code steps in your projects', () => {
   // Agent roles Part C2: naming two projects gives one step per project.
   it('naming shop and blog gives a code step in each', async () => {
     const { request } = await ask('/jose Add a file hello.txt that says hi in shop and in blog.');
-    const code = request.steps.filter((s) => s.agent === 'alphonso' && !String(s.actionType || '').startsWith('assistant_'));
+    // The planned steps: a fix round after a review ("alphonso-2-fix-1") works in the same project (QA batch 1).
+    const code = request.steps.filter((s) => s.agent === 'alphonso' && !String(s.actionType || '').startsWith('assistant_')
+      && !s.revises && !s.helpRound && !s.replaces);
     console.log('ALPHONSO-E2E two', JSON.stringify({ steps: steps(request), projects: code.map((s) => s.project) }));
     expect(code.map((s) => s.project).sort()).toEqual(['blog', 'shop']);
     // Nothing is approved: the request is rejected, so its locks are let go.

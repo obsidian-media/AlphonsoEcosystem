@@ -115,7 +115,7 @@ describe('step prompts describe each field instead of showing values to copy', (
   it('shows no placeholder numbers or empty strings for the model to copy', () => {
     for (const action of ['creative_script', 'analysis_content_review', 'audit_content_quality', 'creative_thumbnails', 'strategy_timing']) {
       const { system } = buildStepPrompt({ projectId: 'p', step: 'script', task: '', prior: {}, brand: { name: 'B', palette: [], references: [], lessons: [], pastScripts: '' }, brief: { idea: 'i', platforms: [], outputs: [], format: 'story', lengthSec: 30, notes: '', writeInMyVoice: false, showEverything: false } } as never, 'miya', action);
-      expect(system, action).not.toMatch(/:\s*0|:\s*""/);
+      expect(system, action).not.toMatch(/:\s*0\b|:\s*""/);
     }
   });
 

@@ -359,6 +359,20 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(missingAsked('/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy', withMaria as never)).toEqual([]);
   });
 
+  // QA batch 1 (desktop run with qwen2.5:7b): "Audit this plan …" got Alphonso writing the emails, a
+  // second audit and Hector. Reviewing a plan is Maria's one step; what the plan says is not asked for.
+  it('a plan review that asks for nothing else is one Maria step', () => {
+    const ONLY = 'The request only asks for a review of a plan: plan one maria step with the task type audit_governance and nothing else.';
+    const audit = '/jose Audit this plan for compliance risks: tomorrow we email all 500 customers a 30 percent discount code and post it on Instagram.';
+    const maria = { agent: 'maria', effects: ['read'], actionType: 'audit_governance' };
+    const padded = [maria, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }, { agent: 'hector', effects: ['read'], actionType: 'research_report' }];
+    expect(missingAsked(audit, padded as never)).toEqual([ONLY]);
+    expect(missingAsked(audit, [maria] as never)).toEqual([]);
+    // Something asked for after the plan is kept.
+    expect(missingAsked('/jose Review this plan for risks: we launch on Monday. Then post the review to Slack #news.', padded as never)).not.toContain(ONLY);
+    expect(missingAsked('/jose Review my launch plan and write a short summary for the team.', padded as never)).not.toContain(ONLY);
+  });
+
   // The Maria desktop run (2026-10-26): the model's check needed nothing and reviewed nothing.
   it('a review step that needs nothing reviews the one piece of work', async () => {
     llm.mockResolvedValueOnce(answer([
