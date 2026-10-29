@@ -12,6 +12,7 @@
 //   ALPHONSO_LIVE_CLICKUP_KEY_FILE / ALPHONSO_LIVE_CLICKUP_LIST_FILE  a ClickUp key and a test list id
 //   ALPHONSO_LIVE_TAVILY_KEY_FILE / ALPHONSO_LIVE_BRAVE_KEY_FILE  search keys for Hector
 //   ALPHONSO_LIVE_PEXELS_KEY_FILE / _PIXABAY_KEY_FILE / _COVERR_KEY_FILE  stock footage keys (free)
+//   ALPHONSO_LIVE_NVIDIA_KEY_FILE / ALPHONSO_LIVE_GEMINI_KEY_FILE  free-tier cloud model keys
 // Each key is read from its file here and typed into the test app's Settings, as a user would;
 // it lives only in this run's throwaway profile. The Slack check posts one real message; the
 // ElevenLabs check makes one short voice-over (one line), after its estimate is approved.
@@ -38,6 +39,10 @@ const STOCK_KEYS = {
   pexels: { key: readKey(process.env.ALPHONSO_LIVE_PEXELS_KEY_FILE), placeholder: 'Your Pexels API key', saved: /pexels key saved/i },
   pixabay: { key: readKey(process.env.ALPHONSO_LIVE_PIXABAY_KEY_FILE), placeholder: 'Your Pixabay API key', saved: /pixabay key saved/i },
   coverr: { key: readKey(process.env.ALPHONSO_LIVE_COVERR_KEY_FILE), placeholder: 'Your Coverr API key', saved: /coverr key saved/i },
+};
+const CLOUD_KEYS = {
+  nvidia_nim: { key: readKey(process.env.ALPHONSO_LIVE_NVIDIA_KEY_FILE), placeholder: 'nvapi-...', saved: /nvidia nim key saved/i, tab: 'NVIDIA NIM' },
+  gemini: { key: readKey(process.env.ALPHONSO_LIVE_GEMINI_KEY_FILE), placeholder: 'AIza...', saved: /gemini key saved/i, tab: 'Gemini' },
 };
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 
@@ -160,7 +165,7 @@ async function marcusSends(name, text, label) {
 
 describe('Alphonso desktop: the live check with your own accounts', () => {
   before(async function () {
-    if (!Object.values(STOCK_KEYS).some((s) => s.key) && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
+    if (![...Object.values(STOCK_KEYS), ...Object.values(CLOUD_KEYS)].some((s) => s.key) && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
     await enterShell();
   });
 
@@ -393,5 +398,46 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     } finally {
       fs.rmSync(outputFolder, { recursive: true, force: true });
     }
+  }).timeout(900000);
+
+  // NVIDIA NIM and Gemini (free tiers): the provider picked in Chat answers a plain question.
+  it('answers a plain question in Chat with NVIDIA NIM and with Gemini', async function () {
+    const providers = Object.entries(CLOUD_KEYS).filter(([, c]) => c.key);
+    if (!providers.length) this.skip();
+    const results = {};
+    try {
+      for (const [id, c] of providers) {
+        await saveConnectorField(c.placeholder, c.key);
+        await browser.waitUntil(async () => c.saved.test(await mainText()), { timeout: 60000, timeoutMsg: `${id} was not saved` });
+        await $('[data-testid="sidebar-chat-shortcut"]').click();
+        const tab = await $(`button[title="${c.tab}"]`);
+        await tab.waitForClickable({ timeout: 30000 });
+        await tab.click();
+        // The picker chooses the provider's first model once its list loads.
+        await browser.waitUntil(async () => {
+          const settings = await browser.execute(() => JSON.parse(localStorage.getItem('alphonso_settings') || '{}'));
+          return settings.selectedProvider === id && Boolean(settings.selectedModel);
+        }, { timeout: 60000, timeoutMsg: `${c.tab} picked no model` });
+        const model = (await browser.execute(() => JSON.parse(localStorage.getItem('alphonso_settings') || '{}'))).selectedModel;
+        const before = (await $$('[data-testid="chat-message-assistant"]')).length;
+        const input = await $('[data-testid="chat-compose-input"]');
+        await input.waitForDisplayed();
+        await input.setValue('What is the capital of France? Answer in one word.');
+        await clickSend();
+        let reply = '';
+        await browser.waitUntil(async () => {
+          const replies = await $$('[data-testid="chat-message-assistant"]');
+          if (replies.length <= before) return false;
+          reply = (await replies[replies.length - 1].getText()).trim();
+          return reply.length > 0 && !/^\.*$/.test(reply);
+        }, { timeout: 180000, interval: 2000, timeoutMsg: `${c.tab} gave no reply` });
+        results[id] = { model, reply: reply.slice(0, 160) };
+      }
+    } finally {
+      const ollama = await $('button[title="Ollama"]');
+      if (await ollama.isExisting()) await ollama.click();
+    }
+    console.log('LIVE cloud', JSON.stringify(results));
+    for (const [id] of providers) expect(results[id].reply).toMatch(/paris/i);
   }).timeout(900000);
 });
