@@ -44,8 +44,8 @@ const STOCK_KEYS = {
   coverr: { key: readKey(process.env.ALPHONSO_LIVE_COVERR_KEY_FILE), placeholder: 'Your Coverr API key', saved: /coverr key saved/i },
 };
 const CLOUD_KEYS = {
-  nvidia_nim: { key: readKey(process.env.ALPHONSO_LIVE_NVIDIA_KEY_FILE), placeholder: 'nvapi-...', saved: /nvidia nim key saved/i, tab: 'NVIDIA NIM' },
-  gemini: { key: readKey(process.env.ALPHONSO_LIVE_GEMINI_KEY_FILE), placeholder: 'AIza...', section: 'Google Gemini', saved: /gemini key saved/i, tab: 'Gemini' },
+  nvidia_nim: { key: readKey(process.env.ALPHONSO_LIVE_NVIDIA_KEY_FILE), placeholder: 'nvapi-...', category: 'ai_models', saved: /nvidia nim key saved/i, tab: 'NVIDIA NIM' },
+  gemini: { key: readKey(process.env.ALPHONSO_LIVE_GEMINI_KEY_FILE), placeholder: 'AIza...', section: 'Google Gemini', category: 'ai_models', saved: /gemini key saved/i, tab: 'Gemini' },
 };
 const COMPOSIO_KEY = readKey(process.env.ALPHONSO_LIVE_COMPOSIO_KEY_FILE);
 const HF_KEY_ID = readKey(process.env.ALPHONSO_LIVE_HIGGSFIELD_KEY_ID_FILE);
@@ -96,17 +96,26 @@ async function useSettings(values) {
 }
 
 /** Settings → Connectors, one field typed, then that section's Save & Enable. */
-async function saveConnectorField(placeholder, value, more = {}, { section } = {}) {
+async function saveConnectorField(placeholder, value, more = {}, { section, category } = {}) {
   await $('[aria-label="Open settings"]').click();
   const connectors = await $('//nav//button[normalize-space(.)="Connectors"]');
   await connectors.waitForClickable({ timeout: 30000 });
   await connectors.click();
+  if (category) {
+    // Open the field's own category: a folded one hides its form, and another connector can
+    // share the placeholder (QA batch 1: the Gemini key went into Google Web Risk's field).
+    const toggle = await $(`[data-testid="connector-category-${category}"]`);
+    await toggle.waitForExist({ timeout: 30000 });
+    if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  }
   // Two connectors can share a placeholder (Gemini and Google Web Risk both take "AIza..."):
-  // `section` names the heading the field sits under.
+  // `section` names the heading the field sits under (the last one: the status list at the top
+  // shows the same name).
   const selector = section
-    ? `//*[normalize-space(text())="${section}"]/following::input[@placeholder="${placeholder}"][1]`
+    ? `(//*[normalize-space(text())="${section}"])[last()]/following::input[@placeholder="${placeholder}"][1]`
     : `input[placeholder="${placeholder}"]`;
-  const findField = async () => (await $$(selector))[0];
+  // An empty $$() throws on [0] in this WebdriverIO, so check its length first.
+  const findField = async () => { const found = await $$(selector); return found.length ? found[0] : null; };
   let field = await findField();
   if (!field || !(await field.isExisting())) {
     // A closed category: open the one that holds it.
@@ -446,8 +455,12 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     const results = {};
     try {
       for (const [id, c] of providers) {
-        await saveConnectorField(c.placeholder, c.key, {}, { section: c.section });
-        await browser.waitUntil(async () => c.saved.test(await mainText()), { timeout: 60000, timeoutMsg: `${id} was not saved` });
+        await saveConnectorField(c.placeholder, c.key, {}, { section: c.section, category: c.category });
+        await browser.waitUntil(async () => c.saved.test(await mainText()), { timeout: 60000, timeoutMsg: `${id} was not saved` }).catch(async (e) => {
+          const text = await mainText();
+          const at = Math.max(0, text.lastIndexOf(c.section || c.tab));
+          throw new Error(`${e.message}; the form: ${JSON.stringify(text.slice(at, at + 700))}`);
+        });
         const ollamaModel = (await browser.execute(() => JSON.parse(localStorage.getItem('alphonso_settings') || '{}'))).selectedModel;
         await $('[data-testid="sidebar-chat-shortcut"]').click();
         // Settings has the same provider tabs (one row per agent): wait for Chat, then take Chat's.
@@ -470,6 +483,13 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
         const input = await $('[data-testid="chat-compose-input"]');
         await input.waitForDisplayed();
         await input.setValue('What is the capital of France? Answer in one word.');
+        // "Starting AI Runtimes" sits in the bottom-right corner over Send until every runtime has
+        // started (QA batch 1). Say what it showed, then close it as a user would.
+        const boot = await $('[aria-label="Dismiss boot status"]');
+        if (await boot.isExisting()) {
+          console.log('LIVE cloud: the runtime box was still open:', JSON.stringify((await browser.execute((el) => el.closest('.fixed')?.innerText || '', boot)).slice(0, 300)));
+          await boot.click();
+        }
         await clickSend();
         let reply = '';
         await browser.waitUntil(async () => {
