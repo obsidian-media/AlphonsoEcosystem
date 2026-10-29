@@ -88,7 +88,10 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   const problems: string[] = [];
   // QA batch 1: "then write a long report" was planned with research, a judgment and a check, and nobody writing.
   const writes = (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) => /^(?:assistant_|creative_|design_)/.test(String(st.actionType || ''));
-  if (parsed.intents.writing && !has('alphonso', writes) && !has('miya', writes)) {
+  // A send that quotes no text needs it written first, as the simple plan does (QA batch 1).
+  const sendNeedsText = Boolean(parsed.sends && !parsed.sends.quoted)
+    && has('marcus', (st) => (st.effects || []).includes('publish_or_send'));
+  if ((parsed.intents.writing || sendNeedsText) && !has('alphonso', writes) && !has('miya', writes)) {
     problems.push('The request asks for writing: add an alphonso step with the task type assistant_write.');
   }
   if (parsed.intents.check && parsed.intents.writing && !has('maria')) {

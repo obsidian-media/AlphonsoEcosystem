@@ -320,6 +320,17 @@ describe('the example plan has nothing a small model can copy', () => {
       .not.toContain('The request asks for writing: add an alphonso step with the task type assistant_write.');
   });
 
+  // QA batch 1 (CI, small model): "Post a short note … to Slack" was planned as a lone Marcus step,
+  // which had nothing to send. A send that quotes no text needs someone to write it first.
+  it('a send with no text of its own, planned without anyone who writes, is sent back', () => {
+    const slack = '/jose Post a short note that we open at 9 to Slack #news.';
+    const loneSend = [{ agent: 'marcus', effects: ['publish_or_send'], actionType: 'distribution_execution' }];
+    const WRITE = 'The request asks for writing: add an alphonso step with the task type assistant_write.';
+    expect(missingAsked(slack, loneSend as never)).toContain(WRITE);
+    expect(missingAsked(slack, [{ agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }, ...loneSend] as never)).not.toContain(WRITE);
+    expect(missingAsked('/jose Post "We open at 9." to Slack #news.', loneSend as never)).not.toContain(WRITE);
+  });
+
   // The desktop run (2026-10-26): the model planned only the writing for "post it to Slack".
   it('a plan that leaves out the send is sent back; still missing → the simple plan with Marcus', async () => {
     const SLACK = '/jose Post a short note that we open at 9 to Slack #news.';
@@ -460,7 +471,7 @@ describe('the example plan has nothing a small model can copy', () => {
     // Asking whether something is remembered is not asking to save it.
     expect(missingAsked('Do you remember what we decided about the launch?', plan as never)).toEqual([]);
     // A note to post is not something to remember.
-    expect(missingAsked('Post a short note that we open at 9 to Slack #news.', [{ agent: 'marcus', effects: ['publish_or_send'], actionType: 'distribution_execution' }] as never)).toEqual([]);
+    expect(missingAsked('Post a short note that we open at 9 to Slack #news.', [{ agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }, { agent: 'marcus', effects: ['publish_or_send'], actionType: 'distribution_execution' }] as never)).toEqual([]);
   });
 
   it('a plan with the send is used as it is', async () => {

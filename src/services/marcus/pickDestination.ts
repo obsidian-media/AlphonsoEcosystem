@@ -105,6 +105,25 @@ function readAnswer(raw: string): Record<string, unknown> | null {
   return null;
 }
 
+type DestinationOpts = { given?: Partial<Destination>; hint?: MarcusConnector; actionType?: string };
+
+/** The one connector a send goes through: given, from its task type, or the only one the request names. */
+function connectorFor(request: string, opts: DestinationOpts): MarcusConnector | undefined {
+  const newsletter = opts.actionType === 'distribution_newsletter';
+  const asked = requestWithoutQuotes(request).toLowerCase();
+  const named = MARCUS_CONNECTORS.filter((c) => c !== 'composio' && new RegExp(`\\b${c}\\b`).test(asked))
+    .filter((c) => !newsletter || NEWSLETTER_CONNECTORS.includes(c));
+  return opts.given?.connector || opts.hint || (named.length === 1 ? named[0] : undefined);
+}
+
+/** What to set up when the send's connector isn't set up, else null. No model call. */
+export function notSetUp(request: string, opts: DestinationOpts = {}): Picked | null {
+  const hint = connectorFor(request, opts);
+  if (!hint) return null;
+  const info = destinationsFor(hint);
+  return info.setUp ? null : { ok: false, outcome: 'setup', reason: info.setUpSentence as string };
+}
+
 export async function pickDestination(
   request: string,
   text: string,
@@ -121,13 +140,9 @@ export async function pickDestination(
   }
   // A connector the request names but that isn't set up says so, without asking the model.
   const asked = requestWithoutQuotes(request).toLowerCase();
-  const named = MARCUS_CONNECTORS.filter((c) => c !== 'composio' && new RegExp(`\\b${c}\\b`).test(asked))
-    .filter((c) => !newsletter || NEWSLETTER_CONNECTORS.includes(c));
-  const hint = opts.given?.connector || opts.hint || (named.length === 1 ? named[0] : undefined);
-  if (hint) {
-    const info = destinationsFor(hint);
-    if (!info.setUp) return { ok: false, outcome: 'setup', reason: info.setUpSentence as string };
-  }
+  const hint = connectorFor(request, opts);
+  const missing = notSetUp(request, opts);
+  if (missing) return missing;
   const offered = (hint ? [hint] : MARCUS_CONNECTORS).filter((c) => destinationsFor(c).setUp)
     .filter((c) => !newsletter || NEWSLETTER_CONNECTORS.includes(c));
   // One connector, and the request names one of its defaults or listed workflows: no model needed.

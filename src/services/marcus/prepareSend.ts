@@ -4,10 +4,11 @@
 import { buildStepInput } from '../jose/stepInput';
 import { findExactRisks, exactRiskText } from '../sentinel/exactChecks';
 import { CHANNEL_LIMITS } from './destinations';
-import { hintFromTaskType, pickDestination } from './pickDestination';
+import { hintFromTaskType, notSetUp, pickDestination } from './pickDestination';
 import { NOTHING_TO_SEND, textToSend } from './sendText';
 import { readSendTime } from './sendTime';
 import { withoutQuotedContent } from '../jose/quotedContent';
+import { JOSE_LIMITS } from '../jose/stepGraph';
 import type { Destination, PrepareResult, SendPreview } from './types';
 
 interface SendAssignment {
@@ -19,6 +20,7 @@ interface SendAssignment {
   payload?: Record<string, unknown>;
   contentStep?: unknown;
   instruction?: string;
+  round?: number;
 }
 
 const SERIOUS = new Set(['key', 'password_request', 'disguised_link']);
@@ -63,6 +65,16 @@ export function unfilledReason(gaps: string[]): string {
   return `Fill in ${gaps.join(', ')} before it is sent: use the request, or write it without that part.`;
 }
 
+/** Said when the text still needs a fix after the last round (QA batch 1). */
+export const FIX_ROUNDS_USED = (rounds: number) => `It still needed this after ${rounds} rounds of fixes, so nothing was sent.`;
+
+/** A fix sends the text back to its writer, except after the last round: then the step fails. */
+function fixOrFail(assignment: SendAssignment, reason: string, sourceStepId: string): PrepareResult {
+  const rounds = JOSE_LIMITS.maxFixRounds;
+  if ((assignment.round || 0) >= rounds) return { ok: false, outcome: 'failed', reason: `${reason} ${FIX_ROUNDS_USED(rounds)}` };
+  return { ok: false, outcome: 'fix', reason, sourceStepId };
+}
+
 /** A send time the request gives but doesn't make clear (agent roles Part C2). */
 export const SEND_TIME_UNCLEAR = 'When should Marcus send it? Ask again with a day and time, like “tomorrow at 9”.';
 
@@ -73,10 +85,15 @@ export async function prepareMarcusSend(commandId: string, assignment: SendAssig
   if (when && 'unclear' in when) return { ok: false, outcome: 'failed', reason: SEND_TIME_UNCLEAR };
   const input = buildStepInput(commandId, assignment as never, requestText);
   const picked = textToSend(assignment, input);
-  if (!picked) return { ok: false, outcome: 'failed', reason: NOTHING_TO_SEND };
   const hint = (assignment.payload?.connector as Destination['connector'] | undefined) || hintFromTaskType(assignment.actionType);
   const fixed = given(assignment.payload);
   if (fixed?.target && !fixed.connector && hint) fixed.connector = hint;
+  if (!picked) {
+    // What to set up is the more useful answer (QA batch 1): the text can be written once it is.
+    const missing = notSetUp(requestText, { given: fixed || undefined, hint, actionType: assignment.actionType });
+    if (missing && missing.ok === false) return { ok: false, outcome: missing.outcome, reason: missing.reason };
+    return { ok: false, outcome: 'failed', reason: NOTHING_TO_SEND };
+  }
   // A destination set by the screen that asked (Boardroom's channel, the Marcus panel's field)
   // was chosen by you there, so it counts as named.
   const named = fixed?.target ? `${requestText} ${fixed.target}` : requestText;
@@ -84,11 +101,11 @@ export async function prepareMarcusSend(commandId: string, assignment: SendAssig
   if (where.ok === false) return { ok: false, outcome: where.outcome, reason: where.reason };
   const limit = CHANNEL_LIMITS[`${where.destination.connector}:${where.destination.kind}`];
   if (limit && picked.text.length > limit) {
-    return { ok: false, outcome: 'fix', reason: tooLongReason(where.destination.label, picked.text.length, limit), sourceStepId: picked.sourceStepId };
+    return fixOrFail(assignment, tooLongReason(where.destination.label, picked.text.length, limit), picked.sourceStepId);
   }
   // A gap goes back to the step he sends from, like text too long for the channel.
   const gaps = unfilledGaps(picked.text);
-  if (gaps.length) return { ok: false, outcome: 'fix', reason: unfilledReason(gaps), sourceStepId: picked.sourceStepId };
+  if (gaps.length) return fixOrFail(assignment, unfilledReason(gaps), picked.sourceStepId);
   // The final text may be a revision Sentinel didn't review: his exact checks run on it here.
   const exactFacts = findExactRisks(picked.text, { links: 'sent' }).filter((r) => SERIOUS.has(r.kind)).map(exactRiskText);
   const preview: SendPreview = {

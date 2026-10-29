@@ -63,6 +63,9 @@ describe('Alphonso desktop: Jose plans', function () {
     await send('What is 2 + 2? Reply with just the number.');
     await browser.waitUntil(async () => /\b4\b|four/i.test(await lastReplyText()), {
       timeout: 150000, interval: 1000, timeoutMsg: 'no direct answer within 150s',
+    }).catch(async (err) => {
+      // The reply goes in the error when it never says 4 (QA batch 1: it failed once in CI with no clue why).
+      throw new Error(`${err.message}; the last reply: ${JSON.stringify(String(await lastReplyText()).slice(0, 300))}`);
     });
     expect(await lastReplyText()).not.toMatch(PLAN_NOTE);
   });
