@@ -2293,7 +2293,8 @@ mod tests {
       "a.txt".to_string(),
       "x".to_string(),
     )
-    .unwrap_err();
+    .err()
+    .expect("a write to a missing folder must fail");
     assert!(err.contains("doesn't exist"), "{err}");
     assert!(err.contains(&dir.to_string_lossy().to_string()), "{err}");
     assert!(!err.contains("os error"), "{err}");
