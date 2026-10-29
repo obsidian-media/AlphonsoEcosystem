@@ -368,11 +368,15 @@ export const WRITE_FOR_SEND = 'Write only the text that will be sent, exactly as
 const OPEN_ISSUE = /\b(?:open|create|file|raise|log|submit)\s+(?:(?:it|this|that)\s+)?(?:as\s+)?an?\s+(?:new\s+)?(?:github\s+)?issue\b/;
 const SEND_WORD = new RegExp(`${/\b(?:send|post|tell|message|announce|notify|share|publish|release)\b/.source}|${OPEN_ISSUE.source}`);
 const CHANNEL_WORDS = ['slack', 'discord', 'telegram', 'whatsapp', 'notion', 'clickup', 'n8n', 'github'];
+// Notion and ClickUp keep things rather than message anyone: "save it to Notion", "add it as a task
+// in ClickUp", "put the notes in Notion" are sends too, but only with the place named after the word
+// (QA batch 1: "add a ClickUp integration to my app" is not one).
+const STORE_SEND = /\b(?:save|add|put|store|log|create)\b[^.?!]*?\b(?:to|in|into|on)\s+(?:my\s+|our\s+|the\s+)?(?:notion|clickup)\b/;
 const READINESS_QUESTION = /\bready\b|\bcan i (?:post|publish|send)\b/;
 
 /** The channels a request sends to, in the order it names them (agent phase 5). */
 function parseSends(asked: string, clean: string, planReview: boolean): ParsedSend | undefined {
-  if (planReview || READINESS_QUESTION.test(asked) || !SEND_WORD.test(asked)) return undefined;
+  if (planReview || READINESS_QUESTION.test(asked) || !(SEND_WORD.test(asked) || STORE_SEND.test(asked))) return undefined;
   const issue = OPEN_ISSUE.test(asked);
   const release = !issue && /\brelease\b/.test(asked) && (/\bgithub\b/.test(asked) || /\bv?\d+\.\d+/.test(asked));
   const found = CHANNEL_WORDS

@@ -364,6 +364,8 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
 
   it('writes one approved page in your Notion', async function () {
     if (!NOTION_TOKEN || !NOTION_PAGE || !(await ollamaHasModels())) this.skip();
+    // Notion and ClickUp are on the paid list: Zero-Cost Mode (on by default) would refuse the send.
+    await useSettings({ zeroCostMode: false });
     await saveConnectorField('secret_...', NOTION_TOKEN, { 'Page UUID (optional)': NOTION_PAGE });
     await browser.waitUntil(async () => /notion saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'Notion was not saved' });
     const { done, output } = await marcusSends('notion', '/jose Write a one-line note that the Alphonso QA live check ran, and save it to Notion', 'Notion');
@@ -373,6 +375,8 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
 
   it('makes one approved task in your ClickUp list', async function () {
     if (!CLICKUP_KEY || !CLICKUP_LIST || !(await ollamaHasModels())) this.skip();
+    // Notion and ClickUp are on the paid list: Zero-Cost Mode (on by default) would refuse the send.
+    await useSettings({ zeroCostMode: false });
     await saveConnectorField('pk_...', CLICKUP_KEY, { 'Found in the list URL (optional)': CLICKUP_LIST });
     await browser.waitUntil(async () => /clickup credentials saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'ClickUp was not saved' });
     const { done, output } = await marcusSends('clickup', '/jose Write a one-line note that the Alphonso QA live check ran, and add it as a task in ClickUp', 'ClickUp');

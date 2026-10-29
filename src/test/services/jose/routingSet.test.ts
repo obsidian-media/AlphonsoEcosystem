@@ -47,6 +47,14 @@ const RULE_PLAN: [string, Part[]][] = [
   ['/jose Write a short note that the backup finished, and open it as an issue in GitHub acme/shop', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
   ['/jose Write up the Safari login bug and file it as a GitHub issue in acme/shop', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
   ['/jose Create a GitHub issue in acme/shop about the slow checkout page', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
+  // QA batch 1 (the live run): "save it to Notion" and "add it as a task in ClickUp" had no send
+  // word, so no step sent anything and the request never reached an approval. Notion and ClickUp
+  // are on the paid list, so Jose's cost check comes too.
+  ['/jose Write a one-line note that the backup finished, and save it to Notion', [['alphonso', 'assistant_write'], ['jose', 'cost_policy_enforcement'], ['marcus', 'distribution_execution']]],
+  ['/jose Write a one-line note that the backup finished, and add it as a task in ClickUp', [['alphonso', 'assistant_write'], ['jose', 'cost_policy_enforcement'], ['marcus', 'distribution_execution']]],
+  ['/jose Put the meeting notes in Notion', [['alphonso', 'assistant_write'], ['jose', 'cost_policy_enforcement'], ['marcus', 'distribution_execution']]],
+  // Saving or adding without a place to put it is not a send.
+  ['Add a dark mode toggle to my app', [['alphonso', 'local_operation']]],
   ['/jose Is my new post ready to publish on Instagram?', [['marcus', 'distribution_readiness']]],
   ['Is my announcement ready to post on Slack?', [['marcus', 'distribution_readiness']]],
   ['Scan my last week for security issues', [['sentinel', 'security_monitor']]],
