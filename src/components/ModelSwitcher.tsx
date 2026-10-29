@@ -169,17 +169,14 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
 // sorted to the top of NVIDIA NIM's list when present — 70-80+ raw options
 // is a UX regression, not a feature, per
 // docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §4.
-const RECOMMENDED_NVIDIA_MODELS = [
-  'meta/llama-3.1-8b-instruct',
-  'meta/llama-3.1-70b-instruct',
-  'nvidia/nemotron-4-340b-instruct',
-  'mistralai/mixtral-8x7b-instruct-v0.1'
-];
-
-function sortRecommendedFirst(models: string[], recommended: string[]): string[] {
-  const recommendedPresent = recommended.filter((m) => models.includes(m));
-  const rest = models.filter((m) => !recommendedPresent.includes(m)).sort();
-  return [...recommendedPresent, ...rest];
+/**
+ * NVIDIA lists models it no longer serves, so the list alone can't pick one (QA batch 1: a fixed
+ * "recommended" list chose a model NVIDIA answered 404 for, and NVIDIA failed for every new user).
+ * The chosen model is tried first, then the rest in name order, until one answers.
+ */
+function nvidiaCandidates(models: string[], selected: string): string[] {
+  const rest = models.filter((m) => m !== selected).sort();
+  return models.includes(selected) ? [selected, ...rest] : rest;
 }
 
 export type CloudProvider = 'nvidia_nim' | 'gemini';
@@ -193,28 +190,56 @@ interface CloudModelPickerProps {
 export function CloudModelPicker({ provider, selectedModel, onModelChange }: CloudModelPickerProps): React.JSX.Element {
   const [models, setModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [finding, setFinding] = useState(false);
+  const [notServed, setNotServed] = useState<string[]>([]);
+  const [noneAnswered, setNoneAnswered] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    import('../services/modelSelectionService').then(({ getCloudModelList }) => getCloudModelList(provider)).then((list) => {
+    setNoneAnswered(false);
+    import('../services/modelSelectionService').then(({ getCloudModelList }) => getCloudModelList(provider)).then(async (list) => {
       if (cancelled) return;
-      const ordered = provider === 'nvidia_nim' ? sortRecommendedFirst(list, RECOMMENDED_NVIDIA_MODELS) : list;
-      setModels(ordered);
+      if (provider !== 'nvidia_nim') {
+        setModels(list);
+        setLoading(false);
+        if (list.length > 0 && !list.includes(selectedModel)) onModelChange(list[0]);
+        return;
+      }
+      const nvidia = await import('../services/connectors/nvidiaNimConnector');
+      const sorted = [...list].sort();
+      setModels(sorted);
+      setNotServed(nvidia.nvidiaModelsNotServed());
       setLoading(false);
-      if (ordered.length > 0 && !ordered.includes(selectedModel)) {
-        onModelChange(ordered[0]);
+      setFinding(true);
+      const found = await nvidia.findWorkingNvidiaModel(nvidiaCandidates(list, selectedModel));
+      if (cancelled) return;
+      setFinding(false);
+      setNotServed(nvidia.nvidiaModelsNotServed());
+      if (found.model) {
+        if (found.model !== selectedModel) onModelChange(found.model);
+      } else if (!found.rateLimited) {
+        setNoneAnswered(true);
       }
     }).catch(() => {
-      if (!cancelled) { setModels([]); setLoading(false); }
+      if (!cancelled) { setModels([]); setLoading(false); setFinding(false); }
     });
     return () => { cancelled = true; };
   }, [provider]);
 
-  if (loading) {
+  if (loading || finding) {
     return (
       <div className="flex items-center gap-1.5 px-2.5 py-1 bg-(--surface-2) border border-(--border) rounded-lg text-[10px] text-(--text-3) font-medium uppercase tracking-widest">
-        <Cpu className="w-3 h-3 shrink-0" /><span>Loading models…</span>
+        <Cpu className="w-3 h-3 shrink-0" /><span>{finding ? 'Finding a model that answers…' : 'Loading models…'}</span>
+      </div>
+    );
+  }
+
+  if (noneAnswered) {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-(--surface-2) border border-(--warning-border) rounded-lg text-[10px] text-(--warning) font-medium"
+        title="NVIDIA lists these models, but none answered a test question. Try again later or check your NVIDIA key in Settings → Connectors.">
+        <Cpu className="w-3 h-3 shrink-0" /><span>No NVIDIA model answered</span>
       </div>
     );
   }
@@ -233,7 +258,10 @@ export function CloudModelPicker({ provider, selectedModel, onModelChange }: Clo
       <select aria-label={selectedModel || 'Select a model'} value={selectedModel} onChange={(e) => onModelChange(e.target.value)}
         className="appearance-none bg-transparent text-[10px] text-(--text-2) font-medium uppercase tracking-widest pr-4 focus:outline-hidden cursor-pointer max-w-[180px] truncate"
         title={selectedModel || 'Select a model'}>
-        {models.map((name) => <option key={name} value={name} className="bg-(--surface-2) text-(--text-2) normal-case tracking-normal">{name}</option>)}
+        {models.map((name) => {
+          const gone = notServed.includes(name);
+          return <option key={name} value={name} disabled={gone} className="bg-(--surface-2) text-(--text-2) normal-case tracking-normal">{gone ? `${name} (not served)` : name}</option>;
+        })}
       </select>
       <ChevronDown className="w-3 h-3 text-(--text-3) absolute right-2 pointer-events-none" />
     </div>

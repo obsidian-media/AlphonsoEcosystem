@@ -144,3 +144,59 @@ export async function listNvidiaModels(): Promise<string[]> {
   const data = await r.json();
   return (data.data || []).map((m: { id: string }) => m.id);
 }
+
+const NOT_SERVED_KEY = 'alphonso_nvidia_models_not_served_v1';
+
+/** Models NVIDIA listed but answered "not found" for (404), as remembered on this computer. */
+export function nvidiaModelsNotServed(): string[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(NOT_SERVED_KEY) || '[]');
+    return Array.isArray(saved) ? saved.filter((m) => typeof m === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberNotServed(models: string[]): void {
+  if (models.length === 0) return;
+  try {
+    const all = Array.from(new Set([...nvidiaModelsNotServed(), ...models]));
+    localStorage.setItem(NOT_SERVED_KEY, JSON.stringify(all));
+  } catch {
+    // Storage unavailable: the next check simply asks again.
+  }
+}
+
+export interface WorkingModelResult {
+  model: string | null;
+  notServed: string[];
+  rateLimited?: true;
+}
+
+/**
+ * NVIDIA lists models it no longer serves (QA batch 1: 58 of 85 answered 404), so a list alone
+ * can't say which model works. Asks each candidate, in the order given, a tiny question until one
+ * answers it like a chat model; a model answering 404 is remembered as not served. Stops at a rate
+ * limit rather than guessing. No fixed model list.
+ */
+export async function findWorkingNvidiaModel(candidates: string[]): Promise<WorkingModelResult> {
+  const skip = new Set(nvidiaModelsNotServed());
+  const notServed: string[] = [];
+  try {
+    for (const model of candidates) {
+      if (skip.has(model)) continue;
+      let result: NvidiaSendResult;
+      try {
+        result = await sendNvidiaMessage([{ role: 'user', content: 'Reply with the word OK.' }], { model, maxTokens: 8, temperature: 0 });
+      } catch (error) {
+        if (/API error 404\b/.test(String(error))) notServed.push(model);
+        continue;
+      }
+      if (!result.ok) return { model: null, notServed, rateLimited: true };
+      if (/\bok\b/i.test(result.content)) return { model, notServed };
+    }
+    return { model: null, notServed };
+  } finally {
+    rememberNotServed(notServed);
+  }
+}
