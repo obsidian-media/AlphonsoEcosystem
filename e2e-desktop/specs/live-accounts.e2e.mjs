@@ -9,6 +9,7 @@
 //   ALPHONSO_LIVE_GITHUB_REPO             owner/repo for the one test issue (close it afterwards)
 //   ALPHONSO_LIVE_NOTION_TOKEN_FILE       a file holding a Notion integration secret
 //   ALPHONSO_LIVE_NOTION_PAGE_FILE        a file holding the id of a page shared with it
+//   ALPHONSO_LIVE_CLICKUP_KEY_FILE / ALPHONSO_LIVE_CLICKUP_LIST_FILE  a ClickUp key and a test list id
 //   ALPHONSO_LIVE_TAVILY_KEY_FILE / ALPHONSO_LIVE_BRAVE_KEY_FILE  search keys for Hector
 // Each key is read from its file here and typed into the test app's Settings, as a user would;
 // it lives only in this run's throwaway profile. The Slack check posts one real message; the
@@ -28,6 +29,8 @@ const GITHUB_TOKEN = readKey(process.env.ALPHONSO_LIVE_GITHUB_TOKEN_FILE);
 const GITHUB_REPO = String(process.env.ALPHONSO_LIVE_GITHUB_REPO || '').trim();
 const NOTION_TOKEN = readKey(process.env.ALPHONSO_LIVE_NOTION_TOKEN_FILE);
 const NOTION_PAGE = readKey(process.env.ALPHONSO_LIVE_NOTION_PAGE_FILE);
+const CLICKUP_KEY = readKey(process.env.ALPHONSO_LIVE_CLICKUP_KEY_FILE);
+const CLICKUP_LIST = readKey(process.env.ALPHONSO_LIVE_CLICKUP_LIST_FILE);
 const TAVILY_KEY = readKey(process.env.ALPHONSO_LIVE_TAVILY_KEY_FILE);
 const BRAVE_KEY = readKey(process.env.ALPHONSO_LIVE_BRAVE_KEY_FILE);
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
@@ -151,7 +154,7 @@ async function marcusSends(name, text, label) {
 
 describe('Alphonso desktop: the live check with your own accounts', () => {
   before(async function () {
-    if (!SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !TAVILY_KEY && !BRAVE_KEY) this.skip();
+    if (!SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
     await enterShell();
   });
 
@@ -310,6 +313,15 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     await browser.waitUntil(async () => /notion saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'Notion was not saved' });
     const { done, output } = await marcusSends('notion', '/jose Write a one-line note that the Alphonso QA live check ran, and save it to Notion', 'Notion');
     console.log('LIVE notion after', JSON.stringify({ step: done.status, error: done.error, summary: output?.summary, link: output?.resultUrl || output?.schema?.link || null, log: await connectorLog('notion') }));
+    expect(done.status).toBe('done');
+  }).timeout(2400000);
+
+  it('makes one approved task in your ClickUp list', async function () {
+    if (!CLICKUP_KEY || !CLICKUP_LIST || !(await ollamaHasModels())) this.skip();
+    await saveConnectorField('pk_...', CLICKUP_KEY, { 'Found in the list URL (optional)': CLICKUP_LIST });
+    await browser.waitUntil(async () => /clickup credentials saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'ClickUp was not saved' });
+    const { done, output } = await marcusSends('clickup', '/jose Write a one-line note that the Alphonso QA live check ran, and add it as a task in ClickUp', 'ClickUp');
+    console.log('LIVE clickup after', JSON.stringify({ step: done.status, error: done.error, summary: output?.summary, link: output?.resultUrl || output?.schema?.link || null, log: await connectorLog('clickup') }));
     expect(done.status).toBe('done');
   }).timeout(2400000);
 
