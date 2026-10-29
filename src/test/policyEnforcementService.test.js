@@ -317,6 +317,15 @@ describe('policyEnforcementService', () => {
       expect(result.blocked).toBe(false);
     });
 
+    it('lets Notion and ClickUp through in Zero-Cost Mode: their APIs are free (QA batch 1)', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: true, approvalMode: false }));
+      expect(listPaidOrMeteredConnectors()).not.toContain('notion');
+      expect(listPaidOrMeteredConnectors()).not.toContain('clickup');
+      for (const connectorId of ['notion', 'clickup']) {
+        expect(evaluatePolicyGate({ connectorId, actionType: 'create_page', approved: true }).ok).toBe(true);
+      }
+    });
+
     it('blocks high-risk action without approval in approval mode', () => {
       localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));
       const result = evaluatePolicyGate({

@@ -35,10 +35,10 @@ const MAX_AUTO_RETRIES = 2;
 const STALE_ROUTE_MS = 10 * 60 * 1000;
 const ZERO_COST_PAID_TERMS: string[] = [
   'chatgpt', 'openai', 'claude', 'anthropic', 'qwen', 'dashscope', 'alibaba', 'whatsapp', 'twilio',
-  'notion', 'clickup', 'gmail', 'google drive', 'airtable'
+  'gmail', 'google drive', 'airtable'
 ];
 const ZERO_COST_FREE_TERMS: string[] = [
-  'ollama', 'comfyui', 'sd webui', 'stable diffusion', 'telegram', 'youtube'
+  'ollama', 'comfyui', 'sd webui', 'stable diffusion', 'telegram', 'youtube', 'notion', 'clickup'
 ];
 
 export interface AgentContract {

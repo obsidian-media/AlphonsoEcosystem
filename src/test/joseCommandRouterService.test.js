@@ -235,7 +235,7 @@ describe('decomposeJoseCommand — cost and zero-cost routing', () => {
   });
 
   it('adds Jose cost-policy gate assignment when zero-cost mode blocks paid connector', () => {
-    const parsed = parseJoseCommand('send message via notion API');
+    const parsed = parseJoseCommand('send message via claude API');
     const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
     const gate = assignments.find((a) => a.actionType === 'cost_policy_enforcement');
     expect(gate).toBeTruthy();
@@ -244,8 +244,14 @@ describe('decomposeJoseCommand — cost and zero-cost routing', () => {
     expect(gate.requiresApproval).toBe(true);
   });
 
+  // Notion's and ClickUp's APIs are free on every plan (owner, QA batch 1): Zero-Cost Mode lets them through.
+  it.each(['save the note to Notion', 'add it as a task in ClickUp'])('no cost gate for a free connector: %s', (text) => {
+    const assignments = decomposeJoseCommand(parseJoseCommand(text), { zeroCostMode: true });
+    expect(assignments.find((a) => a.actionType === 'cost_policy_enforcement')).toBeFalsy();
+  });
+
   it('does not add cost-policy gate when zero-cost mode is off', () => {
-    const parsed = parseJoseCommand('send message via notion API');
+    const parsed = parseJoseCommand('send message via claude API');
     const assignments = decomposeJoseCommand(parsed, { zeroCostMode: false });
     const gate = assignments.find((a) => a.actionType === 'cost_policy_enforcement');
     expect(gate).toBeFalsy();
