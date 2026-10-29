@@ -719,6 +719,11 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       allowlist: telegramChatIds.split(/[,\n]/).map((s) => s.trim()).filter(Boolean)
     });
     setTelegramBotVerified(null);
+    // Start (or restart) the link with this token now; before, it started only when the app opened (QA batch 1).
+    try {
+      const { restartTelegramCompanion } = await import('../services/telegramCompanionService');
+      restartTelegramCompanion();
+    } catch { /* the link starts at the next launch instead */ }
     try {
       const result = await verifyConnectorEnvironment('telegram') as { ok?: boolean } | null;
       showNotice(result?.ok ? 'Telegram saved & verified ✓' : 'Telegram saved — use "Test Connection" to verify the bot token.', result?.ok ? 'success' : 'info');

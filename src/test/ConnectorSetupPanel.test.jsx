@@ -66,6 +66,8 @@ vi.mock('../services/telegramBrowserConnector', () => ({
 }));
 
 // ── connectorAuth (direct import path used by panel) ─────────────────────────
+// QA batch 1: saving the Telegram token starts (or restarts) the link at once.
+vi.mock('../services/telegramCompanionService', () => ({ restartTelegramCompanion: vi.fn(() => true) }));
 vi.mock('../services/connectors/connectorAuth', () => ({
   saveConnectorCredential: vi.fn(),
   getConnectorCredential: vi.fn().mockReturnValue(''),
@@ -94,6 +96,7 @@ vi.mock('../services/calleMcpAuthService', () => ({
 
 // ── Component under test ──────────────────────────────────────────────────────
 import { ConnectorSetupPanel } from '../components/ConnectorSetupPanel';
+import { restartTelegramCompanion } from '../services/telegramCompanionService';
 import { listAgentProfiles } from '../agents/agentRegistry';
 
 describe('ConnectorSetupPanel', () => {
@@ -245,6 +248,17 @@ describe('ConnectorSetupPanel', () => {
     // entry — no stray hardcoded row that isn't backed by the registry.
     const hermesHeadings = screen.getAllByText(/^Hermes — /);
     expect(hermesHeadings.length).toBe(agents.length);
+  });
+
+  // QA batch 1 (live check of 2.10.0, 2026-10-28): the bot didn't answer /start; a token saved
+  // while the app was open did nothing until a restart. Save & Enable starts the link now.
+  it('Save & Enable on Telegram starts the link without a restart', async () => {
+    render(<ConnectorSetupPanel />);
+    const token = screen.getByPlaceholderText('Paste your bot token from @BotFather');
+    fireEvent.change(token, { target: { value: '123:abc' } });
+    const save = screen.getAllByRole('button', { name: 'Save & Enable' }).find((b) => token.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    await act(async () => { fireEvent.click(save); });
+    expect(restartTelegramCompanion).toHaveBeenCalled();
   });
 
   it('notice div is not present initially when no notice is set', () => {

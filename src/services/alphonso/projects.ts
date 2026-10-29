@@ -15,7 +15,7 @@ export interface WorkPlace {
   prefix: string;
 }
 
-export const NEEDS_OUTPUT_FOLDER = 'Set the output folder in Settings → General so Alphonso has somewhere to put new code.';
+export const NEEDS_OUTPUT_FOLDER = 'Set the Output Folder in Settings → Runtime so Alphonso has somewhere to put new code.';
 export const NO_PROJECT = "Add a project in Settings → Agents → Alphonso's projects.";
 /** A reading skill with no folder to read from (agent roles Part C2). */
 export const NAME_A_PROJECT = "Name one of your projects in Settings → Agents → Alphonso's projects, or the file's project in the request.";

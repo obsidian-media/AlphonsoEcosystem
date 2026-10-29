@@ -70,8 +70,13 @@ export interface JoseRequest {
 
 // Told whenever a request's status changes (Jose phase 7: the queue gives a turn back).
 const statusListeners: ((requestId: string, status: string) => void)[] = [];
-export function onRequestStatusChange(listener: (requestId: string, status: string) => void): void {
+/** Listens to every request's status; returns a function that stops listening (QA batch 1: Chat's notice). */
+export function onRequestStatusChange(listener: (requestId: string, status: string) => void): () => void {
   if (!statusListeners.includes(listener)) statusListeners.push(listener);
+  return () => {
+    const at = statusListeners.indexOf(listener);
+    if (at >= 0) statusListeners.splice(at, 1);
+  };
 }
 
 function readAll(): JoseRequest[] {

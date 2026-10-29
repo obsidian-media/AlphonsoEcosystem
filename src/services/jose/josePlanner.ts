@@ -86,6 +86,11 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   }
   const parsed = parseJoseCommand(text);
   const problems: string[] = [];
+  // QA batch 1: "then write a long report" was planned with research, a judgment and a check, and nobody writing.
+  const writes = (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) => /^(?:assistant_|creative_|design_)/.test(String(st.actionType || ''));
+  if (parsed.intents.writing && !has('alphonso', writes) && !has('miya', writes)) {
+    problems.push('The request asks for writing: add an alphonso step with the task type assistant_write.');
+  }
   if (parsed.intents.check && parsed.intents.writing && !has('maria')) {
     problems.push('The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.');
   }
@@ -130,9 +135,19 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   return problems;
 }
 
-export function copiedPlaceholders(steps: Array<{ id?: string; agent?: string; taskType?: string }>): string[] {
+/** The example plan's own instructions and its topic (QA batch 1): a small model copied them for a
+ *  request about something else ("the history of tea" became "three facts about honeybees"). */
+const EXAMPLE_INSTRUCTIONS = new Set((JSON.parse(PLAN_EXAMPLE).steps as Array<{ instruction: string }>).map((st) => st.instruction.trim().toLowerCase()));
+const EXAMPLE_TOPIC = /\bhoneybees?\b/i;
+
+export function copiedPlaceholders(steps: Array<{ id?: string; agent?: string; taskType?: string; instruction?: string }>, request = ''): string[] {
   const problems: string[] = [];
+  const aboutExample = EXAMPLE_TOPIC.test(request);
   for (const step of steps) {
+    const said = String(step.instruction ?? '').trim().toLowerCase();
+    if (!aboutExample && said && EXAMPLE_INSTRUCTIONS.has(said)) {
+      problems.push(`Step "${step.id}" copies the example's instruction: write one for this request.`);
+    }
     const id = String(step.id ?? '').trim().toLowerCase();
     const agent = String(step.agent ?? '').trim().toLowerCase();
     const task = String(step.taskType ?? '').trim().toLowerCase();
@@ -358,7 +373,7 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     // Each step only to the agent who owns its kind of work (owner, 2026-10-24),
     // and no code step for a request that isn't about code (agent phase 1).
     const check = checkPlan(plan.steps, { taskTypes: true, request: text });
-    const copied = copiedPlaceholders(plan.steps.map((st) => ({ id: st.stepId, agent: st.agent, taskType: st.actionType })));
+    const copied = copiedPlaceholders(plan.steps.map((st) => ({ id: st.stepId, agent: st.agent, taskType: st.actionType, instruction: st.instruction })), text);
     const unsent = missingAsked(text, plan.steps);
     const fromHistory = historyOnlyDestinations(plan.steps, text, options.history);
     if (!check.ok || copied.length || unsent.length || fromHistory.length) {

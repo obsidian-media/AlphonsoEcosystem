@@ -3,8 +3,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { getDefaultWorkspaceRoot } from '../services/workspaceRootService';
 import { INITIAL_CONVERSATION_ID } from '../constants/appConstants';
 
+// Start-up jobs wait for a quiet moment, but never longer than IDLE_DEADLINE_MS: without a deadline
+// a busy, minimized or background window put them off for a long time, and the Telegram bot didn't
+// answer /start (QA batch 1, 2026-10-28).
+const IDLE_DEADLINE_MS = 3000;
 const onIdle = typeof requestIdleCallback === 'function'
-  ? requestIdleCallback
+  ? (cb) => requestIdleCallback(cb, { timeout: IDLE_DEADLINE_MS })
   : (cb) => setTimeout(cb, 50);
 
 function cancelIdle(id) {

@@ -627,6 +627,17 @@ describe('/stop', () => {
     expect(JSON.stringify(sent)).toContain('Stopped: Write three notes about the launch');
   });
 
+  // QA batch 1 (live check, 2026-10-28): a long request ended "Stopped: … write a long report about ."
+  it('a long request is shortened at a word, ending with an ellipsis', async () => {
+    const store = await import('../../services/jose/joseRequestStore');
+    const r = store.createJoseRequest({ commandId: 'c-long', source: 'user', text: '/jose Research the history of tea, then write a long report about it, then check the report.', kind: 'normal', steps: [] });
+    store.setJoseRequestStatus(r.id, 'running');
+    mockInvoke.mockClear();
+    await service.handleStopCommand('test-token', 'owner-chat');
+    const text = mockInvoke.mock.calls.find((c) => c[0] === 'connector_send_telegram')[1].text;
+    expect(text).toBe('Stopped: Research the history of tea, then write a long report about…');
+  });
+
   it('says so when nothing is running', async () => {
     mockInvoke.mockClear();
     await service.handleStopCommand('test-token', 'owner-chat');

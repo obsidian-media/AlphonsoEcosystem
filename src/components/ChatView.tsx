@@ -29,7 +29,7 @@ import { JosePlanCard } from './jose/JosePlanCard'
 import { MariaOfferButton } from './maria/MariaOfferButton'
 import { JoseRequestOutcome } from './jose/JoseRequestOutcome'
 import { EchoRemembered } from './echo/EchoRemembered'
-import { getJoseRequest, listJoseRequests } from '../services/jose/joseRequestStore'
+import { getJoseRequest, listJoseRequests, onRequestStatusChange } from '../services/jose/joseRequestStore'
 import { agentName } from '../services/jose/agentNames'
 import { OPEN_CHAT_EVENT, takeChatDraft } from '../lib/chatDraft'
 import type { PlanFirstSetting } from '../services/jose/josePlanApproval';
@@ -340,6 +340,9 @@ export function ChatView({
     setInterruptedRequests(all.filter((r) => r.status === 'interrupted'));
     setSetupRequests(all.filter((r) => r.status === 'waiting_setup'));
   };
+  // Carried on or cancelled anywhere (Telegram, the board), the notice follows (QA batch 1: it kept
+  // offering Carry on / Cancel for a request cancelled on Telegram).
+  useEffect(() => onRequestStatusChange(() => refreshInterrupted()), []);
   const [streamingText, setStreamingText] = useState('');
   const [streamingTokens, setStreamingTokens] = useState(0);
   const [streamingStartTime, setStreamingStartTime] = useState(null);

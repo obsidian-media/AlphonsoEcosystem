@@ -942,6 +942,21 @@ describe('ChatView: everything goes to Jose', () => {
     expect(cancelRequest).toHaveBeenCalledWith(request.id);
   });
 
+  // QA batch 1 (live check of 2.10.0, 2026-10-28): Cancel pressed on Telegram worked, but Chat
+  // kept offering Carry on / Cancel: its notice read the requests only when Chat opened.
+  it('the notice goes away when the request is cancelled elsewhere', async () => {
+    localStorage.removeItem('alphonso_jose_requests_v1');
+    const request = createJoseRequest({
+      commandId: 'c-cut3', source: 'user', text: 'Research the river', kind: 'normal',
+      steps: [{ stepId: 'a', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [] }],
+    });
+    setJoseRequestStatus(request.id, 'interrupted');
+    render(<ChatView {...makeProps()} />);
+    await screen.findByTestId('chat-interrupted-notice');
+    act(() => { setJoseRequestStatus(request.id, 'cancelled'); });
+    await waitFor(() => expect(screen.queryByTestId('chat-interrupted-notice')).toBeNull());
+  });
+
   // Agent roles Part C2: a request waiting for something to be set up shows there too.
   it('tells you about a request waiting for setup, with what to set up and Carry on', async () => {
     localStorage.removeItem('alphonso_jose_requests_v1');

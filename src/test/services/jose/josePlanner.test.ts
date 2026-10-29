@@ -298,6 +298,28 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(copiedPlaceholders([{ id: 'research', agent: 'hector', taskType: 'research_report' }])).toEqual([]);
   });
 
+  // QA batch 1 (live check of 2.10.0, 2026-10-28): "Research the history of tea, then write a long
+  // report" was planned as "Find three facts about honeybees", the example plan's own step.
+  it("names an instruction copied from the example plan when the request isn't about it", () => {
+    const tea = '/jose Research the history of tea, then write a long report about it, then check the report.';
+    const copied = [{ id: 'research', agent: 'hector', taskType: 'research_report', instruction: 'Find three facts about honeybees, with sources.' }];
+    expect(copiedPlaceholders(copied, tea)).toEqual(['Step "research" copies the example\'s instruction: write one for this request.']);
+    expect(copiedPlaceholders(copied, '/jose Research three facts about honeybees and write a short post.')).toEqual([]);
+    expect(copiedPlaceholders([{ ...copied[0], instruction: 'Find the history of tea, with sources.' }], tea)).toEqual([]);
+  });
+
+  it('a request asking for writing, planned without anyone who writes, is sent back', () => {
+    const tea = '/jose Research the history of tea, then write a long report about it, then check the report.';
+    const noWriter = [
+      { agent: 'hector', effects: ['read'], actionType: 'research_report' },
+      { agent: 'nova', effects: ['read'], actionType: 'analysis_findings' },
+      { agent: 'maria', effects: ['read'], actionType: 'audit_quality' },
+    ];
+    expect(missingAsked(tea, noWriter as never)).toContain('The request asks for writing: add an alphonso step with the task type assistant_write.');
+    expect(missingAsked(tea, [...noWriter, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }] as never))
+      .not.toContain('The request asks for writing: add an alphonso step with the task type assistant_write.');
+  });
+
   // The desktop run (2026-10-26): the model planned only the writing for "post it to Slack".
   it('a plan that leaves out the send is sent back; still missing → the simple plan with Marcus', async () => {
     const SLACK = '/jose Post a short note that we open at 9 to Slack #news.';

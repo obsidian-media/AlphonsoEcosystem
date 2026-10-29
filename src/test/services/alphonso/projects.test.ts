@@ -39,7 +39,8 @@ describe('projects', () => {
     });
     localStorage.clear();
     expect(scratchPlace('x', [])).toEqual({ ok: false, reason: NEEDS_OUTPUT_FOLDER });
-    expect(NEEDS_OUTPUT_FOLDER).toBe('Set the output folder in Settings → General so Alphonso has somewhere to put new code.');
+    // QA batch 1 (live check, 2026-10-28): Output Folder is on Settings → Runtime; General has none.
+    expect(NEEDS_OUTPUT_FOLDER).toBe('Set the Output Folder in Settings → Runtime so Alphonso has somewhere to put new code.');
   });
 
   it('the code model is a setting, none by default', () => {

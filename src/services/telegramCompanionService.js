@@ -247,8 +247,10 @@ export async function handleStopCommand(token, chatId) {
     return;
   }
   const result = stopRequest(newest.id);
-  const what = String(newest.text || '').replace(/^\s*\/jose\s+/i, '').slice(0, 60);
-  await sendTelegramMessageInternal({ token, chatId, text: result.ok ? `Stopped: ${what}.` : result.summary });
+  // At most 60 characters, cut at a word with "…" (QA batch 1: it used to end "… about .").
+  const full = String(newest.text || '').replace(/^\s*\/jose\s+/i, '').trim().replace(/[.!?]+$/, '');
+  const what = full.length <= 60 ? `${full}.` : `${full.slice(0, 60).replace(/\s+\S*$/, '').replace(/[\s,;:]+$/, '')}…`;
+  await sendTelegramMessageInternal({ token, chatId, text: result.ok ? `Stopped: ${what}` : result.summary });
 }
 
 export async function handleRejectCommand(token, chatId, id) {
@@ -976,6 +978,13 @@ export function startTelegramCompanion() {
   }, PUSH_WATCHER_MS);
 
   return { inboundId: inboundIntervalId, watcherId: watcherIntervalId };
+}
+
+/** Starts the link again with the token saved now (QA batch 1): Settings' Save & Enable calls it, so a
+ *  token saved while the app is open works without a restart. True when the link is running. */
+export function restartTelegramCompanion() {
+  stopTelegramCompanion();
+  return startTelegramCompanion() !== null;
 }
 
 export function stopTelegramCompanion() {
