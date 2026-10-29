@@ -104,6 +104,23 @@ describe('runAlphonsoCode', () => {
     expect(r.summary).toContain('npm run test: failed: 1 test failed');
   });
 
+  // QA batch 1 (CI, 2026-10-28): the approved version failed its check, a fix round rewrote the file,
+  // and the summary said only "Changed test.js … passed": you couldn't tell it wasn't what you approved.
+  it('says when a fix round changed a file after the approval', async () => {
+    exitCodes = [1, 0];
+    llm.mockResolvedValue({ response: JSON.stringify({ files: [{ path: 'src/App.tsx', content: 'fixed app' }] }) });
+    const r = await runAlphonsoCode('c1', assignment, preview(), null);
+    expect(r.summary).toContain('npm run test failed at first; Alphonso changed src/App.tsx again (1 fix round), so it differs from what you approved.');
+    expect(r.artifacts.find((a: any) => a.type === 'fix_rounds')).toEqual({ type: 'fix_rounds', rounds: 1, files: ['src/App.tsx'] });
+  });
+
+  it('says nothing about fix rounds when the approved version passed', async () => {
+    exitCodes = [0];
+    const r = await runAlphonsoCode('c1', assignment, preview(), null);
+    expect(r.summary).not.toContain('fix round');
+    expect(r.artifacts.some((a: any) => a.type === 'fix_rounds')).toBe(false);
+  });
+
   it('a fix touching another existing file is not done and is reported', async () => {
     exitCodes = [1, 0];
     disk['D:/shop/src/other.ts'] = 'other';

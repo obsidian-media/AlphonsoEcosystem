@@ -10,6 +10,21 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [Unreleased]
 
+### QA batch 1: the live check of 2.10.0 with Telegram (2026-10-28)
+The owner ran Telegram's Approve, Stop and Cancel on the installed 2.10.0; what didn't match was fixed:
+- **The Telegram bot didn't answer at first.** Start-up jobs waited for the window's "idle" moment with no deadline, which a busy or background window can put off; they now start within 3 seconds. **Save & Enable** on Telegram starts the link at once, without a restart.
+- **"Set the output folder in Settings → General"**: General has no such field. It is on Settings → Runtime, and the message now says so.
+- **A request about tea was planned as "Find three facts about honeybees"**, the planner's own example. A step copying the example, and a request asking for writing with nobody writing, are now sent back to Jose's model.
+- **Cancel on Telegram looked like it did nothing**: it worked, but Chat's "cut off" notice never refreshed. It now follows a request carried on or cancelled anywhere.
+- **A very small model is named:** next to Chat's model picker ("Very small model") and in Settings (owner). Under 3B, by the size in the model's name; nothing is blocked. The owner's qwen3:0.6b copied Jose's example and gave Alphonso no usable change.
+- **Echo's meaning search finds what it should.** Measured with the real `all-minilm`: right matches score 0.38 to 0.71, wrong ones at most 0.44; the cut-off was 0.55 and missed most right matches. It is 0.45 now, and only the subject of the question is compared ("morning meals", not "/jose What did we decide about morning meals?").
+- **Alphonso says when he changed a file after your approval:** when the approved version fails its check and a fix round rewrites it, the summary says "… failed at first; Alphonso changed test.js again (1 fix round), so it differs from what you approved."
+- **"Post it to Slack #test" failed with "Marcus couldn't tell where to send this".** A channel you name with one connector (Slack or Discord) is now used as it is, without Marcus's model; when his model doesn't answer, he says that instead of blaming the channel.
+- **No Slack message could be sent from the desktop app.** Slack refuses a bot token sent from the app window ("Failed to fetch"); Marcus now sends to Slack through the backend (`connector_slack_send`). Checked, not assumed: Discord and GitHub accept the window's calls and are unchanged.
+- **A failed send is tried once, then waits for you** (owner): it is never retried on its own or with a larger model (the live check's Slack send was "Tried 4 times, and with llama3.2:3b"). The step says the platform's reason and "When that is fixed, Carry on sends it again."
+- **A Slack app-level token (`xapp-…`) is refused on Save**, with which token to paste instead (the Bot User OAuth Token, `xoxb-…`); the Health Monitor's Test says the same. A section refusing a save no longer shows "saved".
+- `/stop`'s reply is cut at a word with "…"; Settings' model list leaves out embedding models.
+
 ### QA batch 0: main's local-model check made green (2026-10-28)
 CI's new run of the agent specs with a small local model (`qwen2.5:1.5b`) failed on `main` after the 2.10.0 release. The failures were read one by one; five were the app, not the model:
 - **Echo's meaning search never worked in the app.** It read `http_status` from the backend's model list, which sends `httpStatus`, so it always said "Needs Ollama running". Its test mocked the wrong field name too.

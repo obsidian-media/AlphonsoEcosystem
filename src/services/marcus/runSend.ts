@@ -28,11 +28,12 @@ async function send(preview: SendPreview, commandId: string): Promise<SendResult
   const options = { approved: true, commandId };
   switch (connector) {
     case 'slack': {
-      const slack = await import('../connectors/slackConnector');
-      const token = setting('slack', 'SLACK_BOT_TOKEN');
+      // Through the backend (QA batch 1): Slack refuses a bot token sent from the app window, so every
+      // send from the window failed with "Failed to fetch". Discord and GitHub accept it and stay as they are.
+      const { sendSlackMessage } = await import('../connectors/connectorOutbound');
       const channel = target.startsWith('#') || /^[CGD][A-Z0-9]{6,}$/.test(target) ? target : `#${target}`;
-      const result = await slack.sendMessage({ token, defaultChannel: channel } as never, channel, text);
-      return { ok: true, sentence: `Sent to ${label}.`, link: null, platformId: (result as { ts?: string })?.ts || null };
+      const r = await sendSlackMessage(channel, text, options) as { ok?: boolean; error?: string; ts?: string | null };
+      return r?.ok ? { ok: true, sentence: `Sent to ${label}.`, link: null, platformId: r.ts || null } : notSent(label, String(r?.error || 'Slack refused it'));
     }
     case 'discord': {
       const discord = await import('../connectors/discordConnector');

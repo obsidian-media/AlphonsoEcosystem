@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { slackTokenProblem } from '../services/connectors/slackConnector';
 import { listElevenLabsVoices } from '../services/connectors/elevenLabsConnector';
 import { HIGGSFIELD_CONSOLE_URL, parseExtra, testHiggsfieldModel } from '../services/connectors/higgsfieldConnector';
 import { invoke } from '@tauri-apps/api/core';
@@ -134,7 +135,8 @@ interface CredentialSectionProps {
   bgColor: string;
   accentColor: string;
   fields: CredentialField[];
-  onSave: () => void;
+  /** False (or a promise of false) when nothing was saved: the section doesn't say it was (QA batch 1). */
+  onSave: () => void | boolean | Promise<void | boolean>;
   hint?: string;
   savedLabel?: string;
 }
@@ -216,8 +218,8 @@ function HiggsfieldSection({ onSave }: { onSave: (fields: Record<string, string>
 function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColor, fields, onSave, hint, savedLabel }: CredentialSectionProps): React.JSX.Element {
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    onSave();
+  const handleSave = async () => {
+    if ((await onSave()) === false) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -734,12 +736,15 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   };
 
   const saveConnectorApiKey = async (cId: string, fields: Record<string, string>) => {
+    // An xapp- token in Slack's bot-token field can't post (QA batch 1): refused with the reason.
+    const wrongSlackToken = cId === 'slack' ? slackTokenProblem(fields.SLACK_BOT_TOKEN) : null;
+    if (wrongSlackToken) { showNotice(wrongSlackToken, 'error'); return false; }
     let hasValue = false;
     for (const [key, value] of Object.entries(fields)) {
       const trimmed = String(value || '').trim();
       if (trimmed) { saveConnectorCredential(cId, key, trimmed); hasValue = true; }
     }
-    if (!hasValue) { showNotice('Please enter at least one credential value.', 'error'); return; }
+    if (!hasValue) { showNotice('Please enter at least one credential value.', 'error'); return false; }
     updateConnectorAuthProfile(cId, { enabled: true });
     try {
       const result = await verifyConnectorEnvironment(cId) as { ok?: boolean } | null;

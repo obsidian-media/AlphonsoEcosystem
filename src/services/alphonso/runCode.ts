@@ -98,7 +98,12 @@ export async function runAlphonsoCode(commandId: string, assignment: any, previe
     const notDone = new Set<string>();
     const leftOut = [...preview.dropped];
     const approvedPaths = new Set(preview.files.map((f) => f.path));
+    // What failed first, and what a fix round rewrote after the approval (QA batch 1): the summary says so.
+    const failedFirst = runs.filter((r) => !r.ok).map((r) => line(r.command));
+    const refixed = new Set<string>();
+    let rounds = 0;
     for (let round = 0; round < JOSE_LIMITS.maxFixRounds && runs.some((r) => !r.ok); round += 1) {
+      rounds += 1;
       const current = await Promise.all(preview.files.map(async (f) => ({ path: f.path, text: String(await readCurrent(preview, f.path) ?? '').slice(0, FILE_LIMITS.eachChars) })));
       const answer = parseCodeAnswer(await askAlphonso(fixPrompt(preview, runs.filter((r) => !r.ok), current, input), preview.model));
       for (const raw of answer?.files || []) {
@@ -109,6 +114,7 @@ export async function runAlphonsoCode(commandId: string, assignment: any, previe
         const exists = (await readCurrent(preview, file.path)) !== null;
         if (!approvedPaths.has(file.path) && exists) { notDone.add(`change ${file.path}`); continue; }
         await write(preview, file.path, file.content);
+        refixed.add(file.path);
         if (!written.includes(file.path)) written.push(file.path);
       }
       runs = await runApprovedCommands(preview);
@@ -122,6 +128,9 @@ export async function runAlphonsoCode(commandId: string, assignment: any, previe
     if (changedOnes.length) parts.push(`Changed ${changedOnes.join(', ')}.`);
     for (const r of refused) parts.push(`${r.path} was not written: ${r.reason}.`);
     for (const d of leftOut) parts.push(`${d.path} was left out: ${d.reason}`);
+    if (rounds && refixed.size) {
+      parts.push(`${failedFirst.join(', ')} failed at first; Alphonso changed ${[...refixed].join(', ')} again (${plural(rounds, 'fix round')}), so it differs from what you approved.`);
+    }
     for (const r of runs) parts.push(r.ok ? `${line(r.command)}: passed.` : `${line(r.command)}: failed: ${r.tail.trim().slice(-STEP_INPUT_LIMITS.otherLineChars)}`);
     if (notDone.size) parts.push(`Needs your approval: ${[...notDone].join(', ')}.`);
     if (preview.place.kind === 'new' && written.length) parts.push(`Folder: ${preview.place.folder}`);
@@ -144,6 +153,7 @@ export async function runAlphonsoCode(commandId: string, assignment: any, previe
       artifacts: [
         ...written.map((p) => ({ type: 'code_file', relativePath: `${preview.place.prefix}${p}`, status: changed.has(p) ? 'changed' : 'new' })),
         ...runs.map((r) => ({ type: 'command_result', program: r.command.program, args: r.command.args, exitCode: r.exitCode, ok: r.ok })),
+        ...(rounds && refixed.size ? [{ type: 'fix_rounds', rounds, files: [...refixed] }] : []),
       ],
     };
   } catch (error) {

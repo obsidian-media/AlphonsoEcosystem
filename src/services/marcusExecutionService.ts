@@ -18,7 +18,7 @@ import type { PostPlatform, PostStatus } from './contentFactory/contentTypes';
 import { randomHex } from '../lib/randomId';
 import { redactText } from './sentinel/exactChecks';
 import { prepareMarcusSend } from './marcus/prepareSend';
-import { runMarcusSend } from './marcus/runSend';
+import { ALREADY_SENT, runMarcusSend } from './marcus/runSend';
 import { formatSendTime } from './marcus/sendTime';
 import { checkReadiness } from './marcus/readiness';
 import type { SendPreview, SendResult } from './marcus/types';
@@ -236,8 +236,15 @@ export async function runMarcusDistribution(commandText: string, assignment: Ass
     verificationState: schema.confidenceLevel,
   });
 
+  // A failed send waits with the platform's reason (QA batch 1, owner 2026-10-28): Carry on sends it
+  // again once the cause is fixed. Already sent stays done; nothing is retried on its own.
+  if (!sent.ok && sent.sentence !== ALREADY_SENT) {
+    return result(`${sent.sentence} ${SEND_FAILED_CARRY_ON}`, 'setup_required', schema, actionType);
+  }
   return result([lateNote, prefix, sent.sentence].filter(Boolean).join(' '), sent.ok ? 'completed' : 'failed', schema, actionType);
 }
+
+export const SEND_FAILED_CARRY_ON = 'When that is fixed, Carry on sends it again.';
 
 // ── Scheduled Publishing ──────────────────────────────────────────────────────
 

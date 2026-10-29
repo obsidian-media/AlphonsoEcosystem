@@ -957,6 +957,17 @@ describe('ChatView: everything goes to Jose', () => {
     await waitFor(() => expect(screen.queryByTestId('chat-interrupted-notice')).toBeNull());
   });
 
+  // QA batch 1 (owner, 2026-10-28): a model too small for plans and code is named next to the picker.
+  it('warns next to the model picker when the local model is very small', () => {
+    render(<ChatView {...makeProps({ settings: { selectedModel: 'qwen3:0.6b', colorScheme: 'dark' } })} />);
+    expect(screen.getByTestId('small-model-notice').getAttribute('title')).toContain('qwen3:0.6b is very small');
+  });
+
+  it('says nothing for a model of 3B or more', () => {
+    render(<ChatView {...makeProps()} />);
+    expect(screen.queryByTestId('small-model-notice')).toBeNull();
+  });
+
   // Agent roles Part C2: a request waiting for something to be set up shows there too.
   it('tells you about a request waiting for setup, with what to set up and Carry on', async () => {
     localStorage.removeItem('alphonso_jose_requests_v1');

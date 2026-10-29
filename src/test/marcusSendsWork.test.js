@@ -2,8 +2,9 @@
 // agent phase 5 the text and the destination are prepared first (marcus/prepareSend.ts).
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const sendMessage = vi.fn(async () => ({ ts: '1.2' }));
-vi.mock('../services/connectors/slackConnector', () => ({ sendMessage: (...a) => sendMessage(...a) }));
+// Marcus sends to Slack through the backend (QA batch 1: Slack refuses a bot token from the app window).
+const sendMessage = vi.fn(async () => ({ ok: true, ts: '1.2' }));
+vi.mock('../services/connectors/connectorOutbound', async (importOriginal) => ({ ...(await importOriginal()), sendSlackMessage: (...a) => sendMessage(...a) }));
 vi.mock('../services/memoryService', () => ({ pushMemoryItem: vi.fn() }));
 vi.mock('../services/contentFactory/postMetrics', () => ({ readDueMetrics: vi.fn(async () => 0) }));
 vi.mock('../services/orchestrationReceiptService', () => ({ appendOrchestrationReceipt: vi.fn() }));
@@ -36,7 +37,7 @@ describe('Marcus sends the work', () => {
     request('Bees pollinate a third of our food.');
     await runMarcusDistribution('Send the post to the team channel.', marcus, null, { commandId: 'w1' });
     expect(sendMessage).toHaveBeenCalledTimes(1);
-    expect(sendMessage.mock.calls[0][2]).toBe('Bees pollinate a third of our food.');
+    expect(sendMessage.mock.calls[0][1]).toBe('Bees pollinate a third of our food.');
   });
 
   it('sends nothing when no earlier step wrote the text', async () => {

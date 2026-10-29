@@ -86,6 +86,7 @@ vi.mock('../services/modelSelectionService', () => ({
 vi.mock('../lib/ollama', () => ({
   formatModelSize: vi.fn().mockReturnValue('0B'),
   normalizeEndpoint: vi.fn().mockReturnValue('http://localhost:11434'),
+  isChatModel: () => true,
 }));
 
 vi.mock('../components/MemoryGraphViewer', () => ({

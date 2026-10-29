@@ -111,7 +111,10 @@ describe('Alphonso desktop: publishing', () => {
     const requests = JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
     const request = requests.find((r) => r.id === project.joseRequestId);
     expect(request.steps.find((s) => s.stepId === 'publish').status).not.toBe('waiting_approval');
-    expect(await $('section[aria-label="Posts"]').getText()).toContain('Scheduled');
+    // The Posts list refreshes every 2 s while a post goes out; wait for it (QA batch 1, as in the carousel spec).
+    await browser.waitUntil(async () => (await $('section[aria-label="Posts"]').getText()).includes('Scheduled'), {
+      timeout: 30000, timeoutMsg: 'the Posts list never showed "Scheduled"',
+    });
   });
 
   it('cancelling the post cancels its scheduled send', async function () {

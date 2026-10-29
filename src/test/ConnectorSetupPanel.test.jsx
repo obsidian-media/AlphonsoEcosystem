@@ -261,6 +261,21 @@ describe('ConnectorSetupPanel', () => {
     expect(restartTelegramCompanion).toHaveBeenCalled();
   });
 
+  // QA batch 1 (live check, 2026-10-28): an xapp- app-level token was saved as Slack's bot token.
+  it("Slack's Save refuses an app-level token and says which token to paste", async () => {
+    const { saveConnectorCredential } = await import('../services/connectors/connectorAuth');
+    render(<ConnectorSetupPanel />);
+    const token = screen.getByPlaceholderText('xoxb-...');
+    fireEvent.change(token, { target: { value: 'xapp-1-A1-123-abc' } });
+    const save = screen.getAllByRole('button', { name: /save/i }).find((b) => token.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    vi.mocked(saveConnectorCredential).mockClear();
+    await act(async () => { fireEvent.click(save); });
+    expect(await screen.findByText(/This is an app-level token \(xapp-…\)/)).toBeTruthy();
+    expect(saveConnectorCredential).not.toHaveBeenCalledWith('slack', 'SLACK_BOT_TOKEN', expect.anything());
+    // Nothing was saved, so the section doesn't say it was.
+    expect(screen.queryByText('Slack token saved')).toBeNull();
+  });
+
   it('notice div is not present initially when no notice is set', () => {
     render(<ConnectorSetupPanel />);
     // No notice text rendered by default — the notice state starts as empty string

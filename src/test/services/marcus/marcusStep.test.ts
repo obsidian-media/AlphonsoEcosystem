@@ -2,7 +2,7 @@
 // preview prepared before you approved it; the record says who approved and who reviewed it.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('../../../services/marcus/runSend', () => ({ runMarcusSend: vi.fn() }));
+vi.mock('../../../services/marcus/runSend', () => ({ runMarcusSend: vi.fn(), ALREADY_SENT: 'Already sent.' }));
 vi.mock('../../../services/marcus/prepareSend', async (orig) => ({ ...(await orig() as object), prepareMarcusSend: vi.fn() }));
 vi.mock('../../../services/marcus/readiness', () => ({ checkReadiness: vi.fn() }));
 vi.mock('../../../services/memoryService', () => ({ pushMemoryItem: vi.fn() }));
@@ -82,7 +82,9 @@ describe('runMarcusDistribution', () => {
     expect(sent.schema).toMatchObject({ kind: 'send', connector: 'slack', target: '#news', sendKind: 'message', status: 'sent', approvedBy: 'you', reviewedBy: ['sentinel-send-marcus', 'check'], confidenceLevel: 'verified', platformId: '1.2' });
     vi.mocked(runMarcusSend).mockResolvedValueOnce({ ok: false, sentence: 'Not sent to Slack #news: channel_not_found.' });
     const failed = await runMarcusDistribution('x', send as never, null, { commandId: 'm1' });
-    expect(failed.resultState).toBe('failed');
+    // QA batch 1 (owner, 2026-10-28): a failed send waits with the platform's reason; Carry on sends it again.
+    expect(failed.resultState).toBe('setup_required');
+    expect(failed.summary).toBe('Not sent to Slack #news: channel_not_found. When that is fixed, Carry on sends it again.');
     expect(failed.schema).toMatchObject({ status: 'failed', confidenceLevel: 'failed' });
   });
 

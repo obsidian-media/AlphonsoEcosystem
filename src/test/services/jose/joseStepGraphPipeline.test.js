@@ -38,7 +38,12 @@ vi.mock('../../../services/hectorResearchService', () => ({
 }));
 
 // Marcus's connectors (agent phase 5): nothing leaves the test.
-vi.mock('../../../services/connectors/slackConnector', () => ({ sendMessage: vi.fn(async () => ({ ts: '1.2' })) }));
+vi.mock('../../../services/connectors/slackConnector', () => ({ sendMessage: vi.fn(async () => ({ ts: '1.2' })), slackTokenProblem: () => null }));
+// Marcus sends to Slack through the backend (QA batch 1); the rest of connectorOutbound stays real.
+vi.mock('../../../services/connectors/connectorOutbound', async (importOriginal) => ({
+  ...(await importOriginal()),
+  sendSlackMessage: vi.fn(async () => ({ ok: true, ts: '1.2' })),
+}));
 vi.mock('../../../services/connectors/discordConnector', () => ({ sendMessage: vi.fn(async () => ({ id: 'M' })), listGuildChannels: vi.fn(async () => [{ id: 'C', name: 'news' }]) }));
 
 vi.mock('../../../lib/ollama', () => ({
@@ -467,6 +472,22 @@ describe('Jose runs plans as step graphs', () => {
       const request = getJoseRequest(requestId);
       expect(request.steps.map((s) => [s.stepId, s.status])).toEqual([['facts', 'done'], ['post', 'done'], ['check', 'done']]);
       expect(request.status).toBe('done');
+    });
+
+    // QA batch 1 (owner, 2026-10-28): a send that fails is tried once, never with a larger model;
+    // the live check's Slack send was "Tried 4 times, and with llama3.2:3b".
+    it('a send that fails is tried once, with no larger model', async () => {
+      const first = await waitingPlan();
+      globalThis.__joseInstalledModels = ['llama3.2:3b', 'qwen2.5:7b'];
+      vi.mocked(executeContentStepAssignment).mockClear();
+      vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+        if (assignment.stepId === 'post') throw new Error('Not sent to Slack #test: not_in_channel.');
+        return { summary: 'ok', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+      });
+      await executeApprovedPackets([packetOf(first.commandId, 'post')]);
+      globalThis.__joseInstalledModels = [];
+      expect(ranSteps().filter((id) => id === 'post')).toHaveLength(1);
+      expect(vi.mocked(executeContentStepAssignment).mock.calls.every((c) => !globalThis.__joseStepModel)).toBe(true);
     });
 
     it('runs an approved step once when it is approved twice', async () => {
@@ -990,9 +1011,9 @@ describe('Marcus sends what you approved', () => {
     const requestId = `jose-request-${result.commandId}`;
     await approveRequestStep(requestId, 'marcus');
     await approveRequestStep(requestId, 'marcus');
-    const slack = await import('../../../services/connectors/slackConnector');
-    expect(slack.sendMessage).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(slack.sendMessage).mock.calls[0][2]).toBe('Open Saturday.');
+    const { sendSlackMessage } = await import('../../../services/connectors/connectorOutbound');
+    expect(sendSlackMessage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(sendSlackMessage).mock.calls[0][1]).toBe('Open Saturday.');
     expect(getStepOutput(result.commandId, 'marcus').summary).toBe('Sent to Slack #news.');
   });
 

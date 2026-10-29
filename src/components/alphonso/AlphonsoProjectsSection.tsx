@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { FolderOpen, Trash2 } from 'lucide-react';
 import { listProjects, saveProjects, type AlphonsoProject } from '../../services/alphonso/projects';
 import { listInstalledModels } from '../../services/jose/joseModels';
+import { SmallModelNotice } from '../SmallModelNotice';
 
 interface Props {
   settings: Record<string, any>;
@@ -79,6 +80,7 @@ export function AlphonsoProjectsSection({ settings, setSettings }: Props): React
           {models.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
       </div>
+      <SmallModelNotice model={String(settings.alphonsoCodeModel || settings.selectedModel || '')} />
     </div>
   );
 }

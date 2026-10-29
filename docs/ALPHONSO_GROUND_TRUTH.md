@@ -2442,6 +2442,20 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.53 QA batch 1: the live check of 2.10.0 with Telegram (2026-10-28)
+
+The owner ran checks 1a–1c (Approve, `/stop`, Cancel on Telegram) on the installed 2.10.0, with `qwen3:0.6b`. Found and fixed, each with a test that failed first:
+- **Start-up jobs had no deadline:** `onIdle` in `useBootEffects.js` used `requestIdleCallback` without a timeout; the Telegram link (and the other start-up jobs) now start within `IDLE_DEADLINE_MS` (3 s). `restartTelegramCompanion()` in `telegramCompanionService.js`, called by Connectors → Telegram's Save & Enable, starts the link with the token saved now.
+- **The wrong page in a message:** `NEEDS_OUTPUT_FOLDER` named Settings → General; Output Folder is on Settings → Runtime.
+- **Jose copied his example:** `copiedPlaceholders(steps, request)` also names a step whose instruction is one of `PLAN_EXAMPLE`'s (unless the request is about its topic), and `missingAsked()` sends back a writing request planned without an Alphonso, Miya or design writer.
+- **Chat's notice was stale:** it read the requests once; it now listens through `onRequestStatusChange()` (which returns a function that stops listening).
+- **Very small models:** `src/components/SmallModelNotice.tsx` (`isSmallModel()`, under `SMALL_MODEL_MIN_B` = 3 by the size in the name) next to Chat's picker, under Settings' Active Inference Model and under "Model for Alphonso's code" (owner, 2026-10-28). The owner switched to qwen2.5:7b for the next checks.
+- **Found by the desktop runs while doing this:** Echo's meaning cut-off (`MEANING_MIN_SIMILARITY`, now 0.45 from measurements with the real `all-minilm`) and `meaningQuestion()`; Alphonso's run now reports a fix round after the approval (`fix_rounds` artifact and a summary line); the content-publish, Hector and Alphonso desktop specs waited, skipped or asked the wrong way (a new file needs no approval by design).
+- **Check 1d (Slack) so far:** "post it to Slack #test" failed before Slack was called: `pickDestination()` used a channel without the model only when it was a saved default, and a model that failed was reported as `NO_DESTINATION`. One named connector with one named `#channel` (Slack, Discord) is now used as it is (`namedChannels()`), and a failed model call is `MARCUS_MODEL_FAILED`. The owner's token was an app-level `xapp-` token: `slackTokenProblem()` / `SLACK_APP_TOKEN_PROBLEM` in `slackConnector.ts` refuse it on Save (`saveConnectorApiKey()` returns false, so `CredentialSection` doesn't say "saved") and in `checkSlackConnection()`.
+- **Slack never sent from the desktop app:** `runSend.ts` called Slack with `fetch` from the window, and Slack's CORS answer allows no `Authorization` header, so every send failed ("Failed to fetch"); it now uses `sendSlackMessage()` in `connectorOutbound.js` (backend `connector_slack_send`, with its approval, readiness and policy checks). Measured on 2026-10-28 with a preflight from `http://tauri.localhost`: Discord and GitHub allow it, so they are unchanged.
+- **A failed send (owner, 2026-10-28):** a step with the `publish_or_send` effect runs once in `executeAssignmentWithRetries()` (no retries, no larger model), and Marcus's failed send returns `setup_required` with the reason and `SEND_FAILED_CARRY_ON`, so the request waits and Carry on sends it again; "Already sent." stays as it was.
+- **Still to check live:** the Slack send with a `xoxb-` token, an ElevenLabs voice-over and a Higgsfield picture, with qwen2.5:7b.
+
 ## 11.52 QA batch 0: main's local-model check made green (2026-10-28)
 
 The owner chose desktop QA with the deferred items folded in, in batches, before the new phases; batch 0 makes `main` green. The only red job was the desktop run with `qwen2.5:1.5b` (added in Jose phase 7), failing in five specs. Each failure was read from the run's log (run 40531686234):

@@ -514,3 +514,15 @@ describe('slackConnector', () => {
     });
   });
 });
+
+// QA batch 1 (live check of 2.10.0, 2026-10-28): an xapp- token was saved where the bot token goes.
+describe('slackTokenProblem', () => {
+  it('names an app-level token and lets a bot or user token through', async () => {
+    const { slackTokenProblem, SLACK_APP_TOKEN_PROBLEM } = await import('../../services/connectors/slackConnector.ts');
+    expect(slackTokenProblem('xapp-1-A1-123-abc')).toBe(SLACK_APP_TOKEN_PROBLEM);
+    expect(SLACK_APP_TOKEN_PROBLEM).toBe("This is an app-level token (xapp-…), which can't post messages. Paste the Bot User OAuth Token (xoxb-…) from your Slack app's OAuth & Permissions page.");
+    expect(slackTokenProblem('xoxb-1-abc')).toBeNull();
+    expect(slackTokenProblem('xoxp-1-abc')).toBeNull();
+    expect(slackTokenProblem('')).toBeNull();
+  });
+});

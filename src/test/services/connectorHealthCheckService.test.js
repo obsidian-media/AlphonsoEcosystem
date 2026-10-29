@@ -203,6 +203,18 @@ describe('connectorHealthCheckService', () => {
       expect(result.ok).toBe(true);
       expect(result.message).toContain('Acme');
     });
+
+    // QA batch 1 (live check, 2026-10-28): an app-level token (xapp-) was saved as the bot token;
+    // Marcus could never post with it, and nothing said so.
+    it('names an app-level token instead of calling Slack', async () => {
+      mockGetConnectorCredential.mockReturnValue('xapp-1-A1-123-abc');
+      global.fetch = vi.fn();
+      const { checkSlackConnection } = await import('../../services/connectorHealthCheckService');
+      const { SLACK_APP_TOKEN_PROBLEM } = await import('../../services/connectors/slackConnector');
+      const result = await checkSlackConnection();
+      expect(result).toMatchObject({ ok: false, message: SLACK_APP_TOKEN_PROBLEM, details: { reason: 'wrong_token_type' } });
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
   });
 
   describe('checkDiscordConnection', () => {

@@ -8,6 +8,14 @@ import type { ComposioTool } from '../composioService';
 import type { Destination, MarcusConnector, SendKind } from './types';
 
 export const NO_DESTINATION = "Marcus couldn't tell where to send this: name the channel, or set a default in Settings → Connectors.";
+/** QA batch 1: a model that didn't answer was reported as "couldn't tell where", blaming the request. */
+export const MARCUS_MODEL_FAILED = "Marcus's model didn't answer, so he couldn't choose where to send this. Check that Ollama is running, or name one channel (for example Slack #news).";
+
+/** The #channels a request names (Slack, Discord), in order, without repeats. */
+function namedChannels(request: string): string[] {
+  const found = [...request.matchAll(/(?:^|[\s(])#([a-z0-9][\w-]*)/gi)].map((m) => `#${m[1].toLowerCase()}`);
+  return [...new Set(found)];
+}
 // A newsletter (agent roles Part C2) goes through an n8n workflow or a mail app in Composio only.
 export const NEWSLETTER_NEEDS = 'A newsletter goes through an n8n workflow or a mail app in Composio. Set one up in Settings → Connectors, then carry on.';
 const MAIL_TOOLKITS = new Set(['gmail', 'outlook', 'mailchimp', 'sendgrid', 'brevo']);
@@ -130,6 +138,15 @@ export async function pickDestination(
       if ('picked' in got) return got.picked;
     }
   }
+  // One Slack or Discord and one #channel named (QA batch 1: "post it to Slack #test" went to the model,
+  // which failed): that is where it goes, checked like any other.
+  if ((hint === 'slack' || hint === 'discord') && offered.includes(hint)) {
+    const channels = namedChannels(requestWithoutQuotes(request));
+    if (channels.length === 1) {
+      const got = check({ connector: hint, target: channels[0], kind: kindHint }, request, text);
+      if ('picked' in got) return got.picked;
+    }
+  }
   // Composio's send tools (agent phase 5), only from the toolkits you switched on.
   const allTools = offered.includes('composio') ? await composioSendTools().catch(() => []) : [];
   const composioTools = newsletter ? mailTools(allTools) : allTools;
@@ -143,7 +160,7 @@ export async function pickDestination(
       const result = await generateAgentLlmResponse('marcus', { prompt: prompt(request, text, offered, problem, composioTools), format: 'json' });
       raw = String((result as { response?: unknown })?.response || '');
     } catch {
-      return { ok: false, outcome: 'failed', reason: NO_DESTINATION };
+      return { ok: false, outcome: 'failed', reason: MARCUS_MODEL_FAILED };
     }
     const answer = readAnswer(raw);
     if (!answer) { problem = 'It was not JSON.'; continue; }

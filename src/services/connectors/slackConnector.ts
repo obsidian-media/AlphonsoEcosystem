@@ -2,6 +2,15 @@ import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const SLACK_API_BASE = 'https://slack.com/api';
 
+/** QA batch 1 (live check of 2.10.0, 2026-10-28): an app-level token was saved as the bot token, and
+ *  Marcus could never post with it. Settings' Save and the Health Monitor's Test say so. */
+export const SLACK_APP_TOKEN_PROBLEM = "This is an app-level token (xapp-…), which can't post messages. Paste the Bot User OAuth Token (xoxb-…) from your Slack app's OAuth & Permissions page.";
+
+/** Why a token in the bot-token field can't post, or null. */
+export function slackTokenProblem(token: string | null | undefined): string | null {
+  return /^xapp-/i.test(String(token || '').trim()) ? SLACK_APP_TOKEN_PROBLEM : null;
+}
+
 export interface SlackConfig {
   token: string;
   defaultChannel?: string;

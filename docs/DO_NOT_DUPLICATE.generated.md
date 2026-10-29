@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 328 services and 176 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 328 services and 177 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -150,6 +150,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | component | `src/components/SignInPanel.tsx` | `InstagramLoginSection`, `SignInButton` |
 | component | `src/components/skills/SkillForm.tsx` | `ownTaskTypes`, `SkillForm` |
 | component | `src/components/skills/SkillsPage.tsx` | `SkillsPage` |
+| component | `src/components/SmallModelNotice.tsx` | `isSmallModel`, `SMALL_MODEL_MIN_B`, `SMALL_MODEL_NOTE`, `SmallModelNotice` |
 | component | `src/components/SmartVoiceButton.tsx` | `SmartVoiceButton` |
 | component | `src/components/teams/TeamBuilder.tsx` | `BuilderRow`, `rowsToMembers`, `TeamBuilder` |
 | component | `src/components/teams/TeamsPage.tsx` | `default`, `TeamsPage` |
@@ -260,7 +261,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/connectors/n8nConnector.ts` | `isN8nHealthy`, `listN8nWorkflows`, `N8nActionResult`, `N8nHealthResult`, `N8nWebhookResult`, `N8nWorkflowListResult`, `setN8nWorkflowActive`, `triggerN8nWebhook` |
 | service | `src/services/connectors/nvidiaNimConnector.ts` | `DEFAULT_MODEL`, `isNvidiaConfigured`, `listNvidiaModels`, `NvidiaChatOptions`, `NvidiaChatSuccess`, `NvidiaMessage`, `NvidiaRateLimited`, `NvidiaSendResult`, `sendNvidiaMessage` |
 | service | `src/services/connectors/perplexityConnector.ts` | `isPerplexityConfigured`, `PerplexitySearchOptions`, `PerplexitySearchResult`, `PerplexitySource`, `searchPerplexity` |
-| service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `updateMessage`, `uploadFile` |
+| service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SLACK_APP_TOKEN_PROBLEM`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `slackTokenProblem`, `updateMessage`, `uploadFile` |
 | service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
@@ -320,7 +321,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/echo/decisions.ts` | `activePreferences`, `addDecision`, `Decision`, `decisionIds`, `DecisionKind`, `DECISIONS_CHANGED`, `DECISIONS_KEY`, `ECHO_LIMITS`, `editDecision`, `forgetDecision`, `getDecision`, `listDecisions`, `NewDecision`, `replaceWith`, `Surface`, `surfaceOf` |
 | service | `src/services/echo/echoPicks.ts` | `applyCleanupStep`, `dismissCleanupStep`, `pickForget` |
 | service | `src/services/echo/echoSteps.ts` | `COULDNT_SAVE`, `EchoCtx`, `echoSavePrompt`, `EchoStepResult`, `extractDecisions`, `NO_DECISIONS_THIS_WEEK`, `NOTHING_SAVED_ABOUT`, `NOTHING_TO_REMEMBER`, `runEchoStep`, `WHICH_TO_FORGET`, `withoutRememberWords` |
-| service | `src/services/echo/meaning.ts` | `ECHO_EMBED_MODEL`, `ensureMeaning`, `indexDecisionMeaning`, `MEANING_MIN_SIMILARITY`, `MEANING_QUERY_WAIT_MS`, `meaningEnabled`, `meaningMatches`, `meaningState`, `MeaningState`, `onMeaningState`, `resetMeaningForTests` |
+| service | `src/services/echo/meaning.ts` | `ECHO_EMBED_MODEL`, `ensureMeaning`, `indexDecisionMeaning`, `MEANING_MIN_SIMILARITY`, `MEANING_QUERY_WAIT_MS`, `meaningEnabled`, `meaningMatches`, `meaningQuestion`, `meaningState`, `MeaningState`, `onMeaningState`, `resetMeaningForTests` |
 | service | `src/services/echo/memoryIntents.ts` | `asksToCleanUpMemory`, `asksToForget`, `asksToRemember`, `asksWhatWasDecided`, `memoryOnlyTask` |
 | service | `src/services/echo/recall.ts` | `answerDecisionsBlock`, `contentWords`, `decisionLine`, `decisionsFor`, `decisionsText`, `indexDecision`, `NEAR_REPEAT`, `nearlySame`, `resetChromaCheckForTests`, `searchDecisions`, `surfaceName` |
 | service | `src/services/echoFileWatcherService.ts` | `getWatcherConfig`, `saveWatcherConfig`, `startFileWatcher`, `stopFileWatcher`, `WatcherConfig` |
@@ -385,14 +386,14 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/marcus/composioChannel.ts` | `checkComposioAnswer`, `composioSendTools`, `describeComposioTools` |
 | service | `src/services/marcus/describeSend.ts` | `describeSend` |
 | service | `src/services/marcus/destinations.ts` | `CHANNEL_LIMITS`, `CONNECTOR_NAMES`, `DESTINATION_KEYS`, `destinationsFor`, `isAllowedTarget`, `listedN8nWorkflows`, `MARCUS_CONNECTORS`, `requestWithoutQuotes`, `targetLabel`, `telegramOwnerChatId` |
-| service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `pickDestination` |
+| service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `MARCUS_MODEL_FAILED`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `pickDestination` |
 | service | `src/services/marcus/prepareSend.ts` | `describeSend`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason` |
 | service | `src/services/marcus/readiness.ts` | `checkReadiness` |
 | service | `src/services/marcus/runSend.ts` | `ALREADY_SENT`, `COMPOSIO_NOT_READY`, `runMarcusSend`, `WHATSAPP_24H` |
 | service | `src/services/marcus/sendText.ts` | `NOTHING_TO_SEND`, `sourceStep`, `textToSend` |
 | service | `src/services/marcus/sendTime.ts` | `formatSendTime`, `readSendTime`, `SendTime` |
 | service | `src/services/marcus/types.ts` | `Destination`, `MarcusConnector`, `PrepareResult`, `SendKind`, `SendPreview`, `SendResult` |
-| service | `src/services/marcusExecutionService.ts` | `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `getScheduledPublishes`, `MarcusRecord`, `mariaReviewFor`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleApprovedSend`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
+| service | `src/services/marcusExecutionService.ts` | `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `getScheduledPublishes`, `MarcusRecord`, `mariaReviewFor`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleApprovedSend`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `SEND_FAILED_CARRY_ON`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
 | service | `src/services/marcusPublishService.ts` | `buildMarcusPublishPacket`, `executeMarcusPublish`, `MARCUS_PUBLISH_PLATFORMS` |
 | service | `src/services/maria/mariaHolds.ts` | `holdStepsAfter`, `mariaHoldFor` |
 | service | `src/services/maria/mariaPlanReview.ts` | `contradiction`, `LOW_WITH_APPROVAL`, `parsePlanReview`, `PlanReview`, `planReviewPrompt`, `planReviewText`, `Risk`, `runMariaPlanReview` |
@@ -482,7 +483,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/streamingService.ts` | `abortStream`, `clearStreamHistory`, `getActiveStreams`, `getStreamState`, `startStream`, `StreamEvent`, `subscribeToStreams` |
 | service | `src/services/telegramAutoPollService.ts` | `getTelegramAutoPollState`, `getTelegramEnvSafe`, `runSingleTelegramPoll` |
 | service | `src/services/telegramBrowserConnector.ts` | `browserPollTelegram`, `browserSendTelegram`, `getTelegramPollCursor`, `handleTelegramBotCommand`, `parseTelegramCommand`, `setTelegramPollCursor`, `TelegramAuditEntry`, `TelegramBotVerifyResult`, `TelegramMessage`, `TelegramPollResult`, `TelegramSendResult`, `verifyTelegramBotEnvironment` |
-| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `handleStopCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
+| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `handleStopCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `restartTelegramCompanion`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
 | service | `src/services/toolConnectionService.ts` | `buildToolConnectionPayload`, `listToolConnectionAudit`, `listToolConnections`, `listToolConnectionTypes`, `proveToolConnectionPath`, `removeToolConnection`, `sendToolConnectionMessage`, `SendToolConnectionOptions`, `setToolConnectionStatus`, `testToolConnection`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `ToolConnection`, `ToolConnectionAuditEntry`, `ToolConnectionPatch`, `ToolConnectionResult`, `ToolConnectionType`, `upsertToolConnection` |
 | service | `src/services/toolNotificationDispatcher.ts` | `dispatchReceiptNotifications` |
 | service | `src/services/toolRegistryService.ts` | `executeTool`, `formatToolsForPrompt`, `getAllToolNames`, `getToolDefinition`, `getToolDefinitions`, `ToolArgs`, `ToolContext`, `ToolDefinition`, `ToolExecutionResult`, `ToolParameterSchema` |
