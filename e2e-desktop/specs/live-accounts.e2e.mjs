@@ -14,6 +14,8 @@
 //   ALPHONSO_LIVE_PEXELS_KEY_FILE / _PIXABAY_KEY_FILE / _COVERR_KEY_FILE  stock footage keys (free)
 //   ALPHONSO_LIVE_NVIDIA_KEY_FILE / ALPHONSO_LIVE_GEMINI_KEY_FILE  free-tier cloud model keys
 //   ALPHONSO_LIVE_COMPOSIO_KEY_FILE       a Composio API key (read only: its toolkits are listed)
+//   ALPHONSO_LIVE_HIGGSFIELD_KEY_ID_FILE / _KEY_SECRET_FILE  Higgsfield keys; with
+//   ALPHONSO_LIVE_HIGGSFIELD_PICTURE_MODEL / _CLIP_MODEL      model ids: only Higgsfield's estimate is asked, nothing is made
 // Each key is read from its file here and typed into the test app's Settings, as a user would;
 // it lives only in this run's throwaway profile. The Slack check posts one real message; the
 // ElevenLabs check makes one short voice-over (one line), after its estimate is approved.
@@ -46,6 +48,10 @@ const CLOUD_KEYS = {
   gemini: { key: readKey(process.env.ALPHONSO_LIVE_GEMINI_KEY_FILE), placeholder: 'AIza...', saved: /gemini key saved/i, tab: 'Gemini' },
 };
 const COMPOSIO_KEY = readKey(process.env.ALPHONSO_LIVE_COMPOSIO_KEY_FILE);
+const HF_KEY_ID = readKey(process.env.ALPHONSO_LIVE_HIGGSFIELD_KEY_ID_FILE);
+const HF_SECRET = readKey(process.env.ALPHONSO_LIVE_HIGGSFIELD_KEY_SECRET_FILE);
+const HF_PICTURE = String(process.env.ALPHONSO_LIVE_HIGGSFIELD_PICTURE_MODEL || '').trim();
+const HF_CLIP = String(process.env.ALPHONSO_LIVE_HIGGSFIELD_CLIP_MODEL || '').trim();
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 
 const savedRequests = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
@@ -167,7 +173,7 @@ async function marcusSends(name, text, label) {
 
 describe('Alphonso desktop: the live check with your own accounts', () => {
   before(async function () {
-    if (![...Object.values(STOCK_KEYS), ...Object.values(CLOUD_KEYS)].some((s) => s.key) && !COMPOSIO_KEY && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
+    if (![...Object.values(STOCK_KEYS), ...Object.values(CLOUD_KEYS)].some((s) => s.key) && !COMPOSIO_KEY && !HF_KEY_ID && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
     await enterShell();
   });
 
@@ -464,4 +470,32 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     console.log('LIVE composio', JSON.stringify({ toolkits: count, healthy: !/composio.*(fail|invalid|error|unauthor)/i.test(text) }));
     expect(count).toBeGreaterThan(0);
   }).timeout(300000);
+
+  // Higgsfield, estimate only (owner, 2026-10-29): Test asks Higgsfield's price; nothing is made or charged.
+  it("gets Higgsfield's estimate for your picture and clip models", async function () {
+    if (!HF_KEY_ID || !HF_SECRET || (!HF_PICTURE && !HF_CLIP)) this.skip();
+    await saveConnectorField('Your Higgsfield key id', HF_KEY_ID, {
+      'Your Higgsfield key secret': HF_SECRET,
+      ...(HF_PICTURE ? { 'e.g. higgsfield-ai/soul/v2/standard': HF_PICTURE } : {}),
+      ...(HF_CLIP ? { 'e.g. kling-video/v2.1/pro/image-to-video': HF_CLIP } : {}),
+    });
+    await browser.waitUntil(async () => /higgsfield settings saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'Higgsfield was not saved' });
+    const results = {};
+    for (const [what, model] of [['picture', HF_PICTURE], ['clip', HF_CLIP]]) {
+      if (!model) continue;
+      // The answer shows beside the buttons, after "Open the Higgsfield Console".
+      const answer = '//button[normalize-space(.)="Open the Higgsfield Console"]/following-sibling::span[1]';
+      const shown = async () => ((await $(answer).isExisting()) ? (await $(answer).getText()).trim() : '');
+      const before = await shown();
+      await (await buttonByText(`Test ${what} model`)).click();
+      let line = '';
+      await browser.waitUntil(async () => {
+        line = await shown();
+        return Boolean(line) && line !== before && line !== 'Checking…';
+      }, { timeout: 120000, interval: 2000, timeoutMsg: `Higgsfield gave no estimate for the ${what} model` });
+      results[what] = { model, line };
+    }
+    console.log('LIVE higgsfield', JSON.stringify(results));
+    for (const what of Object.keys(results)) expect(results[what].line).toMatch(/model works: about \$/i);
+  }).timeout(600000);
 });
