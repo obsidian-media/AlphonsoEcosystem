@@ -35,6 +35,7 @@ The owner ran Telegram's Approve, Stop and Cancel on the installed 2.10.0; what 
 - Tests: the desktop runs now delete their own keychain entries (every run left one in Windows Credential Manager); a new by-hand spec, `live-accounts.e2e.mjs`, checks a real Slack send and one ElevenLabs voice-over with your own keys, read from files you name; it also opens one GitHub issue, writes one Notion page and one ClickUp task (each approved first), and runs a cited research answer with Tavily and Brave.
 - Tests: the Calendar test's moves were judged against today's date, so it started failing once its October dates passed; its clock is now fixed at the time the test assumes.
 - `/stop`'s reply is cut at a word with "…"; Settings' model list leaves out embedding models.
+- Dependencies: body-parser 2.4.0 in the Alphonso Bridge and the MCP server (a denial of service with a compressed request body), serialize-javascript 7.1.4 in the test harness. `glib`'s alert stays: Tauri pins it.
 
 ### QA batch 0: main's local-model check made green (2026-10-28)
 CI's new run of the agent specs with a small local model (`qwen2.5:1.5b`) failed on `main` after the 2.10.0 release. The failures were read one by one; five were the app, not the model:
