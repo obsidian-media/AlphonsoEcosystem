@@ -5,6 +5,11 @@
 //   ALPHONSO_LIVE_ELEVENLABS_KEY_FILE     a file holding an ElevenLabs API key
 //   ALPHONSO_LIVE_ELEVENLABS_PRICE_PER_1K your ElevenLabs price per 1,000 characters, USD
 //   ALPHONSO_LIVE_SPEND_CAP_USD           the month's spending cap for the paid check, USD
+//   ALPHONSO_LIVE_GITHUB_TOKEN_FILE       a file holding a GitHub token that may open issues
+//   ALPHONSO_LIVE_GITHUB_REPO             owner/repo for the one test issue (close it afterwards)
+//   ALPHONSO_LIVE_NOTION_TOKEN_FILE       a file holding a Notion integration secret
+//   ALPHONSO_LIVE_NOTION_PAGE_FILE        a file holding the id of a page shared with it
+//   ALPHONSO_LIVE_TAVILY_KEY_FILE / ALPHONSO_LIVE_BRAVE_KEY_FILE  search keys for Hector
 // Each key is read from its file here and typed into the test app's Settings, as a user would;
 // it lives only in this run's throwaway profile. The Slack check posts one real message; the
 // ElevenLabs check makes one short voice-over (one line), after its estimate is approved.
@@ -19,6 +24,12 @@ const SLACK_CHANNEL = String(process.env.ALPHONSO_LIVE_SLACK_CHANNEL || '').trim
 const ELEVEN_KEY = readKey(process.env.ALPHONSO_LIVE_ELEVENLABS_KEY_FILE);
 const ELEVEN_PRICE = Number(process.env.ALPHONSO_LIVE_ELEVENLABS_PRICE_PER_1K);
 const SPEND_CAP = Number(process.env.ALPHONSO_LIVE_SPEND_CAP_USD);
+const GITHUB_TOKEN = readKey(process.env.ALPHONSO_LIVE_GITHUB_TOKEN_FILE);
+const GITHUB_REPO = String(process.env.ALPHONSO_LIVE_GITHUB_REPO || '').trim();
+const NOTION_TOKEN = readKey(process.env.ALPHONSO_LIVE_NOTION_TOKEN_FILE);
+const NOTION_PAGE = readKey(process.env.ALPHONSO_LIVE_NOTION_PAGE_FILE);
+const TAVILY_KEY = readKey(process.env.ALPHONSO_LIVE_TAVILY_KEY_FILE);
+const BRAVE_KEY = readKey(process.env.ALPHONSO_LIVE_BRAVE_KEY_FILE);
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 
 const savedRequests = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
@@ -90,9 +101,57 @@ async function approveOnBoard(stepId) {
   console.log('LIVE approved', stepId);
 }
 
+/** The app's log for one connector: event names and reasons only (never a key). */
+async function connectorLog(id) {
+  return browser.execute((cid) => {
+    try {
+      const rows = JSON.parse(localStorage.getItem('alphonso_connector_audit_v2') || '[]');
+      return rows.filter((r) => r.connectorId === cid || r.connector === cid).slice(-8)
+        .map((r) => [r.eventType || r.event || r.type || r.action || null, r.details?.reason || r.details?.error || r.error || r.reason || null]);
+    } catch { return []; }
+  }, id);
+}
+
+/** Sends one Chat request and waits until `ready(request)` says it got far enough. */
+async function askInChat(text, ready, what) {
+  const model = (await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {};
+  await useSettings({ showPlanFirst: 'never', ...model });
+  await warmSelectedModel();
+  const before = new Set((await savedRequests()).map((r) => r.id));
+  await $('[data-testid="sidebar-chat-shortcut"]').click();
+  const input = await $('[data-testid="chat-compose-input"]');
+  await input.waitForDisplayed();
+  await input.setValue(text);
+  await clickSend();
+  let request;
+  await browser.waitUntil(async () => {
+    request = await newestRequest(before);
+    return Boolean(request && ready(request));
+  }, { timeout: 1800000, interval: 3000, timeoutMsg: `${what} never got there` });
+  return request;
+}
+
+/** One request whose Marcus send waits with `label`, approved on the board, then finished. */
+async function marcusSends(name, text, label) {
+  const settled = (s) => ['waiting_approval', 'done', 'failed', 'setup_needed'].includes(s?.status);
+  let request = await askInChat(text, (r) => settled(r.steps.find((s) => s.agent === 'marcus')), `${name}: Marcus's send`);
+  const marcus = request.steps.find((s) => s.agent === 'marcus');
+  console.log(`LIVE ${name} before`, JSON.stringify({ status: marcus.status, label: marcus.sendPreview?.label, chars: marcus.sendPreview?.text?.length, error: marcus.error }));
+  expect(marcus.status).toBe('waiting_approval');
+  expect(marcus.sendPreview?.label).toBe(label);
+  await approveOnBoard(marcus.stepId);
+  await browser.waitUntil(async () => {
+    request = (await savedRequests()).find((r) => r.id === request.id);
+    return !['running', 'waiting_approval', 'queued'].includes(request.status);
+  }, { timeout: 600000, interval: 3000, timeoutMsg: `${name}: the request did not finish after approval` });
+  const done = request.steps.find((s) => s.agent === 'marcus');
+  const output = (await stepOutputs())[request.commandId]?.steps?.[done.stepId];
+  return { done, output };
+}
+
 describe('Alphonso desktop: the live check with your own accounts', () => {
   before(async function () {
-    if (!SLACK_TOKEN && !ELEVEN_KEY) this.skip();
+    if (!SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !TAVILY_KEY && !BRAVE_KEY) this.skip();
     await enterShell();
   });
 
@@ -235,4 +294,43 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
       fs.rmSync(outputFolder, { recursive: true, force: true });
     }
   }).timeout(1800000);
+
+  it('opens one approved issue in your GitHub test repository', async function () {
+    if (!GITHUB_TOKEN || !GITHUB_REPO || !(await ollamaHasModels())) this.skip();
+    await saveConnectorField('ghp_...', GITHUB_TOKEN, { 'owner/repo (optional)': GITHUB_REPO });
+    await browser.waitUntil(async () => /github saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'GitHub was not saved' });
+    const { done, output } = await marcusSends('github', `/jose Write a one-line note that the Alphonso QA live check ran, and open it as an issue in GitHub ${GITHUB_REPO}`, `GitHub ${GITHUB_REPO}`);
+    console.log('LIVE github after', JSON.stringify({ step: done.status, error: done.error, summary: output?.summary, link: output?.resultUrl || output?.schema?.link || null, platformId: output?.schema?.platformId || null, log: await connectorLog('github') }));
+    expect(done.status).toBe('done');
+  }).timeout(2400000);
+
+  it('writes one approved page in your Notion', async function () {
+    if (!NOTION_TOKEN || !NOTION_PAGE || !(await ollamaHasModels())) this.skip();
+    await saveConnectorField('secret_...', NOTION_TOKEN, { 'Page UUID (optional)': NOTION_PAGE });
+    await browser.waitUntil(async () => /notion saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'Notion was not saved' });
+    const { done, output } = await marcusSends('notion', '/jose Write a one-line note that the Alphonso QA live check ran, and save it to Notion', 'Notion');
+    console.log('LIVE notion after', JSON.stringify({ step: done.status, error: done.error, summary: output?.summary, link: output?.resultUrl || output?.schema?.link || null, log: await connectorLog('notion') }));
+    expect(done.status).toBe('done');
+  }).timeout(2400000);
+
+  it('researches with your Tavily and Brave keys and cites what it read', async function () {
+    if ((!TAVILY_KEY && !BRAVE_KEY) || !(await ollamaHasModels())) this.skip();
+    if (TAVILY_KEY) {
+      await saveConnectorField('tvly-...', TAVILY_KEY);
+      await browser.waitUntil(async () => /tavily saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'Tavily was not saved' });
+    }
+    if (BRAVE_KEY) {
+      await saveConnectorField('BSA...', BRAVE_KEY);
+      await browser.waitUntil(async () => /brave\S* saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'Brave was not saved' });
+    }
+    const finished = (s) => ['done', 'failed', 'setup_needed'].includes(s?.status);
+    const request = await askInChat('/jose Research what the IANA example domain is used for and give me a short cited answer.',
+      (r) => finished(r.steps.find((s) => s.agent === 'hector')), "Hector's research");
+    const hector = request.steps.find((s) => s.agent === 'hector');
+    const output = (await stepOutputs())[request.commandId]?.steps?.[hector.stepId];
+    const sources = output?.schema?.sources || output?.sources || [];
+    console.log('LIVE research', JSON.stringify({ step: hector.status, error: hector.error, sources: sources.length, tavily: await connectorLog('tavily'), brave: await connectorLog('brave_search') }));
+    expect(hector.status).toBe('done');
+    expect(sources.length).toBeGreaterThan(0);
+  }).timeout(2400000);
 });
