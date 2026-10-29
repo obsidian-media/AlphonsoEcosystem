@@ -171,6 +171,11 @@ async function marcusSends(name, text, label) {
 }
 
 describe('Alphonso desktop: the live check with your own accounts', () => {
+  // Temporary output folders are removed at the end, not after each check: Settings still points
+  // at the last one, and a later step writing there failed with "(os error 2)" (QA batch 1).
+  const tempFolders = [];
+  after(() => { for (const f of tempFolders) fs.rmSync(f, { recursive: true, force: true }); });
+
   before(async function () {
     if (![...Object.values(STOCK_KEYS), ...Object.values(CLOUD_KEYS)].some((s) => s.key) && !COMPOSIO_KEY && !HF_KEY_ID && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
     await enterShell();
@@ -312,7 +317,7 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
       expect(spent).toBeGreaterThan(0);
       expect(spent).toBeLessThanOrEqual(SPEND_CAP);
     } finally {
-      fs.rmSync(outputFolder, { recursive: true, force: true });
+      tempFolders.push(outputFolder);
     }
   }).timeout(1800000);
 
@@ -403,7 +408,7 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
         expect(results[source].downloadedBytes).toBeGreaterThan(50000);
       }
     } finally {
-      fs.rmSync(outputFolder, { recursive: true, force: true });
+      tempFolders.push(outputFolder);
     }
   }).timeout(900000);
 

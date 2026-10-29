@@ -253,6 +253,8 @@ function riskRank(risk: string): number {
  * but not "latest", "file" matches "files" but not "profile". Until 2026-10-25
  * any substring matched.
  */
+const NOT_A_CHECK = /\bcheck(?:outs?|lists?|box(?:es)?|points?)\b/g;
+
 function matchesAny(text: string, terms: string[]): boolean {
   return terms.some((term) => new RegExp(`(^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(text));
 }
@@ -362,14 +364,16 @@ const NOT_CODE = /\b(?:discount|promo|promotional|coupon|voucher|referral|gift)\
 const PLAN_REVIEW = /\b(?:audit|review|assess|evaluate|check)\b[^.?!:]*\b(?:plan|plans|idea|ideas|campaign|proposal|strategy)\b/i;
 
 export const WRITE_FOR_SEND = 'Write only the text that will be sent, exactly as it should read. Do not say that it was sent or where it goes: Marcus sends it after you approve it.';
-const SEND_WORD = /\b(?:send|post|tell|message|announce|notify|share|publish|release)\b|\b(?:open|create|file)\s+an?\s+issue\b/;
+// "Open an issue", "open it as an issue", "file it as a GitHub issue", "create a GitHub issue" (QA batch 1).
+const OPEN_ISSUE = /\b(?:open|create|file|raise|log|submit)\s+(?:(?:it|this|that)\s+)?(?:as\s+)?an?\s+(?:new\s+)?(?:github\s+)?issue\b/;
+const SEND_WORD = new RegExp(`${/\b(?:send|post|tell|message|announce|notify|share|publish|release)\b/.source}|${OPEN_ISSUE.source}`);
 const CHANNEL_WORDS = ['slack', 'discord', 'telegram', 'whatsapp', 'notion', 'clickup', 'n8n', 'github'];
 const READINESS_QUESTION = /\bready\b|\bcan i (?:post|publish|send)\b/;
 
 /** The channels a request sends to, in the order it names them (agent phase 5). */
 function parseSends(asked: string, clean: string, planReview: boolean): ParsedSend | undefined {
   if (planReview || READINESS_QUESTION.test(asked) || !SEND_WORD.test(asked)) return undefined;
-  const issue = /\b(?:open|create|file)\s+an?\s+issue\b/.test(asked);
+  const issue = OPEN_ISSUE.test(asked);
   const release = !issue && /\brelease\b/.test(asked) && (/\bgithub\b/.test(asked) || /\bv?\d+\.\d+/.test(asked));
   const found = CHANNEL_WORDS
     .map((word) => ({ word, at: asked.search(new RegExp(`\\b${word}\\b`)) }))
@@ -418,7 +422,8 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
     // Everyday writing (agent phase 1): a writing verb, when it isn't creative or code work.
     writing: !planReview && !creative && !localExecution && matchesAny(asked, ['write', 'draft', 'compose', 'rewrite', 'summarise', 'summarize']),
     // A check of the writing for accuracy (agent phase 1).
-    check: !planReview && matchesAny(asked, ['check', 'accuracy', 'accurate', 'fact-check', 'proofread']) && (!securityMonitoring || accuracyCheck),
+    // A checkout page, a checklist or a checkbox is not a check (QA batch 1).
+    check: !planReview && matchesAny(asked.replace(NOT_A_CHECK, ' '), ['check', 'accuracy', 'accurate', 'fact-check', 'proofread']) && (!securityMonitoring || accuracyCheck),
     governanceAudit: planReview || matchesAny(asked, ['audit', 'compliance', 'policy', 'approval', 'governance', 'risk']),
     securityMonitoring,
     memoryPreservation: !asksToForget(asked) && !asksToCleanUpMemory(asked) && matchesAny(asked, ['remember', 'archive', 'knowledge', 'timeline', 'document decision']),

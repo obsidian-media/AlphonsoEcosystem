@@ -43,6 +43,10 @@ const RULE_PLAN: [string, Part[]][] = [
   ['/jose Tell my team on Telegram "meeting moved to 3pm"', [['marcus', 'distribution_execution']]],
   ['/jose Create a GitHub release v1.2.0 for my repo with the notes: fixed the login bug.', [['alphonso', 'assistant_write'], ['marcus', 'distribution_release']]],
   ['/jose Open an issue on GitHub acme/shop: the login page fails on Safari', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
+  // QA batch 1 (the live run): "open it as an issue" was planned as a code change in the repository.
+  ['/jose Write a short note that the backup finished, and open it as an issue in GitHub acme/shop', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
+  ['/jose Write up the Safari login bug and file it as a GitHub issue in acme/shop', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
+  ['/jose Create a GitHub issue in acme/shop about the slow checkout page', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
   ['/jose Is my new post ready to publish on Instagram?', [['marcus', 'distribution_readiness']]],
   ['Is my announcement ready to post on Slack?', [['marcus', 'distribution_readiness']]],
   ['Scan my last week for security issues', [['sentinel', 'security_monitor']]],
