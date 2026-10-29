@@ -1694,8 +1694,104 @@ pub(crate) async fn connector_hermes_agent_request(
   })
 }
 
+const NVIDIA_API_BASE: &str = "https://integrate.api.nvidia.com/v1";
+
+/// NVIDIA NIM's address for one of the two calls the app makes, and whether it posts.
+/// Anything else is refused: this command reaches NVIDIA only.
+pub(crate) fn nvidia_target(path: &str) -> Result<(String, bool), String> {
+  match path {
+    "models" => Ok((format!("{NVIDIA_API_BASE}/models"), false)),
+    "chat/completions" => Ok((format!("{NVIDIA_API_BASE}/chat/completions"), true)),
+    other => Err(format!("NVIDIA NIM has no call named {other:?} here.")),
+  }
+}
+
+/// Calls NVIDIA NIM from the backend. NVIDIA sends no Access-Control-Allow-Origin, so the
+/// app window's own fetch always failed with "Failed to fetch" (QA batch 1). The key is the
+/// one saved in Settings, else `NVIDIA_API_KEY`; it never appears in an error.
+#[tauri::command]
+pub(crate) async fn connector_nvidia_request(
+  path: String,
+  body: Option<String>,
+  api_key: Option<String>,
+) -> Result<HermesAgentHttpProof, String> {
+  let failed = |error: String| HermesAgentHttpProof {
+    ok: false,
+    http_status: None,
+    body: None,
+    error: Some(error),
+  };
+  let (url, posts) = match nvidia_target(&path) {
+    Ok(target) => target,
+    Err(error) => return Ok(failed(error)),
+  };
+  let key = secret_or_env(api_key, "NVIDIA_API_KEY");
+  if key.is_empty() {
+    return Ok(failed(
+      "No NVIDIA NIM key is saved. Add it in Settings → Connectors.".to_string(),
+    ));
+  }
+  let client = match reqwest::Client::builder()
+    .timeout(Duration::from_secs(120))
+    .build()
+  {
+    Ok(c) => c,
+    Err(error) => return Ok(failed(error.to_string())),
+  };
+  let mut request = if posts {
+    client
+      .post(&url)
+      .header("Content-Type", "application/json")
+      .body(body.unwrap_or_default())
+  } else {
+    client.get(&url)
+  };
+  request = request.header("Authorization", format!("Bearer {}", key.trim()));
+  let response = match request.send().await {
+    Ok(r) => r,
+    // reqwest's error names the address, never the header, so the key stays out of it.
+    Err(error) => return Ok(failed(error.without_url().to_string())),
+  };
+  let http_status = Some(response.status().as_u16());
+  let ok = response.status().is_success();
+  let body_text = response.text().await.unwrap_or_default();
+  Ok(HermesAgentHttpProof {
+    ok,
+    http_status,
+    body: Some(body_text),
+    error: None,
+  })
+}
+
 #[cfg(test)]
 mod tests {
+  #[test]
+  fn nvidia_requests_reach_only_nvidia_and_only_its_two_calls() {
+    assert_eq!(
+      nvidia_target("models").unwrap(),
+      (
+        "https://integrate.api.nvidia.com/v1/models".to_string(),
+        false
+      )
+    );
+    assert_eq!(
+      nvidia_target("chat/completions").unwrap(),
+      (
+        "https://integrate.api.nvidia.com/v1/chat/completions".to_string(),
+        true
+      )
+    );
+    for bad in [
+      "",
+      "../models",
+      "https://evil.example",
+      "models?x=1",
+      "embeddings",
+    ] {
+      assert!(nvidia_target(bad).is_err(), "{bad} must be refused");
+    }
+  }
+
   use super::*;
   use std::ffi::OsString;
   use std::sync::{Mutex, OnceLock};

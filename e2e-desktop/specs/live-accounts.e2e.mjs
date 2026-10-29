@@ -45,7 +45,7 @@ const STOCK_KEYS = {
 };
 const CLOUD_KEYS = {
   nvidia_nim: { key: readKey(process.env.ALPHONSO_LIVE_NVIDIA_KEY_FILE), placeholder: 'nvapi-...', saved: /nvidia nim key saved/i, tab: 'NVIDIA NIM' },
-  gemini: { key: readKey(process.env.ALPHONSO_LIVE_GEMINI_KEY_FILE), placeholder: 'AIza...', saved: /gemini key saved/i, tab: 'Gemini' },
+  gemini: { key: readKey(process.env.ALPHONSO_LIVE_GEMINI_KEY_FILE), placeholder: 'AIza...', section: 'Google Gemini', saved: /gemini key saved/i, tab: 'Gemini' },
 };
 const COMPOSIO_KEY = readKey(process.env.ALPHONSO_LIVE_COMPOSIO_KEY_FILE);
 const HF_KEY_ID = readKey(process.env.ALPHONSO_LIVE_HIGGSFIELD_KEY_ID_FILE);
@@ -96,19 +96,25 @@ async function useSettings(values) {
 }
 
 /** Settings → Connectors, one field typed, then that section's Save & Enable. */
-async function saveConnectorField(placeholder, value, more = {}) {
+async function saveConnectorField(placeholder, value, more = {}, { section } = {}) {
   await $('[aria-label="Open settings"]').click();
   const connectors = await $('//nav//button[normalize-space(.)="Connectors"]');
   await connectors.waitForClickable({ timeout: 30000 });
   await connectors.click();
-  let field = await $(`input[placeholder="${placeholder}"]`);
-  if (!(await field.isExisting())) {
+  // Two connectors can share a placeholder (Gemini and Google Web Risk both take "AIza..."):
+  // `section` names the heading the field sits under.
+  const selector = section
+    ? `//*[normalize-space(text())="${section}"]/following::input[@placeholder="${placeholder}"][1]`
+    : `input[placeholder="${placeholder}"]`;
+  const findField = async () => (await $$(selector))[0];
+  let field = await findField();
+  if (!field || !(await field.isExisting())) {
     // A closed category: open the one that holds it.
     for (const id of ['content', 'automation', 'search', 'ai_models']) {
       const toggle = await $(`[data-testid="connector-category-${id}"]`);
       if (await toggle.isExisting()) await toggle.click();
-      field = await $(`input[placeholder="${placeholder}"]`);
-      if (await field.isExisting()) break;
+      field = await findField();
+      if (field && (await field.isExisting())) break;
     }
   }
   await field.waitForDisplayed({ timeout: 30000 });
@@ -398,7 +404,10 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
       for (const [source, s] of sources) {
         await saveConnectorField(s.placeholder, s.key);
         await browser.waitUntil(async () => s.saved.test(await mainText()), { timeout: 60000, timeoutMsg: `${source} was not saved` });
-        const body = await invoke('content_stock_search', { request: { source, query: 'ocean waves', orientation: 'landscape', apiKey: s.key } });
+        // invoke() answers { ok, value } or { ok: false, error }: the search result is the value.
+        const searched = await invoke('content_stock_search', { request: { source, query: 'ocean waves', orientation: 'landscape', apiKey: s.key } });
+        if (!searched.ok) { results[source] = { hits: 0, downloadedBytes: 0, error: String(searched.error).slice(0, 200) }; continue; }
+        const body = searched.value;
         const hits = source === 'pexels' ? (body?.videos || []) : (body?.hits || body?.videos || []);
         const first = hits[0];
         const url = source === 'pexels'
@@ -409,10 +418,11 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
         let error = null;
         if (url) {
           try {
-            await invoke('content_download_media', { request: {
+            const got = await invoke('content_download_media', { request: {
               workspaceRoot: outputFolder, url, relPath,
               ...(source === 'coverr' ? { coverrId: String(first.id), apiKey: s.key } : {}),
             } });
+            if (!got.ok) error = String(got.error).slice(0, 200);
             const file = path.join(outputFolder, relPath);
             downloaded = fs.existsSync(file) ? fs.statSync(file).size : 0;
           } catch (e) { error = String(e?.message || e).slice(0, 200); }
@@ -436,17 +446,25 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     const results = {};
     try {
       for (const [id, c] of providers) {
-        await saveConnectorField(c.placeholder, c.key);
+        await saveConnectorField(c.placeholder, c.key, {}, { section: c.section });
         await browser.waitUntil(async () => c.saved.test(await mainText()), { timeout: 60000, timeoutMsg: `${id} was not saved` });
+        const ollamaModel = (await browser.execute(() => JSON.parse(localStorage.getItem('alphonso_settings') || '{}'))).selectedModel;
         await $('[data-testid="sidebar-chat-shortcut"]').click();
-        const tab = await $(`button[title="${c.tab}"]`);
+        // Settings has the same provider tabs (one row per agent): wait for Chat, then take Chat's.
+        await $('[data-testid="chat-compose-input"]').waitForDisplayed({ timeout: 30000 });
+        let tab;
+        await browser.waitUntil(async () => {
+          for (const t of await $$(`button[title="${c.tab}"]`)) if (await t.isDisplayed({ withinViewport: true })) { tab = t; return true; }
+          return false;
+        }, { timeout: 30000, timeoutMsg: `Chat's ${c.tab} tab is not on screen` });
         await tab.waitForClickable({ timeout: 30000 });
         await tab.click();
         // The picker chooses the provider's first model once its list loads.
         await browser.waitUntil(async () => {
           const settings = await browser.execute(() => JSON.parse(localStorage.getItem('alphonso_settings') || '{}'));
-          return settings.selectedProvider === id && Boolean(settings.selectedModel);
-        }, { timeout: 60000, timeoutMsg: `${c.tab} picked no model` });
+          // A model of this provider's, not the Ollama model still saved (it passed with llama3.2:3b).
+          return settings.selectedProvider === id && Boolean(settings.selectedModel) && settings.selectedModel !== ollamaModel;
+        }, { timeout: 60000, timeoutMsg: `${c.tab} picked no model of its own` });
         const model = (await browser.execute(() => JSON.parse(localStorage.getItem('alphonso_settings') || '{}'))).selectedModel;
         const before = (await $$('[data-testid="chat-message-assistant"]')).length;
         const input = await $('[data-testid="chat-compose-input"]');
@@ -462,9 +480,16 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
         }, { timeout: 180000, interval: 2000, timeoutMsg: `${c.tab} gave no reply` });
         results[id] = { model, reply: reply.slice(0, 160) };
       }
+    } catch (e) {
+      console.log('LIVE cloud failed', JSON.stringify(results), String(e?.message || e).slice(0, 300));
+      throw e;
     } finally {
-      const ollama = await $('button[title="Ollama"]');
-      if (await ollama.isExisting()) await ollama.click();
+      // Back to Ollama for the next checks; a failure here must not hide the check's own error.
+      try {
+        for (const ollama of await $$('button[title="Ollama"]')) {
+          if (await ollama.isDisplayed({ withinViewport: true })) { await browser.execute((el) => el.click(), ollama); break; }
+        }
+      } catch (e) { console.log('LIVE cloud: could not switch back to Ollama:', String(e?.message || e).slice(0, 200)); }
     }
     console.log('LIVE cloud', JSON.stringify(results));
     for (const [id] of providers) expect(results[id].reply).toMatch(/paris/i);
@@ -509,11 +534,16 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
       const shown = async () => ((await $(answer).isExisting()) ? (await $(answer).getText()).trim() : '');
       const before = await shown();
       await (await buttonByText(`Test ${what} model`)).click();
+      // The answer can read the same as the last model's (the same refusal), so a new answer is
+      // one seen after "Checking…", or after 20 s with no change.
+      const started = Date.now();
+      let sawChecking = false;
       let line = '';
       await browser.waitUntil(async () => {
         line = await shown();
-        return Boolean(line) && line !== before && line !== 'Checking…';
-      }, { timeout: 120000, interval: 2000, timeoutMsg: `Higgsfield gave no estimate for the ${what} model` });
+        if (line === 'Checking…') { sawChecking = true; return false; }
+        return Boolean(line) && (sawChecking || line !== before || Date.now() - started > 20000);
+      }, { timeout: 120000, interval: 300, timeoutMsg: `Higgsfield gave no estimate for the ${what} model` });
       results[what] = { model, line };
     }
     console.log('LIVE higgsfield', JSON.stringify(results));
