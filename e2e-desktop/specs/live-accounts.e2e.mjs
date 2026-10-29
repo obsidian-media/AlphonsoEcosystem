@@ -222,7 +222,9 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
         }));
         throw new Error('the voice step did not finish');
       }
-      const chosen = voice.versions?.[voice.versions.length - 1]?.output;
+      // A step's version keeps each agent's answer under its name (Miya's here).
+      const saved = voice.versions?.[voice.versions.length - 1]?.output;
+      const chosen = saved?.miya || saved;
       const spent = await browser.execute(() => { try { return JSON.parse(localStorage.getItem('alphonso_jose_spend_v1') || '{}').totalUsd || 0; } catch { return 0; } });
       console.log('LIVE eleven after', JSON.stringify({ status: voice.status, error: voice.error, engine: chosen?.engine, note: chosen?.note, words: (chosen?.words || []).length, spent }));
       expect(voice.status).toBe('done');

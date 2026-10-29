@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 19 (Vite 8, Tailwind 4) + Ollama (local LLM)
-- **Version**: 2.10.0 (released 2026-10-27; 596 test files, 6,929 tests, 328 services)
+- **Version**: 2.10.0 (released 2026-10-27; 596 test files, 6,933 tests, 328 services)
 - **Released in 2.10.0**: the Jose redesign (phases 1–7: plans as step graphs, approval by effect, the Requests board, Stop, a local-model queue), agent roles Parts A–C (one owner per kind of work, 60 skills, Projects and Teams), agent phases 1–7 (each agent rebuilt around its own model's judgment) and Miya's content factory (phases 1–4c: from an idea to finished, posted videos, Shorts and carousels, with results, paid engines, brand characters and motion) Next (owner, 2026-10-27): the live check with the owner's keys, then the resource manager, OpenRouter, a real MCP server and the Hermes gateway, each a phase of its own.
 
 ## Directory Structure
@@ -32,7 +32,7 @@ src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and ol
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                596 test files, 6,929 tests (Vitest; see ground truth for current verification status)
+  test/                596 test files, 6,933 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -88,7 +88,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,929 tests (596 files; also runs bridge/)
+npm run test             # 6,933 tests (596 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command

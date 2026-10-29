@@ -11,6 +11,21 @@ export const COMPOSIO_NOT_READY = "Composio sending isn't ready yet.";
 
 const setting = (connector: string, key: string) => String(getConnectorCredential(connector, key) || '').trim();
 const message = (error: unknown) => String((error as Error)?.message || error || 'it failed').replace(/\.$/, '');
+/** What to do when Slack refuses a send, by Slack's own error code (QA batch 1: "missing_scope" was shown raw). */
+export const SLACK_REASONS = {
+  missing_scope: "Slack's bot isn't allowed to post: add the chat:write scope under OAuth & Permissions in your Slack app, reinstall the app, then paste the new Bot User OAuth Token (xoxb-…) in Settings → Connectors → Slack",
+  not_in_channel: "the bot isn't in that channel: type /invite @your-bot-name in the channel",
+  channel_not_found: "Slack has no channel by that name that the bot can see: check the name, or invite the bot to it",
+  invalid_auth: "Slack refused the token: paste a current Bot User OAuth Token (xoxb-…) in Settings → Connectors → Slack",
+} as const;
+const SLACK_SAME_AS: Record<string, keyof typeof SLACK_REASONS> = { token_revoked: 'invalid_auth', not_authed: 'invalid_auth', account_inactive: 'invalid_auth', token_expired: 'invalid_auth' };
+
+export function slackReason(error: string): string {
+  const code = String(error || '').trim().match(/([a-z_]+)$/)?.[1] || '';
+  const known = (code in SLACK_REASONS ? code : SLACK_SAME_AS[code]) as keyof typeof SLACK_REASONS | undefined;
+  return known ? SLACK_REASONS[known] : String(error || '');
+}
+
 const notSent = (label: string, reason: string): SendResult => ({ ok: false, sentence: `Not sent to ${label}: ${reason.replace(/\.$/, '')}.` });
 
 /** Whether a step's send already went out; sets the mark before sending when not. */
@@ -33,7 +48,7 @@ async function send(preview: SendPreview, commandId: string): Promise<SendResult
       const { sendSlackMessage } = await import('../connectors/connectorOutbound');
       const channel = target.startsWith('#') || /^[CGD][A-Z0-9]{6,}$/.test(target) ? target : `#${target}`;
       const r = await sendSlackMessage(channel, text, options) as { ok?: boolean; error?: string; ts?: string | null };
-      return r?.ok ? { ok: true, sentence: `Sent to ${label}.`, link: null, platformId: r.ts || null } : notSent(label, String(r?.error || 'Slack refused it'));
+      return r?.ok ? { ok: true, sentence: `Sent to ${label}.`, link: null, platformId: r.ts || null } : notSent(label, slackReason(String(r?.error || 'Slack refused it')));
     }
     case 'discord': {
       const discord = await import('../connectors/discordConnector');

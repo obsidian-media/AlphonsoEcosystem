@@ -13,6 +13,7 @@ vi.mock('../../../services/connectors/connectorOutbound', () => ({
   sendSlackMessage: vi.fn(),
 }));
 import { sendSlackMessage } from '../../../services/connectors/connectorOutbound';
+import { slackReason, SLACK_REASONS } from '../../../services/marcus/runSend';
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { requireApproval } from '../../../services/approval/approvalService';
@@ -73,7 +74,7 @@ describe('runMarcusSend', () => {
   it('a send the platform refused can be tried again', async () => {
     const commandId = fresh();
     vi.mocked(sendSlackMessage).mockResolvedValueOnce({ ok: false, error: 'channel_not_found' } as never).mockResolvedValueOnce({ ok: true, ts: '1.3' } as never);
-    expect(await runMarcusSend(commandId, 'marcus', p())).toEqual({ ok: false, sentence: 'Not sent to Slack #news: channel_not_found.' });
+    expect(await runMarcusSend(commandId, 'marcus', p())).toEqual({ ok: false, sentence: `Not sent to Slack #news: ${SLACK_REASONS.channel_not_found}.` });
     expect(getJoseRequest(`jose-request-${commandId}`).steps[0].sentAtMs).toBeUndefined();
     expect((await runMarcusSend(commandId, 'marcus', p())).sentence).toBe('Sent to Slack #news.');
     expect((await runMarcusSend(commandId, 'marcus', p())).sentence).toBe(ALREADY_SENT);
@@ -119,7 +120,7 @@ describe('runMarcusSend', () => {
 
   it("a refusal says the platform's reason", async () => {
     vi.mocked(sendSlackMessage).mockResolvedValue({ ok: false, error: 'channel_not_found' } as never);
-    expect((await runMarcusSend(fresh(), 'marcus', p())).sentence).toBe('Not sent to Slack #news: channel_not_found.');
+    expect((await runMarcusSend(fresh(), 'marcus', p())).sentence).toBe(`Not sent to Slack #news: ${SLACK_REASONS.channel_not_found}.`);
   });
 
   it('sends once', async () => {
@@ -129,5 +130,17 @@ describe('runMarcusSend', () => {
     expect(getJoseRequest(`jose-request-${commandId}`)?.steps[0].sentAtMs).toBeGreaterThan(0);
     expect(await runMarcusSend(commandId, 'marcus', p())).toEqual({ ok: false, sentence: ALREADY_SENT });
     expect(sendSlackMessage).toHaveBeenCalledTimes(1);
+  });
+});
+
+// QA batch 1 (third live run): Slack answered "HTTP 200: missing_scope" and the board showed it raw.
+describe('slackReason', () => {
+  it("turns Slack's codes into what to do, and keeps anything else as Slack said it", () => {
+    expect(slackReason('HTTP 200: missing_scope')).toBe(SLACK_REASONS.missing_scope);
+    expect(SLACK_REASONS.missing_scope).toContain('chat:write');
+    expect(slackReason('not_in_channel')).toBe(SLACK_REASONS.not_in_channel);
+    expect(slackReason('HTTP 200: invalid_auth')).toBe(SLACK_REASONS.invalid_auth);
+    expect(slackReason('token_revoked')).toBe(SLACK_REASONS.invalid_auth);
+    expect(slackReason('Failed to fetch')).toBe('Failed to fetch');
   });
 });

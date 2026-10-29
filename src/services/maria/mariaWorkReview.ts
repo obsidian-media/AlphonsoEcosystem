@@ -80,6 +80,18 @@ export function givenByRequest(claim: string, request: string): boolean {
   return [...meaning].filter((w) => inRequest.has(w)).length / meaning.size >= 0.5;
 }
 
+/**
+ * Whether a "not backed" claim is in the work at all (QA batch 1: a 7B model returned the answer
+ * format's own example, "the exact claim"): quoted, or at least half its meaning words in the work.
+ */
+export function claimInWork(claim: string, work: string): boolean {
+  if (quoteIn(claim, work)) return true;
+  const meaning = contentWords(claim);
+  if (!meaning.size) return false;
+  const inWork = contentWords(work);
+  return [...meaning].filter((w) => inWork.has(w)).length / meaning.size >= 0.5;
+}
+
 export function parseWorkReview(text: string, work: string, files: { path: string; text: string }[], opts: { request?: string } = {}): { review: WorkReview; badQuotes: string[]; help: string } | null {
   const data = readJson(text);
   if (!data || (data.verdict !== 'pass' && data.verdict !== 'fix')) return null;
@@ -95,12 +107,13 @@ export function parseWorkReview(text: string, work: string, files: { path: strin
     if (!quoteIn(quote, where)) { badQuotes.push(quote); continue; }
     findings.push({ quote, problem, change: str(f?.change), ...(inFile ? { file, line: Number.isInteger(f?.line) ? f.line : undefined } : {}) });
   }
-  const unbacked = (Array.isArray(data.unbacked) ? data.unbacked : [])
+  const claimed = (Array.isArray(data.unbacked) ? data.unbacked : [])
     .map((u: any) => ({ claim: str(u?.claim), why: str(u?.why) }))
     .filter((u: { claim: string }) => u.claim);
+  const unbacked = claimed.filter((u: { claim: string }) => claimInWork(u.claim, work));
   // With no sources (opts.request given), what the request itself says needs no source.
   const kept = opts.request !== undefined ? unbacked.filter((u: { claim: string }) => !givenByRequest(u.claim, opts.request as string)) : unbacked;
-  const droppedAll = kept.length < unbacked.length && !kept.length;
+  const droppedAll = kept.length < claimed.length && !kept.length;
   // A fix with nothing left to change once those are dropped can't be acted on, so it passes.
   const modelFix = data.verdict === 'fix' && !(droppedAll && !findings.length && !badQuotes.length);
   const verdict: 'pass' | 'fix' = modelFix || kept.length ? 'fix' : 'pass';

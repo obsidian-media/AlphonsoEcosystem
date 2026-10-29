@@ -578,6 +578,8 @@ export function startPostScheduler(): void {
   void readDueMetrics().catch(() => undefined);
   // Lessons after each 7-day reading (phase 4a); loaded lazily to keep the runner light.
   void import('./contentFactory/contentLearning').then((m) => m.startContentLearning()).catch(() => undefined);
+  // A project's steps get the reason when its request ends without finishing (QA batch 1).
+  void import('./contentFactory/contentStepRunner').then((m) => m.startContentRequestWatch()).catch(() => undefined);
   startScheduler();
 }
 

@@ -45,6 +45,15 @@ describe('parseWorkReview with no sources', () => {
     expect(out.review.unbacked).toHaveLength(1);
   });
 
+  // Third live run: a 7B model returned the answer format's own example, "the exact claim".
+  it('a "not backed" claim that is not in the work is dropped', () => {
+    const out = parseWorkReview(answer(['the exact claim']), NOTE, [], { request: REQUEST })!;
+    expect(out.review.unbacked).toEqual([]);
+    expect(out.review.verdict).toBe('pass');
+    const withSources = parseWorkReview(answer(['the exact claim']), NOTE, [])!;
+    expect(withSources.review.unbacked).toEqual([]);
+  });
+
   it('the prompt says to check against the request when there are no sources', () => {
     const p = workReviewPrompt(input() as never, { sources: NO_SOURCES, files: '', results: '', factCheck: false });
     expect(p).toContain('There are no sources: check each fact, number and name against the request');
