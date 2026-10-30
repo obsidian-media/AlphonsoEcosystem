@@ -95,6 +95,7 @@ describe('Alphonso desktop: Jose plan board', function () {
       return request && !['waiting_plan_approval', 'running'].includes(request.status);
     }, { timeout: 1100000, interval: 3000, timeoutMsg: 'the plan never finished running' });
     const [request] = (await savedRequests()).slice(-1);
+    console.log('BOARD-E2E run', JSON.stringify({ status: request.status, steps: request.steps.map((x) => [x.stepId, x.agent, x.actionType, x.status, x.error || null]) }));
     expect(['done', 'waiting_approval']).toContain(request.status);
     expect(request.steps.some((s) => s.status === 'done')).toBe(true);
     expect(request.changeLog.some((c) => /should do/.test(c.text))).toBe(true);

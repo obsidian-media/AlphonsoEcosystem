@@ -4,7 +4,7 @@
 // the model is unavailable, the simple rule-based plan runs and Jose says so
 // (owner, 2026-10-23).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.3–2.4, §5
-import { memoryOnlyTask } from '../echo/memoryIntents';
+import { memoryOnlyTask, MEMORY_ONLY_INSTRUCTION } from '../echo/memoryIntents';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { asksPlanReview, asksReadiness, asksToCleanUpMemory, asksToForget, asksToRemember, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
@@ -305,7 +305,10 @@ function fillFromTemplate(steps: PlanStep[], template: JoseTemplate): PlanStep[]
   });
 }
 
-const isReviewType = (actionType: string) => actionType.startsWith('audit_') || actionType.includes('review');
+// Sentinel's checks review work too (QA batch 1: an unlinked security_workflow_step checked the
+// request instead of the email); his dependency check looks at a project, not a piece of work.
+const isReviewType = (actionType: string) => actionType.startsWith('audit_') || actionType.includes('review')
+  || (actionType.startsWith('security_') && actionType !== 'security_dependencies');
 
 /**
  * A review step the model did not mark: if its task is a review and it needs
@@ -381,7 +384,7 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
   const memoryTask = memoryOnlyTask(text);
   if (memoryTask) {
     return {
-      steps: [{ stepId: 'echo', agent: 'echo', actionType: memoryTask, effects: inferEffects(memoryTask), needs: [], instruction: 'Do what the request asks with memory.' }],
+      steps: [{ stepId: 'echo', agent: 'echo', actionType: memoryTask, effects: inferEffects(memoryTask), needs: [], instruction: MEMORY_ONLY_INSTRUCTION }],
       source: 'rules', templateId: null, kind: 'normal', note: 'Echo does this.',
     };
   }

@@ -19,11 +19,11 @@ interface NvidiaResponse {
  * goes through the backend's connector_nvidia_request (NVIDIA's two addresses only); a plain
  * fetch is kept for the browser dev build.
  */
-async function nvidiaRequest(path: NvidiaPath, apiKey: string, body?: string): Promise<NvidiaResponse> {
+async function nvidiaRequest(path: NvidiaPath, apiKey: string, body?: string, timeoutSecs?: number): Promise<NvidiaResponse> {
   if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__) {
     const proof = await invoke<{ ok: boolean; httpStatus: number | null; body: string | null; error: string | null }>(
       'connector_nvidia_request',
-      { path, body: body ?? null, apiKey }
+      { path, body: body ?? null, apiKey, timeoutSecs: timeoutSecs ?? null }
     );
     if (proof.httpStatus === null) {
       throw new Error(`Couldn't reach NVIDIA NIM: ${proof.error || 'no answer'}`);
@@ -35,6 +35,7 @@ async function nvidiaRequest(path: NvidiaPath, apiKey: string, body?: string): P
     method: body === undefined ? 'GET' : 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
     ...(body === undefined ? {} : { body }),
+    ...(timeoutSecs ? { signal: AbortSignal.timeout(timeoutSecs * 1000) } : {}),
   });
 }
 // meta/llama-3.1-8b-instruct is one of NVIDIA NIM's widely-available free-tier
@@ -52,6 +53,8 @@ export interface NvidiaChatOptions {
   model?: string;
   maxTokens?: number;
   temperature?: number;
+  /** Seconds to wait for NVIDIA before giving up (the backend allows 5 to 120; 120 when not given). */
+  timeoutSecs?: number;
 }
 
 export interface NvidiaChatSuccess {
@@ -78,7 +81,7 @@ export function isNvidiaConfigured(): boolean {
 
 export async function sendNvidiaMessage(
   messages: NvidiaMessage[],
-  { model = DEFAULT_MODEL, maxTokens = 2048, temperature = 0.7 }: NvidiaChatOptions = {}
+  { model = DEFAULT_MODEL, maxTokens = 2048, temperature = 0.7, timeoutSecs }: NvidiaChatOptions = {}
 ): Promise<NvidiaSendResult> {
   const apiKey = getConnectorCredential('nvidia_nim', 'NVIDIA_API_KEY');
   if (!apiKey) throw new Error('NVIDIA API key not configured');
@@ -99,7 +102,7 @@ export async function sendNvidiaMessage(
     messages,
     max_tokens: maxTokens,
     temperature
-  }));
+  }), timeoutSecs);
 
   if (r.status === 429) {
     const err = await r.text();
@@ -173,30 +176,47 @@ export interface WorkingModelResult {
   rateLimited?: true;
 }
 
+/** How the search asks: a few models at once, each with a short limit (QA batch 1: one at a time,
+ *  a fresh install waited 139 s, two listed models never answering; over 4 minutes in the app). */
+export const NVIDIA_PROBE = { timeoutSecs: 20, atOnce: 4 } as const;
+
 /**
  * NVIDIA lists models it no longer serves (QA batch 1: 58 of 85 answered 404), so a list alone
- * can't say which model works. Asks each candidate, in the order given, a tiny question until one
- * answers it like a chat model; a model answering 404 is remembered as not served. Stops at a rate
- * limit rather than guessing. No fixed model list.
+ * can't say which model works. Asks the candidates a tiny question, a few at once, and keeps the
+ * first that answers it like a chat model; a model answering 404 is remembered as not served.
+ * Stops at a rate limit rather than guessing. No fixed model list.
  */
 export async function findWorkingNvidiaModel(candidates: string[]): Promise<WorkingModelResult> {
   const skip = new Set(nvidiaModelsNotServed());
+  const queue = candidates.filter((model) => !skip.has(model));
   const notServed: string[] = [];
-  try {
-    for (const model of candidates) {
-      if (skip.has(model)) continue;
-      let result: NvidiaSendResult;
-      try {
-        result = await sendNvidiaMessage([{ role: 'user', content: 'Reply with the word OK.' }], { model, maxTokens: 8, temperature: 0 });
-      } catch (error) {
-        if (/API error 404\b/.test(String(error))) notServed.push(model);
-        continue;
-      }
-      if (!result.ok) return { model: null, notServed, rateLimited: true };
-      if (/\bok\b/i.test(result.content)) return { model, notServed };
+  let found: string | null = null;
+  let rateLimited = false;
+  const tryOne = async (model: string): Promise<void> => {
+    try {
+      const result = await sendNvidiaMessage([{ role: 'user', content: 'Reply with the word OK.' }], { model, maxTokens: 8, temperature: 0, timeoutSecs: NVIDIA_PROBE.timeoutSecs });
+      if (!result.ok) { rateLimited = true; return; }
+      if (!found && /\bok\b/i.test(result.content)) found = model;
+    } catch (error) {
+      // A 404 is remembered at once; a model that timed out may answer another time.
+      if (/API error 404\b/.test(String(error))) { notServed.push(model); rememberNotServed([model]); }
     }
-    return { model: null, notServed };
-  } finally {
-    rememberNotServed(notServed);
-  }
+  };
+  await new Promise<void>((resolve) => {
+    let next = 0;
+    let running = 0;
+    const pump = () => {
+      if (found || rateLimited || (next >= queue.length && running === 0)) { resolve(); return; }
+      while (running < NVIDIA_PROBE.atOnce && next < queue.length) {
+        const model = queue[next];
+        next += 1;
+        running += 1;
+        void tryOne(model).finally(() => { running -= 1; pump(); });
+      }
+    };
+    pump();
+  });
+  if (found) return { model: found, notServed: [...notServed] };
+  if (rateLimited) return { model: null, notServed: [...notServed], rateLimited: true };
+  return { model: null, notServed: [...notServed] };
 }

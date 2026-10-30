@@ -1,6 +1,6 @@
 // Echo's steps (agent phase 7): save what was decided, answer from it, forget on request.
 // His model decides what is a decision and what it replaces; nothing is made up when it fails.
-import { asksToRemember } from './memoryIntents';
+import { asksToRemember, MEMORY_ONLY_INSTRUCTION } from './memoryIntents';
 import { contentWords, nearlySame } from './recall';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { extractJsonObject } from '../../lib/jsonUtils.js';
@@ -114,6 +114,11 @@ async function findReplaced(text: string, known: Decision[], packetId?: string):
   }
 }
 
+const KEEP_DETAILS = 'Keep the details as given: the dates, times, prices and other numbers the user said must be in what you save.';
+/** The numbers you gave (dates, prices): a saved decision must keep at least one of them (QA batch 1:
+ *  "the 14th and the price is $29" was saved as "Save the date and price"). */
+const numbersIn = (text: string): string[] => String(text || '').match(/\d+(?:[.,]\d+)?/g) || [];
+
 const ASKED_TO_REMEMBER = 'The user asked you to remember something: save it as a decision, preference or instruction. When it changes a decision already saved, set "replaces" to its id.';
 
 /** Echo's model writes down what was decided; each is saved and indexed. */
@@ -140,6 +145,11 @@ export async function extractDecisions(input: {
       // A repeat of a saved decision, or of one just found, in other words.
       if (active.some((k) => nearlySame(k.text, d.text)) || found.some((f) => nearlySame(f.text, d.text))) continue;
       found.push(d);
+    }
+    const given = asked ? numbersIn(input.request) : [];
+    if (found.length && given.length && !found.some((d) => given.some((n) => String(d.text).includes(n)))) {
+      if (attempt === 0) { problem = KEEP_DETAILS; continue; }
+      found.length = 0;
     }
     if (!found.length && asked) {
       if (attempt === 0) { problem = ASKED_TO_REMEMBER; continue; }
@@ -175,7 +185,8 @@ export async function extractDecisions(input: {
 
 const workOf = (input: StepInput | null): string => (input?.needs || []).filter((n) => !n.failed).map((n) => `[${n.agent}] ${n.text}`).join('\n\n');
 const withoutJose = (text: unknown): string => String(text || '').replace(/^\s*\/jose\s+/i, '').trim();
-const askedText = (input: StepInput | null): string => [withoutJose(input?.request), input?.instruction].filter(Boolean).join('\n');
+// Jose's fixed line for a memory-only step is not part of what you asked (QA batch 1: it was saved in a decision).
+const askedText = (input: StepInput | null): string => [withoutJose(input?.request), input?.instruction === MEMORY_ONLY_INSTRUCTION ? '' : input?.instruction].filter(Boolean).join('\n');
 
 async function save(assignment: any, input: StepInput | null, ctx: EchoCtx): Promise<EchoStepResult> {
   const actionType = String(assignment?.actionType || 'memory_preservation');

@@ -1696,6 +1696,12 @@ pub(crate) async fn connector_hermes_agent_request(
 
 const NVIDIA_API_BASE: &str = "https://integrate.api.nvidia.com/v1";
 
+/// How long to wait for NVIDIA: the time asked for, kept between 5 and 120 seconds; 120 when not
+/// given. The model search asks with a short limit, since some listed models never answer (QA batch 1).
+pub(crate) fn nvidia_timeout(secs: Option<u64>) -> Duration {
+  Duration::from_secs(secs.unwrap_or(120).clamp(5, 120))
+}
+
 /// NVIDIA NIM's address for one of the two calls the app makes, and whether it posts.
 /// Anything else is refused: this command reaches NVIDIA only.
 pub(crate) fn nvidia_target(path: &str) -> Result<(String, bool), String> {
@@ -1714,6 +1720,7 @@ pub(crate) async fn connector_nvidia_request(
   path: String,
   body: Option<String>,
   api_key: Option<String>,
+  timeout_secs: Option<u64>,
 ) -> Result<HermesAgentHttpProof, String> {
   let failed = |error: String| HermesAgentHttpProof {
     ok: false,
@@ -1732,7 +1739,7 @@ pub(crate) async fn connector_nvidia_request(
     ));
   }
   let client = match reqwest::Client::builder()
-    .timeout(Duration::from_secs(120))
+    .timeout(nvidia_timeout(timeout_secs))
     .build()
   {
     Ok(c) => c,
@@ -1895,6 +1902,14 @@ mod tests {
     ] {
       assert!(nvidia_target(bad).is_err(), "{bad} must be refused");
     }
+  }
+
+  #[test]
+  fn nvidia_waits_as_long_as_asked_between_5_and_120_seconds() {
+    assert_eq!(nvidia_timeout(None), Duration::from_secs(120));
+    assert_eq!(nvidia_timeout(Some(20)), Duration::from_secs(20));
+    assert_eq!(nvidia_timeout(Some(0)), Duration::from_secs(5));
+    assert_eq!(nvidia_timeout(Some(9999)), Duration::from_secs(120));
   }
 
   #[test]

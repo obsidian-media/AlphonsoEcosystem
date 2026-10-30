@@ -429,6 +429,19 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(plan.steps.find((s) => s.stepId === 'judge')?.needs).toEqual(['research']);
   });
 
+  // QA batch 1 (desktop run with qwen2.5:7b): "Write a welcome email, then have it checked for
+  // security issues" got a Sentinel step that waited for nothing, so it checked the request, not the email.
+  it("a Sentinel check that waits for nothing checks the one piece of writing", async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write a short welcome email for new customers.', effects: ['write_own_work'], needs: [] },
+      { id: 'security_check', agent: 'sentinel', taskType: 'security_workflow_step', instruction: 'Check the email for security issues.', effects: ['read'], needs: [] },
+    ]));
+    const plan = await planJoseRequest('/jose Write a short welcome email for new customers, then have it checked for security issues.');
+    const check = plan.steps.find((s) => s.stepId === 'security_check');
+    expect(check?.needs).toEqual(['write']);
+    expect(check?.reviewOf).toBe('write');
+  });
+
   it('plain writing planned with research is sent back; writing that needs facts keeps it', () => {
     const plan = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }];
     expect(missingAsked('Write a short email to my landlord saying the heating is broken', plan as never))

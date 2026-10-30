@@ -54,6 +54,7 @@ describe('Alphonso desktop: every caller goes through Jose', function () {
     await browser.waitUntil(async () => Boolean(await newRequest(before)), { timeout: 600000, interval: 2000, timeoutMsg: 'Run now made no request' });
     await browser.waitUntil(async () => settled(await newRequest(before)), { timeout: 900000, interval: 3000, timeoutMsg: 'the scheduled request never finished' });
     const request = await newRequest(before);
+    console.log('CALLERS-E2E schedule', JSON.stringify({ status: request.status, steps: request.steps.map((x) => [x.stepId, x.agent, x.actionType, x.status, x.error || null]) }));
     expect(request.source).toBe('schedule');
     expect(request.runOptions.allowPaidModels).toBe(false);
     expect(request.steps.some((s) => String(s.model || '').includes(':'))).toBe(false);
