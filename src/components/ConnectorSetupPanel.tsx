@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { slackTokenProblem } from '../services/connectors/slackConnector';
 import { listElevenLabsVoices } from '../services/connectors/elevenLabsConnector';
+import { getOpenRouterKeyInfo } from '../services/connectors/openRouterConnector';
+import { openExternalUrl } from '../services/browserAutomationService';
 import { HIGGSFIELD_CONSOLE_URL, parseExtra, testHiggsfieldModel } from '../services/connectors/higgsfieldConnector';
 import { invoke } from '@tauri-apps/api/core';
 import {
@@ -155,6 +157,23 @@ function ElevenLabsTest(): React.JSX.Element {
   return (
     <div className="-mt-2 flex items-center gap-2 px-1 text-[12px] text-(--text-2)">
       <button type="button" aria-label="Test ElevenLabs" className="rounded-lg bg-(--surface-2) px-2 py-1" onClick={() => { void test(); }}>Test</button>
+      {result && <span>{result}</span>}
+    </div>
+  );
+}
+
+/** Test for OpenRouter (2026-10-30): the free requests left today, from OpenRouter's key page. */
+function OpenRouterTest(): React.JSX.Element {
+  const [result, setResult] = useState('');
+  const test = async () => {
+    setResult('Checking…');
+    const info = await getOpenRouterKeyInfo();
+    setResult(info ? `${info.freeRemaining} free requests left today.` : 'OpenRouter did not answer for this key. Check the key and save it again.');
+  };
+  return (
+    <div className="-mt-2 flex flex-wrap items-center gap-2 px-1 text-[12px] text-(--text-2)">
+      <button type="button" aria-label="Test OpenRouter" className="rounded-lg bg-(--surface-2) px-2 py-1" onClick={() => { void test(); }}>Test</button>
+      <button type="button" className="rounded-lg bg-(--surface-2) px-2 py-1" onClick={() => { void openExternalUrl('https://openrouter.ai/settings/keys'); }}>Get a key</button>
       {result && <span>{result}</span>}
     </div>
   );
@@ -617,6 +636,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [deepseekApiKey, setDeepseekApiKey] = useState(() => getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
   const [nvidiaApiKey, setNvidiaApiKey] = useState(() => getConnectorCredential('nvidia_nim', 'NVIDIA_API_KEY'));
   const [geminiApiKey, setGeminiApiKey] = useState(() => getConnectorCredential('gemini', 'GEMINI_API_KEY'));
+  const [openRouterApiKey, setOpenRouterApiKey] = useState(() => getConnectorCredential('openrouter', 'OPENROUTER_API_KEY'));
 
   // The credential useState initializers above read from an in-memory cache that starts
   // empty until hydrated from the Tauri SQLite store. Nothing hydrates that cache at app
@@ -1160,6 +1180,14 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('gemini', { GEMINI_API_KEY: geminiApiKey })}
             hint="Get a free key at aistudio.google.com (AI Studio free tier, not billed Vertex AI). Free tier, not local: requests leave your machine and go to Google's cloud. Rate-limited and provider-controlled, not guaranteed by Alphonso — if Google changes their free-tier policy, this may stop working or require billing on their side."
             savedLabel="Gemini key saved" />
+
+          {/* OpenRouter (2026-10-30): one key for free models, paid models and your own provider keys. */}
+          <CredentialSection title="OpenRouter" icon={Cpu} borderColor="border-indigo-300/20" bgColor="bg-indigo-500/8" accentColor="text-indigo-400"
+            fields={[{ label: 'API Key', placeholder: 'sk-or-...', value: openRouterApiKey, onChange: setOpenRouterApiKey, key: 'OPENROUTER_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('openrouter', { OPENROUTER_API_KEY: openRouterApiKey })}
+            hint="One key for OpenRouter's free models (50 requests a day, 1,000 once you have bought $10 of credit) and its paid models. Not local: requests go to OpenRouter and the company running the model. Your own Gemini, Anthropic, OpenAI or Mistral keys added in OpenRouter can be used here too; those models count as paid steps, so they always ask first."
+            savedLabel="OpenRouter key saved" />
+          <OpenRouterTest />
 
           <HermesAgentsSection />
 

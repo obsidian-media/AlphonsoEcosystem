@@ -12,6 +12,10 @@ const RISK_CACHE_TTL = 300000;
 // genuinely free-tier (rate-limited, not billed on overage) as of
 // 2026-07-25. See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md
 // before adding them here or removing them from here.
+// openrouter is also intentionally NOT in this set (2026-10-30): its free models
+// pass Zero-Cost Mode like NVIDIA's and Gemini's, and every paid or own-key
+// OpenRouter model is a paid step instead, which asks first and is refused while
+// Zero-Cost Mode is on (paidModelAvailable() in jose/joseSpend.ts).
 // hermes_agents is also intentionally NOT in this set — every profile is a
 // local/self-hosted process the user runs on their own machine (same posture
 // as Ollama), not a metered cloud API this app pays for per call.

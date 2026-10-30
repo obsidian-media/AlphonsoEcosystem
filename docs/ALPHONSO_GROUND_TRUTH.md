@@ -191,7 +191,7 @@ Key services that past audits missed or underestimated:
 
 ### Policy & Approval (fully implemented, fail-closed)
 - `policyEnforcementService.ts` — **centralized policy gate** enforcing: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks. Fails closed with a blocked result object when uncertain or unauthorized.
-- `connectorRegistryService.ts` — all 34 connectors' send paths run through policy gate before any external call
+- `connectorRegistryService.ts` — all 35 connectors' send paths run through policy gate before any external call
 
 ### Agent Contracts (fully implemented)
 - `agentContractService.ts` — per-agent allowed/blocked action prefixes, checked before packet execution
