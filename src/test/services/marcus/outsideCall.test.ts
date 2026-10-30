@@ -116,6 +116,24 @@ describe('Marcus’s outside-tool step', () => {
     expect(String(generate.mock.calls[1][1].prompt)).toContain('is not one of the tools');
   });
 
+  it('a copied placeholder is no answer: the pick offers no "missing", and a copied one is asked again', async () => {
+    // Found live: the local model answered {"missing": "what the request doesn't say"}.
+    const s = addServer({ name: 'Hub', url: 'https://hub.example/mcp', cost: 'free' });
+    const big = { type: 'object', properties: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`field_${i}`, { type: 'string', description: 'x'.repeat(40) }])) };
+    const tools = Array.from({ length: 40 }, (_, i) => ({ name: `tool_${i}`, inputSchema: big }));
+    tools.push({ name: 'issue_write', inputSchema: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] } } as never);
+    updateServer(s.id, { tools: mergeTools([], tools) });
+    generate
+      .mockResolvedValueOnce({ response: '{"missing": "what the request doesn\'t say"}' })
+      .mockResolvedValueOnce({ response: '{"tool": "issue_write"}' })
+      .mockResolvedValueOnce({ response: '{"missing": "what the request doesn\'t say"}' })
+      .mockResolvedValueOnce({ response: '{"tool": "hub/issue_write", "arguments": {"title": "Hi"}}' });
+    const r: any = await prepareOutsideCall('c1', step(), { text: 'Through Hub, open an issue titled Hi' });
+    expect(r.ok).toBe(true);
+    expect(String(generate.mock.calls[0][1].prompt)).not.toContain('"missing"');
+    expect(generate).toHaveBeenCalledTimes(4);
+  });
+
   it('a missing required field goes back once, then fails with the field named', async () => {
     shop();
     generate

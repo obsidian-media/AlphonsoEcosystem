@@ -126,6 +126,12 @@ function pickedTool(options: Array<{ server: McpServer; entry: McpToolEntry }>, 
   return byName.length === 1 ? byName[0] : null;
 }
 
+/** The prompt's own example for "missing", which a small model copies back (found live, 2026-10-30). */
+const MISSING_EXAMPLE = "what the request doesn't say";
+function isPlaceholder(text: string): boolean {
+  return text.trim().replace(/[’']/g, "'").replace(/[.\s]+$/, '').toLowerCase() === MISSING_EXAMPLE;
+}
+
 /** Prepares the call before the approval: the tool, its checked arguments and its effects. */
 export async function prepareOutsideCall(commandId: string, assignment: Assignment, request: { text?: string }): Promise<PrepareOutside> {
   const payload = assignment.payload || {};
@@ -152,7 +158,7 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
           'Tools:',
           shortLines(options),
           unclear ? `"${unclear}" is not one of the tools. Copy one tool's name exactly as listed.` : '',
-          'Answer with JSON only: {"tool": "<server>/<tool>"}, or {"missing": "what the request doesn\'t say"}.',
+          'Answer with JSON only: {"tool": "<server>/<tool>"}.',
         ].filter(Boolean).join('\n\n');
         let answer: Record<string, unknown> | null = null;
         try {
@@ -160,9 +166,6 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
           answer = readJson(String(reply?.response || ''));
         } catch {
           answer = null;
-        }
-        if (answer && typeof answer.missing === 'string' && answer.missing.trim()) {
-          return { ok: false, outcome: 'failed', reason: `Marcus needs to know: ${answer.missing.trim().slice(0, 300)}` };
         }
         const named = answer && typeof answer.tool === 'string' ? answer.tool.trim() : '';
         pick = named ? pickedTool(options, named) : null;
@@ -187,6 +190,10 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
         answer = readJson(String(reply?.response || ''));
       } catch {
         answer = null;
+      }
+      if (answer && typeof answer.missing === 'string' && isPlaceholder(answer.missing)) {
+        problems = ['you copied the example text instead of answering'];
+        continue;
       }
       if (answer && typeof answer.missing === 'string' && answer.missing.trim()) {
         return { ok: false, outcome: 'failed', reason: `Marcus needs to know: ${answer.missing.trim().slice(0, 300)}` };
