@@ -100,6 +100,17 @@ function toolLines(list: Array<{ server: McpServer; entry: McpToolEntry }>): str
     .join('\n');
 }
 
+/** Above this many characters the full tool list would overflow a local model's context, so Marcus
+ * first picks a tool from one line each, then fills in only its fields (found live, 2026-10-30:
+ * GitHub's server lists 46 tools). */
+export const FULL_LIST_BUDGET = 6000;
+
+function shortLines(list: Array<{ server: McpServer; entry: McpToolEntry }>): string {
+  return list
+    .map(({ server, entry }) => `- ${toolRef(server.id, entry.name)}: ${(entry.title || entry.description || entry.name).replace(/\s+/g, ' ').slice(0, 120)}`)
+    .join('\n');
+}
+
 /** Prepares the call before the approval: the tool, its checked arguments and its effects. */
 export async function prepareOutsideCall(commandId: string, assignment: Assignment, request: { text?: string }): Promise<PrepareOutside> {
   const payload = assignment.payload || {};
@@ -115,13 +126,36 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
   let args: Record<string, unknown> | null = given && payload.arguments && typeof payload.arguments === 'object' ? (payload.arguments as Record<string, unknown>) : null;
   if (!chosen || !args) {
     const input = buildStepInput(commandId, assignment as never, String(request.text || ''));
+    let options = list;
+    if (options.length > 1 && toolLines(options).length > FULL_LIST_BUDGET) {
+      const prompt = [
+        'You are Marcus. You make one change through an outside tool the user connected. Pick the one tool that does what the request asks.',
+        stepInputText(input),
+        'Tools:',
+        shortLines(options),
+        'Answer with JSON only: {"tool": "<server>/<tool>"}, or {"missing": "what the request doesn\'t say"}.',
+      ].join('\n\n');
+      let answer: Record<string, unknown> | null = null;
+      try {
+        const reply: any = await generateAgentLlmResponse('marcus', { prompt, format: 'json' });
+        answer = readJson(String(reply?.response || ''));
+      } catch {
+        answer = null;
+      }
+      if (answer && typeof answer.missing === 'string' && answer.missing.trim()) {
+        return { ok: false, outcome: 'failed', reason: `Marcus needs to know: ${answer.missing.trim().slice(0, 300)}` };
+      }
+      const pick = answer && typeof answer.tool === 'string' ? options.find(({ server, entry }) => toolRef(server.id, entry.name) === answer!.tool) : null;
+      if (!pick) return { ok: false, outcome: 'failed', reason: 'Marcus couldn’t tell which outside tool does this. Name the tool in your request.' };
+      options = [pick];
+    }
     let problems: string[] = [];
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const prompt = [
         'You are Marcus. You make one change through an outside tool the user connected. Use only the values the request or an earlier step gives; never invent one.',
         stepInputText(input),
         'Tools:',
-        toolLines(list),
+        toolLines(options),
         problems.length ? `Your last answer had problems: ${problems.join('; ')}. Fix them.` : '',
         'Answer with JSON only: {"tool": "<server>/<tool>", "arguments": {...exactly the tool\'s fields}}, or {"missing": "what the request doesn\'t say"}.',
       ].filter(Boolean).join('\n\n');
@@ -135,8 +169,8 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
       if (answer && typeof answer.missing === 'string' && answer.missing.trim()) {
         return { ok: false, outcome: 'failed', reason: `Marcus needs to know: ${answer.missing.trim().slice(0, 300)}` };
       }
-      const pick = answer && typeof answer.tool === 'string' ? list.find(({ server, entry }) => toolRef(server.id, entry.name) === answer!.tool) : null;
-      const picked = pick ?? (list.length === 1 ? list[0] : null);
+      const pick = answer && typeof answer.tool === 'string' ? options.find(({ server, entry }) => toolRef(server.id, entry.name) === answer!.tool) : null;
+      const picked = pick ?? (options.length === 1 ? options[0] : null);
       const pickedArgs = answer && answer.arguments && typeof answer.arguments === 'object' ? (answer.arguments as Record<string, unknown>) : null;
       problems = !picked ? ['pick one of the tools listed'] : !pickedArgs ? ['give the arguments'] : argumentProblems(picked.entry.inputSchema, pickedArgs);
       if (!problems.length) {

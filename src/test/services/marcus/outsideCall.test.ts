@@ -73,6 +73,27 @@ describe('Marcus’s outside-tool step', () => {
     expect(prompt).not.toContain('open_issue');
   });
 
+  it('with many tools, picks one from short lines first, then fills only its fields', async () => {
+    // Found live: GitHub lists 46 tools; every schema in one prompt overflowed a local model.
+    const s = addServer({ name: 'Hub', url: 'https://hub.example/mcp', cost: 'free' });
+    const big = { type: 'object', properties: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`field_${i}`, { type: 'string', description: 'x'.repeat(40) }])) };
+    const tools = Array.from({ length: 40 }, (_, i) => ({ name: `tool_${i}`, description: `Does thing ${i}`, inputSchema: big }));
+    tools.push({ name: 'issue_write', description: 'Create or update an issue', inputSchema: { type: 'object', properties: { method: { type: 'string' }, title: { type: 'string' } }, required: ['method', 'title'] } } as never);
+    updateServer(s.id, { tools: mergeTools([], tools) });
+    generate
+      .mockResolvedValueOnce({ response: '{"tool": "hub/issue_write"}' })
+      .mockResolvedValueOnce({ response: '{"tool": "hub/issue_write", "arguments": {"method": "create", "title": "Hi"}}' });
+    const r: any = await prepareOutsideCall('c1', step(), { text: 'Through Hub, open an issue titled Hi' });
+    expect(r.ok).toBe(true);
+    expect(r.preview).toMatchObject({ tool: 'issue_write', arguments: { method: 'create', title: 'Hi' } });
+    const first = String(generate.mock.calls[0][1].prompt);
+    expect(first).toContain('hub/tool_39');
+    expect(first).not.toContain('field_0');
+    const second = String(generate.mock.calls[1][1].prompt);
+    expect(second).toContain('"required":["method","title"]');
+    expect(second).not.toContain('hub/tool_0');
+  });
+
   it('a missing required field goes back once, then fails with the field named', async () => {
     shop();
     generate
