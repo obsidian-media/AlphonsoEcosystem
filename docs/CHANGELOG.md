@@ -10,6 +10,12 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [Unreleased]
 
+### OpenRouter (2026-10-30)
+- **One more model provider**, beside NVIDIA NIM, Gemini, Claude and ChatGPT: add an OpenRouter key in Settings → Connectors → AI Models.
+- **Free models for any agent and in Chat.** The picker lists OpenRouter's free models, with "Let OpenRouter choose a free model" first, how many free requests are left today, and a note that free models are run by other companies that may keep what you send.
+- **When the free limit runs out** (50 requests a day until you have bought $10 of OpenRouter credit), a step carries on with this computer's model and says so, or, if you choose, Jose asks to finish it with a paid OpenRouter model, showing the cost.
+- **Paid OpenRouter models** are a third choice in Settings → Approvals → Allow paid models. Their prices come from OpenRouter, so there's nothing to type. Models served by your own Gemini, Anthropic, OpenAI or Mistral keys added in OpenRouter count as paid steps too: they always ask first, and the cost OpenRouter reports counts toward your monthly cap.
+
 ### Memory decides what runs (2026-10-30)
 - **Steps wait for memory instead of running out.** Before each step Alphonso checks free RAM and graphics memory. If the step fits, it runs; if not, idle models and idle tools Alphonso started are freed first, or the step waits and says why ("Waiting for memory: ComfyUI is busy."). A step this computer could never hold fails at once with the reason.
 - **Tools start when a step needs them** (Ollama, ComfyUI, yours or Alphonso's) **and stop when idle** (ComfyUI after 15 minutes by default; change it per tool). Programs you started yourself are never stopped.

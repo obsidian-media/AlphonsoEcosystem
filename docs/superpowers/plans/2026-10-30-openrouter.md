@@ -32,6 +32,15 @@
 
 ---
 
+## Built (2026-10-30)
+
+All six tasks built on `feat/openrouter`, natively, one after another (owner: "go ahead autonomously"). Changes from the plan, each for a reason found while building:
+- **Task 1:** the key is passed from the window to the backend, as NVIDIA's is (the window already holds every saved key); it never reaches an error or a log. `openRouterFailure()` returns the failure, since the project's TypeScript settings don't narrow on `ok`.
+- **Task 3:** the free-model test asks one model at a time, at most three, at most once a day per model, and never the router, instead of four at once: free requests are scarce (50 a day). A model answering with no text (a thinking model cut short) counts as served.
+- **Task 4:** a step's "needs setup" and notes are recorded per agent by `openRouterFreeLimit.ts` and taken by the engine after the step, because executors catch model errors themselves, so an error class would not reach the engine.
+- **Task 5:** the paid list uses OpenRouter's `/models/user` (the models this account can use; a fourth backend path), found live: the owner's account allows only its own keys, and 389 of 456 models would have failed. No API names which models own keys serve (`/byok` and `/keys` refuse a normal key), so none is marked. Models answering only in pictures or sound are left out (`textOutput`).
+- **Task 6:** the live check is part of the existing Chat test for NVIDIA and Gemini rather than a test of its own.
+
 ### Task 1: The backend command and the connector module
 
 **Files:**
