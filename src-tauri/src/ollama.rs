@@ -415,6 +415,55 @@ pub(crate) fn loaded_model_names(ps: &Value) -> Vec<String> {
     .unwrap_or_default()
 }
 
+/// A model Ollama has in memory, with its size (RAM and graphics) in MiB.
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct LoadedModel {
+  pub(crate) name: String,
+  pub(crate) size_mb: u64,
+  pub(crate) vram_mb: u64,
+}
+
+/// The models `/api/ps` reports as loaded, with `size` and `size_vram` in MiB.
+pub(crate) fn parse_loaded_models(ps: &Value) -> Vec<LoadedModel> {
+  let mib = |m: &Value, key: &str| m.get(key).and_then(Value::as_u64).unwrap_or(0) / 1_048_576;
+  ps.get("models")
+    .and_then(Value::as_array)
+    .map(|models| {
+      models
+        .iter()
+        .filter_map(|m| {
+          let name = m
+            .get("name")
+            .or_else(|| m.get("model"))
+            .and_then(Value::as_str)?;
+          Some(LoadedModel {
+            name: name.to_string(),
+            size_mb: mib(m, "size"),
+            vram_mb: mib(m, "size_vram"),
+          })
+        })
+        .collect()
+    })
+    .unwrap_or_default()
+}
+
+/// What Ollama has loaded right now (the resource manager's view). Empty when
+/// Ollama doesn't answer in 5 s.
+#[tauri::command]
+pub(crate) async fn ollama_loaded_models(endpoint: Option<String>) -> Vec<LoadedModel> {
+  let base = ollama_base(endpoint);
+  let Ok(response) = reqwest::Client::new()
+    .get(format!("{base}/api/ps"))
+    .timeout(Duration::from_secs(5))
+    .send()
+    .await
+  else {
+    return Vec::new();
+  };
+  parse_loaded_models(&response.json::<Value>().await.unwrap_or(Value::Null))
+}
+
 /// Asks Ollama to unload every model it has in memory (`keep_alive: 0`), so
 /// a local image job gets the GPU. On a 6 GB card a loaded 7B model left
 /// ComfyUI so little memory that the first image took 445 s (QA, 2026-10-21).
@@ -651,6 +700,23 @@ pub(crate) async fn ollama_embed(
 
 #[cfg(test)]
 mod tests {
+  #[test]
+  fn reads_loaded_models_with_their_memory() {
+    let ps = serde_json::json!({"models": [
+      {"name": "llama3.2:3b", "size": 3_221_225_472u64, "size_vram": 2_147_483_648u64},
+      {"model": "all-minilm:latest", "size": 47_185_920u64}
+    ]});
+    let models = parse_loaded_models(&ps);
+    assert_eq!(models.len(), 2);
+    assert_eq!(models[0].name, "llama3.2:3b");
+    assert_eq!(models[0].size_mb, 3072);
+    assert_eq!(models[0].vram_mb, 2048);
+    assert_eq!(models[1].name, "all-minilm:latest");
+    assert_eq!(models[1].size_mb, 45);
+    assert_eq!(models[1].vram_mb, 0);
+    assert!(parse_loaded_models(&serde_json::Value::Null).is_empty());
+  }
+
   use super::*;
 
   #[test]

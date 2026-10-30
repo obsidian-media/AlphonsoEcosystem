@@ -41,7 +41,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
   src-tauri/             Rust backend
-  src/lib.rs           ~955 lines, 203 Tauri commands (across 53 modules)
+  src/lib.rs           ~958 lines, 205 Tauri commands (across 54 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -58,6 +58,7 @@ ios/                   iOS companion app (SwiftUI)
   src/policy_gate.rs   Policy enforcement backend
   src/audit_log.rs     Audit chain
   src/ollama.rs        Ollama backend
+  src/resources.rs     Memory on this computer (resource manager)
   src/memory_store.rs  Memory persistence
   src/meta_publish.rs  Meta publishing
   src/voice_sidecar.rs Voice sidecar management
