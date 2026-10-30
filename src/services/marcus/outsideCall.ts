@@ -11,7 +11,7 @@ import { fenced } from '../sentinel/fence';
 import { redactText } from '../sentinel/exactChecks';
 import { listServers, type McpServer, type McpToolEntry } from '../mcp/mcpServers';
 import { callTool } from '../mcp/mcpConnection';
-import { effectsForCall, findTool, isReadingTool, OUTSIDE_TASK, serverAllowed, toolRef } from '../mcp/mcpTools';
+import { effectsForCall, findTool, isReadingTool, OUTSIDE_TASK, serverAllowed, serversNamedIn, toolRef } from '../mcp/mcpTools';
 
 export interface OutsideCallPreview {
   serverId: string;
@@ -104,7 +104,11 @@ function toolLines(list: Array<{ server: McpServer; entry: McpToolEntry }>): str
 export async function prepareOutsideCall(commandId: string, assignment: Assignment, request: { text?: string }): Promise<PrepareOutside> {
   const payload = assignment.payload || {};
   const given = typeof payload.tool === 'string' ? findTool(payload.tool) : null;
-  const list = given ? [given] : candidates();
+  // A server the request names narrows the choice to its tools (2026-10-30).
+  const all = candidates();
+  const named = new Set(serversNamedIn(String(request.text || '')).map((s) => s.id));
+  const preferred = all.filter((c) => named.has(c.server.id));
+  const list = given ? [given] : (preferred.length ? preferred : all);
   if (!list.length) return { ok: false, outcome: 'setup', reason: NO_OUTSIDE_TOOL };
 
   let chosen = given;

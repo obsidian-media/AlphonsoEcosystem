@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 345 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 346 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -414,6 +414,7 @@ Source-backed inventory: 345 services and 180 components. Human purpose descript
 | service | `src/services/mcp/mcpConnection.ts` | `callTool`, `finishPastedSignIn`, `NO_SUCH_SERVER`, `NOT_DESKTOP`, `refreshTools`, `RegistryServer`, `savedParts`, `saveServerHeader`, `searchRegistry`, `signIn`, `TOOLS_CACHE_MS` |
 | service | `src/services/mcp/mcpServers.ts` | `addServer`, `getServer`, `ListedTool`, `listServers`, `MCP_SERVERS_KEY`, `McpServer`, `McpToolEntry`, `McpVersion`, `mergeTools`, `onServersChanged`, `removeServer`, `setToolMark`, `setToolOff`, `ToolMark`, `updateServer` |
 | service | `src/services/mcp/mcpTools.ts` | `effectsForCall`, `findTool`, `isReadingTool`, `OUTSIDE_TASK`, `outsideToolsForPlanner`, `outsideToolsLines`, `PAID_ONLY_AS_STEP`, `parseToolRef`, `readingTools`, `readingToolsForPrompt`, `runOutsideRead`, `serverAllowed`, `serversNamedIn`, `toolRef` |
+| service | `src/services/mcp/toOutsideTool.ts` | `toOutsideTool` |
 | service | `src/services/mediaStorageService.ts` | `cleanOldStaged`, `NO_STORAGE`, `removeStaged`, `STAGED_PREFIX`, `stagedKey`, `stageFile`, `StageResult`, `STORAGE_CONNECTOR`, `storageConfig`, `StorageConfig`, `storageConfigured`, `StoragePart`, `StorageTestResult`, `testStorage` |
 | service | `src/services/memory/ecosystemMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `ECOSYSTEM_MEMORY_CATEGORIES`, `exportMemoryItems`, `getAllMemorySizes`, `getMemorySize`, `importMemoryItems`, `listMemory`, `listMemoryItems`, `MEMORY_CONFIDENCE`, `MEMORY_NAMESPACES`, `pushMemory`, `tickExpiry` |
 | service | `src/services/memoryGraphInferenceService.ts` | `runScheduledInferencePass`, `startMemoryGraphInferenceScheduler`, `stopMemoryGraphInferenceScheduler` |

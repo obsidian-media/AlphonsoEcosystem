@@ -63,6 +63,7 @@ const HF_CLIP = String(process.env.ALPHONSO_LIVE_HIGGSFIELD_CLIP_MODEL || '').tr
 const SHOPIFY_STORE = String(process.env.ALPHONSO_LIVE_SHOPIFY_STORE || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
 const GITHUB_MCP_URL = String(process.env.ALPHONSO_LIVE_GITHUB_MCP_URL || '').trim();
 const MCP_SERVERS_KEY = 'alphonso_mcp_servers_v1';
+const ISSUE_TOOLS = ['create_issue', 'issue_write'];
 const mcpServers = async () => JSON.parse(await browser.execute((k) => localStorage.getItem(k) || '[]', MCP_SERVERS_KEY));
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 
@@ -440,8 +441,8 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     await (await $('input[aria-label="Key header for GitHub MCP"]')).setValue('Authorization');
     await (await $('input[aria-label="Key for GitHub MCP"]')).setValue(`Bearer ${GITHUB_TOKEN}`);
     await (await row.$('.//button[normalize-space(.)="Save key"]')).click();
-    await browser.waitUntil(async () => ((await mcpServers()).find((s) => s.id === server.id)?.tools || []).some((t) => t.name === 'create_issue'),
-      { timeout: 90000, timeoutMsg: 'GitHub listed no create_issue tool' });
+    await browser.waitUntil(async () => ((await mcpServers()).find((s) => s.id === server.id)?.tools || []).some((t) => ISSUE_TOOLS.includes(t.name)),
+      { timeout: 90000, timeoutMsg: 'GitHub listed no tool that opens an issue' });
     expect(JSON.stringify(await mcpServers())).not.toContain(GITHUB_TOKEN);
     const waitingOrSettled = (r) => {
       const m = r.steps.find((s) => s.agent === 'marcus' && s.actionType === 'distribution_outside_tool');
@@ -451,7 +452,9 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     const marcus = request.steps.find((s) => s.agent === 'marcus' && s.actionType === 'distribution_outside_tool');
     console.log('LIVE github-mcp before', JSON.stringify({ steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status, s.error || null]), call: marcus?.outsideCall ? { tool: marcus.outsideCall.tool, args: Object.keys(marcus.outsideCall.arguments || {}) } : null }));
     expect(marcus?.status).toBe('waiting_approval');
-    expect(marcus.outsideCall.tool).toBe('create_issue');
+    // GitHub has named it create_issue, then issue_write with method "create".
+    expect(ISSUE_TOOLS).toContain(marcus.outsideCall.tool);
+    if (marcus.outsideCall.tool === 'issue_write') expect(marcus.outsideCall.arguments.method).toBe('create');
     await approveOnBoard(marcus.stepId);
     await browser.waitUntil(async () => {
       request = (await savedRequests()).find((r) => r.id === request.id);

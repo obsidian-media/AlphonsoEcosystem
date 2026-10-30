@@ -62,6 +62,17 @@ describe('Marcus’s outside-tool step', () => {
     expect(String(generate.mock.calls[0][1].prompt)).toContain('"required":["product","price"]');
   });
 
+  it('offers only the tools of the server the request names', async () => {
+    shop();
+    const t = addServer({ name: 'Tracker', url: 'https://tracker.example/mcp', cost: 'free' });
+    updateServer(t.id, { tools: mergeTools([], [{ name: 'open_issue', inputSchema: {} }]) });
+    generate.mockResolvedValueOnce({ response: '{"tool": "shop/update_price", "arguments": {"product": "Blue mug", "price": 18}}' });
+    await prepareOutsideCall('c1', step(), { text: 'Through Shop, set the blue mug to $18' });
+    const prompt = String(generate.mock.calls[0][1].prompt);
+    expect(prompt).toContain('shop/update_price');
+    expect(prompt).not.toContain('open_issue');
+  });
+
   it('a missing required field goes back once, then fails with the field named', async () => {
     shop();
     generate
