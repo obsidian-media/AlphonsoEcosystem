@@ -21,7 +21,7 @@ vi.mock('../../../services/resources/freeMemory', () => ({ freeThings: (...a: un
 const ensureTools = vi.fn();
 vi.mock('../../../services/resources/ensureTools', () => ({ ensureTools: (...a: unknown[]) => ensureTools(...a) }));
 
-import { admitStep, reservedTotal, resetGateForTests, WAIT_RECHECK_MS } from '../../../services/resources/resourceGate';
+import { admitStep, runAdmitted, reservedTotal, resetGateForTests, WAIT_RECHECK_MS } from '../../../services/resources/resourceGate';
 import { isInUse, resetToolUseForTests } from '../../../services/resources/toolUse';
 import { createJoseRequest, getJoseRequest } from '../../../services/jose/joseRequestStore';
 import type { ResourceState, LoadedThing } from '../../../services/resources/resourceState';
@@ -136,5 +136,33 @@ describe('admitStep', () => {
 
   it('rechecks on its own when no reading comes', () => {
     expect(WAIT_RECHECK_MS).toBe(30_000);
+  });
+});
+
+// A step run outside a saved request (an approved packet, a dead-letter retry) passes the same gate.
+describe('runAdmitted', () => {
+  it('runs the step when it fits and releases its tools afterwards', async () => {
+    estimateNeed.mockResolvedValue(need());
+    readResources.mockResolvedValue(state());
+    const run = vi.fn(async () => { expect(isInUse('comfyui')).toBe(true); return { ok: true, attempts: 1 }; });
+    expect(await runAdmitted('packet-1', 'miya', { agent: 'miya', actionType: 'creative_scenes' }, run)).toEqual({ ok: true, attempts: 1 });
+    expect(isInUse('comfyui')).toBe(false);
+  });
+
+  it('does not run a step too big for this computer, and says why', async () => {
+    estimateNeed.mockResolvedValue(need({ gpuMb: 12288 }));
+    readResources.mockResolvedValue(state());
+    const run = vi.fn();
+    expect(await runAdmitted('packet-1', 'miya', { agent: 'miya', actionType: 'creative_scenes' }, run)).toEqual({
+      ok: false, attempts: 0, error: 'This step needs about 12 GB of graphics memory; this computer has 8 GB.',
+    });
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('releases the tools when the step throws', async () => {
+    estimateNeed.mockResolvedValue(need());
+    readResources.mockResolvedValue(state());
+    await expect(runAdmitted('packet-1', 'miya', { agent: 'miya', actionType: 'creative_scenes' }, async () => { throw new Error('boom'); })).rejects.toThrow('boom');
+    expect(isInUse('comfyui')).toBe(false);
   });
 });

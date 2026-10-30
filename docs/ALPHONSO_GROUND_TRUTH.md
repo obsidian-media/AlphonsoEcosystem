@@ -191,7 +191,7 @@ Key services that past audits missed or underestimated:
 
 ### Policy & Approval (fully implemented, fail-closed)
 - `policyEnforcementService.ts` — **centralized policy gate** enforcing: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks. Fails closed with a blocked result object when uncertain or unauthorized.
-- `connectorRegistryService.ts` — all 34 connectors' send paths run through policy gate before any external call
+- `connectorRegistryService.ts` — all 35 connectors' send paths run through policy gate before any external call
 
 ### Agent Contracts (fully implemented)
 - `agentContractService.ts` — per-agent allowed/blocked action prefixes, checked before packet execution
@@ -2441,6 +2441,17 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **The closing summary.** One line per step and "Open on the board." (`joseSummary.ts`).
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
+
+## 11.57 OpenRouter: one more model provider (2026-10-30)
+
+The second of the four phases after QA batch 1 (owner, 2026-10-30; design `docs/superpowers/specs/2026-10-30-openrouter-design.md`, plan `docs/superpowers/plans/2026-10-30-openrouter.md`). OpenRouter is connector 35, beside NVIDIA NIM, Gemini, Claude and ChatGPT, which stay (owner, after a live test with their keys: OpenRouter serves almost none of NVIDIA's own catalogue, its free allowance is 50 requests a day before $10 of credit, and the direct connectors already work).
+- **The connection.** Every call goes through the backend's `connector_openrouter_request` (`connector_commands.rs`: OpenRouter's `models`, `models/user`, `key` and `chat/completions` only; the rate-limit headers passed back; the key never in an error). `openRouterConnector.ts` reads the lists (no model id is written in the app), the free requests left today, and sends a chat, telling a refused key, an empty reply, a rate limit and a model no longer served apart, with the cost OpenRouter reports (own-key cost included).
+- **Settings → Connectors → AI Models → OpenRouter**: the key, Test (the free requests left today), and a line that models served by your own provider keys added in OpenRouter count as paid steps. The Health Monitor checks it live.
+- **Free models for agents and Chat.** OpenRouter is a provider for any agent and a tab in Chat. The picker lists OpenRouter's free text models, "Let OpenRouter choose a free model" first (the default), with the free requests left and a line that free models may keep what you send. A chosen free model is tested once with a short question (one at a time, at most three, at most once a day, never the router), and one OpenRouter no longer serves is marked. The queue and the resource manager treat OpenRouter as cloud.
+- **When the free limit runs out** (Settings → Approvals): by default the step runs on this computer's model and says so on the board and Chat's live line; or Jose asks to finish it with a paid OpenRouter model, showing the cost. The 20-a-minute limit is told apart from the daily one by reading the free requests left. With no chat model on this computer the step waits with Carry on. Chat used directly says the limit is reached and doesn't switch models by itself.
+- **Paid OpenRouter models**: the third choice in Settings → Approvals → Allow paid models. The list is the models this account can use (`/models/user`), text models with both prices listed; choosing one fills in its prices. A step model `openrouter:<model>` is paid, asks first, and the reported cost counts toward the monthly cap. OpenRouter doesn't say which models your own keys serve, so none is marked.
+- **Checked:** unit tests for every part; Rust tests for the command (run by CI); the desktop spec `openrouter.e2e.mjs` (no key: the tab is off and says what to set up; Settings' Test says no key works); the live check (`live-accounts.e2e.mjs`, `ALPHONSO_LIVE_OPENROUTER_KEY_FILE`) asks a plain question through the free router in Chat. Live with the owner's keys: Gemini and Mistral keys work through OpenRouter; Claude was refused at first, then answered (Haiku 5.5, Sonnet 5.5) once the owner let the key serve every model in OpenRouter, charged $0 by OpenRouter with Anthropic's cost reported. The same check found OpenRouter listing `:batch` versions that chat can't use; the paid list leaves them out.
+- **Closing the resource manager (owner, 2026-10-30):** your own ComfyUI, once Alphonso started it, stops after its idle time like Alphonso's copy (`launch_comfyui` records its process); an approved step run on its own and a dead-letter retry pass the memory check too (`runAdmitted()`); the Telegram memory notice stays under the waiting-step switch, with no switch of its own. Known limit: a scheduled run (no paid models) with "Ask to use a paid model" fails its step when the free limit runs out instead of running locally.
 
 ## 11.56 The resource manager: memory decides what runs (2026-10-30)
 

@@ -54,6 +54,8 @@ import {
 } from '../lib/ollama';
 import { OllamaModelPicker, ModelProviderPicker, type ModelProviderId } from './ModelSwitcher';
 import { isNvidiaConfigured, sendNvidiaMessage } from '../services/connectors/nvidiaNimConnector';
+import { isOpenRouterConfigured, openRouterFailure, sendOpenRouterMessage, OPENROUTER_CHOOSE_FREE, type OpenRouterAnswer } from '../services/connectors/openRouterConnector';
+import { OPENROUTER_CHAT_LIMIT } from '../services/connectors/openRouterModels';
 import { isGeminiConfigured, sendGeminiMessage } from '../services/connectors/geminiConnector';
 import { isHermesAgentConfigured, sendHermesAgentMessage } from '../services/connectors/hermesAgentConnector';
 import { getAgentProvider, setAgentProvider } from '../services/modelSelectionService';
@@ -85,6 +87,7 @@ function getJosePipelineStorageKey(chatId: string | null): string | null {
 function getProviderLabel(provider: ModelProviderId): string {
   if (provider === 'nvidia_nim') return 'NVIDIA NIM';
   if (provider === 'gemini') return 'Gemini';
+  if (provider === 'openrouter') return 'OpenRouter';
   if (provider === 'hermes') return 'Hermes';
   return 'Ollama';
 }
@@ -99,7 +102,7 @@ function getProviderLabel(provider: ModelProviderId): string {
 // for ChatView too -- doesn't silently lose it. Never clobbers an explicit
 // Hermes choice, which only ever lives in the per-agent store.
 function syncLegacyProviderIntoAgentStore(legacyProvider: unknown): void {
-  if (legacyProvider !== 'ollama' && legacyProvider !== 'nvidia_nim' && legacyProvider !== 'gemini') return;
+  if (legacyProvider !== 'ollama' && legacyProvider !== 'nvidia_nim' && legacyProvider !== 'gemini' && legacyProvider !== 'openrouter') return;
   const current = getAgentProvider('alphonso');
   if (current.provider === 'hermes') return;
   if (current.provider !== legacyProvider) {
@@ -686,6 +689,7 @@ export function ChatView({
   const modelReady = useMemo(() => {
     const cloudProviderConfigured = selectedProvider === 'nvidia_nim' ? isNvidiaConfigured()
       : selectedProvider === 'gemini' ? isGeminiConfigured()
+      : selectedProvider === 'openrouter' ? isOpenRouterConfigured()
       : selectedProvider === 'hermes' ? isHermesAgentConfigured('alphonso')
       : true;
     return selectedProvider === 'ollama'
@@ -979,7 +983,7 @@ export function ChatView({
         content: selectedProvider !== 'ollama'
           ? selectedProvider === 'hermes'
             ? `Hermes is not configured or unreachable for Alphonso. Add its endpoint in Settings → Connectors, or switch back to Ollama.`
-            : !settings.selectedModel && (selectedProvider === 'nvidia_nim' ? isNvidiaConfigured() : isGeminiConfigured())
+            : !settings.selectedModel && (selectedProvider === 'nvidia_nim' ? isNvidiaConfigured() : selectedProvider === 'openrouter' ? isOpenRouterConfigured() : isGeminiConfigured())
               // The key is saved; no model of this provider's is chosen yet (QA batch 1).
               ? `No ${providerLabel} model is chosen yet: wait for the model list next to the provider tabs, or pick one there.`
               : `${providerLabel} is not configured. Add a free API key in Settings → Connectors, or switch back to Ollama.`
@@ -1045,6 +1049,18 @@ export function ChatView({
         // deliver the full reply in one update rather than faking a token
         // stream.
         const providerLabel = getProviderLabel(selectedProvider);
+        // OpenRouter (2026-10-30): its own answer shape; Chat doesn't switch models by itself.
+        if (selectedProvider === 'openrouter') {
+          const reply = await sendOpenRouterMessage(chatMessages, { model: (settings.selectedModel as string) || OPENROUTER_CHOOSE_FREE });
+          if (!abortRef.current) return;
+          const failure = openRouterFailure(reply);
+          const text = failure
+            ? (failure.kind === 'rate_limited' && !failure.providerLimited ? OPENROUTER_CHAT_LIMIT : failure.message)
+            : (reply as OpenRouterAnswer).content;
+          setMessages((current) => current.map((msg) => (msg.id === assistantMsgId ? { ...msg, ...(failure ? { isError: true } : {}), content: text } : msg)));
+          if (!failure) onTaskComplete();
+          return;
+        }
         const result = selectedProvider === 'nvidia_nim'
           ? await sendNvidiaMessage(chatMessages, { model: settings.selectedModel as string })
           : selectedProvider === 'hermes'
@@ -1786,11 +1802,12 @@ export function ChatView({
                 <span className="text-xs text-(--text-2) font-medium">
                   {liveProgress.stage === 'queued' && WAITING_FOR_TURN}
                   {liveProgress.stage === 'waiting_memory' && liveProgress.reason}
+                  {liveProgress.stage === 'model_note' && liveProgress.text}
                   {liveProgress.stage === 'wave_start' && `Wave ${(liveProgress.wave || 0) + 1}: ${(liveProgress.agents || []).join(', ')}`}
                   {liveProgress.stage === 'executed' && `${liveProgress.assignment?.agent || 'Agent'} completed`}
                   {liveProgress.stage === 'generating_images' && `Generating ${liveProgress.promptCount || 0} image(s)...`}
                   {liveProgress.stage === 'approval_required' && `${liveProgress.assignment?.agent || 'Agent'} needs approval`}
-                  {!['queued', 'waiting_memory', 'wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
+                  {!['queued', 'waiting_memory', 'model_note', 'wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
                 </span>
                 {liveRequestId && (
                   <button

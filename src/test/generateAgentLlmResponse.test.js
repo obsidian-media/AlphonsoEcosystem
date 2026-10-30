@@ -14,6 +14,9 @@ vi.mock('../services/connectors/geminiConnector', () => ({ sendGeminiMessage }))
 const sendHermesAgentMessage = vi.fn();
 vi.mock('../services/connectors/hermesAgentConnector', () => ({ sendHermesAgentMessage }));
 
+const sendOpenRouterMessage = vi.fn();
+vi.mock('../services/connectors/openRouterConnector', async (orig) => ({ ...(await orig()), sendOpenRouterMessage }));
+
 const { generateAgentLlmResponse, withAgentModel, getAgentModelOverride } = await import('../lib/ollama');
 
 describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () => {
@@ -22,6 +25,7 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     sendNvidiaMessage.mockReset();
     sendGeminiMessage.mockReset();
     sendHermesAgentMessage.mockReset();
+    sendOpenRouterMessage.mockReset();
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -41,6 +45,64 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     expect(result).toEqual({ response: 'hi from nvidia', done: true, backend: 'nvidia_nim', model: 'meta/llama-3.1-8b-instruct' });
     expect(sendNvidiaMessage).toHaveBeenCalledWith([{ role: 'user', content: 'research this' }], { model: 'meta/llama-3.1-8b-instruct' });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  // OpenRouter (2026-10-30): a free model chosen for the agent, else OpenRouter's free router.
+  it('routes to OpenRouter when that agent is configured for openrouter', async () => {
+    agentProviderMap.hector = { provider: 'openrouter', model: 'x/y:free' };
+    sendOpenRouterMessage.mockResolvedValueOnce({ ok: true, content: 'hi from openrouter', model: 'x/y:free', costUsd: 0, usage: { promptTokens: 2, completionTokens: 3 } });
+    const result = await generateAgentLlmResponse('hector', { prompt: 'research this' });
+    expect(result).toEqual({ response: 'hi from openrouter', done: true, backend: 'openrouter', model: 'x/y:free' });
+    expect(sendOpenRouterMessage).toHaveBeenCalledWith([{ role: 'user', content: 'research this' }], { model: 'x/y:free' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("uses OpenRouter's free router when no model was chosen", async () => {
+    agentProviderMap.alphonso = { provider: 'openrouter' };
+    sendOpenRouterMessage.mockResolvedValueOnce({ ok: true, content: 'hi', model: 'some/free:free', costUsd: 0, usage: { promptTokens: 1, completionTokens: 1 } });
+    await generateAgentLlmResponse('alphonso', { prompt: 'hello' });
+    expect(sendOpenRouterMessage).toHaveBeenCalledWith([{ role: 'user', content: 'hello' }], { model: 'openrouter/free' });
+  });
+
+  it("carries on with this computer's model once the free limit is used up, and says so", async () => {
+    agentProviderMap.hector = { provider: 'openrouter', model: 'x/y:free' };
+    const limit = await import('../services/connectors/openRouterFreeLimit');
+    limit.markFreeLimitUsed(Date.now() + 3_600_000);
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ response: 'local answer', done: true }) });
+    const result = await generateAgentLlmResponse('hector', { prompt: 'research this' });
+    expect(result).toMatchObject({ response: 'local answer', backend: 'ollama', model: 'llama3.2:3b' });
+    expect(sendOpenRouterMessage).not.toHaveBeenCalled();
+    expect(limit.takeModelNotes('hector')).toEqual([limit.FREE_LIMIT_LOCAL('llama3.2:3b')]);
+    localStorage.clear();
+  });
+
+  it('waits for setup when no model on this computer can take over', async () => {
+    agentProviderMap.hector = { provider: 'openrouter', model: 'x/y:free' };
+    const limit = await import('../services/connectors/openRouterFreeLimit');
+    limit.markFreeLimitUsed(Date.now() + 3_600_000);
+    fetch.mockRejectedValueOnce(new Error('connection refused'));
+    await expect(generateAgentLlmResponse('hector', { prompt: 'x' })).rejects.toThrow(limit.FREE_LIMIT_NO_LOCAL);
+    expect(limit.takeSetupNeeded('hector')).toBe(limit.FREE_LIMIT_NO_LOCAL);
+    localStorage.clear();
+  });
+
+  it('a paid OpenRouter step records the cost OpenRouter reports', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2, monthlyCapUsd: 5 } }));
+    localStorage.setItem('alphonso_connector_auth_profiles_v1', JSON.stringify({ openrouter: { enabled: true, mode: 'trusted_session' } }));
+    const spend = await import('../services/jose/joseSpend');
+    if (!spend.paidModelAvailable().ok) throw new Error(`paid model not available: ${spend.paidModelAvailable().reason}`);
+    sendOpenRouterMessage.mockResolvedValueOnce({ ok: true, content: 'paid answer', model: 'b/y', costUsd: 0.0123, costReported: true, usage: { promptTokens: 100, completionTokens: 50 } });
+    const result = await generateAgentLlmResponse('hector', { prompt: 'deep research', model: 'openrouter:b/y' });
+    expect(result).toEqual({ response: 'paid answer', done: true, backend: 'openrouter', model: 'b/y' });
+    expect(sendOpenRouterMessage).toHaveBeenCalledWith([{ role: 'user', content: 'deep research' }], { model: 'b/y', maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
+    expect(spend.monthSpendUsd()).toBeCloseTo(0.0123, 6);
+    localStorage.clear();
+  });
+
+  it("says plainly when OpenRouter refuses the key", async () => {
+    agentProviderMap.hector = { provider: 'openrouter', model: 'x/y:free' };
+    sendOpenRouterMessage.mockResolvedValueOnce({ ok: false, kind: 'key_refused', message: 'OpenRouter refused the key. Check it in Settings → Connectors.' });
+    await expect(generateAgentLlmResponse('hector', { prompt: 'x' })).rejects.toThrow('OpenRouter refused the key. Check it in Settings → Connectors.');
   });
 
   it('routes to Gemini when that agent is configured for gemini', async () => {

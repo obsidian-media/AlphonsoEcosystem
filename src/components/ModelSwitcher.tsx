@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Cpu } from 'lucide-react';
 import { fetchOllamaModels, getConfiguredOllamaEndpoint, isChatModel, pullOllamaModel } from '../lib/ollama';
+import type { OpenRouterModel } from '../services/connectors/openRouterConnector';
+import type { FreeModelChoice } from '../services/connectors/openRouterModels';
 
 const STORAGE_KEY = 'alphonso_selected_model_v1';
 // Computed per-call, not module-scoped constants — the configured endpoint
@@ -179,7 +181,7 @@ function nvidiaCandidates(models: string[], selected: string): string[] {
   return models.includes(selected) ? [selected, ...rest] : rest;
 }
 
-export type CloudProvider = 'nvidia_nim' | 'gemini';
+export type CloudProvider = 'nvidia_nim' | 'gemini' | 'openrouter';
 
 interface CloudModelPickerProps {
   provider: CloudProvider;
@@ -187,7 +189,88 @@ interface CloudModelPickerProps {
   onModelChange: (name: string) => void;
 }
 
+/**
+ * OpenRouter's free models (2026-10-30): the router first, then the free models from OpenRouter's
+ * live list, the free requests left today, and a line saying free models may keep what you send.
+ * A free model is tested once when chosen (free requests are scarce); the router never is.
+ */
+function OpenRouterModelPicker({ selectedModel, onModelChange }: { selectedModel: string; onModelChange: (name: string) => void }): React.JSX.Element {
+  const [models, setModels] = useState<OpenRouterModel[]>([]);
+  const [choices, setChoices] = useState<FreeModelChoice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [left, setLeft] = useState<number | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [problem, setProblem] = useState('');
+  const [privacy, setPrivacy] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const connector = await import('../services/connectors/openRouterConnector');
+      const picks = await import('../services/connectors/openRouterModels');
+      const listed = await connector.listOpenRouterModels();
+      const list = picks.freeModelChoices(listed, Date.now());
+      if (cancelled) return;
+      setModels(listed);
+      setPrivacy(picks.OPENROUTER_FREE_PRIVACY);
+      setChoices(list);
+      setLoading(false);
+      // A model that isn't one of OpenRouter's free ones (the Ollama one still saved) is replaced by the router.
+      if (!list.some((c) => c.id === selectedModel && c.served)) onModelChange(picks.OPENROUTER_CHOOSE_FREE);
+      const info = await connector.getOpenRouterKeyInfo();
+      if (!cancelled && info) setLeft(info.freeRemaining);
+    })().catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const choose = async (id: string) => {
+    setProblem('');
+    setTesting(true);
+    const picks = await import('../services/connectors/openRouterModels');
+    const found = await picks.findWorkingOpenRouterModel([id, picks.OPENROUTER_CHOOSE_FREE]);
+    setTesting(false);
+    // A model found gone while testing is shown as such.
+    setChoices(picks.freeModelChoices(models, Date.now()));
+    if (found.model) {
+      onModelChange(found.model);
+      if (found.model !== id) setProblem(`${id} didn't answer, so OpenRouter chooses a free model.`);
+    } else {
+      setProblem(found.reason || `${id} didn't answer.`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-(--surface-2) border border-(--border) rounded-lg text-[10px] text-(--text-3) font-medium uppercase tracking-widest">
+        <Cpu className="w-3 h-3 shrink-0" /><span>Loading models…</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="relative flex items-center gap-1 bg-(--surface-2) border border-(--border) rounded-lg px-2 py-1 hover:border-(--accent-border) transition-colors">
+        <Cpu className="w-3 h-3 text-(--text-3) shrink-0 pointer-events-none" />
+        <select aria-label="OpenRouter free model" value={selectedModel} disabled={testing} onChange={(e) => { void choose(e.target.value); }}
+          className="appearance-none bg-transparent text-[10px] text-(--text-2) font-medium pr-4 focus:outline-hidden cursor-pointer max-w-[220px] truncate">
+          {choices.map((c) => <option key={c.id} value={c.id} disabled={!c.served} className="bg-(--surface-2) text-(--text-2)">{c.label}</option>)}
+        </select>
+        <ChevronDown className="w-3 h-3 text-(--text-3) absolute right-2 pointer-events-none" />
+      </div>
+      {testing && <div className="text-[10px] text-(--text-3)">Checking that this model answers…</div>}
+      {problem && <div className="text-[10px] text-(--warning)">{problem}</div>}
+      {left !== null && <div className="text-[10px] text-(--text-3)">{left} free requests left today.</div>}
+      {privacy && <div className="text-[10px] text-(--text-3)">{privacy}</div>}
+    </div>
+  );
+}
+
 export function CloudModelPicker({ provider, selectedModel, onModelChange }: CloudModelPickerProps): React.JSX.Element {
+  if (provider === 'openrouter') return <OpenRouterModelPicker selectedModel={selectedModel} onModelChange={onModelChange} />;
+  return <ListedCloudModelPicker provider={provider} selectedModel={selectedModel} onModelChange={onModelChange} />;
+}
+
+function ListedCloudModelPicker({ provider, selectedModel, onModelChange }: CloudModelPickerProps): React.JSX.Element {
   const [models, setModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [finding, setFinding] = useState(false);
@@ -277,6 +360,7 @@ const PROVIDER_LABELS: Record<ModelProviderId, string> = {
   ollama: 'Ollama',
   nvidia_nim: 'NVIDIA NIM',
   gemini: 'Gemini',
+  openrouter: 'OpenRouter',
   hermes: 'Hermes'
 };
 
@@ -361,7 +445,7 @@ interface ModelProviderPickerProps {
 }
 
 export function ModelProviderPicker({ provider, onProviderChange, selectedModel, onModelChange, ollamaPicker, agentId, locked = false }: ModelProviderPickerProps): React.JSX.Element {
-  const [configured, setConfigured] = useState<Record<CloudProvider, boolean>>({ nvidia_nim: false, gemini: false });
+  const [configured, setConfigured] = useState<Record<CloudProvider, boolean>>({ nvidia_nim: false, gemini: false, openrouter: false });
   const [hermesConfigured, setHermesConfigured] = useState(false);
 
   useEffect(() => {
@@ -370,9 +454,10 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
       Promise.all([
         import('../services/connectors/nvidiaNimConnector').then((m) => m.isNvidiaConfigured()),
         import('../services/connectors/geminiConnector').then((m) => m.isGeminiConfigured()),
+        import('../services/connectors/openRouterConnector').then((m) => m.isOpenRouterConfigured()),
         agentId ? import('../services/connectors/hermesAgentConnector').then((m) => m.isHermesAgentConfigured(agentId)) : Promise.resolve(false)
-      ]).then(([nvidia, gemini, hermes]) => {
-        if (!cancelled) { setConfigured({ nvidia_nim: nvidia, gemini }); setHermesConfigured(hermes); }
+      ]).then(([nvidia, gemini, openrouter, hermes]) => {
+        if (!cancelled) { setConfigured({ nvidia_nim: nvidia, gemini, openrouter }); setHermesConfigured(hermes); }
       }).catch(() => { /* leave as-is — treated as unconfigured until a successful check */ });
     };
     checkConfigured();
@@ -395,8 +480,8 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
   };
 
   const visibleProviders: ModelProviderId[] = agentId
-    ? ['ollama', 'nvidia_nim', 'gemini', 'hermes']
-    : ['ollama', 'nvidia_nim', 'gemini'];
+    ? ['ollama', 'nvidia_nim', 'gemini', 'openrouter', 'hermes']
+    : ['ollama', 'nvidia_nim', 'gemini', 'openrouter'];
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -420,7 +505,7 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
       </div>
       {provider === 'ollama' && ollamaPicker}
       {provider === 'hermes' && agentId && <HermesModelPicker agentId={agentId} selectedModel={selectedModel} onModelChange={onModelChange} />}
-      {(provider === 'nvidia_nim' || provider === 'gemini') && <CloudModelPicker provider={provider} selectedModel={selectedModel} onModelChange={onModelChange} />}
+      {(provider === 'nvidia_nim' || provider === 'gemini' || provider === 'openrouter') && <CloudModelPicker provider={provider} selectedModel={selectedModel} onModelChange={onModelChange} />}
     </div>
   );
 }

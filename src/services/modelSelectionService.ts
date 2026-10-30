@@ -6,8 +6,8 @@ const MODEL_PROVIDER_KEY = 'alphonso_model_provider_v1';
 const AGENT_PROVIDER_KEY = 'alphonso_agent_provider_v1';
 const MAX_RECENT = 10;
 
-export type ModelProvider = 'ollama' | 'nvidia_nim' | 'gemini';
-const CLOUD_PROVIDERS: ModelProvider[] = ['nvidia_nim', 'gemini'];
+export type ModelProvider = 'ollama' | 'nvidia_nim' | 'gemini' | 'openrouter';
+const CLOUD_PROVIDERS: ModelProvider[] = ['nvidia_nim', 'gemini', 'openrouter'];
 
 export type AgentModelProvider = ModelProvider | 'hermes';
 
@@ -18,7 +18,7 @@ export interface AgentProviderConfig {
 }
 
 const DEFAULT_AGENT_PROVIDER: AgentProviderConfig = { provider: 'ollama' };
-const VALID_AGENT_PROVIDERS: AgentModelProvider[] = ['ollama', 'nvidia_nim', 'gemini', 'hermes'];
+const VALID_AGENT_PROVIDERS: AgentModelProvider[] = ['ollama', 'nvidia_nim', 'gemini', 'openrouter', 'hermes'];
 
 function loadAgentProviderMap(): Record<string, AgentProviderConfig> {
   try {
@@ -73,7 +73,7 @@ export function setAgentProvider(agentId: string, config: AgentProviderConfig): 
     // 'hermes' isn't part of the legacy ModelProvider union ChatView's picker
     // uses — Alphonso's row supports it too via this same per-agent path,
     // it's just stored alongside the others rather than in the legacy key.
-    if (config.provider === 'ollama' || config.provider === 'nvidia_nim' || config.provider === 'gemini') {
+    if (config.provider === 'ollama' || config.provider === 'nvidia_nim' || config.provider === 'gemini' || config.provider === 'openrouter') {
       setSelectedProvider(config.provider);
       // Clear any stale 'hermes' override so getAgentProvider('alphonso')
       // stops preferring it over the legacy key just updated above.
@@ -184,8 +184,13 @@ export function setSelectedProvider(provider: ModelProvider) {
   } catch { /* quota */ }
 }
 
-export async function getCloudModelList(provider: 'nvidia_nim' | 'gemini'): Promise<string[]> {
+export async function getCloudModelList(provider: 'nvidia_nim' | 'gemini' | 'openrouter'): Promise<string[]> {
   try {
+    if (provider === 'openrouter') {
+      // OpenRouter's free models from its live list; paid ones are chosen in Settings → Approvals.
+      const { listOpenRouterModels } = await import('./connectors/openRouterConnector');
+      return (await listOpenRouterModels()).filter((m) => m.free).map((m) => m.id);
+    }
     if (provider === 'nvidia_nim') {
       const { listNvidiaModels } = await import('./connectors/nvidiaNimConnector');
       return await listNvidiaModels();

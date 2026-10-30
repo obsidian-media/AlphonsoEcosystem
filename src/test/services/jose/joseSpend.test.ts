@@ -44,6 +44,21 @@ describe('paidModelAvailable', () => {
     expect(paidModelAvailable()).toEqual({ ok: false, reason: 'Claude is not set up in Connectors.' });
   });
 
+  // OpenRouter (2026-10-30): a third paid choice; its model must be chosen, prices come from OpenRouter.
+  it('accepts OpenRouter as the paid model, with its model chosen', () => {
+    (globalThis as any).__paidConnectors = ['openrouter'];
+    setSettings({}, { provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2 });
+    expect(getPaidModelSettings().provider).toBe('openrouter');
+    expect(paidModelAvailable()).toEqual({ ok: true });
+    setSettings({}, { provider: 'openrouter', model: null, inputPerMillionUsd: 1, outputPerMillionUsd: 2 });
+    expect(paidModelAvailable()).toEqual({ ok: false, reason: 'Choose an OpenRouter model in Settings.' });
+    (globalThis as any).__paidConnectors = [];
+    setSettings({}, { provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2 });
+    expect(paidModelAvailable()).toEqual({ ok: false, reason: 'OpenRouter is not set up in Connectors.' });
+    setSettings({ zeroCostMode: true }, { provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2 });
+    expect(paidModelAvailable()).toEqual({ ok: false, reason: 'Zero-Cost Mode is on.' });
+  });
+
   it('treats Zero-Cost Mode as on when it was never set', () => {
     localStorage.setItem('alphonso_settings', JSON.stringify({ paidModels: paid }));
     expect(paidModelAvailable().ok).toBe(false);

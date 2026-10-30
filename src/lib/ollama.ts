@@ -7,6 +7,7 @@ import type { OllamaModelsProof, OllamaGenerateProof } from '../types/tauri-comm
 import type { NvidiaSendResult } from '../services/connectors/nvidiaNimConnector';
 import type { GeminiSendResult } from '../services/connectors/geminiConnector';
 import type { HermesSendResult } from '../services/connectors/hermesAgentConnector';
+import type { OpenRouterAnswer } from '../services/connectors/openRouterConnector';
 import { getStorage } from './appStorage';
 import { isPaidModelId } from '../services/jose/stepGraph';
 import { randomHex } from './randomId';
@@ -775,7 +776,7 @@ export interface AgentGenerateResult {
 
 // Kept as a bare string union (not imported from modelSelectionService) to
 // avoid the same import-cycle risk documented below for the dynamic imports.
-type AgentModelProviderLike = 'ollama' | 'nvidia_nim' | 'gemini' | 'hermes' | 'claude' | 'chatgpt';
+type AgentModelProviderLike = 'ollama' | 'nvidia_nim' | 'gemini' | 'openrouter' | 'hermes' | 'claude' | 'chatgpt';
 
 /**
  * The one shared per-agent LLM dispatcher — every per-agent service should
@@ -813,7 +814,7 @@ export async function withAgentModel<T>(agentId: string, model: string, fn: () =
 }
 
 /**
- * A step Jose gave a paid model ("claude:<model>" / "chatgpt:<model>", phase
+ * A step Jose gave a paid model ("claude:<model>" / "chatgpt:<model>" / "openrouter:<model>", phase
  * 4). Refused unless paid models are available and the month's cap allows it;
  * the cost is recorded from the usage the provider reports.
  */
@@ -825,6 +826,18 @@ async function generatePaidResponse(paidModel: string, options: AgentGenerateOpt
   if (!available.ok) throw new Error(available.reason);
   const allowed = spend.canSpend(spend.estimateCostUsd(String(options.prompt || '').length, spend.PAID_MAX_OUTPUT_TOKENS));
   if (!allowed.ok) throw new Error(allowed.reason);
+  // OpenRouter (2026-10-30): the cost OpenRouter reports (own-key cost included), else tokens × listed prices.
+  if (provider === 'openrouter') {
+    if (!model) throw new Error('Choose an OpenRouter model in Settings.');
+    const { sendOpenRouterMessage, openRouterFailure } = await import('../services/connectors/openRouterConnector');
+    const result = await sendOpenRouterMessage([{ role: 'user', content: options.prompt }], { model, maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
+    const failure = openRouterFailure(result);
+    if (failure) throw new Error(failure.message);
+    const answer = result as OpenRouterAnswer;
+    if (answer.costReported) spend.recordSpendUsd(answer.costUsd);
+    else spend.recordSpend({ inputTokens: answer.usage.promptTokens, outputTokens: answer.usage.completionTokens });
+    return { response: answer.content, done: true, backend: 'openrouter', model: answer.model };
+  }
   if (provider === 'claude') {
     const { sendClaudeMessage } = await import('../services/claudeService');
     const result: any = await sendClaudeMessage(options.prompt, { model, maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
@@ -874,6 +887,34 @@ export async function generateAgentLlmResponse(agentId: string, rawOptions: Agen
     const result: NvidiaSendResult = await sendNvidiaMessage(messages, { model: config.model });
     if (!result.ok) throw new Error(('message' in result && result.message) || 'NVIDIA NIM rate limit exceeded');
     return { response: result.content, done: true, backend: 'nvidia_nim', model: result.model };
+  }
+
+  // OpenRouter (2026-10-30): the free model chosen for the agent, else OpenRouter's free router.
+  if (config.provider === 'openrouter') {
+    const { sendOpenRouterMessage, openRouterFailure, OPENROUTER_CHOOSE_FREE } = await import('../services/connectors/openRouterConnector');
+    const model = config.model || OPENROUTER_CHOOSE_FREE;
+    if (model.endsWith(':free') || model === OPENROUTER_CHOOSE_FREE) {
+      // A free model: when the free limit is used up, this computer's model carries on (or a paid retry follows).
+      const limit = await import('../services/connectors/openRouterFreeLimit');
+      const outcome = await limit.askOpenRouterFree(agentId, messages, model);
+      if (outcome.kind === 'answer') return { response: outcome.content, done: true, backend: 'openrouter', model: outcome.model };
+      const local = getConfiguredOllamaModel();
+      try {
+        if (!isChatModel(local)) throw new Error('not a chat model');
+        const result = await generateOllamaResponse({ endpoint: options.endpoint || getConfiguredOllamaEndpoint(), model: local, prompt: options.prompt, signal: options.signal, ...(options.format ? { format: options.format } : {}) });
+        limit.noteModel(agentId, limit.FREE_LIMIT_LOCAL(local));
+        return { ...result, backend: 'ollama', model: local };
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        limit.markSetupNeeded(agentId, limit.FREE_LIMIT_NO_LOCAL);
+        throw new Error(limit.FREE_LIMIT_NO_LOCAL);
+      }
+    }
+    const result = await sendOpenRouterMessage(messages, { model });
+    const failure = openRouterFailure(result);
+    if (failure) throw new Error(failure.message);
+    const answer = result as OpenRouterAnswer;
+    return { response: answer.content, done: true, backend: 'openrouter', model: answer.model };
   }
 
   if (config.provider === 'gemini') {

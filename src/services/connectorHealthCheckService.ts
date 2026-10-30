@@ -352,6 +352,20 @@ export async function checkNvidiaConnection(): Promise<HealthCheckResult> {
   }
 }
 
+/** Live check: OpenRouter's key page is free, changes nothing, and says the free requests left today. */
+export async function checkOpenRouterConnection(): Promise<HealthCheckResult> {
+  const startTime = timestampMs();
+  if (!getConnectorCredential('openrouter', 'OPENROUTER_API_KEY')) {
+    return { ok: false, checked: 'live', message: 'No OpenRouter key saved. Add it in Settings → Connectors.', latency: 0, details: { reason: 'missing_key' } };
+  }
+  const { getOpenRouterKeyInfo } = await import('./connectors/openRouterConnector');
+  const info = await getOpenRouterKeyInfo();
+  if (!info) {
+    return { ok: false, checked: 'live', message: 'OpenRouter did not answer for this key. Check it in Settings → Connectors.', latency: measureLatency(startTime), details: { reason: 'error' } };
+  }
+  return { ok: true, checked: 'live', message: `OpenRouter answered: ${info.freeRemaining} free requests left today.`, latency: measureLatency(startTime), details: { freeRemaining: info.freeRemaining, freeLimit: info.freeLimit } };
+}
+
 /** Live check: Gemini's model list is free and changes nothing. */
 export async function checkGeminiConnection(): Promise<HealthCheckResult> {
   const startTime = timestampMs();
@@ -411,6 +425,8 @@ async function runConnectorHealthCheck(connectorId: string, options: { botToken?
       return checkNvidiaConnection();
     case 'gemini':
       return checkGeminiConnection();
+    case 'openrouter':
+      return checkOpenRouterConnection();
     case 'chatgpt':
       return checkApiKeyConfigured('chatgpt', 'OPENAI_API_KEY', 'ChatGPT');
     case 'claude':

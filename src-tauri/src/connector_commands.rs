@@ -1770,6 +1770,135 @@ pub(crate) async fn connector_nvidia_request(
   })
 }
 
+const OPENROUTER_API_BASE: &str = "https://openrouter.ai/api/v1";
+/// OpenRouter's app attribution headers: they name Alphonso, never the user.
+const OPENROUTER_REFERER: &str = "https://github.com/obsidian-media/AlphonsoEcosystem";
+const OPENROUTER_TITLE: &str = "Alphonso";
+
+/// OpenRouter's address for one of the four calls the app makes, whether it posts, and
+/// whether it needs the key (the model list is public). Anything else is refused.
+pub(crate) fn openrouter_target(path: &str) -> Result<(String, bool, bool), String> {
+  match path {
+    "models" => Ok((format!("{OPENROUTER_API_BASE}/models"), false, false)),
+    // The models this account can use (its own provider settings applied).
+    "models/user" => Ok((format!("{OPENROUTER_API_BASE}/models/user"), false, true)),
+    "key" => Ok((format!("{OPENROUTER_API_BASE}/key"), false, true)),
+    "chat/completions" => Ok((
+      format!("{OPENROUTER_API_BASE}/chat/completions"),
+      true,
+      true,
+    )),
+    other => Err(format!("OpenRouter has no call named {other:?} here.")),
+  }
+}
+
+/// When OpenRouter's limit resets, from X-RateLimit-Reset: milliseconds since 1970
+/// (a value in seconds is turned into milliseconds). None when absent or unreadable.
+pub(crate) fn openrouter_reset_ms(value: Option<&str>) -> Option<i64> {
+  let n: i64 = value?.trim().parse().ok()?;
+  if n <= 0 {
+    return None;
+  }
+  Some(if n < 1_000_000_000_000 { n * 1000 } else { n })
+}
+
+/// How long OpenRouter asks to wait, from Retry-After in seconds (at most an hour).
+pub(crate) fn openrouter_retry_after(value: Option<&str>) -> Option<u64> {
+  let n: u64 = value?.trim().parse().ok()?;
+  if n == 0 {
+    None
+  } else {
+    Some(n.min(3600))
+  }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct OpenRouterHttpResult {
+  pub(crate) ok: bool,
+  pub(crate) http_status: Option<u16>,
+  pub(crate) body: Option<String>,
+  pub(crate) error: Option<String>,
+  pub(crate) retry_after_secs: Option<u64>,
+  pub(crate) reset_ms: Option<i64>,
+}
+
+/// Calls OpenRouter from the backend (2026-10-30). The key is the one saved in Settings,
+/// else `OPENROUTER_API_KEY`; it never appears in an error. The rate-limit headers are
+/// passed back so the app can tell the per-minute limit from the daily one.
+#[tauri::command]
+pub(crate) async fn connector_openrouter_request(
+  path: String,
+  body: Option<String>,
+  api_key: Option<String>,
+  timeout_secs: Option<u64>,
+) -> Result<OpenRouterHttpResult, String> {
+  let failed = |error: String| OpenRouterHttpResult {
+    ok: false,
+    http_status: None,
+    body: None,
+    error: Some(error),
+    retry_after_secs: None,
+    reset_ms: None,
+  };
+  let (url, posts, needs_key) = match openrouter_target(&path) {
+    Ok(target) => target,
+    Err(error) => return Ok(failed(error)),
+  };
+  let key = secret_or_env(api_key, "OPENROUTER_API_KEY");
+  if needs_key && key.is_empty() {
+    return Ok(failed(
+      "No OpenRouter key saved. Add it in Settings → Connectors.".to_string(),
+    ));
+  }
+  let client = match reqwest::Client::builder()
+    .timeout(nvidia_timeout(timeout_secs))
+    .build()
+  {
+    Ok(c) => c,
+    Err(error) => return Ok(failed(error.to_string())),
+  };
+  let mut request = if posts {
+    client
+      .post(&url)
+      .header("Content-Type", "application/json")
+      .body(body.unwrap_or_default())
+  } else {
+    client.get(&url)
+  };
+  request = request
+    .header("HTTP-Referer", OPENROUTER_REFERER)
+    .header("X-Title", OPENROUTER_TITLE);
+  if needs_key {
+    request = request.header("Authorization", format!("Bearer {}", key.trim()));
+  }
+  let response = match request.send().await {
+    Ok(r) => r,
+    // reqwest's error names the address, never the header, so the key stays out of it.
+    Err(error) => return Ok(failed(error.without_url().to_string())),
+  };
+  let header = |name: &str| {
+    response
+      .headers()
+      .get(name)
+      .and_then(|v| v.to_str().ok())
+      .map(str::to_string)
+  };
+  let retry_after_secs = openrouter_retry_after(header("retry-after").as_deref());
+  let reset_ms = openrouter_reset_ms(header("x-ratelimit-reset").as_deref());
+  let http_status = Some(response.status().as_u16());
+  let ok = response.status().is_success();
+  let body_text = response.text().await.unwrap_or_default();
+  Ok(OpenRouterHttpResult {
+    ok,
+    http_status,
+    body: Some(body_text),
+    error: None,
+    retry_after_secs,
+    reset_ms,
+  })
+}
+
 const COMPOSIO_API_BASE: &str = "https://backend.composio.dev/api/v3.1";
 
 /// A toolkit or tool name as Composio writes them (gmail, GMAIL_FETCH_EMAILS).
@@ -1902,6 +2031,80 @@ mod tests {
     ] {
       assert!(nvidia_target(bad).is_err(), "{bad} must be refused");
     }
+  }
+
+  #[test]
+  fn openrouter_requests_reach_only_openrouter_and_only_its_four_calls() {
+    assert_eq!(
+      openrouter_target("models").unwrap(),
+      (
+        "https://openrouter.ai/api/v1/models".to_string(),
+        false,
+        false
+      )
+    );
+    assert_eq!(
+      openrouter_target("models/user").unwrap(),
+      (
+        "https://openrouter.ai/api/v1/models/user".to_string(),
+        false,
+        true
+      )
+    );
+    assert_eq!(
+      openrouter_target("key").unwrap(),
+      ("https://openrouter.ai/api/v1/key".to_string(), false, true)
+    );
+    assert_eq!(
+      openrouter_target("chat/completions").unwrap(),
+      (
+        "https://openrouter.ai/api/v1/chat/completions".to_string(),
+        true,
+        true
+      )
+    );
+    for bad in [
+      "",
+      "models/../key",
+      "auth/keys",
+      "https://evil.example/x",
+      "keys",
+      "models?x=1",
+    ] {
+      assert!(openrouter_target(bad).is_err(), "{bad} must be refused");
+    }
+  }
+
+  #[test]
+  fn openrouter_rate_limit_headers_are_read_plainly() {
+    assert_eq!(
+      openrouter_reset_ms(Some("1793232000000")),
+      Some(1_793_232_000_000)
+    );
+    assert_eq!(
+      openrouter_reset_ms(Some("1793232000")),
+      Some(1_793_232_000_000)
+    );
+    assert_eq!(openrouter_reset_ms(Some("soon")), None);
+    assert_eq!(openrouter_reset_ms(None), None);
+    assert_eq!(openrouter_retry_after(Some("30")), Some(30));
+    assert_eq!(openrouter_retry_after(Some("99999")), Some(3600));
+    assert_eq!(openrouter_retry_after(Some("0")), None);
+  }
+
+  #[tokio::test]
+  async fn openrouter_refusal_never_shows_the_key() {
+    let secret = "sk-or-v1-should-never-appear";
+    let refused = connector_openrouter_request(
+      "auth/keys".to_string(),
+      None,
+      Some(secret.to_string()),
+      None,
+    )
+    .await
+    .unwrap();
+    assert!(!refused.ok);
+    assert!(!refused.error.unwrap_or_default().contains(secret));
   }
 
   #[test]

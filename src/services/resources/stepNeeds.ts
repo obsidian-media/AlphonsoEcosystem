@@ -39,8 +39,8 @@ export interface StepNeed {
 export const MODEL_WORKING_MEMORY = 1.2;
 const USAGE_KEY = 'alphonso_resource_usage_v1';
 const KEEP_READINGS = 5;
-const CLOUD = new Set(['nvidia_nim', 'gemini', 'hermes']);
-const PAID = /^(claude|chatgpt):/;
+const CLOUD = new Set(['nvidia_nim', 'gemini', 'hermes', 'openrouter']);
+const PAID = /^(claude|chatgpt|openrouter):/;
 const PICTURE_STEPS = new Set(['creative_scenes', 'creative_thumbnails', 'creative_carousel']);
 
 type Engines = ReturnType<typeof projectEngines>;

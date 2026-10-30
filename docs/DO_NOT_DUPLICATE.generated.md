@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 336 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 340 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -240,7 +240,7 @@ Source-backed inventory: 336 services and 179 components. Human purpose descript
 | service | `src/services/composioService.ts` | `__resetComposioApiKeyCacheForTests`, `checkComposioHealth`, `ComposioActionResult`, `ComposioConfig`, `ComposioHealthResult`, `ComposioStatusResult`, `ComposioTool`, `ComposioToolkit`, `enabledComposioToolkits`, `executeComposioTool`, `fetchComposioToolkits`, `getCachedToolkits`, `getComposioConfig`, `getComposioStatus`, `hydrateComposioApiKeyFromKeychain`, `isComposioEnabled`, `isReadOnlyTool`, `listToolkitTools`, `setComposioConfig` |
 | service | `src/services/connectorAuditLogService.ts` | `appendConnectorAuditEntry`, `ConnectorAuditEntry`, `getConnectorAuditLog`, `getLastEntryForConnector` |
 | service | `src/services/connectorCircuitBreakerService.ts` | `configure`, `getAll`, `getCircuitState`, `isOpen`, `recordFailure`, `recordSuccess`, `resetAllConfigs`, `resetCircuit` |
-| service | `src/services/connectorHealthCheckService.ts` | `checkConnectorHealth`, `checkDiscordConnection`, `checkGeminiConnection`, `checkGenericWebhookConnection`, `checkGitHubConnection`, `checkHermesAgentsConnection`, `checkMobileBridgeConnection`, `checkN8nConnection`, `checkNvidiaConnection`, `checkSlackConnection`, `checkTelegramConnection`, `checkWhatsAppConnection` |
+| service | `src/services/connectorHealthCheckService.ts` | `checkConnectorHealth`, `checkDiscordConnection`, `checkGeminiConnection`, `checkGenericWebhookConnection`, `checkGitHubConnection`, `checkHermesAgentsConnection`, `checkMobileBridgeConnection`, `checkN8nConnection`, `checkNvidiaConnection`, `checkOpenRouterConnection`, `checkSlackConnection`, `checkTelegramConnection`, `checkWhatsAppConnection` |
 | service | `src/services/connectorRateLimiterService.ts` | `checkLimit`, `configure`, `ConnectorStatus`, `consume`, `getStatus`, `RateLimitResult`, `resetAll` |
 | service | `src/services/connectorRegistryService.ts` | *(no static export detected)* |
 | service | `src/services/connectors/braveSearchConnector.ts` | `BraveSearchResult`, `BraveSearchResultItem`, `isBraveSearchConfigured`, `searchBrave` |
@@ -262,6 +262,10 @@ Source-backed inventory: 336 services and 179 components. Human purpose descript
 | service | `src/services/connectors/higgsfieldConnector.ts` | `cachedHiggsfieldEstimate`, `HIGGSFIELD_CONSOLE_URL`, `HIGGSFIELD_NOT_SET_UP`, `higgsfieldAvailable`, `higgsfieldKeys`, `HiggsfieldKeys`, `higgsfieldModels`, `HiggsfieldModels`, `isHiggsfieldConfigured`, `listHiggsfieldPresets`, `parseExtra`, `refreshHiggsfieldEstimate`, `testHiggsfieldModel` |
 | service | `src/services/connectors/n8nConnector.ts` | `isN8nHealthy`, `listN8nWorkflows`, `N8nActionResult`, `N8nHealthResult`, `N8nWebhookResult`, `N8nWorkflowListResult`, `setN8nWorkflowActive`, `triggerN8nWebhook` |
 | service | `src/services/connectors/nvidiaNimConnector.ts` | `DEFAULT_MODEL`, `findWorkingNvidiaModel`, `isNvidiaConfigured`, `listNvidiaModels`, `NVIDIA_PROBE`, `NvidiaChatOptions`, `NvidiaChatSuccess`, `NvidiaMessage`, `nvidiaModelsNotServed`, `NvidiaRateLimited`, `NvidiaSendResult`, `sendNvidiaMessage`, `WorkingModelResult` |
+| service | `src/services/connectors/openRouterConnector.ts` | `forgetOpenRouterKeyInfo`, `getOpenRouterKeyInfo`, `isOpenRouterConfigured`, `listOpenRouterModels`, `listOpenRouterUserModels`, `OPENROUTER_CHOOSE_FREE`, `OPENROUTER_KEY_REFUSED`, `OPENROUTER_NO_KEY`, `OPENROUTER_NO_TEXT`, `OpenRouterAnswer`, `openRouterFailure`, `OpenRouterFailure`, `OpenRouterKeyInfo`, `OpenRouterMessage`, `OpenRouterModel`, `OpenRouterSendResult`, `resetOpenRouterCacheForTests`, `sendOpenRouterMessage` |
+| service | `src/services/connectors/openRouterFreeLimit.ts` | `askOpenRouterFree`, `FREE_LIMIT_LOCAL`, `FREE_LIMIT_NO_LOCAL`, `FREE_LIMIT_PAID`, `FreeLimitChoice`, `freeLimitUsedUntil`, `FreeOutcome`, `getFreeLimitChoice`, `markFreeLimitUsed`, `markSetupNeeded`, `nextMidnightUtc`, `noteModel`, `OPENROUTER_BUSY`, `setWaitForTests`, `takeModelNotes`, `takeSetupNeeded` |
+| service | `src/services/connectors/openRouterModels.ts` | `findWorkingOpenRouterModel`, `FreeModelChoice`, `freeModelChoices`, `OPENROUTER_CHAT_LIMIT`, `OPENROUTER_CHOOSE_FREE`, `OPENROUTER_CHOOSE_FREE_LABEL`, `OPENROUTER_FREE_PRIVACY`, `openRouterModelsNotServed`, `rememberNotServed` |
+| service | `src/services/connectors/openRouterPaid.ts` | `PaidModelChoice`, `paidModelChoices`, `paidModelLabel` |
 | service | `src/services/connectors/perplexityConnector.ts` | `isPerplexityConfigured`, `PerplexitySearchOptions`, `PerplexitySearchResult`, `PerplexitySource`, `searchPerplexity` |
 | service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SLACK_APP_TOKEN_PROBLEM`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `slackTokenProblem`, `updateMessage`, `uploadFile` |
 | service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
@@ -451,7 +455,7 @@ Source-backed inventory: 336 services and 179 components. Human purpose descript
 | service | `src/services/resources/ensureTools.ts` | `EnsureResult`, `ensureTools` |
 | service | `src/services/resources/freeMemory.ts` | `FreeResult`, `freeThings` |
 | service | `src/services/resources/idleStop.ts` | `DEFAULT_IDLE_MINUTES`, `FAST_POLL_MS`, `getIdleMinutes`, `idleTick`, `latestResources`, `onResources`, `resetIdleStopForTests`, `setIdleMinutes`, `SLOW_POLL_MS`, `startResourceWatcher` |
-| service | `src/services/resources/resourceGate.ts` | `admitStep`, `Admitted`, `firstStepNeed`, `NotAdmitted`, `RESERVATION_SETTLE_MS`, `reservedTotal`, `resetGateForTests`, `WAIT_RECHECK_MS` |
+| service | `src/services/resources/resourceGate.ts` | `admitStep`, `Admitted`, `firstStepNeed`, `NotAdmitted`, `RESERVATION_SETTLE_MS`, `reservedTotal`, `resetGateForTests`, `runAdmitted`, `WAIT_RECHECK_MS` |
 | service | `src/services/resources/resourceState.ts` | `GPU_UNKNOWN`, `GpuSource`, `LoadedThing`, `readResources`, `ResourceState`, `UsageRecord` |
 | service | `src/services/resources/stepNeeds.ts` | `estimateNeed`, `MODEL_WORKING_MEMORY`, `NeededTool`, `recordStepUse`, `resetUsageForTests`, `StepAssignment`, `StepNeed`, `toolsForStep` |
 | service | `src/services/resources/toolUse.ts` | `anyInUse`, `beginUse`, `endUse`, `isInUse`, `lastUsedAt`, `markUsed`, `resetToolUseForTests`, `usageRecord` |

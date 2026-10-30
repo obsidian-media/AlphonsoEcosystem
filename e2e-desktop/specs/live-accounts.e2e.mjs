@@ -13,6 +13,7 @@
 //   ALPHONSO_LIVE_TAVILY_KEY_FILE / ALPHONSO_LIVE_BRAVE_KEY_FILE  search keys for Hector
 //   ALPHONSO_LIVE_PEXELS_KEY_FILE / _PIXABAY_KEY_FILE / _COVERR_KEY_FILE  stock footage keys (free)
 //   ALPHONSO_LIVE_NVIDIA_KEY_FILE / ALPHONSO_LIVE_GEMINI_KEY_FILE  free-tier cloud model keys
+//   ALPHONSO_LIVE_OPENROUTER_KEY_FILE     an OpenRouter key (its free router answers; one free request)
 //   ALPHONSO_LIVE_COMPOSIO_KEY_FILE       a Composio API key (read only: its toolkits are listed)
 //   ALPHONSO_LIVE_HIGGSFIELD_KEY_ID_FILE / _KEY_SECRET_FILE  Higgsfield keys; with
 //   ALPHONSO_LIVE_HIGGSFIELD_PICTURE_MODEL / _CLIP_MODEL      model ids: only Higgsfield's estimate is asked, nothing is made
@@ -46,6 +47,8 @@ const STOCK_KEYS = {
 const CLOUD_KEYS = {
   nvidia_nim: { key: readKey(process.env.ALPHONSO_LIVE_NVIDIA_KEY_FILE), placeholder: 'nvapi-...', category: 'ai_models', saved: /nvidia nim key saved/i, tab: 'NVIDIA NIM' },
   gemini: { key: readKey(process.env.ALPHONSO_LIVE_GEMINI_KEY_FILE), placeholder: 'AIza...', section: 'Google Gemini', category: 'ai_models', saved: /gemini key saved/i, tab: 'Gemini' },
+  // OpenRouter (2026-10-30): "Let OpenRouter choose a free model" is chosen, and the free requests left are shown.
+  openrouter: { key: readKey(process.env.ALPHONSO_LIVE_OPENROUTER_KEY_FILE), placeholder: 'sk-or-...', category: 'ai_models', saved: /openrouter key saved/i, tab: 'OpenRouter', shows: /\d+ free requests left today\./ },
 };
 const COMPOSIO_KEY = readKey(process.env.ALPHONSO_LIVE_COMPOSIO_KEY_FILE);
 const HF_KEY_ID = readKey(process.env.ALPHONSO_LIVE_HIGGSFIELD_KEY_ID_FILE);
@@ -456,8 +459,8 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     }
   }).timeout(900000);
 
-  // NVIDIA NIM and Gemini (free tiers): the provider picked in Chat answers a plain question.
-  it('answers a plain question in Chat with NVIDIA NIM and with Gemini', async function () {
+  // NVIDIA NIM, Gemini and OpenRouter (free): the provider picked in Chat answers a plain question.
+  it('answers a plain question in Chat with NVIDIA NIM, Gemini and OpenRouter', async function () {
     const providers = Object.entries(CLOUD_KEYS).filter(([, c]) => c.key);
     if (!providers.length) this.skip();
     const results = {};
@@ -501,6 +504,7 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
           return settings.selectedProvider === id && Boolean(settings.selectedModel) && settings.selectedModel !== ollamaModel;
         }, { timeout: 60000, timeoutMsg: `${c.tab} picked no model of its own` });
         const model = (await browser.execute(() => JSON.parse(localStorage.getItem('alphonso_settings') || '{}'))).selectedModel;
+        if (c.shows) await browser.waitUntil(async () => c.shows.test(await mainText()), { timeout: 60000, timeoutMsg: `${c.tab} did not show ${c.shows}` });
         const before = (await $$('[data-testid="chat-message-assistant"]')).length;
         const input = await $('[data-testid="chat-compose-input"]');
         await input.waitForDisplayed();

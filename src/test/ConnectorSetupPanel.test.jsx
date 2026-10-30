@@ -82,6 +82,9 @@ vi.mock('../services/connectors/higgsfieldConnector', async (orig) => ({
 vi.mock('../services/connectors/elevenLabsConnector', () => ({
   listElevenLabsVoices: vi.fn(async () => ({ ok: true, voices: [{ id: 'v1', name: 'Rachel', cloned: false }, { id: 'v2', name: 'My voice', cloned: true }] })),
 }));
+vi.mock('../services/connectors/openRouterConnector', () => ({
+  getOpenRouterKeyInfo: vi.fn(async () => ({ freeUsed: 4, freeLimit: 50, freeRemaining: 46, isFreeTier: false })),
+}));
 vi.mock('../components/ToolConnectionsPanel', () => ({
   ToolConnectionsPanel: () => <div data-testid="tool-connections-panel" />
 }));
@@ -169,6 +172,23 @@ describe('ConnectorSetupPanel', () => {
   });
 
   // Phase 4b: ElevenLabs, with a Test that lists the account's voices.
+  // OpenRouter (2026-10-30): its key, the free requests left, and your own keys counted as paid.
+  it('has an OpenRouter section that saves its key and shows the free requests left', async () => {
+    localStorage.clear();
+    const auth = await import('../services/connectors/connectorAuth');
+    render(<ConnectorSetupPanel />);
+    fireEvent.click(screen.getByTestId('connector-category-ai_models'));
+    expect(screen.getByText('OpenRouter')).toBeInTheDocument();
+    expect(screen.getByText(/those models count as paid steps/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Test OpenRouter' }));
+    expect(await screen.findByText('46 free requests left today.')).toBeInTheDocument();
+    const field = screen.getByPlaceholderText('sk-or-...');
+    fireEvent.change(field, { target: { value: 'sk-or-test' } });
+    const section = field.closest('[data-credential-section]') || field.parentElement.parentElement.parentElement;
+    fireEvent.click(within(section).getAllByRole('button').find((b) => /save/i.test(b.textContent)));
+    expect(auth.saveConnectorCredential).toHaveBeenCalledWith('openrouter', 'OPENROUTER_API_KEY', 'sk-or-test');
+  });
+
   it('has an ElevenLabs section whose Test lists your voices', async () => {
     localStorage.clear();
     render(<ConnectorSetupPanel />);

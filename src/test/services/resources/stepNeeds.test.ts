@@ -49,7 +49,10 @@ describe('toolsForStep', () => {
     expect(toolsForStep({ agent: 'hector', actionType: 'research_report' })).toEqual([]);
     providers.nova = 'gemini';
     expect(toolsForStep({ agent: 'nova', actionType: 'analysis_market' })).toEqual([]);
+    providers.maria = 'openrouter';
+    expect(toolsForStep({ agent: 'maria', actionType: 'audit_quality' })).toEqual([]);
     expect(toolsForStep({ agent: 'alphonso', actionType: 'assistant_answer', model: 'claude:claude-haiku-5-5' })).toEqual([]);
+    expect(toolsForStep({ agent: 'alphonso', actionType: 'assistant_answer', model: 'openrouter:b/y' })).toEqual([]);
   });
 
   it('picture steps need the model and ComfyUI, unless Higgsfield makes the pictures', () => {

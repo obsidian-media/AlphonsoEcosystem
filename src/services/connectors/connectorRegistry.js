@@ -327,6 +327,17 @@ export const DEFAULT_CONNECTORS = [
     disabledReason: 'NVIDIA API key is not configured.'
   },
   {
+    // OpenRouter (2026-10-30): free models, paid models, and models served by the
+    // user's own provider keys added in OpenRouter. Paid use is gated per step.
+    id: 'openrouter',
+    name: 'OpenRouter',
+    status: 'not_configured',
+    transport: 'openrouter_api',
+    requiredEnv: ['OPENROUTER_API_KEY'],
+    permissions: ['prompt_exchange'],
+    disabledReason: 'OpenRouter API key is not configured.'
+  },
+  {
     id: 'gemini',
     name: 'Google Gemini',
     status: 'not_configured',

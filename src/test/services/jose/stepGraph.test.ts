@@ -92,6 +92,8 @@ describe('stepGraph', () => {
   it('knows a paid model id', () => {
     expect(isPaidModelId('claude:claude-haiku-5-5')).toBe(true);
     expect(isPaidModelId('chatgpt:')).toBe(true);
+    expect(isPaidModelId('openrouter:anthropic/claude-haiku-5.5')).toBe(true);
+    expect(isPaidModelId('openrouter/free')).toBe(false);
     expect(isPaidModelId('qwen2.5:7b')).toBe(false);
     expect(isPaidModelId(undefined)).toBe(false);
   });

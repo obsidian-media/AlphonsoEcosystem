@@ -852,6 +852,40 @@ describe('a step whose owner needs setting up', () => {
   });
 });
 
+// OpenRouter (2026-10-30): the free limit used up with no model on this computer makes the step
+// wait (not retried); a step that ran on this computer instead says so in the change log.
+describe("a step whose model ran out of OpenRouter's free requests", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(executeContentStepAssignment).mockClear();
+  });
+
+  it('waits for setup when nothing on this computer can take over, tried once', async () => {
+    const limit = await import('../../../services/connectors/openRouterFreeLimit');
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+      limit.markSetupNeeded('miya', limit.FREE_LIMIT_NO_LOCAL);
+      return { summary: 'The model failed.', resultState: 'failed', artifacts: [], sources: [], contractAction: assignment.actionType };
+    });
+    const result = await run([step('miya', 'creative_script', { stepId: 'script' })]);
+    expect(vi.mocked(executeContentStepAssignment)).toHaveBeenCalledTimes(1);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.status).toBe('waiting_setup');
+    expect(request.steps[0]).toMatchObject({ status: 'setup_needed', error: limit.FREE_LIMIT_NO_LOCAL });
+  });
+
+  it("says in the change log when a step ran on this computer's model", async () => {
+    const limit = await import('../../../services/connectors/openRouterFreeLimit');
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+      limit.noteModel('miya', limit.FREE_LIMIT_LOCAL('llama3.2:3b'));
+      return { summary: 'ok', resultState: 'completed', artifacts: [], sources: [], contractAction: assignment.actionType };
+    });
+    const result = await run([step('miya', 'creative_script', { stepId: 'script' })]);
+    const request = getJoseRequest(`jose-request-${result.commandId}`);
+    expect(request.status).toBe('done');
+    expect((request.changeLog || []).map((e) => e.text)).toContain(`Miya: ${limit.FREE_LIMIT_LOCAL('llama3.2:3b')}`);
+  });
+});
+
 describe('the closing summary (agent roles Part A)', () => {
   beforeEach(() => {
     localStorage.clear();

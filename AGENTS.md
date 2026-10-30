@@ -26,13 +26,13 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and older services)
   agents/              9 agent profiles and schemas (what each may do is src/services/jose/agentPermissionTable.ts)
   components/          175 UI components (incl. miya/, jose/, calendar/ for the content factory, Jose's board and the Calendar)
-  services/            336 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
+  services/            340 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
     jose/              Jose's planner, step graphs, effects, requests, Telegram, paid models
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                610 test files, 6,933 tests (Vitest; see ground truth for current verification status)
+  test/                615 test files, 6,933 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -41,7 +41,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
   src-tauri/             Rust backend
-  src/lib.rs           ~958 lines, 205 Tauri commands (across 54 modules)
+  src/lib.rs           ~959 lines, 206 Tauri commands (across 54 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -89,7 +89,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,933 tests (610 files; also runs bridge/)
+npm run test             # 6,933 tests (615 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
@@ -125,7 +125,7 @@ What each agent may do is one table, `src/services/jose/agentPermissionTable.ts`
 - **parallelExecutionService.ts** — parallel task execution with concurrency control and retry
 - **cacheService.ts** — memory caching with TTL and LRU eviction
 - **orchestrationQueueService.js** manages durable queue with dead-letter replay
-- All 34 connectors (ElevenLabs and Higgsfield since content factory phase 4b, Google Web Risk since agent phase 4; Telegram, WhatsApp Cloud, YouTube, Meta (Facebook and Instagram), mobile_bridge, ChatGPT, Claude, Qwen, Notion, ClickUp, SD WebUI, ComfyUI Video, Runway, GitHub, Slack, Discord, Generic Webhook, Ollama, Brave Search, Perplexity, Tavily, DeepSeek, NVIDIA NIM, Gemini, n8n, Hermes Agents, CALL-E, Pexels, Pixabay, Coverr, Your storage, Google Web Risk) are policy-gated
+- All 35 connectors (ElevenLabs and Higgsfield since content factory phase 4b, Google Web Risk since agent phase 4, OpenRouter since 2026-10-30; Telegram, WhatsApp Cloud, YouTube, Meta (Facebook and Instagram), mobile_bridge, ChatGPT, Claude, Qwen, Notion, ClickUp, SD WebUI, ComfyUI Video, Runway, GitHub, Slack, Discord, Generic Webhook, Ollama, Brave Search, Perplexity, Tavily, DeepSeek, NVIDIA NIM, Gemini, OpenRouter, n8n, Hermes Agents, CALL-E, Pexels, Pixabay, Coverr, Your storage, Google Web Risk) are policy-gated
 - Window close now calls `std::process::exit(0)` to prevent WebView2 zombie process leak
 
 ## Do Not Duplicate
