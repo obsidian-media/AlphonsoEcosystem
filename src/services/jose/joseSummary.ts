@@ -18,6 +18,11 @@ function firstSentence(text: string): string {
 function stepLine(request: JoseRequest, step: JoseRequestStep): string {
   const name = agentName(step.agent);
   const reason = String((step as any).error || '').trim();
+  // Held back by the resource gate (2026-10-30): "Waiting for memory: X is busy." → "(X is busy.)".
+  if (step.waitingFor) {
+    const why = step.waitingFor.replace(/^Waiting for memory(: | to free up\.)?/, '').trim();
+    return why ? `${name}: waiting for memory (${why})` : `${name}: waiting for memory`;
+  }
   switch (step.status) {
     case 'done': {
       const output = getStepOutput(request.commandId, step.stepId);

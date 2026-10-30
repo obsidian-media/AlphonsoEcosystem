@@ -10,6 +10,17 @@ const s = (stepId: string, agent: string, status: string, extra: Record<string, 
 describe('closingSummary', () => {
   beforeEach(() => localStorage.clear());
 
+  it('a step waiting for memory says so (resource manager, 2026-10-30)', () => {
+    const text = closingSummary(request([
+      s('scenes', 'miya', 'running', { waitingFor: 'Waiting for memory: ComfyUI is busy.' }),
+      s('voice', 'miya', 'running', { waitingFor: 'Waiting for memory to free up.' }),
+    ]));
+    expect(text.split('\n').slice(0, 2)).toEqual([
+      'Miya: waiting for memory (ComfyUI is busy.)',
+      'Miya: waiting for memory',
+    ]);
+  });
+
   it('gives one line per step, what waits, and points to the board', () => {
     setStepOutput('c1', 'research', 'hector', { summary: 'Found five sources on honeybees. More detail follows.' });
     const text = closingSummary(request([

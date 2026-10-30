@@ -17,6 +17,32 @@ const kinds = (list: JoseNotification[]) => list.map((n) => n.kind);
 
 beforeEach(() => localStorage.clear());
 
+describe('a step waiting long for memory (resource manager, 2026-10-30)', () => {
+  const MIN = 60_000;
+  const waiting = (sinceMs: number) => request({
+    steps: [{ stepId: 'scenes', agent: 'miya', actionType: 'creative_scenes', effects: [], needs: [], status: 'running',
+      waitingFor: 'Waiting for memory: ComfyUI is busy.', waitingSinceMs: sinceMs } as never],
+  });
+
+  it('says nothing for the first 10 minutes', () => {
+    expect(collectJoseNotifications([waiting(0)], new Set(), ALL_ON, 9 * MIN)).toEqual([]);
+  });
+
+  it('tells you once after 10 minutes, without buttons', () => {
+    const list = collectJoseNotifications([waiting(0)], new Set(), ALL_ON, 11 * MIN);
+    expect(list).toEqual([{
+      key: 'memwait:r1:scenes',
+      kind: 'memory_wait',
+      text: "Miya's step has waited 11 minutes. Waiting for memory: ComfyUI is busy.",
+    }]);
+    expect(collectJoseNotifications([waiting(0)], new Set(['memwait:r1:scenes']), ALL_ON, 30 * MIN)).toEqual([]);
+  });
+
+  it('follows the waiting-step switch', () => {
+    expect(collectJoseNotifications([waiting(0)], new Set(), { ...ALL_ON, stepWaiting: false }, 11 * MIN)).toEqual([]);
+  });
+});
+
 describe('collectJoseNotifications', () => {
   it('says what a waiting step will do, with Approve and Reject', () => {
     const [n] = collectJoseNotifications([request({

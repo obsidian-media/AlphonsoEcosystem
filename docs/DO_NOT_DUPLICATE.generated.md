@@ -365,7 +365,7 @@ Source-backed inventory: 336 services and 177 components. Human purpose descript
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `listStepOutputs`, `priorOutputsForNeeds`, `setStepOutput`, `StepOutput` |
 | service | `src/services/jose/joseStop.ts` | `clearStop`, `isStopRequested`, `NOT_RUNNING`, `onStopRequested`, `STOPPED_LINE`, `stopRequest`, `stopSignal`, `stopWaitsFor` |
 | service | `src/services/jose/joseSummary.ts` | `closingSummary` |
-| service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
+| service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `MEMORY_WAIT_NOTICE_MS`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `asksToMake`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `MAKING_WORDS`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
 | service | `src/services/jose/joseUserTemplates.ts` | `deleteUserTemplate`, `listUserTemplates`, `saveUserTemplate` |
 | service | `src/services/jose/movedTaskTypes.ts` | `dropRetiredSteps`, `MOVED_TASK_TYPES`, `moveToOwner`, `RETIRED_TASK_TYPES`, `toCurrentOwners` |

@@ -26,7 +26,7 @@ export interface JoseButton {
 
 export interface JoseNotification {
   key: string;
-  kind: 'step_waiting' | 'plan_waiting' | 'finished' | 'review_decision' | 'interrupted' | 'setup_needed';
+  kind: 'step_waiting' | 'plan_waiting' | 'finished' | 'review_decision' | 'interrupted' | 'setup_needed' | 'memory_wait';
   text: string;
   buttons?: JoseButton[][];
 }
@@ -88,10 +88,24 @@ For: ${cut(request.text, 200)}`;
 }
 
 /** The notifications not yet sent, for the kinds that are switched on. Pure. */
-export function collectJoseNotifications(requests: JoseRequest[], sent: Set<string>, settings: JoseTelegramSettings): JoseNotification[] {
+/** A step waiting for memory longer than this is told once (resource manager, 2026-10-30). */
+export const MEMORY_WAIT_NOTICE_MS = 10 * 60_000;
+
+export function collectJoseNotifications(requests: JoseRequest[], sent: Set<string>, settings: JoseTelegramSettings, nowMs: number = Date.now()): JoseNotification[] {
   const out: JoseNotification[] = [];
   const add = (notification: JoseNotification) => { if (!sent.has(notification.key)) out.push(notification); };
   for (const request of requests) {
+    if (settings.stepWaiting) {
+      for (const step of request.steps.filter((s) => s.waitingFor && typeof s.waitingSinceMs === 'number')) {
+        const waited = nowMs - (step.waitingSinceMs as number);
+        if (waited <= MEMORY_WAIT_NOTICE_MS) continue;
+        add({
+          key: `memwait:${request.id}:${step.stepId}`,
+          kind: 'memory_wait',
+          text: `${agentName(step.agent)}'s step has waited ${Math.floor(waited / 60_000)} minutes. ${step.waitingFor}`,
+        });
+      }
+    }
     if (request.status === 'waiting_approval' && settings.stepWaiting) {
       for (const step of request.steps.filter((s) => s.status === 'waiting_approval')) {
         add({

@@ -217,6 +217,8 @@
 **Interfaces:**
 - Produces: a notification kind for a step with `waitingFor` and `waitingSinceMs` older than 10 min, sent once per step (sent-log key `memwait:<requestId>:<stepId>`), text `` `${agentName(step.agent)}'s step has waited ${minutes} minutes. ${step.waitingFor}` ``, no buttons; `closingSummary` shows `waiting for memory (…)` for such a step.
 
+  **Built (2026-10-30), calls made while building:** `collectJoseNotifications()` takes an optional `nowMs` (default now) so the 10 minutes can be tested; the notice follows the existing "a step is waiting" switch (`stepWaiting`) rather than adding a new Settings switch; the minutes are rounded down; `waitingSinceMs` is checked as a number (0 counts). The summary line drops the "Waiting for memory:" prefix from the reason, so it reads "Miya: waiting for memory (ComfyUI is busy.)", and just "waiting for memory" when no holder is named.
+
 - [ ] **Step 1: Write the failing tests**: 9 min → nothing; 11 min → one message with that text; a second collect → nothing more.
 - [ ] **Step 2: Run** — Expected: FAIL.
 - [ ] **Step 3: Implement.**
