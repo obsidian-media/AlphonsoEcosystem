@@ -458,6 +458,8 @@ interface AppSettings {
   effectApprovals?: Partial<Record<JoseEffect, boolean>>;
   /** When Jose shows his plan before running it (phase 3): always, bigger (default) or never. */
   showPlanFirst?: string;
+  /** OpenRouter (2026-10-30): when its free limit runs out, 'local' (default) or 'paid'. */
+  openRouterFreeLimit?: string;
   safeMode?: boolean;
   privacyShieldActive?: boolean;
   miyaCompanionPinned?: boolean;
@@ -1302,6 +1304,21 @@ export function SettingsView({
           </div>
           <EffectApprovalsTable settings={settings} setSettings={setSettings} />
           <PaidModelsPanel settings={settings} setSettings={setSettings} />
+          <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
+            <div>
+              <label htmlFor="openrouter-free-limit" className="text-sm font-semibold text-(--text-1)">When OpenRouter's free limit runs out</label>
+              <div className="text-[11px] text-(--text-3) mt-0.5">OpenRouter's free models allow 50 requests a day (1,000 once you have bought $10 of its credit). A step then carries on with this computer's model and says so, or Jose asks to finish it with a paid OpenRouter model, showing the cost. Asking needs paid models allowed above, with OpenRouter as the paid model.</div>
+            </div>
+            <select
+              id="openrouter-free-limit"
+              value={settings.openRouterFreeLimit === 'paid' ? 'paid' : 'local'}
+              onChange={(e) => setSettings({ ...settings, openRouterFreeLimit: e.target.value })}
+              className="rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+            >
+              <option value="local">Use this computer's model</option>
+              <option value="paid">Ask to use a paid model</option>
+            </select>
+          </div>
           <JoseTelegramPanel settings={settings} setSettings={setSettings} />
           <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
             <div>

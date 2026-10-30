@@ -25,6 +25,7 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     sendNvidiaMessage.mockReset();
     sendGeminiMessage.mockReset();
     sendHermesAgentMessage.mockReset();
+    sendOpenRouterMessage.mockReset();
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -61,6 +62,28 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     sendOpenRouterMessage.mockResolvedValueOnce({ ok: true, content: 'hi', model: 'some/free:free', costUsd: 0, usage: { promptTokens: 1, completionTokens: 1 } });
     await generateAgentLlmResponse('alphonso', { prompt: 'hello' });
     expect(sendOpenRouterMessage).toHaveBeenCalledWith([{ role: 'user', content: 'hello' }], { model: 'openrouter/free' });
+  });
+
+  it("carries on with this computer's model once the free limit is used up, and says so", async () => {
+    agentProviderMap.hector = { provider: 'openrouter', model: 'x/y:free' };
+    const limit = await import('../services/connectors/openRouterFreeLimit');
+    limit.markFreeLimitUsed(Date.now() + 3_600_000);
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ response: 'local answer', done: true }) });
+    const result = await generateAgentLlmResponse('hector', { prompt: 'research this' });
+    expect(result).toMatchObject({ response: 'local answer', backend: 'ollama', model: 'llama3.2:3b' });
+    expect(sendOpenRouterMessage).not.toHaveBeenCalled();
+    expect(limit.takeModelNotes('hector')).toEqual([limit.FREE_LIMIT_LOCAL('llama3.2:3b')]);
+    localStorage.clear();
+  });
+
+  it('waits for setup when no model on this computer can take over', async () => {
+    agentProviderMap.hector = { provider: 'openrouter', model: 'x/y:free' };
+    const limit = await import('../services/connectors/openRouterFreeLimit');
+    limit.markFreeLimitUsed(Date.now() + 3_600_000);
+    fetch.mockRejectedValueOnce(new Error('connection refused'));
+    await expect(generateAgentLlmResponse('hector', { prompt: 'x' })).rejects.toThrow(limit.FREE_LIMIT_NO_LOCAL);
+    expect(limit.takeSetupNeeded('hector')).toBe(limit.FREE_LIMIT_NO_LOCAL);
+    localStorage.clear();
   });
 
   it("says plainly when OpenRouter refuses the key", async () => {

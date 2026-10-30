@@ -881,6 +881,23 @@ export async function generateAgentLlmResponse(agentId: string, rawOptions: Agen
   if (config.provider === 'openrouter') {
     const { sendOpenRouterMessage, openRouterFailure, OPENROUTER_CHOOSE_FREE } = await import('../services/connectors/openRouterConnector');
     const model = config.model || OPENROUTER_CHOOSE_FREE;
+    if (model.endsWith(':free') || model === OPENROUTER_CHOOSE_FREE) {
+      // A free model: when the free limit is used up, this computer's model carries on (or a paid retry follows).
+      const limit = await import('../services/connectors/openRouterFreeLimit');
+      const outcome = await limit.askOpenRouterFree(agentId, messages, model);
+      if (outcome.kind === 'answer') return { response: outcome.content, done: true, backend: 'openrouter', model: outcome.model };
+      const local = getConfiguredOllamaModel();
+      try {
+        if (!isChatModel(local)) throw new Error('not a chat model');
+        const result = await generateOllamaResponse({ endpoint: options.endpoint || getConfiguredOllamaEndpoint(), model: local, prompt: options.prompt, signal: options.signal, ...(options.format ? { format: options.format } : {}) });
+        limit.noteModel(agentId, limit.FREE_LIMIT_LOCAL(local));
+        return { ...result, backend: 'ollama', model: local };
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        limit.markSetupNeeded(agentId, limit.FREE_LIMIT_NO_LOCAL);
+        throw new Error(limit.FREE_LIMIT_NO_LOCAL);
+      }
+    }
     const result = await sendOpenRouterMessage(messages, { model });
     const failure = openRouterFailure(result);
     if (failure) throw new Error(failure.message);

@@ -41,6 +41,7 @@ import { saveRequestDecisions } from './jose/joseFinish';
 import { recordReviewVerdict, recordStepOutcome } from './skills/skillOutcomes';
 import { rewireNeeds } from './jose/josePlanEdits';
 import { appendRequestNote, addRequestSteps, rewireRequestNeeds } from './jose/joseRequestStore';
+import { takeModelNotes, takeSetupNeeded } from './connectors/openRouterFreeLimit';
 import { moveToOwner } from './jose/movedTaskTypes';
 import { buildStepInput, skillSection, stepInputText } from './jose/stepInput';
 import { runReviewStep } from './jose/reviewStep';
@@ -502,8 +503,25 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
     if (!model) return executeAssignment(packet, assignment, commandText, options);
     return withAgentModel(assignment.agent, model, () => executeAssignment(packet, assignment, commandText, { ...options, model }));
   };
+  // Nothing left over from an earlier step of the same agent (OpenRouter, 2026-10-30).
+  takeSetupNeeded(assignment?.agent);
+  // The agent's model said the step can't go on until something is set up (OpenRouter's free
+  // limit used up with no model on this computer): the step waits with Carry on, not retried.
+  const setupResult = () => {
+    const reason = takeSetupNeeded(assignment?.agent);
+    return reason ? { summary: reason, resultState: 'setup_required', artifacts: [], sources: [], contractAction: assignment.actionType } : null;
+  };
   const attemptWith = async (model: string | null) => {
-    const result = await runOnce(model);
+    let result;
+    try {
+      result = await runOnce(model);
+    } catch (error) {
+      const setup = setupResult();
+      if (setup) return setup;
+      throw error;
+    }
+    const setup = setupResult();
+    if (setup) return setup;
     if (isRetryableTaskFailure(result)) {
       throw new Error(result.summary || `Task "${instruction}" returned a failed result.`);
     }
@@ -2024,6 +2042,7 @@ async function runPipeline({
 
       // The outputs of the steps this step needs, keyed by agent as agents read them.
       const priorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
+      takeModelNotes(assignment.agent);
       const runStep = () => executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory, isStopped: stopWanted });
       // The resource gate (2026-10-30): run when its memory fits, make room, wait with a reason
       // on the board, or fail as too big for this computer. Released however the step ends.
@@ -2046,6 +2065,11 @@ async function runPipeline({
         } finally {
           if (admitted?.ok) admitted.release();
         }
+      }
+      // What the step's model did instead (OpenRouter's free limit, 2026-10-30): on the board and Chat's live line.
+      for (const note of takeModelNotes(assignment.agent)) {
+        if (joseRequestId) { try { appendRequestNote(joseRequestId, `${agentName(assignment.agent)}: ${note}`); } catch { /* display aid only */ } }
+        onProgress?.({ stage: 'model_note', assignment, packetId: assignment.packetId, text: note });
       }
       if (taskResult.stopped) {
         rejectPacket(assignment.packetId, STOPPED_LINE);

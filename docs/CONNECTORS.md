@@ -785,6 +785,8 @@ Without storage, such a post is saved in the project's `ready-to-post` folder wi
 
 **Using it:** pick OpenRouter as a provider for any agent (Settings → Connectors → Agent Providers) or on Chat's provider tabs. The model list shows OpenRouter's free models only, with "Let OpenRouter choose a free model" first (the default); a free model you pick is checked once with a short question. Paid OpenRouter models are chosen in Settings → Approvals → Allow paid models.
 
+**When the free limit runs out:** a step carries on with this computer's model and says so on the board and in Chat (the default), or, with "Ask to use a paid model" in Settings → Approvals, Jose asks to finish it with a paid OpenRouter model, showing the cost. With no model on this computer, the step waits with Carry on. The 20-a-minute limit is not mistaken for the daily one: the step waits a moment and asks again. Chat used directly says the limit is reached and doesn't switch models by itself.
+
 **How to test:** Test under the OpenRouter section, or the Connector Health Monitor: both read OpenRouter's key page and say how many free requests are left today (nothing is sent to a model).
 
 **Your own keys:** add your Gemini, Anthropic, OpenAI or Mistral key in OpenRouter (Settings → Integrations there) to run those models through your one OpenRouter key. Checked live on 2026-10-30: Gemini and Mistral work; OpenRouter serves almost none of NVIDIA's own catalogue this way (keep the NVIDIA NIM connector for that); OpenRouter charges nothing for a request on your own key and reports the provider's price, which Alphonso counts toward your monthly cap.

@@ -264,6 +264,16 @@ describe('SettingsView smoke', () => {
     expect(setSettings).toHaveBeenCalledWith(expect.objectContaining({ showPlanFirst: 'never' }));
   });
 
+  // OpenRouter (2026-10-30): what a step does when OpenRouter's free limit runs out.
+  it("saves what happens when OpenRouter's free limit runs out", () => {
+    const setSettings = renderApprovals({ ...minimalSettings });
+    const select = screen.getByLabelText("When OpenRouter's free limit runs out");
+    expect(select.value).toBe('local');
+    expect(screen.getByText("Use this computer's model")).toBeTruthy();
+    fireEvent.change(select, { target: { value: 'paid' } });
+    expect(setSettings).toHaveBeenCalledWith(expect.objectContaining({ openRouterFreeLimit: 'paid' }));
+  });
+
   // Phase 4: paid models, which you allow, with prices you enter and a monthly cap.
   it('saves the paid-model settings', () => {
     const setSettings = renderApprovals({ ...minimalSettings, zeroCostMode: true, paidModels: { monthlyCapUsd: 5 } });
