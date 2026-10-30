@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 336 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 337 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -262,6 +262,7 @@ Source-backed inventory: 336 services and 179 components. Human purpose descript
 | service | `src/services/connectors/higgsfieldConnector.ts` | `cachedHiggsfieldEstimate`, `HIGGSFIELD_CONSOLE_URL`, `HIGGSFIELD_NOT_SET_UP`, `higgsfieldAvailable`, `higgsfieldKeys`, `HiggsfieldKeys`, `higgsfieldModels`, `HiggsfieldModels`, `isHiggsfieldConfigured`, `listHiggsfieldPresets`, `parseExtra`, `refreshHiggsfieldEstimate`, `testHiggsfieldModel` |
 | service | `src/services/connectors/n8nConnector.ts` | `isN8nHealthy`, `listN8nWorkflows`, `N8nActionResult`, `N8nHealthResult`, `N8nWebhookResult`, `N8nWorkflowListResult`, `setN8nWorkflowActive`, `triggerN8nWebhook` |
 | service | `src/services/connectors/nvidiaNimConnector.ts` | `DEFAULT_MODEL`, `findWorkingNvidiaModel`, `isNvidiaConfigured`, `listNvidiaModels`, `NVIDIA_PROBE`, `NvidiaChatOptions`, `NvidiaChatSuccess`, `NvidiaMessage`, `nvidiaModelsNotServed`, `NvidiaRateLimited`, `NvidiaSendResult`, `sendNvidiaMessage`, `WorkingModelResult` |
+| service | `src/services/connectors/openRouterConnector.ts` | `forgetOpenRouterKeyInfo`, `getOpenRouterKeyInfo`, `isOpenRouterConfigured`, `listOpenRouterModels`, `OPENROUTER_CHOOSE_FREE`, `OPENROUTER_KEY_REFUSED`, `OPENROUTER_NO_KEY`, `OPENROUTER_NO_TEXT`, `OpenRouterKeyInfo`, `OpenRouterMessage`, `OpenRouterModel`, `OpenRouterSendResult`, `resetOpenRouterCacheForTests`, `sendOpenRouterMessage` |
 | service | `src/services/connectors/perplexityConnector.ts` | `isPerplexityConfigured`, `PerplexitySearchOptions`, `PerplexitySearchResult`, `PerplexitySource`, `searchPerplexity` |
 | service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SLACK_APP_TOKEN_PROBLEM`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `slackTokenProblem`, `updateMessage`, `uploadFile` |
 | service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
