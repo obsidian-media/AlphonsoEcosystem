@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 334 services and 177 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 335 services and 177 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -446,6 +446,7 @@ Source-backed inventory: 334 services and 177 components. Human purpose descript
 | service | `src/services/repoAuditService.ts` | `getLastRepoAudit`, `listRepoAudits`, `REPO_AUDIT_SCOPE`, `runRepoAudit`, `summarizeRepoAudit` |
 | service | `src/services/resourceCostService.ts` | `collectResourceSnapshot`, `listResourceSnapshots`, `summarizeResourceUsage` |
 | service | `src/services/resources/admission.ts` | `Admission`, `decideAdmission`, `MARGIN`, `memoryWaitLine`, `tooBigLine` |
+| service | `src/services/resources/ensureTools.ts` | `EnsureResult`, `ensureTools` |
 | service | `src/services/resources/freeMemory.ts` | `FreeResult`, `freeThings` |
 | service | `src/services/resources/idleStop.ts` | `DEFAULT_IDLE_MINUTES`, `FAST_POLL_MS`, `getIdleMinutes`, `idleTick`, `latestResources`, `onResources`, `resetIdleStopForTests`, `setIdleMinutes`, `SLOW_POLL_MS`, `startResourceWatcher` |
 | service | `src/services/resources/resourceState.ts` | `GPU_UNKNOWN`, `GpuSource`, `LoadedThing`, `readResources`, `ResourceState`, `UsageRecord` |

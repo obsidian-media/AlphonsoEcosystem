@@ -179,6 +179,8 @@
 - Consumes: `getAllStatus()`, `startTool()`, `waitForTool(name, 60_000)`; for ComfyUI the found-install path `resolveComfyuiDirectory()`/`launch_comfyui` already used by Runtime Hub's ComfyUI card (call the same function that card calls; don't add a third path).
 - Produces: `export async function ensureTools(tools: NeededTool[]): Promise<{ ok: true } | { ok: false; reason: string }>` — `ffmpeg`, `kokoro`, `audiocraft`, `whisper` are per-call: only checked installed (`media_tools_status`), never started. Not installed → `` `${displayName} isn't installed. Install it in Runtime Hub.` `` Didn't answer in 60 s → `` `${displayName} didn't start. Open Runtime Hub to see its log.` ``
 
+  **Built (2026-10-30), calls made while building:** ComfyUI uses Alphonso's own copy when Runtime Hub has it installed, else the first install `findComfyuiInstalls()` finds that isn't Alphonso's (the saved folder first), started with `launch_comfyui` as the card does. A ComfyUI started that way isn't in `RuntimeManager.spawned`, so it counts as yours and the idle stop never stops it (only asked to unload). ffmpeg isn't a Runtime Hub tool (bundled on Windows, the system's elsewhere), so its message doesn't point to Runtime Hub. Display names come from Runtime Hub's own `displayName`. A start that throws reads as "didn't start".
+
 - [ ] **Step 1: Write the failing tests**: a stopped installed ComfyUI is started and awaited; a running one isn't started again; not installed → the reason above; per-call tools are never started.
 - [ ] **Step 2: Run** — Expected: FAIL.
 - [ ] **Step 3: Implement.**
