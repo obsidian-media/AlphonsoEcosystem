@@ -87,7 +87,7 @@ describe('MCP connection', () => {
     expect(getServer(s.id)!.signIn).toBe('browser');
     invoke.mockResolvedValueOnce(undefined);
     await saveServerHeader(s.id, 'X-Api-Key', 'k-123');
-    expect(invoke).toHaveBeenLastCalledWith('mcp_save_header', { serverId: 'shop', name: 'X-Api-Key', value: 'k-123' });
+    expect(invoke).toHaveBeenLastCalledWith('mcp_save_header', { serverId: 'shop', url: 'https://shop.example/mcp', name: 'X-Api-Key', value: 'k-123' });
     expect(JSON.stringify(localStorage)).not.toContain('k-123');
   });
 

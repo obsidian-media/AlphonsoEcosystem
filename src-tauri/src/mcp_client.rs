@@ -865,6 +865,53 @@ pub(crate) fn load_creds(server_id: &str) -> Creds {
   }
 }
 
+/// The origin an address is reached at: "https://host" or "https://host:port".
+pub(crate) fn origin_of(url: &reqwest::Url) -> String {
+  url.origin().ascii_serialization()
+}
+
+/// Only secrets saved for this exact origin go with a request (final review, 2026-10-30): the
+/// window passes the address, so a key or sign-in saved for one server must never reach another.
+/// Saved keys carry the origin they were saved for; a sign-in token carries its `resource`.
+pub(crate) fn creds_for_address(
+  saved_origin: Option<&str>,
+  token_resource: Option<&str>,
+  url: &reqwest::Url,
+  creds: Creds,
+) -> Creds {
+  let here = origin_of(url);
+  let token_ok = token_resource
+    .and_then(|r| reqwest::Url::parse(r).ok())
+    .is_some_and(|r| origin_of(&r) == here);
+  let headers_ok = saved_origin == Some(here.as_str());
+  Creds {
+    bearer: if token_ok { creds.bearer } else { None },
+    headers: if headers_ok {
+      creds.headers
+    } else {
+      Vec::new()
+    },
+  }
+}
+
+fn saved_token_resource(server_id: &str) -> Option<String> {
+  let raw = keychain_get(&account(server_id, "token"))?;
+  let v: Value = serde_json::from_str(&raw).ok()?;
+  v.get("resource")
+    .and_then(Value::as_str)
+    .map(|s| s.to_string())
+}
+
+/// The saved secrets that may go to `url`.
+pub(crate) fn bound_creds(server_id: &str, url: &reqwest::Url) -> Creds {
+  creds_for_address(
+    keychain_get(&account(server_id, "origin")).as_deref(),
+    saved_token_resource(server_id).as_deref(),
+    url,
+    load_creds(server_id),
+  )
+}
+
 async fn connect(server_id: &str, url: &str, version: Option<&str>) -> Result<McpConn, String> {
   if !valid_server_id(server_id) {
     return Err(BAD_SERVER_ID.to_string());
@@ -872,7 +919,8 @@ async fn connect(server_id: &str, url: &str, version: Option<&str>) -> Result<Mc
   let allow = allow_local();
   let url = checked_url(url, allow).await?;
   crate::mcp_auth::refresh_if_expired(server_id).await;
-  McpConn::new(url, load_creds(server_id), version, allow)
+  let creds = bound_creds(server_id, &url);
+  McpConn::new(url, creds, version, allow)
 }
 
 #[tauri::command]
@@ -896,7 +944,7 @@ pub(crate) async fn mcp_list_tools(
       .await
       .unwrap_or(false)
   {
-    conn.creds = load_creds(&server_id);
+    conn.creds = bound_creds(&server_id, &conn.url);
     outcome = list_tools(&mut conn).await;
   }
   match outcome {
@@ -939,7 +987,7 @@ pub(crate) async fn mcp_call_tool(
       .await
       .unwrap_or(false)
   {
-    conn.creds = load_creds(&server_id);
+    conn.creds = bound_creds(&server_id, &conn.url);
     outcome = call_tool(&mut conn, &tool, arguments, input_schema.as_ref()).await;
   }
   match outcome {
@@ -953,15 +1001,26 @@ pub(crate) async fn mcp_call_tool(
   }
 }
 
-/// A key or header the server needs, kept in the keychain (never returned to the window).
+pub(crate) const KEY_FOR_OTHER_ADDRESS: &str =
+  "This server's key was saved for another address. Remove the server and add it again.";
+
+/// A key or header the server needs, kept in the keychain (never returned to the window), and
+/// bound to the server's address: it is only ever sent there.
 #[tauri::command]
-pub(crate) fn mcp_save_header(
+pub(crate) async fn mcp_save_header(
   server_id: String,
+  url: String,
   name: String,
   value: String,
 ) -> Result<(), String> {
   if !valid_server_id(&server_id) {
     return Err(BAD_SERVER_ID.to_string());
+  }
+  let origin = origin_of(&checked_url(&url, allow_local()).await?);
+  match keychain_get(&account(&server_id, "origin")) {
+    Some(saved) if saved != origin => return Err(KEY_FOR_OTHER_ADDRESS.to_string()),
+    Some(_) => {}
+    None => keychain_set(&account(&server_id, "origin"), &origin)?,
   }
   let name = name.trim().to_string();
   if !header_name_allowed(&name) {
@@ -996,7 +1055,7 @@ pub(crate) fn mcp_forget_server(server_id: String) -> Result<(), String> {
   for n in header_names(&server_id) {
     del(account(&server_id, &format!("header:{n}")));
   }
-  for part in ["headers", "token", "client"] {
+  for part in ["headers", "token", "client", "origin"] {
     del(account(&server_id, part));
   }
   Ok(())
@@ -1525,5 +1584,44 @@ pub(crate) mod tests {
     assert!(!header_name_allowed("Mcp-Session-Id"));
     assert!(!header_name_allowed("Host"));
     assert!(!header_name_allowed("Bad Name"));
+  }
+
+  // Final review (2026-10-30): a saved key or sign-in goes only to the address it was saved for,
+  // whatever address the window passes.
+  #[test]
+  fn saved_secrets_go_only_to_their_own_address() {
+    let creds = || Creds {
+      bearer: Some("tok".into()),
+      headers: vec![("X-Api-Key".into(), "k".into())],
+    };
+    let shop = reqwest::Url::parse("https://shop.example/api/mcp").unwrap();
+    let evil = reqwest::Url::parse("https://evil.example/api/mcp").unwrap();
+    let other_port = reqwest::Url::parse("https://shop.example:8443/api/mcp").unwrap();
+    let kept = creds_for_address(
+      Some("https://shop.example"),
+      Some("https://shop.example/api/mcp"),
+      &shop,
+      creds(),
+    );
+    assert_eq!(kept.bearer.as_deref(), Some("tok"));
+    assert_eq!(kept.headers.len(), 1);
+    let none = creds_for_address(
+      Some("https://shop.example"),
+      Some("https://shop.example/api/mcp"),
+      &evil,
+      creds(),
+    );
+    assert!(none.bearer.is_none() && none.headers.is_empty());
+    let port = creds_for_address(
+      Some("https://shop.example"),
+      Some("https://shop.example/api/mcp"),
+      &other_port,
+      creds(),
+    );
+    assert!(port.bearer.is_none() && port.headers.is_empty());
+    // Nothing recorded: nothing is sent.
+    let unknown = creds_for_address(None, None, &shop, creds());
+    assert!(unknown.bearer.is_none() && unknown.headers.is_empty());
+    assert_eq!(origin_of(&shop), "https://shop.example");
   }
 }

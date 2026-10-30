@@ -127,7 +127,10 @@ export async function finishPastedSignIn(serverId: string, address: string): Pro
 /** A key or header the server needs, kept in the keychain. */
 export async function saveServerHeader(serverId: string, name: string, value: string): Promise<void> {
   if (!inDesktopApp()) throw new Error(NOT_DESKTOP);
-  await backend('mcp_save_header', { serverId, name, value });
+  const server = getServer(serverId);
+  if (!server) throw new Error(NO_SUCH_SERVER);
+  // The backend binds the key to this address: it is only ever sent there.
+  await backend('mcp_save_header', { serverId, url: server.url, name, value });
   updateServer(serverId, { signIn: 'key' });
 }
 

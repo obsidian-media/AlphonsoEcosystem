@@ -400,26 +400,29 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
   }).timeout(2400000);
 
   // Outside tools (2026-10-30): the store's own MCP server is read only and needs no sign-in.
-  it('reads products from your Shopify store through its MCP server', async function () {
+  it('reads from your Shopify store through its MCP server', async function () {
     if (!SHOPIFY_STORE) this.skip();
     const server = await addOutsideServer('My Shopify', `https://${SHOPIFY_STORE}/api/mcp`, 'free');
     await browser.waitUntil(async () => ((await mcpServers()).find((s) => s.id === server.id)?.tools || []).length > 0,
       { timeout: 60000, timeoutMsg: 'the store listed no tools' });
     const listed = (await mcpServers()).find((s) => s.id === server.id);
     console.log('LIVE shopify tools', JSON.stringify({ version: listed.version, tools: listed.tools.map((t) => [t.name, t.hintReadOnly || false]) }));
-    const search = listed.tools.find((t) => /search.*catalog|search.*product/i.test(t.name)) || listed.tools.find((t) => t.hintReadOnly);
+    // A store lists only what Shopify gives it: the catalog search, or (as on the owner's store, 2026-10-30)
+    // only the policy and FAQ search.
+    const search = listed.tools.find((t) => /search.*(catalog|product)/i.test(t.name)) || listed.tools.find((t) => /^(search|get)_/i.test(t.name)) || listed.tools[0];
+    const aboutPolicies = /polic|faq/i.test(search?.name || '');
     expect(search).toBeTruthy();
     await (await $(`[data-testid="mcp-server-${server.id}"]`)).$('.//button[starts-with(normalize-space(.), "Show tools")]').then((b) => b.click());
     await (await $(`select[aria-label="What ${search.name} may do"]`)).selectByAttribute('value', 'reading_only');
     // The backend itself: one call to the reading tool, answered by the store.
     const props = Object.keys(search.inputSchema?.properties || {});
-    const args = Object.fromEntries(props.filter((p) => /query|search|text/i.test(p)).slice(0, 1).map((p) => [p, 'mug']));
+    const args = Object.fromEntries(props.filter((p) => /query|search|text/i.test(p)).slice(0, 1).map((p) => [p, aboutPolicies ? 'returns' : 'mug']));
     if (props.includes('context')) args.context = 'A customer asking what the shop sells.';
     const direct = await invoke('mcp_call_tool', { serverId: server.id, url: listed.url, version: listed.version || null, tool: search.name, arguments: args, inputSchema: search.inputSchema || null });
-    console.log('LIVE shopify call', JSON.stringify({ ok: direct.ok && direct.value?.ok, reason: direct.value?.reason || direct.error || null, chars: String(direct.value?.text || '').length }));
+    console.log('LIVE shopify call', JSON.stringify({ ok: direct.ok && direct.value?.ok, reason: direct.value?.reason || direct.error || null, chars: String(direct.value?.text || '').length, text: String(direct.value?.text || '').slice(0, 300) }));
     expect(direct.ok && direct.value?.ok).toBe(true);
     if (!(await ollamaHasModels())) return;
-    const request = await askInChat('/jose What kinds of products does My Shopify sell? Look it up in the store.',
+    const request = await askInChat(aboutPolicies ? "/jose What is My Shopify's return policy? Look it up in the store." : '/jose What kinds of products does My Shopify sell? Look it up in the store.',
       (r) => !['running', 'queued'].includes(r.status) && !r.steps.some((s) => ['running', 'pending'].includes(s.status)), 'the Shopify question');
     const outs = (await stepOutputs())[request.commandId]?.steps || {};
     console.log('LIVE shopify answer', JSON.stringify({ status: request.status, steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status]),
