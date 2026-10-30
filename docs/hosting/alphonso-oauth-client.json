@@ -1,0 +1,10 @@
+{
+  "client_id": "https://alphonsoecosystem.app/alphonso/oauth-client.json",
+  "client_name": "Alphonso",
+  "client_uri": "https://alphonsoecosystem.app",
+  "redirect_uris": ["http://127.0.0.1:8088/callback"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none",
+  "application_type": "native"
+}

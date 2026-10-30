@@ -14,10 +14,11 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
 
-/// Alphonso's client metadata document (Task 9: hosted on the owner's site). Used only while it
-/// answers with a document whose `client_id` is this address.
+/// Alphonso's client metadata document, on the marketing site (owner, 2026-10-30; how it is hosted:
+/// docs/hosting/HOSTING_CLIENT_METADATA.md). Used only while it answers with a document whose
+/// `client_id` is this address. Changing it makes every user sign in to their servers again.
 pub(crate) const CLIENT_METADATA_URL: &str =
-  "https://obsidianmedia.online/alphonso/oauth-client.json";
+  "https://alphonsoecosystem.app/alphonso/oauth-client.json";
 pub(crate) const CALLBACK_PORT: u16 = 8088;
 const PASTE_WAIT: Duration = Duration::from_secs(600);
 const METADATA_CHECK_EVERY: Duration = Duration::from_secs(24 * 3600);
@@ -881,6 +882,18 @@ mod tests {
       parse_callback_with_issuer(target, "s1", "https://auth.example", false).unwrap(),
       "abc"
     );
+  }
+
+  #[test]
+  fn saved_document_matches_the_address() {
+    // The copy in docs/hosting is what the owner publishes; it must name this exact address.
+    let doc: Value = serde_json::from_str(include_str!(
+      "../../docs/hosting/alphonso-oauth-client.json"
+    ))
+    .unwrap();
+    assert!(metadata_document_ok(&doc, CLIENT_METADATA_URL));
+    assert_eq!(doc["token_endpoint_auth_method"], "none");
+    assert!(doc.get("client_secret").is_none());
   }
 
   #[test]
