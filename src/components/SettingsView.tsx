@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import type { PaidModelChoice } from '../services/connectors/openRouterPaid';
 import { invoke } from '@tauri-apps/api/core';
 import { Activity, AlertTriangle, Cable, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare, PhoneCall } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
@@ -531,9 +532,28 @@ function EffectApprovalsTable({ settings, setSettings }: { settings: AppSettings
  * such step asks first and says what it should cost. The prices are yours to
  * enter (they change), and the monthly cap stops spending past it.
  */
+/** OpenRouter's paid models for the account (2026-10-30), loaded when OpenRouter is the paid choice. */
+function useOpenRouterPaidChoices(active: boolean): PaidModelChoice[] | null {
+  const [choices, setChoices] = useState<PaidModelChoice[] | null>(null);
+  useEffect(() => {
+    if (!active || choices) return;
+    let cancelled = false;
+    (async () => {
+      const { listOpenRouterUserModels } = await import('../services/connectors/openRouterConnector');
+      const { paidModelChoices } = await import('../services/connectors/openRouterPaid');
+      const list = paidModelChoices(await listOpenRouterUserModels());
+      if (!cancelled) setChoices(list);
+    })().catch(() => { if (!cancelled) setChoices([]); });
+    return () => { cancelled = true; };
+  }, [active, choices]);
+  return choices;
+}
+
 function PaidModelsPanel({ settings, setSettings }: { settings: AppSettings; setSettings: (s: AppSettings) => void }) {
   const saved = (settings.paidModels && typeof settings.paidModels === 'object' ? settings.paidModels : {}) as Record<string, unknown>;
-  const provider = saved.provider === 'chatgpt' ? 'chatgpt' : 'claude';
+  const provider = saved.provider === 'chatgpt' || saved.provider === 'openrouter' ? saved.provider : 'claude';
+  const openRouterChoices = useOpenRouterPaidChoices(provider === 'openrouter');
+  const fromOpenRouter = provider === 'openrouter';
   // The provider shown is the one saved, also before you change it.
   const save = (patch: Record<string, unknown>) => setSettings({ ...settings, paidModels: { ...saved, provider, ...patch } });
   const amountOf = (value: string) => (value.trim() === '' || !Number.isFinite(Number(value)) || Number(value) < 0 ? null : Number(value));
@@ -571,18 +591,40 @@ function PaidModelsPanel({ settings, setSettings }: { settings: AppSettings; set
         >
           <option value="claude">Claude</option>
           <option value="chatgpt">ChatGPT</option>
+          <option value="openrouter">OpenRouter</option>
         </select>
-        <label htmlFor="paid-model-name">Model name (blank: the one chosen in Connectors)</label>
-        <input
-          id="paid-model-name"
-          value={typeof saved.model === 'string' ? saved.model : ''}
-          onChange={(e) => save({ model: e.target.value.trim() || null })}
-          className="w-40 rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
-        />
+        {fromOpenRouter ? (
+          <>
+            <label htmlFor="paid-openrouter-model">Model (prices from OpenRouter)</label>
+            <select
+              id="paid-openrouter-model"
+              aria-label="OpenRouter paid model"
+              value={typeof saved.model === 'string' ? saved.model : ''}
+              onChange={(e) => {
+                const choice = (openRouterChoices || []).find((c) => c.id === e.target.value);
+                save(choice ? { model: choice.id, inputPerMillionUsd: choice.inputPerMillionUsd, outputPerMillionUsd: choice.outputPerMillionUsd } : { model: null });
+              }}
+              className="max-w-[260px] rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+            >
+              <option value="">{openRouterChoices === null ? 'Loading…' : openRouterChoices.length ? 'Choose a model' : 'No paid models found'}</option>
+              {(openRouterChoices || []).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+          </>
+        ) : (
+          <>
+            <label htmlFor="paid-model-name">Model name (blank: the one chosen in Connectors)</label>
+            <input
+              id="paid-model-name"
+              value={typeof saved.model === 'string' ? saved.model : ''}
+              onChange={(e) => save({ model: e.target.value.trim() || null })}
+              className="w-40 rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+            />
+          </>
+        )}
         <label htmlFor="paid-input-price">Price per million input tokens (USD)</label>
-        <input id="paid-input-price" inputMode="decimal" value={shown(saved.inputPerMillionUsd)} onChange={(e) => save({ inputPerMillionUsd: amountOf(e.target.value) })} className={inputClass} />
+        <input id="paid-input-price" inputMode="decimal" readOnly={fromOpenRouter} value={shown(saved.inputPerMillionUsd)} onChange={(e) => save({ inputPerMillionUsd: amountOf(e.target.value) })} className={inputClass} />
         <label htmlFor="paid-output-price">Price per million output tokens (USD)</label>
-        <input id="paid-output-price" inputMode="decimal" value={shown(saved.outputPerMillionUsd)} onChange={(e) => save({ outputPerMillionUsd: amountOf(e.target.value) })} className={inputClass} />
+        <input id="paid-output-price" inputMode="decimal" readOnly={fromOpenRouter} value={shown(saved.outputPerMillionUsd)} onChange={(e) => save({ outputPerMillionUsd: amountOf(e.target.value) })} className={inputClass} />
         <label htmlFor="paid-cap">Monthly spending cap (USD)</label>
         <input id="paid-cap" inputMode="decimal" placeholder="No cap" value={shown(saved.monthlyCapUsd)} onChange={(e) => save({ monthlyCapUsd: amountOf(e.target.value) })} className={inputClass} />
         <label htmlFor="runway-price">Runway price per second of video (USD)</label>
@@ -592,6 +634,12 @@ function PaidModelsPanel({ settings, setSettings }: { settings: AppSettings; set
         <label htmlFor="elevenlabs-effect-price">ElevenLabs price per sound effect (USD)</label>
         <input id="elevenlabs-effect-price" inputMode="decimal" value={shown(saved.elevenLabsPricePerEffectUsd)} onChange={(e) => save({ elevenLabsPricePerEffectUsd: amountOf(e.target.value) })} className={inputClass} />
       </div>
+      {fromOpenRouter && (
+        <div className="text-[11px] text-(--text-3) mt-2">Prices from OpenRouter.</div>
+      )}
+      {fromOpenRouter && (
+        <div className="text-[11px] text-(--text-3) mt-1">Models served by your own keys added in OpenRouter count as paid too: OpenRouter reports their price, and it counts toward the cap.</div>
+      )}
       <div className="text-[11px] text-(--text-3) mt-2">Runway makes Miya's AI clips when a project chooses it, and ElevenLabs reads voice-overs and makes sound effects when a brand chooses it; each run asks first with the estimate (Higgsfield uses its own estimate). The monthly cap covers all of them together.</div>
       <div className="text-[11px] text-(--text-3) mt-2">Spent this month: ${monthSpendUsd().toFixed(2)}</div>
     </div>

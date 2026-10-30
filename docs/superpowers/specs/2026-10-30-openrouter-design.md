@@ -38,6 +38,7 @@ The owner made an OpenRouter account (workspace restricted to their own keys, so
 - **Anthropic** (`anthropic/claude-haiku-5.5`): refused, `failed_routing_step: "Add BYOK Endpoints"`, although the same key works directly against Anthropic. Something in the OpenRouter key entry; the owner checks it there. Recheck before relying on Claude through OpenRouter.
 - `openrouter/free` works (it chose an NVIDIA free model).
 - `/api/v1/key` reports `byok_usage` / `byok_usage_daily` (the reported provider cost of own-key requests) beside `free_model_daily_requests`.
+- (While building, 2026-10-30) No endpoint names the providers a key's own keys cover (`/byok` and `/keys` refuse a normal key), so the paid list marks none as "your key". `GET /api/v1/models/user` (with the key) lists the models this account can use: 67 of 456 for the owner's account, which allows only its own keys. The paid list uses it, so such an account isn't offered models that would fail.
 
 ## 5. How it works
 

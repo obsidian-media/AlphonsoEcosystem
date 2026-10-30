@@ -17,7 +17,7 @@ export const OPENROUTER_NO_KEY = 'No OpenRouter key saved. Add it in Settings â†
 /** The router that picks one of OpenRouter's free models itself. */
 export const OPENROUTER_CHOOSE_FREE = 'openrouter/free';
 
-type OpenRouterPath = 'models' | 'key' | 'chat/completions';
+type OpenRouterPath = 'models' | 'models/user' | 'key' | 'chat/completions';
 
 interface RawAnswer {
   httpStatus: number | null;
@@ -36,6 +36,8 @@ export interface OpenRouterModel {
   completionUsdPerToken: number | null;
   free: boolean;
   expiresAtMs: number | null;
+  /** False for a model that answers only in pictures or sound (no text answer). */
+  textOutput: boolean;
 }
 
 export interface OpenRouterKeyInfo {
@@ -55,6 +57,8 @@ export interface OpenRouterAnswer {
   content: string;
   model: string;
   costUsd: number;
+  /** True when OpenRouter reported the cost; otherwise it is worked out from the tokens and prices. */
+  costReported: boolean;
   usage: { promptTokens: number; completionTokens: number };
 }
 
@@ -75,10 +79,12 @@ export function openRouterFailure(result: OpenRouterSendResult): OpenRouterFailu
 }
 
 let modelsCache: { atMs: number; models: OpenRouterModel[] } | null = null;
+let userModelsCache: { atMs: number; models: OpenRouterModel[] } | null = null;
 let keyInfoCache: { atMs: number; info: OpenRouterKeyInfo | null } | null = null;
 
 export function resetOpenRouterCacheForTests(): void {
   modelsCache = null;
+  userModelsCache = null;
   keyInfoCache = null;
 }
 
@@ -141,13 +147,10 @@ function price(value: unknown): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-/** OpenRouter's models, free and paid, kept for ten minutes. Empty when the list can't be read. */
-export async function listOpenRouterModels(): Promise<OpenRouterModel[]> {
-  if (modelsCache && Date.now() - modelsCache.atMs < MODELS_KEEP_MS) return modelsCache.models;
-  const answer = await openRouterRequest('models');
+function readModels(answer: RawAnswer): OpenRouterModel[] | null {
   const rows = answer.httpStatus === 200 ? parse(answer.body)?.data : null;
-  if (!Array.isArray(rows)) return [];
-  const models = rows
+  if (!Array.isArray(rows)) return null;
+  return rows
     .filter((row: any) => row && typeof row.id === 'string')
     .map((row: any): OpenRouterModel => {
       const expires = row.expiration_date ? Date.parse(row.expiration_date) : NaN;
@@ -159,9 +162,30 @@ export async function listOpenRouterModels(): Promise<OpenRouterModel[]> {
         completionUsdPerToken: price(row.pricing?.completion),
         free: row.id.endsWith(':free') || row.id === OPENROUTER_CHOOSE_FREE,
         expiresAtMs: Number.isFinite(expires) ? expires : null,
+        textOutput: !Array.isArray(row.architecture?.output_modalities) || row.architecture.output_modalities.includes('text'),
       };
     });
+}
+
+/** OpenRouter's models, free and paid, kept for ten minutes. Empty when the list can't be read. */
+export async function listOpenRouterModels(): Promise<OpenRouterModel[]> {
+  if (modelsCache && Date.now() - modelsCache.atMs < MODELS_KEEP_MS) return modelsCache.models;
+  const models = readModels(await openRouterRequest('models'));
+  if (!models) return [];
   modelsCache = { atMs: Date.now(), models };
+  return models;
+}
+
+/**
+ * The models this account can use, with its own provider settings applied (an account that
+ * allows only its own keys sees only the models those keys serve). OpenRouter's whole list
+ * when it can't be read. Kept for ten minutes.
+ */
+export async function listOpenRouterUserModels(): Promise<OpenRouterModel[]> {
+  if (userModelsCache && Date.now() - userModelsCache.atMs < MODELS_KEEP_MS) return userModelsCache.models;
+  const models = savedKey() ? readModels(await openRouterRequest('models/user')) : null;
+  if (!models) return listOpenRouterModels();
+  userModelsCache = { atMs: Date.now(), models };
   return models;
 }
 
@@ -241,6 +265,7 @@ export async function sendOpenRouterMessage(
     content,
     model: typeof data.model === 'string' ? data.model : options.model,
     costUsd: charged + ownKey,
+    costReported: usage.cost !== undefined && usage.cost !== null,
     usage: { promptTokens: Number(usage.prompt_tokens) || 0, completionTokens: Number(usage.completion_tokens) || 0 },
   };
 }

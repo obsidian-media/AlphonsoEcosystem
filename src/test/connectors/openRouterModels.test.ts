@@ -16,7 +16,7 @@ const {
 
 const model = (id: string, extra: Record<string, unknown> = {}) => ({
   id, name: id.toUpperCase(), contextLength: 131072, promptUsdPerToken: 0, completionUsdPerToken: 0,
-  free: id.endsWith(':free') || id === 'openrouter/free', expiresAtMs: null, ...extra,
+  free: id.endsWith(':free') || id === 'openrouter/free', expiresAtMs: null, textOutput: true, ...extra,
 });
 
 describe('OpenRouter free models', () => {

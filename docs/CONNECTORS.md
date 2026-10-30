@@ -783,7 +783,7 @@ Without storage, such a post is saved in the project's `ready-to-post` folder wi
 |---|---|
 | `OPENROUTER_API_KEY` | A key from `openrouter.ai/settings/keys` |
 
-**Using it:** pick OpenRouter as a provider for any agent (Settings → Connectors → Agent Providers) or on Chat's provider tabs. The model list shows OpenRouter's free models only, with "Let OpenRouter choose a free model" first (the default); a free model you pick is checked once with a short question. Paid OpenRouter models are chosen in Settings → Approvals → Allow paid models.
+**Using it:** pick OpenRouter as a provider for any agent (Settings → Connectors → Agent Providers) or on Chat's provider tabs. The model list shows OpenRouter's free models only, with "Let OpenRouter choose a free model" first (the default); a free model you pick is checked once with a short question. Paid OpenRouter models are chosen in Settings → Approvals → Allow paid models: pick OpenRouter, then a model from the models your account can use; its prices fill in from OpenRouter. Every paid step asks first with its estimate and counts toward the monthly cap.
 
 **When the free limit runs out:** a step carries on with this computer's model and says so on the board and in Chat (the default), or, with "Ask to use a paid model" in Settings → Approvals, Jose asks to finish it with a paid OpenRouter model, showing the cost. With no model on this computer, the step waits with Carry on. The 20-a-minute limit is not mistaken for the daily one: the step waits a moment and asks again. Chat used directly says the limit is reached and doesn't switch models by itself.
 

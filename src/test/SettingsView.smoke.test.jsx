@@ -5,6 +5,13 @@ import { SettingsView } from '../components/SettingsView';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn().mockResolvedValue(null) }));
 
+vi.mock('../services/connectors/openRouterConnector', async (orig) => ({
+  ...(await orig()),
+  listOpenRouterUserModels: vi.fn(async () => [
+    { id: 'b/y', name: 'B: Y', contextLength: 32000, promptUsdPerToken: 0.000001, completionUsdPerToken: 0.000002, free: false, expiresAtMs: null, textOutput: true },
+    { id: 'a/x:free', name: 'A: X (free)', contextLength: 32000, promptUsdPerToken: 0, completionUsdPerToken: 0, free: true, expiresAtMs: null, textOutput: true },
+  ]),
+}));
 vi.mock('../services/agentAvatarService', () => ({
   getCustomAvatarDataUrl: vi.fn().mockReturnValue(null),
   removeCustomAvatar: vi.fn(),
@@ -272,6 +279,18 @@ describe('SettingsView smoke', () => {
     expect(screen.getByText("Use this computer's model")).toBeTruthy();
     fireEvent.change(select, { target: { value: 'paid' } });
     expect(setSettings).toHaveBeenCalledWith(expect.objectContaining({ openRouterFreeLimit: 'paid' }));
+  });
+
+  // OpenRouter (2026-10-30): a third paid choice; the model comes from OpenRouter's list with its prices.
+  it('offers OpenRouter as the paid model, with prices from OpenRouter', async () => {
+    const setSettings = renderApprovals({ ...minimalSettings, zeroCostMode: false, paidModels: { allowed: true, provider: 'openrouter' } });
+    const model = await screen.findByLabelText('OpenRouter paid model');
+    expect(await screen.findByText('B: Y ($1.00 in, $2.00 out per million tokens)')).toBeTruthy();
+    expect(screen.queryByText(/A: X \(free\)/)).toBeNull();
+    fireEvent.change(model, { target: { value: 'b/y' } });
+    expect(setSettings).toHaveBeenLastCalledWith(expect.objectContaining({ paidModels: expect.objectContaining({ provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2 }) }));
+    expect(screen.getByLabelText('Price per million input tokens (USD)').hasAttribute('readonly')).toBe(true);
+    expect(screen.getByText('Prices from OpenRouter.')).toBeTruthy();
   });
 
   // Phase 4: paid models, which you allow, with prices you enter and a monthly cap.

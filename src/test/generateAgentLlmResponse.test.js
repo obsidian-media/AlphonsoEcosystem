@@ -86,6 +86,19 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     localStorage.clear();
   });
 
+  it('a paid OpenRouter step records the cost OpenRouter reports', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2, monthlyCapUsd: 5 } }));
+    localStorage.setItem('alphonso_connector_auth_profiles_v1', JSON.stringify({ openrouter: { enabled: true, mode: 'trusted_session' } }));
+    const spend = await import('../services/jose/joseSpend');
+    if (!spend.paidModelAvailable().ok) throw new Error(`paid model not available: ${spend.paidModelAvailable().reason}`);
+    sendOpenRouterMessage.mockResolvedValueOnce({ ok: true, content: 'paid answer', model: 'b/y', costUsd: 0.0123, costReported: true, usage: { promptTokens: 100, completionTokens: 50 } });
+    const result = await generateAgentLlmResponse('hector', { prompt: 'deep research', model: 'openrouter:b/y' });
+    expect(result).toEqual({ response: 'paid answer', done: true, backend: 'openrouter', model: 'b/y' });
+    expect(sendOpenRouterMessage).toHaveBeenCalledWith([{ role: 'user', content: 'deep research' }], { model: 'b/y', maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
+    expect(spend.monthSpendUsd()).toBeCloseTo(0.0123, 6);
+    localStorage.clear();
+  });
+
   it("says plainly when OpenRouter refuses the key", async () => {
     agentProviderMap.hector = { provider: 'openrouter', model: 'x/y:free' };
     sendOpenRouterMessage.mockResolvedValueOnce({ ok: false, kind: 'key_refused', message: 'OpenRouter refused the key. Check it in Settings → Connectors.' });

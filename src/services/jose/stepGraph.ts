@@ -100,7 +100,7 @@ export function stepMaySpend(step: { agent?: string; actionType?: string; model?
 }
 
 export function isPaidModelId(model?: unknown): boolean {
-  return typeof model === 'string' && /^(claude|chatgpt):/.test(model);
+  return typeof model === 'string' && /^(claude|chatgpt|openrouter):/.test(model);
 }
 
 /**

@@ -101,6 +101,7 @@ describe('the queue', () => {
   it('only requests using the local model queue', () => {
     expect(usesLocalModel([step('alphonso')])).toBe(true);
     expect(usesLocalModel([step('alphonso', { model: 'claude:claude-haiku-5-5' })])).toBe(false);
+    expect(usesLocalModel([step('alphonso', { model: 'openrouter:b/y' })])).toBe(false);
     expect(usesLocalModel([step('miya', { model: 'claude:x', contentStep: { projectId: 'p', step: 'scenes' } as never })])).toBe(true);
     expect(usesLocalModel([])).toBe(false);
   });

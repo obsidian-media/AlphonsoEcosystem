@@ -15,7 +15,7 @@ export const PAID_MAX_OUTPUT_TOKENS = 1024;
 /** Room in a paid step's estimate for what it is given besides its instruction (earlier steps' work). */
 export const PAID_PROMPT_ALLOWANCE_CHARS = 4000;
 
-export type PaidProvider = 'claude' | 'chatgpt';
+export type PaidProvider = 'claude' | 'chatgpt' | 'openrouter';
 
 export interface PaidModelSettings {
   allowed: boolean;
@@ -31,7 +31,7 @@ export interface PaidModelSettings {
   elevenLabsPricePerEffectUsd: number | null;
 }
 
-const PROVIDER_NAMES: Record<PaidProvider, string> = { claude: 'Claude', chatgpt: 'ChatGPT' };
+const PROVIDER_NAMES: Record<PaidProvider, string> = { claude: 'Claude', chatgpt: 'ChatGPT', openrouter: 'OpenRouter' };
 
 function readSettings(): Record<string, any> {
   try {
@@ -51,7 +51,7 @@ function amount(value: unknown): number | null {
 
 export function getPaidModelSettings(): PaidModelSettings {
   const raw = readSettings().paidModels || {};
-  const provider = raw.provider === 'claude' || raw.provider === 'chatgpt' ? raw.provider : null;
+  const provider = raw.provider === 'claude' || raw.provider === 'chatgpt' || raw.provider === 'openrouter' ? raw.provider : null;
   return {
     allowed: raw.allowed === true,
     provider,
@@ -72,13 +72,15 @@ export function paidModelAvailable(): { ok: boolean; reason?: string } {
   if (readSettings().zeroCostMode !== false) return { ok: false, reason: 'Zero-Cost Mode is on.' };
   if (!settings.provider) return { ok: false, reason: 'Choose a paid model in Settings.' };
   if (!isConnectorAuthenticated(settings.provider).ok) return { ok: false, reason: `${PROVIDER_NAMES[settings.provider]} is not set up in Connectors.` };
+  // OpenRouter has no model of its own to fall back on (2026-10-30).
+  if (settings.provider === 'openrouter' && !settings.model) return { ok: false, reason: 'Choose an OpenRouter model in Settings.' };
   if (settings.inputPerMillionUsd === null || settings.outputPerMillionUsd === null) {
     return { ok: false, reason: 'Enter the prices for the paid model in Settings.' };
   }
   return { ok: true };
 }
 
-/** The model id a step uses: "claude:<model>" or "chatgpt:<model>" ("" = the connector's own model). */
+/** The model id a step uses: "claude:<model>", "chatgpt:<model>" ("" = the connector's own model) or "openrouter:<model>". */
 export function paidModelId(): string | null {
   const settings = getPaidModelSettings();
   return settings.provider ? `${settings.provider}:${settings.model || ''}` : null;

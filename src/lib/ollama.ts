@@ -814,7 +814,7 @@ export async function withAgentModel<T>(agentId: string, model: string, fn: () =
 }
 
 /**
- * A step Jose gave a paid model ("claude:<model>" / "chatgpt:<model>", phase
+ * A step Jose gave a paid model ("claude:<model>" / "chatgpt:<model>" / "openrouter:<model>", phase
  * 4). Refused unless paid models are available and the month's cap allows it;
  * the cost is recorded from the usage the provider reports.
  */
@@ -826,6 +826,18 @@ async function generatePaidResponse(paidModel: string, options: AgentGenerateOpt
   if (!available.ok) throw new Error(available.reason);
   const allowed = spend.canSpend(spend.estimateCostUsd(String(options.prompt || '').length, spend.PAID_MAX_OUTPUT_TOKENS));
   if (!allowed.ok) throw new Error(allowed.reason);
+  // OpenRouter (2026-10-30): the cost OpenRouter reports (own-key cost included), else tokens × listed prices.
+  if (provider === 'openrouter') {
+    if (!model) throw new Error('Choose an OpenRouter model in Settings.');
+    const { sendOpenRouterMessage, openRouterFailure } = await import('../services/connectors/openRouterConnector');
+    const result = await sendOpenRouterMessage([{ role: 'user', content: options.prompt }], { model, maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
+    const failure = openRouterFailure(result);
+    if (failure) throw new Error(failure.message);
+    const answer = result as OpenRouterAnswer;
+    if (answer.costReported) spend.recordSpendUsd(answer.costUsd);
+    else spend.recordSpend({ inputTokens: answer.usage.promptTokens, outputTokens: answer.usage.completionTokens });
+    return { response: answer.content, done: true, backend: 'openrouter', model: answer.model };
+  }
   if (provider === 'claude') {
     const { sendClaudeMessage } = await import('../services/claudeService');
     const result: any = await sendClaudeMessage(options.prompt, { model, maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });

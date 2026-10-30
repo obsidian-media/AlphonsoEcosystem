@@ -1775,11 +1775,13 @@ const OPENROUTER_API_BASE: &str = "https://openrouter.ai/api/v1";
 const OPENROUTER_REFERER: &str = "https://github.com/obsidian-media/AlphonsoEcosystem";
 const OPENROUTER_TITLE: &str = "Alphonso";
 
-/// OpenRouter's address for one of the three calls the app makes, whether it posts, and
+/// OpenRouter's address for one of the four calls the app makes, whether it posts, and
 /// whether it needs the key (the model list is public). Anything else is refused.
 pub(crate) fn openrouter_target(path: &str) -> Result<(String, bool, bool), String> {
   match path {
     "models" => Ok((format!("{OPENROUTER_API_BASE}/models"), false, false)),
+    // The models this account can use (its own provider settings applied).
+    "models/user" => Ok((format!("{OPENROUTER_API_BASE}/models/user"), false, true)),
     "key" => Ok((format!("{OPENROUTER_API_BASE}/key"), false, true)),
     "chat/completions" => Ok((
       format!("{OPENROUTER_API_BASE}/chat/completions"),
@@ -2032,13 +2034,21 @@ mod tests {
   }
 
   #[test]
-  fn openrouter_requests_reach_only_openrouter_and_only_its_three_calls() {
+  fn openrouter_requests_reach_only_openrouter_and_only_its_four_calls() {
     assert_eq!(
       openrouter_target("models").unwrap(),
       (
         "https://openrouter.ai/api/v1/models".to_string(),
         false,
         false
+      )
+    );
+    assert_eq!(
+      openrouter_target("models/user").unwrap(),
+      (
+        "https://openrouter.ai/api/v1/models/user".to_string(),
+        false,
+        true
       )
     );
     assert_eq!(

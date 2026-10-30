@@ -69,7 +69,7 @@ const contextLabel = (tokens: number) => (tokens > 0 ? ` (${Math.round(tokens / 
 /** The router first, then OpenRouter's free models by name; never a paid model. */
 export function freeModelChoices(models: OpenRouterModel[], nowMs: number): FreeModelChoice[] {
   const gone = new Set(openRouterModelsNotServed());
-  const free = models.filter((m) => m.free && m.id !== OPENROUTER_CHOOSE_FREE).sort((a, b) => a.name.localeCompare(b.name));
+  const free = models.filter((m) => m.free && m.textOutput !== false && m.id !== OPENROUTER_CHOOSE_FREE).sort((a, b) => a.name.localeCompare(b.name));
   const choices: FreeModelChoice[] = [{ id: OPENROUTER_CHOOSE_FREE, label: OPENROUTER_CHOOSE_FREE_LABEL, served: true }];
   for (const m of free) {
     const served = !gone.has(m.id) && !(m.expiresAtMs !== null && m.expiresAtMs <= nowMs);
