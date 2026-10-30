@@ -871,6 +871,7 @@ async fn connect(server_id: &str, url: &str, version: Option<&str>) -> Result<Mc
   }
   let allow = allow_local();
   let url = checked_url(url, allow).await?;
+  crate::mcp_auth::refresh_if_expired(server_id).await;
   McpConn::new(url, load_creds(server_id), version, allow)
 }
 

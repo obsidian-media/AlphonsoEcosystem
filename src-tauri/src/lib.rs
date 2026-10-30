@@ -944,6 +944,8 @@ pub fn run() {
       mcp_client::mcp_forget_server,
       mcp_client::mcp_saved_parts,
       mcp_client::mcp_registry_search,
+      mcp_auth::mcp_sign_in,
+      mcp_auth::mcp_finish_pasted,
       connector_composio_request,
       workspace::transcribe_audio_file,
       workspace::read_workspace_file,
