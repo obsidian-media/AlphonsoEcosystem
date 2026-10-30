@@ -416,10 +416,12 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     await (await $(`select[aria-label="What ${search.name} may do"]`)).selectByAttribute('value', 'reading_only');
     // The backend itself: one call to the reading tool, answered by the store.
     const props = Object.keys(search.inputSchema?.properties || {});
-    const args = Object.fromEntries(props.filter((p) => /query|search|text/i.test(p)).slice(0, 1).map((p) => [p, aboutPolicies ? 'returns' : 'mug']));
+    // The search field by its whole name ("context" also contains "text").
+    const field = props.find((p) => /^(query|q|search|search_query|text)$/i.test(p));
+    const args = field ? { [field]: aboutPolicies ? 'returns' : 'mug' } : {};
     if (props.includes('context')) args.context = 'A customer asking what the shop sells.';
     const direct = await invoke('mcp_call_tool', { serverId: server.id, url: listed.url, version: listed.version || null, tool: search.name, arguments: args, inputSchema: search.inputSchema || null });
-    console.log('LIVE shopify call', JSON.stringify({ ok: direct.ok && direct.value?.ok, reason: direct.value?.reason || direct.error || null, chars: String(direct.value?.text || '').length, text: String(direct.value?.text || '').slice(0, 300) }));
+    console.log('LIVE shopify call', JSON.stringify({ ok: direct.ok && direct.value?.ok, reason: direct.value?.reason || direct.error || null, chars: String(direct.value?.text || '').length, text: String(direct.value?.text || '').slice(0, 300), args }));
     expect(direct.ok && direct.value?.ok).toBe(true);
     if (!(await ollamaHasModels())) return;
     const request = await askInChat(aboutPolicies ? "/jose What is My Shopify's return policy? Look it up in the store." : '/jose What kinds of products does My Shopify sell? Look it up in the store.',
