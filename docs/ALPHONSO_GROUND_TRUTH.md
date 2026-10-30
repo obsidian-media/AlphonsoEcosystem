@@ -2442,6 +2442,10 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.55 When Windows blocks the bundled ffmpeg (2026-10-30)
+
+The owner chose not to code-sign for launch. Smart App Control refuses unsigned programs in two ways, both seen on the dev machine: the program won't start (OS error 4551, "An Application Control policy has blocked this file"), or it starts and a blocked DLL stops it (exit code 0xC0E90002, no output). `windows_block()` in `media_tools.rs` recognises both, and `run_ffmpeg()` (every ffmpeg run, ElevenLabs' MP3 to WAV too) and `probe()` return `FFMPEG_BLOCKED`: which features need ffmpeg, and that Smart App Control can be turned off in Windows Security but not back on without a reset. Before, the step said "ffmpeg failed:" with nothing after it, or the raw OS error. Test: `tells_when_windows_blocks_ffmpeg` (run by CI; this machine blocks local Rust test binaries). Signing is still open in `DEFERRED_WORK.md`.
+
 ## 11.54 QA batch 1, finished: every live account and the whole desktop suite (2026-10-29)
 
 The owner's accounts, typed into Settings by `live-accounts.e2e.mjs` / `jose-telegram-live.e2e.mjs` on CI-built debug apps, with `qwen2.5:7b`. **Passed live:** Slack (one approved post), GitHub (one approved issue, closed after), ElevenLabs (one voice-over within $0.50), Pexels, Pixabay and Coverr (a clip found and downloaded from each), Tavily and Brave (a cited research answer), Notion (one page), ClickUp (one task, marked complete after), Composio (key checked, toolkits listed), NVIDIA NIM and Gemini (a plain answer in Chat each), Telegram (pairing by `/start`, Approve pressed on the phone carried the request on). Higgsfield skipped (owner). No key appeared in any log (counted after every run).

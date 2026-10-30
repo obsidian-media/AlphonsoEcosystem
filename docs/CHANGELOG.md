@@ -10,6 +10,9 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [Unreleased]
 
+### When Windows blocks ffmpeg (2026-10-30)
+- On a Windows PC with Smart App Control on, the voice-over, finished video, Shorts and motion clip steps now say that Windows blocked ffmpeg because its files aren't signed yet, and what you can do about it, instead of an empty "ffmpeg failed:".
+
 ### QA batch 1: the live check of 2.10.0 with Telegram (2026-10-28)
 **Finished 2026-10-29:** every account in the live check passed (Slack, GitHub, ElevenLabs, Pexels, Pixabay, Coverr, Tavily, Brave, Notion, ClickUp, Composio, NVIDIA NIM, Gemini, Telegram; Higgsfield skipped by the owner), and the desktop suite ran with qwen2.5:7b. Open: the bundled ffmpeg isn't code-signed, so Windows Smart App Control blocks it (DEFERRED_WORK).
 The owner ran Telegram's Approve, Stop and Cancel on the installed 2.10.0; what didn't match was fixed:
