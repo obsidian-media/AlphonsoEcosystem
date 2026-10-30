@@ -60,6 +60,7 @@ import { describeCodeChange, previewNeeds } from './alphonso/changeSet';
 import { onProjectReleased, releaseProject, releaseProjectsHeldBy } from './alphonso/projectLock';
 import { clearStop, isStopRequested, stopSignal, stopWaitsFor, STOPPED_LINE } from './jose/joseStop';
 import { giveBackTurn, takeTurn, usesLocalModel } from './jose/joseQueue';
+import { admitStep, firstStepNeed } from './resources/resourceGate';
 import { readingFolder, reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
@@ -1499,8 +1500,10 @@ async function runPipeline({
   if (joseRequestId) onProgress?.({ stage: 'request_started', requestId: joseRequestId, commandId: command.id });
   // One local-model request at a time (Jose phase 7): wait for the turn. The queue takes it back
   // when the request stops running (done, failed, waiting for you, stopped).
+  // Since the resource manager (2026-10-30) a request may start beside another when its first
+  // step fits in memory; every step then passes the resource gate before it runs.
   if (joseRequestId && usesLocalModel(planSteps)) {
-    const turn = takeTurn(joseRequestId);
+    const turn = takeTurn(joseRequestId, await firstStepNeed(planSteps as any));
     if (getJoseRequest(joseRequestId)?.status === 'queued') onProgress?.({ stage: 'queued', requestId: joseRequestId, commandId: command.id });
     await turn;
   }
@@ -2022,10 +2025,27 @@ async function runPipeline({
       // The outputs of the steps this step needs, keyed by agent as agents read them.
       const priorOutputs = priorOutputsForNeeds(command.id, assignment.needs || []);
       const runStep = () => executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory, isStopped: stopWanted });
-      // A send or an approved code change finishes its one action before a stop (Jose phase 7).
-      const taskResult: any = joseRequestId && !stopWaitsFor(assignment, packet)
-        ? await withAgentSignal(assignment.agent, stopSignal(joseRequestId), runStep)
-        : await runStep();
+      // The resource gate (2026-10-30): run when its memory fits, make room, wait with a reason
+      // on the board, or fail as too big for this computer. Released however the step ends.
+      const admitted = joseRequestId
+        ? await admitStep(joseRequestId, assignment.stepId, assignment, stopSignal(joseRequestId))
+        : null;
+      let taskResult: any;
+      if (admitted && !admitted.ok) {
+        const refused = admitted as { reason: string; stopped?: true };
+        taskResult = refused.stopped
+          ? { ok: false, stopped: true, attempts: 0, error: STOPPED_LINE }
+          : { ok: false, attempts: 0, error: refused.reason };
+      } else {
+        try {
+          // A send or an approved code change finishes its one action before a stop (Jose phase 7).
+          taskResult = joseRequestId && !stopWaitsFor(assignment, packet)
+            ? await withAgentSignal(assignment.agent, stopSignal(joseRequestId), runStep)
+            : await runStep();
+        } finally {
+          if (admitted?.ok) admitted.release();
+        }
+      }
       if (taskResult.stopped) {
         rejectPacket(assignment.packetId, STOPPED_LINE);
         executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'stopped', reason: STOPPED_LINE });

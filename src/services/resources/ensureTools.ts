@@ -5,7 +5,8 @@
 // install the same way Runtime Hub's ComfyUI card starts it (`launch_comfyui`
 // with the install and Python `findComfyuiInstalls()` found). Kokoro, AudioCraft,
 // Whisper and ffmpeg run inside the step and end with it, so they are only
-// checked installed, never started.
+// checked installed, never started. When Runtime Hub's list or the media check
+// can't be read, nothing is started or refused: the step itself says what it needs.
 import { invoke } from '@tauri-apps/api/core';
 import { getAllStatus, startTool, waitForTool, type ToolStatus } from '../runtimeManagerService';
 import { findComfyuiInstalls } from '../comfyuiSettingsService';
@@ -50,7 +51,8 @@ export async function ensureTools(tools: NeededTool[]): Promise<EnsureResult> {
   const perCall = tools.filter((t) => PER_CALL.includes(t));
   if (perCall.length) {
     const media = await invoke<Record<string, unknown>>('media_tools_status').catch(() => null);
-    for (const tool of perCall) {
+    // Unknown (no backend): the step itself says what is missing.
+    for (const tool of media ? perCall : []) {
       if (media?.[tool]) continue;
       return { ok: false, reason: tool === 'ffmpeg' ? FFMPEG_MISSING : notInstalled(nameOf(statuses, tool)) };
     }
@@ -58,7 +60,8 @@ export async function ensureTools(tools: NeededTool[]): Promise<EnsureResult> {
 
   for (const tool of tools.filter((t) => !PER_CALL.includes(t))) {
     const current = statuses.find((s) => s.name === tool);
-    if (current?.running) continue;
+    // Not in Runtime Hub's list (no backend): nothing to start; the step says what it needs.
+    if (!current || current.running) continue;
     try {
       if (tool === 'comfyui') {
         const result = await startComfy(statuses);

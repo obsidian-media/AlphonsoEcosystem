@@ -81,6 +81,13 @@ describe('ensureTools', () => {
     expect(await ensureTools(['ffmpeg'])).toEqual({ ok: false, reason: "ffmpeg wasn't found on this computer, so the video can't be put together." });
   });
 
+  it("when the tool list or the media check can't be read, nothing is started and nothing fails", async () => {
+    getAllStatus.mockResolvedValue([]);
+    invoke.mockRejectedValue(new Error('no backend'));
+    expect(await ensureTools(['ollama', 'kokoro'])).toEqual({ ok: true });
+    expect(startTool).not.toHaveBeenCalled();
+  });
+
   it('nothing needed is fine', async () => {
     expect(await ensureTools([])).toEqual({ ok: true });
     expect(getAllStatus).not.toHaveBeenCalled();
