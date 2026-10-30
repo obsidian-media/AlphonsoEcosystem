@@ -93,3 +93,13 @@ as new work requiring its own review, not a revert.
 - **Kept, because other features use them:** `agentWorkshop/accBridgeService.js`, `projectExecution/workshopSessionService.js`, `services/approval/approvalService.js`.
 
 **Before restoring:** don't bring the workshop back as a second way to run agents; every agent step goes through Jose. A panel's layout could be reused on the Projects page.
+
+---
+
+## mcp-server/ — the call-in MCP stand-in (retired 2026-10-30)
+
+**What it was:** an Express server on port 3333 (a Runtime Hub tool, "MCP Server") meant to let Claude Desktop, Cursor and similar apps call Alphonso as a tool. It spoke no real MCP (a custom `/call` route, no JSON-RPC), was never in the installer, and its tools only passed questions to Ollama through the Alphonso Bridge.
+
+**Why retired:** the owner decided on 2026-10-30 that outside apps calling into Alphonso is a security risk. Alphonso calls out to MCP servers instead (outside tools: `docs/superpowers/specs/2026-10-30-mcp-client-design.md`). Its Runtime Hub entry was removed with it. The Alphonso Bridge (`bridge/`), its only partner, stays until the owner decides.
+
+**Before restoring:** a server that listens for MCP requests must not bypass Jose's approvals (every tool call through `answerOrPlan()` / `submitStepsToJose()`), must speak the real protocol (2026-07-28, with the 2025-11-25 handshake for older clients), and needs the owner's approval (R14).
