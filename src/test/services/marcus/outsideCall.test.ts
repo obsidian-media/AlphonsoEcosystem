@@ -94,6 +94,28 @@ describe('Marcus’s outside-tool step', () => {
     expect(second).not.toContain('hub/tool_0');
   });
 
+  it('a picked tool may be named alone or with the server\'s name, and an unclear pick is asked once more', async () => {
+    // Found live: a local model answered the pick without the server id.
+    const s = addServer({ name: 'GitHub MCP', url: 'https://hub.example/mcp', cost: 'free' });
+    const big = { type: 'object', properties: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`field_${i}`, { type: 'string', description: 'x'.repeat(40) }])) };
+    const tools = Array.from({ length: 40 }, (_, i) => ({ name: `tool_${i}`, inputSchema: big }));
+    tools.push({ name: 'issue_write', inputSchema: { type: 'object', properties: { method: { type: 'string' }, title: { type: 'string' } }, required: ['method', 'title'] } } as never);
+    updateServer(s.id, { tools: mergeTools([], tools) });
+    const fill = { response: `{"tool": "${s.id}/issue_write", "arguments": {"method": "create", "title": "Hi"}}` };
+    for (const named of ['issue_write', 'GitHub MCP/issue_write', 'ISSUE_WRITE']) {
+      generate.mockReset();
+      generate.mockResolvedValueOnce({ response: JSON.stringify({ tool: named }) }).mockResolvedValueOnce(fill);
+      const r: any = await prepareOutsideCall('c1', step(), { text: 'Through GitHub MCP, open an issue titled Hi' });
+      expect(r.ok).toBe(true);
+      expect(r.preview.tool).toBe('issue_write');
+    }
+    generate.mockReset();
+    generate.mockResolvedValueOnce({ response: '{"tool": "make an issue"}' }).mockResolvedValueOnce({ response: '{"tool": "issue_write"}' }).mockResolvedValueOnce(fill);
+    const again: any = await prepareOutsideCall('c1', step(), { text: 'Through GitHub MCP, open an issue titled Hi' });
+    expect(again.ok).toBe(true);
+    expect(String(generate.mock.calls[1][1].prompt)).toContain('is not one of the tools');
+  });
+
   it('a missing required field goes back once, then fails with the field named', async () => {
     shop();
     generate

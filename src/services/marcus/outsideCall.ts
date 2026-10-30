@@ -111,6 +111,21 @@ function shortLines(list: Array<{ server: McpServer; entry: McpToolEntry }>): st
     .join('\n');
 }
 
+/**
+ * The tool a pick names: its full `<server>/<tool>`, the server's display name with the tool,
+ * or the tool's name alone when only one listed tool has it (any capitals). A small model
+ * often leaves the server id out (found live, 2026-10-30).
+ */
+function pickedTool(options: Array<{ server: McpServer; entry: McpToolEntry }>, named: string) {
+  const want = named.toLowerCase();
+  const exact = options.find(({ server, entry }) => toolRef(server.id, entry.name).toLowerCase() === want
+    || `${server.name}/${entry.name}`.toLowerCase() === want);
+  if (exact) return exact;
+  const tail = want.slice(want.lastIndexOf('/') + 1);
+  const byName = options.filter(({ entry }) => entry.name.toLowerCase() === tail);
+  return byName.length === 1 ? byName[0] : null;
+}
+
 /** Prepares the call before the approval: the tool, its checked arguments and its effects. */
 export async function prepareOutsideCall(commandId: string, assignment: Assignment, request: { text?: string }): Promise<PrepareOutside> {
   const payload = assignment.payload || {};
@@ -128,24 +143,31 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
     const input = buildStepInput(commandId, assignment as never, String(request.text || ''));
     let options = list;
     if (options.length > 1 && toolLines(options).length > FULL_LIST_BUDGET) {
-      const prompt = [
-        'You are Marcus. You make one change through an outside tool the user connected. Pick the one tool that does what the request asks.',
-        stepInputText(input),
-        'Tools:',
-        shortLines(options),
-        'Answer with JSON only: {"tool": "<server>/<tool>"}, or {"missing": "what the request doesn\'t say"}.',
-      ].join('\n\n');
-      let answer: Record<string, unknown> | null = null;
-      try {
-        const reply: any = await generateAgentLlmResponse('marcus', { prompt, format: 'json' });
-        answer = readJson(String(reply?.response || ''));
-      } catch {
-        answer = null;
+      let pick: { server: McpServer; entry: McpToolEntry } | null = null;
+      let unclear = '';
+      for (let attempt = 0; attempt < 2 && !pick; attempt += 1) {
+        const prompt = [
+          'You are Marcus. You make one change through an outside tool the user connected. Pick the one tool that does what the request asks.',
+          stepInputText(input),
+          'Tools:',
+          shortLines(options),
+          unclear ? `"${unclear}" is not one of the tools. Copy one tool's name exactly as listed.` : '',
+          'Answer with JSON only: {"tool": "<server>/<tool>"}, or {"missing": "what the request doesn\'t say"}.',
+        ].filter(Boolean).join('\n\n');
+        let answer: Record<string, unknown> | null = null;
+        try {
+          const reply: any = await generateAgentLlmResponse('marcus', { prompt, format: 'json' });
+          answer = readJson(String(reply?.response || ''));
+        } catch {
+          answer = null;
+        }
+        if (answer && typeof answer.missing === 'string' && answer.missing.trim()) {
+          return { ok: false, outcome: 'failed', reason: `Marcus needs to know: ${answer.missing.trim().slice(0, 300)}` };
+        }
+        const named = answer && typeof answer.tool === 'string' ? answer.tool.trim() : '';
+        pick = named ? pickedTool(options, named) : null;
+        unclear = named.slice(0, 120) || 'an empty answer';
       }
-      if (answer && typeof answer.missing === 'string' && answer.missing.trim()) {
-        return { ok: false, outcome: 'failed', reason: `Marcus needs to know: ${answer.missing.trim().slice(0, 300)}` };
-      }
-      const pick = answer && typeof answer.tool === 'string' ? options.find(({ server, entry }) => toolRef(server.id, entry.name) === answer!.tool) : null;
       if (!pick) return { ok: false, outcome: 'failed', reason: 'Marcus couldn’t tell which outside tool does this. Name the tool in your request.' };
       options = [pick];
     }
