@@ -65,6 +65,24 @@ export function unfilledReason(gaps: string[]): string {
   return `Fill in ${gaps.join(', ')} before it is sent: use the request, or write it without that part.`;
 }
 
+// A sentence telling where the text goes (QA batch 1: a ClickUp task read "Add it as a task in
+// ClickUp."): a send word, "it" or "this", and the place's name, in one sentence. A text that only
+// mentions the place ("Ask in #news on Slack") is sent as it is.
+const SEND_WORDS = /\b(?:send|post|add|put|save|share|publish|create|make|open|log|file)\b/i;
+const POINTS_AT_TEXT = /\b(?:it|this|that|these|the\s+(?:note|message|text|post|summary|update|task|page|issue))\b/i;
+
+export function deliveryLines(text: string, connector: string): string[] {
+  const place = new RegExp(`\\b${connector.replace(/[^a-z0-9]/gi, '')}\\b`, 'i');
+  return String(text || '')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((line) => line.replace(/^\s*[-*•]\s*/, '').trim())
+    .filter((line) => line && place.test(line) && SEND_WORDS.test(line) && POINTS_AT_TEXT.test(line));
+}
+
+export function deliveryReason(lines: string[]): string {
+  return `Leave out where it goes (${lines.map((l) => `"${l}"`).join(', ')}): Marcus sends the text itself.`;
+}
+
 /** Said when the text still needs a fix after the last round (QA batch 1). */
 export const FIX_ROUNDS_USED = (rounds: number) => `It still needed this after ${rounds} rounds of fixes, so nothing was sent.`;
 
@@ -106,6 +124,8 @@ export async function prepareMarcusSend(commandId: string, assignment: SendAssig
   // A gap goes back to the step he sends from, like text too long for the channel.
   const gaps = unfilledGaps(picked.text);
   if (gaps.length) return fixOrFail(assignment, unfilledReason(gaps), picked.sourceStepId);
+  const delivery = deliveryLines(picked.text, where.destination.connector);
+  if (delivery.length) return fixOrFail(assignment, deliveryReason(delivery), picked.sourceStepId);
   // The final text may be a revision Sentinel didn't review: his exact checks run on it here.
   const exactFacts = findExactRisks(picked.text, { links: 'sent' }).filter((r) => SERIOUS.has(r.kind)).map(exactRiskText);
   const preview: SendPreview = {

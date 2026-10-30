@@ -7,7 +7,7 @@ vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: vi.fn() }));
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { saveConnectorCredential } from '../../../services/connectors/connectorAuth';
 import { setStepOutput } from '../../../services/jose/joseStepOutputs';
-import { prepareMarcusSend, describeSend, isMarcusSendStep, tooLongReason, unfilledReason, SEND_TIME_UNCLEAR, FIX_ROUNDS_USED } from '../../../services/marcus/prepareSend';
+import { prepareMarcusSend, describeSend, isMarcusSendStep, tooLongReason, unfilledReason, deliveryReason, SEND_TIME_UNCLEAR, FIX_ROUNDS_USED } from '../../../services/marcus/prepareSend';
 import { NOTHING_TO_SEND } from '../../../services/marcus/sendText';
 
 const llm = vi.mocked(generateAgentLlmResponse);
@@ -95,6 +95,23 @@ describe('prepareMarcusSend', () => {
       expect(got).toEqual({ ok: false, outcome: 'fix', reason: unfilledReason([gap]), sourceStepId: 'write' });
     }
     expect(unfilledReason(['[placeholder]'])).toBe('Fill in [placeholder] before it is sent: use the request, or write it without that part.');
+  });
+
+  // QA batch 1 (live ClickUp check): the task read "- Alphonso QA live check ran. Add it as a task in
+  // ClickUp." The writer copied where it goes into the text Marcus sends.
+  it('a line saying where the text goes → fix for the step he sends from', async () => {
+    setStepOutput('c1', 'write', 'alphonso', { summary: 'We open Saturday. Post it to our Slack channel #news.' } as never);
+    const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
+    expect(got).toEqual({ ok: false, outcome: 'fix', reason: deliveryReason(['Post it to our Slack channel #news.']), sourceStepId: 'write' });
+    expect(deliveryReason(['Post it to Slack.'])).toBe('Leave out where it goes ("Post it to Slack."): Marcus sends the text itself.');
+  });
+
+  it('a text that only mentions the place is sent as it is', async () => {
+    for (const text of ['Our Slack channel is now open to everyone.', 'Questions? Ask in #news on Slack.']) {
+      setStepOutput('c1', 'write', 'alphonso', { summary: text } as never);
+      const got: any = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
+      expect(got.ok).toBe(true);
+    }
   });
 
   it('brackets that are not a gap are sent as they are', async () => {
