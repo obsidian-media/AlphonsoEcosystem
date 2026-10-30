@@ -3,6 +3,7 @@ import { Bell, WifiOff, Sun, Moon, Keyboard, ArrowUpCircle, Inbox } from 'lucide
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { useTheme } from '../hooks/useTheme';
 import { ModeToggle } from './ModeToggle';
+import { MemoryMeter } from './resources/MemoryMeter';
 
 interface Settings {
   selectedModel?: string;
@@ -31,6 +32,8 @@ interface TopBarProps {
   onModeChange?: (mode: 'simple' | 'advanced') => void;
   onOpenDigest?: () => void;
   digestUnreadCount?: number;
+  /** Opens Runtime Hub's Memory section (resource manager, 2026-10-30). */
+  onOpenMemory?: () => void;
 }
 
 const PAGE_TITLES: Record<string, string> = {
@@ -69,6 +72,7 @@ export function TopBar({
   onModeChange,
   onOpenDigest,
   digestUnreadCount = 0,
+  onOpenMemory,
 }: TopBarProps) {
   const { theme, toggleTheme } = useTheme();
 
@@ -96,6 +100,8 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2">
+        {onOpenMemory && <MemoryMeter onOpen={onOpenMemory} />}
+
         {onModeChange && (
           <ModeToggle mode={mode} onModeChange={onModeChange} />
         )}

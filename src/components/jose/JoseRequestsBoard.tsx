@@ -41,6 +41,9 @@ export const STATUS_LABELS: Record<string, string> = {
 export function statusLabel(request: JoseRequest): string {
   const place = request.status === 'queued' ? queuePosition(request.id) : null;
   if (place) return QUEUED_LINE(place);
+  // Resource manager (2026-10-30): a running request held back by memory says what holds it.
+  const memoryWait = request.status === 'running' ? request.steps.find((s) => s.waitingFor)?.waitingFor : undefined;
+  if (memoryWait) return memoryWait;
   return STATUS_LABELS[request.status] || request.status;
 }
 
@@ -218,6 +221,11 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
             ? <JosePlanEditor request={selected} onSaved={() => { setEditing(false); refresh(); }} />
             : (
               <>
+                {selected.steps.some((s) => s.waitingFor) && (
+                  <div data-testid="memory-waiting" className="mb-2 rounded-lg bg-(--warning-dim) border border-(--warning-border) px-3 py-2 text-xs text-(--text-1)">
+                    {selected.steps.filter((s) => s.waitingFor).map((s) => `${agentName(s.agent)}: ${s.waitingFor}`).join(' ')}
+                  </div>
+                )}
                 <JosePlanMap steps={selected.steps} selectedStepId={stepId || undefined} onSelectStep={(id) => setStepId(id === stepId ? null : id)} />
                 {stepId && selected.steps.some((s) => s.stepId === stepId) && (
                   <div className="mt-2 rounded-xl bg-(--surface-2) p-3">

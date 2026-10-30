@@ -143,18 +143,22 @@ export interface OllamaUnloadReport {
  * Ask Ollama to unload the models it has in memory, so a local image job
  * gets the GPU (owner decision 2026-10-21). On a 6 GB card a loaded 7B model
  * made the first ComfyUI image take 445 s. Never throws: the image job runs
- * either way, and the next chat simply reloads its model.
+ * either way, and the next chat simply reloads its model. With `models`, only
+ * those are unloaded (the resource manager frees idle models, 2026-10-30).
  */
-export async function freeOllamaGpuMemory(endpoint?: string | null): Promise<OllamaUnloadReport> {
+export async function freeOllamaGpuMemory(endpoint?: string | null, models?: string[]): Promise<OllamaUnloadReport> {
   const baseUrl = normalizeEndpoint(endpoint);
   try {
     if (isTauri()) {
       // From the backend: a user-started Ollama refuses the app window.
-      const report = await invoke<{ unloaded?: string[]; error?: string | null }>('ollama_unload_models', { endpoint: baseUrl });
+      // `models` unloads only those (the resource manager); none = every loaded model.
+      const args = models ? { endpoint: baseUrl, models } : { endpoint: baseUrl };
+      const report = await invoke<{ unloaded?: string[]; error?: string | null }>('ollama_unload_models', args);
       return { unloaded: report?.unloaded || [], error: report?.error || null };
     }
     const ps = await fetch(`${baseUrl}/api/ps`).then((r) => r.json()) as { models?: Array<{ name?: string }> };
-    const names = (ps.models || []).map((m) => m.name).filter((n): n is string => Boolean(n));
+    const names = (ps.models || []).map((m) => m.name).filter((n): n is string => Boolean(n))
+      .filter((n) => !models || models.includes(n));
     for (const name of names) {
       await fetch(`${baseUrl}/api/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: name, keep_alive: 0 }) });
     }

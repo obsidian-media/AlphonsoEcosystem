@@ -10,6 +10,16 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [Unreleased]
 
+### Memory decides what runs (2026-10-30)
+- **Steps wait for memory instead of running out.** Before each step Alphonso checks free RAM and graphics memory. If the step fits, it runs; if not, idle models and idle tools Alphonso started are freed first, or the step waits and says why ("Waiting for memory: ComfyUI is busy."). A step this computer could never hold fails at once with the reason.
+- **Tools start when a step needs them** (Ollama, ComfyUI, yours or Alphonso's) **and stop when idle** (ComfyUI after 15 minutes by default; change it per tool). Programs you started yourself are never stopped.
+- **Two requests can run together** when the second fits in memory.
+- **Runtime Hub → Memory** shows what is loaded, how much it uses, who started it and what is waiting; a meter in the top bar opens it. Telegram tells you once when a step has waited 10 minutes.
+- **Fixed:** requests using NVIDIA waited behind local ones for no reason.
+
+### When Windows blocks ffmpeg (2026-10-30)
+- On a Windows PC with Smart App Control on, the voice-over, finished video, Shorts and motion clip steps now say that Windows blocked ffmpeg because its files aren't signed yet, and what you can do about it, instead of an empty "ffmpeg failed:".
+
 ### QA batch 1: the live check of 2.10.0 with Telegram (2026-10-28)
 **Finished 2026-10-29:** every account in the live check passed (Slack, GitHub, ElevenLabs, Pexels, Pixabay, Coverr, Tavily, Brave, Notion, ClickUp, Composio, NVIDIA NIM, Gemini, Telegram; Higgsfield skipped by the owner), and the desktop suite ran with qwen2.5:7b. Open: the bundled ffmpeg isn't code-signed, so Windows Smart App Control blocks it (DEFERRED_WORK).
 The owner ran Telegram's Approve, Stop and Cancel on the installed 2.10.0; what didn't match was fixed:

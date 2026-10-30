@@ -44,6 +44,9 @@ export interface JoseRequestStep extends PlanStep {
   cleanupSetId?: string;
   /** Waiting for another request to finish with this project folder. */
   waitingForFolder?: string;
+  /** Waiting for memory (resource manager, 2026-10-30): the reason, and since when. */
+  waitingFor?: string;
+  waitingSinceMs?: number;
 }
 
 export interface JoseRequest {

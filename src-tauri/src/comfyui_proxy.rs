@@ -24,7 +24,8 @@ pub struct ComfyUiResponse {
   body_base64: Option<String>,
 }
 
-/// Paths the image generator needs. Anything else is refused.
+/// Paths the image generator needs, plus `POST /free` (the resource manager
+/// asks ComfyUI to drop its loaded models). Anything else is refused.
 fn allowed_path(method: &str, path: &str) -> bool {
   if path.contains("..") || path.contains('\\') || !path.starts_with('/') {
     return false;
@@ -36,7 +37,7 @@ fn allowed_path(method: &str, path: &str) -> bool {
         || path.starts_with("/history/")
         || path.starts_with("/view?")
     }
-    "POST" => path == "/prompt",
+    "POST" => path == "/prompt" || path == "/free",
     _ => false,
   }
 }
@@ -339,6 +340,7 @@ mod tests {
       ("GET", "/history/abc-123"),
       ("GET", "/view?filename=a.png&type=output"),
       ("POST", "/prompt"),
+      ("POST", "/free"),
     ] {
       assert!(allowed_path(method, path), "{method} {path}");
     }
@@ -346,7 +348,7 @@ mod tests {
       ("POST", "/system_stats"),
       ("GET", "/prompt"),
       ("POST", "/interrupt"),
-      ("POST", "/free"),
+      ("GET", "/free"),
       ("GET", "/userdata/x"),
       ("GET", "/view/../../etc/passwd"),
       ("GET", "history/abc"),

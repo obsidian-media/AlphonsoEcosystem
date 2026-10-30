@@ -3,6 +3,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createJoseRequest, getJoseRequest, setJoseRequestStatus, listJoseRequests } from '../../../services/jose/joseRequestStore';
 import { takeTurn, queuePosition, usesLocalModel, requeueAtStart, QUEUED_LINE, resetQueueForTests } from '../../../services/jose/joseQueue';
 import { stopRequest } from '../../../services/jose/joseStop';
+
+// Memory-aware queue (resource manager, 2026-10-30): the latest reading decides whether a second
+// request may run beside the first. No reading yet → one at a time, as before.
+let latest: unknown = null;
+vi.mock('../../../services/resources/idleStop', () => ({ latestResources: () => latest, onResources: () => () => undefined }));
+const memory = (gpuFreeMb: number) => ({ atMs: Date.now(), ramTotalMb: 16384, ramFreeMb: 8000, gpuTotalMb: 8192, gpuFreeMb, gpuSource: 'nvidia', loaded: [] });
+const fits = { key: 'k', tools: ['ollama'], ramMb: 0, gpuMb: 2000, gpuSpillsToRam: false, learned: false, known: true } as never;
 import type { PlanStep } from '../../../services/jose/stepGraph';
 
 const made = (text: string, status = 'running') => {
@@ -16,6 +23,7 @@ const step = (agent: string, extra: Partial<PlanStep> = {}): PlanStep => ({ step
 beforeEach(() => {
   localStorage.clear();
   resetQueueForTests();
+  latest = null;
 });
 
 describe('the queue', () => {
@@ -95,6 +103,58 @@ describe('the queue', () => {
     expect(usesLocalModel([step('alphonso', { model: 'claude:claude-haiku-5-5' })])).toBe(false);
     expect(usesLocalModel([step('miya', { model: 'claude:x', contentStep: { projectId: 'p', step: 'scenes' } as never })])).toBe(true);
     expect(usesLocalModel([])).toBe(false);
+  });
+
+  it('an NVIDIA, Gemini or Hermes plan is not local', () => {
+    for (const provider of ['nvidia_nim', 'gemini', 'hermes']) {
+      localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider } }));
+      expect(usesLocalModel([step('hector')])).toBe(false);
+    }
+    localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider: 'ollama' } }));
+    expect(usesLocalModel([step('hector')])).toBe(true);
+  });
+
+  it('two requests run together when the second fits in memory', async () => {
+    latest = memory(6000);
+    const a = made('A');
+    const b = made('B');
+    await takeTurn(a, fits);
+    let bRuns = false;
+    void takeTurn(b, fits).then(() => { bRuns = true; });
+    await settle();
+    expect(bRuns).toBe(true);
+    expect(getJoseRequest(b)!.status).toBe('running');
+  });
+
+  it('the second queues when it does not fit, and starts when the first ends', async () => {
+    latest = memory(1000);
+    const a = made('A');
+    const b = made('B');
+    await takeTurn(a, fits);
+    let bRuns = false;
+    void takeTurn(b, fits).then(() => { bRuns = true; });
+    await settle();
+    expect(bRuns).toBe(false);
+    expect(queuePosition(b)).toBe(1);
+    setJoseRequestStatus(a, 'done');
+    await settle();
+    expect(bRuns).toBe(true);
+  });
+
+  it('nothing jumps ahead of a request already waiting', async () => {
+    latest = memory(1000);
+    const a = made('A');
+    const b = made('B');
+    const c = made('C');
+    await takeTurn(a, fits);
+    void takeTurn(b, fits);
+    await settle();
+    latest = memory(6000);
+    let cRuns = false;
+    void takeTurn(c, fits).then(() => { cRuns = true; });
+    await settle();
+    expect(cRuns).toBe(false);
+    expect(queuePosition(c)).toBe(2);
   });
 
   it('positions are shown as Queued (2nd)', () => {

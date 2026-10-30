@@ -1455,6 +1455,15 @@ impl RuntimeManager {
     self.spawned.lock().ok()?.get(name).copied()
   }
 
+  /// Every tool Alphonso started, with its process id.
+  pub fn spawned_pids(&self) -> Vec<(String, u32)> {
+    self
+      .spawned
+      .lock()
+      .map(|map| map.iter().map(|(k, v)| (k.clone(), *v)).collect())
+      .unwrap_or_default()
+  }
+
   pub fn record_pid(&self, name: &str, pid: u32) {
     if let Ok(mut map) = self.spawned.lock() {
       map.insert(name.to_string(), pid);

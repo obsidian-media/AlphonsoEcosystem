@@ -911,6 +911,26 @@ pub(crate) fn build_assembly_runs(
   runs
 }
 
+/// Said when Windows refuses to run the bundled ffmpeg. Its files aren't code-signed yet
+/// (owner decision 2026-10-29), so Smart App Control blocks them on PCs that have it on.
+pub(crate) const FFMPEG_BLOCKED: &str = "Windows blocked ffmpeg, the video tool Alphonso uses, because its files aren't signed yet (Smart App Control). Voice-overs, the finished video, Shorts and motion clips need it. You can turn Smart App Control off in Windows Security → App & browser control, but Windows can't turn it back on without a reset.";
+
+/// Whether a run failed because Windows blocked the program: it refused to start
+/// (OS error 4551), or it started and a blocked DLL stopped it (exit code 0xC0E90002).
+pub(crate) fn windows_block(exit_code: Option<i32>, os_error: Option<i32>) -> Option<&'static str> {
+  const POLICY_REFUSED_START: i32 = 4551;
+  const POLICY_STOPPED_RUN: i32 = 0xC0E9_0002_u32 as i32;
+  (os_error == Some(POLICY_REFUSED_START) || exit_code == Some(POLICY_STOPPED_RUN))
+    .then_some(FFMPEG_BLOCKED)
+}
+
+/// A start error in plain words when Windows blocked the program.
+fn start_error(e: std::io::Error) -> String {
+  windows_block(None, e.raw_os_error())
+    .map(str::to_string)
+    .unwrap_or_else(|| e.to_string())
+}
+
 pub(crate) async fn run_ffmpeg(tool: &Path, run: &FfmpegRun) -> Result<(), String> {
   let mut cmd = tokio::process::Command::new(tool);
   cmd.args(&run.args).current_dir(&run.cwd).kill_on_drop(true);
@@ -918,9 +938,11 @@ pub(crate) async fn run_ffmpeg(tool: &Path, run: &FfmpegRun) -> Result<(), Strin
   let output = tokio::time::timeout(std::time::Duration::from_secs(1800), cmd.output())
     .await
     .map_err(|_| "ffmpeg took longer than 30 minutes.".to_string())?
-    .map_err(|e| e.to_string())?;
+    .map_err(start_error)?;
   if output.status.success() {
     Ok(())
+  } else if let Some(blocked) = windows_block(output.status.code(), None) {
+    Err(blocked.to_string())
   } else {
     let err = String::from_utf8_lossy(&output.stderr);
     Err(format!(
@@ -945,7 +967,10 @@ async fn probe(ffprobe: &Path, file: &Path) -> Result<(f64, bool, bool), String>
     .arg(file)
     .kill_on_drop(true);
   crate::utils::no_window_async(&mut cmd);
-  let output = cmd.output().await.map_err(|e| e.to_string())?;
+  let output = cmd.output().await.map_err(start_error)?;
+  if let Some(blocked) = windows_block(output.status.code(), None) {
+    return Err(blocked.to_string());
+  }
   let info: serde_json::Value = serde_json::from_slice(&output.stdout)
     .map_err(|_| "ffprobe could not read the video.".to_string())?;
   let duration = info["format"]["duration"]
@@ -1830,6 +1855,21 @@ mod tests {
     );
     assert_eq!(free_folder(|_| false, "x").as_deref(), Some("x"));
     assert_eq!(free_folder(|_| true, "x"), None);
+  }
+
+  #[test]
+  fn tells_when_windows_blocks_ffmpeg() {
+    // The program refused to start (Smart App Control): OS error 4551.
+    assert_eq!(windows_block(None, Some(4551)), Some(FFMPEG_BLOCKED));
+    // It started, then a blocked DLL stopped it: exit code 0xC0E90002.
+    assert_eq!(
+      windows_block(Some(0xC0E9_0002_u32 as i32), None),
+      Some(FFMPEG_BLOCKED)
+    );
+    // An ordinary failure is not a block.
+    assert_eq!(windows_block(Some(1), None), None);
+    assert_eq!(windows_block(None, Some(2)), None);
+    assert!(FFMPEG_BLOCKED.contains("Smart App Control"));
   }
 
   #[test]

@@ -1785,11 +1785,12 @@ export function ChatView({
                 <div className="w-1.5 h-1.5 bg-(--accent) rounded-full animate-pulse" />
                 <span className="text-xs text-(--text-2) font-medium">
                   {liveProgress.stage === 'queued' && WAITING_FOR_TURN}
+                  {liveProgress.stage === 'waiting_memory' && liveProgress.reason}
                   {liveProgress.stage === 'wave_start' && `Wave ${(liveProgress.wave || 0) + 1}: ${(liveProgress.agents || []).join(', ')}`}
                   {liveProgress.stage === 'executed' && `${liveProgress.assignment?.agent || 'Agent'} completed`}
                   {liveProgress.stage === 'generating_images' && `Generating ${liveProgress.promptCount || 0} image(s)...`}
                   {liveProgress.stage === 'approval_required' && `${liveProgress.assignment?.agent || 'Agent'} needs approval`}
-                  {!['wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
+                  {!['queued', 'waiting_memory', 'wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
                 </span>
                 {liveRequestId && (
                   <button

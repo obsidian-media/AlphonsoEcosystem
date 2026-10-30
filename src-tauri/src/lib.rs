@@ -51,6 +51,7 @@ mod plugin_runtime;
 mod policy_gate;
 mod post_metrics;
 mod research_store;
+mod resources;
 mod runtime_manager;
 mod runway;
 mod search;
@@ -866,6 +867,8 @@ pub fn run() {
       ollama_pull_model,
       ollama_embed,
       ollama_unload_models,
+      ollama::ollama_loaded_models,
+      resources::resource_snapshot,
       record_restore_point,
       write_handoff_export_file,
       workspace::write_workspace_text_file,

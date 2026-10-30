@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 328 services and 177 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 336 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -129,6 +129,8 @@ Source-backed inventory: 328 services and 177 components. Human purpose descript
 | component | `src/components/ProductionReadinessPanel.tsx` | `ProductionReadinessPanel` |
 | component | `src/components/ProjectBatchPanel.tsx` | `default` |
 | component | `src/components/projects/ProjectsPage.tsx` | `default`, `ProjectsPage` |
+| component | `src/components/resources/MemoryMeter.tsx` | `MemoryMeter` |
+| component | `src/components/resources/MemorySection.tsx` | `IDLE_CHOICES`, `MemorySection` |
 | component | `src/components/RightPanel.tsx` | `RightPanel` |
 | component | `src/components/RuntimeManagerView.tsx` | `default` |
 | component | `src/components/RuntimeNotice.tsx` | `RuntimeNotice` |
@@ -365,7 +367,7 @@ Source-backed inventory: 328 services and 177 components. Human purpose descript
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `listStepOutputs`, `priorOutputsForNeeds`, `setStepOutput`, `StepOutput` |
 | service | `src/services/jose/joseStop.ts` | `clearStop`, `isStopRequested`, `NOT_RUNNING`, `onStopRequested`, `STOPPED_LINE`, `stopRequest`, `stopSignal`, `stopWaitsFor` |
 | service | `src/services/jose/joseSummary.ts` | `closingSummary` |
-| service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
+| service | `src/services/jose/joseTelegram.ts` | `buttonToken`, `collectJoseNotifications`, `getJoseTelegramSettings`, `JoseButton`, `JoseButtonAction`, `JoseNotification`, `JoseTelegramSettings`, `markSent`, `MEMORY_WAIT_NOTICE_MS`, `readButtonToken`, `seedSentLog`, `sentKeys`, `wasSent` |
 | service | `src/services/jose/joseTemplates.ts` | `allTemplates`, `asksToMake`, `getTemplate`, `JOSE_TEMPLATES`, `JoseTemplate`, `MAKING_WORDS`, `scoreTemplateFit`, `TEMPLATE_FIT_THRESHOLD` |
 | service | `src/services/jose/joseUserTemplates.ts` | `deleteUserTemplate`, `listUserTemplates`, `saveUserTemplate` |
 | service | `src/services/jose/movedTaskTypes.ts` | `dropRetiredSteps`, `MOVED_TASK_TYPES`, `moveToOwner`, `RETIRED_TASK_TYPES`, `toCurrentOwners` |
@@ -445,6 +447,14 @@ Source-backed inventory: 328 services and 177 components. Human purpose descript
 | service | `src/services/recoveryService.ts` | `backupMemoryLedger`, `createSnapshot`, `listSnapshots`, `restoreSnapshotById` |
 | service | `src/services/repoAuditService.ts` | `getLastRepoAudit`, `listRepoAudits`, `REPO_AUDIT_SCOPE`, `runRepoAudit`, `summarizeRepoAudit` |
 | service | `src/services/resourceCostService.ts` | `collectResourceSnapshot`, `listResourceSnapshots`, `summarizeResourceUsage` |
+| service | `src/services/resources/admission.ts` | `Admission`, `decideAdmission`, `MARGIN`, `memoryWaitLine`, `tooBigLine` |
+| service | `src/services/resources/ensureTools.ts` | `EnsureResult`, `ensureTools` |
+| service | `src/services/resources/freeMemory.ts` | `FreeResult`, `freeThings` |
+| service | `src/services/resources/idleStop.ts` | `DEFAULT_IDLE_MINUTES`, `FAST_POLL_MS`, `getIdleMinutes`, `idleTick`, `latestResources`, `onResources`, `resetIdleStopForTests`, `setIdleMinutes`, `SLOW_POLL_MS`, `startResourceWatcher` |
+| service | `src/services/resources/resourceGate.ts` | `admitStep`, `Admitted`, `firstStepNeed`, `NotAdmitted`, `RESERVATION_SETTLE_MS`, `reservedTotal`, `resetGateForTests`, `WAIT_RECHECK_MS` |
+| service | `src/services/resources/resourceState.ts` | `GPU_UNKNOWN`, `GpuSource`, `LoadedThing`, `readResources`, `ResourceState`, `UsageRecord` |
+| service | `src/services/resources/stepNeeds.ts` | `estimateNeed`, `MODEL_WORKING_MEMORY`, `NeededTool`, `recordStepUse`, `resetUsageForTests`, `StepAssignment`, `StepNeed`, `toolsForStep` |
+| service | `src/services/resources/toolUse.ts` | `anyInUse`, `beginUse`, `endUse`, `isInUse`, `lastUsedAt`, `markUsed`, `resetToolUseForTests`, `usageRecord` |
 | service | `src/services/runtimeApiService.ts` | `getRunStatus`, `listModulesRemote`, `publishEvent`, `runModule` |
 | service | `src/services/runtimeLedgerService.ts` | `bootstrapRuntimeLedgerHydration`, `hydrateScopeToLocalStorage`, `HydrationResult`, `LedgerRecord`, `listScopeRecords`, `persistScopeRows` |
 | service | `src/services/runtimeManagerService.ts` | `checkPrerequisites`, `getAllStatus`, `getAutostartPrefs`, `getInstallLocation`, `InstallLocation`, `installPrerequisite`, `installTool`, `listTools`, `loadBundledStarterModel`, `LogEvent`, `onAnyProgress`, `onLogLine`, `PrereqStatus`, `ProgressEvent`, `saveAutostartPref`, `setInstallLocation`, `startTool`, `stopTool`, `TOOL_NAMES`, `ToolName`, `ToolResult`, `ToolStatus`, `waitForTool` |

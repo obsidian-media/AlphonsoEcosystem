@@ -284,6 +284,16 @@ describe('Stop on the board', () => {
     expect(screen.getByText('Stopped by you.')).toBeTruthy();
   });
 
+  it('a step waiting for memory says so in the request status and on the board (resource manager)', async () => {
+    const { statusLabel } = await import('../../../components/jose/JoseRequestsBoard');
+    const request = createJoseRequest({ commandId: 'c-mem', source: 'user', text: 'Make pictures', kind: 'normal', steps });
+    setJoseRequestStatus(request.id, 'running');
+    updateJoseStep(request.id, 'facts', { status: 'running', waitingFor: 'Waiting for memory: ComfyUI is busy.', waitingSinceMs: 1 });
+    expect(statusLabel(getJoseRequest(request.id)!)).toBe('Waiting for memory: ComfyUI is busy.');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    expect(screen.getByTestId('memory-waiting').textContent).toBe('Hector: Waiting for memory: ComfyUI is busy.');
+  });
+
   it('a finished request has no Stop', () => {
     const request = createJoseRequest({ commandId: 'c-done', source: 'user', text: 'Done one', kind: 'normal', steps });
     setJoseRequestStatus(request.id, 'done');

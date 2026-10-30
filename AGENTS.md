@@ -26,13 +26,13 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and older services)
   agents/              9 agent profiles and schemas (what each may do is src/services/jose/agentPermissionTable.ts)
   components/          175 UI components (incl. miya/, jose/, calendar/ for the content factory, Jose's board and the Calendar)
-  services/            328 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
+  services/            336 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
     jose/              Jose's planner, step graphs, effects, requests, Telegram, paid models
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                600 test files, 6,933 tests (Vitest; see ground truth for current verification status)
+  test/                610 test files, 6,933 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -41,7 +41,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
   src-tauri/             Rust backend
-  src/lib.rs           ~955 lines, 203 Tauri commands (across 53 modules)
+  src/lib.rs           ~958 lines, 205 Tauri commands (across 54 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -58,6 +58,7 @@ ios/                   iOS companion app (SwiftUI)
   src/policy_gate.rs   Policy enforcement backend
   src/audit_log.rs     Audit chain
   src/ollama.rs        Ollama backend
+  src/resources.rs     Memory on this computer (resource manager)
   src/memory_store.rs  Memory persistence
   src/meta_publish.rs  Meta publishing
   src/voice_sidecar.rs Voice sidecar management
@@ -88,7 +89,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,933 tests (600 files; also runs bridge/)
+npm run test             # 6,933 tests (610 files; also runs bridge/)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
