@@ -98,3 +98,21 @@ describe('MCP connection', () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 });
+
+// Outside tools (2026-10-30): the Health Monitor asks each switched-on server for its tool list.
+describe('outside tools health check', () => {
+  it('says what to add when there is nothing, and which server failed', async () => {
+    localStorage.clear();
+    const { checkOutsideToolsConnection } = await import('../../../services/connectorHealthCheckService');
+    expect((await checkOutsideToolsConnection()).message).toBe('No outside tools added. Add an MCP server in Settings → Connectors → Outside tools (MCP).');
+    const { addServer } = await import('../../../services/mcp/mcpServers');
+    addServer({ name: 'Shop', url: 'https://shop.example/mcp' });
+    (window as any).__TAURI_INTERNALS__ = {};
+    invoke.mockReset();
+    invoke.mockRejectedValueOnce(new Error('The server did not answer.'));
+    const r = await checkOutsideToolsConnection();
+    delete (window as any).__TAURI_INTERNALS__;
+    expect(r.ok).toBe(false);
+    expect(r.message).toContain('Shop:');
+  });
+});

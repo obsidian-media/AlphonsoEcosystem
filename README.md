@@ -463,7 +463,7 @@ All agents are registered in `src/agents/agentRegistry.js`; what each may do is 
 
 ## Connectors
 
-All 35 connectors are set up in **Settings → Connectors**; keys are kept in the system keychain, never in a file. An environment variable still works as a fallback.
+All 36 connectors are set up in **Settings → Connectors**; keys are kept in the system keychain, never in a file. An environment variable still works as a fallback.
 
 | Group | Connectors |
 |-------|-----------|
@@ -479,7 +479,7 @@ Every outbound call goes through the policy gate; paid connectors (Claude, ChatG
 
 ## License Tiers
 
-**Free at launch: every agent and all 35 connectors, no license key.** Paid tiers are not on sale. The licensing code (`licenseService.ts`) stays dormant until a vendor signing key is configured. Third-party services you connect bill you directly through your own API keys, and Zero-Cost Mode blocks paid calls until you approve them.
+**Free at launch: every agent and all 36 connectors, no license key.** Paid tiers are not on sale. The licensing code (`licenseService.ts`) stays dormant until a vendor signing key is configured. Third-party services you connect bill you directly through your own API keys, and Zero-Cost Mode blocks paid calls until you approve them.
 
 See [docs/PRICING.md](docs/PRICING.md) for details.
 
@@ -490,7 +490,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 6,933 tests across 620 files (src + bridge)
+npm run test           # 6,933 tests across 621 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -528,7 +528,7 @@ is the last full release-verification record.
 |---------------------------------------------|----------------------------------------------|
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Quick setup guide |
 | [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | What each agent does and when to use them |
-| [CONNECTORS.md](docs/CONNECTORS.md) | Setup for all 35 connectors (keys entered in Settings) |
+| [CONNECTORS.md](docs/CONNECTORS.md) | Setup for all 36 connectors (keys entered in Settings) |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
 | [USER_MANUAL.md](docs/USER_MANUAL.md) | Full feature reference (current) |
 | [RELEASE.md](docs/RELEASE.md) | Auto-updater signing and release pipeline |
