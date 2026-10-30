@@ -143,6 +143,8 @@
 - Consumes: `freeOllamaGpuMemory()` (all models; add an optional `models?: string[]` parameter to unload only those, passed through to `ollama_unload_models`), `comfyRequest('POST', '/free', { unload_models: true, free_memory: true })`, `stopTool()`.
 - Produces: `export async function freeThings(things: LoadedThing[]): Promise<{ freed: string[]; failed: string[] }>` — model → unload; ComfyUI started by the user → `/free`; tool started by Alphonso → `stopTool(name)`. Never throws.
 
+  **Built (2026-10-30), calls made while building:** `ollama_unload_models` gained an optional `models` argument (`names_to_unload()`, with a Rust test); without it nothing changes for the existing callers. Models are unloaded in one call; a model missing from Ollama's report with no error was already gone and counts as freed. `freeThings()` checks the never-touch rules itself (anything in use, the Ollama program, any tool you started other than ComfyUI), so a wrong list can't stop your tools. Results come back in the order asked; a stop the backend refuses (`ok: false`) counts as failed.
+
 - [ ] **Step 1: Write the failing tests**: a user-started ComfyUI gets `/free`, never `stopTool`; an Alphonso-started ComfyUI gets `stopTool('comfyui')`; an Ollama model gets unloaded by name; one failure is listed in `failed` and the rest still run.
 - [ ] **Step 2: Run** — Expected: FAIL.
 - [ ] **Step 3: Implement.**

@@ -213,6 +213,12 @@ describe('ollama utilities', () => {
         await expect(freeOllamaGpuMemory()).resolves.toEqual({ unloaded: [], error: 'backend gone' });
       });
 
+      it('unloads only the models asked for', async () => {
+        invoke.mockResolvedValueOnce({ unloaded: ['qwen'], error: null });
+        await expect(freeOllamaGpuMemory('http://localhost:11434', ['qwen'])).resolves.toEqual({ unloaded: ['qwen'], error: null });
+        expect(invoke).toHaveBeenCalledWith('ollama_unload_models', { endpoint: 'http://localhost:11434', models: ['qwen'] });
+      });
+
       it('reports the backend reason when the command rejects with a plain string', async () => {
         // Tauri rejects with a string, not an Error; callers used to lose it
         // and say "The local model could not be reached" (QA Bug 18).

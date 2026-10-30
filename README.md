@@ -490,7 +490,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 6,933 tests across 603 files (src + bridge)
+npm run test           # 6,933 tests across 604 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -503,7 +503,7 @@ npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app 
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 394 Rust unit tests across 54 modules
+cargo test                     # 395 Rust unit tests across 54 modules
                                 # (cargo test runs a few more: the async
                                 # #[tokio::test] cases, 370 in all)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
@@ -581,7 +581,7 @@ is the last full release-verification record.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 331 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 332 services already exist.
 
 ## Third-party notices
 

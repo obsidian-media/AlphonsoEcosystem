@@ -469,9 +469,19 @@ pub(crate) async fn ollama_loaded_models(endpoint: Option<String>) -> Vec<Loaded
 /// ComfyUI so little memory that the first image took 445 s (QA, 2026-10-21).
 /// Best effort: the report says what was unloaded and what went wrong; the
 /// caller carries on either way. The next chat reloads the model.
+/// The loaded models to unload: all of them, or only those in `only`
+/// (the resource manager frees idle models one by one, 2026-10-30).
+pub(crate) fn names_to_unload(ps: &Value, only: Option<&Vec<String>>) -> Vec<String> {
+  loaded_model_names(ps)
+    .into_iter()
+    .filter(|name| only.map_or(true, |list| list.iter().any(|m| m == name)))
+    .collect()
+}
+
 #[tauri::command]
 pub(crate) async fn ollama_unload_models(
   endpoint: Option<String>,
+  models: Option<Vec<String>>,
 ) -> Result<OllamaUnloadReport, String> {
   let base = ollama_base(endpoint);
   let client = reqwest::Client::new();
@@ -492,7 +502,7 @@ pub(crate) async fn ollama_unload_models(
   };
   let mut unloaded = Vec::new();
   let mut errors = Vec::new();
-  for name in loaded_model_names(&ps) {
+  for name in names_to_unload(&ps, models.as_ref()) {
     let body = serde_json::json!({ "model": name, "keep_alive": 0 });
     match client
       .post(format!("{base}/api/generate"))
@@ -700,6 +710,15 @@ pub(crate) async fn ollama_embed(
 
 #[cfg(test)]
 mod tests {
+  #[test]
+  fn unloads_only_the_models_asked_for() {
+    let ps = serde_json::json!({ "models": [{ "name": "a" }, { "name": "b" }, { "name": "c" }] });
+    assert_eq!(names_to_unload(&ps, None), vec!["a", "b", "c"]);
+    let only = vec!["c".to_string(), "x".to_string(), "a".to_string()];
+    assert_eq!(names_to_unload(&ps, Some(&only)), vec!["a", "c"]);
+    assert!(names_to_unload(&ps, Some(&Vec::new())).is_empty());
+  }
+
   #[test]
   fn reads_loaded_models_with_their_memory() {
     let ps = serde_json::json!({"models": [
