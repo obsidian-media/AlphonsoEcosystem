@@ -8,6 +8,7 @@ import { agentName } from '../jose/agentNames';
 import { stepInputText } from '../jose/stepInput';
 import { ACTION_TOOLS, SKILL_TOOLS } from './skillTools';
 import { runSkillTool, type ToolContext } from './skillToolRun';
+import { readingTools, readingToolsForPrompt, serversNamedIn } from '../mcp/mcpTools';
 import type { Skill } from './skillFile';
 
 export interface GatheredResult { tool: string; ok: boolean; text: string }
@@ -33,16 +34,50 @@ function readCall(text: string): { tool?: string; args?: Record<string, unknown>
   }
 }
 
+const OUTSIDE_CALL = 'Call it as {"tool": "outside_read", "args": {"tool": "<server>/<tool>", "args": {...its fields}}}. Reading tools:';
+
+/**
+ * Outside reading tools (2026-10-30) are offered to every agent: always to a model that calls
+ * tools itself, and to a small model only when the step names a connected server, with one
+ * question which tool to read (an extra model call nothing else needs).
+ */
+async function pickOutsideRead(skill: Skill, ctx: ToolContext): Promise<GatheredResult | null> {
+  const prompt = [
+    `You are ${agentName(skill.agent)}. Your step may need facts from an outside tool the user connected.`,
+    ctx.stepInput?.instruction ? `The step: ${ctx.stepInput.instruction}` : '',
+    ctx.stepInput?.request ? `The request: ${ctx.stepInput.request.slice(0, 2000)}` : '',
+    'Reading tools:',
+    ...readingToolsForPrompt(),
+    'Answer with JSON only: {"tool": "<server>/<tool>", "args": {...its fields}} to read one, or {"none": true} if none of them helps.',
+  ].filter(Boolean).join('\n\n');
+  let answer: Record<string, unknown> | null = null;
+  try {
+    const reply: any = await generateAgentLlmResponse(skill.agent, { prompt, format: 'json' });
+    answer = readCall(String(reply?.response || ''));
+  } catch {
+    answer = null;
+  }
+  if (!answer || answer.none || typeof answer.tool !== 'string') return null;
+  const args = { tool: answer.tool, args: answer.args && typeof answer.args === 'object' ? answer.args : {} };
+  return { tool: 'outside_read', ...(await runSkillTool('outside_read', args, ctx)) };
+}
+
 export async function gatherForSkill(skill: Skill, ctx: ToolContext, opts: { ownCalls: boolean; maxCalls?: number }): Promise<{ results: GatheredResult[]; mode: 'fixed' | 'own' }> {
   const callable = skill.tools.filter((t) => !ACTION_TOOLS.has(t));
   const results: GatheredResult[] = [];
+  const outside = readingTools().length > 0 && !callable.includes('outside_read');
   if (!opts.ownCalls) {
     for (const name of skill.steps.filter((t) => callable.includes(t))) {
       const result = await runSkillTool(name, argsForStep(ctx), ctx);
       results.push({ tool: name, ...result });
     }
+    if (outside && serversNamedIn(`${ctx.stepInput?.request || ''}\n${ctx.stepInput?.instruction || ''}`).length) {
+      const read = await pickOutsideRead(skill, ctx);
+      if (read) results.push(read);
+    }
     return { results, mode: 'fixed' };
   }
+  if (outside) callable.push('outside_read');
   if (!callable.length) return { results, mode: 'own' };
   const max = opts.maxCalls ?? MAX_TOOL_CALLS;
   const context = ctx.stepInput ? stepInputText(ctx.stepInput) : '';
@@ -54,7 +89,7 @@ export async function gatherForSkill(skill: Skill, ctx: ToolContext, opts: { own
       ctx.stepInput?.request ? `The request: ${ctx.stepInput.request.slice(0, 2000)}` : '',
       context,
       'Tools you can call:',
-      ...callable.map((t) => `- ${t}: ${SKILL_TOOLS[t].label}`),
+      ...callable.map((t) => `- ${t}: ${SKILL_TOOLS[t].label}${t === 'outside_read' ? ` ${OUTSIDE_CALL}\n${readingToolsForPrompt().join('\n')}` : ''}`),
       // Tool results are page text: marked untrusted (agent phase 4).
       results.length ? `What your tools found so far:\n${UNTRUSTED_RULE}\n${fenced('TOOL RESULTS', results.map((r) => `${r.tool}: ${r.text}`).join('\n\n'))}` : '',
       `You may call ${max - call} more tool(s). Answer with JSON only: {"tool": "a tool name", "args": {"query": "...", "stepId": "...", "url": "...", "path": "..."}} to call one, or {"done": true} when you have what you need.`,

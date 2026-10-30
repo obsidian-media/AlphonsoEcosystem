@@ -74,6 +74,7 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   distribution_execution: 'send what an earlier step wrote; Marcus picks where',
   distribution_release: 'make a draft GitHub release with notes an earlier step wrote',
   distribution_issue: 'open a GitHub issue an earlier step wrote',
+  distribution_outside_tool: 'use a tool of an outside service (MCP) that changes or sends something; asks first with the exact call',
   distribution_review: 'check what would be sent and where; sends nothing',
   distribution_readiness: 'check that something is ready to send; sends nothing',
   distribution_schedule_posts: 'publish or schedule approved posts',

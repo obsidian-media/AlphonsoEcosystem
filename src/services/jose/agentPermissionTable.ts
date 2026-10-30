@@ -76,7 +76,8 @@ export const AGENT_PERMISSION_TABLE: Record<string, AgentPermissions> = {
     // engagement_ and performance_ went in agent phase 5: nothing used them (Nova owns analysis_performance).
     taskTypes: ['approved_', 'distribution_', 'outreach_', 'agent_report'],
     blockedTaskTypes: ['execute_command', 'filesystem_write', 'purchase'],
-    effects: ['read', 'write_own_work', 'publish_or_send', 'spend'],
+    // delete: an outside tool marked "Deletes" (2026-10-30); it always asks.
+    effects: ['read', 'write_own_work', 'publish_or_send', 'spend', 'delete'],
   },
   echo: {
     role: 'memory_historian',

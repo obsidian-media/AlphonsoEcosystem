@@ -9,6 +9,7 @@ import { generateAgentLlmResponse } from '../../lib/ollama';
 import { asksPlanReview, asksReadiness, asksToCleanUpMemory, asksToForget, asksToRemember, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
 import { CODE_TASK_PREFIXES, isCodeRequest, needsFacts, planningMenu } from './taskTypeMeanings';
+import { outsideToolsForPlanner } from '../mcp/mcpTools';
 import { isPlainQuestion } from '../../lib/chatUtils';
 import { EFFECT_LABELS, JOSE_EFFECTS, inferEffects, type JoseEffect } from './joseEffects';
 import { TEMPLATE_FIT_THRESHOLD, getTemplate, scoreTemplateFit, type JoseTemplate } from './joseTemplates';
@@ -42,7 +43,8 @@ interface PlanOptions {
 
 /** Each agent with its jobs and their meanings (agent phase 1): a small model picks from these, not from bare prefixes. */
 function agentsForPrompt(): string {
-  return planningMenu();
+  // Outside tools (2026-10-30): one line per connected MCP server.
+  return [planningMenu(), outsideToolsForPlanner()].filter(Boolean).join('\n\n');
 }
 
 function templateForPrompt(template: JoseTemplate): string {
