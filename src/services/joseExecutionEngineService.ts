@@ -54,6 +54,7 @@ import { runMariaGovernanceAudit } from './mariaAuditService';
 import { holdStepsAfter, mariaHoldFor } from './maria/mariaHolds';
 import { sentinelHoldFor } from './sentinel/sentinelHolds';
 import { describeSend, isMarcusSendStep, prepareMarcusSend } from './marcus/prepareSend';
+import { describeOutsideCall, isOutsideCallStep, prepareOutsideCall } from './marcus/outsideCall';
 import { isAlphonsoCodeStep } from './alphonso/codeStep';
 import { prepareAlphonsoCode } from './alphonso/prepareCode';
 import { runAlphonsoCode } from './alphonso/runCode';
@@ -1865,6 +1866,35 @@ async function runPipeline({
             try { updateJoseStep(joseRequestId, assignment.stepId, { sendPreview: prepared.preview, note: sendLine } as any); } catch { /* display aid */ }
           }
         }
+      }
+
+      // An outside tool's change (2026-10-30) is prepared the same way: the exact call, and its
+      // effects (delete, spend) added to the step so the approval asks for them.
+      if (isOutsideCallStep(assignment) && packet.status !== 'approved') {
+        const requestNow: any = joseRequestId ? getJoseRequest(joseRequestId) : null;
+        let preview: any = requestNow?.steps?.find((s: any) => s.stepId === assignment.stepId)?.outsideCall || null;
+        if (!preview) {
+          const prepared: any = await prepareOutsideCall(command.id, assignment, requestNow || { text: commandText });
+          if (prepared.ok === false) {
+            if (prepared.outcome === 'setup') {
+              updatePacketStatus(assignment.packetId, 'queued', { failureReason: prepared.reason });
+              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'setup_needed', reason: prepared.reason });
+              onProgress?.({ stage: 'setup_needed', assignment, packetId: assignment.packetId, reason: prepared.reason });
+            } else {
+              failedCount += 1;
+              updatePacketStatus(assignment.packetId, 'failed', { failureReason: prepared.reason, retryable: false });
+              executionReceipts.push({ packetId: assignment.packetId, agent: assignment.agent, status: 'failed', reason: prepared.reason });
+              onProgress?.({ stage: 'step_failed', assignment, packetId: assignment.packetId, reason: prepared.reason });
+            }
+            continue;
+          }
+          preview = prepared.preview;
+          if (joseRequestId) {
+            try { updateJoseStep(joseRequestId, assignment.stepId, { outsideCall: preview, note: describeOutsideCall(preview) } as any); } catch { /* display aid */ }
+          }
+        }
+        assignment.effects = Array.from(new Set([...(Array.isArray(assignment.effects) ? assignment.effects : []), ...preview.effects]));
+        sendLine = describeOutsideCall(preview);
       }
 
       // A packet you approved has been previewed already.

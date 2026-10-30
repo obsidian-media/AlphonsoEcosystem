@@ -114,4 +114,14 @@ describe("the content factory's Publish", () => {
     const send = { stepId: 'send', agent: 'marcus', actionType: 'distribution_execution', effects: ['publish_or_send'], needs: [] } as any;
     expect(addSecurityChecks([send], 'Post hello to Slack #news').added).toEqual(['sentinel-send-send']);
   });
+
+  // Outside tools (2026-10-30): a change built from what an outside tool read is checked first.
+  it('an outside change built from an outside read gets Sentinel\'s check first', () => {
+    const { steps, added } = addSecurityChecks([
+      s('facts', 'hector', 'research_report', ['read']),
+      s('marcus', 'marcus', 'distribution_outside_tool', ['publish_or_send'], ['facts']),
+    ], 'Look up the blue mug in my Shop and set its price to $18');
+    expect(added).toContain('sentinel-send-marcus');
+    expect(byId(steps, 'marcus').needs).toContain('sentinel-send-marcus');
+  });
 });

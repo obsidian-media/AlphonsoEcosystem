@@ -44,6 +44,8 @@ vi.mock('../../../services/connectors/connectorOutbound', async (importOriginal)
   ...(await importOriginal()),
   sendSlackMessage: vi.fn(async () => ({ ok: true, ts: '1.2' })),
 }));
+// Outside tools (2026-10-30): the MCP server is never reached from a test.
+vi.mock('../../../services/mcp/mcpConnection', () => ({ callTool: vi.fn(async () => ({ ok: true, text: 'Price updated.' })) }));
 vi.mock('../../../services/connectors/discordConnector', () => ({ sendMessage: vi.fn(async () => ({ id: 'M' })), listGuildChannels: vi.fn(async () => [{ id: 'C', name: 'news' }]) }));
 
 vi.mock('../../../lib/ollama', () => ({
@@ -1096,5 +1098,53 @@ describe('Marcus sends what you approved', () => {
     const marcus = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'marcus');
     expect(marcus.status).toBe('done');
     expect(getStepOutput(result.commandId, 'marcus').summary).toMatch(/^(Ready\.|Not ready:)/);
+  });
+});
+
+// Outside tools (2026-10-30, owner): a change through an MCP server is Marcus's step, prepared
+// before it asks with the exact call, run once after the approval and never retried.
+describe('Marcus makes an outside change you approved', () => {
+  const outsideStep = (extra = {}) => ({
+    agent: 'marcus', actionType: 'distribution_outside_tool', stepId: 'marcus', title: 'Change price', rationale: 'test', riskLevel: 'high',
+    requiresApproval: false, commandPreview: 'Changes a price.', fragments: [], effects: ['publish_or_send'], needs: [],
+    payload: { tool: 'shop/update_price', arguments: { product: 'Blue mug', price: 18 } }, ...extra,
+  });
+
+  beforeEach(async () => {
+    localStorage.clear();
+    const { addServer, updateServer, mergeTools } = await import('../../../services/mcp/mcpServers');
+    const s = addServer({ name: 'Shop', url: 'https://shop.example/mcp', cost: 'free' });
+    updateServer(s.id, { tools: mergeTools([], [{ name: 'update_price', title: 'Update price', inputSchema: { type: 'object', properties: { product: { type: 'string' }, price: { type: 'number' } }, required: ['product', 'price'] } }]) });
+    const { callTool } = await import('../../../services/mcp/mcpConnection');
+    vi.mocked(callTool).mockClear();
+  });
+
+  it('waits with the exact call saved, and runs once after approval', async () => {
+    const result = await runJoseCommandExecutionPipeline({ commandText: 'Set the blue mug to $18 in my Shop', source: 'test', zeroCostMode: true, previewMode: false, assignments: [outsideStep()] });
+    const requestId = `jose-request-${result.commandId}`;
+    const marcus = getJoseRequest(requestId).steps.find((s) => s.stepId === 'marcus');
+    expect(marcus.status).toBe('waiting_approval');
+    expect(marcus.outsideCall).toMatchObject({ serverId: 'shop', tool: 'update_price', arguments: { product: 'Blue mug', price: 18 } });
+    const { listAgentPackets } = await import('../../../services/agentBusService');
+    const packet = listAgentPackets().find((p) => p.payload?.joseCommandId === result.commandId && p.toAgent === 'marcus');
+    expect(packet.policyReason).toBe('Waiting for your approval: Shop: Update price (product: Blue mug, price: 18)');
+    const { callTool } = await import('../../../services/mcp/mcpConnection');
+    expect(callTool).not.toHaveBeenCalled();
+    await approveRequestStep(requestId, 'marcus');
+    await approveRequestStep(requestId, 'marcus');
+    expect(callTool).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(callTool).mock.calls[0]).toEqual(['shop', 'update_price', { product: 'Blue mug', price: 18 }]);
+    expect(getStepOutput(result.commandId, 'marcus').summary).toMatch(/^Shop: Update price \(product: Blue mug, price: 18\): done\./);
+  });
+
+  it('a failed call is not retried', async () => {
+    const { callTool } = await import('../../../services/mcp/mcpConnection');
+    vi.mocked(callTool).mockResolvedValue({ ok: false, text: '', reason: 'Shop said: no such product' });
+    const result = await runJoseCommandExecutionPipeline({ commandText: 'Set the blue mug to $18 in my Shop', source: 'test', zeroCostMode: true, previewMode: false, assignments: [outsideStep()] });
+    await approveRequestStep(`jose-request-${result.commandId}`, 'marcus');
+    expect(callTool).toHaveBeenCalledTimes(1);
+    const marcus = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'marcus');
+    expect(marcus.status).toBe('failed');
+    vi.mocked(callTool).mockResolvedValue({ ok: true, text: 'Price updated.' });
   });
 });

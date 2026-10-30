@@ -19,6 +19,8 @@ import { randomHex } from '../lib/randomId';
 import { redactText } from './sentinel/exactChecks';
 import { prepareMarcusSend } from './marcus/prepareSend';
 import { ALREADY_SENT, runMarcusSend } from './marcus/runSend';
+import { describeOutsideCall, prepareOutsideCall, runOutsideCall } from './marcus/outsideCall';
+import { OUTSIDE_TASK } from './mcp/mcpTools';
 import { formatSendTime } from './marcus/sendTime';
 import { checkReadiness } from './marcus/readiness';
 import type { SendPreview, SendResult } from './marcus/types';
@@ -151,6 +153,23 @@ export async function runMarcusDistribution(commandText: string, assignment: Ass
   const commandId = String(options.commandId || assignment?.commandId || '');
   const request = getJoseRequest(`jose-request-${commandId}`);
   const requestText = request?.text || String(commandText || '');
+
+  // An outside tool's change (2026-10-30): the call prepared before the approval, run once.
+  if (actionType === OUTSIDE_TASK) {
+    const stepId = String(assignment?.stepId || 'marcus');
+    const saved = requestForCommand(commandId)?.steps.find((s) => s.stepId === stepId)?.outsideCall;
+    let preview = saved;
+    if (!preview) {
+      const prepared = await prepareOutsideCall(commandId, assignment as never, { text: requestText });
+      if (prepared.ok === false) return result(prepared.reason, prepared.outcome === 'setup' ? 'setup_required' : 'failed', record({}), actionType);
+      preview = prepared.preview;
+    }
+    const done = await runOutsideCall(commandId, stepId, preview);
+    if (!done.ok) return result(done.reason || 'The outside tool didn’t do it.', done.setup ? 'setup_required' : 'failed', record({}), actionType);
+    return result(`${describeOutsideCall(preview)}: done.\n${done.text}`, 'completed', record({
+      connector: 'mcp', target: `${preview.serverName} ${preview.tool}`, status: 'sent', approvedBy: 'you', confidenceLevel: TRUST_STATES.INFERRED,
+    }), actionType);
+  }
 
   if (READ_ONLY.has(actionType)) {
     const check = await checkReadiness(commandId, assignment, { text: requestText });
