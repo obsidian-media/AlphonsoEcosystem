@@ -250,6 +250,8 @@
 - Create: `e2e-desktop/specs/resources.e2e.mjs`
 - Modify: `docs/ALPHONSO_GROUND_TRUTH.md` (new section 11.56), `docs/CHANGELOG.md`, `docs/governance/DEFERRED_WORK.md` (mark the resource manager line, keep Hermes open), `CLAUDE.md` (Do Not Duplicate rows for `src/services/resources/` and the two components; the desktop E2E count), `README.md`/`AGENTS.md`/`ARCHITECTURE.md` counts, `docs/DO_NOT_DUPLICATE.generated.md`
 
+  **Built (2026-10-30), calls made while building:** the ComfyUI check starts Alphonso's ComfyUI through the backend (`runtime_start_tool`) rather than a picture step, because a picture step needs a model and minutes of work in CI; it checks the Memory row says "Started by Alphonso" and that the idle time set to 5 is saved, then stops ComfyUI. Admission itself is covered by the unit tests.
+
 - [ ] **Step 1: Write the spec**: a fresh profile opens Runtime Hub and sees `memory-section` with a RAM number above 0 and either a graphics number or `Graphics memory unknown on this computer.`; `memory-meter` is in the top bar; with ComfyUI installed and stopped (skip otherwise, saying why), its idle time set to 1 minute by a test-only `__ALPHONSO_E2E__` hook is not used — instead set the select to 5 and assert the saved value, and assert a picture step started by the spec starts ComfyUI (`memory-row-comfyui` appears with "Started by Alphonso").
 - [ ] **Step 2: Run** `npm run test`, `npm run lint`, `npm run typecheck`, `node scripts/verify-doc-counts.mjs`, `npm run verify:dnd-map` — Expected: all pass.
 - [ ] **Step 3: Update the docs** listed above, in the same commit.
