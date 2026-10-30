@@ -162,6 +162,7 @@ import { markRunningRequestsInterrupted } from './services/jose/joseRequestStore
 import { expireWaitingRequests } from './services/jose/joseExpiry';
 import { loadUserSkills } from './services/skills/userSkills';
 import { startPostScheduler, stopScheduler } from './services/marcusExecutionService';
+import { startResourceWatcher } from './services/resources/idleStop';
 import { randomHex } from './lib/randomId';
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
@@ -226,6 +227,12 @@ function AppShell() {
     if (IS_COACH_WINDOW) return undefined;
     try { startPostScheduler(); } catch { /* checked again next start */ }
     return () => stopScheduler();
+  }, []);
+  // Resource manager (2026-10-30): memory read every few seconds while a step uses a tool,
+  // and tools Alphonso started stopped after their idle time.
+  useEffect(() => {
+    if (IS_COACH_WINDOW) return undefined;
+    return startResourceWatcher();
   }, []);
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;

@@ -19,4 +19,10 @@ describe('App start', () => {
     const source = readFileSync(resolve(__dirname, '../App.tsx'), 'utf8');
     expect(source).toMatch(/if \(IS_COACH_WINDOW\) return undefined;\s*try \{ startPostScheduler\(\); \}/);
   });
+
+  // Resource manager (2026-10-30): memory is watched and idle tools stopped, never from the Coach window.
+  it('starts the resource watcher outside the Coach window', () => {
+    const source = readFileSync(resolve(__dirname, '../App.tsx'), 'utf8');
+    expect(source).toMatch(/if \(IS_COACH_WINDOW\) return undefined;\s*return startResourceWatcher\(\);/);
+  });
 });
