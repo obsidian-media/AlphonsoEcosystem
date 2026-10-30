@@ -105,8 +105,8 @@ describe('the queue', () => {
     expect(usesLocalModel([])).toBe(false);
   });
 
-  it('an NVIDIA, Gemini or Hermes plan is not local', () => {
-    for (const provider of ['nvidia_nim', 'gemini', 'hermes']) {
+  it('an NVIDIA, Gemini, Hermes or OpenRouter plan is not local', () => {
+    for (const provider of ['nvidia_nim', 'gemini', 'hermes', 'openrouter']) {
       localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider } }));
       expect(usesLocalModel([step('hector')])).toBe(false);
     }

@@ -14,6 +14,23 @@ vi.mock('../services/connectors/geminiConnector', () => ({
   isGeminiConfigured: vi.fn(() => false)
 }));
 
+const findWorkingOpenRouterModel = vi.fn(async (candidates) => ({ model: candidates[0], skipped: [] }));
+vi.mock('../services/connectors/openRouterConnector', () => ({
+  OPENROUTER_CHOOSE_FREE: 'openrouter/free',
+  openRouterFailure: (r) => (r.ok ? null : r),
+  isOpenRouterConfigured: vi.fn(() => true),
+  listOpenRouterModels: vi.fn(async () => [
+    { id: 'openrouter/free', name: 'Free Models Router', contextLength: 200000, promptUsdPerToken: 0, completionUsdPerToken: 0, free: true, expiresAtMs: null },
+    { id: 'a/x:free', name: 'A: X (free)', contextLength: 131072, promptUsdPerToken: 0, completionUsdPerToken: 0, free: true, expiresAtMs: null },
+    { id: 'b/y', name: 'B: Y', contextLength: 32000, promptUsdPerToken: 1e-6, completionUsdPerToken: 2e-6, free: false, expiresAtMs: null },
+  ]),
+  getOpenRouterKeyInfo: vi.fn(async () => ({ freeUsed: 4, freeLimit: 50, freeRemaining: 46, isFreeTier: false })),
+}));
+vi.mock('../services/connectors/openRouterModels', async (orig) => ({
+  ...(await orig()),
+  findWorkingOpenRouterModel: (...args) => findWorkingOpenRouterModel(...args),
+}));
+
 vi.mock('../services/modelSelectionService', () => ({
   getCloudModelList: vi.fn(async (provider) => {
     if (provider === 'nvidia_nim') return ['meta/llama-3.1-8b-instruct', 'nvidia/nemotron-4-340b-instruct'];
@@ -80,6 +97,34 @@ describe('CloudModelPicker on NVIDIA', () => {
     await waitFor(() => expect(onModelChange).toHaveBeenCalledWith(''));
     finish({ model: 'meta/llama-3.1-8b-instruct', notServed: [] });
     await waitFor(() => expect(onModelChange).toHaveBeenLastCalledWith('meta/llama-3.1-8b-instruct'));
+  });
+});
+
+describe('OpenRouter in the picker (2026-10-30)', () => {
+  it('lists only free models, the router first, with the free requests left and the privacy line', async () => {
+    const onModelChange = vi.fn();
+    render(<CloudModelPicker provider="openrouter" selectedModel="" onModelChange={onModelChange} />);
+    expect(await screen.findByText('46 free requests left today.')).toBeInTheDocument();
+    expect(screen.getByText('Let OpenRouter choose a free model')).toBeInTheDocument();
+    expect(screen.getByText('A: X (free) (128k)')).toBeInTheDocument();
+    expect(screen.queryByText(/B: Y/)).toBeNull();
+    expect(screen.getByText('Free models are run by other companies through OpenRouter; some may keep what you send.')).toBeInTheDocument();
+    // Nothing chosen yet: the router is used.
+    expect(onModelChange).toHaveBeenCalledWith('openrouter/free');
+  });
+
+  it('tests a free model when it is chosen', async () => {
+    const onModelChange = vi.fn();
+    render(<CloudModelPicker provider="openrouter" selectedModel="openrouter/free" onModelChange={onModelChange} />);
+    const select = await screen.findByRole('combobox');
+    fireEvent.change(select, { target: { value: 'a/x:free' } });
+    await waitFor(() => expect(findWorkingOpenRouterModel).toHaveBeenCalledWith(['a/x:free', 'openrouter/free']));
+    expect(onModelChange).toHaveBeenLastCalledWith('a/x:free');
+  });
+
+  it('has an OpenRouter tab', () => {
+    render(<ModelProviderPicker provider="ollama" onProviderChange={() => {}} selectedModel="" onModelChange={() => {}} ollamaPicker={<div>ollama-picker</div>} />);
+    expect(screen.getByText('OpenRouter')).toBeInTheDocument();
   });
 });
 

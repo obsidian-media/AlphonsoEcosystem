@@ -7,6 +7,7 @@ import type { OllamaModelsProof, OllamaGenerateProof } from '../types/tauri-comm
 import type { NvidiaSendResult } from '../services/connectors/nvidiaNimConnector';
 import type { GeminiSendResult } from '../services/connectors/geminiConnector';
 import type { HermesSendResult } from '../services/connectors/hermesAgentConnector';
+import type { OpenRouterAnswer } from '../services/connectors/openRouterConnector';
 import { getStorage } from './appStorage';
 import { isPaidModelId } from '../services/jose/stepGraph';
 import { randomHex } from './randomId';
@@ -775,7 +776,7 @@ export interface AgentGenerateResult {
 
 // Kept as a bare string union (not imported from modelSelectionService) to
 // avoid the same import-cycle risk documented below for the dynamic imports.
-type AgentModelProviderLike = 'ollama' | 'nvidia_nim' | 'gemini' | 'hermes' | 'claude' | 'chatgpt';
+type AgentModelProviderLike = 'ollama' | 'nvidia_nim' | 'gemini' | 'openrouter' | 'hermes' | 'claude' | 'chatgpt';
 
 /**
  * The one shared per-agent LLM dispatcher — every per-agent service should
@@ -874,6 +875,17 @@ export async function generateAgentLlmResponse(agentId: string, rawOptions: Agen
     const result: NvidiaSendResult = await sendNvidiaMessage(messages, { model: config.model });
     if (!result.ok) throw new Error(('message' in result && result.message) || 'NVIDIA NIM rate limit exceeded');
     return { response: result.content, done: true, backend: 'nvidia_nim', model: result.model };
+  }
+
+  // OpenRouter (2026-10-30): the free model chosen for the agent, else OpenRouter's free router.
+  if (config.provider === 'openrouter') {
+    const { sendOpenRouterMessage, openRouterFailure, OPENROUTER_CHOOSE_FREE } = await import('../services/connectors/openRouterConnector');
+    const model = config.model || OPENROUTER_CHOOSE_FREE;
+    const result = await sendOpenRouterMessage(messages, { model });
+    const failure = openRouterFailure(result);
+    if (failure) throw new Error(failure.message);
+    const answer = result as OpenRouterAnswer;
+    return { response: answer.content, done: true, backend: 'openrouter', model: answer.model };
   }
 
   if (config.provider === 'gemini') {

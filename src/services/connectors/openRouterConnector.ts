@@ -50,16 +50,29 @@ export interface OpenRouterMessage {
   content: string;
 }
 
-export type OpenRouterSendResult =
-  | { ok: true; content: string; model: string; costUsd: number; usage: { promptTokens: number; completionTokens: number } }
-  | {
-      ok: false;
-      kind: 'rate_limited' | 'key_refused' | 'not_served' | 'no_text' | 'failed';
-      message: string;
-      providerLimited?: boolean;
-      retryAfterSecs?: number;
-      resetMs?: number;
-    };
+export interface OpenRouterAnswer {
+  ok: true;
+  content: string;
+  model: string;
+  costUsd: number;
+  usage: { promptTokens: number; completionTokens: number };
+}
+
+export interface OpenRouterFailure {
+  ok: false;
+  kind: 'rate_limited' | 'key_refused' | 'not_served' | 'no_text' | 'failed';
+  message: string;
+  providerLimited?: boolean;
+  retryAfterSecs?: number;
+  resetMs?: number;
+}
+
+export type OpenRouterSendResult = OpenRouterAnswer | OpenRouterFailure;
+
+/** The failure, or null for an answer (the project's TypeScript settings don't narrow on `ok`). */
+export function openRouterFailure(result: OpenRouterSendResult): OpenRouterFailure | null {
+  return result.ok ? null : (result as OpenRouterFailure);
+}
 
 let modelsCache: { atMs: number; models: OpenRouterModel[] } | null = null;
 let keyInfoCache: { atMs: number; info: OpenRouterKeyInfo | null } | null = null;

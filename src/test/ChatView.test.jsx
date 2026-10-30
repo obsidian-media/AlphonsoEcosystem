@@ -100,6 +100,13 @@ vi.mock('../services/connectors/nvidiaNimConnector', () => ({
   sendNvidiaMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from NVIDIA', model: 'meta/llama-3.1-8b-instruct', provider: 'nvidia_nim' })
 }));
 
+const sendOpenRouterMessage = vi.fn();
+vi.mock('../services/connectors/openRouterConnector', async (orig) => ({
+  ...(await orig()),
+  isOpenRouterConfigured: vi.fn().mockReturnValue(true),
+  sendOpenRouterMessage: (...args) => sendOpenRouterMessage(...args),
+}));
+
 vi.mock('../services/connectors/geminiConnector', () => ({
   isGeminiConfigured: vi.fn().mockReturnValue(true),
   sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-3.5-flash-lite', provider: 'gemini' })
@@ -513,6 +520,32 @@ describe('ChatView', () => {
     await waitFor(() => {
       expect(screen.getByText(/request failed/i)).toBeTruthy();
       expect(screen.queryByText(/rate-limited/i)).toBeNull();
+    });
+  });
+
+  // OpenRouter (2026-10-30): a free model answers in one piece; its free limit is said plainly.
+  it('routes generation through OpenRouter when it is the selected provider', async () => {
+    nextMsgId.mockReturnValueOnce('msg-or-user').mockReturnValueOnce('msg-or-assistant');
+    sendOpenRouterMessage.mockResolvedValueOnce({ ok: true, content: 'Hello from OpenRouter', model: 'a/x:free', costUsd: 0, usage: { promptTokens: 1, completionTokens: 1 } });
+    render(<ChatView {...makeProps({ settings: { selectedProvider: 'openrouter', selectedModel: 'a/x:free', colorScheme: 'dark' } })} />);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    await waitFor(() => {
+      expect(sendOpenRouterMessage).toHaveBeenCalledWith(expect.any(Array), { model: 'a/x:free' });
+      expect(screen.getByText('Hello from OpenRouter')).toBeTruthy();
+    });
+  });
+
+  it("says plainly when OpenRouter's free limit is reached", async () => {
+    nextMsgId.mockReturnValueOnce('msg-or-user-2').mockReturnValueOnce('msg-or-assistant-2');
+    sendOpenRouterMessage.mockResolvedValueOnce({ ok: false, kind: 'rate_limited', message: 'Rate limit exceeded', providerLimited: false });
+    render(<ChatView {...makeProps({ settings: { selectedProvider: 'openrouter', selectedModel: 'a/x:free', colorScheme: 'dark' } })} />);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    await waitFor(() => {
+      expect(screen.getByText("OpenRouter's free limit is reached. Try again later, or switch to another provider.")).toBeTruthy();
     });
   });
 

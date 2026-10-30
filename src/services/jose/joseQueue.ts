@@ -16,7 +16,7 @@ import type { StepNeed } from '../resources/stepNeeds';
 import type { PlanStep } from './stepGraph';
 
 // Until 2026-10-30 this listed 'nvidia', which is not a provider id, so NVIDIA steps queued.
-const CLOUD_PROVIDERS = new Set(['nvidia_nim', 'gemini', 'hermes']);
+const CLOUD_PROVIDERS = new Set(['nvidia_nim', 'gemini', 'hermes', 'openrouter']);
 const PAID_MODEL = /^(claude|chatgpt):/;
 
 const current = new Set<string>();
