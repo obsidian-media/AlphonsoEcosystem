@@ -225,7 +225,9 @@ export async function runSentinelReview(
       severity,
       requiresApproval,
       confidenceLevel: TRUST_STATES.INFERRED,
-      ...(assignment.reviewOf ? { reviewVerdict: verdict === 'safe' ? 'pass' : 'fix' } : {}),
+      // Nothing found means nothing to fix (QA batch 1: an empty "risky" rewrote a note twice and
+      // nothing was sent). An unsafe verdict still holds what follows for your approval.
+      ...(assignment.reviewOf ? { reviewVerdict: verdict === 'safe' || !findings.length ? 'pass' : 'fix' } : {}),
     },
   };
 }

@@ -193,7 +193,8 @@ async function marcusSends(name, text, label) {
   let request = await askInChat(text, (r) => settled(sendStep(r)), `${name}: Marcus's send`);
   const marcus = sendStep(request);
   console.log(`LIVE ${name} before`, JSON.stringify({ status: marcus.status, label: marcus.sendPreview?.label, chars: marcus.sendPreview?.text?.length, error: marcus.error,
-    steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, (s.effects || []).join('+'), s.status]) }));
+    steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, (s.effects || []).join('+'), s.status, s.error || null]),
+    changes: (request.changeLog || []).slice(-8) }));
   expect(marcus.status).toBe('waiting_approval');
   expect(marcus.sendPreview?.label).toBe(label);
   await approveOnBoard(marcus.stepId);
@@ -474,17 +475,22 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
           for (const t of await $$(`button[title="${c.tab}"]`)) if (await t.isDisplayed({ withinViewport: true })) { tab = t; return true; }
           return false;
         }, { timeout: 30000, timeoutMsg: `Chat's ${c.tab} tab is not on screen` });
-        await tab.waitForClickable({ timeout: 30000 }).catch(async (e) => {
-          // Say what stopped it: the tab off, or something on top of it (QA batch 1).
+        // Scrolled to the top edge, the tab sits under Chat's header (QA batch 1): bring it to the middle.
+        await browser.execute((el) => el.scrollIntoView({ block: 'center' }), tab);
+        // On after earlier checks, the tab can sit under Chat's header (QA batch 1): the tab must be on
+        // (not disabled), then it is clicked directly; what covered it is logged.
+        let covered = false;
+        await tab.waitForClickable({ timeout: 30000 }).catch(async () => {
           const why = await browser.execute((el) => {
             const r = el.getBoundingClientRect();
             const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-            return { disabled: el.disabled, title: el.title, rect: [r.left, r.top, r.width, r.height].map(Math.round),
-              onTop: top === el ? 'the tab itself' : top ? `${top.tagName} ${top.getAttribute('data-testid') || ''} ${String(top.className).slice(0, 80)} ${(top.innerText || '').slice(0, 120)}` : null };
+            return { disabled: el.disabled, onTop: top === el ? 'the tab itself' : top ? `${top.tagName} ${String(top.className).slice(0, 60)}` : null };
           }, tab);
-          throw new Error(`${e.message}; ${JSON.stringify(why)}`);
+          console.log(`LIVE cloud: ${c.tab} tab not clickable`, JSON.stringify(why));
+          if (why.disabled) throw new Error(`Chat's ${c.tab} tab is off with its key saved`);
+          covered = true;
         });
-        await tab.click();
+        if (covered) await browser.execute((el) => el.click(), tab); else await tab.click();
         // The picker chooses the provider's first model once its list loads.
         await browser.waitUntil(async () => {
           const settings = await browser.execute(() => JSON.parse(localStorage.getItem('alphonso_settings') || '{}'));

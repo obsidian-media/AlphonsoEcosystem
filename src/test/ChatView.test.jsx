@@ -390,6 +390,18 @@ describe('ChatView', () => {
     });
   });
 
+  // QA batch 1 (live NVIDIA check): with no NVIDIA model found yet, Chat sent the Ollama model's
+  // name to NVIDIA, which answered "404 page not found".
+  it('sends nothing to NVIDIA until an NVIDIA model is chosen, and says so', async () => {
+    nextMsgId.mockReturnValueOnce('msg-user-nomodel').mockReturnValueOnce('msg-assistant-nomodel');
+    render(<ChatView {...makeProps({ settings: { selectedProvider: 'nvidia_nim', selectedModel: '', colorScheme: 'dark' } })} />);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    await waitFor(() => expect(screen.getByText(/No NVIDIA NIM model is chosen yet/)).toBeTruthy());
+    expect(sendNvidiaMessage).not.toHaveBeenCalled();
+  });
+
   it('routes generation through sendHermesAgentMessage for the alphonso agent when hermes is selected', async () => {
     nextMsgId.mockReturnValueOnce('msg-hermes-user').mockReturnValueOnce('msg-hermes-assistant');
     setAgentProvider('alphonso', { provider: 'hermes' });

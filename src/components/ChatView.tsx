@@ -979,7 +979,10 @@ export function ChatView({
         content: selectedProvider !== 'ollama'
           ? selectedProvider === 'hermes'
             ? `Hermes is not configured or unreachable for Alphonso. Add its endpoint in Settings → Connectors, or switch back to Ollama.`
-            : `${providerLabel} is not configured. Add a free API key in Settings → Connectors, or switch back to Ollama.`
+            : !settings.selectedModel && (selectedProvider === 'nvidia_nim' ? isNvidiaConfigured() : isGeminiConfigured())
+              // The key is saved; no model of this provider's is chosen yet (QA batch 1).
+              ? `No ${providerLabel} model is chosen yet: wait for the model list next to the provider tabs, or pick one there.`
+              : `${providerLabel} is not configured. Add a free API key in Settings → Connectors, or switch back to Ollama.`
           : selectedModelMissing
             ? `Model not found: ${settings.selectedModel}. Choose one of the installed models: ${installedModels.map((model) => model.name).join(', ')}.`
             : 'No Ollama model is selected. Run Check Ollama and choose an installed model.'

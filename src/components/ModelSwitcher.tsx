@@ -211,6 +211,9 @@ export function CloudModelPicker({ provider, selectedModel, onModelChange }: Clo
       setModels(sorted);
       setNotServed(nvidia.nvidiaModelsNotServed());
       setLoading(false);
+      // A model that isn't NVIDIA's (the Ollama one still saved) is dropped at once, so nothing is
+      // sent to NVIDIA under that name while a model that answers is found (QA batch 1).
+      if (selectedModel && !list.includes(selectedModel)) onModelChange('');
       setFinding(true);
       const found = await nvidia.findWorkingNvidiaModel(nvidiaCandidates(list, selectedModel));
       if (cancelled) return;

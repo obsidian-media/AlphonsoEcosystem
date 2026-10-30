@@ -70,6 +70,19 @@ describe('CloudModelPicker with NVIDIA (no fixed model list)', () => {
   });
 });
 
+describe('CloudModelPicker on NVIDIA', () => {
+  // QA batch 1: until a model answered, the Ollama model's name stayed selected and Chat sent it to NVIDIA.
+  it("drops a model that isn't NVIDIA's at once, before looking for one that answers", async () => {
+    let finish;
+    findWorkingNvidiaModel.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    const onModelChange = vi.fn();
+    render(<CloudModelPicker provider="nvidia_nim" selectedModel="llama3.2:3b" onModelChange={onModelChange} />);
+    await waitFor(() => expect(onModelChange).toHaveBeenCalledWith(''));
+    finish({ model: 'meta/llama-3.1-8b-instruct', notServed: [] });
+    await waitFor(() => expect(onModelChange).toHaveBeenLastCalledWith('meta/llama-3.1-8b-instruct'));
+  });
+});
+
 describe('ModelProviderPicker', () => {
   it('renders a tab for each provider', () => {
     render(<ModelProviderPicker provider="ollama" onProviderChange={() => {}} selectedModel="" onModelChange={() => {}} ollamaPicker={<div>ollama-picker</div>} />);
