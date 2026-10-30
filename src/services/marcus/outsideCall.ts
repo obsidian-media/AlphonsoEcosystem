@@ -147,6 +147,9 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
   let args: Record<string, unknown> | null = given && payload.arguments && typeof payload.arguments === 'object' ? (payload.arguments as Record<string, unknown>) : null;
   if (!chosen || !args) {
     const input = buildStepInput(commandId, assignment as never, String(request.text || ''));
+    // stepInputText() holds the earlier steps' work only, never the request:
+    // without these lines Marcus filled GitHub's fields from Sentinel's check (found live).
+    const asked = [`The request: ${input.request}`, input.instruction ? `Your task: ${input.instruction}` : ''].filter(Boolean).join('\n');
     let options = list;
     if (options.length > 1 && toolLines(options).length > FULL_LIST_BUDGET) {
       let pick: { server: McpServer; entry: McpToolEntry } | null = null;
@@ -154,6 +157,7 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
       for (let attempt = 0; attempt < 2 && !pick; attempt += 1) {
         const prompt = [
           'You are Marcus. You make one change through an outside tool the user connected. Pick the one tool that does what the request asks.',
+          asked,
           stepInputText(input),
           'Tools:',
           shortLines(options),
@@ -178,6 +182,7 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const prompt = [
         'You are Marcus. You make one change through an outside tool the user connected. Use only the values the request or an earlier step gives; never invent one.',
+        asked,
         stepInputText(input),
         'Tools:',
         toolLines(options),

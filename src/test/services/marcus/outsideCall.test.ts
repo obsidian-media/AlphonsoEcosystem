@@ -22,8 +22,9 @@ vi.mock('../../../services/jose/joseRequestStore', () => ({
   updateJoseStep: (_r: string, stepId: string, patch: any) => { steps[stepId] = { ...(steps[stepId] || { stepId }), ...patch }; },
 }));
 vi.mock('../../../services/jose/stepInput', () => ({
-  buildStepInput: () => ({ request: 'Set the blue mug to $18', instruction: 'Change the price', needs: [], others: [], memory: '' }),
-  stepInputText: () => 'The request: Set the blue mug to $18',
+  buildStepInput: (_c: string, _a: unknown, request: string) => ({ request, instruction: 'Change the price', needs: [], others: [], memory: '' }),
+  // Like the real one: the earlier steps' work, never the request itself.
+  stepInputText: () => "From Sentinel's step (sentinel-send-marcus): Safe.",
 }));
 
 const { addServer, updateServer, mergeTools } = await import('../../../services/mcp/mcpServers');
@@ -60,6 +61,26 @@ describe('Marcus’s outside-tool step', () => {
     const preview = (r as any).preview;
     expect(preview).toMatchObject({ serverId: 'shop', tool: 'update_price', arguments: { product: 'Blue mug', price: 18 }, effects: ['publish_or_send'] });
     expect(String(generate.mock.calls[0][1].prompt)).toContain('"required":["product","price"]');
+  });
+
+  // Found live: stepInputText() leaves out the request, so the prompts held only
+  // Sentinel's check and Marcus filled every field with "sentinel".
+  it('tells Marcus the request and his task in both the pick and the fill', async () => {
+    const s = addServer({ name: 'Hub', url: 'https://hub.example/mcp', cost: 'free' });
+    const big = { type: 'object', properties: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`field_${i}`, { type: 'string', description: 'x'.repeat(40) }])) };
+    const tools = Array.from({ length: 40 }, (_, i) => ({ name: `tool_${i}`, inputSchema: big }));
+    tools.push({ name: 'issue_write', inputSchema: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] } } as never);
+    updateServer(s.id, { tools: mergeTools([], tools) });
+    generate
+      .mockResolvedValueOnce({ response: '{"tool": "hub/issue_write"}' })
+      .mockResolvedValueOnce({ response: '{"tool": "hub/issue_write", "arguments": {"title": "Hi"}}' });
+    await prepareOutsideCall('c1', step(), { text: 'Through Hub, open an issue titled Hi' });
+    expect(generate).toHaveBeenCalledTimes(2);
+    for (const call of generate.mock.calls) {
+      const prompt = String(call[1].prompt);
+      expect(prompt).toContain('Through Hub, open an issue titled Hi');
+      expect(prompt).toContain('Change the price');
+    }
   });
 
   it('offers only the tools of the server the request names', async () => {
