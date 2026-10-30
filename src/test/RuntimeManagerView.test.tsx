@@ -129,6 +129,19 @@ describe('RuntimeManagerView', () => {
     }
   });
 
+  // Hermes gateway (2026-10-30): Hermes has no web page; it says which agents use it.
+  it('lists Hermes as used by Hermes-profile agents, with no web page', async () => {
+    mockGetAllStatus.mockResolvedValue([
+      ...runtimeNames,
+      { ...runtimeNames[0], name: 'hermes-agent', displayName: 'Hermes Agent', running: true },
+    ]);
+    render(<RuntimeManagerView />);
+    const note = await screen.findByTestId('runtime-tool-note-hermes-agent');
+    expect(note.textContent).toMatch(/Used by: .*Hermes profile/);
+    const card = await screen.findByTestId('runtime-tool-hermes-agent');
+    expect(within(card).queryByText(/Open UI/)).toBeNull();
+  });
+
   // Bare <a target="_blank"> does nothing in the desktop window, and Open UI
   // was offered for background services with no page (Ollama).
   it('opens a running tool through the backend, and only tools with a web page', async () => {
