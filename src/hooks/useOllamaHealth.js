@@ -24,7 +24,9 @@ export function useOllamaHealth({
       message: 'Checking Ollama /api/tags...'
     }));
 
-    let result = await checkOllama(settings.endpoint, settings.selectedModel);
+    // With a cloud provider in Chat the saved model is that provider's, not Ollama's (QA batch 1).
+    const ollamaInChat = !settings.selectedProvider || settings.selectedProvider === 'ollama';
+    let result = await checkOllama(settings.endpoint, ollamaInChat ? settings.selectedModel : '');
     let trust = result.state === 'connected' ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED;
 
     if (
@@ -42,7 +44,7 @@ export function useOllamaHealth({
         : [];
 
       if (runtimeProof.reachable) {
-        const selectedFromProof = chooseDefaultModel(proofModels, settings.selectedModel);
+        const selectedFromProof = chooseDefaultModel(proofModels, ollamaInChat ? settings.selectedModel : '');
         const mergedModels = proofModels.length > 0 ? proofModels : result.models;
         const hasModels = Array.isArray(mergedModels) && mergedModels.length > 0;
         result = {
@@ -96,13 +98,14 @@ export function useOllamaHealth({
 
     // A health check is not something to remember (agent phase 7).
 
-    if ((!settings.selectedModel || result.state === 'model_missing') && result.selectedModel) {
+    // Only while Ollama answers Chat: replacing a cloud model sent llama3.2:3b to NVIDIA (QA batch 1).
+    if (ollamaInChat && (!settings.selectedModel || result.state === 'model_missing') && result.selectedModel) {
       setSettings((current) => ({
         ...current,
         selectedModel: result.selectedModel
       }));
     }
-  }, [desktopBridge.state, settings.endpoint, settings.selectedModel, setOllamaStatus, setLastCheckedAt, setVerificationLogs, setMemoryItems, setSettings, ollamaCheckRunRef]);
+  }, [desktopBridge.state, settings.endpoint, settings.selectedModel, settings.selectedProvider, setOllamaStatus, setLastCheckedAt, setVerificationLogs, setMemoryItems, setSettings, ollamaCheckRunRef]);
 
   const initialCheckDoneRef = useRef(false);
   useEffect(() => {

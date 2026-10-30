@@ -188,9 +188,12 @@ async function askInChat(text, ready, what) {
 async function marcusSends(name, text, label) {
   const settled = (s) => ['waiting_approval', 'done', 'failed', 'setup_needed'].includes(s?.status);
   // The send step, not any Marcus step: a plan may also give him a readiness check, which is done at once.
-  const sendStep = (r) => r.steps.find((s) => s.agent === 'marcus' && (s.effects || []).includes('publish_or_send'))
+  // The newest one: a rewrite after a review adds a new send step ("marcus-r1") in place of the first.
+  const sendStep = (r) => [...r.steps].reverse().find((s) => s.agent === 'marcus' && (s.effects || []).includes('publish_or_send'))
     || r.steps.find((s) => s.agent === 'marcus');
-  let request = await askInChat(text, (r) => settled(sendStep(r)), `${name}: Marcus's send`);
+  // A send handed back for a rewrite is "done" before its new step exists: wait for one that waits,
+  // or for the request to stop running.
+  let request = await askInChat(text, (r) => sendStep(r)?.status === 'waiting_approval' || (settled(sendStep(r)) && !['running', 'queued'].includes(r.status)), `${name}: Marcus's send`);
   const marcus = sendStep(request);
   console.log(`LIVE ${name} before`, JSON.stringify({ status: marcus.status, label: marcus.sendPreview?.label, chars: marcus.sendPreview?.text?.length, error: marcus.error,
     steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, (s.effects || []).join('+'), s.status, s.error || null]),
