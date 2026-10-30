@@ -393,7 +393,7 @@ Source-backed inventory: 346 services and 180 components. Human purpose descript
 | service | `src/services/marcus/composioChannel.ts` | `checkComposioAnswer`, `composioSendTools`, `describeComposioTools` |
 | service | `src/services/marcus/describeSend.ts` | `describeSend` |
 | service | `src/services/marcus/destinations.ts` | `CHANNEL_LIMITS`, `CONNECTOR_NAMES`, `DESTINATION_KEYS`, `destinationsFor`, `isAllowedTarget`, `listedN8nWorkflows`, `MARCUS_CONNECTORS`, `requestWithoutQuotes`, `targetLabel`, `telegramOwnerChatId` |
-| service | `src/services/marcus/outsideCall.ts` | `ALREADY_DONE`, `argumentProblems`, `describeOutsideCall`, `isOutsideCallStep`, `NO_OUTSIDE_TOOL`, `OutsideCallPreview`, `PrepareOutside`, `prepareOutsideCall`, `runOutsideCall` |
+| service | `src/services/marcus/outsideCall.ts` | `ALREADY_DONE`, `argumentProblems`, `describeOutsideCall`, `FULL_LIST_BUDGET`, `isOutsideCallStep`, `NO_OUTSIDE_TOOL`, `OutsideCallPreview`, `PrepareOutside`, `prepareOutsideCall`, `runOutsideCall` |
 | service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `MARCUS_MODEL_FAILED`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `notSetUp`, `pickDestination` |
 | service | `src/services/marcus/prepareSend.ts` | `deliveryLines`, `deliveryReason`, `describeSend`, `FIX_ROUNDS_USED`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason`, `unfilledGaps`, `unfilledReason` |
 | service | `src/services/marcus/readiness.ts` | `checkReadiness` |
