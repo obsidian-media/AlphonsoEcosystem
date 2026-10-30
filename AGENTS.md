@@ -41,7 +41,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
   src-tauri/             Rust backend
-  src/lib.rs           ~959 lines, 206 Tauri commands (across 54 modules)
+  src/lib.rs           ~967 lines, 212 Tauri commands (across 56 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -71,6 +71,7 @@ ios/                   iOS companion app (SwiftUI)
   src/companion_router.rs Companion command routing
   src/commands/         Split-out commands (bridge, clipboard, filesystem, jose, notification, ocr, restore, runtime, system, updates, url)
   src/comfyui_installs.rs / comfyui_proxy.rs / comfyui_video_models.rs  Finding ComfyUI, its narrow backend route, pinned video/character/motion models
+  src/mcp_client.rs / mcp_auth.rs  Outside tools: Alphonso calls online MCP servers (never called into)
   src/media_tools.rs   FFmpeg, Kokoro, MusicGen, Whisper, stock clips, video assembly, Shorts, motion clips
   src/media_storage.rs Your own S3-compatible storage (SigV4)
   src/meta_video.rs / meta_media.rs  Reels, Instagram by link, Facebook photo posts

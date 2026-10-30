@@ -399,7 +399,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~959 lines · 206 Tauri commands · 54 modules   │    │
+│  │  lib.rs ~967 lines · 212 Tauri commands · 56 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -503,7 +503,7 @@ npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app 
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 397 Rust unit tests across 54 modules
+cargo test                     # 403 Rust unit tests across 56 modules
                                 # (cargo test runs a few more: the async
                                 # #[tokio::test] cases, 370 in all)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
