@@ -104,6 +104,21 @@ function startRun(key: string, need: StepNeed, state: ResourceState): Admitted {
   };
 }
 
+/**
+ * A step run outside a saved request (an approved packet, a dead-letter retry): the same gate,
+ * keyed by `gateId`. Not admitted → `{ ok: false, attempts: 0, error }` without running it.
+ */
+export async function runAdmitted<T>(
+  gateId: string,
+  stepId: string,
+  assignment: StepAssignment,
+  run: () => Promise<T>,
+): Promise<T | { ok: false; attempts: 0; error: string }> {
+  const admitted = await admitStep(gateId, stepId, assignment);
+  if (!admitted.ok) return { ok: false, attempts: 0, error: (admitted as NotAdmitted).reason };
+  try { return await run(); } finally { admitted.release(); }
+}
+
 /** Waits until this step may run; `release()` when it ends. Never throws. */
 export async function admitStep(
   requestId: string,

@@ -23,7 +23,8 @@ const perMillion = (perToken: number) => Math.round(perToken * 1e6 * 1e6) / 1e6;
 
 export function paidModelChoices(models: OpenRouterModel[]): PaidModelChoice[] {
   return models
-    .filter((m) => !m.free && m.textOutput && m.promptUsdPerToken !== null && m.completionUsdPerToken !== null)
+    // A `:batch` version is listed but can't answer a chat (checked live 2026-10-30).
+    .filter((m) => !m.free && m.textOutput && !m.id.endsWith(':batch') && m.promptUsdPerToken !== null && m.completionUsdPerToken !== null)
     .filter((m) => (m.promptUsdPerToken as number) > 0 || (m.completionUsdPerToken as number) > 0)
     .map((m) => {
       const input = perMillion(m.promptUsdPerToken as number);

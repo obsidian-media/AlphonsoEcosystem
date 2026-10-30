@@ -61,6 +61,7 @@ pub(crate) async fn launch_ollama() -> Result<ServiceLaunchProof, String> {
 pub(crate) async fn launch_comfyui(
   comfyui_dir: String,
   python_exe: String,
+  runtime: tauri::State<'_, crate::runtime_manager::RuntimeManager>,
 ) -> Result<ServiceLaunchProof, String> {
   let dir = comfyui_dir.trim().to_string();
   if dir.is_empty() {
@@ -134,12 +135,15 @@ pub(crate) async fn launch_comfyui(
   }
   comfy_cmd.current_dir(&dir);
   utils::no_window(&mut comfy_cmd);
-  comfy_cmd.spawn().map_err(|e| {
+  let child = comfy_cmd.spawn().map_err(|e| {
     format!(
       "Failed to launch ComfyUI from '{}' using '{}': {}",
       dir, py, e
     )
   })?;
+  // Recorded as started by Alphonso (owner, 2026-10-30), so the idle stop, Runtime Hub's Stop
+  // and the Memory section treat it like Alphonso's own copy. A ComfyUI you start stays yours.
+  runtime.record_pid("comfyui", child.id());
   Ok(ServiceLaunchProof {
     service: "comfyui".to_string(),
     launched: true,

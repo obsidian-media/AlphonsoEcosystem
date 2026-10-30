@@ -455,7 +455,7 @@ Source-backed inventory: 340 services and 179 components. Human purpose descript
 | service | `src/services/resources/ensureTools.ts` | `EnsureResult`, `ensureTools` |
 | service | `src/services/resources/freeMemory.ts` | `FreeResult`, `freeThings` |
 | service | `src/services/resources/idleStop.ts` | `DEFAULT_IDLE_MINUTES`, `FAST_POLL_MS`, `getIdleMinutes`, `idleTick`, `latestResources`, `onResources`, `resetIdleStopForTests`, `setIdleMinutes`, `SLOW_POLL_MS`, `startResourceWatcher` |
-| service | `src/services/resources/resourceGate.ts` | `admitStep`, `Admitted`, `firstStepNeed`, `NotAdmitted`, `RESERVATION_SETTLE_MS`, `reservedTotal`, `resetGateForTests`, `WAIT_RECHECK_MS` |
+| service | `src/services/resources/resourceGate.ts` | `admitStep`, `Admitted`, `firstStepNeed`, `NotAdmitted`, `RESERVATION_SETTLE_MS`, `reservedTotal`, `resetGateForTests`, `runAdmitted`, `WAIT_RECHECK_MS` |
 | service | `src/services/resources/resourceState.ts` | `GPU_UNKNOWN`, `GpuSource`, `LoadedThing`, `readResources`, `ResourceState`, `UsageRecord` |
 | service | `src/services/resources/stepNeeds.ts` | `estimateNeed`, `MODEL_WORKING_MEMORY`, `NeededTool`, `recordStepUse`, `resetUsageForTests`, `StepAssignment`, `StepNeed`, `toolsForStep` |
 | service | `src/services/resources/toolUse.ts` | `anyInUse`, `beginUse`, `endUse`, `isInUse`, `lastUsedAt`, `markUsed`, `resetToolUseForTests`, `usageRecord` |

@@ -50,6 +50,8 @@ describe('OpenRouter paid models', () => {
       row('google/lyria-3', '0', '0', ['audio']),
       row('m/n', '0.0000005', '0.0000015', ['text', 'image']),
       row('pics/only', '0.00001', '0.00002', ['image']),
+      // OpenRouter lists batch versions, which chat can't use (checked live 2026-10-30).
+      row('b/y:batch', '0.0000005', '0.000001'),
     ]));
     const choices = paidModelChoices(await listOpenRouterUserModels());
     expect(choices).toEqual([

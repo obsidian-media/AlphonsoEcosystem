@@ -61,7 +61,7 @@ import { describeCodeChange, previewNeeds } from './alphonso/changeSet';
 import { onProjectReleased, releaseProject, releaseProjectsHeldBy } from './alphonso/projectLock';
 import { clearStop, isStopRequested, stopSignal, stopWaitsFor, STOPPED_LINE } from './jose/joseStop';
 import { giveBackTurn, takeTurn, usesLocalModel } from './jose/joseQueue';
-import { admitStep, firstStepNeed } from './resources/resourceGate';
+import { admitStep, firstStepNeed, runAdmitted } from './resources/resourceGate';
 import { readingFolder, reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
 import { listWorkflows } from './workflowBuilderService';
@@ -2408,10 +2408,12 @@ export async function retryDLQ(taskId) {
   }
 
   const draftDisabledRetry = !(await checkOllamaAvailable(entry.endpoint || undefined));
-  const taskResult: any = await executeAssignmentWithRetries(packet, assignment, commandText, {
-    endpoint: entry.endpoint || undefined,
-    draftDisabled: draftDisabledRetry
-  });
+  // The resource gate covers a retry too (owner, 2026-10-30).
+  const taskResult: any = await runAdmitted(`packet:${packet.id}`, assignment.stepId || assignment.agent, assignment,
+    () => executeAssignmentWithRetries(packet, assignment, commandText, {
+      endpoint: entry.endpoint || undefined,
+      draftDisabled: draftDisabledRetry
+    }));
 
   if (!taskResult.ok) {
     updatePacketStatus(packet.id, 'dead_letter', {
@@ -2708,13 +2710,15 @@ export async function executeApprovedPackets(packetIds: any, options: any = {}) 
     const draftDisabled = !(await checkOllamaAvailable(endpoint));
 
     try {
-      const taskResult: any = await executeAssignmentWithRetries(packet, assignment, commandText, {
-        endpoint,
-        draftDisabled,
-        onProgress,
-        onToken,
-        conversationHistory
-      });
+      // The resource gate covers an approved packet run on its own too (owner, 2026-10-30).
+      const taskResult: any = await runAdmitted(`packet:${packetId}`, assignment.stepId || assignment.agent, assignment,
+        () => executeAssignmentWithRetries(packet, assignment, commandText, {
+          endpoint,
+          draftDisabled,
+          onProgress,
+          onToken,
+          conversationHistory
+        }));
 
       if (taskResult.ok) {
         succeeded += 1;
