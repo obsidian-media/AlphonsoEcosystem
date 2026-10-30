@@ -11,6 +11,7 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 ## [Unreleased]
 
 ### QA batch 1: the live check of 2.10.0 with Telegram (2026-10-28)
+**Finished 2026-10-29:** every account in the live check passed (Slack, GitHub, ElevenLabs, Pexels, Pixabay, Coverr, Tavily, Brave, Notion, ClickUp, Composio, NVIDIA NIM, Gemini, Telegram; Higgsfield skipped by the owner), and the desktop suite ran with qwen2.5:7b. Open: the bundled ffmpeg isn't code-signed, so Windows Smart App Control blocks it (DEFERRED_WORK).
 The owner ran Telegram's Approve, Stop and Cancel on the installed 2.10.0; what didn't match was fixed:
 - **The Telegram bot didn't answer at first.** Start-up jobs waited for the window's "idle" moment with no deadline, which a busy or background window can put off; they now start within 3 seconds. **Save & Enable** on Telegram starts the link at once, without a restart.
 - **"Set the output folder in Settings → General"**: General has no such field. It is on Settings → Runtime, and the message now says so.

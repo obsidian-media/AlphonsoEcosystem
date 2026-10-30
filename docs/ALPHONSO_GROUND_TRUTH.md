@@ -2442,6 +2442,16 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.54 QA batch 1, finished: every live account and the whole desktop suite (2026-10-29)
+
+The owner's accounts, typed into Settings by `live-accounts.e2e.mjs` / `jose-telegram-live.e2e.mjs` on CI-built debug apps, with `qwen2.5:7b`. **Passed live:** Slack (one approved post), GitHub (one approved issue, closed after), ElevenLabs (one voice-over within $0.50), Pexels, Pixabay and Coverr (a clip found and downloaded from each), Tavily and Brave (a cited research answer), Notion (one page), ClickUp (one task, marked complete after), Composio (key checked, toolkits listed), NVIDIA NIM and Gemini (a plain answer in Chat each), Telegram (pairing by `/start`, Approve pressed on the phone carried the request on). Higgsfield skipped (owner). No key appeared in any log (counted after every run).
+
+**Desktop suite with `qwen2.5:7b`** (46 files): all pass on this computer except (a) three that need the bundled ffmpeg, which Windows Smart App Control blocks here because its files aren't code-signed (CI passes them), and (b) three that need Hector's free search, refused by DuckDuckGo after a day of runs ("too many searches"; the step says so). The 1.5B CI leg's failures that the 7B run passes are the small model.
+
+**Fixed in this part**, each with a test that failed first: Chat's NVIDIA/Gemini tabs turn on when a key is saved (`onConnectorCredentialsChanged`); no Ollama model name is sent to NVIDIA (the picker, and `useOllamaHealth.js` swapping a cloud model every 30 s); the NVIDIA model search asks four at once, 20 s each (`NVIDIA_PROBE`, `connector_nvidia_request`'s `timeoutSecs`); a plan review is one Maria step (`planReviewOnly()`); help gets real task types only; ClickUp's "Team not authorized" says to check the list ID (`clickupReason()`); a Sentinel review with no findings passes the loop; a late review of revised work is skipped; an unlinked Sentinel check reviews the writing (`inferReviewOf()`); Echo keeps the numbers you gave and never saves `MEMORY_ONLY_INSTRUCTION`; a sentence saying where the text goes goes back to the writer (`deliveryLines()`); Notion and ClickUp aren't paid; Composio and NVIDIA go through the backend. A content-factory test had a backspace where `\b` was meant, so it could never fail.
+
+**Open (owner decisions, `DEFERRED_WORK.md`):** code-sign the bundled ffmpeg (Smart App Control would block voice-overs, finished videos and Shorts for users who have it on); Hector's free search can be throttled, and only a search key in Settings avoids it.
+
 ## 11.53 QA batch 1: the live check of 2.10.0 with Telegram (2026-10-28)
 
 The owner ran checks 1a–1c (Approve, `/stop`, Cancel on Telegram) on the installed 2.10.0, with `qwen3:0.6b`. Found and fixed, each with a test that failed first:

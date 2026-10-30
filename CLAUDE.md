@@ -714,6 +714,10 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
+_Last verified: 2026-10-29 (QA batch 1 finished, branch `fix/qa-batch-1`, PR #369)_ — every live account in the owner's plan passed on CI-built debug apps (Slack, GitHub, ElevenLabs, Pexels/Pixabay/Coverr, Tavily, Brave, Notion, ClickUp, Composio, NVIDIA, Gemini, Telegram; Higgsfield skipped), and the 46-file desktop suite ran with `qwen2.5:7b`. Fixes and what is open: `docs/ALPHONSO_GROUND_TRUTH.md` §11.54, `docs/governance/DEFERRED_WORK.md` (2026-10-29: ffmpeg code-signing, throttled free search). Things to know: on the dev machine Smart App Control blocks unsigned binaries (the bundled ffmpeg, locally built Rust), so test with the CI artifact `alphonso-debug-app-<sha>`; DuckDuckGo throttles after many runs; the live-check scripts read keys from files and a log is counted for key traces after every run.
+
+---
+
 _Last verified: 2026-10-06 (false-confidence tests)_ — `bridge/tests/server.test.js` never ran in CI (`npm test` filtered to `src`) and had TypeScript syntax in a `.js` file; fixed, and `test`/`test:watch` now run `src bridge`. `companionIntegration.test.js` rewritten as a source-reading contract test (mutation-verified). Same day: `scripts/run-vitest-programmatic.mjs` was found to run zero test bodies (wrong `startVitest` mode, exit always 0) and was fixed — trust `npm test` only from 2026-10-06 on; #270 macOS notarization, #271 AI-planned command approval, #272 approval-bridge fix, #275 approval for execute/restore/enable actions merged; #276 (Tailwind v4) held on the macOS 10.15 decision. See `docs/governance/DEFERRED_WORK.md` 2026-10-06 entries.
 
 ---

@@ -245,7 +245,7 @@ describe('Alphonso desktop: Echo remembers what you decide', () => {
     expect(shown).toBe('On.');
     const request = await ask('/jose What did we decide about morning meals?');
     const said = await stepSummary(request, 'echo');
-    console.log('ECHO-E2E meaning', JSON.stringify(said.slice(0, 600)));
+    console.log('ECHO-E2E meaning', JSON.stringify(said.slice(0, 600)), JSON.stringify(request.steps.map((x) => [x.stepId, x.agent, x.actionType, x.status, x.error || null])));
     expect(said.toLowerCase()).toContain('breakfast');
   }).timeout(1600000);
 
