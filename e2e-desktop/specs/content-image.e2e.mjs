@@ -18,6 +18,7 @@ async function comfyUiIsUp() {
 
 describe('Alphonso desktop Content Studio image generation', function () {
   // The first image after ComfyUI starts includes a cold checkpoint load.
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
   this.timeout(480000);
 
   before(async function () {
@@ -26,7 +27,6 @@ describe('Alphonso desktop Content Studio image generation', function () {
     if (!(await ollamaHasModels())) this.skip();
     // Load the model first: these specs check what it writes, not how fast
     // a cold model comes off the disk.
-    this.timeout(400000);
     await warmSelectedModel();
     await $('[data-testid="sidebar-chat-shortcut"]').click();
     await browser.waitUntil(

@@ -46,11 +46,12 @@ async function lastRequest() {
   return requests.sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0))[0] || null;
 }
 
-describe('Alphonso desktop: each agent does only its own work', () => {
+describe('Alphonso desktop: each agent does only its own work', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(400000);
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(400000);
     const extra = { showPlanFirst: 'never', ...((await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {}) };
     const loaded = await invoke('load_settings');
     const saved = JSON.parse((loaded.ok && loaded.value) || '{}');

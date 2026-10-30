@@ -14,7 +14,8 @@ const LEGACY_COLOR_TO_VARIANT: Record<string, 'default' | 'success' | 'warning' 
   zinc: 'default',
 };
 import { AlphonsoProjectsSection } from './alphonso/AlphonsoProjectsSection';
-import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
+import { formatModelSize, isChatModel, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
+import { SmallModelNotice } from './SmallModelNotice';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
 import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits, hydrateComposioApiKeyFromKeychain } from '../services/composioService';
@@ -274,7 +275,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
             className="w-full appearance-none bg-(--surface-2) rounded-xl px-4 py-3 pr-10 text-sm text-(--text-1) focus:outline-hidden focus:ring-1 focus:ring-(--accent-border)"
           >
             {selectedModelMissing && <option value="">Model not found: {selectedModel}</option>}
-            {models.map((model) => (
+            {models.filter(isChatModel).map((model) => (
               <option key={model.name} value={model.name}>
                 {model.name} - {formatModelSize(model.size)}
               </option>
@@ -288,6 +289,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
           Model not found: <span className="font-mono">{selectedModel}</span>. Suggested installed models: {models.map((model) => model.name).join(', ')}.
         </div>
       )}
+      {!selectedModelMissing && <SmallModelNotice model={selectedModel} />}
     </div>
   );
 }

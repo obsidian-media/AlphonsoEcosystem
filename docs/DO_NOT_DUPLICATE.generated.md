@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 328 services and 176 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 328 services and 177 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -150,6 +150,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | component | `src/components/SignInPanel.tsx` | `InstagramLoginSection`, `SignInButton` |
 | component | `src/components/skills/SkillForm.tsx` | `ownTaskTypes`, `SkillForm` |
 | component | `src/components/skills/SkillsPage.tsx` | `SkillsPage` |
+| component | `src/components/SmallModelNotice.tsx` | `isSmallModel`, `SMALL_MODEL_MIN_B`, `SMALL_MODEL_NOTE`, `SmallModelNotice` |
 | component | `src/components/SmartVoiceButton.tsx` | `SmartVoiceButton` |
 | component | `src/components/teams/TeamBuilder.tsx` | `BuilderRow`, `rowsToMembers`, `TeamBuilder` |
 | component | `src/components/teams/TeamsPage.tsx` | `default`, `TeamsPage` |
@@ -199,7 +200,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/alphonso/editChange.ts` | `EDIT_NOT_IN_CHANGE`, `EDIT_TOO_LATE`, `editCodeFile` |
 | service | `src/services/alphonso/prepareCode.ts` | `ALPHONSO_NO_PLAN`, `askAlphonso`, `codeModelFor`, `FOLDER_GONE`, `MODEL_DIDNT_ANSWER`, `NEEDS_TO_KNOW`, `prepareAlphonsoCode`, `PrepareCode`, `safePath`, `WHICH_PROJECT` |
 | service | `src/services/alphonso/projectLock.ts` | `busyLine`, `claimProject`, `onProjectReleased`, `projectHolder`, `releaseProject`, `releaseProjectsHeldBy` |
-| service | `src/services/alphonso/projects.ts` | `AlphonsoProject`, `getCodeModel`, `listProjects`, `NAME_A_PROJECT`, `NEEDS_OUTPUT_FOLDER`, `NO_PROJECT`, `projectNamedIn`, `projectPlace`, `projectsNamedIn`, `saveProjects`, `scratchPlace`, `WorkPlace` |
+| service | `src/services/alphonso/projects.ts` | `AlphonsoProject`, `asksForProjectWork`, `getCodeModel`, `listProjects`, `NAME_A_PROJECT`, `NEEDS_OUTPUT_FOLDER`, `NO_PROJECT`, `projectNamedIn`, `projectPlace`, `projectsNamedIn`, `saveProjects`, `scratchPlace`, `WorkPlace` |
 | service | `src/services/alphonso/readProject.ts` | `listProjectFiles`, `ProjectFile`, `readProjectFiles` |
 | service | `src/services/alphonso/runCode.ts` | `applyChangeSet`, `CommandRun`, `runAlphonsoCode`, `runApprovedCommands` |
 | service | `src/services/alphonso/splitProjects.ts` | `splitPerProject` |
@@ -244,7 +245,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/connectors/calleConnector.ts` | `CalleCallAttempt`, `CalleCallStatus`, `CalleCallTask`, `CalleCreateCallRequest`, `CalleTranscriptTurn`, `createCall`, `getCall`, `isCalleConfigured`, `pollCallUntilTerminal` |
 | service | `src/services/connectors/calleMcpConnector.ts` | `CallRunActivityEntry`, `CallRunOutcome`, `CallRunResult`, `CallRunResultPayload`, `getCallRun`, `planCall`, `PlanCallArgs`, `PlanCallQuestion`, `PlanCallResult`, `runCall` |
 | service | `src/services/connectors/comfyUiEndpoint.js` | `COMFYUI_ENDPOINT_KEY`, `DEFAULT_COMFYUI_ENDPOINT`, `getComfyUiEndpoint`, `setComfyUiEndpoint` |
-| service | `src/services/connectors/connectorAuth.ts` | `authorizeConnectorRequest`, `ConnectorAuthProfile`, `ConnectorAuthProfiles`, `ConnectorCredentials`, `DEFAULT_AUTH_PROFILES`, `getConnectorCredential`, `getConnectorCredentials`, `hydrateConnectorAuthProfilesFromSqlite`, `hydrateConnectorCredentialsFromSqlite`, `isConnectorAuthenticated`, `listConnectorAuthProfiles`, `logUnauthenticatedConnectorRequest`, `LogUnauthenticatedOptions`, `normalizeAllowlist`, `readAuthProfiles`, `saveConnectorCredential`, `updateConnectorAuthProfile`, `writeAuthProfiles` |
+| service | `src/services/connectors/connectorAuth.ts` | `authorizeConnectorRequest`, `ConnectorAuthProfile`, `ConnectorAuthProfiles`, `ConnectorCredentials`, `DEFAULT_AUTH_PROFILES`, `getConnectorCredential`, `getConnectorCredentials`, `hydrateConnectorAuthProfilesFromSqlite`, `hydrateConnectorCredentialsFromSqlite`, `isConnectorAuthenticated`, `listConnectorAuthProfiles`, `logUnauthenticatedConnectorRequest`, `LogUnauthenticatedOptions`, `normalizeAllowlist`, `onConnectorCredentialsChanged`, `readAuthProfiles`, `saveConnectorCredential`, `updateConnectorAuthProfile`, `writeAuthProfiles` |
 | service | `src/services/connectors/connectorConstants.ts` | `CONNECTOR_AUDIT_KEY`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_KEY`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_KEY`, `CONNECTOR_SCOPE` |
 | service | `src/services/connectors/connectorImageGenerators.js` | `checkComfyUiImage`, `comfyRequest`, `COMFYUI_CHECKPOINT_KEY`, `COMFYUI_ENDPOINT_KEY`, `COMFYUI_IMAGE_TIMEOUT_MS`, `DEFAULT_COMFYUI_ENDPOINT`, `generateComfyUiImage`, `generateSdWebUiImage`, `getComfyUiEndpoint`, `getComfyUiVideoHistory`, `getSelectedComfyUiCheckpoint`, `listComfyUiCheckpoints`, `pickAutomaticCheckpoint`, `pollComfyUiHistory`, `queueComfyUiVideo`, `queueComfyUiWorkflow`, `setComfyUiEndpoint`, `setSelectedComfyUiCheckpoint` |
 | service | `src/services/connectors/connectorOutbound.js` | `proveTelegramConnectorPath`, `rescheduleYouTubeVideo`, `sendChatGptConnectorMessage`, `sendClaudeConnectorMessage`, `sendClickUpConnectorTask`, `sendGitHubAction`, `sendNotionConnectorEntry`, `sendQwenConnectorMessage`, `sendSlackMessage`, `sendTelegramConnectorMessage`, `sendWhatsAppConnectorMessage`, `uploadYouTubeConnectorVideo` |
@@ -258,9 +259,9 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/connectors/hermesAgentConnector.ts` | `getHermesAgentEndpoint`, `getHermesAgentHealth`, `getHermesSessionMode`, `HermesAgentEndpoint`, `HermesBlocked`, `HermesChatOptions`, `HermesChatSuccess`, `HermesCircuitOpen`, `HermesMessage`, `HermesRateLimited`, `HermesSendResult`, `HermesSessionMode`, `isHermesAgentConfigured`, `listHermesAgentModels`, `resolveSecureSessionId`, `saveHermesAgentEndpoint`, `sendHermesAgentMessage`, `setHermesSessionMode` |
 | service | `src/services/connectors/higgsfieldConnector.ts` | `cachedHiggsfieldEstimate`, `HIGGSFIELD_CONSOLE_URL`, `HIGGSFIELD_NOT_SET_UP`, `higgsfieldAvailable`, `higgsfieldKeys`, `HiggsfieldKeys`, `higgsfieldModels`, `HiggsfieldModels`, `isHiggsfieldConfigured`, `listHiggsfieldPresets`, `parseExtra`, `refreshHiggsfieldEstimate`, `testHiggsfieldModel` |
 | service | `src/services/connectors/n8nConnector.ts` | `isN8nHealthy`, `listN8nWorkflows`, `N8nActionResult`, `N8nHealthResult`, `N8nWebhookResult`, `N8nWorkflowListResult`, `setN8nWorkflowActive`, `triggerN8nWebhook` |
-| service | `src/services/connectors/nvidiaNimConnector.ts` | `DEFAULT_MODEL`, `isNvidiaConfigured`, `listNvidiaModels`, `NvidiaChatOptions`, `NvidiaChatSuccess`, `NvidiaMessage`, `NvidiaRateLimited`, `NvidiaSendResult`, `sendNvidiaMessage` |
+| service | `src/services/connectors/nvidiaNimConnector.ts` | `DEFAULT_MODEL`, `findWorkingNvidiaModel`, `isNvidiaConfigured`, `listNvidiaModels`, `NVIDIA_PROBE`, `NvidiaChatOptions`, `NvidiaChatSuccess`, `NvidiaMessage`, `nvidiaModelsNotServed`, `NvidiaRateLimited`, `NvidiaSendResult`, `sendNvidiaMessage`, `WorkingModelResult` |
 | service | `src/services/connectors/perplexityConnector.ts` | `isPerplexityConfigured`, `PerplexitySearchOptions`, `PerplexitySearchResult`, `PerplexitySource`, `searchPerplexity` |
-| service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `updateMessage`, `uploadFile` |
+| service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SLACK_APP_TOKEN_PROBLEM`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `slackTokenProblem`, `updateMessage`, `uploadFile` |
 | service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
@@ -292,7 +293,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/contentFactory/contentStepAgents.ts` | `priorOutputs`, `STEP_AGENTS`, `StepAgent`, `stepMarkdown` |
 | service | `src/services/contentFactory/contentStepPrompts.ts` | `buildStepPrompt`, `CONTENT_ACTION_KEYS`, `CONTENT_HELP_LINE`, `helpFromAnswer`, `parseStepAnswer` |
 | service | `src/services/contentFactory/contentStepRecorder.ts` | `beginContentStep`, `contentAppSettings`, `recordContentStepResult` |
-| service | `src/services/contentFactory/contentStepRunner.ts` | `addMiniShort`, `approveContentStep`, `CONTENT_TASK_PREVIEW`, `ONE_MORE_SHORT`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
+| service | `src/services/contentFactory/contentStepRunner.ts` | `addMiniShort`, `approveContentStep`, `CONTENT_TASK_PREVIEW`, `ONE_MORE_SHORT`, `PROJECT_LABEL`, `runContentProject`, `runContentStep`, `RunStepOptions`, `settleProjectSteps`, `startContentRequestWatch`, `STEP_AGENTS`, `WAITING_FOR_APPROVAL` |
 | service | `src/services/contentFactory/contentTelegram.ts` | `collectContentNotifications`, `ContentButton`, `ContentButtonAction`, `contentButtonToken`, `ContentNotification`, `ContentTelegramSettings`, `getContentTelegramSettings`, `handleContentButton`, `readContentButtonToken` |
 | service | `src/services/contentFactory/contentTypes.ts` | `BasedOn`, `BrandCharacter`, `BrandLesson`, `CarouselShape`, `CarouselSlide`, `Checkpoint`, `CONTENT_FORMATS`, `ContentBrand`, `ContentBrief`, `ContentFormat`, `ContentIdea`, `ContentProject`, `ContentStepPayload`, `DEFAULT_SHORTS_SETTINGS`, `DEFAULT_VIDEO_SETTINGS`, `hasOwnKey`, `MetricsReading`, `PostingSlot`, `PostMetrics`, `PostPlatform`, `PostStatus`, `ProjectPost`, `SceneMotion`, `secureId`, `ShortKind`, `ShortPlan`, `ShortsSettings`, `SIDE_STEPS`, `STEP_ORDER`, `StepId`, `StepState`, `StepStatus`, `StepVersion`, `VideoSettings` |
 | service | `src/services/contentFactory/dailyLimits.ts` | `checkDailyLimit`, `FACEBOOK_DAILY_LIMIT`, `LimitCheck` |
@@ -320,8 +321,8 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/echo/decisions.ts` | `activePreferences`, `addDecision`, `Decision`, `decisionIds`, `DecisionKind`, `DECISIONS_CHANGED`, `DECISIONS_KEY`, `ECHO_LIMITS`, `editDecision`, `forgetDecision`, `getDecision`, `listDecisions`, `NewDecision`, `replaceWith`, `Surface`, `surfaceOf` |
 | service | `src/services/echo/echoPicks.ts` | `applyCleanupStep`, `dismissCleanupStep`, `pickForget` |
 | service | `src/services/echo/echoSteps.ts` | `COULDNT_SAVE`, `EchoCtx`, `echoSavePrompt`, `EchoStepResult`, `extractDecisions`, `NO_DECISIONS_THIS_WEEK`, `NOTHING_SAVED_ABOUT`, `NOTHING_TO_REMEMBER`, `runEchoStep`, `WHICH_TO_FORGET`, `withoutRememberWords` |
-| service | `src/services/echo/meaning.ts` | `ECHO_EMBED_MODEL`, `ensureMeaning`, `indexDecisionMeaning`, `MEANING_MIN_SIMILARITY`, `MEANING_QUERY_WAIT_MS`, `meaningEnabled`, `meaningMatches`, `meaningState`, `MeaningState`, `onMeaningState`, `resetMeaningForTests` |
-| service | `src/services/echo/memoryIntents.ts` | `asksToCleanUpMemory`, `asksToForget`, `asksToRemember`, `asksWhatWasDecided`, `memoryOnlyTask` |
+| service | `src/services/echo/meaning.ts` | `ECHO_EMBED_MODEL`, `ensureMeaning`, `indexDecisionMeaning`, `MEANING_MIN_SIMILARITY`, `MEANING_QUERY_WAIT_MS`, `meaningEnabled`, `meaningMatches`, `meaningQuestion`, `meaningState`, `MeaningState`, `onMeaningState`, `resetMeaningForTests` |
+| service | `src/services/echo/memoryIntents.ts` | `asksToCleanUpMemory`, `asksToForget`, `asksToRemember`, `asksWhatWasDecided`, `MEMORY_ONLY_INSTRUCTION`, `memoryOnlyTask` |
 | service | `src/services/echo/recall.ts` | `answerDecisionsBlock`, `contentWords`, `decisionLine`, `decisionsFor`, `decisionsText`, `indexDecision`, `NEAR_REPEAT`, `nearlySame`, `resetChromaCheckForTests`, `searchDecisions`, `surfaceName` |
 | service | `src/services/echoFileWatcherService.ts` | `getWatcherConfig`, `saveWatcherConfig`, `startFileWatcher`, `stopFileWatcher`, `WatcherConfig` |
 | service | `src/services/echoMemoryService.ts` | `activePreferences`, `addDecision`, `decisionsFor`, `decisionsText`, `ECHO_LIMITS`, `editDecision`, `extractDecisions`, `forgetDecision`, `getDecision`, `isChromaHealthy`, `listDecisions`, `runEchoStep`, `searchDecisions` |
@@ -356,7 +357,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/jose/josePlanApproval.ts` | `getPlanFirstSetting`, `needsPlanApproval`, `PlanFirstSetting` |
 | service | `src/services/jose/josePlanEdits.ts` | `addStep`, `changeStepAgent`, `removeStep`, `rewireNeeds`, `setStepInstruction`, `setStepNeeds` |
 | service | `src/services/jose/josePlanLayout.ts` | `DEFAULT_BOX`, `layoutPlan`, `PlanLayout` |
-| service | `src/services/jose/josePlanner.ts` | `BATCH_LABEL`, `buildPromptForTests`, `copiedPlaceholders`, `describePlanSource`, `HISTORY_HEADING`, `historyOnlyDestinations`, `JosePlan`, `missingAsked`, `PLAN_EXAMPLE`, `planBatch`, `planJoseRequest` |
+| service | `src/services/jose/josePlanner.ts` | `BATCH_LABEL`, `buildPromptForTests`, `copiedPlaceholders`, `describePlanSource`, `HISTORY_HEADING`, `historyOnlyDestinations`, `JosePlan`, `missingAsked`, `PLAN_EXAMPLE`, `planBatch`, `planJoseRequest`, `planReviewOnly` |
 | service | `src/services/jose/joseQueue.ts` | `giveBackTurn`, `leaveQueue`, `QUEUED_LINE`, `queuePosition`, `requeueAtStart`, `resetQueueForTests`, `takeTurn`, `usesLocalModel`, `WAITING_FOR_TURN` |
 | service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `onRequestStatusChange`, `replacePlanSteps`, `requestForCommand`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `setRequestGroup`, `setRequestQueuedAt`, `updateJoseStep` |
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
@@ -371,7 +372,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/jose/quotedContent.ts` | `CONTENT_AFTER`, `NOT_A_SEND`, `QUOTED`, `quotedPieces`, `withoutQuotedContent` |
 | service | `src/services/jose/requestGroups.ts` | `groupRequests`, `RequestGroup` |
 | service | `src/services/jose/reviewStep.ts` | `ReviewStepResult`, `runReviewStep` |
-| service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `PlanStep` |
+| service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `MIYA_PAID_STEPS`, `PlanStep`, `stepMaySpend` |
 | service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_PROJECT_SOURCES`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
 | service | `src/services/jose/taskTypeMeanings.ts` | `CODE_TASK_PREFIXES`, `isCodeRequest`, `isCodeTask`, `needsFacts`, `planningMenu`, `refersToAProject`, `TASK_TYPE_MEANINGS`, `taskTypesFor` |
@@ -385,20 +386,20 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/marcus/composioChannel.ts` | `checkComposioAnswer`, `composioSendTools`, `describeComposioTools` |
 | service | `src/services/marcus/describeSend.ts` | `describeSend` |
 | service | `src/services/marcus/destinations.ts` | `CHANNEL_LIMITS`, `CONNECTOR_NAMES`, `DESTINATION_KEYS`, `destinationsFor`, `isAllowedTarget`, `listedN8nWorkflows`, `MARCUS_CONNECTORS`, `requestWithoutQuotes`, `targetLabel`, `telegramOwnerChatId` |
-| service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `pickDestination` |
-| service | `src/services/marcus/prepareSend.ts` | `describeSend`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason` |
+| service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `MARCUS_MODEL_FAILED`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `notSetUp`, `pickDestination` |
+| service | `src/services/marcus/prepareSend.ts` | `deliveryLines`, `deliveryReason`, `describeSend`, `FIX_ROUNDS_USED`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason`, `unfilledGaps`, `unfilledReason` |
 | service | `src/services/marcus/readiness.ts` | `checkReadiness` |
-| service | `src/services/marcus/runSend.ts` | `ALREADY_SENT`, `COMPOSIO_NOT_READY`, `runMarcusSend`, `WHATSAPP_24H` |
+| service | `src/services/marcus/runSend.ts` | `ALREADY_SENT`, `CLICKUP_REASONS`, `clickupReason`, `COMPOSIO_NOT_READY`, `runMarcusSend`, `SLACK_REASONS`, `slackReason`, `WHATSAPP_24H` |
 | service | `src/services/marcus/sendText.ts` | `NOTHING_TO_SEND`, `sourceStep`, `textToSend` |
 | service | `src/services/marcus/sendTime.ts` | `formatSendTime`, `readSendTime`, `SendTime` |
 | service | `src/services/marcus/types.ts` | `Destination`, `MarcusConnector`, `PrepareResult`, `SendKind`, `SendPreview`, `SendResult` |
-| service | `src/services/marcusExecutionService.ts` | `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `getScheduledPublishes`, `MarcusRecord`, `mariaReviewFor`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleApprovedSend`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
+| service | `src/services/marcusExecutionService.ts` | `cancelScheduledContentPost`, `cancelScheduledPublish`, `checkSignIns`, `getScheduledPublishes`, `MarcusRecord`, `mariaReviewFor`, `postOverdueNow`, `recoverScheduledPublishes`, `rescheduleScheduledPublish`, `runMarcusDistribution`, `runScheduledPublishes`, `scheduleApprovedSend`, `scheduleContentPost`, `scheduleContentReminder`, `schedulePublish`, `SEND_FAILED_CARRY_ON`, `startPostScheduler`, `startScheduler`, `stopScheduler` |
 | service | `src/services/marcusPublishService.ts` | `buildMarcusPublishPacket`, `executeMarcusPublish`, `MARCUS_PUBLISH_PLATFORMS` |
 | service | `src/services/maria/mariaHolds.ts` | `holdStepsAfter`, `mariaHoldFor` |
 | service | `src/services/maria/mariaPlanReview.ts` | `contradiction`, `LOW_WITH_APPROVAL`, `parsePlanReview`, `PlanReview`, `planReviewPrompt`, `planReviewText`, `Risk`, `runMariaPlanReview` |
 | service | `src/services/maria/mariaTypes.ts` | `MARIA_SECURITY_LINE`, `MariaAssignment`, `MariaStepResult` |
 | service | `src/services/maria/mariaWeekly.ts` | `askMariaWeeklyRisks`, `MARIA_WEEKLY_LABEL` |
-| service | `src/services/maria/mariaWorkReview.ts` | `findingStrings`, `MARIA_NO_REVIEW`, `parseWorkReview`, `runMariaWorkReview`, `WorkFinding`, `WorkReview`, `workReviewPrompt`, `workReviewText` |
+| service | `src/services/maria/mariaWorkReview.ts` | `claimInWork`, `findingStrings`, `givenByRequest`, `MARIA_NO_REVIEW`, `parseWorkReview`, `runMariaWorkReview`, `WorkFinding`, `WorkReview`, `workReviewPrompt`, `workReviewText` |
 | service | `src/services/maria/workContext.ts` | `FILE_LIMITS`, `NO_SOURCES`, `workDependencyFiles`, `WorkFile`, `workFiles`, `workResults`, `WorkSource`, `workSources`, `workSteps` |
 | service | `src/services/mariaAuditService.ts` | `MariaAuditOptions`, `runMariaGovernanceAudit` |
 | service | `src/services/mediaStorageService.ts` | `cleanOldStaged`, `NO_STORAGE`, `removeStaged`, `STAGED_PREFIX`, `stagedKey`, `stageFile`, `StageResult`, `STORAGE_CONNECTOR`, `storageConfig`, `StorageConfig`, `storageConfigured`, `StoragePart`, `StorageTestResult`, `testStorage` |
@@ -482,7 +483,7 @@ Source-backed inventory: 328 services and 176 components. Human purpose descript
 | service | `src/services/streamingService.ts` | `abortStream`, `clearStreamHistory`, `getActiveStreams`, `getStreamState`, `startStream`, `StreamEvent`, `subscribeToStreams` |
 | service | `src/services/telegramAutoPollService.ts` | `getTelegramAutoPollState`, `getTelegramEnvSafe`, `runSingleTelegramPoll` |
 | service | `src/services/telegramBrowserConnector.ts` | `browserPollTelegram`, `browserSendTelegram`, `getTelegramPollCursor`, `handleTelegramBotCommand`, `parseTelegramCommand`, `setTelegramPollCursor`, `TelegramAuditEntry`, `TelegramBotVerifyResult`, `TelegramMessage`, `TelegramPollResult`, `TelegramSendResult`, `verifyTelegramBotEnvironment` |
-| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `handleStopCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
+| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `handleStopCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `restartTelegramCompanion`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
 | service | `src/services/toolConnectionService.ts` | `buildToolConnectionPayload`, `listToolConnectionAudit`, `listToolConnections`, `listToolConnectionTypes`, `proveToolConnectionPath`, `removeToolConnection`, `sendToolConnectionMessage`, `SendToolConnectionOptions`, `setToolConnectionStatus`, `testToolConnection`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `ToolConnection`, `ToolConnectionAuditEntry`, `ToolConnectionPatch`, `ToolConnectionResult`, `ToolConnectionType`, `upsertToolConnection` |
 | service | `src/services/toolNotificationDispatcher.ts` | `dispatchReceiptNotifications` |
 | service | `src/services/toolRegistryService.ts` | `executeTool`, `formatToolsForPrompt`, `getAllToolNames`, `getToolDefinition`, `getToolDefinitions`, `ToolArgs`, `ToolContext`, `ToolDefinition`, `ToolExecutionResult`, `ToolParameterSchema` |

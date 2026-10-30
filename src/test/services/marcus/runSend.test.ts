@@ -10,7 +10,10 @@ vi.mock('../../../services/connectors/githubConnector', () => ({ createRelease: 
 vi.mock('../../../services/connectors/n8nConnector', () => ({ triggerN8nWebhook: vi.fn() }));
 vi.mock('../../../services/connectors/connectorOutbound', () => ({
   sendTelegramConnectorMessage: vi.fn(), sendWhatsAppConnectorMessage: vi.fn(), sendNotionConnectorEntry: vi.fn(), sendClickUpConnectorTask: vi.fn(),
+  sendSlackMessage: vi.fn(),
 }));
+import { sendSlackMessage } from '../../../services/connectors/connectorOutbound';
+import { slackReason, SLACK_REASONS, clickupReason, CLICKUP_REASONS } from '../../../services/marcus/runSend';
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { requireApproval } from '../../../services/approval/approvalService';
@@ -44,9 +47,13 @@ beforeEach(() => {
 
 describe('runMarcusSend', () => {
   it('sends the saved preview without a model call and never asks a second approval', async () => {
-    vi.mocked(slack.sendMessage).mockResolvedValue({ ts: '1.2', channel: 'C1', text: 'Open Saturday.' } as never);
-    const r = await runMarcusSend(fresh(), 'marcus', p());
-    expect(slack.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ token: 'xoxb-1' }), '#news', 'Open Saturday.');
+    // QA batch 1 (live check of 2.10.0, 2026-10-28): Slack refuses a bot token sent from the app
+    // window ("Failed to fetch"), so the send goes through the backend (connector_slack_send).
+    vi.mocked(sendSlackMessage).mockResolvedValue({ ok: true, ts: '1.2', channel: 'C1' } as never);
+    const commandId = fresh();
+    const r = await runMarcusSend(commandId, 'marcus', p());
+    expect(sendSlackMessage).toHaveBeenCalledWith('#news', 'Open Saturday.', { approved: true, commandId });
+    expect(slack.sendMessage).not.toHaveBeenCalled();
     expect(r).toEqual({ ok: true, sentence: 'Sent to Slack #news.', link: null, platformId: '1.2' });
     expect(generateAgentLlmResponse).not.toHaveBeenCalled();
     expect(requireApproval).not.toHaveBeenCalled();
@@ -57,17 +64,17 @@ describe('runMarcusSend', () => {
     const steps = [{ stepId: 'marcus', agent: 'marcus', actionType: 'distribution_execution', effects: ['publish_or_send'], needs: [] }];
     const waiting = createWaitingPlanRequest({ text: 'x', source: 'user', kind: 'normal', steps, plan: { source: 'fresh' }, runOptions: { source: 'user' } } as never);
     attachRunToRequest(waiting.id, { commandId: 'c-plan', steps } as never);
-    vi.mocked(slack.sendMessage).mockResolvedValue({ ts: '1.4' } as never);
+    vi.mocked(sendSlackMessage).mockResolvedValue({ ok: true, ts: '1.4' } as never);
     expect((await runMarcusSend('c-plan', 'marcus', p())).ok).toBe(true);
     expect(await runMarcusSend('c-plan', 'marcus', p())).toEqual({ ok: false, sentence: ALREADY_SENT });
-    expect(slack.sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendSlackMessage).toHaveBeenCalledTimes(1);
   });
 
   // Final review: a refused send is tried again by the step's retries, not reported as "Already sent.".
   it('a send the platform refused can be tried again', async () => {
     const commandId = fresh();
-    vi.mocked(slack.sendMessage).mockRejectedValueOnce(new Error('channel_not_found')).mockResolvedValueOnce({ ts: '1.3' } as never);
-    expect(await runMarcusSend(commandId, 'marcus', p())).toEqual({ ok: false, sentence: 'Not sent to Slack #news: channel_not_found.' });
+    vi.mocked(sendSlackMessage).mockResolvedValueOnce({ ok: false, error: 'channel_not_found' } as never).mockResolvedValueOnce({ ok: true, ts: '1.3' } as never);
+    expect(await runMarcusSend(commandId, 'marcus', p())).toEqual({ ok: false, sentence: `Not sent to Slack #news: ${SLACK_REASONS.channel_not_found}.` });
     expect(getJoseRequest(`jose-request-${commandId}`).steps[0].sentAtMs).toBeUndefined();
     expect((await runMarcusSend(commandId, 'marcus', p())).sentence).toBe('Sent to Slack #news.');
     expect((await runMarcusSend(commandId, 'marcus', p())).sentence).toBe(ALREADY_SENT);
@@ -112,16 +119,47 @@ describe('runMarcusSend', () => {
   });
 
   it("a refusal says the platform's reason", async () => {
-    vi.mocked(slack.sendMessage).mockRejectedValue(new Error('channel_not_found'));
-    expect((await runMarcusSend(fresh(), 'marcus', p())).sentence).toBe('Not sent to Slack #news: channel_not_found.');
+    vi.mocked(sendSlackMessage).mockResolvedValue({ ok: false, error: 'channel_not_found' } as never);
+    expect((await runMarcusSend(fresh(), 'marcus', p())).sentence).toBe(`Not sent to Slack #news: ${SLACK_REASONS.channel_not_found}.`);
   });
 
   it('sends once', async () => {
-    vi.mocked(slack.sendMessage).mockResolvedValue({ ts: '1.2' } as never);
+    vi.mocked(sendSlackMessage).mockResolvedValue({ ok: true, ts: '1.2' } as never);
     const commandId = fresh();
     await runMarcusSend(commandId, 'marcus', p());
     expect(getJoseRequest(`jose-request-${commandId}`)?.steps[0].sentAtMs).toBeGreaterThan(0);
     expect(await runMarcusSend(commandId, 'marcus', p())).toEqual({ ok: false, sentence: ALREADY_SENT });
-    expect(slack.sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendSlackMessage).toHaveBeenCalledTimes(1);
+  });
+});
+
+// QA batch 1 (live ClickUp check): the list ID field held the workspace number, and the board
+// showed ClickUp's "Team not authorized", which doesn't say what to fix.
+describe('clickupReason', () => {
+  it("turns ClickUp's refusals into what to do, and keeps anything else as ClickUp said it", () => {
+    expect(clickupReason('Team not authorized')).toBe(CLICKUP_REASONS.not_your_list);
+    expect(clickupReason('HTTP 401: {"err":"Team not authorized","ECODE":"OAUTH_027"}')).toBe(CLICKUP_REASONS.not_your_list);
+    expect(CLICKUP_REASONS.not_your_list).toContain('/li/');
+    expect(clickupReason('Oauth token not found')).toBe(CLICKUP_REASONS.bad_key);
+    expect(clickupReason('Failed to fetch')).toBe('Failed to fetch');
+  });
+
+  it('a refused ClickUp send says what to fix', async () => {
+    vi.mocked(outbound.sendClickUpConnectorTask).mockResolvedValueOnce({ ok: false, error: 'Team not authorized' } as never);
+    const result = await runMarcusSend(fresh(), 'marcus', p({ connector: 'clickup', target: '', kind: 'task', title: 'Note', label: 'ClickUp' }));
+    expect(result.ok).toBe(false);
+    expect(result.sentence).toBe(`Not sent to ClickUp: ${CLICKUP_REASONS.not_your_list}.`);
+  });
+});
+
+// QA batch 1 (third live run): Slack answered "HTTP 200: missing_scope" and the board showed it raw.
+describe('slackReason', () => {
+  it("turns Slack's codes into what to do, and keeps anything else as Slack said it", () => {
+    expect(slackReason('HTTP 200: missing_scope')).toBe(SLACK_REASONS.missing_scope);
+    expect(SLACK_REASONS.missing_scope).toContain('chat:write');
+    expect(slackReason('not_in_channel')).toBe(SLACK_REASONS.not_in_channel);
+    expect(slackReason('HTTP 200: invalid_auth')).toBe(SLACK_REASONS.invalid_auth);
+    expect(slackReason('token_revoked')).toBe(SLACK_REASONS.invalid_auth);
+    expect(slackReason('Failed to fetch')).toBe('Failed to fetch');
   });
 });

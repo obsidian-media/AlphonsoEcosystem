@@ -29,13 +29,13 @@ const RISK_CACHE_TTL = 300000;
 // 'gmail', 'google_drive' and 'airtable' entries were removed on 2026-10-21:
 // none of them was ever a connector, so they could never match. Add a new
 // paid connector here in the same change that registers it.
+// 'notion' and 'clickup' were removed in QA batch 1 (owner): their APIs are free on
+// every plan, so Zero-Cost Mode blocked Marcus's sends to them for no reason.
 const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'chatgpt',
   'claude',
   'qwen',
   'whatsapp',
-  'notion',
-  'clickup',
   'calle',
   'runway',
   // Phase 4b: paid voices and sound effects; paid pictures and clips.

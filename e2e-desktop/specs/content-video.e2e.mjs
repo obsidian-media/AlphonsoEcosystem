@@ -44,7 +44,9 @@ async function waitForStep(id, step, statuses, timeout) {
   return stepState(id, step);
 }
 
-describe('Alphonso desktop: Miya makes the finished video', () => {
+describe('Alphonso desktop: Miya makes the finished video', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(300000);
   let outputFolder = '';
   let ffmpeg = null;
   let ffprobe = null;
@@ -52,7 +54,6 @@ describe('Alphonso desktop: Miya makes the finished video', () => {
   let dir = '';
 
   before(async function () {
-    this.timeout(300000);
     ffmpeg = tool('ffmpeg');
     ffprobe = tool('ffprobe');
     await enterShell();
@@ -118,7 +119,6 @@ describe('Alphonso desktop: Miya makes the finished video', () => {
   });
 
   it('Voice, Music and Stock clips say what they need when it is not installed or set', async function () {
-    this.timeout(600000);
     // The helper answers { ok, value }.
     const status = (await invoke('media_tools_status')).value || {};
     await runStep('Voice-over');
@@ -139,10 +139,9 @@ describe('Alphonso desktop: Miya makes the finished video', () => {
       expect(music.status).toBe('done');
       expect(await sectionText('Music')).toContain('AudioCraft is not installed.');
     }
-  });
+  }).timeout(600000);
 
   it('assembles both videos with the bundled ffmpeg and shows them', async function () {
-    this.timeout(900000);
     // A voice track, as Kokoro would have made it.
     const voiceRel = `${dir}/audio/voice-v1/full.wav`;
     const voiceAbs = path.join(outputFolder, ...voiceRel.split('/'));
@@ -185,5 +184,5 @@ describe('Alphonso desktop: Miya makes the finished video', () => {
     await browser.execute(() => document.querySelectorAll('section[aria-label="Finished video"] video').forEach((v) => v.load()));
     await browser.waitUntil(async () => browser.execute(() => [...document.querySelectorAll('section[aria-label="Finished video"] video')]
       .every((v) => v.readyState >= 1 && Math.abs(v.duration - 6) <= 1)), { timeout: 30000, timeoutMsg: 'the window could not load the videos' });
-  });
+  }).timeout(900000);
 });

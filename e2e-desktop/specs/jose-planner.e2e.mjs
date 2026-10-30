@@ -33,11 +33,12 @@ async function send(text) {
   await button.click();
 }
 
-describe('Alphonso desktop: Jose plans', () => {
+describe('Alphonso desktop: Jose plans', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(400000);
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(400000);
     // Plans run straight away here (the plan card is jose-board.e2e.mjs's job).
     // Backend settings are merged in at start, so save there as Settings does.
     const extra = { showPlanFirst: 'never', ...((await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {}) };
@@ -62,12 +63,14 @@ describe('Alphonso desktop: Jose plans', () => {
     await send('What is 2 + 2? Reply with just the number.');
     await browser.waitUntil(async () => /\b4\b|four/i.test(await lastReplyText()), {
       timeout: 150000, interval: 1000, timeoutMsg: 'no direct answer within 150s',
+    }).catch(async (err) => {
+      // The reply goes in the error when it never says 4 (QA batch 1: it failed once in CI with no clue why).
+      throw new Error(`${err.message}; the last reply: ${JSON.stringify(String(await lastReplyText()).slice(0, 300))}`);
     });
     expect(await lastReplyText()).not.toMatch(PLAN_NOTE);
   });
 
   it('plans a research task and says how it planned it', async function () {
-    this.timeout(1200000);
     const before = (await $$('[data-testid="chat-message-assistant"]')).length;
     await send('Research what the IANA example domain is used for and write a short report.');
     await browser.waitUntil(
@@ -85,10 +88,9 @@ describe('Alphonso desktop: Jose plans', () => {
     const requests = JSON.parse(receipts);
     expect(requests.length).toBeGreaterThan(0);
     expect(requests[requests.length - 1].steps.some((s) => s.agent === 'hector')).toBe(true);
-  });
+  }).timeout(1200000);
 
   it('"Plan this fresh:" plans without a template', async function () {
-    this.timeout(1200000);
     const before = (await $$('[data-testid="chat-message-assistant"]')).length;
     await send('Plan this fresh: suggest three names for a small coffee shop.');
     await browser.waitUntil(
@@ -96,5 +98,5 @@ describe('Alphonso desktop: Jose plans', () => {
       { timeout: 1100000, interval: 2000, timeoutMsg: 'Jose never replied with a fresh plan' }
     );
     expect(await lastReplyText()).not.toMatch(/Based on template/);
-  });
+  }).timeout(1200000);
 });

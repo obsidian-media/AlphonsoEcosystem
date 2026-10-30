@@ -23,6 +23,13 @@ const judged = (ids: string[], verdicts: ('pass' | 'fix')[], steps = plan) =>
 beforeEach(() => llm.mockReset());
 
 describe('planReviewRound', () => {
+  // QA batch 1 (live ClickUp check): Marcus's check of the first draft came in after the draft was
+  // already revised, so the loop tried to add "write-fix-1" again ("appears twice").
+  it('skips a late review of work that has already been revised', () => {
+    const revised: PlanStep[] = [...plan, { stepId: 'script-fix-1', agent: 'miya', actionType: 'creative_script', effects: ['write_own_work'], needs: ['script', 'review_value'], revises: 'script', round: 1, instruction: 'Fix.' }];
+    expect(planReviewRound(revised, judged(['review_quality'], ['fix'], revised))).toEqual({ changes: [], notes: [] });
+  });
+
   it('sends the work back once, with the findings, and re-reviews it', () => {
     const { changes, notes } = planReviewRound(plan, judged(['review_value', 'review_quality'], ['fix', 'pass']));
     expect(notes).toEqual([]);

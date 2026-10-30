@@ -15,9 +15,9 @@ import { submitStepsToJose } from '../../../services/jose/submitToJose';
 import { approveRequestStep } from '../../../services/joseExecutionEngineService';
 import { getJoseRequest } from '../../../services/jose/joseRequestStore';
 import { saveBrand } from '../../../services/contentFactory/contentBrandService';
-import { createProject, emptyBrief, getProject, markStepStatus, startStep } from '../../../services/contentFactory/contentProjectService';
+import { createProject, emptyBrief, getProject, markStepStatus, setProjectRequest, startStep } from '../../../services/contentFactory/contentProjectService';
 import {
-  runContentStep, runContentProject, approveContentStep, addMiniShort, STEP_AGENTS, CONTENT_TASK_PREVIEW, PROJECT_LABEL, WAITING_FOR_APPROVAL,
+  runContentStep, runContentProject, approveContentStep, addMiniShort, settleProjectSteps, STEP_AGENTS, CONTENT_TASK_PREVIEW, PROJECT_LABEL, WAITING_FOR_APPROVAL,
 } from '../../../services/contentFactory/contentStepRunner';
 import { CLIPS_WAIT, CLIPS_WAIT_PAID, PUBLISH_WAIT, REVIEW_WAIT } from '../../../services/contentFactory/contentProjectPlan';
 import { savePosts } from '../../../services/contentFactory/contentPosts';
@@ -267,5 +267,34 @@ describe("a project's requests are grouped", () => {
     for (const call of vi.mocked(submitStepsToJose).mock.calls) {
       expect((call[0] as any).group).toEqual({ id: p.id, label: 'Launch' });
     }
+  });
+});
+
+// QA batch 1 (live ElevenLabs check, 2026-10-29): the request failed after you approved the voice
+// step, and Miya Studio still said "Waiting for your approval in the Approval panel." forever.
+describe('settleProjectSteps', () => {
+  it("a request that ends without finishing fails the project's waiting and running steps with its reason", () => {
+    const p = newProject();
+    setProjectRequest(p.id, 'r1');
+    markStepStatus(p.id, 'voice', 'needs_approval', WAITING_FOR_APPROVAL);
+    startStep(p.id, 'music');
+    vi.mocked(getJoseRequest).mockReturnValue({ id: 'r1', status: 'failed', steps: [{ stepId: 'voice', status: 'failed', error: 'miya may not: Spend money.' }] } as never);
+    settleProjectSteps('r1', 'failed');
+    const after = getProject(p.id)!;
+    expect(after.steps.voice).toMatchObject({ status: 'failed', error: 'miya may not: Spend money.' });
+    expect(after.steps.music).toMatchObject({ status: 'failed', error: 'miya may not: Spend money.' });
+  });
+
+  it("a step waiting for the project's own approval, or a request still going, is left alone", () => {
+    const p = newProject();
+    setProjectRequest(p.id, 'r1');
+    markStepStatus(p.id, 'review', 'needs_approval', null);
+    markStepStatus(p.id, 'voice', 'needs_approval', WAITING_FOR_APPROVAL);
+    vi.mocked(getJoseRequest).mockReturnValue({ id: 'r1', status: 'failed', steps: [] } as never);
+    settleProjectSteps('r1', 'waiting_approval');
+    expect(getProject(p.id)!.steps.voice.status).toBe('needs_approval');
+    settleProjectSteps('r1', 'stopped');
+    expect(getProject(p.id)!.steps.review.status).toBe('needs_approval');
+    expect(getProject(p.id)!.steps.voice).toMatchObject({ status: 'failed', error: 'The request ended: stopped.' });
   });
 });

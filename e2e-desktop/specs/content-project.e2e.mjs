@@ -28,13 +28,14 @@ const savedProjects = async () => JSON.parse(await browser.execute(() => localSt
 const projectNamed = async (name) => (await savedProjects()).find((p) => p.name === name);
 const stepText = async (label) => browser.execute((name) => document.querySelector(`section[aria-label="${name}"]`)?.innerText || '', label);
 
-describe('Alphonso desktop: a Miya Studio project is one Jose request', () => {
+describe('Alphonso desktop: a Miya Studio project is one Jose request', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(400000);
   let outputFolder = '';
 
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(400000);
     outputFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'alphonso-project-'));
     const loaded = await invoke('load_settings');
     const saved = JSON.parse((loaded.ok && loaded.value) || '{}');
@@ -55,7 +56,6 @@ describe('Alphonso desktop: a Miya Studio project is one Jose request', () => {
   });
 
   it('runs the project through the reviews and waits for your approval', async function () {
-    this.timeout(2400000);
     await openPage('work', 'miya');
     const name = await $('input[aria-label="New project name"]');
     await name.waitForDisplayed({ timeout: 60000 });
@@ -91,10 +91,9 @@ describe('Alphonso desktop: a Miya Studio project is one Jose request', () => {
     expect(project.steps.review.status).toBe('needs_approval');
     expect(fs.existsSync(path.join(outputFolder, fs.readdirSync(outputFolder)[0], 'why-we-procrastinate', 'script', 'v1.md'))).toBe(true);
     expect(await mainText()).toContain('Jose request: Waiting for your approval.');
-  });
+  }).timeout(2400000);
 
   it('Approve in Miya Studio carries the request on to Scenes', async function () {
-    this.timeout(2400000);
     const project = await projectNamed('Why we procrastinate');
     const approve = await $('//section[@aria-label="Review"]//button[normalize-space(.)="Approve"]');
     await approve.waitForClickable({ timeout: 30000 });
@@ -109,10 +108,9 @@ describe('Alphonso desktop: a Miya Studio project is one Jose request', () => {
     const request = (await savedRequests()).find((r) => r.id === project.joseRequestId);
     expect(request.steps.find((s) => s.stepId === 'scenes').status).not.toBe('waiting_approval');
     expect(await stepText('Scenes')).not.toMatch(/Failed/);
-  });
+  }).timeout(2400000);
 
   it('a content video asked in Chat starts a project that opens in Miya Studio', async function () {
-    this.timeout(300000);
     await $('[data-testid="sidebar-chat-shortcut"]').click();
     const input = await $('[data-testid="chat-compose-input"]');
     await input.waitForDisplayed();
@@ -125,5 +123,5 @@ describe('Alphonso desktop: a Miya Studio project is one Jose request', () => {
     await browser.waitUntil(async () => (await mainText()).includes('Script Studio'), { timeout: 30000, timeoutMsg: 'Miya Studio did not open' });
     const idea = await $('textarea[aria-label="Idea"]');
     expect(await idea.getValue()).toContain('brewing coffee at home');
-  });
+  }).timeout(300000);
 });

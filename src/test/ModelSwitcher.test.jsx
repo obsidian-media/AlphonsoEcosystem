@@ -2,8 +2,12 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
+const findWorkingNvidiaModel = vi.fn(async (candidates) => ({ model: candidates[0], notServed: [] }));
+const nvidiaModelsNotServed = vi.fn(() => []);
 vi.mock('../services/connectors/nvidiaNimConnector', () => ({
-  isNvidiaConfigured: vi.fn(() => true)
+  isNvidiaConfigured: vi.fn(() => true),
+  findWorkingNvidiaModel: (...args) => findWorkingNvidiaModel(...args),
+  nvidiaModelsNotServed: (...args) => nvidiaModelsNotServed(...args),
 }));
 
 vi.mock('../services/connectors/geminiConnector', () => ({
@@ -33,6 +37,49 @@ describe('CloudModelPicker', () => {
     const select = await screen.findByRole('combobox');
     fireEvent.change(select, { target: { value: 'nvidia/nemotron-4-340b-instruct' } });
     expect(onModelChange).toHaveBeenCalledWith('nvidia/nemotron-4-340b-instruct');
+  });
+});
+
+describe('CloudModelPicker with NVIDIA (no fixed model list)', () => {
+  beforeEach(() => {
+    findWorkingNvidiaModel.mockReset();
+    nvidiaModelsNotServed.mockReset();
+    nvidiaModelsNotServed.mockReturnValue([]);
+  });
+
+  it('tries the chosen model first, then the rest, and uses the one that answers', async () => {
+    findWorkingNvidiaModel.mockResolvedValueOnce({ model: 'meta/llama-3.1-8b-instruct', notServed: ['nvidia/nemotron-4-340b-instruct'] });
+    const onModelChange = vi.fn();
+    render(<CloudModelPicker provider="nvidia_nim" selectedModel="nvidia/nemotron-4-340b-instruct" onModelChange={onModelChange} />);
+    await waitFor(() => expect(onModelChange).toHaveBeenCalledWith('meta/llama-3.1-8b-instruct'));
+    expect(findWorkingNvidiaModel.mock.calls[0][0]).toEqual(['nvidia/nemotron-4-340b-instruct', 'meta/llama-3.1-8b-instruct']);
+  });
+
+  it('marks a model NVIDIA no longer serves and does not offer it', async () => {
+    nvidiaModelsNotServed.mockReturnValue(['nvidia/nemotron-4-340b-instruct']);
+    findWorkingNvidiaModel.mockResolvedValueOnce({ model: 'meta/llama-3.1-8b-instruct', notServed: [] });
+    render(<CloudModelPicker provider="nvidia_nim" selectedModel="" onModelChange={() => {}} />);
+    const gone = await screen.findByText('nvidia/nemotron-4-340b-instruct (not served)');
+    expect(gone).toBeDisabled();
+  });
+
+  it('says so when no NVIDIA model answers', async () => {
+    findWorkingNvidiaModel.mockResolvedValueOnce({ model: null, notServed: [] });
+    render(<CloudModelPicker provider="nvidia_nim" selectedModel="" onModelChange={() => {}} />);
+    expect(await screen.findByText(/No NVIDIA model answered/i)).toBeInTheDocument();
+  });
+});
+
+describe('CloudModelPicker on NVIDIA', () => {
+  // QA batch 1: until a model answered, the Ollama model's name stayed selected and Chat sent it to NVIDIA.
+  it("drops a model that isn't NVIDIA's at once, before looking for one that answers", async () => {
+    let finish;
+    findWorkingNvidiaModel.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    const onModelChange = vi.fn();
+    render(<CloudModelPicker provider="nvidia_nim" selectedModel="llama3.2:3b" onModelChange={onModelChange} />);
+    await waitFor(() => expect(onModelChange).toHaveBeenCalledWith(''));
+    finish({ model: 'meta/llama-3.1-8b-instruct', notServed: [] });
+    await waitFor(() => expect(onModelChange).toHaveBeenLastCalledWith('meta/llama-3.1-8b-instruct'));
   });
 });
 

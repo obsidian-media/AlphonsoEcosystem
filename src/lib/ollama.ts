@@ -393,8 +393,18 @@ export async function fetchOllamaModels(endpoint: string | null | undefined): Pr
   }
 }
 
-export function chooseDefaultModel(models: OllamaModel[], currentModel: string | null | undefined): string {
-  const names = models.map((model) => model.name);
+/** Embedding models only turn text into numbers (Echo's meaning search uses one); they can't
+ *  write a reply, so they are never a chat model (QA batch 0). By name, or by Ollama's family. */
+const EMBEDDING_NAME = /(?:^|[/:_-])(?:all-minilm|minilm|bge|e5|gte|mxbai|nomic-embed|snowflake-arctic-embed|paraphrase-multilingual)|embed/i;
+
+export function isChatModel(model: { name?: string; details?: unknown } | string): boolean {
+  const name = typeof model === 'string' ? model : String(model?.name || '');
+  const family = typeof model === 'string' ? '' : String((model?.details as { family?: string } | undefined)?.family || '');
+  return Boolean(name) && !EMBEDDING_NAME.test(name) && !/bert/i.test(family);
+}
+
+export function chooseDefaultModel(models: Array<{ name: string; details?: unknown }>, currentModel: string | null | undefined): string {
+  const names = models.filter(isChatModel).map((model) => model.name);
 
   if (currentModel && names.includes(currentModel)) return currentModel;
   if (names.includes(PREFERRED_MODEL)) return PREFERRED_MODEL;

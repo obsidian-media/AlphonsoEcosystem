@@ -91,7 +91,6 @@ describe('Alphonso desktop: Jose while you are away', () => {
 
   it('offers Carry on for a request cut off when the app closed, and finishes it', async function () {
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(1800000);
     const model = (await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {};
     await useSettings({ ...model, showPlanFirst: 'never', effectApprovals: {} });
     await restart();
@@ -115,5 +114,5 @@ describe('Alphonso desktop: Jose while you are away', () => {
       timeout: 900000, interval: 3000, timeoutMsg: 'Carry on did not finish the request',
     });
     expect((await findRequest(request.id)).steps.find((s) => s.stepId === last).status).toBe('done');
-  });
+  }).timeout(1800000);
 });

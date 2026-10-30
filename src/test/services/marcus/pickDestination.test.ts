@@ -6,11 +6,13 @@ vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: vi.fn() }));
 
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { saveConnectorCredential } from '../../../services/connectors/connectorAuth';
-import { pickDestination, hintFromTaskType, NO_DESTINATION, CAMPAIGN_STUDIO_ONLY, NEWSLETTER_NEEDS, mailTools } from '../../../services/marcus/pickDestination';
+import { pickDestination, hintFromTaskType, NO_DESTINATION, MARCUS_MODEL_FAILED, CAMPAIGN_STUDIO_ONLY, NEWSLETTER_NEEDS, mailTools } from '../../../services/marcus/pickDestination';
 
 const llm = vi.mocked(generateAgentLlmResponse);
 const say = (o: unknown) => ({ response: JSON.stringify(o) }) as never;
 const REQ = '/jose Write a two-sentence announcement that our bakery opens on Saturday, then post it to our Slack channel #news.';
+// Two channels named: Marcus's model has to choose (one named channel needs no model, QA batch 1).
+const REQ_TWO = '/jose Write a two-sentence announcement that our bakery opens on Saturday, then post it to Slack #news or #updates.';
 
 beforeEach(() => {
   localStorage.clear();
@@ -30,7 +32,7 @@ describe('pickDestination', () => {
   it('a model answer naming #general is refused and asked again', async () => {
     llm.mockResolvedValueOnce(say({ connector: 'slack', target: '#general', kind: 'message', reason: 'default' }))
       .mockResolvedValueOnce(say({ connector: 'slack', target: '#news', kind: 'message', reason: 'named' }));
-    const got = await pickDestination(REQ, 'Open Saturday.', {});
+    const got = await pickDestination(REQ_TWO, 'Open Saturday.', {});
     expect(got).toMatchObject({ ok: true, destination: { connector: 'slack', target: '#news', label: 'Slack #news' } });
     expect(llm).toHaveBeenCalledTimes(2);
     expect(String((llm.mock.calls[1][1] as { prompt: string }).prompt)).toContain('"#general" was not named in the request and is not a default.');
@@ -38,7 +40,7 @@ describe('pickDestination', () => {
 
   it('the prompt has the request with keys hidden, the text and only set-up connectors', async () => {
     llm.mockResolvedValueOnce(say({ connector: 'slack', target: '#news', kind: 'message' }));
-    await pickDestination(`${REQ} key sk-live-1234abcd5678efgh`, 'Open Saturday.', {});
+    await pickDestination(`${REQ_TWO} key sk-live-1234abcd5678efgh`, 'Open Saturday.', {});
     const prompt = String((llm.mock.calls[0][1] as { prompt: string }).prompt);
     expect(prompt).not.toContain('sk-live-1234abcd5678efgh');
     expect(prompt).toContain('Open Saturday.');
@@ -48,8 +50,22 @@ describe('pickDestination', () => {
 
   it('unreadable twice → NO_DESTINATION', async () => {
     llm.mockResolvedValue({ response: 'no idea' } as never);
-    expect(await pickDestination(REQ, 'x', {})).toEqual({ ok: false, outcome: 'failed', reason: NO_DESTINATION });
+    expect(await pickDestination(REQ_TWO, 'x', {})).toEqual({ ok: false, outcome: 'failed', reason: NO_DESTINATION });
     expect(NO_DESTINATION).toBe("Marcus couldn't tell where to send this: name the channel, or set a default in Settings → Connectors.");
+  });
+
+  // QA batch 1 (live check of 2.10.0, 2026-10-28): "post it to Slack #test" failed with "Marcus
+  // couldn't tell where to send this": a channel that isn't a saved default went to the model.
+  it('one named connector and one named #channel are used without asking the model', async () => {
+    const got = await pickDestination('/jose Write a one-line note that the test worked, and post it to Slack #test', 'It worked.', {});
+    expect(got).toEqual({ ok: true, destination: { connector: 'slack', target: '#test', kind: 'message', label: 'Slack #test' } });
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  it("when Marcus's model doesn't answer, he says so rather than blaming the channel", async () => {
+    llm.mockRejectedValue(new Error('model not found'));
+    expect(await pickDestination(REQ_TWO, 'x', {})).toEqual({ ok: false, outcome: 'failed', reason: MARCUS_MODEL_FAILED });
+    expect(MARCUS_MODEL_FAILED).toBe("Marcus's model didn't answer, so he couldn't choose where to send this. Check that Ollama is running, or name one channel (for example Slack #news).");
   });
 
   it('a connector that is not set up → setup with its sentence', async () => {
@@ -69,7 +85,7 @@ describe('pickDestination', () => {
     saveConnectorCredential('discord', 'DISCORD_GUILD_ID', 'G');
     llm.mockResolvedValueOnce(say({ connector: 'telegram', target: 'team', kind: 'message' }))
       .mockResolvedValueOnce(say({ connector: 'slack', target: '#news', kind: 'message' }));
-    const got = await pickDestination(REQ, 'Open Saturday.', {});
+    const got = await pickDestination(REQ_TWO, 'Open Saturday.', {});
     expect(got).toMatchObject({ ok: true, destination: { connector: 'slack', target: '#news' } });
     expect(String((llm.mock.calls[1][1] as { prompt: string }).prompt)).toContain('"telegram" is not one of the connectors offered.');
   });

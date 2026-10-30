@@ -771,6 +771,21 @@ pub(crate) fn rel_touches_git_dir(rel: &Path) -> bool {
   })
 }
 
+/// The workspace folder, resolved. A folder that isn't there (moved, deleted, or a drive that is
+/// unplugged) is named in plain words instead of "(os error 2)" (QA batch 1).
+fn canonical_root(root: &Path) -> Result<PathBuf, String> {
+  fs::canonicalize(root).map_err(|error| {
+    if error.kind() == std::io::ErrorKind::NotFound {
+      format!(
+        "The folder {} doesn't exist: it may have been moved or deleted. Choose it again in Settings.",
+        root.display()
+      )
+    } else {
+      error.to_string()
+    }
+  })
+}
+
 #[tauri::command]
 pub(crate) fn write_workspace_text_file(
   workspace_root: String,
@@ -782,7 +797,7 @@ pub(crate) fn write_workspace_text_file(
     return Err("Workspace root is required for workspace file writes.".to_string());
   }
 
-  let root_abs = fs::canonicalize(&root).map_err(|error| error.to_string())?;
+  let root_abs = canonical_root(&root)?;
   let rel = Path::new(relative_path.trim());
   if rel.as_os_str().is_empty() {
     return Err("Relative path is required.".to_string());
@@ -1058,7 +1073,7 @@ fn resolve_workspace_read_path(
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
   }
-  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let root_abs = canonical_root(&root)?;
   let rel = Path::new(relative_path.trim());
   if rel.as_os_str().is_empty() {
     return Err("Relative path is required.".to_string());
@@ -1148,7 +1163,7 @@ pub(crate) fn delete_workspace_file(
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
   }
-  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let root_abs = canonical_root(&root)?;
   let rel = Path::new(relative_path.trim());
   if rel.as_os_str().is_empty() {
     return Err("Relative path is required.".to_string());
@@ -1198,7 +1213,7 @@ pub(crate) fn move_workspace_file(
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
   }
-  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let root_abs = canonical_root(&root)?;
   let from_rel = Path::new(from_relative.trim());
   let to_rel = Path::new(to_relative.trim());
   if from_rel.as_os_str().is_empty() || to_rel.as_os_str().is_empty() {
@@ -1252,7 +1267,7 @@ pub(crate) fn search_workspace_files(
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
   }
-  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let root_abs = canonical_root(&root)?;
   let max_results = max_results.unwrap_or(200);
   let mut results = Vec::new();
   let mut files_scanned = 0;
@@ -1378,7 +1393,7 @@ pub(crate) fn list_project_files(
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
   }
-  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let root_abs = canonical_root(&root)?;
   if !root_abs.is_dir() {
     return Err("Path is not a directory.".to_string());
   }
@@ -1414,7 +1429,7 @@ pub(crate) fn list_workspace_directory(
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
   }
-  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let root_abs = canonical_root(&root)?;
   let rel = Path::new(relative_path.trim());
   let dir_path = if rel.as_os_str().is_empty() {
     root_abs.clone()
@@ -2267,6 +2282,22 @@ mod tests {
     assert!(rel_touches_git_dir(Path::new("sub/.GIT/config")));
     assert!(!rel_touches_git_dir(Path::new("src/.gitignore")));
     assert!(!rel_touches_git_dir(Path::new("docs/git-notes.md")));
+  }
+
+  #[test]
+  fn a_missing_folder_is_named_in_plain_words() {
+    // QA batch 1: a write to an output folder that was deleted said "(os error 2)".
+    let dir = std::env::temp_dir().join(format!("alphonso-gone-{}", now_ms()));
+    let err = write_workspace_text_file(
+      dir.to_string_lossy().to_string(),
+      "a.txt".to_string(),
+      "x".to_string(),
+    )
+    .err()
+    .expect("a write to a missing folder must fail");
+    assert!(err.contains("doesn't exist"), "{err}");
+    assert!(err.contains(&dir.to_string_lossy().to_string()), "{err}");
+    assert!(!err.contains("os error"), "{err}");
   }
 
   #[test]

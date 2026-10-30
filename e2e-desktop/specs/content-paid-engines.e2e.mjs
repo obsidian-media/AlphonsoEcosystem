@@ -17,11 +17,12 @@ async function stepText(label) {
   return browser.execute((name) => document.querySelector(`section[aria-label="${name}"]`)?.innerText || '', label);
 }
 
-describe('Alphonso desktop: paid engines, nothing paid sent', () => {
+describe('Alphonso desktop: paid engines, nothing paid sent', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(300000);
   let outputFolder = '';
 
   before(async function () {
-    this.timeout(300000);
     await enterShell();
     outputFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'alphonso-paid-'));
     const loaded = await invoke('load_settings');
@@ -41,7 +42,6 @@ describe('Alphonso desktop: paid engines, nothing paid sent', () => {
   });
 
   it('Connectors → Higgsfield refuses extra settings that are not a JSON object', async function () {
-    this.timeout(120000);
     await $('[aria-label="Open settings"]').click();
     await browser.waitUntil(async () => /API CREDENTIALS|General/.test(await mainText()), { timeout: 30000 });
     await buttonByText('Connectors').click();
@@ -62,10 +62,9 @@ describe('Alphonso desktop: paid engines, nothing paid sent', () => {
     const section = await keyId.$('./ancestor::div[contains(@class, "rounded-2xl")][1]');
     await (await section.$('.//button[contains(normalize-space(.), "Save")]')).click();
     await browser.waitUntil(async () => /Higgsfield settings saved/.test(await mainText()), { timeout: 30000, timeoutMsg: 'the Higgsfield settings were not saved' });
-  });
+  }).timeout(120000);
 
   it('the Brands tab saves an ElevenLabs voice choice and Higgsfield pictures', async function () {
-    this.timeout(120000);
     await enterShell();
     await openPage('work', 'miya');
     await (await buttonByText('Brands')).click();
@@ -81,10 +80,9 @@ describe('Alphonso desktop: paid engines, nothing paid sent', () => {
     await browser.waitUntil(async () => (await savedBrands()).some((b) => b.engines?.voice?.engine === 'elevenlabs' && b.engines?.pictures === 'higgsfield'), {
       timeout: 20000, timeoutMsg: 'the engines were not saved on the brand',
     });
-  });
+  }).timeout(120000);
 
   it('with Zero-Cost Mode on, a Scenes run makes its pictures with ComfyUI and says why', async function () {
-    this.timeout(20 * 60 * 1000);
     if (!(await ollamaHasModels())) this.skip();
     await (await buttonByText('Scene Builder')).click();
     const name = await $('input[aria-label="New project name"]');
@@ -112,5 +110,5 @@ describe('Alphonso desktop: paid engines, nothing paid sent', () => {
       return version?.output?.pictureNote === ZERO_COST_NOTE;
     }, { timeout: 10 * 60 * 1000, interval: 3000, timeoutMsg: 'the pictures did not say why ComfyUI made them' });
     expect(await mainText()).toContain(ZERO_COST_NOTE);
-  });
+  }).timeout(20 * 60 * 1000);
 });

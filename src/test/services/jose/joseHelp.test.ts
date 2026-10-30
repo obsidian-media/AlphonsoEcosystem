@@ -55,8 +55,18 @@ describe('chooseHelper', () => {
   });
 
   it("keeps Jose's choice when it is allowed and safe", async () => {
-    llm.mockResolvedValueOnce(says({ agent: 'nova', taskType: 'analysis_timing' }));
-    expect(await chooseHelper('when should we post?', 'miya')).toEqual({ agent: 'nova', actionType: 'analysis_timing' });
+    llm.mockResolvedValueOnce(says({ agent: 'nova', taskType: 'strategy_timing' }));
+    expect(await chooseHelper('when should we post?', 'miya')).toEqual({ agent: 'nova', actionType: 'strategy_timing' });
+  });
+
+  // QA batch 1 (found in the real app): the prompt listed prefixes ("hector research_"), the model
+  // answered the bare prefix, and a Hector step with the task type "research_" was added.
+  it('treats a task type that does not exist as unusable, and lists the real ones', async () => {
+    llm.mockResolvedValueOnce(says({ agent: 'hector', taskType: 'research_' }));
+    expect(await chooseHelper('facts about the launch date', 'maria')).toEqual({ agent: 'hector', actionType: 'research_report' });
+    const prompt = String((llm.mock.calls[0][1] as any).prompt);
+    expect(prompt).toContain('research_report');
+    expect(prompt).not.toMatch(/\bresearch_[,\s]/);
   });
 
   it('falls back to the rules when the answer is unusable', async () => {

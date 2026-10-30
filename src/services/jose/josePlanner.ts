@@ -4,7 +4,7 @@
 // the model is unavailable, the simple rule-based plan runs and Jose says so
 // (owner, 2026-10-23).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §2.3–2.4, §5
-import { memoryOnlyTask } from '../echo/memoryIntents';
+import { memoryOnlyTask, MEMORY_ONLY_INSTRUCTION } from '../echo/memoryIntents';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { asksPlanReview, asksReadiness, asksToCleanUpMemory, asksToForget, asksToRemember, decomposeJoseCommand, parseJoseCommand } from '../joseCommandRouterService';
 import { toCurrentOwners } from './movedTaskTypes';
@@ -17,7 +17,7 @@ import { listInstalledModels } from './joseModels';
 import { paidModelAvailable, paidModelId, estimateCostUsd, PAID_MAX_OUTPUT_TOKENS, PAID_PROMPT_ALLOWANCE_CHARS } from './joseSpend';
 import { getAgentProvider } from '../modelSelectionService';
 import { CONNECTOR_NAMES } from '../marcus/destinations';
-import { listProjects } from '../alphonso/projects';
+import { asksForProjectWork, listProjects } from '../alphonso/projects';
 import type { MarcusConnector } from '../marcus/types';
 
 export interface JosePlan {
@@ -71,11 +71,33 @@ const PLACEHOLDER_TASKS = new Set(['normal', 'project', 'task type', 'tasktype']
  * the accuracy check asked for. The same words the simple plan reads: a send, a readiness check, a
  * check of the writing, a review of a plan.
  */
+/** A request asking which option to choose, do first or is worth it (QA batch 0); "the value of" is not one. */
+const ASKS_WHICH_FIRST = /\bprioriti[sz]e\b|\bwhich\b[^.?!]*\b(?:first|best|should|worth)\b|\bworth\s+(?:going\s+after|pursuing|doing)\b|\brank\s+(?:them|these|the\s+options)\b/i;
+
+/** Work besides the review itself. */
+const WORK_BESIDES_REVIEW = /\b(?:write|draft|compose|send|post|publish|share|email|message|research|find|search|look\s+up|make|create|build|code|run|schedule|call|summari[sz]e|translate|remember)\b/i;
+/** A sentence after the plan that asks for something more ("Then post the review to Slack."). */
+const FOLLOW_ON = /^(?:then|also|after\s+that|afterwards|next|and\s+then|finally)\b/i;
+
+/** QA batch 1: a request that asks only for a plan to be reviewed. What the plan itself says (after
+ *  the colon) is not asked for; a sentence after it starting "Then …" is. */
+export function planReviewOnly(text: string): boolean {
+  const t = String(text || '').replace(/^\s*\/jose\b/i, '');
+  const colon = t.indexOf(':');
+  const ask = colon < 0 ? t : t.slice(0, colon);
+  const followOns = colon < 0 ? [] : t.slice(colon + 1).split(/(?<=[.!?])\s+/).map((x) => x.trim()).filter((x) => FOLLOW_ON.test(x));
+  return ![ask, ...followOns].some((part) => WORK_BESIDES_REVIEW.test(part));
+}
+
 export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' | 'effects' | 'actionType'>>): string[] {
   const has = (agent: string, test: (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) => boolean = () => true) =>
     steps.some((st) => st.agent === agent && test(st));
   if (asksPlanReview(text)) {
-    return has('maria') ? [] : ['The request asks for a review of a plan: add a maria step with the task type audit_governance.'];
+    if (!has('maria')) return ['The request asks for a review of a plan: add a maria step with the task type audit_governance.'];
+    // QA batch 1: the model also planned the plan's own work (writing the emails) and more audits.
+    return planReviewOnly(text) && steps.length > 1
+      ? ['The request only asks for a review of a plan: plan one maria step with the task type audit_governance and nothing else.']
+      : [];
   }
   if (asksReadiness(text)) {
     return has('marcus', (st) => st.actionType === 'distribution_readiness')
@@ -83,8 +105,20 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   }
   const parsed = parseJoseCommand(text);
   const problems: string[] = [];
+  // QA batch 1: "then write a long report" was planned with research, a judgment and a check, and nobody writing.
+  const writes = (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) => /^(?:assistant_|creative_|design_)/.test(String(st.actionType || ''));
+  // A send that quotes no text needs it written first, as the simple plan does (QA batch 1).
+  const sendNeedsText = Boolean(parsed.sends && !parsed.sends.quoted)
+    && has('marcus', (st) => (st.effects || []).includes('publish_or_send'));
+  if ((parsed.intents.writing || sendNeedsText) && !has('alphonso', writes) && !has('miya', writes)) {
+    problems.push('The request asks for writing: add an alphonso step with the task type assistant_write.');
+  }
   if (parsed.intents.check && parsed.intents.writing && !has('maria')) {
     problems.push('The request asks for the writing to be checked: add a maria step with the task type audit_quality that reviews it.');
+  }
+  // QA batch 0: asking which option to choose or do first is Nova's judgment.
+  if (ASKS_WHICH_FIRST.test(text) && !has('nova')) {
+    problems.push('The request asks which option to choose: add a nova step with the task type opportunity_analysis.');
   }
   // Agent phase 7: remembering, forgetting and tidying memory are Echo's steps.
   const echoDoes = (types: string[]) => has('echo', (st) => types.includes(String(st.actionType)));
@@ -107,7 +141,8 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   // Agent phase 6: a code request needs Alphonso's code step; plain writing needs no research.
   const codeStep = (st: Pick<PlanStep, 'agent' | 'effects' | 'actionType'>) =>
     CODE_TASK_PREFIXES.some((prefix) => String(st.actionType || '').startsWith(prefix));
-  if (isCodeRequest(text) && !isPlainQuestion(text) && !has('alphonso', codeStep)) {
+  // QA batch 0: changing a file in a saved project is code work too, whatever the file type.
+  if ((isCodeRequest(text) || asksForProjectWork(text)) && !isPlainQuestion(text) && !has('alphonso', codeStep)) {
     problems.push('The request asks for code: add an alphonso step with the task type local_operation.');
   }
   // Writing or code that needs no facts gets no research step (agent phase 6).
@@ -122,9 +157,19 @@ export function missingAsked(text: string, steps: Array<Pick<PlanStep, 'agent' |
   return problems;
 }
 
-export function copiedPlaceholders(steps: Array<{ id?: string; agent?: string; taskType?: string }>): string[] {
+/** The example plan's own instructions and its topic (QA batch 1): a small model copied them for a
+ *  request about something else ("the history of tea" became "three facts about honeybees"). */
+const EXAMPLE_INSTRUCTIONS = new Set((JSON.parse(PLAN_EXAMPLE).steps as Array<{ instruction: string }>).map((st) => st.instruction.trim().toLowerCase()));
+const EXAMPLE_TOPIC = /\bhoneybees?\b/i;
+
+export function copiedPlaceholders(steps: Array<{ id?: string; agent?: string; taskType?: string; instruction?: string }>, request = ''): string[] {
   const problems: string[] = [];
+  const aboutExample = EXAMPLE_TOPIC.test(request);
   for (const step of steps) {
+    const said = String(step.instruction ?? '').trim().toLowerCase();
+    if (!aboutExample && said && EXAMPLE_INSTRUCTIONS.has(said)) {
+      problems.push(`Step "${step.id}" copies the example's instruction: write one for this request.`);
+    }
     const id = String(step.id ?? '').trim().toLowerCase();
     const agent = String(step.agent ?? '').trim().toLowerCase();
     const task = String(step.taskType ?? '').trim().toLowerCase();
@@ -260,13 +305,30 @@ function fillFromTemplate(steps: PlanStep[], template: JoseTemplate): PlanStep[]
   });
 }
 
-const isReviewType = (actionType: string) => actionType.startsWith('audit_') || actionType.includes('review');
+// Sentinel's checks review work too (QA batch 1: an unlinked security_workflow_step checked the
+// request instead of the email); his dependency check looks at a project, not a piece of work.
+const isReviewType = (actionType: string) => actionType.startsWith('audit_') || actionType.includes('review')
+  || (actionType.startsWith('security_') && actionType !== 'security_dependencies');
 
 /**
  * A review step the model did not mark: if its task is a review and it needs
  * exactly one step that is not itself a review, it reviews that step (so its
  * findings can send the work back).
  */
+/**
+ * Nova judges what Hector found (QA batch 1: a 7B model planned them side by side, so she judged
+ * from the request alone). A Nova step that waits for nothing waits for every research step of
+ * Hector's in the plan, the same order as the simple plan (`AGENT_DEPENDENCIES`). A plan where
+ * Hector waits for Nova is left as it is.
+ */
+function novaWaitsForHector(steps: PlanStep[]): PlanStep[] {
+  const research = steps.filter((s) => s.agent === 'hector' && String(s.actionType || '').startsWith('research_'));
+  if (!research.length) return steps;
+  const novaIds = new Set(steps.filter((s) => s.agent === 'nova').map((s) => s.stepId));
+  if (research.some((s) => s.needs.some((n) => novaIds.has(n)))) return steps;
+  return steps.map((step) => (step.agent === 'nova' && !step.needs.length ? { ...step, needs: research.map((r) => r.stepId) } : step));
+}
+
 function inferReviewOf(steps: PlanStep[]): PlanStep[] {
   const byId = new Map(steps.map((s) => [s.stepId, s]));
   // The one piece of work in the plan (Alphonso's or Miya's), for a review that names nothing (agent phase 5).
@@ -322,7 +384,7 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
   const memoryTask = memoryOnlyTask(text);
   if (memoryTask) {
     return {
-      steps: [{ stepId: 'echo', agent: 'echo', actionType: memoryTask, effects: inferEffects(memoryTask), needs: [], instruction: 'Do what the request asks with memory.' }],
+      steps: [{ stepId: 'echo', agent: 'echo', actionType: memoryTask, effects: inferEffects(memoryTask), needs: [], instruction: MEMORY_ONLY_INSTRUCTION }],
       source: 'rules', templateId: null, kind: 'normal', note: 'Echo does this.',
     };
   }
@@ -346,11 +408,11 @@ export async function planJoseRequest(text: string, options: PlanOptions = {}): 
     }
     const basedOn = template && plan.basedOnTemplate === template.id ? template : null;
     if (basedOn) plan.steps = fillFromTemplate(plan.steps, basedOn);
-    plan.steps = toCurrentOwners(inferReviewOf(plan.steps)).steps;
+    plan.steps = toCurrentOwners(inferReviewOf(novaWaitsForHector(plan.steps))).steps;
     // Each step only to the agent who owns its kind of work (owner, 2026-10-24),
     // and no code step for a request that isn't about code (agent phase 1).
     const check = checkPlan(plan.steps, { taskTypes: true, request: text });
-    const copied = copiedPlaceholders(plan.steps.map((st) => ({ id: st.stepId, agent: st.agent, taskType: st.actionType })));
+    const copied = copiedPlaceholders(plan.steps.map((st) => ({ id: st.stepId, agent: st.agent, taskType: st.actionType, instruction: st.instruction })), text);
     const unsent = missingAsked(text, plan.steps);
     const fromHistory = historyOnlyDestinations(plan.steps, text, options.history);
     if (!check.ok || copied.length || unsent.length || fromHistory.length) {

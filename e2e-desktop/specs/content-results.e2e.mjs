@@ -8,9 +8,10 @@ const DAY = 24 * 3600e3;
 const savedBrands = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_brands_v1') || '[]'));
 const savedProjects = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_projects_v1') || '[]'));
 
-describe('Alphonso desktop: real results', () => {
+describe('Alphonso desktop: real results', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(300000);
   before(async function () {
-    this.timeout(300000);
     await enterShell();
     await browser.execute((DAY_MS) => {
       const now = Date.now();
@@ -46,27 +47,23 @@ describe('Alphonso desktop: real results', () => {
   });
 
   it("the Results show each post with how it did for its brand", async function () {
-    this.timeout(60000);
     const results = await $('section[aria-label="Results"]');
     expect(await $('[data-testid="result-hit"]').getText()).toContain('good');
     expect(await $('[data-testid="result-a"]').getText()).toContain('weak');
     expect(await results.getText()).toContain('900');
-  });
+  }).timeout(60000);
 
   it('a proposed lesson is kept, and then counts as a lesson', async function () {
-    this.timeout(60000);
     await (await $('button[aria-label="Keep lesson: Question hooks kept people watching."]')).click();
     await browser.waitUntil(async () => (await savedBrands())[0].lessons[0].status === 'kept', { timeout: 10000, timeoutMsg: 'the lesson was not kept' });
-  });
+  }).timeout(60000);
 
   it('an idea starts a project for the brand', async function () {
-    this.timeout(60000);
     await (await $('button[aria-label="Start project: Part two: the cold brew test"]')).click();
     await browser.waitUntil(async () => (await savedProjects()).some((p) => p.name === 'Part two: the cold brew test' && p.brandId === 'acme'), { timeout: 10000, timeoutMsg: 'no project from the idea' });
-  });
+  }).timeout(60000);
 
   it("the Calendar shows a post's numbers and marks the Short", async function () {
-    this.timeout(120000);
     await openPage('work', 'calendar');
     const chip = await $('[data-testid="calendar-item-post:hit"]');
     await chip.waitForDisplayed({ timeout: 60000 });
@@ -75,5 +72,5 @@ describe('Alphonso desktop: real results', () => {
     const panel = await $('section[aria-label="Selected post"]');
     await panel.waitForDisplayed({ timeout: 15000 });
     expect(await panel.getText()).toContain('900');
-  });
+  }).timeout(120000);
 });

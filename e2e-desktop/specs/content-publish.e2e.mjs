@@ -15,12 +15,13 @@ const schedule = async () => JSON.parse(await browser.execute(() => localStorage
 const projectById = async (id) => (await savedProjects()).find((p) => p.id === id);
 
 
-describe('Alphonso desktop: publishing', () => {
+describe('Alphonso desktop: publishing', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(300000);
   let outputFolder = '';
   let projectId = '';
 
   before(async function () {
-    this.timeout(300000);
     await enterShell();
     outputFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'alphonso-publish-'));
     const loaded = await invoke('load_settings');
@@ -77,7 +78,6 @@ describe('Alphonso desktop: publishing', () => {
   });
 
   it('makes the posts list and changes a post time', async function () {
-    this.timeout(120000);
     await (await buttonByText('make the posts list')).click();
     await browser.waitUntil(async () => ((await projectById(projectId)).posts || []).length === 1, { timeout: 15000, timeoutMsg: 'no posts list' });
     const post = (await projectById(projectId)).posts[0];
@@ -95,10 +95,9 @@ describe('Alphonso desktop: publishing', () => {
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }, value);
     await browser.waitUntil(async () => (await projectById(projectId)).posts[0].scheduledAtMs === at.getTime(), { timeout: 10000, timeoutMsg: 'the new time was not saved' });
-  });
+  }).timeout(120000);
 
   it('"Approve and schedule" asks once and hands the Reel to Marcus for its time', async function () {
-    this.timeout(300000);
     await (await buttonByText('approve and schedule')).click();
     // Under the runner's 180 s per test, so the diagnostic prints when this times out in CI.
     await browser.waitUntil(async () => (await projectById(projectId)).posts[0].status === 'scheduled', {
@@ -111,15 +110,17 @@ describe('Alphonso desktop: publishing', () => {
     const requests = JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
     const request = requests.find((r) => r.id === project.joseRequestId);
     expect(request.steps.find((s) => s.stepId === 'publish').status).not.toBe('waiting_approval');
-    expect(await $('section[aria-label="Posts"]').getText()).toContain('Scheduled');
-  });
+    // The Posts list refreshes every 2 s while a post goes out; wait for it (QA batch 1, as in the carousel spec).
+    await browser.waitUntil(async () => (await $('section[aria-label="Posts"]').getText()).includes('Scheduled'), {
+      timeout: 30000, timeoutMsg: 'the Posts list never showed "Scheduled"',
+    });
+  }).timeout(300000);
 
   it('cancelling the post cancels its scheduled send', async function () {
-    this.timeout(60000);
     await (await $('button[aria-label="Cancel Instagram Reel"]')).click();
     await browser.waitUntil(async () => (await projectById(projectId)).posts[0].status === 'cancelled', { timeout: 10000 });
     const postId = (await projectById(projectId)).posts[0].id;
     const item = (await schedule()).find((i) => i.postId === postId);
     expect(item.status).toBe('cancelled');
-  });
+  }).timeout(60000);
 });

@@ -19,6 +19,8 @@ const SHOP = path.join(ROOT, 'shop');
 const BLOG = path.join(ROOT, 'blog');
 const OUTPUT = path.join(ROOT, 'output');
 const ORIGINAL_TEST = "console.log('not yet');\n";
+// The edit typed into the preview: valid JavaScript, since node runs test.js after the approval (QA batch 1).
+const EDITED = "console.log('Edited by the test.');\n";
 
 async function installedModels() {
   try {
@@ -204,7 +206,9 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     const done = (await settle(request.id, 'change')).request;
     console.log('ALPHONSO-E2E change done', JSON.stringify({ status: done.status, steps: steps(done), summary: (await stepOutput(done, step.stepId))?.summary }));
     // What was approved is what was written (a later fix round may have changed it again).
-    const fixed = done.steps.some((x) => x.revises === step.stepId);
+    // A fix round inside his own run says so in the summary (QA batch 1).
+    const summary = String((await stepOutput(done, step.stepId))?.summary || '');
+    const fixed = done.steps.some((x) => x.revises === step.stepId) || /differs from what you approved/.test(summary);
     for (const f of files) {
       const now = fs.readFileSync(path.join(SHOP, f.path), 'utf8');
       if (!fixed) expect(now).toBe(f.content);
@@ -251,7 +255,8 @@ describe('Alphonso desktop: his code steps in your projects', () => {
 
   // Agent roles Part C2: you can edit his change before approving it; your edit is what is written.
   it('an edited preview is what gets written', async () => {
-    const { request } = await ask('/jose In shop, add a file notes.txt that says hello.');
+    // A change to an existing file, so it waits: a new file is his own work and asks nothing (QA batch 1).
+    const { request } = await ask("/jose In shop, change test.js so it prints 'edited'.");
     const step = codeStep(request);
     console.log('ALPHONSO-E2E edit', JSON.stringify({ steps: steps(request), files: step?.codePreview?.files?.map((f) => [f.path, f.status]) }));
     expect(step?.status).toBe('waiting_approval');
@@ -260,19 +265,22 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     await (await $(`[data-testid="alphonso-edit-${file.path}"]`)).click();
     const box = await $(`//textarea[@aria-label="Edit ${file.path}"]`);
     await box.waitForDisplayed({ timeout: 30000 });
-    await box.setValue('Edited by the test.');
+    await box.setValue(EDITED);
     await (await $('[data-testid="alphonso-edit-save"]')).click();
     await browser.waitUntil(async () => /Edited by you/.test(await (await $('[data-testid="alphonso-code-preview"]')).getText()), { timeout: 30000 });
     await (await $('//main//button[starts-with(normalize-space(.), "Approve and carry on")]')).click();
     const done = (await settle(request.id, 'edit')).request;
-    const fixed = done.steps.some((x) => x.revises === step.stepId);
-    if (!fixed) expect(fs.readFileSync(path.join(SHOP, file.path), 'utf8')).toBe('Edited by the test.');
+    const summary = String((await stepOutput(done, step.stepId))?.summary || '');
+    const fixed = done.steps.some((x) => x.revises === step.stepId) || /differs from what you approved/.test(summary);
+    if (!fixed) expect(fs.readFileSync(path.join(SHOP, file.path), 'utf8')).toBe(EDITED);
   }).timeout(3200000);
 
   // Agent roles Part C2: naming two projects gives one step per project.
   it('naming shop and blog gives a code step in each', async () => {
     const { request } = await ask('/jose Add a file hello.txt that says hi in shop and in blog.');
-    const code = request.steps.filter((s) => s.agent === 'alphonso' && !String(s.actionType || '').startsWith('assistant_'));
+    // The planned steps: a fix round after a review ("alphonso-2-fix-1") works in the same project (QA batch 1).
+    const code = request.steps.filter((s) => s.agent === 'alphonso' && !String(s.actionType || '').startsWith('assistant_')
+      && !s.revises && !s.helpRound && !s.replaces);
     console.log('ALPHONSO-E2E two', JSON.stringify({ steps: steps(request), projects: code.map((s) => s.project) }));
     expect(code.map((s) => s.project).sort()).toEqual(['blog', 'shop']);
     // Nothing is approved: the request is rejected, so its locks are let go.

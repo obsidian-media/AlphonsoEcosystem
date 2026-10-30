@@ -17,8 +17,9 @@ function fakeVector(text: string): number[] {
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(async (cmd: string, args: any) => {
     if (cmd === 'ollama_list_models') {
-      if (!ollamaUp) return { http_status: null, models: [] };
-      return { http_status: 200, models: models.map((name) => ({ name })) };
+      // The backend sends camelCase (serde rename_all), as OllamaModelsProof in ollama.rs does (QA batch 0).
+      if (!ollamaUp) return { httpStatus: null, models: [] };
+      return { httpStatus: 200, models: models.map((name) => ({ name })) };
     }
     if (cmd === 'ollama_embed') {
       embedCalls.push(args.inputs);
@@ -40,7 +41,7 @@ vi.mock('../../../lib/ollama', async (orig) => ({
 vi.mock('../../../services/chromaDbService', () => ({ isChromaHealthy: vi.fn(async () => false), semanticSearchMemory: vi.fn(async () => null), addMemoryToChroma: vi.fn(async () => undefined) }));
 vi.mock('../../../services/memoryGraphService', () => ({ addNode: vi.fn(async () => null), addEdge: vi.fn(async () => null) }));
 
-import { ensureMeaning, meaningState, resetMeaningForTests, ECHO_EMBED_MODEL } from '../../../services/echo/meaning';
+import { ensureMeaning, meaningState, resetMeaningForTests, ECHO_EMBED_MODEL, MEANING_MIN_SIMILARITY, meaningQuestion } from '../../../services/echo/meaning';
 import { searchDecisions } from '../../../services/echo/recall';
 import { addDecision } from '../../../services/echo/decisions';
 
@@ -115,5 +116,21 @@ describe("Echo's meaning search", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// QA batch 1 (2026-10-28), measured with the real all-minilm on 14 questions against 6 decisions:
+// right matches 0.38 to 0.71 (median 0.55), wrong ones at most 0.44. At 0.55 most right matches
+// were missed ("morning meals" scored 0.51 against "We serve breakfast until eleven.").
+describe('the meaning cut-off and the question it embeds', () => {
+  it('counts a match from 0.45, above every wrong match measured', () => {
+    expect(MEANING_MIN_SIMILARITY).toBe(0.45);
+  });
+
+  it('embeds only what the question is about, without "/jose" or "what did we decide about"', () => {
+    expect(meaningQuestion('/jose What did we decide about morning meals?')).toBe('morning meals');
+    expect(meaningQuestion('Remind me what we decided about the launch venue.')).toBe('the launch venue');
+    expect(meaningQuestion('Do you remember what we said about pricing?')).toBe('pricing');
+    expect(meaningQuestion('breakfast hours')).toBe('breakfast hours');
   });
 });

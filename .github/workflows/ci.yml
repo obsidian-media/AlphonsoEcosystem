@@ -355,6 +355,16 @@ jobs:
       - name: Build debug Tauri binary
         run: npm run tauri build -- --debug --no-bundle
 
+      # The debug app for the by-hand live checks (QA batch 1): Smart App Control on the dev
+      # machine blocks freshly built Rust files, so the live checks run on this build instead.
+      - name: Upload the debug app for live checks
+        if: matrix.suite == 'plain'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: alphonso-debug-app-${{ github.sha }}
+          path: src-tauri/target/debug/app.exe
+          retention-days: 3
+
       - name: Run desktop E2E suite
         if: matrix.suite == 'plain'
         run: npm run test:e2e:desktop

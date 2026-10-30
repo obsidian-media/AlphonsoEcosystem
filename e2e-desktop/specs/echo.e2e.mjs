@@ -3,7 +3,7 @@
 // one, Forget removes one, a forget that could mean several waits with a button for each, a
 // cleanup changes nothing until you apply it, and health checks no longer fill memory.
 // Nothing is sent anywhere. Needs a local model; uses qwen2.5:7b when installed.
-import { enterShell, invoke, ollamaHasModels, warmSelectedModel, mainText } from '../helpers.mjs';
+import { enterShell, invoke, ollamaHasModels, warmSelectedModel, mainText, needsLargerModel } from '../helpers.mjs';
 
 // CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
@@ -119,7 +119,7 @@ describe('Alphonso desktop: Echo remembers what you decide', () => {
     await warmSelectedModel();
   });
 
-  it('remembers a decision, shows it in Chat, and answers from it in a new chat', async () => {
+  it('remembers a decision, shows it in Chat, and answers from it in a new chat', async function () {
     const request = await ask('Remember that our launch is on Friday the 14th and the price is $29.');
     const saved = (await decisions()).filter((d) => d.status === 'active');
     console.log('ECHO-E2E remember', JSON.stringify({ steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status]), saved: saved.map((d) => [d.kind, d.text]) }));
@@ -130,6 +130,7 @@ describe('Alphonso desktop: Echo remembers what you decide', () => {
     const shown = await $$('[data-testid="echo-remembered"]');
     expect(await shown[shown.length - 1].getText()).toContain('Echo remembered:');
 
+    needsLargerModel(this, 'the answer has to give both the date and the price');
     await newChat();
     const reply = await answer('What did we decide about the launch?', (t) => /14/.test(t) && /29/.test(t));
     console.log('ECHO-E2E recall', JSON.stringify(reply.slice(0, 600)));
@@ -149,7 +150,7 @@ describe('Alphonso desktop: Echo remembers what you decide', () => {
     expect(email).toContain('14');
   }).timeout(1600000);
 
-  it('a changed decision replaces the old one, and the recall gives both dates', async () => {
+  it('a changed decision replaces the old one, and the recall gives both dates', async function () {
     const moved = await ask('Remember that the launch moved to Saturday the 15th.');
     const all = await decisions();
     console.log('ECHO-E2E moved', JSON.stringify({ steps: moved.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status, s.error]), echo: await stepSummary(moved, 'echo'), decisions: all.map((d) => [d.id, d.status, d.text, d.replaces, d.replacedBy]) }));
@@ -159,6 +160,7 @@ describe('Alphonso desktop: Echo remembers what you decide', () => {
     const old = all.find((d) => /14/.test(d.text) && d.status !== 'forgotten');
     expect(old).toBeTruthy();
     expect(old.status === 'replaced' || /29/.test(old.text)).toBe(true);
+    needsLargerModel(this, "Echo's recall has to give the old date and the new one");
     const request = await ask('/jose What did we decide about the launch date?');
     const said = await stepSummary(request, 'echo');
     console.log('ECHO-E2E dates', JSON.stringify(said.slice(0, 800)));
@@ -243,7 +245,7 @@ describe('Alphonso desktop: Echo remembers what you decide', () => {
     expect(shown).toBe('On.');
     const request = await ask('/jose What did we decide about morning meals?');
     const said = await stepSummary(request, 'echo');
-    console.log('ECHO-E2E meaning', JSON.stringify(said.slice(0, 600)));
+    console.log('ECHO-E2E meaning', JSON.stringify(said.slice(0, 600)), JSON.stringify(request.steps.map((x) => [x.stepId, x.agent, x.actionType, x.status, x.error || null])));
     expect(said.toLowerCase()).toContain('breakfast');
   }).timeout(1600000);
 

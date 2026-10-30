@@ -145,11 +145,24 @@ function writeAllCredentials(creds: ConnectorCredentials): void {
   }
 }
 
+const credentialListeners = new Set<(connectorId: string) => void>();
+
+/** Called with the connector's id whenever one of its keys is saved. A screen that stays open
+ *  (Chat's provider tabs) re-checks then: inside the one app window it never gets focus back
+ *  (QA batch 1). Returns a function that stops listening. */
+export function onConnectorCredentialsChanged(listener: (connectorId: string) => void): () => void {
+  credentialListeners.add(listener);
+  return () => { credentialListeners.delete(listener); };
+}
+
 export function saveConnectorCredential(connectorId: string, key: string, value: unknown): void {
   const all = readAllCredentials();
   if (!all[connectorId]) all[connectorId] = {};
   all[connectorId][key] = String(value || '').trim();
   writeAllCredentials(all);
+  for (const listener of [...credentialListeners]) {
+    try { listener(connectorId); } catch { /* one screen's error must not stop a save */ }
+  }
 }
 
 export function getConnectorCredential(connectorId: string, key: string): string {
@@ -184,11 +197,29 @@ export const DEFAULT_AUTH_PROFILES: ConnectorAuthProfiles = {
   runway: { enabled: false, allowlist: [], mode: 'allowlist_required' }
 };
 
+/**
+ * The runtime ledger writes these back as rows (`[{ id: 'auth-slack', enabled, … }]`, the shape
+ * `writeAuthProfiles()` persists to its scope) about 4 s after every start; they are read keyed by
+ * connector. Until QA batch 1 the rows were spread as "0", "1", …, so every connector read as not
+ * enabled and sends were refused with "not_authenticated".
+ */
+function profilesFromRows(parsed: unknown): ConnectorAuthProfiles {
+  if (!Array.isArray(parsed)) return (parsed && typeof parsed === 'object' ? parsed : {}) as ConnectorAuthProfiles;
+  const out: ConnectorAuthProfiles = {};
+  for (const row of parsed) {
+    const id = String(row?.id || '').replace(/^auth-/, '');
+    if (!id) continue;
+    const { id: _rowId, ...profile } = row;
+    out[id] = profile as ConnectorAuthProfile;
+  }
+  return out;
+}
+
 export function readAuthProfiles(): ConnectorAuthProfiles {
   try {
     const raw = durableGet(CONNECTOR_AUTH_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
-    return { ...DEFAULT_AUTH_PROFILES, ...(parsed || {}) };
+    return { ...DEFAULT_AUTH_PROFILES, ...profilesFromRows(parsed) };
   } catch {
     return { ...DEFAULT_AUTH_PROFILES };
   }

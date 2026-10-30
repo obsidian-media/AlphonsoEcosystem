@@ -349,6 +349,35 @@ describe('useOllamaHealth', () => {
     });
   });
 
+  // QA batch 1 (live NVIDIA check): the health check put an Ollama model in place of an NVIDIA or
+  // Gemini model (empty, or "not installed in Ollama"), so Chat sent llama3.2:3b to NVIDIA.
+  describe('a cloud provider in Chat', () => {
+    it("keeps the cloud model: the check doesn't swap in an Ollama one", async () => {
+      checkOllama.mockResolvedValue({ state: 'model_missing', label: 'Model missing', message: '', models: [{ name: 'llama3.2:3b' }], selectedModel: 'llama3.2:3b' });
+      for (const settings of [
+        createMockSettings({ selectedProvider: 'nvidia_nim', selectedModel: 'meta/llama-3.1-8b-instruct' }),
+        createMockSettings({ selectedProvider: 'gemini', selectedModel: '' }),
+      ]) {
+        const setters = mockSetters();
+        const { unmount } = renderHook(() => useOllamaHealth({ settings, desktopBridge: createMockDesktopBridge(), ...setters, ollamaCheckRunRef: mockOllamaCheckRunRef }));
+        await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+        expect(setters.setOllamaStatus).toHaveBeenCalled();
+        expect(setters.setSettings).not.toHaveBeenCalled();
+        // Ollama is checked without the cloud model, so it isn't reported as missing from Ollama.
+        expect(checkOllama).toHaveBeenLastCalledWith(settings.endpoint, '');
+        unmount();
+      }
+    });
+
+    it('still picks an Ollama model when Ollama is the provider', async () => {
+      checkOllama.mockResolvedValue({ state: 'model_missing', label: 'Model missing', message: '', models: [{ name: 'llama3.2:3b' }], selectedModel: 'llama3.2:3b' });
+      const setters = mockSetters();
+      renderHook(() => useOllamaHealth({ settings: createMockSettings({ selectedProvider: 'ollama', selectedModel: 'gone:1b' }), desktopBridge: createMockDesktopBridge(), ...setters, ollamaCheckRunRef: mockOllamaCheckRunRef }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+      expect(setters.setSettings).toHaveBeenCalled();
+    });
+  });
+
   describe('Streaming health updates to subscribers', () => {
     it('updates lastCheckedAt timestamp on each check', async () => {
       const settings = createMockSettings();

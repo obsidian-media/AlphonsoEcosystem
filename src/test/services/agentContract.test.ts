@@ -3,6 +3,26 @@ import { describe, it, expect } from 'vitest';
 import { AGENT_EXECUTION_CONTRACTS, validateAgentExecutionContract } from '../../services/agentContractService';
 import type { AgentContractPacket, ContractValidationResult } from '../../services/agentContractService';
 
+// QA batch 1 (live ElevenLabs check, 2026-10-29): the plan let Miya's paid voice step spend, but the
+// check when it ran didn't, so it failed "miya may not: Spend money." right after you approved it.
+describe('spending allowed by the plan is allowed when the step runs', () => {
+  it("Miya's paid content steps", () => {
+    for (const actionType of ['creative_voice', 'creative_video_clips', 'creative_higgsfield', 'creative_sfx']) {
+      expect(validateAgentExecutionContract({ toAgent: 'miya', actionType, effects: ['write_own_work', 'spend'] }).ok).toBe(true);
+    }
+  });
+
+  it('a step on a paid model', () => {
+    expect(validateAgentExecutionContract({ toAgent: 'hector', actionType: 'research_report', effects: ['read', 'spend'], model: 'claude:claude-haiku-5-5' }).ok).toBe(true);
+  });
+
+  it('anything else still may not spend', () => {
+    expect(validateAgentExecutionContract({ toAgent: 'miya', actionType: 'creative_brief', effects: ['write_own_work', 'spend'] }))
+      .toEqual({ ok: false, reason: 'miya may not: Spend money.' });
+    expect(validateAgentExecutionContract({ toAgent: 'hector', actionType: 'research_report', effects: ['read', 'spend'], model: 'qwen2.5:7b' }).ok).toBe(false);
+  });
+});
+
 describe('agentContractService', () => {
   describe('AGENT_EXECUTION_CONTRACTS', () => {
     it('has contracts for all 9 agents', () => {

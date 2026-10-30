@@ -6,6 +6,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import {
   chooseDefaultModel,
+  isChatModel,
   classifyOllamaError,
   formatModelSize,
   freeOllamaGpuMemory,
@@ -84,6 +85,18 @@ describe('ollama utilities', () => {
 
     it('returns empty string when no models', () => {
       expect(chooseDefaultModel([], '')).toBe('');
+    });
+    // QA batch 0 (CI, 2026-10-28): once Echo's meaning search downloaded all-minilm, it sorted
+    // first and became every agent's chat model ("does not support generate").
+    it('never picks an embedding model as the chat model', () => {
+      const models = [{ name: 'all-minilm:latest', details: { family: 'bert' } }, { name: 'nomic-embed-text:latest' }, { name: 'qwen2.5:1.5b', details: { family: 'qwen2' } }];
+      expect(chooseDefaultModel(models, 'llama3.2:3b')).toBe('qwen2.5:1.5b');
+      expect(chooseDefaultModel(models, 'all-minilm:latest')).toBe('qwen2.5:1.5b');
+      expect(chooseDefaultModel([{ name: 'all-minilm:latest' }], '')).toBe('');
+      expect(isChatModel({ name: 'bge-m3:latest' })).toBe(false);
+      expect(isChatModel({ name: 'mxbai-embed-large' })).toBe(false);
+      expect(isChatModel({ name: 'some-model', details: { family: 'nomic-bert' } })).toBe(false);
+      expect(isChatModel({ name: 'llama3.2:3b', details: { family: 'llama' } })).toBe(true);
     });
   });
 

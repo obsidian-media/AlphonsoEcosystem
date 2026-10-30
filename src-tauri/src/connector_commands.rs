@@ -1694,8 +1694,262 @@ pub(crate) async fn connector_hermes_agent_request(
   })
 }
 
+const NVIDIA_API_BASE: &str = "https://integrate.api.nvidia.com/v1";
+
+/// How long to wait for NVIDIA: the time asked for, kept between 5 and 120 seconds; 120 when not
+/// given. The model search asks with a short limit, since some listed models never answer (QA batch 1).
+pub(crate) fn nvidia_timeout(secs: Option<u64>) -> Duration {
+  Duration::from_secs(secs.unwrap_or(120).clamp(5, 120))
+}
+
+/// NVIDIA NIM's address for one of the two calls the app makes, and whether it posts.
+/// Anything else is refused: this command reaches NVIDIA only.
+pub(crate) fn nvidia_target(path: &str) -> Result<(String, bool), String> {
+  match path {
+    "models" => Ok((format!("{NVIDIA_API_BASE}/models"), false)),
+    "chat/completions" => Ok((format!("{NVIDIA_API_BASE}/chat/completions"), true)),
+    other => Err(format!("NVIDIA NIM has no call named {other:?} here.")),
+  }
+}
+
+/// Calls NVIDIA NIM from the backend. NVIDIA sends no Access-Control-Allow-Origin, so the
+/// app window's own fetch always failed with "Failed to fetch" (QA batch 1). The key is the
+/// one saved in Settings, else `NVIDIA_API_KEY`; it never appears in an error.
+#[tauri::command]
+pub(crate) async fn connector_nvidia_request(
+  path: String,
+  body: Option<String>,
+  api_key: Option<String>,
+  timeout_secs: Option<u64>,
+) -> Result<HermesAgentHttpProof, String> {
+  let failed = |error: String| HermesAgentHttpProof {
+    ok: false,
+    http_status: None,
+    body: None,
+    error: Some(error),
+  };
+  let (url, posts) = match nvidia_target(&path) {
+    Ok(target) => target,
+    Err(error) => return Ok(failed(error)),
+  };
+  let key = secret_or_env(api_key, "NVIDIA_API_KEY");
+  if key.is_empty() {
+    return Ok(failed(
+      "No NVIDIA NIM key is saved. Add it in Settings → Connectors.".to_string(),
+    ));
+  }
+  let client = match reqwest::Client::builder()
+    .timeout(nvidia_timeout(timeout_secs))
+    .build()
+  {
+    Ok(c) => c,
+    Err(error) => return Ok(failed(error.to_string())),
+  };
+  let mut request = if posts {
+    client
+      .post(&url)
+      .header("Content-Type", "application/json")
+      .body(body.unwrap_or_default())
+  } else {
+    client.get(&url)
+  };
+  request = request.header("Authorization", format!("Bearer {}", key.trim()));
+  let response = match request.send().await {
+    Ok(r) => r,
+    // reqwest's error names the address, never the header, so the key stays out of it.
+    Err(error) => return Ok(failed(error.without_url().to_string())),
+  };
+  let http_status = Some(response.status().as_u16());
+  let ok = response.status().is_success();
+  let body_text = response.text().await.unwrap_or_default();
+  Ok(HermesAgentHttpProof {
+    ok,
+    http_status,
+    body: Some(body_text),
+    error: None,
+  })
+}
+
+const COMPOSIO_API_BASE: &str = "https://backend.composio.dev/api/v3.1";
+
+/// A toolkit or tool name as Composio writes them (gmail, GMAIL_FETCH_EMAILS).
+fn composio_slug(value: Option<&str>) -> Option<&str> {
+  value.filter(|v| {
+    !v.is_empty()
+      && v.len() <= 100
+      && v
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+  })
+}
+
+/// Composio's address for one of the three calls the app makes, and whether it posts.
+/// Anything else is refused: this command reaches Composio only.
+pub(crate) fn composio_target(
+  call: &str,
+  toolkit: Option<&str>,
+  tool: Option<&str>,
+  limit: Option<u32>,
+) -> Result<(String, bool), String> {
+  match call {
+    "toolkits" => match limit {
+      None => Ok((format!("{COMPOSIO_API_BASE}/toolkits"), false)),
+      Some(n) if (1..=1000).contains(&n) => {
+        Ok((format!("{COMPOSIO_API_BASE}/toolkits?limit={n}"), false))
+      }
+      Some(n) => Err(format!("A toolkit list of {n} isn't allowed.")),
+    },
+    "tools" => composio_slug(toolkit)
+      .map(|t| {
+        (
+          format!("{COMPOSIO_API_BASE}/tools?toolkit_slug={t}&limit=100"),
+          false,
+        )
+      })
+      .ok_or_else(|| "That isn't a Composio toolkit name.".to_string()),
+    "execute" => composio_slug(tool)
+      .map(|t| (format!("{COMPOSIO_API_BASE}/tools/execute/{t}"), true))
+      .ok_or_else(|| "That isn't a Composio tool name.".to_string()),
+    other => Err(format!("Composio has no call named {other:?} here.")),
+  }
+}
+
+/// Calls Composio from the backend. Composio's browser pre-check leaves out
+/// Access-Control-Allow-Origin for the app window's origin (http://tauri.localhost), so the
+/// window's own fetch always failed (QA batch 1). The key is the one saved in Settings, else
+/// `COMPOSIO_API_KEY`; it never appears in an error.
+#[tauri::command]
+pub(crate) async fn connector_composio_request(
+  call: String,
+  toolkit: Option<String>,
+  tool: Option<String>,
+  limit: Option<u32>,
+  body: Option<String>,
+  api_key: Option<String>,
+) -> Result<HermesAgentHttpProof, String> {
+  let failed = |error: String| HermesAgentHttpProof {
+    ok: false,
+    http_status: None,
+    body: None,
+    error: Some(error),
+  };
+  let (url, posts) = match composio_target(&call, toolkit.as_deref(), tool.as_deref(), limit) {
+    Ok(target) => target,
+    Err(error) => return Ok(failed(error)),
+  };
+  let key = secret_or_env(api_key, "COMPOSIO_API_KEY");
+  if key.is_empty() {
+    return Ok(failed(
+      "No Composio key is saved. Add it in Settings → Composio.".to_string(),
+    ));
+  }
+  let client = match reqwest::Client::builder()
+    .timeout(Duration::from_secs(120))
+    .build()
+  {
+    Ok(c) => c,
+    Err(error) => return Ok(failed(error.to_string())),
+  };
+  let mut request = if posts {
+    client
+      .post(&url)
+      .header("Content-Type", "application/json")
+      .body(body.unwrap_or_default())
+  } else {
+    client.get(&url)
+  };
+  request = request.header("x-api-key", key.trim());
+  let response = match request.send().await {
+    Ok(r) => r,
+    // reqwest's error names the address, never the header, so the key stays out of it.
+    Err(error) => return Ok(failed(error.without_url().to_string())),
+  };
+  let http_status = Some(response.status().as_u16());
+  let ok = response.status().is_success();
+  let body_text = response.text().await.unwrap_or_default();
+  Ok(HermesAgentHttpProof {
+    ok,
+    http_status,
+    body: Some(body_text),
+    error: None,
+  })
+}
+
 #[cfg(test)]
 mod tests {
+  #[test]
+  fn nvidia_requests_reach_only_nvidia_and_only_its_two_calls() {
+    assert_eq!(
+      nvidia_target("models").unwrap(),
+      (
+        "https://integrate.api.nvidia.com/v1/models".to_string(),
+        false
+      )
+    );
+    assert_eq!(
+      nvidia_target("chat/completions").unwrap(),
+      (
+        "https://integrate.api.nvidia.com/v1/chat/completions".to_string(),
+        true
+      )
+    );
+    for bad in [
+      "",
+      "../models",
+      "https://evil.example",
+      "models?x=1",
+      "embeddings",
+    ] {
+      assert!(nvidia_target(bad).is_err(), "{bad} must be refused");
+    }
+  }
+
+  #[test]
+  fn nvidia_waits_as_long_as_asked_between_5_and_120_seconds() {
+    assert_eq!(nvidia_timeout(None), Duration::from_secs(120));
+    assert_eq!(nvidia_timeout(Some(20)), Duration::from_secs(20));
+    assert_eq!(nvidia_timeout(Some(0)), Duration::from_secs(5));
+    assert_eq!(nvidia_timeout(Some(9999)), Duration::from_secs(120));
+  }
+
+  #[test]
+  fn composio_requests_reach_only_composio_and_only_its_three_calls() {
+    let base = "https://backend.composio.dev/api/v3.1";
+    assert_eq!(
+      composio_target("toolkits", None, None, None).unwrap(),
+      (format!("{base}/toolkits"), false)
+    );
+    assert_eq!(
+      composio_target("toolkits", None, None, Some(1)).unwrap(),
+      (format!("{base}/toolkits?limit=1"), false)
+    );
+    assert_eq!(
+      composio_target("tools", Some("gmail"), None, None).unwrap(),
+      (format!("{base}/tools?toolkit_slug=gmail&limit=100"), false)
+    );
+    assert_eq!(
+      composio_target("execute", None, Some("GMAIL_FETCH_EMAILS"), None).unwrap(),
+      (format!("{base}/tools/execute/GMAIL_FETCH_EMAILS"), true)
+    );
+    for (call, toolkit, tool, limit) in [
+      ("", None, None, None),
+      ("toolkits", None, None, Some(0)),
+      ("toolkits", None, None, Some(5000)),
+      ("tools", None, None, None),
+      ("tools", Some("gmail&limit=1"), None, None),
+      ("tools", Some("../x"), None, None),
+      ("execute", None, None, None),
+      ("execute", None, Some("A/../../B"), None),
+      ("execute", None, Some("https://evil.example"), None),
+      ("connected_accounts", None, None, None),
+    ] {
+      assert!(
+        composio_target(call, toolkit, tool, limit).is_err(),
+        "{call} {toolkit:?} {tool:?} {limit:?} must be refused"
+      );
+    }
+  }
+
   use super::*;
   use std::ffi::OsString;
   use std::sync::{Mutex, OnceLock};

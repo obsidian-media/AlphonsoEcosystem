@@ -4,7 +4,7 @@
 // for n8n receives exactly that text once; and Jose's own plan has no copied placeholder.
 // Nothing is sent to a real service. Needs a local model; uses qwen2.5:7b when installed.
 import http from 'node:http';
-import { enterShell, invoke, ollamaHasModels, warmSelectedModel, mainText, buttonByText } from '../helpers.mjs';
+import { enterShell, invoke, ollamaHasModels, warmSelectedModel, mainText, buttonByText, needsLargerModel } from '../helpers.mjs';
 
 // CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
@@ -144,11 +144,17 @@ describe('Alphonso desktop: Marcus sends what you approved', () => {
   }).timeout(1600000);
 
   // Agent roles Part C2: a send with a time is approved now and sent at that time.
-  it('a send for tomorrow at 9 is approved now, scheduled, and not sent yet', async () => {
+  it('a send for tomorrow at 9 is approved now, scheduled, and not sent yet', async function () {
     const before = received.length;
     const { request } = await ask('/jose Write a one-line note that the shop opens at 10 and send it to my n8n workflow Team notes tomorrow at 9.');
     const marcus = request.steps.find((s) => s.agent === 'marcus' && s.status === 'waiting_approval');
     console.log('MARCUS-E2E timed', JSON.stringify({ steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status, s.error]), preview: marcus?.sendPreview }));
+    // QA batch 1: a 1.5B writer left "[Your Name]" in the note through both fix rounds. Marcus then
+    // fails the send, saying nothing was sent; the scheduling itself needs a note without a gap.
+    const lastMarcus = [...request.steps].reverse().find((s) => s.agent === 'marcus');
+    if (!marcus && /rounds of fixes, so nothing was sent/.test(String(lastMarcus?.error || ''))) {
+      needsLargerModel(this, 'the note still had a gap to fill after the fix rounds');
+    }
     expect(marcus).toBeTruthy();
     expect(marcus.sendPreview.sendAtMs).toBeGreaterThan(Date.now() + 60_000);
     expect(new Date(marcus.sendPreview.sendAtMs).getHours()).toBe(9);

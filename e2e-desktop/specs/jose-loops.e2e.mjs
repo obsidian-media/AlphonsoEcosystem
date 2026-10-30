@@ -60,13 +60,14 @@ const savedRequests = async () => JSON.parse(await browser.execute(() => localSt
 const latest = async () => (await savedRequests()).slice(-1)[0];
 const settled = (request) => request && !['running', 'waiting_plan_approval'].includes(request.status);
 
-describe('Alphonso desktop: Jose plans that change while they run', () => {
+describe('Alphonso desktop: Jose plans that change while they run', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(400000);
   let baseSettings = {};
 
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(400000);
     baseSettings = (await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {};
     // Nothing but the locked kinds asks, so the first request runs (and the
     // board link shows while it does).
@@ -76,7 +77,6 @@ describe('Alphonso desktop: Jose plans that change while they run', () => {
   });
 
   it('links to the board while a request runs', async function () {
-    this.timeout(900000);
     const before = (await savedRequests()).length;
     // Watch for the link from before sending rather than polling.
     await browser.execute(() => {
@@ -92,10 +92,9 @@ describe('Alphonso desktop: Jose plans that change while they run', () => {
     });
     await browser.waitUntil(async () => (await savedRequests()).length > before, { timeout: 60000, timeoutMsg: 'no request was saved' });
     await browser.waitUntil(async () => settled(await latest()), { timeout: 300000, interval: 2000, timeoutMsg: 'the request never stopped running' });
-  });
+  }).timeout(900000);
 
   it('carries the request on when its waiting steps are approved on the board', async function () {
-    this.timeout(2400000);
     // Now every step's own work asks first, so this request waits for approval.
     await useSettings({ ...baseSettings, showPlanFirst: 'never', approvalMode: true, effectApprovals: { read: true, write_own_work: true } });
     await openChat();
@@ -125,10 +124,9 @@ describe('Alphonso desktop: Jose plans that change while they run', () => {
     const finished = (await savedRequests()).find((r) => r.id === request.id);
     expect(finished.status).toBe('done');
     expect(finished.steps.every((s) => s.status === 'done')).toBe(true);
-  });
+  }).timeout(2400000);
 
   it('records a verdict for every review in a research report, and a revision ran when one asked for changes', async function () {
-    this.timeout(2400000);
     await useSettings({ ...baseSettings, showPlanFirst: 'never', effectApprovals: {} });
     await openChat();
     // Jose's model decides the plan; it may plan no review. Try twice.
@@ -163,5 +161,5 @@ describe('Alphonso desktop: Jose plans that change while they run', () => {
       await openLatestOnBoard();
       await browser.waitUntil(async () => (await mainText()).includes('Round 1'), { timeout: 30000, timeoutMsg: 'the board did not show Round 1' });
     }
-  });
+  }).timeout(2400000);
 });

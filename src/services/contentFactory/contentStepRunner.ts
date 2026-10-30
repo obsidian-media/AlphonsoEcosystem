@@ -4,10 +4,10 @@
 // version, writes the project folder and makes the pictures.
 import { submitStepsToJose } from '../jose/submitToJose';
 import { approveRequestStep } from '../joseExecutionEngineService';
-import { getJoseRequest } from '../jose/joseRequestStore';
+import { getJoseRequest, onRequestStatusChange } from '../jose/joseRequestStore';
 import { getBrand } from './contentBrandService';
 import {
-  addStepProgress, approveStep, changeProjectPosts, chosenVersionOf, failStep, getProject, markStepStatus, setProjectRequest, startStep,
+  addStepProgress, approveStep, changeProjectPosts, chosenVersionOf, failStep, getProject, listProjects, markStepStatus, setProjectRequest, startStep,
 } from './contentProjectService';
 import { requireOutputRoot } from './contentProjectFiles';
 import { CLIPS_WAIT, CLIPS_WAIT_PAID, contentProjectPlanSteps, PUBLISH_WAIT, REVIEW_WAIT } from './contentProjectPlan';
@@ -156,6 +156,37 @@ export async function runContentStep(projectId: string, step: StepId, options: R
     return failStep(projectId, step, 'No result was saved for this step.');
   }
   return after;
+}
+
+/** How a project's request can end without finishing its steps. */
+const UNFINISHED_ENDS = ['failed', 'stopped', 'cancelled', 'expired'];
+
+/**
+ * A project's request that ends without finishing (QA batch 1): its steps still shown running, or
+ * waiting for an approval given on the board, get the request's reason. Before, a step that failed
+ * after you approved it stayed "Waiting for your approval" in Miya Studio forever. A step waiting
+ * for the project's own approval (the review) is left as it is.
+ */
+export function settleProjectSteps(requestId: string, status: string): void {
+  if (!UNFINISHED_ENDS.includes(status)) return;
+  const request = getJoseRequest(requestId);
+  const failed = request?.steps.find((s) => s.status === 'failed' && s.error) || request?.steps.find((s) => s.error && s.status !== 'done');
+  const reason = failed?.error || `The request ended: ${status}.`;
+  for (const project of listProjects().filter((p) => p.joseRequestId === requestId)) {
+    for (const step of STEP_ORDER) {
+      const state = project.steps[step];
+      if (!state) continue;
+      if (state.status === 'running' || (state.status === 'needs_approval' && state.error === WAITING_FOR_APPROVAL)) failStep(project.id, step, reason);
+    }
+  }
+}
+
+let stopSettling: (() => void) | null = null;
+
+/** At app start: settle a project's steps whenever its request ends without finishing. */
+export function startContentRequestWatch(): void {
+  if (stopSettling) return;
+  stopSettling = onRequestStatusChange((requestId, status) => settleProjectSteps(requestId, status));
 }
 
 /** Approve a step in Miya Studio; after the review this also carries the project's request on. */

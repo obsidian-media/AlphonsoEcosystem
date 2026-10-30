@@ -133,7 +133,8 @@ describe('Alphonso desktop: agent skills', () => {
     const withSkill = ran.find((s) => s.skill);
     await openPage('system', 'orchestrator');
     const requestsTab = await $('//main//button[normalize-space(.)="Requests"]');
-    await requestsTab.waitForDisplayed({ timeout: 30000 });
+    // The Orchestrator page loads on first use; with the model busy on CI's runner that took over 30 s (QA batch 0).
+    await requestsTab.waitForDisplayed({ timeout: 120000 });
     await requestsTab.click();
     const boxes = await $$('[data-testid="jose-plan-step"]');
     const index = request.steps.findIndex((s) => s.stepId === withSkill.stepId);

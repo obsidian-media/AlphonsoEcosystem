@@ -18,6 +18,7 @@ vi.mock('../../../services/jose/joseSpend', async (importOriginal) => ({
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { planJoseRequest, describePlanSource, PLAN_EXAMPLE, copiedPlaceholders, missingAsked, buildPromptForTests, historyOnlyDestinations } from '../../../services/jose/josePlanner';
 import { getTemplate } from '../../../services/jose/joseTemplates';
+import { saveProjects } from '../../../services/alphonso/projects';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 
 const llm = vi.mocked(generateAgentLlmResponse);
@@ -297,6 +298,39 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(copiedPlaceholders([{ id: 'research', agent: 'hector', taskType: 'research_report' }])).toEqual([]);
   });
 
+  // QA batch 1 (live check of 2.10.0, 2026-10-28): "Research the history of tea, then write a long
+  // report" was planned as "Find three facts about honeybees", the example plan's own step.
+  it("names an instruction copied from the example plan when the request isn't about it", () => {
+    const tea = '/jose Research the history of tea, then write a long report about it, then check the report.';
+    const copied = [{ id: 'research', agent: 'hector', taskType: 'research_report', instruction: 'Find three facts about honeybees, with sources.' }];
+    expect(copiedPlaceholders(copied, tea)).toEqual(['Step "research" copies the example\'s instruction: write one for this request.']);
+    expect(copiedPlaceholders(copied, '/jose Research three facts about honeybees and write a short post.')).toEqual([]);
+    expect(copiedPlaceholders([{ ...copied[0], instruction: 'Find the history of tea, with sources.' }], tea)).toEqual([]);
+  });
+
+  it('a request asking for writing, planned without anyone who writes, is sent back', () => {
+    const tea = '/jose Research the history of tea, then write a long report about it, then check the report.';
+    const noWriter = [
+      { agent: 'hector', effects: ['read'], actionType: 'research_report' },
+      { agent: 'nova', effects: ['read'], actionType: 'analysis_findings' },
+      { agent: 'maria', effects: ['read'], actionType: 'audit_quality' },
+    ];
+    expect(missingAsked(tea, noWriter as never)).toContain('The request asks for writing: add an alphonso step with the task type assistant_write.');
+    expect(missingAsked(tea, [...noWriter, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }] as never))
+      .not.toContain('The request asks for writing: add an alphonso step with the task type assistant_write.');
+  });
+
+  // QA batch 1 (CI, small model): "Post a short note … to Slack" was planned as a lone Marcus step,
+  // which had nothing to send. A send that quotes no text needs someone to write it first.
+  it('a send with no text of its own, planned without anyone who writes, is sent back', () => {
+    const slack = '/jose Post a short note that we open at 9 to Slack #news.';
+    const loneSend = [{ agent: 'marcus', effects: ['publish_or_send'], actionType: 'distribution_execution' }];
+    const WRITE = 'The request asks for writing: add an alphonso step with the task type assistant_write.';
+    expect(missingAsked(slack, loneSend as never)).toContain(WRITE);
+    expect(missingAsked(slack, [{ agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }, ...loneSend] as never)).not.toContain(WRITE);
+    expect(missingAsked('/jose Post "We open at 9." to Slack #news.', loneSend as never)).not.toContain(WRITE);
+  });
+
   // The desktop run (2026-10-26): the model planned only the writing for "post it to Slack".
   it('a plan that leaves out the send is sent back; still missing → the simple plan with Marcus', async () => {
     const SLACK = '/jose Post a short note that we open at 9 to Slack #news.';
@@ -325,6 +359,20 @@ describe('the example plan has nothing a small model can copy', () => {
     expect(missingAsked('/jose Research three facts about honeybees, write a short post about them, and have the post checked for accuracy', withMaria as never)).toEqual([]);
   });
 
+  // QA batch 1 (desktop run with qwen2.5:7b): "Audit this plan …" got Alphonso writing the emails, a
+  // second audit and Hector. Reviewing a plan is Maria's one step; what the plan says is not asked for.
+  it('a plan review that asks for nothing else is one Maria step', () => {
+    const ONLY = 'The request only asks for a review of a plan: plan one maria step with the task type audit_governance and nothing else.';
+    const audit = '/jose Audit this plan for compliance risks: tomorrow we email all 500 customers a 30 percent discount code and post it on Instagram.';
+    const maria = { agent: 'maria', effects: ['read'], actionType: 'audit_governance' };
+    const padded = [maria, { agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }, { agent: 'hector', effects: ['read'], actionType: 'research_report' }];
+    expect(missingAsked(audit, padded as never)).toEqual([ONLY]);
+    expect(missingAsked(audit, [maria] as never)).toEqual([]);
+    // Something asked for after the plan is kept.
+    expect(missingAsked('/jose Review this plan for risks: we launch on Monday. Then post the review to Slack #news.', padded as never)).not.toContain(ONLY);
+    expect(missingAsked('/jose Review my launch plan and write a short summary for the team.', padded as never)).not.toContain(ONLY);
+  });
+
   // The Maria desktop run (2026-10-26): the model's check needed nothing and reviewed nothing.
   it('a review step that needs nothing reviews the one piece of work', async () => {
     llm.mockResolvedValueOnce(answer([
@@ -343,6 +391,55 @@ describe('the example plan has nothing a small model can copy', () => {
       .toEqual(['The request asks for code: add an alphonso step with the task type local_operation.']);
     expect(missingAsked('Add a dark mode toggle to my website', [{ agent: 'alphonso', effects: ['run'], actionType: 'local_operation' }] as never)).toEqual([]);
     expect(missingAsked('What is a closure in JavaScript?', plan as never)).toEqual([]);
+  });
+
+  // QA batch 0 (CI, 2026-10-27): "In shop, add a file notes.txt" was planned as writing in Chat.
+  // Changing a file in one of your saved projects is project work, whatever the file type.
+  it('adding or changing a file in a saved project needs Alphonso\'s code step', () => {
+    saveProjects([{ name: 'shop', folder: 'D:\\code\\shop' }, { name: 'blog', folder: 'D:\\code\\blog' }] as never);
+    const writing = [{ agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }];
+    const sendBack = ['The request asks for code: add an alphonso step with the task type local_operation.'];
+    expect(missingAsked('/jose In shop, add a file notes.txt that says hello.', writing as never)).toEqual(sendBack);
+    expect(missingAsked('/jose Add a file hello.txt that says hi in shop and in blog.', writing as never)).toEqual(sendBack);
+    expect(missingAsked('/jose Rename the docs folder in blog to guides.', writing as never)).toEqual(sendBack);
+    // Reading a project, or a request that only mentions the name, is not a change.
+    expect(missingAsked('/jose Summarize README.md in shop.', [{ agent: 'alphonso', effects: ['read'], actionType: 'assistant_summarize' }] as never)).toEqual([]);
+    expect(missingAsked('/jose Write a short post about our shop opening.', writing as never)).toEqual([]);
+  });
+
+  // QA batch 0 (CI, 2026-10-27): "Research … and tell me which opportunity is worth going after
+  // first" was planned with Hector only. Asking which comes first is Nova's judgment.
+  it('a request asking which option comes first, planned without Nova, is sent back', () => {
+    const research = [{ agent: 'hector', effects: ['read'], actionType: 'research_report' }];
+    const addNova = ['The request asks which option to choose: add a nova step with the task type opportunity_analysis.'];
+    expect(missingAsked('/jose Research the coffee subscription market in Canada and tell me which opportunity is worth going after first.', research as never)).toEqual(addNova);
+    expect(missingAsked('/jose Which of these should a small bakery do first: a newsletter, a loyalty card, or a podcast? Prioritize them.', [] as never)).toEqual(addNova);
+    expect(missingAsked('/jose Research the coffee market and tell me which opportunity is worth going after first.', [...research, { agent: 'nova', effects: ['read'], actionType: 'opportunity_analysis' }] as never)).toEqual([]);
+    expect(missingAsked('/jose Research the value of honey and write a short post about it.', research as never)).not.toContain(addNova[0]);
+  });
+
+  // QA batch 1 (local run with qwen2.5:7b, 2026-10-29): Hector and Nova were planned side by side,
+  // so Nova judged before Hector had found anything ("Judged from your request only").
+  it("a Nova step that waits for nothing waits for Hector's research", async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'research', agent: 'hector', taskType: 'research_report', instruction: 'Research the coffee subscription market in Canada.', effects: ['read'], needs: [] },
+      { id: 'judge', agent: 'nova', taskType: 'opportunity_analysis', instruction: 'Say which opportunity to go after first.', effects: ['read'], needs: [] },
+    ]));
+    const plan = await planJoseRequest('/jose Research the coffee subscription market in Canada and tell me which opportunity is worth going after first.');
+    expect(plan.steps.find((s) => s.stepId === 'judge')?.needs).toEqual(['research']);
+  });
+
+  // QA batch 1 (desktop run with qwen2.5:7b): "Write a welcome email, then have it checked for
+  // security issues" got a Sentinel step that waited for nothing, so it checked the request, not the email.
+  it("a Sentinel check that waits for nothing checks the one piece of writing", async () => {
+    llm.mockResolvedValueOnce(answer([
+      { id: 'write', agent: 'alphonso', taskType: 'assistant_write', instruction: 'Write a short welcome email for new customers.', effects: ['write_own_work'], needs: [] },
+      { id: 'security_check', agent: 'sentinel', taskType: 'security_workflow_step', instruction: 'Check the email for security issues.', effects: ['read'], needs: [] },
+    ]));
+    const plan = await planJoseRequest('/jose Write a short welcome email for new customers, then have it checked for security issues.');
+    const check = plan.steps.find((s) => s.stepId === 'security_check');
+    expect(check?.needs).toEqual(['write']);
+    expect(check?.reviewOf).toBe('write');
   });
 
   it('plain writing planned with research is sent back; writing that needs facts keeps it', () => {
@@ -401,7 +498,7 @@ describe('the example plan has nothing a small model can copy', () => {
     // Asking whether something is remembered is not asking to save it.
     expect(missingAsked('Do you remember what we decided about the launch?', plan as never)).toEqual([]);
     // A note to post is not something to remember.
-    expect(missingAsked('Post a short note that we open at 9 to Slack #news.', [{ agent: 'marcus', effects: ['publish_or_send'], actionType: 'distribution_execution' }] as never)).toEqual([]);
+    expect(missingAsked('Post a short note that we open at 9 to Slack #news.', [{ agent: 'alphonso', effects: ['write_own_work'], actionType: 'assistant_write' }, { agent: 'marcus', effects: ['publish_or_send'], actionType: 'distribution_execution' }] as never)).toEqual([]);
   });
 
   it('a plan with the send is used as it is', async () => {

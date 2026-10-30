@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { decomposeJoseCommand, parseJoseCommand } from '../../../services/joseCommandRouterService';
 import { scoreTemplateFit, TEMPLATE_FIT_THRESHOLD, asksToMake } from '../../../services/jose/joseTemplates';
 import { isCodeRequest } from '../../../services/jose/taskTypeMeanings';
+import { saveProjects } from '../../../services/alphonso/projects';
 import { NEEDS_OUTPUT_FOLDER } from '../../../services/contentFactory/contentFromChat';
 
 type Part = [agent: string, actionType: string];
@@ -42,6 +43,17 @@ const RULE_PLAN: [string, Part[]][] = [
   ['/jose Tell my team on Telegram "meeting moved to 3pm"', [['marcus', 'distribution_execution']]],
   ['/jose Create a GitHub release v1.2.0 for my repo with the notes: fixed the login bug.', [['alphonso', 'assistant_write'], ['marcus', 'distribution_release']]],
   ['/jose Open an issue on GitHub acme/shop: the login page fails on Safari', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
+  // QA batch 1 (the live run): "open it as an issue" was planned as a code change in the repository.
+  ['/jose Write a short note that the backup finished, and open it as an issue in GitHub acme/shop', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
+  ['/jose Write up the Safari login bug and file it as a GitHub issue in acme/shop', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
+  ['/jose Create a GitHub issue in acme/shop about the slow checkout page', [['alphonso', 'assistant_write'], ['marcus', 'distribution_issue']]],
+  // QA batch 1 (the live run): "save it to Notion" and "add it as a task in ClickUp" had no send
+  // word, so no step sent anything and the request never reached an approval.
+  ['/jose Write a one-line note that the backup finished, and save it to Notion', [['alphonso', 'assistant_write'], ['marcus', 'distribution_execution']]],
+  ['/jose Write a one-line note that the backup finished, and add it as a task in ClickUp', [['alphonso', 'assistant_write'], ['marcus', 'distribution_execution']]],
+  ['/jose Put the meeting notes in Notion', [['alphonso', 'assistant_write'], ['marcus', 'distribution_execution']]],
+  // Saving or adding without a place to put it is not a send.
+  ['Add a dark mode toggle to my app', [['alphonso', 'local_operation']]],
   ['/jose Is my new post ready to publish on Instagram?', [['marcus', 'distribution_readiness']]],
   ['Is my announcement ready to post on Slack?', [['marcus', 'distribution_readiness']]],
   ['Scan my last week for security issues', [['sentinel', 'security_monitor']]],
@@ -88,6 +100,18 @@ describe('the routing set: the rule plan gives each part to its owner', () => {
   for (const [text, expected] of RULE_PLAN) {
     it(text, () => expect(sorted(partsOf(text))).toEqual(sorted(expected)));
   }
+
+  // QA batch 0 (CI, 2026-10-27): when the model's plan fails, the rule plan must still give a file
+  // change in a saved project to Alphonso's code step, not to writing.
+  it('a file change in a saved project is code in the rule plan', () => {
+    saveProjects([{ name: 'shop', folder: 'D:\\code\\shop' }] as never);
+    try {
+      expect(partsOf('In shop, add a file notes.txt that says hello.')).toEqual([['alphonso', 'local_operation']]);
+      expect(partsOf('Write a short post about our shop opening')).toEqual([['alphonso', 'assistant_write']]);
+    } finally {
+      saveProjects([]);
+    }
+  });
 
   it('a writing step reads the research, and the check reviews the writing', () => {
     const steps = decomposeJoseCommand(parseJoseCommand('Research three facts about honeybees, write a short post about them, and have the post checked for accuracy'));

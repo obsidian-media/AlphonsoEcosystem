@@ -6,13 +6,14 @@
 // conversation lands in the throwaway test store, not real chat history.
 import { enterShell, ollamaHasModels, warmSelectedModel } from '../helpers.mjs';
 
-describe('Alphonso desktop chat', () => {
+describe('Alphonso desktop chat', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(400000);
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
     // Load the model first: these specs check what it writes, not how fast
     // a cold model comes off the disk.
-    this.timeout(400000);
     await warmSelectedModel();
   });
 

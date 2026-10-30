@@ -5,6 +5,12 @@ const publishPost = vi.fn();
 const appendNotification = vi.fn();
 const sendTelegramMessage = vi.fn();
 const checkDailyLimit = vi.fn();
+// QA batch 1: a scheduled text send asks Marcus's model where to send it; without this mock the
+// test called a real local Ollama when one was running (3 s alone, 30 s timeouts under load).
+vi.mock('../../lib/ollama', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/ollama')>()),
+  generateAgentLlmResponse: vi.fn(async () => { throw new Error('no model in this test'); }),
+}));
 vi.mock('../../services/contentFactory/dailyLimits', () => ({ checkDailyLimit: (...a: unknown[]) => checkDailyLimit(...a) }));
 vi.mock('../../services/contentFactory/publishPost', () => ({ publishPost: (...a: unknown[]) => publishPost(...a) }));
 vi.mock('../../services/notificationService', () => ({ appendNotification: (...a: unknown[]) => appendNotification(...a), sendNativeNotification: vi.fn() }));

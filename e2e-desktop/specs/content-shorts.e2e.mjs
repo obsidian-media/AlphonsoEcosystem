@@ -25,12 +25,13 @@ async function reopen(tab, projectId, outputFolder) {
   await select.selectByAttribute('value', projectId);
 }
 
-describe('Alphonso desktop: Shorts', () => {
+describe('Alphonso desktop: Shorts', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(300000);
   let outputFolder = '';
   let projectId = '';
 
   before(async function () {
-    this.timeout(300000);
     await enterShell();
     outputFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'alphonso-shorts-'));
     const loaded = await invoke('load_settings');
@@ -82,7 +83,6 @@ describe('Alphonso desktop: Shorts', () => {
   });
 
   it("Shorts Studio shows each Short's kind and what each platform makes of it", async function () {
-    this.timeout(60000);
     await $('[data-testid="short-sh3"]').waitForDisplayed({ timeout: 30000 });
     expect(await $('select[aria-label="Kind of Short 1"]').getValue()).toBe('mini');
     expect(await $('select[aria-label="Kind of Short 2"]').getValue()).toBe('highlight');
@@ -90,17 +90,15 @@ describe('Alphonso desktop: Shorts', () => {
     const long = await $('[data-testid="short-sh2"]').getText();
     expect(long).toContain('Facebook: Not a Facebook Reel');
     expect(long).toContain('Instagram: fits');
-  });
+  }).timeout(60000);
 
   it('unticking a platform is saved', async function () {
-    this.timeout(60000);
     await (await $('input[aria-label="Short 1 on Instagram"]')).click();
     await browser.waitUntil(async () => !(await shortsOf(projectId))[0].platforms.includes('instagram'), { timeout: 10000, timeoutMsg: 'the platform was not saved' });
     expect((await shortsOf(projectId))[0].platforms).toEqual(['youtube']);
-  });
+  }).timeout(60000);
 
   it('the Posts list has the Shorts and leaves Facebook off the long one, with a note', async function () {
-    this.timeout(120000);
     await reopen('campaign studio', projectId, outputFolder);
     await $('section[aria-label="Posts"]').waitForDisplayed({ timeout: 60000 });
     await (await buttonByText('make the posts list')).click();
@@ -108,5 +106,5 @@ describe('Alphonso desktop: Shorts', () => {
     const posts = (await projectById(projectId)).posts.filter((x) => x.shortId);
     expect(posts.map((x) => `${x.shortId}:${x.platform}`).sort()).toEqual(['sh1:youtube', 'sh2:instagram', 'sh3:youtube']);
     expect(await $('section[aria-label="Posts"]').getText()).toContain('Not a Facebook Reel');
-  });
+  }).timeout(120000);
 });

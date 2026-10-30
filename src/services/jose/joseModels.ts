@@ -2,7 +2,7 @@
 // and a step that keeps failing is tried once more with the next larger model
 // the user has installed (owner: Q15, Q18). Only installed local models; a
 // model's size is read from its tag (qwen2.5:7b → 7).
-import { fetchOllamaModels, getConfiguredOllamaEndpoint, getConfiguredOllamaModel } from '../../lib/ollama';
+import { fetchOllamaModels, getConfiguredOllamaEndpoint, getConfiguredOllamaModel, isChatModel } from '../../lib/ollama';
 import { getAgentProvider } from '../modelSelectionService';
 
 /** Billions of parameters from a model tag, or null when the tag doesn't say. */
@@ -26,7 +26,8 @@ export function pickLargerModel(current: string, installed: string[]): string | 
 export async function listInstalledModels(): Promise<string[]> {
   try {
     const { models } = await fetchOllamaModels(getConfiguredOllamaEndpoint());
-    return (models || []).map((m) => m.name).filter(Boolean);
+    // Only models that can write a reply: an embedding model is never offered to a step (QA batch 0).
+    return (models || []).filter(isChatModel).map((m) => m.name).filter(Boolean);
   } catch {
     return [];
   }

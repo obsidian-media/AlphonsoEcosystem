@@ -8,6 +8,7 @@
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { inferEffects, type JoseEffect } from './joseEffects';
 import { isTaskTypeAllowed, ownerOf, responsibilityLines } from './agentPermissionTable';
+import { TASK_TYPE_MEANINGS, taskTypesFor } from './taskTypeMeanings';
 import type { PlanStep } from './stepGraph';
 import type { PlanChange } from './joseAdapt';
 
@@ -68,6 +69,14 @@ function ruleHelper(request: string): Helper {
   return { agent: 'hector', actionType: 'research_report' };
 }
 
+/** The task types a helper may be given, by agent: real ones only, never a prefix (QA batch 1). */
+function helpTaskTypes(): string {
+  return ['hector', 'nova', 'maria', 'sentinel', 'miya', 'echo']
+    .map((agent) => `${agent} ${taskTypesFor(agent).map((t) => t.type)
+      .filter((type) => inferEffects(type).every((effect) => SAFE_HELP_EFFECTS.includes(effect))).join(' or ')}`)
+    .join(', ');
+}
+
 /**
  * Jose picks who helps. A choice that is not allowed or not safe is refused
  * (null), never swapped for another; an unreadable answer uses the rules.
@@ -77,7 +86,7 @@ export async function chooseHelper(request: string, askingAgent: string): Promis
     `An agent (${askingAgent}) asked for help: ${request}`,
     'Which agent owns what is needed, and with which task type? Each agent helps only with its own work:',
     responsibilityLines().join('\n'),
-    'Task types: hector research_, nova analysis_, maria audit_, sentinel security_, miya creative_, echo memory_, alphonso assistant_write or assistant_answer (writing only), echo memory_recall (what was decided before).',
+    `Task types (use one exactly as written): ${helpTaskTypes()}; alphonso assistant_write or assistant_answer (writing only), echo memory_recall (what was decided before).`,
     'Answer with JSON only: {"agent": "<agent>", "taskType": "<task type>"}',
   ].join('\n\n');
   try {
@@ -86,7 +95,8 @@ export async function chooseHelper(request: string, askingAgent: string): Promis
     const start = text.indexOf('{');
     const end = text.lastIndexOf('}');
     const parsed = start >= 0 && end > start ? JSON.parse(text.slice(start, end + 1)) : null;
-    if (parsed && typeof parsed.agent === 'string' && typeof parsed.taskType === 'string') {
+    // A task type that does not exist (a bare prefix such as "research_") is unusable, not a refusal (QA batch 1).
+    if (parsed && typeof parsed.agent === 'string' && typeof parsed.taskType === 'string' && TASK_TYPE_MEANINGS[parsed.taskType.trim().toLowerCase()]) {
       return safeHelper({ agent: parsed.agent.trim().toLowerCase(), actionType: parsed.taskType.trim().toLowerCase() }, askingAgent);
     }
   } catch { /* unreadable: use the rules */ }

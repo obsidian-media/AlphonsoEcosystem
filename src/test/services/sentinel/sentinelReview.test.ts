@@ -120,6 +120,16 @@ describe('his answer', () => {
   });
 });
 
+// QA batch 1 (live ClickUp check): Sentinel answered "risky" with no findings for a one-line note,
+// the loop rewrote it twice with nothing to change, and nothing was sent.
+describe('a review with nothing to fix', () => {
+  it('passes the review loop', async () => {
+    llm.mockResolvedValue(answer({ verdict: 'risky', summary: 'Could be risky.', findings: [] }));
+    const risky = await runSentinelReview({ agent: 'sentinel', reviewOf: 'write' }, input({ review: reviewOf('The QA live check ran.') }));
+    expect(risky.schema).toMatchObject({ verdict: 'risky', reviewVerdict: 'pass' });
+  });
+});
+
 describe('his model, keys and memory', () => {
   it("uses Jose's step model", async () => {
     llm.mockResolvedValue(answer({ verdict: 'safe', summary: 'Fine.', findings: [] }));

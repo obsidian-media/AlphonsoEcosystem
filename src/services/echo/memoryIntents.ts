@@ -26,6 +26,9 @@ export function asksWhatWasDecided(text: string): boolean {
 /** Words that ask for other work besides memory ("… and write an email to Sam"). */
 const OTHER_WORK = /\b(write|draft|compose|send|post|publish|share|research|find|search|look up|make|create|build|check|review|summari[sz]e|plan|code|run|analy[sz]e|compare|schedule|call)\b/i;
 
+/** Jose's line for a memory-only step: never read as part of what you asked (QA batch 1). */
+export const MEMORY_ONLY_INSTRUCTION = 'Do what the request asks with memory.';
+
 /** Agent phase 7: the task type of a request that only asks Echo to remember, forget or tidy; else null. */
 export function memoryOnlyTask(text: string): 'memory_preservation' | 'memory_forget' | 'memory_cleanup' | null {
   const t = String(text || '');

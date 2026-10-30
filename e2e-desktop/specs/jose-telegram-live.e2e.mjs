@@ -41,7 +41,6 @@ describe('Alphonso desktop: Jose on your Telegram (live)', () => {
   });
 
   it('saves your bot in Settings and connects to it', async function () {
-    this.timeout(120000);
     await $('[aria-label="Open settings"]').click();
     // Settings opens on General; wait for it before choosing Connectors.
     await browser.waitUntil(async () => /API CREDENTIALS|General/.test(await mainText()), { timeout: 30000 });
@@ -56,18 +55,16 @@ describe('Alphonso desktop: Jose on your Telegram (live)', () => {
     await (await section.$('.//button[normalize-space(.)="Save & Enable"]')).click();
     await (await section.$('.//button[normalize-space(.)="Verify Bot"]')).click();
     await browser.waitUntil(async () => /Connected as @/.test(await mainText()), { timeout: 60000, timeoutMsg: 'the bot did not connect' });
-  });
+  }).timeout(120000);
 
   it('pairs when you send /start to your bot', async function () {
-    this.timeout(WAIT_FOR_YOU_MS + 120000);
     await useSettings({ showPlanFirst: 'never', approvalMode: true, effectApprovals: { read: true, write_own_work: true } });
     await restart();
     console.log('\n>>> Send /start to your Telegram bot now. Waiting up to 15 minutes.\n');
     await browser.waitUntil(async () => (await ownerChat()) === CHAT, { timeout: WAIT_FOR_YOU_MS, interval: 3000, timeoutMsg: 'no /start arrived from your chat' });
-  });
+  }).timeout(WAIT_FOR_YOU_MS + 120000);
 
   it('carries the request on when you press Approve in Telegram', async function () {
-    this.timeout(WAIT_FOR_YOU_MS + 1200000);
     await warmSelectedModel();
     await $('[data-testid="sidebar-chat-shortcut"]').click();
     const before = (await savedRequests()).length;
@@ -86,5 +83,5 @@ describe('Alphonso desktop: Jose on your Telegram (live)', () => {
       const now = (await savedRequests()).find((r) => r.id === request.id);
       return now.steps.find((s) => s.stepId === waiting).status === 'done';
     }, { timeout: WAIT_FOR_YOU_MS, interval: 3000, timeoutMsg: 'the approved step never ran' });
-  });
+  }).timeout(WAIT_FOR_YOU_MS + 1200000);
 });

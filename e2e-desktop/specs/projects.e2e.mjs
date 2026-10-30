@@ -25,11 +25,12 @@ async function denyAnyApproval() {
 const readJson = (key) => browser.execute((k) => localStorage.getItem(k) || '[]', key).then((s) => JSON.parse(s));
 const tab = (label) => $(`//button[starts-with(normalize-space(translate(., 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')), "${label.toUpperCase()}")]`);
 
-describe('Alphonso desktop: Projects', () => {
+describe('Alphonso desktop: Projects', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(400000);
   before(async function () {
     await enterShell();
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(400000);
     const extra = { showPlanFirst: 'never', ...((await installedModels()).includes(PREFERRED_TEST_MODEL) ? { selectedModel: PREFERRED_TEST_MODEL } : {}) };
     const loaded = await invoke('load_settings');
     await invoke('save_settings', { settingsJson: JSON.stringify({ ...JSON.parse((loaded.ok && loaded.value) || '{}'), ...extra }) });
@@ -43,7 +44,6 @@ describe('Alphonso desktop: Projects', () => {
   });
 
   it('starts a request whose steps, approvals and locked results show on the page', async function () {
-    this.timeout(1500000);
     await $('input[aria-label="Project name"]').setValue('Tea timer');
     await $('input[aria-label="What it should do"]').setValue('A small web page that counts down three minutes for a cup of tea');
     await $('[data-testid="projects-start"]').click();
@@ -73,5 +73,5 @@ describe('Alphonso desktop: Projects', () => {
 
     const results = await tab('Results');
     expect(await results.getAttribute('disabled') !== null).toBe(waiting.length > 0);
-  });
+  }).timeout(1500000);
 });

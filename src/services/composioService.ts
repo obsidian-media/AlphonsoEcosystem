@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { evaluatePolicyGate } from './policyEnforcementService';
 import { secureGet, secureSet } from './secureStorageService';
@@ -63,6 +64,45 @@ export async function hydrateComposioApiKeyFromKeychain(): Promise<void> {
 
 /** Composio's current API (agent phase 5); the old `/v1/actions` paths are gone. */
 const COMPOSIO_API_BASE = 'https://backend.composio.dev/api/v3.1';
+
+type ComposioCall =
+  | { call: 'toolkits'; limit?: number }
+  | { call: 'tools'; toolkit: string }
+  | { call: 'execute'; tool: string; body: string };
+
+interface ComposioResponse {
+  ok: boolean;
+  status: number;
+  json: () => Promise<any>;
+}
+
+/**
+ * One call to Composio. Composio's browser pre-check leaves out Access-Control-Allow-Origin for
+ * the desktop window's origin (http://tauri.localhost), so every fetch from the window failed
+ * (QA batch 1). Inside the app the call goes through the backend's connector_composio_request
+ * (Composio's three calls only); a plain fetch is kept for the browser dev build.
+ */
+async function composioRequest(apiKey: string, request: ComposioCall): Promise<ComposioResponse> {
+  if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__) {
+    const proof = await invoke<{ ok: boolean; httpStatus: number | null; body: string | null; error: string | null }>(
+      'connector_composio_request',
+      { ...request, apiKey }
+    );
+    if (proof.httpStatus === null) {
+      throw new Error(`Couldn't reach Composio: ${proof.error || 'no answer'}`);
+    }
+    const text = proof.body ?? '';
+    return { ok: proof.ok, status: proof.httpStatus, json: async () => JSON.parse(text) };
+  }
+  const headers: Record<string, string> = { 'x-api-key': apiKey, 'Content-Type': 'application/json' };
+  if (request.call === 'toolkits') {
+    return fetch(`${COMPOSIO_API_BASE}/toolkits${request.limit ? `?limit=${request.limit}` : ''}`, { method: 'GET', headers });
+  }
+  if (request.call === 'tools') {
+    return fetch(`${COMPOSIO_API_BASE}/tools?toolkit_slug=${encodeURIComponent(request.toolkit)}&limit=100`, { method: 'GET', headers });
+  }
+  return fetch(`${COMPOSIO_API_BASE}/tools/execute/${encodeURIComponent(request.tool)}`, { method: 'POST', headers, body: request.body });
+}
 
 export interface ComposioConfig {
   enabled: boolean;
@@ -147,10 +187,7 @@ export async function fetchComposioToolkits(): Promise<{ toolkits: ComposioToolk
   if (!config.apiKey) return { toolkits: [], error: 'No API key configured' };
 
   try {
-    const response = await fetch(`${COMPOSIO_API_BASE}/toolkits`, {
-      method: 'GET',
-      headers: { 'x-api-key': config.apiKey, 'Content-Type': 'application/json' }
-    });
+    const response = await composioRequest(config.apiKey, { call: 'toolkits' });
 
     if (!response.ok) {
       throw new Error(`Composio API returned HTTP ${response.status}`);
@@ -217,10 +254,7 @@ export async function listToolkitTools(toolkit: string): Promise<{ tools: Compos
   const config = getComposioConfig();
   if (!config.apiKey) return { tools: [], error: 'No API key configured' };
   try {
-    const response = await fetch(`${COMPOSIO_API_BASE}/tools?toolkit_slug=${encodeURIComponent(toolkit)}&limit=100`, {
-      method: 'GET',
-      headers: { 'x-api-key': config.apiKey, 'Content-Type': 'application/json' }
-    });
+    const response = await composioRequest(config.apiKey, { call: 'tools', toolkit });
     if (!response.ok) throw new Error(`Composio API returned HTTP ${response.status}`);
     const data = await response.json();
     const tools: ComposioTool[] = Array.isArray(data?.items)
@@ -275,10 +309,10 @@ export async function executeComposioTool(
   const gate = evaluatePolicyGate({ connectorId: 'composio', actionType: String(tool).toLowerCase(), commandPreview: JSON.stringify({ tool, args }).slice(0, 500), approved: Boolean(opts.approved) });
   if (!gate.ok) return { success: false, data: null, error: gate.reason || 'The policy gate blocked it.' };
   try {
-    const response = await fetch(`${COMPOSIO_API_BASE}/tools/execute/${encodeURIComponent(tool)}`, {
-      method: 'POST',
-      headers: { 'x-api-key': config.apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ arguments: args || {}, user_id: config.userId })
+    const response = await composioRequest(config.apiKey, {
+      call: 'execute',
+      tool,
+      body: JSON.stringify({ arguments: args || {}, user_id: config.userId }),
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -301,10 +335,7 @@ export async function checkComposioHealth(): Promise<ComposioHealthResult> {
 
   try {
     // A real authenticated call (v3.1 has no /health).
-    const response = await fetch(`${COMPOSIO_API_BASE}/toolkits?limit=1`, {
-      method: 'GET',
-      headers: { 'x-api-key': config.apiKey }
-    });
+    const response = await composioRequest(config.apiKey, { call: 'toolkits', limit: 1 });
 
     if (response.ok) {
       return { status: 'healthy', enabled: true, message: 'Composio API is reachable' };

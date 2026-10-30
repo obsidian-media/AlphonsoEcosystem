@@ -31,11 +31,12 @@ async function comfyRunning() {
 }
 const savedBrands = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_content_brands_v1') || '[]'));
 
-describe('Alphonso desktop: characters and motion', () => {
+describe('Alphonso desktop: characters and motion', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(300000);
   let outputFolder = '';
 
   before(async function () {
-    this.timeout(300000);
     await enterShell();
     outputFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'alphonso-characters-'));
     await browser.execute((folder) => {
@@ -66,16 +67,14 @@ describe('Alphonso desktop: characters and motion', () => {
   });
 
   it("a real person can't be trained until the permission tick", async function () {
-    this.timeout(60000);
     const train = async () => $('//section[@aria-label="Characters"]//*[.//input[@aria-label="Character name: Sam"]]//button[normalize-space(.)="Train on Higgsfield"]');
     expect(await (await train()).isEnabled()).toBe(false);
     await (await $('input[aria-label="This is me, or I have this person\'s permission"]')).click();
     await browser.waitUntil(async () => Boolean((await savedBrands())[0].characters.find((c) => c.id === 'sam').permission?.atMs), { timeout: 10000, timeoutMsg: 'the permission was not saved with its date' });
     await browser.waitUntil(async () => (await train()).isEnabled(), { timeout: 10000, timeoutMsg: 'Train stayed off after the tick' });
-  });
+  }).timeout(60000);
 
   it('a made-up character gets 8 pictures from Miya when ComfyUI runs', async function () {
-    this.timeout(1800000);
     if (!(await comfyRunning())) this.skip();
     await (await $('//section[@aria-label="Characters"]//*[.//input[@aria-label="Character name: Pip"]]//button[normalize-space(.)="Make pictures with Miya"]')).click();
     await browser.waitUntil(async () => (await savedBrands())[0].characters.find((c) => c.id === 'pip').pictures.length === 8, {
@@ -83,10 +82,9 @@ describe('Alphonso desktop: characters and motion', () => {
     });
     const first = (await savedBrands())[0].characters.find((c) => c.id === 'pip').pictures[0];
     expect(fs.existsSync(path.join(outputFolder, ...first.split('/')))).toBe(true);
-  });
+  }).timeout(1800000);
 
   it('a motion clip is saved into the motion folder, and one over 10 seconds is refused', async function () {
-    this.timeout(300000);
     const ffmpeg = tool('ffmpeg');
     if (!ffmpeg) this.skip();
     const clip = (seconds) => {
@@ -104,5 +102,5 @@ describe('Alphonso desktop: characters and motion', () => {
     expect(refused.ok).toBe(false);
     expect(refused.reason).toBe('The clip is longer than 10 seconds.');
     expect(fs.existsSync(path.join(outputFolder, 'acme', 'p1', 'motion', 's2-v1.mp4'))).toBe(false);
-  });
+  }).timeout(300000);
 });

@@ -7,7 +7,7 @@ vi.mock('../../../lib/ollama', () => ({ generateAgentLlmResponse: vi.fn() }));
 import { generateAgentLlmResponse } from '../../../lib/ollama';
 import { saveConnectorCredential } from '../../../services/connectors/connectorAuth';
 import { setStepOutput } from '../../../services/jose/joseStepOutputs';
-import { prepareMarcusSend, describeSend, isMarcusSendStep, tooLongReason, SEND_TIME_UNCLEAR } from '../../../services/marcus/prepareSend';
+import { prepareMarcusSend, describeSend, isMarcusSendStep, tooLongReason, unfilledReason, deliveryReason, SEND_TIME_UNCLEAR, FIX_ROUNDS_USED } from '../../../services/marcus/prepareSend';
 import { NOTHING_TO_SEND } from '../../../services/marcus/sendText';
 
 const llm = vi.mocked(generateAgentLlmResponse);
@@ -34,6 +34,13 @@ describe('isMarcusSendStep', () => {
     expect(isMarcusSendStep(marcus({ actionType: 'outreach_call', effects: ['publish_or_send', 'spend'] }))).toBe(false);
     expect(isMarcusSendStep(marcus({ contentStep: { projectId: 'p', step: 'publish' } }))).toBe(false);
     expect(isMarcusSendStep({ ...(marcus() as object), agent: 'alphonso' } as never)).toBe(false);
+  });
+
+  // QA batch 0 (CI, 2026-10-27): a planner gave "post this to Slack" the content factory's
+  // posting type; with no content data it is an ordinary send and must be prepared before it asks.
+  it('a posting step without Miya Studio data is an ordinary send', () => {
+    expect(isMarcusSendStep(marcus({ actionType: 'distribution_schedule_posts' }))).toBe(true);
+    expect(isMarcusSendStep(marcus({ actionType: 'distribution_schedule_posts', contentStep: { projectId: 'p', step: 'publish' } }))).toBe(false);
   });
 });
 
@@ -79,6 +86,42 @@ describe('prepareMarcusSend', () => {
     expect(tooLongReason('Discord #news', 2413, 2000)).toBe('Too long for Discord #news: 2,413 characters; the limit is 2,000.');
   });
 
+  // QA batch 1 (live Slack check, 2026-10-29): a 7B model wrote "[placeholder] The check passed."
+  // and only Sentinel's garbled hold stopped it going out.
+  it('a gap left to fill → fix for the step he sends from, nothing asked', async () => {
+    for (const gap of ['[placeholder]', '[Your Name]', '[insert date]']) {
+      setStepOutput('c1', 'write', 'alphonso', { summary: `${gap} The check passed.` } as never);
+      const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
+      expect(got).toEqual({ ok: false, outcome: 'fix', reason: unfilledReason([gap]), sourceStepId: 'write' });
+    }
+    expect(unfilledReason(['[placeholder]'])).toBe('Fill in [placeholder] before it is sent: use the request, or write it without that part.');
+  });
+
+  // QA batch 1 (live ClickUp check): the task read "- Alphonso QA live check ran. Add it as a task in
+  // ClickUp." The writer copied where it goes into the text Marcus sends.
+  it('a line saying where the text goes → fix for the step he sends from', async () => {
+    setStepOutput('c1', 'write', 'alphonso', { summary: 'We open Saturday. Post it to our Slack channel #news.' } as never);
+    const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
+    expect(got).toEqual({ ok: false, outcome: 'fix', reason: deliveryReason(['Post it to our Slack channel #news.']), sourceStepId: 'write' });
+    expect(deliveryReason(['Post it to Slack.'])).toBe('Leave out where it goes ("Post it to Slack."): Marcus sends the text itself.');
+  });
+
+  it('a text that only mentions the place is sent as it is', async () => {
+    for (const text of ['Our Slack channel is now open to everyone.', 'Questions? Ask in #news on Slack.']) {
+      setStepOutput('c1', 'write', 'alphonso', { summary: text } as never);
+      const got: any = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
+      expect(got.ok).toBe(true);
+    }
+  });
+
+  it('brackets that are not a gap are sent as they are', async () => {
+    for (const text of ['See [the docs](https://example.com).', 'Release [v2.10] is out.', 'Open Saturday [updated].']) {
+      setStepOutput('c1', 'write', 'alphonso', { summary: text } as never);
+      const got: any = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
+      expect(got.ok).toBe(true);
+    }
+  });
+
   it('not set up → setup', async () => {
     const got = await prepareMarcusSend('c1', marcus({ payload: { connector: 'telegram', target: 'team' } }), { text: '/jose tell my team on Telegram' });
     expect(got).toEqual({ ok: false, outcome: 'setup', reason: "Telegram isn't set up: add the bot token in Settings → Connectors → Telegram." });
@@ -87,6 +130,25 @@ describe('prepareMarcusSend', () => {
   it('nothing to send → failed with NOTHING_TO_SEND', async () => {
     const got = await prepareMarcusSend('c1', marcus({ needs: [] }), REQ);
     expect(got).toEqual({ ok: false, outcome: 'failed', reason: NOTHING_TO_SEND });
+  });
+
+  // QA batch 1 (CI, small model): a lone send step with nothing written before it, to a Slack that
+  // isn't set up, said "Nothing to send" instead of what to set up.
+  it('nothing to send, to a connector not set up → setup, said first', async () => {
+    const got = await prepareMarcusSend('c1', marcus({ needs: [] }), { text: '/jose Post a short note that we open at 9 to Telegram.' });
+    expect(got).toEqual({ ok: false, outcome: 'setup', reason: "Telegram isn't set up: add the bot token in Settings → Connectors → Telegram." });
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  // QA batch 1 (CI, small model): a gap left after the last fix round ended the request "done"
+  // with nothing sent and nothing asked.
+  it('still needing a fix after the last round → failed, saying nothing was sent', async () => {
+    setStepOutput('c1', 'write', 'alphonso', { summary: 'We open at 10. [Your Name]' } as never);
+    const first: any = await prepareMarcusSend('c1', marcus({ payload: { connector: 'slack', target: '#news' } }), REQ);
+    expect(first.outcome).toBe('fix');
+    const last: any = await prepareMarcusSend('c1', marcus({ round: 2, payload: { connector: 'slack', target: '#news' } }), REQ);
+    expect(last).toEqual({ ok: false, outcome: 'failed', reason: `${unfilledReason(['[Your Name]'])} ${FIX_ROUNDS_USED(2)}` });
+    expect(FIX_ROUNDS_USED(2)).toBe('It still needed this after 2 rounds of fixes, so nothing was sent.');
   });
 
   it('exact checks on the final text', async () => {

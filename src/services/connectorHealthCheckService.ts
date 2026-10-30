@@ -1,6 +1,7 @@
 import { isConnectorAuthenticated } from './connectorRegistryService';
 import { timestampMs } from './trustModel';
 import { getConnectorCredential } from './connectors/connectorAuth';
+import { slackTokenProblem } from './connectors/slackConnector';
 
 interface HealthCheckResult {
   ok: boolean;
@@ -207,6 +208,8 @@ export async function checkSlackConnection(): Promise<HealthCheckResult> {
   if (!token) {
     return { ok: false, message: 'No Slack bot token configured.', latency: 0, details: { reason: 'missing_token' } };
   }
+  const wrongType = slackTokenProblem(token);
+  if (wrongType) return { ok: false, message: wrongType, latency: 0, details: { reason: 'wrong_token_type' } };
 
   try {
     const response = await fetch('https://slack.com/api/auth.test', {

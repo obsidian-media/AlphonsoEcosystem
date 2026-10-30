@@ -511,7 +511,9 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
   const stepModel = typeof assignment?.model === 'string' && assignment.model ? assignment.model : null;
   // An Alphonso code step runs once (agent phase 6): its change was approved as prepared, and
   // its own fix rounds already ran; a rerun would only find its files changed since the preview.
-  const runsOnce = isAlphonsoCodeStep(assignment);
+  // A step that publishes or sends runs once too (QA batch 1, owner 2026-10-28): a failed send waits with
+  // the platform's reason for Carry on, never retried on its own or with a larger model (no model sends).
+  const runsOnce = isAlphonsoCodeStep(assignment) || (assignment?.effects || []).includes('publish_or_send');
   const attempts = runsOnce ? 1 : MAX_TASK_RETRIES + 1;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {

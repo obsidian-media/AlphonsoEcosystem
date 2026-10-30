@@ -11,8 +11,10 @@ const jobs = async () => JSON.parse(await browser.execute(() => localStorage.get
 const pad = (n) => String(n).padStart(2, '0');
 const dayKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-describe('Alphonso desktop: the Calendar', () => {
+describe('Alphonso desktop: the Calendar', function () {
   // Posts a few days ahead, inside the current month view when possible.
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(300000);
   const base = new Date();
   base.setHours(0, 0, 0, 0);
   const day = (n, h = 0) => { const d = new Date(base); d.setDate(d.getDate() + n); d.setHours(h, 0, 0, 0); return d; };
@@ -21,7 +23,6 @@ describe('Alphonso desktop: the Calendar', () => {
   const draftTarget = day(5);
 
   before(async function () {
-    this.timeout(300000);
     await enterShell();
     await browser.execute((seed) => {
       const now = Date.now();
@@ -59,21 +60,18 @@ describe('Alphonso desktop: the Calendar', () => {
   });
 
   it("shows both brands' posts and the draft", async function () {
-    this.timeout(60000);
     expect(await $('[data-testid="calendar-item-post:sp1"]').isDisplayed()).toBe(true);
     expect(await $('[data-testid="calendar-item-draft:job1"]').isDisplayed()).toBe(true);
     expect(await $(`[data-testid="calendar-day-${dayKey(igAt)}"]`).getText()).toContain('18:00 Tired reel');
-  });
+  }).timeout(60000);
 
   it('dragging the draft to another day moves it', async function () {
-    this.timeout(60000);
     const target = await $(`[data-testid="calendar-day-${dayKey(draftTarget)}"]`);
     await (await $('[data-testid="calendar-item-draft:job1"]')).dragAndDrop(target);
     await browser.waitUntil(async () => (await jobs())[0].scheduled_date === dayKey(draftTarget), { timeout: 15000, timeoutMsg: 'the draft did not move' });
-  });
+  }).timeout(60000);
 
   it("Change in the side panel moves the Instagram post and its send; Cancel cancels both", async function () {
-    this.timeout(120000);
     await (await $('[data-testid="calendar-item-post:ig1"]')).click();
     const panel = await $('section[aria-label="Selected post"]');
     await panel.waitForDisplayed({ timeout: 15000 });
@@ -94,5 +92,5 @@ describe('Alphonso desktop: the Calendar', () => {
     await (await dialog.$('button=Cancel it')).click();
     await browser.waitUntil(async () => (await projects())[0].posts[0].status === 'cancelled', { timeout: 15000, timeoutMsg: 'the post was not cancelled' });
     expect((await schedule()).find((i) => i.postId === 'ig1').status).toBe('cancelled');
-  });
+  }).timeout(120000);
 });

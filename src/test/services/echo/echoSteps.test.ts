@@ -112,6 +112,25 @@ describe('saving: what the real run showed', () => {
   });
 });
 
+// QA batch 1 (desktop run with qwen2.5:7b): "Remember that our launch is on Friday the 14th and the
+// price is $29." was saved as "Save the date and price", and a later fallback saved Jose's own step
+// line "Do what the request asks with memory." as part of the decision.
+describe('saving: what you said is kept', () => {
+  it('a decision that drops every number you gave is asked once more, then your words are kept', async () => {
+    llm.mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'Save the date and price', topics: ['launch'] }] }))
+      .mockResolvedValueOnce(say({ decisions: [{ kind: 'decision', text: 'Remember the date and price', topics: ['launch'] }] }));
+    await runEchoStep(step('memory_preservation'), input('Remember that our launch is on Friday the 14th and the price is $29.'), ctx());
+    expect(String(llm.mock.calls[1][1].prompt)).toContain('Keep the details as given');
+    expect(listDecisions().map((d) => d.text)).toEqual(['Our launch is on Friday the 14th and the price is $29.']);
+  });
+
+  it("Jose's step line for a memory-only request is never saved", async () => {
+    llm.mockResolvedValueOnce(say({ decisions: [] })).mockResolvedValueOnce(say({ decisions: [] }));
+    await runEchoStep(step('memory_preservation'), input('Remember that the launch moved to Saturday the 15th.', { instruction: 'Do what the request asks with memory.' }), ctx());
+    expect(listDecisions().map((d) => d.text)).toEqual(['The launch moved to Saturday the 15th.']);
+  });
+});
+
 describe('saving: the second real run', () => {
   it('a near-repeat of a saved decision is not saved; a different date or price is', async () => {
     addDecision({ kind: 'decision', text: 'Our launch is on Friday the 14th at $29.', topics: ['launch'], source: { surface: 'chat', by: 'you' } } as never);

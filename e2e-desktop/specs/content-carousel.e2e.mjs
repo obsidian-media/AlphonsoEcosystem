@@ -26,13 +26,14 @@ async function reopen(tab, projectId, outputFolder) {
   await select.selectByAttribute('value', projectId);
 }
 
-describe('Alphonso desktop: carousels', () => {
+describe('Alphonso desktop: carousels', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(300000);
   let outputFolder = '';
   let projectId = '';
   let dir = '';
 
   before(async function () {
-    this.timeout(300000);
     await enterShell();
     outputFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'alphonso-carousel-'));
     const loaded = await invoke('load_settings');
@@ -85,25 +86,22 @@ describe('Alphonso desktop: carousels', () => {
   });
 
   it('Carousel Studio shows every slide with its text', async function () {
-    this.timeout(60000);
     await $('[data-testid="carousel-slide-c5"]').waitForDisplayed({ timeout: 30000 });
     const text = await $('main').getText();
     for (let n = 1; n <= 5; n += 1) expect(text).toContain(`HABIT ${n}`);
     // The label is upper-cased by its style, so the window's text says COVER.
     expect(text).toMatch(/\bcover\b/i);
-  });
+  }).timeout(60000);
 
   it('the Posts list has the Instagram carousel with its own caption', async function () {
-    this.timeout(120000);
     await reopen('campaign studio', projectId, outputFolder);
     await $('section[aria-label="Posts"]').waitForDisplayed({ timeout: 60000 });
     await (await buttonByText('make the posts list')).click();
     await browser.waitUntil(async () => ((await projectById(projectId)).posts || []).length === 1, { timeout: 15000, timeoutMsg: 'no posts list' });
     expect((await projectById(projectId)).posts[0]).toMatchObject({ platform: 'instagram', piece: 'carousel', caption: 'Swipe for five habits', status: 'draft' });
-  });
+  }).timeout(120000);
 
   it('with no storage, approving it saves the slides and caption to post by hand', async function () {
-    this.timeout(300000);
     // Due now, so the Publish step sends it at once instead of handing it to the runner.
     await browser.execute((id) => {
       const projects = JSON.parse(localStorage.getItem('alphonso_content_projects_v1') || '[]');
@@ -123,6 +121,9 @@ describe('Alphonso desktop: carousels', () => {
     const folder = path.join(outputFolder, ...post.folder.split('/'));
     expect(fs.readdirSync(folder).sort()).toEqual(['01-v1-c1.png', '02-v1-c2.png', '03-v1-c3.png', '04-v1-c4.png', '05-v1-c5.png', 'caption.txt']);
     expect(fs.readFileSync(path.join(folder, 'caption.txt'), 'utf8')).toBe('Swipe for five habits\n\n#coffee');
-    expect(await $('section[aria-label="Posts"]').getText()).toContain('Post by hand');
-  });
+    // The Posts list refreshes every 2 s while a post goes out; wait for it rather than read it at once (QA batch 0).
+    await browser.waitUntil(async () => (await $('section[aria-label="Posts"]').getText()).includes('Post by hand'), {
+      timeout: 30000, timeoutMsg: 'the Posts list never showed "Post by hand"',
+    });
+  }).timeout(300000);
 });

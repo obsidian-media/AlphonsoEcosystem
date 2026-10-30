@@ -1,5 +1,5 @@
 // Phase 3b: what the Calendar page shows: every brand's posts, Content Studio's drafts, Marcus's sends.
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const movePost = vi.fn();
 vi.mock('../../../services/contentFactory/contentPostMoves', async () => {
@@ -41,7 +41,9 @@ function seed() {
   return { lw, sp };
 }
 
-beforeEach(() => { localStorage.clear(); movePost.mockReset(); });
+// The seeded times are in late October 2026: the clock stays at NOW so moves are judged against it, not today.
+beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(NOW); localStorage.clear(); movePost.mockReset(); });
+afterEach(() => { vi.useRealTimers(); });
 
 describe('listCalendarItems', () => {
   it('merges posts of every brand, Content Studio drafts and Marcus sends', () => {

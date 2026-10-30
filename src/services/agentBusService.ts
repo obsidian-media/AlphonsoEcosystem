@@ -41,6 +41,8 @@ export interface AgentPacket {
   deadLetterAtMs?: number;
   /** What the step does (Jose steps since 2026-10-23); approval is decided from these. */
   effects?: JoseEffect[];
+  /** The step's model, when Jose gave it one: a paid model may spend (QA batch 1). */
+  model?: string;
 }
 
 export interface AgentPacketInput {
@@ -59,6 +61,8 @@ export interface AgentPacketInput {
   fileChangePreview?: string;
   rollbackAvailable?: boolean;
   effects?: JoseEffect[];
+  /** The step's model, when Jose gave it one: a paid model may spend (QA batch 1). */
+  model?: string;
 }
 
 export interface PacketStatusUpdate {
@@ -142,7 +146,8 @@ export function createAgentPacket({
   commandPreview = '',
   fileChangePreview = '',
   rollbackAvailable = false,
-  effects
+  effects,
+  model
 }: AgentPacketInput): AgentPacket {
   const packets = readPackets();
   const packet: AgentPacket = {
@@ -166,7 +171,8 @@ export function createAgentPacket({
     updatedAtMs: timestampMs(),
     references: [],
     executionResult: null,
-    ...(Array.isArray(effects) ? { effects } : {})
+    ...(Array.isArray(effects) ? { effects } : {}),
+    ...(model ? { model } : {})
   };
   packets.push(packet);
   writePackets(packets);

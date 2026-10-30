@@ -1,6 +1,6 @@
 // Phase 3a: Campaign Studio's Posts list (review, edit, approve once, see what happened).
 import React from 'react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 const cancelScheduledContentPost = vi.fn();
@@ -45,10 +45,14 @@ const renderPanel = (project = finished().project, brand = saveBrand({ name: 'B'
   return { ...view, onChange, approvePosts };
 };
 
+// The posts are set in early November 2026: the clock stays before them so their times are never in the past.
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 9, 26, 10, 0));
   localStorage.clear();
   [cancelScheduledContentPost, postOverdueNow, scheduleContentPost, openExternalUrl].forEach((f) => f.mockReset());
 });
+afterEach(() => { vi.useRealTimers(); });
 
 describe('PostsPanel', () => {
   it('makes the posts list from the finished video and the campaign', () => {

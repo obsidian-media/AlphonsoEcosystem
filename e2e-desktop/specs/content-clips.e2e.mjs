@@ -27,12 +27,13 @@ async function openSceneBuilder(projectId) {
   await $('section[aria-label="AI clips"]').waitForDisplayed({ timeout: 60000 });
 }
 
-describe('Alphonso desktop: AI clips', () => {
+describe('Alphonso desktop: AI clips', function () {
+  // Hooks' limits are set here: this harness ignores this.timeout() inside a hook (QA batch 1).
+  this.timeout(300000);
   let outputFolder = '';
   let projectId = '';
 
   before(async function () {
-    this.timeout(300000);
     await enterShell();
     outputFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'alphonso-clips-'));
     const loaded = await invoke('load_settings');
@@ -93,7 +94,6 @@ describe('Alphonso desktop: AI clips', () => {
   });
 
   it('saves the main moments and the AI clip settings', async function () {
-    this.timeout(120000);
     const box = await $('input[aria-label="Main moment: Scene 2"]');
     await box.waitForExist({ timeout: 30000 });
     expect(await box.isSelected()).toBe(false);
@@ -104,10 +104,9 @@ describe('Alphonso desktop: AI clips', () => {
     await browser.waitUntil(async () => (await projectById(projectId)).videoSettings?.aiClips === 'every', { timeout: 10000 });
     await (await $('select[aria-label="AI clips for"]')).selectByAttribute('value', 'main');
     await browser.waitUntil(async () => (await projectById(projectId)).videoSettings?.aiClips === 'main', { timeout: 10000 });
-  });
+  }).timeout(120000);
 
   it('runs the AI clips step: a real clip when a video model is installed, else says what to set up', async function () {
-    this.timeout(2400000);
     const info = (await invoke('comfyui_video_models', { savedDir: null })).value || { models: [] };
     const installed = (info.models || []).some((m) => m.installed);
     const run = await $('//section[@aria-label="AI clips"]//button[normalize-space(.)="Run" or normalize-space(.)="Run again" or normalize-space(.)="Retry"]');
@@ -134,10 +133,9 @@ describe('Alphonso desktop: AI clips', () => {
       if (video.readyState < 1) video.load();
       return video.readyState >= 1 && video.duration > 0;
     }), { timeout: 60000, timeoutMsg: 'the clip did not load in the Scene Builder' });
-  });
+  }).timeout(2400000);
 
   it("shows Runtime Hub's video models with the card's memory", async function () {
-    this.timeout(120000);
     // The panel sits on the ComfyUI card once a ComfyUI is installed or found; CI has none.
     const info = (await invoke('comfyui_video_models', { savedDir: null })).value || {};
     if (!info.comfyuiDir) this.skip();
@@ -146,5 +144,5 @@ describe('Alphonso desktop: AI clips', () => {
       const text = await browser.execute(() => document.querySelector('section[aria-label="Video models"]')?.innerText || '');
       return /Your card: \d+ GB|No NVIDIA graphics card was found/.test(text) && text.includes('LTX-Video 2B') && text.includes('Wan 2.2 5B');
     }, { timeout: 90000, timeoutMsg: 'the video models were not shown on the ComfyUI card' });
-  });
+  }).timeout(120000);
 });

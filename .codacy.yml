@@ -13,3 +13,10 @@ exclude_paths:
   # surfaced this (voice_learner_weaknesses migration flagged with ~50
   # T-SQL-only issues on a 24-line, valid Postgres file).
   - "supabase/migrations/**"
+  # The desktop end-to-end specs run under Node with WebdriverIO and Mocha
+  # globals (browser, $, describe, expect) and import node:fs. Codacy reads
+  # them as ES5 browser code, so every line of them is a false positive
+  # ("ES2015 arrow functions are forbidden", "'browser' is not defined").
+  # They are checked by running them (npm run test:e2e:desktop). Owner
+  # decision 2026-10-29 (PR #369: about 95 of 100 Codacy findings).
+  - "e2e-desktop/**"

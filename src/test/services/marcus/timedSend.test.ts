@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 const sends: unknown[] = [];
 vi.mock('../../../services/marcus/runSend', () => ({
   runMarcusSend: vi.fn(async (...args: unknown[]) => { sends.push(args); return { ok: true, sentence: 'Sent to Slack #team.' }; }),
+  ALREADY_SENT: 'Already sent.',
 }));
 vi.mock('../../../services/memoryService', () => ({ pushMemoryItem: vi.fn() }));
 vi.mock('../../../services/orchestrationReceiptService', () => ({ appendOrchestrationReceipt: vi.fn() }));

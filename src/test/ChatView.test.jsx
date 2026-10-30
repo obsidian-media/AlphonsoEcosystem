@@ -390,6 +390,18 @@ describe('ChatView', () => {
     });
   });
 
+  // QA batch 1 (live NVIDIA check): with no NVIDIA model found yet, Chat sent the Ollama model's
+  // name to NVIDIA, which answered "404 page not found".
+  it('sends nothing to NVIDIA until an NVIDIA model is chosen, and says so', async () => {
+    nextMsgId.mockReturnValueOnce('msg-user-nomodel').mockReturnValueOnce('msg-assistant-nomodel');
+    render(<ChatView {...makeProps({ settings: { selectedProvider: 'nvidia_nim', selectedModel: '', colorScheme: 'dark' } })} />);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    await waitFor(() => expect(screen.getByText(/No NVIDIA NIM model is chosen yet/)).toBeTruthy());
+    expect(sendNvidiaMessage).not.toHaveBeenCalled();
+  });
+
   it('routes generation through sendHermesAgentMessage for the alphonso agent when hermes is selected', async () => {
     nextMsgId.mockReturnValueOnce('msg-hermes-user').mockReturnValueOnce('msg-hermes-assistant');
     setAgentProvider('alphonso', { provider: 'hermes' });
@@ -940,6 +952,32 @@ describe('ChatView: everything goes to Jose', () => {
     await screen.findByTestId('chat-interrupted-notice');
     fireEvent.click(screen.getByTestId(`chat-notice-cancel-${request.id}`));
     expect(cancelRequest).toHaveBeenCalledWith(request.id);
+  });
+
+  // QA batch 1 (live check of 2.10.0, 2026-10-28): Cancel pressed on Telegram worked, but Chat
+  // kept offering Carry on / Cancel: its notice read the requests only when Chat opened.
+  it('the notice goes away when the request is cancelled elsewhere', async () => {
+    localStorage.removeItem('alphonso_jose_requests_v1');
+    const request = createJoseRequest({
+      commandId: 'c-cut3', source: 'user', text: 'Research the river', kind: 'normal',
+      steps: [{ stepId: 'a', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [] }],
+    });
+    setJoseRequestStatus(request.id, 'interrupted');
+    render(<ChatView {...makeProps()} />);
+    await screen.findByTestId('chat-interrupted-notice');
+    act(() => { setJoseRequestStatus(request.id, 'cancelled'); });
+    await waitFor(() => expect(screen.queryByTestId('chat-interrupted-notice')).toBeNull());
+  });
+
+  // QA batch 1 (owner, 2026-10-28): a model too small for plans and code is named next to the picker.
+  it('warns next to the model picker when the local model is very small', () => {
+    render(<ChatView {...makeProps({ settings: { selectedModel: 'qwen3:0.6b', colorScheme: 'dark' } })} />);
+    expect(screen.getByTestId('small-model-notice').getAttribute('title')).toContain('qwen3:0.6b is very small');
+  });
+
+  it('says nothing for a model of 3B or more', () => {
+    render(<ChatView {...makeProps()} />);
+    expect(screen.queryByTestId('small-model-notice')).toBeNull();
   });
 
   // Agent roles Part C2: a request waiting for something to be set up shows there too.

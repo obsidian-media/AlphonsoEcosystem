@@ -114,6 +114,9 @@ export function planReviewRound(
     if (!reviewed) continue;
     const original = steps.find((s) => s.stepId === (reviewed.revises || reviewed.stepId)) || reviewed;
     const round = Math.max(...reviews.map((r) => r.review.round || 0)) + 1;
+    // A late review of work already revised is out of date: the newer draft gets its own re-check
+    // (QA batch 1: Marcus's check of the first draft came after it was revised, and "-fix-1" was added twice).
+    if (steps.some((s) => s.revises === original.stepId && (s.round || 0) >= round)) continue;
     if (round > maxRounds) {
       notes.push(`The review still found problems after ${maxRounds} rounds: ${sentences(findings)} Tell me what to change, or use it as it is.`);
       continue;

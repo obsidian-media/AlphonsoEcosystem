@@ -15,7 +15,7 @@ export interface WorkPlace {
   prefix: string;
 }
 
-export const NEEDS_OUTPUT_FOLDER = 'Set the output folder in Settings → General so Alphonso has somewhere to put new code.';
+export const NEEDS_OUTPUT_FOLDER = 'Set the Output Folder in Settings → Runtime so Alphonso has somewhere to put new code.';
 export const NO_PROJECT = "Add a project in Settings → Agents → Alphonso's projects.";
 /** A reading skill with no folder to read from (agent roles Part C2). */
 export const NAME_A_PROJECT = "Name one of your projects in Settings → Agents → Alphonso's projects, or the file's project in the request.";
@@ -85,6 +85,17 @@ export function projectsNamedIn(request: string, list: AlphonsoProject[] = listP
     }
   }
   return found.sort((a, b) => a.at - b.at).map((f) => f.project);
+}
+
+/** A change to a file or folder in one sentence: a change word, then a file, a folder or a file name. */
+const CHANGES_A_FILE = /\b(?:add|create|make|write|put|change|edit|update|modify|fix|append|delete|remove|rename|move)\b[^.?!]*?(?:\b(?:files?|folders?|director(?:y|ies))\b|\b[\w-]+\.[a-z0-9]{1,5}\b)/i;
+
+/** A request that names one of your saved projects and asks to change a file or folder in it
+ *  (QA batch 0): project work for Alphonso's code step, whatever the file type. Reading or
+ *  summarizing a project is not a change. */
+export function asksForProjectWork(request: string, list: AlphonsoProject[] = listProjects()): boolean {
+  const text = String(request || '');
+  return projectsNamedIn(text, list).length > 0 && CHANGES_A_FILE.test(text);
 }
 
 /** A new scratch folder: `<output folder>/<agent name>/<slug>/`, `-2` … when taken. */

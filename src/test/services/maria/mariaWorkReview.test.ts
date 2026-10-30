@@ -20,6 +20,46 @@ const input = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => { llm.mockReset(); sources.mockReturnValue([]); files.mockResolvedValue([]); });
 
+// QA batch 1 (owner, 2026-10-29): with no sources, a claim is checked against the request; only a
+// fact, number or name the request doesn't give stays "not backed".
+describe('parseWorkReview with no sources', () => {
+  const REQUEST = 'Write a one-line note that the Alphonso QA live check worked, and post it to Slack #test.';
+  const NOTE = 'The Alphonso QA live check passed as expected.';
+  const answer = (unbacked: string[], verdict = 'fix') => JSON.stringify({ verdict, summary: 's', findings: [], unbacked: unbacked.map((claim) => ({ claim, why: 'no source' })) });
+
+  it('a claim the request gives is not "not backed", and a fix with nothing left to change passes', () => {
+    const out = parseWorkReview(answer([NOTE]), NOTE, [], { request: REQUEST })!;
+    expect(out.review.unbacked).toEqual([]);
+    expect(out.review.verdict).toBe('pass');
+  });
+
+  it('a new number or name stays "not backed"', () => {
+    const work = 'The Alphonso QA live check passed 40 tests. Dana ran it.';
+    const out = parseWorkReview(answer(['The Alphonso QA live check passed 40 tests.', 'Dana ran it.']), work, [], { request: REQUEST })!;
+    expect(out.review.unbacked.map((u) => u.claim)).toEqual(['The Alphonso QA live check passed 40 tests.', 'Dana ran it.']);
+    expect(out.review.verdict).toBe('fix');
+  });
+
+  it('a new claim in other words stays "not backed"', () => {
+    const out = parseWorkReview(answer(['Our bread is the best in town.']), 'Our bread is the best in town.', [], { request: 'Write a post about our bakery.' })!;
+    expect(out.review.unbacked).toHaveLength(1);
+  });
+
+  // Third live run: a 7B model returned the answer format's own example, "the exact claim".
+  it('a "not backed" claim that is not in the work is dropped', () => {
+    const out = parseWorkReview(answer(['the exact claim']), NOTE, [], { request: REQUEST })!;
+    expect(out.review.unbacked).toEqual([]);
+    expect(out.review.verdict).toBe('pass');
+    const withSources = parseWorkReview(answer(['the exact claim']), NOTE, [])!;
+    expect(withSources.review.unbacked).toEqual([]);
+  });
+
+  it('the prompt says to check against the request when there are no sources', () => {
+    const p = workReviewPrompt(input() as never, { sources: NO_SOURCES, files: '', results: '', factCheck: false });
+    expect(p).toContain('There are no sources: check each fact, number and name against the request');
+  });
+});
+
 describe('parseWorkReview', () => {
   it('pass and fix, quotes from the work', () => {
     const out = parseWorkReview(JSON.stringify({ verdict: 'fix', summary: 'One wrong number.', findings: [{ quote: 'beat their wings 200 times a minute', problem: 'the source says 11,400', change: 'say 11,400 times a minute' }], unbacked: [], good: ['Short and clear.'] }), POST, [])!;

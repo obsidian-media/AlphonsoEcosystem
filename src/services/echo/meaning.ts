@@ -9,7 +9,19 @@ import { listDecisions, type Decision } from './decisions';
 
 export const ECHO_EMBED_MODEL = 'all-minilm';
 /** A decision counts as a match by meaning only this close to the question (cosine similarity). */
-export const MEANING_MIN_SIMILARITY = 0.55;
+// Measured with the real all-minilm (QA batch 1, 2026-10-28): right matches 0.38 to 0.71 (median
+// 0.55), wrong ones at most 0.44, so 0.45 keeps out every wrong one; 0.55 missed most right ones.
+export const MEANING_MIN_SIMILARITY = 0.45;
+
+/** What a question is about, without "/jose" or "what did we decide about" (QA batch 1): the wording
+ *  around the subject lowered the score ("morning meals" 0.55 alone, 0.51 inside the question). */
+const ASKING = /^(?:(?:can|could)\s+you\s+)?(?:remind\s+me\s+|tell\s+me\s+|do\s+you\s+remember\s+)?(?:what|which)\s+(?:did|have|had)?\s*(?:we|i)\s+(?:decide[ds]?|said|say|agree[ds]?|chose|choose|pick(?:ed)?)\s+(?:about|on|for)\s+/i;
+
+export function meaningQuestion(query: string): string {
+  const text = String(query || '').trim().replace(/^\/jose\s+/i, '').trim();
+  const about = text.replace(ASKING, '').replace(/[?.!]+$/, '').trim();
+  return about || text;
+}
 /** A search never waits longer than this for the question's vector. */
 export const MEANING_QUERY_WAIT_MS = 4000;
 const BATCH = 32;
@@ -83,9 +95,11 @@ async function index(pending: Decision[], extra?: (s: MeaningState) => void): Pr
 async function prepare(extra?: (s: MeaningState) => void): Promise<void> {
   if (!meaningEnabled()) { setState({ kind: 'off' }, extra); return; }
   const endpoint = getConfiguredOllamaEndpoint();
-  let listed: { http_status?: number | null; models?: { name: string }[] } | null = null;
+  // The backend's OllamaModelsProof is camelCase (`httpStatus`); reading `http_status` made the
+  // meaning search say "Needs Ollama running" with Ollama up (found by CI, QA batch 0).
+  let listed: { httpStatus?: number | null; models?: { name: string }[] } | null = null;
   try { listed = await invoke('ollama_list_models', { endpoint }); } catch { listed = null; }
-  if (!listed?.http_status) { setState({ kind: 'no_ollama' }, extra); return; }
+  if (!listed?.httpStatus) { setState({ kind: 'no_ollama' }, extra); return; }
   const has = (listed.models || []).some((m) => m.name === ECHO_EMBED_MODEL || m.name.startsWith(`${ECHO_EMBED_MODEL}:`));
   if (!has) {
     setState({ kind: 'downloading', pct: null }, extra);
@@ -132,7 +146,7 @@ export async function meaningMatches(query: string, pool: Decision[], limit: num
   try {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const late = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), MEANING_QUERY_WAIT_MS); });
-    const rows = await Promise.race([embed([query]), late]).finally(() => clearTimeout(timer));
+    const rows = await Promise.race([embed([meaningQuestion(query)]), late]).finally(() => clearTimeout(timer));
     if (!rows) return [];
     const known = await loadVectors();
     return pool

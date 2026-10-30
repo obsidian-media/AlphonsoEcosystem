@@ -29,7 +29,8 @@ import { JosePlanCard } from './jose/JosePlanCard'
 import { MariaOfferButton } from './maria/MariaOfferButton'
 import { JoseRequestOutcome } from './jose/JoseRequestOutcome'
 import { EchoRemembered } from './echo/EchoRemembered'
-import { getJoseRequest, listJoseRequests } from '../services/jose/joseRequestStore'
+import { getJoseRequest, listJoseRequests, onRequestStatusChange } from '../services/jose/joseRequestStore'
+import { SmallModelNotice } from './SmallModelNotice'
 import { agentName } from '../services/jose/agentNames'
 import { OPEN_CHAT_EVENT, takeChatDraft } from '../lib/chatDraft'
 import type { PlanFirstSetting } from '../services/jose/josePlanApproval';
@@ -340,6 +341,9 @@ export function ChatView({
     setInterruptedRequests(all.filter((r) => r.status === 'interrupted'));
     setSetupRequests(all.filter((r) => r.status === 'waiting_setup'));
   };
+  // Carried on or cancelled anywhere (Telegram, the board), the notice follows (QA batch 1: it kept
+  // offering Carry on / Cancel for a request cancelled on Telegram).
+  useEffect(() => onRequestStatusChange(() => refreshInterrupted()), []);
   const [streamingText, setStreamingText] = useState('');
   const [streamingTokens, setStreamingTokens] = useState(0);
   const [streamingStartTime, setStreamingStartTime] = useState(null);
@@ -975,7 +979,10 @@ export function ChatView({
         content: selectedProvider !== 'ollama'
           ? selectedProvider === 'hermes'
             ? `Hermes is not configured or unreachable for Alphonso. Add its endpoint in Settings → Connectors, or switch back to Ollama.`
-            : `${providerLabel} is not configured. Add a free API key in Settings → Connectors, or switch back to Ollama.`
+            : !settings.selectedModel && (selectedProvider === 'nvidia_nim' ? isNvidiaConfigured() : isGeminiConfigured())
+              // The key is saved; no model of this provider's is chosen yet (QA batch 1).
+              ? `No ${providerLabel} model is chosen yet: wait for the model list next to the provider tabs, or pick one there.`
+              : `${providerLabel} is not configured. Add a free API key in Settings → Connectors, or switch back to Ollama.`
           : selectedModelMissing
             ? `Model not found: ${settings.selectedModel}. Choose one of the installed models: ${installedModels.map((model) => model.name).join(', ')}.`
             : 'No Ollama model is selected. Run Check Ollama and choose an installed model.'
@@ -1195,6 +1202,7 @@ export function ChatView({
                 />
               }
             />
+            {selectedProvider === 'ollama' && <SmallModelNotice model={settings.selectedModel as string | undefined} short />}
             <button
               onClick={() => setDirectMode((d) => !d)}
               className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded-sm transition-colors uppercase tracking-widest font-bold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--accent-border) ${directMode ? 'bg-(--accent-dim) text-(--accent)' : 'text-(--text-4) hover:text-(--text-2)'}`}

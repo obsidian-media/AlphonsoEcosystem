@@ -55,7 +55,6 @@ describe('Alphonso desktop: Teams', () => {
 
   it('runs the team when Chat asks for it by name', async function () {
     if (!(await ollamaHasModels())) this.skip();
-    this.timeout(300000);
     const before = (await readJson('alphonso_jose_requests_v1')).map((r) => r.id);
     await $('[data-testid="sidebar-chat-shortcut"]').click();
     const input = await $('[data-testid="chat-compose-input"]');
@@ -69,5 +68,5 @@ describe('Alphonso desktop: Teams', () => {
     expect(request.plan?.note).toBe('Steps set by your team Teatime.');
     const work = request.steps.filter((s) => s.agent !== 'sentinel').map((s) => [s.agent, s.actionType]);
     expect(work).toEqual([['hector', 'research_report'], ['alphonso', 'assistant_write']]);
-  });
+  }).timeout(300000);
 });
