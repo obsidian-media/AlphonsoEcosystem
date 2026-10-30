@@ -1137,6 +1137,20 @@ describe('Marcus makes an outside change you approved', () => {
     expect(getStepOutput(result.commandId, 'marcus').summary).toMatch(/^Shop: Update price \(product: Blue mug, price: 18\): done\./);
   });
 
+  it('a Paid server in Zero-Cost Mode needs setting up and asks nothing', async () => {
+    const { updateServer } = await import('../../../services/mcp/mcpServers');
+    updateServer('shop', { cost: 'paid' });
+    const { setRuntimePolicySettings } = await import('../../../services/policyEnforcementService');
+    await setRuntimePolicySettings({ zeroCostMode: true });
+    const result = await runJoseCommandExecutionPipeline({ commandText: 'Set the blue mug to $18 in my Shop', source: 'test', zeroCostMode: true, previewMode: false, assignments: [outsideStep()] });
+    expect(result.pendingApprovalCount).toBe(0);
+    const marcus = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'marcus');
+    expect(marcus.status).toBe('setup_needed');
+    expect(JSON.stringify(getJoseRequest(`jose-request-${result.commandId}`))).toContain('Shop is a paid server and Zero-Cost Mode is on.');
+    const { callTool } = await import('../../../services/mcp/mcpConnection');
+    expect(callTool).not.toHaveBeenCalled();
+  });
+
   it('a failed call is not retried', async () => {
     const { callTool } = await import('../../../services/mcp/mcpConnection');
     vi.mocked(callTool).mockResolvedValue({ ok: false, text: '', reason: 'Shop said: no such product' });
