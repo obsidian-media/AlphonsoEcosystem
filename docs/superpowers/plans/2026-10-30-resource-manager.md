@@ -64,10 +64,11 @@
   export type GpuSource = 'nvidia' | 'comfyui' | 'unknown';
   export interface LoadedThing { kind: 'tool' | 'model'; name: string; label: string; memMb: number | null; startedBy: 'alphonso' | 'you'; lastUsedAtMs: number | null; inUse: boolean }
   export interface ResourceState { atMs: number; ramTotalMb: number; ramFreeMb: number; gpuTotalMb: number | null; gpuFreeMb: number | null; gpuSource: GpuSource; loaded: LoadedThing[] }
-  export async function readResources(): Promise<ResourceState>
+  export interface UsageRecord { lastUsedAt(key: string): number | null; isInUse(key: string): boolean }
+  export async function readResources(usage?: UsageRecord): Promise<ResourceState>
   export const GPU_UNKNOWN = 'Graphics memory unknown on this computer.';
   ```
-  Graphics: NVIDIA reading first, else ComfyUI `/system_stats` `devices[0].vram_total/vram_free` (bytes → MB), else `unknown`. Apple Silicon: `unknown` graphics, RAM covers it. `startedBy` is `'alphonso'` for tools in the snapshot's `processes`, `'you'` for a running tool not in it. `lastUsedAtMs` and `inUse` come from Task 6's `toolUse` store (import its getters).
+  Graphics: NVIDIA reading first, else ComfyUI `/system_stats` `devices[0].vram_total/vram_free` (bytes → MB), else `unknown`. Apple Silicon: `unknown` graphics, RAM covers it. `startedBy` is `'alphonso'` for tools in the snapshot's `processes`, `'you'` for a running tool not in it. `lastUsedAtMs` and `inUse` come from an optional `UsageRecord` argument (`lastUsedAt(key)`, `isInUse(key)`; tools by name, models as `model:<name>`), defaulting to never used; Task 6 passes its `toolUse` store, and the gate (Task 8) marks the step's model in use as `model:<name>` beside its tools.
 
 - [ ] **Step 1: Write the failing tests** (mock `invoke` and `comfyRequest`): NVIDIA present → `gpuSource 'nvidia'`; no NVIDIA, ComfyUI answers `vram_total 4294967296` → `gpuTotalMb 4096, gpuSource 'comfyui'`; neither → `gpuFreeMb null, gpuSource 'unknown'`; a running ComfyUI not in `processes` → `startedBy 'you'`; each Ollama model is a `LoadedThing` of kind `'model'` with `memMb` = its `vramMb || sizeMb`.
 - [ ] **Step 2: Run** `npx vitest run src/test/services/resources/resourceState.test.ts` — Expected: FAIL (module not found).
