@@ -236,6 +236,8 @@
 - Consumes: `onResources()` / `latestResources()` (Task 6), `getIdleMinutes`/`setIdleMinutes`, `freeThings`, `GPU_UNKNOWN`.
 - Produces (`data-testid`s for the E2E spec): `memory-section`, `memory-ram`, `memory-gpu`, `memory-row-<name>`, `memory-idle-<tool>` (select: 5, 15, 30, 60 minutes, Never), `memory-stop-<tool>` (only `startedBy 'alphonso'`), `memory-unload-<model>`, `memory-waiting`; `memory-meter` in the top bar. Each row: label, memory (`"about"` before an estimate), "Started by Alphonso" / "Started by you", idle time. Graphics unknown → `GPU_UNKNOWN`.
 
+  **Built (2026-10-30), calls made while building:** the idle-time choice shows only for tools Alphonso started (the idle stop never stops anything else) and not for Ollama (never stopped); Stop is disabled while a step uses the tool; Unload shows only for a model no step is using. Memory is shown as measured; a row with no reading says "Size not known" rather than an estimate. The meter rounds to whole GB and shows nothing before the first reading or when RAM couldn't be read. Chat's live line gets the wait through a new optional `onWait` on `admitStep()` (sent once per wait as progress stage `waiting_memory`), and `queued` no longer also prints "Processing...". The board shows the waiting line above the plan map for the selected request.
+
 - [ ] **Step 1: Write the failing tests**: rows render from a given state; Stop only on Alphonso's tools; changing the idle select calls `setIdleMinutes('comfyui', 30)`; unknown graphics shows the sentence; the meter shows RAM used of total and opens the section on click; the board's step line shows `Waiting for memory: ComfyUI is busy.`
 - [ ] **Step 2: Run** — Expected: FAIL.
 - [ ] **Step 3: Implement** with the `src/components/ui` kit.

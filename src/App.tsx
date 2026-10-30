@@ -883,6 +883,10 @@ function AppShell() {
           onModeChange={setUxMode}
           onOpenDigest={() => setDigestOpen(true)}
           digestUnreadCount={digestItems.filter(i => !i.read).length}
+          onOpenMemory={() => {
+            switchTab('runtimes');
+            window.setTimeout(() => document.getElementById('memory-section')?.scrollIntoView({ block: 'start' }), 300);
+          }}
         />
         <Suspense fallback={null}>
           <CommandRib activeTab={activeTab} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} />

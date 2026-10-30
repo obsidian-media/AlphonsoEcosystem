@@ -48,6 +48,7 @@ import { VideoModelsPanel } from './VideoModelsPanel';
 import { CharacterReferencePanel, MotionTransferPanel } from './CharacterReferencePanel';
 import { getStorage } from '../lib/appStorage';
 import { InstallLocationPicker } from './InstallLocationPicker';
+import { MemorySection } from './resources/MemorySection';
 import type { InstallLocation } from '../services/runtimeManagerService';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -905,6 +906,8 @@ export default function RuntimeManagerView() {
           <AlertCircle size={14} /> {error}
         </div>
       )}
+
+      <MemorySection />
 
       {!loading && prereqs && prereqs.missing.length > 0 && (
         <PrereqPanel

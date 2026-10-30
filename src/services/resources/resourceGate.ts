@@ -105,7 +105,13 @@ function startRun(key: string, need: StepNeed, state: ResourceState): Admitted {
 }
 
 /** Waits until this step may run; `release()` when it ends. Never throws. */
-export async function admitStep(requestId: string, stepId: string, assignment: StepAssignment, signal?: AbortSignal): Promise<Admitted | NotAdmitted> {
+export async function admitStep(
+  requestId: string,
+  stepId: string,
+  assignment: StepAssignment,
+  signal?: AbortSignal,
+  onWait?: (reason: string) => void,
+): Promise<Admitted | NotAdmitted> {
   const noop: Admitted = { ok: true, release: () => undefined };
   if (!inTauri()) return noop;
   let need: StepNeed;
@@ -146,6 +152,7 @@ export async function admitStep(requestId: string, stepId: string, assignment: S
 
     const reason = decision.kind === 'wait' ? decision.reason : 'Waiting for memory to free up.';
     noteWaiting(requestId, stepId, waiting ? { waitingFor: reason } : { waitingFor: reason, waitingSinceMs: Date.now() });
+    if (!waiting) { try { onWait?.(reason); } catch { /* a progress line is never worth a failed step */ } }
     waiting = true;
     state = await nextReading(signal);
     if (!state && signal?.aborted) { stopWaiting(); return { ok: false, reason: STOPPED_LINE, stopped: true }; }

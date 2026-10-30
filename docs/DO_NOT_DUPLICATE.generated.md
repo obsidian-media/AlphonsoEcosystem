@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 336 services and 177 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 336 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -129,6 +129,8 @@ Source-backed inventory: 336 services and 177 components. Human purpose descript
 | component | `src/components/ProductionReadinessPanel.tsx` | `ProductionReadinessPanel` |
 | component | `src/components/ProjectBatchPanel.tsx` | `default` |
 | component | `src/components/projects/ProjectsPage.tsx` | `default`, `ProjectsPage` |
+| component | `src/components/resources/MemoryMeter.tsx` | `MemoryMeter` |
+| component | `src/components/resources/MemorySection.tsx` | `IDLE_CHOICES`, `MemorySection` |
 | component | `src/components/RightPanel.tsx` | `RightPanel` |
 | component | `src/components/RuntimeManagerView.tsx` | `default` |
 | component | `src/components/RuntimeNotice.tsx` | `RuntimeNotice` |

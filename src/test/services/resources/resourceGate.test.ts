@@ -88,12 +88,15 @@ describe('admitStep', () => {
     const busy: LoadedThing = { kind: 'tool', name: 'comfyui', label: 'ComfyUI', memMb: 500, startedBy: 'alphonso', lastUsedAtMs: null, inUse: true };
     readResources.mockResolvedValue(state({ loaded: [busy] }));
     let done = false;
-    const pending = admitStep(requestId, 'miya', { agent: 'miya', actionType: 'creative_scenes' }).then((r) => { done = true; return r; });
+    const onWait = vi.fn();
+    const pending = admitStep(requestId, 'miya', { agent: 'miya', actionType: 'creative_scenes' }, undefined, onWait).then((r) => { done = true; return r; });
     await settle(); await settle(); await settle();
     expect(done).toBe(false);
     const step = getJoseRequest(requestId)!.steps[0];
     expect(step.waitingFor).toBe('Waiting for memory: ComfyUI is busy.');
     expect(typeof step.waitingSinceMs).toBe('number');
+    expect(onWait).toHaveBeenCalledTimes(1);
+    expect(onWait).toHaveBeenCalledWith('Waiting for memory: ComfyUI is busy.');
     publish(state({ gpuFreeMb: 8000 }));
     const result = await pending;
     expect(result.ok).toBe(true);

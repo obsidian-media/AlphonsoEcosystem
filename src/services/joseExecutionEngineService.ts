@@ -2028,7 +2028,8 @@ async function runPipeline({
       // The resource gate (2026-10-30): run when its memory fits, make room, wait with a reason
       // on the board, or fail as too big for this computer. Released however the step ends.
       const admitted = joseRequestId
-        ? await admitStep(joseRequestId, assignment.stepId, assignment, stopSignal(joseRequestId))
+        ? await admitStep(joseRequestId, assignment.stepId, assignment, stopSignal(joseRequestId),
+          (reason) => onProgress?.({ stage: 'waiting_memory', reason, requestId: joseRequestId, commandId: command.id }))
         : null;
       let taskResult: any;
       if (admitted && !admitted.ok) {
