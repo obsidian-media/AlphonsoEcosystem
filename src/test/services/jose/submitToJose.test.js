@@ -182,6 +182,13 @@ describe('submitToJose', () => {
     expect(runPipelineShortcuts).not.toHaveBeenCalled();
   });
 
+  // A content video stays the Content video plan from places that don't start a Miya Studio project.
+  it('a content video from elsewhere keeps the content video plan, not a short clip', async () => {
+    planner.mockResolvedValueOnce(freshPlan);
+    await submitToJose({ text: 'Make a YouTube video script about home coffee', source: 'board' });
+    expect(askChatMedia).not.toHaveBeenCalled();
+  });
+
   it('"Plan this fresh" plans instead of making the media at once', async () => {
     planner.mockResolvedValueOnce(freshPlan);
     await submitToJose({ text: 'make a video of a cat on a boat', source: 'user', planFresh: true });
