@@ -99,3 +99,12 @@ export async function openPairingRequest(sealed: string, computer: { publicKey: 
     return null;
   }
 }
+
+/** The relay's https address from its WebSocket address (pairing and unpairing use it). */
+export function relayHttpBase(relayUrl: string): string {
+  const u = new URL(relayUrl);
+  u.protocol = u.protocol === 'ws:' ? 'http:' : 'https:';
+  u.pathname = '';
+  u.search = '';
+  return u.toString().replace(/\/$/, '');
+}

@@ -12,7 +12,7 @@ import { randomHex, randomId } from '../../lib/randomId';
 import { secureGet, secureSet } from '../secureStorageService';
 import { generateKeyPair } from './phoneCrypto';
 import {
-  decodeMessage, encodeMessage, openPairingRequest, pairingPayload,
+  decodeMessage, encodeMessage, openPairingRequest, pairingPayload, relayHttpBase,
   type MirroredStore, type PhoneMessage, type PhoneNotification,
 } from './phoneProtocol';
 
@@ -113,12 +113,6 @@ async function tryPairing(deviceId: string, frame: string): Promise<boolean> {
   return true;
 }
 
-function relayHttpBase(relayUrl: string): string {
-  const u = new URL(relayUrl);
-  u.protocol = u.protocol === 'ws:' ? 'http:' : 'https:';
-  u.pathname = '';
-  return u.toString().replace(/\/$/, '');
-}
 
 /** Unpair a phone: forgotten here at once, then unpaired at the relay. */
 export async function removePhone(deviceId: string, deps: { relayUrl: string; auth: PhoneAuth; fetchImpl?: typeof fetch }): Promise<void> {
