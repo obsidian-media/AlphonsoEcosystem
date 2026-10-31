@@ -10,6 +10,13 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [Unreleased]
 
+### Docs and release checks (2026-10-31)
+- **New user guides.** The README, Getting started, User manual, Agent guide, Connectors guide and Troubleshooting were rewritten for people using the app: shorter, step by step, in the words on the screen. Build and test help moved to CONTRIBUTING.md; older reports and plans moved to `docs/internal/`.
+- **Download a model from Settings.** Settings → General → Download a model downloads inside the app with progress and links Ollama's model library, instead of a fixed list of old model names and a command to paste into a terminal.
+- **Telegram: `/pause`** pauses push notifications. `/stop` was listed twice and always stopped the running request.
+- **Fixed:** four messages sent you to "Settings → Approvals", which doesn't exist; Allow paid models is in Settings → General.
+- **Fixed on Linux:** packing the AppImage failed once ffmpeg was bundled (its libraries couldn't find each other).
+
 ### Closing the deferred list (2026-10-30)
 - **Make a video or music from Chat.** "Make a video of a cat on a boat" or "create calm piano music for my intro" is now Miya's step: a picture from ComfyUI turned into a short clip by the video model you installed in Runtime Hub, or a piece of music from AudioCraft. It plays in Chat and is listed in Miya Studio → Quick package. Without the tool, Alphonso says what to install and starts nothing.
 - **Linux gets ffmpeg in the AppImage**, like the Windows installer. **On a Mac**, Runtime Hub and the video steps tell you to run `brew install ffmpeg` when it's missing.

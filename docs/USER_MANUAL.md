@@ -266,7 +266,7 @@ Everything is set up in **Settings → Connectors**, grouped into Messaging, AI 
 **Memory.** Before each step, Alphonso checks free RAM and graphics memory. If the step fits, it runs; if not, idle models and idle tools Alphonso started are freed to make room, or the step waits and says why. **Runtime Hub → Memory** (or the meter in the top bar) shows what's loaded, who started it and what's waiting, and how long each tool may sit idle before it stops (ComfyUI: 15 minutes). Programs you started yourself are never stopped.
 
 Settings worth knowing:
-- **Settings → General:** the Ollama address and model, Approval Mode, What asks first, Allow paid models, Show Jose's plan first, Developer mode.
+- **Settings → General:** the Ollama address and model (and **Download a model**: type a name from Ollama's model library and press Download), Approval Mode, What asks first, Allow paid models, Show Jose's plan first, Developer mode.
 - **Settings → Runtime:** the output folder, the ComfyUI install to use, phone pairing.
 - **Settings → Agents:** Alphonso's projects, when agents call their own tools (by model size).
 - **Settings → Logs** and **Settings → Backup:** the crash log, and exporting or restoring your data (keys are never exported).
