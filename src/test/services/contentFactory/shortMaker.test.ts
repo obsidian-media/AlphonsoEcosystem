@@ -17,6 +17,13 @@ vi.mock('../../../services/videoModelService', () => ({
   effectiveVideoModel: (info: { models: unknown[] }) => info.models[0],
   clipSizeFor: () => ({ lowRes: false, maxSeconds: Infinity }),
 }));
+// The character reference model (phase 4c): off unless a test turns it on.
+const referenceReady = vi.fn(async () => false);
+const makeCharacterPicture = vi.fn(async (_input: Record<string, unknown>) => ({ ok: true, previewBase64: 'REF' }));
+vi.mock('../../../services/contentFactory/comfyCharacter', async () => {
+  const actual = await vi.importActual<typeof import('../../../services/contentFactory/comfyCharacter')>('../../../services/contentFactory/comfyCharacter');
+  return { ...actual, characterReferenceAvailable: () => referenceReady(), makeCharacterPicture: (input: Record<string, unknown>) => makeCharacterPicture(input) };
+});
 vi.mock('../../../services/contentFactory/contentProjectFiles', async () => {
   const actual = await vi.importActual<typeof import('../../../services/contentFactory/contentProjectFiles')>('../../../services/contentFactory/contentProjectFiles');
   return { ...actual, saveProjectImage: vi.fn(async (_r, _b, _p, sub, file) => `D:/Content/${sub}/${file}`), writeProjectFile: vi.fn(async () => undefined) };
@@ -91,6 +98,24 @@ describe('makeShorts', () => {
     updateCharacter(brand.id, c.id, { pictures: ['a', 'b', 'c', 'd', 'e'] });
     await makeShorts(p.id, settings);
     expect(generateComfyUiImage.mock.calls[0][0].prompt).toContain('a teacher with red glasses');
+  });
+
+  it("with the character reference model installed, a mini Short's pictures use the character's own pictures", async () => {
+    // Closing phase (2026-10-30): Shorts used only the description, while scenes used the reference pictures.
+    const { addCharacter, updateCharacter } = await import('../../../services/contentFactory/contentCharacters');
+    const { listBrands } = await import('../../../services/contentFactory/contentBrandService');
+    const p = setup([mini]);
+    const brand = listBrands()[0];
+    const c = addCharacter(brand.id, { name: 'Ana', kind: 'made_up', description: 'a teacher with red glasses' });
+    updateCharacter(brand.id, c.id, { pictures: ['a', 'b', 'c', 'd', 'e'] });
+    referenceReady.mockResolvedValue(true);
+    const [out] = await makeShorts(p.id, settings);
+    expect(makeCharacterPicture).toHaveBeenCalledTimes(2);
+    expect(makeCharacterPicture.mock.calls[0][0]).toMatchObject({ root: 'D:/Content', width: 480, height: 832, character: { id: c.id } });
+    expect(String((makeCharacterPicture.mock.calls[0][0] as { prompt: string }).prompt)).toContain('a teacher with red glasses');
+    expect(generateComfyUiImage).not.toHaveBeenCalled();
+    expect(out.status).toBe('done');
+    referenceReady.mockResolvedValue(false);
   });
 
   it('a highlight speaks the hook and cuts the moment', async () => {
