@@ -1,6 +1,6 @@
 # Alphonso on the phone: design
 
-**Status:** design, waiting for the owner's approval. Not started. Planned for right after 2.11.0.
+**Status:** approved by the owner on 2026-10-31 (with phase 4). Not started. Planned for right after 2.11.0.
 **Owner's decisions (2026-10-31):** every screen of the desktop app, reshaped for a phone; iPhone and Android; usable from anywhere through an Obsidian Media relay, end-to-end encrypted; the desktop's own screens reused ("A"), not native apps rebuilt; when the computer is off, say so and show the last known state; notifications with Approve/Reject like Telegram; for everyone who installs Alphonso, in the App Store and Google Play, free; sign in with Apple or Google, plus email; the relay runs on Google Cloud next to Cloud Voice; first after 2.11.0.
 
 ## Why
