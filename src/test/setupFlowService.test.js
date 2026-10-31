@@ -234,7 +234,21 @@ describe('isSetupComplete / markSetupComplete', () => {
 describe('getUnmetPrereq', () => {
   const pythonMissing = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true };
   const dockerMissing = { missing: ['Docker'], installHint: 'x', pythonFound: true, dockerFound: false };
-  const allPresent = { missing: [], installHint: 'x', pythonFound: true, dockerFound: true };
+  const allPresent = { missing: [], installHint: 'x', pythonFound: true, dockerFound: true, gitFound: true };
+  const gitMissing = { missing: ['Git'], installHint: 'x', pythonFound: true, dockerFound: true, gitFound: false };
+
+  it('flags comfyui as blocked when Git is missing, since its install clones a repository', () => {
+    expect(getUnmetPrereq('comfyui', gitMissing)).toBe('git');
+    expect(getUnmetPrereq('fooocus', gitMissing)).toBe('git');
+  });
+
+  it('asks for Python before Git when both are missing', () => {
+    expect(getUnmetPrereq('comfyui', { ...gitMissing, pythonFound: false })).toBe('python');
+  });
+
+  it('does not ask for Git for a component that clones nothing', () => {
+    expect(getUnmetPrereq('voice-os', gitMissing)).toBe(null);
+  });
 
   it('flags fooocus as blocked when Python is missing', () => {
     expect(getUnmetPrereq('fooocus', pythonMissing)).toBe('python');

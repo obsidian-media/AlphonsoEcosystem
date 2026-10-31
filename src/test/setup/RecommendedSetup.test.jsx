@@ -25,7 +25,7 @@ import { getAllStatus, installPrerequisite, getInstallLocation, setInstallLocati
 import { RecommendedSetup } from '../../components/setup/RecommendedSetup';
 
 const hardware = { ramGb: 16, diskFreeGb: 220, gpuPresent: false, gpuVendor: null, gpuModel: null };
-const allPrereqsOk = { missing: [], installHint: 'ok', pythonFound: true, dockerFound: true };
+const allPrereqsOk = { missing: [], installHint: 'ok', pythonFound: true, dockerFound: true, gitFound: true };
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -131,7 +131,7 @@ describe('RecommendedSetup — prerequisite gating', () => {
     // runtime_manager.rs's TOOLS — queuing them without Python present is
     // the same failure shape starter-model had with installTool.
     getAllStatus.mockResolvedValue([]);
-    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true };
+    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true, gitFound: true };
     const onProceed = vi.fn();
     render(<RecommendedSetup intent="chat-images" hardware={hardware} prereqs={noPython} onProceed={onProceed} onCustomize={() => {}} />);
 
@@ -146,7 +146,7 @@ describe('RecommendedSetup — prerequisite gating', () => {
     // Docker has no auto-install path anywhere in this codebase — offering a
     // button that cannot work would be worse than the missing-prereq note.
     getAllStatus.mockResolvedValue([]);
-    const noDocker = { missing: ['Docker'], installHint: 'x', pythonFound: true, dockerFound: false };
+    const noDocker = { missing: ['Docker'], installHint: 'x', pythonFound: true, dockerFound: false, gitFound: true };
     render(<RecommendedSetup intent="full-power" hardware={hardware} prereqs={noDocker} onProceed={() => {}} onCustomize={() => {}} />);
 
     await waitFor(() => expect(screen.getByText(/needs docker/i)).toBeInTheDocument());
@@ -155,7 +155,7 @@ describe('RecommendedSetup — prerequisite gating', () => {
 
   it('calls installPrerequisite("python") when "Install Python" is clicked', async () => {
     getAllStatus.mockResolvedValue([]);
-    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true };
+    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true, gitFound: true };
     installPrerequisite.mockResolvedValue({ tool: 'python', ok: true, message: 'installed' });
     render(<RecommendedSetup intent="chat-images" hardware={hardware} prereqs={noPython} onProceed={() => {}} onCustomize={() => {}} />);
 
@@ -166,7 +166,7 @@ describe('RecommendedSetup — prerequisite gating', () => {
 
   it('includes the previously-blocked component once Python install succeeds', async () => {
     getAllStatus.mockResolvedValue([]);
-    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true };
+    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true, gitFound: true };
     installPrerequisite.mockResolvedValue({ tool: 'python', ok: true, message: 'installed' });
     const onProceed = vi.fn();
     render(<RecommendedSetup intent="chat-images" hardware={hardware} prereqs={noPython} onProceed={onProceed} onCustomize={() => {}} />);
@@ -180,9 +180,24 @@ describe('RecommendedSetup — prerequisite gating', () => {
     expect(queued.some((c) => c.id === 'comfyui')).toBe(true);
   });
 
+  it('asks for Git before installing ComfyUI, and Install Git installs it', async () => {
+    getAllStatus.mockResolvedValue([]);
+    const noGit = { missing: ['Git'], installHint: 'x', pythonFound: true, dockerFound: true, gitFound: false };
+    installPrerequisite.mockResolvedValue({ tool: 'git', ok: true, message: 'installed' });
+    const onProceed = vi.fn();
+    render(<RecommendedSetup intent="chat-images" hardware={hardware} prereqs={noGit} onProceed={onProceed} onCustomize={() => {}} />);
+
+    await waitFor(() => expect(screen.getByText(/needs git/i)).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Install Git'));
+    await waitFor(() => expect(installPrerequisite).toHaveBeenCalledWith('git'));
+    await waitFor(() => expect(screen.queryByText(/needs git/i)).not.toBeInTheDocument());
+    fireEvent.click(screen.getByText('Looks Good → Install'));
+    expect(onProceed.mock.calls[0][0].some((c) => c.id === 'comfyui')).toBe(true);
+  });
+
   it('does not gate an intent with no Python/Docker-dependent components at all', async () => {
     getAllStatus.mockResolvedValue([]);
-    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: false };
+    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: false, gitFound: true };
     const onProceed = vi.fn();
     render(<RecommendedSetup intent="chat-only" hardware={hardware} prereqs={noPython} onProceed={onProceed} onCustomize={() => {}} />);
 

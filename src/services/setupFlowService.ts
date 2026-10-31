@@ -370,20 +370,37 @@ export function checkDiskSpace(
  * flow just because they upgraded. The legacy value is migrated forward on
  * read so this only costs one check per install, not forever.
  */
-export type PrereqKind = 'python' | 'docker';
+export type PrereqKind = 'python' | 'git' | 'docker';
 
 /**
  * Which prerequisite each Setup component genuinely needs, per
  * `runtime_manager.rs`'s `TOOLS` array (`exe: "python"` for comfyui/fooocus/voice-os,
  * `exe: "docker"` for chromadb) — not guessed from the component name.
+ * ComfyUI and Fooocus also need Git: their install clones a repository
+ * (`repo_url` in `TOOLS`). Listed in the order Setup asks for them.
  * Components absent from this map (the starter model, and any future
  * component that needs neither) are never blocked.
  */
-const COMPONENT_PREREQ: Partial<Record<string, PrereqKind>> = {
-  comfyui: 'python',
-  fooocus: 'python',
-  'voice-os': 'python',
-  chromadb: 'docker',
+const COMPONENT_PREREQ: Partial<Record<string, PrereqKind[]>> = {
+  comfyui: ['python', 'git'],
+  fooocus: ['python', 'git'],
+  'voice-os': ['python'],
+  chromadb: ['docker'],
+};
+
+/** Prerequisites Setup can install itself (Docker can't be). */
+export type InstallablePrereq = 'python' | 'git';
+
+/** The name shown in "Needs …" and "Install …". */
+export const PREREQ_LABEL: Record<PrereqKind, string> = { python: 'Python', git: 'Git', docker: 'Docker' };
+
+/** The scan's flag that turns true once an installable prerequisite is installed. */
+export const PREREQ_FLAG: Record<InstallablePrereq, keyof PrereqStatus> = { python: 'pythonFound', git: 'gitFound' };
+
+const PREREQ_FOUND: Record<PrereqKind, (p: PrereqStatus) => boolean | undefined> = {
+  python: (p) => p.pythonFound,
+  git: (p) => p.gitFound,
+  docker: (p) => p.dockerFound,
 };
 
 /**
@@ -398,10 +415,8 @@ const COMPONENT_PREREQ: Partial<Record<string, PrereqKind>> = {
  * `starter-model` was.
  */
 export function getUnmetPrereq(componentId: string, prereqs: PrereqStatus): PrereqKind | null {
-  const required = COMPONENT_PREREQ[componentId];
-  if (!required) return null;
-  if (required === 'python') return prereqs.pythonFound === true ? null : 'python';
-  return prereqs.dockerFound === true ? null : 'docker';
+  const required = COMPONENT_PREREQ[componentId] ?? [];
+  return required.find((kind) => PREREQ_FOUND[kind](prereqs) !== true) ?? null;
 }
 
 export function isSetupComplete(): boolean {
