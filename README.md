@@ -46,7 +46,7 @@ Ask in plain words, in Chat or from your phone on Telegram. **Jose** answers a s
 | System | Installer | Notes |
 |---|---|---|
 | Windows | `Alphonso_…_x64-setup.exe` | Includes Ollama and FFmpeg |
-| macOS 13.3 or later (Apple Silicon) | `Alphonso_…_aarch64.dmg` | The first time, right-click Alphonso in Applications and choose **Open**. For finished videos, run `brew install ffmpeg` once. |
+| macOS 13.3 or later (Apple Silicon) | `Alphonso_…_aarch64.dmg` | Includes Ollama. The first time, right-click Alphonso in Applications and choose **Open**. For finished videos, run `brew install ffmpeg` once. |
 | Linux | `Alphonso_…_amd64.AppImage` | Includes Ollama and FFmpeg |
 
 Get them from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest). Alphonso updates itself after that. A graphics card helps with pictures and video; chat works without one.
