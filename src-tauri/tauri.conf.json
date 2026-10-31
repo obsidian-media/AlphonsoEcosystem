@@ -68,7 +68,7 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "minimumSystemVersion": "11.0",
+      "minimumSystemVersion": "13.3",
       "exceptionDomain": "",
       "signingIdentity": null,
       "providerShortName": null,

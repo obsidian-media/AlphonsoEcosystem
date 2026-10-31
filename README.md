@@ -321,7 +321,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 - **Screen Intelligence** — `screenIntelligenceService.ts` for on-screen context awareness
 - **Voice OS** — Real-time STT→LLM→TTS pipeline (`voice/`) with faster-whisper, Ollama, and Piper. Launched from Runtime Manager as a Tauri sidecar. AudioWorklet-based `useJarvisVoice` hook with barge-in and conversation history.
 - **Premium Animated UI** — OKLCH design token system, Framer Motion animations (`AnimatePresence` on chat messages), glassmorphism input, sidebar tooltips.
-- **Desktop Native** — Tauri v2 + React 19 + Vite 8; NSIS/MSI installer for Windows (it bundles the Ollama runtime and FFmpeg), a DMG for Apple Silicon and an AppImage for Linux
+- **Desktop Native** — Tauri v2 + React 19 + Vite 8; NSIS/MSI installer for Windows (it bundles the Ollama runtime and FFmpeg), a DMG for Apple Silicon (macOS 13.3 or later) and an AppImage for Linux
 
 ---
 

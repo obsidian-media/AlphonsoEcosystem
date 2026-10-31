@@ -60,7 +60,7 @@ Alphonso is a **local-first AI desktop companion** that runs entirely on your ma
 Download the installer for your system from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest):
 
 - **Windows:** `Alphonso_<version>_x64-setup.exe`. Run it, then launch Alphonso.
-- **macOS (Apple Silicon only):** `Alphonso_<version>_aarch64.dmg`. Open it and drag Alphonso to Applications. The Mac build is not yet signed by Apple, so the first time, right-click Alphonso in Applications and choose **Open**, then confirm (on newer macOS you may need System Settings > Privacy & Security > **Open Anyway**). After that it opens normally and updates install themselves.
+- **macOS (Apple Silicon, macOS 13.3 or later):** `Alphonso_<version>_aarch64.dmg`. Open it and drag Alphonso to Applications. The Mac build is not yet signed by Apple, so the first time, right-click Alphonso in Applications and choose **Open**, then confirm (on newer macOS you may need System Settings > Privacy & Security > **Open Anyway**). After that it opens normally and updates install themselves.
 - **Linux:** `Alphonso_<version>_amd64.AppImage`. Make it executable (`chmod +x`) and run it.
 
 An installed copy checks for updates at launch and offers to install them.
