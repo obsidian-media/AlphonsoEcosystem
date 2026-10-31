@@ -20,12 +20,12 @@ The owner wants to use Alphonso from the phone as the same app, not a remote wit
 3. Notifications for a step waiting, a plan waiting, a request done or failed, and a request cut off when the app closed: the same events and wording as `collectJoseNotifications()`. Approve/Reject from the notification for a step whose effects are not locked; a step that spends, publishes or sends, or deletes (`LOCKED_EFFECTS`) opens the app on its approval (owner, 2026-10-31: a notification can be cut short, so a send, a spend or a delete is approved where the exact text and cost are shown in full, confirmed with Face ID / fingerprint).
 4. One app for iPhone and Android, built from the desktop's React screens.
 5. Honest when the computer is off: the last known state, read-only, with "Your computer is offline since 14:02." Messages typed meanwhile wait on the phone and are sent when it is back.
+6. **Later (phase 4, owner 2026-10-31): the phone can work on its own when the computer is off**: answer on the phone's own model, answer with the user's cloud model, or try to wake the computer. Each only after the infrastructure check below shows it works well enough; see "Phase 4".
 
 ## Non-goals
 
-- Agents, models or tools running on the phone. The computer does all the work.
+- In phases 1 to 3, agents, models or tools running on the phone: the computer does all the work. Phase 4 adds what the phone can do itself (below); the computer's tools (ComfyUI, ffmpeg, Kokoro, the user's project folders) never run on the phone.
 - A cloud copy of the user's data. The relay passes encrypted messages and keeps nothing it can read.
-- Waking the computer, or answering in the cloud while it is off.
 - Several computers per account (that comes with "Echo on several computers"; the design must not prevent it).
 
 ## Anti-goals (a failure even if it works)
@@ -66,6 +66,31 @@ The owner wants to use Alphonso from the phone as the same app, not a remote wit
 1. **The link and the everyday screens:** relay with sign-in and pairing, the seam for Chat and the Requests board, approvals, Stop / Carry on / Cancel, notifications, offline state. Replaces Telegram for the owner's daily use.
 2. **Studio and Calendar:** Miya Studio's tabs and the Calendar, with pictures and videos from the computer.
 3. **Everything else:** memory, Projects, Teams, Skills, Boardroom, Settings and Connectors. Then the Swift app retires and both stores get the new app.
+4. **The phone on its own (owner, 2026-10-31; after the infrastructure check):** when the computer is off, the offline screen offers what this phone and account can do: "Answer on this phone", "Answer with <cloud model>", "Try to wake my computer". Nothing happens without the user choosing it, and each says where the answer came from.
+
+## Phase 4: the phone on its own, and what has to be checked first
+
+The owner wants all three. None is decided until a spike shows it on real devices and networks; the findings come back to the owner before building.
+
+### Answering on the phone's own model
+
+- **What exists (checked 2026-10-31, to confirm against the vendors' own documentation):** Apple's Foundation Models framework gives apps its on-device model (about 3 billion parameters) for free and offline, on iOS 26 and later, on iPhones with Apple Intelligence (A17 Pro and newer by most reports; apps must check at run time). Android's ML Kit GenAI APIs give apps Gemini Nano through the AICore system service, on a changing list of recent phones (Pixel 9 and later, recent Galaxy flagships), tiered by Nano version.
+- **What it could do:** Alphonso's agent logic is TypeScript in the same React app, so the phone can run the parts that need only a model and text: Jose deciding to answer or plan, Alphonso's plain answers and everyday writing, Echo's recall from the phone's copy of the decisions, reading the last known requests. Research needs the internet search keys; anything using the computer's tools waits for the computer.
+- **To check:** how well a 3B on-device model follows Alphonso's prompts (the desktop warns under 3B); whether both vendors' APIs can be reached from the chosen packaging (a native plugin); which share of users' phones have it; what the phone does when it doesn't (offer the cloud choice instead).
+
+### Answering with a cloud model
+
+- **What it could do:** the same answering, with the user's own cloud provider: OpenRouter's free models, NVIDIA NIM, Gemini, or a paid Claude, ChatGPT or OpenRouter model. All the rules stay: Zero-Cost Mode, paid steps ask with the cost, the monthly cap.
+- **To check:** keys today live in the computer's keychain and must not cross the relay. The user would add a key on the phone (stored in the phone's keychain), or choose not to. The monthly cap is counted on the computer; the phone needs its own share of it, reconciled when the computer is back.
+
+### Waking the computer
+
+- **What exists:** Wake-on-LAN's "magic packet" only travels inside the home network, so the relay cannot wake a sleeping computer by itself. Ways around it, each with limits: a computer that sleeps with network wake on (Windows Modern Standby supports it on some machines, unreliably on others, by community reports); another always-on device at home sending the packet (a router that supports it, a NAS, a Raspberry Pi, or a second computer running Alphonso); keeping the computer awake while plugged in, as an Alphonso setting.
+- **To check:** on the owner's own computer and router, and on a typical laptop: does Modern Standby wake from a packet, how long until Alphonso answers again. If waking can't be made reliable, the button says plainly what happened ("Your computer didn't answer. It may be off, or it can't be woken from sleep.") and the setup screen explains the choices.
+
+### Order inside phase 4
+
+The spike reports on all three first (devices, networks, rough cost). The owner then picks which to build; my suggestion is cloud answering first (it works on every phone), then the phone's own model, then waking.
 
 ## Constraints
 
@@ -74,6 +99,8 @@ The owner wants to use Alphonso from the phone as the same app, not a remote wit
 - Desktop E2E keeps testing the desktop; the phone app gets its own end-to-end tests against a stand-in relay and a debug desktop build, plus a by-hand check on real phones before each store release.
 
 ## Left to the builder
+
+- Phase 4's spike: which devices and networks to test on, and how to measure answer quality on the phones' own models.
 
 - Tauri 2 mobile or Capacitor (after the spike above).
 - The encryption library and protocol, within "established, not home-made".
