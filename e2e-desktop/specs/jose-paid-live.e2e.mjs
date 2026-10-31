@@ -1,6 +1,8 @@
 // A real paid-model step, by hand (Jose redesign phase 6a, 2026-10-23).
 // Skipped unless you set, for Claude or for ChatGPT:
-//   ALPHONSO_LIVE_ANTHROPIC_API_KEY  (or ALPHONSO_LIVE_OPENAI_API_KEY)
+//   ALPHONSO_LIVE_ANTHROPIC_API_KEY  (or ALPHONSO_LIVE_OPENAI_API_KEY), or the path of a file
+//   holding it: ALPHONSO_LIVE_ANTHROPIC_KEY_FILE / ALPHONSO_LIVE_OPENAI_KEY_FILE (like the
+//   live-accounts spec, so the key never appears on a command line)
 //   ALPHONSO_LIVE_PAID_INPUT_PRICE   price per million input tokens, USD
 //   ALPHONSO_LIVE_PAID_OUTPUT_PRICE  price per million output tokens, USD
 // The key names end in _KEY, so the harness keeps them out of the app's own
@@ -8,10 +10,15 @@
 // as a user would. One step costs a fraction of a cent at current prices; the
 // monthly cap is $0.10 for the first step and is then lowered to what was
 // spent, so the second step is refused before anything is sent.
+import fs from 'node:fs';
 import { enterShell, invoke, mainText, buttonByText, ollamaHasModels, openPage } from '../helpers.mjs';
 
-const ANTHROPIC = process.env.ALPHONSO_LIVE_ANTHROPIC_API_KEY || '';
-const OPENAI = process.env.ALPHONSO_LIVE_OPENAI_API_KEY || '';
+const fromFile = (name) => {
+  const file = process.env[name];
+  try { return file ? fs.readFileSync(file, 'utf8').trim() : ''; } catch { return ''; }
+};
+const ANTHROPIC = process.env.ALPHONSO_LIVE_ANTHROPIC_API_KEY || fromFile('ALPHONSO_LIVE_ANTHROPIC_KEY_FILE');
+const OPENAI = process.env.ALPHONSO_LIVE_OPENAI_API_KEY || fromFile('ALPHONSO_LIVE_OPENAI_KEY_FILE');
 const INPUT_PRICE = Number(process.env.ALPHONSO_LIVE_PAID_INPUT_PRICE);
 const OUTPUT_PRICE = Number(process.env.ALPHONSO_LIVE_PAID_OUTPUT_PRICE);
 const PROVIDER = ANTHROPIC ? 'claude' : 'chatgpt';
