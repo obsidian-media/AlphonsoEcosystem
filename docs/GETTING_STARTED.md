@@ -1,176 +1,61 @@
 # Getting Started with Alphonso
 
-Alphonso is a local-first AI desktop companion. Your data stays on your machine.
+Alphonso is a team of AI agents on your own computer. Chat and the agents run on local models, and nothing is sent, posted or paid for without your approval.
 
-## Install the app (most people)
+## 1. Install
 
-1. Download the installer from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest): Windows `…_x64-setup.exe`, macOS (Apple Silicon, macOS 13.3 or later) `…_aarch64.dmg`, Linux `…_amd64.AppImage`. On macOS the build isn't signed by Apple yet: the first time, right-click Alphonso in Applications and choose **Open**. For finished videos a Mac also needs FFmpeg once: open Terminal and run `brew install ffmpeg` (the Windows and Linux installers include it).
-2. Launch Alphonso. **Setup** checks your computer, asks what you want to do (Chat only, Chat + Images, Chat + Voice, Full Power, or Custom), asks where to install tools, and installs what that needs, including the starter model `llama3.2:3b` and, on Windows, the bundled Ollama runtime. Ollama installed already, or ComfyUI of your own, is found and used.
-3. When it's done, chat. Installed copies update themselves.
+Download the installer from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest):
 
-## Build from source (developers)
+| System | File | Then |
+|---|---|---|
+| Windows | `Alphonso_…_x64-setup.exe` | Run it. No admin rights needed. |
+| macOS 13.3 or later (Apple Silicon) | `Alphonso_…_aarch64.dmg` | Drag Alphonso to Applications. It isn't signed by Apple yet, so the first time, right-click it and choose **Open** (on newer macOS: System Settings → Privacy & Security → **Open Anyway**). |
+| Linux | `Alphonso_…_amd64.AppImage` | Make it executable (`chmod +x`) and run it. |
 
-### Prerequisites
+Every installer includes Ollama, which runs the models. Windows and Linux also include FFmpeg for finished videos; on a Mac, install it once with `brew install ffmpeg` if you'll make videos. Alphonso updates itself after this.
 
-| Dependency | Version | Install |
-|-----------|---------|---------|
-| **Ollama** | Latest | https://ollama.com |
-| **Node.js** | 22 LTS (`nvm use` picks the repo's version) | https://nodejs.org |
-| **Rust** | 1.77.2+ | https://rustup.rs |
+## 2. Setup
 
-### Quick Start (5 minutes)
+The first time you open Alphonso, **Setup**:
 
-#### 1. Install Ollama and pull a model
+1. Checks your computer (memory, graphics card, free space).
+2. Asks what you want to do: **Chat only**, **Chat + Images**, **Chat + Voice**, **Full Power**, or **Custom** (pick per agent).
+3. Asks where to install tools.
+4. Installs what that needs, including a small starter model. You can start chatting as soon as the model is ready, while the rest finishes.
 
-```bash
-# Install from https://ollama.com, then:
-ollama pull llama3.2:3b
-```
+An Ollama, its models or a ComfyUI you already have are found and used.
 
-#### 2. Clone and install
+## 3. Your first requests
 
-```bash
-git clone https://github.com/obsidian-media/AlphonsoEcosystem.git
-cd AlphonsoEcosystem
-npm install
-```
+Open **Chat** and try:
 
-#### 3. Run
+- **A question:** "What's the difference between a latte and a flat white?" Answered straight away.
+- **Research:** "Research the best microphones under $100 and tell me which to buy." Hector researches with sources, then Nova says what to buy first.
+- **Writing with a check:** "Write a launch post for my bakery and check it for accuracy." Alphonso writes it and Maria reviews it.
+- **Remember something:** "Remember that I prefer short emails without emojis." Every agent follows it from now on.
 
-```bash
-# Web-only mode (fastest to start)
-npm run dev
-# Opens at http://localhost:5173
+Bigger requests show their plan first; press **Run this plan**. A step that sends, publishes, spends money or deletes always asks you first. **Open on the board** shows any request's steps as they run.
 
-# Or full desktop app
-npm run tauri dev
-```
+## 4. Next steps
 
-#### 4. First-run Setup
+- **Make a video:** set the output folder (Settings → Runtime), open **Work → Creative** (Miya Studio), create a brand and a project, fill in the idea and press **Run project**. Install Kokoro (voice-overs) in **System → Runtimes**, and a video model for AI clips.
+- **Connect your services:** **Settings → Connectors**, one key or sign-in each; **Test** shows whether it works. YouTube, Facebook and Instagram have **Sign in** buttons. Step-by-step: [Connectors](CONNECTORS.md).
+- **Telegram:** pair your Telegram chat and Jose asks you there when something waits for your approval, so you can approve while away.
+- **Free cloud models:** add an NVIDIA, Gemini or OpenRouter key to use their free models in Chat or for any agent.
+- **Your code:** add your project folders in Settings → Agents → **Alphonso's projects**, then ask "In shop, add a dark mode toggle".
+- **Voice:** install Voice OS in Runtime Hub, start it on **System → Voice**, then use the microphone in Chat.
+- **Hermes:** install Hermes Agent in Runtime Hub, then Settings → Connectors → Agent Providers → **Hermes profiles** gives an agent Hermes's own tools, such as web search.
 
-On first launch, the Setup screen runs as described above. In web-only mode (`npm run dev`) it can't scan the computer and shows "Unknown" instead.
+## Good to know
 
-## What's Next
+- **Approval Mode** (on by default): each step asks according to what it does. Choose what asks in Settings → General → **What asks first**. Spending, sending and deleting always ask.
+- **Zero-Cost Mode** (on by default): paid services (Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E, and WhatsApp, which Meta charges for) are blocked until you turn it off.
+- **Your keys** are kept in your system's keychain and are never included in a backup.
+- **Memory:** if your computer is short on memory, a step waits and says why instead of failing; Runtime Hub → **Memory** shows what's loaded.
 
-- **Chat** — Type a message. A plain question is answered at once; anything else Jose plans as steps for the right agents, and bigger plans are shown first. Approvals, results and insights appear inline in the chat thread; **Open on the board** shows the plan on the Requests board (System → Orchestrator → Requests).
-- **Agents** — 9 specialized agents handle different tasks. See [AGENT_GUIDE.md](./AGENT_GUIDE.md).
-- **Your first video** — set **Settings → Output folder**, open **Work → Creative** (Miya Studio), create a project for your brand, fill in the idea and press **Run project**. For the finished video, install Kokoro (voice-over) and, for AI clips, a video model in **Runtimes**. See the [User Manual, section 8](./USER_MANUAL.md#8-miya-studio--the-content-factory).
-- **Connectors** — Connect Telegram, WhatsApp, YouTube, Facebook and Instagram, and more in **Settings → Connectors**; YouTube, Facebook and Instagram have **Sign in** buttons. **Test** says whether the service itself answered. See [CONNECTORS.md](./CONNECTORS.md).
-- **Telegram** — pair your Telegram chat and Jose asks you there when something waits for your approval.
-- **Settings** — approval mode and what asks first, zero-cost mode, paid models (off by default), privacy shield, and more.
+## Need help?
 
-## WhatsApp Cloud Setup (optional)
-
-To use WhatsApp Cloud API (send/receive messages):
-
-### 1. Deploy the Railway Gateway
-
-Deploy `gateway/whatsapp-cloud/` to Railway and set these env vars:
-- `WHATSAPP_VERIFY_TOKEN` — any secret string you choose
-- `WHATSAPP_APP_SECRET` — from Meta App Dashboard → App Settings
-- `WHATSAPP_ALLOWED_NUMBERS` — comma-separated allowed sender numbers (digits only, no `+`)
-
-Point your Meta webhook URL to `https://<your-railway-url>/webhook`.
-
-### 2. Enter Credentials in Alphonso
-
-Open **Settings → Connectors → WhatsApp** and enter:
-
-| Key | Where to find it |
-|-----|-----------------|
-| `WHATSAPP_ACCESS_TOKEN` | Meta App Dashboard → WhatsApp → API Setup |
-| `WHATSAPP_PHONE_NUMBER_ID` | Meta App Dashboard → WhatsApp → Phone Numbers |
-| `WHATSAPP_VERIFY_TOKEN` | Same value you set in Railway |
-| `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` | `https://<your-railway-url>/queue/drain` |
-| `WHATSAPP_ALLOWED_NUMBERS` | Same comma-separated list as Railway |
-
-Alphonso will poll the gateway queue every 30 seconds for inbound messages and route them through Jose.
-
-## Voice OS (optional — real-time voice interface)
-
-Alphonso includes a full real-time voice pipeline: speech-to-text → agent routing → Ollama LLM → text-to-speech.
-
-### Prerequisites for Voice OS
-
-In the app, **Runtimes → Voice OS → Install** installs Python (if needed) and everything below, and the speech models download on first use. For running it by hand:
-
-| Dependency | Install |
-|-----------|---------|
-| **Python 3.10+** | https://python.org |
-| **faster-whisper** | `pip install faster-whisper` |
-| **piper-tts** | `pip install piper-tts` |
-| **webrtcvad** | `pip install webrtcvad` |
-| **Ollama** | Running at the address set in Settings (default `http://localhost:11434`) |
-
-### Start the Voice Server
-
-```bash
-cd voice/backend
-python -m venv .venv
-.venv\Scripts\activate          # Windows
-pip install -r requirements.txt
-# Voice OS refuses every connection unless VOICE_OS_TOKEN is set (fail-closed).
-# When launched from Alphonso, the app generates and passes this token for you.
-# --no-access-log keeps the token (sent as ?token=) out of uvicorn's access log.
-set VOICE_OS_TOKEN=<any-long-random-string>   # Windows (bash: export VOICE_OS_TOKEN=...)
-python -m uvicorn main:app --host 127.0.0.1 --port 8766 --no-access-log
-```
-
-Or launch it from within Alphonso: open **Runtimes → Voice OS → Start**, or the **Voice** page. Started from the app, it uses the Ollama model and address you chose.
-
-### First Use
-
-1. With the voice server running, open **Chat** in Alphonso
-2. Click the microphone button — it uses the `useJarvisVoice` hook (AudioWorklet)
-3. Speak naturally — Alphonso waits until you finish, transcribes, routes to the right agent, and responds by voice
-4. Say anything to interrupt the response (barge-in is supported)
-
-### Voice Agent Routing
-
-The voice pipeline routes to the same 9 agents as the chat interface:
-
-| Say something like... | Routes to |
-|----------------------|-----------|
-| "Search for..." / "Find..." | Hector |
-| "Write..." / "Draft..." | Miya |
-| "Task..." / "Schedule..." / "Plan..." | Jose |
-| "Remember..." / "What did I..." | Echo |
-| "Scan for security..." | Sentinel |
-| "Market opportunity..." | Nova |
-| "Publish..." / "Post to..." | Marcus |
-| "Compliance..." / "Governance..." | Maria |
-| Anything else | Alphonso |
-
-## Hermes profiles (optional)
-
-[Hermes Agent](https://github.com/NousResearch) (Nous Research, MIT) gives an agent its own tools, such as web search.
-
-1. Open **Runtime Hub** and install **Hermes Agent** (it needs Python 3.11–3.13; Runtime Hub offers to install Python).
-2. Open **Settings → Connectors → Agent Providers → Hermes profiles** and choose **Set up a Hermes profile for** an agent, then pick the model it uses. Alphonso makes the profile, its key and its port; nothing to type. Already run Hermes yourself? **Find my Hermes profiles** lists them (Alphonso reads only their settings, never their keys) and **Use for this agent** connects one.
-3. That agent's steps now run on Hermes. Chat's live line shows what it's doing; when it wants to run a command or change something, the step waits for your approval on the board and Telegram.
-
-Profiles start when a step needs them, and the ones Alphonso started stop after 30 idle minutes. Every other agent keeps its own provider.
-
-## Key Concepts
-
-### Approval Mode (on by default)
-Each step asks according to what it does (Settings → General → What asks first). Spending, publishing or sending, and deleting always ask, even with Approval Mode off.
-
-### Zero-Cost Mode (on by default)
-Blocks paid connectors (Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E and others) unless you turn it off.
-
-### Privacy Shield
-When active, no data leaves your machine. All processing happens locally via Ollama.
-
-## Production Build
-
-```bash
-npm run build          # Web build → dist/
-npm run tauri build    # Desktop installer → src-tauri/target/release/bundle/
-```
-
-## Need Help?
-
-- [Troubleshooting Guide](./TROUBLESHOOTING.md)
-- [User Manual](./USER_MANUAL.md)
-- [Architecture Overview](../ARCHITECTURE.md)
+- [User manual](USER_MANUAL.md): every screen, step by step
+- [Agent guide](AGENT_GUIDE.md): what each agent does
+- [Troubleshooting](TROUBLESHOOTING.md): what you see and the fix
+- Building from source: [CONTRIBUTING.md](../CONTRIBUTING.md)

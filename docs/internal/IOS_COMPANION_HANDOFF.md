@@ -147,8 +147,8 @@ This file is the complete briefing for any agent (human or AI) picking up the iO
 
 ### Source of Truth
 - `docs/ALPHONSO_GROUND_TRUTH.md` — version, agent roster, service layer, test counts, "do not duplicate" rules
-- `docs/IOS_COMPANION_PLAN.md` — full protocol spec, architecture diagram
-- `docs/MOBILE_COMPANION_SPRINT.md` — original sprint instructions (Phase 1–2 already done, Phase 3–5 remaining)
+- `docs/internal/IOS_COMPANION_PLAN.md` — full protocol spec, architecture diagram
+- `docs/internal/MOBILE_COMPANION_SPRINT.md` — original sprint instructions (Phase 1–2 already done, Phase 3–5 remaining)
 - `docs/platform/ios-companion.md` — detailed iOS file structure (if it exists)
 
 ### Commands to Know
@@ -197,9 +197,9 @@ You are continuing the Alphonso iOS Companion project. All desktop work (Phases 
 
 Read these files first:
 1. docs/ALPHONSO_GROUND_TRUTH.md (single source of truth)
-2. docs/IOS_COMPANION_PLAN.md (protocol + architecture)
-3. docs/MOBILE_COMPANION_SPRINT.md (Phase 3–5 instructions)
-4. docs/IOS_COMPANION_HANDOFF.md (this file — what was built + what remains)
+2. docs/internal/IOS_COMPANION_PLAN.md (protocol + architecture)
+3. docs/internal/MOBILE_COMPANION_SPRINT.md (Phase 3–5 instructions)
+4. docs/internal/IOS_COMPANION_HANDOFF.md (this file — what was built + what remains)
 
 Your task: Start Phase 3 — create the iOS companion app.
 
@@ -236,8 +236,8 @@ Constraints:
 | Pairing tests | `src/test/CompanionPairingPanel.test.jsx` |
 | Settings integration | `src/components/SettingsView.tsx` line ~1031 |
 | iOS target folder | `ios/AlphonsoCompanion/` (Phase 3 complete) | |
-| Protocol spec | `docs/IOS_COMPANION_PLAN.md` |
-| Sprint instructions | `docs/MOBILE_COMPANION_SPRINT.md` |
+| Protocol spec | `docs/internal/IOS_COMPANION_PLAN.md` |
+| Sprint instructions | `docs/internal/MOBILE_COMPANION_SPRINT.md` |
 | Ground truth | `docs/ALPHONSO_GROUND_TRUTH.md` |
 
 ---

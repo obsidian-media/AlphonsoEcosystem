@@ -94,6 +94,9 @@ vi.mock('../lib/ollama', () => ({
   formatModelSize: vi.fn().mockReturnValue('0B'),
   normalizeEndpoint: vi.fn().mockReturnValue('http://localhost:11434'),
   isChatModel: () => true,
+  PREFERRED_MODEL: 'llama3.2:3b',
+  getConfiguredOllamaEndpoint: () => 'http://localhost:11434',
+  pullOllamaModel: vi.fn(),
 }));
 
 vi.mock('../components/MemoryGraphViewer', () => ({

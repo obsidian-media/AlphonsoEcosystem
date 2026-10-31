@@ -117,7 +117,7 @@ function formatShortId(fullId) {
   return fullId ? String(fullId).slice(-8) : '';
 }
 
-function formatCommandList() {
+export function formatCommandList() {
   return `👋 Alphonso companion active.
 
 🤖 Core:
@@ -148,7 +148,7 @@ function formatCommandList() {
 /read <filename> — read a workspace file
 
 ⚙️ Settings:
-/stop — pause push notifications
+/pause — pause push notifications
 /resume — resume push notifications
 /resetowner — re-register this chat
 /help — show this list`;
@@ -829,7 +829,8 @@ export async function processInboundCommands(token, updates) {
         continue;
       }
 
-      if (cmd === 'stop') {
+      // /stop stops the running request (above); pausing has its own command.
+      if (cmd === 'pause') {
         setNotificationsPaused(true);
         await sendTelegramMessageInternal({
           token,

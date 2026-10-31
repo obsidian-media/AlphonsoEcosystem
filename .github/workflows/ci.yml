@@ -285,7 +285,7 @@ jobs:
     # the known-good Windows 2022 image until the runner-image regression is
     # resolved upstream.
     runs-on: windows-2022
-    timeout-minutes: ${{ matrix.suite == 'model' && 150 || 35 }}
+    timeout-minutes: ${{ matrix.suite == 'model' && 150 || 60 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 

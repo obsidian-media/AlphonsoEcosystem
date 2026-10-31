@@ -1,6 +1,8 @@
 // A real paid-model step, by hand (Jose redesign phase 6a, 2026-10-23).
 // Skipped unless you set, for Claude or for ChatGPT:
-//   ALPHONSO_LIVE_ANTHROPIC_API_KEY  (or ALPHONSO_LIVE_OPENAI_API_KEY)
+//   ALPHONSO_LIVE_ANTHROPIC_API_KEY  (or ALPHONSO_LIVE_OPENAI_API_KEY), or the path of a file
+//   holding it: ALPHONSO_LIVE_ANTHROPIC_KEY_FILE / ALPHONSO_LIVE_OPENAI_KEY_FILE (like the
+//   live-accounts spec, so the key never appears on a command line)
 //   ALPHONSO_LIVE_PAID_INPUT_PRICE   price per million input tokens, USD
 //   ALPHONSO_LIVE_PAID_OUTPUT_PRICE  price per million output tokens, USD
 // The key names end in _KEY, so the harness keeps them out of the app's own
@@ -8,16 +10,20 @@
 // as a user would. One step costs a fraction of a cent at current prices; the
 // monthly cap is $0.10 for the first step and is then lowered to what was
 // spent, so the second step is refused before anything is sent.
+import fs from 'node:fs';
 import { enterShell, invoke, mainText, buttonByText, ollamaHasModels, openPage } from '../helpers.mjs';
 
-const ANTHROPIC = process.env.ALPHONSO_LIVE_ANTHROPIC_API_KEY || '';
-const OPENAI = process.env.ALPHONSO_LIVE_OPENAI_API_KEY || '';
+const fromFile = (name) => {
+  const file = process.env[name];
+  try { return file ? fs.readFileSync(file, 'utf8').trim() : ''; } catch { return ''; }
+};
+const ANTHROPIC = process.env.ALPHONSO_LIVE_ANTHROPIC_API_KEY || fromFile('ALPHONSO_LIVE_ANTHROPIC_KEY_FILE');
+const OPENAI = process.env.ALPHONSO_LIVE_OPENAI_API_KEY || fromFile('ALPHONSO_LIVE_OPENAI_KEY_FILE');
 const INPUT_PRICE = Number(process.env.ALPHONSO_LIVE_PAID_INPUT_PRICE);
 const OUTPUT_PRICE = Number(process.env.ALPHONSO_LIVE_PAID_OUTPUT_PRICE);
 const PROVIDER = ANTHROPIC ? 'claude' : 'chatgpt';
 const KEY = ANTHROPIC || OPENAI;
 const KEY_PLACEHOLDER = PROVIDER === 'claude' ? 'sk-ant-...' : 'sk-...';
-const SECTION_TITLE = PROVIDER === 'claude' ? 'Claude (Anthropic)' : 'ChatGPT (OpenAI)';
 
 async function useSettings(values) {
   const loaded = await invoke('load_settings');
@@ -87,13 +93,25 @@ describe('Alphonso desktop: a real paid-model step (live)', () => {
     await $('[aria-label="Open settings"]').click();
     await browser.waitUntil(async () => /API CREDENTIALS|General/.test(await mainText()), { timeout: 30000 });
     await buttonByText('Connectors').click();
-    await buttonByText('AI Models').click();
-    const field = await $(`//main//*[contains(normalize-space(.), "${SECTION_TITLE}")]/ancestor::div[contains(@class, "rounded-2xl")][1]//input[@placeholder="${KEY_PLACEHOLDER}"]`);
-    await field.waitForExist({ timeout: 30000 });
-    await field.scrollIntoView();
+    // Open AI Models only when it's closed: a click on an open section folds it (QA, 2026-10-31).
+    const category = await $('[data-testid="connector-category-ai_models"]');
+    await category.waitForExist({ timeout: 30000 });
+    if ((await category.getAttribute('aria-expanded')) !== 'true') await category.click();
+    // The box by its placeholder, then the Save & Enable that follows it (as live-accounts does).
+    const field = await $(`input[placeholder="${KEY_PLACEHOLDER}"]`);
+    await field.waitForDisplayed({ timeout: 30000 });
+    await field.scrollIntoView({ block: 'center' });
+    await field.click();
     await field.setValue(KEY);
-    const section = await field.$('./ancestor::div[contains(@class, "rounded-2xl")][1]');
-    await (await section.$('.//button[contains(normalize-space(.), "Save")]')).click();
+    let saved = false;
+    for (const save of await $$('//button[normalize-space(.)="Save & Enable"]')) {
+      if (await browser.execute((f, b) => Boolean(f.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING), field, save)) {
+        await save.click();
+        saved = true;
+        break;
+      }
+    }
+    expect(saved).toBe(true);
     await browser.waitUntil(async () => /key saved/i.test(await mainText()), { timeout: 30000, timeoutMsg: 'the key was not saved' });
   }).timeout(120000);
 
@@ -114,6 +132,15 @@ describe('Alphonso desktop: a real paid-model step (live)', () => {
       timeout: 300000, interval: 3000, timeoutMsg: 'the paid step never finished',
     });
     const done = (await savedRequests()).find((r) => r.id === requestId);
+    // What the paid service itself answered: a model error shows up here, not in the step's error.
+    const log = await browser.execute((cid) => {
+      try {
+        const rows = JSON.parse(localStorage.getItem('alphonso_connector_audit_v2') || '[]');
+        return rows.filter((r) => r.connectorId === cid || r.connector === cid).slice(-8)
+          .map((r) => [r.eventType || r.event || r.type || r.action || null, r.details?.error || r.details?.reason || r.error || null, r.details?.httpStatus || null]);
+      } catch { return []; }
+    }, PROVIDER);
+    console.log('PAID-E2E done', JSON.stringify({ status: done.status, step: [done.steps[0].status, done.steps[0].error, done.steps[0].model], connector: log, spent: await spentThisMonth() }));
     expect(done.steps[0].status).toBe('done');
     expect(await spentThisMonth()).toBeGreaterThan(before);
   }).timeout(600000);

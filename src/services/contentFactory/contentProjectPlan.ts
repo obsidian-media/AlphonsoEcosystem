@@ -174,6 +174,8 @@ export function contentProjectPlanSteps(
       },
     };
     if (s.reviewOf && ids.has(s.reviewOf)) step.reviewOf = s.reviewOf;
+    // The resource manager reads it: ComfyUI is needed only for clips made on this computer.
+    if (factoryStep === 'clips' && options.clipEngine !== undefined && step.contentStep) step.contentStep.clipEngine = options.clipEngine;
     if (factoryStep === 'scenes' && hasReview) step.waitFor = REVIEW_WAIT;
     if (factoryStep === 'publish') step.waitFor = PUBLISH_WAIT;
     // AI clips stop once for the main moments; a Runway run is that same stop plus its cost.

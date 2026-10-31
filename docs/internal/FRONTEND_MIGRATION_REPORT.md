@@ -184,5 +184,5 @@ Expected initial output: zero errors (since `checkJs: false` and only `memorySer
 | `src/services/serviceScopes.ts` | JSDoc added to all 24 exports |
 | `src/services/memoryService.ts` | Created (TypeScript migration) |
 | `src/services/memoryService.js.bak` | Created (backup of original) |
-| `docs/FRONTEND_MIGRATION_REPORT.md` | Created (this file) |
+| `docs/internal/FRONTEND_MIGRATION_REPORT.md` | Created (this file) |
 

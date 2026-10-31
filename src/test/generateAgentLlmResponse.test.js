@@ -103,6 +103,50 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     localStorage.clear();
   });
 
+  // QA, 2026-10-31 (live, every agent on Claude): an answer cut off at the length limit is asked
+  // once more with more room, and a second cut-off is said plainly instead of "unreadable".
+  it('asks a cut-off paid answer once more with more room, and records both calls', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2, monthlyCapUsd: 5 } }));
+    localStorage.setItem('alphonso_connector_auth_profiles_v1', JSON.stringify({ openrouter: { enabled: true, mode: 'trusted_session' } }));
+    const spend = await import('../services/jose/joseSpend');
+    sendOpenRouterMessage
+      .mockResolvedValueOnce({ ok: true, content: '{"doFirst": "Coll', model: 'b/y', costUsd: 0.002, costReported: true, cutOff: true, usage: { promptTokens: 100, completionTokens: 4096 } })
+      .mockResolvedValueOnce({ ok: true, content: '{"doFirst": "Collect data"}', model: 'b/y', costUsd: 0.003, costReported: true, usage: { promptTokens: 100, completionTokens: 5000 } });
+    const result = await generateAgentLlmResponse('nova', { prompt: 'judge', model: 'openrouter:b/y' });
+    expect(result.response).toBe('{"doFirst": "Collect data"}');
+    expect(sendOpenRouterMessage.mock.calls.map((c) => c[1].maxTokens)).toEqual([spend.PAID_MAX_OUTPUT_TOKENS, spend.PAID_RETRY_MAX_OUTPUT_TOKENS]);
+    expect(spend.PAID_RETRY_MAX_OUTPUT_TOKENS).toBeGreaterThan(spend.PAID_MAX_OUTPUT_TOKENS);
+    expect(spend.monthSpendUsd()).toBeCloseTo(0.005, 6);
+    localStorage.clear();
+  });
+
+  it('says plainly when a paid answer is still cut off with more room', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2, monthlyCapUsd: 5 } }));
+    localStorage.setItem('alphonso_connector_auth_profiles_v1', JSON.stringify({ openrouter: { enabled: true, mode: 'trusted_session' } }));
+    const spend = await import('../services/jose/joseSpend');
+    sendOpenRouterMessage.mockResolvedValue({ ok: false, kind: 'no_text', message: 'no text', cutOff: true });
+    const error = await generateAgentLlmResponse('nova', { prompt: 'judge', model: 'openrouter:b/y' }).catch((e) => e);
+    expect(String(error.message)).toMatch(spend.CUT_OFF_PATTERN);
+    expect(sendOpenRouterMessage).toHaveBeenCalledTimes(2);
+    // Agents that swallow a model error (Nova, Hector, Echo) still get the line to the step runner.
+    expect(spend.takePaidStop('nova')).toMatch(spend.CUT_OFF_PATTERN);
+    expect(spend.takePaidStop('nova')).toBeNull();
+    localStorage.clear();
+  });
+
+  // QA, 2026-10-31 (live cap check): Nova turned "past your monthly cap" into "unreadable" and was
+  // tried 4 times; the reason reaches the step runner whatever the agent does with the error.
+  it('a paid step past the monthly cap sends nothing and leaves the reason for the step runner', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2, monthlyCapUsd: 0 } }));
+    localStorage.setItem('alphonso_connector_auth_profiles_v1', JSON.stringify({ openrouter: { enabled: true, mode: 'trusted_session' } }));
+    const spend = await import('../services/jose/joseSpend');
+    const error = await generateAgentLlmResponse('nova', { prompt: 'judge', model: 'openrouter:b/y' }).catch((e) => e);
+    expect(String(error.message)).toMatch(/monthly cap/);
+    expect(sendOpenRouterMessage).not.toHaveBeenCalled();
+    expect(spend.takePaidStop('nova')).toMatch(/monthly cap/);
+    localStorage.clear();
+  });
+
   it("says plainly when OpenRouter refuses the key", async () => {
     agentProviderMap.hector = { provider: 'openrouter', model: 'x/y:free' };
     sendOpenRouterMessage.mockResolvedValueOnce({ ok: false, kind: 'key_refused', message: 'OpenRouter refused the key. Check it in Settings → Connectors.' });

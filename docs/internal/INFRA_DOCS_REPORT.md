@@ -16,7 +16,7 @@
 | `docs/CONNECTORS.md` | Per-connector reference for all 11 connectors + Runway: required env vars, how to get credentials, how to test, known limitations, setup doc cross-references |
 | `docs/CHANGELOG.md` | Keep a Changelog format: Unreleased entries for 2026-05-31 Agent A/B/C/D changes; [0.1.0] summary from production completion report |
 | `.github/dependabot.yml` | Dependabot auto-update config: npm (weekly, limit 5 PRs), Cargo (weekly, limit 5 PRs), GitHub Actions (weekly, limit 3 PRs) |
-| `docs/INFRA_DOCS_REPORT.md` | This file |
+| `docs/internal/INFRA_DOCS_REPORT.md` | This file |
 
 ---
 
@@ -117,7 +117,7 @@ After a successful release, the following are produced in `release/`:
 
 If deploying the WhatsApp Cloud webhook gateway:
 1. Push `gateway/whatsapp-cloud/` to Railway
-2. Set all required env vars in the Railway service (see `docs/RAILWAY_WHATSAPP_GATEWAY.md`)
+2. Set all required env vars in the Railway service (see `docs/internal/RAILWAY_WHATSAPP_GATEWAY.md`)
 3. Configure the Meta webhook callback URL to point at the Railway service `/webhook` endpoint
 4. Verify `/health` returns 200 and the challenge token handshake passes before treating as live
 
@@ -136,7 +136,7 @@ Dependabot (`.github/dependabot.yml`) will open weekly PRs for npm, Cargo, and G
 | File | Purpose |
 |---|---|
 | `docs/ALPHONSO_GROUND_TRUTH.md` | Single source of truth — update whenever agents, services, or tests are added |
-| `docs/SECURITY_ROTATION_CHECKLIST.md` | Rotate all 26 credentials if any secret is suspected compromised |
+| `docs/internal/SECURITY_ROTATION_CHECKLIST.md` | Rotate all 26 credentials if any secret is suspected compromised |
 | `docs/CONNECTORS.md` | Connector credential reference (this session) |
 | `docs/CHANGELOG.md` | Running changelog — update with every significant change |
 | `ARCHITECTURE.md` | Architecture reference (this session) |

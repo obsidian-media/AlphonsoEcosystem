@@ -66,7 +66,7 @@ Fixed one lint error: `handleBoardroomCommand` was called in telegramCompanionSe
 - [x] P-02: `KeyboardShortcutsModal.tsx` — new; TopBar keyboard icon button; Ctrl+? / Ctrl+J/B/R shortcuts
 - [x] P-03: `AgentPerformanceView.tsx` — CSV + JSON export buttons
 - [x] P-04: `CONTRIBUTING.md` — updated with PR checklist, TS requirements, commit format
-- [x] P-05: `docs/WORKFLOW_NODES.md` — all 9 node types documented
+- [x] P-05: `docs/internal/WORKFLOW_NODES.md` — all 9 node types documented
 - [x] P-06: `e2e/multiagent.spec.js` — Playwright pipeline test (CI-skipped)
 - [x] P-07: `README.md` — updated to v2.4.0 with new feature sections
 - [x] P-08: `docs/ALPHONSO_GROUND_TRUTH.md`, `CLAUDE.md`, `docs/CHANGELOG.md` — all updated to v2.4.0
@@ -88,9 +88,9 @@ Fixed one lint error: `handleBoardroomCommand` was called in telegramCompanionSe
 12. `src/components/BoardroomView.tsx`
 13. `src/components/KeyboardShortcutsModal.tsx`
 14. `CONTRIBUTING.md` (extended)
-15. `docs/WORKFLOW_NODES.md`
+15. `docs/internal/WORKFLOW_NODES.md`
 16. `e2e/multiagent.spec.js`
-17. `docs/PHASE_SPRINT_VERIFICATION.md` (this file)
+17. `docs/internal/PHASE_SPRINT_VERIFICATION.md` (this file)
 
 ## Modified Files
 1. `.github/workflows/ci.yml`

@@ -5,7 +5,7 @@ vi.mock('../../../services/connectors/connectorAuth', () => ({
 }));
 
 import {
-  getPaidModelSettings, paidModelAvailable, estimateCostUsd, recordSpend, monthSpendUsd, canSpend, recordSpendUsd,
+  getPaidModelSettings, paidModelAvailable, estimateCostUsd, recordSpend, monthSpendUsd, canSpend, recordSpendUsd, PAID_MAX_OUTPUT_TOKENS,
 } from '../../../services/jose/joseSpend';
 
 const paid = { allowed: true, provider: 'claude', model: 'claude-haiku-5-5', inputPerMillionUsd: 3, outputPerMillionUsd: 15, monthlyCapUsd: 1 };
@@ -19,6 +19,14 @@ beforeEach(() => {
   vi.setSystemTime(new Date(2026, 9, 23, 12));
 });
 afterEach(() => vi.useRealTimers());
+
+// QA, 2026-10-31 (live, every agent on Claude): claude-haiku-5.5 thinks before it answers, and the
+// thinking counts against the limit, so 1,024 tokens cut Nova's verdict off mid-JSON every time.
+describe('paid answer length', () => {
+  it('leaves room for a model that thinks before answering', () => {
+    expect(PAID_MAX_OUTPUT_TOKENS).toBeGreaterThanOrEqual(4096);
+  });
+});
 
 describe('paidModelAvailable', () => {
   it('is available only when allowed, Zero-Cost Mode is off, the connector is set up and both prices are entered', () => {

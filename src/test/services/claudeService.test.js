@@ -109,6 +109,29 @@ describe('claudeService', () => {
       expect(result.text).toBe('response text');
     });
 
+    // QA, 2026-10-31 (live check): claude-haiku-5-5 answers with a thinking block first, so reading
+    // content[0] gave an empty answer and every paid step on Claude failed.
+    it('reads the text blocks, not a thinking block that comes first', async () => {
+      const { sendClaudeMessage } = await import('../../services/claudeService');
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: '{"ok": ' }, { type: 'text', text: 'true}' }],
+          usage: { input_tokens: 10, output_tokens: 20 }
+        })
+      });
+      const result = await sendClaudeMessage('hello');
+      expect(result.text).toBe('{"ok": true}');
+    });
+
+    it('says when the answer was cut off at the length limit', async () => {
+      const { sendClaudeMessage } = await import('../../services/claudeService');
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ content: [{ type: 'text', text: '{"doFirst": "Coll' }], stop_reason: 'max_tokens', usage: {} }) });
+      expect((await sendClaudeMessage('hello')).cutOff).toBe(true);
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ content: [{ type: 'text', text: 'done' }], stop_reason: 'end_turn', usage: {} }) });
+      expect((await sendClaudeMessage('hello')).cutOff).toBe(false);
+    });
+
     it('extracts HTTP error message on failure', async () => {
       const { sendClaudeMessage } = await import('../../services/claudeService');
       fetch.mockResolvedValueOnce({

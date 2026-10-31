@@ -1,209 +1,99 @@
 # Agent Guide
 
-Alphonso has 9 specialized agents. What each may do is one table, `src/services/jose/agentPermissionTable.ts`: everyone may read and create new files of its own; only **Alphonso** may run code or change project files; only **Marcus** may publish or send. Spending is allowed only on certain steps (a paid-model step, Miya's paid media steps, Marcus's paid sends) and always asks. `agentContractService.ts` and Jose's plan check enforce it.
+Alphonso has nine agents. Each kind of work has exactly one owner, and Jose gives every step of a request to that agent. You don't have to name the agent: say what you want and Jose plans it.
 
-## Agent Roster
+Everyone may read and create new files of their own. Only **Alphonso** changes your project files or runs code, and only **Marcus** sends or publishes. Spending money (a paid model, a paid voice or video service) only happens on steps that ask you first with the cost.
 
-### Alphonso — Local Operator
-**Role:** Code in your projects, commands, plain questions, everyday writing
-**Can do:** Work in a project you listed in Settings → Agents → Alphonso's projects (or a new folder under your output folder for small code), plan the change from your files, show it before it happens, write it, run the checks and fix up to two rounds, report plainly; answer questions and write emails and notes; help other agents with writing
-**Cannot:** Change a project or run a command that isn't read-only without your approval (one per step, with the preview); commit to git or start a dev server unless you asked; work on two requests in the same project at once; spend or publish
-**When to use:** Building, fixing, testing in your projects; plain questions and everyday writing (emails, notes).
-**Skills (4, `src/skills/alphonso/`):** Answer a question, Code change, Everyday writing, Verify a build.
+## The agents
 
-### Jose — Orchestrator
-**Role:** Answers or plans every request, runs the plan, reports
-**Can do:** Answer plain questions; plan a request as steps (agent, action, what each needs), from a template or fresh; show bigger plans first; change a plan while it runs (review rounds, help, a larger model, a paid model if you allow them); tell you on Telegram what waits for you
-**Cannot:** Run code or publish; spend only on a paid-model step, which always asks; a plan that breaks the permission table doesn't run
-**When to use:** Everything — every message reaches Jose. "Research X, write a report and post it to Slack" becomes steps for Hector, Miya and Marcus, with the Slack step waiting for your approval. Plans are on the Requests board (System → Orchestrator → Requests).
-**Skills:** none (Jose plans; planning is not a skill step).
-**Since Jose phase 7:** plans from what you asked (earlier chat is background only); one request using the local model at a time (a queue); Stop and Cancel on the board, in Chat and on Telegram; a whole batch planned in one call; an agent can ask him for a send or a code change partway through its step, which becomes a Marcus or Alphonso step that waits for your approval; workflows and Boardroom's actions run through him and open on the board.
+### Jose — plans every request
+Answers plain questions himself; anything bigger he plans as steps, gives each to its owner, and reports back with a short summary. He adapts a plan while it runs: a review that sends work back, an agent asking for help, a larger model when a step keeps failing. He does none of the work himself.
+- **Ask:** anything. "Research X, write a post and put it on Slack" becomes steps for Hector, Alphonso, Maria and Marcus.
+- **Where:** plans and their progress are on the Requests board (System → Orchestrator → Requests).
 
-### Hector — Researcher
-**Role:** Finds facts and sources (including competitors' public material), with citations
-**Runtime:** `src/services/hector/` (since 2026-10-25) — researches in rounds: the question broken into parts, short searches through one chain (Brave, Tavily, Perplexity when set up, then DuckDuckGo and news feeds), the parts of each page that match the question, a write-up with numbered citations, follow-up rounds for what's missing; the answer first. Blocked pages keep their search snippet, labelled. Found nothing → his step waits and says why; he never writes facts from memory
-**Can do:** Web search, document analysis, source verification, API docs research, compliance research, competitive analysis; in Miya Studio, what goes viral and a stock clip for each scene (Pexels, Pixabay, Coverr)
-**Cannot:** Run commands, change project files, post, or spend
-**When to use:** "Research the latest trends in AI", "Find sources for this claim", "Summarize this article"
-**Skills (4, `src/skills/hector/`):** Competitor material, Find what works, Stock footage, Web research with sources.
+### Alphonso — code, questions and everyday writing
+Works in the projects you list (Settings → Agents → Alphonso's projects). He reads your files, shows the change on the board (file by file, with each command and why), and writes it only after you approve. Then he runs the checks, fixes what fails (at most twice) and says what he did. He also answers questions and writes emails and notes.
+- **Ask:** "In shop, add a dark mode toggle", "Fix this error: …", "Write tests for the cart", "Explain the code in blog", "Draft an email declining the meeting".
+- **Won't:** change anything or run a command that isn't read-only without your approval; commit to git or start a dev server unless you ask.
+- **Skills:** Answer a question, Everyday writing, Code change, Verify a build, Fix a bug from an error, Write tests, Explain code, Summarise a document, API and tool integration, Plan and build a feature.
 
-### Miya — Creative
-**Role:** UI/UX and creative systems, content creation, and front-end design and code drafts
-**Can do:** Miya Studio's content factory: scripts with hooks, scene plans and pictures (with the brand's character), thumbnails, voice-overs, music, sound effects, AI clips and motion, Shorts, carousels and campaigns, and lessons from results; plan UI/UX and brand direction; draft front-end designs and code for Alphonso to build
-**Cannot:** Run code or commands (only Alphonso does) or publish (only Marcus does); paid engines (ElevenLabs, Higgsfield, Runway) only inside a step you approved
-**When to use:** "Make a YouTube video about X" (starts a Miya Studio project), "Write a script", "Create a marketing strategy", "Design a storyboard".
-**Skills (12, `src/skills/miya/`):** Choose sound effects, Creative lessons, Creative package, Design thumbnails, Edit the video, Make a picture, Plan the scenes, Plan the Shorts, UI design, Write a carousel, Write the campaign, Write the script.
+### Hector — research
+Breaks a question into parts, searches, reads the relevant parts of each page and goes back for what's missing. His report starts with the answer, with numbered sources and how well each finding is supported. If nothing usable turns up he says why; he never fills in facts from memory.
+- **Ask:** "Research the coffee subscription market in Canada", "Compare these three microphones on price and features", "Find what's working in cooking Shorts this month".
+- **Won't:** judge which option is best (that's Nova), write the content, or send anything.
+- **Skills:** Web research with sources, Competitor material, Find what works, Stock footage, Compare products and prices, Find companies or people.
 
-### Maria — Governance & Risk Lead
-**Role:** Governance, risk and quality reviews
-**Runtime:** `src/services/mariaAuditService.ts` (dispatcher) and `src/services/maria/` — her own model only, no rule-based fallback (agent phase 3)
-**Can do:** Review work (pass or fix, quoting the words to change; unbacked claims are a fix; Alphonso's files and results with file and line), review a plan (risk and why, the rules that apply, what needs your approval, an offer to have Marcus prepare it), score a video's pieces against what is known about the brand's references and run the quality gate in Miya Studio, Boardroom's Conclude, the weekly review of the week's risks. When she asks for approval, or work still needs changes after two rounds, the steps after hers wait for you. Security matters go to Sentinel
-**Cannot:** Perform destructive execution
-**Schema:** work review `kind: 'work'`, `verdict`, `findings[]`, `review`; plan review `kind: 'plan'`, `risk`, `why`, `rules[]`, `points[]`, `needsApproval`, `approvalReasons[]`, `offer`; both keep `riskLevel`, `approvalRequired`, `summary`
-**When to use:** Jose plans her review steps; a review that finds problems sends the work back (at most 2 rounds).
-**Skills (4, `src/skills/maria/`):** Claim check, Governance review, Quality against the references, Quality review.
+### Nova — what to do first
+Judges value, effort, risk and timing, from Hector's research when there is some. Her answer starts with **What to do first**, ranks every option with why, and says what would change her mind.
+- **Ask:** "Which should my bakery do first: a newsletter, a loyalty card or a podcast?", "Research the market and tell me which opportunity is worth going after."
+- **Won't:** gather facts herself; with nothing to judge she asks Hector first.
+- **Skills:** Value and priority, Judge the market, Review the script, Best time to post, Read the results, Follow-up ideas, Pros and cons, Pricing.
 
-### Marcus — Distribution & Release Manager
-**Role:** The only agent that publishes or sends — always after your approval
-**Runtime:** `src/services/marcusExecutionService.ts` — also the one scheduler for posts
-**Can do:** Send exactly what the step before him wrote (or what you quoted) to Slack, Discord, Telegram (your team chat or you), WhatsApp, Notion, ClickUp, your listed n8n workflows and Composio apps you switched on; make GitHub draft releases and issues; check whether something is ready to send (read-only, asks nothing); post a project's videos, Shorts and carousels to YouTube, Instagram and Facebook at their times; remind you of posts to make by hand
-**Cannot:** Change the words, send anywhere you didn't name or set as a default, or send anything you haven't approved. The approval shows the exact text and destination, and Sentinel checks it first
-**Skills (5, `src/skills/marcus/`):** Place a call, Publish a post, Release or issue, Release readiness, Send a message.
-**Schema:** `kind: "send"`, `connector`, `target`, `approvedBy: "you"`, `reviewedBy`, `reviewVerdict`, `status`, `resultUrl`
-**When to use:** "Write an announcement and post it to Slack #news", "Make a draft GitHub release v1.2.0", "Is this ready to post?", or Campaign Studio's **Approve and schedule**.
+### Miya — content and design
+Scripts, pictures, voice-overs, music, videos, Shorts, carousels, campaigns and UI design. Miya Studio (Work → Creative) is her content factory, from an idea to posted videos.
+- **Ask:** "Make a YouTube video about home coffee", "Create an image of …", "Make a video of a cat on a boat", "Create calm piano music for my intro", "Write a carousel about our new menu".
+- **Won't:** write code or send anything; paid engines (ElevenLabs, Higgsfield, Runway) only after you approve the cost.
+- **Skills:** Write the script, Plan the scenes, Design thumbnails, Plan the Shorts, Choose sound effects, Write a carousel, Write the campaign, Creative lessons, Creative package, UI design, Edit the video, Make a picture.
 
-### Echo — Knowledge Historian
-**Role:** The ecosystem's memory of decisions: what was decided, preferred, instructed or turned down, wherever it was decided
-**Runtime:** `src/services/echo/` (agent phase 7) — his own model writes and finds decisions; nothing is made up
-**Skills (4, `src/skills/echo/`):** Answer from memory, Forget, Merge and clean memory, Save decisions.
-**Can do:** Save the decisions of every finished request (Chat, Telegram, WhatsApp, the phone, schedules, Boardroom, Miya Studio), your approvals and rejections, and anything you ask him to remember; give every agent the decisions and preferences that apply to its step; answer "what did we decide about …?"; forget a decision (asking which when it could be several); propose a cleanup of memory
-**Cannot:** Change memory in a cleanup until you apply it; invent a decision that isn't in the request or the work
-**When to use:** "Remember that …", "What did we decide about …?", "Forget …", "Clean up my memory". He also saves each request's decisions on his own, shown as "Echo remembered: …" with Edit and Forget.
+### Maria — quality and risk
+Reviews work: **Pass.** or **Fix:**, quoting the exact words to change and how, and listing claims no source backs. Work that needs changes goes back to its author (at most twice). She also audits plans for risk (**Risk:** low, medium or high) without starting anything, and when she asks for your approval the next steps wait.
+- **Ask:** "…and have it checked for accuracy", "Audit this plan for compliance risks: …", "Review the code change in shop".
+- **Won't:** do security checks (that's Sentinel).
+- **Skills:** Quality review, Claim check, Governance review, Quality against the references, Review code, Brand voice check.
 
-### Sentinel — Security Monitor
-**Role:** Security monitoring and automation safety
-**Note:** security only (risk and quality reviews are Maria's)
-**Runtime:** `src/services/sentinel/` (agent phase 4) — his own model judges; exact checks (keys, password requests, disguised links, deleting or code commands) are handed to him as facts
-**Skills (3, `src/skills/sentinel/`):** Content safety check, Permission audit, Text and link check.
-**Can do:** Check work, a post, an email, code (with its files, results and dependencies) or a request: Safe, Risky or Unsafe, each finding with what, where, how serious and the fix. A serious finding makes the next steps wait for you. Reviews the last week of activity on request (the sidebar's Re-scan, Telegram `/scan`, the daily schedule). Checks a campaign before it's posted. Uses your trusted-domain list.
-**Cannot:** Perform destructive execution; decide what commands may run (the backend gate does)
-**When to use:** Ask him ("check this post for security problems"). He also checks without being asked: before anything Marcus sends, after Alphonso changes or runs code, the research a step acts on, and a request that contains a key or a link (keys are hidden from every agent's model).
+### Sentinel — security
+Answers **Safe.**, **Risky:** or **Unsafe:**, with each finding, where it is and the fix. He always flags keys or passwords in text, requests for a password, links that look disguised, and commands that delete or run code. He checks on his own before anything is sent, after code changes, and on any request with a key or a link. A key in your request is hidden from every agent.
+- **Ask:** "Check this post for security problems before I publish it: …", "Check shop's dependencies".
+- **Won't:** judge quality (that's Maria).
+- **Skills:** Text and link check, Permission audit, Content safety check, Dependency check, Personal-data check.
 
-### Nova — Opportunity Analyst
-**Role:** Judging value, priority and timing from what Hector found
-**Runtime:** `src/services/novaAnalysisService.ts` and `src/services/nova/` (since 2026-10-25) — her model judges what she was given and answers with a ranked verdict; no keyword scores
-**Skills (6, `src/skills/nova/`):** Best time to post, Follow-up ideas, Judge the market, Read the results, Review the script, Value and priority.
-**Can do:** Rank the options a request names or Hector found: each with why, value / effort / risk (high, medium, low) and the sources that support it; say what to do first and what would change her mind. A single option also gets a 0–100 score. With nothing to judge she asks Hector to research first. Her last verdicts are in Settings and on Telegram (`/nova`)
-**Cannot:** Execute actions — analysis and recommendation only
-**Schema:** `doFirst`, `options` (`name`, `rank`, `why`, `value`, `effort`, `risk`, `sources`, `notJudged`), `wouldChange`, `score` (one option only), `fromRequestOnly`
-**When to use:** "Which of these is most promising?", "Prioritize these tasks", "Analyze this opportunity". In Miya Studio, Nova checks the market, reviews the script's value, suggests post times, and turns each post's results into lessons and follow-up ideas.
+### Marcus — sending and publishing
+Sends exactly what was written (or what you quoted) to Slack, Discord, Telegram, WhatsApp, Notion, ClickUp, GitHub, n8n, Composio apps and your outside tools, and posts Miya Studio's videos at their times. The approval shows the exact text and where it goes; he sends it once.
+- **Ask:** "Post it to Slack #news", "Send it tomorrow at 9", "Make a draft GitHub release v1.2.0", "Is this ready to post?" (only checks; sends nothing).
+- **Won't:** change the words, send anywhere you didn't name or set as a default, or send without your approval.
+- **Skills:** Send a message, Publish a post, Place a call, Release readiness, Make a release or an issue, Email newsletter, Follow-up reminder, Use an outside tool.
 
-## Hermes agent backend (opt-in, per agent)
+### Echo — memory
+Keeps what you decided, preferred or turned down, wherever it happened, and gives every agent the decisions that apply to its work. Nothing is made up; a cleanup changes nothing until you apply it.
+- **Ask:** "Remember that …", "What did we decide about the launch?", "Forget …", "Clean up my memory", "What did we decide this week?"
+- **Skills:** Save decisions, Answer from memory, Forget, Merge and clean memory, Weekly decisions digest, Project memory summary.
 
-Every agent's "thinking" comes from local Ollama by default (with NVIDIA/Gemini
-as alternate providers — see `modelSelectionService.ts`, `ModelSwitcher.tsx`).
-A 4th option now exists, **per agent**: routing a specific agent's turn to a
-live, standalone "Hermes Agent" (Nous Research, MIT-licensed) instance the
-owner runs separately on their own machine — 5 of the 9 in-app agents
-(Jose/Hector/Miya/Marcus/Alphonso) have a real, running "standalone twin"
-profile today, each self-described as such in its own persona doc, with the
-remaining 4 (Maria/Echo/Sentinel/Nova) expected to follow. Ollama stays the
-unconditional default for every agent; this is purely additive and opt-in per
-agent — untouched for anyone who never opens Settings → Connectors → Agent
-Providers.
-
-**PR 1a scope (shipped):** `src/services/connectors/hermesAgentConnector.ts`,
-the per-agent provider map in `modelSelectionService.ts`
-(`getAgentProvider`/`setAgentProvider`), the `HermesAgentsSection` credential
-UI and `AgentProvidersSection` picker, and the shared `generateAgentLlmResponse`
-dispatcher in `src/lib/ollama.ts` wired into every confirmed per-agent LLM
-call site (see the "Shared per-agent LLM dispatcher" row in `CLAUDE.md`'s
-Do Not Duplicate table for the exact list). **PR 1b (done 2026-08-21):** health-check registration, circuit breaker, rate
-limiter, audit log and approval gating for Hermes-backed turns (a Hermes
-profile can run real tools, not just generate text). **Session continuity
-(done 2026-10-06):** each per-agent call passes a natural session id through
-`X-Hermes-Session-Id`. A Hermes endpoint that isn't on this computer counts as
-paid, so Zero-Cost Mode blocks it. **Hermes gateway (2026-10-30):** Runtime Hub
-installs Hermes Agent, Settings sets up a profile per agent (or connects one of
-your own), each step runs as a Hermes run with its progress on Chat's live line
-and Stop, Hermes's own requests wait for you on the board and Telegram, and the
-resource manager starts a profile when a step needs it and stops one it started
-after 30 idle minutes (`docs/ALPHONSO_GROUND_TRUTH.md` §11.59).
-
-Full design lives in `docs/HERMES_AGENT_DELEGATION_PLAN.md`. **That file is
-gitignored** (it references this machine's own local Hermes install
-paths/ports) — if you're a future session and it's missing, check
-`docs/TRUTH_FIRST_EXECUTION_PLAN.md` §I and `docs/governance/DEFERRED_WORK.md`
-for the summary, and re-derive or request the full file from the owner before
-starting Phase 1b or Phase 2.
-
-## OpenRouter, outside tools and memory (2026-10-30)
-
-- **OpenRouter** is one more provider in Settings → Connectors → Agent Providers: any agent can use one of its free models (or let OpenRouter choose). When the day's free requests run out, the step carries on with this computer's model and says so, or asks to use a paid model if you chose that.
-- **Outside tools (MCP).** Every agent may read from a tool you marked "Reading only" on a free server you connected. Only Marcus changes things through an outside tool: his step shows the exact call (`Shop: Update price (product: Blue mug, price: 18)`), waits for your approval, and runs once; Sentinel checks it first.
-- **Memory.** Before an agent's step runs, Alphonso checks that its model and tools fit in RAM and graphics memory. If not, it frees idle models and tools it started, or the step waits and says what for. Programs you started yourself are never stopped.
-- **Miya makes video and music asked for in words** ("make a video of …", "create music for …") on this computer, with the installed video model or AudioCraft.
-
-## How Agents Collaborate
+## How they work together
 
 ```
-You: "Research AI trends, write a blog post and post it to Slack"
-  → Jose plans (from the Research report template, adapted):
-    → hector: research AI trends, with citations
-    → miya: write the post             (needs hector)
-    → maria: review accuracy and tone  (needs miya; may send it back, 2 rounds)
-    → marcus: post to Slack            (needs maria; publish_or_send: waits for you)
-  → You: approve on the board, in Chat or on Telegram
-  → Marcus posts; Echo saves what was decided
+You: "Research AI trends, write a short post about them and post it to Slack #news"
+  Hector    researches, with sources
+  Alphonso  writes the post from Hector's research
+  Maria     checks it for accuracy (may send it back, at most twice)
+  Sentinel  checks it before it is sent
+  Marcus    waits with the exact text: approve once, and it's posted
+  Echo      remembers what was decided
 ```
 
-## Who Owns What
+Each step gets the full work of the steps before it, so a reviewer reads the actual draft and Marcus sends what was written. When an agent can't work until something is set up, the step waits and says what; it's never handed to another agent.
 
-Each kind of work has exactly one owner (`AGENT_PERMISSION_TABLE`, `owns` and `never` per agent; `ownerOf()` finds it, and a test fails if two agents could take the same task type). Jose plans, routes, approves and writes the closing summary, and does none of the work. Alphonso owns code, commands, plain questions and everyday writing; Miya content and design (and editing the finished video), never code; Hector finding facts; Nova judging what Hector found; Maria quality, governance and risk; Sentinel security; Marcus sending, publishing and calls; Echo memory. Help goes only to the owner of the work asked for, and a step whose owner can't work waits for setup instead of moving to another agent.
+## What asks first
 
-Every step gets the full output of the steps it depends on (by step, cut at 6,000 characters for local models, 20,000 for paid or cloud ones), one line for each other finished step, and memory. A review gets the work it reviews and gives its verdict in the same answer.
+| Agent | Changes project files | Runs code | Spends | Sends or publishes |
+|---|---|---|---|---|
+| Alphonso | Your choice | Your choice | — | — |
+| Marcus | — | — | Always asks | Always asks |
+| Miya | — | — | Paid media steps, always asks | — |
+| Jose | — | — | Paid-model steps, always asks | — |
+| Everyone else | — | — | — | — |
 
-## Skills
+Choose what else asks in Settings → General → **What asks first**.
 
-Each agent (Jose aside: he plans) has its own skills: know-how for one kind of job plus the tools it needs, one Markdown file each (`src/skills/<agent>/`). A skill can give its agent only work it owns and tools it may use; one that breaks this is refused with the reason. For every step the agent picks one of its skills for that kind of work (with one, it is used straight away), and the board shows the skill and why. A small model runs the skill's tools in the skill's order; a larger one (14B and up by default, set in Settings → Agents) or a paid or cloud model calls them itself, at most 5 times. Tools that send, publish, call, run code, change files or make media are never called this way: they are the step's own action and keep its approval.
+## Choosing each agent's model
 
-| Agent | Built-in skills |
-|-------|-----------------|
-| Alphonso | Answer a question, Everyday writing, Code change, Verify a build, Fix a bug from an error, Write tests, Explain code, Summarise a document, API and tool integration, Plan and build a feature |
-| Miya | Write the script, Plan the scenes, Design thumbnails, Plan the Shorts, Choose sound effects, Write a carousel, Write the campaign, Creative lessons, Creative package, UI design, Edit the video, Make a picture |
-| Hector | Web research with sources, Competitor material, Find what works, Stock footage, Compare products and prices, Find companies or people |
-| Nova | Value and priority, Judge the market, Review the script, Best time to post, Read the results, Follow-up ideas, Pros and cons, Pricing |
-| Maria | Quality review, Claim check, Governance review, Quality against the references, Review code, Brand voice check |
-| Sentinel | Text and link check, Permission audit, Content safety check, Dependency check, Personal-data check |
-| Marcus | Send a message, Publish a post, Place a call, Release readiness, Release or issue, Email newsletter, Follow-up reminder |
-| Echo | Save decisions, Answer from memory, Merge and clean memory, Weekly decisions digest, Project memory summary |
+By default every agent uses your local model. In **Settings → Connectors → Agent Providers** you can give an agent a different one: another Ollama model, NVIDIA or Gemini (free tiers), one of OpenRouter's free models, or a **Hermes profile** (install Hermes Agent in Runtime Hub, then set up a profile for that agent; it then uses Hermes's own tools, such as web search, and asks you before running commands).
 
-You can add your own on All Agents → Skills (a form, or a skill file), and they sit beside the built-in ones.
+## Your own skills and teams
 
-What else changed in agent roles Part C2: Marcus sends at a time you name ("send it tomorrow at 9"), approved once; a request that names two of your projects gets one Alphonso step in each; you can edit Alphonso's change on the board before approving it; Hector reads a PDF's text and follows his skill when he writes up; Nova finds the options in an ordinary sentence; Sentinel checks people research for personal data; Echo finds a decision worded differently, with a small model on your computer.
+**System → All Agents → Skills** lists every agent's skills, how often each is used and how its work did in reviews. Add your own with **New skill** or **Import**; a skill can only give an agent work it owns.
 
-The Skills page shows how each skill has done: how often it was used, how many of its reviewed steps passed, and when it was last used.
+**System → Teams** saves a set of agents for a job you do often; run it with "use team <name> to …".
 
-### Teams
+## Voice
 
-A team is a saved set of steps, one agent each, for a kind of job you do often (System → Teams). Each agent in a team gets only work it owns; a team that breaks that is refused with the reason. "use team <name> to …" runs it as a request.
-
-## Agent Permissions Matrix
-
-From `agentPermissionTable.ts` and the plan check. Settings → General → What asks first decides which allowed effects ask; spend and publish always do.
-
-| Agent | Read | Write its own work | Change project files | Run code | Spend | Publish or send |
-|-------|------|------|------|------|------|------|
-| Alphonso | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Jose | ✅ | ✅ | ❌ | ❌ | ⚠️ paid-model steps | ❌ |
-| Hector | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Miya | ✅ | ✅ | ❌ | ❌ | ⚠️ paid media steps only | ❌ |
-| Maria | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Marcus | ✅ | ✅ | ❌ | ❌ | ⚠️ | ⚠️ |
-| Echo | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Sentinel | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Nova | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-
-✅ = Allowed | ⚠️ = Allowed, always asks | ❌ = Not allowed. Any step Jose gives a paid model (Claude, ChatGPT) may spend, and always asks.
-
-## Agents in Voice OS
-
-When using the Voice OS pipeline, the same 9 agents handle voice requests. The `voice/backend/router.py` uses keyword regex patterns to route audio transcriptions:
-
-| Voice intent | Agent | Example phrase |
-|-------------|-------|----------------|
-| Search / research | **Hector** | "Find the latest news on..." |
-| Write / draft | **Miya** | "Write a blog post about..." |
-| Task / plan | **Jose** | "Schedule a task for tomorrow..." |
-| Memory / recall | **Echo** | "What did I say about...?" |
-| Security / scan | **Sentinel** | "Scan for vulnerabilities in..." |
-| Opportunity / market | **Nova** | "What are the growth opportunities for...?" |
-| Publish / distribute | **Marcus** | "Post this to Telegram..." |
-| Governance / compliance | **Maria** | "Review this for compliance..." |
-| Everything else | **Alphonso** | Default fallback |
-
-The Voice OS agent routing is stateless per utterance — each transcription is independently classified.
-
-## Viewing Agent Activity
-
-Open **Runtimes → Activity** to see real-time agent actions, decisions, and audit logs; each Jose request's steps and outputs are on the Requests board. Voice OS activity (server start/stop) is also logged here via `agentActivityService`.
+With Voice OS running (System → Voice), the same agents answer what you say: the one whose work it is answers, and says who does it when you ask for someone else's work.

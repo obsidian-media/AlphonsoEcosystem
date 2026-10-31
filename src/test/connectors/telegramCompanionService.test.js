@@ -391,6 +391,18 @@ describe('telegramCompanionService', () => {
       expect(mockAppStorage.setStorage).toHaveBeenCalledWith('alphonso_telegram_notifications_paused', true);
     });
 
+    // /stop stops the running request; /pause is how push notifications pause (docs pass, 2026-10-30).
+    it('/pause pauses push notifications from the paired chat', async () => {
+      mockAppStorage.getStorage.mockImplementation((key) => (key === 'alphonso_telegram_owner_chat_id' ? 'chat-123' : null));
+      await service.processInboundCommands('test-token', { ok: true, messages: [{ chatId: 'chat-123', text: '/pause', updateId: 7 }] });
+      expect(mockAppStorage.setStorage).toHaveBeenCalledWith('alphonso_telegram_notifications_paused', true);
+    });
+
+    it('the help lists /stop once', () => {
+      expect(service.formatCommandList().match(/\/stop /g)).toHaveLength(1);
+      expect(service.formatCommandList()).toContain('/pause');
+    });
+
     it('setNotificationsPaused(false) clears paused flag', () => {
       service.setNotificationsPaused(false);
       expect(mockAppStorage.setStorage).toHaveBeenCalledWith('alphonso_telegram_notifications_paused', false);

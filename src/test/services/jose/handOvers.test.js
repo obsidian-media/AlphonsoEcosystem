@@ -16,6 +16,17 @@ describe('hand-overs', () => {
     expect(prompt).toContain('What to do first: the newsletter.');
   });
 
+  // QA, 2026-10-31 (7B desktop run): a writing step sent back by a review never saw "Fix what the
+  // review found", so Alphonso rewrote "[Your Name]" into the note twice and Marcus sent nothing.
+  it("Alphonso's writing prompt has his step's instruction, including what a review asked to fix", () => {
+    const fix = { ...input([need('write', 'alphonso', 'The shop opens at 9. [Your Name]')]), instruction: ['Write a one-line note.', '', 'Fix what the review found:', '- Fill in [Your Name] before it is sent: use the request, or write it without that part.'].join('\n') };
+    const prompt = assistantPrompt('Write a one-line note that the shop opens at 9 and send it to n8n.', fix);
+    expect(prompt).toContain('Fix what the review found:');
+    expect(prompt).toContain('Fill in [Your Name] before it is sent');
+    // The request is still there, and the instruction comes before it.
+    expect(prompt.indexOf('Fix what the review found:')).toBeLessThan(prompt.indexOf('Request: Write a one-line note'));
+  });
+
   it("Alphonso's step uses the step model", () => {
     const engine = readFileSync('src/services/joseExecutionEngineService.ts', 'utf8');
     const body = engine.slice(engine.indexOf('async function executeAssistantAssignment'), engine.indexOf('async function executeAssistantAssignment') + 1500);

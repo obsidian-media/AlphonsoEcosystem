@@ -1,7 +1,8 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { ModelPullHelper } from './ModelPullHelper';
 import type { PaidModelChoice } from '../services/connectors/openRouterPaid';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, AlertTriangle, Cable, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare, PhoneCall } from 'lucide-react';
+import { Activity, AlertTriangle, Cable, ChevronDown, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare, PhoneCall } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { Modal } from './ui/Modal';
 import { MemoryGraphViewer } from './MemoryGraphViewer';
@@ -297,53 +298,6 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
   );
 }
 
-const SUGGESTED_MODELS = ['llama3.2', 'llama3.1:8b', 'mistral', 'phi3.5', 'codellama', 'deepseek-r1:7b'];
-
-function ModelPullHelper({ onRefresh }: { onRefresh: () => void }) {
-  const [modelName, setModelName] = useState('');
-  const [copied, setCopied] = useState(false);
-  const cmd = `ollama pull ${modelName.trim() || '<model-name>'}`;
-
-  const copy = () => {
-    if (!modelName.trim()) return;
-    navigator.clipboard.writeText(cmd).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="rounded-2xl bg-(--surface-2) p-4 space-y-3">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Pull a New Model</div>
-      <div className="flex flex-wrap gap-1.5">
-        {SUGGESTED_MODELS.map((m) => (
-          <button key={m} onClick={() => setModelName(m)}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border transition-colors ${modelName === m ? 'border-(--accent-border) bg-(--accent-dim) text-(--accent)' : 'border-(--border) bg-(--surface-3) text-(--text-3) hover:text-(--text-1)'}`}>
-            {m}
-          </button>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input
-          value={modelName}
-          onChange={(e) => setModelName(e.target.value)}
-          placeholder="or type a model name..."
-          className="flex-1 bg-(--surface-3) rounded-xl px-3 py-2 text-sm font-mono text-(--text-1) placeholder-(--text-4) focus:outline-hidden focus:border-(--accent-border)"
-        />
-        <button
-          onClick={copy}
-          disabled={!modelName.trim()}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-(--surface-3) border-(--border) text-(--text-2) hover:bg-(--surface-3)"
-        >
-          {copied ? <><ClipboardCopy className="w-3.5 h-3.5" /> Copied</> : <><Download className="w-3.5 h-3.5" /> Copy Command</>}
-        </button>
-      </div>
-      {modelName.trim() && (
-        <div className="font-mono text-[11px] bg-(--surface-1) rounded-lg px-3 py-2 text-(--success) select-all">{cmd}</div>
-      )}
-      <p className="text-[11px] text-(--text-4)">Paste this in a terminal. When the download finishes, click <button onClick={onRefresh} className="text-(--accent) hover:text-(--accent-hover) underline">Refresh Models</button> to load it.</p>
-    </div>
-  );
-}
 
 const AVATAR_AGENTS = [
   { id: 'alphonso', label: 'Alphonso' },

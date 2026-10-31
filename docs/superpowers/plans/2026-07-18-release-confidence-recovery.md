@@ -1,6 +1,6 @@
 # Release-Confidence Recovery Implementation Plan
 
-> **Status (2026-10-25):** carried out (see `docs/RELEASE_VERIFICATION_2026-07-22.md`).
+> **Status (2026-10-25):** carried out (see `docs/internal/RELEASE_VERIFICATION_2026-07-22.md`).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -127,14 +127,14 @@ git commit -m "docs: reconcile runtime and migration facts"
 - Modify: `playwright.config.js`
 - Modify: `e2e/tauri-mock.js`
 - Modify: affected files in `e2e/*.spec.js`
-- Create: `docs/E2E_RECOVERY_2026-07-18.md`
+- Create: `docs/internal/E2E_RECOVERY_2026-07-18.md`
 
 - [ ] **Step 1: Capture the current failure ledger**
 
 Run: `npx playwright test --reporter=line`
 
 Record each spec/test name, failure category, and current UI contract in
-`docs/E2E_RECOVERY_2026-07-18.md`. Do not classify a timeout as a product bug
+`docs/internal/E2E_RECOVERY_2026-07-18.md`. Do not classify a timeout as a product bug
 until the dev-server and Tauri mock are known to be ready.
 
 - [ ] **Step 2: Add a harness readiness test**
@@ -179,7 +179,7 @@ Expected: all collected Playwright tests pass with no skipped stale failures.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add playwright.config.js e2e docs/E2E_RECOVERY_2026-07-18.md
+git add playwright.config.js e2e docs/internal/E2E_RECOVERY_2026-07-18.md
 git commit -m "test(e2e): restore current UI smoke coverage"
 ```
 
@@ -187,7 +187,7 @@ git commit -m "test(e2e): restore current UI smoke coverage"
 
 **Files:**
 - Modify: `.github/workflows/ci.yml`
-- Modify: `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md`
+- Modify: `docs/internal/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md`
 - Modify: `docs/ALPHONSO_GROUND_TRUTH.md`
 
 - [ ] **Step 1: Add a CI configuration assertion**
@@ -218,7 +218,7 @@ expected E2E conclusion is `success`, not `neutral` or `cancelled`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .github/workflows/ci.yml docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md docs/ALPHONSO_GROUND_TRUTH.md scripts/test-runtime-contract.mjs
+git add .github/workflows/ci.yml docs/internal/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md docs/ALPHONSO_GROUND_TRUTH.md scripts/test-runtime-contract.mjs
 git commit -m "ci: require passing Playwright E2E"
 ```
 
