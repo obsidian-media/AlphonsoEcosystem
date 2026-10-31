@@ -160,6 +160,9 @@ export const config = {
       env: testAppEnv({
         WEBVIEW2_USER_DATA_FOLDER: profileDir,
         ALPHONSO_E2E_PROFILE: dataProfile,
+        // Outside tools (2026-10-30): only the MCP spec may use a local http stand-in server; a debug
+        // build under a test profile honours it, a release build never does.
+        ...(specs.some((s) => /mcp\.e2e\.mjs$/.test(String(s))) ? { ALPHONSO_E2E_MCP_LOCAL: '1' } : {}),
         // The Hermes spec finds a test Hermes folder, never a real one (Hermes gateway, 2026-10-30).
         ...(specs.some((s) => /hermes\.e2e\.mjs$/.test(String(s))) ? { HERMES_HOME: HERMES_HOME_FOR_TEST } : {}),
       }),

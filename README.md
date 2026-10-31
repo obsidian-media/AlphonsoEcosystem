@@ -399,23 +399,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-│  │  lib.rs ~969 lines · 214 Tauri commands · 56 modules   │    │
-=======
-│  │  lib.rs ~966 lines · 212 Tauri commands · 55 modules   │    │
->>>>>>> e829615 (feat(hermes): set up, start and stop a Hermes profile)
-=======
-│  │  lib.rs ~967 lines · 213 Tauri commands · 55 modules   │    │
->>>>>>> 3bfae35 (feat(hermes): find your own Hermes profiles and warn about risky settings)
-=======
-│  │  lib.rs ~971 lines · 216 Tauri commands · 56 modules   │    │
->>>>>>> 33e7344 (feat(hermes): run Hermes steps as runs with progress and Stop)
-=======
-│  │  lib.rs ~972 lines · 217 Tauri commands · 56 modules   │    │
->>>>>>> 7a365c8 (feat(hermes): the resource manager starts, counts and stops Hermes profiles)
+│  │  lib.rs ~982 lines · 225 Tauri commands · 58 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -506,31 +490,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-npm run test           # 6,933 tests across 622 files (src + bridge)
-=======
-npm run test           # 6,933 tests across 616 files (src + bridge)
->>>>>>> 1a3abf4 (feat(hermes): set up and remove a profile for an agent)
-=======
-npm run test           # 6,933 tests across 618 files (src + bridge)
->>>>>>> 3bfae35 (feat(hermes): find your own Hermes profiles and warn about risky settings)
-=======
-npm run test           # 6,933 tests across 619 files (src + bridge)
->>>>>>> 33e7344 (feat(hermes): run Hermes steps as runs with progress and Stop)
-=======
-npm run test           # 6,933 tests across 620 files (src + bridge)
->>>>>>> 21f7a82 (feat(hermes): Hermes's approval requests wait on the board and Telegram)
-=======
-npm run test           # 6,933 tests across 621 files (src + bridge)
->>>>>>> 7a365c8 (feat(hermes): the resource manager starts, counts and stops Hermes profiles)
-=======
-npm run test           # 6,933 tests across 623 files (src + bridge)
->>>>>>> 3bd4c18 (feat(hermes): Hermes profiles in Settings and on the board)
+npm run test           # 6,933 tests across 630 files (src + bridge)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -543,7 +503,7 @@ npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app 
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 417 Rust unit tests across 56 modules
+cargo test                     # 435 Rust unit tests across 58 modules
                                 # (cargo test runs a few more: the async
                                 # #[tokio::test] cases, 370 in all)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
@@ -621,27 +581,7 @@ is the last full release-verification record.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 346 services already exist.
-=======
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 341 services already exist.
->>>>>>> 1a3abf4 (feat(hermes): set up and remove a profile for an agent)
-=======
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 343 services already exist.
->>>>>>> 3bfae35 (feat(hermes): find your own Hermes profiles and warn about risky settings)
-=======
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 345 services already exist.
->>>>>>> 33e7344 (feat(hermes): run Hermes steps as runs with progress and Stop)
-=======
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 346 services already exist.
->>>>>>> 21f7a82 (feat(hermes): Hermes's approval requests wait on the board and Telegram)
-=======
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 348 services already exist.
->>>>>>> 7a365c8 (feat(hermes): the resource manager starts, counts and stops Hermes profiles)
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 354 services already exist.
 
 ## Third-party notices
 

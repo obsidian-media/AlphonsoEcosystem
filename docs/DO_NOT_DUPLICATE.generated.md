@@ -1,31 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-Source-backed inventory: 346 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
-=======
-Source-backed inventory: 341 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
->>>>>>> 1a3abf4 (feat(hermes): set up and remove a profile for an agent)
-=======
-Source-backed inventory: 343 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
->>>>>>> 3bfae35 (feat(hermes): find your own Hermes profiles and warn about risky settings)
-=======
-Source-backed inventory: 345 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
->>>>>>> 33e7344 (feat(hermes): run Hermes steps as runs with progress and Stop)
-=======
-Source-backed inventory: 346 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
->>>>>>> 21f7a82 (feat(hermes): Hermes's approval requests wait on the board and Telegram)
-=======
-Source-backed inventory: 348 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
->>>>>>> 7a365c8 (feat(hermes): the resource manager starts, counts and stops Hermes profiles)
-=======
-Source-backed inventory: 348 services and 181 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
->>>>>>> 3bd4c18 (feat(hermes): Hermes profiles in Settings and on the board)
+Source-backed inventory: 354 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
