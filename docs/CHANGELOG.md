@@ -20,6 +20,7 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 - **Fixed: posting needed Ollama running.** The memory check counted Marcus's posting and sending steps as using a model; they don't once you've approved them.
 - **Fixed: AI clips on Automatic, voice-overs and music** were stopped by the memory check before they could say what to install (music, which is optional, failed instead of being skipped).
 - **Hermes:** the warning about a profile with its own Telegram appears as soon as you connect it.
+- **Fixed: every paid step on Claude failed.** The current Claude model answers with a thinking part first, and Alphonso read only that empty part, so each answer looked blank. Checked live with a real Claude key.
 - **Fixed: Alphonso ignored what a review sent back.** When Maria or Marcus asked for a fix (for example "fill in [Your Name]"), his rewrite never saw it, so the same problem came back and the send failed. His writing now gets his step's instruction, including the fix list.
 
 ### Closing the deferred list (2026-10-30)

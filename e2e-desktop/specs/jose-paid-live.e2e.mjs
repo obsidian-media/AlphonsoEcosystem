@@ -132,6 +132,15 @@ describe('Alphonso desktop: a real paid-model step (live)', () => {
       timeout: 300000, interval: 3000, timeoutMsg: 'the paid step never finished',
     });
     const done = (await savedRequests()).find((r) => r.id === requestId);
+    // What the paid service itself answered: a model error shows up here, not in the step's error.
+    const log = await browser.execute((cid) => {
+      try {
+        const rows = JSON.parse(localStorage.getItem('alphonso_connector_audit_v2') || '[]');
+        return rows.filter((r) => r.connectorId === cid || r.connector === cid).slice(-8)
+          .map((r) => [r.eventType || r.event || r.type || r.action || null, r.details?.error || r.details?.reason || r.error || null, r.details?.httpStatus || null]);
+      } catch { return []; }
+    }, PROVIDER);
+    console.log('PAID-E2E done', JSON.stringify({ status: done.status, step: [done.steps[0].status, done.steps[0].error, done.steps[0].model], connector: log, spent: await spentThisMonth() }));
     expect(done.steps[0].status).toBe('done');
     expect(await spentThisMonth()).toBeGreaterThan(before);
   }).timeout(600000);
