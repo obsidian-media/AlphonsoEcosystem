@@ -87,18 +87,16 @@ describe('ensureTools', () => {
     expect(await ensureTools(['ollama'])).toEqual({ ok: false, reason: "Ollama didn't start. Open Runtime Hub to see its log." });
   });
 
-  it('never starts the tools a step runs itself, only checks they are installed', async () => {
+  // QA, 2026-10-31: refusing here failed a step before it could say it itself, and failed Music,
+  // which is optional and skips itself without AudioCraft. The step's own message wins (Kokoro:
+  // "Install Kokoro in Runtime Hub."; ffmpeg: the backend's, with Homebrew on a Mac).
+  it('never starts or refuses the tools a step runs itself: the step says what it needs', async () => {
     getAllStatus.mockResolvedValue([status('kokoro'), status('audiocraft'), status('whisper')]);
+    media.kokoro = false;
+    media.audiocraft = false;
+    media.ffmpeg = null;
     expect(await ensureTools(['ffmpeg', 'kokoro', 'audiocraft', 'whisper'])).toEqual({ ok: true });
     expect(startTool).not.toHaveBeenCalled();
-    media.kokoro = false;
-    expect(await ensureTools(['kokoro'])).toEqual({ ok: false, reason: "Kokoro isn't installed. Install it in Runtime Hub." });
-    media.ffmpeg = null;
-    expect(await ensureTools(['ffmpeg'])).toEqual({ ok: false, reason: "ffmpeg wasn't found on this computer, so the video can't be put together." });
-    // The backend says how to get it on this computer (closing phase: Homebrew on a Mac).
-    media.ffmpegHelp = 'Install it with Homebrew: brew install ffmpeg';
-    expect(await ensureTools(['ffmpeg'])).toEqual({ ok: false, reason: "ffmpeg wasn't found on this computer, so the video can't be put together. Install it with Homebrew: brew install ffmpeg" });
-    delete media.ffmpegHelp;
   });
 
   it("when the tool list or the media check can't be read, nothing is started and nothing fails", async () => {

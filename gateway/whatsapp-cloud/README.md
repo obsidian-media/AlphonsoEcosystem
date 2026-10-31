@@ -42,7 +42,7 @@ This package is suitable for Railway, Render, or a small VPS deployment.
 - Start command: `npm start`
 - Healthcheck path: `/health`
 
-See [`../../docs/RAILWAY_WHATSAPP_GATEWAY.md`](../../docs/RAILWAY_WHATSAPP_GATEWAY.md) for the full deployment checklist.
+See [`../../docs/RAILWAY_WHATSAPP_GATEWAY.md`](../../docs/internal/RAILWAY_WHATSAPP_GATEWAY.md) for the full deployment checklist.
 
 ## Setup-required until hosted
 

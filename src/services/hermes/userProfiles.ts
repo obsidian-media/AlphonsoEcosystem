@@ -104,6 +104,20 @@ function readConnected(): Record<string, { name: string; folder: string }> {
   }
 }
 
+const changeListeners = new Set<() => void>();
+
+/** Called whenever an agent is connected to one of the user's profiles (QA, 2026-10-31). */
+export function onUserProfilesChanged(listener: () => void): () => void {
+  changeListeners.add(listener);
+  return () => { changeListeners.delete(listener); };
+}
+
+function announceChange(): void {
+  for (const listener of [...changeListeners]) {
+    try { listener(); } catch { /* one screen's refresh never stops another's */ }
+  }
+}
+
 /** Every agent's connected profile of the user's, by agent. */
 export function connectedUserProfiles(): Record<string, { name: string; folder: string }> {
   return readConnected();
@@ -128,5 +142,6 @@ export async function connectUserProfile(name: string, agent: string, key: strin
   } catch {
     // The connection still works; only starting it from Alphonso is lost.
   }
+  announceChange();
   return { ok: true };
 }

@@ -4,7 +4,7 @@
 
 ## Overview
 
-Expands on `docs/IOS_COMPANION_PLAN.md`. The iOS companion is a native SwiftUI app that connects to the Alphonso desktop via WebSocket over local network. Desktop remains the single runtime — iOS is a remote control.
+Expands on `docs/internal/IOS_COMPANION_PLAN.md`. The iOS companion is a native SwiftUI app that connects to the Alphonso desktop via WebSocket over local network. Desktop remains the single runtime — iOS is a remote control.
 
 ---
 

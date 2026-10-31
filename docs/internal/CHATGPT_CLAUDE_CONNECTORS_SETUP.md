@@ -1,6 +1,6 @@
 # ChatGPT + Claude Connector Setup
 
-Status: outbound prompt exchange is wired with supervised connector commands and audit logs. Both are paid: Zero-Cost Mode blocks them, and Jose gives a step to one only when you turn on Settings → Approvals → **Allow paid models** (off by default), at the prices you enter there, inside a monthly cap. Not checked with a paid account yet (unit tests only).
+Status: outbound prompt exchange is wired with supervised connector commands and audit logs. Both are paid: Zero-Cost Mode blocks them, and Jose gives a step to one only when you turn on Settings → General → **Allow paid models** (off by default), at the prices you enter there, inside a monthly cap. Not checked with a paid account yet (unit tests only).
 
 ## Security rules
 

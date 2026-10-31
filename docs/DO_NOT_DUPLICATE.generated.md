@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 354 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 354 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -116,6 +116,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | component | `src/components/miya/ThumbnailStudioTab.tsx` | `ThumbnailStudioTab`, `ThumbnailStudioTabProps` |
 | component | `src/components/MiyaCompanionWidget.tsx` | `MiyaCompanionWidget` |
 | component | `src/components/MiyaStudio.tsx` | `brandKitPrompt`, `MiyaStudio` |
+| component | `src/components/ModelPullHelper.tsx` | `ModelPullHelper` |
 | component | `src/components/ModelSwitcher.tsx` | `CloudModelPicker`, `CloudProvider`, `HermesModelPicker`, `ModelProviderId`, `ModelProviderPicker`, `ModelSwitcher`, `OllamaModelPicker` |
 | component | `src/components/ModeToggle.tsx` | `ModeToggle` |
 | component | `src/components/NotificationCenter.tsx` | `clearPersistedNotifications`, `loadPersistedNotifications`, `NotificationCenter` |
@@ -359,7 +360,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/hermes/hermesStepHooks.ts` | `getHermesHooks`, `HermesStepHooks`, `withHermesHooks` |
 | service | `src/services/hermes/hermesTools.ts` | `HERMES_DIDNT_START`, `HERMES_TOOL_PREFIX`, `hermesLocalModel`, `hermesToolFor`, `hermesToolLabel`, `isHermesTool`, `saveProfileModel`, `startHermesTool`, `stopHermesTool` |
 | service | `src/services/hermes/profileModels.ts` | `hermesLocalModel`, `savedProfileModel`, `SavedProfileModel`, `saveProfileModel` |
-| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
+| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `onUserProfilesChanged`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
@@ -379,7 +380,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/jose/joseQueue.ts` | `giveBackTurn`, `leaveQueue`, `QUEUED_LINE`, `queuePosition`, `requeueAtStart`, `resetQueueForTests`, `takeTurn`, `usesLocalModel`, `WAITING_FOR_TURN` |
 | service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `onRequestStatusChange`, `replacePlanSteps`, `requestForCommand`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `setRequestGroup`, `setRequestQueuedAt`, `updateJoseStep` |
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
-| service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `estimateEffectsUsd`, `estimateElevenLabsUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd` |
+| service | `src/services/jose/joseSpend.ts` | `canSpend`, `CUT_OFF_PATTERN`, `cutOffLine`, `estimateCostUsd`, `estimateEffectsUsd`, `estimateElevenLabsUsd`, `getPaidModelSettings`, `monthSpendUsd`, `notePaidStop`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `PAID_RETRY_MAX_OUTPUT_TOKENS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd`, `takePaidStop` |
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `listStepOutputs`, `priorOutputsForNeeds`, `setStepOutput`, `StepOutput` |
 | service | `src/services/jose/joseStop.ts` | `clearStop`, `isStopRequested`, `NOT_RUNNING`, `onStopRequested`, `STOPPED_LINE`, `stopRequest`, `stopSignal`, `stopWaitsFor` |
 | service | `src/services/jose/joseSummary.ts` | `closingSummary` |
@@ -514,7 +515,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/streamingService.ts` | `abortStream`, `clearStreamHistory`, `getActiveStreams`, `getStreamState`, `startStream`, `StreamEvent`, `subscribeToStreams` |
 | service | `src/services/telegramAutoPollService.ts` | `getTelegramAutoPollState`, `getTelegramEnvSafe`, `runSingleTelegramPoll` |
 | service | `src/services/telegramBrowserConnector.ts` | `browserPollTelegram`, `browserSendTelegram`, `getTelegramPollCursor`, `handleTelegramBotCommand`, `parseTelegramCommand`, `setTelegramPollCursor`, `TelegramAuditEntry`, `TelegramBotVerifyResult`, `TelegramMessage`, `TelegramPollResult`, `TelegramSendResult`, `verifyTelegramBotEnvironment` |
-| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `handleStopCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `restartTelegramCompanion`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
+| service | `src/services/telegramCompanionService.js` | `formatCommandList`, `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `handleStopCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `restartTelegramCompanion`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
 | service | `src/services/toolConnectionService.ts` | `buildToolConnectionPayload`, `listToolConnectionAudit`, `listToolConnections`, `listToolConnectionTypes`, `proveToolConnectionPath`, `removeToolConnection`, `sendToolConnectionMessage`, `SendToolConnectionOptions`, `setToolConnectionStatus`, `testToolConnection`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `ToolConnection`, `ToolConnectionAuditEntry`, `ToolConnectionPatch`, `ToolConnectionResult`, `ToolConnectionType`, `upsertToolConnection` |
 | service | `src/services/toolNotificationDispatcher.ts` | `dispatchReceiptNotifications` |
 | service | `src/services/toolRegistryService.ts` | `executeTool`, `formatToolsForPrompt`, `getAllToolNames`, `getToolDefinition`, `getToolDefinitions`, `ToolArgs`, `ToolContext`, `ToolDefinition`, `ToolExecutionResult`, `ToolParameterSchema` |

@@ -1,284 +1,114 @@
 # Troubleshooting
 
-## Ollama Issues
+Find what you see, then try the fix. Most messages in Alphonso already say what to do; this page explains the common ones.
 
-### "Ollama is not running"
-```bash
-# Start Ollama
-ollama serve
+## Chat and models
 
-# Or on macOS/Linux, it may already be running as a service
-# Check with:
-curl http://localhost:11434/api/tags
-```
+| You see | Fix |
+|---|---|
+| "Ollama is not running" or "Ollama offline" | Press **Start** on the banner, or System → Runtimes → Ollama → **Start**. Alphonso starts Ollama for you when it's installed. |
+| No models to choose from | Runtimes → Ollama, or Setup, installs the starter model. Or in a terminal: `ollama pull llama3.2:3b`. |
+| Replies arrive all at once instead of word by word | You started Ollama yourself and it refuses the app window. Replies still work. For word-by-word replies, let Alphonso start Ollama, or start yours with `OLLAMA_ORIGINS=http://tauri.localhost`. |
+| Replies are slow, or the computer struggles | Use a smaller model, close other programs, and check **Runtime Hub → Memory** for what's loaded. |
+| A warning next to the model | Models under 3B work but give weaker answers. |
+| "OpenRouter is busy. Try again in a minute." | OpenRouter's free models are limited per minute; it tries again by itself once. |
+| "OpenRouter's free limit for today is used up, and no model on this computer can take over." | Start Ollama with a chat model, then **Carry on**. The free limit resets at midnight UTC. |
+| A cloud tab (NVIDIA, Gemini, OpenRouter) is greyed out | Add its key in Settings → Connectors → AI Models. |
 
-### "No models installed"
-```bash
-ollama pull llama3.2:3b
-```
+## Requests and approvals
 
-### Ollama is slow or timing out
-- Check available RAM — llama3.2:3b needs ~4GB
-- Close other applications
-- Try a smaller model: `ollama pull llama3.2:1b`
-- Check if GPU acceleration is available: `ollama run llama3.2:3b "hello"` should respond quickly
+| You see | Fix |
+|---|---|
+| A plan card that does nothing | Bigger requests show their plan first. Press **Run this plan**, or change Settings → General → **Show Jose's plan first**. |
+| "Waiting for you" | A step asks first. Approve it in Chat, on the Requests board (**Approve and carry on**) or on Telegram. |
+| An approval window keeps appearing | That's Approval Mode. Settings → General → **What asks first** chooses what asks; spending, sending and deleting always ask. |
+| "Queued (2nd)." | Requests on your computer's model run one at a time; it starts when the one before finishes. |
+| "Waiting for memory: …" | Not enough RAM or graphics memory free yet. It starts when there is; Runtime Hub → Memory shows what's using it. |
+| A step "needs something set up" | It says what (a tool to install, a key to add). Do that, then **Carry on**. |
+| **Interrupted** | The app closed while it ran. **Carry on** keeps the finished steps. |
+| **Expired** | It waited longer than Settings → General → **Waiting requests expire after** (7 days). Ask again, or set 0 for never. |
+| A paid model is never used | Zero-Cost Mode is on, **Allow paid models** is off, its key isn't set up, or its prices aren't entered. Settings → General → Allow paid models says which. |
+| A Telegram button says "That button has expired." | It's over 7 days old or the request ended; open it on the board. |
 
-### "Could not reach Ollama"
-1. Verify Ollama is running: `curl http://localhost:11434/api/tags`
-2. Check firewall settings
-3. Try restarting Ollama: stop the process and run `ollama serve` again
+## Pictures, video and sound
 
-### Desktop app: chat replies stay empty, header says "Ollama offline" while Ollama is running
+| You see | Fix |
+|---|---|
+| A picture never appears, or "Timed out waiting for ComfyUI" | The first picture after ComfyUI starts loads the model, which can take minutes. Press **Check again**; it's picked up, never made twice. |
+| ComfyUI isn't found, or makes nothing | Settings → Runtime → ComfyUI lists every install found (**Search this computer** looks further). Choose yours, and pick an image model there. |
+| "Windows blocked ffmpeg … (Smart App Control)" | Windows blocks Alphonso's video tool because it isn't signed yet. Voice-overs, finished videos, Shorts and motion need it. You can turn Smart App Control off in Windows Security → App & browser control, but Windows can't turn it back on without a reset. |
+| On a Mac: ffmpeg isn't found | Open Terminal and run `brew install ffmpeg` (install [Homebrew](https://brew.sh) first if needed). |
+| "Install Kokoro in Runtime Hub." | Runtimes → Kokoro → Install. |
+| Music is skipped | AudioCraft isn't installed (optional): Runtimes → AudioCraft → Install. |
+| Making a video from Chat says to install a video model | Runtimes → ComfyUI → Video models suggests one for your graphics card. |
+| "This graphics card has under 8 GB, so AI clips are made smaller…" | Expected on smaller cards. |
+| A "built-in template" notice in Content Studio | The model's reply couldn't be used, and the notice says why. Check Ollama and the chosen model, then try again. |
 
-Ollama answers the desktop window with `403 Forbidden`. On Windows the window's origin is `http://tauri.localhost`, which is not on Ollama's default allow-list.
+## Miya Studio
 
-- From v2.10.0, chat no longer stays empty here: Alphonso sends the conversation through its backend when the window is refused, so you get a reply, all at once instead of streamed. The steps below give you streamed replies again.
-- From v2.9.0, an Ollama that Alphonso starts itself is configured correctly. Close any Ollama you started yourself (tray app, `ollama serve`) and let Alphonso start it, or use Runtimes > Ollama > Start.
-- To keep your own Ollama running, start it with the window origin allowed:
-
-  ```powershell
-  $env:OLLAMA_ORIGINS="http://tauri.localhost"
-  ollama serve
-  ```
-
-  Do not add `tauri://localhost` to `OLLAMA_ORIGINS`: Ollama refuses to start ("bad origin"), and it already allows that scheme.
-
-## Image Generation Issues
-
-### "Image generation failed" with ComfyUI running
-
-Before v2.9.0 ComfyUI refused the app window's requests (403) and no image could be queued. Update to v2.9.0 or later, where the desktop app reaches ComfyUI through its backend.
-
-In plain-browser dev mode (`npm run dev`) the window still calls ComfyUI directly, so ComfyUI must be started with `--enable-cors-header`.
-
-### "Timed out waiting for ComfyUI image output"
-
-The first image after ComfyUI starts has to load the model, which can take several minutes on a small GPU. Before every image Alphonso asks Ollama to free the graphics card, and it waits 15 minutes (5 in v2.9.0). A picture still being made after that is kept: retry the Image step, or press **Check again** in Miya Studio, and the finished picture is picked up instead of starting again.
-
-### ComfyUI makes no image, or Alphonso can't find it
-
-- Settings → Runtime → ComfyUI lists every ComfyUI found on this computer; **Search this computer** looks through your drives. Choose yours there, and set **ComfyUI address** if it isn't `http://127.0.0.1:8188`.
-- A ComfyUI installed by Runtime Hub gets the PyTorch build for your NVIDIA driver and the starter image model. One without an image model can't make a picture: pick or add a model in Settings → Runtime → ComfyUI → Image model.
-
-### Content Studio or Creative Studio shows a "built-in template" notice
-
-The model's reply could not be used, and the notice says why. Check that Ollama is running and a model is selected in Chat, then generate again.
-
-## Build Issues
-
-### Desktop build fails with "Found version mismatched Tauri packages"
-
-The `tauri` crate in `src-tauri/Cargo.lock` and the `@tauri-apps/api` / `@tauri-apps/cli` npm packages must be on the same major.minor. Bump whichever is behind. Since 2026-10-21 PRs check this too (`npm run verify:tauri-versions` in Test & Build), so it should fail before the desktop build does.
-
-
-### `npm install` fails
-```bash
-# Clear cache and retry
-npm cache clean --force
-npm install --legacy-peer-deps
-```
-
-### `npm run tauri dev` fails
-```bash
-# Check Rust is installed
-rustc --version
-
-# Update Rust
-rustup update
-
-# Check Tauri CLI
-npx tauri --version
-
-# On Windows, ensure WebView2 is installed
-# https://developer.microsoft.com/en-us/microsoft-edge/webview2/
-```
-
-### Build hangs or runs out of memory
-```bash
-# Increase Node.js memory limit
-NODE_OPTIONS="--max-old-space-size=4096" npm run build
-```
-
-## Runtime Issues
-
-### App freezes on startup
-- This was fixed in v1.0.3 — make sure you're on the latest release
-- Heavy startup work is deferred to prevent a UI freeze
-- Installed copies check for updates at launch and install them in the app
-
-### WebView2 zombie process (Windows)
-- Fixed in v1.0.2 — window close now calls `std::process::exit(0)`
-- If you see lingering processes, kill them via Task Manager
-
-### Chat not responding
-1. Check Ollama is running and a model is loaded
-2. Check the Ollama status indicator in the top bar
-3. Try switching models in Settings
-4. Check browser console (F12) for errors
-
-### Connectors showing "setup_required" or failing verification
-1. Go to **Settings → Connectors** and enter your credentials in the input fields, then **Save**
-2. Use **Test** in the Connector Health Monitor. "Live check passed" means the service itself answered; "key found" means only that a key is saved (nothing was sent). Each key shows as "saved", "environment only" or "missing".
-3. If it still fails, the reason says what is missing or what the service said; double-check the values (no extra spaces)
-4. See [CONNECTORS.md](./CONNECTORS.md) for per-connector credential names
-
-> **Note**: you do NOT need to set OS environment variables. Keys saved in Settings are kept in the system keychain and used directly (since 2026-10-21 for every connector; before that, a few still needed an environment variable).
-
-### Connector shows "Not set up" after saving credentials (pre-v2.2.3)
-In older versions, the connector verification checked OS environment variables instead of the UI credential store. Upgrade to v2.2.3+ to fix this permanently. Workaround: add credentials to the OS environment and restart the app.
-
-### Chat doesn't scroll to new messages
-- Fixed in v2.2.3 — upgrade to the latest version
-- Auto-scroll now fires by default; it was previously opt-in (broken by default)
-
-### Jose pipeline results / approval buttons not visible in chat (v2.2.3+)
-- All results now appear inline in the chat thread, directly below the last assistant message
-- Scroll down within the chat window to see pipeline receipts, approval buttons, and Nova insights
-- If results still don't appear, check the Ollama status — the pipeline requires Ollama to be running
-
-### Approval modal keeps appearing
-- This is by design — Approval Mode is on by default
-- Settings → General → **What asks first** has a switch per kind of step. Spending, publishing or sending, and deleting always ask, even with Approval Mode off
-- Commands that only read (such as `ollama list`) never ask
-
-## Test Issues
-
-### Tests fail
-```bash
-# Run all tests
-npm run test
-
-# Run with verbose output
-npm run test -- --reporter=verbose
-
-# Run a specific test file
-npm run test -- src/test/policyEnforcementService.test.js
-```
-
-### Rust tests fail
-```bash
-cd src-tauri
-cargo test
-cargo clippy -- -D warnings
-```
-
-## Common Error Messages
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `credentials are missing` | Connector key not saved | Add it in Settings → Connectors |
-| `action blocked by policy` | Zero-cost or approval mode blocking | Check Settings |
-| `agent not allowed` | Agent contract violation | Check AGENT_GUIDE.md |
-| `dead_letter` state | Orchestration packet failed | Check Runtimes → Activity, or the request on the Requests board |
-| `plan_rejected` | Jose's plan broke the rules (a step waiting for itself, a missing step, an agent doing what it may not) | The reason lists each problem; Jose usually falls back to the simple plan, or edit the plan on the board |
-| `budget_exceeded` | A request went over 50 steps or its time limit | Split the request, or plan it again |
-| `WAL mode` errors | SQLite concurrent access | Restart the app |
-
-## Jose and the Requests Board
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| A request shows a plan card and does nothing | Bigger requests show their plan first | Press **Run this plan** (Chat or the board), or change Settings → General → Show Jose's plan first |
-| A request stops with "Waiting for you" | A step asks first (spend, publish or send, delete, or what you switched on in What asks first) | Approve it in Chat, on the board (**Approve and carry on**) or on Telegram |
-| A request shows **Interrupted** | The app closed while it ran | Press **Carry on** on the board, in Chat or on Telegram; finished steps are kept, a step that asks asks again |
-| A waiting request shows **Expired** | It waited longer than Settings → Approvals → Waiting requests expire after (7 days to start) | Ask again, or set 0 for never |
-| A paid model is never used | Allow paid models is off, Zero-Cost Mode is on, the connector isn't set up, or the prices aren't entered | Settings → Approvals → Allow paid models says which one |
-| Telegram doesn't pair | `TELEGRAM_ALLOWED_CHAT_IDS` is empty | Add your chat id in Settings → Connectors → Telegram, then send `/start` |
-| A Telegram button says "That button has expired." | It was older than 7 days, or the request ended | Open the request on the board |
-
-## Miya Studio (content factory)
-
-| Message or symptom | Fix |
-|---------|-----|
-| "Choose an output folder in Settings first, then ask again." | Set **Settings → Output folder**; projects are saved in `<output folder>/<brand>/<project>/` |
-| "Approve the review in Miya Studio first." | The run waits after the script's reviews: approve them in Script Studio (or on the board or Telegram) |
-| Voice-over: "Install Kokoro in Runtime Hub." | Runtimes → Kokoro → Install |
-| Music step skipped | AudioCraft isn't installed: Runtimes → AudioCraft → Install (optional) |
-| "No stock footage keys are set…" | Add a free Pexels, Pixabay or Coverr key in Connectors → Content & Productivity, or leave it: scene pictures are used |
-| "Install a video model in Runtime Hub (ComfyUI), or add a Runway key in Connectors." | Runtimes → ComfyUI → Video models suggests one for your graphics card |
-| "This graphics card has under 8 GB, so AI clips are made smaller and at most 3 seconds…" | Expected on small cards; choose full size in Runtime Hub → ComfyUI → Video models if you want to try |
-| "Runway clips were not approved for this run…" / "Higgsfield clips weren't approved for this run." | Run AI clips again and approve the cost |
-| A clip or picture says "Waiting for Higgsfield…" or is still in ComfyUI | Press **Check again**; it is fetched, never made twice |
-| Characters: "Tick that this is you or that you have permission first." / "Add at least 5 pictures." | A real person needs the permission tick; every character needs 5–20 pictures |
-| "Add your own photos for a real person." | Make pictures with Miya works only for made-up characters |
-| "Install the character reference model in Runtime Hub to keep the character." | Runtimes → ComfyUI → Characters → Install (about 6 GB), or train the character on Higgsfield |
-| Motion: "The clip is longer than 10 seconds." | Trim it, or record a move (it stops by itself at 10 s) |
-| "Alphonso couldn't use the camera…" | Allow the camera in Windows Settings → Privacy → Camera, or choose a file |
-| "This graphics card can't run local motion transfer; Higgsfield can." | Local motion needs about 8 GB of graphics memory |
-| A Short: "Make the finished video first: a highlight or a cut is taken from it." | Run the Finished video step first |
-| A step shows **Out of date** | An earlier step changed; run it again when you want (nothing reruns by itself) |
-| "Higgsfield isn't set up: add your keys and a model id…" | Settings → Connectors → Higgsfield; paste the model ids from the Higgsfield Console |
+| You see | Fix |
+|---|---|
+| "Choose an output folder in Settings first, then ask again." | Settings → Runtime → **Output Folder**. |
+| "Approve the review in Miya Studio first." | The run waits after the script's reviews: approve in Script Studio, on the board or on Telegram. |
+| "No stock footage keys are set…" | Add a free Pexels, Pixabay or Coverr key (Settings → Connectors), or carry on with scene pictures. |
+| "Runway clips were not approved for this run…" | Run AI clips again and approve the cost. |
+| "Waiting for Higgsfield…" | Press **Check again**; it's fetched, never made twice. |
+| "Higgsfield isn't set up…" | Settings → Connectors → Higgsfield: add your keys and paste the model ids from the Higgsfield Console. |
+| Characters: "Tick that this is you or that you have permission first." / "Add at least 5 pictures." | A real person needs the permission tick; every character needs 5–20 pictures. |
+| "Install the character reference model in Runtime Hub to keep the character." | Runtimes → ComfyUI → Characters → Install (about 6 GB), or train the character on Higgsfield. |
+| Motion: "The clip is longer than 10 seconds." | Trim it, or record a move (recording stops at 10 seconds). |
+| "Alphonso couldn't use the camera…" | Allow the camera in your system's privacy settings, or choose a file. |
+| "Make the finished video first…" (a Short) | Run the Finished video step first. |
+| **Out of date** | An earlier step changed. Run it again when you're ready; nothing reruns by itself. |
 
 ## Publishing and the Calendar
 
-| Message or symptom | Fix |
-|---------|-----|
-| "No posts are approved…" | Campaign Studio → Posts → **Approve and schedule** |
-| "Sign in to YouTube again in Settings → Connectors: the sign-in has run out." | Press **Sign in to YouTube**. While your Google project is in Testing, Google ends the sign-in after about 7 days; publish the project and tick "My Google project is Published" |
-| A YouTube video shows **Kept private by YouTube** | YouTube keeps uploads private for a Google project that hasn't passed its audit; Alphonso reminds you at the time with a link to make it public in YouTube Studio |
-| A post shows **Post by hand** | It needs a public link (an Instagram carousel, or a Reel through Instagram Login) and no storage is set up. Its files and caption are in the project's `ready-to-post` folder; or set up Connectors → Your storage |
-| A post shows **Waiting: daily limit** | Instagram's daily limit or Facebook's 30 Reels a day; it goes when there is room |
-| A post shows **Check it** | It was cut off while sending; check the platform, then retry or cancel. It is never sent again blindly |
-| Numbers show "Sign in again to see … numbers" | The account was signed in before reading numbers was asked for; sign in again (posting keeps working) |
-| Moving a post asks first | It is already scheduled on YouTube or Facebook, and moving it changes it there |
+| You see | Fix |
+|---|---|
+| "No posts are approved…" | Campaign Studio → Posts → **Approve and schedule**. |
+| "Sign in to YouTube again in Settings → Connectors: the sign-in has run out." | Press **Sign in to YouTube**. While your Google project is in Testing, Google ends the sign-in after about 7 days; publish the project and tick "My Google project is Published". |
+| **Kept private by YouTube** | YouTube keeps uploads private until your Google project passes its audit. Alphonso reminds you at the time, with a link to make it public. |
+| **Post by hand** | It needs a public link and no storage is set up. Its files and caption are in the project's `ready-to-post` folder; or set up Settings → Connectors → Your storage. |
+| **Waiting: daily limit** | Instagram's or Facebook's daily limit; it goes when there's room. |
+| **Check it** | It was cut off while sending. Check the platform, then retry or cancel; it's never sent again blindly. |
+| "Sign in again to see … numbers" | Sign in again; posting keeps working meanwhile. |
+| Moving a post asks first | It's already scheduled on YouTube or Facebook, and moving it changes it there. |
 
-## WhatsApp Issues
+## Connectors
 
-### Outbound messages not sending
-1. Verify `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` are set in Settings → Connectors → WhatsApp
-2. Check the connector UI shows green for those keys
-3. Ensure the recipient number is in international format (digits only, e.g. `16474842752`)
-4. Verify the access token has not expired — Meta tokens expire after ~60 days; regenerate from App Dashboard
+| You see | Fix |
+|---|---|
+| A connector shows "setup required" | Settings → Connectors: enter the key and **Save**. You don't need environment variables. |
+| **Test** says "key found" but not "Live check passed" | Only the key was found; the service wasn't asked. A failing live check says what the service answered. |
+| "credentials are missing" | Add the key in Settings → Connectors. |
+| "action blocked by policy" | Zero-Cost Mode or Approval Mode stopped it; check Settings → General. |
+| "No outside tool can do this." | Add one in Settings → Connectors → Outside tools (MCP), and make sure it's signed in and switched on. |
+| "Paid servers are used only as their own step." | Agents only read from free servers; a Paid server's tools run as Marcus's step, with your approval. |
+| Telegram doesn't pair | Add your chat ID in Settings → Connectors → Telegram ("required to pair"), then send `/start`. |
+| WhatsApp: nothing arrives | Check the gateway address ends in `/queue/drain`, the verify token matches your gateway's, and the sender's number (digits only, no `+`) is in the allowed list. Full steps: [Connectors](CONNECTORS.md). |
+| WhatsApp: messages don't send | Meta tokens run out after about 60 days; make a new one in your Meta app. Numbers are digits only. |
 
-### Inbound messages not arriving
-1. Confirm `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` is set to `https://<your-railway-url>/queue/drain`
-2. Confirm `WHATSAPP_VERIFY_TOKEN` matches the value set in Railway env vars
-3. Confirm `WHATSAPP_ALLOWED_NUMBERS` contains the sender's number (digits only, no `+`)
-4. Check Railway gateway health: `GET https://<your-railway-url>/health` — should return `"status": "ready"`
-5. Verify Meta webhook subscription is pointing to `https://<your-railway-url>/webhook` and verified
+## Hermes
 
-### Gateway returns 403 on drain
-The `WHATSAPP_VERIFY_TOKEN` in Alphonso must match the `WHATSAPP_VERIFY_TOKEN` env var in Railway. Both must be the same string.
+| You see | Fix |
+|---|---|
+| Setting up a profile fails | Hermes Agent must be installed (System → Runtimes → Hermes Agent); it needs Python 3.11–3.13, which Runtime Hub can install. |
+| A step on Hermes waits for you | Hermes wants to run a command or change something. Approve or reject it on the board or Telegram. |
+| A profile doesn't start | Alphonso starts a profile when a step needs it, yours too; if it can't, the step says why. |
+| "This profile's API server is off. Switch it on in Hermes first." | Your own profile needs its API server on (in that profile's Hermes settings); then enter its API server key in **Use for this agent**. |
+| A Hermes step fails | It never falls back to another agent's answer. Fix the profile, or switch that agent back to Ollama in Settings → Connectors → Agent Providers. |
 
-### Messages blocked (sender not in allowlist)
-WhatsApp sends numbers without a `+` prefix (e.g. `16474842752`). Your `WHATSAPP_ALLOWED_NUMBERS` list should also be digits-only. The gateway strips `+` automatically, but double-check the format.
+## Voice
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `WHATSAPP_ACCESS_TOKEN not set` | Missing credential | Add in Settings → Connectors → WhatsApp |
-| `Gateway drain failed: HTTP 401` | Token mismatch | Match `WHATSAPP_VERIFY_TOKEN` in app and Railway |
-| `Gateway drain failed: HTTP 404` | Wrong drain URL | Use `https://<url>/queue/drain` (not `/webhook`) |
-| `sender_not_allowlisted` | Number not in allowlist | Add digits-only number to `WHATSAPP_ALLOWED_NUMBERS` |
+| You see | Fix |
+|---|---|
+| "Connection failed" | Start Voice OS from System → Voice (install it in Runtime Hub first). |
+| The microphone is blocked | Allow the microphone in your system's privacy settings. |
+| No spoken reply | The voice is downloaded the first time it's used; make sure you're online then. |
+| Slow replies | Use a smaller model. |
 
-## Voice OS Issues
+## Still stuck
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| "Connection failed" in voice UI | Voice server not running | Start from Runtimes → Voice OS → Start (or the Voice page), or set `VOICE_OS_TOKEN` and run `python -m uvicorn main:app --host 127.0.0.1 --port 8766 --no-access-log` in `voice/backend/` |
-| No transcription produced | Ollama not running or no model pulled | Ensure `ollama serve` is running and `ollama pull llama3.2:3b` completed |
-| `ModuleNotFoundError: faster_whisper` | Python deps not installed | Run `pip install -r voice/backend/requirements.txt` in the voice venv |
-| `ModuleNotFoundError: piper` | piper-tts not installed | Run `pip install piper-tts` |
-| `webrtcvad` import error on Windows | MSVC build tools missing | Install [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) |
-| Microphone permission denied | Browser security | Allow microphone in system settings; Tauri WebView requires explicit permission |
-| High voice latency (>3s) | Model too large or slow hardware | Use `llama3.2:1b` in Ollama; set `beam_size=1` in `voice/backend/stt.py` (already default) |
-| Voice server exits immediately | Port 8766 already in use | Kill existing process: `netstat -ano \| findstr 8766`, then `taskkill /PID <pid> /F` |
-| Voice client connects then is rejected immediately | `VOICE_OS_TOKEN` not set for a manually started server | Launch Voice OS from Alphonso (it sets the token), or set the same `VOICE_OS_TOKEN` for the server and client |
-| No audio playback | TTS model file missing | piper downloads the model on first use — ensure internet access for first run |
-| `/health` returns 500 | Model preload failed | Check terminal output for STT/TTS errors; ensure Python 3.10+ and all deps installed |
-
-## Hermes Agent Issues
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Hermes credential row shows "unreachable" after saving | Base URL wrong, or the Hermes profile isn't running | Confirm the profile's own `platforms.api_server.enabled: true` in its `config.yaml`, confirm the port matches, and confirm the profile process is actually running |
-| Hermes tab is greyed out / disabled in Agent Providers | That agent has no saved (or no reachable) Hermes endpoint | Configure it first under Settings → Connectors → API Credentials → Hermes Agents, then return to Agent Providers |
-| Model dropdown shows "Profile unreachable" | `/v1/models` request failed after credentials were saved | Re-check the profile is still running and the API key hasn't been rotated/regenerated on the Hermes side since you saved it |
-| Chat/pipeline reply fails with a Hermes error instead of using Ollama | Expected — by design, a Hermes failure never silently falls back to a different agent's answer | Fix the underlying Hermes profile issue, or switch that agent's provider back to Ollama in Agent Providers |
-| 401 from a Hermes profile after it worked before | The API key was regenerated on the Hermes side | Copy the new key from that profile's `config.yaml` and re-save it in Hermes Agents |
-
-## Getting Help
-
-1. Check [Runtimes → Activity](./AGENT_GUIDE.md#viewing-agent-activity) for audit logs, and the Requests board for a request's steps
-2. Export diagnostics from Operator Dashboard → Export Diagnostics (turn on Settings → Desktop & UI → Developer mode to see the Operator Dashboard)
-3. Check `docs/ALPHONSO_GROUND_TRUTH.md` for verified system state
-4. Open an issue at https://github.com/obsidian-media/AlphonsoEcosystem/issues
+1. Look at the request on the Requests board: each step says what happened.
+2. Settings → Logs shows the crash log.
+3. Open an issue at https://github.com/obsidian-media/AlphonsoEcosystem/issues with what you did and what you saw (don't include keys).

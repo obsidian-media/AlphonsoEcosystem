@@ -104,6 +104,16 @@ describe('the clips step in the plan', () => {
     expect(steps.filter((s) => s.waitFor).map((s) => s.stepId)).toEqual(['scenes', 'publish']);
   });
 
+  it('the clips step carries the engine the plan worked out, for the resource manager (QA, 2026-10-31)', () => {
+    const { brand, project } = setup();
+    for (const clipEngine of [null, 'local', 'runway'] as const) {
+      const clips = contentProjectPlanSteps(project, brand, 'research', { clipEngine }).find((s) => s.stepId === 'clips')!;
+      expect((clips.contentStep as { clipEngine?: unknown }).clipEngine).toBe(clipEngine);
+    }
+    const unknown = contentProjectPlanSteps(project, brand, 'research').find((s) => s.stepId === 'clips')!;
+    expect('clipEngine' in (unknown.contentStep as object)).toBe(false);
+  });
+
   it('older projects gain the clips step, not started', () => {
     const { project } = setup();
     const saved = JSON.parse(localStorage.getItem('alphonso_content_projects_v1')!);

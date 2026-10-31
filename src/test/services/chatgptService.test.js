@@ -50,6 +50,14 @@ describe('chatgptService', () => {
       expect(result.error).toContain('No API key');
     });
 
+    it('says when the answer was cut off at the length limit', async () => {
+      const { sendChatGPTMessage } = await import('../../services/chatgptService');
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ choices: [{ message: { content: 'half' }, finish_reason: 'length' }], usage: {} }) });
+      expect((await sendChatGPTMessage('hello', { stream: false })).cutOff).toBe(true);
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ choices: [{ message: { content: 'done' }, finish_reason: 'stop' }], usage: {} }) });
+      expect((await sendChatGPTMessage('hello', { stream: false })).cutOff).toBe(false);
+    });
+
     it('calls one-shot endpoint when stream disabled', async () => {
       const { sendChatGPTMessage } = await import('../../services/chatgptService');
       fetch.mockResolvedValueOnce({

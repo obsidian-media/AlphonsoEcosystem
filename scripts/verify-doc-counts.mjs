@@ -55,35 +55,8 @@ const CURRENT_TOTAL_TESTS = '6,933';
 //   actualFn    — returns the true current value
 //   multiLine   — if true, search across the whole file (not line by line)
 const CLAIMS = [
-  // ── README.md ────────────────────────────────────────────────
-  {
-    file: 'README.md',
-    label: 'version badge',
-    pattern: /version-([\d.]+)-blue/,
-    actualFn: () => CURRENT_VERSION
-  },
-  // NOTE: the "tests-N%20passing" shields.io badge was removed from README.md's
-  // badge row in the Sprint 5 batch 3 commit (v2.5.11) — this claim intentionally
-  // has no entry anymore since checking for a doc element that was deliberately
-  // removed is validation for a scenario that can no longer occur.
-  {
-    file: 'README.md',
-    label: 'subtitle version',
-    pattern: /> \*\*v([\d.]+)\*\*/,
-    actualFn: () => CURRENT_VERSION
-  },
-  {
-    file: 'README.md',
-    label: 'architecture lib.rs lines',
-    pattern: /lib\.rs ~([\d,]+) lines/,
-    actualFn: () => getAllCounts().libRs.nonEmptyLines
-  },
-  {
-    file: 'README.md',
-    label: 'architecture Tauri commands',
-    pattern: /lib\.rs ~[\d,]+ lines · (\d+) Tauri commands/,
-    actualFn: () => getAllCounts().tauriCommands
-  },
+  // README.md is written for people who use the app (2026-10-30) and states no counts;
+  // the developer docs below carry them.
   // Desktop E2E counts (agent roles Part C2), in both places CLAUDE.md states them.
   {
     file: 'CLAUDE.md',
@@ -109,45 +82,6 @@ const CLAIMS = [
     label: 'desktop E2E checks (suite row)',
     pattern: /Full suite: (\d+) spec files, (\d+) checks/,
     actualFn: () => getAllCounts().desktop.checks,
-    group: 2
-  },
-  {
-    file: 'README.md',
-    label: 'architecture modules',
-    pattern: /(\d+) modules\s+│/,
-    actualFn: () => getAllCounts().rustSource.modules.length
-  },
-  {
-    file: 'README.md',
-    label: 'dev test command count',
-    pattern: /# ([\d,]+) tests across/,
-    actualFn: () => CURRENT_TOTAL_TESTS
-  },
-  {
-    file: 'README.md',
-    label: 'dev test command files',
-    pattern: /([\d,]+) tests across (\d+) files/,
-    actualFn: () => getAllCounts().tests.files,
-    group: 2
-  },
-  {
-    file: 'README.md',
-    label: 'contributing services count',
-    pattern: /(\d+) services already exist/,
-    actualFn: () => getAllCounts().services.files
-  },
-
-  {
-    file: 'README.md',
-    label: 'Rust unit tests (Development section)',
-    pattern: /# (\d+) Rust unit tests across (\d+) modules/,
-    actualFn: () => getAllCounts().rustTests
-  },
-  {
-    file: 'README.md',
-    label: 'Rust modules (Development section)',
-    pattern: /# (\d+) Rust unit tests across (\d+) modules/,
-    actualFn: () => getAllCounts().rustSource.modules.length,
     group: 2
   },
 

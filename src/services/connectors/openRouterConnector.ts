@@ -60,12 +60,16 @@ export interface OpenRouterAnswer {
   /** True when OpenRouter reported the cost; otherwise it is worked out from the tokens and prices. */
   costReported: boolean;
   usage: { promptTokens: number; completionTokens: number };
+  /** Set when the answer stopped at the length limit (finish_reason "length"). */
+  cutOff?: boolean;
 }
 
 export interface OpenRouterFailure {
   ok: false;
   kind: 'rate_limited' | 'key_refused' | 'not_served' | 'no_text' | 'failed';
   message: string;
+  /** A no_text answer that stopped at the length limit, e.g. while the model was still thinking. */
+  cutOff?: boolean;
   providerLimited?: boolean;
   retryAfterSecs?: number;
   resetMs?: number;
@@ -256,7 +260,8 @@ export async function sendOpenRouterMessage(
   }
 
   const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== 'string' || !content.trim()) return { ok: false, kind: 'no_text', message: OPENROUTER_NO_TEXT };
+  const cutOff = data?.choices?.[0]?.finish_reason === 'length' ? { cutOff: true } : {};
+  if (typeof content !== 'string' || !content.trim()) return { ok: false, kind: 'no_text', message: OPENROUTER_NO_TEXT, ...cutOff };
   const usage = data?.usage || {};
   const charged = Number(usage.cost) || 0;
   const ownKey = usage.is_byok === true ? Number(usage.cost_details?.upstream_inference_cost) || 0 : 0;
@@ -267,5 +272,6 @@ export async function sendOpenRouterMessage(
     costUsd: charged + ownKey,
     costReported: usage.cost !== undefined && usage.cost !== null,
     usage: { promptTokens: Number(usage.prompt_tokens) || 0, completionTokens: Number(usage.completion_tokens) || 0 },
+    ...cutOff,
   };
 }

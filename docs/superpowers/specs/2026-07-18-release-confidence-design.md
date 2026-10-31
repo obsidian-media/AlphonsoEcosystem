@@ -1,6 +1,6 @@
 # Release-Confidence Recovery — Design
 
-> **Status (2026-10-25):** carried out; the release-verification record is `docs/RELEASE_VERIFICATION_2026-07-22.md`. Releases since then: v2.7.0 to v2.9.0; 2.10.0 is on `main`, not tagged.
+> **Status (2026-10-25):** carried out; the release-verification record is `docs/internal/RELEASE_VERIFICATION_2026-07-22.md`. Releases since then: v2.7.0 to v2.9.0; 2.10.0 is on `main`, not tagged.
 
 ## Scope
 

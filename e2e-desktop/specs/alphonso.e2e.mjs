@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { enterShell, invoke, ollamaHasModels, warmSelectedModel, mainText, buttonByText, clickSend } from '../helpers.mjs';
+import { enterShell, invoke, ollamaHasModels, warmSelectedModel, mainText, buttonByText, clickSend, needsLargerModel } from '../helpers.mjs';
 
 // CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
@@ -19,6 +19,10 @@ const SHOP = path.join(ROOT, 'shop');
 const BLOG = path.join(ROOT, 'blog');
 const OUTPUT = path.join(ROOT, 'output');
 const ORIGINAL_TEST = "console.log('not yet');\n";
+// A model too small to write a usable change (CI's 1.5B leg, QA 2026-10-31): Alphonso says so,
+// which is right, but the checks below need a change to look at.
+const UNUSABLE_CHANGE = /didn't give a change he could use/;
+
 // The edit typed into the preview: valid JavaScript, since node runs test.js after the approval (QA batch 1).
 const EDITED = "console.log('Edited by the test.');\n";
 
@@ -187,10 +191,13 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     for (const run of (out?.artifacts || []).filter((a) => a.type === 'command_result')) expect(run.exitCode).toBe(0);
   }).timeout(3200000);
 
-  it('a change in shop waits with the preview and is written only after approval', async () => {
+  it('a change in shop waits with the preview and is written only after approval', async function () {
     const { request } = await ask("/jose In shop, change test.js so it prints 'ok'.");
     const step = codeStep(request);
     console.log('ALPHONSO-E2E change', JSON.stringify({ steps: steps(request), files: step?.codePreview?.files?.map((f) => [f.path, f.status]) }));
+    if (UNUSABLE_CHANGE.test(String(step?.error || '')) || (step?.codePreview && !step.codePreview.files.length)) {
+      needsLargerModel(this, 'the model proposed no file change');
+    }
     expect(step?.status).toBe('waiting_approval');
     expect(step.project).toBe('shop');
     const files = step.codePreview.files;
@@ -207,7 +214,9 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     console.log('ALPHONSO-E2E change done', JSON.stringify({ status: done.status, steps: steps(done), summary: (await stepOutput(done, step.stepId))?.summary }));
     // What was approved is what was written (a later fix round may have changed it again).
     // A fix round inside his own run says so in the summary (QA batch 1).
-    const summary = String((await stepOutput(done, step.stepId))?.summary || '');
+    // A step whose checks still fail after the fix rounds ends failed, and its report is then the
+    // step's error, not its output (QA, 2026-10-31: the edit check read only the output).
+    const summary = String((await stepOutput(done, step.stepId))?.summary || done.steps.find((x) => x.stepId === step.stepId)?.error || '');
     const fixed = done.steps.some((x) => x.revises === step.stepId) || /differs from what you approved/.test(summary);
     for (const f of files) {
       const now = fs.readFileSync(path.join(SHOP, f.path), 'utf8');
@@ -235,7 +244,7 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     expect(fs.existsSync(path.join(BLOG, '.git'))).toBe(false);
   });
 
-  it('with two projects and none named, he asks which one, then works in blog', async () => {
+  it('with two projects and none named, he asks which one, then works in blog', async function () {
     const { request } = await ask('/jose Add a README file that says what this project is.');
     const step = codeStep(request);
     console.log('ALPHONSO-E2E which', JSON.stringify({ status: request.status, steps: steps(request), choices: step?.projectChoices }));
@@ -248,17 +257,21 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     const picked = codeStep(after);
     console.log('ALPHONSO-E2E picked', JSON.stringify({ status: after.status, steps: steps(after), project: picked?.project }));
     expect(picked.project).toBe('blog');
+    if (UNUSABLE_CHANGE.test(String(picked.error || ''))) needsLargerModel(this, 'the model gave no usable change');
     if (picked.status === 'waiting_approval') after = (await approveOnBoard(after)).request;
     expect(findFile(BLOG, 'README.md') || findFile(BLOG, 'README')).toBeTruthy();
     expect(findFile(SHOP, 'README.md')).toBeNull();
   }).timeout(3200000);
 
   // Agent roles Part C2: you can edit his change before approving it; your edit is what is written.
-  it('an edited preview is what gets written', async () => {
+  it('an edited preview is what gets written', async function () {
     // A change to an existing file, so it waits: a new file is his own work and asks nothing (QA batch 1).
     const { request } = await ask("/jose In shop, change test.js so it prints 'edited'.");
     const step = codeStep(request);
     console.log('ALPHONSO-E2E edit', JSON.stringify({ steps: steps(request), files: step?.codePreview?.files?.map((f) => [f.path, f.status]) }));
+    if (UNUSABLE_CHANGE.test(String(step?.error || '')) || (step?.codePreview && !step.codePreview.files.length)) {
+      needsLargerModel(this, 'the model proposed no file change');
+    }
     expect(step?.status).toBe('waiting_approval');
     const file = step.codePreview.files[0];
     await openBoard();
@@ -270,7 +283,10 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     await browser.waitUntil(async () => /Edited by you/.test(await (await $('[data-testid="alphonso-code-preview"]')).getText()), { timeout: 30000 });
     await (await $('//main//button[starts-with(normalize-space(.), "Approve and carry on")]')).click();
     const done = (await settle(request.id, 'edit')).request;
-    const summary = String((await stepOutput(done, step.stepId))?.summary || '');
+    console.log('ALPHONSO-E2E edit done', JSON.stringify({ status: done.status, steps: steps(done) }));
+    // A step whose checks still fail after the fix rounds ends failed, and its report is then the
+    // step's error, not its output (QA, 2026-10-31: the edit check read only the output).
+    const summary = String((await stepOutput(done, step.stepId))?.summary || done.steps.find((x) => x.stepId === step.stepId)?.error || '');
     const fixed = done.steps.some((x) => x.revises === step.stepId) || /differs from what you approved/.test(summary);
     if (!fixed) expect(fs.readFileSync(path.join(SHOP, file.path), 'utf8')).toBe(EDITED);
   }).timeout(3200000);
@@ -283,9 +299,12 @@ describe('Alphonso desktop: his code steps in your projects', () => {
       && !s.revises && !s.helpRound && !s.replaces);
     console.log('ALPHONSO-E2E two', JSON.stringify({ steps: steps(request), projects: code.map((s) => s.project) }));
     expect(code.map((s) => s.project).sort()).toEqual(['blog', 'shop']);
-    // Nothing is approved: the request is rejected, so its locks are let go.
-    await openBoard();
-    const reject = await $('//main//button[normalize-space(.)="Reject"]');
-    if (await reject.isExisting()) await reject.click();
+    // Nothing is approved: a request still waiting is rejected, so its locks are let go. New files
+    // are his own work and ask nothing, so the request may already be done (7B run, 2026-10-31).
+    if (request.status === 'waiting_approval' || request.steps.some((s) => s.status === 'waiting_approval')) {
+      await openBoard();
+      const reject = await $('//main//button[normalize-space(.)="Reject"]');
+      if (await reject.isExisting()) await reject.click();
+    }
   }).timeout(3200000);
 });

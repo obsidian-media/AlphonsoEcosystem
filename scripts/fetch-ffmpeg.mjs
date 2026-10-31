@@ -74,6 +74,18 @@ export function KEEP_FILE(entryPath) {
   return null;
 }
 
+/**
+ * Linux: each library gets the search path `$ORIGIN` (its own folder). The libraries
+ * ship with none; ffmpeg finds them through its own path, but linuxdeploy (the AppImage
+ * packer) checks each library on its own and stopped at libswresample -> libavutil
+ * (CI, 2026-10-30). Run with patchelf, which the Linux CI jobs install.
+ */
+export function rpathCommands(kept, vendorDir) {
+  return kept
+    .filter((name) => name.startsWith('lib/'))
+    .map((name) => ['patchelf', ['--set-rpath', '$ORIGIN', `${vendorDir}/${name}`]]);
+}
+
 const STAMP = join(VENDOR_DIR, '.version');
 
 async function download(url, destPath) {
@@ -126,7 +138,7 @@ async function main() {
   for (const name of readdirSync(VENDOR_DIR)) {
     if (name !== '.gitkeep') rmSync(join(VENDOR_DIR, name), { recursive: true, force: true });
   }
-  let kept = 0;
+  const keptNames = [];
   for (const file of walk(unpacked)) {
     const name = keep(relative(unpacked, file));
     if (!name) continue;
@@ -135,7 +147,16 @@ async function main() {
     // copyFileSync follows a link, so each library is a real file under the name asked for.
     copyFileSync(file, target);
     if (name.startsWith('bin/')) chmodSync(target, 0o755);
-    kept += 1;
+    keptNames.push(name);
+  }
+  if (platform === 'linux') {
+    for (const [program, args] of rpathCommands(keptNames, VENDOR_DIR)) {
+      try {
+        execFileSync(program, args, { stdio: 'inherit' });
+      } catch (error) {
+        throw new Error(`[fetch-ffmpeg] patchelf is needed to bundle ffmpeg on Linux (${error.message})`);
+      }
+    }
   }
   if (programs.some((program) => !existsSync(join(VENDOR_DIR, program)))) {
     throw new Error(`[fetch-ffmpeg] the archive had no ${programs.join(' or ')}`);
@@ -143,7 +164,7 @@ async function main() {
   writeFileSync(STAMP, asset.sha256);
   rmSync(unpacked, { recursive: true, force: true });
   rmSync(archive, { force: true });
-  console.log(`[fetch-ffmpeg] bundled ${kept} files into ${VENDOR_DIR}`);
+  console.log(`[fetch-ffmpeg] bundled ${keptNames.length} files into ${VENDOR_DIR}`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

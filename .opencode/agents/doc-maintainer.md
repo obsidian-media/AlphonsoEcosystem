@@ -47,8 +47,8 @@ You are a documentation maintenance agent for Alphonso. You verify that docs mat
 ### Other Docs
 - `docs/CONNECTORS.md` — all 33 connectors documented (`DEFAULT_CONNECTORS` in `connectorRegistry.js`)?
 - `docs/SECURITY_CONFIG_REPORT.md` — CSP still matches `tauri.conf.json`?
-- `docs/UPDATER_RELEASE_PIPELINE.md` — still accurate?
-- `docs/FRONTEND_MIGRATION_REPORT.md` — TypeScript progress accurate?
+- `docs/internal/UPDATER_RELEASE_PIPELINE.md` — still accurate?
+- `docs/internal/FRONTEND_MIGRATION_REPORT.md` — TypeScript progress accurate?
 
 ### Cross-Reference Check
 - Does CLAUDE.md reference files that don't exist?
