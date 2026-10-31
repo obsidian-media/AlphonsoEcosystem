@@ -163,7 +163,9 @@ import { expireWaitingRequests } from './services/jose/joseExpiry';
 import { loadUserSkills } from './services/skills/userSkills';
 import { startPostScheduler, stopScheduler } from './services/marcusExecutionService';
 import { startResourceWatcher } from './services/resources/idleStop';
-import { startPhoneLink, phoneAccessOn, webSocketFactory } from './services/phone/phoneLink';
+import { startPhoneLink, phoneAccessOn, webSocketFactory, onPhoneCall, publish as publishToPhones } from './services/phone/phoneLink';
+import { handlePhoneCall } from './services/phone/phoneCalls';
+import { startPhoneMirror } from './services/phone/phoneMirror';
 import { phoneAuth, phoneRelayUrl } from './services/phone/phoneAccount';
 import { randomHex } from './lib/randomId';
 
@@ -242,7 +244,10 @@ function AppShell() {
     if (IS_COACH_WINDOW) return undefined;
     const relayUrl = phoneRelayUrl();
     if (!relayUrl || !phoneAccessOn()) return undefined;
-    return startPhoneLink({ relayUrl, auth: phoneAuth, socket: webSocketFactory });
+    const offCalls = onPhoneCall(handlePhoneCall);
+    const stopMirror = startPhoneMirror({ publish: publishToPhones });
+    const stopLink = startPhoneLink({ relayUrl, auth: phoneAuth, socket: webSocketFactory });
+    return () => { stopLink(); stopMirror(); offCalls(); };
   }, []);
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;
