@@ -325,4 +325,6 @@ export interface ContentStepPayload {
   postRef?: { projectId: string; postId: string };
   /** Real web results Hector found (research steps): the only sources allowed. */
   sources?: { url: string; title: string; snippet: string }[];
+  /** AI clips only: the engine the plan worked out (null = none can make clips here). */
+  clipEngine?: 'local' | 'runway' | 'higgsfield' | null;
 }
