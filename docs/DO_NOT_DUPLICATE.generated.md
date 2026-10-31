@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 354 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 355 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -102,7 +102,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | component | `src/components/miya/CharactersEditor.tsx` | `CharactersEditor` |
 | component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab`, `selectContentProject` |
 | component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
-| component | `src/components/miya/HiggsfieldResults.tsx` | `HiggsfieldMedia`, `HiggsfieldResultsList` |
+| component | `src/components/miya/HiggsfieldResults.tsx` | `ChatMediaList`, `HiggsfieldMedia`, `HiggsfieldResultsList` |
 | component | `src/components/miya/IdeasList.tsx` | `IdeasList` |
 | component | `src/components/miya/MotionPicker.tsx` | `MotionPicker` |
 | component | `src/components/miya/MotionRecorder.tsx` | `MotionRecorder` |
@@ -277,6 +277,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/contentFactory/adCopyExport.ts` | `AD_NETWORKS`, `AdCopy`, `adCsv`, `AdNetwork`, `adsForNetwork`, `writeAdCsv` |
 | service | `src/services/contentFactory/brandResults.ts` | `Band`, `BANDS`, `brandMedian`, `BrandResultRow`, `brandResultRows`, `FIRST_POSTS`, `MAIN_METRIC`, `MIN_POSTS_TO_COMPARE`, `permissionBanners`, `postBand` |
 | service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
+| service | `src/services/contentFactory/chatMedia.ts` | `askChatMedia`, `CHAT_CLIP_SECONDS`, `CHAT_MEDIA_LABEL`, `CHAT_MUSIC_SECONDS`, `chatMediaDoneSince`, `chatMediaFor`, `ChatMediaKind`, `chatMediaKindOf`, `chatMediaPromptOf`, `ChatMediaResult`, `checkChatMedia`, `executeChatMedia`, `listChatMedia`, `markChatMediaShown`, `NO_AUDIOCRAFT`, `NO_VIDEO_MODEL` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
 | service | `src/services/contentFactory/comfyCharacter.ts` | `buildCharacterWorkflow`, `CHARACTER_REFERENCE_MISSING`, `characterReferenceAvailable`, `makeCharacterPicture`, `REFERENCE_CHECKPOINT`, `resetReferenceCacheForTests`, `withCharacterPrompt` |
 | service | `src/services/contentFactory/comfyMotionClip.ts` | `buildMotionWorkflow`, `localMotionAvailable`, `makeComfyMotionClip`, `MOTION_CARD_TOO_SMALL`, `MOTION_MODEL_MISSING`, `motionFrames`, `resetMotionCacheForTests` |

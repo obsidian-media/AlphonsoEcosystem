@@ -119,6 +119,8 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   creative_music: ['write_own_work'],
   creative_sfx: ['write_own_work'],
   creative_higgsfield: ['write_own_work', 'spend'],
+  creative_chat_video: ['write_own_work'],
+  creative_chat_music: ['write_own_work'],
   creative_character_train: ['write_own_work', 'spend'],
   assistant_answer: ['read'],
   // Agent roles Part C2.

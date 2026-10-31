@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { HiggsfieldResultsList } from './miya/HiggsfieldResults';
+import { ChatMediaList, HiggsfieldResultsList } from './miya/HiggsfieldResults';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bot,
@@ -1050,6 +1050,7 @@ export function MiyaStudio({
           <div className="space-y-4">
             {/* Asked of Higgsfield by name from anywhere (phase 4b). */}
             <HiggsfieldResultsList outputRoot={String(settings?.outputFolder || '')} />
+            <ChatMediaList outputRoot={String(settings?.outputFolder || '')} />
             <section className="card">
               <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-(--text-3)">Pipeline Inputs</div>
               <PipelineInputs pipeline={pipeline} setPipeline={setPipeline} />

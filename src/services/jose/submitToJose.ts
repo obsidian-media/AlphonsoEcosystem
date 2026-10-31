@@ -126,6 +126,14 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
     }
   }
 
+  // Video or music asked for (closing phase, owner 2026-10-30): Miya makes it on this computer,
+  // or the request says what to install. "Plan this fresh" plans instead.
+  if (!planFresh) {
+    const { askChatMedia } = await import('../contentFactory/chatMedia');
+    const media = await askChatMedia({ text, source, onProgress });
+    if (media) return media;
+  }
+
   const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });
   // A picture is Miya's work: one step of hers, like any other (agent roles Part A).
   if (shortcut?.kind === 'image_step') {
