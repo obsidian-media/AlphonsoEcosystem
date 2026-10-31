@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { enterShell, invoke, ollamaHasModels, warmSelectedModel, mainText, buttonByText, clickSend } from '../helpers.mjs';
+import { enterShell, invoke, ollamaHasModels, warmSelectedModel, mainText, buttonByText, clickSend, needsLargerModel } from '../helpers.mjs';
 
 // CI's model run sets ALPHONSO_E2E_MODEL (Jose phase 7); locally the 7B model when installed.
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
@@ -19,6 +19,10 @@ const SHOP = path.join(ROOT, 'shop');
 const BLOG = path.join(ROOT, 'blog');
 const OUTPUT = path.join(ROOT, 'output');
 const ORIGINAL_TEST = "console.log('not yet');\n";
+// A model too small to write a usable change (CI's 1.5B leg, QA 2026-10-31): Alphonso says so,
+// which is right, but the checks below need a change to look at.
+const UNUSABLE_CHANGE = /didn't give a change he could use/;
+
 // The edit typed into the preview: valid JavaScript, since node runs test.js after the approval (QA batch 1).
 const EDITED = "console.log('Edited by the test.');\n";
 
@@ -187,10 +191,13 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     for (const run of (out?.artifacts || []).filter((a) => a.type === 'command_result')) expect(run.exitCode).toBe(0);
   }).timeout(3200000);
 
-  it('a change in shop waits with the preview and is written only after approval', async () => {
+  it('a change in shop waits with the preview and is written only after approval', async function () {
     const { request } = await ask("/jose In shop, change test.js so it prints 'ok'.");
     const step = codeStep(request);
     console.log('ALPHONSO-E2E change', JSON.stringify({ steps: steps(request), files: step?.codePreview?.files?.map((f) => [f.path, f.status]) }));
+    if (UNUSABLE_CHANGE.test(String(step?.error || '')) || (step?.codePreview && !step.codePreview.files.length)) {
+      needsLargerModel(this, 'the model proposed no file change');
+    }
     expect(step?.status).toBe('waiting_approval');
     expect(step.project).toBe('shop');
     const files = step.codePreview.files;
@@ -237,7 +244,7 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     expect(fs.existsSync(path.join(BLOG, '.git'))).toBe(false);
   });
 
-  it('with two projects and none named, he asks which one, then works in blog', async () => {
+  it('with two projects and none named, he asks which one, then works in blog', async function () {
     const { request } = await ask('/jose Add a README file that says what this project is.');
     const step = codeStep(request);
     console.log('ALPHONSO-E2E which', JSON.stringify({ status: request.status, steps: steps(request), choices: step?.projectChoices }));
@@ -250,17 +257,21 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     const picked = codeStep(after);
     console.log('ALPHONSO-E2E picked', JSON.stringify({ status: after.status, steps: steps(after), project: picked?.project }));
     expect(picked.project).toBe('blog');
+    if (UNUSABLE_CHANGE.test(String(picked.error || ''))) needsLargerModel(this, 'the model gave no usable change');
     if (picked.status === 'waiting_approval') after = (await approveOnBoard(after)).request;
     expect(findFile(BLOG, 'README.md') || findFile(BLOG, 'README')).toBeTruthy();
     expect(findFile(SHOP, 'README.md')).toBeNull();
   }).timeout(3200000);
 
   // Agent roles Part C2: you can edit his change before approving it; your edit is what is written.
-  it('an edited preview is what gets written', async () => {
+  it('an edited preview is what gets written', async function () {
     // A change to an existing file, so it waits: a new file is his own work and asks nothing (QA batch 1).
     const { request } = await ask("/jose In shop, change test.js so it prints 'edited'.");
     const step = codeStep(request);
     console.log('ALPHONSO-E2E edit', JSON.stringify({ steps: steps(request), files: step?.codePreview?.files?.map((f) => [f.path, f.status]) }));
+    if (UNUSABLE_CHANGE.test(String(step?.error || '')) || (step?.codePreview && !step.codePreview.files.length)) {
+      needsLargerModel(this, 'the model proposed no file change');
+    }
     expect(step?.status).toBe('waiting_approval');
     const file = step.codePreview.files[0];
     await openBoard();

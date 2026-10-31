@@ -133,6 +133,11 @@ describe('Alphonso desktop: Marcus sends what you approved', () => {
     if (!marcus && /rounds of fixes, so nothing was sent/.test(String(lastMarcus?.error || ''))) {
       needsLargerModel(this, 'the note still had a gap to fill after the fix rounds');
     }
+    // A 1.5B planner gave the send to a GitHub release instead (CI, 2026-10-31); Marcus then rightly
+    // says GitHub isn't set up and sends nothing.
+    if (!marcus && ['distribution_release', 'distribution_issue'].includes(lastMarcus?.actionType)) {
+      needsLargerModel(this, `the planner gave the send to ${lastMarcus.actionType}`);
+    }
     expect(marcus).toBeTruthy();
     expect(marcus.sendPreview.connector).toBe('n8n');
     expect(marcus.note.startsWith('Start your n8n workflow Team notes with: “')).toBe(true);
