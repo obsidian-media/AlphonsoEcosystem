@@ -16,6 +16,10 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 - **Telegram: `/pause`** pauses push notifications. `/stop` was listed twice and always stopped the running request.
 - **Fixed:** four messages sent you to "Settings → Approvals", which doesn't exist; Allow paid models is in Settings → General.
 - **Fixed on Linux:** packing the AppImage failed once ffmpeg was bundled (its libraries couldn't find each other).
+- **Fixed: Claude and ChatGPT keys couldn't be entered.** Their sections in Settings → Connectors were covered by a "Coming Soon" panel since August, so Allow paid models could never use them. Both can be set up now.
+- **Fixed: posting needed Ollama running.** The memory check counted Marcus's posting and sending steps as using a model; they don't once you've approved them.
+- **Fixed: AI clips on Automatic, voice-overs and music** were stopped by the memory check before they could say what to install (music, which is optional, failed instead of being skipped).
+- **Hermes:** the warning about a profile with its own Telegram appears as soon as you connect it.
 
 ### Closing the deferred list (2026-10-30)
 - **Make a video or music from Chat.** "Make a video of a cat on a boat" or "create calm piano music for my intro" is now Miya's step: a picture from ComfyUI turned into a short clip by the video model you installed in Runtime Hub, or a piece of music from AudioCraft. It plays in Chat and is listed in Miya Studio → Quick package. Without the tool, Alphonso says what to install and starts nothing.

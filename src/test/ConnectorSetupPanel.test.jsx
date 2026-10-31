@@ -189,6 +189,22 @@ describe('ConnectorSetupPanel', () => {
     expect(auth.saveConnectorCredential).toHaveBeenCalledWith('openrouter', 'OPENROUTER_API_KEY', 'sk-or-test');
   });
 
+  // QA, 2026-10-31: Claude and ChatGPT sat under a "Coming Soon" cover since 2026-08-17, so their
+  // keys (which Allow paid models needs) could not be typed in, though both work for Jose's steps.
+  it('Claude and ChatGPT keys can be typed and saved, with no Coming Soon cover', () => {
+    render(<ConnectorSetupPanel />);
+    const category = screen.getByTestId('connector-category-ai_models');
+    if (category.getAttribute('aria-expanded') !== 'true') fireEvent.click(category);
+    expect(screen.queryByText('Coming Soon')).toBeNull();
+    expect(screen.queryByText(/Not yet active in the routing pipeline/)).toBeNull();
+    for (const placeholder of ['sk-ant-...', 'sk-...']) {
+      const field = screen.getAllByPlaceholderText(placeholder)[0];
+      expect(field.closest('[aria-hidden="true"]')).toBeNull();
+      expect(field.closest('.pointer-events-none')).toBeNull();
+    }
+    expect(screen.getAllByText(/Allow paid models/).length).toBeGreaterThan(0);
+  });
+
   it('has an ElevenLabs section whose Test lists your voices', async () => {
     localStorage.clear();
     render(<ConnectorSetupPanel />);

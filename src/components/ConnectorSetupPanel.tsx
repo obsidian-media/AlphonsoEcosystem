@@ -331,24 +331,6 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
   );
 }
 
-function PlaceholderConnectorBanner({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return (
-    <div className="relative">
-      {/* Overlay covers the children area and catches pointer events — no pointer-events-none. */}
-      <div className="absolute inset-0 z-10 rounded-2xl bg-(--surface-1) backdrop-blur-[1px]" />
-      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-(--warning-border) bg-(--warning-dim) px-2.5 py-1">
-        <span className="h-1.5 w-1.5 rounded-full bg-(--warning)" />
-        <span className="text-[10px] font-semibold tracking-wide text-(--warning)">Coming Soon</span>
-      </div>
-      {/* pointer-events-none + aria-hidden ensure neither mouse events nor assistive
-          technology can reach or activate the disabled credential form. */}
-      <div className="pointer-events-none opacity-40" aria-hidden="true">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 interface HermesAgentRowState {
   url: string;
   key: string;
@@ -1142,23 +1124,19 @@ export function ConnectorSetupPanel(): React.JSX.Element {
 
         <CollapsibleCategory id="ai_models" label="AI Models" icon={Bot} defaultOpen={false}>
 
-          <PlaceholderConnectorBanner>
-            <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
-              fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
-              onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
-              hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
-              savedLabel="Anthropic key saved" />
-            {anthropicApiKey && <CloudModelSelect provider="claude" />}
-          </PlaceholderConnectorBanner>
+          <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
+            fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
+            hint="Used for Jose's steps when Settings → General → Allow paid models is on and this is the provider chosen there. Every paid step asks first, with the cost."
+            savedLabel="Anthropic key saved" />
+          {anthropicApiKey && <CloudModelSelect provider="claude" />}
 
-          <PlaceholderConnectorBanner>
-            <CredentialSection title="ChatGPT (OpenAI)" icon={Bot} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
-              fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
-              onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
-              hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
-              savedLabel="OpenAI key saved" />
-            {openaiApiKey && <CloudModelSelect provider="chatgpt" />}
-          </PlaceholderConnectorBanner>
+          <CredentialSection title="ChatGPT (OpenAI)" icon={Bot} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
+            fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
+            hint="Used for Jose's steps when Settings → General → Allow paid models is on and this is the provider chosen there. Every paid step asks first, with the cost."
+            savedLabel="OpenAI key saved" />
+          {openaiApiKey && <CloudModelSelect provider="chatgpt" />}
 
           <CredentialSection title="Qwen / DashScope" icon={Cpu} borderColor="border-yellow-300/20" bgColor="bg-yellow-500/8" accentColor="text-yellow-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: qwenApiKey, onChange: setQwenApiKey, key: 'DASHSCOPE_API_KEY' }]}
@@ -1169,7 +1147,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
           <CredentialSection title="DeepSeek AI" icon={Cpu} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: deepseekApiKey, onChange: setDeepseekApiKey, key: 'DEEPSEEK_API_KEY' }]}
             onSave={() => saveConnectorApiKey('deepseek', { DEEPSEEK_API_KEY: deepseekApiKey })}
-            hint="Get your key at platform.deepseek.com. OpenAI-compatible API — deepseek-chat model. Use as an alternative to Claude/ChatGPT for Hector research."
+            hint="Get your key at platform.deepseek.com. DeepSeek bills you directly, and Zero-Cost Mode doesn't block it."
             savedLabel="DeepSeek key saved" />
 
           <CredentialSection title="NVIDIA NIM" icon={Cpu} borderColor="border-lime-300/20" bgColor="bg-lime-500/8" accentColor="text-lime-400"

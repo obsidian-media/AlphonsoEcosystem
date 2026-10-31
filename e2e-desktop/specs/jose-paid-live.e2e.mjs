@@ -24,7 +24,6 @@ const OUTPUT_PRICE = Number(process.env.ALPHONSO_LIVE_PAID_OUTPUT_PRICE);
 const PROVIDER = ANTHROPIC ? 'claude' : 'chatgpt';
 const KEY = ANTHROPIC || OPENAI;
 const KEY_PLACEHOLDER = PROVIDER === 'claude' ? 'sk-ant-...' : 'sk-...';
-const SECTION_TITLE = PROVIDER === 'claude' ? 'Claude (Anthropic)' : 'ChatGPT (OpenAI)';
 
 async function useSettings(values) {
   const loaded = await invoke('load_settings');
@@ -94,13 +93,25 @@ describe('Alphonso desktop: a real paid-model step (live)', () => {
     await $('[aria-label="Open settings"]').click();
     await browser.waitUntil(async () => /API CREDENTIALS|General/.test(await mainText()), { timeout: 30000 });
     await buttonByText('Connectors').click();
-    await buttonByText('AI Models').click();
-    const field = await $(`//main//*[contains(normalize-space(.), "${SECTION_TITLE}")]/ancestor::div[contains(@class, "rounded-2xl")][1]//input[@placeholder="${KEY_PLACEHOLDER}"]`);
-    await field.waitForExist({ timeout: 30000 });
-    await field.scrollIntoView();
+    // Open AI Models only when it's closed: a click on an open section folds it (QA, 2026-10-31).
+    const category = await $('[data-testid="connector-category-ai_models"]');
+    await category.waitForExist({ timeout: 30000 });
+    if ((await category.getAttribute('aria-expanded')) !== 'true') await category.click();
+    // The box by its placeholder, then the Save & Enable that follows it (as live-accounts does).
+    const field = await $(`input[placeholder="${KEY_PLACEHOLDER}"]`);
+    await field.waitForDisplayed({ timeout: 30000 });
+    await field.scrollIntoView({ block: 'center' });
+    await field.click();
     await field.setValue(KEY);
-    const section = await field.$('./ancestor::div[contains(@class, "rounded-2xl")][1]');
-    await (await section.$('.//button[contains(normalize-space(.), "Save")]')).click();
+    let saved = false;
+    for (const save of await $$('//button[normalize-space(.)="Save & Enable"]')) {
+      if (await browser.execute((f, b) => Boolean(f.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING), field, save)) {
+        await save.click();
+        saved = true;
+        break;
+      }
+    }
+    expect(saved).toBe(true);
     await browser.waitUntil(async () => /key saved/i.test(await mainText()), { timeout: 30000, timeoutMsg: 'the key was not saved' });
   }).timeout(120000);
 
