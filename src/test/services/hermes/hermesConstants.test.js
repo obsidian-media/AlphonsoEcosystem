@@ -9,7 +9,7 @@ describe('Hermes reading toolsets', () => {
     const rust = readFileSync(resolve(__dirname, '../../../../src-tauri/src/hermes_profiles.rs'), 'utf8');
     const block = rust.match(/READING_TOOLSETS: &\[&str\] = &\[([^\]]*)\]/);
     expect(block).toBeTruthy();
-    const names = [...(block?.[1] || '').matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    const names = [...((block && block[1]) || '').matchAll(/"([^"]+)"/g)].map((m) => m[1]);
     expect(names).toEqual([...READING_TOOLSETS]);
   });
 });
