@@ -124,6 +124,14 @@ describe('claudeService', () => {
       expect(result.text).toBe('{"ok": true}');
     });
 
+    it('says when the answer was cut off at the length limit', async () => {
+      const { sendClaudeMessage } = await import('../../services/claudeService');
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ content: [{ type: 'text', text: '{"doFirst": "Coll' }], stop_reason: 'max_tokens', usage: {} }) });
+      expect((await sendClaudeMessage('hello')).cutOff).toBe(true);
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ content: [{ type: 'text', text: 'done' }], stop_reason: 'end_turn', usage: {} }) });
+      expect((await sendClaudeMessage('hello')).cutOff).toBe(false);
+    });
+
     it('extracts HTTP error message on failure', async () => {
       const { sendClaudeMessage } = await import('../../services/claudeService');
       fetch.mockResolvedValueOnce({

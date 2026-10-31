@@ -15,6 +15,34 @@ const SPEND_KEY = 'alphonso_jose_spend_v1';
  */
 export const PAID_MAX_OUTPUT_TOKENS = 4096;
 
+/** A paid answer cut off at PAID_MAX_OUTPUT_TOKENS is asked once more with this much room (QA, 2026-10-31). */
+export const PAID_RETRY_MAX_OUTPUT_TOKENS = 8192;
+
+/** What every cut-off message contains; the step runner does not retry a step that failed this way. */
+export const CUT_OFF_PATTERN = /cut off at the length limit/;
+
+// The last cut-off per agent, for the step runner: Nova, Hector and Echo turn a model error into
+// their own "unreadable" line, which would hide it (QA, 2026-10-31). Like withAgentModel, per agent.
+const cutOffNotes = new Map<string, string>();
+
+export function noteCutOff(agent: string, line: string): void {
+  if (agent) cutOffNotes.set(agent, line);
+}
+
+/** The agent's last cut-off line, once; null when there is none. */
+export function takeCutOff(agent: string): string | null {
+  const line = cutOffNotes.get(agent) ?? null;
+  cutOffNotes.delete(agent);
+  return line;
+}
+
+/** Said when a paid answer was still cut off after the retry with more room, or the retry would pass the cap. */
+export function cutOffLine(who: string, why: 'still' | 'cap' = 'still'): string {
+  return why === 'cap'
+    ? `${who}'s answer was cut off at the length limit, and asking again with more room would pass your monthly cap.`
+    : `${who}'s answer was cut off at the length limit, even with twice the room. Ask for a shorter answer, or choose a model that thinks less.`;
+}
+
 /** Room in a paid step's estimate for what it is given besides its instruction (earlier steps' work). */
 export const PAID_PROMPT_ALLOWANCE_CHARS = 4000;
 

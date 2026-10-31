@@ -141,6 +141,8 @@ interface ClaudeResult {
   latencyMs?: number;
   error?: string;
   trust: string;
+  /** True when Claude stopped at the length limit (stop_reason "max_tokens"). */
+  cutOff?: boolean;
 }
 
 export async function sendClaudeMessage(text: string, options: ClaudeOptions = {}): Promise<ClaudeResult> {
@@ -219,6 +221,7 @@ async function sendClaudeOneShot({ apiKey, model, maxTokens, messages, systemPro
       model,
       usage: data?.usage || null,
       latencyMs,
+      cutOff: data?.stop_reason === 'max_tokens',
       trust: TRUST_STATES.VERIFIED
     };
   } catch (error) {

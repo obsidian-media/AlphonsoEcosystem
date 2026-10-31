@@ -341,6 +341,31 @@ describe('Jose runs plans as step graphs', () => {
     expect(String(result.executionReceipts[0].reason)).toMatch(/^Tried \d+ times; it still failed: model gave up\. Tell me how to go on\.$/);
   });
 
+  // QA, 2026-10-31: a paid answer cut off at the length limit is not tried again; it would only
+  // be paid for again (Nova's live step was "Tried 4 times").
+  it('a step whose answer was cut off at the length limit is not tried again', async () => {
+    const { cutOffLine } = await import('../../../services/jose/joseSpend');
+    globalThis.__joseInstalledModels = ['llama3.2:3b', 'qwen2.5:7b'];
+    vi.mocked(executeContentStepAssignment).mockClear();
+    vi.mocked(executeContentStepAssignment).mockImplementation(async () => { throw new Error(cutOffLine('Claude')); });
+    const result = await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'] })]);
+    globalThis.__joseInstalledModels = [];
+    expect(vi.mocked(executeContentStepAssignment)).toHaveBeenCalledTimes(1);
+    expect(String(result.executionReceipts[0].reason)).toContain('cut off at the length limit');
+  });
+
+  it('says the cut-off, not the agent\'s own "unreadable", when the agent swallowed the error', async () => {
+    const { cutOffLine, noteCutOff } = await import('../../../services/jose/joseSpend');
+    vi.mocked(executeContentStepAssignment).mockClear();
+    vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
+      noteCutOff(assignment.agent, cutOffLine('OpenRouter'));
+      throw new Error("Nova's model didn't give a readable verdict.");
+    });
+    const result = await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'] })]);
+    expect(vi.mocked(executeContentStepAssignment)).toHaveBeenCalledTimes(1);
+    expect(String(result.executionReceipts[0].reason)).toContain("OpenRouter's answer was cut off at the length limit");
+  });
+
   it('runs a step with the model Jose chose for it', async () => {
     const seen = [];
     vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {

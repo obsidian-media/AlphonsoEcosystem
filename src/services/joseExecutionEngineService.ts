@@ -61,6 +61,7 @@ import { runAlphonsoCode } from './alphonso/runCode';
 import { describeCodeChange, previewNeeds } from './alphonso/changeSet';
 import { onProjectReleased, releaseProject, releaseProjectsHeldBy } from './alphonso/projectLock';
 import { clearStop, isStopRequested, stopSignal, stopWaitsFor, STOPPED_LINE } from './jose/joseStop';
+import { CUT_OFF_PATTERN, takeCutOff } from './jose/joseSpend';
 import { giveBackTurn, takeTurn, usesLocalModel } from './jose/joseQueue';
 import { admitStep, firstStepNeed, runAdmitted } from './resources/resourceGate';
 import { readingFolder, reviewedFolder } from './alphonso/stepFolder';
@@ -536,12 +537,13 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
   // its own fix rounds already ran; a rerun would only find its files changed since the preview.
   // A step that publishes or sends runs once too (QA batch 1, owner 2026-10-28): a failed send waits with
   // the platform's reason for Carry on, never retried on its own or with a larger model (no model sends).
-  const runsOnce = isAlphonsoCodeStep(assignment) || (assignment?.effects || []).includes('publish_or_send');
+  let runsOnce = isAlphonsoCodeStep(assignment) || (assignment?.effects || []).includes('publish_or_send');
   const attempts = runsOnce ? 1 : MAX_TASK_RETRIES + 1;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       const result = await attemptWith(stepModel);
+      takeCutOff(assignment?.agent);
       _resetEscalationCount(commandText);
       return {
         ok: true,
@@ -554,6 +556,11 @@ async function executeAssignmentWithRetries(packet: any, assignment: any, comman
       lastError = error;
       // Stopped by you (Jose phase 7): no retry, no larger model.
       if (options.isStopped?.()) return { ok: false, stopped: true, attempts: attempt, error: STOPPED_LINE, taskId, instruction };
+      // A paid answer cut off at the length limit was already asked again with more room; another
+      // try would only be paid for again (QA, 2026-10-31: Nova's live step was "Tried 4 times").
+      const cutOff = takeCutOff(assignment?.agent);
+      if (cutOff) lastError = new Error(cutOff);
+      if (cutOff || CUT_OFF_PATTERN.test(String((error as Error)?.message || error))) { runsOnce = true; break; }
       if (attempt < attempts) {
         await delay(TASK_RETRY_BACKOFF_MS[attempt - 1]);
       }
