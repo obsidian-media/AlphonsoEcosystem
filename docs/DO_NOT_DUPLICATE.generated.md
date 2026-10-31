@@ -360,7 +360,7 @@ Source-backed inventory: 354 services and 183 components. Human purpose descript
 | service | `src/services/hermes/hermesStepHooks.ts` | `getHermesHooks`, `HermesStepHooks`, `withHermesHooks` |
 | service | `src/services/hermes/hermesTools.ts` | `HERMES_DIDNT_START`, `HERMES_TOOL_PREFIX`, `hermesLocalModel`, `hermesToolFor`, `hermesToolLabel`, `isHermesTool`, `saveProfileModel`, `startHermesTool`, `stopHermesTool` |
 | service | `src/services/hermes/profileModels.ts` | `hermesLocalModel`, `savedProfileModel`, `SavedProfileModel`, `saveProfileModel` |
-| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
+| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `onUserProfilesChanged`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
