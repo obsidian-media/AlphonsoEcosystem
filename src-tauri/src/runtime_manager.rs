@@ -223,18 +223,6 @@ const TOOLS: &[ToolDef] = &[
     args: &["run", "-d", "--name", "n8n", "-p", "5678:5678", "-v", "n8n_data:/home/node/.n8n", "n8nio/n8n"],
   },
   ToolDef {
-    name: "alphonso-bridge",
-    display_name: "Alphonso Bridge",
-    description: "HTTP bridge on port 4444 for outside scripts. Nothing in Alphonso needs it.",
-    repo_url: None,
-    pip_packages: &[],
-    requirements_file: None,
-    port: Some(4444),
-    health_path: Some("/health"),
-    exe: "node",
-    args: &["bridge/server.js"],
-  },
-  ToolDef {
     name: "chromadb",
     display_name: "ChromaDB",
     description: "Local vector database — powers Echo semantic memory search (find related memories without exact keyword matching)",
@@ -3031,6 +3019,12 @@ pub(crate) fn is_pid_alive(pid: u32) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  // The port-4444 Bridge was archived (owner, 2026-10-30): nothing in Alphonso used it.
+  #[test]
+  fn bridge_is_not_a_runtime_tool() {
+    assert!(TOOLS.iter().all(|t| t.name != "alphonso-bridge"));
+  }
 
   // Hermes gateway (2026-10-30): one pinned, checked Hermes package.
   #[test]

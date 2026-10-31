@@ -103,3 +103,22 @@ as new work requiring its own review, not a revert.
 **Why retired:** the owner decided on 2026-10-30 that outside apps calling into Alphonso is a security risk. Alphonso calls out to MCP servers instead (outside tools: `docs/superpowers/specs/2026-10-30-mcp-client-design.md`). Its Runtime Hub entry was removed with it. The Alphonso Bridge (`bridge/`), its only partner, stays until the owner decides.
 
 **Before restoring:** a server that listens for MCP requests must not bypass Jose's approvals (every tool call through `answerOrPlan()` / `submitStepsToJose()`), must speak the real protocol (2026-07-28, with the 2025-11-25 handshake for older clients), and needs the owner's approval (R14).
+
+---
+
+## Alphonso Bridge (port 4444) + runtimeApiService
+
+- **Archived:** 2026-10-30 (closing phase; owner chose "Archive it")
+- **Files:** `bridge-4444/bridge/` (was `bridge/`: `server.js`, its `package.json`,
+  its tests and the `express` mock), `bridge-4444/runtimeApiService.ts` (was
+  `src/services/runtimeApiService.ts`) and its test.
+- **Why it was removed:** an Express server on port 4444 that proxied tool calls
+  to Ollama. Its one user, the call-in MCP server, was archived on 2026-10-30, and
+  `runtimeApiService.ts` (its client) had no caller outside its own test. It was
+  still offered as a Runtime Hub tool ("Nothing in Alphonso needs it") and its
+  tests ran in `npm test`.
+- **Also removed:** the Runtime Hub card (`TOOLS` in `runtime_manager.rs`, guarded
+  by `bridge_is_not_a_runtime_tool`), port 4444 from the CSP, and `bridge` from the
+  test scripts and `vitest.config.js`.
+- **Before restoring:** decide what would call it. Alphonso calls Ollama directly
+  (`src/lib/ollama.ts`, `ollama.rs`) and calls out to MCP servers itself.

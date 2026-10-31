@@ -1,9 +1,5 @@
 import { startVitest } from 'vitest/node';
 import { configDefaults } from 'vitest/config';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 function sanitizeNodeOptions(raw) {
   if (!raw) return '';
@@ -61,12 +57,7 @@ const ctx = await startVitest(
     fileParallelism: false,
     configFile: false
   },
-  {
-    configFile: false,
-    // Mirror vitest.config.js: bridge/server.js imports express, which the
-    // bridge tests replace with a mock.
-    resolve: { alias: { express: path.join(root, 'bridge/tests/__mocks__/express.js') } }
-  }
+  { configFile: false }
 );
 
 if (ctx && !ctx.shouldKeepServer()) {

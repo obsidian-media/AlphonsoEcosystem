@@ -109,7 +109,7 @@ async function stopProcess(child, timeoutMs = 10000) {
 export const config = {
   runner: 'local',
   hostname: '127.0.0.1',
-  // Not tauri-driver's default 4444: that is the Alphonso Bridge port.
+  // Not tauri-driver's default 4444, so a tool a user runs on that port can't clash.
   port: 4455,
   specs: [resolve(here, 'specs', '**', '*.e2e.mjs')],
   maxInstances: 1,

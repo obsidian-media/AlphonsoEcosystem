@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 355 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 354 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -477,7 +477,6 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | service | `src/services/resources/resourceState.ts` | `GPU_UNKNOWN`, `GpuSource`, `LoadedThing`, `readResources`, `ResourceState`, `UsageRecord` |
 | service | `src/services/resources/stepNeeds.ts` | `estimateNeed`, `MODEL_WORKING_MEMORY`, `NeededTool`, `recordStepUse`, `resetUsageForTests`, `StepAssignment`, `StepNeed`, `toolsForStep` |
 | service | `src/services/resources/toolUse.ts` | `anyInUse`, `beginUse`, `endUse`, `isInUse`, `lastUsedAt`, `markUsed`, `resetToolUseForTests`, `usageRecord` |
-| service | `src/services/runtimeApiService.ts` | `getRunStatus`, `listModulesRemote`, `publishEvent`, `runModule` |
 | service | `src/services/runtimeLedgerService.ts` | `bootstrapRuntimeLedgerHydration`, `hydrateScopeToLocalStorage`, `HydrationResult`, `LedgerRecord`, `listScopeRecords`, `persistScopeRows` |
 | service | `src/services/runtimeManagerService.ts` | `checkPrerequisites`, `getAllStatus`, `getAutostartPrefs`, `getInstallLocation`, `InstallLocation`, `installPrerequisite`, `installTool`, `listTools`, `loadBundledStarterModel`, `LogEvent`, `onAnyProgress`, `onLogLine`, `PrereqStatus`, `ProgressEvent`, `saveAutostartPref`, `setInstallLocation`, `startTool`, `stopTool`, `TOOL_NAMES`, `ToolName`, `ToolResult`, `ToolStatus`, `waitForTool` |
 | service | `src/services/runwayService.ts` | `buildRunwayVideoRequest`, `generateRunwayVideo`, `listPendingRunwayJobs`, `resumeRunwayTask`, `RunwayResult` |

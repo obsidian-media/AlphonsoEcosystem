@@ -273,13 +273,13 @@ Key services that past audits missed or underestimated:
 - `src/services/whisperTranscriptionService.ts` — Whisper meeting transcription: `transcribeAndIngest(audioFilePath, filename, onProgress)` — calls `transcribe_audio_file` Tauri command → Ollama summarize → Echo `pushMemoryItem`.
 - `src/services/connectors/n8nConnector.ts` — n8n workflow automation: `isN8nHealthy`, `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`. Wired as Marcus distribution target (`n8n|workflow.*trigger`). All endpoints have AbortController timeouts (15s/10s/5s).
 - `src/services/moduleRegistryService.ts` — Agent OS module registry: `installModule`, `enableModule`, `disableModule`, `listModules`, `getModule`, `uninstallModule`. Persisted via durableStore as `alphonso_modules_v1`. Reads `module.toml` manifests.
-- `src/services/runtimeApiService.ts` — Bridge client (port 4444) for module lifecycle: `listModules`, `runModule`, `getRunStatus`, `publishEvent`. Falls back to registry when bridge offline. 10s AbortController timeout.
+- `src/services/runtimeApiService.ts` — Bridge client (port 4444) for module lifecycle: `listModules`, `runModule`, `getRunStatus`, `publishEvent`. Falls back to registry when bridge offline. 10s AbortController timeout. **Archived 2026-10-30** to `archive/MIGHTBEUSEDLATER/bridge-4444/` (closing phase, owner).
 - `src/services/policyDslService.ts` — Module-level policy evaluation: `loadPolicy`, `evaluateAction`, `getPolicyRules`. Uses hardcoded rules from `policy.yaml` spec. Separate from `policyEnforcementService`.
 - `src/services/a2aProtocolService.ts` — A2A task delegation: `delegate`, `getTaskStatus`, `updateTaskResult`, `listActiveTasks`, `listTasksByAgent`. Uses agentBusService for message passing; persists to `alphonso_a2a_tasks_v1`.
 - `src/services/joseSchedulerService.ts` — Jose cron scheduler: `createSchedule`, `listSchedules`, `saveSchedule`, `deleteSchedule`, `startScheduler`, `stopScheduler`. `SCHEDULE_PRESETS`: 30min/hourly/daily/weekly. Polls every 60s, fires callback when due. Started in `App.tsx`.
 - `src/services/echoFileWatcherService.ts` — Echo inbox file watcher: `startFileWatcher`, `stopFileWatcher`, `getWatcherConfig`, `saveWatcherConfig`. Polls via `watch_inbox_poll` Tauri command every 30s, auto-summarizes with Ollama, saves to Echo via `runEchoPreservation`, deduplicates via `.processed` suffix. Started in `App.tsx`.
 - `mcp-server/server.js` — MCP server (port 3333): 5 tools (`alphonso_run_pipeline`, `alphonso_search_memory`, `alphonso_research`, `alphonso_get_status`, `alphonso_get_receipts`), callable from Claude Desktop/Cursor/Windsurf.
-- `bridge/server.js` — Alphonso Bridge (port 4444): proxies MCP tool calls to Ollama `/api/chat` for live responses; `alphonso_get_status` checks Ollama `/api/tags` for real health + model list.
+- `bridge/server.js` — Alphonso Bridge (port 4444): proxies MCP tool calls to Ollama `/api/chat` for live responses; `alphonso_get_status` checks Ollama `/api/tags` for real health + model list. **Archived 2026-10-30** to `archive/MIGHTBEUSEDLATER/bridge-4444/` (closing phase, owner).
 
 ### Other
 - `pluginSandboxService.ts`, `pluginRegistryService.ts`
@@ -499,8 +499,8 @@ dev                      node scripts/run-vite-dev.mjs
 desktop:dev              npx.cmd tauri dev
 build                    node scripts/run-vite-build.mjs
 start                    node scripts/run-vite-preview.mjs
-test                     node scripts/run-vitest-programmatic.mjs src bridge
-test:watch               node scripts/run-vitest-programmatic.mjs --watch src bridge
+test                     node scripts/run-vitest-programmatic.mjs src
+test:watch               node scripts/run-vitest-programmatic.mjs --watch src
 lint                     eslint src
 typecheck                tsc --noEmit
 verify:app               npm run lint && npm run typecheck && npm run test && npm run build
@@ -528,7 +528,7 @@ preview                  node scripts/run-vite-preview.mjs
 e2e:server               node scripts/run-e2e-server.mjs
 tauri                    tauri
 test:file                vitest run
-test:coverage            vitest run --coverage src bridge --pool=forks
+test:coverage            vitest run --coverage src --pool=forks
 test:e2e                 playwright test
 test:e2e:desktop         wdio run e2e-desktop/wdio.conf.mjs
 test:rust                cd src-tauri && cargo test

@@ -36,8 +36,8 @@ const mockStatuses = [
 beforeEach(() => vi.clearAllMocks());
 
 describe('TOOL_NAMES', () => {
-  it('exports all 13 tool names, matching runtime_manager.rs\'s TOOLS catalogue', () => {
-    expect(TOOL_NAMES).toHaveLength(13);
+  it('exports all 12 tool names, matching runtime_manager.rs\'s TOOLS catalogue', () => {
+    expect(TOOL_NAMES).toHaveLength(12);
     expect(TOOL_NAMES).toContain('ollama');
     expect(TOOL_NAMES).toContain('comfyui');
     expect(TOOL_NAMES).toContain('automatic1111');
@@ -49,7 +49,8 @@ describe('TOOL_NAMES', () => {
     expect(TOOL_NAMES).toContain('voice-os');
     expect(TOOL_NAMES).toContain('n8n');
     expect(TOOL_NAMES).not.toContain('mcp-server');
-    expect(TOOL_NAMES).toContain('alphonso-bridge');
+    // The port-4444 Bridge was archived (owner, 2026-10-30): nothing in Alphonso used it.
+    expect(TOOL_NAMES).not.toContain('alphonso-bridge');
     expect(TOOL_NAMES).toContain('chromadb');
     expect(TOOL_NAMES).toContain('openHands');
   });

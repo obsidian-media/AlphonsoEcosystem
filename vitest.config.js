@@ -1,30 +1,20 @@
 import { defineConfig } from 'vitest/config';
-import path from 'path';
-import { fileURLToPath } from 'url';
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   optimizeDeps: {
     exclude: ['@tauri-apps/api']
-  },
-  resolve: {
-    alias: {
-      express: path.resolve(__dirname, 'bridge/tests/__mocks__/express.js'),
-    },
   },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setupTests.js',
     globals: true,
     testTimeout: 30000,
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}', 'bridge/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
-      // bridge/ (the Ollama proxy on port 4444) is measured too; its tests
-      // have run under `npm test` since 2026-10-06 but were never counted.
-      include: ['src/**/*.{js,jsx,ts,tsx}', 'bridge/**/*.js'],
-      exclude: ['src/test/**', 'src/**/*.test.{js,jsx}', 'src/**/*.spec.{js,jsx}', 'bridge/tests/**', 'bridge/node_modules/**'],
+      include: ['src/**/*.{js,jsx,ts,tsx}'],
+      exclude: ['src/test/**', 'src/**/*.test.{js,jsx}', 'src/**/*.spec.{js,jsx}'],
       thresholds: {
         // Real measured coverage as of 2026-09-05 (post test-coverage-gap
         // remediation, 353 files / 5,147 tests): lines 57.81%, branches 45.62%,

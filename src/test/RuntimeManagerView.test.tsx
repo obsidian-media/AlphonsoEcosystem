@@ -64,7 +64,6 @@ const runtimeNames = [
   'audiocraft',
   'voice-os',
   'openwebui',
-  'alphonso-bridge',
   'chromadb',
   'openHands',
   'n8n',
@@ -73,7 +72,6 @@ const runtimeNames = [
   displayName:
     name === 'voice-os' ? 'Voice OS'
       : name === 'openwebui' ? 'Open WebUI'
-      : name === 'alphonso-bridge' ? 'Alphonso Bridge'
       : name === 'chromadb' ? 'ChromaDB'
       : name === 'openHands' ? 'OpenHands'
       : name === 'audiocraft' ? 'AudioCraft / MusicGen'
@@ -104,7 +102,7 @@ describe('RuntimeManagerView', () => {
 
   it('renders the runtime catalog entries that were previously untested', async () => {
     render(<RuntimeManagerView />);
-    for (const name of ['Open WebUI', 'Alphonso Bridge', 'ChromaDB', 'OpenHands', 'Voice OS', 'AudioCraft / MusicGen']) {
+    for (const name of ['Open WebUI', 'ChromaDB', 'OpenHands', 'Voice OS', 'AudioCraft / MusicGen']) {
       expect(await screen.findByText(name)).toBeTruthy();
     }
   });

@@ -188,15 +188,6 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
     color: 'text-(--agent-nova)',
     bg: 'bg-(--surface-1)',
   },
-  'alphonso-bridge': {
-    icon: Activity,
-    category: 'Integration',
-    usedBy: null,
-    difference: 'A local connection for outside scripts. Nothing in Alphonso needs it.',
-    docsUrl: 'https://modelcontextprotocol.io',
-    color: 'text-violet-400',
-    bg: 'bg-violet-500/10',
-  },
   chromadb: {
     icon: Layers,
     category: 'Memory',

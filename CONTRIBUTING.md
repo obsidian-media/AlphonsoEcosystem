@@ -48,7 +48,7 @@ has been recorded.
 
 5. **Run tests**
    ```bash
-    npm run test         # Full Vitest suite (src + bridge)
+    npm run test         # Full Vitest suite (src)
     npm run lint         # ESLint
     npm run verify:app   # lint + typecheck + test + build
     ```
