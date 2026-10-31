@@ -7,6 +7,7 @@
 import { freeOllamaGpuMemory, getConfiguredOllamaEndpoint } from '../../lib/ollama';
 import { comfyRequest, getComfyUiEndpoint } from '../connectors/connectorImageGenerators';
 import { stopTool } from '../runtimeManagerService';
+import { isHermesTool, stopHermesTool } from '../hermes/hermesTools';
 import type { LoadedThing } from './resourceState';
 
 export interface FreeResult {
@@ -35,7 +36,7 @@ async function unloadComfy(): Promise<boolean> {
 
 async function stop(name: string): Promise<boolean> {
   try {
-    const result = await stopTool(name);
+    const result = isHermesTool(name) ? await stopHermesTool(name) : await stopTool(name);
     return Boolean(result?.ok);
   } catch {
     return false;

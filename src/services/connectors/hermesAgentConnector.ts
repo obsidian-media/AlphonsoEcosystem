@@ -246,7 +246,7 @@ export function setHermesSessionMode(agentId: string, mode: HermesSessionMode): 
  * docs/HERMES_AGENT_DELEGATION_PLAN.md Phase 2's discussion of Tailscale as a legitimate future
  * case) — narrowing this later is a deliberate policy change, not a bug fix.
  */
-function isLoopbackHermesUrl(url: string): boolean {
+export function isLoopbackHermesUrl(url: string): boolean {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
     return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]';
@@ -293,14 +293,14 @@ export async function listHermesAgentModels(agentId: string): Promise<string[]> 
   return (data.data || []).map((m: { id: string }) => m.id);
 }
 
-export async function sendHermesAgentMessage(
-  agentId: string,
-  messages: HermesMessage[],
-  { model = 'hermes-agent', maxTokens = 2048, temperature = 0.7, approved = false, sessionId }: HermesChatOptions = {}
-): Promise<HermesSendResult> {
-  const { url, key } = getHermesAgentEndpoint(agentId);
-  if (!url || !key) throw new Error(`Hermes endpoint not configured for agent "${agentId}"`);
-
+/**
+ * The checks every call to a Hermes profile passes first (a chat completion
+ * or a run): the cool-down after failures, Zero-Cost Mode for an address off
+ * this computer, the policy gate and the rate limit. Returns the refusal, or
+ * null and counts the call against the rate limit (Hermes gateway, 2026-10-30).
+ */
+export function hermesGate(agentId: string, preview: string, approved = false): HermesSendResult | null {
+  const { url } = getHermesAgentEndpoint(agentId);
   if (circuitBreaker.isOpen(CONNECTOR_ID)) {
     appendConnectorAudit(CONNECTOR_ID, 'send_blocked_circuit_open', { agentId });
     return { ok: false, circuitOpen: true, message: `Hermes connector circuit is open (agent "${agentId}") — too many recent failures, cooling down.`, provider: 'hermes' };
@@ -323,7 +323,7 @@ export async function sendHermesAgentMessage(
   const gate = evaluatePolicyGate({
     connectorId: CONNECTOR_ID,
     actionType: 'hermesAgentDelegation',
-    commandPreview: JSON.stringify({ agentId, model, messages, maxTokens, temperature }),
+    commandPreview: preview,
     approved,
     auth: { enabled: false, isAuthorized: false }
   });
@@ -337,6 +337,19 @@ export async function sendHermesAgentMessage(
     return { ok: false, rateLimited: true, status: 429, message: 'Hermes connector rate limit exceeded (local throttle).', provider: 'hermes' };
   }
   rateLimiter.consume(CONNECTOR_ID);
+  return null;
+}
+
+export async function sendHermesAgentMessage(
+  agentId: string,
+  messages: HermesMessage[],
+  { model = 'hermes-agent', maxTokens = 2048, temperature = 0.7, approved = false, sessionId }: HermesChatOptions = {}
+): Promise<HermesSendResult> {
+  const { url, key } = getHermesAgentEndpoint(agentId);
+  if (!url || !key) throw new Error(`Hermes endpoint not configured for agent "${agentId}"`);
+
+  const held = hermesGate(agentId, JSON.stringify({ agentId, model, messages, maxTokens, temperature }), approved);
+  if (held) return held;
 
   const sessionMode = getHermesSessionMode(agentId);
   const sessionHeader: Record<string, string> =

@@ -13,6 +13,9 @@ vi.mock('../services/connectors/geminiConnector', () => ({ sendGeminiMessage }))
 
 const sendHermesAgentMessage = vi.fn();
 vi.mock('../services/connectors/hermesAgentConnector', () => ({ sendHermesAgentMessage }));
+// Hermes gateway (2026-10-30): a Hermes step is a Hermes run.
+const runHermesStep = vi.fn();
+vi.mock('../services/hermes/hermesRun', () => ({ runHermesStep }));
 
 const sendOpenRouterMessage = vi.fn();
 vi.mock('../services/connectors/openRouterConnector', async (orig) => ({ ...(await orig()), sendOpenRouterMessage }));
@@ -25,6 +28,7 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     sendNvidiaMessage.mockReset();
     sendGeminiMessage.mockReset();
     sendHermesAgentMessage.mockReset();
+    runHermesStep.mockReset();
     sendOpenRouterMessage.mockReset();
     vi.stubGlobal('fetch', vi.fn());
   });
@@ -115,17 +119,18 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
 
   it('routes to the correct Hermes profile for that specific agent, not a generic one', async () => {
     agentProviderMap.jose = { provider: 'hermes', model: 'hermes-agent' };
-    sendHermesAgentMessage.mockResolvedValueOnce({ ok: true, content: 'hi from jose profile', model: 'hermes-agent', usage: null, provider: 'hermes' });
+    runHermesStep.mockResolvedValueOnce({ ok: true, text: 'hi from jose profile' });
     const result = await generateAgentLlmResponse('jose', { prompt: 'orchestrate this' });
     expect(result).toEqual({ response: 'hi from jose profile', done: true, backend: 'hermes', model: 'hermes-agent' });
-    expect(sendHermesAgentMessage).toHaveBeenCalledWith('jose', [expect.objectContaining({ role: 'system', content: expect.stringContaining('You own:') }), { role: 'user', content: 'orchestrate this' }], { model: 'hermes-agent' });
+    expect(runHermesStep).toHaveBeenCalledWith('jose', 'orchestrate this', expect.objectContaining({ instructions: expect.stringContaining('You own:'), model: 'hermes-agent' }));
   });
 
-  it('passes sessionId and approved through to sendHermesAgentMessage when the caller supplies them', async () => {
+  it('passes sessionId, approved and the step\'s stop signal through to the Hermes run', async () => {
     agentProviderMap.jose = { provider: 'hermes', model: 'hermes-agent' };
-    sendHermesAgentMessage.mockResolvedValueOnce({ ok: true, content: 'hi', model: 'hermes-agent', usage: null, provider: 'hermes' });
-    await generateAgentLlmResponse('jose', { prompt: 'orchestrate this', sessionId: 'receipt-7', approved: true });
-    expect(sendHermesAgentMessage).toHaveBeenCalledWith('jose', [expect.objectContaining({ role: 'system', content: expect.stringContaining('You own:') }), { role: 'user', content: 'orchestrate this' }], { model: 'hermes-agent', sessionId: 'receipt-7', approved: true });
+    runHermesStep.mockResolvedValueOnce({ ok: true, text: 'hi' });
+    const signal = new AbortController().signal;
+    await generateAgentLlmResponse('jose', { prompt: 'orchestrate this', sessionId: 'receipt-7', approved: true, signal });
+    expect(runHermesStep).toHaveBeenCalledWith('jose', 'orchestrate this', expect.objectContaining({ sessionId: 'receipt-7', approved: true, signal }));
   });
 
   it('a different agent set to ollama is unaffected by another agent being on hermes — per-agent resolution, not global', async () => {
@@ -134,19 +139,19 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ response: 'ollama reply', done: true }) });
     const result = await generateAgentLlmResponse('hector', { prompt: 'research' });
     expect(result.response).toBe('ollama reply');
-    expect(sendHermesAgentMessage).not.toHaveBeenCalled();
+    expect(runHermesStep).not.toHaveBeenCalled();
   });
 
   it('propagates a rate-limited Hermes result as a thrown error rather than a silent Ollama fallback', async () => {
     agentProviderMap.jose = { provider: 'hermes' };
-    sendHermesAgentMessage.mockResolvedValueOnce({ ok: false, rateLimited: true, status: 429, message: 'Hermes profile rate limit exceeded', provider: 'hermes' });
+    runHermesStep.mockResolvedValueOnce({ ok: false, reason: 'Hermes profile rate limit exceeded' });
     await expect(generateAgentLlmResponse('jose', { prompt: 'x' })).rejects.toThrow('Hermes profile rate limit exceeded');
     expect(fetch).not.toHaveBeenCalled();
   });
 
   it('a Hermes connector throw (e.g. profile down) propagates rather than falling back to Ollama', async () => {
     agentProviderMap.jose = { provider: 'hermes' };
-    sendHermesAgentMessage.mockRejectedValueOnce(new Error('Hermes endpoint not configured for agent "jose"'));
+    runHermesStep.mockRejectedValueOnce(new Error('Hermes endpoint not configured for agent "jose"'));
     await expect(generateAgentLlmResponse('jose', { prompt: 'x' })).rejects.toThrow('Hermes endpoint not configured');
     expect(fetch).not.toHaveBeenCalled();
   });

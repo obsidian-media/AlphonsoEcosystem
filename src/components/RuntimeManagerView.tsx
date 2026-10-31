@@ -140,6 +140,16 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
     color: 'text-(--agent-miya)',
     bg: 'bg-(--agent-miya-glow)',
   },
+  // Hermes gateway (2026-10-30): agents can work through a Hermes profile.
+  'hermes-agent': {
+    icon: Bot,
+    category: 'Agents',
+    usedBy: 'Agents whose provider is a Hermes profile (Settings → Agents)',
+    difference: 'Hermes Agent by Nous Research runs an agent with its own memory and tools; Alphonso sets up a reading-only profile per agent and asks you before any action.',
+    docsUrl: 'https://github.com/NousResearch/hermes-agent',
+    color: 'text-(--agent-alphonso)',
+    bg: 'bg-(--agent-alphonso-glow)',
+  },
   whisper: {
     icon: Mic,
     category: 'Audio',

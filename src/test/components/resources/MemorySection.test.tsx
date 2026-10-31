@@ -19,6 +19,10 @@ vi.mock('../../../services/resources/resourceState', () => ({
   readResources: vi.fn(async () => latest),
 }));
 vi.mock('../../../services/resources/toolUse', () => ({ usageRecord: () => ({ lastUsedAt: () => null, isInUse: () => false }) }));
+const stopTool = vi.fn(async () => ({ ok: true }));
+vi.mock('../../../services/runtimeManagerService', () => ({ stopTool: (...a: unknown[]) => stopTool(...(a as [])) }));
+const stopHermesTool = vi.fn(async (_name: string) => ({ ok: true }));
+vi.mock('../../../services/hermes/hermesTools', () => ({ stopHermesTool: (name: string) => stopHermesTool(name) }));
 
 import { MemorySection } from '../../../components/resources/MemorySection';
 import { createJoseRequest, setJoseRequestStatus, updateJoseStep } from '../../../services/jose/joseRequestStore';
@@ -59,6 +63,16 @@ describe('MemorySection', () => {
     expect(screen.queryByTestId('memory-stop-ollama')).toBeNull();
     fireEvent.click(screen.getByTestId('memory-unload-llama3.2:3b'));
     expect(freeThings).toHaveBeenCalledWith([{ ...model, inUse: false }]);
+  });
+
+  it("stops a Hermes profile through Hermes's own stop (Hermes gateway)", async () => {
+    const hector: LoadedThing = { kind: 'tool', name: 'hermes:hector', label: "Hector's Hermes profile", memMb: 300, startedBy: 'alphonso', lastUsedAtMs: null, inUse: false };
+    latest = state({ loaded: [hector] });
+    render(<MemorySection />);
+    expect(screen.getByTestId('memory-row-hermes:hector').textContent).toContain("Hector's Hermes profile");
+    await act(async () => { fireEvent.click(screen.getByTestId('memory-stop-hermes:hector')); });
+    expect(stopHermesTool).toHaveBeenCalledWith('hermes:hector');
+    expect(stopTool).not.toHaveBeenCalled();
   });
 
   it('no Unload for a model a step is using', () => {

@@ -11,6 +11,8 @@ vi.mock('../../../services/resources/idleStop', () => ({ latestResources: () => 
 const memory = (gpuFreeMb: number) => ({ atMs: Date.now(), ramTotalMb: 16384, ramFreeMb: 8000, gpuTotalMb: 8192, gpuFreeMb, gpuSource: 'nvidia', loaded: [] });
 const fits = { key: 'k', tools: ['ollama'], ramMb: 0, gpuMb: 2000, gpuSpillsToRam: false, learned: false, known: true } as never;
 import type { PlanStep } from '../../../services/jose/stepGraph';
+const hermesTools: Record<string, string> = {};
+vi.mock('../../../services/hermes/hermesTools', () => ({ hermesToolFor: (agent: string) => hermesTools[agent] || null }));
 
 const made = (text: string, status = 'running') => {
   const request = createJoseRequest({ commandId: `c-${text}`, source: 'user', text, kind: 'normal', steps: [] });
@@ -113,6 +115,14 @@ describe('the queue', () => {
     }
     localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider: 'ollama' } }));
     expect(usesLocalModel([step('hector')])).toBe(true);
+  });
+
+  it('a Hermes profile on this computer is local (Hermes gateway)', () => {
+    localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider: 'hermes' } }));
+    hermesTools.hector = 'hermes:hector';
+    expect(usesLocalModel([step('hector')])).toBe(true);
+    delete hermesTools.hector;
+    expect(usesLocalModel([step('hector')])).toBe(false);
   });
 
   it('two requests run together when the second fits in memory', async () => {

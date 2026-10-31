@@ -14,6 +14,11 @@ vi.mock('../../../services/connectors/connectorImageGenerators', () => ({
 }));
 const stopTool = vi.fn();
 vi.mock('../../../services/runtimeManagerService', () => ({ stopTool: (...a: unknown[]) => stopTool(...a) }));
+const stopHermesTool = vi.fn(async (_name: string) => ({ ok: true }));
+vi.mock('../../../services/hermes/hermesTools', () => ({
+  isHermesTool: (name: string) => name.startsWith('hermes:'),
+  stopHermesTool: (name: string) => stopHermesTool(name),
+}));
 
 import { freeThings } from '../../../services/resources/freeMemory';
 import type { LoadedThing } from '../../../services/resources/resourceState';
@@ -38,6 +43,15 @@ describe('freeThings', () => {
     });
     expect(stopTool).not.toHaveBeenCalled();
     expect(result).toEqual({ freed: ['ComfyUI'], failed: [] });
+  });
+
+  it('stops an idle Hermes profile Alphonso started, never one in use (Hermes gateway)', async () => {
+    const hector = thing({ name: 'hermes:hector', label: "Hector's Hermes profile" });
+    expect((await freeThings([{ ...hector, inUse: true }])).freed).toEqual([]);
+    expect(stopHermesTool).not.toHaveBeenCalled();
+    expect((await freeThings([hector])).freed).toEqual(["Hector's Hermes profile"]);
+    expect(stopHermesTool).toHaveBeenCalledWith('hermes:hector');
+    expect(stopTool).not.toHaveBeenCalled();
   });
 
   it('stops a ComfyUI Alphonso started', async () => {

@@ -135,6 +135,21 @@ const TOOLS: &[ToolDef] = &[
     exe: "python",
     args: &[],
   },
+  // Hermes gateway (2026-10-30): Hermes Agent, installed from the one pinned
+  // wheel (`HERMES_WHEEL`). Its profiles are started by hermes_profiles.rs,
+  // so Runtime Hub only installs it.
+  ToolDef {
+    name: "hermes-agent",
+    display_name: "Hermes Agent",
+    description: "Hermes Agent (Nous Research, MIT) — runs agents with their own memory and tools",
+    repo_url: None,
+    pip_packages: &[],
+    requirements_file: None,
+    port: None,
+    health_path: None,
+    exe: "python",
+    args: &[],
+  },
   ToolDef {
     name: "whisper",
     display_name: "Whisper",
@@ -1946,6 +1961,7 @@ pub async fn runtime_get_all_status(
       (Some(_), _) => dir.exists() && dir.join(".git").exists(),
       (None, "ollama") => find_ollama().is_some(),
       (None, "python") if def.name == "voice-os" => voice_runtime_installed(&dir, def.pip_packages),
+      (None, "python") if def.name == "hermes-agent" => hermes_python().is_some(),
       (None, "docker") => match (find_docker(), docker_image(def)) {
         (Some(docker), Some(image)) => docker_image_present(&docker, image),
         _ => false,
@@ -2005,6 +2021,40 @@ pub async fn runtime_get_all_status(
 // could not make a picture. Its install now picks the PyTorch build that
 // matches the NVIDIA driver, and downloads Stable Diffusion 1.5 when no model
 // is present.
+
+/// A Python package pinned to one file, checked by size and SHA-256.
+pub(crate) struct PinnedWheel {
+  pub name: &'static str,
+  pub url: &'static str,
+  pub sha256: &'static str,
+  pub size: u64,
+}
+
+/// Hermes Agent 0.19.0 by Nous Research, from PyPI's own listing (checked
+/// 2026-10-30). No remote install script: this file only, into its own venv.
+pub(crate) const HERMES_WHEEL: PinnedWheel = PinnedWheel {
+  name: "hermes_agent-0.19.0-py3-none-any.whl",
+  url: "https://files.pythonhosted.org/packages/e5/30/c85be8290e9565dc3c7a9720e93f3e59e09b1b163487be4946c3aa848f80/hermes_agent-0.19.0-py3-none-any.whl",
+  sha256: "bd0bac012aee38a60894781f4597dc29ee7bedb3448540249921f10d3bef327f",
+  size: 10_144_439,
+};
+
+pub(crate) const HERMES_PYTHON_TOO_OLD: &str =
+  "Hermes needs Python 3.11 to 3.13. Install one in Runtime Hub's prerequisites.";
+pub(crate) const HERMES_NOTHING_TO_START: &str =
+  "Hermes starts each agent's own Hermes profile from Settings → Agents; there is nothing to start here.";
+
+/// Hermes 0.19.0 asks for Python 3.11 up to, not including, 3.14.
+pub(crate) fn hermes_python_ok(version: &str) -> bool {
+  matches!(parse_python_version(version), Some((3, minor)) if (11..=13).contains(&minor))
+}
+
+/// The Python inside Hermes's own venv, when Hermes is installed there.
+pub(crate) fn hermes_python() -> Option<PathBuf> {
+  let dir = tool_dir("hermes-agent");
+  let python = venv_python(&dir);
+  (python.exists() && voice_runtime_installed(&dir, &["hermes-agent"])).then_some(python)
+}
 
 /// Stable Diffusion 1.5 (fp16) from Comfy-Org's archive, pinned to one commit
 /// and checked by SHA-256. It is the checkpoint the image generator expects
@@ -2193,6 +2243,13 @@ pub async fn runtime_install_tool(
   let py = py_path.unwrap_or_else(|_| "python".to_string());
   let git = git_path.unwrap_or_else(|_| "git".to_string());
 
+  // find_python() prefers 3.12, 3.13 and 3.11, so a 3.10 or 3.14 here means
+  // none in Hermes's range is installed.
+  if name == "hermes-agent" && !python_version(&py).is_some_and(|v| hermes_python_ok(&v)) {
+    emit_progress(&app, &name, "error", HERMES_PYTHON_TOO_OLD, 0);
+    return Err(HERMES_PYTHON_TOO_OLD.to_string());
+  }
+
   // Docker tools: installing means pulling the image the tool runs.
   if let Some(image) = docker_image(def) {
     let docker = find_docker().ok_or_else(|| {
@@ -2260,6 +2317,53 @@ pub async fn runtime_install_tool(
   } else {
     py.clone()
   };
+
+  // ── Hermes: the one pinned wheel, checked, then pip installs it and
+  // the dependencies it lists (Hermes gateway, 2026-10-30). ──
+  if name == "hermes-agent" {
+    let wheel = dir.join(HERMES_WHEEL.name);
+    download_verified(
+      &app,
+      &name,
+      HERMES_WHEEL.url,
+      &wheel,
+      HERMES_WHEEL.sha256,
+      HERMES_WHEEL.size,
+      &DownloadNote {
+        label: "Hermes Agent",
+        from: 40,
+        span: 15,
+      },
+    )
+    .await
+    .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+    emit_progress(
+      &app,
+      &name,
+      "installing_deps",
+      "Installing Hermes Agent and what it needs…",
+      60,
+    );
+    let wheel_path = wheel.to_string_lossy().to_string();
+    run_streaming(
+      &app,
+      &name,
+      &pip_py,
+      &[
+        "-m",
+        "pip",
+        "install",
+        "--progress-bar",
+        "off",
+        &cache[0],
+        &cache[1],
+        &wheel_path,
+      ],
+      Some(&dir),
+    )
+    .await
+    .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+  }
 
   // ── Step 3a: ComfyUI gets the PyTorch build that matches the GPU ──
   // Installed before requirements.txt, which lists `torch` unpinned, so pip
@@ -2471,6 +2575,10 @@ pub async fn runtime_start_tool(
   app: AppHandle,
 ) -> Result<RuntimeActionResult, String> {
   let def = tool_def(&name).ok_or_else(|| format!("Unknown tool: {}", name))?;
+  // Hermes itself is not a server: each agent's Hermes profile starts on its own.
+  if name == "hermes-agent" {
+    return Err(HERMES_NOTHING_TO_START.to_string());
+  }
 
   // Reserve before any PID/health checks. Otherwise two concurrent callers can
   // both observe a stopped tool and race into spawn (or overwrite its token/PID).
@@ -2725,7 +2833,8 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
     let prefs = load_autostart_prefs();
 
     for def in TOOLS {
-      let should_start = prefs.get(def.name).copied().unwrap_or(def.name == "ollama");
+      let should_start =
+        def.name != "hermes-agent" && prefs.get(def.name).copied().unwrap_or(def.name == "ollama");
       if !should_start {
         continue;
       }
@@ -2922,6 +3031,31 @@ pub(crate) fn is_pid_alive(pid: u32) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  // Hermes gateway (2026-10-30): one pinned, checked Hermes package.
+  #[test]
+  fn hermes_wheel_is_pinned() {
+    assert_eq!(
+      HERMES_WHEEL.sha256,
+      "bd0bac012aee38a60894781f4597dc29ee7bedb3448540249921f10d3bef327f"
+    );
+    assert_eq!(HERMES_WHEEL.size, 10_144_439);
+    assert!(HERMES_WHEEL
+      .url
+      .starts_with("https://files.pythonhosted.org/"));
+    assert!(HERMES_WHEEL.url.ends_with(HERMES_WHEEL.name));
+    assert!(tool_def("hermes-agent").is_some());
+  }
+
+  #[test]
+  fn hermes_python_range() {
+    assert!(!hermes_python_ok("3.10.12"));
+    assert!(hermes_python_ok("3.11.9"));
+    assert!(hermes_python_ok("3.12.4"));
+    assert!(hermes_python_ok("3.13.1"));
+    assert!(!hermes_python_ok("3.14.0"));
+    assert!(!hermes_python_ok("not a version"));
+  }
 
   #[test]
   fn docker_tools_name_their_image() {

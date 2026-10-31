@@ -57,6 +57,22 @@ describe('collectJoseNotifications', () => {
     ]]);
   });
 
+  // Hermes gateway (2026-10-30): a Hermes run asking to do something waits while its request runs.
+  it("sends a Hermes profile's request with Approve and Reject while the request still runs", () => {
+    const hermesStep = { stepId: 'hector', agent: 'hector', actionType: 'research_web', effects: ['read'], needs: [], status: 'waiting_approval', startedAtMs: 5,
+      hermesApproval: { runId: 'run_1', command: 'rm -rf build', description: 'delete the build folder' } } as never;
+    const [n] = collectJoseNotifications([request({ status: 'running', steps: [hermesStep] })], new Set(), ALL_ON);
+    expect(n.kind).toBe('step_waiting');
+    expect(n.text).toBe("Hector's Hermes profile wants to run: rm -rf build\nFor: Post the launch video");
+    expect(n.key).toBe('r1:hermes:hector:run_1');
+    expect(n.buttons).toEqual([[
+      { text: 'Approve', action: 'approve', requestId: 'r1', stepId: 'hector' },
+      { text: 'Reject', action: 'reject', requestId: 'r1', stepId: 'hector' },
+    ]]);
+    expect(collectJoseNotifications([request({ status: 'running', steps: [hermesStep] })], new Set(), { ...ALL_ON, stepWaiting: false })).toEqual([]);
+    expect(collectJoseNotifications([request({ status: 'interrupted', steps: [hermesStep] })], new Set(), ALL_ON).filter((n) => n.kind === 'step_waiting')).toEqual([]);
+  });
+
   // Agent phase 5: a prepared Marcus send shows exactly what goes where.
   it('a waiting send shows its preview', () => {
     const [n] = collectJoseNotifications([request({

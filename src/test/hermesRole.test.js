@@ -1,23 +1,23 @@
 // A Hermes-backed agent is told its role (agent roles Part A, 2026-10-24).
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const sendHermes = vi.fn(async () => ({ ok: true, content: 'answer', model: 'm' }));
-vi.mock('../services/connectors/hermesAgentConnector', () => ({ sendHermesAgentMessage: (...a) => sendHermes(...a) }));
+const runHermes = vi.fn(async () => ({ ok: true, text: 'answer' }));
+vi.mock('../services/hermes/hermesRun', () => ({ runHermesStep: (...a) => runHermes(...a) }));
 vi.mock('../services/modelSelectionService', () => ({ getAgentProvider: () => ({ provider: 'hermes', model: 'm' }) }));
 
 import { generateAgentLlmResponse } from '../lib/ollama';
 import { describeResponsibility } from '../services/jose/agentPermissionTable';
 
 describe('Hermes-backed agents', () => {
-  beforeEach(() => sendHermes.mockClear());
+  beforeEach(() => runHermes.mockClear());
 
   it('get their role first: what they own, never do, and may do', async () => {
     await generateAgentLlmResponse('hector', { prompt: 'Find sources on bees' });
-    const messages = sendHermes.mock.calls[0][1];
-    expect(messages[0].role).toBe('system');
-    expect(messages[0].content).toContain(describeResponsibility('hector').owns);
-    expect(messages[0].content).toContain(describeResponsibility('hector').never);
-    expect(messages[0].content).toMatch(/You may: /);
-    expect(messages[1]).toEqual({ role: 'user', content: 'Find sources on bees' });
+    const [agent, input, opts] = runHermes.mock.calls[0];
+    expect(agent).toBe('hector');
+    expect(opts.instructions).toContain(describeResponsibility('hector').owns);
+    expect(opts.instructions).toContain(describeResponsibility('hector').never);
+    expect(opts.instructions).toMatch(/You may: /);
+    expect(input).toBe('Find sources on bees');
   });
 });

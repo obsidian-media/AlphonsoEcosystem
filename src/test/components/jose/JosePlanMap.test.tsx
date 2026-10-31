@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { JosePlanMap } from '../../../components/jose/JosePlanMap';
 
@@ -32,6 +32,15 @@ describe('JosePlanMap', () => {
     render(<JosePlanMap steps={steps} compact />);
     expect(screen.queryByText('Find the facts.')).toBeNull();
     expect(screen.getByText('Hector')).toBeTruthy();
+  });
+
+  // Hermes gateway (2026-10-30): a step whose agent runs on a Hermes profile says so.
+  it('tags a step whose agent uses a Hermes profile', () => {
+    localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider: 'hermes' } }));
+    render(<JosePlanMap steps={steps} />);
+    expect(screen.getAllByTestId('jose-plan-hermes')).toHaveLength(1);
+    expect(screen.getByText('Hermes profile')).toBeTruthy();
+    localStorage.clear();
   });
 
   it('shows the model Jose chose for a step', () => {

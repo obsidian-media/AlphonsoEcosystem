@@ -33,6 +33,8 @@ mod companion_server;
 mod companion_types;
 mod connector_commands;
 mod elevenlabs;
+mod hermes_profiles;
+mod hermes_runs;
 mod higgsfield;
 mod kv_store;
 mod mcp_auth;
@@ -968,6 +970,17 @@ pub fn run() {
       launch_comfyui,
       runtime_manager::runtime_get_all_status,
       runtime_manager::runtime_install_tool,
+      hermes_profiles::hermes_profile_setup,
+      hermes_profiles::hermes_profile_set_model,
+      hermes_profiles::hermes_profile_start,
+      hermes_profiles::hermes_profile_stop,
+      hermes_profiles::hermes_user_profile_start,
+      hermes_profiles::hermes_profile_remove,
+      hermes_profiles::hermes_profiles_list,
+      hermes_profiles::hermes_find_user_profiles,
+      hermes_runs::hermes_run_start,
+      hermes_runs::hermes_run_stop,
+      hermes_runs::hermes_run_answer,
       runtime_manager::runtime_load_bundled_starter_model,
       runtime_manager::runtime_start_tool,
       runtime_manager::runtime_stop_tool,

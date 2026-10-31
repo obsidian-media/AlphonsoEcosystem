@@ -67,6 +67,14 @@ describe('readResources', () => {
     expect(state.gpuTotalMb).toBeNull();
   });
 
+  it('lists a Hermes profile Alphonso started as a tool of its own (Hermes gateway)', async () => {
+    backend.resource_snapshot = () => snapshot({ processes: [{ tool: 'hermes:hector', pid: 7, memMb: 300 }] });
+    const state = await readResources();
+    expect(state.loaded).toEqual([
+      { kind: 'tool', name: 'hermes:hector', label: "Hector's Hermes profile", memMb: 300, startedBy: 'alphonso', lastUsedAtMs: null, inUse: false },
+    ]);
+  });
+
   it('marks a running tool not in the snapshot as started by you', async () => {
     backend.runtime_get_all_status = () => [tool('comfyui', true, 'ComfyUI'), tool('n8n', false)];
     const state = await readResources();

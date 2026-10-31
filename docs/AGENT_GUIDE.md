@@ -103,8 +103,12 @@ limiter, audit log and approval gating for Hermes-backed turns (a Hermes
 profile can run real tools, not just generate text). **Session continuity
 (done 2026-10-06):** each per-agent call passes a natural session id through
 `X-Hermes-Session-Id`. A Hermes endpoint that isn't on this computer counts as
-paid, so Zero-Cost Mode blocks it. **Phase 2 (deferred, opt-in decided):**
-bundling Hermes into the installer for new users.
+paid, so Zero-Cost Mode blocks it. **Hermes gateway (2026-10-30):** Runtime Hub
+installs Hermes Agent, Settings sets up a profile per agent (or connects one of
+your own), each step runs as a Hermes run with its progress on Chat's live line
+and Stop, Hermes's own requests wait for you on the board and Telegram, and the
+resource manager starts a profile when a step needs it and stops one it started
+after 30 idle minutes (`docs/ALPHONSO_GROUND_TRUTH.md` §11.59).
 
 Full design lives in `docs/HERMES_AGENT_DELEGATION_PLAN.md`. **That file is
 gitignored** (it references this machine's own local Hermes install

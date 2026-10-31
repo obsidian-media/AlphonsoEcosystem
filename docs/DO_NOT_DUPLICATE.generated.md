@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 346 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 354 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -70,6 +70,8 @@ Source-backed inventory: 346 services and 180 components. Human purpose descript
 | component | `src/components/hector/SavedSources.tsx` | `SavedSources` |
 | component | `src/components/hector/SourceBoard.tsx` | `SourceBoard` |
 | component | `src/components/HectorCompanionWidget.tsx` | `HectorCompanionWidget` |
+| component | `src/components/hermes/HermesMessagingWarning.tsx` | `HermesMessagingWarning` |
+| component | `src/components/hermes/HermesProfilesSection.tsx` | `HermesProfilesSection` |
 | component | `src/components/InstallLocationPicker.tsx` | `InstallLocationPicker` |
 | component | `src/components/jose/JosePlanCard.tsx` | `JosePlanCard`, `JosePlanCardProps` |
 | component | `src/components/jose/JosePlanEditor.tsx` | `JosePlanEditor` |
@@ -259,7 +261,7 @@ Source-backed inventory: 346 services and 180 components. Human purpose descript
 | service | `src/services/connectors/elevenLabsConnector.ts` | `ELEVENLABS_NOT_SET_UP`, `elevenLabsKey`, `ElevenLabsModel`, `ElevenLabsVoice`, `isElevenLabsConfigured`, `listElevenLabsModels`, `listElevenLabsVoices` |
 | service | `src/services/connectors/geminiConnector.ts` | `DEFAULT_MODEL`, `GeminiChatOptions`, `GeminiChatSuccess`, `GeminiMessage`, `GeminiRateLimited`, `GeminiSendResult`, `isGeminiConfigured`, `sendGeminiMessage` |
 | service | `src/services/connectors/githubConnector.ts` | `closeIssue`, `createIssue`, `createPullRequest`, `createRelease`, `getFileContent`, `GitHubAsset`, `GitHubConfig`, `GitHubIssue`, `GitHubPullRequest`, `GitHubRelease`, `GitHubSearchResult`, `listIssues`, `listPullRequests`, `listReleases`, `listWorkflows`, `mergePullRequest`, `searchCode`, `searchIssues`, `searchRepos`, `triggerWorkflow` |
-| service | `src/services/connectors/hermesAgentConnector.ts` | `getHermesAgentEndpoint`, `getHermesAgentHealth`, `getHermesSessionMode`, `HermesAgentEndpoint`, `HermesBlocked`, `HermesChatOptions`, `HermesChatSuccess`, `HermesCircuitOpen`, `HermesMessage`, `HermesRateLimited`, `HermesSendResult`, `HermesSessionMode`, `isHermesAgentConfigured`, `listHermesAgentModels`, `resolveSecureSessionId`, `saveHermesAgentEndpoint`, `sendHermesAgentMessage`, `setHermesSessionMode` |
+| service | `src/services/connectors/hermesAgentConnector.ts` | `getHermesAgentEndpoint`, `getHermesAgentHealth`, `getHermesSessionMode`, `HermesAgentEndpoint`, `HermesBlocked`, `HermesChatOptions`, `HermesChatSuccess`, `HermesCircuitOpen`, `hermesGate`, `HermesMessage`, `HermesRateLimited`, `HermesSendResult`, `HermesSessionMode`, `isHermesAgentConfigured`, `isLoopbackHermesUrl`, `listHermesAgentModels`, `resolveSecureSessionId`, `saveHermesAgentEndpoint`, `sendHermesAgentMessage`, `setHermesSessionMode` |
 | service | `src/services/connectors/higgsfieldConnector.ts` | `cachedHiggsfieldEstimate`, `HIGGSFIELD_CONSOLE_URL`, `HIGGSFIELD_NOT_SET_UP`, `higgsfieldAvailable`, `higgsfieldKeys`, `HiggsfieldKeys`, `higgsfieldModels`, `HiggsfieldModels`, `isHiggsfieldConfigured`, `listHiggsfieldPresets`, `parseExtra`, `refreshHiggsfieldEstimate`, `testHiggsfieldModel` |
 | service | `src/services/connectors/n8nConnector.ts` | `isN8nHealthy`, `listN8nWorkflows`, `N8nActionResult`, `N8nHealthResult`, `N8nWebhookResult`, `N8nWorkflowListResult`, `setN8nWorkflowActive`, `triggerN8nWebhook` |
 | service | `src/services/connectors/nvidiaNimConnector.ts` | `DEFAULT_MODEL`, `findWorkingNvidiaModel`, `isNvidiaConfigured`, `listNvidiaModels`, `NVIDIA_PROBE`, `NvidiaChatOptions`, `NvidiaChatSuccess`, `NvidiaMessage`, `nvidiaModelsNotServed`, `NvidiaRateLimited`, `NvidiaSendResult`, `sendNvidiaMessage`, `WorkingModelResult` |
@@ -349,6 +351,14 @@ Source-backed inventory: 346 services and 180 components. Human purpose descript
 | service | `src/services/hectorBookmarkService.ts` | `deleteBookmark`, `exportBookmarks`, `getBookmarks`, `getStats`, `saveBookmark` |
 | service | `src/services/hectorExportService.ts` | `buildHectorReportMarkdown`, `exportHectorReportAsMarkdown`, `exportHectorReportAsPdf`, `exportHectorReportAsPowerPoint` |
 | service | `src/services/hectorResearchService.js` | `buildHectorSynthesisPrompt`, `createResearchBrief`, `createResearchDraft`, `fetchRssSources`, `fetchSuppliedSourcesForReport`, `isBraveSearchConfigured`, `listHectorActivity`, `listHectorReports`, `parseHectorSynthesisResponse`, `parseRssItems`, `persistResearchResult`, `recordHectorActivity`, `resynthesizeHectorReport`, `RSS_FEED_CATALOG`, `runHectorLiveResearch`, `runMultiSourceResearch`, `scoreRssFeed`, `searchBrave`, `slimOldReports`, `synthesizeHectorResearch` |
+| service | `src/services/hermes/hermesApprovals.ts` | `ALREADY_DONE`, `answerHermesApproval`, `describeHermesApproval`, `endHermesApproval`, `HERMES_TIMED_OUT`, `isWaitingOnHermes`, `StepHermesApproval`, `waitForHermesApproval` |
+| service | `src/services/hermes/hermesConstants.ts` | `describeHermesApproval`, `HERMES_TIMED_OUT`, `HERMES_TOOL_PREFIX`, `hermesToolAgent`, `hermesToolLabel`, `isHermesTool`, `READING_TOOLSETS` |
+| service | `src/services/hermes/hermesProfiles.ts` | `isProfileKeyRef`, `listOwnProfiles`, `NOT_DESKTOP`, `PAID_IN_ZERO_COST`, `ProfileInfo`, `profileKeyRef`, `ProfileModel`, `profileModelChoices`, `ProfileResult`, `removeProfile`, `setProfileModel`, `setUpProfile` |
+| service | `src/services/hermes/hermesRun.ts` | `HERMES_LOST`, `HERMES_NOT_SET_UP`, `HERMES_TIMED_OUT`, `HermesApprovalRequest`, `HermesRunOptions`, `HermesStepResult`, `progressLine`, `RUN_EVENT`, `runHermesStep`, `RUNS_NOT_SUPPORTED` |
+| service | `src/services/hermes/hermesStepHooks.ts` | `getHermesHooks`, `HermesStepHooks`, `withHermesHooks` |
+| service | `src/services/hermes/hermesTools.ts` | `HERMES_DIDNT_START`, `HERMES_TOOL_PREFIX`, `hermesLocalModel`, `hermesToolFor`, `hermesToolLabel`, `isHermesTool`, `saveProfileModel`, `startHermesTool`, `stopHermesTool` |
+| service | `src/services/hermes/profileModels.ts` | `hermesLocalModel`, `savedProfileModel`, `SavedProfileModel`, `saveProfileModel` |
+| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |

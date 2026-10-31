@@ -10,6 +10,7 @@ import { describeCodeChange } from '../alphonso/changeSet';
 import { getCleanup as readCleanupSet } from '../echo/cleanupStore';
 import { EFFECT_LABELS, type JoseEffect } from './joseEffects';
 import { agentName } from './agentNames';
+import { describeHermesApproval } from '../hermes/hermesConstants';
 import type { JoseRequest } from './joseRequestStore';
 
 export type JoseButtonAction = 'approve' | 'reject' | 'run' | 'cancel' | 'carry_on' | 'cancel_request' | 'pick_project' | 'pick_forget' | 'apply_cleanup' | 'dismiss_cleanup';
@@ -107,6 +108,19 @@ export function collectJoseNotifications(requests: JoseRequest[], sent: Set<stri
           key: `memwait:${request.id}:${step.stepId}`,
           kind: 'memory_wait',
           text: `${agentName(step.agent)}'s step has waited ${Math.floor(waited / 60_000)} minutes. ${step.waitingFor}`,
+        });
+      }
+      // A Hermes run asking to do something (Hermes gateway, 2026-10-30): its request keeps running.
+      for (const step of request.status === 'running' ? request.steps.filter((s) => s.status === 'waiting_approval' && s.hermesApproval) : []) {
+        const approval = step.hermesApproval as NonNullable<typeof step.hermesApproval>;
+        add({
+          key: `${request.id}:hermes:${step.stepId}:${approval.runId}`,
+          kind: 'step_waiting',
+          text: `${cut(describeHermesApproval({ agent: step.agent, ...approval }), 600)}\nFor: ${cut(request.text, 200)}`,
+          buttons: [[
+            { text: 'Approve', action: 'approve', requestId: request.id, stepId: step.stepId },
+            { text: 'Reject', action: 'reject', requestId: request.id, stepId: step.stepId },
+          ]],
         });
       }
     }

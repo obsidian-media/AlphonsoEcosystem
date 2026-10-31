@@ -3,6 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const stopTool = vi.fn();
 vi.mock('../../../services/runtimeManagerService', () => ({ stopTool: (...a: unknown[]) => stopTool(...a) }));
+const stopHermesTool = vi.fn();
+vi.mock('../../../services/hermes/hermesTools', () => ({
+  isHermesTool: (name: string) => name.startsWith('hermes:'),
+  stopHermesTool: (...a: unknown[]) => stopHermesTool(...a),
+}));
 const readResources = vi.fn();
 vi.mock('../../../services/resources/resourceState', () => ({ readResources: (...a: unknown[]) => readResources(...a) }));
 
@@ -27,12 +32,17 @@ beforeEach(() => {
   resetToolUseForTests();
   resetIdleStopForTests();
   stopTool.mockResolvedValue({ ok: true });
+  stopHermesTool.mockResolvedValue({ ok: true });
 });
 
 describe('idle times', () => {
-  it('ComfyUI 15 minutes by default; anything else Never', () => {
-    expect(DEFAULT_IDLE_MINUTES).toEqual({ comfyui: 15 });
+  it('ComfyUI 15 minutes and Hermes profiles 30 by default; anything else Never', () => {
+    expect(DEFAULT_IDLE_MINUTES).toEqual({ comfyui: 15, hermes: 30 });
     expect(getIdleMinutes('comfyui')).toBe(15);
+    expect(getIdleMinutes('hermes:hector')).toBe(30);
+    setIdleMinutes('hermes:hector', 5);
+    expect(getIdleMinutes('hermes:hector')).toBe(5);
+    expect(getIdleMinutes('hermes:nova')).toBe(30);
     expect(getIdleMinutes('voice-os')).toBeNull();
   });
 
@@ -49,6 +59,16 @@ describe('idle times', () => {
 });
 
 describe('idleTick', () => {
+  it('stops a Hermes profile Alphonso started after 30 idle minutes, never one you started (Hermes gateway)', async () => {
+    markUsed('hermes:hector', 0);
+    const hector = thing({ name: 'hermes:hector', label: "Hector's Hermes profile" });
+    expect(await idleTick(state([hector]), 29 * MIN)).toEqual([]);
+    expect(await idleTick(state([thing({ ...hector, startedBy: 'you' })]), 31 * MIN)).toEqual([]);
+    expect(await idleTick(state([hector]), 31 * MIN)).toEqual(['hermes:hector']);
+    expect(stopHermesTool).toHaveBeenCalledWith('hermes:hector');
+    expect(stopTool).not.toHaveBeenCalled();
+  });
+
   it('stops an Alphonso ComfyUI idle 16 minutes, keeps one idle 14', async () => {
     markUsed('comfyui', 0);
     expect(await idleTick(state([thing({})]), 14 * MIN)).toEqual([]);
