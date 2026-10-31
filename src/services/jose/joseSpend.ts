@@ -9,8 +9,11 @@ import { isConnectorAuthenticated } from '../connectors/connectorAuth';
 const SETTINGS_KEY = 'alphonso_settings';
 const SPEND_KEY = 'alphonso_jose_spend_v1';
 
-/** The most a paid step may write, in tokens; also what its cost is estimated from. */
-export const PAID_MAX_OUTPUT_TOKENS = 1024;
+/**
+ * The most a paid step may write, in tokens; also what its cost is estimated from. Models that
+ * think before answering count the thinking too: 1,024 cut answers off (QA, 2026-10-31).
+ */
+export const PAID_MAX_OUTPUT_TOKENS = 4096;
 
 /** Room in a paid step's estimate for what it is given besides its instruction (earlier steps' work). */
 export const PAID_PROMPT_ALLOWANCE_CHARS = 4000;
