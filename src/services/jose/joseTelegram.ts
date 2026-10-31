@@ -111,7 +111,7 @@ export function collectJoseNotifications(requests: JoseRequest[], sent: Set<stri
         });
       }
       // A Hermes run asking to do something (Hermes gateway, 2026-10-30): its request keeps running.
-      for (const step of request.steps.filter((s) => s.status === 'waiting_approval' && s.hermesApproval)) {
+      for (const step of request.status === 'running' ? request.steps.filter((s) => s.status === 'waiting_approval' && s.hermesApproval) : []) {
         const approval = step.hermesApproval as NonNullable<typeof step.hermesApproval>;
         add({
           key: `${request.id}:hermes:${step.stepId}:${approval.runId}`,

@@ -44,8 +44,9 @@ describe('Hermes approvals through Alphonso', () => {
   });
 
   it('refuses an answer once Hermes stopped waiting, and the step says so', async () => {
-    void waitForHermesApproval('req-1', 'hector', req);
+    const wait = waitForHermesApproval('req-1', 'hector', req);
     endHermesApproval('req-1', 'hector');
+    expect(await wait).toBe('deny');
     expect(HERMES_TIMED_OUT).toBe('Hermes stopped waiting for your answer.');
     expect(await answerHermesApproval('req-1', 'hector', true)).toEqual({ ok: false, summary: HERMES_TIMED_OUT });
     expect(steps.hector.note).toBe(HERMES_TIMED_OUT);

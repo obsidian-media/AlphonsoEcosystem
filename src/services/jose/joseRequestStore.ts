@@ -1,6 +1,7 @@
 // Every request Jose runs, saved with its steps and their status: the base for
 // the live board (phase 3) and resuming after a restart (phase 5).
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §5
+import { HERMES_TIMED_OUT } from '../hermes/hermesConstants';
 import type { SendPreview } from '../marcus/types';
 import { durableGet, durableSet } from '../../lib/durableStore.js';
 import type { PlanStep } from './stepGraph';
@@ -307,6 +308,13 @@ export function markRunningRequestsInterrupted(): number {
     if (r.status === 'running') {
       r.status = 'interrupted';
       count += 1;
+      // A Hermes run asking to do something ended with the app (Hermes gateway, 2026-10-30).
+      for (const step of r.steps) {
+        if (!step.hermesApproval) continue;
+        delete step.hermesApproval;
+        step.status = 'running';
+        step.note = HERMES_TIMED_OUT;
+      }
     }
   }
   if (count > 0) writeAll(all);

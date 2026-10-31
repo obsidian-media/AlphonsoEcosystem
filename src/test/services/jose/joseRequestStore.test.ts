@@ -78,6 +78,17 @@ describe('joseRequestStore', () => {
     expect(getJoseRequest(b.id)!.status).toBe('done');
   });
 
+  // Hermes gateway (2026-10-30): a Hermes request cut off by closing the app no longer waits for an answer.
+  it("drops a Hermes profile's open request when the app was closed", () => {
+    const a = make('a');
+    updateJoseStep(a.id, 'hector', { status: 'waiting_approval', hermesApproval: { runId: 'run_1', command: 'ls', description: '' }, note: 'x' });
+    markRunningRequestsInterrupted();
+    const step = getJoseRequest(a.id)!.steps.find((s) => s.stepId === 'hector')!;
+    expect(step.hermesApproval).toBeUndefined();
+    expect(step.status).toBe('running');
+    expect(step.note).toBe('Hermes stopped waiting for your answer.');
+  });
+
 });
 
 // Phase 3 (2026-10-23): a plan can wait for the user before it runs.

@@ -138,7 +138,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
     }
   };
   // A Hermes run asking to do something (Hermes gateway, 2026-10-30): its request keeps running.
-  const hermesSteps = selected ? selected.steps.filter((s) => s.status === 'waiting_approval' && s.hermesApproval) : [];
+  const hermesSteps = selected?.status === 'running' ? selected.steps.filter((s) => s.status === 'waiting_approval' && s.hermesApproval) : [];
   const answerHermes = async (stepId: string, yes: boolean) => {
     if (!selected) return;
     const { answerHermesApproval } = await import('../../services/hermes/hermesApprovals');

@@ -39,9 +39,12 @@ export function waitForHermesApproval(requestId: string, stepId: string, req: He
 /** The run ended while the step waited (Hermes gave up, or the step stopped). */
 export function endHermesApproval(requestId: string, stepId: string): void {
   const key = keyOf(requestId, stepId);
-  if (!waiting.has(key)) return;
+  const entry = waiting.get(key);
+  if (!entry) return;
   waiting.delete(key);
   ended.add(key);
+  // Settles the open question so nothing waits on it any more.
+  entry.resolve('deny');
   updateJoseStep(requestId, stepId, { hermesApproval: undefined, note: HERMES_TIMED_OUT } as never);
 }
 

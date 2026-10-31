@@ -70,6 +70,7 @@ describe('collectJoseNotifications', () => {
       { text: 'Reject', action: 'reject', requestId: 'r1', stepId: 'hector' },
     ]]);
     expect(collectJoseNotifications([request({ status: 'running', steps: [hermesStep] })], new Set(), { ...ALL_ON, stepWaiting: false })).toEqual([]);
+    expect(collectJoseNotifications([request({ status: 'interrupted', steps: [hermesStep] })], new Set(), ALL_ON).filter((n) => n.kind === 'step_waiting')).toEqual([]);
   });
 
   // Agent phase 5: a prepared Marcus send shows exactly what goes where.
