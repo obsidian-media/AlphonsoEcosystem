@@ -8,7 +8,7 @@ This file lists items that are intentionally **not** marked complete without ext
 - YouTube: your own Google project, then Sign in to YouTube (publish the project, or the sign-in ends after about 7 days)
 - Meta: your own Meta app, then Sign in to Facebook or Sign in with Instagram
 - Notion / ClickUp tokens and destination IDs
-- Optional paid providers (Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E), with your prices in Settings → Approvals
+- Optional paid providers (Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E), with your prices in Settings → General
 - Optional: your own S3-compatible storage for Instagram carousels
 - Slack / Discord / custom webhook connection URLs
 - Local ComfyUI (and its video, character and motion models), Kokoro, AudioCraft and Whisper, from Runtime Hub

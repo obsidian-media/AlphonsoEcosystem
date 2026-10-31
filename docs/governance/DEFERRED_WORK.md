@@ -299,7 +299,7 @@ starter model before).
 
 - [2026-10-23] **Jose redesign phase 5 (away from the app): what it leaves open.**
   - WhatsApp and the phone companion get Jose's notifications and approvals: not in phase 6 either (owner, 2026-10-23). Their messages go through Jose since phase 6a; WhatsApp sends one line when a request ends; approving still happens in the app or on Telegram. Written up as its own entry above (owner, 2026-10-27).
-  - ~~The older Telegram "N agent actions since your last check" notifier runs alongside Jose's messages~~ — CLOSED 2026-10-23: off by default (owner), switchable in Settings → Approvals → "Jose on Telegram".
+  - ~~The older Telegram "N agent actions since your last check" notifier runs alongside Jose's messages~~ — CLOSED 2026-10-23: off by default (owner), switchable in Settings → General → "Jose on Telegram".
   - Telegram buttons are short codes saved for 7 days; a button older than that answers "That button has expired." (use the app or `/approve`).
   - **Status:** OPEN.
 

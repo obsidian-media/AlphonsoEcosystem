@@ -39,7 +39,7 @@ This setup keeps Miya Studio's content factory low-cost and local-first. Everyth
 
 ## 8) Runway, ElevenLabs, Higgsfield (paid, optional)
 
-- Keys in Connectors; prices in Settings → Approvals → Allow paid models. Each run asks first with the cost, inside the monthly cap. Runway clips are 5 or 10 seconds from the scene's picture. See [CONNECTORS.md](CONNECTORS.md) sections 12, 31 and 32.
+- Keys in Connectors; prices in Settings → General → Allow paid models. Each run asks first with the cost, inside the monthly cap. Runway clips are 5 or 10 seconds from the scene's picture. See [CONNECTORS.md](CONNECTORS.md) sections 12, 31 and 32.
 
 ## 9) Safety + truthfulness behavior
 

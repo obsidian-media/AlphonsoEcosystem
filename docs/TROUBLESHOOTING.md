@@ -181,8 +181,8 @@ cargo clippy -- -D warnings
 | A request shows a plan card and does nothing | Bigger requests show their plan first | Press **Run this plan** (Chat or the board), or change Settings → General → Show Jose's plan first |
 | A request stops with "Waiting for you" | A step asks first (spend, publish or send, delete, or what you switched on in What asks first) | Approve it in Chat, on the board (**Approve and carry on**) or on Telegram |
 | A request shows **Interrupted** | The app closed while it ran | Press **Carry on** on the board, in Chat or on Telegram; finished steps are kept, a step that asks asks again |
-| A waiting request shows **Expired** | It waited longer than Settings → Approvals → Waiting requests expire after (7 days to start) | Ask again, or set 0 for never |
-| A paid model is never used | Allow paid models is off, Zero-Cost Mode is on, the connector isn't set up, or the prices aren't entered | Settings → Approvals → Allow paid models says which one |
+| A waiting request shows **Expired** | It waited longer than Settings → General → Waiting requests expire after (7 days to start) | Ask again, or set 0 for never |
+| A paid model is never used | Allow paid models is off, Zero-Cost Mode is on, the connector isn't set up, or the prices aren't entered | Settings → General → Allow paid models says which one |
 | Telegram doesn't pair | `TELEGRAM_ALLOWED_CHAT_IDS` is empty | Add your chat id in Settings → Connectors → Telegram, then send `/start` |
 | A Telegram button says "That button has expired." | It was older than 7 days, or the request ended | Open the request on the board |
 

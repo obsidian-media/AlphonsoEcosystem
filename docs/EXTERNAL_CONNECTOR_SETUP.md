@@ -60,7 +60,7 @@ Status: this documents the real connector setup path for the most-used external 
 
 ### Paid media (optional)
 
-- Runway (`RUNWAYML_API_SECRET`), ElevenLabs (`ELEVENLABS_API_KEY`), Higgsfield (`HIGGSFIELD_KEY_ID`, `HIGGSFIELD_KEY_SECRET` and the model ids). Enter your prices in Settings → Approvals → Allow paid models.
+- Runway (`RUNWAYML_API_SECRET`), ElevenLabs (`ELEVENLABS_API_KEY`), Higgsfield (`HIGGSFIELD_KEY_ID`, `HIGGSFIELD_KEY_SECRET` and the model ids). Enter your prices in Settings → General → Allow paid models.
 
 ## Recommended execution order
 

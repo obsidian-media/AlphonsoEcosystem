@@ -120,7 +120,7 @@ Twilio was never supported for setup, and its leftover code and fields were remo
 
 ## 5. Claude (Anthropic)
 
-**Status:** Outbound prompt exchange wired through the `connector_send_claude` Rust command. Pick the model in the connector's **Model** list (loaded live from Anthropic; the default is Claude Haiku 5.5). Paid: blocked in Zero-Cost Mode; Jose uses it for a step only when Settings → Approvals → Allow paid models is on.
+**Status:** Outbound prompt exchange wired through the `connector_send_claude` Rust command. Pick the model in the connector's **Model** list (loaded live from Anthropic; the default is Claude Haiku 5.5). Paid: blocked in Zero-Cost Mode; Jose uses it for a step only when Settings → General → Allow paid models is on.
 
 **Required env vars:**
 | Variable | Description |
@@ -320,7 +320,7 @@ Twilio was never supported for setup, and its leftover code and fields were remo
 
 ## 12. Runway (Miya creative cloud draft)
 
-**Status:** AI clips for the main moments in Miya Studio (and Content Studio's video step), through the Tauri backend. Paid: enter your price per second in Settings → Approvals → Allow paid models; each run asks once with the estimate, inside the monthly cap. *Not checked with a real account yet.*
+**Status:** AI clips for the main moments in Miya Studio (and Content Studio's video step), through the Tauri backend. Paid: enter your price per second in Settings → General → Allow paid models; each run asks once with the estimate, inside the monthly cap. *Not checked with a real account yet.*
 
 **Required env vars:**
 | Variable | Description |
@@ -740,7 +740,7 @@ Without storage, such a post is saved in the project's `ready-to-post` folder wi
 
 ## 31. ElevenLabs
 
-**Status:** Paid, high risk. Voice-overs with one of your ElevenLabs voices (including clones), with ElevenLabs' own word timing for the captions, and sound effects (`elevenlabs.rs`, `elevenLabsConnector.ts`). Chosen per brand (Brands tab) or project; never chosen for you. Each run asks first with the cost, from your prices (Settings → Approvals → Allow paid models: per 1,000 characters, per sound effect). *Not checked with a real account yet.*
+**Status:** Paid, high risk. Voice-overs with one of your ElevenLabs voices (including clones), with ElevenLabs' own word timing for the captions, and sound effects (`elevenlabs.rs`, `elevenLabsConnector.ts`). Chosen per brand (Brands tab) or project; never chosen for you. Each run asks first with the cost, from your prices (Settings → General → Allow paid models: per 1,000 characters, per sound effect). *Not checked with a real account yet.*
 
 **Credentials:** `ELEVENLABS_API_KEY`. **Test** lists your voices.
 
@@ -779,9 +779,9 @@ Without storage, such a post is saved in the project's `ready-to-post` folder wi
 |---|---|
 | `OPENROUTER_API_KEY` | A key from `openrouter.ai/settings/keys` |
 
-**Using it:** pick OpenRouter as a provider for any agent (Settings → Connectors → Agent Providers) or on Chat's provider tabs. The model list shows OpenRouter's free models only, with "Let OpenRouter choose a free model" first (the default); a free model you pick is checked once with a short question. Paid OpenRouter models are chosen in Settings → Approvals → Allow paid models: pick OpenRouter, then a model from the models your account can use; its prices fill in from OpenRouter. Every paid step asks first with its estimate and counts toward the monthly cap.
+**Using it:** pick OpenRouter as a provider for any agent (Settings → Connectors → Agent Providers) or on Chat's provider tabs. The model list shows OpenRouter's free models only, with "Let OpenRouter choose a free model" first (the default); a free model you pick is checked once with a short question. Paid OpenRouter models are chosen in Settings → General → Allow paid models: pick OpenRouter, then a model from the models your account can use; its prices fill in from OpenRouter. Every paid step asks first with its estimate and counts toward the monthly cap.
 
-**When the free limit runs out:** a step carries on with this computer's model and says so on the board and in Chat (the default), or, with "Ask to use a paid model" in Settings → Approvals, Jose asks to finish it with a paid OpenRouter model, showing the cost. With no model on this computer, the step waits with Carry on. The 20-a-minute limit is not mistaken for the daily one: the step waits a moment and asks again. Chat used directly says the limit is reached and doesn't switch models by itself.
+**When the free limit runs out:** a step carries on with this computer's model and says so on the board and in Chat (the default), or, with "Ask to use a paid model" in Settings → General, Jose asks to finish it with a paid OpenRouter model, showing the cost. With no model on this computer, the step waits with Carry on. The 20-a-minute limit is not mistaken for the daily one: the step waits a moment and asks again. Chat used directly says the limit is reached and doesn't switch models by itself.
 
 **How to test:** Test under the OpenRouter section, or the Connector Health Monitor: both read OpenRouter's key page and say how many free requests are left today (nothing is sent to a model).
 
