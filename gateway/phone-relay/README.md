@@ -46,4 +46,4 @@ number of users needs it.
   (after `npm ci --prefix gateway/phone-relay`).
 - Locally against a Firebase project: `GOOGLE_APPLICATION_CREDENTIALS` set by `gcloud auth
   application-default login`, then `node src/server.js` (port `PORT`, default 8080).
-- Deploy: `.github/workflows/deploy-phone-relay.yml` (Task 4).
+- Deploy: `.github/workflows/deploy-phone-relay.yml`; setup in `cloudrun.md`.
