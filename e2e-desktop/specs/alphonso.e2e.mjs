@@ -207,7 +207,9 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     console.log('ALPHONSO-E2E change done', JSON.stringify({ status: done.status, steps: steps(done), summary: (await stepOutput(done, step.stepId))?.summary }));
     // What was approved is what was written (a later fix round may have changed it again).
     // A fix round inside his own run says so in the summary (QA batch 1).
-    const summary = String((await stepOutput(done, step.stepId))?.summary || '');
+    // A step whose checks still fail after the fix rounds ends failed, and its report is then the
+    // step's error, not its output (QA, 2026-10-31: the edit check read only the output).
+    const summary = String((await stepOutput(done, step.stepId))?.summary || done.steps.find((x) => x.stepId === step.stepId)?.error || '');
     const fixed = done.steps.some((x) => x.revises === step.stepId) || /differs from what you approved/.test(summary);
     for (const f of files) {
       const now = fs.readFileSync(path.join(SHOP, f.path), 'utf8');
@@ -270,7 +272,10 @@ describe('Alphonso desktop: his code steps in your projects', () => {
     await browser.waitUntil(async () => /Edited by you/.test(await (await $('[data-testid="alphonso-code-preview"]')).getText()), { timeout: 30000 });
     await (await $('//main//button[starts-with(normalize-space(.), "Approve and carry on")]')).click();
     const done = (await settle(request.id, 'edit')).request;
-    const summary = String((await stepOutput(done, step.stepId))?.summary || '');
+    console.log('ALPHONSO-E2E edit done', JSON.stringify({ status: done.status, steps: steps(done) }));
+    // A step whose checks still fail after the fix rounds ends failed, and its report is then the
+    // step's error, not its output (QA, 2026-10-31: the edit check read only the output).
+    const summary = String((await stepOutput(done, step.stepId))?.summary || done.steps.find((x) => x.stepId === step.stepId)?.error || '');
     const fixed = done.steps.some((x) => x.revises === step.stepId) || /differs from what you approved/.test(summary);
     if (!fixed) expect(fs.readFileSync(path.join(SHOP, file.path), 'utf8')).toBe(EDITED);
   }).timeout(3200000);
