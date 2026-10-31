@@ -101,7 +101,7 @@ You can approve in Chat, on the Requests board, on Telegram (with the buttons Jo
 
 ### Zero-Cost Mode and paid models
 
-**Zero-Cost Mode** (on by default) blocks every paid service: Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E, paid OpenRouter models and outside tools you marked Paid.
+**Zero-Cost Mode** (on by default) blocks every paid service: Claude, ChatGPT, Qwen, Runway, ElevenLabs, Higgsfield, CALL-E, WhatsApp (Meta charges for conversations), paid OpenRouter models and outside tools you marked Paid.
 
 To let a step use a paid model, turn Zero-Cost Mode off and switch on **Settings → General → Allow paid models**: choose Claude, ChatGPT or OpenRouter, enter the prices (OpenRouter fills them in) and a monthly cap. A step that still fails on your own models may then be given to the paid model, after asking with the cost. Prices for Runway, ElevenLabs and Higgsfield are entered in the same place.
 

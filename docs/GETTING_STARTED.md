@@ -49,7 +49,7 @@ Bigger requests show their plan first; press **Run this plan**. A step that send
 ## Good to know
 
 - **Approval Mode** (on by default): each step asks according to what it does. Choose what asks in Settings → General → **What asks first**. Spending, sending and deleting always ask.
-- **Zero-Cost Mode** (on by default): paid services (Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E) are blocked until you turn it off.
+- **Zero-Cost Mode** (on by default): paid services (Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E, and WhatsApp, which Meta charges for) are blocked until you turn it off.
 - **Your keys** are kept in your system's keychain and are never included in a backup.
 - **Memory:** if your computer is short on memory, a step waits and says why instead of failing; Runtime Hub → **Memory** shows what's loaded.
 
