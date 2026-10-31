@@ -366,6 +366,26 @@ export async function checkOpenRouterConnection(): Promise<HealthCheckResult> {
   return { ok: true, checked: 'live', message: `OpenRouter answered: ${info.freeRemaining} free requests left today.`, latency: measureLatency(startTime), details: { freeRemaining: info.freeRemaining, freeLimit: info.freeLimit } };
 }
 
+/** Live check: each switched-on outside MCP server is asked for its tool list, which changes nothing. */
+export async function checkOutsideToolsConnection(): Promise<HealthCheckResult> {
+  const startTime = timestampMs();
+  const { listServers } = await import('./mcp/mcpServers');
+  const { refreshTools } = await import('./mcp/mcpConnection');
+  const servers = listServers().filter((s) => s.enabled);
+  if (!servers.length) {
+    return { ok: false, checked: 'live', message: 'No outside tools added. Add an MCP server in Settings → Connectors → Outside tools (MCP).', latency: 0, details: { reason: 'missing_key' } };
+  }
+  const problems: string[] = [];
+  for (const s of servers) {
+    const r = await refreshTools(s.id, { force: true });
+    if (!r.ok) problems.push(`${s.name}: ${r.reason || 'did not answer'}`);
+  }
+  if (problems.length) {
+    return { ok: false, checked: 'live', message: problems.join(' '), latency: measureLatency(startTime), details: { reason: 'error', failed: problems.length, total: servers.length } };
+  }
+  return { ok: true, checked: 'live', message: `${servers.length} outside tool server${servers.length === 1 ? '' : 's'} answered.`, latency: measureLatency(startTime), details: { total: servers.length } };
+}
+
 /** Live check: Gemini's model list is free and changes nothing. */
 export async function checkGeminiConnection(): Promise<HealthCheckResult> {
   const startTime = timestampMs();
@@ -427,6 +447,8 @@ async function runConnectorHealthCheck(connectorId: string, options: { botToken?
       return checkGeminiConnection();
     case 'openrouter':
       return checkOpenRouterConnection();
+    case 'outside_tools':
+      return checkOutsideToolsConnection();
     case 'chatgpt':
       return checkApiKeyConfigured('chatgpt', 'OPENAI_API_KEY', 'ChatGPT');
     case 'claude':

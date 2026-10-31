@@ -49,6 +49,7 @@ import { listAgentProfiles } from '../agents/agentRegistry';
 import { getHermesAgentEndpoint, saveHermesAgentEndpoint, getHermesAgentHealth } from '../services/connectors/hermesAgentConnector';
 import { CloudModelSelect } from './CloudModelSelect';
 import { MediaStorageSection } from './MediaStorageSection';
+import { OutsideToolsSection } from './OutsideToolsSection';
 import { InstagramLoginSection, SignInButton } from './SignInPanel';
 import { isYoutubeProjectPublished, recordSignIn, setYoutubeProjectPublished } from '../services/contentFactory/signInExpiry';
 
@@ -1318,6 +1319,10 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             hint="Get your key at app.runwayml.com/account/api-keys. Used by Miya Studio for AI video generation (Gen-4.5). Free trial credits included."
             savedLabel="Runway key saved" />
 
+        </CollapsibleCategory>
+
+        <CollapsibleCategory id="outside_tools" label="Outside tools (MCP)" icon={Webhook} defaultOpen={false}>
+          <OutsideToolsSection />
         </CollapsibleCategory>
 
         <CollapsibleCategory id="automation" label="Automation" icon={Zap} defaultOpen={false}>

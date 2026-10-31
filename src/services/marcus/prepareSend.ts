@@ -32,6 +32,8 @@ export function isMarcusSendStep(assignment: SendAssignment | null | undefined):
   // The content factory's posting steps carry `contentStep` (above). A planned posting step
   // without it is an ordinary send, prepared before it asks (QA batch 0).
   if (assignment.actionType === 'outreach_call') return false;
+  // An outside tool's change is prepared by outsideCall.ts (2026-10-30).
+  if (assignment.actionType === 'distribution_outside_tool') return false;
   return Array.isArray(assignment.effects) && assignment.effects.includes('publish_or_send');
 }
 

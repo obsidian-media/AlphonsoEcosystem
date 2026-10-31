@@ -35,6 +35,8 @@ mod connector_commands;
 mod elevenlabs;
 mod higgsfield;
 mod kv_store;
+mod mcp_auth;
+mod mcp_client;
 mod media_storage;
 mod media_tools;
 mod memory_graph;
@@ -936,6 +938,14 @@ pub fn run() {
       connector_hermes_agent_request,
       connector_nvidia_request,
       connector_openrouter_request,
+      mcp_client::mcp_list_tools,
+      mcp_client::mcp_call_tool,
+      mcp_client::mcp_save_header,
+      mcp_client::mcp_forget_server,
+      mcp_client::mcp_saved_parts,
+      mcp_client::mcp_registry_search,
+      mcp_auth::mcp_sign_in,
+      mcp_auth::mcp_finish_pasted,
       connector_composio_request,
       workspace::transcribe_audio_file,
       workspace::read_workspace_file,

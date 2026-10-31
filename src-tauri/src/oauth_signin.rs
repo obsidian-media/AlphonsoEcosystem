@@ -229,6 +229,19 @@ pub(crate) async fn wait_for_callback(
   expected_state: &str,
   wait: Duration,
 ) -> Result<String, String> {
+  wait_for_callback_with(listener, wait, |target| {
+    parse_callback(target, expected_state)
+  })
+  .await
+}
+
+/// `wait_for_callback` with the caller's own check of the address (MCP sign-in adds RFC 9207's
+/// issuer check).
+pub(crate) async fn wait_for_callback_with<F: Fn(&str) -> Result<String, String>>(
+  listener: tokio::net::TcpListener,
+  wait: Duration,
+  check: F,
+) -> Result<String, String> {
   let deadline = tokio::time::Instant::now() + wait;
   loop {
     let accepted = tokio::time::timeout_at(deadline, listener.accept()).await;
@@ -254,7 +267,7 @@ pub(crate) async fn wait_for_callback(
         .await;
       continue;
     }
-    let result = parse_callback(&target, expected_state);
+    let result = check(&target);
     let _ = socket.write_all(page(result.is_ok()).as_bytes()).await;
     let _ = socket.shutdown().await;
     return result;

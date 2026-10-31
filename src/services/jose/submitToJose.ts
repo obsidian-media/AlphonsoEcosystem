@@ -10,6 +10,7 @@ import { needsPlanApproval, type PlanFirstSetting } from './josePlanApproval';
 import { appendRequestNote, cancelJoseRequest, claimPlanForRun, createWaitingPlanRequest, returnPlanToWaiting, type JoseRequest } from './joseRequestStore';
 import { addSecurityChecks } from '../sentinel/addSecurityChecks';
 import { splitPerProject } from '../alphonso/splitProjects';
+import { toOutsideTool } from '../mcp/toOutsideTool';
 import { checkPlan, type PlanStep } from './stepGraph';
 import { agentName } from './agentNames';
 import { asksToMake, scoreTemplateFit, TEMPLATE_FIT_THRESHOLD } from './joseTemplates';
@@ -140,8 +141,9 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   const allowPaidModels = input.allowPaidModels !== false;
   const planned: JosePlan = await planJoseRequest(text, { planFresh, history, allowPaidModels, templateId: input.templateId });
   // Sentinel looks without being asked (agent phase 4): his checks join every plan, after a request
-  // naming several projects gets an Alphonso step in each (agent roles Part C2).
-  const secured = addSecurityChecks(splitPerProject(planned.steps, text), text);
+  // naming several projects gets an Alphonso step in each (agent roles Part C2), and a send
+  // through an outside tool the request names is Marcus's outside-tool step (2026-10-30).
+  const secured = addSecurityChecks(splitPerProject(toOutsideTool(planned.steps, text), text), text);
   const plan: JosePlan = { ...planned, steps: secured.steps };
   const planNote = [noteFor(plan), securityNote(secured)].filter(Boolean).join(' ');
   onProgress?.({ stage: 'planned', plan, planNote });

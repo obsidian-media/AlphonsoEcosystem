@@ -5,6 +5,7 @@
 // is always sent, with Carry on. Built from the saved requests; a durable log
 // keeps anything from being sent twice, also after a restart.
 import { describeSend } from '../marcus/describeSend';
+import { describeOutsideCall } from '../marcus/outsideCall';
 import { describeCodeChange } from '../alphonso/changeSet';
 import { getCleanup as readCleanupSet } from '../echo/cleanupStore';
 import { EFFECT_LABELS, type JoseEffect } from './joseEffects';
@@ -77,6 +78,9 @@ function stepText(request: JoseRequest, step: JoseRequest['steps'][number]): str
   if (step.waitFor) return `${agentName(step.agent)}'s next step waits for you: ${cut(step.waitFor, 300)}\nFor: ${cut(request.text, 200)}`;
   // A prepared Marcus send says exactly what goes where (agent phase 5).
   if (step.sendPreview) return `${agentName(step.agent)} wants to: ${cut(describeSend(step.sendPreview), 600)}
+For: ${cut(request.text, 200)}`;
+  // A prepared outside-tool call says exactly what it does (2026-10-30).
+  if (step.outsideCall) return `${agentName(step.agent)} wants to: ${cut(describeOutsideCall(step.outsideCall), 600)}
 For: ${cut(request.text, 200)}`;
   // A prepared Alphonso change says exactly what changes and runs (agent phase 6).
   if (step.codePreview) return `${agentName(step.agent)} wants to: ${cut(describeCodeChange(step.codePreview), 600)}

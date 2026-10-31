@@ -41,8 +41,10 @@ describe('built-in skills', () => {
   });
 
   // Agent roles Part C2: 18 more skills, and the kinds of work they need.
-  it('has the 18 skills Part C2 adds, 60 in all', () => {
-    expect(listSkills().length).toBe(60);
+  // Outside tools (2026-10-30) add Marcus's "Use an outside tool".
+  it('has the 18 skills Part C2 adds and the outside-tool skill, 61 in all', () => {
+    expect(listSkills().length).toBe(61);
+    expect(listSkills().some((x) => x.agent === 'marcus' && x.taskTypes.includes('distribution_outside_tool'))).toBe(true);
   });
 
   it.each([

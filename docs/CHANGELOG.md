@@ -10,6 +10,13 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [Unreleased]
 
+### Outside tools through MCP (2026-10-30)
+- **Connect the online services you use** (your shop, your issue tracker) in Settings → Connectors → Outside tools (MCP): search the MCP Registry or paste the server's address, then sign in in your browser or save its key. Keys stay in your system keychain.
+- **You decide what each tool may do.** Every tool asks you first until you mark it "Reading only". Mark a server Free or Paid; Paid servers are blocked in Zero-Cost Mode.
+- **Agents read from your tools** when a request needs the facts, for example "how many orders came in to my shop this week?".
+- **Marcus makes the changes** ("set the blue mug to $18"): the approval shows the exact call, and it runs once.
+- **Removed:** the old "MCP Server" tool in Runtime Hub, which didn't speak MCP.
+
 ### OpenRouter (2026-10-30)
 - **One more model provider**, beside NVIDIA NIM, Gemini, Claude and ChatGPT: add an OpenRouter key in Settings → Connectors → AI Models.
 - **Free models for any agent and in Chat.** The picker lists OpenRouter's free models, with "Let OpenRouter choose a free model" first, how many free requests are left today, and a note that free models are run by other companies that may keep what you send.

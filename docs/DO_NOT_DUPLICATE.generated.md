@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 340 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 346 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -125,6 +125,7 @@ Source-backed inventory: 340 services and 179 components. Human purpose descript
 | component | `src/components/OperatorDashboard.tsx` | `OperatorDashboard` |
 | component | `src/components/OrchestratorQueueView.tsx` | `default`, `OrchestratorQueueView` |
 | component | `src/components/OrchestratorView.tsx` | `OrchestratorView` |
+| component | `src/components/OutsideToolsSection.tsx` | `OutsideToolsSection` |
 | component | `src/components/PipelineResultCard.tsx` | `PipelineResultCard` |
 | component | `src/components/ProductionReadinessPanel.tsx` | `ProductionReadinessPanel` |
 | component | `src/components/ProjectBatchPanel.tsx` | `default` |
@@ -240,7 +241,7 @@ Source-backed inventory: 340 services and 179 components. Human purpose descript
 | service | `src/services/composioService.ts` | `__resetComposioApiKeyCacheForTests`, `checkComposioHealth`, `ComposioActionResult`, `ComposioConfig`, `ComposioHealthResult`, `ComposioStatusResult`, `ComposioTool`, `ComposioToolkit`, `enabledComposioToolkits`, `executeComposioTool`, `fetchComposioToolkits`, `getCachedToolkits`, `getComposioConfig`, `getComposioStatus`, `hydrateComposioApiKeyFromKeychain`, `isComposioEnabled`, `isReadOnlyTool`, `listToolkitTools`, `setComposioConfig` |
 | service | `src/services/connectorAuditLogService.ts` | `appendConnectorAuditEntry`, `ConnectorAuditEntry`, `getConnectorAuditLog`, `getLastEntryForConnector` |
 | service | `src/services/connectorCircuitBreakerService.ts` | `configure`, `getAll`, `getCircuitState`, `isOpen`, `recordFailure`, `recordSuccess`, `resetAllConfigs`, `resetCircuit` |
-| service | `src/services/connectorHealthCheckService.ts` | `checkConnectorHealth`, `checkDiscordConnection`, `checkGeminiConnection`, `checkGenericWebhookConnection`, `checkGitHubConnection`, `checkHermesAgentsConnection`, `checkMobileBridgeConnection`, `checkN8nConnection`, `checkNvidiaConnection`, `checkOpenRouterConnection`, `checkSlackConnection`, `checkTelegramConnection`, `checkWhatsAppConnection` |
+| service | `src/services/connectorHealthCheckService.ts` | `checkConnectorHealth`, `checkDiscordConnection`, `checkGeminiConnection`, `checkGenericWebhookConnection`, `checkGitHubConnection`, `checkHermesAgentsConnection`, `checkMobileBridgeConnection`, `checkN8nConnection`, `checkNvidiaConnection`, `checkOpenRouterConnection`, `checkOutsideToolsConnection`, `checkSlackConnection`, `checkTelegramConnection`, `checkWhatsAppConnection` |
 | service | `src/services/connectorRateLimiterService.ts` | `checkLimit`, `configure`, `ConnectorStatus`, `consume`, `getStatus`, `RateLimitResult`, `resetAll` |
 | service | `src/services/connectorRegistryService.ts` | *(no static export detected)* |
 | service | `src/services/connectors/braveSearchConnector.ts` | `BraveSearchResult`, `BraveSearchResultItem`, `isBraveSearchConfigured`, `searchBrave` |
@@ -392,6 +393,7 @@ Source-backed inventory: 340 services and 179 components. Human purpose descript
 | service | `src/services/marcus/composioChannel.ts` | `checkComposioAnswer`, `composioSendTools`, `describeComposioTools` |
 | service | `src/services/marcus/describeSend.ts` | `describeSend` |
 | service | `src/services/marcus/destinations.ts` | `CHANNEL_LIMITS`, `CONNECTOR_NAMES`, `DESTINATION_KEYS`, `destinationsFor`, `isAllowedTarget`, `listedN8nWorkflows`, `MARCUS_CONNECTORS`, `requestWithoutQuotes`, `targetLabel`, `telegramOwnerChatId` |
+| service | `src/services/marcus/outsideCall.ts` | `ALREADY_DONE`, `argumentProblems`, `describeOutsideCall`, `FULL_LIST_BUDGET`, `isOutsideCallStep`, `NO_OUTSIDE_TOOL`, `OutsideCallPreview`, `PrepareOutside`, `prepareOutsideCall`, `runOutsideCall` |
 | service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `MARCUS_MODEL_FAILED`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `notSetUp`, `pickDestination` |
 | service | `src/services/marcus/prepareSend.ts` | `deliveryLines`, `deliveryReason`, `describeSend`, `FIX_ROUNDS_USED`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason`, `unfilledGaps`, `unfilledReason` |
 | service | `src/services/marcus/readiness.ts` | `checkReadiness` |
@@ -408,6 +410,11 @@ Source-backed inventory: 340 services and 179 components. Human purpose descript
 | service | `src/services/maria/mariaWorkReview.ts` | `claimInWork`, `findingStrings`, `givenByRequest`, `MARIA_NO_REVIEW`, `parseWorkReview`, `runMariaWorkReview`, `WorkFinding`, `WorkReview`, `workReviewPrompt`, `workReviewText` |
 | service | `src/services/maria/workContext.ts` | `FILE_LIMITS`, `NO_SOURCES`, `workDependencyFiles`, `WorkFile`, `workFiles`, `workResults`, `WorkSource`, `workSources`, `workSteps` |
 | service | `src/services/mariaAuditService.ts` | `MariaAuditOptions`, `runMariaGovernanceAudit` |
+| service | `src/services/mcp/mcpBackend.ts` | `backend`, `forgetServerSecrets`, `inDesktopApp`, `NOT_DESKTOP` |
+| service | `src/services/mcp/mcpConnection.ts` | `callTool`, `finishPastedSignIn`, `NO_SUCH_SERVER`, `NOT_DESKTOP`, `refreshTools`, `RegistryServer`, `savedParts`, `saveServerHeader`, `searchRegistry`, `signIn`, `TOOLS_CACHE_MS` |
+| service | `src/services/mcp/mcpServers.ts` | `addServer`, `getServer`, `ListedTool`, `listServers`, `MCP_SERVERS_KEY`, `McpServer`, `McpToolEntry`, `McpVersion`, `mergeTools`, `onServersChanged`, `removeServer`, `setToolMark`, `setToolOff`, `ToolMark`, `updateServer` |
+| service | `src/services/mcp/mcpTools.ts` | `effectsForCall`, `findTool`, `isReadingTool`, `OUTSIDE_TASK`, `outsideToolsForPlanner`, `outsideToolsLines`, `PAID_ONLY_AS_STEP`, `parseToolRef`, `readingTools`, `readingToolsForPrompt`, `runOutsideRead`, `serverAllowed`, `serversNamedIn`, `toolRef` |
+| service | `src/services/mcp/toOutsideTool.ts` | `toOutsideTool` |
 | service | `src/services/mediaStorageService.ts` | `cleanOldStaged`, `NO_STORAGE`, `removeStaged`, `STAGED_PREFIX`, `stagedKey`, `stageFile`, `StageResult`, `STORAGE_CONNECTOR`, `storageConfig`, `StorageConfig`, `storageConfigured`, `StoragePart`, `StorageTestResult`, `testStorage` |
 | service | `src/services/memory/ecosystemMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `ECOSYSTEM_MEMORY_CATEGORIES`, `exportMemoryItems`, `getAllMemorySizes`, `getMemorySize`, `importMemoryItems`, `listMemory`, `listMemoryItems`, `MEMORY_CONFIDENCE`, `MEMORY_NAMESPACES`, `pushMemory`, `tickExpiry` |
 | service | `src/services/memoryGraphInferenceService.ts` | `runScheduledInferencePass`, `startMemoryGraphInferenceScheduler`, `stopMemoryGraphInferenceScheduler` |

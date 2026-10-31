@@ -35,6 +35,8 @@ export const SKILL_TOOLS: Record<string, SkillTool> = {
   read_brand: { effects: ['read'], agents: ['maria', 'miya'], label: 'Read a brand’s voice' },
   // Read-only Composio actions (agent phase 5); anything that sends is Marcus's step.
   composio_read: { effects: ['read'], agents: ['hector', 'echo', 'alphonso'], label: 'Read from a Composio app' },
+  // Outside tools (2026-10-30): a tool the user marked "Reading only" on an MCP server they added.
+  outside_read: { effects: ['read'], agents: WORKERS, label: 'Read from an outside tool (MCP)' },
 };
 
 /** Tools that make or send something: they run as the step's own action, after its approval. */

@@ -338,6 +338,16 @@ export const DEFAULT_CONNECTORS = [
     disabledReason: 'OpenRouter API key is not configured.'
   },
   {
+    // Outside tools (2026-10-30): the user's own online MCP servers; Alphonso calls them, nothing calls in.
+    id: 'outside_tools',
+    name: 'Outside tools (MCP)',
+    status: 'foundation_only',
+    transport: 'mcp_streamable_http',
+    requiredEnv: [],
+    permissions: ['outside_read', 'outside_change'],
+    disabledReason: 'No outside tools added yet (optional). Add an MCP server in Settings → Connectors.'
+  },
+  {
     id: 'gemini',
     name: 'Google Gemini',
     status: 'not_configured',

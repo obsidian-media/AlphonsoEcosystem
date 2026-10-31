@@ -17,6 +17,10 @@
 //   ALPHONSO_LIVE_COMPOSIO_KEY_FILE       a Composio API key (read only: its toolkits are listed)
 //   ALPHONSO_LIVE_HIGGSFIELD_KEY_ID_FILE / _KEY_SECRET_FILE  Higgsfield keys; with
 //   ALPHONSO_LIVE_HIGGSFIELD_PICTURE_MODEL / _CLIP_MODEL      model ids: only Higgsfield's estimate is asked, nothing is made
+//   ALPHONSO_LIVE_SHOPIFY_STORE           your store's address (e.g. your-store.myshopify.com): its own MCP server
+//                                         (/api/mcp, read only, no sign-in) is added and a product question asked
+//   ALPHONSO_LIVE_GITHUB_MCP_URL          GitHub's MCP server address; with ALPHONSO_LIVE_GITHUB_TOKEN_FILE and
+//                                         ALPHONSO_LIVE_GITHUB_REPO one approved test issue is opened through it
 // Each key is read from its file here and typed into the test app's Settings, as a user would;
 // it lives only in this run's throwaway profile. The Slack check posts one real message; the
 // ElevenLabs check makes one short voice-over (one line), after its estimate is approved.
@@ -55,6 +59,12 @@ const HF_KEY_ID = readKey(process.env.ALPHONSO_LIVE_HIGGSFIELD_KEY_ID_FILE);
 const HF_SECRET = readKey(process.env.ALPHONSO_LIVE_HIGGSFIELD_KEY_SECRET_FILE);
 const HF_PICTURE = String(process.env.ALPHONSO_LIVE_HIGGSFIELD_PICTURE_MODEL || '').trim();
 const HF_CLIP = String(process.env.ALPHONSO_LIVE_HIGGSFIELD_CLIP_MODEL || '').trim();
+// Outside tools (MCP, 2026-10-30).
+const SHOPIFY_STORE = String(process.env.ALPHONSO_LIVE_SHOPIFY_STORE || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+const GITHUB_MCP_URL = String(process.env.ALPHONSO_LIVE_GITHUB_MCP_URL || '').trim();
+const MCP_SERVERS_KEY = 'alphonso_mcp_servers_v1';
+const ISSUE_TOOLS = ['create_issue', 'issue_write'];
+const mcpServers = async () => JSON.parse(await browser.execute((k) => localStorage.getItem(k) || '[]', MCP_SERVERS_KEY));
 const PREFERRED_TEST_MODEL = process.env.ALPHONSO_E2E_MODEL || 'qwen2.5:7b';
 
 const savedRequests = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
@@ -167,6 +177,23 @@ async function connectorLog(id) {
   }, id);
 }
 
+/** Adds one outside MCP server in Settings → Connectors → Outside tools, as a user would. */
+async function addOutsideServer(name, url, cost) {
+  await $('[aria-label="Open settings"]').click();
+  await browser.waitUntil(async () => /API CREDENTIALS|General/.test(await mainText()), { timeout: 30000 });
+  await buttonByText('Connectors').click();
+  const category = await $('[data-testid="connector-category-outside_tools"]');
+  await category.waitForExist({ timeout: 30000 });
+  await category.scrollIntoView();
+  if (!(await $('[data-testid="outside-tools-section"]').isDisplayed())) await category.click();
+  await (await $('input[aria-label="Name"]')).setValue(name);
+  await (await $('input[aria-label="Server address"]')).setValue(url);
+  await (await $(`input[aria-label="${cost === 'free' ? 'Free' : 'Paid'}"]`)).click();
+  await (await $('[data-testid="mcp-add"]')).click();
+  await browser.waitUntil(async () => (await mcpServers()).some((s) => s.name === name), { timeout: 30000, timeoutMsg: `${name} was not saved` });
+  return (await mcpServers()).find((s) => s.name === name);
+}
+
 /** Sends one Chat request and waits until `ready(request)` says it got far enough. */
 async function askInChat(text, ready, what) {
   const model = await testModel();
@@ -220,7 +247,7 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
   after(() => { for (const f of tempFolders) fs.rmSync(f, { recursive: true, force: true }); });
 
   before(async function () {
-    if (![...Object.values(STOCK_KEYS), ...Object.values(CLOUD_KEYS)].some((s) => s.key) && !COMPOSIO_KEY && !HF_KEY_ID && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY) this.skip();
+    if (![...Object.values(STOCK_KEYS), ...Object.values(CLOUD_KEYS)].some((s) => s.key) && !COMPOSIO_KEY && !HF_KEY_ID && !SLACK_TOKEN && !ELEVEN_KEY && !GITHUB_TOKEN && !NOTION_TOKEN && !CLICKUP_KEY && !TAVILY_KEY && !BRAVE_KEY && !SHOPIFY_STORE && !GITHUB_MCP_URL) this.skip();
     await enterShell();
   });
 
@@ -370,6 +397,72 @@ describe('Alphonso desktop: the live check with your own accounts', () => {
     await browser.waitUntil(async () => /github saved/i.test(await mainText()), { timeout: 60000, timeoutMsg: 'GitHub was not saved' });
     const { done, output } = await marcusSends('github', `/jose Write a one-line note that the Alphonso QA live check ran, and open it as an issue in GitHub ${GITHUB_REPO}`, `GitHub ${GITHUB_REPO}`);
     console.log('LIVE github after', JSON.stringify({ step: done.status, error: done.error, summary: output?.summary, link: output?.resultUrl || output?.schema?.link || null, platformId: output?.schema?.platformId || null, log: await connectorLog('github') }));
+    expect(done.status).toBe('done');
+  }).timeout(2400000);
+
+  // Outside tools (2026-10-30): the store's own MCP server is read only and needs no sign-in.
+  it('reads from your Shopify store through its MCP server', async function () {
+    if (!SHOPIFY_STORE) this.skip();
+    const server = await addOutsideServer('My Shopify', `https://${SHOPIFY_STORE}/api/mcp`, 'free');
+    await browser.waitUntil(async () => ((await mcpServers()).find((s) => s.id === server.id)?.tools || []).length > 0,
+      { timeout: 60000, timeoutMsg: 'the store listed no tools' });
+    const listed = (await mcpServers()).find((s) => s.id === server.id);
+    console.log('LIVE shopify tools', JSON.stringify({ version: listed.version, tools: listed.tools.map((t) => [t.name, t.hintReadOnly || false]) }));
+    // A store lists only what Shopify gives it: the catalog search, or (as on the owner's store, 2026-10-30)
+    // only the policy and FAQ search.
+    const search = listed.tools.find((t) => /search.*(catalog|product)/i.test(t.name)) || listed.tools.find((t) => /^(search|get)_/i.test(t.name)) || listed.tools[0];
+    const aboutPolicies = /polic|faq/i.test(search?.name || '');
+    expect(search).toBeTruthy();
+    await (await $(`[data-testid="mcp-server-${server.id}"]`)).$('.//button[starts-with(normalize-space(.), "Show tools")]').then((b) => b.click());
+    await (await $(`select[aria-label="What ${search.name} may do"]`)).selectByAttribute('value', 'reading_only');
+    // The backend itself: one call to the reading tool, answered by the store.
+    const props = Object.keys(search.inputSchema?.properties || {});
+    // The search field by its whole name ("context" also contains "text").
+    const field = props.find((p) => /^(query|q|search|search_query|text)$/i.test(p));
+    const args = field ? { [field]: aboutPolicies ? 'returns' : 'mug' } : {};
+    if (props.includes('context')) args.context = 'A customer asking what the shop sells.';
+    const direct = await invoke('mcp_call_tool', { serverId: server.id, url: listed.url, version: listed.version || null, tool: search.name, arguments: args, inputSchema: search.inputSchema || null });
+    console.log('LIVE shopify call', JSON.stringify({ ok: direct.ok && direct.value?.ok, reason: direct.value?.reason || direct.error || null, chars: String(direct.value?.text || '').length, text: String(direct.value?.text || '').slice(0, 300), args }));
+    expect(direct.ok && direct.value?.ok).toBe(true);
+    if (!(await ollamaHasModels())) return;
+    const request = await askInChat(aboutPolicies ? "/jose What is My Shopify's return policy? Look it up in the store." : '/jose What kinds of products does My Shopify sell? Look it up in the store.',
+      (r) => !['running', 'queued'].includes(r.status) && !r.steps.some((s) => ['running', 'pending'].includes(s.status)), 'the Shopify question');
+    const outs = (await stepOutputs())[request.commandId]?.steps || {};
+    console.log('LIVE shopify answer', JSON.stringify({ status: request.status, steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status]),
+      answer: Object.values(outs).map((o) => String(o.summary || '').slice(0, 300)) }));
+    expect(request.steps.some((s) => s.status === 'waiting_approval')).toBe(false);
+  }).timeout(2400000);
+
+  // Outside tools (2026-10-30): a change through GitHub's own MCP server is Marcus's step, asked once.
+  it('opens one approved issue through GitHub\'s MCP server', async function () {
+    if (!GITHUB_MCP_URL || !GITHUB_TOKEN || !GITHUB_REPO || !(await ollamaHasModels())) this.skip();
+    const server = await addOutsideServer('GitHub MCP', GITHUB_MCP_URL, 'free');
+    const row = await $(`[data-testid="mcp-server-${server.id}"]`);
+    await (await $('input[aria-label="Key header for GitHub MCP"]')).setValue('Authorization');
+    await (await $('input[aria-label="Key for GitHub MCP"]')).setValue(`Bearer ${GITHUB_TOKEN}`);
+    await (await row.$('.//button[normalize-space(.)="Save key"]')).click();
+    await browser.waitUntil(async () => ((await mcpServers()).find((s) => s.id === server.id)?.tools || []).some((t) => ISSUE_TOOLS.includes(t.name)),
+      { timeout: 90000, timeoutMsg: 'GitHub listed no tool that opens an issue' });
+    expect(JSON.stringify(await mcpServers())).not.toContain(GITHUB_TOKEN);
+    const waitingOrSettled = (r) => {
+      const m = r.steps.find((s) => s.agent === 'marcus' && s.actionType === 'distribution_outside_tool');
+      return m?.status === 'waiting_approval' || (m && ['done', 'failed', 'setup_needed'].includes(m.status)) || (!['running', 'queued'].includes(r.status) && !m);
+    };
+    let request = await askInChat(`/jose Through my GitHub MCP outside tool, open an issue in ${GITHUB_REPO} titled "Alphonso MCP live check" saying the outside-tools live check ran.`, waitingOrSettled, 'the GitHub MCP issue');
+    const marcus = request.steps.find((s) => s.agent === 'marcus' && s.actionType === 'distribution_outside_tool');
+    console.log('LIVE github-mcp before', JSON.stringify({ steps: request.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status, s.error || null]), call: marcus?.outsideCall ? { tool: marcus.outsideCall.tool, args: Object.keys(marcus.outsideCall.arguments || {}) } : null }));
+    expect(marcus?.status).toBe('waiting_approval');
+    // GitHub has named it create_issue, then issue_write with method "create".
+    expect(ISSUE_TOOLS).toContain(marcus.outsideCall.tool);
+    if (marcus.outsideCall.tool === 'issue_write') expect(marcus.outsideCall.arguments.method).toBe('create');
+    await approveOnBoard(marcus.stepId);
+    await browser.waitUntil(async () => {
+      request = (await savedRequests()).find((r) => r.id === request.id);
+      return !['running', 'waiting_approval', 'queued'].includes(request.status);
+    }, { timeout: 600000, interval: 3000, timeoutMsg: 'the GitHub MCP request did not finish after approval' });
+    const done = request.steps.find((s) => s.stepId === marcus.stepId);
+    const output = (await stepOutputs())[request.commandId]?.steps?.[done.stepId];
+    console.log('LIVE github-mcp after', JSON.stringify({ status: done.status, error: done.error || null, summary: String(output?.summary || '').slice(0, 400) }));
     expect(done.status).toBe('done');
   }).timeout(2400000);
 

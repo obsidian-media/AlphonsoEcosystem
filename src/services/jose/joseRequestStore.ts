@@ -29,6 +29,10 @@ export interface JoseRequestStep extends PlanStep {
   sendPreview?: SendPreview;
   /** When that send went out; a second run says it was already sent. */
   sentAtMs?: number;
+  /** A Marcus outside-tool call prepared before it asked you (2026-10-30): the exact call. */
+  outsideCall?: import('../marcus/outsideCall').OutsideCallPreview;
+  /** When that call was made; a second run says it was already done. */
+  ranAtMs?: number;
   /** An Alphonso code step prepared before it asked you (agent phase 6). */
   codePreview?: import('../alphonso/types').CodePreview;
   /** The project it works in (a listed name), and the folder its files are relative to. */

@@ -131,6 +131,10 @@ async function run(name: string, args: Record<string, unknown>, ctx: ToolContext
       if (!sources.length) return { ok: false, text: result.errors.length ? `No results: ${result.errors.join('; ')}` : 'No results.' };
       return { ok: true, text: sources.slice(0, 8).map((s: any) => `- ${s.title || s.url} (${s.url})${s.snippet ? `: ${s.snippet}` : ''}`).join('\n') };
     }
+    case 'outside_read': {
+      const { runOutsideRead } = await import('../mcp/mcpTools');
+      return runOutsideRead(args);
+    }
     case 'composio_read': {
       const toolName = str(args.tool);
       const toolkit = str(args.toolkit).toLowerCase();

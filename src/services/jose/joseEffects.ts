@@ -92,6 +92,8 @@ export const ACTION_EFFECTS: Record<string, JoseEffect[]> = {
   distribution_release: ['publish_or_send'],
   distribution_issue: ['publish_or_send'],
   distribution_schedule_posts: ['publish_or_send'],
+  // Outside tools (2026-10-30): a change through an MCP server; delete and spend are added per tool.
+  distribution_outside_tool: ['publish_or_send'],
   boardroom_planning: ['write_own_work'],
   boardroom_execute: ['write_own_work'],
   boardroom_advance: ['read'],
