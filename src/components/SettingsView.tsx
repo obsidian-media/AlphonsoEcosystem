@@ -17,6 +17,7 @@ const LEGACY_COLOR_TO_VARIANT: Record<string, 'default' | 'success' | 'warning' 
 import { AlphonsoProjectsSection } from './alphonso/AlphonsoProjectsSection';
 import { formatModelSize, isChatModel, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { SmallModelNotice } from './SmallModelNotice';
+import { HermesProfilesSection } from './hermes/HermesProfilesSection';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
 import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits, hydrateComposioApiKeyFromKeychain } from '../services/composioService';
@@ -134,6 +135,7 @@ function AgentProvidersSection() {
           </div>
         );
       })}
+      <HermesProfilesSection />
     </div>
   );
 }

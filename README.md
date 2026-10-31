@@ -511,6 +511,7 @@ npm run lint           # ESLint on src/
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 npm run test           # 6,933 tests across 622 files (src + bridge)
 =======
 npm run test           # 6,933 tests across 616 files (src + bridge)
@@ -527,6 +528,9 @@ npm run test           # 6,933 tests across 620 files (src + bridge)
 =======
 npm run test           # 6,933 tests across 621 files (src + bridge)
 >>>>>>> 7a365c8 (feat(hermes): the resource manager starts, counts and stops Hermes profiles)
+=======
+npm run test           # 6,933 tests across 623 files (src + bridge)
+>>>>>>> 3bd4c18 (feat(hermes): Hermes profiles in Settings and on the board)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command

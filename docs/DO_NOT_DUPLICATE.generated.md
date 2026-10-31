@@ -6,6 +6,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Source-backed inventory: 346 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 =======
 Source-backed inventory: 341 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
@@ -22,6 +23,9 @@ Source-backed inventory: 346 services and 179 components. Human purpose descript
 =======
 Source-backed inventory: 348 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 >>>>>>> 7a365c8 (feat(hermes): the resource manager starts, counts and stops Hermes profiles)
+=======
+Source-backed inventory: 348 services and 181 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+>>>>>>> 3bd4c18 (feat(hermes): Hermes profiles in Settings and on the board)
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -90,6 +94,8 @@ Source-backed inventory: 348 services and 179 components. Human purpose descript
 | component | `src/components/hector/SavedSources.tsx` | `SavedSources` |
 | component | `src/components/hector/SourceBoard.tsx` | `SourceBoard` |
 | component | `src/components/HectorCompanionWidget.tsx` | `HectorCompanionWidget` |
+| component | `src/components/hermes/HermesMessagingWarning.tsx` | `HermesMessagingWarning` |
+| component | `src/components/hermes/HermesProfilesSection.tsx` | `HermesProfilesSection` |
 | component | `src/components/InstallLocationPicker.tsx` | `InstallLocationPicker` |
 | component | `src/components/jose/JosePlanCard.tsx` | `JosePlanCard`, `JosePlanCardProps` |
 | component | `src/components/jose/JosePlanEditor.tsx` | `JosePlanEditor` |
@@ -375,8 +381,8 @@ Source-backed inventory: 348 services and 179 components. Human purpose descript
 | service | `src/services/hermes/hermesRun.ts` | `HERMES_LOST`, `HERMES_NOT_SET_UP`, `HERMES_TIMED_OUT`, `HermesApprovalRequest`, `HermesRunOptions`, `HermesStepResult`, `progressLine`, `RUN_EVENT`, `runHermesStep`, `RUNS_NOT_SUPPORTED` |
 | service | `src/services/hermes/hermesStepHooks.ts` | `getHermesHooks`, `HermesStepHooks`, `withHermesHooks` |
 | service | `src/services/hermes/hermesTools.ts` | `HERMES_DIDNT_START`, `HERMES_TOOL_PREFIX`, `hermesLocalModel`, `hermesToolFor`, `hermesToolLabel`, `isHermesTool`, `saveProfileModel`, `startHermesTool`, `stopHermesTool` |
-| service | `src/services/hermes/profileModels.ts` | `hermesLocalModel`, `SavedProfileModel`, `saveProfileModel` |
-| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
+| service | `src/services/hermes/profileModels.ts` | `hermesLocalModel`, `savedProfileModel`, `SavedProfileModel`, `saveProfileModel` |
+| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |

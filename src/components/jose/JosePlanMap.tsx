@@ -6,6 +6,7 @@ import { Badge } from '../ui';
 import { layoutPlan, DEFAULT_BOX } from '../../services/jose/josePlanLayout';
 import type { PlanStep } from '../../services/jose/stepGraph';
 import { agentName } from '../../services/jose/agentNames';
+import { getAgentProvider } from '../../services/modelSelectionService';
 
 type MapStep = PlanStep & { status?: string; startedAtMs?: number; endedAtMs?: number; verdict?: 'pass' | 'fix' };
 
@@ -89,7 +90,13 @@ export function JosePlanMap({ steps, compact = false, selectedStepId, onSelectSt
               title={(step as { skill?: string }).skill ? `Skill: ${(step as { skill?: string }).skill}` : undefined}
             >
               <div className="flex items-center justify-between gap-1 text-[11px] font-semibold text-(--text-1)">
-                <span>{agentName(step.agent)}{step.round ? <span className="ml-1 font-normal text-(--text-3)">Round {step.round}</span> : null}</span>
+                <span>
+                  {agentName(step.agent)}
+                  {step.round ? <span className="ml-1 font-normal text-(--text-3)">Round {step.round}</span> : null}
+                  {getAgentProvider(step.agent)?.provider === 'hermes' && (
+                    <span data-testid="jose-plan-hermes" className="ml-1 font-normal text-(--text-3)">Hermes profile</span>
+                  )}
+                </span>
                 {status === 'waiting_approval'
                   ? <Badge variant="warning" className="px-1! py-0! text-[9px]!">Waiting for you</Badge>
                   : <span className="text-[9px] font-normal text-(--text-3)">{STATUS_LABELS[status] || status}{time ? ` · ${time}` : ''}</span>}

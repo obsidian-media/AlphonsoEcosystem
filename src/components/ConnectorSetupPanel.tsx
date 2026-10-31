@@ -47,6 +47,7 @@ import { saveConnectorCredential, getConnectorCredential, hydrateConnectorCreden
 import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { getHermesAgentEndpoint, saveHermesAgentEndpoint, getHermesAgentHealth } from '../services/connectors/hermesAgentConnector';
+import { HermesMessagingWarning } from './hermes/HermesMessagingWarning';
 import { CloudModelSelect } from './CloudModelSelect';
 import { MediaStorageSection } from './MediaStorageSection';
 import { OutsideToolsSection } from './OutsideToolsSection';
@@ -1071,6 +1072,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             <p className="mt-3 text-[11px] text-(--text-3)">
               Create a bot with <span className="text-(--text-3)">@BotFather</span> on Telegram to get your bot token, then message <span className="text-(--text-3)">@userinfobot</span> to get your own numeric chat ID. Set it here <span className="text-(--text-3)">before</span> sending <span className="text-(--text-3)">/start</span> to your bot — Alphonso will only let a chat ID on this list claim ownership, closing the window where anyone who finds your bot first could take control.
             </p>
+            <HermesMessagingWarning platform="telegram" />
             {telegramBotVerified !== null && (
               <div className={`mt-3 flex items-center gap-1.5 text-[12px] font-medium ${telegramBotVerified.ok ? 'text-(--success)' : 'text-(--error)'}`}>
                 {telegramBotVerified.ok

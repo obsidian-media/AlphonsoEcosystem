@@ -28,3 +28,8 @@ export function hermesLocalModel(agent: string): string | null {
   const saved = savedModels()[agent];
   return saved?.kind === 'ollama' && saved.model ? saved.model : null;
 }
+
+/** What a profile Alphonso set up thinks with, for Settings; null when unknown. */
+export function savedProfileModel(agent: string): SavedProfileModel | null {
+  return savedModels()[agent] || null;
+}

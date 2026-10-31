@@ -104,6 +104,11 @@ function readConnected(): Record<string, { name: string; folder: string }> {
   }
 }
 
+/** Every agent's connected profile of the user's, by agent. */
+export function connectedUserProfiles(): Record<string, { name: string; folder: string }> {
+  return readConnected();
+}
+
 /** Which of the user's profiles serves this agent (for starting it), if any. */
 export function userProfileFor(agent: string): { name: string; folder: string } | null {
   return readConnected()[agent] || null;
