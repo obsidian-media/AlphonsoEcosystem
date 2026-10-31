@@ -8,7 +8,8 @@
 //   ALPHONSO_LIVE_PAID_INPUT_PRICE    price per million input tokens, USD
 //   ALPHONSO_LIVE_PAID_OUTPUT_PRICE   price per million output tokens, USD
 // Optional: ALPHONSO_LIVE_SPEND_CAP_USD (default 0.50), ALPHONSO_LIVE_REPORT_FILE (each step's
-// full output is written there for reading afterwards).
+// full output is written there for reading afterwards), ALPHONSO_LIVE_TAVILY_KEY_FILE (Hector
+// searches with it; without one he uses the free search, which refuses after many searches).
 //
 // One request with a step for each working agent (Hector, Nova, Alphonso, Miya, Maria, Sentinel,
 // Marcus, Echo), every step on Claude as Allow paid models runs it today: each step asks once with
@@ -27,6 +28,7 @@ const INPUT_PRICE = Number(process.env.ALPHONSO_LIVE_PAID_INPUT_PRICE);
 const OUTPUT_PRICE = Number(process.env.ALPHONSO_LIVE_PAID_OUTPUT_PRICE);
 const CAP = Number(process.env.ALPHONSO_LIVE_SPEND_CAP_USD) || 0.5;
 const REPORT = process.env.ALPHONSO_LIVE_REPORT_FILE || '';
+const TAVILY_KEY = (() => { try { const f = process.env.ALPHONSO_LIVE_TAVILY_KEY_FILE; return f ? fs.readFileSync(f, 'utf8').trim() : ''; } catch { return ''; } })();
 const TOPIC = 'a small specialty coffee kiosk in a busy commuter train station';
 
 const savedRequests = async () => JSON.parse(await browser.execute(() => localStorage.getItem('alphonso_jose_requests_v1') || '[]'));
@@ -47,26 +49,26 @@ async function useSettings(values) {
   await $('[data-alphonso-shell-ready="true"]').waitForExist({ timeout: 60000 });
 }
 
-async function saveKey() {
+async function saveKey(placeholder = KEY_PLACEHOLDER, value = KEY, categoryId = 'ai_models') {
   await $('[aria-label="Open settings"]').click();
   const connectors = await $('//nav//button[normalize-space(.)="Connectors"]');
   await connectors.waitForClickable({ timeout: 30000 });
   await connectors.click();
-  const category = await $('[data-testid="connector-category-ai_models"]');
+  const category = await $(`[data-testid="connector-category-${categoryId}"]`);
   await category.waitForExist({ timeout: 30000 });
   if ((await category.getAttribute('aria-expanded')) !== 'true') await category.click();
-  const field = await $(`input[placeholder="${KEY_PLACEHOLDER}"]`);
+  const field = await $(`input[placeholder="${placeholder}"]`);
   await field.waitForDisplayed({ timeout: 30000 });
   await field.scrollIntoView({ block: 'center' });
   await field.click();
-  await field.setValue(KEY);
+  await field.setValue(value);
   for (const save of await $$('//button[normalize-space(.)="Save & Enable"]')) {
     if (await browser.execute((f, b) => Boolean(f.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING), field, save)) {
       await save.click();
       return;
     }
   }
-  throw new Error(`no Save & Enable after the ${PROVIDER} key`);
+  throw new Error(`no Save & Enable after "${placeholder}"`);
 }
 
 /** The plan, saved waiting for you, as the planner would save it: one step per working agent. */
@@ -126,6 +128,7 @@ describe('Alphonso desktop: every agent on Claude (live)', function () {
 
   it('runs one request through every agent on Claude, each step approved with its cost', async function () {
     await saveKey();
+    if (TAVILY_KEY) await saveKey('tvly-...', TAVILY_KEY, 'search');
     await useSettings({
       zeroCostMode: false, approvalMode: true, showPlanFirst: 'always',
       paidModels: { allowed: true, provider: PROVIDER, model: MODEL, inputPerMillionUsd: INPUT_PRICE, outputPerMillionUsd: OUTPUT_PRICE, monthlyCapUsd: CAP },

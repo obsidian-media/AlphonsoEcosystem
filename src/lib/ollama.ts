@@ -821,10 +821,12 @@ async function generatePaidResponse(paidModel: string, options: AgentGenerateOpt
   const [provider, ...rest] = paidModel.split(':');
   const model = rest.join(':').trim() || undefined;
   const spend = await import('../services/jose/joseSpend');
+  // A reason that won't change by asking again is left for the step runner, which then stops.
+  const stop = (line: string) => { spend.notePaidStop(agentId, line); return new Error(line); };
   const available = spend.paidModelAvailable();
-  if (!available.ok) throw new Error(available.reason);
+  if (!available.ok) throw stop(String(available.reason));
   const allowed = spend.canSpend(spend.estimateCostUsd(String(options.prompt || '').length, spend.PAID_MAX_OUTPUT_TOKENS));
-  if (!allowed.ok) throw new Error(allowed.reason);
+  if (!allowed.ok) throw stop(String(allowed.reason));
   const who = provider === 'openrouter' ? 'OpenRouter' : provider === 'claude' ? 'Claude' : 'ChatGPT';
   // One call; its cost is recorded even when the answer was cut off (it was still charged).
   const callOnce = async (maxTokens: number): Promise<{ text: string; model: string | undefined; cutOff: boolean }> => {
@@ -859,10 +861,9 @@ async function generatePaidResponse(paidModel: string, options: AgentGenerateOpt
   let answer = await callOnce(spend.PAID_MAX_OUTPUT_TOKENS);
   if (answer.cutOff) {
     const more = spend.canSpend(spend.estimateCostUsd(String(options.prompt || '').length, spend.PAID_RETRY_MAX_OUTPUT_TOKENS));
-    const cutOff = (line: string) => { spend.noteCutOff(agentId, line); return new Error(line); };
-    if (!more.ok) throw cutOff(spend.cutOffLine(who, 'cap'));
+    if (!more.ok) throw stop(spend.cutOffLine(who, 'cap'));
     answer = await callOnce(spend.PAID_RETRY_MAX_OUTPUT_TOKENS);
-    if (answer.cutOff) throw cutOff(spend.cutOffLine(who));
+    if (answer.cutOff) throw stop(spend.cutOffLine(who));
   }
   return { response: answer.text, done: true, backend: provider === 'openrouter' || provider === 'claude' ? provider : 'chatgpt', model: answer.model };
 }

@@ -21,16 +21,17 @@ export const PAID_RETRY_MAX_OUTPUT_TOKENS = 8192;
 /** What every cut-off message contains; the step runner does not retry a step that failed this way. */
 export const CUT_OFF_PATTERN = /cut off at the length limit/;
 
-// The last cut-off per agent, for the step runner: Nova, Hector and Echo turn a model error into
-// their own "unreadable" line, which would hide it (QA, 2026-10-31). Like withAgentModel, per agent.
+// Why a paid call stopped for good (cut off, past the cap, paid models unavailable), per agent, for the
+// step runner: Nova, Hector and Echo turn a model error into their own "unreadable" line, which would
+// hide it, and the step would be tried again (QA, 2026-10-31). Like withAgentModel, per agent.
 const cutOffNotes = new Map<string, string>();
 
-export function noteCutOff(agent: string, line: string): void {
+export function notePaidStop(agent: string, line: string): void {
   if (agent) cutOffNotes.set(agent, line);
 }
 
-/** The agent's last cut-off line, once; null when there is none. */
-export function takeCutOff(agent: string): string | null {
+/** Why the agent's last paid call stopped for good, once; null when there is none. */
+export function takePaidStop(agent: string): string | null {
   const line = cutOffNotes.get(agent) ?? null;
   cutOffNotes.delete(agent);
   return line;

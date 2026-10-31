@@ -129,8 +129,21 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     expect(String(error.message)).toMatch(spend.CUT_OFF_PATTERN);
     expect(sendOpenRouterMessage).toHaveBeenCalledTimes(2);
     // Agents that swallow a model error (Nova, Hector, Echo) still get the line to the step runner.
-    expect(spend.takeCutOff('nova')).toMatch(spend.CUT_OFF_PATTERN);
-    expect(spend.takeCutOff('nova')).toBeNull();
+    expect(spend.takePaidStop('nova')).toMatch(spend.CUT_OFF_PATTERN);
+    expect(spend.takePaidStop('nova')).toBeNull();
+    localStorage.clear();
+  });
+
+  // QA, 2026-10-31 (live cap check): Nova turned "past your monthly cap" into "unreadable" and was
+  // tried 4 times; the reason reaches the step runner whatever the agent does with the error.
+  it('a paid step past the monthly cap sends nothing and leaves the reason for the step runner', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: false, paidModels: { allowed: true, provider: 'openrouter', model: 'b/y', inputPerMillionUsd: 1, outputPerMillionUsd: 2, monthlyCapUsd: 0 } }));
+    localStorage.setItem('alphonso_connector_auth_profiles_v1', JSON.stringify({ openrouter: { enabled: true, mode: 'trusted_session' } }));
+    const spend = await import('../services/jose/joseSpend');
+    const error = await generateAgentLlmResponse('nova', { prompt: 'judge', model: 'openrouter:b/y' }).catch((e) => e);
+    expect(String(error.message)).toMatch(/monthly cap/);
+    expect(sendOpenRouterMessage).not.toHaveBeenCalled();
+    expect(spend.takePaidStop('nova')).toMatch(/monthly cap/);
     localStorage.clear();
   });
 

@@ -355,10 +355,10 @@ describe('Jose runs plans as step graphs', () => {
   });
 
   it('says the cut-off, not the agent\'s own "unreadable", when the agent swallowed the error', async () => {
-    const { cutOffLine, noteCutOff } = await import('../../../services/jose/joseSpend');
+    const { cutOffLine, notePaidStop } = await import('../../../services/jose/joseSpend');
     vi.mocked(executeContentStepAssignment).mockClear();
     vi.mocked(executeContentStepAssignment).mockImplementation(async (assignment) => {
-      noteCutOff(assignment.agent, cutOffLine('OpenRouter'));
+      notePaidStop(assignment.agent, cutOffLine('OpenRouter'));
       throw new Error("Nova's model didn't give a readable verdict.");
     });
     const result = await run([step('nova', 'analysis_market', { stepId: 'value', effects: ['read'] })]);
