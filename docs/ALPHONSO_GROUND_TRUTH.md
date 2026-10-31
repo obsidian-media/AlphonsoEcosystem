@@ -131,7 +131,7 @@ the same change; no task is complete without the plan's stated verification.
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.10.0 |
+| Version | 2.11.0 (release prepared 2026-10-31; 2.10.0 is the latest published) |
 | Type | Tauri v2 desktop app (Windows; macOS Apple Silicon and Linux builds too) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust (minimum 1.77.2), Tauri 2.12, SQLite (rusqlite bundled), the OS keychain, tokio, reqwest, tokio-tungstenite (companion) |

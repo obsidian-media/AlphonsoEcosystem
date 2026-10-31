@@ -10,6 +10,8 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [Unreleased]
 
+## [2.11.0] — 2026-10-31 (outside tools through MCP, PR 372; the Hermes gateway, PR 373; the closing phase, PR 374, with OpenRouter and the resource manager; the user-guide rewrite and the fixes found by the live checks)
+
 ### Docs and release checks (2026-10-31)
 - **New user guides.** The README, Getting started, User manual, Agent guide, Connectors guide and Troubleshooting were rewritten for people using the app: shorter, step by step, in the words on the screen. Build and test help moved to CONTRIBUTING.md; older reports and plans moved to `docs/internal/`.
 - **Download a model from Settings.** Settings → General → Download a model downloads inside the app with progress and links Ollama's model library, instead of a fixed list of old model names and a command to paste into a terminal.

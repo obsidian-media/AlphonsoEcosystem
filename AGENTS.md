@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 19 (Vite 8, Tailwind 4) + Ollama (local LLM)
-- **Version**: 2.10.0 (released 2026-10-27; 596 test files, 6,933 tests, 328 services)
+- **Version**: 2.11.0 (release prepared 2026-10-31 on `release/docs-and-qa`; 2.10.0 released 2026-10-27; 596 test files, 6,933 tests, 328 services)
 - **Released in 2.10.0**: the Jose redesign (phases 1–7: plans as step graphs, approval by effect, the Requests board, Stop, a local-model queue), agent roles Parts A–C (one owner per kind of work, 60 skills, Projects and Teams), agent phases 1–7 (each agent rebuilt around its own model's judgment) and Miya's content factory (phases 1–4c: from an idea to finished, posted videos, Shorts and carousels, with results, paid engines, brand characters and motion) Next (owner, 2026-10-27): the live check with the owner's keys, then the resource manager, OpenRouter, a real MCP server and the Hermes gateway, each a phase of its own.
 
 ## Directory Structure
