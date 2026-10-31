@@ -2442,6 +2442,20 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.60 The closing phase: the deferred list checked against the code (2026-10-30)
+
+Asked by the owner before the full QA pass and the release: check the deferred list against the code, close what was stale, and fix what the owner chose (branch `fix/closing-phase`). `docs/governance/DEFERRED_WORK.md` now starts with "What is open", sorted into code, owner decisions and live checks.
+- **macOS 13.3 or later** (`minimumSystemVersion`, Vite `build.target: 'safari16.4'`): Tailwind v4's CSS needs Safari 16.4, so 10.15–13.2 would have shown a blank window. `src/test/macosMinimum.test.js` keeps the two in step.
+- **Setup asks for Git before ComfyUI or Fooocus** (`COMPONENT_PREREQ` lists every prerequisite; `getUnmetPrereq()` returns the first missing one; "Install Git" uses `runtime_install_prerequisite`).
+- **The Research Desk says when only free search is set up** (`hasSearchKey()`, `FREE_SEARCH_NOTE` in `hector/searchChain.ts`).
+- **Marcus sees each outside tool's description**, fenced as the server's text (`toolList()` in `marcus/outsideCall.ts`).
+- **Shorts use the character's own pictures on ComfyUI** (`makeMini()` in `shortMaker.ts` calls `makeCharacterPicture()` when the reference model is installed).
+- **Coach Mode's gambling parts wait for SessionGuard** (owner): spins, net, stretch and Pause / End session show only for a check-in whose source is SessionGuard (`isSessionGuardIntervention()`); Alphonso's own check-ins show their message and Continue.
+- **Video and music from Chat** (owner: "wire both"): `contentFactory/chatMedia.ts`, one Miya step, a ComfyUI picture turned into a clip by the installed video model, or AudioCraft's music; shown in Chat and Quick package; nothing starts without the tool.
+- **The Alphonso Bridge is archived** (owner) to `archive/MIGHTBEUSEDLATER/bridge-4444/` with `runtimeApiService.ts`; Runtime Hub has 14 tools; port 4444 left the CSP; `npm test` runs `src` only.
+- **ffmpeg** (owner: "bundle Linux, guide macOS"): the AppImage bundles the pinned LGPL build (`fetch-ffmpeg.mjs linux`, `bin/` + `lib/`, checked to run inside the AppImage in CI); a Mac is told to `brew install ffmpeg` (`ffmpeg_missing_for()`, `ffmpegHelp`). Bundled resources are now found in Tauri's resource folder too (`bundled_resource()` in `utils.rs`): an AppImage never found its bundled Ollama or starter model before.
+- **Checked:** unit tests for each change, Rust compiled with clippy (Rust tests run in CI), and a dispatched CI run of the branch for the Linux and macOS builds. Not yet on a real Linux or Mac computer.
+
 ## 11.59 The Hermes gateway: Alphonso runs Hermes and is its front door (2026-10-30)
 
 The last of the four phases after QA batch 1 (owner, 2026-10-30; design `docs/superpowers/specs/2026-10-30-hermes-gateway-design.md`, plan `docs/superpowers/plans/2026-10-30-hermes-gateway.md`). Hermes Agent 0.19.0 (Nous Research, MIT) gives an agent its own tools; Alphonso installs it, runs a profile per agent, and keeps its approvals in charge.
@@ -2456,7 +2470,7 @@ The last of the four phases after QA batch 1 (owner, 2026-10-30; design `docs/su
 ## 11.58 Outside tools through MCP: Alphonso calls out (2026-10-30)
 
 The third of the four phases after QA batch 1, turned round by the owner: Alphonso is an MCP **client** that calls the user's online MCP servers (a shop, an issue tracker), not a server others call into ("calling in alphonso would be alot of security vaulnribility"). Design `docs/superpowers/specs/2026-10-30-mcp-client-design.md`, plan `docs/superpowers/plans/2026-10-30-mcp-client.md`.
-- **The old `mcp-server/` facade is archived** (`archive/MIGHTBEUSEDLATER/mcp-server/`), with Runtime Hub's "MCP Server" tool; port 3333 is free. The Alphonso Bridge stays, with no in-app user.
+- **The old `mcp-server/` facade is archived** (`archive/MIGHTBEUSEDLATER/mcp-server/`), with Runtime Hub's "MCP Server" tool; port 3333 is free. The Alphonso Bridge stays, with no in-app user (archived in the closing phase, §11.60).
 - **The backend client** (`src-tauri/src/mcp_client.rs`): the 2026-07-28 protocol (no handshake; every request carries its version, `MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name`, `Mcp-Param-*` from a tool's `x-mcp-header` marks; a tool with broken marks is left out by name), falling back to 2025-11-25's handshake and session. https only, private addresses refused, every redirect checked, 2 MB and 60 s per answer, 200 tools at most. A server asking a question back (`input_required`) is refused with a plain sentence. Keys and sign-ins live in the keychain (`mcp:<id>:…`); the window never holds one. The MCP Registry is searched through the backend.
 - **Sign-in** (`mcp_auth.rs`): the server's 401 leads to its authorization server; PKCE, `state`, the RFC 9207 `iss` check, the `resource` parameter; a token refreshed before it runs out and once after a 401. Alphonso identifies itself with a Client ID Metadata Document at `https://alphonsoecosystem.app/alphonso/oauth-client.json` (published on the marketing site with the owner, 2026-10-30; `docs/hosting/`), else registers itself as a native app, else takes a client ID the user pastes. Callback on `127.0.0.1:8088`.
 - **What each tool may do** (owner): every tool asks first until the user marks it "Reading only"; the server's own hints are shown as suggestions only. A Paid server (the default) adds `spend` and is blocked in Zero-Cost Mode; a "Deletes" mark or a destructive hint adds `delete`.

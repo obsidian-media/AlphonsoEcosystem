@@ -483,18 +483,19 @@ Each post's numbers are read 1 hour, 1 day, 7 days and 30 days after it goes out
 
 ## 9. Connector System
 
-Alphonso has 34 connectors, all set up in **Settings → Connectors** and all policy-gated. Keys are kept in your system's keychain, never in a file; an environment variable still works as a fallback.
+Alphonso has 36 connectors, all set up in **Settings → Connectors** and all policy-gated. Keys are kept in your system's keychain, never in a file; an environment variable still works as a fallback.
 
 | Group | Connectors | Cost |
 |-------|-----------|------|
 | Messaging | Telegram, WhatsApp Cloud, Discord, Slack, Generic Webhook, Mobile Bridge | Free |
 | | CALL-E (real outbound phone calls) | Paid |
-| AI models | Ollama (local), NVIDIA NIM, Gemini (free tiers), Hermes Agents (self-hosted) | Free |
+| AI models | Ollama (local), NVIDIA NIM, Gemini, OpenRouter's free models (free tiers), Hermes Agents (on this computer) | Free |
 | | Claude, ChatGPT, Qwen, DeepSeek | Paid |
-| Search & research | Brave Search, Tavily, Perplexity | Free tiers / paid |
+| Search & research | Brave Search, Tavily, Perplexity, Google Web Risk (link checks) | Free tiers / paid |
 | Content & productivity | YouTube, Meta (Facebook and Instagram), ComfyUI, SD WebUI, Pexels, Pixabay, Coverr, your own storage, Notion, ClickUp, GitHub | Free |
 | | Runway, ElevenLabs, Higgsfield | Paid |
 | Automation | n8n | Free (self-hosted) |
+| Outside tools | Your own online services through MCP (a shop, an issue tracker) | Free or paid, you choose |
 
 **Claude and ChatGPT:** pick the model from the live list in each connector (Claude Haiku 5.5 and GPT-6 Luna by default). **Higgsfield:** paste the model ids from the Higgsfield Console (pictures, clips, character training, motion), each with optional extra settings as JSON; **Test** gives Higgsfield's estimate without making anything. **ElevenLabs:** **Test** lists your voices, including your clones. Prices for paid engines are yours to enter in Settings → Approvals → Allow paid models.
 
@@ -513,6 +514,18 @@ WhatsApp uses Meta's Cloud API (free) + a small Railway gateway service for inbo
 | `WHATSAPP_ALLOWED_NUMBERS` | Comma-separated allowed sender numbers (digits only) |
 
 See [GETTING_STARTED.md](./GETTING_STARTED.md) for the full Railway deployment steps.
+
+### OpenRouter
+
+Add an OpenRouter key in **Settings → Connectors → AI Models**. Chat and every agent can then use OpenRouter's free models; the picker shows how many free requests are left today. When the free limit runs out (50 a day until you have bought $10 of credit), a step carries on with this computer's model and says so, or, if you choose in Settings → Approvals, asks to finish with a paid model. Paid OpenRouter models are a choice in **Settings → Approvals → Allow paid models**, with their prices from OpenRouter.
+
+### Outside tools (MCP)
+
+**Settings → Connectors → Outside tools (MCP)** connects online services that offer an MCP server, such as your shop or your issue tracker: search the MCP Registry or paste the server's address, then sign in in your browser or save its key. Mark the server Free or Paid (Paid servers are blocked in Zero-Cost Mode). Every tool asks you first until you mark it **Reading only**. Agents read from reading-only tools when a request needs the facts ("how many orders came in this week?"); changes are Marcus's step ("set the blue mug to $18"), and the approval shows the exact call, which runs once.
+
+### Hermes profiles
+
+Hermes Agent (Nous Research) gives an agent its own tools, such as searching the web. Install it from **Runtime Hub**, then in **Settings → Connectors → Agent Providers → Hermes profiles** set up a profile for an agent, or use **Find my Hermes profiles** to connect one you already have. That agent's steps then run on Hermes, with what it's doing shown on Chat's live line. When Hermes wants to run a command or change something, the step waits for you on the board and on Telegram. Profiles start when a step needs them; those Alphonso started stop after 30 idle minutes.
 
 ### Setting Up Connectors
 
@@ -704,6 +717,8 @@ You don't need commands: write what you want and you get an answer (from Alphons
 | `create a marketing campaign` | Full campaign |
 
 ### System Commands
+
+**Memory.** Before each step Alphonso checks free RAM and graphics memory: a step that fits runs, idle models and idle tools Alphonso started are freed to make room, and otherwise the step waits and says why. **Runtime Hub → Memory** (or the meter in the top bar) shows what is loaded, who started it and what is waiting, and sets how long each tool may sit idle before it stops (ComfyUI: 15 minutes). Programs you started yourself are never stopped.
 
 Ask in plain words ("is Ollama running?", "which models do I have?"); Alphonso answers. Settings → Runtime and Runtime Hub show the real status of Ollama, ComfyUI, Voice OS and the other tools, and the Connector Health Monitor tests each connector.
 

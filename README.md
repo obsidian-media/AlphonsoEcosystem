@@ -14,6 +14,14 @@
 
 [**Download the latest release**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
+## Coming in the next release (on `main`, not released yet)
+
+- **Outside tools through MCP:** connect your shop, issue tracker or other online service; agents read from it, and Marcus makes changes after you approve the exact call.
+- **OpenRouter:** free models for Chat and any agent, and its paid models as a choice under Allow paid models.
+- **Memory decides what runs:** a step waits when RAM or graphics memory is short instead of running out; idle tools stop; Runtime Hub → Memory and a meter in the top bar show what is loaded.
+- **Hermes gateway:** Runtime Hub installs Hermes Agent, Settings sets up a profile per agent, and Hermes's own requests wait for your approval.
+- **Video and music from Chat**, ffmpeg in the Linux AppImage, macOS 13.3 or later required, and the deferred list cleaned up. Details in [docs/CHANGELOG.md](docs/CHANGELOG.md).
+
 ## What's New in v2.10.0 (2026-10-27)
 
 The full list is in [docs/CHANGELOG.md](docs/CHANGELOG.md).
@@ -468,10 +476,11 @@ All 36 connectors are set up in **Settings → Connectors**; keys are kept in th
 | Group | Connectors |
 |-------|-----------|
 | Messaging | Telegram, WhatsApp Cloud, Discord, Slack, CALL-E (phone calls), Generic Webhook, Mobile Bridge |
-| AI models | Ollama (local), Claude, ChatGPT, Qwen, DeepSeek, NVIDIA NIM, Gemini, Hermes Agents |
-| Search & research | Brave Search, Perplexity, Tavily |
+| AI models | Ollama (local), Claude, ChatGPT, Qwen, DeepSeek, NVIDIA NIM, Gemini, OpenRouter, Hermes Agents |
+| Search & research | Brave Search, Perplexity, Tavily, Google Web Risk (link checks) |
 | Content & productivity | YouTube, Meta (Facebook and Instagram), ComfyUI, SD WebUI, Runway, Pexels, Pixabay, Coverr, your own storage, ElevenLabs, Higgsfield, Notion, ClickUp, GitHub |
 | Automation | n8n |
+| Outside tools | Your own online services through MCP (Settings → Connectors → Outside tools) |
 
 Every outbound call goes through the policy gate; paid connectors (Claude, ChatGPT, Runway, CALL-E, ElevenLabs, Higgsfield and others) are off in Zero-Cost Mode and ask first. See [docs/CONNECTORS.md](docs/CONNECTORS.md) for setup.
 

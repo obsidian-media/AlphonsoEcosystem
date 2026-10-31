@@ -10,6 +10,24 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [Unreleased]
 
+### Closing the deferred list (2026-10-30)
+- **Make a video or music from Chat.** "Make a video of a cat on a boat" or "create calm piano music for my intro" is now Miya's step: a picture from ComfyUI turned into a short clip by the video model you installed in Runtime Hub, or a piece of music from AudioCraft. It plays in Chat and is listed in Miya Studio → Quick package. Without the tool, Alphonso says what to install and starts nothing.
+- **Linux gets ffmpeg in the AppImage**, like the Windows installer. **On a Mac**, Runtime Hub and the video steps tell you to run `brew install ffmpeg` when it's missing.
+- **macOS 13.3 or later** is required (the app's styles need it; older Macs would show a blank window).
+- **Setup asks for Git** before installing ComfyUI or Fooocus, with an Install Git button, instead of failing part-way.
+- **The Research Desk says when only free search is set up**, and that adding a Brave, Tavily or Perplexity key gives better results.
+- **Coach Mode** no longer shows gambling numbers (spins, net, stretch) or Pause / End session on its own check-ins; those wait for SessionGuard.
+- **Shorts** use your character's own pictures on ComfyUI, like the main video.
+- **Marcus reads each outside tool's description** when picking one, treated as the server's own text.
+- **Fixed on Linux:** the bundled Ollama and starter model were never found inside the AppImage.
+- **Removed:** the Alphonso Bridge (a local server on port 4444 that nothing in Alphonso used).
+
+### Hermes gateway (2026-10-30)
+- **Runtime Hub installs Hermes Agent** (Nous Research), and Settings → Connectors → Agent Providers → Hermes profiles sets up one profile per agent, or connects one of your own.
+- **An agent on Hermes uses Hermes's own tools** (web search, reading pages) and you see what it's doing on Chat's live line ("Hector: searching the web"). Stop ends that step.
+- **Hermes asks you first.** When a Hermes run wants to run a command or change something, the step waits on the board and Telegram with exactly what it wants; Approve or Reject.
+- **Profiles start when a step needs them** and the ones Alphonso started stop after 30 idle minutes. Your own Hermes folder is never changed, and its keys are never read.
+
 ### Outside tools through MCP (2026-10-30)
 - **Connect the online services you use** (your shop, your issue tracker) in Settings → Connectors → Outside tools (MCP): search the MCP Registry or paste the server's address, then sign in in your browser or save its key. Keys stay in your system keychain.
 - **You decide what each tool may do.** Every tool asks you first until you mark it "Reading only". Mark a server Free or Paid; Paid servers are blocked in Zero-Cost Mode.
