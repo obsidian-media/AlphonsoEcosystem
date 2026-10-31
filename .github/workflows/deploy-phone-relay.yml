@@ -1,0 +1,81 @@
+name: Deploy phone relay to Cloud Run
+
+# Builds gateway/phone-relay and deploys it to Cloud Run in the Obsidian Media Google
+# Cloud project. Signs in with Workload Identity Federation (no stored Google key).
+# Run by hand. Everything about the project comes from repository variables:
+#   GCP_PROJECT_ID, GCP_REGION, GCP_WIF_PROVIDER, GCP_DEPLOY_SERVICE_ACCOUNT,
+#   PHONE_RELAY_SERVICE (Cloud Run service name), PHONE_RELAY_RUN_AS (the service
+#   account the relay runs as: Firebase Auth, Firestore and Cloud Messaging only).
+# The relay keeps connections in memory, so it runs as one instance (see its README).
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-phone-relay
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Check the settings are there
+        env:
+          PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          REGION: ${{ vars.GCP_REGION }}
+          PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          DEPLOYER: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          SERVICE: ${{ vars.PHONE_RELAY_SERVICE }}
+          RUN_AS: ${{ vars.PHONE_RELAY_RUN_AS }}
+        run: |
+          for name in PROJECT REGION PROVIDER DEPLOYER SERVICE RUN_AS; do
+            if [ -z "${!name}" ]; then echo "::error::Repository variable for $name is not set."; exit 1; fi
+          done
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Test before deploying
+        run: |
+          npm ci --prefix gateway/phone-relay --no-audit --no-fund
+          node --test gateway/phone-relay/src/relay.test.mjs gateway/phone-relay/src/server.test.mjs
+
+      - name: Build and deploy
+        env:
+          PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          REGION: ${{ vars.GCP_REGION }}
+          SERVICE: ${{ vars.PHONE_RELAY_SERVICE }}
+          RUN_AS: ${{ vars.PHONE_RELAY_RUN_AS }}
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --project "$PROJECT" --region "$REGION" \
+            --source gateway/phone-relay \
+            --service-account "$RUN_AS" \
+            --allow-unauthenticated \
+            --session-affinity \
+            --timeout 3600 \
+            --min-instances 0 --max-instances 1 \
+            --concurrency 1000 \
+            --memory 512Mi --cpu 1 \
+            --quiet
+
+      - name: Check it answers
+        env:
+          PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          REGION: ${{ vars.GCP_REGION }}
+          SERVICE: ${{ vars.PHONE_RELAY_SERVICE }}
+        run: |
+          url=$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" --format 'value(status.url)')
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$url/healthz")
+          echo "Relay at $url answered $code"
+          [ "$code" = "200" ]
