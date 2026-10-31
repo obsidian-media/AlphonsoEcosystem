@@ -200,7 +200,7 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 - [2026-10-23] **Miya content factory phase 2a (the finished video file): what it leaves open.**
   - ~~Phase 2b: AI video clips per scene~~ — CLOSED 2026-10-23 by phase 2b.
-  - FFmpeg is bundled only in the Windows installer; macOS and Linux use an `ffmpeg`/`ffprobe` on the PATH (`media_tools_status` reports it). Bundle LGPL builds for both.
+  - FFmpeg is bundled only in the Windows installer; macOS and Linux use an `ffmpeg`/`ffprobe` on the PATH (`media_tools_status` reports it). Bundle LGPL builds for both. CLOSED 2026-10-30 (closing phase, owner chose "Bundle Linux, guide macOS"): the Linux AppImage bundles the same pinned LGPL build (`node scripts/fetch-ffmpeg.mjs linux`, `bin/` + `lib/`, checked to run inside the AppImage in CI); on a Mac, Runtime Hub and the failing step say to run `brew install ffmpeg` (`ffmpeg_missing_for()` in `media_tools.rs`, `ffmpegHelp` in `media_tools_status`). Bundled resources are also looked for in Tauri's resource folder now (`bundled_resource()` in `utils.rs`), which the AppImage uses; until then bundled Ollama and the starter model were never found there either. Not yet run on a real Linux or Mac computer.
   - Kokoro's voices are English (American and British), and the captions' Whisper timing uses `tiny.en`; other languages need other voices and models.
   - MusicGen on a computer without an NVIDIA card is slow (minutes per clip); a new Coverr app is limited to 50 searches an hour.
   - ~~The asset protocol lets the window play files only from the output folder chosen when Miya Studio opens~~ — CLOSED 2026-10-23 by phase 3b (the players wait for the folder to be allowed; not yet seen live).

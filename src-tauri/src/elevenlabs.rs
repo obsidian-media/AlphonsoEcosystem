@@ -277,7 +277,7 @@ pub(crate) async fn elevenlabs_speak(request: SpeakRequest) -> Value {
     return fail("The voice-over folder could not be made.".to_string());
   }
   let Some(ffmpeg) = ffmpeg_path() else {
-    return fail("ffmpeg is missing from this install.".to_string());
+    return fail(crate::media_tools::ffmpeg_not_found());
   };
   let Ok(http) = client() else {
     return fail("Could not start the request.".to_string());
@@ -432,7 +432,7 @@ pub(crate) async fn elevenlabs_sound(request: SoundRequest) -> Value {
     return fail("The sound folder could not be made.".to_string());
   }
   let Some(ffmpeg) = ffmpeg_path() else {
-    return fail("ffmpeg is missing from this install.".to_string());
+    return fail(crate::media_tools::ffmpeg_not_found());
   };
   let Ok(http) = client() else {
     return fail("Could not start the request.".to_string());

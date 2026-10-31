@@ -4,7 +4,7 @@ Alphonso is a local-first AI desktop companion. Your data stays on your machine.
 
 ## Install the app (most people)
 
-1. Download the installer from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest): Windows `…_x64-setup.exe`, macOS (Apple Silicon, macOS 13.3 or later) `…_aarch64.dmg`, Linux `…_amd64.AppImage`. On macOS the build isn't signed by Apple yet: the first time, right-click Alphonso in Applications and choose **Open**.
+1. Download the installer from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest): Windows `…_x64-setup.exe`, macOS (Apple Silicon, macOS 13.3 or later) `…_aarch64.dmg`, Linux `…_amd64.AppImage`. On macOS the build isn't signed by Apple yet: the first time, right-click Alphonso in Applications and choose **Open**. For finished videos a Mac also needs FFmpeg once: open Terminal and run `brew install ffmpeg` (the Windows and Linux installers include it).
 2. Launch Alphonso. **Setup** checks your computer, asks what you want to do (Chat only, Chat + Images, Chat + Voice, Full Power, or Custom), asks where to install tools, and installs what that needs, including the starter model `llama3.2:3b` and, on Windows, the bundled Ollama runtime. Ollama installed already, or ComfyUI of your own, is found and used.
 3. When it's done, chat. Installed copies update themselves.
 

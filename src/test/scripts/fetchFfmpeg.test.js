@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FFMPEG_ASSET, KEEP_FILE } from '../../../scripts/fetch-ffmpeg.mjs';
+import { FFMPEG_ASSET, FFMPEG_ASSETS, KEEP_FILE, KEEP_FILE_LINUX, platformArg } from '../../../scripts/fetch-ffmpeg.mjs';
 
 // Miya content factory phase 2a (owner): ffmpeg is bundled in the installer,
 // an LGPL build only, pinned to a dated release with its checksum.
@@ -20,5 +20,34 @@ describe('fetch-ffmpeg', () => {
     expect(KEEP_FILE('ffmpeg-x/bin/ffplay.exe')).toBeNull();
     expect(KEEP_FILE('ffmpeg-x/include/libavcodec/avcodec.h')).toBeNull();
     expect(KEEP_FILE('ffmpeg-x/lib/avcodec.lib')).toBeNull();
+  });
+
+  // Closing phase (owner, 2026-10-30): the Linux AppImage bundles ffmpeg too.
+  it('pins the same dated LGPL build for Linux, with its SHA-256', () => {
+    const linux = FFMPEG_ASSETS.linux;
+    expect(linux.url).toMatch(/^https:\/\/github\.com\/BtbN\/FFmpeg-Builds\/releases\/download\/autobuild-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}\//);
+    expect(linux.url).toMatch(/linux64-lgpl-shared-\d+\.\d+\.tar\.xz$/);
+    expect(linux.url).not.toMatch(/-gpl-/);
+    expect(linux.sha256).toMatch(/^[0-9a-f]{64}$/);
+    // One release for both, so Windows and Linux run the same ffmpeg.
+    expect(linux.url.split('/')[7]).toBe(FFMPEG_ASSETS.windows.url.split('/')[7]);
+    expect(FFMPEG_ASSET).toBe(FFMPEG_ASSETS.windows);
+  });
+
+  it('on Linux keeps bin/ffmpeg, bin/ffprobe and the versioned libraries they load from ../lib', () => {
+    expect(KEEP_FILE_LINUX('ffmpeg-x/bin/ffmpeg')).toBe('bin/ffmpeg');
+    expect(KEEP_FILE_LINUX('ffmpeg-x/bin/ffprobe')).toBe('bin/ffprobe');
+    expect(KEEP_FILE_LINUX('ffmpeg-x/lib/libavcodec.so.62')).toBe('lib/libavcodec.so.62');
+    expect(KEEP_FILE_LINUX('ffmpeg-x/LICENSE.txt')).toBe('LICENSE.txt');
+    expect(KEEP_FILE_LINUX('ffmpeg-x/bin/ffplay')).toBeNull();
+    expect(KEEP_FILE_LINUX('ffmpeg-x/lib/libavcodec.so')).toBeNull();
+    expect(KEEP_FILE_LINUX('ffmpeg-x/lib/libavcodec.so.62.28.103')).toBeNull();
+    expect(KEEP_FILE_LINUX('ffmpeg-x/lib/pkgconfig/libavcodec.pc')).toBeNull();
+  });
+
+  it('reads the platform from the command line, Windows by default', () => {
+    expect(platformArg([])).toBe('windows');
+    expect(platformArg(['linux'])).toBe('linux');
+    expect(() => platformArg(['darwin'])).toThrow(/windows or linux/);
   });
 });

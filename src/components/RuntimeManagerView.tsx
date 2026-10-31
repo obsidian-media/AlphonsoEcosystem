@@ -656,6 +656,15 @@ export default function RuntimeManagerView() {
   const [filter, setFilter] = useState('All');
   const [actionMsg, setActionMsg] = useState<{ msg: string; isError: boolean } | null>(null);
   const [prereqs, setPrereqs] = useState<PrereqStatus | null>(null);
+  // How to get ffmpeg when this computer has none (closing phase: a Mac gets it from Homebrew).
+  const [ffmpegHelp, setFfmpegHelp] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve().then(() => invoke<{ ffmpeg?: string | null; ffmpegHelp?: string | null } | null>('media_tools_status'))
+      .then((status) => { if (alive) setFfmpegHelp(!status?.ffmpeg && status?.ffmpegHelp ? status.ffmpegHelp : null); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
   const [prereqInstalling, setPrereqInstalling] = useState<Record<string, boolean>>({});
   const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const unlistenRef = useRef<(() => void) | null>(null);
@@ -907,6 +916,12 @@ export default function RuntimeManagerView() {
           onInstall={handlePrereqInstall}
           installing={prereqInstalling}
         />
+      )}
+
+      {ffmpegHelp && (
+        <div data-testid="runtime-ffmpeg-missing" className="rounded-xl bg-(--warning-dim) p-4 text-xs text-(--text-2)">
+          <span className="font-semibold text-(--warning)">ffmpeg isn't installed.</span> The finished video, voice-overs and Shorts need it. {ffmpegHelp}
+        </div>
       )}
 
       {!loading && (

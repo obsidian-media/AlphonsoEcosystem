@@ -95,6 +95,10 @@ describe('ensureTools', () => {
     expect(await ensureTools(['kokoro'])).toEqual({ ok: false, reason: "Kokoro isn't installed. Install it in Runtime Hub." });
     media.ffmpeg = null;
     expect(await ensureTools(['ffmpeg'])).toEqual({ ok: false, reason: "ffmpeg wasn't found on this computer, so the video can't be put together." });
+    // The backend says how to get it on this computer (closing phase: Homebrew on a Mac).
+    media.ffmpegHelp = 'Install it with Homebrew: brew install ffmpeg';
+    expect(await ensureTools(['ffmpeg'])).toEqual({ ok: false, reason: "ffmpeg wasn't found on this computer, so the video can't be put together. Install it with Homebrew: brew install ffmpeg" });
+    delete media.ffmpegHelp;
   });
 
   it("when the tool list or the media check can't be read, nothing is started and nothing fails", async () => {

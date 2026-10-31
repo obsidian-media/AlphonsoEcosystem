@@ -62,7 +62,9 @@ export async function ensureTools(tools: NeededTool[]): Promise<EnsureResult> {
     // Unknown (no backend): the step itself says what is missing.
     for (const tool of media ? perCall : []) {
       if (media?.[tool]) continue;
-      return { ok: false, reason: tool === 'ffmpeg' ? FFMPEG_MISSING : notInstalled(nameOf(statuses, tool)) };
+      // The backend says how to get ffmpeg on this computer (closing phase: Homebrew on a Mac).
+      const help = typeof media.ffmpegHelp === 'string' && media.ffmpegHelp ? ` ${media.ffmpegHelp}` : '';
+      return { ok: false, reason: tool === 'ffmpeg' ? `${FFMPEG_MISSING}${help}` : notInstalled(nameOf(statuses, tool)) };
     }
   }
 

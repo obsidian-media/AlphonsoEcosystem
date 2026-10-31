@@ -491,6 +491,10 @@ jobs:
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs linux-amd64
 
+      # Closing phase (owner, 2026-10-30): the AppImage bundles ffmpeg like the Windows installer.
+      - name: Fetch bundled ffmpeg (LGPL)
+        run: node scripts/fetch-ffmpeg.mjs linux
+
       - name: Fetch bundled starter model
         run: node scripts/fetch-starter-model.mjs
 
@@ -517,7 +521,7 @@ jobs:
       # AppImage with no runtime inside it and this job would still stay
       # green. --appimage-extract needs no special tooling on GitHub's
       # ubuntu runners and takes seconds.
-      - name: Verify bundled Ollama runtime is inside the AppImage
+      - name: Verify bundled Ollama runtime and ffmpeg are inside the AppImage
         shell: bash
         run: |
           set -euo pipefail
@@ -543,6 +547,13 @@ jobs:
             echo "Bundled ollama binary is suspiciously small ($size bytes) -- likely not the real executable" >&2
             exit 1
           fi
+          # The bundled ffmpeg must be inside and must start: it loads its libraries from ../lib.
+          ffmpeg=$(find "$workdir/squashfs-root" -type f -path "*/ffmpeg/bin/ffmpeg" | head -n 1)
+          if [ -z "$ffmpeg" ]; then
+            echo "Bundled ffmpeg not found inside the AppImage" >&2
+            exit 1
+          fi
+          "$ffmpeg" -hide_banner -version | head -n 1
           rm -rf "$workdir"
 
       - name: Upload AppImage artifact
