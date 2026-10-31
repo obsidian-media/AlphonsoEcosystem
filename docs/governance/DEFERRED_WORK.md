@@ -42,18 +42,23 @@ starter model before).
 - The "Jose phase 7: what is left" and "Agent roles Part C2: what is left" entries
   below: mainly new desktop checks not yet seen passing in CI.
 
-**Owner decisions:**
-- Code-signing: Windows Authenticode (the bundled ffmpeg is blocked by Smart App
-  Control until signed), Apple notarization (pipeline written, never run).
-- WhatsApp and phone-app approvals (Telegram only today).
-- Echo's decisions on several computers.
-- SessionGuard sign-in and live feed (bridge phases 2–4); until then Coach Mode's
-  gambling parts stay hidden.
-- A shared Obsidian Media app for YouTube/Meta sign-in (each user makes their own).
-- Cloud Voice on AWS: the custom domain doesn't resolve (DNS/ALB).
-- Codacy's pydocstyle D212/D213 setting (dashboard only).
-- Make the desktop E2E jobs a required check; mobile biometric approvals.
-- ACC accepts packets of any kind (QA Bug 66, parked).
+**Owner decisions (answered 2026-10-30):**
+- Code-signing: **release unsigned**; Windows Authenticode (the bundled ffmpeg is
+  blocked by Smart App Control until signed) and Apple notarization follow once
+  there is a certificate.
+- **After the release, in this order:** (1) a shared Obsidian Media app for
+  YouTube/Meta sign-in (each user makes their own today; start Google's and Meta's
+  app review early, it takes weeks); (2) WhatsApp and phone-app approvals
+  (Telegram only today); (3) Echo's decisions on several computers; (4) SessionGuard
+  sign-in and live feed (bridge phases 2–4; until then Coach Mode's gambling parts
+  stay hidden).
+- **Cloud Voice moves to Google Cloud, after the release** (its AWS address doesn't
+  resolve); its own phase, with a design first. The release ships with local Voice OS.
+- **Desktop E2E becomes a required check once green**: fix or confirm the failing
+  specs in the QA pass, then require the plain desktop job (the local-model job
+  stays advisory).
+- Still open: Codacy's pydocstyle D212/D213 setting (dashboard only); mobile
+  biometric approvals; ACC accepts packets of any kind (QA Bug 66, parked).
 
 **Live checks (need a real account, device or model):**
 - Hermes gateway with a real Hermes install; GitHub MCP opening its issue.
