@@ -146,7 +146,7 @@ The voice pipeline routes to the same 9 agents as the chat interface:
 [Hermes Agent](https://github.com/NousResearch) (Nous Research, MIT) gives an agent its own tools, such as web search.
 
 1. Open **Runtime Hub** and install **Hermes Agent** (it needs Python 3.11–3.13; Runtime Hub offers to install Python).
-2. Open **Settings → Connectors → Agent Providers → Hermes profiles** and choose **Set up a Hermes profile for** an agent, then pick the model it uses. Alphonso makes the profile, its key and its port; nothing to type. Already run Hermes yourself? **Find my Hermes profiles** lists them (Alphonso reads only their settings, never their keys) and **Use for this agent** connects one.
+2. Open **Settings → Connectors → Agent Providers → Hermes profiles** and choose **Set up a Hermes profile for** an agent, then pick the model it uses. Alphonso makes the profile, its key and its port; nothing to type. Already run Hermes yourself? **Find my Hermes profiles** lists them (Alphonso reads only their settings, never their keys) and **Use for this agent** connects one (with that profile's API server key).
 3. That agent's steps now run on Hermes. Chat's live line shows what it's doing; when it wants to run a command or change something, the step waits for your approval on the board and Telegram.
 
 Profiles start when a step needs them, and the ones Alphonso started stop after 30 idle minutes. Every other agent keeps its own provider.

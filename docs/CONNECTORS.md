@@ -677,7 +677,7 @@ Twilio was never supported for setup, and its leftover code and fields were remo
 **Setting it up (no keys to type):**
 1. Runtime Hub → **Hermes Agent** → Install (Python 3.11–3.13; Runtime Hub offers to install Python).
 2. Settings → Connectors → Agent Providers → **Hermes profiles** → **Set up a Hermes profile for** an agent, then pick its model (one of your Ollama models, or a free OpenRouter model). Alphonso makes the profile, its key (kept in the keychain) and its port.
-3. Already run Hermes yourself? **Find my Hermes profiles** lists them (only their settings are read, never a key or `.env`) and **Use for this agent** connects one. A profile with its own Telegram or other messaging connection gets a warning: messages there skip Alphonso's approvals.
+3. Already run Hermes yourself? **Find my Hermes profiles** lists them (only their settings are read, never a key or `.env`) and **Use for this agent** connects one, with that profile's API server key. A profile with its own Telegram or other messaging connection gets a warning: messages there skip Alphonso's approvals.
 
 **How to test:** ask that agent something in Chat; its steps show what Hermes is doing on the live line. The Health Monitor checks each connected profile.
 

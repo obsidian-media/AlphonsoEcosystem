@@ -153,6 +153,16 @@ npm run test
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
+## When the build fails
+
+- **"Found version mismatched Tauri packages":** the `tauri` crate in `src-tauri/Cargo.lock` and the `@tauri-apps/api` / `@tauri-apps/cli` npm packages must share major.minor; bump whichever is behind (`npm run verify:tauri-versions` checks it).
+- **`npm install` fails:** `npm cache clean --force`, then `npm install` (`.npmrc` already sets `legacy-peer-deps`).
+- **`npm run tauri dev` fails:** check `rustc --version`, `rustup update`, `npx tauri --version`; on Windows, WebView2 must be installed.
+- **The build runs out of memory:** `NODE_OPTIONS="--max-old-space-size=4096" npm run build`.
+- **Tests:** `npm run test`, or one file with `npx vitest run src/test/<file>`; Rust from `src-tauri/` with `cargo test` and `cargo clippy -- -D warnings`.
+- **ComfyUI in plain-browser dev mode** (`npm run dev`): the window calls ComfyUI directly, so start ComfyUI with `--enable-cors-header`. The desktop app goes through its backend and needs nothing.
+- **Voice OS by hand:** in `voice/backend/`, `pip install -r requirements.txt`, set `VOICE_OS_TOKEN`, then `python -m uvicorn main:app --host 127.0.0.1 --port 8766 --no-access-log` (the app sets the token itself when it starts Voice OS).
+
 ## Important Rules
 
 1. **Never commit secrets** — `.env`, `.tauri-updater-key` are in `.gitignore`
