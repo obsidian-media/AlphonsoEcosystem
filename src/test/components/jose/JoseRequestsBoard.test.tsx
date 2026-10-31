@@ -27,6 +27,9 @@ vi.mock('../../../services/echo/echoPicks', () => ({
   dismissCleanupStep: vi.fn(async () => ({ ok: true, summary: 'Left memory as it is.' })),
 }));
 
+const answerHermesApproval = vi.fn(async (_r: string, _s: string, yes: boolean) => ({ ok: true, summary: yes ? 'Approved. Hector carries on.' : "Rejected. Hector's Hermes profile won't do it." }));
+vi.mock('../../../services/hermes/hermesApprovals', () => ({ answerHermesApproval: (r: string, s: string, y: boolean) => answerHermesApproval(r, s, y) }));
+
 import { JoseRequestsBoard } from '../../../components/jose/JoseRequestsBoard';
 import { pickForget } from '../../../services/echo/echoPicks';
 import { saveCleanupSet } from '../../../services/echo/cleanup';
@@ -245,6 +248,24 @@ describe('JosePlanEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reject: Marcus distribution_execution' }));
     expect(rejectRequestStep).toHaveBeenCalledWith(request.id, 'post');
     expect(await screen.findByText('Rejected. The request was cancelled.')).toBeTruthy();
+  });
+
+  // Hermes gateway (2026-10-30): the request keeps running while the step waits on Hermes.
+  it("shows what a Hermes profile wants to do, and Approve and Reject answer Hermes", async () => {
+    const request = createJoseRequest({
+      commandId: 'c-hermes', source: 'user', text: 'Research bees', kind: 'normal',
+      steps: [{ stepId: 'hector', agent: 'hector', actionType: 'research_web', effects: ['read'], needs: [] }],
+    });
+    updateJoseStep(request.id, 'hector', { status: 'waiting_approval', hermesApproval: { runId: 'run_1', command: 'rm -rf build', description: '' } } as never);
+    setJoseRequestStatus(request.id, 'running');
+    render(<JoseRequestsBoard selectedRequestId={request.id} />);
+    expect(screen.getByTestId('jose-hermes-approval-hector').textContent).toContain("Hector's Hermes profile wants to run: rm -rf build");
+    fireEvent.click(screen.getByRole('button', { name: 'Approve: Hector' }));
+    expect(await screen.findByText('Approved. Hector carries on.')).toBeTruthy();
+    expect(answerHermesApproval).toHaveBeenLastCalledWith(request.id, 'hector', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Reject: Hector' }));
+    await waitFor(() => expect(answerHermesApproval).toHaveBeenLastCalledWith(request.id, 'hector', false));
+    expect(approveRequestStep).not.toHaveBeenCalledWith(request.id, 'hector');
   });
 });
 

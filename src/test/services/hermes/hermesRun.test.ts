@@ -19,7 +19,7 @@ vi.mock('../../../services/connectors/hermesAgentConnector', () => ({
   sendHermesAgentMessage: (...a: unknown[]) => sendHermesAgentMessage(...a),
 }));
 
-const { runHermesStep, progressLine, HERMES_LOST, RUNS_NOT_SUPPORTED } = await import('../../../services/hermes/hermesRun');
+const { runHermesStep, progressLine, HERMES_LOST, RUNS_NOT_SUPPORTED, HERMES_TIMED_OUT } = await import('../../../services/hermes/hermesRun');
 
 function send(runId: string, data: Record<string, unknown>) {
   for (const fn of [...listeners]) fn({ payload: { runId, event: String(data.event), data } });
@@ -121,6 +121,43 @@ describe('Hermes runs', () => {
     expect(invoke.mock.calls[1][1].choice).toBe('deny');
     send('run_1', { event: 'run.failed', error: 'denied' });
     expect((await done as any).ok).toBe(false);
+  });
+
+  it('says no before stopping when Stop comes while an approval waits', async () => {
+    invoke.mockResolvedValue({ ok: true, tooLate: false });
+    invoke.mockResolvedValueOnce({ runId: 'run_1', notSupported: false });
+    const controller = new AbortController();
+    const gone = vi.fn();
+    const done = runHermesStep('hector', 'x', { signal: controller.signal, onApproval: () => new Promise(() => {}), onApprovalGone: gone });
+    await tick();
+    send('run_1', { event: 'approval.request', command: 'ls' });
+    await tick();
+    controller.abort();
+    expect((await done as any).stopped).toBe(true);
+    const calls = invoke.mock.calls.map((c) => [c[0], c[1].choice]);
+    expect(calls.slice(1)).toEqual([['hermes_run_answer', 'deny'], ['hermes_run_stop', undefined]]);
+    expect(gone).toHaveBeenCalled();
+  });
+
+  it('fails with a plain reason when Hermes stops waiting for the answer', async () => {
+    expect(HERMES_TIMED_OUT).toBe('Hermes stopped waiting for your answer.');
+    invoke.mockResolvedValueOnce({ runId: 'run_1', notSupported: false });
+    const gone = vi.fn();
+    const done = runHermesStep('hector', 'x', { onApproval: () => new Promise(() => {}), onApprovalGone: gone });
+    await tick();
+    send('run_1', { event: 'approval.request', command: 'ls' });
+    await tick();
+    send('run_1', { event: 'run.failed', error: 'approval timed out' });
+    expect(await done).toEqual({ ok: false, reason: HERMES_TIMED_OUT });
+    expect(gone).toHaveBeenCalled();
+  });
+
+  it('fails the same way when the answer arrives too late', async () => {
+    invoke.mockResolvedValueOnce({ runId: 'run_1', notSupported: false }).mockResolvedValueOnce({ ok: false, tooLate: true });
+    const done = runHermesStep('hector', 'x', { onApproval: async () => 'once' });
+    await tick();
+    send('run_1', { event: 'approval.request', command: 'ls' });
+    expect(await done).toEqual({ ok: false, reason: HERMES_TIMED_OUT });
   });
 
   it('falls back to the chat endpoint when the profile has no runs', async () => {

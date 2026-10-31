@@ -37,6 +37,8 @@ vi.mock('../../services/echo/echoPicks', () => ({
   applyCleanupStep: vi.fn(async () => ({ ok: true, summary: 'Applied 2 changes to memory.' })),
   dismissCleanupStep: vi.fn(async () => ({ ok: true, summary: 'Left memory as it is.' })),
 }));
+const answerHermesApproval = vi.fn(async (_r, _s, yes) => ({ ok: true, summary: yes ? 'Approved. Hector carries on.' : "Rejected. Hector's Hermes profile won't do it." }));
+vi.mock('../../services/hermes/hermesApprovals', () => ({ answerHermesApproval: (...a) => answerHermesApproval(...a) }));
 
 import { handleJoseButton, runPushWatcher, handleApproveCommand, handleRejectCommand, stopTelegramCompanion } from '../../services/telegramCompanionService';
 import { approveRequestStep, rejectRequestStep, carryOnRequest, cancelRequest, executeApprovedPackets, pickAlphonsoProject } from '../../services/joseExecutionEngineService';
@@ -169,6 +171,20 @@ describe('Telegram buttons', () => {
     await press(token);
     expect(await press(token)).toBe('Already done.');
     expect(approveRequestStep).toHaveBeenCalledTimes(1);
+  });
+
+  // Hermes gateway (2026-10-30): a Hermes run's request is answered while its request keeps running.
+  it("Approve and Reject on a Hermes profile's request answer Hermes, not the step's approval", async () => {
+    const request = createJoseRequest({ commandId: 'c2', source: 'user', text: 'Research bees', kind: 'normal',
+      steps: [{ stepId: 'hector', agent: 'hector', actionType: 'research_web', effects: ['read'], needs: [], instruction: 'Research.' }] });
+    updateJoseStep(request.id, 'hector', { status: 'waiting_approval', hermesApproval: { runId: 'run_1', command: 'ls', description: '' } });
+    setJoseRequestStatus(request.id, 'running');
+    expect(await press(buttonToken({ text: 'Approve', action: 'approve', requestId: request.id, stepId: 'hector' }))).toBe('Approved. Hector carries on.');
+    expect(answerHermesApproval).toHaveBeenLastCalledWith(request.id, 'hector', true);
+    expect(await press(buttonToken({ text: 'Reject', action: 'reject', requestId: request.id, stepId: 'hector' }))).toBe("Rejected. Hector's Hermes profile won't do it.");
+    expect(answerHermesApproval).toHaveBeenLastCalledWith(request.id, 'hector', false);
+    expect(approveRequestStep).not.toHaveBeenCalled();
+    expect(rejectRequestStep).not.toHaveBeenCalled();
   });
 
   it('Reject cancels the request', async () => {

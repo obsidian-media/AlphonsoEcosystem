@@ -583,6 +583,11 @@ export async function handleJoseButton(token, update) {
   const quietly = (promise) => { Promise.resolve(promise).catch(() => { /* the request shows what happened */ }); };
   if (button.action === 'approve' || button.action === 'reject') {
     const step = request.steps.find((s) => s.stepId === button.stepId);
+    // A Hermes run asking to do something (Hermes gateway, 2026-10-30): answered while its request runs.
+    if (step?.hermesApproval) {
+      const { answerHermesApproval } = await import('./hermes/hermesApprovals');
+      return (await answerHermesApproval(request.id, button.stepId, button.action === 'approve')).summary;
+    }
     if (request.status !== 'waiting_approval' || step?.status !== 'waiting_approval') return 'Already done.';
     if (button.action === 'reject') {
       const result = engine.rejectRequestStep(request.id, button.stepId);

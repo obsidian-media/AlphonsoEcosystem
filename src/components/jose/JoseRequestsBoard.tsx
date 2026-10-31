@@ -22,6 +22,7 @@ import { QUEUED_LINE, queuePosition } from '../../services/jose/joseQueue';
 import { groupRequests } from '../../services/jose/requestGroups';
 import { agentName } from '../../services/jose/agentNames';
 import { approveRequestStep, cancelRequest, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
+import { describeHermesApproval } from '../../services/hermes/hermesConstants';
 
 export const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
@@ -136,7 +137,15 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
       refresh();
     }
   };
-  const waitingSteps = selected?.status === 'waiting_approval' ? selected.steps.filter((s) => s.status === 'waiting_approval') : [];
+  // A Hermes run asking to do something (Hermes gateway, 2026-10-30): its request keeps running.
+  const hermesSteps = selected ? selected.steps.filter((s) => s.status === 'waiting_approval' && s.hermesApproval) : [];
+  const answerHermes = async (stepId: string, yes: boolean) => {
+    if (!selected) return;
+    const { answerHermesApproval } = await import('../../services/hermes/hermesApprovals');
+    setMessage((await answerHermesApproval(selected.id, stepId, yes)).summary);
+    refresh();
+  };
+  const waitingSteps = selected?.status === 'waiting_approval' ? selected.steps.filter((s) => s.status === 'waiting_approval' && !s.hermesApproval) : [];
   // "Which project" (agent phase 6).
   const choosingStep = selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.projectChoices?.length) : undefined;
   // Echo's pickers (agent phase 7): which decision to forget, or his cleanup proposals.
@@ -303,6 +312,13 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 <Button variant="ghost" data-testid="jose-cancel-request" disabled={running} onClick={() => { setMessage(cancelRequest(selected.id).summary); refresh(); }}>Cancel</Button>
               </>
             )}
+            {hermesSteps.map((step) => (
+              <div key={`hermes-${step.stepId}`} data-testid={`jose-hermes-approval-${step.stepId}`} className="flex w-full flex-wrap items-center gap-2">
+                <span className="text-sm text-(--text-primary)">{describeHermesApproval({ agent: step.agent, ...(step.hermesApproval as NonNullable<typeof step.hermesApproval>) })}</span>
+                <Button variant="primary" onClick={() => answerHermes(step.stepId, true)}>{`Approve: ${agentName(step.agent)}`}</Button>
+                <Button variant="ghost" onClick={() => answerHermes(step.stepId, false)}>{`Reject: ${agentName(step.agent)}`}</Button>
+              </div>
+            ))}
             {waitingSteps.map((step) => (
               <React.Fragment key={step.stepId}>
                 <Button variant="primary" disabled={running} onClick={() => approveStep(step.stepId)}>

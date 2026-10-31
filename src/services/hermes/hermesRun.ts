@@ -16,11 +16,13 @@ import {
 import { agentName } from '../jose/agentNames';
 import { STOPPED_LINE } from '../jose/joseStop';
 import { redactText } from '../sentinel/exactChecks';
+import { HERMES_TIMED_OUT } from './hermesConstants';
 
 export const RUN_EVENT = 'hermes://run_event';
 export const RUNS_NOT_SUPPORTED = "This Hermes profile can't show its progress or be stopped (an older Hermes).";
 export const HERMES_LOST = (name: string) => `${name}'s Hermes profile stopped answering.`;
 export const HERMES_NOT_SET_UP = (name: string) => `${name} has no Hermes profile set up.`;
+export { HERMES_TIMED_OUT };
 
 export interface HermesApprovalRequest {
   runId: string;
@@ -40,6 +42,8 @@ export interface HermesRunOptions {
   signal?: AbortSignal;
   onProgress?: (line: string) => void;
   onApproval?: (req: HermesApprovalRequest) => Promise<'once' | 'deny'>;
+  /** The run ended while an approval still waited: the question is no longer open. */
+  onApprovalGone?: () => void;
 }
 
 /** Hermes's tool names in plain words, for the progress line. */
@@ -101,21 +105,27 @@ export async function runHermesStep(agent: string, input: string, opts: HermesRu
   return new Promise<HermesStepResult>((resolve) => {
     let finished = false;
     let stopping = false;
+    let asking = false;
     let answer = '';
     const finish = (result: HermesStepResult) => {
       if (finished) return;
       finished = true;
       unlisten();
       opts.signal?.removeEventListener('abort', onAbort);
+      if (asking) opts.onApprovalGone?.();
       resolve(result);
     };
-    const stop = () => {
-      if (runId) invoke('hermes_run_stop', { ...target, runId }).catch(() => undefined);
+    const stop = async () => {
+      if (runId) {
+        // An open approval is answered no first, so Hermes doesn't act on it.
+        if (asking) await invoke('hermes_run_answer', { ...target, runId, choice: 'deny' }).catch(() => undefined);
+        invoke('hermes_run_stop', { ...target, runId }).catch(() => undefined);
+      }
       finish({ ok: false, stopped: true, reason: STOPPED_LINE });
     };
     function onAbort() {
       stopping = true;
-      if (runId) stop();
+      if (runId) void stop();
     }
     opts.signal?.addEventListener('abort', onAbort);
 
@@ -127,6 +137,7 @@ export async function runHermesStep(agent: string, input: string, opts: HermesRu
         description: redactText(text(data.description)),
       };
       let choice: 'once' | 'deny' = 'deny';
+      asking = true;
       try {
         choice = opts.onApproval ? await opts.onApproval(req) : 'deny';
       } catch {
@@ -134,7 +145,9 @@ export async function runHermesStep(agent: string, input: string, opts: HermesRu
       }
       if (choice !== 'once') choice = 'deny';
       if (finished) return;
-      await invoke('hermes_run_answer', { ...target, runId, choice }).catch(() => undefined);
+      const sent = await invoke<{ ok: boolean; tooLate: boolean }>('hermes_run_answer', { ...target, runId, choice }).catch(() => null);
+      asking = false;
+      if (sent?.tooLate) finish({ ok: false, reason: HERMES_TIMED_OUT });
     };
 
     onEvent = (data: EventData) => {
@@ -145,6 +158,8 @@ export async function runHermesStep(agent: string, input: string, opts: HermesRu
       if (kind === 'message.delta') answer += text(data.delta);
       else if (kind === 'approval.request') void answerApproval(data);
       else if (kind === 'run.completed') finish({ ok: true, text: redactText(text(data.output) || answer) });
+      // Failing while an approval waits means Hermes's own time for the answer ran out.
+      else if (kind === 'run.failed' && asking) finish({ ok: false, reason: HERMES_TIMED_OUT });
       else if (kind === 'run.failed') finish({ ok: false, reason: `${name}'s Hermes profile failed: ${redactText(text(data.error) || 'no reason given')}` });
       else if (kind === 'run.cancelled') finish({ ok: false, stopped: true, reason: STOPPED_LINE });
       else if (kind === 'run.lost') finish({ ok: false, reason: HERMES_LOST(name) });
@@ -165,7 +180,7 @@ export async function runHermesStep(agent: string, input: string, opts: HermesRu
         return;
       }
       runId = started.runId;
-      if (stopping) return stop();
+      if (stopping) { void stop(); return; }
       for (const e of early.splice(0)) if (e.runId === runId) onEvent(e.data);
     }).catch((error) => {
       finish({ ok: false, reason: redactText(typeof error === 'string' ? error : error instanceof Error ? error.message : HERMES_LOST(name)) });

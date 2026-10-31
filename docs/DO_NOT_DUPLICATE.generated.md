@@ -4,6 +4,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Source-backed inventory: 346 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 =======
 Source-backed inventory: 341 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
@@ -14,6 +15,9 @@ Source-backed inventory: 343 services and 179 components. Human purpose descript
 =======
 Source-backed inventory: 345 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 >>>>>>> 33e7344 (feat(hermes): run Hermes steps as runs with progress and Stop)
+=======
+Source-backed inventory: 346 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+>>>>>>> 21f7a82 (feat(hermes): Hermes's approval requests wait on the board and Telegram)
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -361,9 +365,10 @@ Source-backed inventory: 345 services and 179 components. Human purpose descript
 | service | `src/services/hectorBookmarkService.ts` | `deleteBookmark`, `exportBookmarks`, `getBookmarks`, `getStats`, `saveBookmark` |
 | service | `src/services/hectorExportService.ts` | `buildHectorReportMarkdown`, `exportHectorReportAsMarkdown`, `exportHectorReportAsPdf`, `exportHectorReportAsPowerPoint` |
 | service | `src/services/hectorResearchService.js` | `buildHectorSynthesisPrompt`, `createResearchBrief`, `createResearchDraft`, `fetchRssSources`, `fetchSuppliedSourcesForReport`, `isBraveSearchConfigured`, `listHectorActivity`, `listHectorReports`, `parseHectorSynthesisResponse`, `parseRssItems`, `persistResearchResult`, `recordHectorActivity`, `resynthesizeHectorReport`, `RSS_FEED_CATALOG`, `runHectorLiveResearch`, `runMultiSourceResearch`, `scoreRssFeed`, `searchBrave`, `slimOldReports`, `synthesizeHectorResearch` |
-| service | `src/services/hermes/hermesConstants.ts` | `READING_TOOLSETS` |
+| service | `src/services/hermes/hermesApprovals.ts` | `ALREADY_DONE`, `answerHermesApproval`, `describeHermesApproval`, `endHermesApproval`, `HERMES_TIMED_OUT`, `isWaitingOnHermes`, `StepHermesApproval`, `waitForHermesApproval` |
+| service | `src/services/hermes/hermesConstants.ts` | `describeHermesApproval`, `HERMES_TIMED_OUT`, `READING_TOOLSETS` |
 | service | `src/services/hermes/hermesProfiles.ts` | `isProfileKeyRef`, `listOwnProfiles`, `NOT_DESKTOP`, `PAID_IN_ZERO_COST`, `ProfileInfo`, `profileKeyRef`, `ProfileModel`, `profileModelChoices`, `ProfileResult`, `removeProfile`, `setProfileModel`, `setUpProfile` |
-| service | `src/services/hermes/hermesRun.ts` | `HERMES_LOST`, `HERMES_NOT_SET_UP`, `HermesApprovalRequest`, `HermesRunOptions`, `HermesStepResult`, `progressLine`, `RUN_EVENT`, `runHermesStep`, `RUNS_NOT_SUPPORTED` |
+| service | `src/services/hermes/hermesRun.ts` | `HERMES_LOST`, `HERMES_NOT_SET_UP`, `HERMES_TIMED_OUT`, `HermesApprovalRequest`, `HermesRunOptions`, `HermesStepResult`, `progressLine`, `RUN_EVENT`, `runHermesStep`, `RUNS_NOT_SUPPORTED` |
 | service | `src/services/hermes/hermesStepHooks.ts` | `getHermesHooks`, `HermesStepHooks`, `withHermesHooks` |
 | service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |

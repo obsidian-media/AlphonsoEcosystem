@@ -78,6 +78,8 @@ import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { generateAgentLlmResponse, fetchOllamaModels, getConfiguredOllamaModel, getConfiguredOllamaEndpoint, withAgentModel } from '../lib/ollama';
 import { withAgentSignal } from '../lib/agentSignals';
 import { withHermesHooks } from './hermes/hermesStepHooks';
+import { waitForHermesApproval, endHermesApproval } from './hermes/hermesApprovals';
+import type { HermesApprovalRequest } from './hermes/hermesRun';
 import { ALPHONSO_ANSWER_PROMPT } from './alphonso/answerPrompt';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { getAgentProvider } from './modelSelectionService';
@@ -2078,6 +2080,11 @@ async function runPipeline({
       // A Hermes step's progress (Hermes gateway, 2026-10-30) shows on Chat's live line.
       const runStep = () => withHermesHooks(assignment.agent, {
         onProgress: (line: string) => onProgress?.({ stage: 'model_note', assignment, packetId: assignment.packetId, text: line }),
+        // Hermes asking to do something waits on the board and Telegram, step by step.
+        ...(joseRequestId ? {
+          onApproval: (req: HermesApprovalRequest) => waitForHermesApproval(joseRequestId as string, assignment.stepId, req),
+          onApprovalGone: () => endHermesApproval(joseRequestId as string, assignment.stepId),
+        } : {}),
       }, runAssignment);
       // The resource gate (2026-10-30): run when its memory fits, make room, wait with a reason
       // on the board, or fail as too big for this computer. Released however the step ends.

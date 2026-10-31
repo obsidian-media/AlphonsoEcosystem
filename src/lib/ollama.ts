@@ -944,6 +944,7 @@ export async function generateAgentLlmResponse(agentId: string, rawOptions: Agen
       signal: options.signal,
       onProgress: hooks?.onProgress,
       onApproval: hooks?.onApproval,
+      onApprovalGone: hooks?.onApprovalGone,
     });
     if (result.ok === false) throw new Error(result.reason);
     return { response: result.text, done: true, backend: 'hermes', model: config.model || 'hermes-agent' };

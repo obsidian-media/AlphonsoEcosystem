@@ -7,6 +7,7 @@ import type { HermesApprovalRequest } from './hermesRun';
 export interface HermesStepHooks {
   onProgress?: (line: string) => void;
   onApproval?: (req: HermesApprovalRequest) => Promise<'once' | 'deny'>;
+  onApprovalGone?: () => void;
 }
 
 const hooks = new Map<string, HermesStepHooks>();

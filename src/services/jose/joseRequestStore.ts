@@ -51,6 +51,8 @@ export interface JoseRequestStep extends PlanStep {
   /** Waiting for memory (resource manager, 2026-10-30): the reason, and since when. */
   waitingFor?: string;
   waitingSinceMs?: number;
+  /** A Hermes run asking to do something (Hermes gateway, 2026-10-30): the step waits for you. */
+  hermesApproval?: { runId: string; command?: string; description: string };
 }
 
 export interface JoseRequest {

@@ -505,6 +505,7 @@ npm run lint           # ESLint on src/
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 npm run test           # 6,933 tests across 622 files (src + bridge)
 =======
 npm run test           # 6,933 tests across 616 files (src + bridge)
@@ -515,6 +516,9 @@ npm run test           # 6,933 tests across 618 files (src + bridge)
 =======
 npm run test           # 6,933 tests across 619 files (src + bridge)
 >>>>>>> 33e7344 (feat(hermes): run Hermes steps as runs with progress and Stop)
+=======
+npm run test           # 6,933 tests across 620 files (src + bridge)
+>>>>>>> 21f7a82 (feat(hermes): Hermes's approval requests wait on the board and Telegram)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -608,6 +612,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR g
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 346 services already exist.
 =======
 Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 341 services already exist.
@@ -618,6 +623,9 @@ Before writing any new service, component, or feature, check `CLAUDE.md` for the
 =======
 Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 345 services already exist.
 >>>>>>> 33e7344 (feat(hermes): run Hermes steps as runs with progress and Stop)
+=======
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 346 services already exist.
+>>>>>>> 21f7a82 (feat(hermes): Hermes's approval requests wait on the board and Telegram)
 
 ## Third-party notices
 
