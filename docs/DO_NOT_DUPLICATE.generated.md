@@ -346,7 +346,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/hector/relevantText.ts` | `pageBudget`, `questionTerms`, `relevantText` |
 | service | `src/services/hector/researchLimits.ts` | `HECTOR_LIMITS` |
 | service | `src/services/hector/researchRun.ts` | `fallbackQuery`, `Finding`, `NO_REPORT`, `parseWriteUp`, `planQuestion`, `ReportSource`, `reportText`, `ResearchReport`, `runResearch`, `SubQuestion`, `Support` |
-| service | `src/services/hector/searchChain.ts` | `FoundSource`, `searchChain` |
+| service | `src/services/hector/searchChain.ts` | `FoundSource`, `FREE_SEARCH_NOTE`, `hasSearchKey`, `searchChain` |
 | service | `src/services/hector/sourceQuality.ts` | `isJunkResult`, `rankSources`, `sourceKind`, `SourceKind` |
 | service | `src/services/hectorBookmarkService.ts` | `deleteBookmark`, `exportBookmarks`, `getBookmarks`, `getStats`, `saveBookmark` |
 | service | `src/services/hectorExportService.ts` | `buildHectorReportMarkdown`, `exportHectorReportAsMarkdown`, `exportHectorReportAsPdf`, `exportHectorReportAsPowerPoint` |

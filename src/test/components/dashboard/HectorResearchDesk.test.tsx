@@ -17,6 +17,11 @@ vi.mock('../../../services/hectorResearchService', () => {
     listHectorReports: vi.fn(() => reports),
   };
 });
+const hasSearchKey = vi.fn(async () => true);
+vi.mock('../../../services/hector/searchChain', () => ({
+  hasSearchKey: () => hasSearchKey(),
+  FREE_SEARCH_NOTE: 'Hector is using free search, which can stop answering after many searches.',
+}));
 vi.mock('../../../services/browserAutomationService', () => ({
   openExternalUrl: vi.fn(),
   writeClipboard: vi.fn(async () => null),
@@ -29,6 +34,18 @@ describe('HectorResearchDesk', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (hectorResearchServiceModule as unknown as { __resetReports: () => void }).__resetReports();
+  });
+
+  it('says free search can stop answering when no search key is set up', async () => {
+    hasSearchKey.mockResolvedValueOnce(false);
+    render(<HectorResearchDesk />);
+    expect(await screen.findByTestId('hector-free-search-note')).toBeTruthy();
+  });
+
+  it('shows no note once a search key is set up', async () => {
+    render(<HectorResearchDesk />);
+    await Promise.resolve();
+    expect(screen.queryByTestId('hector-free-search-note')).toBeNull();
   });
 
   it('renders all 3 tabs, defaulting to New Research', () => {

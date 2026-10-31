@@ -37,6 +37,25 @@ const PROVIDERS: Provider[] = [
   { name: 'news feeds', available: () => true, search: (q, n) => searchFeeds(q, n) },
 ];
 
+/** Search engines that need a key the user adds (the rest are free and can be throttled). */
+const KEYED = new Set(['brave', 'tavily', 'perplexity']);
+
+/** What the Research Desk says while only free search is set up (closing phase, 2026-10-30). */
+export const FREE_SEARCH_NOTE =
+  'Hector is using free search, which can stop answering after many searches. A free Tavily or Brave key (Settings → Connectors → Search & Research) keeps his research working.';
+
+/** Whether any search engine with a key (Brave, Tavily, Perplexity) is set up. A failed check counts as no key. */
+export async function hasSearchKey(): Promise<boolean> {
+  for (const provider of PROVIDERS.filter((p) => KEYED.has(p.name))) {
+    try {
+      if (await provider.available()) return true;
+    } catch {
+      // A check that fails says nothing is set up; the next provider may still be.
+    }
+  }
+  return false;
+}
+
 export async function searchChain(queries: string[], { limit = 8 }: { limit?: number } = {}): Promise<{ sources: FoundSource[]; providers: string[]; errors: string[] }> {
   const found = new Map<string, FoundSource>();
   const providers: string[] = [];
