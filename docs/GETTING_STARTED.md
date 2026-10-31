@@ -4,7 +4,7 @@ Alphonso is a local-first AI desktop companion. Your data stays on your machine.
 
 ## Install the app (most people)
 
-1. Download the installer from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest): Windows `…_x64-setup.exe`, macOS (Apple Silicon) `…_aarch64.dmg`, Linux `…_amd64.AppImage`. On macOS the build isn't signed by Apple yet: the first time, right-click Alphonso in Applications and choose **Open**.
+1. Download the installer from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest): Windows `…_x64-setup.exe`, macOS (Apple Silicon, macOS 13.3 or later) `…_aarch64.dmg`, Linux `…_amd64.AppImage`. On macOS the build isn't signed by Apple yet: the first time, right-click Alphonso in Applications and choose **Open**. For finished videos a Mac also needs FFmpeg once: open Terminal and run `brew install ffmpeg` (the Windows and Linux installers include it).
 2. Launch Alphonso. **Setup** checks your computer, asks what you want to do (Chat only, Chat + Images, Chat + Voice, Full Power, or Custom), asks where to install tools, and installs what that needs, including the starter model `llama3.2:3b` and, on Windows, the bundled Ollama runtime. Ollama installed already, or ComfyUI of your own, is found and used.
 3. When it's done, chat. Installed copies update themselves.
 
@@ -141,20 +141,15 @@ The voice pipeline routes to the same 9 agents as the chat interface:
 | "Compliance..." / "Governance..." | Maria |
 | Anything else | Alphonso |
 
-## Connecting a Hermes profile (optional — advanced)
+## Hermes profiles (optional)
 
-If you separately run [Hermes Agent](https://github.com/NousResearch) (Nous Research's standalone agent framework — a different install from this app), you can delegate a specific agent's replies to its matching Hermes profile instead of local Ollama. This is fully optional and per-agent: nothing changes for anyone who doesn't set it up, and every other agent keeps using Ollama untouched.
+[Hermes Agent](https://github.com/NousResearch) (Nous Research, MIT) gives an agent its own tools, such as web search.
 
-**Prerequisite:** a running Hermes profile with its API server enabled (`platforms.api_server.enabled: true` in that profile's `config.yaml`) — see Hermes Agent's own docs for setup. Note the profile's base URL (e.g. `http://127.0.0.1:8645`) and its `key`.
+1. Open **Runtime Hub** and install **Hermes Agent** (it needs Python 3.11–3.13; Runtime Hub offers to install Python).
+2. Open **Settings → Connectors → Agent Providers → Hermes profiles** and choose **Set up a Hermes profile for** an agent, then pick the model it uses. Alphonso makes the profile, its key and its port; nothing to type. Already run Hermes yourself? **Find my Hermes profiles** lists them (Alphonso reads only their settings, never their keys) and **Use for this agent** connects one.
+3. That agent's steps now run on Hermes. Chat's live line shows what it's doing; when it wants to run a command or change something, the step waits for your approval on the board and Telegram.
 
-1. Open **Settings → Connectors → API Credentials → Hermes Agents**
-2. For the agent you want to delegate (e.g. Jose), paste that profile's Base URL and API Key, then **Save & Enable** — the row shows connected/unreachable after a live reachability check
-3. Scroll to **Settings → Connectors → Agent Providers**, find that agent's row, and switch its provider tab to **Hermes**
-4. Pick a model from the dropdown — it's fetched live from that profile's own `/v1/models`, never a fixed list
-
-That agent's replies now come from the real standalone Hermes profile. Every other agent, and this same agent if you switch it back, still uses Ollama exactly as before.
-
----
+Profiles start when a step needs them, and the ones Alphonso started stop after 30 idle minutes. Every other agent keeps its own provider.
 
 ## Key Concepts
 

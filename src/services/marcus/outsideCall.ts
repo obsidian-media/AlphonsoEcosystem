@@ -7,7 +7,7 @@ import { buildStepInput, stepInputText } from '../jose/stepInput';
 import { requestForCommand, updateJoseStep } from '../jose/joseRequestStore';
 import type { JoseEffect } from '../jose/joseEffects';
 import { recordSpendUsd } from '../jose/joseSpend';
-import { fenced } from '../sentinel/fence';
+import { fenced, UNTRUSTED_RULE } from '../sentinel/fence';
 import { redactText } from '../sentinel/exactChecks';
 import { listServers, type McpServer, type McpToolEntry } from '../mcp/mcpServers';
 import { callTool } from '../mcp/mcpConnection';
@@ -94,9 +94,23 @@ function readJson(text: string): Record<string, unknown> | null {
   }
 }
 
+/** A tool's title and description together: with the title alone a small model mixed up
+ * similar tools (closing phase, 2026-10-30: add_issue_comment picked over issue_write). */
+function toolSummary(entry: McpToolEntry, max: number): string {
+  const title = (entry.title || '').trim();
+  const description = (entry.description || '').trim();
+  const text = title && description && !description.startsWith(title) ? `${title}: ${description}` : description || title || entry.name;
+  return text.replace(/\s+/g, ' ').slice(0, max);
+}
+
+/** The server's own words go into the prompt fenced as data, never instructions. */
+function toolList(lines: string): string {
+  return `${UNTRUSTED_RULE}\n${fenced("The outside servers' tools", lines)}`;
+}
+
 function toolLines(list: Array<{ server: McpServer; entry: McpToolEntry }>): string {
   return list
-    .map(({ server, entry }) => `- ${toolRef(server.id, entry.name)} (${server.name}): ${(entry.title || entry.description || entry.name).replace(/\s+/g, ' ').slice(0, 200)}\n  fields: ${JSON.stringify(entry.inputSchema ?? {}).slice(0, 1500)}`)
+    .map(({ server, entry }) => `- ${toolRef(server.id, entry.name)} (${server.name}): ${toolSummary(entry, 300)}\n  fields: ${JSON.stringify(entry.inputSchema ?? {}).slice(0, 1500)}`)
     .join('\n');
 }
 
@@ -107,7 +121,7 @@ export const FULL_LIST_BUDGET = 6000;
 
 function shortLines(list: Array<{ server: McpServer; entry: McpToolEntry }>): string {
   return list
-    .map(({ server, entry }) => `- ${toolRef(server.id, entry.name)}: ${(entry.title || entry.description || entry.name).replace(/\s+/g, ' ').slice(0, 120)}`)
+    .map(({ server, entry }) => `- ${toolRef(server.id, entry.name)}: ${toolSummary(entry, 200)}`)
     .join('\n');
 }
 
@@ -160,7 +174,7 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
           asked,
           stepInputText(input),
           'Tools:',
-          shortLines(options),
+          toolList(shortLines(options)),
           unclear ? `"${unclear}" is not one of the tools. Copy one tool's name exactly as listed.` : '',
           'Answer with JSON only: {"tool": "<server>/<tool>"}.',
         ].filter(Boolean).join('\n\n');
@@ -185,7 +199,7 @@ export async function prepareOutsideCall(commandId: string, assignment: Assignme
         asked,
         stepInputText(input),
         'Tools:',
-        toolLines(options),
+        toolList(toolLines(options)),
         problems.length ? `Your last answer had problems: ${problems.join('; ')}. Fix them.` : '',
         'Answer with JSON only: {"tool": "<server>/<tool>", "arguments": {...exactly the tool\'s fields}}, or {"missing": "what the request doesn\'t say"}.',
       ].filter(Boolean).join('\n\n');

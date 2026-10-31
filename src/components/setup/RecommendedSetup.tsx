@@ -15,6 +15,7 @@ import {
   type SelectableComponent,
 } from '../../services/setupFlowService';
 import type { HardwareProfile } from '../../services/setupFlowService';
+import { PREREQ_FLAG, PREREQ_LABEL, type InstallablePrereq } from '../../services/setupFlowService';
 import type { IntentId } from './IntentSelection';
 
 interface RecommendedComponent extends SelectableComponent {
@@ -76,8 +77,8 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
   // Local, mutable copy: installing Python mid-screen needs to unblock the
   // components that depend on it without a full re-scan round-trip.
   const [prereqs, setPrereqs] = useState<PrereqStatus>(initialPrereqs);
-  const [installingPython, setInstallingPython] = useState(false);
-  const [pythonInstallError, setPythonInstallError] = useState<string | null>(null);
+  const [installingPrereq, setInstallingPrereq] = useState<InstallablePrereq | null>(null);
+  const [prereqInstallError, setPrereqInstallError] = useState<{ kind: InstallablePrereq; message: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,18 +132,18 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
   const diskCheck = checkDiskSpace(toInstall, placed.diskFreeGb, placed.ollamaModelsDirFreeGb, sameInstallVolume(placed));
   const needsImageGen = recommended.some((c) => c.id === 'comfyui');
 
-  const handleInstallPython = async () => {
-    setInstallingPython(true);
-    setPythonInstallError(null);
+  const handleInstallPrereq = async (kind: InstallablePrereq) => {
+    setInstallingPrereq(kind);
+    setPrereqInstallError(null);
     try {
-      await installPrerequisite('python');
+      await installPrerequisite(kind);
       // Update locally rather than re-running the whole hardware/prereq scan
       // — the user is mid-decision on this screen, not starting over.
-      setPrereqs((prev) => ({ ...prev, pythonFound: true }));
+      setPrereqs((prev) => ({ ...prev, [PREREQ_FLAG[kind]]: true }));
     } catch (err) {
-      setPythonInstallError(err instanceof Error ? err.message : String(err));
+      setPrereqInstallError({ kind, message: err instanceof Error ? err.message : String(err) });
     } finally {
-      setInstallingPython(false);
+      setInstallingPrereq(null);
     }
   };
 
@@ -161,17 +162,17 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
                   {alreadyInstalled ? 'already installed' : unmetPrereq ? 'skipped' : `${c.sizeGb}GB`}
                 </span>
               </div>
-              {unmetPrereq === 'python' && (
+              {(unmetPrereq === 'python' || unmetPrereq === 'git') && (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-(--warning)">
-                    Needs Python, which isn&apos;t installed.
+                    Needs {PREREQ_LABEL[unmetPrereq]}, which isn&apos;t installed.
                   </span>
                   <button
-                    onClick={handleInstallPython}
-                    disabled={installingPython}
+                    onClick={() => handleInstallPrereq(unmetPrereq)}
+                    disabled={installingPrereq !== null}
                     className="shrink-0 rounded-sm border border-(--warning) px-2 py-1 text-xs text-(--warning) disabled:opacity-50"
                   >
-                    {installingPython ? 'Installing…' : 'Install Python'}
+                    {installingPrereq === unmetPrereq ? 'Installing…' : `Install ${PREREQ_LABEL[unmetPrereq]}`}
                   </button>
                 </div>
               )}
@@ -185,9 +186,9 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
             </div>
           );
         })}
-        {pythonInstallError && (
+        {prereqInstallError && (
           <div className="rounded-sm bg-(--error-dim) px-3 py-2 text-(--error) text-xs">
-            Couldn&apos;t install Python: {pythonInstallError}
+            Couldn&apos;t install {PREREQ_LABEL[prereqInstallError.kind]}: {prereqInstallError.message}
           </div>
         )}
         {needsImageGen && !hardware.gpuPresent && (

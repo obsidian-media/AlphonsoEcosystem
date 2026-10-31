@@ -1,5 +1,7 @@
 // Miya content factory phase 2a (owner, 2026-10-23): ffmpeg is bundled in the
 // Windows installer, so assembly, captions and checks work right after install.
+// Since the closing phase (owner, 2026-10-30) the Linux AppImage bundles it too
+// (`node scripts/fetch-ffmpeg.mjs linux`); macOS users install it with Homebrew.
 //
 // An LGPL build only (most ready-made builds are GPL, which brings stricter
 // terms when redistributed), the shared variant (ffmpeg and ffprobe share
@@ -9,10 +11,12 @@
 //
 // Downloads into src-tauri/vendor/ffmpeg/, which tauri.conf.json stages into
 // the installer as "ffmpeg". Run before `tauri build` (ci.yml, release.yml).
+// The Linux build keeps its bin/ and lib/ folders: its programs load their
+// libraries from $ORIGIN/../lib (checked in the binary's RPATH, 2026-10-30).
 // Bump the URL and checksum together, from `gh api repos/BtbN/FFmpeg-Builds/
 // releases/tags/<tag> --jq '.assets[] | .name + " " + .digest'`.
 import { createHash } from 'node:crypto';
-import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, copyFileSync } from 'node:fs';
+import { chmodSync, createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, copyFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pipeline } from 'node:stream/promises';
@@ -23,10 +27,40 @@ const PROJECT_ROOT = join(__dirname, '..');
 const VENDOR_DIR = join(PROJECT_ROOT, 'src-tauri', 'vendor', 'ffmpeg');
 const DOWNLOAD_DIR = join(PROJECT_ROOT, 'src-tauri', 'vendor', '.download');
 
-export const FFMPEG_ASSET = {
-  url: 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-22-13-06/ffmpeg-n8.1.3-23-g5c4f5744cd-win64-lgpl-shared-8.1.zip',
-  sha256: 'c41df73a3f3259e81d5d53e6ce0c4c80b4841a30894fb77954650e445daa6c53',
+// Both from one release, so Windows and Linux run the same ffmpeg.
+export const FFMPEG_ASSETS = {
+  windows: {
+    url: 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-22-13-06/ffmpeg-n8.1.3-23-g5c4f5744cd-win64-lgpl-shared-8.1.zip',
+    sha256: 'c41df73a3f3259e81d5d53e6ce0c4c80b4841a30894fb77954650e445daa6c53',
+  },
+  linux: {
+    url: 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-22-13-06/ffmpeg-n8.1.3-23-g5c4f5744cd-linux64-lgpl-shared-8.1.tar.xz',
+    sha256: '97fa301cf2bbc0609f0879a3db4440a9829585dd14d3bfcf9d5d2080cc180705',
+  },
 };
+export const FFMPEG_ASSET = FFMPEG_ASSETS.windows;
+
+/** `windows` (the default) or `linux`, from the command line. */
+export function platformArg(args) {
+  const value = args[0] || 'windows';
+  if (value !== 'windows' && value !== 'linux') throw new Error(`[fetch-ffmpeg] platform must be windows or linux, not ${value}`);
+  return value;
+}
+
+/**
+ * Linux: which archive entries are bundled, and where (null = left out). The programs,
+ * the license, and each library under the versioned name the programs ask for
+ * (`libavcodec.so.62`); the unversioned and full-version names are links to the same file.
+ */
+export function KEEP_FILE_LINUX(entryPath) {
+  const parts = entryPath.replace(/\\/g, '/').split('/');
+  const name = parts[parts.length - 1];
+  const folder = parts[parts.length - 2] || '';
+  if (name === 'LICENSE.txt' && parts.length <= 2) return name;
+  if (folder === 'bin' && (name === 'ffmpeg' || name === 'ffprobe')) return `bin/${name}`;
+  if (folder === 'lib' && /^lib[a-z0-9_]+\.so\.\d+$/.test(name)) return `lib/${name}`;
+  return null;
+}
 
 /** Which archive entries are bundled, by their file name (null = left out). */
 export function KEEP_FILE(entryPath) {
@@ -62,18 +96,22 @@ function walk(dir) {
 }
 
 async function main() {
-  if (existsSync(STAMP) && readFileSync(STAMP, 'utf8').trim() === FFMPEG_ASSET.sha256 && existsSync(join(VENDOR_DIR, 'ffmpeg.exe'))) {
+  const platform = platformArg(process.argv.slice(2));
+  const asset = FFMPEG_ASSETS[platform];
+  const keep = platform === 'linux' ? KEEP_FILE_LINUX : KEEP_FILE;
+  const programs = platform === 'linux' ? ['bin/ffmpeg', 'bin/ffprobe'] : ['ffmpeg.exe', 'ffprobe.exe'];
+  if (existsSync(STAMP) && readFileSync(STAMP, 'utf8').trim() === asset.sha256 && existsSync(join(VENDOR_DIR, programs[0]))) {
     console.log('[fetch-ffmpeg] already present');
     return;
   }
   mkdirSync(DOWNLOAD_DIR, { recursive: true });
-  const archive = join(DOWNLOAD_DIR, 'ffmpeg.zip');
-  console.log(`[fetch-ffmpeg] downloading ${FFMPEG_ASSET.url}`);
-  await download(FFMPEG_ASSET.url, archive);
+  const archive = join(DOWNLOAD_DIR, platform === 'linux' ? 'ffmpeg.tar.xz' : 'ffmpeg.zip');
+  console.log(`[fetch-ffmpeg] downloading ${asset.url}`);
+  await download(asset.url, archive);
   const actual = await sha256File(archive);
-  if (actual !== FFMPEG_ASSET.sha256) {
+  if (actual !== asset.sha256) {
     rmSync(archive, { force: true });
-    throw new Error(`[fetch-ffmpeg] checksum mismatch: expected ${FFMPEG_ASSET.sha256}, got ${actual}`);
+    throw new Error(`[fetch-ffmpeg] checksum mismatch: expected ${asset.sha256}, got ${actual}`);
   }
   const unpacked = join(DOWNLOAD_DIR, 'ffmpeg-unpacked');
   rmSync(unpacked, { recursive: true, force: true });
@@ -90,15 +128,19 @@ async function main() {
   }
   let kept = 0;
   for (const file of walk(unpacked)) {
-    const name = KEEP_FILE(relative(unpacked, file));
+    const name = keep(relative(unpacked, file));
     if (!name) continue;
-    copyFileSync(file, join(VENDOR_DIR, name));
+    const target = join(VENDOR_DIR, name);
+    mkdirSync(dirname(target), { recursive: true });
+    // copyFileSync follows a link, so each library is a real file under the name asked for.
+    copyFileSync(file, target);
+    if (name.startsWith('bin/')) chmodSync(target, 0o755);
     kept += 1;
   }
-  if (!existsSync(join(VENDOR_DIR, 'ffmpeg.exe')) || !existsSync(join(VENDOR_DIR, 'ffprobe.exe'))) {
-    throw new Error('[fetch-ffmpeg] the archive had no ffmpeg.exe or ffprobe.exe');
+  if (programs.some((program) => !existsSync(join(VENDOR_DIR, program)))) {
+    throw new Error(`[fetch-ffmpeg] the archive had no ${programs.join(' or ')}`);
   }
-  writeFileSync(STAMP, FFMPEG_ASSET.sha256);
+  writeFileSync(STAMP, asset.sha256);
   rmSync(unpacked, { recursive: true, force: true });
   rmSync(archive, { force: true });
   console.log(`[fetch-ffmpeg] bundled ${kept} files into ${VENDOR_DIR}`);

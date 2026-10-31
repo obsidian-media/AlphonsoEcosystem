@@ -17,6 +17,8 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   creative_package: 'a quick creative idea: title, hook, short script, scenes, picture prompts',
   creative_image: 'make a picture',
   creative_higgsfield: 'make a picture or clip with Higgsfield, asked by name',
+  creative_chat_video: 'make a short video clip on this computer, asked for in words',
+  creative_chat_music: 'make a piece of music on this computer, asked for in words',
   creative_character_train: "train a brand's character on Higgsfield",
   creative_script: "a content video's hooks and timed script",
   creative_scenes: "a content video's storyboard",

@@ -45,6 +45,7 @@ import {
 import { executeApprovedPackets, carryOnRequest, cancelRequest } from '../services/joseExecutionEngineService';
 import { higgsfieldResultsDoneSince, higgsfieldResultsFor, markShownInChat, type HiggsfieldResult } from '../services/contentFactory/higgsfieldByName';
 import { HiggsfieldMedia } from './miya/HiggsfieldResults';
+import { chatMediaDoneSince, markChatMediaShown, type ChatMediaResult } from '../services/contentFactory/chatMedia';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
 import {
@@ -382,10 +383,15 @@ export function ChatView({
     const showNew = () => {
       if (generatingRef.current) return; // An approval in Chat attaches its own result.
       const found = higgsfieldResultsDoneSince(chatOpenedAtRef.current);
-      if (found.length === 0) return;
+      // Video and music Miya made from a request (closing phase): shown the same way.
+      const madeHere = chatMediaDoneSince(chatOpenedAtRef.current);
+      if (found.length === 0 && madeHere.length === 0) return;
       found.forEach((r) => markShownInChat(r.id));
+      madeHere.forEach((r) => markChatMediaShown(r.id));
       setMessages((current) => [...current, ...found.map((r) => ({
         id: nextMsgId(), role: 'assistant', content: `Higgsfield made a ${r.kind}: ${r.prompt}`, media: [r],
+      })), ...madeHere.map((r) => ({
+        id: nextMsgId(), role: 'assistant', content: `${agentName('miya')} made ${r.kind === 'music' ? 'music' : 'a video'}: ${r.prompt}`, media: [r],
       }))]);
     };
     // First look just after the chat's history has loaded (loading clears the list).
@@ -1526,9 +1532,9 @@ export function ChatView({
                         </details>
                       )}
                       <MarkdownMessage content={message.content} />
-                      {Array.isArray((message as unknown as { media?: HiggsfieldResult[] }).media) && (
+                      {Array.isArray((message as unknown as { media?: Array<HiggsfieldResult | ChatMediaResult> }).media) && (
                         <div className="mt-2 space-y-2" data-testid="chat-higgsfield-media">
-                          {(message as unknown as { media: HiggsfieldResult[] }).media.map((r) => <HiggsfieldMedia key={r.id} outputRoot={String(settings.outputFolder || '')} result={r} />)}
+                          {(message as unknown as { media: Array<HiggsfieldResult | ChatMediaResult> }).media.map((r) => <HiggsfieldMedia key={r.id} outputRoot={String(settings.outputFolder || '')} result={r} />)}
                         </div>
                       )}
                     </div>

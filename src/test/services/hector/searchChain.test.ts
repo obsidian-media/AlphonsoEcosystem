@@ -17,7 +17,7 @@ vi.mock('../../../services/connectors/deepseekConnector', () => ({ isDeepSeekCon
 vi.mock('@tauri-apps/api/core', () => ({ invoke: (...a: unknown[]) => invoke(...a) }));
 vi.mock('../../../services/hector/feeds', () => ({ searchFeeds: (...a: unknown[]) => rss(...a) }));
 
-import { searchChain } from '../../../services/hector/searchChain';
+import { searchChain, hasSearchKey } from '../../../services/hector/searchChain';
 
 const hits = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => ({ url: `https://${prefix}.example/article-${i}`, title: `${prefix} ${i}`, snippet: `about ${prefix}` }));
 
@@ -25,6 +25,22 @@ beforeEach(() => {
   for (const f of [brave, braveOn, tavily, tavilyOn, perplexity, perplexityOn, invoke, rss, deepseek]) f.mockReset();
   braveOn.mockResolvedValue(false); tavilyOn.mockReturnValue(false); perplexityOn.mockReturnValue(false);
   invoke.mockResolvedValue([]); rss.mockResolvedValue([]);
+});
+
+describe('hasSearchKey', () => {
+  it('is false when only the free searches are there', async () => {
+    expect(await hasSearchKey()).toBe(false);
+  });
+
+  it('is true when any of Brave, Tavily or Perplexity is set up', async () => {
+    tavilyOn.mockReturnValue(true);
+    expect(await hasSearchKey()).toBe(true);
+  });
+
+  it('counts a check that fails as no key', async () => {
+    braveOn.mockRejectedValue(new Error('backend gone'));
+    expect(await hasSearchKey()).toBe(false);
+  });
 });
 
 describe('searchChain', () => {

@@ -15,6 +15,7 @@ import {
   type SelectableComponent,
 } from '../../services/setupFlowService';
 import type { HardwareProfile } from '../../services/setupFlowService';
+import { PREREQ_FLAG, PREREQ_LABEL, type InstallablePrereq } from '../../services/setupFlowService';
 import alphonsoPortrait from '../../assets/agents/setup/alphonso.webp';
 import joePortrait from '../../assets/agents/setup/jose.webp';
 import miyaPortrait from '../../assets/agents/setup/miya.webp';
@@ -103,7 +104,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
   const [loaded, setLoaded] = useState(false);
   const [toggled, setToggled] = useState<Set<string>>(new Set());
   const [prereqs, setPrereqs] = useState<PrereqStatus>(initialPrereqs);
-  const [installingPython, setInstallingPython] = useState(false);
+  const [installingPrereq, setInstallingPrereq] = useState<InstallablePrereq | null>(null);
 
   const optionalComponentIds = AGENTS.filter((a) => a.component && !a.alwaysOn).map((a) => a.component!.id);
 
@@ -142,13 +143,13 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
     });
   };
 
-  const handleInstallPython = async () => {
-    setInstallingPython(true);
+  const handleInstallPrereq = async (kind: InstallablePrereq) => {
+    setInstallingPrereq(kind);
     try {
-      await installPrerequisite('python');
-      setPrereqs((prev) => ({ ...prev, pythonFound: true }));
+      await installPrerequisite(kind);
+      setPrereqs((prev) => ({ ...prev, [PREREQ_FLAG[kind]]: true }));
     } finally {
-      setInstallingPython(false);
+      setInstallingPrereq(null);
     }
   };
 
@@ -242,15 +243,15 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
                         ? `${agent.component.sizeGb}GB`
                         : 'Optional'}
               </span>
-              {unmetPrereq === 'python' && (
+              {(unmetPrereq === 'python' || unmetPrereq === 'git') && (
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-(--warning)">Needs Python.</span>
+                  <span className="text-xs text-(--warning)">Needs {PREREQ_LABEL[unmetPrereq]}.</span>
                   <button
-                    onClick={handleInstallPython}
-                    disabled={installingPython}
+                    onClick={() => handleInstallPrereq(unmetPrereq)}
+                    disabled={installingPrereq !== null}
                     className="shrink-0 rounded-sm border border-(--warning) px-2 py-1 text-xs text-(--warning) disabled:opacity-50"
                   >
-                    {installingPython ? 'Installing…' : 'Install Python'}
+                    {installingPrereq === unmetPrereq ? 'Installing…' : `Install ${PREREQ_LABEL[unmetPrereq]}`}
                   </button>
                 </div>
               )}

@@ -117,6 +117,13 @@ paths/ports) — if you're a future session and it's missing, check
 for the summary, and re-derive or request the full file from the owner before
 starting Phase 1b or Phase 2.
 
+## OpenRouter, outside tools and memory (2026-10-30)
+
+- **OpenRouter** is one more provider in Settings → Connectors → Agent Providers: any agent can use one of its free models (or let OpenRouter choose). When the day's free requests run out, the step carries on with this computer's model and says so, or asks to use a paid model if you chose that.
+- **Outside tools (MCP).** Every agent may read from a tool you marked "Reading only" on a free server you connected. Only Marcus changes things through an outside tool: his step shows the exact call (`Shop: Update price (product: Blue mug, price: 18)`), waits for your approval, and runs once; Sentinel checks it first.
+- **Memory.** Before an agent's step runs, Alphonso checks that its model and tools fit in RAM and graphics memory. If not, it frees idle models and tools it started, or the step waits and says what for. Programs you started yourself are never stopped.
+- **Miya makes video and music asked for in words** ("make a video of …", "create music for …") on this computer, with the installed video model or AudioCraft.
+
 ## How Agents Collaborate
 
 ```

@@ -82,11 +82,11 @@ describe('routeToCreativeTool', () => {
     expect(result.tool).toBeUndefined();
   });
 
-  it('says plainly that video and audio are not available from chat yet', async () => {
+  // Closing phase (owner, 2026-10-30): video and music are Miya's step (chatMedia.ts), asked
+  // before the shortcuts, so the route leaves them alone instead of refusing them.
+  it('leaves video and audio to Miya\'s own step', async () => {
     for (const intent of ['video_generation', 'audio_generation']) {
-      const result = await routeToCreativeTool(intent);
-      expect(result).toMatchObject({ ok: false, notAvailable: true, needsRuntime: false });
-      expect(result.error).toMatch(/isn't available yet\. Nothing was started\./);
+      expect(await routeToCreativeTool(intent)).toBeNull();
     }
     expect(getAllStatus).not.toHaveBeenCalled();
   });

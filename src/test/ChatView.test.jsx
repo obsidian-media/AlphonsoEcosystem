@@ -182,6 +182,11 @@ vi.mock('../services/contentFactory/higgsfieldByName', () => ({
   higgsfieldResultsDoneSince: vi.fn(() => []),
   markShownInChat: vi.fn(),
 }));
+// Closing phase: video and music asked for in words, made by Miya on this computer.
+vi.mock('../services/contentFactory/chatMedia', () => ({
+  chatMediaDoneSince: vi.fn(() => []),
+  markChatMediaShown: vi.fn(),
+}));
 vi.mock('../components/miya/HiggsfieldResults', () => ({
   HiggsfieldMedia: ({ result }) => <span data-testid="higgsfield-media">{result.path}</span>,
 }));
@@ -205,6 +210,7 @@ import { submitToJose, runApprovedPlan } from '../services/jose/submitToJose';
 import { createWaitingPlanRequest, createJoseRequest, setJoseRequestStatus, updateJoseStep } from '../services/jose/joseRequestStore';
 import { carryOnRequest, cancelRequest } from '../services/joseExecutionEngineService';
 import { higgsfieldResultsDoneSince, markShownInChat } from '../services/contentFactory/higgsfieldByName';
+import { chatMediaDoneSince, markChatMediaShown } from '../services/contentFactory/chatMedia';
 import { addDecision } from '../services/echo/decisions';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
@@ -247,6 +253,15 @@ describe('ChatView', () => {
     expect(await screen.findByText('Higgsfield made a picture: a cat')).toBeInTheDocument();
     expect(screen.getByTestId('higgsfield-media').textContent).toBe('Higgsfield/2026-10-24/picture-1.png');
     expect(markShownInChat).toHaveBeenCalledWith('h1');
+  });
+
+  it('shows a video Miya made from a request, once', async () => {
+    const made = { id: 'm1', kind: 'video', prompt: 'a cat on a boat', path: 'Miya/2026-10-30/video-1.mp4', status: 'done', atMs: Date.now() };
+    vi.mocked(chatMediaDoneSince).mockReturnValueOnce([made]).mockReturnValue([]);
+    render(<ChatView {...makeProps()} />);
+    expect(await screen.findByText('Miya made a video: a cat on a boat')).toBeInTheDocument();
+    expect(screen.getByTestId('higgsfield-media').textContent).toBe('Miya/2026-10-30/video-1.mp4');
+    expect(markChatMediaShown).toHaveBeenCalledWith('m1');
   });
 
   it('renders without crashing', () => {

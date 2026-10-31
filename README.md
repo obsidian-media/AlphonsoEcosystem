@@ -14,6 +14,14 @@
 
 [**Download the latest release**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
+## Coming in the next release (on `main`, not released yet)
+
+- **Outside tools through MCP:** connect your shop, issue tracker or other online service; agents read from it, and Marcus makes changes after you approve the exact call.
+- **OpenRouter:** free models for Chat and any agent, and its paid models as a choice under Allow paid models.
+- **Memory decides what runs:** a step waits when RAM or graphics memory is short instead of running out; idle tools stop; Runtime Hub → Memory and a meter in the top bar show what is loaded.
+- **Hermes gateway:** Runtime Hub installs Hermes Agent, Settings sets up a profile per agent, and Hermes's own requests wait for your approval.
+- **Video and music from Chat**, ffmpeg in the Linux AppImage, macOS 13.3 or later required, and the deferred list cleaned up. Details in [docs/CHANGELOG.md](docs/CHANGELOG.md).
+
 ## What's New in v2.10.0 (2026-10-27)
 
 The full list is in [docs/CHANGELOG.md](docs/CHANGELOG.md).
@@ -321,7 +329,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 - **Screen Intelligence** — `screenIntelligenceService.ts` for on-screen context awareness
 - **Voice OS** — Real-time STT→LLM→TTS pipeline (`voice/`) with faster-whisper, Ollama, and Piper. Launched from Runtime Manager as a Tauri sidecar. AudioWorklet-based `useJarvisVoice` hook with barge-in and conversation history.
 - **Premium Animated UI** — OKLCH design token system, Framer Motion animations (`AnimatePresence` on chat messages), glassmorphism input, sidebar tooltips.
-- **Desktop Native** — Tauri v2 + React 19 + Vite 8; NSIS/MSI installer for Windows (it bundles the Ollama runtime and FFmpeg), a DMG for Apple Silicon and an AppImage for Linux
+- **Desktop Native** — Tauri v2 + React 19 + Vite 8; NSIS/MSI installer for Windows (it bundles the Ollama runtime and FFmpeg), a DMG for Apple Silicon (macOS 13.3 or later) and an AppImage for Linux
 
 ---
 
@@ -399,7 +407,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~982 lines · 225 Tauri commands · 58 modules   │    │
+│  │  lib.rs ~986 lines · 225 Tauri commands · 58 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -468,10 +476,11 @@ All 36 connectors are set up in **Settings → Connectors**; keys are kept in th
 | Group | Connectors |
 |-------|-----------|
 | Messaging | Telegram, WhatsApp Cloud, Discord, Slack, CALL-E (phone calls), Generic Webhook, Mobile Bridge |
-| AI models | Ollama (local), Claude, ChatGPT, Qwen, DeepSeek, NVIDIA NIM, Gemini, Hermes Agents |
-| Search & research | Brave Search, Perplexity, Tavily |
+| AI models | Ollama (local), Claude, ChatGPT, Qwen, DeepSeek, NVIDIA NIM, Gemini, OpenRouter, Hermes Agents |
+| Search & research | Brave Search, Perplexity, Tavily, Google Web Risk (link checks) |
 | Content & productivity | YouTube, Meta (Facebook and Instagram), ComfyUI, SD WebUI, Runway, Pexels, Pixabay, Coverr, your own storage, ElevenLabs, Higgsfield, Notion, ClickUp, GitHub |
 | Automation | n8n |
+| Outside tools | Your own online services through MCP (Settings → Connectors → Outside tools) |
 
 Every outbound call goes through the policy gate; paid connectors (Claude, ChatGPT, Runway, CALL-E, ElevenLabs, Higgsfield and others) are off in Zero-Cost Mode and ask first. See [docs/CONNECTORS.md](docs/CONNECTORS.md) for setup.
 
@@ -490,7 +499,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 6,933 tests across 630 files (src + bridge)
+npm run test           # 6,933 tests across 632 files
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -503,7 +512,7 @@ npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app 
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 435 Rust unit tests across 58 modules
+cargo test                     # 439 Rust unit tests across 58 modules
                                 # (cargo test runs a few more: the async
                                 # #[tokio::test] cases, 370 in all)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)

@@ -16,7 +16,7 @@ import { chosenVersionOf, getProject, getShortsSettings, getVideoSettings, setSh
 import { projectRelativeDir, requireOutputRoot, saveProjectImage, writeProjectFile } from './contentProjectFiles';
 import { makeComfyClip } from './comfyVideoClip';
 import { resolveCharacter } from './engineChoice';
-import { withCharacterPrompt } from './comfyCharacter';
+import { characterReferenceAvailable, makeCharacterPicture, withCharacterPrompt } from './comfyCharacter';
 import { makeRunwayClip } from './runwayClip';
 import { localMotionAvailable, makeComfyMotionClip } from './comfyMotionClip';
 import { higgsfieldMotionAvailable, makeHiggsfieldClip, makeHiggsfieldMotionClip } from './higgsfieldClip';
@@ -100,10 +100,13 @@ async function makeMini(ctx: Ctx, plan: ShortPlan): Promise<ShortOutput> {
   const pictures: (string | null)[] = [];
   for (const [i, part] of parts.entries()) {
     const file = `v${ctx.n}-p${i + 1}.png`;
-    const result = await generateComfyUiImage(
-      { prompt: withCharacterPrompt([part.imagePrompt, look, 'no text, no letters, no words'].filter(Boolean).join('. '), who.use === 'none' ? null : who.character), width: 480, height: 832 },
-      { endpoint: getComfyUiEndpoint() },
-    ).catch(() => null) as { ok?: boolean; previewBase64?: string } | null;
+    const character = who.use === 'none' ? null : who.character;
+    const prompt = withCharacterPrompt([part.imagePrompt, look, 'no text, no letters, no words'].filter(Boolean).join('. '), character);
+    // The character's own pictures when the reference model is installed, as scene pictures do.
+    const result = (character && await characterReferenceAvailable()
+      ? await makeCharacterPicture({ root: ctx.root, prompt, width: 480, height: 832, character })
+      : await generateComfyUiImage({ prompt, width: 480, height: 832 }, { endpoint: getComfyUiEndpoint() }).catch(() => null)
+    ) as { ok?: boolean; previewBase64?: string } | null;
     if (result?.ok && result.previewBase64) {
       await saveProjectImage(ctx.root, ctx.brand, ctx.project, `shorts/${plan.id}`, file, result.previewBase64);
       pictures.push(`${ctx.dir}/${file}`);

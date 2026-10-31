@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, ChevronDown, ChevronRight, Compass } from 'lucide-react';
 import { HECTOR_PROFILE } from '../../agents/hector/hectorProfile';
@@ -13,6 +13,7 @@ import {
   listHectorReports
 } from '../../services/hectorResearchService';
 import { askOnResearchDesk } from '../../services/hector/deskRequest';
+import { FREE_SEARCH_NOTE, hasSearchKey } from '../../services/hector/searchChain';
 import { fillChat } from '../../lib/chatDraft';
 import { SavedSources } from '../hector/SavedSources';
 import { SourceBoard } from '../hector/SourceBoard';
@@ -57,6 +58,12 @@ function InfoCell({ label, value }: InfoCellProps): React.JSX.Element {
 
 export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabId>('new');
+  const [onlyFreeSearch, setOnlyFreeSearch] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void hasSearchKey().then((has) => { if (live) setOnlyFreeSearch(!has); });
+    return () => { live = false; };
+  }, []);
   const [question, setQuestion] = useState('');
   const [sourceType, setSourceType] = useState('official_docs');
   const [sourceUrls, setSourceUrls] = useState('');
@@ -153,6 +160,9 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
               </div>
               <h1 className="mt-1 font-serif text-xl font-bold tracking-tight text-(--text-1)">Hector Research Desk</h1>
               <p className="mt-1 text-[13px] text-(--text-3)">Research a question: Hector answers it with cited sources. Each run is a Jose request.</p>
+              {onlyFreeSearch && (
+                <p data-testid="hector-free-search-note" className="mt-2 text-[12px] text-(--warning)">{FREE_SEARCH_NOTE}</p>
+              )}
             </div>
             <div className="flex items-center gap-2 shrink-0 text-[11px] text-(--text-3)">
               <span className="rounded-full border border-(--border) px-2.5 py-1">{reports.length} reports</span>

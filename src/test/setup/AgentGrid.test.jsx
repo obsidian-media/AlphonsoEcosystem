@@ -17,11 +17,11 @@ vi.mock('../../services/setupFlowService', async (importOriginal) => {
   };
 });
 
-import { getAllStatus } from '../../services/runtimeManagerService';
+import { getAllStatus, installPrerequisite } from '../../services/runtimeManagerService';
 import { AgentGrid } from '../../components/setup/AgentGrid';
 
 const hardware = { ramGb: 16, diskFreeGb: 220, gpuPresent: false, gpuVendor: null, gpuModel: null };
-const allPrereqsOk = { missing: [], installHint: 'ok', pythonFound: true, dockerFound: true };
+const allPrereqsOk = { missing: [], installHint: 'ok', pythonFound: true, dockerFound: true, gitFound: true };
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -125,7 +125,7 @@ describe('AgentGrid', () => {
 
   it('excludes a toggled component from the queue when its prerequisite is unmet', async () => {
     getAllStatus.mockResolvedValue([]);
-    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true };
+    const noPython = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true, gitFound: true };
     const onProceed = vi.fn();
     render(<AgentGrid hardware={hardware} prereqs={noPython} onProceed={onProceed} onBack={() => {}} />);
 
@@ -136,6 +136,19 @@ describe('AgentGrid', () => {
     const queued = onProceed.mock.calls[0][0];
     expect(queued.some((c) => c.id === 'comfyui')).toBe(false);
     expect(queued.some((c) => c.id === 'starter-model')).toBe(true);
+  });
+
+  it("asks for Git for Miya's ComfyUI, and Install Git installs it", async () => {
+    getAllStatus.mockResolvedValue([]);
+    const noGit = { missing: ['Git'], installHint: 'x', pythonFound: true, dockerFound: true, gitFound: false };
+    installPrerequisite.mockResolvedValue({ tool: 'git', ok: true, message: 'installed' });
+    render(<AgentGrid hardware={hardware} prereqs={noGit} onProceed={() => {}} onBack={() => {}} />);
+
+    fireEvent.click(await waitFor(() => screen.getByRole('checkbox', { name: /miya/i })));
+    await waitFor(() => expect(screen.getByText(/needs git/i)).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Install Git'));
+    await waitFor(() => expect(installPrerequisite).toHaveBeenCalledWith('git'));
+    await waitFor(() => expect(screen.queryByText(/needs git/i)).not.toBeInTheDocument());
   });
 
   it('blocks proceeding when the toggled selection exceeds free disk space', async () => {

@@ -12,7 +12,7 @@ vi.mock('../components/setup/SystemScan', () => ({
   SystemScan: ({ onContinue }) => (
     <button onClick={() => onContinue(
       { ramGb: 16, diskFreeGb: 100, ollamaModelsDirFreeGb: null, gpuPresent: false, gpuVendor: null, gpuModel: null },
-      { missing: [], installHint: 'ok', pythonFound: true, dockerFound: true }
+      { missing: [], installHint: 'ok', pythonFound: true, dockerFound: true, gitFound: true }
     )}>
       scan-continue
     </button>

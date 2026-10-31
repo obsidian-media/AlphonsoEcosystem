@@ -23,10 +23,11 @@ export default defineConfig({
     // build-target/declared-OS-support mismatch, not a code bug in any
     // one file. Pinning target to the OS version this app already
     // promises to support, rather than silently narrowing that promise.
-    // (2026-09-30: minimumSystemVersion is now "11.0" because releases are
-    // Apple Silicon only, which needs macOS 11+. safari13.1 is kept as a
-    // conservative floor; it is strictly more compatible than needed.)
-    target: 'safari13.1',
+    // (2026-09-30: minimumSystemVersion became "11.0", Apple Silicon only.)
+    // 2026-10-30 (owner): the minimum is now macOS 13.3, because Tailwind v4's
+    // CSS needs Safari 16.4; on macOS 11 and 12 the app drew wrongly. The
+    // target matches it; src/test/macosMinimum.test.js keeps the two together.
+    target: 'safari16.4',
     // Regression fix for a real QA finding: 'hidden' still WRITES .map files
     // to dist/ (it only omits the //# sourceMappingURL comment referencing
     // them) — Tauri packages everything under dist/ into the installer

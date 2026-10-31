@@ -116,14 +116,24 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   // From Chat, a content video becomes a Miya Studio project run as one request
   // (phase 6b, owner). "Plan this fresh" still plans it. Checked before the
   // shortcuts: the creative one would answer "videos aren't available" first.
+  const contentFit = scoreTemplateFit(text)[0];
+  const fitsContentVideo = contentFit?.templateId === 'content_video' && contentFit.score >= TEMPLATE_FIT_THRESHOLD;
   if (CONTENT_PROJECT_SOURCES.includes(source) && !planFresh) {
-    const best = scoreTemplateFit(text)[0];
     // Only a request to make something; naming YouTube in a question isn't one (agent phase 2).
-    if (best?.templateId === 'content_video' && best.score >= TEMPLATE_FIT_THRESHOLD && asksToMake(text)) {
+    if (fitsContentVideo && asksToMake(text)) {
       const { startContentProjectFromChat } = await import('../contentFactory/contentFromChat');
       const started = await startContentProjectFromChat(text, savedOutputFolder(), { source, allowPaidModels: input.allowPaidModels });
       return { ok: started.ok, reason: started.ok ? undefined : started.note, contentProjectId: started.projectId || null, plan: null, planNote: started.note };
     }
+  }
+
+  // Video or music asked for (closing phase, owner 2026-10-30): Miya makes it on this computer,
+  // or the request says what to install. "Plan this fresh" plans instead.
+  // A content video is the Content video plan, never a short clip.
+  if (!planFresh && !fitsContentVideo) {
+    const { askChatMedia } = await import('../contentFactory/chatMedia');
+    const media = await askChatMedia({ text, source, onProgress });
+    if (media) return media;
   }
 
   const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });

@@ -377,6 +377,10 @@ pub fn run() {
     .plugin(tauri_plugin_updater::Builder::new().build())
     .plugin(tauri_plugin_process::init())
     .setup(|app| {
+      // Where this build keeps its bundled ffmpeg, Ollama and starter model (closing phase).
+      if let Ok(dir) = app.path().resource_dir() {
+        crate::utils::set_resource_dir(dir);
+      }
       let proof_output_dir = native_proof_output_dir();
       let proof_request = read_native_proof_request(&proof_output_dir);
       let workspace_root = native_workspace_root();

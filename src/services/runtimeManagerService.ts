@@ -12,7 +12,6 @@ export const TOOL_NAMES = [
   'openwebui',
   'voice-os',
   'n8n',
-  'alphonso-bridge',
   'chromadb',
   'openHands',
 ] as const;

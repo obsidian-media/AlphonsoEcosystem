@@ -1,10 +1,10 @@
 //! Media tools for the Miya content factory (phase 2a): the bundled ffmpeg,
 //! and whether the Runtime Hub tools the video steps use are installed.
 //!
-//! ffmpeg ships in the Windows installer (an LGPL build staged by
-//! scripts/fetch-ffmpeg.mjs into the "ffmpeg" resource folder, installed next
-//! to the app's .exe like the bundled Ollama). Elsewhere, or in a dev build
-//! without it, ffmpeg is found on the PATH.
+//! ffmpeg ships in the Windows installer and the Linux AppImage (an LGPL build
+//! staged by scripts/fetch-ffmpeg.mjs into the "ffmpeg" resource folder; on
+//! Linux its programs are in ffmpeg/bin/ with their libraries in ffmpeg/lib/).
+//! On macOS, or in a dev build without it, ffmpeg is found on the PATH.
 use serde::{Deserialize, Serialize};
 use std::path::{Component, Path, PathBuf};
 use tauri::{AppHandle, Manager};
@@ -34,17 +34,21 @@ fn resolve_media_tool(
   lookup: impl Fn(&str) -> Option<PathBuf>,
 ) -> Option<PathBuf> {
   if let Some(dir) = bundled_dir {
-    let candidate = dir.join(exe_name(name));
-    if candidate.is_file() {
-      return Some(candidate);
+    // Windows keeps the programs at the top; the Linux build keeps them in bin/.
+    for candidate in [
+      dir.join(exe_name(name)),
+      dir.join("bin").join(exe_name(name)),
+    ] {
+      if candidate.is_file() {
+        return Some(candidate);
+      }
     }
   }
   lookup(name)
 }
 
 fn bundled_ffmpeg_dir() -> Option<PathBuf> {
-  let exe_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
-  Some(exe_dir.join("ffmpeg"))
+  crate::utils::bundled_resource("ffmpeg")
 }
 
 pub(crate) fn ffmpeg_path() -> Option<PathBuf> {
@@ -70,9 +74,29 @@ fn venv_installed(tool: &str) -> bool {
 pub struct MediaToolsStatus {
   ffmpeg: Option<String>,
   ffprobe: Option<String>,
+  /// How to get ffmpeg on this computer, only while it isn't found (closing phase).
+  ffmpeg_help: Option<String>,
   kokoro: bool,
   audiocraft: bool,
   whisper: bool,
+}
+
+/// How to get ffmpeg when it isn't found, for this kind of computer (closing phase,
+/// owner 2026-10-30): the Windows installer and the Linux AppImage include it; a Mac
+/// gets it from Homebrew.
+pub(crate) fn ffmpeg_missing_for(os: &str) -> &'static str {
+  match os {
+    "macos" => "Install it with Homebrew (brew.sh): open Terminal and run brew install ffmpeg, then try again.",
+    "windows" => "Reinstall Alphonso to put it back; the installer includes it.",
+    _ => "Install it with your package manager (for example sudo apt install ffmpeg), then try again.",
+  }
+}
+
+pub(crate) fn ffmpeg_not_found() -> String {
+  format!(
+    "ffmpeg wasn't found. {}",
+    ffmpeg_missing_for(std::env::consts::OS)
+  )
 }
 
 /// What the video steps can use right now.
@@ -81,6 +105,9 @@ pub fn media_tools_status() -> MediaToolsStatus {
   MediaToolsStatus {
     ffmpeg: ffmpeg_path().map(|p| p.to_string_lossy().to_string()),
     ffprobe: ffprobe_path().map(|p| p.to_string_lossy().to_string()),
+    ffmpeg_help: ffmpeg_path()
+      .is_none()
+      .then(|| ffmpeg_missing_for(std::env::consts::OS).to_string()),
     kokoro: venv_installed("kokoro"),
     audiocraft: venv_installed("audiocraft"),
     whisper: venv_installed("whisper"),
@@ -989,9 +1016,13 @@ async fn probe(ffprobe: &Path, file: &Path) -> Result<(f64, bool, bool), String>
 #[tauri::command]
 pub async fn content_assemble_video(mut spec: AssemblySpec) -> Result<serde_json::Value, String> {
   let font_note = resolve_font(&mut spec.font);
-  let ffmpeg = ffmpeg_path().ok_or_else(|| "ffmpeg is missing from this install.".to_string())?;
-  let ffprobe =
-    ffprobe_path().ok_or_else(|| "ffprobe is missing from this install.".to_string())?;
+  let ffmpeg = ffmpeg_path().ok_or_else(ffmpeg_not_found)?;
+  let ffprobe = ffprobe_path().ok_or_else(|| {
+    format!(
+      "ffprobe wasn't found. {}",
+      ffmpeg_missing_for(std::env::consts::OS)
+    )
+  })?;
   if spec.scenes.is_empty() {
     return Err("The video has no scenes.".to_string());
   }
@@ -1316,9 +1347,13 @@ pub async fn content_cut_short(mut spec: CutShortSpec) -> Result<serde_json::Val
       return Err(format!("A file for the Short is missing: {rel}"));
     }
   }
-  let ffmpeg = ffmpeg_path().ok_or_else(|| "ffmpeg is missing from this install.".to_string())?;
-  let ffprobe =
-    ffprobe_path().ok_or_else(|| "ffprobe is missing from this install.".to_string())?;
+  let ffmpeg = ffmpeg_path().ok_or_else(ffmpeg_not_found)?;
+  let ffprobe = ffprobe_path().ok_or_else(|| {
+    format!(
+      "ffprobe wasn't found. {}",
+      ffmpeg_missing_for(std::env::consts::OS)
+    )
+  })?;
   let out = out_file
     .parent()
     .map(Path::to_path_buf)
@@ -1879,6 +1914,24 @@ mod tests {
     let bundled = dir.join(exe_name("ffmpeg"));
     std::fs::write(&bundled, b"x").unwrap();
     let found = resolve_media_tool(Some(&dir), "ffmpeg", |_| Some(PathBuf::from("elsewhere")));
+    assert_eq!(found, Some(bundled));
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  #[test]
+  fn says_how_to_get_ffmpeg_on_each_computer() {
+    assert!(ffmpeg_missing_for("macos").contains("brew install ffmpeg"));
+    assert!(ffmpeg_missing_for("linux").contains("package manager"));
+    assert!(ffmpeg_missing_for("windows").contains("Reinstall Alphonso"));
+  }
+
+  #[test]
+  fn finds_the_linux_build_in_its_bin_folder() {
+    let dir = std::env::temp_dir().join(format!("alphonso-media-bin-{}", std::process::id()));
+    std::fs::create_dir_all(dir.join("bin")).unwrap();
+    let bundled = dir.join("bin").join(exe_name("ffprobe"));
+    std::fs::write(&bundled, b"x").unwrap();
+    let found = resolve_media_tool(Some(&dir), "ffprobe", |_| None);
     assert_eq!(found, Some(bundled));
     std::fs::remove_dir_all(&dir).ok();
   }

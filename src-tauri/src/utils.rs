@@ -1,6 +1,8 @@
 #![expect(dead_code)]
 
+use std::path::PathBuf;
 use std::process::Command;
+use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[cfg(target_os = "windows")]
@@ -11,6 +13,44 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 /// Apply CREATE_NO_WINDOW on Windows so child processes don't flash a
 /// visible console window. No-op on other platforms.
 #[allow(unused_variables)]
+/// Tauri's resource folder, saved once at start (closing phase, 2026-10-30). On
+/// Windows the installer puts bundled resources next to the app's program; a
+/// Linux AppImage and a macOS app keep them in a separate folder, which only
+/// Tauri knows, so a lookup by the program's folder alone found nothing there.
+static RESOURCE_DIR: OnceLock<PathBuf> = OnceLock::new();
+
+pub(crate) fn set_resource_dir(dir: PathBuf) {
+  let _ = RESOURCE_DIR.set(dir);
+}
+
+/// The folders a bundled resource may be in: next to the program, then Tauri's resource folder.
+fn resource_dirs() -> Vec<PathBuf> {
+  let mut dirs = Vec::new();
+  if let Some(exe_dir) = std::env::current_exe()
+    .ok()
+    .and_then(|exe| exe.parent().map(|p| p.to_path_buf()))
+  {
+    dirs.push(exe_dir);
+  }
+  if let Some(dir) = RESOURCE_DIR.get() {
+    dirs.push(dir.clone());
+  }
+  dirs
+}
+
+/// `relative` inside the first of `dirs` that has it.
+pub(crate) fn find_in_dirs(dirs: &[PathBuf], relative: &str) -> Option<PathBuf> {
+  dirs
+    .iter()
+    .map(|dir| dir.join(relative))
+    .find(|candidate| candidate.exists())
+}
+
+/// A bundled resource (`ffmpeg`, `ollama/ollama`, `starter-model`) wherever this build keeps it.
+pub(crate) fn bundled_resource(relative: &str) -> Option<PathBuf> {
+  find_in_dirs(&resource_dirs(), relative)
+}
+
 /// A connector secret for a backend command: the value the app passes (saved
 /// in Settings, kept in the OS keychain) wins, and a process environment
 /// variable is the fallback. Before 2026-10-21 most connector commands read
@@ -112,6 +152,29 @@ pub(crate) fn generate_id() -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn a_bundled_resource_is_found_in_the_first_folder_that_has_it() {
+    let base = std::env::temp_dir().join(format!("alphonso-res-{}", std::process::id()));
+    let next_to_program = base.join("bin");
+    let resources = base.join("lib");
+    std::fs::create_dir_all(resources.join("ffmpeg")).unwrap();
+    std::fs::create_dir_all(&next_to_program).unwrap();
+    let dirs = vec![next_to_program.clone(), resources.clone()];
+    // Only in Tauri's resource folder (a Linux AppImage).
+    assert_eq!(
+      find_in_dirs(&dirs, "ffmpeg"),
+      Some(resources.join("ffmpeg"))
+    );
+    // Next to the program wins (the Windows installer).
+    std::fs::create_dir_all(next_to_program.join("ffmpeg")).unwrap();
+    assert_eq!(
+      find_in_dirs(&dirs, "ffmpeg"),
+      Some(next_to_program.join("ffmpeg"))
+    );
+    assert_eq!(find_in_dirs(&dirs, "starter-model"), None);
+    std::fs::remove_dir_all(&base).ok();
+  }
 
   #[test]
   fn secret_or_env_prefers_the_passed_value_and_falls_back_to_env() {

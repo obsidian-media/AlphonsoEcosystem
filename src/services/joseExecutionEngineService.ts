@@ -1247,6 +1247,11 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
     const { executeCharacterTraining } = await import('./contentFactory/contentCharacterTraining');
     return executeCharacterTraining(assignment);
   }
+  // Video or music asked for in Chat (closing phase, 2026-10-30).
+  if (assignment?.actionType === 'creative_chat_video' || assignment?.actionType === 'creative_chat_music') {
+    const { executeChatMedia } = await import('./contentFactory/chatMedia');
+    return executeChatMedia(assignment, packet);
+  }
   if (assignment?.actionType === 'creative_higgsfield') {
     const { executeHiggsfieldByName } = await import('./contentFactory/higgsfieldByName');
     return executeHiggsfieldByName(assignment, packet);

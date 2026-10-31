@@ -13,11 +13,8 @@ const CREATIVE_PATTERNS: Record<string, RegExp> = {
 // API-compatible with each other, so routing to them failed anyway.
 const IMAGE_TOOL = 'comfyui';
 
-// Not wired into chat yet (planned: docs/governance/DEFERRED_WORK.md).
-const NOT_AVAILABLE: Record<string, string> = {
-  video_generation: "Making videos from chat isn't available yet. Nothing was started.",
-  audio_generation: "Making music or audio from chat isn't available yet. Nothing was started.",
-};
+// Video and music are Miya's own step (contentFactory/chatMedia.ts, closing phase 2026-10-30),
+// asked by submitToJose() before the shortcuts; this route only finds the picture tool.
 
 interface RouteResult {
   ok: boolean;
@@ -40,7 +37,6 @@ export function detectCreativeIntent(commandText: string): string | null {
 }
 
 export async function routeToCreativeTool(intent: string): Promise<RouteResult | null> {
-  if (NOT_AVAILABLE[intent]) return { ok: false, error: NOT_AVAILABLE[intent], notAvailable: true, needsRuntime: false };
   if (intent !== 'image_generation') return null;
   let statuses: Array<{ name: string; status?: string; running?: boolean }> | undefined;
   try {

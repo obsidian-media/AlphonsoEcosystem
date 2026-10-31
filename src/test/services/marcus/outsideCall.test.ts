@@ -94,6 +94,25 @@ describe('Marcus’s outside-tool step', () => {
     expect(prompt).not.toContain('open_issue');
   });
 
+  it("shows each tool's title and description in the pick, fenced as the server's text", async () => {
+    // Found live (2026-10-30): with only titles, a 7B model picked add_issue_comment over issue_write.
+    const s = addServer({ name: 'Hub', url: 'https://hub.example/mcp', cost: 'free' });
+    const big = { type: 'object', properties: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`field_${i}`, { type: 'string', description: 'x'.repeat(40) }])) };
+    const tools = Array.from({ length: 40 }, (_, i) => ({ name: `tool_${i}`, title: `Tool ${i}`, description: `Does thing ${i}`, inputSchema: big }));
+    tools.push({ name: 'issue_write', title: 'Create or update issue', description: 'Open a new issue or change one that exists', inputSchema: { type: 'object', properties: { method: { type: 'string' } }, required: ['method'] } } as never);
+    updateServer(s.id, { tools: mergeTools([], tools) });
+    generate
+      .mockResolvedValueOnce({ response: '{"tool": "hub/issue_write"}' })
+      .mockResolvedValueOnce({ response: '{"tool": "hub/issue_write", "arguments": {"method": "create"}}' });
+    await prepareOutsideCall('c1', step(), { text: 'Through Hub, open an issue titled Hi' });
+    const pick = String(generate.mock.calls[0][1].prompt);
+    expect(pick).toContain('Create or update issue: Open a new issue or change one that exists');
+    expect(pick).toContain('untrusted');
+    const fill = String(generate.mock.calls[1][1].prompt);
+    expect(fill).toContain('Create or update issue: Open a new issue or change one that exists');
+    expect(fill).toContain('untrusted');
+  });
+
   it('with many tools, picks one from short lines first, then fills only its fields', async () => {
     // Found live: GitHub lists 46 tools; every schema in one prompt overflowed a local model.
     const s = addServer({ name: 'Hub', url: 'https://hub.example/mcp', cost: 'free' });

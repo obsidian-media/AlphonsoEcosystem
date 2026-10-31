@@ -64,7 +64,6 @@ const runtimeNames = [
   'audiocraft',
   'voice-os',
   'openwebui',
-  'alphonso-bridge',
   'chromadb',
   'openHands',
   'n8n',
@@ -73,7 +72,6 @@ const runtimeNames = [
   displayName:
     name === 'voice-os' ? 'Voice OS'
       : name === 'openwebui' ? 'Open WebUI'
-      : name === 'alphonso-bridge' ? 'Alphonso Bridge'
       : name === 'chromadb' ? 'ChromaDB'
       : name === 'openHands' ? 'OpenHands'
       : name === 'audiocraft' ? 'AudioCraft / MusicGen'
@@ -104,9 +102,27 @@ describe('RuntimeManagerView', () => {
 
   it('renders the runtime catalog entries that were previously untested', async () => {
     render(<RuntimeManagerView />);
-    for (const name of ['Open WebUI', 'Alphonso Bridge', 'ChromaDB', 'OpenHands', 'Voice OS', 'AudioCraft / MusicGen']) {
+    for (const name of ['Open WebUI', 'ChromaDB', 'OpenHands', 'Voice OS', 'AudioCraft / MusicGen']) {
       expect(await screen.findByText(name)).toBeTruthy();
     }
+  });
+
+  // Closing phase (owner, 2026-10-30): a Mac has no bundled ffmpeg, so Runtime Hub says how to get it.
+  it('says how to get ffmpeg when this computer has none', async () => {
+    mockTauriInvoke.mockImplementation(async (cmd: string) => (cmd === 'media_tools_status'
+      ? { ffmpeg: null, ffmpegHelp: 'Install it with Homebrew (brew.sh): open Terminal and run brew install ffmpeg, then try again.' }
+      : null));
+    render(<RuntimeManagerView />);
+    const note = await screen.findByTestId('runtime-ffmpeg-missing');
+    expect(note.textContent).toMatch(/ffmpeg isn't installed/);
+    expect(note.textContent).toMatch(/brew install ffmpeg/);
+  });
+
+  it('says nothing about ffmpeg when it is there', async () => {
+    mockTauriInvoke.mockImplementation(async (cmd: string) => (cmd === 'media_tools_status' ? { ffmpeg: 'C:/ffmpeg.exe' } : null));
+    render(<RuntimeManagerView />);
+    await screen.findByText('ComfyUI');
+    expect(screen.queryByTestId('runtime-ffmpeg-missing')).toBeNull();
   });
 
   it('renders the core image and local runtime entries together', async () => {

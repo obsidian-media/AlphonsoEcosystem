@@ -76,7 +76,10 @@ export function toolsForStep(assignment: StepAssignment): NeededTool[] {
     case 'creative_voice':
       return engines?.voice.engine === 'elevenlabs' ? [] : ['kokoro'];
     case 'creative_music':
+    case 'creative_chat_music':
       return ['audiocraft'];
+    case 'creative_chat_video':
+      return ['comfyui'];
     case 'research_broll':
     case 'creative_higgsfield':
     case 'creative_character_train':
@@ -161,7 +164,7 @@ export async function estimateNeed(assignment: StepAssignment): Promise<StepNeed
     else gpuMb = Math.ceil(size * MODEL_WORKING_MEMORY);
   }
   if (tools.includes('comfyui')) {
-    if (assignment.actionType === 'creative_video_clips') {
+    if (assignment.actionType === 'creative_video_clips' || assignment.actionType === 'creative_chat_video') {
       const video = await videoModel();
       if (video) {
         gpuMb = Math.max(gpuMb, video.gpuMb);

@@ -10,6 +10,8 @@ vi.mock('../../../services/joseExecutionEngineService', () => ({
   runJoseCommandExecutionPipeline: vi.fn(async () => ({ ok: true, commandId: 'c1', executedCount: 1, pendingApprovalCount: 0, failedCount: 0, executionReceipts: [] })),
 }));
 
+const askChatMedia = vi.fn(async () => null);
+vi.mock('../../../services/contentFactory/chatMedia', () => ({ askChatMedia: (...a) => askChatMedia(...a) }));
 vi.mock('../../../services/contentFactory/contentFromChat', () => ({
   startContentProjectFromChat: vi.fn(async () => ({ ok: true, projectId: 'p1', note: 'Started the project.' })),
 }));
@@ -37,6 +39,7 @@ beforeEach(() => {
   // These tests run plans straight away; showing the plan first is tested below.
   localStorage.setItem('alphonso_settings', JSON.stringify({ showPlanFirst: 'never' }));
   vi.mocked(runPipelineShortcuts).mockReset().mockResolvedValue(null);
+  askChatMedia.mockClear();
   startFromChat.mockClear();
   pipeline.mockClear();
   planner.mockReset();
@@ -167,6 +170,29 @@ describe('submitToJose', () => {
     const result = await submitToJose({ text: 'Make a YouTube video script about home coffee', source: 'user' });
     expect(result.contentProjectId).toBe('p1');
     expect(runPipelineShortcuts).not.toHaveBeenCalled();
+  });
+
+  // Closing phase (owner, 2026-10-30): video and music from Chat are Miya's step.
+  it('a video or music request goes to Miya\'s media step, before any plan', async () => {
+    askChatMedia.mockResolvedValueOnce({ ok: true, requestId: 'r-media' });
+    const result = await submitToJose({ text: 'make a video of a cat on a boat', source: 'user' });
+    expect(askChatMedia).toHaveBeenCalledWith(expect.objectContaining({ text: 'make a video of a cat on a boat', source: 'user' }));
+    expect(result).toMatchObject({ ok: true, requestId: 'r-media' });
+    expect(planner).not.toHaveBeenCalled();
+    expect(runPipelineShortcuts).not.toHaveBeenCalled();
+  });
+
+  // A content video stays the Content video plan from places that don't start a Miya Studio project.
+  it('a content video from elsewhere keeps the content video plan, not a short clip', async () => {
+    planner.mockResolvedValueOnce(freshPlan);
+    await submitToJose({ text: 'Make a YouTube video script about home coffee', source: 'board' });
+    expect(askChatMedia).not.toHaveBeenCalled();
+  });
+
+  it('"Plan this fresh" plans instead of making the media at once', async () => {
+    planner.mockResolvedValueOnce(freshPlan);
+    await submitToJose({ text: 'make a video of a cat on a boat', source: 'user', planFresh: true });
+    expect(askChatMedia).not.toHaveBeenCalled();
   });
 
   it('"Plan this fresh" still plans a content video', async () => {

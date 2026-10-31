@@ -1,6 +1,6 @@
 # Alphonso Connectors Reference
 
-Alphonso has **35 connectors** (`DEFAULT_CONNECTORS` in `src/services/connectors/connectorRegistry.js`). All outbound connector calls run through `policyEnforcementService.ts` before any external API is contacted. The gate fails closed: missing credentials, zero-cost mode, or unauthorized senders all result in a blocked result with an audit receipt. No raw stubs — every listed path is wired through the policy gate.
+Alphonso has **36 connectors** (`DEFAULT_CONNECTORS` in `src/services/connectors/connectorRegistry.js`). All outbound connector calls run through `policyEnforcementService.ts` before any external API is contacted. The gate fails closed: missing credentials, zero-cost mode, or unauthorized senders all result in a blocked result with an audit receipt. No raw stubs — every listed path is wired through the policy gate.
 
 **Setup flow for every connector:**
 
@@ -672,24 +672,20 @@ Twilio was never supported for setup, and its leftover code and fields were remo
 
 ## 27. Hermes Agents
 
-**Status:** Per-agent, not a single connector — one profile per in-app agent (Jose, Alphonso, Miya, Hector, Maria, Marcus, Echo, Sentinel, Nova), each pointing at the user's own separately-run standalone Hermes Agent instance. `hermesAgentConnector.ts` — `isHermesAgentConfigured(agentId)`, `getHermesAgentEndpoint`/`saveHermesAgentEndpoint`, `getHermesSessionMode`/`setHermesSessionMode`. Local/self-hosted, same policy posture as Ollama.
+**Status:** One profile per agent. Hermes Agent (Nous Research, MIT) gives an agent its own tools, such as web search.
 
-**Required env vars:** None (dynamic per-agent, stored as `HERMES_<AGENTID>_URL`/`_KEY`/`_SESSION_MODE` via `connectorAuth.ts`, not static env vars).
+**Setting it up (no keys to type):**
+1. Runtime Hub → **Hermes Agent** → Install (Python 3.11–3.13; Runtime Hub offers to install Python).
+2. Settings → Connectors → Agent Providers → **Hermes profiles** → **Set up a Hermes profile for** an agent, then pick its model (one of your Ollama models, or a free OpenRouter model). Alphonso makes the profile, its key (kept in the keychain) and its port.
+3. Already run Hermes yourself? **Find my Hermes profiles** lists them (only their settings are read, never a key or `.env`) and **Use for this agent** connects one. A profile with its own Telegram or other messaging connection gets a warning: messages there skip Alphonso's approvals.
 
-**How to get credentials:**
-1. Run a standalone Hermes Agent instance for the agent you want to mirror (its own `config.yaml` defines `api_server`)
-2. In Settings → Connectors, find the "Hermes — `<Agent>`" row for that specific agent
-3. Paste the Base URL and Bearer key from that profile's `config.yaml`
-4. Repeat per agent — there is no single "connect all" action
+**How to test:** ask that agent something in Chat; its steps show what Hermes is doing on the live line. The Health Monitor checks each connected profile.
 
-**How to test:**
-- Connector Setup panel → each Hermes row shows its own configured/not-configured state
-- Select Hermes as a per-agent provider (Settings → Connectors → Agent Providers) and send a chat message for that agent
-
-**Known limitations:**
-- Classified **high risk** (any call can trigger real tool use, not just text generation), not just "local/self-hosted low risk" like Ollama
-- Calls route through native Rust HTTP (`connector_hermes_agent_request`), not browser `fetch()` — a third-party local process has no reason to send CORS headers, so a plain webview `fetch()` was silently blocked regardless of reachability (fixed 2026-08-22, PR #190)
-- `hermes_agents` currently bypasses Zero-Cost Mode for any saved endpoint, including a non-loopback one — a known, separately-tracked gap (`docs/governance/DEFERRED_WORK.md`)
+**Good to know:**
+- When Hermes wants to run a command or change something, the step waits for your approval on the board and Telegram.
+- Profiles start when a step needs them; those Alphonso started stop after 30 idle minutes. Your own Hermes folder is never changed.
+- A Hermes address that isn't on this computer counts as paid, so Zero-Cost Mode blocks it.
+- High risk: a Hermes run can use real tools, not just write text.
 
 ---
 
@@ -794,3 +790,16 @@ Without storage, such a post is saved in the project's `ready-to-post` folder wi
 **Known limitations:**
 - Free models: 20 requests a minute, and 50 a day until you have bought $10 of OpenRouter credit in all (1,000 a day after that). One Jose request can use 10 to 30 model calls.
 - Free models are run by other companies through OpenRouter; some may keep what you send.
+
+---
+
+## 35. Outside tools (MCP)
+
+**Status:** Your own online services that offer an MCP server (a shop, an issue tracker). Alphonso calls out to them; nothing calls in.
+
+**Setting it up:** Settings → Connectors → **Outside tools (MCP)**: search the MCP Registry or paste the server's address (https only), choose Free or Paid (Paid by default, blocked in Zero-Cost Mode), then **Sign in** in your browser or save the key the server asks for.
+
+**What each tool may do:** every tool asks you first until you mark it **Reading only**; mark one **Deletes** when it removes things. Agents read from reading-only tools on free servers; changes are Marcus's step, which shows the exact call and runs once after you approve it.
+
+**How to test:** **Refresh tools** lists the server's tools; the Health Monitor asks each switched-on server for its list.
+

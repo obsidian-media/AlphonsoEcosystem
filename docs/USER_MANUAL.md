@@ -60,7 +60,7 @@ Alphonso is a **local-first AI desktop companion** that runs entirely on your ma
 Download the installer for your system from the [latest release](https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest):
 
 - **Windows:** `Alphonso_<version>_x64-setup.exe`. Run it, then launch Alphonso.
-- **macOS (Apple Silicon only):** `Alphonso_<version>_aarch64.dmg`. Open it and drag Alphonso to Applications. The Mac build is not yet signed by Apple, so the first time, right-click Alphonso in Applications and choose **Open**, then confirm (on newer macOS you may need System Settings > Privacy & Security > **Open Anyway**). After that it opens normally and updates install themselves.
+- **macOS (Apple Silicon, macOS 13.3 or later):** `Alphonso_<version>_aarch64.dmg`. Open it and drag Alphonso to Applications. The Mac build is not yet signed by Apple, so the first time, right-click Alphonso in Applications and choose **Open**, then confirm (on newer macOS you may need System Settings > Privacy & Security > **Open Anyway**). After that it opens normally and updates install themselves.
 - **Linux:** `Alphonso_<version>_amd64.AppImage`. Make it executable (`chmod +x`) and run it.
 
 An installed copy checks for updates at launch and offers to install them.
@@ -446,7 +446,7 @@ Create a project, fill in the brief (the idea, platforms, what to make, format, 
 8. **Stock clips** — Hector finds a clip per scene on Pexels, Pixabay or Coverr (free keys in Connectors → Content & Productivity), keeping each clip's source, author and license.
 9. **AI clips** — real moving video for the main moments (Miya marks them; switch any scene on or off), every scene, or none. Made with a local video model in your ComfyUI (Runtime Hub → ComfyUI suggests one for your graphics card), Runway or Higgsfield. A run with paid clips stops once and asks with the cost.
 10. **Motion** — a scene (or a Short's part) can copy a movement: a Higgsfield preset, a move you **Record** with the webcam (3-2-1, up to 10 seconds), or **A video from your files** (over 10 seconds is refused). Miya suggests where a move would help. Higgsfield makes it inside the clips step's one approval; without that, your computer makes it for free (install motion transfer on Runtime Hub's ComfyUI card; about 8 GB of graphics memory). If a motion can't be made, the scene gets its normal clip and says why.
-11. **Finished video** — Alphonso assembles a 16:9 and a 9:16 MP4 with FFmpeg: voice on top, music under it, captions using only the script's words. The Scene Builder plays everything.
+11. **Finished video** — Alphonso assembles a 16:9 and a 9:16 MP4 with FFmpeg: voice on top, music under it, captions using only the script's words. The Scene Builder plays everything. The Windows and Linux installers include FFmpeg. On a Mac, install it once with Homebrew: open Terminal and run `brew install ffmpeg` (Runtime Hub reminds you when it's missing).
 12. **Shorts** (when "What to make" asks for them, e.g. "3 Shorts") — each 30–60 seconds: its own mini-script, a highlight of the finished video with a new hook, or a plain cut. **Shorts Studio** lets you change a Short's kind, tick its platforms, play, redo or send it back.
 13. **Carousel** (when "What to make" says carousel) — 5–10 slides in the brand's style and shape (4:5 or 1:1), reviewed in **Carousel Studio**.
 14. **Campaign** — captions, hashtags, ad copy and posting times; ad copy can be exported as CSV for Meta Ads Manager or Google Ads Editor.
@@ -483,18 +483,19 @@ Each post's numbers are read 1 hour, 1 day, 7 days and 30 days after it goes out
 
 ## 9. Connector System
 
-Alphonso has 34 connectors, all set up in **Settings → Connectors** and all policy-gated. Keys are kept in your system's keychain, never in a file; an environment variable still works as a fallback.
+Alphonso has 36 connectors, all set up in **Settings → Connectors** and all policy-gated. Keys are kept in your system's keychain, never in a file; an environment variable still works as a fallback.
 
 | Group | Connectors | Cost |
 |-------|-----------|------|
 | Messaging | Telegram, WhatsApp Cloud, Discord, Slack, Generic Webhook, Mobile Bridge | Free |
 | | CALL-E (real outbound phone calls) | Paid |
-| AI models | Ollama (local), NVIDIA NIM, Gemini (free tiers), Hermes Agents (self-hosted) | Free |
+| AI models | Ollama (local), NVIDIA NIM, Gemini, OpenRouter's free models (free tiers), Hermes Agents (on this computer) | Free |
 | | Claude, ChatGPT, Qwen, DeepSeek | Paid |
-| Search & research | Brave Search, Tavily, Perplexity | Free tiers / paid |
+| Search & research | Brave Search, Tavily, Perplexity, Google Web Risk (link checks) | Free tiers / paid |
 | Content & productivity | YouTube, Meta (Facebook and Instagram), ComfyUI, SD WebUI, Pexels, Pixabay, Coverr, your own storage, Notion, ClickUp, GitHub | Free |
 | | Runway, ElevenLabs, Higgsfield | Paid |
 | Automation | n8n | Free (self-hosted) |
+| Outside tools | Your own online services through MCP (a shop, an issue tracker) | Free or paid, you choose |
 
 **Claude and ChatGPT:** pick the model from the live list in each connector (Claude Haiku 5.5 and GPT-6 Luna by default). **Higgsfield:** paste the model ids from the Higgsfield Console (pictures, clips, character training, motion), each with optional extra settings as JSON; **Test** gives Higgsfield's estimate without making anything. **ElevenLabs:** **Test** lists your voices, including your clones. Prices for paid engines are yours to enter in Settings → Approvals → Allow paid models.
 
@@ -513,6 +514,18 @@ WhatsApp uses Meta's Cloud API (free) + a small Railway gateway service for inbo
 | `WHATSAPP_ALLOWED_NUMBERS` | Comma-separated allowed sender numbers (digits only) |
 
 See [GETTING_STARTED.md](./GETTING_STARTED.md) for the full Railway deployment steps.
+
+### OpenRouter
+
+Add an OpenRouter key in **Settings → Connectors → AI Models**. Chat and every agent can then use OpenRouter's free models; the picker shows how many free requests are left today. When the free limit runs out (50 a day until you have bought $10 of credit), a step carries on with this computer's model and says so, or, if you choose in Settings → Approvals, asks to finish with a paid model. Paid OpenRouter models are a choice in **Settings → Approvals → Allow paid models**, with their prices from OpenRouter.
+
+### Outside tools (MCP)
+
+**Settings → Connectors → Outside tools (MCP)** connects online services that offer an MCP server, such as your shop or your issue tracker: search the MCP Registry or paste the server's address, then sign in in your browser or save its key. Mark the server Free or Paid (Paid servers are blocked in Zero-Cost Mode). Every tool asks you first until you mark it **Reading only**. Agents read from reading-only tools when a request needs the facts ("how many orders came in this week?"); changes are Marcus's step ("set the blue mug to $18"), and the approval shows the exact call, which runs once.
+
+### Hermes profiles
+
+Hermes Agent (Nous Research) gives an agent its own tools, such as searching the web. Install it from **Runtime Hub**, then in **Settings → Connectors → Agent Providers → Hermes profiles** set up a profile for an agent, or use **Find my Hermes profiles** to connect one you already have. That agent's steps then run on Hermes, with what it's doing shown on Chat's live line. When Hermes wants to run a command or change something, the step waits for you on the board and on Telegram. Profiles start when a step needs them; those Alphonso started stop after 30 idle minutes.
 
 ### Setting Up Connectors
 
@@ -704,6 +717,8 @@ You don't need commands: write what you want and you get an answer (from Alphons
 | `create a marketing campaign` | Full campaign |
 
 ### System Commands
+
+**Memory.** Before each step Alphonso checks free RAM and graphics memory: a step that fits runs, idle models and idle tools Alphonso started are freed to make room, and otherwise the step waits and says why. **Runtime Hub → Memory** (or the meter in the top bar) shows what is loaded, who started it and what is waiting, and sets how long each tool may sit idle before it stops (ComfyUI: 15 minutes). Programs you started yourself are never stopped.
 
 Ask in plain words ("is Ollama running?", "which models do I have?"); Alphonso answers. Settings → Runtime and Runtime Hub show the real status of Ollama, ComfyUI, Voice OS and the other tools, and the Connector Health Monitor tests each connector.
 

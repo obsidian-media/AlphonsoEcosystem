@@ -223,18 +223,6 @@ const TOOLS: &[ToolDef] = &[
     args: &["run", "-d", "--name", "n8n", "-p", "5678:5678", "-v", "n8n_data:/home/node/.n8n", "n8nio/n8n"],
   },
   ToolDef {
-    name: "alphonso-bridge",
-    display_name: "Alphonso Bridge",
-    description: "HTTP bridge on port 4444 for outside scripts. Nothing in Alphonso needs it.",
-    repo_url: None,
-    pip_packages: &[],
-    requirements_file: None,
-    port: Some(4444),
-    health_path: Some("/health"),
-    exe: "node",
-    args: &["bridge/server.js"],
-  },
-  ToolDef {
     name: "chromadb",
     display_name: "ChromaDB",
     description: "Local vector database — powers Echo semantic memory search (find related memories without exact keyword matching)",
@@ -852,19 +840,16 @@ fn git_version(exe: &str) -> Option<String> {
 /// today. If a macOS/Linux release job is ever added, verify this still
 /// matches `resource_dir()`'s dmg/appimage/deb resource layout before
 /// relying on it there too — do not assume it carries over unchanged.
+///
+/// Since the closing phase (2026-10-30) it also looks in Tauri's resource
+/// folder (`crate::utils::bundled_resource`), where a Linux AppImage keeps it.
 fn bundled_ollama_path() -> Option<String> {
-  let exe_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
   let binary_name = if cfg!(target_os = "windows") {
-    "ollama.exe"
+    "ollama/ollama.exe"
   } else {
-    "ollama"
+    "ollama/ollama"
   };
-  let candidate = exe_dir.join("ollama").join(binary_name);
-  if candidate.exists() {
-    candidate.to_str().map(|s| s.to_string())
-  } else {
-    None
-  }
+  crate::utils::bundled_resource(binary_name).and_then(|p| p.to_str().map(|s| s.to_string()))
 }
 
 /// Dependency Bundling Plan O2: resolves the bundled starter-model resource
@@ -873,13 +858,7 @@ fn bundled_ollama_path() -> Option<String> {
 /// (current_exe().parent()/<resource-name>) so the two bundled resources
 /// behave identically regardless of platform bundle layout quirks.
 fn bundled_starter_model_dir() -> Option<PathBuf> {
-  let exe_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
-  let candidate = exe_dir.join("starter-model");
-  if candidate.exists() {
-    Some(candidate)
-  } else {
-    None
-  }
+  crate::utils::bundled_resource("starter-model")
 }
 
 /// Reads the bundled starter-model manifest (the exact file
@@ -3031,6 +3010,12 @@ pub(crate) fn is_pid_alive(pid: u32) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  // The port-4444 Bridge was archived (owner, 2026-10-30): nothing in Alphonso used it.
+  #[test]
+  fn bridge_is_not_a_runtime_tool() {
+    assert!(TOOLS.iter().all(|t| t.name != "alphonso-bridge"));
+  }
 
   // Hermes gateway (2026-10-30): one pinned, checked Hermes package.
   #[test]

@@ -102,7 +102,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | component | `src/components/miya/CharactersEditor.tsx` | `CharactersEditor` |
 | component | `src/components/miya/ContentFactoryPanel.tsx` | `ContentFactoryPanel`, `ContentFactoryTab`, `selectContentProject` |
 | component | `src/components/miya/ContentProjectBar.tsx` | `ContentProjectBar`, `ContentProjectBarProps` |
-| component | `src/components/miya/HiggsfieldResults.tsx` | `HiggsfieldMedia`, `HiggsfieldResultsList` |
+| component | `src/components/miya/HiggsfieldResults.tsx` | `ChatMediaList`, `HiggsfieldMedia`, `HiggsfieldResultsList` |
 | component | `src/components/miya/IdeasList.tsx` | `IdeasList` |
 | component | `src/components/miya/MotionPicker.tsx` | `MotionPicker` |
 | component | `src/components/miya/MotionRecorder.tsx` | `MotionRecorder` |
@@ -232,7 +232,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/claudeService.ts` | `CLAUDE_DEFAULT_MODEL`, `CloudModelList`, `listClaudeModels`, `sendClaudeMessage`, `streamClaudeMessage` |
 | service | `src/services/coachEngineService.ts` | `ALL_COACH_TRIGGER_IDS`, `clearCoachSnooze`, `COACH_ENABLED_KEY`, `COACH_NARRATIVE_ENABLED_KEY`, `COACH_SNOOZE_UNTIL_KEY`, `COACH_STYLE_KEY`, `COACH_TRIGGER_TOGGLES_KEY`, `CoachSignal`, `detectAgentWhiplash`, `detectApprovalRubberStamp`, `detectApprovalTheater`, `detectBoardroomHedgePileup`, `detectConfidenceDecay`, `detectDeadLetterGraveyard`, `detectLateNightApproval`, `detectLicenseWall`, `detectLongUnbrokenSession`, `detectRepeatedPipelineFailure`, `detectUnusedSurfaceArea`, `generateNarrativeCoachMessage`, `getAllCoachTriggerToggles`, `getCoachEnabled`, `getCoachMessageStyle`, `getCoachNarrativeEnabled`, `getCoachSnoozeUntilMs`, `isCoachSnoozed`, `isCoachTriggerEnabled`, `MessageStyle`, `resetCoachCooldowns`, `runCoachDetectors`, `setCoachEnabled`, `setCoachMessageStyle`, `setCoachNarrativeEnabled`, `setCoachSnoozeHours`, `setCoachTriggerEnabled` |
 | service | `src/services/coachHistoryService.ts` | `clearCoachHistory`, `CoachHistoryEntry`, `getCoachHistory`, `recordCoachHistory` |
-| service | `src/services/coachInterventionService.ts` | `buildCoachIntervention`, `buildDemoIntervention`, `COACH_ENGINE_EVENT`, `COACH_ENGINE_EVENT_TYPES`, `COACH_ENGINE_STORAGE_KEY`, `COACH_INTERVENTION_ACTION_LOG_KEY`, `COACH_INTERVENTION_LEVELS`, `CoachInterventionLevel`, `getLatestCoachEngineIntervention`, `listCoachEngineEvents`, `listCoachInterventionActionLog`, `normalizeCoachEngineEvent`, `pushCoachEngineEvent`, `recordCoachInterventionAction`, `subscribeCoachEngine` |
+| service | `src/services/coachInterventionService.ts` | `buildCoachIntervention`, `buildDemoIntervention`, `COACH_ENGINE_EVENT`, `COACH_ENGINE_EVENT_TYPES`, `COACH_ENGINE_STORAGE_KEY`, `COACH_INTERVENTION_ACTION_LOG_KEY`, `COACH_INTERVENTION_LEVELS`, `CoachInterventionLevel`, `getLatestCoachEngineIntervention`, `isSessionGuardIntervention`, `listCoachEngineEvents`, `listCoachInterventionActionLog`, `normalizeCoachEngineEvent`, `pushCoachEngineEvent`, `recordCoachInterventionAction`, `subscribeCoachEngine` |
 | service | `src/services/coachModeService.ts` | `closeCoachWindow`, `openCoachWindow` |
 | service | `src/services/coachSkillService.ts` | `COACH_SKILLS`, `getCoachSkill`, `listCoachSkills` |
 | service | `src/services/coachSoundCueService.ts` | `getCoachSoundCuePattern`, `getCoachSoundCueSettings`, `playCoachSoundCue`, `shouldPlayCoachSoundCue`, `updateCoachSoundCueSettings` |
@@ -277,6 +277,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/contentFactory/adCopyExport.ts` | `AD_NETWORKS`, `AdCopy`, `adCsv`, `AdNetwork`, `adsForNetwork`, `writeAdCsv` |
 | service | `src/services/contentFactory/brandResults.ts` | `Band`, `BANDS`, `brandMedian`, `BrandResultRow`, `brandResultRows`, `FIRST_POSTS`, `MAIN_METRIC`, `MIN_POSTS_TO_COMPARE`, `permissionBanners`, `postBand` |
 | service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
+| service | `src/services/contentFactory/chatMedia.ts` | `askChatMedia`, `CHAT_CLIP_SECONDS`, `CHAT_MEDIA_LABEL`, `CHAT_MUSIC_SECONDS`, `chatMediaDoneSince`, `chatMediaFor`, `ChatMediaKind`, `chatMediaKindOf`, `chatMediaPromptOf`, `ChatMediaResult`, `checkChatMedia`, `executeChatMedia`, `listChatMedia`, `markChatMediaShown`, `NO_AUDIOCRAFT`, `NO_VIDEO_MODEL` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
 | service | `src/services/contentFactory/comfyCharacter.ts` | `buildCharacterWorkflow`, `CHARACTER_REFERENCE_MISSING`, `characterReferenceAvailable`, `makeCharacterPicture`, `REFERENCE_CHECKPOINT`, `resetReferenceCacheForTests`, `withCharacterPrompt` |
 | service | `src/services/contentFactory/comfyMotionClip.ts` | `buildMotionWorkflow`, `localMotionAvailable`, `makeComfyMotionClip`, `MOTION_CARD_TOO_SMALL`, `MOTION_MODEL_MISSING`, `motionFrames`, `resetMotionCacheForTests` |
@@ -346,7 +347,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/hector/relevantText.ts` | `pageBudget`, `questionTerms`, `relevantText` |
 | service | `src/services/hector/researchLimits.ts` | `HECTOR_LIMITS` |
 | service | `src/services/hector/researchRun.ts` | `fallbackQuery`, `Finding`, `NO_REPORT`, `parseWriteUp`, `planQuestion`, `ReportSource`, `reportText`, `ResearchReport`, `runResearch`, `SubQuestion`, `Support` |
-| service | `src/services/hector/searchChain.ts` | `FoundSource`, `searchChain` |
+| service | `src/services/hector/searchChain.ts` | `FoundSource`, `FREE_SEARCH_NOTE`, `hasSearchKey`, `searchChain` |
 | service | `src/services/hector/sourceQuality.ts` | `isJunkResult`, `rankSources`, `sourceKind`, `SourceKind` |
 | service | `src/services/hectorBookmarkService.ts` | `deleteBookmark`, `exportBookmarks`, `getBookmarks`, `getStats`, `saveBookmark` |
 | service | `src/services/hectorExportService.ts` | `buildHectorReportMarkdown`, `exportHectorReportAsMarkdown`, `exportHectorReportAsPdf`, `exportHectorReportAsPowerPoint` |
@@ -476,7 +477,6 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/resources/resourceState.ts` | `GPU_UNKNOWN`, `GpuSource`, `LoadedThing`, `readResources`, `ResourceState`, `UsageRecord` |
 | service | `src/services/resources/stepNeeds.ts` | `estimateNeed`, `MODEL_WORKING_MEMORY`, `NeededTool`, `recordStepUse`, `resetUsageForTests`, `StepAssignment`, `StepNeed`, `toolsForStep` |
 | service | `src/services/resources/toolUse.ts` | `anyInUse`, `beginUse`, `endUse`, `isInUse`, `lastUsedAt`, `markUsed`, `resetToolUseForTests`, `usageRecord` |
-| service | `src/services/runtimeApiService.ts` | `getRunStatus`, `listModulesRemote`, `publishEvent`, `runModule` |
 | service | `src/services/runtimeLedgerService.ts` | `bootstrapRuntimeLedgerHydration`, `hydrateScopeToLocalStorage`, `HydrationResult`, `LedgerRecord`, `listScopeRecords`, `persistScopeRows` |
 | service | `src/services/runtimeManagerService.ts` | `checkPrerequisites`, `getAllStatus`, `getAutostartPrefs`, `getInstallLocation`, `InstallLocation`, `installPrerequisite`, `installTool`, `listTools`, `loadBundledStarterModel`, `LogEvent`, `onAnyProgress`, `onLogLine`, `PrereqStatus`, `ProgressEvent`, `saveAutostartPref`, `setInstallLocation`, `startTool`, `stopTool`, `TOOL_NAMES`, `ToolName`, `ToolResult`, `ToolStatus`, `waitForTool` |
 | service | `src/services/runwayService.ts` | `buildRunwayVideoRequest`, `generateRunwayVideo`, `listPendingRunwayJobs`, `resumeRunwayTask`, `RunwayResult` |
@@ -497,7 +497,7 @@ Source-backed inventory: 354 services and 182 components. Human purpose descript
 | service | `src/services/sentinelSecurityService.ts` | `recentActivityText`, `runSentinelSecurityScan`, `SentinelScanOptions` |
 | service | `src/services/serviceScopes.ts` | `AGENT_OUTPUT_SCOPE`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_SCOPE`, `DEV_PACKET_SCOPE`, `GOVERNANCE_SCOPE`, `JOSE_COMMAND_SCOPE`, `MIYA_MEMORY_SCOPE`, `NOVA_SCORE_SCOPE`, `ORCHESTRATION_QUEUE_SCOPE`, `ORCHESTRATION_RECEIPT_SCOPE`, `PACKET_SCOPE`, `PLUGIN_AUDIT_SCOPE`, `PLUGINS_SCOPE`, `PRODUCTION_READINESS_SCOPE`, `PROOF_AUTHORITY`, `REPO_AUDIT_SCOPE`, `SELF_DEVELOPMENT_SCOPE`, `SESSION_EVENT_SCOPE`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `VERIFICATION_SCOPE`, `WORKFLOW_OPS_SCOPE`, `WORKFLOW_RECEIPT_SCOPE`, `WORKFLOW_RUN_SCOPE`, `WORKFLOW_TELEMETRY_SCOPE` |
 | service | `src/services/sessionIntelligenceService.ts` | `appendSessionEvent`, `listSessionEvents`, `SESSION_EVENT_SCOPE`, `summarizeSession` |
-| service | `src/services/setupFlowService.ts` | `checkDiskSpace`, `ComponentProgress`, `DiskSpaceCheck`, `getUnmetPrereq`, `hardwareForInstallLocation`, `HardwareProfile`, `installComponent`, `isComponentAlreadyInstalled`, `isSetupComplete`, `markSetupComplete`, `needsInstallLocation`, `PrereqKind`, `sameInstallVolume`, `SCAN_TIMEOUT_MS`, `scanHardware`, `SelectableComponent`, `STARTER_MODEL_ID`, `STARTER_MODEL_TAG`, `withTimeout` |
+| service | `src/services/setupFlowService.ts` | `checkDiskSpace`, `ComponentProgress`, `DiskSpaceCheck`, `getUnmetPrereq`, `hardwareForInstallLocation`, `HardwareProfile`, `InstallablePrereq`, `installComponent`, `isComponentAlreadyInstalled`, `isSetupComplete`, `markSetupComplete`, `needsInstallLocation`, `PREREQ_FLAG`, `PREREQ_LABEL`, `PrereqKind`, `sameInstallVolume`, `SCAN_TIMEOUT_MS`, `scanHardware`, `SelectableComponent`, `STARTER_MODEL_ID`, `STARTER_MODEL_TAG`, `withTimeout` |
 | service | `src/services/signInService.ts` | `chooseMetaPage`, `finishPastedSignIn`, `INSTAGRAM_RENEW_DAYS`, `MetaPage`, `refreshInstagramIfDue`, `signIn`, `SignInOutcome` |
 | service | `src/services/skills/prepareSkill.ts` | `prepareSkill` |
 | service | `src/services/skills/skillCheck.ts` | `checkSkill`, `isKnownOutput` |
