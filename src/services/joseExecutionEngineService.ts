@@ -877,7 +877,10 @@ export function assistantPrompt(commandText: string, stepInput: any): string {
     ALPHONSO_ANSWER_PROMPT,
     skillSection(stepInput),
     stepInput ? stepInputText({ ...stepInput, skill: null }) : '',
-    "Answer the request below, or do the everyday writing it asks for, in text. Use the earlier steps' work when there is some.",
+    // The step's own instruction from Jose's plan, including what a review sent back to fix
+    // (QA, 2026-10-31: a revision never saw it and rewrote "[Your Name]" into the note twice).
+    stepInput?.instruction ? `Your step: ${String(stepInput.instruction).slice(0, 4000)}` : '',
+    "Answer the request below, or do the everyday writing it asks for, in text. Use the earlier steps' work when there is some, and do what your step says.",
     `Request: ${String(commandText || '').slice(0, 4000)}`
   ].filter(Boolean).join('\n\n');
 }

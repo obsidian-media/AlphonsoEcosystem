@@ -299,9 +299,12 @@ describe('Alphonso desktop: his code steps in your projects', () => {
       && !s.revises && !s.helpRound && !s.replaces);
     console.log('ALPHONSO-E2E two', JSON.stringify({ steps: steps(request), projects: code.map((s) => s.project) }));
     expect(code.map((s) => s.project).sort()).toEqual(['blog', 'shop']);
-    // Nothing is approved: the request is rejected, so its locks are let go.
-    await openBoard();
-    const reject = await $('//main//button[normalize-space(.)="Reject"]');
-    if (await reject.isExisting()) await reject.click();
+    // Nothing is approved: a request still waiting is rejected, so its locks are let go. New files
+    // are his own work and ask nothing, so the request may already be done (7B run, 2026-10-31).
+    if (request.status === 'waiting_approval' || request.steps.some((s) => s.status === 'waiting_approval')) {
+      await openBoard();
+      const reject = await $('//main//button[normalize-space(.)="Reject"]');
+      if (await reject.isExisting()) await reject.click();
+    }
   }).timeout(3200000);
 });
