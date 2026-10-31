@@ -173,7 +173,7 @@ async function runVoice(assignment: MediaAssignment, ctx: Context): Promise<Cont
   const choice = resolveVoice(ctx.project, ctx.brand);
   if (choice.engine === 'elevenlabs') {
     const cost = estimateElevenLabsUsd(lines.reduce((n, l) => n + l.text.length, 0));
-    const cap = cost === null ? { ok: false, reason: "Enter ElevenLabs' price per 1,000 characters in Settings → Approvals" } : canSpend(cost);
+    const cap = cost === null ? { ok: false, reason: "Enter ElevenLabs' price per 1,000 characters in Settings → General → Allow paid models" } : canSpend(cost);
     if (!(assignment.effects || []).includes('spend')) note = "ElevenLabs wasn't approved for this run; read by Kokoro.";
     else if (!cap.ok) note = `${String(cap.reason).replace(/\.$/, '')}; read by Kokoro.`;
     else {

@@ -1230,7 +1230,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
           <CredentialSection title="ElevenLabs (voices and sound effects)" icon={FileText} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
             fields={[{ label: 'API Key', placeholder: 'Your ElevenLabs API key', value: elevenLabsApiKey, onChange: setElevenLabsApiKey, key: 'ELEVENLABS_API_KEY' }]}
             onSave={() => saveConnectorApiKey('elevenlabs', { ELEVENLABS_API_KEY: elevenLabsApiKey })}
-            hint="Paid, your own account. A brand can read its voice-overs with one of your ElevenLabs voices (including one you cloned there), and Miya can add sound effects. Every run asks first with the cost, using your prices in Settings → Approvals → Allow paid models."
+            hint="Paid, your own account. A brand can read its voice-overs with one of your ElevenLabs voices (including one you cloned there), and Miya can add sound effects. Every run asks first with the cost, using your prices in Settings → General → Allow paid models."
             savedLabel="ElevenLabs key saved" />
           <ElevenLabsTest />
           {/* Higgsfield (content factory phase 4b): paid pictures and AI clips from the model ids you choose. */}

@@ -37,7 +37,7 @@ export function paidEngineAvailable(engine: PaidEngine): { ok: boolean; reason?:
   if (!hasKeys(engine)) return { ok: false, reason: `${NAME[engine]} isn't set up` };
   if (zeroCostModeOn()) return { ok: false, reason: `${NAME[engine]} is off while Zero-Cost Mode is on` };
   if (engine === 'elevenlabs' && getPaidModelSettings().elevenLabsPricePer1kCharsUsd === null) {
-    return { ok: false, reason: "Enter ElevenLabs' price per 1,000 characters in Settings → Approvals → Allow paid models" };
+    return { ok: false, reason: "Enter ElevenLabs' price per 1,000 characters in Settings → General → Allow paid models" };
   }
   const cap = canSpend(0.01);
   if (!cap.ok) return { ok: false, reason: `Over this month's spending cap (${cap.reason})` };
