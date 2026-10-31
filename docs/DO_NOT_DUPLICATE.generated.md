@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 356 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 358 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -128,6 +128,7 @@ Source-backed inventory: 356 services and 182 components. Human purpose descript
 | component | `src/components/OrchestratorQueueView.tsx` | `default`, `OrchestratorQueueView` |
 | component | `src/components/OrchestratorView.tsx` | `OrchestratorView` |
 | component | `src/components/OutsideToolsSection.tsx` | `OutsideToolsSection` |
+| component | `src/components/phone/PhonesSection.tsx` | `PhonesSection` |
 | component | `src/components/PipelineResultCard.tsx` | `PipelineResultCard` |
 | component | `src/components/ProductionReadinessPanel.tsx` | `ProductionReadinessPanel` |
 | component | `src/components/ProjectBatchPanel.tsx` | `default` |
@@ -455,8 +456,10 @@ Source-backed inventory: 356 services and 182 components. Human purpose descript
 | service | `src/services/orchestrationReceiptService.ts` | `appendOrchestrationReceipt`, `AppendReceiptInput`, `listOrchestrationReceipts`, `ORCHESTRATION_RECEIPT_SCOPE`, `OrchestrationReceipt`, `ReceiptFilters` |
 | service | `src/services/packetExecutionService.ts` | `executeApprovedPacket` |
 | service | `src/services/parallelExecutionService.ts` | `createTaskQueue`, `executeBatch`, `executeParallel`, `executeWithRetry`, `ParallelExecutionOptions`, `ParallelResult`, `ParallelTask` |
-| service | `src/services/phone/phoneCrypto.ts` | `generateKeyPair`, `open`, `seal` |
-| service | `src/services/phone/phoneProtocol.ts` | `decodeMessage`, `encodeMessage`, `MirroredStore`, `PairingInfo`, `pairingPayload`, `PHONE_MAX_FRAME_BYTES`, `PHONE_PROTOCOL_VERSION`, `PhoneCallName`, `PhoneKeys`, `PhoneMessage`, `PhoneNotification`, `readPairingPayload` |
+| service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |
+| service | `src/services/phone/phoneCrypto.ts` | `generateKeyPair`, `open`, `openAnonymous`, `seal`, `sealAnonymous` |
+| service | `src/services/phone/phoneLink.ts` | `computerKeys`, `listPhones`, `onPhoneCall`, `PairedPhone`, `PAIRING_WINDOW_MS`, `pairingQr`, `PHONE_ACCESS_KEY`, `phoneAccessOn`, `PhoneAuth`, `PHONES_KEY`, `publish`, `pushNotice`, `RelaySocket`, `removePhone`, `resetPhoneLinkForTests`, `setPhoneAccess`, `SocketFactory`, `startPhoneLink`, `webSocketFactory` |
+| service | `src/services/phone/phoneProtocol.ts` | `decodeMessage`, `encodeMessage`, `MirroredStore`, `openPairingRequest`, `PairingInfo`, `pairingPayload`, `PairingRequest`, `PHONE_MAX_FRAME_BYTES`, `PHONE_PROTOCOL_VERSION`, `PhoneCallName`, `PhoneKeys`, `PhoneMessage`, `PhoneNotification`, `readPairingPayload`, `sealPairingRequest` |
 | service | `src/services/pluginRegistryService.ts` | `appendPluginAuditEntry`, `discoverDiskPluginManifests`, `executePluginToolRun`, `listPluginAudit`, `listPlugins`, `PLUGIN_AUDIT_SCOPE`, `PLUGIN_MANIFEST_FIELDS`, `PluginAuditEntry`, `PluginAuditInput`, `PluginEntry`, `PLUGINS_SCOPE`, `togglePlugin`, `validatePluginManifestDisk`, `verifyPluginSignatureFromRegistry` |
 | service | `src/services/pluginSandboxService.ts` | `evaluatePluginExecutionPolicy`, `getPluginSandboxPolicy`, `updatePluginSandboxPolicy` |
 | service | `src/services/pluginSigningService.ts` | `_resetTrustedSignerKeysForTesting`, `addTrustedSignerKey`, `exportPublicKeyJwk`, `getOrCreateSignerKeys`, `getTrustedSignerKeys`, `hydrateTrustedSignerKeysFromKv`, `removeTrustedSignerKey`, `signPluginManifest`, `verifyAndAddPlugin`, `verifyPluginSignature` |

@@ -163,6 +163,8 @@ import { expireWaitingRequests } from './services/jose/joseExpiry';
 import { loadUserSkills } from './services/skills/userSkills';
 import { startPostScheduler, stopScheduler } from './services/marcusExecutionService';
 import { startResourceWatcher } from './services/resources/idleStop';
+import { startPhoneLink, phoneAccessOn, webSocketFactory } from './services/phone/phoneLink';
+import { phoneAuth, phoneRelayUrl } from './services/phone/phoneAccount';
 import { randomHex } from './lib/randomId';
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
@@ -233,6 +235,14 @@ function AppShell() {
   useEffect(() => {
     if (IS_COACH_WINDOW) return undefined;
     return startResourceWatcher();
+  }, []);
+  // Phone access (phone app phase 1): the link to the relay, only when a phone is paired and
+  // phone access is on, and only when this build has a relay address.
+  useEffect(() => {
+    if (IS_COACH_WINDOW) return undefined;
+    const relayUrl = phoneRelayUrl();
+    if (!relayUrl || !phoneAccessOn()) return undefined;
+    return startPhoneLink({ relayUrl, auth: phoneAuth, socket: webSocketFactory });
   }, []);
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;

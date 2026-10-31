@@ -1,7 +1,7 @@
 // The messages a paired phone and computer send each other through the relay (phone
 // app, phase 1). Every message is sealed (phoneCrypto.ts); the relay only sees the
 // sealed text. The QR code the computer shows carries pairingPayload().
-import { open, seal } from './phoneCrypto';
+import { open, openAnonymous, seal, sealAnonymous } from './phoneCrypto';
 
 export const PHONE_PROTOCOL_VERSION = 1;
 export const PHONE_MAX_FRAME_BYTES = 4 * 1024 * 1024;
@@ -35,9 +35,11 @@ export interface PairingInfo {
   computerPublicKey: string;
   computerName: string;
   relayUrl: string;
+  /** One-time, from the QR code only: proves to the computer that the phone saw its screen. */
+  pairingSecret: string;
 }
 
-export function pairingPayload(input: { computerId: string; computerPublicKey: string; computerName: string; relayUrl: string }): string {
+export function pairingPayload(input: Omit<PairingInfo, 'version'>): string {
   return PAIR_PREFIX + JSON.stringify({ version: PHONE_PROTOCOL_VERSION, ...input });
 }
 
@@ -46,9 +48,9 @@ export function readPairingPayload(text: string): PairingInfo | null {
   if (typeof text !== 'string' || !text.startsWith(PAIR_PREFIX)) return null;
   try {
     const v = JSON.parse(text.slice(PAIR_PREFIX.length));
-    const fields = ['computerId', 'computerPublicKey', 'computerName', 'relayUrl'] as const;
+    const fields = ['computerId', 'computerPublicKey', 'computerName', 'relayUrl', 'pairingSecret'] as const;
     if (v?.version !== PHONE_PROTOCOL_VERSION || fields.some((f) => typeof v[f] !== 'string' || !v[f])) return null;
-    return { version: v.version, computerId: v.computerId, computerPublicKey: v.computerPublicKey, computerName: v.computerName, relayUrl: v.relayUrl };
+    return { version: v.version, computerId: v.computerId, computerPublicKey: v.computerPublicKey, computerName: v.computerName, relayUrl: v.relayUrl, pairingSecret: v.pairingSecret };
   } catch {
     return null;
   }
@@ -73,6 +75,26 @@ export async function decodeMessage(frame: string, keys: PhoneKeys): Promise<Pho
   try {
     const v = JSON.parse(new TextDecoder().decode(bytes));
     return isMessage(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The phone's first message to a computer: its key, the QR code's secret and its name,
+ *  sealed to the computer's key from the QR code. */
+export interface PairingRequest { phonePublicKey: string; pairingSecret: string; phoneName: string }
+
+export async function sealPairingRequest(request: PairingRequest, computerPublicKey: string): Promise<string> {
+  return sealAnonymous(new TextEncoder().encode(JSON.stringify(request)), computerPublicKey);
+}
+
+export async function openPairingRequest(sealed: string, computer: { publicKey: string; privateKey: string }): Promise<PairingRequest | null> {
+  const bytes = await openAnonymous(sealed, computer);
+  if (!bytes) return null;
+  try {
+    const v = JSON.parse(new TextDecoder().decode(bytes));
+    if (typeof v?.phonePublicKey !== 'string' || typeof v?.pairingSecret !== 'string') return null;
+    return { phonePublicKey: v.phonePublicKey, pairingSecret: v.pairingSecret, phoneName: String(v.phoneName || 'Phone').slice(0, 60) };
   } catch {
     return null;
   }

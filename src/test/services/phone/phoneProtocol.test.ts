@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { generateKeyPair } from '../../../services/phone/phoneCrypto';
 import {
-  PHONE_MAX_FRAME_BYTES, PHONE_PROTOCOL_VERSION, decodeMessage, encodeMessage, pairingPayload, readPairingPayload, type PhoneMessage,
+  PHONE_MAX_FRAME_BYTES, PHONE_PROTOCOL_VERSION, decodeMessage, encodeMessage, pairingPayload, readPairingPayload, sealPairingRequest, openPairingRequest, type PhoneMessage,
 } from '../../../services/phone/phoneProtocol';
 
 describe('phoneProtocol', () => {
   it('the pairing payload round-trips and refuses an unknown version', () => {
-    const info = { computerId: 'c-1', computerPublicKey: 'pk', computerName: 'Studio PC', relayUrl: 'wss://relay.example' };
+    const info = { computerId: 'c-1', computerPublicKey: 'pk', computerName: 'Studio PC', relayUrl: 'wss://relay.example', pairingSecret: 's3cret' };
     const text = pairingPayload(info);
     expect(readPairingPayload(text)).toEqual({ ...info, version: PHONE_PROTOCOL_VERSION });
     const other = JSON.parse(text.replace(/^alphonso-pair:/, ''));
@@ -36,5 +36,18 @@ describe('phoneProtocol', () => {
     const b = await generateKeyPair();
     const big: PhoneMessage = { id: 'big', kind: 'change', store: 'requests', data: 'x'.repeat(PHONE_MAX_FRAME_BYTES), version: 1 };
     await expect(encodeMessage(big, { theirPublic: a.publicKey, myPrivate: b.privateKey })).rejects.toThrow(/too large/i);
+  });
+});
+
+describe('pairing request', () => {
+  it("the phone's first message carries its key, sealed so only the computer can read it", async () => {
+    const computer = await generateKeyPair();
+    const phone = await generateKeyPair();
+    const sealed = await sealPairingRequest({ phonePublicKey: phone.publicKey, pairingSecret: 's3cret', phoneName: 'Ann iPhone' }, computer.publicKey);
+    expect(sealed).not.toContain(phone.publicKey);
+    expect(await openPairingRequest(sealed, computer)).toEqual({ phonePublicKey: phone.publicKey, pairingSecret: 's3cret', phoneName: 'Ann iPhone' });
+    const other = await generateKeyPair();
+    expect(await openPairingRequest(sealed, other)).toBeNull();
+    expect(await openPairingRequest('garbage', computer)).toBeNull();
   });
 });

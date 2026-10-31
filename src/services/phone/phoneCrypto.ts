@@ -42,3 +42,19 @@ export async function open(sealed: string, theirPublic: string, myPrivate: strin
     return null;
   }
 }
+
+/** Seal for a receiver whose key we know, without a key of our own (crypto_box_seal): the
+ *  phone's first message when pairing, so the relay can't read or swap the phone's key. */
+export async function sealAnonymous(message: Uint8Array, theirPublic: string): Promise<string> {
+  const s = await lib();
+  return s.to_base64(s.crypto_box_seal(Uint8Array.from(message), s.from_base64(theirPublic, B64())), B64());
+}
+
+export async function openAnonymous(sealed: string, mine: { publicKey: string; privateKey: string }): Promise<Uint8Array | null> {
+  const s = await lib();
+  try {
+    return s.crypto_box_seal_open(s.from_base64(sealed, B64()), s.from_base64(mine.publicKey, B64()), s.from_base64(mine.privateKey, B64()));
+  } catch {
+    return null;
+  }
+}

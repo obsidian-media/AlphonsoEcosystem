@@ -13,6 +13,7 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 ### Phone app (in progress)
 - The encrypted messages between a phone and its computer (`src/services/phone/`): libsodium's sealed boxes, a 4 MB limit, and the pairing QR code's contents. Nothing on screen yet.
 - The phone relay (`gateway/phone-relay/`): forwards sealed messages only between a phone and the computer it is paired with, refuses other accounts' devices, says when the computer is offline, and stores no content. Not deployed yet.
+- Settings → Runtime → Remote Access → Phones: sign in, pair a phone with a QR code that works once for 10 minutes, see when each phone was last used, remove one, and switch phone access off. Shown only in a build with a relay address. The computer refuses any device it hasn't paired, whatever the relay sends.
 
 ### Closing the deferred list (2026-10-30)
 - **Make a video or music from Chat.** "Make a video of a cat on a boat" or "create calm piano music for my intro" is now Miya's step: a picture from ComfyUI turned into a short clip by the video model you installed in Runtime Hub, or a piece of music from AudioCraft. It plays in Chat and is listed in Miya Studio → Quick package. Without the tool, Alphonso says what to install and starts nothing.

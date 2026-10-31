@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateKeyPair, seal, open } from '../../../services/phone/phoneCrypto';
+import { generateKeyPair, seal, open, sealAnonymous, openAnonymous } from '../../../services/phone/phoneCrypto';
 
 const text = (s: string) => new TextEncoder().encode(s);
 
@@ -38,5 +38,14 @@ describe('phoneCrypto', () => {
   it('garbage does not open and does not throw', async () => {
     const a = await generateKeyPair();
     expect(await open('not-a-frame', a.publicKey, a.privateKey)).toBeNull();
+  });
+});
+
+describe('anonymous seal (the first message of a pairing)', () => {
+  it('opens only with the receiver keys', async () => {
+    const computer = await generateKeyPair();
+    const sealed = await sealAnonymous(text('hi'), computer.publicKey);
+    expect(new TextDecoder().decode((await openAnonymous(sealed, computer)) as Uint8Array)).toBe('hi');
+    expect(await openAnonymous(sealed, await generateKeyPair())).toBeNull();
   });
 });

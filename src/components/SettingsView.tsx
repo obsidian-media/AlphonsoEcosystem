@@ -31,6 +31,7 @@ import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 import { NovaHistoryChart } from './NovaHistoryChart';
 import { CrashLogView } from './CrashLogView';
 import { CompanionPairingPanel } from './CompanionPairingPanel';
+import { PhonesSection } from './phone/PhonesSection';
 import { ConnectorSetupPanel } from './ConnectorSetupPanel';
 import { CalleOutreachPanel } from './calle/CalleOutreachPanel';
 import { EscalationCallPanel } from './calle/EscalationCallPanel';
@@ -1747,6 +1748,7 @@ export function SettingsView({
 
       <section className="space-y-4">
         <SectionHeader icon={Key} label="Remote Access" />
+        <PhonesSection />
         <CompanionPairingPanel />
       </section>
 
