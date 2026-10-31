@@ -6,7 +6,6 @@ import type { OllamaModelsProof, OllamaGenerateProof } from '../types/tauri-comm
 // cycle the dynamic value-imports in generateAgentLlmResponse avoid below.
 import type { NvidiaSendResult } from '../services/connectors/nvidiaNimConnector';
 import type { GeminiSendResult } from '../services/connectors/geminiConnector';
-import type { HermesSendResult } from '../services/connectors/hermesAgentConnector';
 import type { OpenRouterAnswer } from '../services/connectors/openRouterConnector';
 import { getStorage } from './appStorage';
 import { isPaidModelId } from '../services/jose/stepGraph';
@@ -925,21 +924,29 @@ export async function generateAgentLlmResponse(agentId: string, rawOptions: Agen
   }
 
   if (config.provider === 'hermes') {
-    const { sendHermesAgentMessage } = await import('../services/connectors/hermesAgentConnector');
+    // Hermes gateway (2026-10-30): a Hermes step is a Hermes run, so its progress
+    // shows, Stop ends it and its approval requests come to Alphonso.
+    const { runHermesStep } = await import('../services/hermes/hermesRun');
+    const { getHermesHooks } = await import('../services/hermes/hermesStepHooks');
     // Hermes can use its own tools, so it is told the agent's job and what it may do (agent roles Part A).
     const { describeResponsibility, describeAgentPermissions } = await import('../services/jose/agentPermissionTable');
     const duty = describeResponsibility(agentId);
     const may = describeAgentPermissions(agentId).allowed;
-    const role = duty
-      ? [{ role: 'system', content: `You are ${agentId.charAt(0).toUpperCase()}${agentId.slice(1)}. You own: ${duty.owns} You never: ${duty.never} You may: ${may.join('; ')}. Do nothing else.` }]
-      : [];
-    const result: HermesSendResult = await sendHermesAgentMessage(agentId, [...role, ...messages], {
+    const instructions = duty
+      ? `You are ${agentId.charAt(0).toUpperCase()}${agentId.slice(1)}. You own: ${duty.owns} You never: ${duty.never} You may: ${may.join('; ')}. Do nothing else.`
+      : undefined;
+    const hooks = getHermesHooks(agentId);
+    const result = await runHermesStep(agentId, options.prompt, {
+      instructions,
       model: config.model,
       sessionId: options.sessionId,
-      approved: options.approved
+      approved: options.approved,
+      signal: options.signal,
+      onProgress: hooks?.onProgress,
+      onApproval: hooks?.onApproval,
     });
-    if (!result.ok) throw new Error(('message' in result && result.message) || 'Hermes profile rate limit exceeded');
-    return { response: result.content, done: true, backend: 'hermes', model: result.model };
+    if (result.ok === false) throw new Error(result.reason);
+    return { response: result.text, done: true, backend: 'hermes', model: config.model || 'hermes-agent' };
   }
 
   throw new Error(`Unknown provider "${(config as { provider: string }).provider}" for agent "${agentId}"`);
