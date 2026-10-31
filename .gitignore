@@ -119,3 +119,7 @@ src-tauri/vendor/starter-model/*
 # The bundled LGPL ffmpeg build (scripts/fetch-ffmpeg.mjs, content factory phase 2a).
 src-tauri/vendor/ffmpeg/*
 !src-tauri/vendor/ffmpeg/.gitkeep
+
+# Local-only archive: old copies kept on this computer, never committed
+# (e.g. the full README before the 2026-10-30 slim-down).
+archive/local/
