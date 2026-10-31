@@ -75,6 +75,40 @@ pub struct ProfileInfo {
   pub running: bool,
 }
 
+/// What the window saves instead of a profile's key (`profileKeyRef()` in
+/// hermesProfiles.ts). The backend swaps it for the key at the moment of a request.
+const KEY_REF_PREFIX: &str = "alphonso-profile:";
+
+/// The agent a `Bearer alphonso-profile:<agent>` header refers to, if any.
+pub(crate) fn profile_ref_agent(header: &str) -> Option<&str> {
+  let agent = header
+    .strip_prefix("Bearer ")?
+    .strip_prefix(KEY_REF_PREFIX)?;
+  valid_agent(agent).then_some(agent)
+}
+
+/// True when `url` goes to this profile on this computer: the key is never
+/// sent anywhere else.
+pub(crate) fn url_is_profile(url: &str, port: u16) -> bool {
+  let base = profile_url(port);
+  url == base || url.starts_with(&format!("{base}/"))
+}
+
+/// The real Authorization header for a profile reference, read from the
+/// keychain, or an error when `url` isn't that profile's own address.
+pub(crate) fn resolve_profile_auth(header: &str, url: &str) -> Result<Option<String>, String> {
+  let Some(agent) = profile_ref_agent(header) else {
+    return Ok(None);
+  };
+  let record = read_record(agent).ok_or_else(|| NO_PROFILE.to_string())?;
+  if !url_is_profile(url, record.port) {
+    return Err("That address is not this agent's Hermes profile.".to_string());
+  }
+  let key = crate::os_keychain_store::secure_credential_get(key_name(agent))?
+    .ok_or_else(|| NO_PROFILE.to_string())?;
+  Ok(Some(format!("Bearer {key}")))
+}
+
 /// Agent ids only: lowercase letters, digits, `-` and `_`, 1 to 64 long.
 pub(crate) fn valid_agent(agent: &str) -> bool {
   !agent.is_empty()
@@ -496,6 +530,30 @@ mod tests {
       PathBuf::from("/profiles/hector").to_string_lossy()
     );
     assert!(!env.contains_key("OPENROUTER_API_KEY"));
+  }
+
+  #[test]
+  fn key_reference_names_the_agent() {
+    assert_eq!(
+      profile_ref_agent("Bearer alphonso-profile:hector"),
+      Some("hector")
+    );
+    assert_eq!(profile_ref_agent("Bearer alphonso-profile:../x"), None);
+    assert_eq!(profile_ref_agent("Bearer sk-real-key"), None);
+    assert_eq!(profile_ref_agent("alphonso-profile:hector"), None);
+  }
+
+  #[test]
+  fn key_only_for_the_profile_address() {
+    assert!(url_is_profile("http://127.0.0.1:8700/v1/runs", 8700));
+    assert!(url_is_profile("http://127.0.0.1:8700", 8700));
+    assert!(!url_is_profile("http://127.0.0.1:87001/v1", 8700));
+    assert!(!url_is_profile("http://127.0.0.1:8701/v1", 8700));
+    assert!(!url_is_profile(
+      "https://evil.example/?u=http://127.0.0.1:8700/",
+      8700
+    ));
+    assert!(!url_is_profile("http://127.0.0.1:8700@evil.example/", 8700));
   }
 
   #[test]

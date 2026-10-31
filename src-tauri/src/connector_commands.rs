@@ -1666,6 +1666,24 @@ pub(crate) async fn connector_hermes_agent_request(
     }
   };
   for (key, value) in headers.iter() {
+    // Hermes gateway (2026-10-30): a profile Alphonso set up is reached with a
+    // reference the backend swaps for its key, only at that profile's address.
+    let value = if key.eq_ignore_ascii_case("authorization") {
+      match crate::hermes_profiles::resolve_profile_auth(value, &url) {
+        Ok(Some(real)) => real,
+        Ok(None) => value.clone(),
+        Err(error) => {
+          return Ok(HermesAgentHttpProof {
+            ok: false,
+            http_status: None,
+            body: None,
+            error: Some(error),
+          })
+        }
+      }
+    } else {
+      value.clone()
+    };
     request = request.header(key, value);
   }
   if let Some(payload) = body {

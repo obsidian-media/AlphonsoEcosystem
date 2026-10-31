@@ -1,7 +1,11 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
+<<<<<<< HEAD
 Source-backed inventory: 346 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+=======
+Source-backed inventory: 341 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+>>>>>>> 1a3abf4 (feat(hermes): set up and remove a profile for an agent)
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -349,6 +353,7 @@ Source-backed inventory: 346 services and 180 components. Human purpose descript
 | service | `src/services/hectorBookmarkService.ts` | `deleteBookmark`, `exportBookmarks`, `getBookmarks`, `getStats`, `saveBookmark` |
 | service | `src/services/hectorExportService.ts` | `buildHectorReportMarkdown`, `exportHectorReportAsMarkdown`, `exportHectorReportAsPdf`, `exportHectorReportAsPowerPoint` |
 | service | `src/services/hectorResearchService.js` | `buildHectorSynthesisPrompt`, `createResearchBrief`, `createResearchDraft`, `fetchRssSources`, `fetchSuppliedSourcesForReport`, `isBraveSearchConfigured`, `listHectorActivity`, `listHectorReports`, `parseHectorSynthesisResponse`, `parseRssItems`, `persistResearchResult`, `recordHectorActivity`, `resynthesizeHectorReport`, `RSS_FEED_CATALOG`, `runHectorLiveResearch`, `runMultiSourceResearch`, `scoreRssFeed`, `searchBrave`, `slimOldReports`, `synthesizeHectorResearch` |
+| service | `src/services/hermes/hermesProfiles.ts` | `isProfileKeyRef`, `listOwnProfiles`, `NOT_DESKTOP`, `PAID_IN_ZERO_COST`, `ProfileInfo`, `profileKeyRef`, `ProfileModel`, `profileModelChoices`, `ProfileResult`, `removeProfile`, `setProfileModel`, `setUpProfile` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
