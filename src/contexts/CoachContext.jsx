@@ -38,7 +38,6 @@ export function CoachProvider({ children }) {
           title: signal.severity === 'critical' ? 'Hard pause recommended' : signal.severity === 'warning' ? 'Coach check-in' : 'Quiet nudge',
           message: signal.message,
           rawMessage: signal.message,
-          metrics: { spinCount: 0, netResult: 0, longestLosingStretch: 0, elapsedMinutes: 0 },
           timestampMs: signal.detectedAtMs,
           localOnly: true,
           actions: signal.severity === 'critical'

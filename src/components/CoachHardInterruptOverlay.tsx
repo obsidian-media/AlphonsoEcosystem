@@ -1,10 +1,11 @@
 import React, { useRef } from 'react';
-import { COACH_INTERVENTION_LEVELS } from '../services/coachInterventionService';
+import { COACH_INTERVENTION_LEVELS, isSessionGuardIntervention } from '../services/coachInterventionService';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface Props {
   intervention: {
     level?: string;
+    source?: string;
     message?: string;
     metrics?: {
       spinCount?: number;
@@ -21,6 +22,7 @@ export function CoachHardInterruptOverlay({ intervention, pauseUntilMs, onAction
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(dialogRef, isActive);
   if (!isActive) return null;
+  const session = isSessionGuardIntervention(intervention);
   return (
     <div className="fixed inset-0 z-90 flex items-center justify-center bg-(--error-dim) p-6 backdrop-blur-md" role="alertdialog" aria-modal="true">
       <div ref={dialogRef} className="w-full max-w-2xl overflow-hidden rounded-3xl border border-(--error-border) bg-(--surface-0) shadow-[0_0_90px_rgba(239,68,68,0.35)]">
@@ -30,19 +32,25 @@ export function CoachHardInterruptOverlay({ intervention, pauseUntilMs, onAction
         </div>
         <div className="space-y-4 p-6">
           <p className="text-sm leading-relaxed text-(--text-2)">{intervention.message}</p>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs text-(--text-2)">
-            <div className="rounded-xl bg-(--surface-2) p-3">Spins<br /><b className="text-(--text-1)">{intervention.metrics?.spinCount || 0}</b></div>
-            <div className="rounded-xl bg-(--surface-2) p-3">Net<br /><b className="text-(--text-1)">{intervention.metrics?.netResult || 0}</b></div>
-            <div className="rounded-xl bg-(--surface-2) p-3">Stretch<br /><b className="text-(--text-1)">{intervention.metrics?.longestLosingStretch || 0}</b></div>
-          </div>
-          {pauseUntilMs > Date.now() && (
+          {session && (
+            <div className="grid grid-cols-3 gap-2 text-center text-xs text-(--text-2)">
+              <div className="rounded-xl bg-(--surface-2) p-3">Spins<br /><b className="text-(--text-1)">{intervention.metrics?.spinCount || 0}</b></div>
+              <div className="rounded-xl bg-(--surface-2) p-3">Net<br /><b className="text-(--text-1)">{intervention.metrics?.netResult || 0}</b></div>
+              <div className="rounded-xl bg-(--surface-2) p-3">Stretch<br /><b className="text-(--text-1)">{intervention.metrics?.longestLosingStretch || 0}</b></div>
+            </div>
+          )}
+          {session && pauseUntilMs > Date.now() && (
             <div className="rounded-xl bg-(--error-dim) px-4 py-3 text-sm font-semibold text-(--error)">
               Pause active until {new Date(pauseUntilMs).toLocaleTimeString()}.
             </div>
           )}
           <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-xl bg-(--text-1) px-4 py-2 text-xs font-black uppercase tracking-widest text-(--surface-0) hover:bg-(--error-dim) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--error-border)" aria-label="Pause for 60 seconds">Pause 60s</button>
-            <button type="button" onClick={() => onAction?.('end_session')} className="rounded-xl border border-(--error-border) bg-(--error-dim) px-4 py-2 text-xs font-bold uppercase tracking-widest text-(--error) hover:bg-(--error-dim) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--error-border)" aria-label="End session">End session</button>
+            {session && (
+              <>
+                <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-xl bg-(--text-1) px-4 py-2 text-xs font-black uppercase tracking-widest text-(--surface-0) hover:bg-(--error-dim) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--error-border)" aria-label="Pause for 60 seconds">Pause 60s</button>
+                <button type="button" onClick={() => onAction?.('end_session')} className="rounded-xl border border-(--error-border) bg-(--error-dim) px-4 py-2 text-xs font-bold uppercase tracking-widest text-(--error) hover:bg-(--error-dim) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--error-border)" aria-label="End session">End session</button>
+              </>
+            )}
             <button type="button" onClick={() => onAction?.('continue_anyway')} className="rounded-xl border border-(--border) px-4 py-2 text-xs font-bold uppercase tracking-widest text-(--text-3) hover:bg-(--surface-3) hover:text-(--text-1) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--border-strong)" aria-label="Continue anyway despite warning">Continue anyway</button>
           </div>
           <div className="text-[11px] text-(--text-3)">Protective/local-only interruption. No upload, no prediction advice.</div>

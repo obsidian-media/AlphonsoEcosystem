@@ -1,8 +1,10 @@
 import React from 'react';
+import { isSessionGuardIntervention } from '../services/coachInterventionService';
 
 interface Props {
   intervention: {
     level?: string;
+    source?: string;
     title?: string;
     message?: string;
     metrics?: {
@@ -32,9 +34,8 @@ export function CoachInterventionCard({ intervention, onAction, onDemo, pauseUnt
   if (!intervention) {
     return (
       <div className="rounded-2xl bg-(--surface-2) p-3">
-        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-(--text-3)">Session guard</div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-(--text-3)">Coach</div>
         <div className="mt-2 text-sm font-semibold text-(--text-2)">No active intervention.</div>
-        <div className="mt-1 text-xs leading-relaxed text-(--text-3)">Local bridge is ready for protective session events.</div>
         {onDemo && (
           <button
             type="button"
@@ -48,6 +49,7 @@ export function CoachInterventionCard({ intervention, onAction, onDemo, pauseUnt
     );
   }
 
+  const session = isSessionGuardIntervention(intervention);
   return (
     <div className={`rounded-2xl p-4 ${tone}`} role="alert">
       <div className="flex items-start justify-between gap-3">
@@ -58,19 +60,25 @@ export function CoachInterventionCard({ intervention, onAction, onDemo, pauseUnt
         <div className={`rounded-full border ${toneBorder} px-2 py-1 text-[10px] font-bold uppercase tracking-widest`}>{level}</div>
       </div>
       <p className="mt-3 text-sm leading-relaxed">{intervention.message}</p>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] opacity-75">
-        <div className="rounded-lg bg-black/20 px-2 py-1">Spins<br /><b>{intervention.metrics?.spinCount || 0}</b></div>
-        <div className="rounded-lg bg-black/20 px-2 py-1">Net<br /><b>{intervention.metrics?.netResult || 0}</b></div>
-        <div className="rounded-lg bg-black/20 px-2 py-1">Stretch<br /><b>{intervention.metrics?.longestLosingStretch || 0}</b></div>
-      </div>
-      {pauseUntilMs > Date.now() && (
+      {session && (
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] opacity-75">
+          <div className="rounded-lg bg-black/20 px-2 py-1">Spins<br /><b>{intervention.metrics?.spinCount || 0}</b></div>
+          <div className="rounded-lg bg-black/20 px-2 py-1">Net<br /><b>{intervention.metrics?.netResult || 0}</b></div>
+          <div className="rounded-lg bg-black/20 px-2 py-1">Stretch<br /><b>{intervention.metrics?.longestLosingStretch || 0}</b></div>
+        </div>
+      )}
+      {session && pauseUntilMs > Date.now() && (
         <div className={`mt-3 rounded-lg border ${toneBorder} bg-black/25 px-3 py-2 text-[11px] font-semibold opacity-80`}>
           Pause active until {new Date(pauseUntilMs).toLocaleTimeString()}.
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-lg bg-(--text-1) px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-(--surface-0) hover:opacity-90">Pause 60s</button>
-        <button type="button" onClick={() => onAction?.('end_session')} className={`rounded-lg border ${toneBorder} px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest opacity-90 hover:opacity-100`}>End session</button>
+        {session && (
+          <>
+            <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-lg bg-(--text-1) px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-(--surface-0) hover:opacity-90">Pause 60s</button>
+            <button type="button" onClick={() => onAction?.('end_session')} className={`rounded-lg border ${toneBorder} px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest opacity-90 hover:opacity-100`}>End session</button>
+          </>
+        )}
         <button type="button" onClick={() => onAction?.(level === 'hard' ? 'continue_anyway' : 'continue')} className={`rounded-lg border ${toneBorder} px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest opacity-60 hover:opacity-100`}>{level === 'hard' ? 'Continue anyway' : 'Continue'}</button>
       </div>
       <div className="mt-2 text-[10px] opacity-45">Private/local-only. Actions write a local log only — no upload, no prediction advice.</div>

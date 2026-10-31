@@ -154,6 +154,16 @@ export function buildCoachIntervention(event: CoachEngineEvent = {}): CoachInter
   };
 }
 
+/**
+ * Whether a check-in came from SessionGuard (a gambling session), the only source with
+ * spins, net and losing-stretch numbers and a session to pause or end. Alphonso's own
+ * coach check-ins show only their message (owner, 2026-10-30: the gambling parts stay
+ * hidden until SessionGuard is connected).
+ */
+export function isSessionGuardIntervention(intervention: { source?: string } | null | undefined): boolean {
+  return intervention?.source === 'sessionguard';
+}
+
 export function buildDemoIntervention(): CoachIntervention {
   return buildCoachIntervention({
     source: 'coach-engine',
