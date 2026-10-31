@@ -9,6 +9,7 @@
 import { getJoseRequest, listJoseRequests, onRequestStatusChange, setJoseRequestStatus, setRequestQueuedAt, type JoseRequestStatus } from './joseRequestStore';
 import { onStopRequested } from './joseStop';
 import { getAgentProvider } from '../modelSelectionService';
+import { hermesToolFor } from '../hermes/hermesTools';
 import { decideAdmission } from '../resources/admission';
 import { latestResources } from '../resources/idleStop';
 import { reservedTotal } from '../resources/resourceGate';
@@ -47,6 +48,8 @@ export function usesLocalModel(steps: PlanStep[]): boolean {
     if ((step as { contentStep?: unknown }).contentStep) return true;
     if (step.model && PAID_MODEL.test(step.model)) return false;
     const provider = getAgentProvider(step.agent)?.provider || 'ollama';
+    // A Hermes profile on this computer runs here (Hermes gateway, 2026-10-30).
+    if (provider === 'hermes' && hermesToolFor(step.agent)) return true;
     return !CLOUD_PROVIDERS.has(provider);
   });
 }

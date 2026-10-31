@@ -11,8 +11,10 @@ import { projectEngines } from '../contentFactory/engineChoice';
 import { getProject } from '../contentFactory/contentProjectService';
 import { effectiveVideoModel, listVideoModels } from '../videoModelService';
 import { durableGet, durableSet } from '../../lib/durableStore';
+import { hermesLocalModel, hermesToolFor } from '../hermes/hermesTools';
 
-export type NeededTool = 'ollama' | 'comfyui' | 'kokoro' | 'audiocraft' | 'whisper' | 'ffmpeg';
+/** `hermes:<agent>`: that agent's Hermes profile on this computer (Hermes gateway, 2026-10-30). */
+export type NeededTool = 'ollama' | 'comfyui' | 'kokoro' | 'audiocraft' | 'whisper' | 'ffmpeg' | `hermes:${string}`;
 
 export interface StepAssignment {
   agent: string;
@@ -59,12 +61,16 @@ function enginesFor(assignment: StepAssignment): Engines | null {
 /** The Ollama model a step loads, or null when its model isn't local. */
 function localModel(assignment: StepAssignment): string | null {
   if (assignment.model && PAID.test(assignment.model)) return null;
-  if (CLOUD.has(getAgentProvider(assignment.agent)?.provider)) return null;
+  const provider = getAgentProvider(assignment.agent)?.provider;
+  // A Hermes profile on this computer that thinks with Ollama loads its model here.
+  if (provider === 'hermes') return hermesToolFor(assignment.agent) ? hermesLocalModel(assignment.agent) : null;
+  if (CLOUD.has(provider)) return null;
   return assignment.model || getAgentModelOverride(assignment.agent) || getConfiguredOllamaModel();
 }
 
 export function toolsForStep(assignment: StepAssignment): NeededTool[] {
-  const model: NeededTool[] = localModel(assignment) ? ['ollama'] : [];
+  const hermes = hermesToolFor(assignment.agent);
+  const model: NeededTool[] = [...(hermes ? [hermes as NeededTool] : []), ...(localModel(assignment) ? ['ollama' as const] : [])];
   const engines = enginesFor(assignment);
   switch (assignment.actionType) {
     case 'creative_voice':
@@ -167,7 +173,7 @@ export async function estimateNeed(assignment: StepAssignment): Promise<StepNeed
       detail = 'comfyui';
     }
   }
-  if (tools.some((t) => t === 'kokoro' || t === 'audiocraft' || t === 'whisper' || t === 'ffmpeg')) known = false;
+  if (tools.some((t) => t === 'kokoro' || t === 'audiocraft' || t === 'whisper' || t === 'ffmpeg' || t.startsWith('hermes:'))) known = false;
 
   const key = `${assignment.actionType}|${detail}`;
   const base: StepNeed = {

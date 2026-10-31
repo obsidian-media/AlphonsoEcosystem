@@ -12,6 +12,7 @@ import { OPENROUTER_CHOOSE_FREE, isOpenRouterConfigured } from '../connectors/op
 import { describeResponsibility } from '../jose/agentPermissionTable';
 import { ACTION_INSTRUCTION } from '../jose/joseHandoff';
 import { agentName } from '../jose/agentNames';
+import { saveProfileModel } from './profileModels';
 
 export type ProfileModel = { kind: 'ollama'; model: string } | { kind: 'openrouter'; model: string };
 
@@ -94,6 +95,7 @@ export async function setUpProfile(agent: string, opts: { useNow?: boolean; mode
     return { ok: false, reason: reasonOf(error) };
   }
   saveHermesAgentEndpoint(agent, profile.url, profileKeyRef(agent));
+  saveProfileModel(agent, model);
   if (opts.useNow !== false) {
     const current = getAgentProvider(agent);
     if (current.provider !== 'hermes') writePrevious({ ...readPrevious(), [agent]: current });
@@ -111,6 +113,7 @@ export async function removeProfile(agent: string): Promise<{ ok: true } | { ok:
     return { ok: false, reason: reasonOf(error) };
   }
   saveHermesAgentEndpoint(agent, '', '');
+  saveProfileModel(agent, null);
   const previous = readPrevious();
   if (getAgentProvider(agent).provider === 'hermes') {
     setAgentProvider(agent, previous[agent] || { provider: 'ollama' });
@@ -127,6 +130,7 @@ export async function setProfileModel(agent: string, model: ProfileModel): Promi
   }
   try {
     await invoke('hermes_profile_set_model', { agent, model: backendModel(model) });
+    saveProfileModel(agent, model);
     return { ok: true };
   } catch (error) {
     return { ok: false, reason: reasonOf(error) };

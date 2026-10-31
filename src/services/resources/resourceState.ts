@@ -6,6 +6,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { comfyRequest, getComfyUiEndpoint } from '../connectors/connectorImageGenerators';
 import { getConfiguredOllamaEndpoint } from '../../lib/ollama';
+import { hermesToolLabel, isHermesTool } from '../hermes/hermesConstants';
 
 export type GpuSource = 'nvidia' | 'comfyui' | 'unknown';
 
@@ -110,6 +111,18 @@ export async function readResources(usage: UsageRecord = NO_USAGE): Promise<Reso
       lastUsedAtMs: usage.lastUsedAt(s.name),
       inUse: usage.isInUse(s.name),
     }));
+  // A Hermes profile Alphonso started is a tool of its own (Hermes gateway, 2026-10-30).
+  const profiles: LoadedThing[] = snap.processes
+    .filter((p) => isHermesTool(p.tool))
+    .map((p) => ({
+      kind: 'tool',
+      name: p.tool,
+      label: hermesToolLabel(p.tool),
+      memMb: p.memMb,
+      startedBy: 'alphonso',
+      lastUsedAtMs: usage.lastUsedAt(p.tool),
+      inUse: usage.isInUse(p.tool),
+    }));
   const ollamaStarter = ours.has('ollama') ? 'alphonso' : 'you';
   const loadedModels: LoadedThing[] = models.map((m) => ({
     kind: 'model',
@@ -128,6 +141,6 @@ export async function readResources(usage: UsageRecord = NO_USAGE): Promise<Reso
     gpuTotalMb,
     gpuFreeMb,
     gpuSource,
-    loaded: [...tools, ...loadedModels],
+    loaded: [...tools, ...profiles, ...loadedModels],
   };
 }

@@ -9,6 +9,8 @@ import { freeThings } from '../../services/resources/freeMemory';
 import { GPU_UNKNOWN, readResources, type LoadedThing, type ResourceState } from '../../services/resources/resourceState';
 import { usageRecord } from '../../services/resources/toolUse';
 import { stopTool } from '../../services/runtimeManagerService';
+import { stopHermesTool } from '../../services/hermes/hermesTools';
+import { isHermesTool } from '../../services/hermes/hermesConstants';
 import { listJoseRequests } from '../../services/jose/joseRequestStore';
 import { agentName } from '../../services/jose/agentNames';
 
@@ -118,7 +120,7 @@ export function MemorySection() {
                           data-testid={`memory-stop-${thing.name}`}
                           disabled={thing.inUse || busy === thing.name}
                           title={thing.inUse ? 'A step is using it.' : undefined}
-                          onClick={() => void act(thing, () => stopTool(thing.name))}
+                          onClick={() => void act(thing, () => (isHermesTool(thing.name) ? stopHermesTool(thing.name) : stopTool(thing.name)))}
                         >
                           Stop
                         </Button>

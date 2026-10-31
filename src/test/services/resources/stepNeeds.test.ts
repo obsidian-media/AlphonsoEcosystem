@@ -25,6 +25,10 @@ vi.mock('../../../services/videoModelService', () => ({
   effectiveVideoModel: (info: any) => info.models[0],
 }));
 
+// Hermes gateway (2026-10-30): a Hermes profile on this computer is a tool, and its Ollama model is counted.
+const hermes: { tool: string | null; model: string | null } = { tool: null, model: null };
+vi.mock('../../../services/hermes/hermesTools', () => ({ hermesToolFor: () => hermes.tool, hermesLocalModel: () => hermes.model }));
+
 import { toolsForStep, estimateNeed, recordStepUse, resetUsageForTests } from '../../../services/resources/stepNeeds';
 
 const content = (actionType: string, agent = 'miya') => ({ agent, actionType, contentStep: { projectId: 'p1', brand: {} } });
@@ -32,6 +36,8 @@ const content = (actionType: string, agent = 'miya') => ({ agent, actionType, co
 beforeEach(() => {
   for (const k of Object.keys(backend)) delete backend[k];
   for (const k of Object.keys(providers)) delete providers[k];
+  hermes.tool = null;
+  hermes.model = null;
   Object.assign(engines, { voice: { engine: 'kokoro' }, pictures: 'comfyui', clips: 'local' });
   localStorage.clear();
   resetUsageForTests();
@@ -53,6 +59,20 @@ describe('toolsForStep', () => {
     expect(toolsForStep({ agent: 'maria', actionType: 'audit_quality' })).toEqual([]);
     expect(toolsForStep({ agent: 'alphonso', actionType: 'assistant_answer', model: 'claude:claude-haiku-5-5' })).toEqual([]);
     expect(toolsForStep({ agent: 'alphonso', actionType: 'assistant_answer', model: 'openrouter:b/y' })).toEqual([]);
+  });
+
+  it('a Hermes profile on this computer is a tool, plus Ollama when it thinks with Ollama', async () => {
+    providers.hector = 'hermes';
+    hermes.tool = 'hermes:hector';
+    hermes.model = 'llama3.2:3b';
+    expect(toolsForStep({ agent: 'hector', actionType: 'research_report' })).toEqual(['hermes:hector', 'ollama']);
+    const need = await estimateNeed({ agent: 'hector', actionType: 'research_report' });
+    expect(need.modelKey).toBe('model:llama3.2:3b');
+    expect(need.known).toBe(false);
+    hermes.model = null;
+    expect(toolsForStep({ agent: 'hector', actionType: 'research_report' })).toEqual(['hermes:hector']);
+    hermes.tool = null;
+    expect(toolsForStep({ agent: 'hector', actionType: 'research_report' })).toEqual([]);
   });
 
   it('picture steps need the model and ComfyUI, unless Higgsfield makes the pictures', () => {

@@ -25,7 +25,8 @@ vi.mock('../../../services/connectors/openRouterConnector', () => ({
   isOpenRouterConfigured: () => true,
 }));
 
-const { setUpProfile, removeProfile, profileKeyRef, PAID_IN_ZERO_COST, NOT_DESKTOP, profileModelChoices } = await import('../../../services/hermes/hermesProfiles');
+const { setUpProfile, removeProfile, setProfileModel, profileKeyRef, PAID_IN_ZERO_COST, NOT_DESKTOP, profileModelChoices } = await import('../../../services/hermes/hermesProfiles');
+const { hermesLocalModel } = await import('../../../services/hermes/profileModels');
 
 const info = { agent: 'hector', port: 8700, url: 'http://127.0.0.1:8700', folder: 'D:/r/hermes-profiles/hector', running: false };
 
@@ -74,6 +75,18 @@ describe('Hermes profiles in the app', () => {
     expect((await setUpProfile('hector', { model: { kind: 'openrouter', model: 'meta/llama:free' } })).ok).toBe(true);
     invoke.mockResolvedValueOnce(info);
     expect((await setUpProfile('hector', { model: { kind: 'openrouter', model: 'openrouter/free' } })).ok).toBe(true);
+  });
+
+  it('remembers what the profile thinks with, for the resource manager (Task 7)', async () => {
+    invoke.mockResolvedValue(info);
+    await setUpProfile('hector');
+    expect(hermesLocalModel('hector')).toBe('qwen2.5:7b');
+    await setProfileModel('hector', { kind: 'openrouter', model: 'openrouter/free' });
+    expect(hermesLocalModel('hector')).toBeNull();
+    await setProfileModel('hector', { kind: 'ollama', model: 'llama3.2:3b' });
+    expect(hermesLocalModel('hector')).toBe('llama3.2:3b');
+    await removeProfile('hector');
+    expect(hermesLocalModel('hector')).toBeNull();
   });
 
   it('removes it and gives the agent back its earlier provider', async () => {

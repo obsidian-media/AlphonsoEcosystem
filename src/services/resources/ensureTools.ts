@@ -12,6 +12,7 @@ import { getAllStatus, startTool, waitForTool, type ToolStatus } from '../runtim
 import { findComfyuiInstalls } from '../comfyuiSettingsService';
 import { getStorage } from '../../lib/appStorage';
 import type { NeededTool } from './stepNeeds';
+import { isHermesTool, startHermesTool } from '../hermes/hermesTools';
 
 export type EnsureResult = { ok: true } | { ok: false; reason: string };
 
@@ -45,6 +46,13 @@ async function startComfy(statuses: ToolStatus[]): Promise<EnsureResult> {
 }
 
 export async function ensureTools(tools: NeededTool[]): Promise<EnsureResult> {
+  if (!tools.length) return { ok: true };
+  // A Hermes profile has its own way to start (Hermes gateway, 2026-10-30).
+  for (const tool of tools.filter(isHermesTool)) {
+    const result = await startHermesTool(tool);
+    if (!result.ok) return result;
+  }
+  tools = tools.filter((t) => !isHermesTool(t));
   if (!tools.length) return { ok: true };
   const statuses = await getAllStatus().catch(() => [] as ToolStatus[]) ?? [];
 

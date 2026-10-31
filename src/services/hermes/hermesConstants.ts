@@ -13,3 +13,18 @@ export function describeHermesApproval(req: { agent: string; command?: string; d
   const who = `${agentName(req.agent)}'s Hermes profile`;
   return req.command ? `${who} wants to run: ${req.command}` : `${who} wants to: ${req.description}`;
 }
+
+/** A Hermes profile as one of the resource manager's tools: `hermes:<agent>`. */
+export const HERMES_TOOL_PREFIX = 'hermes:';
+
+export function isHermesTool(name: string): boolean {
+  return name.startsWith(HERMES_TOOL_PREFIX);
+}
+
+export function hermesToolAgent(tool: string): string {
+  return tool.slice(HERMES_TOOL_PREFIX.length);
+}
+
+export function hermesToolLabel(tool: string): string {
+  return `${agentName(hermesToolAgent(tool))}'s Hermes profile`;
+}

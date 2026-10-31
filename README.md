@@ -402,6 +402,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 │  │  lib.rs ~969 lines · 214 Tauri commands · 56 modules   │    │
 =======
 │  │  lib.rs ~966 lines · 212 Tauri commands · 55 modules   │    │
@@ -412,6 +413,9 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 =======
 │  │  lib.rs ~971 lines · 216 Tauri commands · 56 modules   │    │
 >>>>>>> 33e7344 (feat(hermes): run Hermes steps as runs with progress and Stop)
+=======
+│  │  lib.rs ~972 lines · 217 Tauri commands · 56 modules   │    │
+>>>>>>> 7a365c8 (feat(hermes): the resource manager starts, counts and stops Hermes profiles)
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -506,6 +510,7 @@ npm run lint           # ESLint on src/
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 npm run test           # 6,933 tests across 622 files (src + bridge)
 =======
 npm run test           # 6,933 tests across 616 files (src + bridge)
@@ -519,6 +524,9 @@ npm run test           # 6,933 tests across 619 files (src + bridge)
 =======
 npm run test           # 6,933 tests across 620 files (src + bridge)
 >>>>>>> 21f7a82 (feat(hermes): Hermes's approval requests wait on the board and Telegram)
+=======
+npm run test           # 6,933 tests across 621 files (src + bridge)
+>>>>>>> 7a365c8 (feat(hermes): the resource manager starts, counts and stops Hermes profiles)
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -531,7 +539,7 @@ npm run test:e2e:desktop  # Desktop end-to-end suite against the real built app 
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 415 Rust unit tests across 56 modules
+cargo test                     # 417 Rust unit tests across 56 modules
                                 # (cargo test runs a few more: the async
                                 # #[tokio::test] cases, 370 in all)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
@@ -613,6 +621,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR g
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 346 services already exist.
 =======
 Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 341 services already exist.
@@ -626,6 +635,9 @@ Before writing any new service, component, or feature, check `CLAUDE.md` for the
 =======
 Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 346 services already exist.
 >>>>>>> 21f7a82 (feat(hermes): Hermes's approval requests wait on the board and Telegram)
+=======
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 348 services already exist.
+>>>>>>> 7a365c8 (feat(hermes): the resource manager starts, counts and stops Hermes profiles)
 
 ## Third-party notices
 

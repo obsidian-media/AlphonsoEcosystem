@@ -14,6 +14,12 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke: (...a: unknown[]) => invoke(...
 const findComfyuiInstalls = vi.fn();
 vi.mock('../../../services/comfyuiSettingsService', () => ({ findComfyuiInstalls: (...a: unknown[]) => findComfyuiInstalls(...a) }));
 
+const startHermesTool = vi.fn();
+vi.mock('../../../services/hermes/hermesTools', () => ({
+  isHermesTool: (name: string) => name.startsWith('hermes:'),
+  startHermesTool: (...a: unknown[]) => startHermesTool(...a),
+}));
+
 import { ensureTools } from '../../../services/resources/ensureTools';
 
 function status(name: string, over: Record<string, unknown> = {}) {
@@ -37,6 +43,16 @@ beforeEach(() => {
 });
 
 describe('ensureTools', () => {
+  it('starts a Hermes profile through its own path, and passes on why it failed (Hermes gateway)', async () => {
+    getAllStatus.mockResolvedValue([status('ollama', { running: true })]);
+    startHermesTool.mockResolvedValueOnce({ ok: true });
+    expect(await ensureTools(['hermes:hector', 'ollama'])).toEqual({ ok: true });
+    expect(startHermesTool).toHaveBeenCalledWith('hermes:hector');
+    expect(startTool).not.toHaveBeenCalled();
+    startHermesTool.mockResolvedValueOnce({ ok: false, reason: "Hector's Hermes profile didn't start. Open Runtime Hub to see its log." });
+    expect(await ensureTools(['hermes:hector'])).toEqual({ ok: false, reason: "Hector's Hermes profile didn't start. Open Runtime Hub to see its log." });
+  });
+
   it('starts a stopped Alphonso ComfyUI and waits for it', async () => {
     getAllStatus.mockResolvedValue([status('comfyui')]);
     expect(await ensureTools(['comfyui'])).toEqual({ ok: true });

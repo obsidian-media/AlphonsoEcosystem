@@ -8,10 +8,12 @@
 // Only a tool Alphonso started and no step is using is stopped. A tool never
 // used counts its idle time from when the watcher first saw it running.
 import { stopTool } from '../runtimeManagerService';
+import { isHermesTool, stopHermesTool } from '../hermes/hermesTools';
 import { readResources, type ResourceState } from './resourceState';
 import { anyInUse, isInUse, lastUsedAt, usageRecord } from './toolUse';
 
-export const DEFAULT_IDLE_MINUTES: Record<string, number | null> = { comfyui: 15 };
+/** `hermes` is every Hermes profile (`hermes:<agent>`), Hermes gateway 2026-10-30. */
+export const DEFAULT_IDLE_MINUTES: Record<string, number | null> = { comfyui: 15, hermes: 30 };
 export const FAST_POLL_MS = 3000;
 export const SLOW_POLL_MS = 30000;
 
@@ -34,7 +36,7 @@ export function getIdleMinutes(tool: string): number | null {
     if (value === null) return null;
     if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
   }
-  return DEFAULT_IDLE_MINUTES[tool] ?? null;
+  return DEFAULT_IDLE_MINUTES[isHermesTool(tool) ? 'hermes' : tool] ?? null;
 }
 
 export function setIdleMinutes(tool: string, minutes: number | null): void {
@@ -57,7 +59,7 @@ export async function idleTick(state: ResourceState, nowMs: number): Promise<str
     const since = lastUsedAt(thing.name) ?? firstSeen.get(thing.name)!;
     if (nowMs - since < minutes * MIN) continue;
     try {
-      const result = await stopTool(thing.name);
+      const result = isHermesTool(thing.name) ? await stopHermesTool(thing.name) : await stopTool(thing.name);
       if (result?.ok) {
         stopped.push(thing.name);
         firstSeen.delete(thing.name);

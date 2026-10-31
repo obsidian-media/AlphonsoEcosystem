@@ -570,20 +570,102 @@ pub(crate) fn find_user_profiles(root: &Path) -> Vec<UserProfile> {
   found
 }
 
-#[tauri::command]
-pub fn hermes_find_user_profiles() -> Vec<UserProfile> {
+fn user_root_now() -> Option<PathBuf> {
   let home_var = if cfg!(target_os = "windows") {
     "USERPROFILE"
   } else {
     "HOME"
   };
-  let root = user_hermes_root(
+  user_hermes_root(
     std::env::var("HERMES_HOME").ok(),
     std::env::var("LOCALAPPDATA").ok(),
     std::env::var(home_var).ok(),
     cfg!(target_os = "windows"),
-  );
-  root.map(|r| find_user_profiles(&r)).unwrap_or_default()
+  )
+}
+
+#[tauri::command]
+pub fn hermes_find_user_profiles() -> Vec<UserProfile> {
+  user_root_now()
+    .map(|r| find_user_profiles(&r))
+    .unwrap_or_default()
+}
+
+pub(crate) const USER_HERMES_NOT_FOUND: &str = "Your Hermes install wasn't found.";
+const USER_PROFILE_GONE: &str = "That Hermes profile is no longer there.";
+
+/// A profile's folder from its name, inside the user's Hermes folder only:
+/// "default" is the root, any other name one folder in `profiles/`.
+pub(crate) fn user_profile_folder(root: &Path, name: &str) -> Option<PathBuf> {
+  if name == "default" {
+    return root
+      .join("config.yaml")
+      .is_file()
+      .then(|| root.to_path_buf());
+  }
+  let plain = !name.is_empty()
+    && name.len() <= 64
+    && !name.starts_with('.')
+    && name
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.');
+  let folder = root.join("profiles").join(name);
+  (plain && folder.is_dir()).then_some(folder)
+}
+
+/// The Python of the user's own Hermes, where Hermes's installer puts it
+/// (`<hermes home>/hermes-agent/venv`).
+pub(crate) fn user_hermes_python(root: &Path, windows: bool) -> Option<PathBuf> {
+  let install = root.join("hermes-agent");
+  ["venv", ".venv"]
+    .iter()
+    .map(|v| {
+      if windows {
+        install.join(v).join("Scripts").join("python.exe")
+      } else {
+        install.join(v).join("bin").join("python")
+      }
+    })
+    .find(|p| p.is_file())
+}
+
+/// Starts one of the user's own profiles, connected to `agent`, with the
+/// user's own Hermes and the profile's own settings (its API server, port and
+/// key come from the profile, never from Alphonso). Recorded as the agent's
+/// Hermes tool, so the resource manager can stop it after it sits idle.
+#[tauri::command]
+pub fn hermes_user_profile_start(
+  agent: String,
+  name: String,
+  state: tauri::State<'_, RuntimeManager>,
+) -> Result<(), String> {
+  checked_agent(&agent)?;
+  let tool = tool_name(&agent);
+  if state.spawned_pid(&tool).is_some_and(is_pid_alive) {
+    return Ok(());
+  }
+  let root = user_root_now().ok_or_else(|| USER_HERMES_NOT_FOUND.to_string())?;
+  let folder = user_profile_folder(&root, &name).ok_or_else(|| USER_PROFILE_GONE.to_string())?;
+  let python = user_hermes_python(&root, cfg!(target_os = "windows"))
+    .ok_or_else(|| USER_HERMES_NOT_FOUND.to_string())?;
+  let logs = runtimes_dir().join("hermes-logs");
+  std::fs::create_dir_all(&logs).map_err(|e| e.to_string())?;
+  let log = std::fs::File::create(logs.join(format!("{agent}.log"))).map_err(|e| e.to_string())?;
+  let log_err = log.try_clone().map_err(|e| e.to_string())?;
+  let mut cmd = Command::new(&python);
+  cmd
+    .args(["-m", "hermes_cli.main", "gateway", "run"])
+    .env("HERMES_HOME", &folder)
+    .current_dir(&folder)
+    .stdin(Stdio::null())
+    .stdout(log)
+    .stderr(log_err);
+  no_window(&mut cmd);
+  let child = cmd
+    .spawn()
+    .map_err(|e| format!("Hermes didn't start: {e}"))?;
+  state.record_pid(&tool, child.id());
+  Ok(())
 }
 
 #[cfg(test)]
@@ -823,5 +905,36 @@ approvals:
     for known in [8085u16, 8086, 8087, 8088, 8188, 8642, 8765, 8766, 11434] {
       assert!(!HERMES_PORT_RANGE.contains(&known), "{known}");
     }
+  }
+
+  #[test]
+  fn user_profile_folder_stays_inside_the_hermes_folder() {
+    let root = std::env::temp_dir().join(format!("alphonso-hermes-user-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("profiles").join("work")).unwrap();
+    std::fs::write(root.join("config.yaml"), "model: {}\n").unwrap();
+    assert_eq!(user_profile_folder(&root, "default"), Some(root.clone()));
+    assert_eq!(
+      user_profile_folder(&root, "work"),
+      Some(root.join("profiles").join("work"))
+    );
+    for bad in ["../work", "..", "", "a/b", "a\\b", ".hidden", "missing"] {
+      assert_eq!(user_profile_folder(&root, bad), None, "{bad}");
+    }
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn user_hermes_python_is_the_installers_venv() {
+    let root = std::env::temp_dir().join(format!("alphonso-hermes-py-{}", std::process::id()));
+    assert_eq!(user_hermes_python(&root, true), None);
+    let exe = root.join("hermes-agent").join("venv").join("Scripts");
+    std::fs::create_dir_all(&exe).unwrap();
+    std::fs::write(exe.join("python.exe"), "").unwrap();
+    assert_eq!(
+      user_hermes_python(&root, true),
+      Some(exe.join("python.exe"))
+    );
+    assert_eq!(user_hermes_python(&root, false), None);
+    let _ = std::fs::remove_dir_all(&root);
   }
 }
