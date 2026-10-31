@@ -14,14 +14,13 @@ import { CleanupProposals } from '../echo/CleanupProposals';
 import { pickForget } from '../../services/echo/echoPicks';
 import { templateProblems } from '../../services/jose/teams';
 import { describePlanSource, type JosePlan } from '../../services/jose/josePlanner';
-import { getJoseRequest, listJoseRequests, type JoseRequest } from '../../services/jose/joseRequestStore';
+import type { JoseRequest } from '../../services/jose/joseRequestStore';
+import { runResultText, useBoardData } from '../../services/phone/boardData';
 import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
-import { cancelPlan, runApprovedPlan } from '../../services/jose/submitToJose';
-import { stopRequest } from '../../services/jose/joseStop';
 import { QUEUED_LINE, queuePosition } from '../../services/jose/joseQueue';
 import { groupRequests } from '../../services/jose/requestGroups';
 import { agentName } from '../../services/jose/agentNames';
-import { approveRequestStep, cancelRequest, carryOnRequest, pickAlphonsoProject, rejectRequestStep } from '../../services/joseExecutionEngineService';
+import { pickAlphonsoProject } from '../../services/joseExecutionEngineService';
 import { describeHermesApproval } from '../../services/hermes/hermesConstants';
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -60,14 +59,12 @@ export function requestPlanLabel(request: JoseRequest): string {
   return describePlanSource(plan);
 }
 
-export function runResultText(result: any): string {
-  if (result?.reason === 'plan_rejected') return `The plan didn't pass the checks: ${(result.problems || []).join(' ')} It is still waiting.`;
-  return result?.command?.userReport?.summary || result?.reason || (result?.ok ? 'Done.' : 'It could not run.');
-}
+export { runResultText };
 
 export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: string }) {
-  const [requests, setRequests] = useState<JoseRequest[]>(() => listJoseRequests());
-  const [selectedId, setSelectedId] = useState<string | undefined>(selectedRequestId || listJoseRequests()[0]?.id);
+  const data = useBoardData();
+  const [requests, setRequests] = useState<JoseRequest[]>(() => data.requests());
+  const [selectedId, setSelectedId] = useState<string | undefined>(selectedRequestId || data.requests()[0]?.id);
   const [editing, setEditing] = useState(false);
   // The step picked in the map, whose output shows below it (phase 6a).
   const [stepId, setStepId] = useState<string | null>(null);
@@ -76,13 +73,21 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
   const [message, setMessage] = useState('');
   const [templateName, setTemplateName] = useState<string | null>(null);
 
-  const refresh = useCallback(() => setRequests(listJoseRequests()), []);
+  const refresh = useCallback(() => setRequests(data.requests()), [data]);
   useEffect(() => {
     const timer = setInterval(refresh, 2000);
-    return () => clearInterval(timer);
-  }, [refresh]);
+    const off = data.subscribe(refresh);
+    return () => { clearInterval(timer); off(); };
+  }, [refresh, data]);
+  // On the phone the board shows the computer's requests; while it is offline, only reading.
+  const readOnly = data.readOnly;
+  // An answer shown at once (the computer) or when it arrives (the phone).
+  const show = (answer: string | Promise<string>) => {
+    if (typeof answer === 'string') { if (answer) setMessage(answer); refresh(); return; }
+    answer.then((text) => { if (text) setMessage(text); refresh(); }).catch((error) => setMessage(`It could not run: ${String(error)}`));
+  };
 
-  const selected = selectedId ? requests.find((r) => r.id === selectedId) || getJoseRequest(selectedId) : null;
+  const selected = selectedId ? requests.find((r) => r.id === selectedId) || data.request(selectedId) : null;
   const waiting = selected?.status === 'waiting_plan_approval';
   // A waiting plan that breaks the rules says so before you run it (agent roles Part C1).
   const planProblems = waiting && selected ? templateProblems({ steps: selected.steps as never }) : [];
@@ -93,8 +98,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
     setRunning(true);
     setMessage('');
     try {
-      const result = await runApprovedPlan(selected.id);
-      setMessage(runResultText(result));
+      setMessage(await data.runPlan(selected.id));
     } catch (error) {
       setMessage(`It could not run: ${String(error)}`);
     } finally {
@@ -111,8 +115,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
     setRunning(true);
     setMessage('');
     try {
-      const result: any = await approveRequestStep(selected.id, stepId);
-      setMessage(result?.summary || (result?.ok ? 'Done.' : 'It could not run.'));
+      setMessage(await data.approveStep(selected.id, stepId));
     } catch (error) {
       setMessage(`It could not run: ${String(error)}`);
     } finally {
@@ -128,7 +131,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
     setRunning(true);
     setMessage('');
     try {
-      setMessage(runResultText(await carryOnRequest(selected.id)));
+      setMessage(await data.carryOn(selected.id));
     } catch (error) {
       setMessage(`It could not run: ${String(error)}`);
     } finally {
@@ -138,7 +141,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
     }
   };
   // A Hermes run asking to do something (Hermes gateway, 2026-10-30): its request keeps running.
-  const hermesSteps = selected?.status === 'running' ? selected.steps.filter((s) => s.status === 'waiting_approval' && s.hermesApproval) : [];
+  const hermesSteps = data.local && selected?.status === 'running' ? selected.steps.filter((s) => s.status === 'waiting_approval' && s.hermesApproval) : [];
   const answerHermes = async (stepId: string, yes: boolean) => {
     if (!selected) return;
     const { answerHermesApproval } = await import('../../services/hermes/hermesApprovals');
@@ -147,10 +150,10 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
   };
   const waitingSteps = selected?.status === 'waiting_approval' ? selected.steps.filter((s) => s.status === 'waiting_approval' && !s.hermesApproval) : [];
   // "Which project" (agent phase 6).
-  const choosingStep = selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.projectChoices?.length) : undefined;
+  const choosingStep = data.local && selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.projectChoices?.length) : undefined;
   // Echo's pickers (agent phase 7): which decision to forget, or his cleanup proposals.
-  const forgetStep = selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.decisionChoices?.length) : undefined;
-  const cleanupStep = selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.cleanupSetId) : undefined;
+  const forgetStep = data.local && selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.decisionChoices?.length) : undefined;
+  const cleanupStep = data.local && selected?.status === 'waiting_setup' ? selected.steps.find((s) => s.status === 'setup_needed' && s.cleanupSetId) : undefined;
   const asking = Boolean(choosingStep || forgetStep || cleanupStep);
   const forget = async (decisionId: string) => {
     if (!selected || !forgetStep || runningRef.current) return;
@@ -255,7 +258,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
               </>
             )}
 
-          {waitingSteps.filter((s) => s.codePreview).map((s) => (
+          {data.local && waitingSteps.filter((s) => s.codePreview).map((s) => (
             <CodePreviewView
               key={`preview-${s.stepId}`}
               preview={s.codePreview!}
@@ -286,7 +289,8 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
           {cleanupStep && (
             <CleanupProposals key={cleanupStep.cleanupSetId} requestId={selected.id} stepId={cleanupStep.stepId} setId={cleanupStep.cleanupSetId!} onDone={(summary) => { setMessage(summary); refresh(); }} />
           )}
-          <EchoRemembered requestId={selected.id} />
+          {data.local && <EchoRemembered requestId={selected.id} />}
+          {readOnly && data.readOnlyReason && <div data-testid="board-read-only" className="rounded-md bg-(--surface-2) p-2 text-xs text-(--text-2)">{data.readOnlyReason}</div>}
 
           {planProblems.length > 0 && (
             <ul data-testid="jose-plan-problems" className="rounded-xl bg-(--surface-2) p-3 text-xs text-(--warning)">
@@ -298,18 +302,18 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
           <div className="flex flex-wrap gap-2">
             {waiting && !editing && (
               <>
-                <Button variant="primary" disabled={running || planProblems.length > 0} onClick={run}>Run this plan</Button>
-                <Button onClick={() => setEditing(true)}>Edit</Button>
-                <Button variant="ghost" onClick={() => { cancelPlan(selected.id); refresh(); }}>Cancel</Button>
+                <Button variant="primary" disabled={running || readOnly || planProblems.length > 0} onClick={run}>Run this plan</Button>
+                {data.local && <Button onClick={() => setEditing(true)}>Edit</Button>}
+                <Button variant="ghost" disabled={readOnly} onClick={() => show(data.cancelPlan(selected.id))}>Cancel</Button>
               </>
             )}
             {(selected.status === 'running' || selected.status === ('queued' as string)) && (
-              <Button variant="ghost" data-testid="jose-stop" onClick={() => { setMessage(stopRequest(selected.id).summary); refresh(); }}>Stop</Button>
+              <Button variant="ghost" data-testid="jose-stop" disabled={readOnly} onClick={() => show(data.stop(selected.id))}>Stop</Button>
             )}
             {(selected.status === 'interrupted' || (selected.status === 'waiting_setup' && !asking)) && (
               <>
-                <Button variant="primary" disabled={running} onClick={carryOn}>Carry on</Button>
-                <Button variant="ghost" data-testid="jose-cancel-request" disabled={running} onClick={() => { setMessage(cancelRequest(selected.id).summary); refresh(); }}>Cancel</Button>
+                <Button variant="primary" disabled={running || readOnly} onClick={carryOn}>Carry on</Button>
+                <Button variant="ghost" data-testid="jose-cancel-request" disabled={running || readOnly} onClick={() => show(data.cancel(selected.id))}>Cancel</Button>
               </>
             )}
             {hermesSteps.map((step) => (
@@ -321,20 +325,20 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
             ))}
             {waitingSteps.map((step) => (
               <React.Fragment key={step.stepId}>
-                <Button variant="primary" disabled={running} onClick={() => approveStep(step.stepId)}>
+                <Button variant="primary" disabled={running || readOnly} onClick={() => approveStep(step.stepId)}>
                   {`Approve and carry on: ${agentName(step.agent)} ${step.actionType}`}
                 </Button>
                 <Button
                   variant="ghost"
-                  disabled={running}
-                  onClick={() => { setMessage(rejectRequestStep(selected.id, step.stepId).summary); refresh(); }}
+                  disabled={running || readOnly}
+                  onClick={() => show(data.rejectStep(selected.id, step.stepId))}
                 >
                   {`Reject: ${agentName(step.agent)} ${step.actionType}`}
                 </Button>
               </React.Fragment>
             ))}
             {editing && <Button variant="ghost" onClick={() => setEditing(false)}>Stop editing</Button>}
-            <Button variant="ghost" onClick={() => setTemplateName(templateName === null ? '' : null)}>Save as template</Button>
+            {data.local && <Button variant="ghost" onClick={() => setTemplateName(templateName === null ? '' : null)}>Save as template</Button>}
           </div>
 
           {templateName !== null && (
