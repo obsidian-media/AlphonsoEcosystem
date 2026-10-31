@@ -155,4 +155,4 @@ required verification evidence.
 ## Known Staleness
 - ARCHITECTURE.md previously claimed lib.rs "~7,200 lines" (~1,585 / 18 modules) — **corrected 2026-07-08**: actual is ~2,197 lines, 105 commands, 25 modules. AGENTS.md itself was stale on component count (82 `.jsx` → 114 `.tsx`), connector count (13 → 22), and service count (130 → 165); all corrected in this pass.
 - Ground truth last verified 2026-10-25 (2.10.0 on `main`). WhatsApp deployment finalized.
-- **This file was reconciled against real code again on 2026-10-25** (first on 2026-07-08 — see `docs/AUDIT_REPORT_2026-07-08.md`). Trust ground truth over this file if any remaining discrepancy is found.
+- **This file was reconciled against real code again on 2026-10-25** (first on 2026-07-08 — see `docs/internal/AUDIT_REPORT_2026-07-08.md`). Trust ground truth over this file if any remaining discrepancy is found.

@@ -1,6 +1,6 @@
 # Alphonso Bug Report — Full Codebase Audit
 
-> **Status (2026-10-25):** a dated bug report (2026-06-24); its items were fixed in the passes that followed (`docs/FIX_PLAN.md`). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
+> **Status (2026-10-25):** a dated bug report (2026-06-24); its items were fixed in the passes that followed (`docs/internal/FIX_PLAN.md`). Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
 **Date:** 2026-06-24  
 **Version:** v2.2.3  
 **Scope:** Every file in `src/`, `src-tauri/src/`, `voice/`, `.github/workflows/`  

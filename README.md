@@ -76,7 +76,7 @@ Free: every agent and every connector, no license key. Services you connect with
 
 ## For developers
 
-Building from source, running the tests, and how it's put together: [CONTRIBUTING.md](CONTRIBUTING.md), [ARCHITECTURE.md](ARCHITECTURE.md) and [AGENTS.md](AGENTS.md).
+Building from source, running the tests, and how it's put together: [CONTRIBUTING.md](CONTRIBUTING.md), [ARCHITECTURE.md](ARCHITECTURE.md) and [AGENTS.md](AGENTS.md). Every document is listed in the [docs index](docs/README.md).
 
 ## Third-party notices
 

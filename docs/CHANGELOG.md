@@ -946,7 +946,7 @@ Files changed:
 - `src/agents/hector/hectorProfile.js` — updated `skillPackIds` (23 total)
 - `src/test/hectorSkillPacks.test.js` — new unit tests
 - `src/test/hectorSkillIntegration.test.js` — new integration tests
-- `docs/HECTOR_SKILLS.md` — new dedicated documentation
+- `docs/internal/HECTOR_SKILLS.md` — new dedicated documentation
 - `docs/AGENT_GUIDE.md` — updated Hector section
 
 **Miya additions (16 new packs):**
@@ -962,7 +962,7 @@ Files changed:
 - `src/agents/miya/miyaProfile.js` — updated `skillPackIds` (21 total)
 - `src/test/miyaSkillPacks.test.js` — new unit tests
 - `src/test/miyaSkillIntegration.test.js` — new integration tests
-- `docs/MIYA_SKILLS.md` — new dedicated documentation
+- `docs/internal/MIYA_SKILLS.md` — new dedicated documentation
 - `docs/AGENT_GUIDE.md` — updated Miya section
 
 **Marcus additions (16 new packs):**
@@ -978,7 +978,7 @@ Files changed:
 - `src/agents/marcus/marcusProfile.js` — updated `skillPackIds` (20 total)
 - `src/test/marcusSkillPacks.test.js` — new unit tests
 - `src/test/marcusSkillIntegration.test.js` — new integration tests
-- `docs/MARCUS_SKILLS.md` — new dedicated documentation
+- `docs/internal/MARCUS_SKILLS.md` — new dedicated documentation
 
 **Echo additions (16 new packs):**
 - Decisions: Decision Capture, Decision Diff, Audit Trail
@@ -1034,7 +1034,7 @@ All packs include:
 - 2-3 example tasks per pack
 - Per-pack scope overrides in `agentContractService.ts`
 - Unit and integration tests
-- Dedicated documentation (`docs/ALPHONSO_SKILLS.md`)
+- Dedicated documentation (`docs/internal/ALPHONSO_SKILLS.md`)
 
 Files changed:
 - `src/services/skillPackService.ts` — 16 new packs in `BASE_PACKS` + 16 guidance entries
@@ -1042,7 +1042,7 @@ Files changed:
 - `src/agents/alphonso/alphonsoProfile.js` — updated `skillPackIds` (18 total)
 - `src/test/alphonsoSkillPacks.test.js` — new unit tests
 - `src/test/alphonsoSkillIntegration.test.js` — new integration tests
-- `docs/ALPHONSO_SKILLS.md` — new dedicated documentation
+- `docs/internal/ALPHONSO_SKILLS.md` — new dedicated documentation
 - `docs/AGENT_GUIDE.md` — updated Alphonso section
 
 ---
@@ -1050,7 +1050,7 @@ Files changed:
 ## [Unreleased] — 2026-07-15 (production-readiness execution — Cycle 1–2)
 
 Execution of the production-readiness roadmap
-(`docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md`), branch
+(`docs/internal/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md`), branch
 `claude/production-readiness-audit-mxenki` / PR #99.
 
 - **CI turned green (Cycle 1):** bumped yanked `spin 0.9.8 → 0.9.9` so
@@ -1273,7 +1273,7 @@ running app. Full narrative and rationale: `docs/ALPHONSO_GROUND_TRUTH.md` §11.
   agents) never actually built.
 
 **Handed off:** full in-app auto-update (download+install+relaunch) —
-`docs/AUTO_UPDATE_HANDOFF.md` (new) + PR #98 on `feat/in-app-auto-update`.
+`docs/internal/AUTO_UPDATE_HANDOFF.md` (new) + PR #98 on `feat/in-app-auto-update`.
 
 **Verification:** 93 JS/TS tests passing (15 new WhatsApp, 2 new Telegram
 regression, 1 new Coach Mode regression), 31/31 voice backend pytest, `cargo
@@ -2153,7 +2153,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - **Agent performance export** — CSV + JSON download from AgentPerformanceView
 - **Dead Letter Queue section** in AgentPerformanceView — count, oldest timestamp, Retry All button
 - **CONTRIBUTING.md** — PR checklist, branch strategy, TS requirements, commit format
-- **docs/WORKFLOW_NODES.md** — all 9 node types documented (trigger, ocr, memory, analysis, condition, approval, action, notification, report)
+- **docs/internal/WORKFLOW_NODES.md** — all 9 node types documented (trigger, ocr, memory, analysis, condition, approval, action, notification, report)
 - **e2e/multiagent.spec.js** — Playwright pipeline smoke test (skipped in CI, requires Ollama)
 
 ## [2.3.3] - 2026-06-27 — Bug Fix Sprint: Voice OS, AgentPairing, Settings persistence, UX polish
@@ -2421,8 +2421,8 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - `src/hooks/pcm-processor.worklet.ts` — PCM AudioWorklet processor string constant, required by `useJarvisVoice.ts`
 - `kv_delete` Tauri command in `src-tauri/src/kv_store.rs` — deletes a key from SQLite kv_store table
 - `typecheck` npm script — runs `tsc --noEmit` for full TypeScript checking
-- `docs/BUG_REPORT.md` — full codebase audit report with file:line citations for all 16 bugs
-- `docs/FIX_PLAN.md` — phased remediation plan used to guide this fix session
+- `docs/internal/BUG_REPORT.md` — full codebase audit report with file:line citations for all 16 bugs
+- `docs/internal/FIX_PLAN.md` — phased remediation plan used to guide this fix session
 
 ### Changed
 - `verify:app` now runs: `lint && typecheck && test && build` (typecheck added)
@@ -2708,7 +2708,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
   - USER_MANUAL.md + TROUBLESHOOTING.md: test counts and version reference corrected
 
 ### Added
-- **`docs/MOBILE_COMPANION_SPRINT.md`** — Full executable sprint plan for the iOS/mobile WebSocket companion: 5 phases, complete Rust and Swift code templates, JSON-RPC protocol, mDNS discovery, PIN auth, Cargo.toml additions, wscat test procedure, iOS Xcode project structure, SwiftUI component code, push notification setup, offline queue, and definition-of-done checklist for each phase.
+- **`docs/internal/MOBILE_COMPANION_SPRINT.md`** — Full executable sprint plan for the iOS/mobile WebSocket companion: 5 phases, complete Rust and Swift code templates, JSON-RPC protocol, mDNS discovery, PIN auth, Cargo.toml additions, wscat test procedure, iOS Xcode project structure, SwiftUI component code, push notification setup, offline queue, and definition-of-done checklist for each phase.
 
 ---
 
@@ -3039,7 +3039,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - Hardware GPU acceleration enabled — removed `--disable-gpu`, `--disable-gpu-compositing`, `--use-angle=swiftshader` flags
 - `.env.example` sanitized — real phone numbers in `WHATSAPP_ALLOWED_NUMBERS` replaced with `REPLACE_WITH_YOUR_ALLOWED_NUMBERS`
 - `docs/SECURITY_CONFIG_REPORT.md` — documents all security configuration changes
-- `docs/SECURITY_ROTATION_CHECKLIST.md` — credential rotation checklist covering all 26 credentials
+- `docs/internal/SECURITY_ROTATION_CHECKLIST.md` — credential rotation checklist covering all 26 credentials
 
 ### Added (2026-05-31 — Claude Code session, Agent B: CI + Coverage)
 - `cargo test` step added to GitHub Actions `ci.yml` — new `rust-quality` job runs `cargo clippy` and `cargo test`
@@ -3054,7 +3054,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - "Connectors" tab mounted in `src/App.jsx` pointing to `ConnectorHealthPanel`
 - `src/components/Sidebar.jsx` — "Connectors" nav item added with inline `ConnectorStatusStrip` showing live/missing/disabled counts
 - `src/components/ApprovalModal.jsx` — improved approval dialog: connector badge, colored risk level indicator (high/medium/low), irreversibility warning banner, red confirm button for high-risk actions; backward-compatible with existing `label` prop
-- `docs/UX_CONNECTOR_HEALTH_REPORT.md` — documents UX changes
+- `docs/internal/UX_CONNECTOR_HEALTH_REPORT.md` — documents UX changes
 
 ### Added (2026-05-31 — Claude Code session, Agent D: Rust backend)
 - SQLite WAL mode — `PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;` added to `open_memory_db()` for concurrent read/write performance
@@ -3069,18 +3069,18 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - `src/services/memoryService.ts` — first TypeScript service migration with `MemoryRecord`, `MemoryWriteOptions`, `MemoryFilters` interfaces; Vite resolves `.ts` before `.js` automatically
 - `src/services/serviceScopes.js` — all 24 storage key constants documented with JSDoc comments
 - `vite.config.cjs` deleted — `vite.config.js` is now the only Vite config
-- `docs/FRONTEND_MIGRATION_REPORT.md` — step-by-step pattern and prioritized migration order for all 50+ remaining services
+- `docs/internal/FRONTEND_MIGRATION_REPORT.md` — step-by-step pattern and prioritized migration order for all 50+ remaining services
 
 ### Added (2026-05-31 — Claude Code session, Agent F: Connector completion)
 - `connectorRegistryService.js` — Claude and ChatGPT connectors now return structured `{ success, code, error }` objects with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`; 30-second timeout; pre-flight API key check before any network call
 - `hectorResearchService.js` — Brave Search dual-path: Rust `search_brave_sources` command first; falls through to `VITE_BRAVE_SEARCH_API_KEY` frontend fetch if Rust path returns empty or fails
 - `src/components/ModelSwitcher.jsx` — Ollama model dropdown; fetches `/api/tags`, shows "Ollama offline" pill if unreachable, persists selection to `alphonso_selected_model_v1`; mounted in ChatView header bar
-- `docs/CONNECTOR_COMPLETION_REPORT.md` — documents all connector improvements
+- `docs/internal/CONNECTOR_COMPLETION_REPORT.md` — documents all connector improvements
 
 ### Added (2026-05-31 — Claude Code session, Agent G: Performance)
 - `src/App.jsx` — `ApprovalModal`, `OnboardingWizard`, `ConnectorHealthPanel` converted from static to `React.lazy()` imports; missing `<Suspense>` added to `CommandRib`
 - Main JS chunk reduced: 331 KB → 320 KB
-- `docs/BUNDLE_PERF_REPORT.md` — documents bundle size changes
+- `docs/internal/BUNDLE_PERF_REPORT.md` — documents bundle size changes
 
 ### Added (2026-05-31 — Claude Code session, Agent H: Infrastructure + Docs)
 - `ARCHITECTURE.md` at project root — full stack diagram, 9-agent roster, orchestration flow, service groups, storage model, security model, deployment
@@ -3088,7 +3088,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - `docs/CONNECTORS.md` — all 11 connectors: required env vars, credential acquisition steps, test procedure, known limitations
 - `docs/CHANGELOG.md` — started; this file
 - `.github/dependabot.yml` — weekly updates for npm, Cargo, and GitHub Actions
-- `docs/INFRA_DOCS_REPORT.md` — new-developer setup path and maintainer release path
+- `docs/internal/INFRA_DOCS_REPORT.md` — new-developer setup path and maintainer release path
 
 ### Added (2026-05-31 — Claude Code session, Autonomous mode)
 - `src/components/AgentDock.jsx` — minimize/expand toggle (persisted to `alphonso_agent_dock_minimized_v1`); Ollama connectivity pill showing online/offline/checking state; Minus and ChevronDown icons from Lucide
@@ -3104,7 +3104,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 
 ## [0.1.0] - 2026-05-13
 
-Initial production-ready baseline. Summary from `docs/ALPHONSO_PRODUCTION_COMPLETION_REPORT_2026-05-13.md`:
+Initial production-ready baseline. Summary from `docs/internal/ALPHONSO_PRODUCTION_COMPLETION_REPORT_2026-05-13.md`:
 
 ### Added
 - Jose orchestration durability: `orchestrationQueueService.js` with full state transitions (`new → pending_approval → queued → reported_to_jose → dead_letter/failed`), dead-letter replay, and manual interrupt

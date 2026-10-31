@@ -261,5 +261,5 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - Coverage floors 48% lines / 38% branches / 30% functions / 48% statements (`npm run test:coverage`); 544 test files, 6,719 tests, all passing (verified 2026-10-25 — this line is not covered by `scripts/verify-doc-counts.mjs`'s ARCHITECTURE.md checks, so it can drift silently; cross-check against AGENTS.md's Project Identity line before trusting it)
 - GitHub connector tests: 20 tests in `githubConnector.test.js`; Slack connector tests: 16 tests in `slackConnector.test.js`
 - `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI; `cargo clippy -- -D warnings` clean (verified 2026-07-08)
-- **Last reconciled with the code:** 2026-10-25 (first full audit 2026-07-08 — see `docs/AUDIT_REPORT_2026-07-08.md`).
+- **Last reconciled with the code:** 2026-10-25 (first full audit 2026-07-08 — see `docs/internal/AUDIT_REPORT_2026-07-08.md`).
 

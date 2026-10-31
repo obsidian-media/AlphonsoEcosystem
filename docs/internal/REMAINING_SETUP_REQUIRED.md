@@ -13,7 +13,7 @@ This file lists items that are intentionally **not** marked complete without ext
 - Slack / Discord / custom webhook connection URLs
 - Local ComfyUI (and its video, character and motion models), Kokoro, AudioCraft and Whisper, from Runtime Hub
 
-See `docs/EXTERNAL_CONNECTOR_SETUP.md` and `docs/CONNECTORS.md`.
+See `docs/internal/EXTERNAL_CONNECTOR_SETUP.md` and `docs/CONNECTORS.md`.
 
 ## 2) Not yet checked with real accounts
 - Publishing to YouTube, Instagram and Facebook, moving and cancelling posts, and reading their numbers
