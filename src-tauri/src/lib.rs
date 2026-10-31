@@ -975,6 +975,7 @@ pub fn run() {
       hermes_profiles::hermes_profile_stop,
       hermes_profiles::hermes_profile_remove,
       hermes_profiles::hermes_profiles_list,
+      hermes_profiles::hermes_find_user_profiles,
       runtime_manager::runtime_load_bundled_starter_model,
       runtime_manager::runtime_start_tool,
       runtime_manager::runtime_stop_tool,

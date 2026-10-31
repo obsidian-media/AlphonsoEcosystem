@@ -408,6 +408,184 @@ pub fn hermes_profiles_list(state: tauri::State<'_, RuntimeManager>) -> Vec<Prof
   list
 }
 
+// ── The user's own Hermes profiles (read only) ─────────────────────────
+
+/// Settings files larger than this are not read.
+const MAX_CONFIG_BYTES: u64 = 1_048_576;
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiServerState {
+  pub on: bool,
+  pub port: Option<u16>,
+}
+
+/// What Alphonso reads from one of the user's own profiles: only these fields,
+/// never a key. Settings switched on in the profile's `.env` are not read.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserProfile {
+  pub name: String,
+  pub folder: String,
+  pub api_server: ApiServerState,
+  pub platforms_on: Vec<String>,
+  pub toolsets_on: Vec<String>,
+  pub approvals_mode: Option<String>,
+  pub readable: bool,
+}
+
+/// Hermes's own rule for its home folder: `HERMES_HOME` (a profile folder's
+/// `profiles/<name>` points back at its root), else the platform default.
+pub(crate) fn user_hermes_root(
+  env_home: Option<String>,
+  local_app_data: Option<String>,
+  home: Option<String>,
+  windows: bool,
+) -> Option<PathBuf> {
+  let clean = |v: Option<String>| v.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+  if let Some(h) = clean(env_home) {
+    let path = PathBuf::from(h);
+    if path
+      .parent()
+      .and_then(|p| p.file_name())
+      .is_some_and(|n| n == "profiles")
+    {
+      return path
+        .parent()
+        .and_then(|p| p.parent())
+        .map(Path::to_path_buf);
+    }
+    return Some(path);
+  }
+  let home = clean(home);
+  if windows {
+    let local = clean(local_app_data)
+      .map(PathBuf::from)
+      .or_else(|| home.map(|h| PathBuf::from(h).join("AppData").join("Local")))?;
+    return Some(local.join("hermes"));
+  }
+  home.map(|h| PathBuf::from(h).join(".hermes"))
+}
+
+fn yaml_str_list(value: &yaml_rust2::Yaml) -> Option<Vec<String>> {
+  value.as_vec().map(|items| {
+    items
+      .iter()
+      .filter_map(|i| i.as_str().map(str::to_string))
+      .collect()
+  })
+}
+
+fn yaml_port(value: &yaml_rust2::Yaml) -> Option<u16> {
+  value
+    .as_i64()
+    .and_then(|p| u16::try_from(p).ok())
+    .or_else(|| value.as_str().and_then(|p| p.trim().parse().ok()))
+}
+
+fn read_user_profile(name: &str, folder: &Path) -> UserProfile {
+  let mut profile = UserProfile {
+    name: name.to_string(),
+    folder: folder.to_string_lossy().to_string(),
+    api_server: ApiServerState {
+      on: false,
+      port: None,
+    },
+    platforms_on: Vec::new(),
+    toolsets_on: Vec::new(),
+    approvals_mode: None,
+    readable: false,
+  };
+  let path = folder.join("config.yaml");
+  if !std::fs::metadata(&path).is_ok_and(|m| m.len() <= MAX_CONFIG_BYTES) {
+    return profile;
+  }
+  let Ok(text) = std::fs::read_to_string(&path) else {
+    return profile;
+  };
+  let Ok(docs) = yaml_rust2::YamlLoader::load_from_str(&text) else {
+    return profile;
+  };
+  let empty = yaml_rust2::Yaml::Hash(Default::default());
+  let doc = docs.first().unwrap_or(&empty);
+  if doc.as_hash().is_none() && !doc.is_null() {
+    return profile;
+  }
+  profile.readable = true;
+  // Top-level `platforms` wins over `gateway.platforms`, as in Hermes.
+  let mut platforms: Vec<(String, bool, Option<u16>)> = Vec::new();
+  for source in [&doc["gateway"]["platforms"], &doc["platforms"]] {
+    let Some(map) = source.as_hash() else {
+      continue;
+    };
+    for (key, block) in map {
+      let Some(name) = key.as_str() else { continue };
+      let enabled = block["enabled"].as_bool();
+      let port = yaml_port(&block["extra"]["port"]).or_else(|| yaml_port(&block["port"]));
+      match platforms.iter_mut().find(|(n, _, _)| n == name) {
+        Some(entry) => {
+          if let Some(e) = enabled {
+            entry.1 = e;
+          }
+          if port.is_some() {
+            entry.2 = port;
+          }
+        }
+        None => platforms.push((name.to_string(), enabled.unwrap_or(false), port)),
+      }
+    }
+  }
+  for (name, enabled, port) in platforms {
+    if name == "api_server" {
+      profile.api_server = ApiServerState { on: enabled, port };
+    } else if enabled {
+      profile.platforms_on.push(name);
+    }
+  }
+  profile.toolsets_on = yaml_str_list(&doc["platform_toolsets"]["api_server"])
+    .or_else(|| yaml_str_list(&doc["toolsets"]))
+    .unwrap_or_default();
+  profile.approvals_mode = doc["approvals"]["mode"].as_str().map(str::to_string);
+  profile
+}
+
+/// The default profile (the root's own `config.yaml`) and every folder in
+/// `profiles/`. Nothing is written.
+pub(crate) fn find_user_profiles(root: &Path) -> Vec<UserProfile> {
+  let mut found = Vec::new();
+  if root.join("config.yaml").is_file() {
+    found.push(read_user_profile("default", root));
+  }
+  if let Ok(entries) = std::fs::read_dir(root.join("profiles")) {
+    let mut names: Vec<String> = entries
+      .flatten()
+      .filter(|e| e.path().is_dir())
+      .filter_map(|e| e.file_name().into_string().ok())
+      .collect();
+    names.sort();
+    for name in names {
+      found.push(read_user_profile(&name, &root.join("profiles").join(&name)));
+    }
+  }
+  found
+}
+
+#[tauri::command]
+pub fn hermes_find_user_profiles() -> Vec<UserProfile> {
+  let home_var = if cfg!(target_os = "windows") {
+    "USERPROFILE"
+  } else {
+    "HOME"
+  };
+  let root = user_hermes_root(
+    std::env::var("HERMES_HOME").ok(),
+    std::env::var("LOCALAPPDATA").ok(),
+    std::env::var(home_var).ok(),
+    cfg!(target_os = "windows"),
+  );
+  root.map(|r| find_user_profiles(&r)).unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -554,6 +732,90 @@ mod tests {
       8700
     ));
     assert!(!url_is_profile("http://127.0.0.1:8700@evil.example/", 8700));
+  }
+
+  fn temp_root(tag: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("alphonso-hermes-{tag}-{}", new_key()));
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+  }
+
+  #[test]
+  fn finds_profiles_read_only() {
+    let root = temp_root("find");
+    let a = root.join("profiles").join("a");
+    let b = root.join("profiles").join("b");
+    std::fs::create_dir_all(&a).unwrap();
+    std::fs::create_dir_all(&b).unwrap();
+    std::fs::write(
+      a.join("config.yaml"),
+      "platforms:
+  api_server:
+    enabled: true
+    extra:
+      port: 9100
+  telegram:
+    enabled: true
+  discord:
+    enabled: false
+platform_toolsets:
+  api_server: [web, terminal]
+approvals:
+  mode: smart
+",
+    )
+    .unwrap();
+    std::fs::write(
+      b.join("config.yaml"),
+      "platforms: [unclosed
+  : :",
+    )
+    .unwrap();
+    std::fs::write(
+      root.join("config.yaml"),
+      "toolsets: [web]
+",
+    )
+    .unwrap();
+    let before = std::fs::metadata(a.join("config.yaml"))
+      .unwrap()
+      .modified()
+      .unwrap();
+    let found = find_user_profiles(&root);
+    let names: Vec<&str> = found.iter().map(|p| p.name.as_str()).collect();
+    assert_eq!(names, ["default", "a", "b"]);
+    let pa = &found[1];
+    assert!(pa.readable);
+    assert!(pa.api_server.on);
+    assert_eq!(pa.api_server.port, Some(9100));
+    assert_eq!(pa.platforms_on, ["telegram"]);
+    assert_eq!(pa.toolsets_on, ["web", "terminal"]);
+    assert_eq!(pa.approvals_mode.as_deref(), Some("smart"));
+    assert!(!found[2].readable);
+    assert!(found[0].readable);
+    assert_eq!(found[0].toolsets_on, ["web"]);
+    let after = std::fs::metadata(a.join("config.yaml"))
+      .unwrap()
+      .modified()
+      .unwrap();
+    assert_eq!(before, after);
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn home_from_env_else_default() {
+    let set = user_hermes_root(Some("D:/h/profiles/x".into()), None, None, true);
+    assert_eq!(set, Some(PathBuf::from("D:/h")));
+    let plain = user_hermes_root(Some("D:/myhermes".into()), None, None, true);
+    assert_eq!(plain, Some(PathBuf::from("D:/myhermes")));
+    let win = user_hermes_root(None, Some("C:/Users/u/AppData/Local".into()), None, true);
+    assert_eq!(
+      win,
+      Some(PathBuf::from("C:/Users/u/AppData/Local").join("hermes"))
+    );
+    let unix = user_hermes_root(None, None, Some("/home/u".into()), false);
+    assert_eq!(unix, Some(PathBuf::from("/home/u").join(".hermes")));
+    assert_eq!(user_hermes_root(None, None, None, false), None);
   }
 
   #[test]

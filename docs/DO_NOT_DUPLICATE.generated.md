@@ -2,10 +2,14 @@
 # Do Not Duplicate — Generated Source Inventory
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 Source-backed inventory: 346 services and 180 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 =======
 Source-backed inventory: 341 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 >>>>>>> 1a3abf4 (feat(hermes): set up and remove a profile for an agent)
+=======
+Source-backed inventory: 343 services and 179 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+>>>>>>> 3bfae35 (feat(hermes): find your own Hermes profiles and warn about risky settings)
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -353,7 +357,9 @@ Source-backed inventory: 341 services and 179 components. Human purpose descript
 | service | `src/services/hectorBookmarkService.ts` | `deleteBookmark`, `exportBookmarks`, `getBookmarks`, `getStats`, `saveBookmark` |
 | service | `src/services/hectorExportService.ts` | `buildHectorReportMarkdown`, `exportHectorReportAsMarkdown`, `exportHectorReportAsPdf`, `exportHectorReportAsPowerPoint` |
 | service | `src/services/hectorResearchService.js` | `buildHectorSynthesisPrompt`, `createResearchBrief`, `createResearchDraft`, `fetchRssSources`, `fetchSuppliedSourcesForReport`, `isBraveSearchConfigured`, `listHectorActivity`, `listHectorReports`, `parseHectorSynthesisResponse`, `parseRssItems`, `persistResearchResult`, `recordHectorActivity`, `resynthesizeHectorReport`, `RSS_FEED_CATALOG`, `runHectorLiveResearch`, `runMultiSourceResearch`, `scoreRssFeed`, `searchBrave`, `slimOldReports`, `synthesizeHectorResearch` |
+| service | `src/services/hermes/hermesConstants.ts` | `READING_TOOLSETS` |
 | service | `src/services/hermes/hermesProfiles.ts` | `isProfileKeyRef`, `listOwnProfiles`, `NOT_DESKTOP`, `PAID_IN_ZERO_COST`, `ProfileInfo`, `profileKeyRef`, `ProfileModel`, `profileModelChoices`, `ProfileResult`, `removeProfile`, `setProfileModel`, `setUpProfile` |
+| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
