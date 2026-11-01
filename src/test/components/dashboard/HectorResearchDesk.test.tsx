@@ -6,6 +6,7 @@ vi.mock('../../../services/hectorResearchService', () => {
   let reports: Record<string, unknown>[] = [];
   return {
     __resetReports: () => { reports = []; },
+    __addReport: (r: Record<string, unknown>) => { reports.push(r); },
     createHectorApprovalPacket: vi.fn(),
     createResearchDraft: vi.fn((opts) => {
       const report = { id: 'draft-1', researchQuestion: opts.researchQuestion, status: 'draft', confidenceLevel: 'unknown' };
@@ -73,5 +74,21 @@ describe('HectorResearchDesk', () => {
     render(<HectorResearchDesk />);
     fireEvent.click(screen.getByText('Live Run'));
     expect(await screen.findByText('Select a report first to view live telemetry.')).toBeTruthy();
+  });
+
+  // 2.11.0 QA (owner, 2026-11-01): the Reports tab showed the raw sources first and Hector's
+  // answer at the bottom. A report with Hector's research leads with the answer.
+  it("leads with Hector's answer, and keeps the raw source list folded away", async () => {
+    (hectorResearchServiceModule as unknown as { __addReport: (r: Record<string, unknown>) => void }).__addReport({
+      id: 'r1', researchQuestion: 'Top KDP niches?', status: 'research_done', confidenceLevel: 'inferred',
+      sources: [{ url: 'https://rank.example/kdp', type: 'general', snippet: 'raw text' }],
+      research: { question: 'Top KDP niches?', answer: 'Journals and planners sell best [1].', subQuestions: [], disagreements: [], notFound: [], rounds: 1, providers: [], sources: [{ n: 1, url: 'https://rank.example/kdp', title: 'Rank', kind: 'general', label: 'read', excerpt: '' }] },
+    });
+    render(<HectorResearchDesk />);
+    fireEvent.click(screen.getByText('Reports'));
+    expect(await screen.findByTestId('research-findings')).toBeTruthy();
+    expect(screen.queryByText('Discovered Sources')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /every page hector looked at/i }));
+    expect(screen.getByText('Discovered Sources')).toBeTruthy();
   });
 });

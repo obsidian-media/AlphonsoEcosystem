@@ -19,7 +19,7 @@ vi.mock('../../services/sessionIntelligenceService', () => ({
   listSessionEvents: vi.fn(() => []),
   summarizeSession: vi.fn(() => ({ eventCount: 0 }))
 }));
-vi.mock('../../services/workflowBuilderService', () => ({ listWorkflows: vi.fn(() => []) }));
+vi.mock('../../services/jose/joseUserTemplates', () => ({ listUserTemplates: vi.fn(() => [{ id: 'user_launch' }, { id: 'user_review' }]) }));
 vi.mock('../../services/trustModel', () => ({
   TRUST_STATES: { VERIFIED: 'verified', UNVERIFIED: 'unverified', TEMPORARY: 'temporary' },
   trustColor: vi.fn(() => 'gray')
@@ -41,7 +41,6 @@ import {
   MemoryConfidencePanel,
   EcosystemMapPanel,
   SessionIntelligencePanel,
-  WorkflowOperationsPanel,
   PrivacyShieldPanel,
   OperatorModesPanel
 } from '../../components/EcosystemMaturityPanels';
@@ -97,6 +96,12 @@ describe('EcosystemMaturityPanels', () => {
       render(<EcosystemMapPanel ollamaStatus={{ label: 'Ready' }} />);
       expect(screen.getByText(/Ecosystem Map/i)).toBeTruthy();
     });
+    // 2.11.0 QA: the map counted Builder workflows, which did nothing; it counts your saved teams.
+    it('counts your saved teams, not Builder workflows', () => {
+      render(<EcosystemMapPanel />);
+      expect(screen.getByText('2 teams')).toBeTruthy();
+      expect(screen.queryByText(/flows$/)).toBeNull();
+    });
   });
 
   describe('SessionIntelligencePanel', () => {
@@ -110,16 +115,6 @@ describe('EcosystemMaturityPanels', () => {
     });
   });
 
-  describe('WorkflowOperationsPanel', () => {
-    it('renders without crashing', () => {
-      const { container } = render(<WorkflowOperationsPanel />);
-      expect(container).toBeTruthy();
-    });
-    it('shows workflow operations heading', () => {
-      render(<WorkflowOperationsPanel />);
-      expect(screen.getByText(/Workflow Operations/i)).toBeTruthy();
-    });
-  });
 
   describe('PrivacyShieldPanel', () => {
     it('renders without crashing', () => {

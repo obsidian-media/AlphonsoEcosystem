@@ -23,6 +23,18 @@ interface Props {
   report?: Report | null;
 }
 
+/**
+ * A page's text, or "Couldn't read this page." when it is mostly not text: reports saved before
+ * 2.11.1 hold compressed bytes as some pages' text (2.11.0 QA, owner 2026-11-01).
+ */
+export function readableText(value: string | undefined): string | undefined {
+  if (!value) return value;
+  const chars = [...value];
+  // eslint-disable-next-line no-control-regex
+  const bad = chars.filter((c) => c === '\uFFFD' || /[\u0000-\u0008\u000E-\u001F]/.test(c)).length;
+  return bad * 20 > chars.length ? "Couldn't read this page." : value;
+}
+
 export function SourceBoard({ report }: Props): React.JSX.Element {
   const sources = report?.sources ?? [];
   return (
@@ -45,10 +57,11 @@ export function SourceBoard({ report }: Props): React.JSX.Element {
                 {source.url}
               </button>
               <div className="mt-1 text-[11px] text-(--text-3)">
-                {source.type} | {source.verificationState ?? source.confidence} | {source.httpStatus ? `HTTP ${source.httpStatus}` : 'not fetched'} | expires {source.expiresAt ? new Date(source.expiresAt).toLocaleDateString() : 'n/a'}
+                {[source.type, source.verificationState ?? source.confidence, source.httpStatus ? `HTTP ${source.httpStatus}` : 'Not opened', source.expiresAt ? `expires ${new Date(source.expiresAt).toLocaleDateString()}` : '']
+                  .filter(Boolean).join(' · ')}
               </div>
               {source.title && <div className="mt-2 text-xs font-semibold text-(--text-2)">{source.title}</div>}
-              <div className="mt-1 text-[11px] text-(--text-3)">{source.error ?? source.snippet ?? source.confidenceReason}</div>
+              <div className="mt-1 text-[11px] text-(--text-3)">{readableText(source.error ?? source.snippet ?? source.confidenceReason)}</div>
             </div>
           ))}
         </div>

@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 355 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 355 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -59,7 +59,7 @@ Source-backed inventory: 355 services and 184 components. Human purpose descript
 | component | `src/components/echo/EchoRemembered.tsx` | `DecisionRow`, `EchoRemembered` |
 | component | `src/components/echo/MeaningSearchStatus.tsx` | `MeaningSearchStatus` |
 | component | `src/components/EcosystemHub.tsx` | `EcosystemHub` |
-| component | `src/components/EcosystemMaturityPanels.tsx` | `ApprovalCenterPanel`, `EcosystemMapPanel`, `MemoryConfidencePanel`, `OperatorModesPanel`, `PrivacyShieldPanel`, `SessionIntelligencePanel`, `TrustLayerPanel`, `WorkflowOperationsPanel` |
+| component | `src/components/EcosystemMaturityPanels.tsx` | `ApprovalCenterPanel`, `EcosystemMapPanel`, `MemoryConfidencePanel`, `OperatorModesPanel`, `PrivacyShieldPanel`, `SessionIntelligencePanel`, `TrustLayerPanel` |
 | component | `src/components/EcosystemMaturityPanelsGate.tsx` | `EcosystemMaturityPanelsGate` |
 | component | `src/components/ErrorBoundary.tsx` | `ErrorBoundary`, `withErrorBoundary` |
 | component | `src/components/FilesView.tsx` | `FilesView` |
@@ -70,7 +70,7 @@ Source-backed inventory: 355 services and 184 components. Human purpose descript
 | component | `src/components/hector/ResearchFindings.tsx` | `ResearchFindings` |
 | component | `src/components/hector/ResearchReportPanel.tsx` | `ResearchReportPanel` |
 | component | `src/components/hector/SavedSources.tsx` | `SavedSources` |
-| component | `src/components/hector/SourceBoard.tsx` | `SourceBoard` |
+| component | `src/components/hector/SourceBoard.tsx` | `readableText`, `SourceBoard` |
 | component | `src/components/HectorCompanionWidget.tsx` | `HectorCompanionWidget` |
 | component | `src/components/hermes/HermesMessagingWarning.tsx` | `HermesMessagingWarning` |
 | component | `src/components/hermes/HermesProfilesSection.tsx` | `HermesProfilesSection` |
@@ -185,8 +185,6 @@ Source-backed inventory: 355 services and 184 components. Human purpose descript
 | component | `src/components/VoiceInputButton.tsx` | `VoiceInputButton` |
 | component | `src/components/VoiceView.tsx` | `VoiceView` |
 | component | `src/components/WhatsAppInboxPanel.tsx` | `WhatsAppInboxPanel` |
-| component | `src/components/WorkflowBuilderView.tsx` | `WorkflowBuilderView` |
-| component | `src/components/WorkflowOperationsDashboard.tsx` | `WorkflowOperationsDashboard` |
 | component | `src/components/WorkflowPanel.tsx` | `WorkflowPanel` |
 | component | `src/components/WorkspaceExportImportView.tsx` | `WorkspaceExportImportView` |
 | service | `src/services/a2aProtocolService.ts` | `A2ATask`, `delegate`, `getTaskStatus`, `listActiveTasks`, `listTasksByAgent`, `updateTaskResult` |

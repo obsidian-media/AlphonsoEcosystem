@@ -907,7 +907,7 @@ function AppShell() {
                 {activeTab === 'hector' && (
                   <HectorResearchDesk onHectorStateChange={(payload: any) => { if (!payload) return; setHectorCompanionState((current: any) => ({ ...current, ...payload })); }} />
                 )}
-                {activeTab === 'automation' && <AutomationView />}
+                {activeTab === 'automation' && <AutomationView onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} />}
                 {activeTab === 'files' && <FilesView memoryItems={memoryItems} />}
                 {(activeTab === 'ecosystem' || activeTab === 'pairings' || activeTab === 'maturity') && (
                   <EcosystemHub key={activeTab} initialTab={activeTab === 'pairings' ? 'pairings' : activeTab === 'maturity' ? 'advanced' : 'overview'} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />

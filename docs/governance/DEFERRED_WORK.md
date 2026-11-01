@@ -1888,3 +1888,12 @@ starter model before).
 - [2026-10-21] **[DONE 2026-10-21]** **Desktop CI Jose execution evidence verified.** Run `39549859072` passed all prerequisite gates and all 16 Windows real-Tauri desktop spec files, including all three Jose approval tests. The queued execution result and case-insensitive `EXECUTION RESULTS` assertion are verified against the built app.
 
 - [2026-10-21] **Native Ollama acceptance rechecked.** The installed client is present at `D:\AgentDevWork\Apps\Ollama\ollama.exe`, but `ollama list` could not start its local server: Ollama reported access denied while opening/rotating files under `C:\Users\AgentDev\AppData\Local\Ollama\` and then timed out. The managed Voice OS venv is also absent. Native model-call and live Voice OS acceptance therefore remain open; repair/provisioning and a rerun are owner actions. Evidence: `audits/2026-10-21_Codex_NativeOllama_Audit.md`; documentation gate `39558985306` passed for commit `72974b3`.
+
+## 2026-11-01 — Workflow services left behind the archived Builder
+
+The Automation Builder and the 16 operations were removed from every screen (2.11.0 QA). Their
+services stay because older code reads them: `workflowBuilderService.ts` (Orchestrator view),
+`workflowOperationsRegistryService.ts` and `workflowExecutionService.js` (agent-chain workflows'
+`executeWorkflowTasks()`, `serviceScopes.ts`). Many executors in `workflowExecutionService.js`
+still write fixed text. Next: move agent-chain workflows fully to Teams and retire the three
+services (needs owner approval under R14).

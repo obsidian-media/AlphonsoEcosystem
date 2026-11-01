@@ -1,9 +1,6 @@
 import React from 'react';
-import { RefreshCw, Play, Trash2 } from 'lucide-react';
-import { createWorkflow, listWorkflows } from '../services/workflowBuilderService';
-import { listWorkflowReceipts } from '../services/workflowReceiptService';
-import { listWorkflowOperations, updateWorkflowOperationStatus } from '../services/workflowOperationsRegistryService';
-import { WorkflowBuilderView } from './WorkflowBuilderView';
+import { Play, Trash2 } from 'lucide-react';
+import { TeamsPage } from './teams/TeamsPage';
 import { DeadLetterQueueView } from './DeadLetterQueueView';
 import { Tabs } from './ui/Tabs';
 import {
@@ -28,28 +25,6 @@ const RUN_STATE_TEXT: Record<ScheduleRunResult['state'], string> = {
 const TIMING_PRESETS = SCHEDULE_PRESETS.filter((p) => !p.handler);
 const JOB_PRESETS = SCHEDULE_PRESETS.filter((p) => p.handler);
 const COMMAND = 'command';
-
-interface Workflow {
-  id: string;
-  name: string;
-  nodes?: unknown[];
-  agentScope?: string;
-}
-
-interface WorkflowReceipt {
-  id: string;
-  workflowId: string;
-  status: string;
-  createdAtMs?: number;
-}
-
-interface WorkflowOperation {
-  id: string;
-  name: string;
-  description?: string;
-  status?: string;
-  enabled?: boolean;
-}
 
 /**
  * Schedules (QA 2026-10-22): a schedule runs either a command for Jose (like a
@@ -229,34 +204,21 @@ function JoseSchedulerPanel() {
   );
 }
 
-export function AutomationView() {
-  const [workflows, setWorkflows] = React.useState<Workflow[]>(() => listWorkflows());
-  const [runs, setRuns] = React.useState<WorkflowReceipt[]>(() => listWorkflowReceipts());
-  const [ops, setOps] = React.useState<WorkflowOperation[]>(() => listWorkflowOperations());
-  const [newName, setNewName] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState('overview');
-
-  const handleCreate = () => {
-    const name = newName.trim();
-    if (!name) return;
-    createWorkflow(name);
-    setWorkflows(listWorkflows());
-    setNewName('');
-  };
-
-  const refresh = () => {
-    setWorkflows(listWorkflows());
-    setRuns(listWorkflowReceipts());
-    setOps(listWorkflowOperations());
-  };
+/**
+ * Automation (2.11.0 QA, owner 2026-11-01): Teams (saved agents and their jobs, each run a real Jose
+ * request) and Schedules (a request or a team on a timer), plus the dead letter queue. The visual
+ * Builder (its steps had no code behind them) and the 16 canned operations (made-up text) were
+ * archived to archive/MIGHTBEUSEDLATER/automation/.
+ */
+export function AutomationView({ onOpenJoseBoard }: { onOpenJoseBoard?: (requestId: string) => void }) {
+  const [activeTab, setActiveTab] = React.useState('teams');
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="px-6 pt-4 pb-0 shrink-0">
         <Tabs
           tabs={[
-            { id: 'overview', label: 'Overview' },
-            { id: 'builder', label: 'Builder' },
+            { id: 'teams', label: 'Teams' },
             { id: 'schedules', label: 'Schedules' },
             { id: 'deadletter', label: 'Dead Letter' }
           ]}
@@ -265,11 +227,7 @@ export function AutomationView() {
         />
       </div>
 
-      {activeTab === 'builder' ? (
-        <div className="flex-1 overflow-hidden">
-          <WorkflowBuilderView />
-        </div>
-      ) : activeTab === 'deadletter' ? (
+      {activeTab === 'deadletter' ? (
         <div className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full">
           <DeadLetterQueueView />
         </div>
@@ -278,110 +236,15 @@ export function AutomationView() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-(--text-1)">Jose Scheduler</h2>
-              <p className="text-xs text-(--text-3) mt-0.5">Automated task execution on intervals</p>
+              <p className="text-xs text-(--text-3) mt-0.5">Runs a request, or a team (/team &lt;name&gt; …), on a timer.</p>
             </div>
           </div>
           <JoseSchedulerPanel />
         </div>
       ) : (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-serif text-base font-bold text-(--text-1)">Automation</h2>
-          <p className="text-xs text-(--text-3) mt-0.5">Build and run multi-agent workflows</p>
+        <div className="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full">
+          <TeamsPage onOpenJoseBoard={onOpenJoseBoard} />
         </div>
-        <button onClick={refresh} aria-label="Refresh schedules" className="p-2 rounded-lg bg-(--surface-2) text-(--text-3) hover:text-(--text-1) hover:bg-(--surface-3) transition-colors">
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      <div className="rounded-2xl bg-(--surface-2) p-4 space-y-3">
-        <div className="section-label">New Workflow</div>
-        <div className="flex gap-2">
-          <input
-            value={newName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
-            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleCreate()}
-            placeholder="Workflow name..."
-            className="flex-1 bg-(--surface-3) rounded-xl px-3 py-2 text-sm text-(--text-1) placeholder:text-(--text-4) focus:outline-hidden focus:border-(--accent-border)"
-          />
-          <button
-            onClick={handleCreate}
-            disabled={!newName.trim()}
-            className="px-4 py-2 rounded-xl bg-(--accent) hover:bg-(--accent-hover) text-(--accent-contrast) text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-colors"
-          >
-            Create
-          </button>
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-(--surface-2) p-4 space-y-3">
-        <div className="section-label">Workflows ({workflows.length})</div>
-        {workflows.length === 0 && <div className="text-xs text-(--text-4) py-2">No workflows yet. Create one above.</div>}
-        {workflows.map((wf) => (
-          <div key={wf.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-(--surface-3)">
-            <div>
-              <div className="text-sm font-medium text-(--text-1)">{wf.name}</div>
-              <div className="text-[10px] text-(--text-4) font-mono">{wf.id}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-(--text-3)">{wf.nodes?.length || 0} nodes</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-sm text-(--text-3)">{wf.agentScope || 'shared'}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {ops.length > 0 && (
-        <div className="rounded-2xl bg-(--surface-2) p-4 space-y-3">
-          <div className="section-label">Registered Operations ({ops.length})</div>
-          {ops.slice(0, 20).map((op) => {
-            const isActive = op.status === 'active' || op.enabled;
-            return (
-              <div key={op.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-(--surface-3)">
-                <div>
-                  <div className="text-sm font-medium text-(--text-2)">{op.name || op.id}</div>
-                  {op.description && <div className="text-[10px] text-(--text-4) mt-0.5">{op.description}</div>}
-                </div>
-                <button
-                  onClick={() => {
-                    const nextStatus = isActive ? 'inactive' : 'active';
-                    updateWorkflowOperationStatus(op.id, nextStatus, { enabled: !isActive });
-                    setOps(listWorkflowOperations());
-                  }}
-                  className={`text-[10px] px-3 py-1 rounded-lg border font-semibold transition-colors ${
-                    isActive
-                      ? 'border-(--success-border) text-(--success) hover:bg-(--success-dim)'
-                      : 'border-(--border) text-(--text-3) hover:border-(--accent-border) hover:text-(--text-1)'
-                  }`}
-                >
-                  {isActive ? 'Enabled' : 'Enable'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {runs.length > 0 && (
-        <div className="rounded-2xl bg-(--surface-2) p-4 space-y-3">
-          <div className="section-label">Recent Runs ({runs.length})</div>
-          {runs.slice(0, 15).map((run) => (
-            <div key={run.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-(--surface-3)">
-              <div>
-                <div className="text-xs font-medium text-(--text-2)">{run.workflowId}</div>
-                <div className="text-[10px] text-(--text-4)">{new Date(run.createdAtMs || 0).toLocaleString()}</div>
-              </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded border ${
-                run.status === 'completed' ? 'border-(--success-border) text-(--success)' :
-                run.status === 'failed' ? 'border-(--error-border) text-(--error)' :
-                'border-(--border) text-(--text-3)'
-              }`}>{run.status}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
       )}
     </div>
   );

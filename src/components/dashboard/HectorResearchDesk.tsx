@@ -120,6 +120,8 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
 
   // A run is a one-step Hector request through Jose (agent phase 1): it shows on the
   // Requests board; the Desk refreshes its report while Hector works.
+  const [showRawSources, setShowRawSources] = useState(false);
+
   const fetchSources = async () => {
     if (!selectedReport?.id || isFetching) return;
     setFetchError('');
@@ -254,9 +256,21 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
                     </button>
                   </div>
                   {fetchError && <div className="rounded-xl bg-(--error-dim) p-3 text-[11px] text-(--error)">{fetchError}</div>}
-                  <SourceBoard report={selectedReport as never} />
-                  <CitationPanel report={selectedReport as never} />
+                  {/* Hector's answer first; the raw pages he looked at stay folded away (2.11.0 QA). */}
                   <ResearchReportPanel report={selectedReport as never} />
+                  {(selectedReport as { research?: unknown } | null)?.research ? (
+                    <>
+                      <button type="button" onClick={() => setShowRawSources((v) => !v)} aria-expanded={showRawSources} className="text-[11px] text-(--text-3) underline">
+                        {showRawSources ? 'Hide every page Hector looked at' : 'Show every page Hector looked at'}
+                      </button>
+                      {showRawSources && <SourceBoard report={selectedReport as never} />}
+                    </>
+                  ) : (
+                    <>
+                      <SourceBoard report={selectedReport as never} />
+                      <CitationPanel report={selectedReport as never} />
+                    </>
+                  )}
                   <HectorApprovalHandoff report={selectedReport as never} onUse={fillChat} />
                   <p className="text-[11px] text-(--text-4)">Each run is a Jose request: it also shows on the Requests board.</p>
                   <SavedSources />

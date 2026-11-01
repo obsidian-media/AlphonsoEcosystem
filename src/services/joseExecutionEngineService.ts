@@ -66,8 +66,6 @@ import { giveBackTurn, takeTurn, usesLocalModel } from './jose/joseQueue';
 import { admitStep, firstStepNeed, runAdmitted } from './resources/resourceGate';
 import { readingFolder, reviewedFolder } from './alphonso/stepFolder';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
-import { listWorkflows } from './workflowBuilderService';
-import { runVisualWorkflow } from './workflowExecutionService';
 import { runEchoStep } from './echo/echoSteps';
 import { surfaceOf } from './echo/decisions';
 import { runMarcusDistribution } from './marcusExecutionService';
@@ -1369,19 +1367,8 @@ export async function runPipelineShortcuts({ commandText, onProgress }: { comman
     }
   }
 
-  // Workflow chat invocation — match "run/start/execute workflow [name]" or just command containing workflow name
-  const workflows = listWorkflows();
-  const lowerCommand = commandText.toLowerCase();
-  const hasWorkflowKeyword = /\b(run|start|execute|trigger)\b.{0,20}\bworkflow\b/i.test(commandText);
-  const workflowMatch = workflows.find(w =>
-    w.name && lowerCommand.includes(w.name.toLowerCase()) &&
-    (hasWorkflowKeyword || lowerCommand.includes('workflow'))
-  );
-  if (workflowMatch) {
-    const wfResult = await runVisualWorkflow(workflowMatch.id, { trigger: 'chat', command: commandText });
-    onProgress?.({ stage: 'workflow_started', workflowId: workflowMatch.id, name: workflowMatch.name, result: wfResult });
-    return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, workflowResult: wfResult, command: null };
-  }
+  // A Builder workflow is no longer run by name (2.11.0 QA, owner 2026-11-01): its steps had no code
+  // behind them. A saved team runs by name instead ("/team <name> …", decideJoseRoute()).
 
   // Coding agent — only route if Claude connector is configured; return early with response
   return null;

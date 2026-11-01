@@ -104,7 +104,8 @@ test.describe('Alphonso accessibility (axe-core) — full WCAG sweep, non-Setup 
   test('Automation view (Work space)', async ({ page }) => {
     await page.getByTestId('space-pill-work').click();
     await page.getByRole('button', { name: /^Automation$/ }).click();
-    await expect(page.getByText('New Workflow', { exact: true })).toBeVisible({ timeout: 15000 });
+    // Automation opens on Teams (2.11.0 QA: the visual Builder was archived).
+    await expect(page.getByTestId('teams-new')).toBeVisible({ timeout: 15000 });
 
     const results = await scan(page);
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
