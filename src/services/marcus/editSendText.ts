@@ -7,6 +7,8 @@ import { getJoseRequest, updateJoseStep, appendRequestNote } from '../jose/joseR
 import { findExactRisks, exactRiskText } from '../sentinel/exactChecks';
 import { CHANNEL_LIMITS } from './destinations';
 import { deliveryLines, deliveryReason, tooLongReason, unfilledGaps, unfilledReason } from './prepareSend';
+import { describeSend } from './describeSend';
+import { listAgentPackets, updatePacketStatus } from '../agentBusService';
 import type { SendPreview } from './types';
 
 export const SEND_TEXT_CHANGED = "This changed on your computer; here's the latest.";
@@ -33,7 +35,13 @@ export function editSendText(requestId: string, stepId: string, text: string, ba
   if (delivery.length) return { ok: false, reason: deliveryReason(delivery) };
   const exactFacts = findExactRisks(next, { links: 'sent' }).filter((r) => SERIOUS.has(r.kind)).map(exactRiskText);
   const edited: EditedSendPreview = { ...preview, text: next, preparedAtMs: Date.now(), editedByYou: true, exactFacts };
-  updateJoseStep(requestId, stepId, { sendPreview: edited });
+  // Every approval screen shows the new text: the board (the preview), the step's note, and
+  // the waiting packet that Chat's approvals and the Orchestrator read.
+  const line = describeSend(edited);
+  updateJoseStep(requestId, stepId, { sendPreview: edited, note: line });
+  const packet = listAgentPackets().find((p: any) => p.status === 'pending_approval'
+    && p.payload?.joseCommandId === request.commandId && p.payload?.assignment?.stepId === stepId);
+  if (packet) updatePacketStatus(packet.id, 'pending_approval', { policyReason: `Waiting for your approval: ${line}`, commandPreview: line });
   appendRequestNote(requestId, 'You changed the text Marcus sends.');
   return { ok: true, preview: edited };
 }
