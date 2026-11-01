@@ -22,6 +22,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- The emailed sign-in link opens the app (the Firebase project's link domain, set
+                 by build.gradle from google-services.json). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="${phoneLinkHost}" />
+            </intent-filter>
+
         </activity>
 
         <!-- Alphonso's notices: opened with the phone's key and shown with their buttons. -->

@@ -19,8 +19,12 @@ const out = {
   xcconfig: path.join(mobile, 'ios/App/firebase.xcconfig'),
 };
 
+// PHONE_LINK_HOST: the email sign-in link's domain, the project's own <project>.firebaseapp.com,
+// where Firebase publishes the files that let the link open the app. Without a project it is
+// a domain that resolves nowhere, so the entitlement stays valid.
 function writeXcconfig(reversedClientId) {
-  fs.writeFileSync(out.xcconfig, `// Written by mobile/scripts/firebase-config.mjs; not committed.\nGOOGLE_REVERSED_CLIENT_ID = ${reversedClientId || ''}\n`);
+  const linkHost = project ? `PHONE_LINK_HOST = ${project}.firebaseapp.com` : 'PHONE_LINK_HOST = example.invalid';
+  fs.writeFileSync(out.xcconfig, `// Written by mobile/scripts/firebase-config.mjs; not committed.\nGOOGLE_REVERSED_CLIENT_ID = ${reversedClientId || ''}\n${linkHost}\n`);
 }
 
 if (!project || !token) {
