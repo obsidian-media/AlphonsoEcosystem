@@ -72,4 +72,43 @@ describe('the phone app', () => {
     fireEvent.click(screen.getByLabelText('Ask for Face ID or fingerprint when opening'));
     expect(localStorage.getItem(PHONE_LOCK_KEY)).toBe('off');
   });
+  const waiting = (effects: string[]) => ({ ...request, status: 'waiting_approval', steps: [{ stepId: 'marcus', agent: 'marcus', actionType: 'distribution_slack', effects, needs: [], status: 'waiting_approval' }] });
+  function actions() {
+    const fns = new Set<any>();
+    return { onAction: (fn: any) => { fns.add(fn); return () => fns.delete(fn); }, fire: (a: any) => fns.forEach((fn) => fn(a)) };
+  }
+
+  it("a notification's Approve answers the computer and shows what it said", async () => {
+    localStorage.setItem('alphonso_phone_pairing_v1', JSON.stringify({ deviceId: 'ph', computerName: 'Studio PC' }));
+    const link = fakeLink({ online: true, snapshot: { requests: [waiting(['read'])], stepOutputs: {}, chat: [], computer: {} } });
+    link.call.mockImplementation(async (name: string) => (name === 'mirror.snapshot' ? { ok: true, value: { requests: [waiting(['read'])], stepOutputs: {}, chat: [], computer: {} } } : { ok: true, value: 'Approved. Marcus carries on.' }));
+    const n = actions();
+    const lock = { confirm: vi.fn(async () => true) };
+    render(<MobileApp signIn={signedIn()} secrets={{ get: async () => null, set: async () => {} }} lock={lock} connect={() => link as any} onNotificationAction={n.onAction} />);
+    await act(async () => { link.fire(); });
+    await screen.findByRole('tab', { name: 'Chat' });
+    lock.confirm.mockClear();
+    await act(async () => { n.fire({ action: 'approve', requestId: 'r1', stepId: 'marcus' }); });
+    expect(await screen.findByText('Approved. Marcus carries on.')).toBeTruthy();
+    expect(link.call).toHaveBeenCalledWith('request.approveStep', { requestId: 'r1', stepId: 'marcus' });
+    expect(lock.confirm).not.toHaveBeenCalled();
+  });
+
+  it('Open from a notification shows that request; approving a locked step there asks for Face ID / fingerprint', async () => {
+    localStorage.setItem('alphonso_phone_pairing_v1', JSON.stringify({ deviceId: 'ph', computerName: 'Studio PC' }));
+    const snap = { requests: [waiting(['publish_or_send'])], stepOutputs: {}, chat: [], computer: {} };
+    const link = fakeLink({ online: true, snapshot: snap });
+    const n = actions();
+    const lock = { confirm: vi.fn(async () => true) };
+    render(<MobileApp signIn={signedIn()} secrets={{ get: async () => null, set: async () => {} }} lock={lock} connect={() => link as any} onNotificationAction={n.onAction} />);
+    await act(async () => { link.fire(); });
+    await screen.findByRole('tab', { name: 'Chat' });
+    lock.confirm.mockClear();
+    await act(async () => { n.fire({ action: 'open', requestId: 'r1', stepId: 'marcus' }); });
+    expect(screen.getByRole('tab', { name: 'Requests' }).getAttribute('aria-selected')).toBe('true');
+    lock.confirm.mockResolvedValue(false);
+    await act(async () => { n.fire({ action: 'approve', requestId: 'r1', stepId: 'marcus' }); });
+    expect(lock.confirm).toHaveBeenCalledWith("Approve Marcus's step", { strict: true });
+    expect(link.call).not.toHaveBeenCalledWith('request.approveStep', expect.anything());
+  });
 });

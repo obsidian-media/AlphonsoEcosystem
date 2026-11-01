@@ -14,6 +14,11 @@ import { offlineLine, type PhoneTransport } from '../services/phone/remoteData';
 export const NOT_ALPHONSO_QR = "That QR code isn't from Alphonso. On your computer, open Settings → Runtime → Remote Access → Phones and scan the code shown there.";
 const PAIRING_KEY = 'alphonso_phone_pairing_v1';
 const PRIVATE_KEY = 'alphonso_phone_private_key';
+/** The paired computer's public key, also in secure storage: the notification extension
+ *  (iOS) and the push service (Android) read both keys there to open a notice. */
+export const COMPUTER_KEY_NAME = 'alphonso_phone_computer_key';
+/** The private key's name, shared with the native notification code. */
+export const PRIVATE_KEY_NAME = PRIVATE_KEY;
 const CALL_TIMEOUT_MS = 30_000;
 const PROBE_MS = 20_000;
 const BACKOFF_START_MS = 1000;
@@ -55,6 +60,7 @@ export async function pairPhone(qrText: string, deps: { auth: PhoneAuth; secrets
     return { ok: false, reason: body?.error || "Couldn't reach Alphonso's relay. Check the phone's internet connection." };
   }
   await deps.secrets.set(PRIVATE_KEY, keys.privateKey);
+  await deps.secrets.set(COMPUTER_KEY_NAME, info.computerPublicKey);
   savePairing({ deviceId, phoneName: deps.phoneName, phonePublicKey: keys.publicKey, computerId: info.computerId, computerPublicKey: info.computerPublicKey, computerName: info.computerName, relayUrl: info.relayUrl, pairingSecret: info.pairingSecret });
   return { ok: true };
 }

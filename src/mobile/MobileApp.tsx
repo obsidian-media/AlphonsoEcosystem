@@ -14,12 +14,20 @@ import { ChatScreen } from './screens/Chat';
 import { RequestsScreen } from './screens/Requests';
 import { MoreScreen } from './screens/More';
 import { OfflineBanner } from './screens/Offline';
+import { withLockedConfirm } from './lockedApproval';
 
 export const PHONE_LOCK_KEY = 'alphonso_phone_lock_v1';
-/** Face ID / fingerprint, given by the packaging. */
-export interface PhoneLock { confirm(reason: string): Promise<boolean> }
+/** Face ID / fingerprint, given by the packaging. `strict`: a phone with no passcode can't
+ *  confirm (locked approvals); without it, such a phone may still open the app. */
+export interface PhoneLock { confirm(reason: string, opts?: { strict?: boolean }): Promise<boolean> }
 
 type Tab = 'chat' | 'requests' | 'more';
+
+/** A notification's button, given by the packaging once the app is open and unlocked. */
+export interface NotificationAction { action: 'approve' | 'reject' | 'open'; requestId: string; stepId?: string }
+export type OnNotificationAction = (fn: (a: NotificationAction) => void) => () => void;
+/** How long a notification's button waits for the computer to send its requests after a cold start. */
+const KNOWN_WAIT_MS = 15_000;
 
 export interface MobileAppProps {
   signIn: PhoneSignIn;
@@ -29,13 +37,34 @@ export interface MobileAppProps {
   pair?: (qrText: string) => Promise<{ ok: boolean; reason?: string }>;
   scanQr?: () => Promise<string | null>;
   phoneName?: string;
+  onNotificationAction?: OnNotificationAction;
 }
 
 export function lockOn(): boolean { return localStorage.getItem(PHONE_LOCK_KEY) !== 'off'; }
 
-function LinkedApp({ link, lockEnabled, onLockChange, onSignOut }: { link: PhoneLink; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void }) {
+function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotificationAction }: { link: PhoneLink; lock: PhoneLock; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void; onNotificationAction?: OnNotificationAction }) {
   const data = useMemo(() => createRemoteData(link), [link]);
+  // A step that spends, sends or publishes, or deletes asks for Face ID / fingerprint first.
+  const board = useMemo(() => withLockedConfirm(data.board, lock), [data, lock]);
   const [tab, setTab] = useState<Tab>('chat');
+  const [selected, setSelected] = useState<string | undefined>(undefined);
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!onNotificationAction) return undefined;
+    // After a cold start the requests arrive a moment later: wait for this one before acting.
+    const whenKnown = (requestId: string) => new Promise<void>((resolve) => {
+      if (board.request(requestId)) { resolve(); return; }
+      const timer = setTimeout(() => { off(); resolve(); }, KNOWN_WAIT_MS);
+      const off = board.subscribe(() => { if (board.request(requestId)) { clearTimeout(timer); off(); resolve(); } });
+    });
+    return onNotificationAction(async (a) => {
+      setSelected(a.requestId);
+      if (a.action === 'open' || !a.stepId) { setTab('requests'); return; }
+      await whenKnown(a.requestId);
+      const text = a.action === 'approve' ? await board.approveStep(a.requestId, a.stepId) : await board.rejectStep(a.requestId, a.stepId);
+      setNotice(text);
+    });
+  }, [onNotificationAction, board]);
   const [online, setOnline] = useState(link.online());
   const [since, setSince] = useState<number | null>(link.offlineSince());
   useEffect(() => link.onStatus((isOnline, sinceMs) => { setOnline(isOnline); setSince(sinceMs); }), [link]);
@@ -47,9 +76,10 @@ function LinkedApp({ link, lockEnabled, onLockChange, onSignOut }: { link: Phone
     <div className="flex h-full flex-col bg-(--surface-1) text-(--text-1)">
       <header className="px-4 pb-2 pt-3 text-sm font-semibold">Alphonso · {computerName}</header>
       {!online && <OfflineBanner text={offlineLine(since)} />}
+      {notice && <p role="status" className="mx-4 mb-2 rounded-lg bg-(--surface-3) px-3 py-2 text-xs">{notice}</p>}
       <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
         {tab === 'chat' && <ChatScreen chat={data.chat} />}
-        {tab === 'requests' && <BoardDataProvider value={data.board}><RequestsScreen /></BoardDataProvider>}
+        {tab === 'requests' && <BoardDataProvider value={board}><RequestsScreen key={selected || 'all'} selectedRequestId={selected} /></BoardDataProvider>}
         {tab === 'more' && <MoreScreen lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} />}
       </main>
       <nav role="tablist" className="grid grid-cols-3 border-t border-(--border) text-xs">
@@ -100,6 +130,8 @@ export function MobileApp(props: MobileAppProps) {
   return (
     <LinkedApp
       link={link}
+      lock={props.lock}
+      onNotificationAction={props.onNotificationAction}
       lockEnabled={lockEnabled}
       onLockChange={(on) => { localStorage.setItem(PHONE_LOCK_KEY, on ? 'on' : 'off'); setLockEnabled(on); }}
       onSignOut={async () => { link.stop(); await props.signIn.signOut(); setLink(null); setSignedIn(false); }}

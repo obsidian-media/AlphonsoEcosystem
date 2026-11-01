@@ -6,6 +6,7 @@ import { initializeApp, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import { pushMessage } from './pushMessage.js';
 
 export async function initFirebase() {
   const app = initializeApp({ credential: applicationDefault() });
@@ -25,6 +26,6 @@ export async function initFirebase() {
     store,
     verifyToken: async (idToken) => (await auth.verifyIdToken(idToken, true)).uid,
     // A data-only message: the app's notification extension opens it with its own key.
-    push: async (token, sealed) => { await messaging.send({ token, data: { sealed }, apns: { payload: { aps: { 'mutable-content': 1, alert: { title: 'Alphonso', body: 'New activity' } } } } }); },
+    push: async (token, sealed) => { await messaging.send(pushMessage(token, sealed)); },
   };
 }

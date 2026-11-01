@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { generateKeyPair } from '../../services/phone/phoneCrypto';
 import { decodeMessage, encodeMessage, openPairingRequest, pairingPayload } from '../../services/phone/phoneProtocol';
-import { NOT_ALPHONSO_QR, connectPhone, pairPhone, savedPairing, type PhoneSecrets } from '../../mobile/phoneSession';
+import { COMPUTER_KEY_NAME, NOT_ALPHONSO_QR, connectPhone, pairPhone, savedPairing, type PhoneSecrets } from '../../mobile/phoneSession';
 
 const RELAY = 'wss://relay.test/link';
 
@@ -60,6 +60,11 @@ describe('phoneSession', () => {
     const saved = savedPairing()!;
     expect(saved.computerName).toBe('Studio PC');
     expect(JSON.stringify(localStorage)).not.toContain(store.map.get('alphonso_phone_private_key')!);
+  });
+
+  it("pairing also keeps the computer's public key in secure storage, where the notification extension reads it", async () => {
+    const { computer, store } = await paired();
+    expect(store.map.get(COMPUTER_KEY_NAME)).toBe(computer.publicKey);
   });
 
   it("the phone's first message carries its key to the computer, sealed", async () => {
