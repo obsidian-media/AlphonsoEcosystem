@@ -26,6 +26,10 @@ against about US$3.65 (the fixed IP address) on the free VM.
   pairing code is showing (`startPhoneLink` in `src/services/phone/phoneLink.ts`).
 - Per-device limits in `src/limits.js` (200 MB a day) cap traffic; outbound traffic past
   1 GB a month is billed.
+- Previews (phone app phase 2) are the large traffic: a one-minute phone-sized video is about
+  6 MB, about 11 MB through the relay (base64 inside a sealed base64 message), so the free
+  1 GB a month is roughly 90 such previews. The relay tells each device its limits when it
+  connects, and the computer stops sending previews with a tenth of the day left.
 
 ## Set up or change (the owner's account)
 

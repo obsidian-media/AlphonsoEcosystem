@@ -44,12 +44,38 @@ A code from another app is refused, and the app says where to find the right one
   the desktop Chat.
 - **Requests:** the board in one column. Approve or reject a step that waits for you; Stop a
   running request; Carry on one that was cut off; Cancel one; run or cancel a plan that waits.
+  Tap a step to read its work in full: Hector's report with its numbered sources, a review's
+  findings, the exact text Marcus will send and where. On a send you can **Send back** the
+  writing with a reason (the agent redoes it and the send asks you again) or **Edit text**
+  yourself. A change Alphonso wants to make to your code is approved on your computer only.
+- **Studio:** Miya Studio's projects, the one waiting for you first. Approve a review or
+  **Send back** with what to change, pick another version, watch the videos and see the
+  pictures, edit a post's caption, hashtags and YouTube title, and **Approve and schedule**
+  (Face ID or your fingerprint first). **New project** starts one from an idea, a brand and
+  what to make.
+- **Calendar:** your posts by day or by week, with brand and platform filters. Tap a post to
+  see it, change its time, or cancel it (cancelling asks for Face ID or your fingerprint).
+  Moving a post already scheduled on YouTube or Facebook asks first, as on the computer.
+  Content Studio drafts and Marcus's messages are changed on the computer.
 - **Notifications:** when a step or plan waits for you, a request finishes or fails, or a
   review needs you. The text is opened only on your phone; Apple, Google and the relay see
   only "New activity".
   - **Approve** and **Reject** work right from the notification.
   - A step that **spends money, sends or publishes, or deletes** shows only **Open**: you
     approve it inside the app, after Face ID or your fingerprint.
+  - **Ready to check:** when Miya finishes new pictures or a new video, you're told once,
+    with a small picture of it when it fits in the notification. Tap it to open the project.
+
+## Pictures and videos on the phone
+
+Your computer makes a phone-sized copy (about 480p for a video) and sends it in pieces; the
+phone checks each piece and the whole file before showing it. A video loads when you tap it.
+On mobile data, one larger than 20 MB asks first and says its size. Copies are kept on the
+phone until the post goes out.
+
+Each phone can pass about 200 MB a day through Alphonso's relay. Previews stop a little
+before that, so messages and approvals still get through; the app says when the limit resets.
+Links in a report open in your phone's browser; one that looks disguised asks first.
 
 ## Face ID and fingerprint
 
@@ -59,7 +85,9 @@ More. Approving a step that spends, sends or deletes always asks, whatever that 
 ## When your computer is off
 
 The app says "Your computer is offline since 14:02." and shows what it last knew. Buttons
-that need the computer are off until it is back. Nothing is lost: requests wait on the
+that need the computer are off until it is back. If something changed on the computer while
+you were editing it on the phone, the phone says "This changed on your computer; here's the
+latest." and shows it, so you never overwrite newer work. Nothing is lost: requests wait on the
 computer as usual.
 
 ## Privacy

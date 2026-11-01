@@ -5,15 +5,23 @@
 // functions the board and Telegram use; their behaviour has its own tests).
 // The five checks: pair; chat; approve a waiting step (once); stop a running request; the
 // computer goes away and the phone says since when.
+// Phase 2 adds: a 6 MB preview arrives in 3 pieces with its hash; a stale caption edit is
+// refused with the latest; the relay's daily_limit reaches the phone at once.
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { WebSocket } from 'ws';
 
 const h = vi.hoisted(() => {
   const requests = new Map();
   const keychain = new Map();
+  const projects = new Map();
+  // A 6 MB phone-sized copy, as the backend would hand it out piece by piece.
+  const previewBytes = new Uint8Array(6 * 1024 * 1024).map((_, i) => (i * 31) % 251);
   return {
     requests,
     keychain,
+    projects,
+    previewBytes,
+    readPiece: vi.fn(async (_path, i) => Buffer.from(previewBytes.subarray(i * 2_621_440, (i + 1) * 2_621_440)).toString('base64')),
     engine: {
       approveRequestStep: vi.fn(async () => ({ ok: true })),
       rejectRequestStep: vi.fn(() => ({ ok: true, summary: 'Rejected.' })),
@@ -34,6 +42,17 @@ vi.mock('../../../services/jose/submitToJose', () => ({ runApprovedPlan: vi.fn()
 vi.mock('../../../services/jose/joseInbound', () => h.inbound);
 vi.mock('../../../services/jose/joseRequestStore', () => ({ getJoseRequest: (id) => h.requests.get(id) || null }));
 vi.mock('../../../services/phone/phoneMirror', () => ({ mirrorSnapshots: async () => ({}) }));
+// The disk and the project store are stand-ins; the calls, the relay and the phone's checks are real.
+vi.mock('../../../services/phone/phonePreviews', async () => {
+  const { createHash } = await import('node:crypto');
+  return {
+    PREVIEW_PIECE_BYTES: 2_621_440,
+    ensurePreview: async () => ({ ok: true, path: 'shop/p1/output/phone-previews/a.mp4', bytes: h.previewBytes.length, sha256: createHash('sha256').update(h.previewBytes).digest('hex'), mime: 'video/mp4', pieces: 3 }),
+    readPiece: (...a) => h.readPiece(...a),
+  };
+});
+vi.mock('../../../services/phone/contentMirror', async (orig) => ({ ...(await orig()), mediaOffered: () => true }));
+vi.mock('../../../services/contentFactory/contentProjectService', async (orig) => ({ ...(await orig()), getProject: (id) => h.projects.get(id) || null }));
 vi.mock('../../../services/secureStorageService', () => ({
   secureGet: async (k) => h.keychain.get(k) ?? null,
   secureSet: async (k, v) => { h.keychain.set(k, v); },
@@ -41,10 +60,13 @@ vi.mock('../../../services/secureStorageService', () => ({
 }));
 
 import { createServer } from '../../../../gateway/phone-relay/src/server.js';
+import { LIMITS } from '../../../../gateway/phone-relay/src/limits.js';
 import { createMemoryStore } from '../../../../gateway/phone-relay/src/memoryStore.js';
 import { listPhones, onPhoneCall, pairingQr, resetPhoneLinkForTests, startPhoneLink } from '../../../services/phone/phoneLink';
 import { handlePhoneCall, ALREADY_DONE, resetPhoneCallsForTests } from '../../../services/phone/phoneCalls';
-import { connectPhone, pairPhone } from '../../../mobile/phoneSession';
+import { connectPhone, pairPhone, RELAY_REFUSED } from '../../../mobile/phoneSession';
+import { fetchPreview } from '../../../mobile/previewFetch';
+import { CHANGED_ON_COMPUTER } from '../../../services/phone/contentCalls';
 
 const auth = { idToken: async () => 'tok-ann' };
 const verifyToken = async (t) => { if (t !== 'tok-ann') throw new Error('bad'); return 'ann'; };
@@ -61,10 +83,11 @@ const wsFactory = (url) => {
   };
 };
 
-const phoneSecrets = (() => {
+const makeSecrets = () => {
   const m = new Map();
   return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); } };
-})();
+};
+const phoneSecrets = makeSecrets();
 
 describe('phone app phase 1, end to end over the real relay', () => {
   let server;
@@ -124,6 +147,30 @@ describe('phone app phase 1, end to end over the real relay', () => {
     expect(h.stop.stopRequest).toHaveBeenCalledWith('r2');
   }, 20_000);
 
+  it('preview: a 6 MB preview arrives in 3 pieces with its hash', async () => {
+    const saved = new Map();
+    const store = { get: async (k) => (saved.has(k) ? `blob:${k}` : null), put: async (k, bytes) => { saved.set(k, bytes); return `blob:${k}`; }, remove: async () => {}, keys: async () => [...saved.keys()] };
+    const ref = { projectId: 'p1', path: 'shop/p1/output/v1-9x16.mp4', kind: 'video' };
+    const r = await fetchPreview(ref, { call: (n, a) => phone.call(n, a), store, network: async () => 'wifi', confirm: async () => true });
+    expect(r.ok).toBe(true);
+    expect(h.readPiece).toHaveBeenCalledTimes(3);
+    const [bytes] = [...saved.values()];
+    expect(bytes.length).toBe(h.previewBytes.length);
+    expect(Buffer.from(bytes).equals(Buffer.from(h.previewBytes))).toBe(true);
+  }, 60_000);
+
+  it('stale: a caption edit based on an old copy is refused with the latest', async () => {
+    h.projects.set('p1', {
+      id: 'p1', brandId: 'b1', name: 'Bakery tour', updatedAtMs: 2, steps: {},
+      posts: [{ id: 'post-1', platform: 'instagram', piece: 'reel', title: '', caption: 'Changed on the computer', hashtags: [], scheduledAtMs: 9, status: 'draft' }],
+    });
+    const r = await phone.call('content.editPost', { projectId: 'p1', postId: 'post-1', caption: 'Mine', base: 'an old copy' });
+    expect(r.ok).toBe(true);
+    expect(r.value.stale).toBe(true);
+    expect(r.value.message).toBe(CHANGED_ON_COMPUTER);
+    expect(r.value.latest.posts[0].caption).toBe('Changed on the computer');
+  }, 20_000);
+
   it('offline: with the computer gone, the phone says since when', async () => {
     stopComputer();
     // A call sent in the same instant would reach the closing connection and be lost (the
@@ -138,4 +185,46 @@ describe('phone app phase 1, end to end over the real relay', () => {
     expect(phone.online()).toBe(false);
     expect(typeof phone.offlineSince()).toBe('number');
   }, 20_000);
+});
+
+describe("the relay's daily limit, end to end", () => {
+  let server;
+  let relayUrl;
+  let stopComputer;
+  let offCalls;
+  let phone;
+
+  beforeAll(async () => {
+    localStorage.clear();
+    resetPhoneLinkForTests();
+    resetPhoneCallsForTests();
+    ({ server } = createServer({ verifyToken, store: createMemoryStore(), push: async () => {}, limits: { ...LIMITS, bytesPerDay: 20_000 } }));
+    await new Promise((r) => server.listen(0, '127.0.0.1', () => r()));
+    relayUrl = `ws://127.0.0.1:${server.address().port}/link`;
+  });
+
+  afterAll(async () => {
+    phone?.stop();
+    stopComputer?.();
+    offCalls?.();
+    await new Promise((r) => server.close(() => r()));
+  });
+
+  it('a relay daily_limit refusal reaches the phone at once', async () => {
+    const secrets = makeSecrets();
+    const qr = await pairingQr({ relayUrl, computerName: 'Test computer' });
+    offCalls = onPhoneCall(handlePhoneCall);
+    stopComputer = startPhoneLink({ relayUrl, auth, socket: wsFactory });
+    await vi.waitFor(async () => {
+      const r = await pairPhone(qr, { auth, secrets, phoneName: 'Test phone', fetchImpl: fetch });
+      if (!r.ok) throw new Error(r.reason);
+    }, { timeout: 10_000, interval: 200 });
+    phone = connectPhone({ socket: wsFactory, auth, secrets });
+    await vi.waitFor(() => expect(phone.online()).toBe(true), { timeout: 10_000 });
+    const startedMs = Date.now();
+    const r = await phone.call('chat.send', { text: 'x'.repeat(30_000), messageId: 'm-big' });
+    expect(r).toEqual({ ok: false, error: RELAY_REFUSED.daily_limit });
+    // Told by the relay, not by the 30-second wait for an answer.
+    expect(Date.now() - startedMs).toBeLessThan(5_000);
+  }, 30_000);
 });

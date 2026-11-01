@@ -23,6 +23,13 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 - The computer connects to the relay only while a phone is paired with phone access on, or while a pairing code is showing.
 - Test builds: TestFlight for iPhones and Firebase App Distribution for Android. A user guide: `docs/PHONE.md`.
 - Checked end to end over the real relay: pairing, a chat message, approving a step (once), Stop, and "offline since".
+- Phase 2, checking work from the phone: Miya Studio and the Calendar on the phone (projects with the one waiting for you first, approve or send back a review, pick a version, phone-sized video and picture previews loaded when tapped, edit a post's caption, hashtags and title, approve and schedule after Face ID, start a project; posts by day or week, change a post's time, cancel it after Face ID).
+- Previews come from the computer in checked pieces (`content_phone_preview`, about 480p video, pictures at most 1080 px); on mobile data one over 20 MB asks first; the relay now tells each device its daily limit so previews stop before messages would.
+- Send back a waiting send's writing with a reason (the agent redoes it, the send asks again) and edit the text Marcus sends, on the board and the phone; the edit goes through the same checks as Marcus's own text.
+- On the phone a step's work reads in full (Hector's numbered sources open in the phone's browser, after the disguised-link check); a code change is approved on the computer only.
+- "Ready to check" notifications when Miya finishes new pictures or a video, once per version, with a small still when it fits; a tap opens the project.
+- An edit made on the phone to something that changed on the computer is refused with the latest ("This changed on your computer; here's the latest.").
+- Checked end to end over the real relay: a 6 MB preview in 3 pieces with its hash, a stale caption edit refused with the latest, and the relay's daily limit reaching the phone at once.
 
 ## [2.11.1] — 2026-11-01 (fixes from using 2.11.0, PR 376; the Linux installer is back)
 
