@@ -33,9 +33,8 @@ import {
 } from '../services/durableMemoryService';
 import { listMiyaMemory } from '../services/miyaMemoryService';
 import { listSessionEvents, summarizeSession } from '../services/sessionIntelligenceService';
-import { listWorkflows } from '../services/workflowBuilderService';
+import { listUserTemplates } from '../services/jose/joseUserTemplates';
 import { trustColor, TRUST_STATES } from '../services/trustModel';
-import { listWorkflowOperations, updateWorkflowOperationStatus, type WorkflowOperation } from '../services/workflowOperationsRegistryService';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 import { AgentAvatar } from './AgentAvatar';
 
@@ -302,7 +301,8 @@ export function MemoryConfidencePanel() {
 
 export function EcosystemMapPanel({ ollamaStatus }: { ollamaStatus?: { label?: string } }) {
   const packets = listAgentPackets() as { fromAgent: string; toAgent: string; status: string }[];
-  const workflows = listWorkflows();
+  // Saved teams (2.11.0 QA): Builder workflows did nothing real and were archived.
+  const teams = listUserTemplates();
   const pending = packets.filter((packet) => packet.status === 'pending_approval').length;
 
   return (
@@ -319,7 +319,7 @@ export function EcosystemMapPanel({ ollamaStatus }: { ollamaStatus?: { label?: s
             <AgentNode agent="jose" title="Jose" subtitle="Orchestrator" stat={`${pending} approvals`} large />
             <div className="grid grid-cols-2 gap-3">
               <MapNode icon={Brain} label="Memory" value={`${listMemoryItems().length + listMiyaMemory().length} records`} />
-              <MapNode icon={GitBranch} label="Workflows" value={`${workflows.length} flows`} />
+              <MapNode icon={GitBranch} label="Teams" value={`${teams.length} teams`} />
               <MapNode icon={ShieldCheck} label="Approvals" value={`${pending} pending`} />
               <MapNode icon={Activity} label="Runtime" value={ollamaStatus?.label || 'Unknown'} />
               <MapNode icon={Network} label="Plugins" value="registry active" />
@@ -399,94 +399,6 @@ export function SessionIntelligencePanel() {
           </div>
           <button onClick={() => setEvents(listSessionEvents())} className="rounded-lg bg-(--surface-3) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--text-1) hover:bg-(--surface-3)">Refresh Session</button>
         </div>
-      </div>
-    </Panel>
-  );
-}
-
-export function WorkflowOperationsPanel() {
-  const [rows, setRows] = useState<WorkflowOperation[]>(() => listWorkflowOperations());
-  const [statusFilter, setStatusFilter] = useState('all');
-  const filtered = rows.filter((row) => statusFilter === 'all' ? true : row.status === statusFilter);
-
-  const setStatus = (workflowId: string, status: string) => {
-    updateWorkflowOperationStatus(workflowId, status, {
-      verificationState: status === 'active' ? TRUST_STATES.TEMPORARY : TRUST_STATES.UNVERIFIED
-    });
-    setRows(listWorkflowOperations());
-  };
-
-  return (
-    <Panel icon={GitBranch} title="Workflow Operations Registry" tone="indigo">
-      <div className="flex flex-wrap gap-2">
-        {['all', 'active', 'paused', 'setup_required'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(status)}
-            className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
-              statusFilter === status ? 'bg-(--accent-dim) text-(--accent) ring-1 ring-(--accent-border)' : 'bg-(--surface-2) text-(--text-3)'
-            }`}
-          >
-            {status.replace(/_/g, ' ')}
-          </button>
-        ))}
-      </div>
-      <div className="mt-3 space-y-2 max-h-96 overflow-y-auto pr-1">
-        {filtered.map((workflow) => (
-          <div key={workflow.id} className="rounded-xl bg-(--surface-2) p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-(--text-1)">{workflow.name}</div>
-                <div className="text-[11px] text-(--text-3)">{workflow.id}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge color={workflow.riskLevel === 'critical' || workflow.riskLevel === 'high' ? 'red' : workflow.riskLevel === 'medium' ? 'amber' : 'green'}>
-                  {workflow.riskLevel}
-                </Badge>
-                <TrustBadge state={workflow.verificationState || TRUST_STATES.UNVERIFIED} />
-              </div>
-            </div>
-            <div className="mt-2 text-[11px] text-(--text-3)">{workflow.purpose}</div>
-            <div className="mt-2 grid gap-1 text-[11px] text-(--text-3) md:grid-cols-2">
-              <div>Sequence: {(workflow.agentSequence || []).join(' -> ')}</div>
-              <div>Approvals: {(workflow.requiredApprovals || []).join(', ')}</div>
-              <div>Connectors: {(workflow.connectorRequirements || []).join(', ')}</div>
-              <div>
-                Status:{' '}
-                <span className={
-                  workflow.status === 'setup_required'
-                    ? 'text-(--warning)'
-                    : workflow.status === 'paused'
-                      ? 'text-(--text-3)'
-                      : workflow.status === 'active'
-                        ? 'text-(--success)'
-                        : 'text-(--text-3)'
-                }>
-                  {workflow.status === 'active' ? 'active (not production-confirmed)' : workflow.status}
-                </span>
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {(workflow.agentSequence || []).map((agentId, index) => (
-                <React.Fragment key={`${workflow.id}-${agentId}-${index}`}>
-                  <div className="flex items-center gap-1 rounded-lg bg-(--surface-2) px-1.5 py-1 text-[10px] text-(--text-2)">
-                    <AgentAvatar agentId={agentId} name={agentId} sizeClass="h-4 w-4" className="border-(--border)" />
-                    <span className="capitalize">{String(agentId).replace(/_/g, ' ')}</span>
-                  </div>
-                  {index < (workflow.agentSequence || []).length - 1 && <span className="text-[10px] text-(--text-4)">{'->'}</span>}
-                </React.Fragment>
-              ))}
-            </div>
-            <div className="mt-2 rounded-lg bg-(--warning-dim) px-2 py-1 text-[10px] text-(--warning)">
-              Needs setup: {(workflow.setupRequired || []).join(' ')}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <button onClick={() => setStatus(workflow.id, 'active')} className="rounded-sm bg-(--success-dim) px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-(--success)">Active</button>
-              <button onClick={() => setStatus(workflow.id, 'paused')} className="rounded-sm bg-(--surface-3) px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-(--text-2)">Pause</button>
-              <button onClick={() => setStatus(workflow.id, 'setup_required')} className="rounded-sm bg-(--warning-dim) px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-(--warning)">Setup Required</button>
-            </div>
-          </div>
-        ))}
       </div>
     </Panel>
   );

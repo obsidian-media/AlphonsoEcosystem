@@ -5,7 +5,7 @@
 **Date:** 2026-09-07
 **Branch:** `feat/smart-installer-bundling`
 **Status:** design, not yet implemented
-**Supersedes:** `docs/SMART_INSTALLER_SPEC_2026-09-06.md` (Copilot draft, agent-grid-first
+**Supersedes:** `docs/internal/SMART_INSTALLER_SPEC_2026-09-06.md` (Copilot draft, agent-grid-first
 flow) — kept in the repo for historical reference only, do not implement from it.
 **Builds on top of:** `docs/DEPENDENCY_BUNDLING_PLAN.md` (the separate, in-progress
 effort that decides what ships *inside* the installer itself — Ollama binary,

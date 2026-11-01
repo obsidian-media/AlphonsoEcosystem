@@ -2,19 +2,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-vi.mock('../../services/workflowBuilderService', () => ({
-  createWorkflow: vi.fn(),
-  listWorkflows: vi.fn(() => [])
-}));
-vi.mock('../../services/workflowReceiptService', () => ({
-  listWorkflowReceipts: vi.fn(() => [])
-}));
-vi.mock('../../services/workflowOperationsRegistryService', () => ({
-  listWorkflowOperations: vi.fn(() => []),
-  updateWorkflowOperationStatus: vi.fn()
-}));
-vi.mock('../../components/WorkflowBuilderView', () => ({ WorkflowBuilderView: vi.fn(() => null) }));
 vi.mock('../../components/DeadLetterQueueView', () => ({ DeadLetterQueueView: vi.fn(() => null) }));
+vi.mock('../../components/teams/TeamsPage', () => ({
+  TeamsPage: vi.fn(({ onOpenJoseBoard }: { onOpenJoseBoard?: unknown }) => <div data-testid="teams-page">{typeof onOpenJoseBoard}</div>),
+}));
 
 import { AutomationView } from '../../components/AutomationView';
 import { listSchedules, startScheduler, stopScheduler } from '../../services/joseSchedulerService';
@@ -26,6 +17,18 @@ function openSchedules() {
   render(<AutomationView />);
   fireEvent.click(screen.getByRole('button', { name: 'Schedules' }));
 }
+
+// 2.11.0 QA (owner, 2026-11-01): the Builder's steps had no code behind them and the 16
+// "registered operations" wrote made-up text. Automation is Teams (real Jose requests) and Schedules.
+describe('AutomationView', () => {
+  it('opens on Teams, and offers only Teams, Schedules and Dead Letter', () => {
+    render(<AutomationView onOpenJoseBoard={() => {}} />);
+    expect(screen.getByTestId('teams-page').textContent).toBe('function');
+    expect(screen.getAllByRole('button').filter((b) => ['Teams', 'Schedules', 'Dead Letter', 'Overview', 'Builder'].includes(b.textContent || '')).map((b) => b.textContent))
+      .toEqual(['Teams', 'Schedules', 'Dead Letter']);
+    expect(screen.queryByText(/Registered Operations/)).toBeNull();
+  });
+});
 
 describe('AutomationView → Schedules', () => {
   beforeEach(() => localStorage.clear());

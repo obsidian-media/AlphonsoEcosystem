@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FFMPEG_ASSET, FFMPEG_ASSETS, KEEP_FILE, KEEP_FILE_LINUX, platformArg } from '../../../scripts/fetch-ffmpeg.mjs';
+import { FFMPEG_ASSET, FFMPEG_ASSETS, KEEP_FILE, KEEP_FILE_LINUX, platformArg, rpathCommands } from '../../../scripts/fetch-ffmpeg.mjs';
 
 // Miya content factory phase 2a (owner): ffmpeg is bundled in the installer,
 // an LGPL build only, pinned to a dated release with its checksum.
@@ -43,6 +43,14 @@ describe('fetch-ffmpeg', () => {
     expect(KEEP_FILE_LINUX('ffmpeg-x/lib/libavcodec.so')).toBeNull();
     expect(KEEP_FILE_LINUX('ffmpeg-x/lib/libavcodec.so.62.28.103')).toBeNull();
     expect(KEEP_FILE_LINUX('ffmpeg-x/lib/pkgconfig/libavcodec.pc')).toBeNull();
+  });
+
+  // CI found the AppImage packer refusing libswresample: the libraries have no search path of their own.
+  it('gives each Linux library a search path to its own folder', () => {
+    expect(rpathCommands(['bin/ffmpeg', 'lib/libavutil.so.60', 'lib/libswresample.so.6', 'LICENSE.txt'], '/v')).toEqual([
+      ['patchelf', ['--set-rpath', '$ORIGIN', '/v/lib/libavutil.so.60']],
+      ['patchelf', ['--set-rpath', '$ORIGIN', '/v/lib/libswresample.so.6']],
+    ]);
   });
 
   it('reads the platform from the command line, Windows by default', () => {

@@ -7,6 +7,7 @@ import { chosenVersionOf } from '../../services/contentFactory/contentProjectSer
 import { visiblePieces } from '../../services/contentFactory/contentQualityGate';
 import type { StepTabProps } from './ScriptStudioTab';
 import type { ContentBrand } from '../../services/contentFactory/contentTypes';
+import { textItems } from '../../lib/readableValue';
 
 interface CampaignOutput {
   miya?: {
@@ -59,7 +60,7 @@ export function CampaignStudioTab({ project, brand, runStep, chooseVersion, appr
                     <Button size="sm" variant="ghost" onClick={() => copy(text)}>Copy</Button>
                   </div>
                   <div className="whitespace-pre-wrap text-(--text-1)">{p.caption}</div>
-                  {(p.hashtags || []).length > 0 && <div className="text-(--text-3)">{p.hashtags!.join(' ')}</div>}
+                  {textItems(p.hashtags).length > 0 && <div className="text-(--text-3)">{textItems(p.hashtags).join(' ')}</div>}
                   {p.description && <div className="whitespace-pre-wrap text-(--text-2)">{p.description}</div>}
                 </div>
               );
@@ -121,7 +122,7 @@ export function CampaignStudioTab({ project, brand, runStep, chooseVersion, appr
             <div className="text-[11px] text-(--text-3)">Scored by Maria against your references. Threshold: {brand?.qualityThreshold ?? 7}/10.</div>
             {pieces.filter((p) => p.visible).map((p) => (
               <div key={p.pieceId} className="text-(--text-1)">
-                {p.pieceId}: <strong>{p.score}/10</strong>{p.comparedTo ? ` (compared to ${p.comparedTo})` : ''}{p.weakPoints.length ? ` — ${p.weakPoints.join('; ')}` : ''}
+                {p.pieceId}: <strong>{p.score}/10</strong>{p.comparedTo ? ` (compared to ${p.comparedTo})` : ''}{textItems(p.weakPoints).length ? ` — ${textItems(p.weakPoints).join('; ')}` : ''}
               </div>
             ))}
             {sentinelCheck && (

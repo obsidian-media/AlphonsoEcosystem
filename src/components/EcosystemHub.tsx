@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Activity,
@@ -8,8 +8,7 @@ import {
   Network,
   PauseCircle,
   PlayCircle,
-  ShieldAlert,
-  Workflow
+  ShieldAlert
 } from 'lucide-react';
 import {
   addPacketReference,
@@ -19,13 +18,6 @@ import {
   markPacketExecuted,
   rejectPacket
 } from '../services/agentBusService';
-import {
-  WORKFLOW_NODE_LIBRARY,
-  addWorkflowEdge,
-  addWorkflowNode,
-  createWorkflow,
-  listWorkflows
-} from '../services/workflowBuilderService';
 import { appendSessionEvent, listSessionEvents, summarizeSession } from '../services/sessionIntelligenceService';
 import { collectResourceSnapshot, listResourceSnapshots, summarizeResourceUsage } from '../services/resourceCostService';
 import { listMarketplaceItems, setMarketplaceItemStatus } from '../services/localMarketplaceService';
@@ -37,11 +29,6 @@ import { TeamsPage } from './teams/TeamsPage';
 import { Tabs } from './ui/Tabs';
 import { SkillsPage } from './skills/SkillsPage';
 
-const WorkflowOperationsDashboard = lazy(() =>
-  import('./WorkflowOperationsDashboard').then((module) => ({
-    default: module.WorkflowOperationsDashboard
-  }))
-);
 
 interface Props {
   /** Which tab to open first. App.tsx remounts the hub (via key) per sidebar entry, so 'Agent Pairing' and 'Maturity' land directly on their tab. */
@@ -60,22 +47,19 @@ interface Props {
 
 export function EcosystemHub({ initialTab = 'overview', settings, setSettings, ollamaStatus, verificationLogs = [], voiceStatus, workspaceFoundation, updateCheckState, nativeSelfDevProof, setNativeSelfDevProof, nativeProofHooks }: Props) {
   const [packets, setPackets] = useState<ReturnType<typeof listAgentPackets>>(() => listAgentPackets());
-  const [workflows, setWorkflows] = useState<{ id: string; name: string; nodes: unknown[]; edges: unknown[]; [key: string]: unknown }[]>(() => listWorkflows());
   const [sessionSummary, setSessionSummary] = useState<{ totalEvents: number; warnings?: unknown[]; unresolved?: unknown[]; hours: number; recommendations?: string[] }>(() => summarizeSession(24));
   const [resourceSummary, setResourceSummary] = useState<{ points: number; avgTokenEstimate: number }>(() => summarizeResourceUsage(24));
   const [resourceSnapshots, setResourceSnapshots] = useState(() => listResourceSnapshots());
   const [marketItems, setMarketItems] = useState<{ id: string; name: string; type: string; status: string; [key: string]: unknown }[]>(() => listMarketplaceItems());
   const [snapshots, setSnapshots] = useState<{ id: string; timestampMs: number; payload?: Record<string, unknown> }[]>(() => listSnapshots());
   const [showAdvancedSections, setShowAdvancedSections] = useState<string>(initialTab);
-  const [newWorkflowName, setNewWorkflowName] = useState('You -> Jose -> Agents -> Jose Confirmation Flow');
   const [handoffNote, setHandoffNote] = useState('Creative packet validated and queued for supervised execution.');
 
   const approvalQueue = useMemo(() => listApprovalQueue() as { id: string; title: string; fromAgent: string; toAgent: string; packetType: string }[], [packets]);
-  const timeline = useMemo(() => listSessionEvents().slice(-30).reverse() as { id: string; title: string; category: string; timestampMs: number }[], [sessionSummary, packets, workflows, resourceSnapshots]);
+  const timeline = useMemo(() => listSessionEvents().slice(-30).reverse() as { id: string; title: string; category: string; timestampMs: number }[], [sessionSummary, packets, resourceSnapshots]);
 
   const refreshAll = () => {
     setPackets(listAgentPackets());
-    setWorkflows(listWorkflows());
     setSessionSummary(summarizeSession(24));
     setResourceSummary(summarizeResourceUsage(24));
     setResourceSnapshots(listResourceSnapshots());
@@ -125,24 +109,6 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
     refreshAll();
   };
 
-  const runCreateWorkflow = () => {
-    const flow = createWorkflow(newWorkflowName, 'shared');
-    let updated = addWorkflowNode(flow.id, 'trigger', { x: 0, y: 0 }, { label: 'User command received' });
-    updated = addWorkflowNode(flow.id, 'approval', { x: 220, y: 0 }, { label: 'Jose routes and gates approvals' });
-    updated = addWorkflowNode(flow.id, 'action', { x: 440, y: 0 }, { label: 'Agents report back to Jose' });
-    if (updated?.nodes?.length >= 3) {
-      addWorkflowEdge(flow.id, updated.nodes[0].id, updated.nodes[1].id, 'always');
-      addWorkflowEdge(flow.id, updated.nodes[1].id, updated.nodes[2].id, 'if approved');
-    }
-    appendSessionEvent({
-      category: 'workflow',
-      title: 'Workflow created',
-      details: { id: flow.id, name: flow.name },
-      agent: 'alphonso'
-    });
-    refreshAll();
-  };
-
   const runResourceSnapshot = () => {
     collectResourceSnapshot({
       ollamaConnected: ollamaStatus.state === 'connected',
@@ -162,7 +128,7 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
     { id: 'overview', label: 'Overview' },
     { id: 'queue', label: 'Queue' },
     { id: 'skills', label: 'Skills' },
-    { id: 'workflows', label: 'Workflows' },
+    { id: 'workflows', label: 'Timeline' },
     { id: 'pairings', label: 'Teams' },
     { id: 'advanced', label: 'Advanced' },
   ];
@@ -250,20 +216,6 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
           {/* WORKFLOWS TAB */}
           {showAdvancedSections === 'workflows' && (
             <div className="space-y-4">
-              <Panel icon={Workflow} title="Workflows">
-                <div className="flex gap-2">
-                  <input value={newWorkflowName} onChange={(e) => setNewWorkflowName(e.target.value)} className="flex-1 rounded-lg bg-(--surface-2) px-3 py-2 text-sm" />
-                  <button onClick={runCreateWorkflow} className="rounded-sm bg-(--accent-dim) px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-(--accent)">Create</button>
-                </div>
-                <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {workflows.length === 0 && <p className="text-sm text-(--text-3)">No workflows yet.</p>}
-                  {workflows.map((flow) => (
-                    <div key={flow.id} className="rounded-lg bg-(--surface-1) px-3 py-2 text-[11px] text-(--text-2)">
-                      {flow.name} — {flow.nodes.length} nodes, {flow.edges.length} edges
-                    </div>
-                  ))}
-                </div>
-              </Panel>
               <Panel icon={Activity} title="Session Timeline (24h)">
                 <div className="text-[11px] text-(--text-3) mb-2">Events: {sessionSummary.totalEvents} | Warnings: {sessionSummary.warnings?.length || 0}</div>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
@@ -299,9 +251,6 @@ export function EcosystemHub({ initialTab = 'overview', settings, setSettings, o
                 workspaceFoundation={workspaceFoundation}
                 onRefresh={refreshAll}
               />
-              <Suspense fallback={<div className="rounded-2xl bg-(--surface-1) p-3 text-sm text-(--text-3)">Loading…</div>}>
-                <WorkflowOperationsDashboard settings={settings} />
-              </Suspense>
               <ProductionReadinessPanel
                 settings={settings}
                 setSettings={setSettings}

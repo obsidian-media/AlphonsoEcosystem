@@ -1,10 +1,12 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 365 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 366 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
+| component | `src/components/AccentColorPicker.tsx` | `AccentColorPicker` |
+| component | `src/components/ActiveModelBadge.tsx` | `ActiveModelBadge` |
 | component | `src/components/AgentActivityLog.tsx` | `AgentActivityLog` |
 | component | `src/components/AgentAvatar.tsx` | `AgentAvatar` |
 | component | `src/components/AgentDock.tsx` | `AgentDock` |
@@ -57,7 +59,7 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | component | `src/components/echo/EchoRemembered.tsx` | `DecisionRow`, `EchoRemembered` |
 | component | `src/components/echo/MeaningSearchStatus.tsx` | `MeaningSearchStatus` |
 | component | `src/components/EcosystemHub.tsx` | `EcosystemHub` |
-| component | `src/components/EcosystemMaturityPanels.tsx` | `ApprovalCenterPanel`, `EcosystemMapPanel`, `MemoryConfidencePanel`, `OperatorModesPanel`, `PrivacyShieldPanel`, `SessionIntelligencePanel`, `TrustLayerPanel`, `WorkflowOperationsPanel` |
+| component | `src/components/EcosystemMaturityPanels.tsx` | `ApprovalCenterPanel`, `EcosystemMapPanel`, `MemoryConfidencePanel`, `OperatorModesPanel`, `PrivacyShieldPanel`, `SessionIntelligencePanel`, `TrustLayerPanel` |
 | component | `src/components/EcosystemMaturityPanelsGate.tsx` | `EcosystemMaturityPanelsGate` |
 | component | `src/components/ErrorBoundary.tsx` | `ErrorBoundary`, `withErrorBoundary` |
 | component | `src/components/FilesView.tsx` | `FilesView` |
@@ -68,7 +70,7 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | component | `src/components/hector/ResearchFindings.tsx` | `ResearchFindings` |
 | component | `src/components/hector/ResearchReportPanel.tsx` | `ResearchReportPanel` |
 | component | `src/components/hector/SavedSources.tsx` | `SavedSources` |
-| component | `src/components/hector/SourceBoard.tsx` | `SourceBoard` |
+| component | `src/components/hector/SourceBoard.tsx` | `readableText`, `SourceBoard` |
 | component | `src/components/HectorCompanionWidget.tsx` | `HectorCompanionWidget` |
 | component | `src/components/hermes/HermesMessagingWarning.tsx` | `HermesMessagingWarning` |
 | component | `src/components/hermes/HermesProfilesSection.tsx` | `HermesProfilesSection` |
@@ -91,7 +93,6 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | component | `src/components/MemorySearch.tsx` | `MemorySearch` |
 | component | `src/components/MicrophoneStatus.tsx` | `MicrophoneStatus` |
 | component | `src/components/MissionControlHome.tsx` | `MissionControlHome` |
-| component | `src/components/MissionRoom.tsx` | `MissionRoom` |
 | component | `src/components/miya/AiClipsPanel.tsx` | `AiClipsPanel`, `AiClipsPanelProps` |
 | component | `src/components/miya/BrandEditor.tsx` | `BrandEditor` |
 | component | `src/components/miya/BrandEnginesEditor.tsx` | `BrandEnginesEditor` |
@@ -116,6 +117,7 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | component | `src/components/miya/ThumbnailStudioTab.tsx` | `ThumbnailStudioTab`, `ThumbnailStudioTabProps` |
 | component | `src/components/MiyaCompanionWidget.tsx` | `MiyaCompanionWidget` |
 | component | `src/components/MiyaStudio.tsx` | `brandKitPrompt`, `MiyaStudio` |
+| component | `src/components/ModelPullHelper.tsx` | `ModelPullHelper` |
 | component | `src/components/ModelSwitcher.tsx` | `CloudModelPicker`, `CloudProvider`, `HermesModelPicker`, `ModelProviderId`, `ModelProviderPicker`, `ModelSwitcher`, `OllamaModelPicker` |
 | component | `src/components/ModeToggle.tsx` | `ModeToggle` |
 | component | `src/components/NotificationCenter.tsx` | `clearPersistedNotifications`, `loadPersistedNotifications`, `NotificationCenter` |
@@ -184,8 +186,6 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | component | `src/components/VoiceInputButton.tsx` | `VoiceInputButton` |
 | component | `src/components/VoiceView.tsx` | `VoiceView` |
 | component | `src/components/WhatsAppInboxPanel.tsx` | `WhatsAppInboxPanel` |
-| component | `src/components/WorkflowBuilderView.tsx` | `WorkflowBuilderView` |
-| component | `src/components/WorkflowOperationsDashboard.tsx` | `WorkflowOperationsDashboard` |
 | component | `src/components/WorkflowPanel.tsx` | `WorkflowPanel` |
 | component | `src/components/WorkspaceExportImportView.tsx` | `WorkspaceExportImportView` |
 | service | `src/services/a2aProtocolService.ts` | `A2ATask`, `delegate`, `getTaskStatus`, `listActiveTasks`, `listTasksByAgent`, `updateTaskResult` |
@@ -218,9 +218,9 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | service | `src/services/autoRunService.ts` | `autoRunDevServer`, `getAutoRunEnabled`, `setAutoRunEnabled` |
 | service | `src/services/backupService.ts` | `BackupSizeEstimate`, `createBackup`, `exportBackupToFile`, `getBackupSizeEstimate`, `importBackupFromFile`, `restoreBackup` |
 | service | `src/services/batchOrchestratorService.js` | `advanceToNextBatch`, `completeGoal`, `createProjectGoal`, `executeBatch`, `generateBatch`, `generateBatchRuleBased`, `generateBatchViaLLM`, `getActiveBatch`, `getActiveGoal`, `getBatch`, `getBatchById`, `getBatchProgress`, `getGoalById`, `getGoalProgress`, `getTaskById`, `isBatchComplete`, `listBatches`, `listGoals`, `updateBatchStatus`, `updateGoal`, `updateTaskStatus` |
-| service | `src/services/boardroomFacilitatorService.ts` | `buildFacilitatorPrompt`, `detectLowConfidence`, `FacilitatorResult`, `generateAgentResponse`, `generateAlphonsoResponse` |
-| service | `src/services/boardroomJoseService.ts` | `BOARDROOM_LABEL`, `BoardroomReview`, `concludeOnJose`, `creativeBriefOnJose`, `distributeOnJose` |
-| service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BoardroomGovernance`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `setThreadGovernance`, `THREADS_KEY`, `updateThreadStatus` |
+| service | `src/services/boardroomFacilitatorService.ts` | `buildAgentSystemPrompt`, `buildFacilitatorPrompt`, `detectLowConfidence`, `FacilitatorResult`, `generateAgentResponse`, `generateAlphonsoResponse` |
+| service | `src/services/boardroomJoseService.ts` | `BOARDROOM_LABEL`, `BoardroomReview`, `concludeOnJose`, `creativeBriefOnJose`, `distributeOnJose`, `workOnJose`, `workRequestIn` |
+| service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BOARDROOM_SPEAKER`, `BoardroomGovernance`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `setThreadGovernance`, `THREADS_KEY`, `updateThreadStatus` |
 | service | `src/services/browserAutomationService.ts` | `fetchUrlContent`, `openAndScrape`, `openExternalUrl`, `openSourceLink`, `openUrl`, `readClipboard`, `scrapeWebPage`, `setLinkConfirmHandler`, `writeClipboard` |
 | service | `src/services/cacheService.ts` | `agentCache`, `cached`, `CacheEntry`, `CacheOptions`, `connectorCache`, `createCacheKey`, `globalCache`, `MemoryCache` |
 | service | `src/services/calleCallStep.ts` | `askMarcusToCall`, `CALL_LABEL`, `CallToPlace`, `executeOutreachCall` |
@@ -360,12 +360,13 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | service | `src/services/hermes/hermesStepHooks.ts` | `getHermesHooks`, `HermesStepHooks`, `withHermesHooks` |
 | service | `src/services/hermes/hermesTools.ts` | `HERMES_DIDNT_START`, `HERMES_TOOL_PREFIX`, `hermesLocalModel`, `hermesToolFor`, `hermesToolLabel`, `isHermesTool`, `saveProfileModel`, `startHermesTool`, `stopHermesTool` |
 | service | `src/services/hermes/profileModels.ts` | `hermesLocalModel`, `savedProfileModel`, `SavedProfileModel`, `saveProfileModel` |
-| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
+| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NOT_FOUND`, `onUserProfilesChanged`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
+| service | `src/services/jose/agentPaidModels.ts` | `withAgentPaidModels` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
 | service | `src/services/jose/joseAdapt.ts` | `AdaptContext`, `adaptPlan`, `PlanChange`, `setPlanAdapterForTests` |
-| service | `src/services/jose/joseDecision.ts` | `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision` |
+| service | `src/services/jose/joseDecision.ts` | `asksForResearch`, `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision`, `ruleRoute` |
 | service | `src/services/jose/joseEffects.ts` | `ACTION_EFFECTS`, `COMMAND_CHECKED_EFFECTS`, `DEFAULT_EFFECT_APPROVALS`, `EFFECT_LABELS`, `effectsNeedingApproval`, `getEffectApprovals`, `inferEffects`, `JOSE_EFFECTS`, `JoseEffect`, `LOCKED_EFFECTS`, `stepEffectsToWaitFor` |
 | service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets` |
 | service | `src/services/jose/joseFinish.ts` | `NOTHING_NEW`, `saveRequestDecisions` |
@@ -380,7 +381,7 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | service | `src/services/jose/joseQueue.ts` | `giveBackTurn`, `leaveQueue`, `QUEUED_LINE`, `queuePosition`, `requeueAtStart`, `resetQueueForTests`, `takeTurn`, `usesLocalModel`, `WAITING_FOR_TURN` |
 | service | `src/services/jose/joseRequestStore.ts` | `addRequestSteps`, `appendRequestNote`, `attachRunToRequest`, `cancelJoseRequest`, `claimPlanForRun`, `createJoseRequest`, `createWaitingPlanRequest`, `findRequestByPacket`, `getJoseRequest`, `JoseRequest`, `JoseRequestStatus`, `JoseRequestStep`, `listJoseRequests`, `markRunningRequestsInterrupted`, `onRequestStatusChange`, `replacePlanSteps`, `requestForCommand`, `returnPlanToWaiting`, `rewireRequestNeeds`, `setJoseRequestStatus`, `setRequestGroup`, `setRequestQueuedAt`, `updateJoseStep` |
 | service | `src/services/jose/joseReviewLoop.ts` | `judgeReview`, `planReviewRound`, `ReviewJudgement` |
-| service | `src/services/jose/joseSpend.ts` | `canSpend`, `estimateCostUsd`, `estimateEffectsUsd`, `estimateElevenLabsUsd`, `getPaidModelSettings`, `monthSpendUsd`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd` |
+| service | `src/services/jose/joseSpend.ts` | `canSpend`, `CUT_OFF_PATTERN`, `cutOffLine`, `estimateCostUsd`, `estimateEffectsUsd`, `estimateElevenLabsUsd`, `getPaidModelSettings`, `monthSpendUsd`, `notePaidStop`, `PAID_MAX_OUTPUT_TOKENS`, `PAID_PROMPT_ALLOWANCE_CHARS`, `PAID_RETRY_MAX_OUTPUT_TOKENS`, `paidModelAvailable`, `paidModelId`, `PaidModelSettings`, `PaidProvider`, `recordSpend`, `recordSpendUsd`, `takePaidStop` |
 | service | `src/services/jose/joseStepOutputs.ts` | `getStepOutput`, `listStepOutputs`, `priorOutputsForNeeds`, `setStepOutput`, `StepOutput` |
 | service | `src/services/jose/joseStop.ts` | `clearStop`, `isStopRequested`, `NOT_RUNNING`, `onStopRequested`, `STOPPED_LINE`, `stopRequest`, `stopSignal`, `stopWaitsFor` |
 | service | `src/services/jose/joseSummary.ts` | `closingSummary` |
@@ -482,7 +483,7 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | service | `src/services/repoAuditService.ts` | `getLastRepoAudit`, `listRepoAudits`, `REPO_AUDIT_SCOPE`, `runRepoAudit`, `summarizeRepoAudit` |
 | service | `src/services/resourceCostService.ts` | `collectResourceSnapshot`, `listResourceSnapshots`, `summarizeResourceUsage` |
 | service | `src/services/resources/admission.ts` | `Admission`, `decideAdmission`, `MARGIN`, `memoryWaitLine`, `tooBigLine` |
-| service | `src/services/resources/ensureTools.ts` | `EnsureResult`, `ensureTools` |
+| service | `src/services/resources/ensureTools.ts` | `COMFY_START_WAIT_MS`, `EnsureResult`, `ensureTools`, `pickComfyInstall`, `startComfyUi` |
 | service | `src/services/resources/freeMemory.ts` | `FreeResult`, `freeThings` |
 | service | `src/services/resources/idleStop.ts` | `DEFAULT_IDLE_MINUTES`, `FAST_POLL_MS`, `getIdleMinutes`, `idleTick`, `latestResources`, `onResources`, `resetIdleStopForTests`, `setIdleMinutes`, `SLOW_POLL_MS`, `startResourceWatcher` |
 | service | `src/services/resources/resourceGate.ts` | `admitStep`, `Admitted`, `firstStepNeed`, `NotAdmitted`, `RESERVATION_SETTLE_MS`, `reservedTotal`, `resetGateForTests`, `runAdmitted`, `WAIT_RECHECK_MS` |
@@ -526,7 +527,7 @@ Source-backed inventory: 365 services and 183 components. Human purpose descript
 | service | `src/services/streamingService.ts` | `abortStream`, `clearStreamHistory`, `getActiveStreams`, `getStreamState`, `startStream`, `StreamEvent`, `subscribeToStreams` |
 | service | `src/services/telegramAutoPollService.ts` | `getTelegramAutoPollState`, `getTelegramEnvSafe`, `runSingleTelegramPoll` |
 | service | `src/services/telegramBrowserConnector.ts` | `browserPollTelegram`, `browserSendTelegram`, `getTelegramPollCursor`, `handleTelegramBotCommand`, `parseTelegramCommand`, `setTelegramPollCursor`, `TelegramAuditEntry`, `TelegramBotVerifyResult`, `TelegramMessage`, `TelegramPollResult`, `TelegramSendResult`, `verifyTelegramBotEnvironment` |
-| service | `src/services/telegramCompanionService.js` | `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `handleStopCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `restartTelegramCompanion`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
+| service | `src/services/telegramCompanionService.js` | `formatCommandList`, `handleAgentsCommand`, `handleApproveCommand`, `handleFilesCommand`, `handleHelpCommand`, `handleJoseButton`, `handleNovaCommand`, `handlePingCommand`, `handleQueueCommand`, `handleRejectCommand`, `handleReportCommand`, `handleScanCommand`, `handleStatusCommand`, `handleStopCommand`, `isTelegramCompanionRunning`, `processInboundCommands`, `restartTelegramCompanion`, `runPushWatcher`, `sendTelegramFileOrFolder`, `sendTelegramMessage`, `setNotificationsPaused`, `startTelegramCompanion`, `stopTelegramCompanion` |
 | service | `src/services/toolConnectionService.ts` | `buildToolConnectionPayload`, `listToolConnectionAudit`, `listToolConnections`, `listToolConnectionTypes`, `proveToolConnectionPath`, `removeToolConnection`, `sendToolConnectionMessage`, `SendToolConnectionOptions`, `setToolConnectionStatus`, `testToolConnection`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `ToolConnection`, `ToolConnectionAuditEntry`, `ToolConnectionPatch`, `ToolConnectionResult`, `ToolConnectionType`, `upsertToolConnection` |
 | service | `src/services/toolNotificationDispatcher.ts` | `dispatchReceiptNotifications` |
 | service | `src/services/toolRegistryService.ts` | `executeTool`, `formatToolsForPrompt`, `getAllToolNames`, `getToolDefinition`, `getToolDefinitions`, `ToolArgs`, `ToolContext`, `ToolDefinition`, `ToolExecutionResult`, `ToolParameterSchema` |

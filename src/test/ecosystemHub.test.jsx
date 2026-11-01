@@ -61,10 +61,6 @@ vi.mock('../components/teams/TeamsPage', () => ({
   TeamsPage: () => <div data-testid="teams-page" />
 }));
 
-vi.mock('../components/WorkflowOperationsDashboard', () => ({
-  WorkflowOperationsDashboard: () => <div data-testid="workflow-ops" />
-}));
-
 import { EcosystemHub } from '../components/EcosystemHub';
 
 const defaultProps = {
@@ -92,7 +88,7 @@ describe('EcosystemHub', () => {
 
   it('renders all tabs', () => {
     render(<EcosystemHub {...defaultProps} />);
-    const tabs = ['Overview', 'Queue', 'Skills', 'Workflows', 'Teams', 'Advanced'];
+    const tabs = ['Overview', 'Queue', 'Skills', 'Timeline', 'Teams', 'Advanced'];
     tabs.forEach((tab) => {
       expect(screen.getByText(tab)).toBeDefined();
     });
@@ -116,16 +112,20 @@ describe('EcosystemHub', () => {
     await waitFor(() => expect(screen.getByText('Agent Skills')).toBeDefined(), { timeout: 3000 });
   });
 
-  it('switches to Workflows tab', () => {
+  // 2.11.0 QA (owner, 2026-11-01): Builder workflows and the canned operations did nothing real.
+  it('the Timeline tab shows the session timeline, with no way to make a Builder workflow', async () => {
     render(<EcosystemHub {...defaultProps} />);
-    fireEvent.click(screen.getByText('Workflows'));
-    expect(screen.getByText('Workflows')).toBeDefined();
+    fireEvent.click(screen.getByText('Timeline'));
+    await waitFor(() => expect(screen.getByText(/Session Timeline \(24h\)/)).toBeDefined(), { timeout: 3000 });
+    expect(screen.queryByText('Create')).toBeNull();
+    expect(screen.queryByText('Workflows')).toBeNull();
   });
 
-  it('switches to Advanced tab', () => {
+  it('switches to Advanced tab, without the operations dashboard', () => {
     render(<EcosystemHub {...defaultProps} />);
     fireEvent.click(screen.getByText('Advanced'));
     expect(screen.getByTestId('maturity-gate')).toBeDefined();
+    expect(screen.queryByText(/Workflow Operations/)).toBeNull();
   });
 
   it('opens directly on the Pairings tab when initialTab is "pairings" (sidebar Agent Pairing entry)', () => {

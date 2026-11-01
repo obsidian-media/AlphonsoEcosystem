@@ -817,38 +817,55 @@ export async function withAgentModel<T>(agentId: string, model: string, fn: () =
  * 4). Refused unless paid models are available and the month's cap allows it;
  * the cost is recorded from the usage the provider reports.
  */
-async function generatePaidResponse(paidModel: string, options: AgentGenerateOptions): Promise<AgentGenerateResult> {
+async function generatePaidResponse(paidModel: string, options: AgentGenerateOptions, agentId = ''): Promise<AgentGenerateResult> {
   const [provider, ...rest] = paidModel.split(':');
   const model = rest.join(':').trim() || undefined;
   const spend = await import('../services/jose/joseSpend');
+  // A reason that won't change by asking again is left for the step runner, which then stops.
+  const stop = (line: string) => { spend.notePaidStop(agentId, line); return new Error(line); };
   const available = spend.paidModelAvailable();
-  if (!available.ok) throw new Error(available.reason);
+  if (!available.ok) throw stop(String(available.reason));
   const allowed = spend.canSpend(spend.estimateCostUsd(String(options.prompt || '').length, spend.PAID_MAX_OUTPUT_TOKENS));
-  if (!allowed.ok) throw new Error(allowed.reason);
-  // OpenRouter (2026-10-30): the cost OpenRouter reports (own-key cost included), else tokens × listed prices.
-  if (provider === 'openrouter') {
-    if (!model) throw new Error('Choose an OpenRouter model in Settings.');
-    const { sendOpenRouterMessage, openRouterFailure } = await import('../services/connectors/openRouterConnector');
-    const result = await sendOpenRouterMessage([{ role: 'user', content: options.prompt }], { model, maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
-    const failure = openRouterFailure(result);
-    if (failure) throw new Error(failure.message);
-    const answer = result as OpenRouterAnswer;
-    if (answer.costReported) spend.recordSpendUsd(answer.costUsd);
-    else spend.recordSpend({ inputTokens: answer.usage.promptTokens, outputTokens: answer.usage.completionTokens });
-    return { response: answer.content, done: true, backend: 'openrouter', model: answer.model };
+  if (!allowed.ok) throw stop(String(allowed.reason));
+  const who = provider === 'openrouter' ? 'OpenRouter' : provider === 'claude' ? 'Claude' : 'ChatGPT';
+  // One call; its cost is recorded even when the answer was cut off (it was still charged).
+  const callOnce = async (maxTokens: number): Promise<{ text: string; model: string | undefined; cutOff: boolean }> => {
+    // OpenRouter (2026-10-30): the cost OpenRouter reports (own-key cost included), else tokens × listed prices.
+    if (provider === 'openrouter') {
+      if (!model) throw new Error('Choose an OpenRouter model in Settings.');
+      const { sendOpenRouterMessage, openRouterFailure } = await import('../services/connectors/openRouterConnector');
+      const result = await sendOpenRouterMessage([{ role: 'user', content: options.prompt }], { model, maxTokens });
+      if (result.ok === false && result.kind === 'no_text' && result.cutOff) return { text: '', model, cutOff: true };
+      const failure = openRouterFailure(result);
+      if (failure) throw new Error(failure.message);
+      const answer = result as OpenRouterAnswer;
+      if (answer.costReported) spend.recordSpendUsd(answer.costUsd);
+      else spend.recordSpend({ inputTokens: answer.usage.promptTokens, outputTokens: answer.usage.completionTokens });
+      return { text: answer.content, model: answer.model, cutOff: Boolean(answer.cutOff) };
+    }
+    if (provider === 'claude') {
+      const { sendClaudeMessage } = await import('../services/claudeService');
+      const result: any = await sendClaudeMessage(options.prompt, { model, maxTokens });
+      if (!result?.ok) throw new Error(result?.error || 'Claude did not answer.');
+      spend.recordSpend({ inputTokens: result.usage?.input_tokens || 0, outputTokens: result.usage?.output_tokens || 0 });
+      return { text: result.text || '', model: result.model || model, cutOff: Boolean(result.cutOff) };
+    }
+    const { sendChatGPTMessage } = await import('../services/chatgptService');
+    const result: any = await sendChatGPTMessage(options.prompt, { model, maxTokens });
+    if (!result?.ok) throw new Error(result?.error || 'ChatGPT did not answer.');
+    spend.recordSpend({ inputTokens: result.usage?.prompt_tokens || 0, outputTokens: result.usage?.completion_tokens || 0 });
+    return { text: result.text || '', model: result.model || model, cutOff: Boolean(result.cutOff) };
+  };
+  // An answer cut off at the length limit (a model that thinks first, or a long piece of work) is
+  // asked once more with more room, within the cap; then it says so plainly (QA, 2026-10-31).
+  let answer = await callOnce(spend.PAID_MAX_OUTPUT_TOKENS);
+  if (answer.cutOff) {
+    const more = spend.canSpend(spend.estimateCostUsd(String(options.prompt || '').length, spend.PAID_RETRY_MAX_OUTPUT_TOKENS));
+    if (!more.ok) throw stop(spend.cutOffLine(who, 'cap'));
+    answer = await callOnce(spend.PAID_RETRY_MAX_OUTPUT_TOKENS);
+    if (answer.cutOff) throw stop(spend.cutOffLine(who));
   }
-  if (provider === 'claude') {
-    const { sendClaudeMessage } = await import('../services/claudeService');
-    const result: any = await sendClaudeMessage(options.prompt, { model, maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
-    if (!result?.ok) throw new Error(result?.error || 'Claude did not answer.');
-    spend.recordSpend({ inputTokens: result.usage?.input_tokens || 0, outputTokens: result.usage?.output_tokens || 0 });
-    return { response: result.text || '', done: true, backend: 'claude', model: result.model || model };
-  }
-  const { sendChatGPTMessage } = await import('../services/chatgptService');
-  const result: any = await sendChatGPTMessage(options.prompt, { model, maxTokens: spend.PAID_MAX_OUTPUT_TOKENS });
-  if (!result?.ok) throw new Error(result?.error || 'ChatGPT did not answer.');
-  spend.recordSpend({ inputTokens: result.usage?.prompt_tokens || 0, outputTokens: result.usage?.completion_tokens || 0 });
-  return { response: result.text || '', done: true, backend: 'chatgpt', model: result.model || model };
+  return { response: answer.text, done: true, backend: provider === 'openrouter' || provider === 'claude' ? provider : 'chatgpt', model: answer.model };
 }
 
 const isPaidModel = (model: unknown): model is string => isPaidModelId(model);
@@ -859,12 +876,14 @@ export async function generateAgentLlmResponse(agentId: string, rawOptions: Agen
   const options: AgentGenerateOptions = rawOptions.signal || !stepSignal ? rawOptions : { ...rawOptions, signal: stepSignal };
   // A paid model Jose chose for this step goes first, whatever the agent's own provider.
   const stepModel = options.model || getAgentModelOverride(agentId);
-  if (isPaidModel(stepModel)) return generatePaidResponse(stepModel, options);
+  if (isPaidModel(stepModel)) return generatePaidResponse(stepModel, options, agentId);
 
   const { getAgentProvider } = await import('../services/modelSelectionService');
   const config = getAgentProvider(agentId);
 
-  if (config.provider === 'ollama') {
+  // 'paid' spends only in a request's step, which carries the paid model and asked first (handled
+  // above); anywhere else (a Boardroom reply) the agent uses this computer's model (2.11.0 QA).
+  if (config.provider === 'ollama' || config.provider === 'paid') {
     const model = options.model || getAgentModelOverride(agentId) || getConfiguredOllamaModel();
     const result = await generateOllamaResponse({
       // The address set in Settings when the caller passes none (QA

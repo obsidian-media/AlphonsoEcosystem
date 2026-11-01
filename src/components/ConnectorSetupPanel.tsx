@@ -45,8 +45,6 @@ import {
 import { getTelegramAutoPollState, runSingleTelegramPoll } from '../services/telegramAutoPollService';
 import { saveConnectorCredential, getConnectorCredential, hydrateConnectorCredentialsFromSqlite } from '../services/connectors/connectorAuth';
 import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
-import { listAgentProfiles } from '../agents/agentRegistry';
-import { getHermesAgentEndpoint, saveHermesAgentEndpoint, getHermesAgentHealth } from '../services/connectors/hermesAgentConnector';
 import { HermesMessagingWarning } from './hermes/HermesMessagingWarning';
 import { CloudModelSelect } from './CloudModelSelect';
 import { MediaStorageSection } from './MediaStorageSection';
@@ -331,44 +329,11 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
   );
 }
 
-function PlaceholderConnectorBanner({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return (
-    <div className="relative">
-      {/* Overlay covers the children area and catches pointer events — no pointer-events-none. */}
-      <div className="absolute inset-0 z-10 rounded-2xl bg-(--surface-1) backdrop-blur-[1px]" />
-      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-(--warning-border) bg-(--warning-dim) px-2.5 py-1">
-        <span className="h-1.5 w-1.5 rounded-full bg-(--warning)" />
-        <span className="text-[10px] font-semibold tracking-wide text-(--warning)">Coming Soon</span>
-      </div>
-      {/* pointer-events-none + aria-hidden ensure neither mouse events nor assistive
-          technology can reach or activate the disabled credential form. */}
-      <div className="pointer-events-none opacity-40" aria-hidden="true">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-interface HermesAgentRowState {
-  url: string;
-  key: string;
-  checking: boolean;
-  health: { ok: boolean; error?: string } | null;
-}
-
-/**
- * One credential row per agent id from `agentRegistry.js` — never a
- * hardcoded list, so a 6th/7th/... Hermes profile the user configures later
- * needs no code change here. Each row is its own `CredentialSection` reusing
- * the exact same component every other connector uses; "Save & Enable"
- * additionally runs the unauthenticated `GET /health` reachability probe so
- * the row shows connected/unreachable rather than just "saved".
- */
 /**
  * CredentialSection's real prop interface (title/icon/fields/onSave/hint/savedLabel)
  * has no slot for extra content, so this renders as its own standalone block right
  * after the CALL-E CredentialSection rather than "inside" it -- same precedent
- * HermesAgentsSection below sets for custom per-connector UI beyond the basic form.
+ * other custom per-connector blocks use.
  */
 function CalleMcpConnectionBlock(): React.JSX.Element {
   const [configured, setConfigured] = useState(false);
@@ -438,62 +403,6 @@ function CalleMcpConnectionBlock(): React.JSX.Element {
       </div>
       {pending && <p className="mt-2 text-[10px] text-zinc-500">Complete the login in your browser, then this will update automatically.</p>}
     </div>
-  );
-}
-
-function HermesAgentsSection(): React.JSX.Element {
-  const agents = useMemo(() => listAgentProfiles(), []);
-  const [rows, setRows] = useState<Record<string, HermesAgentRowState>>(() => {
-    const initial: Record<string, HermesAgentRowState> = {};
-    for (const agent of agents) {
-      const { url, key } = getHermesAgentEndpoint(agent.id);
-      initial[agent.id] = { url, key, checking: false, health: null };
-    }
-    return initial;
-  });
-
-  const updateRow = (agentId: string, patch: Partial<HermesAgentRowState>) => {
-    setRows((prev) => ({ ...prev, [agentId]: { ...prev[agentId], ...patch } }));
-  };
-
-  const handleSave = async (agentId: string) => {
-    const row = rows[agentId];
-    saveHermesAgentEndpoint(agentId, row.url, row.key);
-    updateRow(agentId, { checking: true, health: null });
-    const health = await getHermesAgentHealth(agentId);
-    updateRow(agentId, { checking: false, health });
-  };
-
-  return (
-    <>
-      {agents.map((agent) => {
-        const row = rows[agent.id];
-        if (!row) return null;
-        return (
-          <CredentialSection
-            key={agent.id}
-            title={`Hermes — ${agent.name}`}
-            icon={Cpu}
-            borderColor="border-fuchsia-300/20"
-            bgColor="bg-fuchsia-500/8"
-            accentColor="text-fuchsia-400"
-            fields={[
-              { label: 'Base URL', placeholder: 'http://127.0.0.1:8645', value: row.url, onChange: (v) => updateRow(agent.id, { url: v }), key: `HERMES_${agent.id}_URL`, secret: false },
-              { label: 'API Key', placeholder: 'Bearer token from that profile\'s config.yaml', value: row.key, onChange: (v) => updateRow(agent.id, { key: v }), key: `HERMES_${agent.id}_KEY` }
-            ]}
-            onSave={() => { handleSave(agent.id); }}
-            hint={
-              row.checking
-                ? 'Checking reachability…'
-                : row.health
-                  ? (row.health.ok ? `Connected.` : `Saved, but unreachable: ${row.health.error}`)
-                  : `A standalone Hermes Agent profile mirroring ${agent.name} (same soul/role, different runtime). Paste its api_server base URL and Bearer key from that profile's own config.yaml.`
-            }
-            savedLabel={`${agent.name} Hermes endpoint saved`}
-          />
-        );
-      })}
-    </>
   );
 }
 
@@ -1142,23 +1051,19 @@ export function ConnectorSetupPanel(): React.JSX.Element {
 
         <CollapsibleCategory id="ai_models" label="AI Models" icon={Bot} defaultOpen={false}>
 
-          <PlaceholderConnectorBanner>
-            <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
-              fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
-              onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
-              hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
-              savedLabel="Anthropic key saved" />
-            {anthropicApiKey && <CloudModelSelect provider="claude" />}
-          </PlaceholderConnectorBanner>
+          <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
+            fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
+            hint="Used for Jose's steps when Settings → General → Allow paid models is on and this is the provider chosen there. Every paid step asks first, with the cost."
+            savedLabel="Anthropic key saved" />
+          {anthropicApiKey && <CloudModelSelect provider="claude" />}
 
-          <PlaceholderConnectorBanner>
-            <CredentialSection title="ChatGPT (OpenAI)" icon={Bot} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
-              fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
-              onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
-              hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
-              savedLabel="OpenAI key saved" />
-            {openaiApiKey && <CloudModelSelect provider="chatgpt" />}
-          </PlaceholderConnectorBanner>
+          <CredentialSection title="ChatGPT (OpenAI)" icon={Bot} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
+            fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
+            hint="Used for Jose's steps when Settings → General → Allow paid models is on and this is the provider chosen there. Every paid step asks first, with the cost."
+            savedLabel="OpenAI key saved" />
+          {openaiApiKey && <CloudModelSelect provider="chatgpt" />}
 
           <CredentialSection title="Qwen / DashScope" icon={Cpu} borderColor="border-yellow-300/20" bgColor="bg-yellow-500/8" accentColor="text-yellow-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: qwenApiKey, onChange: setQwenApiKey, key: 'DASHSCOPE_API_KEY' }]}
@@ -1169,7 +1074,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
           <CredentialSection title="DeepSeek AI" icon={Cpu} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: deepseekApiKey, onChange: setDeepseekApiKey, key: 'DEEPSEEK_API_KEY' }]}
             onSave={() => saveConnectorApiKey('deepseek', { DEEPSEEK_API_KEY: deepseekApiKey })}
-            hint="Get your key at platform.deepseek.com. OpenAI-compatible API — deepseek-chat model. Use as an alternative to Claude/ChatGPT for Hector research."
+            hint="Get your key at platform.deepseek.com. DeepSeek bills you directly, and Zero-Cost Mode doesn't block it."
             savedLabel="DeepSeek key saved" />
 
           <CredentialSection title="NVIDIA NIM" icon={Cpu} borderColor="border-lime-300/20" bgColor="bg-lime-500/8" accentColor="text-lime-400"
@@ -1192,7 +1097,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             savedLabel="OpenRouter key saved" />
           <OpenRouterTest />
 
-          <HermesAgentsSection />
+          {/* 2.11.0 QA (owner, 2026-11-01): a box per agent here repeated Settings → Agents → Hermes profiles. */}
+          <p data-testid="hermes-moved" className="text-xs text-zinc-500">Hermes profiles are connected in Settings → Agents → Hermes profiles.</p>
 
         </CollapsibleCategory>
 
@@ -1230,7 +1136,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
           <CredentialSection title="ElevenLabs (voices and sound effects)" icon={FileText} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
             fields={[{ label: 'API Key', placeholder: 'Your ElevenLabs API key', value: elevenLabsApiKey, onChange: setElevenLabsApiKey, key: 'ELEVENLABS_API_KEY' }]}
             onSave={() => saveConnectorApiKey('elevenlabs', { ELEVENLABS_API_KEY: elevenLabsApiKey })}
-            hint="Paid, your own account. A brand can read its voice-overs with one of your ElevenLabs voices (including one you cloned there), and Miya can add sound effects. Every run asks first with the cost, using your prices in Settings → Approvals → Allow paid models."
+            hint="Paid, your own account. A brand can read its voice-overs with one of your ElevenLabs voices (including one you cloned there), and Miya can add sound effects. Every run asks first with the cost, using your prices in Settings → General → Allow paid models."
             savedLabel="ElevenLabs key saved" />
           <ElevenLabsTest />
           {/* Higgsfield (content factory phase 4b): paid pictures and AI clips from the model ids you choose. */}

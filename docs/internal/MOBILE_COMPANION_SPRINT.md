@@ -4,7 +4,7 @@
 
 **Purpose:** Complete instructions for Kilo CLI (or any agent) to implement the Alphonso iOS/mobile companion from scratch in parallel with other development work.
 
-**Status as of 2026-06-22:** Phases 1–2 complete, Phase 3–5 pending. Desktop WebSocket server (Rust) + CompanionPairingPanel UI (React) built and tested. See `docs/IOS_COMPANION_HANDOFF.md` for full handoff details.
+**Status as of 2026-06-22:** Phases 1–2 complete, Phase 3–5 pending. Desktop WebSocket server (Rust) + CompanionPairingPanel UI (React) built and tested. See `docs/internal/IOS_COMPANION_HANDOFF.md` for full handoff details.
 
 **Estimated duration:** 15–23 days across 5 phases.
 
@@ -13,7 +13,7 @@
 ## Before You Start — Read These First
 
 1. `docs/ALPHONSO_GROUND_TRUTH.md` — single source of truth for what already exists
-2. `docs/IOS_COMPANION_PLAN.md` — high-level architecture and protocol
+2. `docs/internal/IOS_COMPANION_PLAN.md` — high-level architecture and protocol
 3. `docs/platform/ios-companion.md` — detailed file structure, types, and phase breakdown
 4. `CLAUDE.md` — build commands, do-not-duplicate table, test requirements
 

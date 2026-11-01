@@ -19,7 +19,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
-import { Tabs } from './components/ui/Tabs';
 import { useUxMode } from './hooks/useUxMode';
 import { GuidedTour } from './components/GuidedTour';
 import { DigestPanel, DigestItem } from './components/DigestPanel';
@@ -81,6 +80,7 @@ import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
 import { VerificationProvider, useVerification } from './contexts/VerificationContext';
 import { CoachProvider, useCoach } from './contexts/CoachContext';
 import type { BoardroomRequestApproval } from './components/BoardroomChatView';
+import { useAccentTheme } from './hooks/useAccentTheme';
 
 // Mirrors Sidebar.tsx's SPACES 'system' group item ids exactly -- keep in
 // sync if that group's tabs ever change (see the RightPanel render branch
@@ -98,34 +98,15 @@ const VoiceView = lazy(() => import('./components/VoiceView').then((mod) => ({ d
 const BootStatusBanner = lazy(() => import('./components/BootStatusBanner').then((mod) => ({ default: mod.BootStatusBanner })));
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
 const CompanionMode = lazy(() => import('./components/CompanionMode').then((mod) => ({ default: mod.CompanionMode })));
-const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
 const BoardroomView = lazy(() => import('./components/BoardroomChatView').then((mod) => ({ default: mod.BoardroomChatView })));
 
-function MissionRoomBoardroomTabs({ onCreateApprovalRequest, onOpenJoseBoard }: { onCreateApprovalRequest: () => void; onOpenJoseBoard?: (requestId: string) => void }) {
-  const [subTab, setSubTab] = React.useState<'mission' | 'boardroom'>('mission');
+// Boardroom: the sessions where agents answer. Mission Room (a local notepad where you typed as
+// agents) was archived in 2.11.0 QA (owner, 2026-11-01): archive/MIGHTBEUSEDLATER/MissionRoom.tsx.
+function BoardroomPage({ onOpenJoseBoard }: { onOpenJoseBoard?: (requestId: string) => void }) {
   const approval = useRequestApprovalBridge();
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <div className="px-5 pt-3 pb-0 shrink-0">
-        <Tabs
-          tabs={[
-            { id: 'mission', label: 'Mission Room' },
-            { id: 'boardroom', label: 'Boardroom Sessions' }
-            // The old "Boardroom Legacy" session view was removed (owner,
-            // 2026-10-21); its Conclude, Distribute and Creative brief actions
-            // now live on each Boardroom thread. Source: archive/MIGHTBEUSEDLATER.
-          ]}
-          activeId={subTab}
-          onChange={(id) => setSubTab(id as 'mission' | 'boardroom')}
-        />
-      </div>
-      <div className="flex-1 overflow-hidden">
-        {subTab === 'mission' ? (
-          <MissionRoom onCreateApprovalRequest={onCreateApprovalRequest} />
-        ) : (
-          <Suspense fallback={null}><BoardroomView requestApproval={approval?.requestApproval} onOpenJoseBoard={onOpenJoseBoard} /></Suspense>
-        )}
-      </div>
+    <div className="h-full overflow-hidden">
+      <Suspense fallback={null}><BoardroomView requestApproval={approval?.requestApproval} onOpenJoseBoard={onOpenJoseBoard} /></Suspense>
     </div>
   );
 }
@@ -400,7 +381,7 @@ function AppShell() {
   // usePollingEffects's update-check block (App.tsx's own boot effect below
   // already owns checkAppUpdate()).
   useBootEffects({ settings, setSettings, setConversations, setActiveChatId, setDesktopBridge, setIsOnline });
-  usePersistenceEffects({ settings, conversations, nativeSelfDevProof, coachMiniMode, coachSnapCorner });
+  usePersistenceEffects({ settings, conversations, nativeSelfDevProof, coachMiniMode, coachSnapCorner, isCoachWindow });
   // Point the context bridge (Plugin/Workspace/Verification providers, Boardroom)
   // at the shell's real approval modal. Without this they await a prompt that never shows.
   const approvalBridge = useRequestApprovalBridge();
@@ -928,7 +909,7 @@ function AppShell() {
                   <MissionControlHome settings={settings} ollamaStatus={ollamaStatus} operatorMode={operatorMode} coachMode={coachMode} coachIntervention={coachIntervention} verificationLogs={verificationLogs} memoryItems={memoryItems} updateCheckState={updateCheckState} onNavigate={switchTab} />
                 )}
                 {activeTab === 'mission_room' && (
-                  <MissionRoomBoardroomTabs onCreateApprovalRequest={() => setApprovalRequiredNotice(true)} onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} />
+                  <BoardroomPage onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} />
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState activeTab="Chat" />}>
@@ -947,7 +928,7 @@ function AppShell() {
                 {activeTab === 'hector' && (
                   <HectorResearchDesk onHectorStateChange={(payload: any) => { if (!payload) return; setHectorCompanionState((current: any) => ({ ...current, ...payload })); }} />
                 )}
-                {activeTab === 'automation' && <AutomationView />}
+                {activeTab === 'automation' && <AutomationView onOpenJoseBoard={(requestId: string) => { setJoseBoardRequestId(requestId); switchTab('orchestrator'); }} />}
                 {activeTab === 'files' && <FilesView memoryItems={memoryItems} />}
                 {(activeTab === 'ecosystem' || activeTab === 'pairings' || activeTab === 'maturity') && (
                   <EcosystemHub key={activeTab} initialTab={activeTab === 'pairings' ? 'pairings' : activeTab === 'maturity' ? 'advanced' : 'overview'} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />
@@ -1092,6 +1073,8 @@ export function RequestApprovalProvider({ children }: { children: React.ReactNod
 }
 
 export default function App() {
+  // The saved accent colour, from the first paint (Settings → Appearance; 2.11.0 QA).
+  useAccentTheme();
   return (
     <VerificationLogsProvider>
       <RequestApprovalProvider>

@@ -99,6 +99,27 @@ describe('toolsForStep', () => {
     expect(toolsForStep(content('creative_assemble_video'))).toEqual(['ffmpeg']);
   });
 
+  // QA, 2026-10-31: CI's plain desktop run (no Ollama, no ComfyUI) showed posting failing on
+  // "Ollama didn't start" and automatic AI clips failing on ComfyUI with no video model installed.
+  it("Marcus's steps need nothing here: his model work happens before you approve, when the send is prepared", () => {
+    for (const actionType of ['distribution_schedule_posts', 'distribution_execution', 'distribution_slack', 'distribution_outside_tool', 'outreach_call', 'distribution_readiness']) {
+      expect(toolsForStep({ agent: 'marcus', actionType })).toEqual([]);
+    }
+    expect(toolsForStep(content('distribution_schedule_posts', 'marcus'))).toEqual([]);
+    hermes.tool = 'hermes:marcus';
+    expect(toolsForStep({ agent: 'marcus', actionType: 'distribution_execution' })).toEqual([]);
+  });
+
+  it('automatic clips with no video model on this computer need nothing here (the step says what to set up)', () => {
+    engines.clips = null;
+    const step = (clipEngine: unknown) => ({ agent: 'miya', actionType: 'creative_video_clips', contentStep: { projectId: 'p1', brand: {}, clipEngine } });
+    expect(toolsForStep(step(null))).toEqual([]);
+    expect(toolsForStep(step('local'))).toEqual(['comfyui']);
+    expect(toolsForStep(step('runway'))).toEqual([]);
+    // Not known (an older saved plan): ComfyUI, as before.
+    expect(toolsForStep(content('creative_video_clips'))).toEqual(['comfyui']);
+  });
+
   it('an unknown task type counts as the agent model (fail safe)', () => {
     expect(toolsForStep({ agent: 'miya', actionType: 'something_new' })).toEqual(['ollama']);
   });

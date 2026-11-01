@@ -28,6 +28,12 @@ vi.mock('../../../services/hermes/userProfiles', async () => {
     userProfileFor: () => null,
   };
 });
+const endpoints: Record<string, { url: string; key: string }> = {};
+const health = vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true }));
+vi.mock('../../../services/connectors/hermesAgentConnector', () => ({
+  getHermesAgentEndpoint: (a: string) => endpoints[a] || { url: '', key: '' },
+  getHermesAgentHealth: (...a: unknown[]) => health(...(a as [])),
+}));
 const setAgentProvider = vi.fn();
 vi.mock('../../../services/modelSelectionService', () => ({ setAgentProvider: (...a: unknown[]) => setAgentProvider(...a) }));
 
@@ -38,6 +44,7 @@ beforeEach(() => {
   own.length = 0;
   for (const k of Object.keys(saved)) delete saved[k];
   found.mockResolvedValue([]);
+  for (const k of Object.keys(endpoints)) delete endpoints[k];
 });
 
 describe('HermesProfilesSection', () => {
@@ -97,5 +104,18 @@ describe('HermesProfilesSection', () => {
     fireEvent.click(screen.getByTestId('hermes-find'));
     await waitFor(() => expect(found).toHaveBeenCalled());
     expect(container.textContent).not.toMatch(/gateway|daemon|toolset/i);
+  });
+
+  // 2.11.0 QA (owner, 2026-11-01): the pink boxes in Connectors are gone; an agent connected to a
+  // Hermes profile shows the address here, with a Test.
+  it('shows the Hermes address an agent is connected to, and tests it', async () => {
+    endpoints.nova = { url: 'http://127.0.0.1:8650', key: 'alphonso-user-profile:nova' };
+    health.mockResolvedValueOnce({ ok: false, error: 'HTTP 401' });
+    render(<HermesProfilesSection />);
+    expect((await screen.findByTestId('hermes-linked-nova')).textContent).toContain('http://127.0.0.1:8650');
+    expect(screen.queryByTestId('hermes-linked-hector')).toBeNull();
+    fireEvent.click(screen.getByTestId('hermes-test-nova'));
+    await waitFor(() => expect(health).toHaveBeenCalledWith('nova'));
+    expect((await screen.findByRole('status')).textContent).toBe("Nova's Hermes profile didn't answer: HTTP 401");
   });
 });

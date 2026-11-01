@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useAccentTheme } from '../../hooks/useAccentTheme';
+import { useAccentTheme, ACCENT_THEMES } from '../../hooks/useAccentTheme';
 
 describe('useAccentTheme', () => {
   beforeEach(() => {
@@ -34,5 +34,15 @@ describe('useAccentTheme', () => {
     act(() => result.current[1]('green'));
     act(() => result.current[1]('cyan'));
     expect(document.documentElement.getAttribute('data-accent')).toBeNull();
+  });
+
+  // 2.11.0 QA (owner, 2026-11-01): Appearance's themes did nothing; it now offers these colours.
+  it('offers cyan, green, purple and gold, and ignores a saved value it does not know', () => {
+    expect(ACCENT_THEMES.map((t) => t.id)).toEqual(['cyan', 'green', 'purple', 'gold']);
+    localStorage.setItem('alphonso_accent_theme', 'orchestrator_gold');
+    const { result } = renderHook(() => useAccentTheme());
+    expect(result.current[0]).toBe('cyan');
+    act(() => result.current[1]('gold'));
+    expect(document.documentElement.getAttribute('data-accent')).toBe('gold');
   });
 });

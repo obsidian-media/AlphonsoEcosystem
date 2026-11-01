@@ -9,7 +9,8 @@ const MAX_RECENT = 10;
 export type ModelProvider = 'ollama' | 'nvidia_nim' | 'gemini' | 'openrouter';
 const CLOUD_PROVIDERS: ModelProvider[] = ['nvidia_nim', 'gemini', 'openrouter'];
 
-export type AgentModelProvider = ModelProvider | 'hermes';
+/** 'paid': the paid model chosen in Settings → Approvals, for an agent's steps in a request (2.11.0 QA). */
+export type AgentModelProvider = ModelProvider | 'hermes' | 'paid';
 
 export interface AgentProviderConfig {
   provider: AgentModelProvider;
@@ -18,7 +19,7 @@ export interface AgentProviderConfig {
 }
 
 const DEFAULT_AGENT_PROVIDER: AgentProviderConfig = { provider: 'ollama' };
-const VALID_AGENT_PROVIDERS: AgentModelProvider[] = ['ollama', 'nvidia_nim', 'gemini', 'openrouter', 'hermes'];
+const VALID_AGENT_PROVIDERS: AgentModelProvider[] = ['ollama', 'nvidia_nim', 'gemini', 'openrouter', 'hermes', 'paid'];
 
 function loadAgentProviderMap(): Record<string, AgentProviderConfig> {
   try {
@@ -51,7 +52,7 @@ export function getAgentProvider(agentId: string): AgentProviderConfig {
     // A 'hermes' selection for Alphonso lives in the per-agent map (the legacy
     // global key's type can't represent it) and takes precedence when present;
     // otherwise fall back to the pre-existing global picker's value.
-    if (map.alphonso?.provider === 'hermes') return map.alphonso;
+    if (map.alphonso?.provider === 'hermes' || map.alphonso?.provider === 'paid') return map.alphonso;
     return { provider: getSelectedProvider() };
   }
   return map[agentId] || { ...DEFAULT_AGENT_PROVIDER };

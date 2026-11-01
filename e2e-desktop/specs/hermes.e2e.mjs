@@ -54,9 +54,15 @@ async function ask(text) {
 const requestById = async (id) => (await requests()).find((r) => r.id === id);
 
 async function waitForHermesApproval(id) {
-  await browser.waitUntil(async () => (await requestById(id))?.steps.some((s) => s.agent === 'alphonso' && s.hermesApproval), {
-    timeout: 180000, interval: 1000, timeoutMsg: "Alphonso's step never waited on Hermes's request",
-  });
+  try {
+    await browser.waitUntil(async () => (await requestById(id))?.steps.some((s) => s.agent === 'alphonso' && s.hermesApproval), { timeout: 180000, interval: 1000 });
+  } catch {
+    const r = await requestById(id);
+    throw new Error(`Alphonso's step never waited on Hermes's request: ${JSON.stringify({ status: r?.status, steps: (r?.steps || []).map((s) => [s.stepId, s.agent, s.actionType, s.status, s.error]) })}`);
+  }
+  // The card is named after the step, which the planner names (e.g. "write"), not the agent.
+  const r = await requestById(id);
+  console.log('HERMES-E2E waiting', JSON.stringify({ status: r.status, steps: r.steps.map((s) => [s.stepId, s.agent, s.actionType, s.status, Boolean(s.hermesApproval)]) }));
 }
 
 /** Chat's live line links the running request to the board. */
@@ -123,7 +129,7 @@ describe('Alphonso desktop: Hermes gateway', function () {
     await waitForHermesApproval(id);
     expect(standIn.calls.runs.some((r) => /^You are Alphonso\./.test(r.instructions || ''))).toBe(true);
     await openOnBoard();
-    const card = await $('[data-testid="jose-hermes-approval-alphonso"]');
+    const card = await $('[data-testid^="jose-hermes-approval-"]');
     await card.waitForDisplayed({ timeout: 30000 });
     expect(await card.getText()).toContain("Alphonso's Hermes profile wants to run: ls build");
     await (await buttonByText('Approve: Alphonso')).click();
@@ -137,7 +143,7 @@ describe('Alphonso desktop: Hermes gateway', function () {
     const id = await ask('/jose Write a short note: approve-me again');
     await waitForHermesApproval(id);
     await openOnBoard();
-    await (await $('[data-testid="jose-hermes-approval-alphonso"]')).waitForDisplayed({ timeout: 30000 });
+    await (await $('[data-testid^="jose-hermes-approval-"]')).waitForDisplayed({ timeout: 30000 });
     await (await buttonByText('Reject: Alphonso')).click();
     await browser.waitUntil(async () => !['running', 'queued'].includes((await requestById(id)).status), { timeout: 180000, interval: 1000 });
     expect(standIn.calls.approvals.at(-1).choice).toBe('deny');

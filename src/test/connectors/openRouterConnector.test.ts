@@ -83,6 +83,16 @@ describe('OpenRouter connector', () => {
     expect(await sendOpenRouterMessage(say, { model: 'a/x:free' })).toEqual({ ok: false, kind: 'key_refused', message: OPENROUTER_KEY_REFUSED });
   });
 
+  // QA, 2026-10-31: an answer stopped at the length limit says so, with or without text.
+  it('says when an answer was cut off at the length limit', async () => {
+    invoke.mockResolvedValueOnce(answer(200, { model: 'b/y', choices: [{ message: { content: '{"doFirst": "Coll' }, finish_reason: 'length' }], usage: { prompt_tokens: 7, completion_tokens: 4096 } }));
+    expect(await sendOpenRouterMessage(say, { model: 'b/y', maxTokens: 4096 })).toMatchObject({ ok: true, cutOff: true });
+    invoke.mockResolvedValueOnce(answer(200, { model: 'b/y', choices: [{ message: { content: '' }, finish_reason: 'length' }], usage: {} }));
+    expect(await sendOpenRouterMessage(say, { model: 'b/y', maxTokens: 4096 })).toMatchObject({ ok: false, kind: 'no_text', cutOff: true });
+    invoke.mockResolvedValueOnce(answer(200, { model: 'b/y', choices: [{ message: { content: 'done' }, finish_reason: 'stop' }], usage: {} }));
+    expect((await sendOpenRouterMessage(say, { model: 'b/y' }) as { cutOff?: boolean }).cutOff).toBeUndefined();
+  });
+
   it('an empty reply is an error', async () => {
     invoke.mockResolvedValueOnce(chat(''));
     expect(await sendOpenRouterMessage(say, { model: 'a/x:free' })).toEqual({ ok: false, kind: 'no_text', message: OPENROUTER_NO_TEXT });

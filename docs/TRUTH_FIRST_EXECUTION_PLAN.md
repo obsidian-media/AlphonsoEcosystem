@@ -242,7 +242,7 @@ authenticated voice and physical-device acceptance can proceed.
     cargo audit (post-B1), and E2E (28/28). The Node 22 vs 25 gap remains the
     one honestly-unresolved environment limitation, carried forward rather
     than silently dropped or claimed fixed.
-  - Prior evidence: [Release Verification — 2026-07-22](RELEASE_VERIFICATION_2026-07-22.md).
+  - Prior evidence: [Release Verification — 2026-07-22](internal/RELEASE_VERIFICATION_2026-07-22.md).
 
 - [x] **A2 — Make the Vitest suite deterministic**
   - **Owner:** Alphonso
@@ -670,7 +670,7 @@ authenticated voice and physical-device acceptance can proceed.
     registry so code and docs cannot drift.
   - **Evidence (2026-07-25):** `scripts/generate-skill-permission-matrix.mjs`
     statically parses `skillPackService.ts` + `agentContractService.ts` and
-    writes `docs/AGENT_SKILL_PERMISSION_MATRIX.md` — 166 exclusive
+    writes `docs/internal/AGENT_SKILL_PERMISSION_MATRIX.md` — 166 exclusive
     `agent_skill` packs grouped by owning agent (flagging any
     unowned/unknown-owner/undocumented pack inline, with a per-pack "Blocked
     (per-pack)" column sourced from `AGENT_SKILL_PACK_BLOCKED_OVERRIDES`) plus
@@ -909,7 +909,7 @@ either report) and are real, unfixed as of 2026-07-26.
 
 ### G. Carried-forward production-readiness backlog (T11–T20)
 
-Source: `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6, a 20-task
+Source: `docs/internal/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6, a 20-task
 roadmap from the 2026-07-15 audit. T1–T10 are closed and already reflected
 in Ground Truth. T11–T20 were still open as of the last review and had not
 been entered into this plan's own tracked queue — recorded here now so they
@@ -1788,7 +1788,7 @@ The code is merged and tested (Jose: PRs #336–#342; content factory: PRs #332,
 | 2026-10-27 | **v2.10.0 released** after a whole documentation pass (Jose phase 7 merged in PR 367). The live check with the owner's keys is deferred to after the release (owner). | `docs/ALPHONSO_GROUND_TRUTH.md` §11.51; `docs/CHANGELOG.md` [2.10.0]; the `v2.10.0` GitHub release. |
 | 2026-10-25 | Added Section K (Jose redesign and Miya's content factory: K0 verified, K1–K10 open live checks). Every document in the repo reconciled with the code the same day (Ground Truth §11.38). | PRs #336–#342, #332, #343–#354; `docs/qa/DESKTOP_QA_COVERAGE.md` live check steps 1–15. |
 | 2026-07-21 | Created as the repository-wide remediation and truth-tracking backlog. | Initial baseline recorded above. |
-| 2026-07-25 | Closed C2 and C3 — per-pack least-privilege enforcement fixed and verified; generated permission matrix + CI-enforced contract regression test added. | See C2/C3 evidence above; `agentContractService.ts`, `docs/AGENT_SKILL_PERMISSION_MATRIX.md`, `scripts/generate-skill-permission-matrix.mjs`, `src/test/services/skillPackContractMatrix.test.ts`. |
+| 2026-07-25 | Closed C2 and C3 — per-pack least-privilege enforcement fixed and verified; generated permission matrix + CI-enforced contract regression test added. | See C2/C3 evidence above; `agentContractService.ts`, `docs/internal/AGENT_SKILL_PERMISSION_MATRIX.md`, `scripts/generate-skill-permission-matrix.mjs`, `src/test/services/skillPackContractMatrix.test.ts`. |
 | 2026-07-26 (Part 1) | Added Section F (3 audit-sourced Cloud Voice hardening items, independently re-verified against live code, not just copied from the source audit) and Section G (production-readiness T11–T20 carried forward into this file's tracked queue, with T13/T15/T16 cross-referenced as already closed by B3/D1/D2 rather than duplicated, plus 5 other previously-untracked open items). | User request, following an external "Hermes" audit report + its own Codex verification addendum; see Section F/G entries for per-item evidence and status notes. |
 | 2026-07-26 (Part 2) | **Closed F1** (timing-safe auth in cloud voice), **G-OTHER3** (companionIntegration tests fixed). PR #124 opened against `fix/audit-134-bugfixes` with 79 files changed across all layers (134 findings fixed from the full-repo bug audit). | PR #124: 3,486 insertions / 340 deletions. Full audit report in `audits/2026-07-26_FullBugAudit_Audit.md`. |
 | 2026-10-12 | **Desktop end-to-end testing pass and v2.9.0.** First end-to-end run of the real desktop binary (`e2e-desktop/`, WebdriverIO + tauri-driver, isolated test data, 16 spec files / 53 checks). Found and fixed: Ollama 403 for the desktop window (#287), Runtime Hub Stop not stopping plus a double start (#289), Creative Studio reply parsing (#289), Content Studio never reaching the model (#290), ComfyUI 403 plus a localStorage overflow that lost the job (#291), slow status probe and Setup wait (#286), and a Tauri crate/npm mismatch that broke release builds on `main`. | PRs #283-#291; `e2e-desktop/specs/*.e2e.mjs`; open findings in `docs/governance/DEFERRED_WORK.md` (2026-10-12). |

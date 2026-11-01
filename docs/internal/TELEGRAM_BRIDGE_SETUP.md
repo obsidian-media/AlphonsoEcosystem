@@ -15,7 +15,7 @@ What it does:
 2. **Approvals while you're away:** Jose sends your paired chat a note when a step waits for you (**Approve** / **Reject**, with the cost for a paid step), when a plan waits (**Run this plan** / **Cancel**), when a request finishes or fails, when a review asks you to decide, and when a request was cut off (**Carry on**). Pressing a button twice runs it once; an old button says "That button has expired."
 3. **Miya Studio:** a daily summary of posts that reached 7 days, with their lessons to **Keep** or **Drop**, and new ideas with **Start project** / **Dismiss**; reminders for posts to make by hand; sign-in warnings.
 4. **Higgsfield by name:** "Make a Higgsfield picture of …" asks with the cost and sends the result (or its folder, over 50 MB).
-5. Settings → Approvals → **Jose on Telegram** switches each kind of message on or off; the older "N agent actions since your last check" summaries are off unless you turn them on.
+5. Settings → General → **Jose on Telegram** switches each kind of message on or off; the older "N agent actions since your last check" summaries are off unless you turn them on.
 
 Implementation notes:
 

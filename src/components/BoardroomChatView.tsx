@@ -12,9 +12,13 @@ import {
   setThreadGovernance,
   parseMentions,
   findCrossThreadContext,
+  BOARDROOM_SPEAKER,
   type BoardroomThread,
   type BoardroomThreadMessage
 } from '../services/boardroomThreadService';
+import { workOnJose, workRequestIn } from '../services/boardroomJoseService';
+
+const JOSE_STARTED = 'Started on the board: Jose is planning it.';
 import { generateAgentResponse, detectLowConfidence } from '../services/boardroomFacilitatorService';
 import { getAgentProvider } from '../services/modelSelectionService';
 import { getRuntimePolicySettings } from '../services/policyEnforcementService';
@@ -62,6 +66,7 @@ const MAX_CHAIN_DEPTH = 3;
 
 function agentLabel(speakerId: string): string {
   if (speakerId === 'user') return 'You';
+  if (speakerId === BOARDROOM_SPEAKER) return 'Boardroom';
   const profile = AGENT_PROFILES.find((p: { id: string }) => p.id === speakerId);
   return profile?.name || speakerId;
 }
@@ -175,8 +180,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
   );
   const [newTopic, setNewTopic] = useState('');
   const [composerText, setComposerText] = useState('');
-  const [composerSpeaker, setComposerSpeaker] = useState('user');
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+    const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [facilitatorPending, setFacilitatorPending] = useState(false);
   const [activeResponder, setActiveResponder] = useState<string | null>(null);
   const [threadAction, setThreadAction] = useState<'conclude' | 'distribute' | 'brief' | null>(null);
@@ -214,16 +218,24 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
   async function handleSend() {
     if (!activeThreadId || !activeThread || !composerText.trim() || generationAbortControllerRef.current) return;
     const text = composerText.trim();
-    const userMessage = addThreadMessage({ threadId: activeThreadId, speaker: composerSpeaker, content: text });
+    const userMessage = addThreadMessage({ threadId: activeThreadId, speaker: 'user', content: text });
     let previousMessageId: string | undefined = userMessage?.id;
     setMessages(listThreadMessages(activeThreadId));
     setComposerText('');
 
+    // Work asked for in a thread ("/jose …", "research …") is a real Jose request, not a chat
+    // where an agent promises work it can't do (2.11.0 QA, owner 2026-11-01).
+    const work = workRequestIn(text, AGENT_PROFILES.map((p: { name: string }) => p.name));
+    if (work) {
+      await handOffToJose(activeThreadId, work);
+      return;
+    }
+
     const agentIds = AGENT_PROFILES.map((p: { id: string }) => p.id);
     const mentions = parseMentions(text, agentIds);
     const respondingAgents = mentions.length > 0
-      ? mentions.filter((agentId) => agentId !== composerSpeaker)
-      : (composerSpeaker !== 'alphonso' ? ['alphonso'] : []);
+      ? mentions
+      : ['alphonso'];
 
     if (respondingAgents.length === 0) return;
 
@@ -242,7 +254,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
       if (stopRequestedRef.current) {
         addThreadMessage({
           threadId: activeThreadId,
-          speaker: 'alphonso',
+          speaker: BOARDROOM_SPEAKER,
           content: 'Generation stopped by user.',
           kind: 'system'
         });
@@ -253,7 +265,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
       if (hopsUsed >= MAX_CHAIN_DEPTH) {
         addThreadMessage({
           threadId: activeThreadId,
-          speaker: 'alphonso',
+          speaker: BOARDROOM_SPEAKER,
           content: `The conversation reached ${MAX_CHAIN_DEPTH} chained replies without stopping — further @mentions won't auto-trigger. Reply directly to keep it going, or make a call on where this should land.`,
           kind: 'escalation'
         });
@@ -264,7 +276,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
       if (budget.isExceeded()) {
         addThreadMessage({
           threadId: activeThreadId,
-          speaker: 'alphonso',
+          speaker: BOARDROOM_SPEAKER,
           content: `This cascade generated more content than the ${DEFAULT_FANOUT_CHAR_BUDGET.toLocaleString()}-character budget for one chain — further @mentions won't auto-trigger. Reply directly to keep it going, or make a call on where this should land.`,
           kind: 'escalation'
         });
@@ -293,7 +305,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
       if (stopRequestedRef.current) {
         addThreadMessage({
           threadId: activeThreadId,
-          speaker: 'alphonso',
+          speaker: BOARDROOM_SPEAKER,
           content: 'Generation stopped by user.',
           kind: 'system'
         });
@@ -320,7 +332,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
         if (detectLowConfidence(replyText)) {
           addThreadMessage({
             threadId: activeThreadId,
-            speaker: 'alphonso',
+            speaker: BOARDROOM_SPEAKER,
             content: `${agentLabel(agentId)} flagged low confidence in that reply — needs your decision.`,
             kind: 'escalation'
           });
@@ -348,6 +360,37 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
     if (activeThreadId) setMessages(listThreadMessages(activeThreadId));
   }
 
+  async function handOffToJose(threadId: string, work: string) {
+    const show = () => setMessages(listThreadMessages(threadId));
+    setFacilitatorPending(true);
+    setActiveResponder('jose');
+    let started: string | null = null;
+    try {
+      const history = listThreadMessages(threadId).slice(-6).map((m) => ({ role: m.speaker === 'user' ? 'user' : 'assistant', content: m.content }));
+      const result = await workOnJose(work, {
+        history,
+        onStarted: (requestId) => {
+          started = requestId;
+          addThreadMessage({ threadId, speaker: BOARDROOM_SPEAKER, content: JOSE_STARTED, kind: 'system', requestId });
+          show();
+        },
+      });
+      addThreadMessage({
+        threadId,
+        speaker: result.requestId ? 'jose' : BOARDROOM_SPEAKER,
+        content: result.summary,
+        kind: result.waiting ? 'system' : 'message',
+        ...(result.requestId || started ? { requestId: result.requestId || started } : {}),
+      });
+    } catch (error) {
+      addThreadMessage({ threadId, speaker: BOARDROOM_SPEAKER, content: `Jose couldn't run it: ${error instanceof Error ? error.message : String(error)}`, kind: 'failure' });
+    } finally {
+      setActiveResponder(null);
+      setFacilitatorPending(false);
+      show();
+    }
+  }
+
   function postThreadNote(speaker: string, content: string, kind: BoardroomThreadMessage['kind'] = 'system', requestId?: string | null) {
     if (!activeThreadId) return;
     addThreadMessage({ threadId: activeThreadId, speaker, content, kind, ...(requestId ? { requestId } : {}) });
@@ -367,7 +410,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
       const { concludeOnJose } = await import('../services/boardroomJoseService');
       const { review, waiting, requestId } = await concludeOnJose(activeThread.topic, transcript);
       if (waiting) {
-        postThreadNote('maria', "Maria's review is waiting for your approval.", 'system', requestId);
+        postThreadNote(BOARDROOM_SPEAKER, "Maria's review is waiting for your approval.", 'system', requestId);
         return;
       }
       if (!review?.riskLevel) throw new Error('Maria returned no review');
@@ -400,7 +443,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
         } as Parameters<typeof pushMemory>[0]);
       } catch { /* saving to memory must not undo the conclusion */ }
     } catch (error) {
-      postThreadNote('alphonso', `Maria's review did not complete: ${error instanceof Error ? error.message : String(error)}. The thread stays open.`, 'failure');
+      postThreadNote(BOARDROOM_SPEAKER, `Maria's review did not complete: ${error instanceof Error ? error.message : String(error)}. The thread stays open.`, 'failure');
     } finally {
       refreshActiveThread();
       setThreadAction(null);
@@ -419,14 +462,14 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
       const { distributeOnJose } = await import('../services/boardroomJoseService');
       const result = await distributeOnJose(activeThread.topic, governance.summary, mode, channel);
       if (result.waiting) {
-        postThreadNote('marcus', `Posting to Slack ${channel} is waiting for your approval. Nothing is sent until you approve it.`, 'system', result.requestId);
+        postThreadNote(BOARDROOM_SPEAKER, `Posting to Slack ${channel} is waiting for your approval. Nothing is sent until you approve it.`, 'system', result.requestId);
       } else {
         const summary = result.summary || 'Marcus returned no summary.';
         postThreadNote('marcus', mode === 'review' ? `Distribution review only, nothing was sent. ${summary}` : summary);
       }
       if (mode === 'slack') setDistributeOpen(false);
     } catch (error) {
-      postThreadNote('marcus', `Distribution failed, nothing was sent: ${error instanceof Error ? error.message : String(error)}`, 'failure');
+      postThreadNote(BOARDROOM_SPEAKER, `Distribution failed, nothing was sent: ${error instanceof Error ? error.message : String(error)}`, 'failure');
     } finally {
       refreshActiveThread();
       setThreadAction(null);
@@ -441,7 +484,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
       const context = activeThread.governance?.summary || messages.slice(-5).map((m) => m.content).join(' ').slice(0, 800);
       const result = await creativeBriefOnJose(activeThread.topic, context);
       postThreadNote(
-        'miya',
+        result.summary && !result.waiting ? 'miya' : BOARDROOM_SPEAKER,
         result.waiting
           ? "Miya's creative brief is waiting for your approval."
           : result.summary
@@ -451,7 +494,7 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
         result.requestId
       );
     } catch (error) {
-      postThreadNote('jose', `The creative brief request failed: ${error instanceof Error ? error.message : String(error)}`, 'failure');
+      postThreadNote(BOARDROOM_SPEAKER, `The creative brief request failed: ${error instanceof Error ? error.message : String(error)}`, 'failure');
     } finally {
       refreshActiveThread();
       setThreadAction(null);
@@ -642,17 +685,6 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
               </div>
             )}
             <div className="flex items-center gap-2 border-t border-(--border) p-3">
-              <select
-                aria-label="Speaking as"
-                value={composerSpeaker}
-                onChange={(e) => setComposerSpeaker(e.target.value)}
-                className="rounded-lg border border-(--border) bg-(--surface-2) px-2 py-1.5 text-xs text-(--text-1)"
-              >
-                <option value="user">You</option>
-                {AGENT_PROFILES.map((p: { id: string; name: string }) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
               <div className="relative flex-1">
                 <input
                   value={composerText}

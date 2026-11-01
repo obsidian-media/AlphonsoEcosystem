@@ -1,7 +1,8 @@
 // Hermes gateway (2026-10-30): the user's own Hermes profiles ("Yours"). The
 // backend reads each profile's config.yaml read-only (hermes_find_user_profiles)
-// and returns only a few fields; nothing in the user's Hermes folder is written,
-// and the profile's .env is never read. Alphonso shows a warning, not a block,
+// and returns only a few fields; nothing in the user's Hermes folder is written.
+// Of a profile's .env only API_SERVER_ENABLED and API_SERVER_PORT are read, and
+// API_SERVER_KEY only when you connect it (into the keychain, by the backend). Alphonso shows a warning, not a block,
 // for settings that skip its approvals.
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { saveHermesAgentEndpoint } from '../connectors/hermesAgentConnector';
@@ -25,10 +26,9 @@ export interface UserProfileView extends UserProfile {
 export const ACTS_WITHOUT_ASKING = 'This profile can change things without asking.';
 export const CANT_READ = "Can't read this profile's settings.";
 export const API_SERVER_OFF = "This profile's API server is off. Switch it on in Hermes first.";
-export const NO_KEY = "Enter this profile's API server key.";
 export const NOT_FOUND = 'That Hermes profile is no longer there.';
 /** Said beside the list: settings in a profile's .env are not read. */
-export const ENV_NOT_CHECKED = "Alphonso reads each profile's config.yaml only; anything switched on in its .env file isn't checked.";
+export const ENV_NOT_CHECKED = "Alphonso reads each profile's config.yaml and only the API server lines of its .env file; anything else switched on in .env isn't checked.";
 
 const PLATFORM_NAMES: Record<string, string> = {
   telegram: 'Telegram', whatsapp: 'WhatsApp', discord: 'Discord', slack: 'Slack', signal: 'Signal',
@@ -104,6 +104,20 @@ function readConnected(): Record<string, { name: string; folder: string }> {
   }
 }
 
+const changeListeners = new Set<() => void>();
+
+/** Called whenever an agent is connected to one of the user's profiles (QA, 2026-10-31). */
+export function onUserProfilesChanged(listener: () => void): () => void {
+  changeListeners.add(listener);
+  return () => { changeListeners.delete(listener); };
+}
+
+function announceChange(): void {
+  for (const listener of [...changeListeners]) {
+    try { listener(); } catch { /* one screen's refresh never stops another's */ }
+  }
+}
+
 /** Every agent's connected profile of the user's, by agent. */
 export function connectedUserProfiles(): Record<string, { name: string; folder: string }> {
   return readConnected();
@@ -119,14 +133,21 @@ export async function connectUserProfile(name: string, agent: string, key: strin
   const profile = (await readProfiles()).find((p) => p.name === name);
   if (!profile) return { ok: false, reason: NOT_FOUND };
   if (!profile.readable) return { ok: false, reason: CANT_READ };
-  const url = profileAddress(profile);
-  if (!url) return { ok: false, reason: API_SERVER_OFF };
-  if (!key.trim()) return { ok: false, reason: NO_KEY };
-  saveHermesAgentEndpoint(agent, url, key.trim());
+  if (!profileAddress(profile)) return { ok: false, reason: API_SERVER_OFF };
+  // The backend keeps the key in the OS keychain: the one typed, else the profile's own
+  // API_SERVER_KEY from its .env, read now (owner, 2026-11-01). The window saves only a reference.
+  let link: { url: string; keyRef: string };
+  try {
+    link = await invoke<{ url: string; keyRef: string }>('hermes_user_profile_link', { agent, name, key: key.trim() || null });
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : String(error) };
+  }
+  saveHermesAgentEndpoint(agent, link.url, link.keyRef);
   try {
     localStorage.setItem(CONNECTED_KEY, JSON.stringify({ ...readConnected(), [agent]: { name: profile.name, folder: profile.folder } }));
   } catch {
     // The connection still works; only starting it from Alphonso is lost.
   }
+  announceChange();
   return { ok: true };
 }

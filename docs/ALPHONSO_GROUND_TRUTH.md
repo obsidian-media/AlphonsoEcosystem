@@ -1,5 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-10-27 — **v2.10.0 tagged and released** (§11.51) after a whole documentation pass. Current numbers: 9 agents, 34 connectors, 328 services, 175 components, 21 hooks, 593 test files with 6,886 Vitest tests (594 with `bridge/tests`), 384 Rust `#[test]`s, 201 Tauri commands, 53 Rust source files, 46 desktop end-to-end spec files with 131 checks, 60 built-in skills.
+**Last verified:** 2026-11-01 — **v2.11.1 tagged and released** (§11.61): fixes from the owner using 2.11.0 (the Miya Studio crash, ComfyUI start, research reading compressed pages, Boardroom role play, the model choice reverting, paid models per agent, accessible accent colours, Automation as Teams + Schedules) and the Linux installer back. v2.11.0 was released on 2026-10-31 (§11.58–11.60).
+
+**Last verified before that:** 2026-10-27 — **v2.10.0 tagged and released** (§11.51) after a whole documentation pass. Current numbers: 9 agents, 34 connectors, 328 services, 175 components, 21 hooks, 593 test files with 6,886 Vitest tests (594 with `bridge/tests`), 384 Rust `#[test]`s, 201 Tauri commands, 53 Rust source files, 46 desktop end-to-end spec files with 131 checks, 60 built-in skills.
 
 **Last verified before that:** 2026-10-25 — every document reconciled with the code (§11.38). Version 2.10.0 is on `main` and **not tagged**; the latest release is v2.9.0 (2026-10-12). Since 2026-10-21, `main` gained the Jose redesign (phases 1–6b, §11.36) and Miya's content factory (phases 1–4c, §11.37). Current numbers: 9 agents, 34 connectors, 290 services, 175 components, 21 hooks, 556 test files with 6,832 Vitest tests, 357 Rust `#[test]`s (370 with the async ones), 189 Tauri commands, 50 Rust modules, 34 desktop end-to-end spec files.
 
@@ -131,7 +133,7 @@ the same change; no task is complete without the plan's stated verification.
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.10.0 |
+| Version | 2.11.1 |
 | Type | Tauri v2 desktop app (Windows; macOS Apple Silicon and Linux builds too) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust (minimum 1.77.2), Tauri 2.12, SQLite (rusqlite bundled), the OS keychain, tokio, reqwest, tokio-tungstenite (companion) |
@@ -585,7 +587,7 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **WhatsApp had no command handling and no auto-start** — new `whatsappCompanionService.ts` (9 real commands, mirrors Telegram's pattern); also found `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` had no UI field anywhere, making inbound polling unconfigurable regardless of credentials.
 - [x] **`voice/backend/router.py` keyword-routing bugs** — hector's broad keywords stole matches meant for nova/sentinel; miya was missing write/blog/draft keywords entirely.
 - [x] **Stale Boardroom docs referencing nonexistent "Hermes"/"Kairo" agents** — correction banners added to `BOARDROOM_ROLES.md`/`BOARDROOM_MODEL_REGISTRY.md`.
-- [x] **Auto-update full in-app download+install+relaunch** — handed off as `docs/AUTO_UPDATE_HANDOFF.md` + PR #98; merged in v2.6.0 and confirmed against a real signed release on 2026-09-05 (v2.7.0 → v2.7.1).
+- [x] **Auto-update full in-app download+install+relaunch** — handed off as `docs/internal/AUTO_UPDATE_HANDOFF.md` + PR #98; merged in v2.6.0 and confirmed against a real signed release on 2026-09-05 (v2.7.0 → v2.7.1).
 - [x] **`companionIntegration.test.js` asserts against fabricated Tauri command names** — closed 2026-10-06: rewritten as a source-reading contract test (§11.29).
 - [x] **Mobile Companion pairing not independently re-verified live** — confirmed on a real device on 2026-07-25 (PR #121, after a second fix to the host-name suffix).
 
@@ -729,7 +731,7 @@ These are confirmed gaps as of 2026-07-02. Any agent working on these areas shou
 - [x] **`CLAUDE.md`** — created at project root: session-start guide, all npm + cargo commands, do-not-duplicate table, real gaps, directory tree (2026-05-31, Agent H; updated 2026-06-21)
 - [x] **`docs/CONNECTORS.md`** — all 14 connectors documented: env vars, credential steps, test procedure, limitations. Credential UI now available for all connectors in ConnectorSetupPanel.
 - [x] **`docs/CHANGELOG.md`** — maintained with all session changes through v2.0.2
-- [x] **`docs/IOS_COMPANION_PLAN.md`** — iOS companion architecture: WebSocket server design, JSON-RPC protocol, mDNS discovery, SwiftUI vs React Native tradeoffs, 5-phase implementation roadmap (2026-06-08)
+- [x] **`docs/internal/IOS_COMPANION_PLAN.md`** — iOS companion architecture: WebSocket server design, JSON-RPC protocol, mDNS discovery, SwiftUI vs React Native tradeoffs, 5-phase implementation roadmap (2026-06-08)
 - [x] **`.github/dependabot.yml`** — npm (weekly), Cargo (weekly), GitHub Actions (weekly)
 - [x] **Auto-updater fully operational** — ed25519 keypair generated, `TAURI_SIGNING_PRIVATE_KEY` set in GitHub Secrets, pubkey in `tauri.conf.json`, v2.0.2 release triggered via `workflow_dispatch`. Future installs will auto-update.
 - [x] **Sentinel Security Monitor runtime** — **CLOSED Phase 1** `src/services/sentinelSecurityService.ts` — deterministic threat scan + Ollama deep analysis, blocks on critical risk/secret detection, full SENTINEL_ALERT_SCHEMA output. *(Superseded 2026-10-25, agent phase 4 (§11.44): the keyword scan and its "blocks" are gone; a blocked scan never held anything. His step is his model's review with exact facts, and a serious finding holds the next steps.)*
@@ -908,7 +910,7 @@ Before writing any new service or feature, verify it does not already exist:
 - **Proactive agent** → `proactiveAgentService.ts` — 7 checks, suggestion banner, 60s interval. Do NOT create another proactive system.
 - **Keyboard shortcuts** → `useKeyboardShortcuts.js` — 12 shortcuts, ? help modal. Do NOT create another shortcut system.
 - **Policy gate** → `policy_gate.rs` — 40+ programs whitelisted. Do NOT modify without reviewing security implications.
-- **iOS companion plan** → `docs/IOS_COMPANION_PLAN.md` — architecture doc, do NOT start building without reviewing.
+- **iOS companion plan** → `docs/internal/IOS_COMPANION_PLAN.md` — architecture doc, do NOT start building without reviewing.
 - **Error boundaries** → `ViewErrorBoundary.tsx` (enhanced with copy error, expandable stack trace), `ErrorBoundary.tsx` (reusable with HOC). All views wrapped.
 - **Code splitting** — ChatView, WorkflowPanel, CoachMissionBadge, CoachInterventionCard, CoachHardInterruptOverlay, CoachSkillGrid now lazy-loaded. Main chunk reduced from 519KB to 288KB.
 - **Approval modal** → `src/components/ApprovalModal.tsx` — already shows connector, risk level, irreversibility warning
@@ -994,7 +996,7 @@ Before writing any new service or feature, verify it does not already exist:
 These items were explicitly deferred by the product owner. Do not skip them permanently — revisit when the milestone conditions are met.
 
 ### Production-readiness roadmap T11–T20 (tracked 2026-07-15/22; status 2026-10-25: T11–T14, T16, T19 and T20 done; T15 confirmed 2026-09-05 when v2.7.0 updated itself to v2.7.1; T17 partial; T18 in progress)
-Full task list, plan, risk, and dependencies for each: `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6. T1/T2/T3/T4/T5/T6 are done (see §11.21/§11.22); **T10 E2E is verified** as of 2026-07-22 (26 tests / 7 specs, no retries) using the production-preview server in `npm run e2e:server`. The active, evidence-backed queue is `docs/TRUTH_FIRST_EXECUTION_PLAN.md`; do not re-derive scope from memory. Short list for quick reference:
+Full task list, plan, risk, and dependencies for each: `docs/internal/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6. T1/T2/T3/T4/T5/T6 are done (see §11.21/§11.22); **T10 E2E is verified** as of 2026-07-22 (26 tests / 7 specs, no retries) using the production-preview server in `npm run e2e:server`. The active, evidence-backed queue is `docs/TRUTH_FIRST_EXECUTION_PLAN.md`; do not re-derive scope from memory. Short list for quick reference:
 - **T11** — harden KV/localStorage persistence with a real schema + migrations
 - **T12** — replace the fail-open connector policy DSL default with risk-tiered rules
 - **T13** — move credentials to OS-level secret storage (depends on T5's token format)
@@ -1076,7 +1078,7 @@ the ground-truth summary of what actually changed.
   `pack.github.integration`, `pack.alphonso-performance-optimization`,
   `pack.alphonso-api-integration`, `pack.alphonso-error-handling`. All packs
   include structured workflow guidance, example tasks, and per-pack scope
-  overrides. See `docs/ALPHONSO_SKILLS.md` for full documentation.
+  overrides. See `docs/internal/ALPHONSO_SKILLS.md` for full documentation.
 - **Jose skill pack expansion (2026-07-17)**: Jose now has 22 skill packs
   (6 existing + 16 new). New packs: `pack.jose-workflow-design`,
   `pack.jose-strategic-planning`, `pack.jose-dependency-mapping`,
@@ -1088,7 +1090,7 @@ the ground-truth summary of what actually changed.
   `pack.jose-bottleneck-detection`, `pack.jose-continuous-improvement`,
   `pack.jose-stakeholder-communication`. All packs include structured
   workflow guidance, example tasks, and per-pack scope overrides. See
-  `docs/JOSE_SKILLS.md` for full documentation.
+  `docs/internal/JOSE_SKILLS.md` for full documentation.
 - **Pipeline loop-guard / execution budget**: `runJoseCommandExecutionPipeline`
   in `joseExecutionEngineService.ts` now hard-stops at `PIPELINE_MAX_ASSIGNMENTS`
   (50) or `PIPELINE_MAX_DURATION_MS` (5 minutes), whichever comes first. On
@@ -1703,7 +1705,7 @@ documentation or assumption.
    "Download Update" — the old label was actively misleading; it never restarted
    anything, it opens the release download page in a browser.
 
-10. **`docs/BOARDROOM_ROLES.md` / `docs/BOARDROOM_MODEL_REGISTRY.md` corrected.**
+10. **`docs/internal/BOARDROOM_ROLES.md` / `docs/internal/BOARDROOM_MODEL_REGISTRY.md` corrected.**
     Both describe an early, aspirational 11-seat Boardroom design — including
     "Hermes" and "Kairo" as agents, and "Shayan" (the founder) as a boardroom
     "seat" — that was never actually built. The real shipped product only has the
@@ -1744,7 +1746,7 @@ items rather than build against them):
   seeing the exact screen the user was looking at.
 
 **Handed off, not built:** full in-app auto-update (download → verify → install →
-relaunch). `docs/AUTO_UPDATE_HANDOFF.md` (new) has the complete scope, file-by-file
+relaunch). `docs/internal/AUTO_UPDATE_HANDOFF.md` (new) has the complete scope, file-by-file
 steps, and acceptance criteria — opened as PR #98 on branch
 `feat/in-app-auto-update`. Deliberately not attempted in this pass: requires new
 `@tauri-apps/plugin-updater`/`plugin-process` dependencies and new Tauri capability
@@ -2057,7 +2059,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 **Root cause of all errors:** The audit was produced without reading `src/test/`, `src/agents/`, all of `src/services/`, or `.github/workflows/`. Future audits must verify all four directories before scoring any dimension.
 
-**A separate, later audit — `14.07.2026CurrentStateofRepo.md` (repo root, dated 2026-07-14)** — is not known to contain factual errors the way the two above did, but carries the same general risk: it is a frozen point-in-time snapshot, not a maintained doc, and several of its numeric claims (test/file/line counts) are already stale relative to commits made after it was written. It now carries an explicit "do not trust on its own" banner at its top pointing back to this file and to `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` (added 2026-07-16). General rule, restated: no single audit or summary document — however recent — is ground truth by itself. Ground truth is the live code plus this file plus CLAUDE.md plus CHANGELOG.md read together, and when those disagree or leave a real gap, ask the user rather than guessing which one is current.
+**A separate, later audit — `14.07.2026CurrentStateofRepo.md` (repo root, dated 2026-07-14)** — is not known to contain factual errors the way the two above did, but carries the same general risk: it is a frozen point-in-time snapshot, not a maintained doc, and several of its numeric claims (test/file/line counts) are already stale relative to commits made after it was written. It now carries an explicit "do not trust on its own" banner at its top pointing back to this file and to `docs/internal/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` (added 2026-07-16). General rule, restated: no single audit or summary document — however recent — is ground truth by itself. Ground truth is the live code plus this file plus CLAUDE.md plus CHANGELOG.md read together, and when those disagree or leave a real gap, ask the user rather than guessing which one is current.
 
 ---
 
@@ -2161,9 +2163,9 @@ User asked to proceed with T4 and to make sure the repo-root audit doc `14.07.20
 
 **T4 — branch protection:** checked actual current state via `gh api repos/.../branches/main/protection` rather than assuming it was unset — it was **already partially configured** (`Test & Build` + `Rust Tests & Clippy` required as status checks, 1 approving review required, force-push and branch deletion both blocked, `enforce_admins: false`). This explains why merging PR #99 required `--admin` earlier the same session — a plain merge was already blocked by the existing review requirement, not by a rule this session was about to add. Expanded the required-status-checks list via `gh api -X PATCH .../required_status_checks` to add `Secrets Scan (TruffleHog)` and `Doc Count Freshness`, both now reliably green after T1–T3. **Deliberately left out of the required list:** `Playwright E2E Smoke Test` — it's intentionally advisory per T10's owner-approved decision (see §11.21), and requiring it would silently re-block every merge on ~22 known-broken, unrelated specs, defeating the point of making it advisory in the first place. Left `enforce_admins: false` — single/small-maintainer repo, and an admin override is exactly the escape hatch that was legitimately used to merge PR #99 after a careful manual review found the failing checks were pre-existing/unrelated; forcing every future judgment call like that through a second approver isn't warranted yet at this team size.
 
-**`14.07.2026CurrentStateofRepo.md` trust caveat:** added an explicit warning banner at the top of the file itself (not just referenced from elsewhere) stating it is a frozen 2026-07-14 snapshot, pointing to this file's own §12 "Known Audit Errors" and to `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` (which already opens by saying it independently re-verified this report's claims rather than trusting them), and stating plainly that no single document is ground truth — code + `ALPHONSO_GROUND_TRUTH.md` + `CLAUDE.md` + `CHANGELOG.md` together are, and when those disagree or leave a gap, the answer is to ask the user, not to guess which doc is more current. Also added a corresponding row to this file's own §12 table so a reader who reaches §12 first (rather than opening the root file first) still learns about it.
+**`14.07.2026CurrentStateofRepo.md` trust caveat:** added an explicit warning banner at the top of the file itself (not just referenced from elsewhere) stating it is a frozen 2026-07-14 snapshot, pointing to this file's own §12 "Known Audit Errors" and to `docs/internal/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` (which already opens by saying it independently re-verified this report's claims rather than trusting them), and stating plainly that no single document is ground truth — code + `ALPHONSO_GROUND_TRUTH.md` + `CLAUDE.md` + `CHANGELOG.md` together are, and when those disagree or leave a gap, the answer is to ask the user, not to guess which doc is more current. Also added a corresponding row to this file's own §12 table so a reader who reaches §12 first (rather than opening the root file first) still learns about it.
 
-**What's still open:** roadmap tasks T11–T20 (secret-scan triage, branch protection enablement, persistence schema, connector-DSL fail-open default, OS-keychain credentials, `lib.rs` split, live auto-updater/iOS-pairing verification, sidecar observability, service-role-key blast radius, doc-drift auto-generation, multi-agent budgets) are **not started** — full detail in `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6, which itself was updated same-pass to record the merge and mark T1/T2/T5/T6 done, T10 partial. CLAUDE.md's Real Gaps list and TODO §11 below were updated to point at the same roadmap doc rather than duplicating the full task list inline, so it can't drift out of sync across two places.
+**What's still open:** roadmap tasks T11–T20 (secret-scan triage, branch protection enablement, persistence schema, connector-DSL fail-open default, OS-keychain credentials, `lib.rs` split, live auto-updater/iOS-pairing verification, sidecar observability, service-role-key blast radius, doc-drift auto-generation, multi-agent budgets) are **not started** — full detail in `docs/internal/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6, which itself was updated same-pass to record the merge and mark T1/T2/T5/T6 done, T10 partial. CLAUDE.md's Real Gaps list and TODO §11 below were updated to point at the same roadmap doc rather than duplicating the full task list inline, so it can't drift out of sync across two places.
 
 ---
 
@@ -2173,7 +2175,7 @@ User asked to close the Truth-First Execution Plan's C section (C2/C3), then —
 
 **First pass — C2 (`src/services/agentContractService.ts`):** `validateSkillPackAgainstContract()` had a `usesAgentWideTaxonomyScope` bypass forcing every Hector (except 5 packs in a `legacyHectorPackIds` set — of which only 4 had a working override entry; the 5th, `pack.hector-professional-marketing`, has none and was already falling back to the agent-wide list regardless), Echo, and Nova taxonomy pack back onto the full agent-wide permission list, silently ignoring the per-pack `AGENT_SKILL_PACK_SCOPE_OVERRIDES` entries defined for them. Root cause: those override entries didn't match the packs' real declared `permissions` in `skillPackService.ts` — Hector's 16 new-taxonomy overrides were entirely fictional dotted-namespace strings that were never real permissions anywhere in the codebase; Echo/Nova had 4 corrupted entries (a mangled `knowledge追溯`, three missing-dot typos). Fixed all 20 mismatches against the real source and removed the bypass.
 
-**First-pass gaps, found only when directly asked to self-audit (not caught before that point):** a factual error in the plan doc (said "4 legacy packs", the code's set actually has 5); the `--check` doc-freshness failure path was claimed working but never actually exercised; the full `npm test` suite was never run, only narrow hand-picked file lists; the `ci.yml` YAML edit was never validated; C2 was marked fully done despite its own stated scope (owner, shared status, allowed *and blocked* prefixes, documentation) being only partially addressed; the negative-authorization tests covered 6 hand-picked packs, not "each pack" as the task literally requires; `installSkillPack`/`setSkillPackEnabled` were never traced for regression risk; this file was never updated. Also, mid-verification, a mistake was made and caught: reproducing the `--check` failure path corrupted `docs/AGENT_SKILL_PERMISSION_MATRIX.md` on disk and a badly-written restore command silently failed, leaving the corrupted file sitting for a few tool calls until the mistake was noticed and fixed by regenerating from source.
+**First-pass gaps, found only when directly asked to self-audit (not caught before that point):** a factual error in the plan doc (said "4 legacy packs", the code's set actually has 5); the `--check` doc-freshness failure path was claimed working but never actually exercised; the full `npm test` suite was never run, only narrow hand-picked file lists; the `ci.yml` YAML edit was never validated; C2 was marked fully done despite its own stated scope (owner, shared status, allowed *and blocked* prefixes, documentation) being only partially addressed; the negative-authorization tests covered 6 hand-picked packs, not "each pack" as the task literally requires; `installSkillPack`/`setSkillPackEnabled` were never traced for regression risk; this file was never updated. Also, mid-verification, a mistake was made and caught: reproducing the `--check` failure path corrupted `docs/internal/AGENT_SKILL_PERMISSION_MATRIX.md` on disk and a badly-written restore command silently failed, leaving the corrupted file sitting for a few tool calls until the mistake was noticed and fixed by regenerating from source.
 
 **Second pass — closing every one of those, verified not asserted:**
 - Fixed the "4 vs 5 legacy packs" error in `docs/TRUTH_FIRST_EXECUTION_PLAN.md`.
@@ -2442,6 +2444,20 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
 
+## 11.61 v2.11.1: fixes from using 2.11.0 (2026-11-01)
+
+The owner used 2.11.0 and reported problems in three batches; each was traced to its cause before a fix (PR #376). Full list: `docs/CHANGELOG.md` [2.11.1].
+- **Crashes and dead ends:** Miya Studio crashed when a model wrapped a list item in an object (`textItems()`); ComfyUI started an old copy with no models (`pickComfyInstall()`); a tool used days ago was stopped as it started; WhatsApp was polled on every computer and failed every 30 s.
+- **Research:** reqwest had no gzip/brotli/deflate support, so compressed pages (Amazon) were stored as their bytes and Hector could neither read nor cite them; now decoded, unreadable bytes count as unread (`unreadable_page()`), and the Desk leads with the answer. "Research …" is always Hector's cited research (`asksForResearch()`).
+- **Model choice:** the Coach window saved its old copy of the settings over the model chosen in the main window; only the main window saves now. An agent may use the paid model (`agentPaidModels.ts`); each paid step asks with its cost. The top-right badge shows Chat's provider and model.
+- **Boardroom:** Mission Room archived; in sessions you can't post as an agent, app notices are "Boardroom", and work asked for in a thread is a Jose request.
+- **Automation:** the visual Builder (no executors) and the 16 canned operations (fixed text) archived; Automation is Teams, Schedules and Dead Letter.
+- **Hermes profiles:** API server settings read from each profile's `.env`; its key read on connect into the keychain.
+- **Appearance:** accent colours (Cyan, Green, Purple, Gold) replace three themes that did nothing; all meet WCAG AA in both modes (`accentContrast.test.js`).
+- **Linux:** the AppImage no longer bundles the starter model, so it fits under GitHub's 2 GiB limit again.
+- **Checked:** 7,326 Vitest tests, 478 Rust tests, clippy, and CI's desktop suite with a local model; the live research test now also checks that every page Hector keeps is readable text.
+- **Open:** 5 dependency advisories GitHub reports on `main` (1 critical, 1 high) are the next batch.
+
 ## 11.60 The closing phase: the deferred list checked against the code (2026-10-30)
 
 Asked by the owner before the full QA pass and the release: check the deferred list against the code, close what was stale, and fix what the owner chose (branch `fix/closing-phase`). `docs/governance/DEFERRED_WORK.md` now starts with "What is open", sorted into code, owner decisions and live checks.
@@ -2485,8 +2501,8 @@ The second of the four phases after QA batch 1 (owner, 2026-10-30; design `docs/
 - **The connection.** Every call goes through the backend's `connector_openrouter_request` (`connector_commands.rs`: OpenRouter's `models`, `models/user`, `key` and `chat/completions` only; the rate-limit headers passed back; the key never in an error). `openRouterConnector.ts` reads the lists (no model id is written in the app), the free requests left today, and sends a chat, telling a refused key, an empty reply, a rate limit and a model no longer served apart, with the cost OpenRouter reports (own-key cost included).
 - **Settings → Connectors → AI Models → OpenRouter**: the key, Test (the free requests left today), and a line that models served by your own provider keys added in OpenRouter count as paid steps. The Health Monitor checks it live.
 - **Free models for agents and Chat.** OpenRouter is a provider for any agent and a tab in Chat. The picker lists OpenRouter's free text models, "Let OpenRouter choose a free model" first (the default), with the free requests left and a line that free models may keep what you send. A chosen free model is tested once with a short question (one at a time, at most three, at most once a day, never the router), and one OpenRouter no longer serves is marked. The queue and the resource manager treat OpenRouter as cloud.
-- **When the free limit runs out** (Settings → Approvals): by default the step runs on this computer's model and says so on the board and Chat's live line; or Jose asks to finish it with a paid OpenRouter model, showing the cost. The 20-a-minute limit is told apart from the daily one by reading the free requests left. With no chat model on this computer the step waits with Carry on. Chat used directly says the limit is reached and doesn't switch models by itself.
-- **Paid OpenRouter models**: the third choice in Settings → Approvals → Allow paid models. The list is the models this account can use (`/models/user`), text models with both prices listed; choosing one fills in its prices. A step model `openrouter:<model>` is paid, asks first, and the reported cost counts toward the monthly cap. OpenRouter doesn't say which models your own keys serve, so none is marked.
+- **When the free limit runs out** (Settings → General): by default the step runs on this computer's model and says so on the board and Chat's live line; or Jose asks to finish it with a paid OpenRouter model, showing the cost. The 20-a-minute limit is told apart from the daily one by reading the free requests left. With no chat model on this computer the step waits with Carry on. Chat used directly says the limit is reached and doesn't switch models by itself.
+- **Paid OpenRouter models**: the third choice in Settings → General → Allow paid models. The list is the models this account can use (`/models/user`), text models with both prices listed; choosing one fills in its prices. A step model `openrouter:<model>` is paid, asks first, and the reported cost counts toward the monthly cap. OpenRouter doesn't say which models your own keys serve, so none is marked.
 - **Checked:** unit tests for every part; Rust tests for the command (run by CI); the desktop spec `openrouter.e2e.mjs` (no key: the tab is off and says what to set up; Settings' Test says no key works); the live check (`live-accounts.e2e.mjs`, `ALPHONSO_LIVE_OPENROUTER_KEY_FILE`) asks a plain question through the free router in Chat. Live with the owner's keys: Gemini and Mistral keys work through OpenRouter; Claude was refused at first, then answered (Haiku 5.5, Sonnet 5.5) once the owner let the key serve every model in OpenRouter, charged $0 by OpenRouter with Anthropic's cost reported. The same check found OpenRouter listing `:batch` versions that chat can't use; the paid list leaves them out.
 - **Closing the resource manager (owner, 2026-10-30):** your own ComfyUI, once Alphonso started it, stops after its idle time like Alphonso's copy (`launch_comfyui` records its process); an approved step run on its own and a dead-letter retry pass the memory check too (`runAdmitted()`); the Telegram memory notice stays under the waiting-step switch, with no switch of its own. Known limit: a scheduled run (no paid models) with "Ask to use a paid model" fails its step when the free limit runs out instead of running locally.
 

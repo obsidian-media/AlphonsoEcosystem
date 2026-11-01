@@ -69,6 +69,10 @@ function localModel(assignment: StepAssignment): string | null {
 }
 
 export function toolsForStep(assignment: StepAssignment): NeededTool[] {
+  // Marcus's model work (where to send, which outside tool) happens when the step is prepared,
+  // before you approve it; running it only sends, posts or calls (QA, 2026-10-31: posting failed
+  // with "Ollama didn't start" on a computer without Ollama running).
+  if (assignment.agent === 'marcus') return [];
   const hermes = hermesToolFor(assignment.agent);
   const model: NeededTool[] = [...(hermes ? [hermes as NeededTool] : []), ...(localModel(assignment) ? ['ollama' as const] : [])];
   const engines = enginesFor(assignment);
@@ -84,8 +88,13 @@ export function toolsForStep(assignment: StepAssignment): NeededTool[] {
     case 'creative_higgsfield':
     case 'creative_character_train':
       return [];
-    case 'creative_video_clips':
+    case 'creative_video_clips': {
+      // The engine the plan worked out (local only when a video model is installed); an older
+      // saved plan without it keeps the old rule (QA, 2026-10-31).
+      const planned = (assignment.contentStep as { clipEngine?: string | null } | undefined)?.clipEngine;
+      if (planned !== undefined) return planned === 'local' ? ['comfyui'] : [];
       return !engines || engines.clips === 'local' || engines.clips === null ? ['comfyui'] : [];
+    }
     case 'creative_assemble_video':
       return ['ffmpeg'];
     case 'creative_shorts':

@@ -1809,11 +1809,12 @@ export function ChatView({
                   {liveProgress.stage === 'queued' && WAITING_FOR_TURN}
                   {liveProgress.stage === 'waiting_memory' && liveProgress.reason}
                   {liveProgress.stage === 'model_note' && liveProgress.text}
+                  {liveProgress.stage === 'starting_tool' && liveProgress.message}
                   {liveProgress.stage === 'wave_start' && `Wave ${(liveProgress.wave || 0) + 1}: ${(liveProgress.agents || []).join(', ')}`}
                   {liveProgress.stage === 'executed' && `${liveProgress.assignment?.agent || 'Agent'} completed`}
                   {liveProgress.stage === 'generating_images' && `Generating ${liveProgress.promptCount || 0} image(s)...`}
                   {liveProgress.stage === 'approval_required' && `${liveProgress.assignment?.agent || 'Agent'} needs approval`}
-                  {!['queued', 'waiting_memory', 'model_note', 'wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
+                  {!['queued', 'waiting_memory', 'model_note', 'starting_tool', 'wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
                 </span>
                 {liveRequestId && (
                   <button

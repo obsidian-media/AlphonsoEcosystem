@@ -141,6 +141,8 @@ interface ClaudeResult {
   latencyMs?: number;
   error?: string;
   trust: string;
+  /** True when Claude stopped at the length limit (stop_reason "max_tokens"). */
+  cutOff?: boolean;
 }
 
 export async function sendClaudeMessage(text: string, options: ClaudeOptions = {}): Promise<ClaudeResult> {
@@ -198,7 +200,10 @@ async function sendClaudeOneShot({ apiKey, model, maxTokens, messages, systemPro
     }
 
     const data = await response.json();
-    const content = data?.content?.[0]?.text || '';
+    // Join the text blocks: newer models put a thinking block first (QA, 2026-10-31: claude-haiku-5-5
+    // did, so reading only the first block gave every paid step an empty answer).
+    const blocks: Array<{ type?: string; text?: unknown }> = Array.isArray(data?.content) ? data.content : [];
+    const content = blocks.filter((b) => (b?.type === undefined || b.type === 'text') && typeof b?.text === 'string').map((b) => b.text as string).join('');
     const latencyMs = timestampMs() - startTime;
 
     appendConnectorAudit('claude', 'send_success', {
@@ -216,6 +221,7 @@ async function sendClaudeOneShot({ apiKey, model, maxTokens, messages, systemPro
       model,
       usage: data?.usage || null,
       latencyMs,
+      cutOff: data?.stop_reason === 'max_tokens',
       trust: TRUST_STATES.VERIFIED
     };
   } catch (error) {

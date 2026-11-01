@@ -53,7 +53,7 @@ describe('runwayClipAvailable', () => {
     setSettings({}, { zeroCostMode: true });
     expect(runwayClipAvailable().reason).toBe('Zero-Cost Mode is on; turn it off in Settings to use Runway.');
     setSettings({ runwayPricePerSecondUsd: '' });
-    expect(runwayClipAvailable().reason).toBe("Enter Runway's price per second in Settings → Approvals → Allow paid models.");
+    expect(runwayClipAvailable().reason).toBe("Enter Runway's price per second in Settings → General → Allow paid models.");
   });
 });
 

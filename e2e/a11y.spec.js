@@ -104,7 +104,8 @@ test.describe('Alphonso accessibility (axe-core) — full WCAG sweep, non-Setup 
   test('Automation view (Work space)', async ({ page }) => {
     await page.getByTestId('space-pill-work').click();
     await page.getByRole('button', { name: /^Automation$/ }).click();
-    await expect(page.getByText('New Workflow', { exact: true })).toBeVisible({ timeout: 15000 });
+    // Automation opens on Teams (2.11.0 QA: the visual Builder was archived).
+    await expect(page.getByTestId('teams-new')).toBeVisible({ timeout: 15000 });
 
     const results = await scan(page);
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
@@ -121,18 +122,15 @@ test.describe('Alphonso accessibility (axe-core) — full WCAG sweep, non-Setup 
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
 
-  test('Boardroom (Mission Room tab)', async ({ page }) => {
+  test('Boardroom', async ({ page }) => {
     // The Space pill and the sidebar nav item are both named "Boardroom" --
     // getByTestId disambiguates the pill (space-pill-boardroom) from the
     // nav item (sidebar-nav-mission_room) instead of a name-based locator
     // that matches both.
     await page.getByTestId('space-pill-boardroom').click();
     await page.getByTestId('sidebar-nav-mission_room').click();
-    // getByText('Mission Room') is a strict-mode violation here -- the page
-    // renders that exact string 3 times (a compact header h1, the active
-    // sub-tab button, and the page's own large display h1). Scope to the
-    // heading role and take the first match to disambiguate.
-    await expect(page.getByRole('heading', { name: 'Mission Room' }).first()).toBeVisible({ timeout: 10000 });
+    // Boardroom opens on its sessions (Mission Room was archived in 2.11.0 QA).
+    await expect(page.getByPlaceholder('New thread topic...')).toBeVisible({ timeout: 10000 });
 
     const results = await scan(page);
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);

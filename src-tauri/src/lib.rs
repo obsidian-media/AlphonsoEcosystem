@@ -986,6 +986,7 @@ pub fn run() {
       hermes_profiles::hermes_profile_remove,
       hermes_profiles::hermes_profiles_list,
       hermes_profiles::hermes_find_user_profiles,
+      hermes_profiles::hermes_user_profile_link,
       hermes_runs::hermes_run_start,
       hermes_runs::hermes_run_stop,
       hermes_runs::hermes_run_answer,

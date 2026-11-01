@@ -23,7 +23,7 @@ export function runwayClipAvailable(): { ok: boolean; reason?: string } {
   if (!getConnectorCredential('runway', 'RUNWAYML_API_SECRET')) return { ok: false, reason: 'Add a Runway key in Connectors.' };
   if (zeroCostModeOn()) return { ok: false, reason: 'Zero-Cost Mode is on; turn it off in Settings to use Runway.' };
   if (getPaidModelSettings().runwayPricePerSecondUsd === null) {
-    return { ok: false, reason: "Enter Runway's price per second in Settings → Approvals → Allow paid models." };
+    return { ok: false, reason: "Enter Runway's price per second in Settings → General → Allow paid models." };
   }
   return { ok: true };
 }

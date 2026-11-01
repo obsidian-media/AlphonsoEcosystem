@@ -1,6 +1,6 @@
 # Alphonso External Connector Setup
 
-Status: this documents the real connector setup path for the most-used external connectors; [CONNECTORS.md](CONNECTORS.md) covers all 34. Nothing is "live" until the Connector Health Monitor's **Test** says "Live check passed" (the service itself answered) or a supervised action succeeded.
+Status: this documents the real connector setup path for the most-used external connectors; [CONNECTORS.md](../CONNECTORS.md) covers all 34. Nothing is "live" until the Connector Health Monitor's **Test** says "Live check passed" (the service itself answered) or a supervised action succeeded.
 
 ## Truth rules
 
@@ -38,7 +38,7 @@ Status: this documents the real connector setup path for the most-used external 
 
 - `META_APP_ID`, `META_APP_SECRET`, then **Sign in to Facebook** and choose your Page; or `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` and **Sign in with Instagram** for an Instagram account without a Page.
 - Optional: **Your storage** (an S3-compatible bucket) for Instagram carousels; without it they are saved to post by hand.
-- See [CONNECTORS.md](CONNECTORS.md#11-meta--instagram).
+- See [CONNECTORS.md](../CONNECTORS.md#11-meta--instagram).
 
 ### Notion / ClickUp
 
@@ -60,7 +60,7 @@ Status: this documents the real connector setup path for the most-used external 
 
 ### Paid media (optional)
 
-- Runway (`RUNWAYML_API_SECRET`), ElevenLabs (`ELEVENLABS_API_KEY`), Higgsfield (`HIGGSFIELD_KEY_ID`, `HIGGSFIELD_KEY_SECRET` and the model ids). Enter your prices in Settings → Approvals → Allow paid models.
+- Runway (`RUNWAYML_API_SECRET`), ElevenLabs (`ELEVENLABS_API_KEY`), Higgsfield (`HIGGSFIELD_KEY_ID`, `HIGGSFIELD_KEY_SECRET` and the model ids). Enter your prices in Settings → General → Allow paid models.
 
 ## Recommended execution order
 
@@ -71,5 +71,5 @@ Status: this documents the real connector setup path for the most-used external 
 
 ## Remaining external blockers
 
-- None of the publishing, results or paid-media connectors have been checked with a real account yet (see the live check in [qa/DESKTOP_QA_COVERAGE.md](qa/DESKTOP_QA_COVERAGE.md)).
+- None of the publishing, results or paid-media connectors have been checked with a real account yet (see the live check in [qa/DESKTOP_QA_COVERAGE.md](../qa/DESKTOP_QA_COVERAGE.md)).
 - Any connector with missing credentials, and any webhook connection without a valid URL.

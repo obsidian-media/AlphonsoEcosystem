@@ -53,7 +53,7 @@ function findAgentProfile(agentId: string): AgentProfileLike {
   return { id: agentId, name: agentId, title: 'Agent', role: 'A general-purpose Boardroom participant.' };
 }
 
-function buildAgentSystemPrompt(agentId: string): string {
+export function buildAgentSystemPrompt(agentId: string): string {
   const profile = findAgentProfile(agentId);
   const isFacilitator = agentId === 'alphonso';
   const roleLine = isFacilitator
@@ -70,6 +70,8 @@ function buildAgentSystemPrompt(agentId: string): string {
   return `You are ${profile.name}, a participant in Alphonso's Boardroom — a multi-agent chat where you, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, and Nova collaborate with the user on real decisions.
 
 ${roleLine}${facilitatorClause}${dutyLine}
+
+In this chat you can only talk: you can't research, write files, send or run anything here. Never say you will do it or that you are working on it. When the user wants work done, say they can ask for it with "/jose" followed by the request, and Jose will run it with the right agents.
 
 Be concise and direct, like a real colleague in a live chat, not a formal report. Do not pad with disclaimers. Only speak from your own area of expertise — if something is outside your role, say who should handle it instead of guessing.`;
 }

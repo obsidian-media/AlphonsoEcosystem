@@ -23,6 +23,44 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 - The computer connects to the relay only while a phone is paired with phone access on, or while a pairing code is showing.
 - Test builds: TestFlight for iPhones and Firebase App Distribution for Android. A user guide: `docs/PHONE.md`.
 - Checked end to end over the real relay: pairing, a chat message, approving a step (once), Stop, and "offline since".
+
+## [2.11.1] — 2026-11-01 (fixes from using 2.11.0, PR 376; the Linux installer is back)
+
+### Fixed
+- Miya Studio no longer crashes when a review's answer lists come back as objects (React error 31); reviews already saved that way show their text.
+- ComfyUI: Runtime Hub's Start, a step and a picture request start the ComfyUI chosen in Settings (else one with image models) instead of an old Alphonso copy that crashed at start; a picture request starts ComfyUI itself; the wait allows a slow first start.
+- A ComfyUI last used days ago is no longer stopped the moment it starts.
+- "Research …", "look up …", "find out …" or anything asked "with sources" is always Hector's research with cited sources, never a reply from memory.
+- No more "jose failed: connector_setup_required" every 30 seconds: WhatsApp is checked in the background only once it is switched on with its keys.
+- Your own Hermes profiles: Alphonso now reads whether a profile's API server is on, and its port, from the profile's .env too, so profiles show the right address and whether they answer.
+- Connecting one of your Hermes profiles to an agent reads its key (API_SERVER_KEY in its .env) when you click "Use for this agent", unless you type one, and keeps it in the system keychain; the app window never holds it.
+- The nine "Hermes — <agent>" boxes in Connectors are gone; Settings → Agents → Hermes profiles shows each agent's Hermes address with a Test button. Connections saved there before keep working.
+
+## [2.11.0] — 2026-10-31 (outside tools through MCP, PR 372; the Hermes gateway, PR 373; the closing phase, PR 374, with OpenRouter and the resource manager; the user-guide rewrite and the fixes found by the live checks)
+
+### Docs and release checks (2026-10-31)
+- **New user guides.** The README, Getting started, User manual, Agent guide, Connectors guide and Troubleshooting were rewritten for people using the app: shorter, step by step, in the words on the screen. Build and test help moved to CONTRIBUTING.md; older reports and plans moved to `docs/internal/`.
+- **Download a model from Settings.** Settings → General → Download a model downloads inside the app with progress and links Ollama's model library, instead of a fixed list of old model names and a command to paste into a terminal.
+- **Telegram: `/pause`** pauses push notifications. `/stop` was listed twice and always stopped the running request.
+- **Fixed:** four messages sent you to "Settings → Approvals", which doesn't exist; Allow paid models is in Settings → General.
+- **Fixed on Linux:** packing the AppImage failed once ffmpeg was bundled (its libraries couldn't find each other).
+- **Fixed: Claude and ChatGPT keys couldn't be entered.** Their sections in Settings → Connectors were covered by a "Coming Soon" panel since August, so Allow paid models could never use them. Both can be set up now.
+- **Fixed: posting needed Ollama running.** The memory check counted Marcus's posting and sending steps as using a model; they don't once you've approved them.
+- **Fixed: AI clips on Automatic, voice-overs and music** were stopped by the memory check before they could say what to install (music, which is optional, failed instead of being skipped).
+- **Hermes:** the warning about a profile with its own Telegram appears as soon as you connect it.
+- **Fixed: every paid step on Claude failed.** The current Claude model answers with a thinking part first, and Alphonso read only that empty part, so each answer looked blank. Checked live with a real Claude key.
+- **Fixed: paid answers were cut off.** A paid step could write at most 1,024 tokens, and models that think before answering use part of that for thinking, so longer answers (such as Nova's verdict) stopped halfway and couldn't be read. The limit is now 4,096 tokens; the cost shown before you approve a step is the most it can cost, so it is a little higher. An answer that still reaches the limit is asked once more with twice the room (within your monthly cap), and if it is cut off again the step says so in plain words instead of "unreadable", without being tried again and paid for again. The same goes for a paid step past your monthly cap or when paid models are off: it says why, instead of "unreadable", and isn't tried again.
+- **Fixed: Alphonso ignored what a review sent back.** When Maria or Marcus asked for a fix (for example "fill in [Your Name]"), his rewrite never saw it, so the same problem came back and the send failed. His writing now gets his step's instruction, including the fix list.
+- Settings → Appearance: the three themes changed nothing you could see. It now offers an accent colour (Cyan, Green, Purple or Gold) that changes buttons, highlights and links in light and dark. Every accent now meets WCAG AA contrast (4.5:1) in both modes; in light mode the accents are darker and text on accent buttons is white (light mode's cyan was 2.3:1 before).
+- Boardroom sessions: you can no longer post as an agent (the "Speaking as" picker is gone), and the app's own notices (waiting for approval, failed, stopped, limits) show as Boardroom instead of as an agent talking.
+- The model you choose in Chat or Settings no longer goes back to an older one: the Coach window saved the settings it read when it opened over yours. Now only the main window saves settings, and each window follows the other's changes.
+- Boardroom sessions: "/jose …" and work asked for in a thread ("@Hector research …", "look up …") now run as a real Jose request. The thread says it started, with a link to the board, then shows Jose's result. Agents in a thread no longer promise work they can't do there; they tell you to use "/jose".
+- Settings → Agents: an agent can now use your paid model (Claude, ChatGPT or an OpenRouter paid model, chosen with its prices under Allow paid models in Settings → General) as its everyday model. Each of its steps in a request asks first, with the cost, and stays within your monthly cap; schedules never spend. Outside a request (a Boardroom reply) it uses this computer's model.
+- The model badge at the top right shows the provider and model Chat really uses (OpenRouter, NVIDIA, Gemini or Ollama). Click it to see each agent's.
+- Research: pages sent compressed (Amazon and others) are now decoded, so Hector reads them instead of storing garbage; a page that still isn't readable counts as "couldn't read", never as a source. "&#038;" and other numbered characters are shown as the characters. Brave Search answers are decoded too.
+- Research Desk: a report leads with Hector's answer and its cited findings; the raw pages he looked at are folded away under "Show every page Hector looked at", and a page saved as garbage in an older report says "Couldn't read this page."
+- Automation is Teams, Schedules and Dead Letter. The visual Builder (its steps had no code behind them, so a run did nothing) and the 16 "registered operations" (most wrote made-up text) are gone; build multi-agent work as a Team, which runs as a real Jose request, and put it on a schedule with "/team <name> …". Jose no longer runs a Builder workflow by name.
+- Boardroom opens on its sessions, where agents answer. Mission Room is gone: no agent answered there, you typed as an agent, its opening messages were made up, and its Hermes and approval buttons did nothing real.
 - Linux: the AppImage no longer bundles the starter model (Setup downloads it, as on Windows and macOS), so it fits GitHub's 2 GB limit again. 2.11.0 shipped without Linux because of it.
 
 ### Closing the deferred list (2026-10-30)
@@ -55,7 +93,7 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 - **Free models for any agent and in Chat.** The picker lists OpenRouter's free models, with "Let OpenRouter choose a free model" first, how many free requests are left today, and a note that free models are run by other companies that may keep what you send.
 - **When the free limit runs out** (50 requests a day until you have bought $10 of OpenRouter credit), a step carries on with this computer's model and says so, or, if you choose, Jose asks to finish it with a paid OpenRouter model, showing the cost.
 - **Claude through OpenRouter** works on your own Anthropic key once your OpenRouter key settings let it serve the model.
-- **Paid OpenRouter models** are a third choice in Settings → Approvals → Allow paid models. Their prices come from OpenRouter, so there's nothing to type. Models served by your own Gemini, Anthropic, OpenAI or Mistral keys added in OpenRouter count as paid steps too: they always ask first, and the cost OpenRouter reports counts toward your monthly cap.
+- **Paid OpenRouter models** are a third choice in Settings → General → Allow paid models. Their prices come from OpenRouter, so there's nothing to type. Models served by your own Gemini, Anthropic, OpenAI or Mistral keys added in OpenRouter count as paid steps too: they always ask first, and the cost OpenRouter reports counts toward your monthly cap.
 
 ### Memory decides what runs (2026-10-30)
 - **Steps wait for memory instead of running out.** Before each step Alphonso checks free RAM and graphics memory. If the step fits, it runs; if not, idle models and idle tools Alphonso started are freed first, or the step waits and says why ("Waiting for memory: ComfyUI is busy."). A step this computer could never hold fails at once with the reason.
@@ -293,7 +331,7 @@ CI's new run of the agent specs with a small local model (`qwen2.5:1.5b`) failed
   - **Fixed from 4b:** Higgsfield downloads are checked against private network addresses; a Higgsfield picture that fails is remade with ComfyUI, and the step says why; a by-name Higgsfield result approved on the board or Telegram now also shows in Chat.
 - **Paid voices, pictures and clips as an extra choice (content factory phase 4b).** ElevenLabs and Higgsfield join as two paid connectors (Settings → Connectors → Content & Productivity). They are never chosen for you, Zero-Cost Mode turns both off, and every run asks first with the cost, inside the one monthly cap.
   - **Choosing:** each brand picks its voice engine (Kokoro or one of your ElevenLabs voices, including one you cloned there), who makes its pictures (ComfyUI or Higgsfield) and its AI clips (this computer, Runway or Higgsfield). A project can override them in the Scene Builder. When a paid engine can't be used, the free one runs and the step says why.
-  - **ElevenLabs voice-overs:** read with your chosen voice and model; the captions use ElevenLabs' own word timing, so Whisper isn't needed. You enter your price per 1,000 characters in Settings → Approvals.
+  - **ElevenLabs voice-overs:** read with your chosen voice and model; the captions use ElevenLabs' own word timing, so Whisper isn't needed. You enter your price per 1,000 characters in Settings → General.
   - **Sound effects:** a new step after Music, on when the brand switches it on. Miya picks at most one short effect per scene, ElevenLabs makes them, and they're mixed under the voice at their scenes.
   - **Higgsfield:** you paste the model ids from the Higgsfield Console (one for pictures, one for clips), each with optional extra settings as JSON; Test gives Higgsfield's estimate without making anything. Scene pictures, thumbnails and carousel pictures can come from Higgsfield (Alphonso still draws the text), and AI clips for the video and the Shorts too. Each step asks once with Higgsfield's estimate. Something still being made at Higgsfield is kept and fetched by Check again, never run twice; results are downloaded into the project and deleted on Higgsfield.
   - **By name, anywhere:** "Make a Higgsfield picture (or video) of …" from Chat, Telegram or the board is one step that asks with the estimate. The result goes in `Higgsfield/<date>/` in your output folder, shows under Chat's reply, is sent on Telegram (or its folder, over 50 MB), and is listed in Miya Studio's Quick package.
@@ -338,7 +376,7 @@ CI's new run of the agent specs with a small local model (`qwen2.5:1.5b`) failed
   - **How much, per project:** Main moments (Miya marks them; you change them with a switch on each scene), Every scene, or None.
   - **Which engine, per project:** your own ComfyUI with a local video model, or Runway. Automatic picks what this computer has, and says how to set one up when it has neither.
   - **Local video models in Runtime Hub:** on the ComfyUI card, a model suggested for your graphics card's memory (LTX-Video 2B for 6 GB and up, Wan 2.2 5B for 8 GB and up), installed into your ComfyUI with progress and each file checked. You can pick the other one.
-  - **Runway:** enter its price per second in Settings → Approvals → Allow paid models. Each run asks once with the estimate ("2 clips, about $0.50"), and the monthly limit covers Runway and the paid models together.
+  - **Runway:** enter its price per second in Settings → General → Allow paid models. Each run asks once with the estimate ("2 clips, about $0.50"), and the monthly limit covers Runway and the paid models together.
   - Run project stops once before the clips so you can check the main moments (for Runway, the cost too). Each clip is as long as its scene allows; the rest of the scene continues on its stock clip or picture. A clip that fails leaves its scene as it was and says why.
 - **Everything goes through Jose (Jose redesign, phase 6a).**
   - **Telegram, WhatsApp, the phone and the Orchestrator page** now get what Chat gets: a question is answered, a task is planned and run as a request on the Requests board, with approvals by what each step does. Telegram and WhatsApp reply "Jose is on it" at once; WhatsApp sends one line when the request ends. The Orchestrator's Send to Jose shows the answer, or opens the Requests tab on the new request. `/boardroom` on Telegram used to create work that nothing ran; it now goes to Jose.
@@ -348,7 +386,7 @@ CI's new run of the agent specs with a small local model (`qwen2.5:1.5b`) failed
   - **See what a step produced:** pick a step in the plan on the Requests board to see its summary, the files it wrote, its sources and its result (QA Bug 4).
   - **Fixed:** a request still waiting could lose its steps' work after 50 newer commands, and two saves in one millisecond pruned the wrong one.
 - **Jose while you are away (Jose redesign, phase 5).**
-  - **Telegram:** Jose tells your paired Telegram chat when a step waits for you (Approve / Reject), when a plan waits (Run / Cancel, with the steps), when a request finishes or fails, and when a review asks you to decide. Each kind can be switched off in Settings → Approvals → "Jose on Telegram". Approving from Telegram carries the request on, also with `/approve`; a button pressed twice runs once. Checked live with a real bot.
+  - **Telegram:** Jose tells your paired Telegram chat when a step waits for you (Approve / Reject), when a plan waits (Run / Cancel, with the steps), when a request finishes or fails, and when a review asks you to decide. Each kind can be switched off in Settings → General → "Jose on Telegram". Approving from Telegram carries the request on, also with `/approve`; a button pressed twice runs once. Checked live with a real bot.
   - **Carry on:** a request cut off when the app closed is shown as Interrupted, with Carry on on the board, in Chat and on Telegram. Nothing runs by itself; a step that needs approval asks again.
   - **Waiting requests expire** after the days set in Settings (7 to start; blank or 0 = never). Echo saves a request's decisions once, when it is done.
   - **Reject** on the board and in Telegram cancels the request, with a note.
@@ -358,7 +396,7 @@ CI's new run of the agent specs with a small local model (`qwen2.5:1.5b`) failed
   - **Reviews send work back:** when a review finds problems, the work goes back to its author with the findings and is reviewed again, at most 2 rounds; then Jose asks you. Each review's verdict is shown on the board, and revisions say "Round 1" or "Round 2".
   - **Agents can ask for help:** an agent that needs something another agent could provide asks Jose, who picks a helper and runs the step again with the help, once per step. A helper can only read or write its own work; it can never run code, publish, spend or delete.
   - **A model per step:** Jose may choose a larger installed model for a step that needs it. A step that keeps failing is tried once more with the next larger installed model, and the failure says so.
-  - **Paid models, only if you allow them:** Settings → Approvals → "Allow paid models" (off by default; Zero-Cost Mode must be off). A step that still fails may be given to Claude or ChatGPT, set up in Connectors, at the prices you enter. Each such step asks first and says what it should cost, and a monthly cap stops spending past it. Checked with tests only so far, not with a paid account.
+  - **Paid models, only if you allow them:** Settings → General → "Allow paid models" (off by default; Zero-Cost Mode must be off). A step that still fails may be given to Claude or ChatGPT, set up in Connectors, at the prices you enter. Each such step asks first and says what it should cost, and a monthly cap stops spending past it. Checked with tests only so far, not with a paid account.
   - **Approving carries the request on:** approving a waiting step, in Chat, on the board ("Approve and carry on") or with Execute on the Orchestrator page, runs it and every step after it. Approving twice runs it once.
   - **"Open on the board" while a request runs**, not only at the end.
   - **Echo saves what was decided** when a request finishes.
@@ -961,7 +999,7 @@ Files changed:
 - `src/agents/hector/hectorProfile.js` — updated `skillPackIds` (23 total)
 - `src/test/hectorSkillPacks.test.js` — new unit tests
 - `src/test/hectorSkillIntegration.test.js` — new integration tests
-- `docs/HECTOR_SKILLS.md` — new dedicated documentation
+- `docs/internal/HECTOR_SKILLS.md` — new dedicated documentation
 - `docs/AGENT_GUIDE.md` — updated Hector section
 
 **Miya additions (16 new packs):**
@@ -977,7 +1015,7 @@ Files changed:
 - `src/agents/miya/miyaProfile.js` — updated `skillPackIds` (21 total)
 - `src/test/miyaSkillPacks.test.js` — new unit tests
 - `src/test/miyaSkillIntegration.test.js` — new integration tests
-- `docs/MIYA_SKILLS.md` — new dedicated documentation
+- `docs/internal/MIYA_SKILLS.md` — new dedicated documentation
 - `docs/AGENT_GUIDE.md` — updated Miya section
 
 **Marcus additions (16 new packs):**
@@ -993,7 +1031,7 @@ Files changed:
 - `src/agents/marcus/marcusProfile.js` — updated `skillPackIds` (20 total)
 - `src/test/marcusSkillPacks.test.js` — new unit tests
 - `src/test/marcusSkillIntegration.test.js` — new integration tests
-- `docs/MARCUS_SKILLS.md` — new dedicated documentation
+- `docs/internal/MARCUS_SKILLS.md` — new dedicated documentation
 
 **Echo additions (16 new packs):**
 - Decisions: Decision Capture, Decision Diff, Audit Trail
@@ -1049,7 +1087,7 @@ All packs include:
 - 2-3 example tasks per pack
 - Per-pack scope overrides in `agentContractService.ts`
 - Unit and integration tests
-- Dedicated documentation (`docs/ALPHONSO_SKILLS.md`)
+- Dedicated documentation (`docs/internal/ALPHONSO_SKILLS.md`)
 
 Files changed:
 - `src/services/skillPackService.ts` — 16 new packs in `BASE_PACKS` + 16 guidance entries
@@ -1057,7 +1095,7 @@ Files changed:
 - `src/agents/alphonso/alphonsoProfile.js` — updated `skillPackIds` (18 total)
 - `src/test/alphonsoSkillPacks.test.js` — new unit tests
 - `src/test/alphonsoSkillIntegration.test.js` — new integration tests
-- `docs/ALPHONSO_SKILLS.md` — new dedicated documentation
+- `docs/internal/ALPHONSO_SKILLS.md` — new dedicated documentation
 - `docs/AGENT_GUIDE.md` — updated Alphonso section
 
 ---
@@ -1065,7 +1103,7 @@ Files changed:
 ## [Unreleased] — 2026-07-15 (production-readiness execution — Cycle 1–2)
 
 Execution of the production-readiness roadmap
-(`docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md`), branch
+(`docs/internal/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md`), branch
 `claude/production-readiness-audit-mxenki` / PR #99.
 
 - **CI turned green (Cycle 1):** bumped yanked `spin 0.9.8 → 0.9.9` so
@@ -1288,7 +1326,7 @@ running app. Full narrative and rationale: `docs/ALPHONSO_GROUND_TRUTH.md` §11.
   agents) never actually built.
 
 **Handed off:** full in-app auto-update (download+install+relaunch) —
-`docs/AUTO_UPDATE_HANDOFF.md` (new) + PR #98 on `feat/in-app-auto-update`.
+`docs/internal/AUTO_UPDATE_HANDOFF.md` (new) + PR #98 on `feat/in-app-auto-update`.
 
 **Verification:** 93 JS/TS tests passing (15 new WhatsApp, 2 new Telegram
 regression, 1 new Coach Mode regression), 31/31 voice backend pytest, `cargo
@@ -2168,7 +2206,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - **Agent performance export** — CSV + JSON download from AgentPerformanceView
 - **Dead Letter Queue section** in AgentPerformanceView — count, oldest timestamp, Retry All button
 - **CONTRIBUTING.md** — PR checklist, branch strategy, TS requirements, commit format
-- **docs/WORKFLOW_NODES.md** — all 9 node types documented (trigger, ocr, memory, analysis, condition, approval, action, notification, report)
+- **docs/internal/WORKFLOW_NODES.md** — all 9 node types documented (trigger, ocr, memory, analysis, condition, approval, action, notification, report)
 - **e2e/multiagent.spec.js** — Playwright pipeline smoke test (skipped in CI, requires Ollama)
 
 ## [2.3.3] - 2026-06-27 — Bug Fix Sprint: Voice OS, AgentPairing, Settings persistence, UX polish
@@ -2436,8 +2474,8 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - `src/hooks/pcm-processor.worklet.ts` — PCM AudioWorklet processor string constant, required by `useJarvisVoice.ts`
 - `kv_delete` Tauri command in `src-tauri/src/kv_store.rs` — deletes a key from SQLite kv_store table
 - `typecheck` npm script — runs `tsc --noEmit` for full TypeScript checking
-- `docs/BUG_REPORT.md` — full codebase audit report with file:line citations for all 16 bugs
-- `docs/FIX_PLAN.md` — phased remediation plan used to guide this fix session
+- `docs/internal/BUG_REPORT.md` — full codebase audit report with file:line citations for all 16 bugs
+- `docs/internal/FIX_PLAN.md` — phased remediation plan used to guide this fix session
 
 ### Changed
 - `verify:app` now runs: `lint && typecheck && test && build` (typecheck added)
@@ -2723,7 +2761,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
   - USER_MANUAL.md + TROUBLESHOOTING.md: test counts and version reference corrected
 
 ### Added
-- **`docs/MOBILE_COMPANION_SPRINT.md`** — Full executable sprint plan for the iOS/mobile WebSocket companion: 5 phases, complete Rust and Swift code templates, JSON-RPC protocol, mDNS discovery, PIN auth, Cargo.toml additions, wscat test procedure, iOS Xcode project structure, SwiftUI component code, push notification setup, offline queue, and definition-of-done checklist for each phase.
+- **`docs/internal/MOBILE_COMPANION_SPRINT.md`** — Full executable sprint plan for the iOS/mobile WebSocket companion: 5 phases, complete Rust and Swift code templates, JSON-RPC protocol, mDNS discovery, PIN auth, Cargo.toml additions, wscat test procedure, iOS Xcode project structure, SwiftUI component code, push notification setup, offline queue, and definition-of-done checklist for each phase.
 
 ---
 
@@ -3054,7 +3092,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - Hardware GPU acceleration enabled — removed `--disable-gpu`, `--disable-gpu-compositing`, `--use-angle=swiftshader` flags
 - `.env.example` sanitized — real phone numbers in `WHATSAPP_ALLOWED_NUMBERS` replaced with `REPLACE_WITH_YOUR_ALLOWED_NUMBERS`
 - `docs/SECURITY_CONFIG_REPORT.md` — documents all security configuration changes
-- `docs/SECURITY_ROTATION_CHECKLIST.md` — credential rotation checklist covering all 26 credentials
+- `docs/internal/SECURITY_ROTATION_CHECKLIST.md` — credential rotation checklist covering all 26 credentials
 
 ### Added (2026-05-31 — Claude Code session, Agent B: CI + Coverage)
 - `cargo test` step added to GitHub Actions `ci.yml` — new `rust-quality` job runs `cargo clippy` and `cargo test`
@@ -3069,7 +3107,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - "Connectors" tab mounted in `src/App.jsx` pointing to `ConnectorHealthPanel`
 - `src/components/Sidebar.jsx` — "Connectors" nav item added with inline `ConnectorStatusStrip` showing live/missing/disabled counts
 - `src/components/ApprovalModal.jsx` — improved approval dialog: connector badge, colored risk level indicator (high/medium/low), irreversibility warning banner, red confirm button for high-risk actions; backward-compatible with existing `label` prop
-- `docs/UX_CONNECTOR_HEALTH_REPORT.md` — documents UX changes
+- `docs/internal/UX_CONNECTOR_HEALTH_REPORT.md` — documents UX changes
 
 ### Added (2026-05-31 — Claude Code session, Agent D: Rust backend)
 - SQLite WAL mode — `PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;` added to `open_memory_db()` for concurrent read/write performance
@@ -3084,18 +3122,18 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - `src/services/memoryService.ts` — first TypeScript service migration with `MemoryRecord`, `MemoryWriteOptions`, `MemoryFilters` interfaces; Vite resolves `.ts` before `.js` automatically
 - `src/services/serviceScopes.js` — all 24 storage key constants documented with JSDoc comments
 - `vite.config.cjs` deleted — `vite.config.js` is now the only Vite config
-- `docs/FRONTEND_MIGRATION_REPORT.md` — step-by-step pattern and prioritized migration order for all 50+ remaining services
+- `docs/internal/FRONTEND_MIGRATION_REPORT.md` — step-by-step pattern and prioritized migration order for all 50+ remaining services
 
 ### Added (2026-05-31 — Claude Code session, Agent F: Connector completion)
 - `connectorRegistryService.js` — Claude and ChatGPT connectors now return structured `{ success, code, error }` objects with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`; 30-second timeout; pre-flight API key check before any network call
 - `hectorResearchService.js` — Brave Search dual-path: Rust `search_brave_sources` command first; falls through to `VITE_BRAVE_SEARCH_API_KEY` frontend fetch if Rust path returns empty or fails
 - `src/components/ModelSwitcher.jsx` — Ollama model dropdown; fetches `/api/tags`, shows "Ollama offline" pill if unreachable, persists selection to `alphonso_selected_model_v1`; mounted in ChatView header bar
-- `docs/CONNECTOR_COMPLETION_REPORT.md` — documents all connector improvements
+- `docs/internal/CONNECTOR_COMPLETION_REPORT.md` — documents all connector improvements
 
 ### Added (2026-05-31 — Claude Code session, Agent G: Performance)
 - `src/App.jsx` — `ApprovalModal`, `OnboardingWizard`, `ConnectorHealthPanel` converted from static to `React.lazy()` imports; missing `<Suspense>` added to `CommandRib`
 - Main JS chunk reduced: 331 KB → 320 KB
-- `docs/BUNDLE_PERF_REPORT.md` — documents bundle size changes
+- `docs/internal/BUNDLE_PERF_REPORT.md` — documents bundle size changes
 
 ### Added (2026-05-31 — Claude Code session, Agent H: Infrastructure + Docs)
 - `ARCHITECTURE.md` at project root — full stack diagram, 9-agent roster, orchestration flow, service groups, storage model, security model, deployment
@@ -3103,7 +3141,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - `docs/CONNECTORS.md` — all 11 connectors: required env vars, credential acquisition steps, test procedure, known limitations
 - `docs/CHANGELOG.md` — started; this file
 - `.github/dependabot.yml` — weekly updates for npm, Cargo, and GitHub Actions
-- `docs/INFRA_DOCS_REPORT.md` — new-developer setup path and maintainer release path
+- `docs/internal/INFRA_DOCS_REPORT.md` — new-developer setup path and maintainer release path
 
 ### Added (2026-05-31 — Claude Code session, Autonomous mode)
 - `src/components/AgentDock.jsx` — minimize/expand toggle (persisted to `alphonso_agent_dock_minimized_v1`); Ollama connectivity pill showing online/offline/checking state; Minus and ChevronDown icons from Lucide
@@ -3119,7 +3157,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 
 ## [0.1.0] - 2026-05-13
 
-Initial production-ready baseline. Summary from `docs/ALPHONSO_PRODUCTION_COMPLETION_REPORT_2026-05-13.md`:
+Initial production-ready baseline. Summary from `docs/internal/ALPHONSO_PRODUCTION_COMPLETION_REPORT_2026-05-13.md`:
 
 ### Added
 - Jose orchestration durability: `orchestrationQueueService.js` with full state transitions (`new → pending_approval → queued → reported_to_jose → dead_letter/failed`), dead-letter replay, and manual interrupt

@@ -154,6 +154,8 @@ interface ChatGPTResult {
   latencyMs?: number;
   error?: string;
   trust: string;
+  /** True when ChatGPT stopped at the length limit (finish_reason "length"). */
+  cutOff?: boolean;
 }
 
 export async function sendChatGPTMessage(text: string, options: ChatGPTOptions = {}): Promise<ChatGPTResult> {
@@ -224,6 +226,7 @@ async function sendChatGPTOneShot({ apiKey, model, maxTokens, messages }: OneSho
       model,
       usage: data?.usage || null,
       latencyMs,
+      cutOff: data?.choices?.[0]?.finish_reason === 'length',
       trust: TRUST_STATES.VERIFIED
     };
   } catch (error) {

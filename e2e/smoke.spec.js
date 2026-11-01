@@ -46,16 +46,11 @@ test.describe('Alphonso E2E smoke tests', () => {
     await expect(page.getByText('Hello!').first()).toBeVisible({ timeout: 15000 });
   });
 
-  // Epic 1 Task 2: Workflow builder
-  test('workflow builder — navigate and render', async ({ page }) => {
-    // Automation is the current workflow surface in the sidebar, now under
-    // the "Work" Space since the sidebar redesign.
+  // Automation opens on Teams (2.11.0 QA: the visual Builder was archived).
+  test('automation — opens on Teams', async ({ page }) => {
     await page.getByTestId('space-pill-work').click();
     await page.getByRole('button', { name: /^Automation$/ }).click();
-
-    // AutomationView / WorkflowBuilderView should load
-    // Look for the "New Workflow" button or workflow list header that WorkflowBuilderView renders
-    await expect(page.getByText('New Workflow', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('teams-new')).toBeVisible({ timeout: 15000 });
   });
 
   // Epic 1 Task 3: Connector health panel

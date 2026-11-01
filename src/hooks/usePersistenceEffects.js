@@ -8,13 +8,17 @@ export function usePersistenceEffects({
   conversations,
   nativeSelfDevProof,
   coachMiniMode,
-  coachSnapCorner
+  coachSnapCorner,
+  isCoachWindow = false
 }) {
   // Persistence: settings
+  // Only the main window saves settings: the Coach window's copy is the one it read when it
+  // opened, and saving it put back an older model (2.11.0 QA).
   useEffect(() => {
+    if (isCoachWindow) return;
     setStorage('alphonso_settings', settings);
     invoke('save_settings', { settingsJson: JSON.stringify(settings) }).catch(() => {});
-  }, [settings]);
+  }, [settings, isCoachWindow]);
 
   // Persistence: conversations
   useEffect(() => {

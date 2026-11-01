@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('../../services/jose/submitToJose', () => ({ submitStepsToJose: vi.fn() }));
+vi.mock('../../services/jose/submitToJose', () => ({ submitStepsToJose: vi.fn(), submitToJose: vi.fn() }));
+vi.mock('../../services/jose/joseRequestStore', () => ({ getJoseRequest: vi.fn() }));
+vi.mock('../../services/jose/joseSummary', () => ({ closingSummary: vi.fn(() => 'Hector: Found the top 5 KDP niches [1].') }));
 vi.mock('../../services/jose/joseStepOutputs', () => ({ getStepOutput: vi.fn() }));
 
-import { submitStepsToJose } from '../../services/jose/submitToJose';
+import { submitStepsToJose, submitToJose } from '../../services/jose/submitToJose';
+import { getJoseRequest } from '../../services/jose/joseRequestStore';
 import { getStepOutput } from '../../services/jose/joseStepOutputs';
-import { concludeOnJose, distributeOnJose, creativeBriefOnJose, BOARDROOM_LABEL } from '../../services/boardroomJoseService';
+import { concludeOnJose, distributeOnJose, creativeBriefOnJose, BOARDROOM_LABEL, workRequestIn, workOnJose } from '../../services/boardroomJoseService';
 
 const stepsOf = () => vi.mocked(submitStepsToJose).mock.calls[0][0].steps;
 
@@ -59,5 +62,41 @@ describe('Boardroom thread actions through Jose (phase 6a)', () => {
     vi.mocked(submitStepsToJose).mockResolvedValueOnce({ ok: true, commandId: 'c5', requestId: 'jose-request-c5', pendingApprovalCount: 1 });
     expect(await concludeOnJose('t', 'x')).toEqual({ requestId: 'jose-request-c5', review: null, waiting: true });
     expect(getStepOutput).not.toHaveBeenCalled();
+  });
+});
+
+// 2.11.0 QA (owner, 2026-11-01): in a thread Hector said "I'll research…" and never could, and
+// "/jose" was answered by Alphonso. Work asked for in a thread is a real Jose request.
+describe('work asked for in a Boardroom thread', () => {
+  const names = ['Hector', 'Jose', 'Alphonso'];
+
+  it('recognises /jose and the requests the rules already plan, after any @mentions', () => {
+    expect(workRequestIn('/jose research the top-selling KDP niches', names)).toBe('research the top-selling KDP niches');
+    expect(workRequestIn('@Hector research the top-selling KDP niches', names)).toBe('research the top-selling KDP niches');
+    expect(workRequestIn('@Hector, look up the current price of a Raspberry Pi 5', names)).toBe('look up the current price of a Raspberry Pi 5');
+    expect(workRequestIn('What do you think about KDP?', names)).toBeNull();
+    expect(workRequestIn('@Hector what happened?', names)).toBeNull();
+    expect(workRequestIn('/jose', names)).toBeNull();
+  });
+
+  it("runs it as a Jose request and returns Jose's closing summary", async () => {
+    vi.mocked(submitToJose).mockImplementationOnce(async (input: any) => {
+      input.onProgress?.({ stage: 'request_started', requestId: 'jose-request-9' });
+      return { ok: true, requestId: 'jose-request-9' };
+    });
+    vi.mocked(getJoseRequest).mockReturnValueOnce({ id: 'jose-request-9' } as never);
+    const started = vi.fn();
+    const result = await workOnJose('research KDP niches', { onStarted: started });
+    expect(vi.mocked(submitToJose).mock.calls[0][0]).toMatchObject({ text: 'research KDP niches', source: 'boardroom' });
+    expect(started).toHaveBeenCalledWith('jose-request-9');
+    expect(result).toEqual({ requestId: 'jose-request-9', waiting: false, summary: 'Hector: Found the top 5 KDP niches [1].' });
+  });
+
+  it('says when it waits for you, and when Jose could not run it', async () => {
+    vi.mocked(submitToJose).mockResolvedValueOnce({ ok: true, requestId: 'r2', pendingApprovalCount: 1 });
+    vi.mocked(getJoseRequest).mockReturnValueOnce(null as never);
+    expect(await workOnJose('send it')).toEqual({ requestId: 'r2', waiting: true, summary: 'A step is waiting for your approval in the app.' });
+    vi.mocked(submitToJose).mockResolvedValueOnce({ ok: false, reason: 'plan_rejected', problems: ['No agent owns this.'] });
+    expect(await workOnJose('x')).toEqual({ requestId: null, waiting: false, summary: "Jose couldn't run it: No agent owns this." });
   });
 });

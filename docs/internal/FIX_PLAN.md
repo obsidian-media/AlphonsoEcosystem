@@ -1,7 +1,7 @@
 # Alphonso Fix Plan — Prioritized Remediation
 
 > **Status (2026-10-25):** a dated plan (2026-06-24); worked through in the June and July passes. Today: 2.10.0 on `main` (not tagged; latest release 2.9.0), 9 agents, 33 connectors, 285 services, 546 test files / 6,777 tests, 189 Tauri commands, 50 Rust modules; current facts are in `docs/ALPHONSO_GROUND_TRUTH.md`.
-**Based on:** `docs/BUG_REPORT.md` — full codebase audit 2026-06-24  
+**Based on:** `docs/internal/BUG_REPORT.md` — full codebase audit 2026-06-24  
 **Version:** v2.2.3
 
 ---
@@ -331,4 +331,4 @@ Since `onCheckOllama` is `useCallback`-wrapped in `OllamaContext`, this won't ca
 
 ---
 
-_Fix plan generated from `docs/BUG_REPORT.md` — 2026-06-24_
+_Fix plan generated from `docs/internal/BUG_REPORT.md` — 2026-06-24_

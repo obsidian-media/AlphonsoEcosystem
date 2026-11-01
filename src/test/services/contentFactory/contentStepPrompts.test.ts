@@ -216,3 +216,24 @@ describe('help in content steps', () => {
     expect(helpFromAnswer('not json')).toBeNull();
   });
 });
+
+// 2.11.0 QA (owner, 2026-11-01): a model answered a list item as an object, copying the item's
+// hint as its key ({"an honesty problem, if any": "…"}); the review screen showed it and crashed.
+describe('lists of text in an answer', () => {
+  it('keep the words when a model wraps an item in an object, and drop empty items', () => {
+    const answer = parseStepAnswer('audit_content_quality', JSON.stringify({
+      pieces: [{ pieceId: 'script', score: 6, comparedTo: 'no reference known', weakPoints: [{ 'a weak point': 'The hook is slow.' }, 'Too long.'] }],
+      honestyIssues: [{ 'an honesty problem, if any': 'It claims a study that is not cited.' }, '', { x: '' }],
+    })) as { pieces: { weakPoints: string[] }[]; honestyIssues: string[] };
+    expect(answer.honestyIssues).toEqual(['It claims a study that is not cited.']);
+    expect(answer.pieces[0].weakPoints).toEqual(['The hook is slow.', 'Too long.']);
+  });
+
+  it("does the same for Nova's notes and must-fix list", () => {
+    const answer = parseStepAnswer('analysis_content_review', JSON.stringify({
+      hookScore: 7, scriptScore: 6, notes: [{ note: 'Good pacing.' }], mustFix: [{ 'what must change': 'Cut the intro.' }, 3],
+    })) as { notes: string[]; mustFix: string[] };
+    expect(answer.notes).toEqual(['Good pacing.']);
+    expect(answer.mustFix).toEqual(['Cut the intro.', '3']);
+  });
+});

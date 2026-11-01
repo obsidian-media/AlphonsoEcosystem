@@ -11,7 +11,6 @@ describe('Alphonso desktop Boardroom', () => {
     if (!(await ollamaHasModels())) this.skip();
     await $('[data-testid="space-pill-boardroom"]').click();
     await $('[data-testid="sidebar-nav-mission_room"]').click();
-    await $('button=Boardroom Sessions').click();
   });
 
   it('creates a thread', async () => {
