@@ -10,7 +10,7 @@ const PAIR_PREFIX = 'alphonso-pair:';
 /** What a phone may ask the computer to do (phoneCalls.ts maps each to the computer's own function). */
 export type PhoneCallName = 'chat.send' | 'request.approveStep' | 'request.rejectStep' | 'request.stop' | 'request.carryOn' | 'request.cancel' | 'plan.run' | 'plan.cancel' | 'mirror.snapshot';
 /** What the computer mirrors to a phone. `computer`: its name, model and modes, never secrets. */
-export type MirroredStore = 'requests' | 'stepOutputs' | 'chat' | 'computer';
+export type MirroredStore = 'requests' | 'stepOutputs' | 'chat' | 'computer' | 'content';
 export interface PhoneNotification {
   key: string;
   title: string;
