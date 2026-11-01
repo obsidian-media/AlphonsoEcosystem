@@ -26,7 +26,11 @@ beforeEach(() => {
 
 describe('media.preview', () => {
   it("a listed video's piece 0 comes with the size, hash and piece count", async () => {
-    expect(await mediaPreview({ ref, piece: 0 })).toEqual({ mime: 'video/mp4', bytes: 6_000_000, sha256: 'abc', pieces: 3, piece: 0, data: 'QUJD' });
+    const QUJD_SHA = 'a43c3ea4b1b0ac7ae1b8f9a8a7e1b8c2b3f4e8e0b4e7e6b0b1c4e7c0e2c5d6a1';
+    const r = await mediaPreview({ ref, piece: 0 });
+    expect(r).toMatchObject({ mime: 'video/mp4', bytes: 6_000_000, sha256: 'abc', pieces: 3, piece: 0, data: 'QUJD' });
+    expect(r.pieceSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(r.pieceSha256).not.toBe(QUJD_SHA);
     expect(readPiece).toHaveBeenCalledWith('shop/p1/output/phone-previews/a.mp4', 0);
   });
 
@@ -66,5 +70,17 @@ describe('media.preview', () => {
     const lastPiece = 6_000_000 - 2 * 2.5 * 1024 * 1024;
     expect(previewFits.mock.calls[0][0]).toBeLessThan(lastPiece * 2);
     expect(previewLimitLine(null)).toBe("Today's limit for previews is used up; try again tomorrow.");
+  });
+
+  it('info alone gives the size and hash without reading anything', async () => {
+    expect(await mediaPreview({ ref, info: true })).toEqual({ mime: 'video/mp4', bytes: 6_000_000, sha256: 'abc', pieces: 3 });
+    expect(readPiece).not.toHaveBeenCalled();
+    expect(previewFits).not.toHaveBeenCalled();
+  });
+
+  it("each piece carries the SHA-256 of its own text", async () => {
+    const r = await mediaPreview({ ref, piece: 1 });
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('QUJD'));
+    expect(r.pieceSha256).toBe([...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join(''));
   });
 });

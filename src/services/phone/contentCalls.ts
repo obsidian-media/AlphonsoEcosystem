@@ -29,17 +29,26 @@ function mediaRef(value: unknown): MediaRef | null {
   return { projectId: v.projectId, path: v.path, kind: v.kind };
 }
 
-/** `media.preview`: one piece of a phone-sized copy of an offered picture or video. */
-export async function mediaPreview(args: Args): Promise<{ mime: string; bytes: number; sha256: string; pieces: number; piece: number; data: string }> {
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export type PreviewPiece = { mime: string; bytes: number; sha256: string; pieces: number; piece?: number; data?: string; pieceSha256?: string };
+
+/** `media.preview`: `{ ref, info: true }` gives the size and hash; `{ ref, piece }` one piece of
+ *  the phone-sized copy, with the SHA-256 of its text so the phone can spot a damaged piece. */
+export async function mediaPreview(args: Args): Promise<PreviewPiece> {
   const ref = mediaRef(args.ref);
   if (!ref || !mediaOffered(ref)) throw new Error(NOT_OFFERED);
   const piece = Number(args.piece);
   const info = await ensurePreview(ref);
   if (info.ok === false) throw new Error(info.reason);
+  if (args.info === true) return { mime: info.mime, bytes: info.bytes, sha256: info.sha256, pieces: info.pieces };
   if (!Number.isInteger(piece) || piece < 0 || piece >= info.pieces) throw new Error('That piece of the preview does not exist.');
   const raw = Math.min(PREVIEW_PIECE_BYTES, info.bytes - piece * PREVIEW_PIECE_BYTES);
   const fits = previewFits(sealedChars(raw));
   if (fits.ok === false) throw new Error(previewLimitLine(fits.resetsAtMs));
   const data = await readPiece(info.path, piece);
-  return { mime: info.mime, bytes: info.bytes, sha256: info.sha256, pieces: info.pieces, piece, data };
+  return { mime: info.mime, bytes: info.bytes, sha256: info.sha256, pieces: info.pieces, piece, data, pieceSha256: await sha256Hex(data) };
 }

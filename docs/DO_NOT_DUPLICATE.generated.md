@@ -458,14 +458,14 @@ Source-backed inventory: 369 services and 183 components. Human purpose descript
 | service | `src/services/packetExecutionService.ts` | `executeApprovedPacket` |
 | service | `src/services/parallelExecutionService.ts` | `createTaskQueue`, `executeBatch`, `executeParallel`, `executeWithRetry`, `ParallelExecutionOptions`, `ParallelResult`, `ParallelTask` |
 | service | `src/services/phone/boardData.ts` | `BoardData`, `BoardDataProvider`, `localBoardData`, `runResultText`, `useBoardData` |
-| service | `src/services/phone/contentCalls.ts` | `mediaPreview`, `NOT_OFFERED` |
+| service | `src/services/phone/contentCalls.ts` | `mediaPreview`, `NOT_OFFERED`, `previewLimitLine`, `PreviewPiece` |
 | service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia` |
 | service | `src/services/phone/desktopSignIn.ts` | `createDesktopPhoneSignIn`, `desktopSignInConfig`, `NO_SIGN_IN_PAGE` |
 | service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |
 | service | `src/services/phone/phoneCalls.ts` | `ALREADY_DONE`, `handlePhoneCall`, `NOT_FROM_PHONE`, `PHONE_CALLS`, `resetPhoneCallsForTests` |
 | service | `src/services/phone/phoneChatLog.ts` | `appendPhoneChat`, `listPhoneChat`, `onPhoneChatChange`, `PHONE_CHAT_KEY`, `PHONE_CHAT_LIMIT`, `PhoneChatMessage` |
 | service | `src/services/phone/phoneCrypto.ts` | `generateKeyPair`, `open`, `openAnonymous`, `seal`, `sealAnonymous` |
-| service | `src/services/phone/phoneLink.ts` | `computerKeys`, `listPhones`, `onPhoneCall`, `PairedPhone`, `PAIRING_WINDOW_MS`, `pairingQr`, `PHONE_ACCESS_KEY`, `phoneAccessOn`, `PhoneAuth`, `PHONES_KEY`, `publish`, `pushNotice`, `RelaySocket`, `removePhone`, `resetPhoneLinkForTests`, `setPhoneAccess`, `SocketFactory`, `startPhoneLink`, `webSocketFactory` |
+| service | `src/services/phone/phoneLink.ts` | `computerKeys`, `listPhones`, `onPhoneCall`, `PairedPhone`, `PAIRING_WINDOW_MS`, `pairingQr`, `PHONE_ACCESS_KEY`, `phoneAccessOn`, `PhoneAuth`, `PHONES_KEY`, `PREVIEW_RESERVE_SHARE`, `previewFits`, `publish`, `pushNotice`, `relayRoom`, `RelaySocket`, `removePhone`, `resetPhoneLinkForTests`, `setPhoneAccess`, `SocketFactory`, `startPhoneLink`, `webSocketFactory` |
 | service | `src/services/phone/phoneMirror.ts` | `CONTENT_POLL_MS`, `MIRROR_BATCH_MS`, `MIRROR_REQUESTS`, `mirrorSnapshots`, `startPhoneMirror` |
 | service | `src/services/phone/phoneNotifications.ts` | `PHONE_NOTIFY_SENT_KEY`, `phoneNotificationsFor`, `phoneNotifySettings`, `startPhoneNotifications` |
 | service | `src/services/phone/phonePreviews.ts` | `ensurePreview`, `FILE_GONE`, `NOT_READY`, `PREVIEW_PIECE_BYTES`, `PreviewInfo`, `PreviewResult`, `readPiece` |

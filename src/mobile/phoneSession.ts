@@ -17,6 +17,14 @@ const PRIVATE_KEY = 'alphonso_phone_private_key';
 /** The paired computer's public key, also in secure storage: the notification extension
  *  (iOS) and the push service (Android) read both keys there to open a notice. */
 export const COMPUTER_KEY_NAME = 'alphonso_phone_computer_key';
+/** What the relay's refusals mean, in plain words (gateway/phone-relay/src/limits.js and routing.js). */
+export const RELAY_REFUSED: Record<string, string> = {
+  daily_limit: "Today's limit for this phone is used up; try again tomorrow.",
+  too_large: 'That was too large to send.',
+  too_fast: 'Too many at once; try again in a moment.',
+  not_paired: "This phone isn't paired with that computer any more. Pair it again in Settings.",
+};
+const RELAY_REFUSED_OTHER = "Alphonso's relay couldn't pass that on. Try again.";
 /** The private key's name, shared with the native notification code. */
 export const PRIVATE_KEY_NAME = PRIVATE_KEY;
 const CALL_TIMEOUT_MS = 30_000;
@@ -141,6 +149,14 @@ export function connectPhone(deps: { socket: SocketFactory; auth: PhoneAuth; sec
         })();
       } else if (m.type === 'from' && typeof m.frame === 'string') {
         void onFrame(String(m.deviceId), m.frame);
+      } else if (m.type === 'error') {
+        // The relay refuses a frame as it arrives, so its answer is for the oldest call waiting.
+        const first = pending.entries().next().value as [string, { resolve: (r: { ok: boolean; error?: string }) => void; timer: ReturnType<typeof setTimeout> }] | undefined;
+        if (first) {
+          clearTimeout(first[1].timer);
+          pending.delete(first[0]);
+          first[1].resolve({ ok: false, error: RELAY_REFUSED[String(m.reason)] || RELAY_REFUSED_OTHER });
+        }
       } else if (m.type === 'offline') {
         setStatus(false, typeof m.sinceMs === 'number' ? m.sinceMs : now());
       }

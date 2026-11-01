@@ -6,6 +6,9 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor
 import { App } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner';
+import { Directory, Filesystem } from '@capacitor/filesystem';
+import { Network } from '@capacitor/network';
+import type { PreviewStore } from '../../src/mobile/previewFetch';
 import type { PhoneSignIn, SignInMethod } from '../../src/services/phone/phoneAccount';
 import type { PhoneSecrets } from '../../src/mobile/phoneSession';
 import type { NotificationAction, OnNotificationAction, PhoneLock } from '../../src/mobile/MobileApp';
@@ -25,6 +28,45 @@ export const secrets: PhoneSecrets = {
   get: async (key) => (await AlphonsoPhone.getSecret({ key })).value,
   set: async (key, value) => { await AlphonsoPhone.setSecret({ key, value }); },
 };
+
+// Previews from the computer (phase 2), kept in the app's own data folder as
+// previews/<key>.<mp4|jpg> until their post goes out or is rejected.
+const PREVIEW_DIR = 'previews';
+const extFor = (mime: string) => (mime === 'video/mp4' ? 'mp4' : 'jpg');
+async function previewFiles(): Promise<string[]> {
+  try { return (await Filesystem.readdir({ path: PREVIEW_DIR, directory: Directory.Data })).files.map((f) => f.name); } catch { return []; }
+}
+function toBase64(bytes: Uint8Array): string {
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(text);
+}
+export const previewStore: PreviewStore = {
+  async get(key) {
+    const name = (await previewFiles()).find((f) => f.startsWith(`${key}.`));
+    if (!name) return null;
+    const { uri } = await Filesystem.getUri({ path: `${PREVIEW_DIR}/${name}`, directory: Directory.Data });
+    return Capacitor.convertFileSrc(uri);
+  },
+  async put(key, bytes, mime) {
+    const path = `${PREVIEW_DIR}/${key}.${extFor(mime)}`;
+    await Filesystem.writeFile({ path, data: toBase64(bytes), directory: Directory.Data, recursive: true });
+    const { uri } = await Filesystem.getUri({ path, directory: Directory.Data });
+    return Capacitor.convertFileSrc(uri);
+  },
+  async remove(key) {
+    for (const name of (await previewFiles()).filter((f) => f.startsWith(`${key}.`))) {
+      await Filesystem.deleteFile({ path: `${PREVIEW_DIR}/${name}`, directory: Directory.Data }).catch(() => undefined);
+    }
+  },
+  async keys() { return (await previewFiles()).map((f) => f.replace(/\.[^.]+$/, '')); },
+};
+
+export async function networkKind(): Promise<'wifi' | 'cellular' | 'none'> {
+  const status = await Network.getStatus();
+  if (!status.connected) return 'none';
+  return status.connectionType === 'cellular' ? 'cellular' : 'wifi';
+}
 
 export const lock: PhoneLock = {
   confirm: async (reason, opts) => {

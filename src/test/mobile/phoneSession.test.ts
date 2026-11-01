@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { generateKeyPair } from '../../services/phone/phoneCrypto';
 import { decodeMessage, encodeMessage, openPairingRequest, pairingPayload } from '../../services/phone/phoneProtocol';
-import { COMPUTER_KEY_NAME, NOT_ALPHONSO_QR, connectPhone, pairPhone, savedPairing, type PhoneSecrets } from '../../mobile/phoneSession';
+import { COMPUTER_KEY_NAME, NOT_ALPHONSO_QR, RELAY_REFUSED, connectPhone, pairPhone, savedPairing, type PhoneSecrets } from '../../mobile/phoneSession';
 
 const RELAY = 'wss://relay.test/link';
 
@@ -116,6 +116,24 @@ describe('phoneSession', () => {
     sockets[0].emit({ type: 'from', deviceId: 'pc-other', frame: await encodeMessage({ id: 'x', kind: 'change', store: 'requests', data: [], version: 1 }, { theirPublic: stranger.publicKey, myPrivate: stranger.privateKey }) });
     await flush();
     expect(mirror).not.toHaveBeenCalled();
+    link.stop();
+  });
+  it("a relay refusal ends the oldest waiting call at once, with a plain line", async () => {
+    const { store } = await paired();
+    const { factory, sockets } = fakeSockets();
+    const link = connectPhone({ socket: factory, auth, secrets: store });
+    await flush();
+    sockets[0].emit({ type: 'ready' });
+    await flush();
+    const first = link.call('request.stop', { requestId: 'r1' });
+    await flush();
+    const second = link.call('request.stop', { requestId: 'r2' });
+    await flush();
+    sockets[0].emit({ type: 'error', reason: 'daily_limit' });
+    expect(await first).toEqual({ ok: false, error: RELAY_REFUSED.daily_limit });
+    expect(RELAY_REFUSED.daily_limit).toBe("Today's limit for this phone is used up; try again tomorrow.");
+    sockets[0].emit({ type: 'error', reason: 'something_new' });
+    expect(await second).toEqual({ ok: false, error: "Alphonso's relay couldn't pass that on. Try again." });
     link.stop();
   });
 });
