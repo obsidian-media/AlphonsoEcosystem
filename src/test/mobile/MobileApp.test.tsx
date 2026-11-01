@@ -36,6 +36,16 @@ describe('the phone app', () => {
     expect(await screen.findByText(NOT_ALPHONSO_QR)).toBeTruthy();
   });
 
+  it('the Studio tab lists the projects the computer sent', async () => {
+    localStorage.setItem('alphonso_phone_pairing_v1', JSON.stringify({ deviceId: 'ph', computerName: 'Studio PC' }));
+    const content = { projects: [{ id: 'p1', brandId: 'b1', name: 'Bakery tour', updatedAtMs: 1, steps: {}, posts: [], media: [] }], brands: [{ id: 'b1', name: 'Shop' }], calendar: [] };
+    const link = fakeLink({ online: true, snapshot: { requests: [], stepOutputs: {}, chat: [], computer: {}, content } });
+    render(<MobileApp signIn={signedIn()} secrets={{ get: async () => null, set: async () => {} }} lock={{ confirm: async () => true }} connect={() => link as any} />);
+    await act(async () => { link.fire(); });
+    fireEvent.click(await screen.findByRole('tab', { name: 'Studio' }));
+    expect(await screen.findByTestId('studio-project-p1')).toBeTruthy();
+  });
+
   it("the Requests tab renders the desktop's board in one column", async () => {
     localStorage.setItem('alphonso_phone_pairing_v1', JSON.stringify({ deviceId: 'ph', computerName: 'Studio PC' }));
     const link = fakeLink({ online: true, snapshot: { requests: [request], stepOutputs: {}, chat: [], computer: {} } });

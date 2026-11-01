@@ -1,7 +1,7 @@
 import React from 'react';
 
 /** What comes to the phone in later phases (phone app design, phases 2 and 3). */
-export const ON_COMPUTER_FOR_NOW = ['Miya Studio', 'Calendar', 'Memory', 'Projects', 'Teams', 'Skills', 'Boardroom', 'Settings and connectors'];
+export const ON_COMPUTER_FOR_NOW = ['Memory', 'Projects', 'Teams', 'Skills', 'Boardroom', 'Settings and connectors'];
 
 export function MoreScreen({ lockEnabled, onLockChange, onSignOut }: { lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void }) {
   return (

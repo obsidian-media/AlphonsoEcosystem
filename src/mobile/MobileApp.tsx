@@ -13,6 +13,8 @@ import { PairScreen } from './screens/Pair';
 import { ChatScreen } from './screens/Chat';
 import { RequestsScreen } from './screens/Requests';
 import { MoreScreen } from './screens/More';
+import { StudioScreen } from './screens/Studio';
+import type { PhonePreviewParts } from '../services/phone/remoteData';
 import { OfflineBanner } from './screens/Offline';
 import { withLockedConfirm } from './lockedApproval';
 
@@ -21,7 +23,8 @@ export const PHONE_LOCK_KEY = 'alphonso_phone_lock_v1';
  *  confirm (locked approvals); without it, such a phone may still open the app. */
 export interface PhoneLock { confirm(reason: string, opts?: { strict?: boolean }): Promise<boolean> }
 
-type Tab = 'chat' | 'requests' | 'more';
+type Tab = 'chat' | 'requests' | 'studio' | 'more';
+const TAB_NAMES: Record<Tab, string> = { chat: 'Chat', requests: 'Requests', studio: 'Studio', more: 'More' };
 
 /** A notification's button, given by the packaging once the app is open and unlocked. */
 export interface NotificationAction { action: 'approve' | 'reject' | 'open'; requestId: string; stepId?: string }
@@ -38,12 +41,14 @@ export interface MobileAppProps {
   scanQr?: () => Promise<string | null>;
   phoneName?: string;
   onNotificationAction?: OnNotificationAction;
+  /** Where previews are kept on the phone and how it is connected (phase 2). */
+  previews?: PhonePreviewParts;
 }
 
 export function lockOn(): boolean { return localStorage.getItem(PHONE_LOCK_KEY) !== 'off'; }
 
-function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotificationAction }: { link: PhoneLink; lock: PhoneLock; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void; onNotificationAction?: OnNotificationAction }) {
-  const data = useMemo(() => createRemoteData(link), [link]);
+function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotificationAction, previews }: { link: PhoneLink; lock: PhoneLock; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void; onNotificationAction?: OnNotificationAction; previews?: PhonePreviewParts }) {
+  const data = useMemo(() => createRemoteData(link, previews), [link, previews]);
   // A step that spends, sends or publishes, or deletes asks for Face ID / fingerprint first.
   const board = useMemo(() => withLockedConfirm(data.board, lock), [data, lock]);
   const [tab, setTab] = useState<Tab>('chat');
@@ -80,12 +85,13 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
       <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
         {tab === 'chat' && <ChatScreen chat={data.chat} />}
         {tab === 'requests' && <BoardDataProvider value={board}><RequestsScreen key={selected || 'all'} selectedRequestId={selected} /></BoardDataProvider>}
+        {tab === 'studio' && <StudioScreen studio={data.studio} lock={lock} />}
         {tab === 'more' && <MoreScreen lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} />}
       </main>
-      <nav role="tablist" className="grid grid-cols-3 border-t border-(--border) text-xs">
-        {(['chat', 'requests', 'more'] as Tab[]).map((t) => (
+      <nav role="tablist" className="grid grid-cols-4 border-t border-(--border) text-xs">
+        {(Object.keys(TAB_NAMES) as Tab[]).map((t) => (
           <button key={t} role="tab" type="button" aria-selected={tab === t} onClick={() => setTab(t)} className={`py-3 ${tab === t ? 'font-semibold text-(--accent)' : 'text-(--text-2)'}`}>
-            {t === 'chat' ? 'Chat' : t === 'requests' ? 'Requests' : 'More'}
+            {TAB_NAMES[t]}
           </button>
         ))}
       </nav>
@@ -132,6 +138,7 @@ export function MobileApp(props: MobileAppProps) {
       link={link}
       lock={props.lock}
       onNotificationAction={props.onNotificationAction}
+      previews={props.previews}
       lockEnabled={lockEnabled}
       onLockChange={(on) => { localStorage.setItem(PHONE_LOCK_KEY, on ? 'on' : 'off'); setLockEnabled(on); }}
       onSignOut={async () => { link.stop(); await props.signIn.signOut(); setLink(null); setSignedIn(false); }}

@@ -95,3 +95,36 @@ describe('remoteData', () => {
     expect(data.board.local).toBe(false);
   });
 });
+
+describe('the Studio on the phone', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('the content store reaches the Studio, and stays while the computer is off', async () => {
+    const t = fakeTransport();
+    const data = createRemoteData(t);
+    t.push({ kind: 'snapshot', store: 'content', data: { projects: [{ id: 'p1', name: 'Tour', media: [] }], brands: [{ id: 'b1', name: 'Shop' }], calendar: [] }, version: 1 });
+    expect(data.studio.projects().map((p) => p.id)).toEqual(['p1']);
+    expect(data.studio.brands()).toEqual([{ id: 'b1', name: 'Shop' }]);
+    t.goOffline(5000);
+    expect(data.studio.projects()).toHaveLength(1);
+    expect(data.studio.readOnly).toBe(true);
+    expect(await data.studio.call('content.approveStep', { projectId: 'p1' })).toEqual({ ok: false, reason: offlineLine(5000) });
+  });
+
+  it("a call's answer, or its refusal in the computer's words", async () => {
+    const t = fakeTransport();
+    const data = createRemoteData(t);
+    vi.mocked(t.call).mockResolvedValueOnce({ ok: true, value: { ok: true, latest: { id: 'p1' } } });
+    expect(await data.studio.call('content.editPost', { projectId: 'p1' })).toEqual({ ok: true, value: { ok: true, latest: { id: 'p1' } } });
+    vi.mocked(t.call).mockResolvedValueOnce({ ok: false, error: "That post isn't on your computer any more." });
+    expect(await data.studio.call('content.editPost', { projectId: 'p1' })).toEqual({ ok: false, reason: "That post isn't on your computer any more." });
+  });
+
+  it('a preview already on the phone is shown without asking the computer', async () => {
+    const t = fakeTransport();
+    const store = { get: vi.fn(async () => 'blob:x'), put: vi.fn(), remove: vi.fn(), keys: vi.fn(async () => []) };
+    const data = createRemoteData(t, { previewStore: store as any, network: async () => 'wifi' });
+    expect(await data.studio.preview({ projectId: 'p1', path: 'a/b.mp4', kind: 'video' }, async () => true)).toEqual({ ok: true, url: 'blob:x' });
+    expect(t.calls).toEqual([]);
+  });
+});

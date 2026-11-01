@@ -8,7 +8,9 @@ import '../../src/index.css';
 import { MobileApp } from '../../src/mobile/MobileApp';
 import { connectPhone, pairPhone } from '../../src/mobile/phoneSession';
 import { webSocketFactory } from '../../src/services/phone/phoneLink';
-import { createSignIn, lock, notificationToken, onNotificationAction, phoneName, scanQr, secrets } from './native';
+import { createSignIn, lock, networkKind, notificationToken, onNotificationAction, phoneName, previewStore, scanQr, secrets } from './native';
+
+const previews = { previewStore, network: networkKind };
 
 const dark = window.matchMedia('(prefers-color-scheme: dark)');
 const applyTheme = () => document.documentElement.setAttribute('data-theme', dark.matches ? 'dark' : 'light');
@@ -28,7 +30,7 @@ async function start() {
   if (localStorage.getItem('alphonso_phone_pairing_v1')) fcmToken = await notificationToken();
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <MobileApp signIn={signIn} secrets={secrets} lock={lock} pair={pair} connect={connect} scanQr={scanQr} phoneName={phoneName()} onNotificationAction={onNotificationAction} />
+      <MobileApp signIn={signIn} secrets={secrets} lock={lock} pair={pair} connect={connect} scanQr={scanQr} phoneName={phoneName()} onNotificationAction={onNotificationAction} previews={previews} />
     </React.StrictMode>,
   );
 }

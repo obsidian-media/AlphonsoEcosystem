@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 372 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 372 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -114,6 +114,7 @@ Source-backed inventory: 372 services and 183 components. Human purpose descript
 | component | `src/components/miya/ScriptStudioTab.tsx` | `ScriptStudioTab`, `StepTabProps` |
 | component | `src/components/miya/ShortsStudioTab.tsx` | `ShortsStudioTab`, `ShortsStudioTabProps` |
 | component | `src/components/miya/StepPanel.tsx` | `StepPanel`, `StepPanelProps` |
+| component | `src/components/miya/stepWords.ts` | `STATUS_TEXT`, `STEP_LABELS` |
 | component | `src/components/miya/ThumbnailStudioTab.tsx` | `ThumbnailStudioTab`, `ThumbnailStudioTabProps` |
 | component | `src/components/MiyaCompanionWidget.tsx` | `MiyaCompanionWidget` |
 | component | `src/components/MiyaStudio.tsx` | `brandKitPrompt`, `MiyaStudio` |
@@ -473,7 +474,7 @@ Source-backed inventory: 372 services and 183 components. Human purpose descript
 | service | `src/services/phone/phoneNotifications.ts` | `PHONE_NOTIFY_SENT_KEY`, `phoneNotificationsFor`, `phoneNotifySettings`, `startPhoneNotifications` |
 | service | `src/services/phone/phonePreviews.ts` | `ensurePreview`, `FILE_GONE`, `NOT_READY`, `PREVIEW_PIECE_BYTES`, `PreviewInfo`, `PreviewResult`, `readPiece` |
 | service | `src/services/phone/phoneProtocol.ts` | `decodeMessage`, `encodeMessage`, `MirroredStore`, `openPairingRequest`, `PairingInfo`, `pairingPayload`, `PairingRequest`, `PHONE_MAX_FRAME_BYTES`, `PHONE_PROTOCOL_VERSION`, `PhoneCallName`, `PhoneKeys`, `PhoneMessage`, `PhoneNotification`, `readPairingPayload`, `relayHttpBase`, `sealPairingRequest` |
-| service | `src/services/phone/remoteData.ts` | `ChatData`, `ChatMessage`, `createRemoteData`, `offlineLine`, `PhoneTransport` |
+| service | `src/services/phone/remoteData.ts` | `ChatData`, `ChatMessage`, `createRemoteData`, `offlineLine`, `PhonePreviewParts`, `PhoneTransport`, `StudioData` |
 | service | `src/services/pluginRegistryService.ts` | `appendPluginAuditEntry`, `discoverDiskPluginManifests`, `executePluginToolRun`, `listPluginAudit`, `listPlugins`, `PLUGIN_AUDIT_SCOPE`, `PLUGIN_MANIFEST_FIELDS`, `PluginAuditEntry`, `PluginAuditInput`, `PluginEntry`, `PLUGINS_SCOPE`, `togglePlugin`, `validatePluginManifestDisk`, `verifyPluginSignatureFromRegistry` |
 | service | `src/services/pluginSandboxService.ts` | `evaluatePluginExecutionPolicy`, `getPluginSandboxPolicy`, `updatePluginSandboxPolicy` |
 | service | `src/services/pluginSigningService.ts` | `_resetTrustedSignerKeysForTesting`, `addTrustedSignerKey`, `exportPublicKeyJwk`, `getOrCreateSignerKeys`, `getTrustedSignerKeys`, `hydrateTrustedSignerKeysFromKv`, `removeTrustedSignerKey`, `signPluginManifest`, `verifyAndAddPlugin`, `verifyPluginSignature` |

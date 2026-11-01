@@ -6,6 +6,9 @@ import type { JoseRequest } from '../jose/joseRequestStore';
 import type { StepOutput } from '../jose/joseStepOutputs';
 import type { BoardData } from './boardData';
 import type { MirroredStore, PhoneCallName } from './phoneProtocol';
+import type { MediaRef, PhoneProject } from './contentMirror';
+import type { CalendarItem } from '../contentFactory/calendarItems';
+import { fetchPreview, type PreviewStore } from '../../mobile/previewFetch';
 
 export interface PhoneTransport {
   call(name: PhoneCallName, args: unknown): Promise<{ ok: boolean; value?: unknown; error?: string }>;
@@ -34,14 +37,31 @@ export function offlineLine(sinceMs: number | null): string {
   return `Your computer is offline since ${hh}:${mm}.`;
 }
 
-type Mirror = { requests: JoseRequest[]; stepOutputs: Record<string, StepOutput[]>; chat: ChatMessage[]; computer: Record<string, unknown> };
-const EMPTY: Mirror = { requests: [], stepOutputs: {}, chat: [], computer: {} };
+type Content = { projects: PhoneProject[]; brands: Array<{ id: string; name: string }>; calendar: CalendarItem[] };
+type Mirror = { requests: JoseRequest[]; stepOutputs: Record<string, StepOutput[]>; chat: ChatMessage[]; computer: Record<string, unknown>; content: Content };
+const EMPTY: Mirror = { requests: [], stepOutputs: {}, chat: [], computer: {}, content: { projects: [], brands: [], calendar: [] } };
+
+/** Miya Studio and the Calendar on the phone (phase 2): the mirrored content store, its calls, previews. */
+export interface StudioData {
+  projects(): PhoneProject[];
+  brands(): Array<{ id: string; name: string }>;
+  calendar(): CalendarItem[];
+  call(name: PhoneCallName, args: Record<string, unknown>): Promise<{ ok: true; value: any } | { ok: false; reason: string }>;
+  preview(ref: MediaRef, confirm: (bytes: number) => Promise<boolean>): Promise<{ ok: true; url: string } | { ok: false; reason: string }>;
+  subscribe(listener: () => void): () => void;
+  readonly readOnly: boolean;
+  readonly readOnlyReason?: string;
+}
+
+/** The phone's own parts for previews (mobile/src/native.ts); none in tests. */
+export interface PhonePreviewParts { previewStore?: PreviewStore; network?: () => Promise<'wifi' | 'cellular' | 'none'> }
+const noStore: PreviewStore = { get: async () => null, put: async () => '', remove: async () => undefined, keys: async () => [] };
 
 function load<T>(key: string, fallback: T): T {
   try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v ?? fallback; } catch { return fallback; }
 }
 
-export function createRemoteData(transport: PhoneTransport) {
+export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewParts = {}) {
   let mirror: Mirror = { ...EMPTY, ...load<Partial<Mirror>>(MIRROR_KEY, {}) };
   const versions = new Map<MirroredStore, number | null>();
   let outbox: Array<{ messageId: string; text: string; atMs: number }> = load(QUEUE_KEY, []);
@@ -129,5 +149,25 @@ export function createRemoteData(transport: PhoneTransport) {
     get readOnly() { return false; },
   };
 
-  return { board, chat, reconnected };
+  const studio: StudioData = {
+    projects: () => mirror.content?.projects || [],
+    brands: () => mirror.content?.brands || [],
+    calendar: () => mirror.content?.calendar || [],
+    call: async (name, args) => {
+      if (!transport.online()) return { ok: false, reason: offlineLine(transport.offlineSince()) };
+      const result = await transport.call(name, args);
+      return result.ok ? { ok: true, value: result.value } : { ok: false, reason: String(result.error || 'It could not run.') };
+    },
+    preview: (ref, confirm) => fetchPreview(ref, {
+      call: (name, args) => transport.call(name, args),
+      store: parts.previewStore || noStore,
+      network: parts.network || (async () => 'wifi'),
+      confirm,
+    }),
+    subscribe: board.subscribe,
+    get readOnly() { return !transport.online(); },
+    get readOnlyReason() { return transport.online() ? undefined : offlineLine(transport.offlineSince()); },
+  };
+
+  return { board, chat, studio, reconnected };
 }
