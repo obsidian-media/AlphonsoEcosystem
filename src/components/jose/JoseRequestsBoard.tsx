@@ -72,6 +72,8 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
   const runningRef = useRef(false);
   const [message, setMessage] = useState('');
   const [templateName, setTemplateName] = useState<string | null>(null);
+  // Send back / Edit text on a waiting send (phone app phase 2): which step, and what is typed.
+  const [sendTool, setSendTool] = useState<{ stepId: string; kind: 'back' | 'edit'; text: string; base: string } | null>(null);
 
   const refresh = useCallback(() => setRequests(data.requests()), [data]);
   useEffect(() => {
@@ -337,9 +339,48 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                 </Button>
               </React.Fragment>
             ))}
+            {waitingSteps.filter((step) => step.sendPreview?.sourceStepId || step.sendPreview?.text).map((step) => (
+              <React.Fragment key={`send-tools-${step.stepId}`}>
+                {step.sendPreview?.sourceStepId && (
+                  <Button variant="ghost" data-testid={`jose-send-back-${step.stepId}`} disabled={running || readOnly}
+                    onClick={() => setSendTool({ stepId: step.stepId, kind: 'back', text: '', base: '' })}>
+                    {`Send back: ${agentName(step.agent)}`}
+                  </Button>
+                )}
+                <Button variant="ghost" data-testid={`jose-edit-send-${step.stepId}`} disabled={running || readOnly}
+                  onClick={() => setSendTool({ stepId: step.stepId, kind: 'edit', text: step.sendPreview?.text || '', base: step.sendPreview?.text || '' })}>
+                  {`Edit text: ${agentName(step.agent)}`}
+                </Button>
+              </React.Fragment>
+            ))}
             {editing && <Button variant="ghost" onClick={() => setEditing(false)}>Stop editing</Button>}
             {data.local && <Button variant="ghost" onClick={() => setTemplateName(templateName === null ? '' : null)}>Save as template</Button>}
           </div>
+
+          {sendTool && selected && (
+            <div className="flex flex-col gap-2" data-testid="jose-send-tool">
+              <textarea
+                aria-label={sendTool.kind === 'back' ? 'What to change' : 'Text Marcus sends'}
+                value={sendTool.text}
+                onChange={(e) => setSendTool({ ...sendTool, text: e.target.value })}
+                rows={sendTool.kind === 'back' ? 2 : 6}
+                className="w-full rounded-sm bg-(--surface-1) px-2 py-1 text-sm"
+              />
+              <div className="flex gap-2">
+                <Button size="sm" variant="primary" disabled={!sendTool.text.trim() || readOnly}
+                  onClick={() => {
+                    const tool = sendTool;
+                    setSendTool(null);
+                    show(tool.kind === 'back'
+                      ? data.sendBack(selected.id, tool.stepId, tool.text)
+                      : data.editSendText(selected.id, tool.stepId, tool.text, tool.base));
+                  }}>
+                  {sendTool.kind === 'back' ? 'Send it back' : 'Save text'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSendTool(null)}>Cancel</Button>
+              </div>
+            </div>
+          )}
 
           {templateName !== null && (
             <div className="flex gap-2">

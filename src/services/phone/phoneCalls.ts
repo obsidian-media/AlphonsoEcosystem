@@ -83,6 +83,15 @@ export const PHONE_CALLS: Record<PhoneCallName, Call> = {
     const result = rejectRequestStep(requestId, stepId);
     return result.ok ? 'Rejected. The request was cancelled.' : result.summary;
   },
+  'request.sendBack': async (args) => {
+    const { sendBackStep } = await import('../jose/sendBackStep');
+    return (await sendBackStep(str(args.requestId), str(args.stepId), str(args.reason))).summary;
+  },
+  'request.editSendText': async (args) => {
+    const { editSendText } = await import('../marcus/editSendText');
+    const { sendTextAnswer } = await import('./boardData');
+    return sendTextAnswer(editSendText(str(args.requestId), str(args.stepId), str(args.text), str(args.baseText)));
+  },
   'request.stop': async (args) => {
     const { stopRequest } = await import('../jose/joseStop');
     return stopRequest(str(args.requestId)).summary;

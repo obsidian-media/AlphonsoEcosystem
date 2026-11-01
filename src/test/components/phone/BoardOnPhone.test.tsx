@@ -14,6 +14,7 @@ function phoneData(over: Partial<BoardData> = {}): BoardData {
     requests: () => [request], request: () => request, stepOutput: () => null,
     approveStep: vi.fn(async () => ''), rejectStep: vi.fn(async () => ''), stop: vi.fn(async () => ''), carryOn: vi.fn(async () => ''),
     cancel: vi.fn(async () => ''), runPlan: vi.fn(async () => ''), cancelPlan: vi.fn(async () => ''),
+    sendBack: vi.fn(async () => ''), editSendText: vi.fn(async () => ''),
     subscribe: () => () => {}, readOnly: true, readOnlyReason: 'Your computer is offline since 14:02.', local: false, ...over,
   };
 }

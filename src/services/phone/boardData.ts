@@ -7,6 +7,8 @@ import { getStepOutput, type StepOutput } from '../jose/joseStepOutputs';
 import { stopRequest } from '../jose/joseStop';
 import { cancelPlan, runApprovedPlan } from '../jose/submitToJose';
 import { approveRequestStep, cancelRequest, carryOnRequest, rejectRequestStep } from '../joseExecutionEngineService';
+import { sendBackStep } from '../jose/sendBackStep';
+import { editSendText } from '../marcus/editSendText';
 
 export interface BoardData {
   requests(): JoseRequest[];
@@ -14,6 +16,10 @@ export interface BoardData {
   stepOutput(commandId: string, stepId: string): StepOutput | null;
   approveStep(requestId: string, stepId: string): Promise<string>;
   rejectStep(requestId: string, stepId: string): string | Promise<string>;
+  /** Send a waiting send's work back with a reason (phone app phase 2). */
+  sendBack(requestId: string, stepId: string, reason: string): Promise<string>;
+  /** Change the text a waiting send sends; `baseText` is the text you were shown. */
+  editSendText(requestId: string, stepId: string, text: string, baseText: string): Promise<string>;
   stop(requestId: string): string | Promise<string>;
   carryOn(requestId: string): Promise<string>;
   cancel(requestId: string): string | Promise<string>;
@@ -34,6 +40,11 @@ export function runResultText(result: any): string {
   return result?.command?.userReport?.summary || result?.reason || (result?.ok ? 'Done.' : 'It could not run.');
 }
 
+/** The board's words for an edit of a send's text. */
+export function sendTextAnswer(result: { ok: boolean; reason?: string }): string {
+  return result.ok ? 'Saved. Marcus sends your text once you approve it.' : String(result.reason || 'It could not be saved.');
+}
+
 export const localBoardData: BoardData = {
   requests: () => listJoseRequests(),
   request: (id) => getJoseRequest(id),
@@ -44,6 +55,8 @@ export const localBoardData: BoardData = {
   },
   // Answered at once on the computer, as before the seam.
   rejectStep: (requestId, stepId) => rejectRequestStep(requestId, stepId).summary,
+  sendBack: async (requestId, stepId, reason) => (await sendBackStep(requestId, stepId, reason)).summary,
+  editSendText: async (requestId, stepId, text, baseText) => sendTextAnswer(editSendText(requestId, stepId, text, baseText)),
   stop: (requestId) => stopRequest(requestId).summary,
   carryOn: async (requestId) => runResultText(await carryOnRequest(requestId)),
   cancel: (requestId) => cancelRequest(requestId).summary,

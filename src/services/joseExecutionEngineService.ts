@@ -33,6 +33,7 @@ import { checkPlan, JOSE_LIMITS } from './jose/stepGraph';
 import { attachRunToRequest, createJoseRequest, updateJoseStep, setJoseRequestStatus, getJoseRequest, findRequestByPacket, listJoseRequests, requestForCommand } from './jose/joseRequestStore';
 import { setStepOutput, priorOutputsForNeeds, getStepOutput } from './jose/joseStepOutputs';
 import { adaptPlan, type PlanChange } from './jose/joseAdapt';
+import { sentBackChange } from './jose/sendBackStep';
 import { HELP_INSTRUCTION } from './jose/joseHelp';
 import { ACTION_INSTRUCTION } from './jose/joseHandoff';
 import { agentName } from './jose/agentNames';
@@ -1623,6 +1624,16 @@ async function runPipeline({
       } catch { /* display aid only */ }
     }
   };
+  // Work you sent back while the request waited (phone app phase 2): its fix round comes
+  // first, and the waiting send waits for the new version (sendBackStep.ts).
+  if (resumeRequest && joseRequestId) {
+    for (const saved of resumeRequest.steps) {
+      const change = saved.sentBack ? sentBackChange(planSteps, saved) : null;
+      if (!change) continue;
+      applyPlanChange(change);
+      try { updateJoseStep(joseRequestId, saved.stepId, { sentBack: undefined } as any); } catch { /* display aid only */ }
+    }
+  }
   let waveIndex = 0;
 
   waveLoop:

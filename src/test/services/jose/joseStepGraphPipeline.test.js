@@ -134,7 +134,7 @@ vi.mock('../../../services/contentFactory/contentStepRecorder', () => ({
   beginContentStep: vi.fn(),
 }));
 
-import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep, carryOnRequest, rejectRequestStep } from '../../../services/joseExecutionEngineService';
+import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep, carryOnRequest, rejectRequestStep, resumeJoseRequest } from '../../../services/joseExecutionEngineService';
 import { createAgentPacket, updatePacketStatus, approvePacket, getPacketById } from '../../../services/agentBusService';
 import { fetchOllamaModels } from '../../../lib/ollama';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
@@ -542,6 +542,24 @@ describe('Jose runs plans as step graphs', () => {
       expect(ranSteps()).toEqual([]);
       expect(result.ok).toBe(false);
       expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('cancelled');
+    });
+
+    // Phone app phase 2: work sent back gets a fix round first; the waiting step waits for it.
+    it('a step sent back gets its fix round first, and the waiting step waits for it again', async () => {
+      const first = await waitingPlan();
+      const requestId = `jose-request-${first.commandId}`;
+      updateJoseStep(requestId, 'post', { sentBack: { workStepId: 'facts', reason: 'Shorter', atMs: 1 } });
+      vi.mocked(executeContentStepAssignment).mockClear();
+      await resumeJoseRequest(requestId);
+      expect(ranSteps()).toEqual(['facts-fix-1']);
+      const fixTask = vi.mocked(executeContentStepAssignment).mock.calls[0][0];
+      expect(String(fixTask.instruction || fixTask.commandPreview || '')).toContain('Fix what you were asked: Shorter');
+      const request = getJoseRequest(requestId);
+      const post = request.steps.find((s) => s.stepId === 'post');
+      expect(post.needs).toEqual(['facts-fix-1']);
+      expect(post.status).toBe('waiting_approval');
+      expect(post.sentBack).toBeUndefined();
+      expect(request.status).toBe('waiting_approval');
     });
 
     it('approves a waiting step by request and step (the board button)', async () => {

@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 370 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 372 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -392,6 +392,7 @@ Source-backed inventory: 370 services and 183 components. Human purpose descript
 | service | `src/services/jose/quotedContent.ts` | `CONTENT_AFTER`, `NOT_A_SEND`, `QUOTED`, `quotedPieces`, `withoutQuotedContent` |
 | service | `src/services/jose/requestGroups.ts` | `groupRequests`, `RequestGroup` |
 | service | `src/services/jose/reviewStep.ts` | `ReviewStepResult`, `runReviewStep` |
+| service | `src/services/jose/sendBackStep.ts` | `SEND_BACK_NOT_HERE`, `sendBackStep`, `SentBack`, `sentBackChange` |
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `MIYA_PAID_STEPS`, `PlanStep`, `stepMaySpend` |
 | service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_PROJECT_SOURCES`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
@@ -406,6 +407,7 @@ Source-backed inventory: 370 services and 183 components. Human purpose descript
 | service | `src/services/marcus/composioChannel.ts` | `checkComposioAnswer`, `composioSendTools`, `describeComposioTools` |
 | service | `src/services/marcus/describeSend.ts` | `describeSend` |
 | service | `src/services/marcus/destinations.ts` | `CHANNEL_LIMITS`, `CONNECTOR_NAMES`, `DESTINATION_KEYS`, `destinationsFor`, `isAllowedTarget`, `listedN8nWorkflows`, `MARCUS_CONNECTORS`, `requestWithoutQuotes`, `targetLabel`, `telegramOwnerChatId` |
+| service | `src/services/marcus/editSendText.ts` | `EditedSendPreview`, `editSendText`, `SEND_NOT_WAITING`, `SEND_TEXT_CHANGED` |
 | service | `src/services/marcus/outsideCall.ts` | `ALREADY_DONE`, `argumentProblems`, `describeOutsideCall`, `FULL_LIST_BUDGET`, `isOutsideCallStep`, `NO_OUTSIDE_TOOL`, `OutsideCallPreview`, `PrepareOutside`, `prepareOutsideCall`, `runOutsideCall` |
 | service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `MARCUS_MODEL_FAILED`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `notSetUp`, `pickDestination` |
 | service | `src/services/marcus/prepareSend.ts` | `deliveryLines`, `deliveryReason`, `describeSend`, `FIX_ROUNDS_USED`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason`, `unfilledGaps`, `unfilledReason` |
@@ -457,7 +459,7 @@ Source-backed inventory: 370 services and 183 components. Human purpose descript
 | service | `src/services/orchestrationReceiptService.ts` | `appendOrchestrationReceipt`, `AppendReceiptInput`, `listOrchestrationReceipts`, `ORCHESTRATION_RECEIPT_SCOPE`, `OrchestrationReceipt`, `ReceiptFilters` |
 | service | `src/services/packetExecutionService.ts` | `executeApprovedPacket` |
 | service | `src/services/parallelExecutionService.ts` | `createTaskQueue`, `executeBatch`, `executeParallel`, `executeWithRetry`, `ParallelExecutionOptions`, `ParallelResult`, `ParallelTask` |
-| service | `src/services/phone/boardData.ts` | `BoardData`, `BoardDataProvider`, `localBoardData`, `runResultText`, `useBoardData` |
+| service | `src/services/phone/boardData.ts` | `BoardData`, `BoardDataProvider`, `localBoardData`, `runResultText`, `sendTextAnswer`, `useBoardData` |
 | service | `src/services/phone/contentCalls.ts` | `CHANGED_ON_COMPUTER`, `CONTENT_CALLS`, `ContentAnswer`, `mediaPreview`, `NOT_OFFERED`, `POST_GONE`, `postsStamp`, `postStamp`, `previewLimitLine`, `PreviewPiece`, `PROJECT_GONE`, `resetContentCallsForTests`, `stepStamp` |
 | service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia` |
 | service | `src/services/phone/contentStamps.ts` | `postsStamp`, `postStamp`, `stepStamp` |

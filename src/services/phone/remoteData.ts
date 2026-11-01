@@ -99,6 +99,8 @@ export function createRemoteData(transport: PhoneTransport) {
     stepOutput: (commandId, stepId) => (mirror.stepOutputs[commandId] || []).find((o: any) => o.stepId === stepId) || null,
     approveStep: (requestId, stepId) => act('request.approveStep', { requestId, stepId }),
     rejectStep: (requestId, stepId) => act('request.rejectStep', { requestId, stepId }),
+    sendBack: (requestId, stepId, reason) => act('request.sendBack', { requestId, stepId, reason }),
+    editSendText: (requestId, stepId, text, baseText) => act('request.editSendText', { requestId, stepId, text, baseText }),
     stop: (requestId) => act('request.stop', { requestId }),
     carryOn: (requestId) => act('request.carryOn', { requestId }),
     cancel: (requestId) => act('request.cancel', { requestId }),
