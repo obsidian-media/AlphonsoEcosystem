@@ -17,8 +17,16 @@ export async function openUrl(url: string) {
 // they fail silently with no visible error. Every UI that opens a citation/source
 // link should call this instead of window.open() directly. Falls back to
 // window.open() when not running inside Tauri (e.g. plain browser/web build).
+/** How a link opens where there is no desktop backend: the phone's browser (phone app phase 2). */
+type LinkOpener = (url: string) => Promise<void>;
+let linkOpener: LinkOpener | null = null;
+export function setLinkOpener(next: LinkOpener | null): void {
+  linkOpener = next;
+}
+
 export async function openExternalUrl(url: string) {
   if (!url) return;
+  if (linkOpener) { await linkOpener(url); return; }
   try {
     await invoke('open_url', { url });
   } catch {

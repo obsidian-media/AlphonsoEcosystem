@@ -8,9 +8,12 @@ import '../../src/index.css';
 import { MobileApp } from '../../src/mobile/MobileApp';
 import { connectPhone, pairPhone } from '../../src/mobile/phoneSession';
 import { webSocketFactory } from '../../src/services/phone/phoneLink';
-import { createSignIn, lock, networkKind, notificationToken, onNotificationAction, phoneName, previewStore, scanQr, secrets } from './native';
+import { setLinkOpener } from '../../src/services/browserAutomationService';
+import { createSignIn, lock, networkKind, openInBrowser, notificationToken, onNotificationAction, phoneName, previewStore, scanQr, secrets } from './native';
 
 const previews = { previewStore, network: networkKind };
+// Source links open in the phone's browser (after the same disguised-link check as the computer).
+setLinkOpener(openInBrowser);
 
 const dark = window.matchMedia('(prefers-color-scheme: dark)');
 const applyTheme = () => document.documentElement.setAttribute('data-theme', dark.matches ? 'dark' : 'light');

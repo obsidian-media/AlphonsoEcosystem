@@ -8,6 +8,7 @@ import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Network } from '@capacitor/network';
+import { Browser } from '@capacitor/browser';
 import type { PreviewStore } from '../../src/mobile/previewFetch';
 import type { PhoneSignIn, SignInMethod } from '../../src/services/phone/phoneAccount';
 import type { PhoneSecrets } from '../../src/mobile/phoneSession';
@@ -61,6 +62,11 @@ export const previewStore: PreviewStore = {
   },
   async keys() { return (await previewFiles()).map((f) => f.replace(/\.[^.]+$/, '')); },
 };
+
+/** A link in the phone's own browser (phone app phase 2: sources, a post's link). */
+export async function openInBrowser(url: string): Promise<void> {
+  await Browser.open({ url });
+}
 
 export async function networkKind(): Promise<'wifi' | 'cellular' | 'none'> {
   const status = await Network.getStatus();

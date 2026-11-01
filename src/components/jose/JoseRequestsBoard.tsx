@@ -22,6 +22,7 @@ import { groupRequests } from '../../services/jose/requestGroups';
 import { agentName } from '../../services/jose/agentNames';
 import { pickAlphonsoProject } from '../../services/joseExecutionEngineService';
 import { describeHermesApproval } from '../../services/hermes/hermesConstants';
+import { describeSend } from '../../services/marcus/describeSend';
 
 export const STATUS_LABELS: Record<string, string> = {
   waiting_plan_approval: 'Plan waiting for you',
@@ -327,9 +328,17 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
             ))}
             {waitingSteps.map((step) => (
               <React.Fragment key={step.stepId}>
-                <Button variant="primary" disabled={running || readOnly} onClick={() => approveStep(step.stepId)}>
-                  {`Approve and carry on: ${agentName(step.agent)} ${step.actionType}`}
-                </Button>
+                {step.sendPreview?.text && (
+                  <p data-testid={`jose-send-preview-${step.stepId}`} className="w-full whitespace-pre-wrap rounded-lg bg-(--surface-1) p-2 text-xs text-(--text-1)">{describeSend(step.sendPreview)}</p>
+                )}
+                {/* A code change is read file by file: it is approved on the computer, never from the phone. */}
+                {step.codePreview && !data.local ? (
+                  <p data-testid={`jose-code-on-computer-${step.stepId}`} className="w-full text-xs text-(--text-2)">{`${agentName(step.agent)}'s change to your code is checked on your computer: open it there to approve.`}</p>
+                ) : (
+                  <Button variant="primary" disabled={running || readOnly} onClick={() => approveStep(step.stepId)}>
+                    {`Approve and carry on: ${agentName(step.agent)} ${step.actionType}`}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   disabled={running || readOnly}
