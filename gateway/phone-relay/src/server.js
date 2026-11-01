@@ -78,7 +78,7 @@ export function createServer({ verifyToken, store, push, limits = LIMITS, now })
   return { server, relay };
 }
 
-// Run as a service: Firebase from the environment (Cloud Run's own service account).
+// Run as a service: Firebase from the environment (the VM's own service account).
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
   const { initFirebase } = await import('./firebase.js');
   const deps = await initFirebase();

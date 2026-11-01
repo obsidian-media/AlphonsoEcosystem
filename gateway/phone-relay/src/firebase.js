@@ -1,5 +1,5 @@
 // Firebase for the relay: checking sign-in tokens, the Firestore records, and sending a
-// notification. Uses the service's own Google credentials (Cloud Run), never a key file.
+// notification. Uses the service's own Google credentials (the VM's service account), never a key file.
 // Firestore holds devices/{deviceId} (uid, role, lastSeenMs, fcmToken) and
 // pairings/{phoneDeviceId} (uid, computerId, createdAtMs): no content.
 import { initializeApp, applicationDefault } from 'firebase-admin/app';

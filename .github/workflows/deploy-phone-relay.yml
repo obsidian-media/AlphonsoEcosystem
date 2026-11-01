@@ -1,12 +1,10 @@
-name: Deploy phone relay to Cloud Run
+name: Deploy phone relay
 
-# Builds gateway/phone-relay and deploys it to Cloud Run in the Obsidian Media Google
-# Cloud project. Signs in with Workload Identity Federation (no stored Google key).
-# Run by hand. Everything about the project comes from repository variables:
-#   GCP_PROJECT_ID, GCP_REGION, GCP_WIF_PROVIDER, GCP_DEPLOY_SERVICE_ACCOUNT,
-#   PHONE_RELAY_SERVICE (Cloud Run service name), PHONE_RELAY_RUN_AS (the service
-#   account the relay runs as: Firebase Auth, Firestore and Cloud Messaging only).
-# The relay keeps connections in memory, so it runs as one instance (see its README).
+# Builds gateway/phone-relay with Cloud Build and restarts its free e2-micro VM on the new
+# image (gateway/phone-relay/vm/deploy.sh; setup in gateway/phone-relay/vm.md).
+# Signs in with Workload Identity Federation (no stored Google key). Run by hand.
+# Repository variables: GCP_PROJECT_ID, GCP_REGION, GCP_ZONE, GCP_WIF_PROVIDER,
+# GCP_DEPLOY_SERVICE_ACCOUNT, PHONE_RELAY_DOMAIN. Not set up yet.
 
 on:
   workflow_dispatch: {}
@@ -29,12 +27,12 @@ jobs:
         env:
           PROJECT: ${{ vars.GCP_PROJECT_ID }}
           REGION: ${{ vars.GCP_REGION }}
+          ZONE: ${{ vars.GCP_ZONE }}
           PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
           DEPLOYER: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
-          SERVICE: ${{ vars.PHONE_RELAY_SERVICE }}
-          RUN_AS: ${{ vars.PHONE_RELAY_RUN_AS }}
+          DOMAIN: ${{ vars.PHONE_RELAY_DOMAIN }}
         run: |
-          for name in PROJECT REGION PROVIDER DEPLOYER SERVICE RUN_AS; do
+          for name in PROJECT REGION ZONE PROVIDER DEPLOYER DOMAIN; do
             if [ -z "${!name}" ]; then echo "::error::Repository variable for $name is not set."; exit 1; fi
           done
 
@@ -45,37 +43,11 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
 
-      - name: Test before deploying
-        run: |
-          npm ci --prefix gateway/phone-relay --no-audit --no-fund
-          node --test gateway/phone-relay/src/relay.test.mjs gateway/phone-relay/src/server.test.mjs gateway/phone-relay/src/pushMessage.test.mjs
-
-      - name: Build and deploy
+      - name: Test, build, deploy and check
         env:
-          PROJECT: ${{ vars.GCP_PROJECT_ID }}
-          REGION: ${{ vars.GCP_REGION }}
-          SERVICE: ${{ vars.PHONE_RELAY_SERVICE }}
-          RUN_AS: ${{ vars.PHONE_RELAY_RUN_AS }}
-        run: |
-          gcloud run deploy "$SERVICE" \
-            --project "$PROJECT" --region "$REGION" \
-            --source gateway/phone-relay \
-            --service-account "$RUN_AS" \
-            --allow-unauthenticated \
-            --session-affinity \
-            --timeout 3600 \
-            --min-instances 0 --max-instances 1 \
-            --concurrency 1000 \
-            --memory 512Mi --cpu 1 \
-            --quiet
-
-      - name: Check it answers
-        env:
-          PROJECT: ${{ vars.GCP_PROJECT_ID }}
-          REGION: ${{ vars.GCP_REGION }}
-          SERVICE: ${{ vars.PHONE_RELAY_SERVICE }}
-        run: |
-          url=$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" --format 'value(status.url)')
-          code=$(curl -s -o /dev/null -w '%{http_code}' "$url/healthz")
-          echo "Relay at $url answered $code"
-          [ "$code" = "200" ]
+          GCP_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          GCP_ZONE: ${{ vars.GCP_ZONE }}
+          RELAY_DOMAIN: ${{ vars.PHONE_RELAY_DOMAIN }}
+        run: bash gateway/phone-relay/vm/deploy.sh

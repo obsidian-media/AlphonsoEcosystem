@@ -1,7 +1,7 @@
 # Phone relay
 
 Connects the Alphonso phone app to the user's computer from anywhere. Run by Obsidian
-Media on Google Cloud (Cloud Run), with Firebase for sign-in, the pairing records and
+Media on Google Cloud's free e2-micro VM (`vm.md`), with Firebase for sign-in, the pairing records and
 notifications. Design: `docs/superpowers/specs/2026-10-31-alphonso-mobile-design.md`.
 
 ## What it does
@@ -36,7 +36,7 @@ device. Over a limit, the frame is refused with a reason (`too_large`, `too_fast
 ## One instance for now
 
 Connections live in the relay's memory, so a phone and its computer must reach the same
-instance: Cloud Run runs it with at most one instance. Running several needs a shared
+instance: it runs on one VM. Running several needs a shared
 message bus between instances (for example Pub/Sub or Memorystore); that comes when the
 number of users needs it.
 
@@ -46,4 +46,4 @@ number of users needs it.
   (after `npm ci --prefix gateway/phone-relay`).
 - Locally against a Firebase project: `GOOGLE_APPLICATION_CREDENTIALS` set by `gcloud auth
   application-default login`, then `node src/server.js` (port `PORT`, default 8080).
-- Deploy: `.github/workflows/deploy-phone-relay.yml`; setup in `cloudrun.md`.
+- Set up and deploy: `vm.md` (`vm/provision.sh`, `vm/deploy.sh`).

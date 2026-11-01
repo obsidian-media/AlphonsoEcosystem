@@ -172,11 +172,23 @@ export function startPhoneLink(deps: {
   let timer: unknown = null;
   state.stopped = false;
 
-  const wanted = () => !state.stopped && (phoneAccessOn() || (!!state.pairing && state.now() <= state.pairing.expiresAtMs) || listPhones().length === 0);
+  // Connected only while phone access is on (a phone is paired) or a pairing code is still
+  // valid: an open connection keeps the relay busy, which is what it costs (owner, 2026-11-01).
+  const pairingOpen = () => !!state.pairing && state.now() <= state.pairing.expiresAtMs;
+  const wanted = () => !state.stopped && (phoneAccessOn() || pairingOpen());
+  let expiryTimer: unknown = null;
+  const closeWhenPairingEnds = () => {
+    if (phoneAccessOn() || !state.pairing) return;
+    expiryTimer = setTimer(() => {
+      expiryTimer = null;
+      if (!wanted()) state.socket?.close();
+    }, Math.max(0, state.pairing.expiresAtMs - state.now()) + 1);
+  };
   const connect = () => {
     if (!wanted()) return;
     const socket = deps.socket(deps.relayUrl);
     state.socket = socket;
+    if (!expiryTimer) closeWhenPairingEnds();
     socket.onOpen(async () => {
       const idToken = await deps.auth.idToken();
       if (!idToken) { socket.close(); return; }
@@ -209,6 +221,7 @@ export function startPhoneLink(deps: {
     state.stopped = true;
     state.accessListeners.delete(onAccess);
     if (timer) clearTimer(timer);
+    if (expiryTimer) clearTimer(expiryTimer);
     state.socket?.close();
     state.socket = null;
   };
