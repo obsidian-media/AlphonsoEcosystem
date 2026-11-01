@@ -64,7 +64,7 @@ The owner wants to use Alphonso from the phone as the same app, not a remote wit
 ## Phases (my call; each one ships something usable)
 
 1. **The link and the everyday screens:** relay with sign-in and pairing, the seam for Chat and the Requests board, approvals, Stop / Carry on / Cancel, notifications, offline state. Replaces Telegram for the owner's daily use.
-2. **Studio and Calendar:** Miya Studio's tabs and the Calendar, with pictures and videos from the computer.
+2. **Check and approve the work:** open, check, fix and approve any work the agents make (pictures and videos as phone-sized previews, writing and research, sends before they go), Miya Studio's steps and posts, the Calendar, and starting a project. Designed in `2026-11-01-alphonso-mobile-phase2-design.md` (owner, 2026-11-01).
 3. **Everything else:** memory, Projects, Teams, Skills, Boardroom, Settings and Connectors. Then the Swift app retires and both stores get the new app.
 4. **The phone on its own (owner, 2026-10-31; after the infrastructure check):** when the computer is off, the offline screen offers what this phone and account can do: "Answer on this phone", "Answer with <cloud model>", "Try to wake my computer". Nothing happens without the user choosing it, and each says where the answer came from.
 
