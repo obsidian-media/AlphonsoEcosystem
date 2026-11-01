@@ -2,6 +2,13 @@
 
 Rule 12 / Rule 11. This register survives the session. Future agents resume from here.
 
+## 2026-11-01: Linux missing from 2.11.0 (fixed on feat/mobile-app, ships next release)
+
+- **What happened:** the 2.11.0 release built all three installers, but GitHub refused the Linux AppImage at upload: about 2.08 GB, over the 2 GiB limit for one release file. It bundled the 1.9 GB starter model, and the closing phase added ffmpeg. 2.10.0's AppImage was 2.01 GB, just under.
+- **What shipped:** the owner chose to publish 2.11.0 for Windows and macOS only. Linux was taken out of `latest.json` and its signature file deleted, so Linux users stay on 2.10.0 and are not offered a broken update.
+- **The fix (on `feat/mobile-app`):** `release.yml`'s and `ci.yml`'s Linux jobs no longer fetch the starter model, as on Windows and macOS. Setup downloads it on first run.
+- **Before the next release:** check the Linux job's AppImage size in the release run (it should be far under 2 GB), and that a fresh Linux install downloads the starter model in Setup. Add a size check before upload so this fails in CI, not at publishing. The release notes must say Linux is back.
+
 ## Format
 - `[DATE] <scope>: <what> — <why deferred> — <resume hint> — <status>`
 
