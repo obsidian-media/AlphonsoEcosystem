@@ -20,7 +20,7 @@ vi.mock('../../../services/hermes/hermesTools', () => ({
   startHermesTool: (...a: unknown[]) => startHermesTool(...a),
 }));
 
-import { ensureTools } from '../../../services/resources/ensureTools';
+import { ensureTools, COMFY_START_WAIT_MS } from '../../../services/resources/ensureTools';
 
 function status(name: string, over: Record<string, unknown> = {}) {
   const labels: Record<string, string> = { comfyui: 'ComfyUI', ollama: 'Ollama', kokoro: 'Kokoro', audiocraft: 'AudioCraft', whisper: 'Whisper' };
@@ -57,7 +57,7 @@ describe('ensureTools', () => {
     getAllStatus.mockResolvedValue([status('comfyui')]);
     expect(await ensureTools(['comfyui'])).toEqual({ ok: true });
     expect(startTool).toHaveBeenCalledWith('comfyui');
-    expect(waitForTool).toHaveBeenCalledWith('comfyui', 60_000);
+    expect(waitForTool).toHaveBeenCalledWith('comfyui', COMFY_START_WAIT_MS);
   });
 
   it('does not start one already running', async () => {
@@ -73,7 +73,34 @@ describe('ensureTools', () => {
     expect(await ensureTools(['comfyui'])).toEqual({ ok: true });
     expect(invoke).toHaveBeenCalledWith('launch_comfyui', { comfyuiDir: 'D:/Comfy', pythonExe: 'D:/Comfy/.venv/python.exe' });
     expect(startTool).not.toHaveBeenCalled();
-    expect(waitForTool).toHaveBeenCalledWith('comfyui', 60_000);
+    expect(waitForTool).toHaveBeenCalledWith('comfyui', COMFY_START_WAIT_MS);
+  });
+
+  // 2.11.0 QA (owner, 2026-11-01): Alphonso's old copy crashed at start (a missing library) and
+  // had no image models; Start ran it instead of the ComfyUI chosen in Settings.
+  const ownCopy = { path: 'C:/Alphonso/runtimes/comfyui', python: 'C:/Alphonso/runtimes/comfyui/venv/python.exe', running: false, sources: ['alphonso'], checkpoints: 0, alphonsoCopy: true };
+  const mine = { path: 'D:/Programs/comfyui/ComfyUI', python: 'D:/Programs/comfyui/venv/python.exe', running: false, sources: ['settings'], checkpoints: 3, alphonsoCopy: false };
+
+  it("starts the ComfyUI chosen in Settings, not Alphonso's own copy", async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ comfyuiDir: mine.path }));
+    getAllStatus.mockResolvedValue([status('comfyui')]);
+    findComfyuiInstalls.mockResolvedValue([ownCopy, mine]);
+    expect(await ensureTools(['comfyui'])).toEqual({ ok: true });
+    expect(findComfyuiInstalls).toHaveBeenCalledWith(mine.path);
+    expect(invoke).toHaveBeenCalledWith('launch_comfyui', { comfyuiDir: mine.path, pythonExe: mine.python });
+    expect(startTool).not.toHaveBeenCalled();
+  });
+
+  it('with nothing chosen, an install with image models wins over a copy with none', async () => {
+    getAllStatus.mockResolvedValue([status('comfyui')]);
+    findComfyuiInstalls.mockResolvedValue([ownCopy, { ...mine, sources: ['usual-place'] }]);
+    expect(await ensureTools(['comfyui'])).toEqual({ ok: true });
+    expect(invoke).toHaveBeenCalledWith('launch_comfyui', { comfyuiDir: mine.path, pythonExe: mine.python });
+    expect(startTool).not.toHaveBeenCalled();
+  });
+
+  it('waits long enough for a first start (130 s seen on a real computer)', () => {
+    expect(COMFY_START_WAIT_MS).toBeGreaterThanOrEqual(180_000);
   });
 
   it('says what to install when there is no ComfyUI', async () => {

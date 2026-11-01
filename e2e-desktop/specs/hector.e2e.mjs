@@ -102,7 +102,13 @@ describe('Alphonso desktop: Hector researches properly', () => {
     for (const s of report.sources) {
       expect(['read', 'snippet']).toContain(s.label);
       expect(s.url).not.toMatch(/^deepseek:/);
+      // 2.11.0 QA (owner, 2026-11-01): compressed pages were stored as their text. Whatever Hector
+      // keeps from a page is readable text.
+      const chars = [...String(s.excerpt || '')];
+      const bad = chars.filter((c) => c === '\uFFFD' || /[\u0000-\u0008\u000E-\u001F]/.test(c)).length;
+      expect(bad * 20).toBeLessThanOrEqual(chars.length);
     }
+    expect(report.sources.some((s) => s.label === 'read')).toBe(true);
     expect(String(output.summary)).toMatch(/\nSources:\n\[1\] /);
 
     // No research page text over 600 characters stays in app storage.

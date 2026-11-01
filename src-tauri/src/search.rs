@@ -237,7 +237,8 @@ pub(crate) fn strip_html_tags(input: &str) -> String {
       _ => {}
     }
   }
-  clean_ws(&output)
+  // Entities too: page text showed "&#038;" (2.11.0 QA).
+  clean_ws(&decode_html_entities(&output))
 }
 
 fn build_snippet(text: &str) -> Option<String> {
@@ -249,14 +250,63 @@ fn build_snippet(text: &str) -> Option<String> {
 }
 
 pub(crate) fn decode_html_entities(input: &str) -> String {
-  input
-    .replace("&amp;", "&")
+  let named = input
     .replace("&lt;", "<")
     .replace("&gt;", ">")
     .replace("&quot;", "\"")
-    .replace("&#39;", "'")
-    .replace("&#x2F;", "/")
-    .replace("&nbsp;", " ")
+    .replace("&nbsp;", " ");
+  // Numbered entities (&#038; &#39; &#x2F; …), as pages write them (2.11.0 QA: "&#038;" was shown).
+  let mut out = String::with_capacity(named.len());
+  let mut rest = named.as_str();
+  while let Some(start) = rest.find("&#") {
+    out.push_str(&rest[..start]);
+    let after = &rest[start + 2..];
+    let decoded = after.find(';').filter(|end| *end <= 8).and_then(|end| {
+      let digits = &after[..end];
+      let code = match digits
+        .strip_prefix('x')
+        .or_else(|| digits.strip_prefix('X'))
+      {
+        Some(hex) => u32::from_str_radix(hex, 16).ok(),
+        None => digits.parse::<u32>().ok(),
+      }?;
+      char::from_u32(code).map(|c| (c, end))
+    });
+    match decoded {
+      Some((c, end)) => {
+        out.push(c);
+        rest = &after[end + 1..];
+      }
+      None => {
+        out.push_str("&#");
+        rest = after;
+      }
+    }
+  }
+  out.push_str(rest);
+  // Last, so "&amp;lt;" stays "&lt;".
+  out.replace("&amp;", "&")
+}
+
+/// Bytes that aren't a page's text: still compressed (gzip's 1F 8B), or mostly not text once read.
+/// Such a source counts as unread, never as the page (2.11.0 QA, owner 2026-11-01).
+/// What a source that came back unreadable says.
+pub(crate) const UNREADABLE_PAGE: &str = "The page came back in a form that can't be read as text.";
+
+pub(crate) fn unreadable_page(bytes: &[u8]) -> bool {
+  if bytes.starts_with(&[0x1f, 0x8b]) {
+    return true;
+  }
+  let text = String::from_utf8_lossy(&bytes[..bytes.len().min(20_000)]);
+  let mut total = 0usize;
+  let mut bad = 0usize;
+  for c in text.chars() {
+    total += 1;
+    if c == '\u{FFFD}' || (c.is_control() && !matches!(c, '\n' | '\r' | '\t')) {
+      bad += 1;
+    }
+  }
+  total > 0 && bad * 20 > total
 }
 
 fn extract_attr(tag_html: &str, attr_name: &str) -> Option<String> {
@@ -377,7 +427,7 @@ pub(crate) fn parse_ddg_results(
           .or_else(|| snippet_tail.find("</div>"))?;
         let snippet_end = snippet_hint + close_rel + 4;
         let snippet_html = &html[snippet_start..snippet_end];
-        let plain = decode_html_entities(&strip_html_tags(snippet_html));
+        let plain = strip_html_tags(snippet_html);
         if plain.is_empty() {
           None
         } else {
@@ -664,7 +714,9 @@ pub(crate) async fn fetch_research_sources(
               None
             };
             let pdf_text_read = pdf_text.is_some();
-            let body = if pdf {
+            // Compressed or binary bytes are not the page: counted as unread (2.11.0 QA).
+            let unreadable = !pdf && unreadable_page(&bytes);
+            let body = if pdf || unreadable {
               String::new()
             } else {
               String::from_utf8_lossy(&bytes[..max_len]).to_string()
@@ -678,22 +730,24 @@ pub(crate) async fn fetch_research_sources(
               official,
               fetched_at_ms,
               http_status: Some(status.as_u16()),
-              ok: status.is_success(),
+              ok: status.is_success() && !unreadable,
               title,
               snippet,
               date_checked: unix_now_iso(),
-              confidence: if status.is_success() {
+              confidence: if status.is_success() && !unreadable {
                 "verified".to_string()
               } else {
                 "failed".to_string()
               },
               risk_level,
-              verification_state: if status.is_success() {
+              verification_state: if status.is_success() && !unreadable {
                 "verified".to_string()
               } else {
                 "failed".to_string()
               },
-              error: if status.is_success() {
+              error: if unreadable {
+                Some(UNREADABLE_PAGE.to_string())
+              } else if status.is_success() {
                 None
               } else {
                 Some(format!("HTTP status {}", status.as_u16()))
@@ -832,7 +886,6 @@ pub(crate) async fn search_brave_sources(
       ("safesearch", "moderate"),
     ])
     .header("Accept", "application/json")
-    .header("Accept-Encoding", "gzip")
     .header("X-Subscription-Token", api_key.as_str())
     .send()
     .await
@@ -1163,6 +1216,61 @@ mod tests {
 
   fn reply(status: &str, content_type: &str, body: &str) -> String {
     format!("HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len())
+  }
+
+  // 2.11.0 QA (owner, 2026-11-01): Amazon sent gzip pages and Hector stored the compressed
+  // bytes as the page's text, so the Research Desk showed garbage and nothing could be cited.
+  const GZIP_PAGE: &[u8] = &[
+    31, 139, 8, 0, 0, 0, 0, 0, 2, 255, 37, 205, 187, 10, 2, 65, 12, 133, 225, 87, 9, 44, 216, 233,
+    8, 54, 130, 33, 133, 88, 105, 227, 43, 204, 56, 129, 93, 54, 38, 195, 38, 34, 251, 246, 94,
+    166, 61, 252, 124, 7, 199, 120, 10, 225, 200, 185, 18, 198, 20, 194, 116, 102, 15, 184, 93,
+    238, 80, 204, 102, 199, 212, 87, 76, 189, 41, 86, 87, 194, 70, 87, 123, 45, 154, 197, 33, 107,
+    133, 38, 89, 149, 23, 7, 103, 17, 40, 63, 96, 51, 236, 15, 199, 19, 136, 189, 183, 15, 211, 96,
+    141, 238, 237, 48, 181, 47, 214, 153, 244, 127, 255, 0, 82, 104, 138, 196, 132, 0, 0, 0,
+  ];
+
+  async fn spawn_bytes_server(reply: Vec<u8>) -> u16 {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+      let (mut socket, _) = listener.accept().await.unwrap();
+      let mut buf = vec![0u8; 4096];
+      let _ = socket.read(&mut buf).await;
+      let _ = socket.write_all(&reply).await;
+      let _ = socket.shutdown().await;
+    });
+    port
+  }
+
+  #[tokio::test]
+  async fn a_gzip_page_is_read_as_text() {
+    let mut reply = format!(
+      "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Encoding: gzip\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+      GZIP_PAGE.len()
+    )
+    .into_bytes();
+    reply.extend_from_slice(GZIP_PAGE);
+    let port = spawn_bytes_server(reply).await;
+    let client = research_client(None).unwrap();
+    let url = reqwest::Url::parse(&format!("http://127.0.0.1:{port}/kdp")).unwrap();
+    let (status, html) = fetch_page_text(&client, url).await.unwrap();
+    assert_eq!(status, 200);
+    assert!(html.contains("Journals and planners"), "{html}");
+    let text = strip_html_tags(&html);
+    assert!(text.contains("sell best & low-content"), "{text}");
+  }
+
+  #[test]
+  fn bytes_that_are_not_text_are_not_a_page() {
+    assert!(unreadable_page(GZIP_PAGE));
+    assert!(unreadable_page(
+      "ab\u{FFFD}\u{FFFD}\u{FFFD}\u{FFFD}c".as_bytes()
+    ));
+    assert!(!unreadable_page(
+      "<p>Plain page, with an accent: café.</p>".as_bytes()
+    ));
+    assert!(!unreadable_page(b""));
   }
 
   #[tokio::test]

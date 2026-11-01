@@ -56,7 +56,9 @@ export async function idleTick(state: ResourceState, nowMs: number): Promise<str
     const minutes = getIdleMinutes(thing.name);
     if (minutes === null) continue;
     if (!firstSeen.has(thing.name)) firstSeen.set(thing.name, nowMs);
-    const since = lastUsedAt(thing.name) ?? firstSeen.get(thing.name)!;
+    // The later of its last use and when it was first seen running: the last use is saved across
+    // restarts, so a tool used days ago would otherwise be stopped as soon as it starts (2.11.0 QA).
+    const since = Math.max(lastUsedAt(thing.name) ?? 0, firstSeen.get(thing.name)!);
     if (nowMs - since < minutes * MIN) continue;
     try {
       const result = isHermesTool(thing.name) ? await stopHermesTool(thing.name) : await stopTool(thing.name);

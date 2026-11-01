@@ -62,6 +62,7 @@ describe('idleTick', () => {
   it('stops a Hermes profile Alphonso started after 30 idle minutes, never one you started (Hermes gateway)', async () => {
     markUsed('hermes:hector', 0);
     const hector = thing({ name: 'hermes:hector', label: "Hector's Hermes profile" });
+    expect(await idleTick(state([hector]), 0)).toEqual([]);
     expect(await idleTick(state([hector]), 29 * MIN)).toEqual([]);
     expect(await idleTick(state([thing({ ...hector, startedBy: 'you' })]), 31 * MIN)).toEqual([]);
     expect(await idleTick(state([hector]), 31 * MIN)).toEqual(['hermes:hector']);
@@ -71,9 +72,19 @@ describe('idleTick', () => {
 
   it('stops an Alphonso ComfyUI idle 16 minutes, keeps one idle 14', async () => {
     markUsed('comfyui', 0);
+    expect(await idleTick(state([thing({})]), 0)).toEqual([]);
     expect(await idleTick(state([thing({})]), 14 * MIN)).toEqual([]);
     expect(await idleTick(state([thing({})]), 16 * MIN)).toEqual(['comfyui']);
     expect(stopTool).toHaveBeenCalledWith('comfyui');
+  });
+
+  // 2.11.0 QA: the last use is saved across restarts; a ComfyUI last used days ago was idle
+  // "for days" the moment it started again, and stopped at the next look.
+  it('a tool last used long ago counts from when it started running again', async () => {
+    markUsed('comfyui', 0);
+    expect(await idleTick(state([thing({})]), 3000 * MIN)).toEqual([]);
+    expect(await idleTick(state([thing({})]), 3014 * MIN)).toEqual([]);
+    expect(await idleTick(state([thing({})]), 3016 * MIN)).toEqual(['comfyui']);
   });
 
   it('a tool never used counts from when it was first seen running', async () => {

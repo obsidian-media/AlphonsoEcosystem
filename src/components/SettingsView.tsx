@@ -62,6 +62,7 @@ import { BridgesPanel } from './BridgesPanel';
 import { DEFAULT_EFFECT_APPROVALS, EFFECT_LABELS, JOSE_EFFECTS, LOCKED_EFFECTS, type JoseEffect } from '../services/jose/joseEffects';
 import { monthSpendUsd } from '../services/jose/joseSpend';
 import { getComfyUiEndpoint, setComfyUiEndpoint, DEFAULT_COMFYUI_ENDPOINT } from '../services/connectors/comfyUiEndpoint.js';
+import { AccentColorPicker } from './AccentColorPicker';
 
 const COACH_TRIGGER_LABELS: Record<string, string> = {
   critical_override_pattern: 'Approval theater (repeated high-risk approvals)',
@@ -127,6 +128,7 @@ function AgentProvidersSection() {
             <div className="text-sm font-semibold text-(--text-1) shrink-0">{agent.name}</div>
             <ModelProviderPicker
               agentId={agent.id}
+              allowPaid
               provider={config.provider as ModelProviderId}
               onProviderChange={(p) => handleProviderChange(agent.id, p)}
               selectedModel={config.model || ''}
@@ -1754,29 +1756,8 @@ export function SettingsView({
     <div className="max-w-4xl mx-auto space-y-10">
       <section className="space-y-4">
         <SectionHeader icon={Palette} label="Appearance" />
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { id: 'minimal_runtime', label: 'Minimal Runtime', preview: 'bg-zinc-900' },
-            { id: 'deep_space', label: 'Deep Space', preview: 'bg-indigo-950' },
-            { id: 'orchestrator_gold', label: 'Orchestrator Gold', preview: 'bg-amber-950' }
-          ].map((theme) => (
-            <button
-              key={theme.id}
-              onClick={() => setSettings({ ...settings, environmentTheme: theme.id })}
-              className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
-                settings.environmentTheme === theme.id
-                  ? 'bg-(--accent-dim) ring-1 ring-(--accent-border)'
-                  : 'bg-(--surface-2) hover:bg-(--surface-3)'
-              }`}
-            >
-              <div className={`w-full h-10 rounded-lg ${theme.preview}`} />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">{theme.label}</span>
-              {settings.environmentTheme === theme.id && (
-                <span className="text-[9px] text-(--accent) font-bold">Active</span>
-              )}
-            </button>
-          ))}
-        </div>
+        <p className="text-xs text-(--text-3)">Accent colour for buttons, highlights and links, in light and dark.</p>
+        <AccentColorPicker />
       </section>
     </div>
   )}

@@ -267,4 +267,14 @@ describe('getAgentProvider / setAgentProvider', () => {
   it('no-hardcoding regression: agent ids are not baked into modelSelectionService — an unknown agent id still gets a valid default', () => {
     expect(getAgentProvider('some-future-10th-agent')).toEqual({ provider: 'ollama' });
   });
+
+  // 2.11.0 QA: 'paid' is saved per agent, Alphonso's too (his other providers use the older key).
+  it('saves the paid model choice for any agent, Alphonso included', () => {
+    setAgentProvider('hector', { provider: 'paid' });
+    expect(getAgentProvider('hector')).toEqual({ provider: 'paid' });
+    setAgentProvider('alphonso', { provider: 'paid' });
+    expect(getAgentProvider('alphonso')).toEqual({ provider: 'paid' });
+    setAgentProvider('alphonso', { provider: 'ollama' });
+    expect(getAgentProvider('alphonso')).toEqual({ provider: 'ollama' });
+  });
 });

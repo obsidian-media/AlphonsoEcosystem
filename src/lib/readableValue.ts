@@ -46,3 +46,25 @@ export function toReadableText(value: unknown, depth = 0): string {
 
   return String(value);
 }
+
+/**
+ * A list meant to hold text, as text: an item a model wrapped in an object
+ * ({"a weak point": "…"}, seen 2026-11-01) keeps its words, numbers become text, and empty
+ * items are dropped. Anything that isn't a list is an empty one. React can't show an object,
+ * so every list of text from a model goes through this before a screen shows it.
+ */
+export function textItems(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item === 'string') return item.trim() ? [item.trim()] : [];
+    if (typeof item === 'number' || typeof item === 'boolean') return [String(item)];
+    if (item && typeof item === 'object') {
+      const words = Object.values(item as Record<string, unknown>)
+        .map((v) => (typeof v === 'string' ? v.trim() : typeof v === 'number' ? String(v) : ''))
+        .filter(Boolean)
+        .join('; ');
+      return words ? [words] : [];
+    }
+    return [];
+  });
+}

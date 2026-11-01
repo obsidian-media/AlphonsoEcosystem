@@ -158,12 +158,15 @@
   --surface-4: oklch(87% 0.012 255);
   --surface-glass: oklch(97% 0.007 255 / 0.85);
 
-  --accent: oklch(62% 0.2 200);
-  --accent-hover: oklch(57% 0.2 200);
-  --accent-dim: oklch(62% 0.2 200 / 0.1);
-  --accent-border: oklch(62% 0.2 200 / 0.3);
-  --accent-glow: oklch(62% 0.2 200 / 0.1);
-  --accent-muted: oklch(62% 0.2 200 / 0.12);
+  --accent: oklch(48% 0.08 200);
+  --accent-hover: oklch(43% 0.08 200);
+  --accent-dim: oklch(48% 0.08 200 / 0.1);
+  --accent-border: oklch(48% 0.08 200 / 0.3);
+  --accent-glow: oklch(48% 0.08 200 / 0.1);
+  --accent-muted: oklch(48% 0.08 200 / 0.12);
+  /* Light mode: accents dark enough for text on every surface (4.5:1), so text ON an accent
+     button is white (2.11.0 QA accessibility check, owner 2026-11-01). */
+  --accent-contrast: oklch(100% 0 0);
 
   --text-1: oklch(15% 0.01 255);
   --text-2: oklch(38% 0.02 255);
@@ -216,12 +219,12 @@
 }
 [data-theme="light"][data-accent="green"],
 .light[data-accent="green"] {
-  --accent: oklch(52% 0.19 145);
-  --accent-hover: oklch(47% 0.19 145);
-  --accent-dim: oklch(52% 0.19 145 / 0.1);
-  --accent-border: oklch(52% 0.19 145 / 0.3);
-  --accent-glow: oklch(52% 0.19 145 / 0.1);
-  --accent-muted: oklch(52% 0.19 145 / 0.12);
+  --accent: oklch(47% 0.145 145);
+  --accent-hover: oklch(42% 0.14 145);
+  --accent-dim: oklch(47% 0.145 145 / 0.1);
+  --accent-border: oklch(47% 0.145 145 / 0.3);
+  --accent-glow: oklch(47% 0.145 145 / 0.1);
+  --accent-muted: oklch(47% 0.145 145 / 0.12);
 }
 
 [data-accent="purple"] {
@@ -234,10 +237,29 @@
 }
 [data-theme="light"][data-accent="purple"],
 .light[data-accent="purple"] {
-  --accent: oklch(55% 0.2 295);
-  --accent-hover: oklch(50% 0.2 295);
-  --accent-dim: oklch(55% 0.2 295 / 0.1);
-  --accent-border: oklch(55% 0.2 295 / 0.3);
-  --accent-glow: oklch(55% 0.2 295 / 0.1);
-  --accent-muted: oklch(55% 0.2 295 / 0.12);
+  --accent: oklch(51% 0.2 295);
+  --accent-hover: oklch(46% 0.2 295);
+  --accent-dim: oklch(51% 0.2 295 / 0.1);
+  --accent-border: oklch(51% 0.2 295 / 0.3);
+  --accent-glow: oklch(51% 0.2 295 / 0.1);
+  --accent-muted: oklch(51% 0.2 295 / 0.12);
+}
+
+/* Gold (2.11.0 QA, owner 2026-11-01: Appearance offers it in place of "Orchestrator Gold"). */
+[data-accent="gold"] {
+  --accent: oklch(80% 0.16 80);
+  --accent-hover: oklch(85% 0.14 80);
+  --accent-dim: oklch(80% 0.16 80 / 0.12);
+  --accent-border: oklch(80% 0.16 80 / 0.28);
+  --accent-glow: oklch(80% 0.16 80 / 0.08);
+  --accent-muted: oklch(80% 0.16 80 / 0.15);
+}
+[data-theme="light"][data-accent="gold"],
+.light[data-accent="gold"] {
+  --accent: oklch(49% 0.105 70);
+  --accent-hover: oklch(44% 0.1 70);
+  --accent-dim: oklch(49% 0.105 70 / 0.1);
+  --accent-border: oklch(49% 0.105 70 / 0.3);
+  --accent-glow: oklch(49% 0.105 70 / 0.1);
+  --accent-muted: oklch(49% 0.105 70 / 0.12);
 }

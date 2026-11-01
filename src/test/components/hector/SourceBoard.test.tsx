@@ -27,4 +27,18 @@ describe('SourceBoard', () => {
     fireEvent.click(screen.getByText('https://example.com'));
     expect(openSourceLink).toHaveBeenCalledWith('https://example.com');
   });
+
+  // 2.11.0 QA (owner, 2026-11-01): reports saved before the fix hold compressed bytes as a page's
+  // text; the list showed them as garbage and "general | | not fetched | expires n/a".
+  it("says a page couldn't be read instead of showing its bytes, in plain words", () => {
+    const garbage = '\u001F\uFFFD\u0008\u0000\uFFFD\uFFFDtj\uFFFD@ E\uFFFD\uFFFD e6\uFFFD \uFFFD\uFFFDE\uFFFDIgf';
+    render(<SourceBoard report={{ sources: [
+      { url: 'https://amazon.example/best', type: 'general', snippet: garbage },
+      { url: 'https://rank.example/kdp', type: 'general', httpStatus: 200, verificationState: 'verified', snippet: 'The 10 best-selling KDP books.' },
+    ] }} />);
+    expect(screen.queryByText(garbage)).toBeNull();
+    expect(screen.getByText("Couldn't read this page.")).toBeTruthy();
+    expect(screen.getByText('The 10 best-selling KDP books.')).toBeTruthy();
+    expect(screen.queryByText(/expires n\/a/)).toBeNull();
+  });
 });

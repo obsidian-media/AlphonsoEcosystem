@@ -5,6 +5,7 @@ import { extractJsonObject } from '../../lib/jsonUtils.js';
 import { type ContentStepPayload, type StepId } from './contentTypes';
 import { contentAsk } from '../skills/skillLibrary';
 import { exactRiskText, findExactRisks, redactText } from '../sentinel/exactChecks';
+import { textItems } from '../../lib/readableValue';
 
 type Json = Record<string, unknown>;
 
@@ -204,6 +205,15 @@ export function buildStepPrompt(payload: ContentStepPayload, agent: string, acti
   return { system, prompt: parts.filter(Boolean).join('\n\n') };
 }
 
+// Lists the prompts ask to hold text. A model sometimes wraps an item in an object, copying
+// the item's hint as its key; the screens can't show that (React error 31, 2.11.0 QA).
+const TEXT_LIST_KEYS = new Set(['notes', 'mustFix', 'honestyIssues', 'weakPoints', 'patterns', 'hookIdeas', 'gaps', 'worked', 'didnt', 'ideas', 'hashtags']);
+function textLists(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(textLists);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, TEXT_LIST_KEYS.has(k) && Array.isArray(v) ? textItems(v) : textLists(v)]));
+}
+
 const isText = (v: unknown) => typeof v === 'string' && v.trim().length > 0;
 const isNum = (v: unknown, min = -Infinity, max = Infinity) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
 
@@ -337,7 +347,7 @@ export function parseStepAnswer(actionType: string, text: string, options: { all
     parsed = repairThumbnails(parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Json) : {}, text);
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
-  parsed = coerce(parsed);
+  parsed = textLists(coerce(parsed));
   let answer = actionType === 'creative_script' ? repairScript(parsed as Json) : (parsed as Json);
   if (options.allowedUrls && Array.isArray(answer.references)) {
     // Only links Hector actually found; a model without internet invents them.

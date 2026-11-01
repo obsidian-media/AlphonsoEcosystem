@@ -1,13 +1,28 @@
 import { useState, useEffect } from 'react';
 
-export type AccentTheme = 'cyan' | 'green' | 'purple';
+export type AccentTheme = 'cyan' | 'green' | 'purple' | 'gold';
+
+/** The accent colours Settings → Appearance offers (2.11.0 QA: the old themes changed nothing visible). */
+export const ACCENT_THEMES: ReadonlyArray<{ id: AccentTheme; label: string }> = [
+  { id: 'cyan', label: 'Cyan' },
+  { id: 'green', label: 'Green' },
+  { id: 'purple', label: 'Purple' },
+  { id: 'gold', label: 'Gold' },
+];
 
 const STORAGE_KEY = 'alphonso_accent_theme';
 
+function readStored(): AccentTheme {
+  try {
+    const value = localStorage.getItem(STORAGE_KEY);
+    return ACCENT_THEMES.some((t) => t.id === value) ? (value as AccentTheme) : 'cyan';
+  } catch {
+    return 'cyan';
+  }
+}
+
 export function useAccentTheme(): [AccentTheme, (theme: AccentTheme) => void] {
-  const [theme, setThemeState] = useState<AccentTheme>(() => {
-    return (localStorage.getItem(STORAGE_KEY) as AccentTheme) || 'cyan';
-  });
+  const [theme, setThemeState] = useState<AccentTheme>(readStored);
 
   useEffect(() => {
     if (theme === 'cyan') {
@@ -18,7 +33,11 @@ export function useAccentTheme(): [AccentTheme, (theme: AccentTheme) => void] {
   }, [theme]);
 
   const setTheme = (newTheme: AccentTheme) => {
-    localStorage.setItem(STORAGE_KEY, newTheme);
+    try {
+      localStorage.setItem(STORAGE_KEY, newTheme);
+    } catch {
+      // The colour still changes for this session.
+    }
     setThemeState(newTheme);
   };
 

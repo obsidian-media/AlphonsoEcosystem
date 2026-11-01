@@ -60,8 +60,7 @@ export function EcosystemMaturityPanelsGate({
     OperatorModesPanel,
     PrivacyShieldPanel,
     SessionIntelligencePanel,
-    TrustLayerPanel,
-    WorkflowOperationsPanel
+    TrustLayerPanel
   } = module;
 
   return (
@@ -73,7 +72,6 @@ export function EcosystemMaturityPanelsGate({
       {showAdvancedSections && (
         <>
           <EcosystemMapPanel ollamaStatus={ollamaStatus} />
-          <WorkflowOperationsPanel />
           <SessionIntelligencePanel />
           <PrivacyShieldPanel settings={settings} voiceStatus={voiceStatus} workspaceFoundation={workspaceFoundation} />
         </>

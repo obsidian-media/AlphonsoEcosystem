@@ -65,7 +65,6 @@ describe('Alphonso desktop: every caller goes through Jose', function () {
     const before = new Set((await savedRequests()).map((r) => r.id));
     await $('[data-testid="space-pill-boardroom"]').click();
     await $('[data-testid="sidebar-nav-mission_room"]').click();
-    await $('button=Boardroom Sessions').click();
     const topic = await $('input[placeholder="New thread topic..."]');
     await topic.waitForDisplayed();
     await topic.setValue('Callers check: a launch brief');

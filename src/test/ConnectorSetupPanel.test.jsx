@@ -265,25 +265,13 @@ describe('ConnectorSetupPanel', () => {
     expect(saveButtons.length).toBeGreaterThan(0);
   });
 
-  // ── Hermes Agents section — no-hardcoding regression (design doc §1.7 item 3) ──
-  // Guards against exactly the drift the user flagged: the row list must come
-  // from agentRegistry.js at render time, not a separately maintained array —
-  // asserted at the UI layer, not just the data layer, since a hardcoded array
-  // could still leak into a component even with a clean service.
-  it('renders exactly one Hermes credential row per agent in agentRegistry.js, dynamically', () => {
+  // 2.11.0 QA (owner, 2026-11-01): Hermes profiles are connected in Settings → Agents; the nine
+  // per-agent boxes that repeated it here (and said the key was in config.yaml) are gone.
+  it('points to Settings → Agents for Hermes profiles instead of a box per agent', () => {
     render(<ConnectorSetupPanel />);
-    // Hermes Agents lives in the "AI Models" collapsible category, collapsed
-    // by default — expand it before asserting on its contents.
     fireEvent.click(screen.getByTestId('connector-category-ai_models'));
-    const agents = listAgentProfiles();
-    expect(agents.length).toBeGreaterThan(0);
-    for (const agent of agents) {
-      expect(screen.getByText(`Hermes — ${agent.name}`)).toBeTruthy();
-    }
-    // Every rendered "Hermes — X" heading corresponds to a real registry
-    // entry — no stray hardcoded row that isn't backed by the registry.
-    const hermesHeadings = screen.getAllByText(/^Hermes — /);
-    expect(hermesHeadings.length).toBe(agents.length);
+    expect(screen.getByTestId('hermes-moved').textContent).toBe('Hermes profiles are connected in Settings → Agents → Hermes profiles.');
+    expect(screen.queryByText(/^Hermes — /)).toBeNull();
   });
 
   // QA batch 1 (live check of 2.10.0, 2026-10-28): the bot didn't answer /start; a token saved

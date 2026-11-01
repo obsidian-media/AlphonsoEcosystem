@@ -45,8 +45,6 @@ import {
 import { getTelegramAutoPollState, runSingleTelegramPoll } from '../services/telegramAutoPollService';
 import { saveConnectorCredential, getConnectorCredential, hydrateConnectorCredentialsFromSqlite } from '../services/connectors/connectorAuth';
 import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
-import { listAgentProfiles } from '../agents/agentRegistry';
-import { getHermesAgentEndpoint, saveHermesAgentEndpoint, getHermesAgentHealth } from '../services/connectors/hermesAgentConnector';
 import { HermesMessagingWarning } from './hermes/HermesMessagingWarning';
 import { CloudModelSelect } from './CloudModelSelect';
 import { MediaStorageSection } from './MediaStorageSection';
@@ -331,26 +329,11 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
   );
 }
 
-interface HermesAgentRowState {
-  url: string;
-  key: string;
-  checking: boolean;
-  health: { ok: boolean; error?: string } | null;
-}
-
-/**
- * One credential row per agent id from `agentRegistry.js` — never a
- * hardcoded list, so a 6th/7th/... Hermes profile the user configures later
- * needs no code change here. Each row is its own `CredentialSection` reusing
- * the exact same component every other connector uses; "Save & Enable"
- * additionally runs the unauthenticated `GET /health` reachability probe so
- * the row shows connected/unreachable rather than just "saved".
- */
 /**
  * CredentialSection's real prop interface (title/icon/fields/onSave/hint/savedLabel)
  * has no slot for extra content, so this renders as its own standalone block right
  * after the CALL-E CredentialSection rather than "inside" it -- same precedent
- * HermesAgentsSection below sets for custom per-connector UI beyond the basic form.
+ * other custom per-connector blocks use.
  */
 function CalleMcpConnectionBlock(): React.JSX.Element {
   const [configured, setConfigured] = useState(false);
@@ -420,62 +403,6 @@ function CalleMcpConnectionBlock(): React.JSX.Element {
       </div>
       {pending && <p className="mt-2 text-[10px] text-zinc-500">Complete the login in your browser, then this will update automatically.</p>}
     </div>
-  );
-}
-
-function HermesAgentsSection(): React.JSX.Element {
-  const agents = useMemo(() => listAgentProfiles(), []);
-  const [rows, setRows] = useState<Record<string, HermesAgentRowState>>(() => {
-    const initial: Record<string, HermesAgentRowState> = {};
-    for (const agent of agents) {
-      const { url, key } = getHermesAgentEndpoint(agent.id);
-      initial[agent.id] = { url, key, checking: false, health: null };
-    }
-    return initial;
-  });
-
-  const updateRow = (agentId: string, patch: Partial<HermesAgentRowState>) => {
-    setRows((prev) => ({ ...prev, [agentId]: { ...prev[agentId], ...patch } }));
-  };
-
-  const handleSave = async (agentId: string) => {
-    const row = rows[agentId];
-    saveHermesAgentEndpoint(agentId, row.url, row.key);
-    updateRow(agentId, { checking: true, health: null });
-    const health = await getHermesAgentHealth(agentId);
-    updateRow(agentId, { checking: false, health });
-  };
-
-  return (
-    <>
-      {agents.map((agent) => {
-        const row = rows[agent.id];
-        if (!row) return null;
-        return (
-          <CredentialSection
-            key={agent.id}
-            title={`Hermes — ${agent.name}`}
-            icon={Cpu}
-            borderColor="border-fuchsia-300/20"
-            bgColor="bg-fuchsia-500/8"
-            accentColor="text-fuchsia-400"
-            fields={[
-              { label: 'Base URL', placeholder: 'http://127.0.0.1:8645', value: row.url, onChange: (v) => updateRow(agent.id, { url: v }), key: `HERMES_${agent.id}_URL`, secret: false },
-              { label: 'API Key', placeholder: 'Bearer token from that profile\'s config.yaml', value: row.key, onChange: (v) => updateRow(agent.id, { key: v }), key: `HERMES_${agent.id}_KEY` }
-            ]}
-            onSave={() => { handleSave(agent.id); }}
-            hint={
-              row.checking
-                ? 'Checking reachability…'
-                : row.health
-                  ? (row.health.ok ? `Connected.` : `Saved, but unreachable: ${row.health.error}`)
-                  : `A standalone Hermes Agent profile mirroring ${agent.name} (same soul/role, different runtime). Paste its api_server base URL and Bearer key from that profile's own config.yaml.`
-            }
-            savedLabel={`${agent.name} Hermes endpoint saved`}
-          />
-        );
-      })}
-    </>
   );
 }
 
@@ -1170,7 +1097,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             savedLabel="OpenRouter key saved" />
           <OpenRouterTest />
 
-          <HermesAgentsSection />
+          {/* 2.11.0 QA (owner, 2026-11-01): a box per agent here repeated Settings → Agents → Hermes profiles. */}
+          <p data-testid="hermes-moved" className="text-xs text-zinc-500">Hermes profiles are connected in Settings → Agents → Hermes profiles.</p>
 
         </CollapsibleCategory>
 

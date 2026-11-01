@@ -5,7 +5,10 @@ vi.mock('../services/runtimeManagerService', () => ({
   getAllStatus: vi.fn(),
 }));
 
+vi.mock('../services/resources/ensureTools', () => ({ ensureTools: vi.fn() }));
+
 import { getAllStatus } from '../services/runtimeManagerService';
+import { ensureTools } from '../services/resources/ensureTools';
 
 describe('detectCreativeIntent', () => {
   it('detects image generation intent', () => {
@@ -54,14 +57,24 @@ describe('routeToCreativeTool', () => {
     expect(result).toEqual({ ok: true, tool: 'comfyui' });
   });
 
-  it('says ComfyUI is needed when it is not running', async () => {
-    getAllStatus.mockResolvedValue([
-      { name: 'ollama', status: 'running' },
-    ]);
+  // 2.11.0 QA (owner, 2026-11-01): a picture request refused while ComfyUI was installed and set up.
+  it('starts ComfyUI when it is not running, then goes ahead', async () => {
+    getAllStatus.mockResolvedValue([{ name: 'ollama', status: 'running' }]);
+    ensureTools.mockResolvedValue({ ok: true });
+    const starting = vi.fn();
+    const result = await routeToCreativeTool('image_generation', starting);
+    expect(ensureTools).toHaveBeenCalledWith(['comfyui']);
+    expect(starting).toHaveBeenCalled();
+    expect(result).toEqual({ ok: true, tool: 'comfyui' });
+  });
+
+  it('says why when ComfyUI could not be started', async () => {
+    getAllStatus.mockResolvedValue([{ name: 'comfyui', running: false, installed: false }]);
+    ensureTools.mockResolvedValue({ ok: false, reason: "ComfyUI isn't installed. Install it in Runtime Hub." });
     const result = await routeToCreativeTool('image_generation');
     expect(result.ok).toBe(false);
     expect(result.needsRuntime).toBe(true);
-    expect(result.error).toMatch(/ComfyUI is not running/);
+    expect(result.error).toBe("ComfyUI isn't installed. Install it in Runtime Hub.");
   });
 
   it('returns null when getAllStatus throws', async () => {

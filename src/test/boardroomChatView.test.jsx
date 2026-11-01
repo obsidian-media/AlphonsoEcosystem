@@ -35,7 +35,9 @@ vi.mock('../services/joseCommandRouterService', () => ({
 vi.mock('../services/boardroomJoseService', () => ({
   concludeOnJose: vi.fn(),
   distributeOnJose: vi.fn(),
-  creativeBriefOnJose: vi.fn()
+  creativeBriefOnJose: vi.fn(),
+  workRequestIn: vi.fn((text) => (/^\/jose\s+/i.test(text) ? text.replace(/^\/jose\s+/i, '') : null)),
+  workOnJose: vi.fn()
 }));
 vi.mock('../services/unifiedMemoryService.js', () => ({
   pushMemory: vi.fn()
@@ -63,7 +65,7 @@ describe('BoardroomChatView', () => {
     expect(await screen.findByText('Q3 Growth Plan')).toBeInTheDocument();
   });
 
-  it('sends a message as the selected speaker and shows it in the thread', async () => {
+  it('sends a message from you and shows it in the thread', async () => {
     const { BoardroomChatView } = await import('../components/BoardroomChatView');
     render(<BoardroomChatView />);
 
@@ -75,6 +77,22 @@ describe('BoardroomChatView', () => {
     fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
 
     expect(await screen.findByText('Hello room')).toBeInTheDocument();
+  });
+
+  // 2.11.0 QA (owner, 2026-11-01): "looks like role playing". You can't post as an agent, and the
+  // app's own notices aren't shown as an agent talking.
+  it('has no way to post as an agent: everything you type is from You', async () => {
+    const threads = await import('../services/boardroomThreadService');
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Speaker Thread' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Speaker Thread');
+    expect(screen.queryByLabelText(/speaking as/i)).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector hi' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+    await screen.findByText('@Hector hi');
+    expect(threads.addThreadMessage).toHaveBeenCalledWith(expect.objectContaining({ speaker: 'user', content: '@Hector hi' }));
   });
 
   it('shows an @mention autocomplete dropdown when typing @ in the composer', async () => {
@@ -493,6 +511,8 @@ describe('BoardroomChatView', () => {
     resolveFirstHop({ ok: true, text: '@Jose keep going' });
 
     await screen.findByText(/generation stopped/i);
+    const threads = await import('../services/boardroomThreadService');
+    expect(threads.addThreadMessage).toHaveBeenCalledWith(expect.objectContaining({ speaker: 'boardroom', content: 'Generation stopped by user.' }));
     expect(screen.queryByText('@Jose keep going')).not.toBeInTheDocument();
     expect(facilitator.generateAgentResponse).not.toHaveBeenCalledWith(
       expect.objectContaining({ agentId: 'jose' })
@@ -826,5 +846,30 @@ describe('BoardroomChatView thread actions', () => {
     creativeBriefOnJose.mockResolvedValue({ requestId: 'r', waiting: true, summary: '' });
     fireEvent.click(screen.getByRole('button', { name: /creative brief/i }));
     expect(await screen.findByText(/Miya's creative brief is waiting for your approval\./)).toBeInTheDocument();
+  });
+
+  // 2.11.0 QA (owner, 2026-11-01): "/jose" in a thread was answered by Alphonso, and Hector only
+  // promised research. Work asked for in a thread is a real Jose request.
+  it('hands /jose work to Jose: a started note with the board link, then his result, and no agent chat', async () => {
+    const jose = await import('../services/boardroomJoseService');
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    const threads = await import('../services/boardroomThreadService');
+    jose.workOnJose.mockImplementationOnce(async (_text, options) => {
+      options.onStarted('jose-request-7');
+      return { requestId: 'jose-request-7', waiting: false, summary: 'Hector: Top KDP niches are journals and planners [1].' };
+    });
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView onOpenJoseBoard={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'KDP' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('KDP');
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '/jose research top KDP niches' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+    expect(await screen.findByText('Hector: Top KDP niches are journals and planners [1].')).toBeInTheDocument();
+    expect(jose.workOnJose).toHaveBeenCalledWith('research top KDP niches', expect.objectContaining({ onStarted: expect.any(Function) }));
+    expect(threads.addThreadMessage).toHaveBeenCalledWith(expect.objectContaining({ speaker: 'boardroom', content: 'Started on the board: Jose is planning it.', requestId: 'jose-request-7' }));
+    expect(threads.addThreadMessage).toHaveBeenCalledWith(expect.objectContaining({ speaker: 'jose', requestId: 'jose-request-7' }));
+    expect(facilitator.generateAgentResponse).not.toHaveBeenCalled();
+    expect(facilitator.generateAlphonsoResponse).not.toHaveBeenCalled();
   });
 });

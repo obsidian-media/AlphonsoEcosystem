@@ -2,6 +2,13 @@
 
 Rule 12 / Rule 11. This register survives the session. Future agents resume from here.
 
+## 2026-11-01: Linux missing from 2.11.0 (fixed on feat/mobile-app, ships next release)
+
+- **What happened:** the 2.11.0 release built all three installers, but GitHub refused the Linux AppImage at upload: about 2.08 GB, over the 2 GiB limit for one release file. It bundled the 1.9 GB starter model, and the closing phase added ffmpeg. 2.10.0's AppImage was 2.01 GB, just under.
+- **What shipped:** the owner chose to publish 2.11.0 for Windows and macOS only. Linux was taken out of `latest.json` and its signature file deleted, so Linux users stay on 2.10.0 and are not offered a broken update.
+- **The fix (on `feat/mobile-app`):** `release.yml`'s and `ci.yml`'s Linux jobs no longer fetch the starter model, as on Windows and macOS. Setup downloads it on first run.
+- **Before the next release:** check the Linux job's AppImage size in the release run (it should be far under 2 GB), and that a fresh Linux install downloads the starter model in Setup. Add a size check before upload so this fails in CI, not at publishing. The release notes must say Linux is back.
+
 ## Format
 - `[DATE] <scope>: <what> — <why deferred> — <resume hint> — <status>`
 
@@ -1881,3 +1888,12 @@ starter model before).
 - [2026-10-21] **[DONE 2026-10-21]** **Desktop CI Jose execution evidence verified.** Run `39549859072` passed all prerequisite gates and all 16 Windows real-Tauri desktop spec files, including all three Jose approval tests. The queued execution result and case-insensitive `EXECUTION RESULTS` assertion are verified against the built app.
 
 - [2026-10-21] **Native Ollama acceptance rechecked.** The installed client is present at `D:\AgentDevWork\Apps\Ollama\ollama.exe`, but `ollama list` could not start its local server: Ollama reported access denied while opening/rotating files under `C:\Users\AgentDev\AppData\Local\Ollama\` and then timed out. The managed Voice OS venv is also absent. Native model-call and live Voice OS acceptance therefore remain open; repair/provisioning and a rerun are owner actions. Evidence: `audits/2026-10-21_Codex_NativeOllama_Audit.md`; documentation gate `39558985306` passed for commit `72974b3`.
+
+## 2026-11-01 — Workflow services left behind the archived Builder
+
+The Automation Builder and the 16 operations were removed from every screen (2.11.0 QA). Their
+services stay because older code reads them: `workflowBuilderService.ts` (Orchestrator view),
+`workflowOperationsRegistryService.ts` and `workflowExecutionService.js` (agent-chain workflows'
+`executeWorkflowTasks()`, `serviceScopes.ts`). Many executors in `workflowExecutionService.js`
+still write fixed text. Next: move agent-chain workflows fully to Teams and retire the three
+services (needs owner approval under R14).

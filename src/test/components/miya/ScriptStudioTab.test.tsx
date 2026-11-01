@@ -29,4 +29,19 @@ describe('ScriptStudioTab', () => {
     expect(screen.getByText(/Hook 8\/10/)).toBeTruthy();
     expect(screen.getByText('shorter intro')).toBeTruthy();
   });
+
+  // 2.11.0 QA (owner, 2026-11-01): a review saved before the answer check tidied lists held
+  // objects; the tab crashed Miya Studio (React error 31).
+  it('shows a saved review whose list items are objects, without crashing', () => {
+    const p = createProject('b', 'P', emptyBrief());
+    saveStepVersion(p.id, 'review', { output: {
+      nova: { hookScore: 5, scriptScore: 5, notes: [{ note: 'Pacing is fine.' }], mustFix: [{ 'what must change': 'Cut the intro.' }] },
+      maria: { pieces: [{ pieceId: 'script', score: 4, weakPoints: [{ 'a weak point': 'Slow hook.' }] }], honestyIssues: [{ 'an honesty problem, if any': 'Uncited study.' }] },
+    }, summary: '', joseCommandId: null });
+    render(<ScriptStudioTab project={getProject(p.id)!} runStep={vi.fn()} approve={vi.fn()} sendBack={vi.fn()} chooseVersion={vi.fn()} />);
+    expect(screen.getByText('Uncited study.')).toBeTruthy();
+    expect(screen.getByText('Cut the intro.')).toBeTruthy();
+    expect(screen.getByText('Pacing is fine.')).toBeTruthy();
+    expect(screen.getByText(/Slow hook\./)).toBeTruthy();
+  });
 });

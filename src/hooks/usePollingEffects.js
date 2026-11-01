@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { readDurableAuditLog } from '../services/verificationService';
-import { isConnectorAuthenticated, pollWhatsAppConnector } from '../services/connectorRegistryService';
+import { getConnectorCredential, isConnectorAuthenticated, pollWhatsAppConnector } from '../services/connectorRegistryService';
 import { isBraveSearchConfigured } from '../services/hectorResearchService';
 import { stopScreenObserver } from '../services/screenIntelligenceService';
 
@@ -33,14 +33,23 @@ export function usePollingEffects({
   }, [isCoachWindow, setBraveSearchConfigured]);
 
   // WhatsApp connector polling — deferred to avoid boot storm
+  // Only while WhatsApp is switched on with its keys, checked before every poll (saved keys load
+  // a moment after start). Until 2.11.0 QA the guard read the result object as true, so every
+  // computer polled every 30 s and each refusal showed "jose failed: connector_setup_required".
   useEffect(() => {
     if (isCoachWindow) return;
-    if (!isConnectorAuthenticated('whatsapp')) return;
     let cancelled = false;
     let timeoutId = null;
+    const whatsAppSetUp = () => isConnectorAuthenticated('whatsapp')?.ok === true
+      && Boolean(getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN'))
+      && Boolean(getConnectorCredential('whatsapp', 'WHATSAPP_PHONE_NUMBER_ID'));
 
     const poll = async () => {
       if (cancelled) return;
+      if (!whatsAppSetUp()) {
+        timeoutId = window.setTimeout(poll, 30000);
+        return;
+      }
       try {
         const result = await pollWhatsAppConnector(12);
         if (!cancelled && result?.routed > 0) {

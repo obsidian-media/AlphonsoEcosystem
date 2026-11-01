@@ -354,15 +354,18 @@ function ListedCloudModelPicker({ provider, selectedModel, onModelChange }: Clou
   );
 }
 
-export type ModelProviderId = 'ollama' | CloudProvider | 'hermes';
+export type ModelProviderId = 'ollama' | CloudProvider | 'hermes' | 'paid';
 
 const PROVIDER_LABELS: Record<ModelProviderId, string> = {
   ollama: 'Ollama',
   nvidia_nim: 'NVIDIA NIM',
   gemini: 'Gemini',
   openrouter: 'OpenRouter',
-  hermes: 'Hermes'
+  hermes: 'Hermes',
+  paid: 'Paid'
 };
+
+const PAID_PROVIDER_NAMES: Record<string, string> = { claude: 'Claude', chatgpt: 'ChatGPT', openrouter: 'OpenRouter' };
 
 interface HermesModelPickerProps {
   agentId: string;
@@ -442,11 +445,32 @@ interface ModelProviderPickerProps {
    * whichever agent's row it's rendering. Omitted entirely disables Hermes.
    */
   agentId?: string;
+  /**
+   * Settings → Agents only: a Paid tab, the paid model chosen in Settings → General (Allow paid models), used for the
+   * agent's steps in a request, each asking first with its cost (2.11.0 QA, owner 2026-11-01).
+   */
+  allowPaid?: boolean;
 }
 
-export function ModelProviderPicker({ provider, onProviderChange, selectedModel, onModelChange, ollamaPicker, agentId, locked = false }: ModelProviderPickerProps): React.JSX.Element {
+export function ModelProviderPicker({ provider, onProviderChange, selectedModel, onModelChange, ollamaPicker, agentId, allowPaid = false, locked = false }: ModelProviderPickerProps): React.JSX.Element {
   const [configured, setConfigured] = useState<Record<CloudProvider, boolean>>({ nvidia_nim: false, gemini: false, openrouter: false });
   const [hermesConfigured, setHermesConfigured] = useState(false);
+  const [paid, setPaid] = useState<{ ok: boolean; line: string }>({ ok: false, line: '' });
+
+  useEffect(() => {
+    if (!allowPaid) return;
+    let cancelled = false;
+    import('../services/jose/joseSpend').then((m) => {
+      if (cancelled) return;
+      const available = m.paidModelAvailable();
+      const id = m.paidModelId() || '';
+      const [prov, ...rest] = id.split(':');
+      setPaid(available.ok
+        ? { ok: true, line: `${PAID_PROVIDER_NAMES[prov] || prov} · ${rest.join(':') || 'its default model'}. Each request asks first, with the cost. Change it in Settings → General (Allow paid models).` }
+        : { ok: false, line: `${available.reason || 'Paid models are off.'} Paid models are set up in Settings → General (Allow paid models).` });
+    }).catch(() => { /* treated as unavailable */ });
+    return () => { cancelled = true; };
+  }, [allowPaid, provider, agentId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -476,12 +500,14 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
   const isConfigured = (id: ModelProviderId) => {
     if (id === 'ollama') return true;
     if (id === 'hermes') return hermesConfigured;
+    if (id === 'paid') return paid.ok;
     return configured[id as CloudProvider];
   };
 
-  const visibleProviders: ModelProviderId[] = agentId
-    ? ['ollama', 'nvidia_nim', 'gemini', 'openrouter', 'hermes']
-    : ['ollama', 'nvidia_nim', 'gemini', 'openrouter'];
+  const visibleProviders: ModelProviderId[] = [
+    ...(agentId ? ['ollama', 'nvidia_nim', 'gemini', 'openrouter', 'hermes'] as ModelProviderId[] : ['ollama', 'nvidia_nim', 'gemini', 'openrouter'] as ModelProviderId[]),
+    ...(allowPaid ? ['paid' as ModelProviderId] : []),
+  ];
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -492,7 +518,9 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
           return (
             <button key={id} type="button" disabled={disabled}
               onClick={() => onProviderChange(id)}
-              title={unconfigured
+              title={unconfigured && id === 'paid'
+                ? paid.line
+                : unconfigured
                 ? `${PROVIDER_LABELS[id]} is not configured — add ${id === 'hermes' ? 'an endpoint' : 'a key'} in Settings → Connectors`
                 : locked ? 'Wait for the current reply to finish before switching provider' : PROVIDER_LABELS[id]}
               className={`px-2 py-0.5 uppercase tracking-widest font-bold transition-colors ${
@@ -504,6 +532,7 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
         })}
       </div>
       {provider === 'ollama' && ollamaPicker}
+      {provider === 'paid' && <p data-testid="paid-model-line" className="text-[10px] text-(--text-3) max-w-[280px]">{paid.line}</p>}
       {provider === 'hermes' && agentId && <HermesModelPicker agentId={agentId} selectedModel={selectedModel} onModelChange={onModelChange} />}
       {(provider === 'nvidia_nim' || provider === 'gemini' || provider === 'openrouter') && <CloudModelPicker provider={provider} selectedModel={selectedModel} onModelChange={onModelChange} />}
     </div>

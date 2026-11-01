@@ -1,5 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-10-27 — **v2.10.0 tagged and released** (§11.51) after a whole documentation pass. Current numbers: 9 agents, 34 connectors, 328 services, 175 components, 21 hooks, 593 test files with 6,886 Vitest tests (594 with `bridge/tests`), 384 Rust `#[test]`s, 201 Tauri commands, 53 Rust source files, 46 desktop end-to-end spec files with 131 checks, 60 built-in skills.
+**Last verified:** 2026-11-01 — **v2.11.1 tagged and released** (§11.61): fixes from the owner using 2.11.0 (the Miya Studio crash, ComfyUI start, research reading compressed pages, Boardroom role play, the model choice reverting, paid models per agent, accessible accent colours, Automation as Teams + Schedules) and the Linux installer back. v2.11.0 was released on 2026-10-31 (§11.58–11.60).
+
+**Last verified before that:** 2026-10-27 — **v2.10.0 tagged and released** (§11.51) after a whole documentation pass. Current numbers: 9 agents, 34 connectors, 328 services, 175 components, 21 hooks, 593 test files with 6,886 Vitest tests (594 with `bridge/tests`), 384 Rust `#[test]`s, 201 Tauri commands, 53 Rust source files, 46 desktop end-to-end spec files with 131 checks, 60 built-in skills.
 
 **Last verified before that:** 2026-10-25 — every document reconciled with the code (§11.38). Version 2.10.0 is on `main` and **not tagged**; the latest release is v2.9.0 (2026-10-12). Since 2026-10-21, `main` gained the Jose redesign (phases 1–6b, §11.36) and Miya's content factory (phases 1–4c, §11.37). Current numbers: 9 agents, 34 connectors, 290 services, 175 components, 21 hooks, 556 test files with 6,832 Vitest tests, 357 Rust `#[test]`s (370 with the async ones), 189 Tauri commands, 50 Rust modules, 34 desktop end-to-end spec files.
 
@@ -131,7 +133,7 @@ the same change; no task is complete without the plan's stated verification.
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.11.0 |
+| Version | 2.11.1 |
 | Type | Tauri v2 desktop app (Windows; macOS Apple Silicon and Linux builds too) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust (minimum 1.77.2), Tauri 2.12, SQLite (rusqlite bundled), the OS keychain, tokio, reqwest, tokio-tungstenite (companion) |
@@ -2441,6 +2443,20 @@ The owner asked for a deep look at how the agents work together before Jose phas
 - **The closing summary.** One line per step and "Open on the board." (`joseSummary.ts`).
 - **Every path.** Picture requests are a Miya step; voice routes by owner and answers in role; CALL-E calls are Marcus's step; Hermes-backed agents get their role and the board notes it.
 Parts B (real skills) and C (Projects, Teams, learning) follow.
+
+## 11.61 v2.11.1: fixes from using 2.11.0 (2026-11-01)
+
+The owner used 2.11.0 and reported problems in three batches; each was traced to its cause before a fix (PR #376). Full list: `docs/CHANGELOG.md` [2.11.1].
+- **Crashes and dead ends:** Miya Studio crashed when a model wrapped a list item in an object (`textItems()`); ComfyUI started an old copy with no models (`pickComfyInstall()`); a tool used days ago was stopped as it started; WhatsApp was polled on every computer and failed every 30 s.
+- **Research:** reqwest had no gzip/brotli/deflate support, so compressed pages (Amazon) were stored as their bytes and Hector could neither read nor cite them; now decoded, unreadable bytes count as unread (`unreadable_page()`), and the Desk leads with the answer. "Research …" is always Hector's cited research (`asksForResearch()`).
+- **Model choice:** the Coach window saved its old copy of the settings over the model chosen in the main window; only the main window saves now. An agent may use the paid model (`agentPaidModels.ts`); each paid step asks with its cost. The top-right badge shows Chat's provider and model.
+- **Boardroom:** Mission Room archived; in sessions you can't post as an agent, app notices are "Boardroom", and work asked for in a thread is a Jose request.
+- **Automation:** the visual Builder (no executors) and the 16 canned operations (fixed text) archived; Automation is Teams, Schedules and Dead Letter.
+- **Hermes profiles:** API server settings read from each profile's `.env`; its key read on connect into the keychain.
+- **Appearance:** accent colours (Cyan, Green, Purple, Gold) replace three themes that did nothing; all meet WCAG AA in both modes (`accentContrast.test.js`).
+- **Linux:** the AppImage no longer bundles the starter model, so it fits under GitHub's 2 GiB limit again.
+- **Checked:** 7,326 Vitest tests, 478 Rust tests, clippy, and CI's desktop suite with a local model; the live research test now also checks that every page Hector keeps is readable text.
+- **Open:** 5 dependency advisories GitHub reports on `main` (1 critical, 1 high) are the next batch.
 
 ## 11.60 The closing phase: the deferred list checked against the code (2026-10-30)
 
