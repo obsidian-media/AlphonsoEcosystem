@@ -30,3 +30,12 @@ export function withLockedConfirm<T extends Pick<BoardData, 'request' | 'approve
     },
   });
 }
+
+/** Content calls that publish or delete (phone app phase 2): Approve and schedule, and Cancel post. */
+export const LOCKED_CONTENT_CALLS: ReadonlySet<string> = new Set(['content.approvePosts', 'content.cancelPost']);
+
+/** null when the call may go ahead; NOT_CONFIRMED when Face ID / fingerprint didn't confirm a locked one. */
+export async function confirmLockedCall(name: string, what: string, lock: PhoneLock): Promise<string | null> {
+  if (!LOCKED_CONTENT_CALLS.has(name)) return null;
+  return (await lock.confirm(what, { strict: true })) ? null : NOT_CONFIRMED;
+}

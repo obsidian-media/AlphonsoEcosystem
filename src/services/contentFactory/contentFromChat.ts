@@ -12,7 +12,7 @@ export const NEEDS_OUTPUT_FOLDER = 'I took this as a content video for Miya Stud
 const MAX_NAME = 60;
 
 /** The message as a project name: at most 60 characters, cut at a word. */
-function projectName(text: string): string {
+export function projectName(text: string): string {
   const clean = text.replace(/\s+/g, ' ').trim();
   if (clean.length <= MAX_NAME) return clean;
   const cut = clean.slice(0, MAX_NAME + 1);

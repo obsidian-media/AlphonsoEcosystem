@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { withLockedConfirm, NOT_CONFIRMED } from '../../mobile/lockedApproval';
+import { withLockedConfirm, NOT_CONFIRMED, confirmLockedCall, LOCKED_CONTENT_CALLS } from '../../mobile/lockedApproval';
 
 const request = (effects: string[]) => ({
   id: 'r1', steps: [{ stepId: 'marcus', agent: 'marcus', actionType: 'distribution_slack', effects, needs: [] }],
@@ -51,5 +51,25 @@ describe('approving from the phone', () => {
     const lock = { confirm: vi.fn(async () => true) };
     await withLockedConfirm(b, lock).approveStep('r9', 'x');
     expect(lock.confirm).toHaveBeenCalled();
+  });
+});
+
+describe('locked content calls from the phone', () => {
+  it('Approve and schedule and Cancel post ask for Face ID / fingerprint first', async () => {
+    expect([...LOCKED_CONTENT_CALLS].sort()).toEqual(['content.approvePosts', 'content.cancelPost']);
+    const lock = { confirm: vi.fn(async () => true) };
+    expect(await confirmLockedCall('content.approvePosts', 'Approve and schedule the posts', lock)).toBeNull();
+    expect(lock.confirm).toHaveBeenCalledWith('Approve and schedule the posts', { strict: true });
+  });
+
+  it('a cancelled Face ID stops the call', async () => {
+    const lock = { confirm: vi.fn(async () => false) };
+    expect(await confirmLockedCall('content.cancelPost', 'Cancel the post', lock)).toBe(NOT_CONFIRMED);
+  });
+
+  it('other content calls do not ask', async () => {
+    const lock = { confirm: vi.fn(async () => false) };
+    expect(await confirmLockedCall('content.editPost', 'Save', lock)).toBeNull();
+    expect(lock.confirm).not.toHaveBeenCalled();
   });
 });
