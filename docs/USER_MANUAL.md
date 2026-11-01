@@ -253,6 +253,10 @@ Before anything runs, the plan is checked: no step can wait for itself, every st
 
 With Telegram paired (Settings → Connectors → Telegram), Jose tells your chat when a step or a plan waits for you (with **Approve** / **Reject** or **Run this plan** / **Cancel** buttons), when a request finishes or fails, and when a review asks you to decide. Settings → Approvals → **Jose on Telegram** switches each kind on or off. A waiting request expires after the days set in Settings → Approvals (7 to start; 0 or blank = never).
 
+### From your phone
+
+The Alphonso phone app (iPhone and Android) pairs with this computer in Settings → Runtime → Remote Access → **Phones**. From the phone you can chat, see the Requests board, approve or reject a waiting step, and Stop, Carry on or Cancel a request; notifications tell you when something waits for you. A step that spends, sends or deletes is approved only inside the app, after Face ID or your fingerprint. See [PHONE.md](PHONE.md).
+
 ### Zero-Cost Mode
 
 On by default. It blocks every paid or metered connector (Claude, ChatGPT, Runway, ElevenLabs, Higgsfield, CALL-E and others) until you turn it off in Settings.

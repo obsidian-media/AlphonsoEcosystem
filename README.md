@@ -34,6 +34,7 @@ The full list is in [docs/CHANGELOG.md](docs/CHANGELOG.md).
 - **Plans change while they run:** a review can send work back (2 rounds at most), an agent can ask another for help, a failing step can get a larger model, or a paid model if you allow them (Settings → Approvals → Allow paid models, off by default, with a monthly cap).
 - **Away from the app:** Jose tells your Telegram chat what waits for you, with Approve / Reject buttons; a request cut off when the app closed can be carried on.
 - **Everything goes through Jose:** Chat, Telegram, WhatsApp, the phone, schedules, Boardroom's thread actions and workflows.
+- **Phone app (iPhone and Android, in testing):** chat, the Requests board, approvals and notifications from your phone, end-to-end encrypted through Alphonso's relay. See [docs/PHONE.md](docs/PHONE.md).
 
 ### Miya's content factory (phases 1–4c)
 
@@ -499,7 +500,7 @@ See [docs/PRICING.md](docs/PRICING.md) for details.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 6,933 tests across 646 files
+npm run test           # 6,933 tests across 647 files
 npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
