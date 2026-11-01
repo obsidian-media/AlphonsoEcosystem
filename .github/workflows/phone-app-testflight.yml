@@ -1,7 +1,7 @@
 name: Phone app to TestFlight
 
 # Builds the phone app (mobile/, Capacitor) for iPhone, signs it and uploads it to TestFlight.
-# Run by hand. It replaces the old Swift companion's TestFlight upload (same app ID,
+# Run by hand, or by pushing a phone-v* tag. It replaces the old Swift companion's TestFlight upload (same app ID,
 # com.alphonso.companion; owner, 2026-11-01).
 #
 # Signing: Xcode's automatic signing with the App Store Connect API key makes and renews the
@@ -17,6 +17,9 @@ name: Phone app to TestFlight
 
 on:
   workflow_dispatch: {}
+  # Or push a tag such as phone-v2.11.1 (works before this file is on main).
+  push:
+    tags: ['phone-v*']
 
 permissions:
   contents: read
