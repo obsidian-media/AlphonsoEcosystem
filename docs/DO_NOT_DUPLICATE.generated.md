@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 364 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 365 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -457,6 +457,7 @@ Source-backed inventory: 364 services and 183 components. Human purpose descript
 | service | `src/services/packetExecutionService.ts` | `executeApprovedPacket` |
 | service | `src/services/parallelExecutionService.ts` | `createTaskQueue`, `executeBatch`, `executeParallel`, `executeWithRetry`, `ParallelExecutionOptions`, `ParallelResult`, `ParallelTask` |
 | service | `src/services/phone/boardData.ts` | `BoardData`, `BoardDataProvider`, `localBoardData`, `runResultText`, `useBoardData` |
+| service | `src/services/phone/desktopSignIn.ts` | `createDesktopPhoneSignIn`, `desktopSignInConfig`, `NO_SIGN_IN_PAGE` |
 | service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |
 | service | `src/services/phone/phoneCalls.ts` | `ALREADY_DONE`, `handlePhoneCall`, `NOT_FROM_PHONE`, `PHONE_CALLS`, `resetPhoneCallsForTests` |
 | service | `src/services/phone/phoneChatLog.ts` | `appendPhoneChat`, `listPhoneChat`, `onPhoneChatChange`, `PHONE_CHAT_KEY`, `PHONE_CHAT_LIMIT`, `PhoneChatMessage` |

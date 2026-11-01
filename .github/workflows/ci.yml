@@ -702,6 +702,9 @@ jobs:
           npm ci --prefix gateway/phone-relay --no-audit --no-fund
           node --test gateway/phone-relay/src/relay.test.mjs gateway/phone-relay/src/server.test.mjs gateway/phone-relay/src/pushMessage.test.mjs
 
+      - name: Sign-in page tests
+        run: node --test gateway/signin-page/src/handoff.test.mjs
+
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"

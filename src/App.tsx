@@ -167,8 +167,12 @@ import { startPhoneLink, phoneAccessOn, webSocketFactory, onPhoneCall, publish a
 import { startPhoneNotifications } from './services/phone/phoneNotifications';
 import { handlePhoneCall } from './services/phone/phoneCalls';
 import { startPhoneMirror } from './services/phone/phoneMirror';
-import { phoneAuth, phoneRelayUrl } from './services/phone/phoneAccount';
+import { phoneAuth, phoneRelayUrl, setPhoneSignInProvider } from './services/phone/phoneAccount';
+import { createDesktopPhoneSignIn, desktopSignInConfig } from './services/phone/desktopSignIn';
 import { randomHex } from './lib/randomId';
+
+// The computer's sign-in for phone access: the browser sign-in page, kept in the OS keychain.
+setPhoneSignInProvider(createDesktopPhoneSignIn({ invoke: (cmd, args) => invoke(cmd, args), ...desktopSignInConfig() }));
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';

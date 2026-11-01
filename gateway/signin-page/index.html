@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Sign in to Alphonso</title>
+    <style>
+      :root { color-scheme: light dark; --bg: #f6f8fb; --card: #ffffff; --text: #111827; --muted: #4b5563; --line: #e5e7eb; --accent: #0ea5b7; --danger: #b91c1c; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #0b0f17; --card: #121826; --text: #e5e7eb; --muted: #9ca3af; --line: #1f2937; --accent: #22d3ee; --danger: #f87171; } }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 16px; }
+      main { width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px 24px; }
+      h1 { font-size: 20px; margin: 0 0 6px; }
+      p { margin: 0 0 16px; color: var(--muted); }
+      button, input { width: 100%; font: inherit; border-radius: 10px; padding: 12px; margin: 0 0 10px; }
+      button { border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer; }
+      button.primary { background: var(--accent); color: #04121a; border-color: transparent; font-weight: 600; }
+      button:disabled { opacity: .6; cursor: default; }
+      input { border: 1px solid var(--line); background: var(--card); color: var(--text); }
+      #status { min-height: 1.5em; margin: 6px 0 0; }
+      #status.error { color: var(--danger); }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Sign in to Alphonso</h1>
+      <p id="intro">Sign in the same way as in the Alphonso app on your phone. Alphonso on this computer then finishes by itself.</p>
+      <div id="choices" hidden>
+        <button id="google" class="primary" type="button">Continue with Google</button>
+        <button id="apple" type="button" hidden>Continue with Apple</button>
+        <input id="email" type="email" autocomplete="email" placeholder="you@example.com" aria-label="Email" />
+        <button id="send" type="button">Email me a link</button>
+      </div>
+      <p id="status" role="status"></p>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

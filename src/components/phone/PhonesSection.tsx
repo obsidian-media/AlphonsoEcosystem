@@ -31,6 +31,13 @@ export function PhonesSection({ computerName = 'This computer' }: { computerName
   const available = phoneAccessAvailable();
   const relayUrl = phoneRelayUrl();
 
+  // Signed in earlier? The keychain knows; ask once when the section opens.
+  useEffect(() => {
+    let live = true;
+    void phoneAuth.idToken().then((t) => { if (live && t) setSignedIn(true); }).catch(() => undefined);
+    return () => { live = false; };
+  }, []);
+
   useEffect(() => {
     if (!qr || !relayUrl) return undefined;
     const stop = startPhoneLink({ relayUrl, auth: phoneAuth, socket: webSocketFactory });
