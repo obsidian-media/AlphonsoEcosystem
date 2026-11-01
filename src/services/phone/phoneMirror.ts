@@ -8,11 +8,14 @@ import { listStepOutputs } from '../jose/joseStepOutputs';
 import { stripSecretFields } from '../workspaceExportService';
 import { redactText } from '../sentinel/exactChecks';
 import { listPhoneChat, onPhoneChatChange } from './phoneChatLog';
+import { contentMirrorData } from './contentMirror';
 import type { MirroredStore } from './phoneProtocol';
 
 export const MIRROR_BATCH_MS = 500;
 export const MIRROR_REQUESTS = 50;
 const MIRROR_OUTPUT_REQUESTS = 20;
+/** The content stores have no change events (the Calendar page polls too), so the mirror looks every 5 s and sends only what changed. */
+export const CONTENT_POLL_MS = 5000;
 
 function clean(value: unknown): unknown {
   const stripped = stripSecretFields(value);
@@ -37,12 +40,13 @@ function storeData(store: MirroredStore): unknown {
     return clean(out);
   }
   if (store === 'chat') return clean(listPhoneChat());
+  if (store === 'content') return clean(contentMirrorData(Date.now()));
   const s = settings();
   return { zeroCostMode: s.zeroCostMode !== false, paidModelsAllowed: !!s.paidModels?.allowed, model: typeof s.selectedModel === 'string' ? s.selectedModel : null };
 }
 
 export function mirrorSnapshots(): Record<MirroredStore, unknown> {
-  return { requests: storeData('requests'), stepOutputs: storeData('stepOutputs'), chat: storeData('chat'), computer: storeData('computer') };
+  return { requests: storeData('requests'), stepOutputs: storeData('stepOutputs'), chat: storeData('chat'), computer: storeData('computer'), content: storeData('content') };
 }
 
 /** Send changes to the phones as they happen, batched. Returns stop(). */
@@ -54,5 +58,11 @@ export function startPhoneMirror(deps: { publish: (store: MirroredStore, data: u
   };
   const offRequests = onRequestStatusChange(() => { schedule('requests'); schedule('stepOutputs'); });
   const offChat = onPhoneChatChange(() => schedule('chat'));
-  return () => { offRequests(); offChat(); for (const t of timers.values()) clearTimeout(t); timers.clear(); };
+  let lastContent = JSON.stringify(storeData('content'));
+  const contentTimer = setInterval(() => {
+    const data = storeData('content');
+    const text = JSON.stringify(data);
+    if (text !== lastContent) { lastContent = text; deps.publish('content', data, 'change'); }
+  }, CONTENT_POLL_MS);
+  return () => { offRequests(); offChat(); clearInterval(contentTimer); for (const t of timers.values()) clearTimeout(t); timers.clear(); };
 }
