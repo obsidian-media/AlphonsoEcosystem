@@ -72,6 +72,13 @@ describe("the phone app's native code", () => {
     expect(gradle).not.toMatch(/storePassword\s+['"]/);
   });
 
+  it("gives both phones the desktop's version, never a fixed one", () => {
+    const gradle = read('mobile/android/app/build.gradle');
+    expect(gradle).toContain("file('../../../package.json')");
+    expect(gradle).not.toMatch(/versionName\s+"\d/);
+    expect(read('.github/workflows/phone-app-testflight.yml')).toContain("require('../../../package.json').version");
+  });
+
   it('keeps the iPhone minimum at iOS 16.4, which Tailwind v4 needs', () => {
     expect(read('mobile/ios/App/project.yml')).toContain('iOS: "16.4"');
     expect(read('mobile/vite.config.mjs')).toContain("target: 'safari16.4'");

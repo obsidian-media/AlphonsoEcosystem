@@ -7,8 +7,10 @@ android {
         applicationId "com.alphonso.companion"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // The desktop's version (the repository's package.json), as on the iPhone. The version
+        // code comes from the build (ANDROID_VERSION_CODE), and must go up for Google Play.
+        versionCode((System.getenv('ANDROID_VERSION_CODE') ?: '1') as int)
+        versionName new groovy.json.JsonSlurper().parse(file('../../../package.json')).version
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // The email link's domain: the Firebase project's own <project>.firebaseapp.com, read from
         // google-services.json (written by mobile/scripts/firebase-config.mjs at build time).
