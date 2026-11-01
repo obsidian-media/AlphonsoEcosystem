@@ -245,4 +245,13 @@ describe('usePersistenceEffects', () => {
       expect(invoke).not.toHaveBeenCalled();
     });
   });
+
+  // 2.11.0 QA: only the main window saves settings (the Coach window's copy is old).
+  it('does not save settings from the Coach window', () => {
+    vi.mocked(invoke).mockClear();
+    vi.mocked(setStorage).mockClear();
+    renderHook(() => usePersistenceEffects({ ...defaultProps, isCoachWindow: true }));
+    expect(vi.mocked(invoke).mock.calls.filter(([cmd]) => cmd === 'save_settings')).toEqual([]);
+    expect(vi.mocked(setStorage).mock.calls.filter(([k]) => k === 'alphonso_settings')).toEqual([]);
+  });
 });

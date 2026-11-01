@@ -257,3 +257,16 @@ describe('boardroomFacilitatorService', () => {
     });
   });
 });
+
+// 2.11.0 QA (owner, 2026-11-01): Hector said "I'll research…" in a thread and never could.
+describe('what an agent may promise in a thread', () => {
+  it('tells every agent it only talks here, and how to have work done', async () => {
+    const { buildAgentSystemPrompt } = await import('../../services/boardroomFacilitatorService');
+    for (const agent of ['alphonso', 'hector']) {
+      const prompt = buildAgentSystemPrompt(agent);
+      expect(prompt).toContain("In this chat you can only talk: you can't research, write files, send or run anything here.");
+      expect(prompt).toContain('Never say you will do it or that you are working on it.');
+      expect(prompt).toContain('/jose');
+    }
+  });
+});

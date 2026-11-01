@@ -50,7 +50,8 @@ function kindsOfWork(text: string): number {
   return [intents.research, intents.writing, intents.check, intents.publishing, intents.localExecution].filter(Boolean).length;
 }
 
-export async function decideJoseRoute(text: string, options: { history?: { role: string; content: string }[] } = {}): Promise<JoseRouteDecision> {
+/** The decision the rules make without a model, or null when it's the model's call. */
+export function ruleRoute(text: string): JoseRouteDecision | null {
   const value = String(text || '').trim();
   if (EXPLICIT_JOSE.test(value)) return { route: 'plan', source: 'rule', reason: 'Asked Jose by name.' };
   // Agent roles Part C1: a team asked for by name runs its own steps.
@@ -62,6 +63,13 @@ export async function decideJoseRoute(text: string, options: { history?: { role:
   // QA batch 0: research, writing, a check, a send or code: two or more of them can't be one reply,
   // whatever the model thinks (a small model answered such a request in Chat).
   if (kindsOfWork(value) >= 2) return { route: 'plan', source: 'rule', reason: 'Several kinds of work.' };
+  return null;
+}
+
+export async function decideJoseRoute(text: string, options: { history?: { role: string; content: string }[] } = {}): Promise<JoseRouteDecision> {
+  const value = String(text || '').trim();
+  const byRule = ruleRoute(value);
+  if (byRule) return byRule;
 
   const recent = (options.history || []).slice(-4).map((m) => `${m.role}: ${String(m.content).slice(0, 300)}`).join('\n');
   const prompt = [

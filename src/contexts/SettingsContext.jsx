@@ -35,14 +35,39 @@ const DEFAULT_SETTINGS = {
   outputFolder: ''
 };
 
+/** The Coach window opens the app with ?coach=1 (coachModeService). */
+export function isCoachWindow() {
+  try {
+    return new URLSearchParams(window.location.search).get('coach') === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function SettingsProvider({ children }) {
   const [settings, setSettingsRaw] = useState(() => getStorage('alphonso_settings', DEFAULT_SETTINGS));
   const [operatorMode, setOperatorModeState] = useState(() => Boolean(getStorage('alphonso_operator_mode_v1', false)));
 
-  // Persist settings to localStorage on every change
+  // Persist settings to localStorage on every change, from the main window only. The Coach window
+  // is a second window with its own copy, read when it opened; saving it wrote an older model (and
+  // anything else) over what you chose in the main window (2.11.0 QA, owner 2026-11-01).
   useEffect(() => {
+    if (isCoachWindow()) return;
     setStorage('alphonso_settings', settings);
   }, [settings]);
+
+  // Follow settings another window saved (the browser tells every other window).
+  useEffect(() => {
+    const onStorage = (event) => {
+      if (event.key !== 'alphonso_settings' || !event.newValue) return;
+      try {
+        const saved = JSON.parse(event.newValue);
+        if (saved && typeof saved === 'object') setSettingsRaw((current) => ({ ...current, ...saved }));
+      } catch { /* not settings */ }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const setSettings = useCallback((valueOrUpdater) => {
     setSettingsRaw((current) => {

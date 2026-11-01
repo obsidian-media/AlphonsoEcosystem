@@ -881,7 +881,9 @@ export async function generateAgentLlmResponse(agentId: string, rawOptions: Agen
   const { getAgentProvider } = await import('../services/modelSelectionService');
   const config = getAgentProvider(agentId);
 
-  if (config.provider === 'ollama') {
+  // 'paid' spends only in a request's step, which carries the paid model and asked first (handled
+  // above); anywhere else (a Boardroom reply) the agent uses this computer's model (2.11.0 QA).
+  if (config.provider === 'ollama' || config.provider === 'paid') {
     const model = options.model || getAgentModelOverride(agentId) || getConfiguredOllamaModel();
     const result = await generateOllamaResponse({
       // The address set in Settings when the caller passes none (QA

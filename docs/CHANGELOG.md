@@ -8,9 +8,9 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ---
 
-## [Unreleased]
+## [2.11.1] — 2026-11-01 (fixes from using 2.11.0)
 
-### Fixed (2.11.0 QA, 2026-11-01)
+### Fixed
 - Miya Studio no longer crashes when a review's answer lists come back as objects (React error 31); reviews already saved that way show their text.
 - ComfyUI: Runtime Hub's Start, a step and a picture request start the ComfyUI chosen in Settings (else one with image models) instead of an old Alphonso copy that crashed at start; a picture request starts ComfyUI itself; the wait allows a slow first start.
 - A ComfyUI last used days ago is no longer stopped the moment it starts.
@@ -35,6 +35,13 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 - **Fixed: every paid step on Claude failed.** The current Claude model answers with a thinking part first, and Alphonso read only that empty part, so each answer looked blank. Checked live with a real Claude key.
 - **Fixed: paid answers were cut off.** A paid step could write at most 1,024 tokens, and models that think before answering use part of that for thinking, so longer answers (such as Nova's verdict) stopped halfway and couldn't be read. The limit is now 4,096 tokens; the cost shown before you approve a step is the most it can cost, so it is a little higher. An answer that still reaches the limit is asked once more with twice the room (within your monthly cap), and if it is cut off again the step says so in plain words instead of "unreadable", without being tried again and paid for again. The same goes for a paid step past your monthly cap or when paid models are off: it says why, instead of "unreadable", and isn't tried again.
 - **Fixed: Alphonso ignored what a review sent back.** When Maria or Marcus asked for a fix (for example "fill in [Your Name]"), his rewrite never saw it, so the same problem came back and the send failed. His writing now gets his step's instruction, including the fix list.
+- Settings → Appearance: the three themes changed nothing you could see. It now offers an accent colour (Cyan, Green, Purple or Gold) that changes buttons, highlights and links in light and dark. Every accent now meets WCAG AA contrast (4.5:1) in both modes; in light mode the accents are darker and text on accent buttons is white (light mode's cyan was 2.3:1 before).
+- Boardroom sessions: you can no longer post as an agent (the "Speaking as" picker is gone), and the app's own notices (waiting for approval, failed, stopped, limits) show as Boardroom instead of as an agent talking.
+- The model you choose in Chat or Settings no longer goes back to an older one: the Coach window saved the settings it read when it opened over yours. Now only the main window saves settings, and each window follows the other's changes.
+- Boardroom sessions: "/jose …" and work asked for in a thread ("@Hector research …", "look up …") now run as a real Jose request. The thread says it started, with a link to the board, then shows Jose's result. Agents in a thread no longer promise work they can't do there; they tell you to use "/jose".
+- Settings → Agents: an agent can now use your paid model (Claude, ChatGPT or an OpenRouter paid model, chosen with its prices under Allow paid models in Settings → General) as its everyday model. Each of its steps in a request asks first, with the cost, and stays within your monthly cap; schedules never spend. Outside a request (a Boardroom reply) it uses this computer's model.
+- The model badge at the top right shows the provider and model Chat really uses (OpenRouter, NVIDIA, Gemini or Ollama). Click it to see each agent's.
+- Boardroom opens on its sessions, where agents answer. Mission Room is gone: no agent answered there, you typed as an agent, its opening messages were made up, and its Hermes and approval buttons did nothing real.
 - Linux: the AppImage no longer bundles the starter model (Setup downloads it, as on Windows and macOS), so it fits GitHub's 2 GB limit again. 2.11.0 shipped without Linux because of it.
 
 ### Closing the deferred list (2026-10-30)

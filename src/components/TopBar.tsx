@@ -4,9 +4,11 @@ import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { useTheme } from '../hooks/useTheme';
 import { ModeToggle } from './ModeToggle';
 import { MemoryMeter } from './resources/MemoryMeter';
+import { ActiveModelBadge } from './ActiveModelBadge';
 
 interface Settings {
   selectedModel?: string;
+  selectedProvider?: string;
   zeroCostMode?: boolean;
 }
 
@@ -51,7 +53,7 @@ const PAGE_TITLES: Record<string, string> = {
   files: 'Knowledge',
   automation: 'Automation',
   content: 'Content',
-  mission_room: 'Mission Room',
+  mission_room: 'Boardroom',
   workflows: 'Workflows',
 };
 
@@ -168,12 +170,7 @@ export function TopBar({
           </button>
         )}
 
-        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-(--surface-2) border ${selectedModelMissing ? 'border-(--warning-border)' : 'border-(--border)'}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-(--success)' : 'bg-(--error)'}`} />
-          <span className={`text-xs ${selectedModelMissing ? 'text-(--warning)' : 'text-(--text-3)'}`}>
-            {selectedModelMissing ? 'No model' : settings.selectedModel || 'No model'}
-          </span>
-        </div>
+        <ActiveModelBadge settings={settings} ollamaState={ollamaStatus.state} selectedModelMissing={selectedModelMissing} />
       </div>
     </header>
   );

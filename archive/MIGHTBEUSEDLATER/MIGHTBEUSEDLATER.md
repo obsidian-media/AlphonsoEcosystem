@@ -122,3 +122,21 @@ as new work requiring its own review, not a revert.
   test scripts and `vitest.config.js`.
 - **Before restoring:** decide what would call it. Alphonso calls Ollama directly
   (`src/lib/ollama.ts`, `ollama.rs`) and calls out to MCP servers itself.
+
+---
+
+## Mission Room
+
+- **Archived:** 2026-11-01 (2.11.0 QA; owner chose "Remove it")
+- **Files:** `missionRoom/MissionRoom.tsx` (was `src/components/MissionRoom.tsx`) and its
+  two tests (`MissionRoom.test.tsx`, `MissionRoomKanbanStatus.test.tsx`).
+- **Why it was removed:** the owner found it "looks like role playing". It was a local
+  notepad: no agent ever answered, a "speaking as" picker let you post as any agent, its
+  first messages ("Mission Room online…", Jose assigning a task) were written into the
+  page on first open, "Assign to Hermes" only saved a local note, "Approval placeholder"
+  only raised a notice, and the handoff brief defaulted to a hard-coded "TapCash".
+  Boardroom sessions (`BoardroomChatView.tsx`) is the real meeting, where agents answer.
+- **Kept:** `src/services/missionRoomService.ts` (its secret hiding and risk checks are used
+  by Boardroom threads and Jose's engine).
+- **Before restoring:** messages must come from the agents' own models, tasks must be Jose
+  requests, and nothing may post as an agent.

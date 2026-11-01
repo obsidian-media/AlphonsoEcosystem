@@ -1,10 +1,12 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 354 services and 183 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 355 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
+| component | `src/components/AccentColorPicker.tsx` | `AccentColorPicker` |
+| component | `src/components/ActiveModelBadge.tsx` | `ActiveModelBadge` |
 | component | `src/components/AgentActivityLog.tsx` | `AgentActivityLog` |
 | component | `src/components/AgentAvatar.tsx` | `AgentAvatar` |
 | component | `src/components/AgentDock.tsx` | `AgentDock` |
@@ -91,7 +93,6 @@ Source-backed inventory: 354 services and 183 components. Human purpose descript
 | component | `src/components/MemorySearch.tsx` | `MemorySearch` |
 | component | `src/components/MicrophoneStatus.tsx` | `MicrophoneStatus` |
 | component | `src/components/MissionControlHome.tsx` | `MissionControlHome` |
-| component | `src/components/MissionRoom.tsx` | `MissionRoom` |
 | component | `src/components/miya/AiClipsPanel.tsx` | `AiClipsPanel`, `AiClipsPanelProps` |
 | component | `src/components/miya/BrandEditor.tsx` | `BrandEditor` |
 | component | `src/components/miya/BrandEnginesEditor.tsx` | `BrandEnginesEditor` |
@@ -218,9 +219,9 @@ Source-backed inventory: 354 services and 183 components. Human purpose descript
 | service | `src/services/autoRunService.ts` | `autoRunDevServer`, `getAutoRunEnabled`, `setAutoRunEnabled` |
 | service | `src/services/backupService.ts` | `BackupSizeEstimate`, `createBackup`, `exportBackupToFile`, `getBackupSizeEstimate`, `importBackupFromFile`, `restoreBackup` |
 | service | `src/services/batchOrchestratorService.js` | `advanceToNextBatch`, `completeGoal`, `createProjectGoal`, `executeBatch`, `generateBatch`, `generateBatchRuleBased`, `generateBatchViaLLM`, `getActiveBatch`, `getActiveGoal`, `getBatch`, `getBatchById`, `getBatchProgress`, `getGoalById`, `getGoalProgress`, `getTaskById`, `isBatchComplete`, `listBatches`, `listGoals`, `updateBatchStatus`, `updateGoal`, `updateTaskStatus` |
-| service | `src/services/boardroomFacilitatorService.ts` | `buildFacilitatorPrompt`, `detectLowConfidence`, `FacilitatorResult`, `generateAgentResponse`, `generateAlphonsoResponse` |
-| service | `src/services/boardroomJoseService.ts` | `BOARDROOM_LABEL`, `BoardroomReview`, `concludeOnJose`, `creativeBriefOnJose`, `distributeOnJose` |
-| service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BoardroomGovernance`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `setThreadGovernance`, `THREADS_KEY`, `updateThreadStatus` |
+| service | `src/services/boardroomFacilitatorService.ts` | `buildAgentSystemPrompt`, `buildFacilitatorPrompt`, `detectLowConfidence`, `FacilitatorResult`, `generateAgentResponse`, `generateAlphonsoResponse` |
+| service | `src/services/boardroomJoseService.ts` | `BOARDROOM_LABEL`, `BoardroomReview`, `concludeOnJose`, `creativeBriefOnJose`, `distributeOnJose`, `workOnJose`, `workRequestIn` |
+| service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BOARDROOM_SPEAKER`, `BoardroomGovernance`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `setThreadGovernance`, `THREADS_KEY`, `updateThreadStatus` |
 | service | `src/services/browserAutomationService.ts` | `fetchUrlContent`, `openAndScrape`, `openExternalUrl`, `openSourceLink`, `openUrl`, `readClipboard`, `scrapeWebPage`, `setLinkConfirmHandler`, `writeClipboard` |
 | service | `src/services/cacheService.ts` | `agentCache`, `cached`, `CacheEntry`, `CacheOptions`, `connectorCache`, `createCacheKey`, `globalCache`, `MemoryCache` |
 | service | `src/services/calleCallStep.ts` | `askMarcusToCall`, `CALL_LABEL`, `CallToPlace`, `executeOutreachCall` |
@@ -363,9 +364,10 @@ Source-backed inventory: 354 services and 183 components. Human purpose descript
 | service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NOT_FOUND`, `onUserProfilesChanged`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
+| service | `src/services/jose/agentPaidModels.ts` | `withAgentPaidModels` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
 | service | `src/services/jose/joseAdapt.ts` | `AdaptContext`, `adaptPlan`, `PlanChange`, `setPlanAdapterForTests` |
-| service | `src/services/jose/joseDecision.ts` | `asksForResearch`, `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision` |
+| service | `src/services/jose/joseDecision.ts` | `asksForResearch`, `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision`, `ruleRoute` |
 | service | `src/services/jose/joseEffects.ts` | `ACTION_EFFECTS`, `COMMAND_CHECKED_EFFECTS`, `DEFAULT_EFFECT_APPROVALS`, `EFFECT_LABELS`, `effectsNeedingApproval`, `getEffectApprovals`, `inferEffects`, `JOSE_EFFECTS`, `JoseEffect`, `LOCKED_EFFECTS`, `stepEffectsToWaitFor` |
 | service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets` |
 | service | `src/services/jose/joseFinish.ts` | `NOTHING_NEW`, `saveRequestDecisions` |

@@ -3,6 +3,7 @@
 // plan from the model or a template runs as explicit steps on the step graph;
 // the simple rule-based plan runs through the old path unchanged.
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §4, §9
+import { withAgentPaidModels } from './agentPaidModels';
 import { toCurrentOwners } from './movedTaskTypes';
 import { runJoseCommandExecutionPipeline, runPipelineShortcuts } from '../joseExecutionEngineService';
 import { describePlanSource, planJoseRequest, type JosePlan } from './josePlanner';
@@ -154,8 +155,10 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
   // naming several projects gets an Alphonso step in each (agent roles Part C2), and a send
   // through an outside tool the request names is Marcus's outside-tool step (2026-10-30).
   const secured = addSecurityChecks(splitPerProject(toOutsideTool(planned.steps, text), text), text);
-  const plan: JosePlan = { ...planned, steps: secured.steps };
-  const planNote = [noteFor(plan), securityNote(secured)].filter(Boolean).join(' ');
+  // An agent set to the paid model gets it for its steps, each asking with its cost (2.11.0 QA).
+  const paid = withAgentPaidModels(secured.steps, { requestText: text, allowPaidModels });
+  const plan: JosePlan = { ...planned, steps: paid.steps };
+  const planNote = [noteFor(plan), securityNote(secured), ...paid.notes].filter(Boolean).join(' ');
   onProgress?.({ stage: 'planned', plan, planNote });
 
   // Bigger requests show their plan first (phase 3): saved to wait for the user.
@@ -203,7 +206,8 @@ export async function submitStepsToJose(input: {
   // Steps saved before 2026-10-24 go to their current owner (agent roles Part A).
   const ownedSteps = toCurrentOwners(input.steps);
   const secured = addSecurityChecks(splitPerProject(ownedSteps.steps, input.text), input.text);
-  const owned = { ...ownedSteps, steps: secured.steps, notes: [...ownedSteps.notes, securityNote(secured)].filter(Boolean) };
+  const paid = withAgentPaidModels(secured.steps, { requestText: input.text, allowPaidModels: input.allowPaidModels !== false });
+  const owned = { ...ownedSteps, steps: paid.steps, notes: [...ownedSteps.notes, securityNote(secured), ...paid.notes].filter(Boolean) };
   const check = checkPlan(owned.steps, { taskTypes: true });
   if (!check.ok) return { ok: false, reason: 'plan_rejected', problems: check.problems, plan: null, planNote: '' };
   const plan: JosePlan = { steps: owned.steps, source: 'given', templateId: null, kind: input.kind || 'normal', note: input.label };

@@ -3,6 +3,10 @@ import { addNode, addEdge } from './memoryGraphService';
 import { TRUST_STATES } from './trustModel';
 import { randomHex } from '../lib/randomId';
 
+/** Who the app's own notices in a thread are from (shown as "Boardroom"): never an agent,
+ * which read as role play (2.11.0 QA, owner 2026-11-01). */
+export const BOARDROOM_SPEAKER = 'boardroom';
+
 export const THREADS_KEY = 'alphonso_boardroom_threads_v2';
 export const MESSAGES_KEY = 'alphonso_boardroom_thread_messages_v2';
 
@@ -386,7 +390,7 @@ export function migrateLegacySessions(): void {
     migratedMessages.push({
       id: makeId('boardroom_msg'),
       threadId: thread.id,
-      speaker: 'alphonso',
+      speaker: BOARDROOM_SPEAKER,
       content: 'This thread was migrated from a legacy Boardroom session — earlier messages may render without full metadata (risk tags, @mentions).',
       kind: 'system',
       riskLevel: 'low',
