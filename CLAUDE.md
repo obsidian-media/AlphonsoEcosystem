@@ -725,6 +725,10 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
+_Last verified: 2026-11-01 (v2.11.1 released, PR #376)_ — the owner's three batches of findings from using 2.11.0 fixed and released; see `docs/ALPHONSO_GROUND_TRUTH.md` §11.61. Things to know: reqwest now decodes gzip/brotli/deflate (never set `Accept-Encoding` by hand, it turns decoding off); only the main window saves settings; Automation is Teams + Schedules; GitHub reports 5 dependency advisories on `main`, the next batch.
+
+---
+
 _Last verified: 2026-10-29 (QA batch 1 finished, branch `fix/qa-batch-1`, PR #369)_ — every live account in the owner's plan passed on CI-built debug apps (Slack, GitHub, ElevenLabs, Pexels/Pixabay/Coverr, Tavily, Brave, Notion, ClickUp, Composio, NVIDIA, Gemini, Telegram; Higgsfield skipped), and the 46-file desktop suite ran with `qwen2.5:7b`. Fixes and what is open: `docs/ALPHONSO_GROUND_TRUTH.md` §11.54, `docs/governance/DEFERRED_WORK.md` (2026-10-29: ffmpeg code-signing, throttled free search). Things to know: on the dev machine Smart App Control blocks unsigned binaries (the bundled ffmpeg, locally built Rust), so test with the CI artifact `alphonso-debug-app-<sha>`; DuckDuckGo throttles after many runs; the live-check scripts read keys from files and a log is counted for key traces after every run.
 
 ---

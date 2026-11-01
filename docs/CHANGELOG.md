@@ -8,7 +8,7 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ---
 
-## [2.11.1] — 2026-11-01 (fixes from using 2.11.0)
+## [2.11.1] — 2026-11-01 (fixes from using 2.11.0, PR 376; the Linux installer is back)
 
 ### Fixed
 - Miya Studio no longer crashes when a review's answer lists come back as objects (React error 31); reviews already saved that way show their text.
