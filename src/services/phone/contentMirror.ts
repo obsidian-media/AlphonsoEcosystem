@@ -28,6 +28,13 @@ function collect(value: unknown, into: Set<string>): void {
   if (value && typeof value === 'object') for (const v of Object.values(value)) collect(v, into);
 }
 
+/** The pictures and videos one version of a step names (phase 2: "ready to check"). */
+export function versionMedia(project: ContentProject, output: unknown): MediaRef[] {
+  const paths = new Set<string>();
+  collect(output, paths);
+  return [...paths].map((path) => ({ projectId: project.id, path, kind: VIDEO.test(path) ? 'video' : 'picture' }));
+}
+
 /** Every picture and video the project's versions and posts name. */
 export function projectMedia(project: ContentProject): MediaRef[] {
   const paths = new Set<string>();

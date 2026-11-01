@@ -53,6 +53,13 @@ describe("the phone app's native code", () => {
     expect(javaPush).toContain('"approve".equals(a)');
   });
 
+  it("both phones show a notice's still picture", () => {
+    expect(swiftNotice).toContain('n["still"] as? String');
+    expect(swiftNotice).toContain('UNNotificationAttachment');
+    expect(javaPush).toContain('notice.optString("still"');
+    expect(javaPush).toContain('BigPictureStyle');
+  });
+
   // Email sign-in (owner, 2026-11-01): the emailed link opens the app on the Firebase project's
   // own link domain, <project>.firebaseapp.com, taken from the project at build time, never
   // written into the app.

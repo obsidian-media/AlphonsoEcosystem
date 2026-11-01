@@ -18,9 +18,9 @@ function whereItIs(p: PhoneProject): { line: string; waiting: boolean } {
 }
 
 /** Miya Studio on the phone (phase 2): projects, the one waiting for you first. */
-export function StudioScreen({ studio, lock }: { studio: StudioData; lock: PhoneLock }) {
+export function StudioScreen({ studio, lock, openProjectId }: { studio: StudioData; lock: PhoneLock; openProjectId?: string }) {
   const [projects, setProjects] = useState(studio.projects());
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(openProjectId || null);
   const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState('');
   useEffect(() => studio.subscribe(() => setProjects(studio.projects())), [studio]);

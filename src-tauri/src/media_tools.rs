@@ -1797,6 +1797,31 @@ pub(crate) fn preview_run(kind: &str, source: &Path, part: &Path, cwd: &Path) ->
   }
 }
 
+/// A notification's still: one frame (a video's first), at most 160 pixels on its longer
+/// side, JPEG quality 6, small enough to travel inside a push.
+pub(crate) fn still_run(source: &Path, part: &Path, cwd: &Path) -> FfmpegRun {
+  let mut args = vec![s("-y"), s("-i"), source.to_string_lossy().to_string()];
+  args.extend(
+    [
+      "-vf",
+      "scale=160:160:force_original_aspect_ratio=decrease",
+      "-frames:v",
+      "1",
+      "-q:v",
+      "6",
+      "-f",
+      "image2",
+    ]
+    .iter()
+    .map(s),
+  );
+  args.push(part.to_string_lossy().to_string());
+  FfmpegRun {
+    cwd: cwd.to_path_buf(),
+    args,
+  }
+}
+
 /// The preview's file name: changes when the original's path, time or size changes.
 pub(crate) fn preview_name(relative: &str, modified_ms: u128, size: u64, ext: &str) -> String {
   use sha2::{Digest, Sha256};
@@ -1905,6 +1930,69 @@ pub async fn content_phone_preview(
     "bytes": bytes,
     "sha256": sha256_file(&out)?,
     "mime": if kind == "video" { "video/mp4" } else { "image/jpeg" },
+  }))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhoneStillRequest {
+  workspace_root: String,
+  relative_path: String,
+}
+
+/// A notification's still of a picture or video in the output folder, as base64 JPEG. Kept
+/// beside the phone previews and reused until the original changes.
+#[tauri::command]
+pub async fn content_phone_still(request: PhoneStillRequest) -> Result<serde_json::Value, String> {
+  use base64::Engine;
+  let source = match crate::workspace::resolve_workspace_read_path(
+    &request.workspace_root,
+    &request.relative_path,
+  ) {
+    Ok(p) => p,
+    Err(e) => return Ok(serde_json::json!({ "ok": false, "reason": e })),
+  };
+  let meta = match std::fs::metadata(&source) {
+    Ok(m) if m.is_file() => m,
+    _ => return Ok(serde_json::json!({ "ok": false, "reason": PREVIEW_FILE_GONE })),
+  };
+  let modified = meta
+    .modified()
+    .ok()
+    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+    .map(|d| d.as_millis())
+    .unwrap_or(0);
+  let parent = Path::new(request.relative_path.trim())
+    .parent()
+    .map(|p| p.to_string_lossy().replace('\\', "/"))
+    .unwrap_or_default();
+  let dir_rel = if parent.is_empty() {
+    "phone-previews".to_string()
+  } else {
+    format!("{parent}/phone-previews")
+  };
+  let name = preview_name(
+    &format!("{}|still", request.relative_path),
+    modified,
+    meta.len(),
+    "jpg",
+  );
+  let rel_out = format!("{dir_rel}/{name}");
+  let out = checked_file(&request.workspace_root, &rel_out, &["jpg"])?;
+  if !out.exists() {
+    let tool = ffmpeg_path().ok_or_else(ffmpeg_not_found)?;
+    let dir = out.parent().map(Path::to_path_buf).unwrap_or_default();
+    let part = dir.join(format!("{name}.part.jpg"));
+    if let Err(e) = run_ffmpeg(&tool, &still_run(&source, &part, &dir)).await {
+      let _ = std::fs::remove_file(&part);
+      return Ok(serde_json::json!({ "ok": false, "reason": e }));
+    }
+    std::fs::rename(&part, &out).map_err(|e| e.to_string())?;
+  }
+  let bytes = std::fs::read(&out).map_err(|e| e.to_string())?;
+  Ok(serde_json::json!({
+    "ok": true,
+    "base64": base64::engine::general_purpose::STANDARD.encode(bytes),
   }))
 }
 
@@ -2751,6 +2839,23 @@ mod tests {
     assert!(joined.contains("scale=1080:1080:force_original_aspect_ratio=decrease"));
     assert!(joined.contains("-frames:v 1"));
     assert!(!joined.contains("libopenh264"));
+  }
+
+  #[test]
+  fn still_run_fits_in_160() {
+    let run = still_run(
+      Path::new("in.mp4"),
+      Path::new("still.part.jpg"),
+      Path::new("."),
+    );
+    let joined = run.args.join(" ");
+    assert!(
+      joined.contains("scale=160:160:force_original_aspect_ratio=decrease"),
+      "{joined}"
+    );
+    assert!(joined.contains("-frames:v 1"));
+    assert!(joined.contains("-q:v 6"));
+    assert!(joined.ends_with("still.part.jpg"));
   }
 
   #[test]

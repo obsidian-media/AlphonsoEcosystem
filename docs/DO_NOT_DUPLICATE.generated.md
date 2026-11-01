@@ -463,7 +463,7 @@ Source-backed inventory: 373 services and 184 components. Human purpose descript
 | service | `src/services/parallelExecutionService.ts` | `createTaskQueue`, `executeBatch`, `executeParallel`, `executeWithRetry`, `ParallelExecutionOptions`, `ParallelResult`, `ParallelTask` |
 | service | `src/services/phone/boardData.ts` | `BoardData`, `BoardDataProvider`, `localBoardData`, `runResultText`, `sendTextAnswer`, `useBoardData` |
 | service | `src/services/phone/contentCalls.ts` | `CHANGED_ON_COMPUTER`, `CONTENT_CALLS`, `ContentAnswer`, `mediaPreview`, `NOT_OFFERED`, `POST_GONE`, `postsStamp`, `postStamp`, `previewLimitLine`, `PreviewPiece`, `PROJECT_GONE`, `resetContentCallsForTests`, `stepStamp` |
-| service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia` |
+| service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia`, `versionMedia` |
 | service | `src/services/phone/contentStamps.ts` | `postsStamp`, `postStamp`, `stepStamp` |
 | service | `src/services/phone/desktopSignIn.ts` | `createDesktopPhoneSignIn`, `desktopSignInConfig`, `NO_SIGN_IN_PAGE` |
 | service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |
@@ -472,8 +472,8 @@ Source-backed inventory: 373 services and 184 components. Human purpose descript
 | service | `src/services/phone/phoneCrypto.ts` | `generateKeyPair`, `open`, `openAnonymous`, `seal`, `sealAnonymous` |
 | service | `src/services/phone/phoneLink.ts` | `computerKeys`, `listPhones`, `onPhoneCall`, `PairedPhone`, `PAIRING_WINDOW_MS`, `pairingQr`, `PHONE_ACCESS_KEY`, `phoneAccessOn`, `PhoneAuth`, `PHONES_KEY`, `PREVIEW_RESERVE_SHARE`, `previewFits`, `publish`, `pushNotice`, `relayRoom`, `RelaySocket`, `removePhone`, `resetPhoneLinkForTests`, `setPhoneAccess`, `SocketFactory`, `startPhoneLink`, `webSocketFactory` |
 | service | `src/services/phone/phoneMirror.ts` | `CONTENT_POLL_MS`, `MIRROR_BATCH_MS`, `MIRROR_REQUESTS`, `mirrorSnapshots`, `startPhoneMirror` |
-| service | `src/services/phone/phoneNotifications.ts` | `PHONE_NOTIFY_SENT_KEY`, `phoneNotificationsFor`, `phoneNotifySettings`, `startPhoneNotifications` |
-| service | `src/services/phone/phonePreviews.ts` | `ensurePreview`, `FILE_GONE`, `NOT_READY`, `PREVIEW_PIECE_BYTES`, `PreviewInfo`, `PreviewResult`, `readPiece` |
+| service | `src/services/phone/phoneNotifications.ts` | `PHONE_NOTIFY_SENT_KEY`, `PHONE_READY_SENT_KEY`, `phoneNotificationsFor`, `phoneNotifySettings`, `PUSH_STILL_LIMIT`, `readyToCheck`, `sealedNoticeChars`, `startPhoneNotifications`, `withStill` |
+| service | `src/services/phone/phonePreviews.ts` | `ensurePreview`, `FILE_GONE`, `makeStill`, `NOT_READY`, `PREVIEW_PIECE_BYTES`, `PreviewInfo`, `PreviewResult`, `readPiece` |
 | service | `src/services/phone/phoneProtocol.ts` | `decodeMessage`, `encodeMessage`, `MirroredStore`, `openPairingRequest`, `PairingInfo`, `pairingPayload`, `PairingRequest`, `PHONE_MAX_FRAME_BYTES`, `PHONE_PROTOCOL_VERSION`, `PhoneCallName`, `PhoneKeys`, `PhoneMessage`, `PhoneNotification`, `readPairingPayload`, `relayHttpBase`, `sealPairingRequest` |
 | service | `src/services/phone/remoteData.ts` | `ChatData`, `ChatMessage`, `createRemoteData`, `offlineLine`, `PhonePreviewParts`, `PhoneTransport`, `StudioData` |
 | service | `src/services/pluginRegistryService.ts` | `appendPluginAuditEntry`, `discoverDiskPluginManifests`, `executePluginToolRun`, `listPluginAudit`, `listPlugins`, `PLUGIN_AUDIT_SCOPE`, `PLUGIN_MANIFEST_FIELDS`, `PluginAuditEntry`, `PluginAuditInput`, `PluginEntry`, `PLUGINS_SCOPE`, `togglePlugin`, `validatePluginManifestDisk`, `verifyPluginSignatureFromRegistry` |

@@ -21,6 +21,8 @@ export interface PhoneNotification {
   requestId: string;
   stepId?: string;
   actions: Array<'approve' | 'reject' | 'open'>;
+  /** A small JPEG (base64) shown with the notice (phase 2: "ready to check"), only when the push stays small. */
+  still?: string;
 }
 
 export type PhoneMessage =

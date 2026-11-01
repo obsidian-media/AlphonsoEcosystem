@@ -22,6 +22,14 @@ class NotificationService: UNNotificationServiceExtension {
             info["requestId"] = notice.requestId
             info["stepId"] = notice.stepId ?? ""
             content.userInfo = info
+            // A small still of the work ("ready to check"), when the computer could fit one.
+            if let still = notice.still, let data = Data(base64Encoded: still) {
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".jpg")
+                if (try? data.write(to: url)) != nil,
+                   let attachment = try? UNNotificationAttachment(identifier: "still", url: url, options: nil) {
+                    content.attachments = [attachment]
+                }
+            }
         }
         contentHandler(content)
     }
@@ -37,6 +45,7 @@ struct Notice {
     let requestId: String
     let stepId: String?
     let actions: [String]
+    let still: String?
 
     private static func bytes(_ s: String) -> Bytes? {
         var t = s.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
@@ -56,6 +65,6 @@ struct Notice {
               let title = n["title"] as? String, let body = n["body"] as? String,
               let requestId = n["requestId"] as? String
         else { return nil }
-        return Notice(title: title, body: body, requestId: requestId, stepId: n["stepId"] as? String, actions: n["actions"] as? [String] ?? ["open"])
+        return Notice(title: title, body: body, requestId: requestId, stepId: n["stepId"] as? String, actions: n["actions"] as? [String] ?? ["open"], still: n["still"] as? String)
     }
 }

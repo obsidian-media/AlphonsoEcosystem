@@ -790,6 +790,7 @@ pub fn run() {
       media_tools::content_assemble_video,
       media_tools::content_save_motion_clip,
       media_tools::content_phone_preview,
+      media_tools::content_phone_still,
       media_tools::content_read_file_part,
       media_tools::content_whisper_words,
       media_tools::content_allow_media_folder,

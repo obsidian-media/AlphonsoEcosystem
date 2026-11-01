@@ -5,6 +5,8 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Base64;
 import androidx.core.app.NotificationCompat;
 import com.goterl.lazysodium.SodiumAndroid;
@@ -78,6 +80,20 @@ public class PushService extends FirebaseMessagingService {
             n.setContentTitle(notice.optString("title", "Alphonso")).setContentText(notice.optString("body", ""))
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(notice.optString("body", "")))
                 .setContentIntent(openApp("open", requestId, stepId, id));
+            // A small still of the work ("ready to check"), when the computer could fit one.
+            String still = notice.optString("still", "");
+            if (!still.isEmpty()) {
+                try {
+                    byte[] jpeg = Base64.decode(still, Base64.DEFAULT);
+                    Bitmap picture = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
+                    if (picture != null) {
+                        n.setLargeIcon(picture).setStyle(new NotificationCompat.BigPictureStyle()
+                            .bigPicture(picture).setSummaryText(notice.optString("body", "")));
+                    }
+                } catch (IllegalArgumentException e) {
+                    // Not a picture: the notice shows as text.
+                }
+            }
             JSONArray actions = notice.optJSONArray("actions");
             for (int i = 0; actions != null && i < actions.length(); i++) {
                 String a = actions.optString(i);

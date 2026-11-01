@@ -106,6 +106,19 @@ describe('the phone app', () => {
     expect(lock.confirm).not.toHaveBeenCalled();
   });
 
+  it('a ready-to-check notice opens its project in the Studio', async () => {
+    localStorage.setItem('alphonso_phone_pairing_v1', JSON.stringify({ deviceId: 'ph', computerName: 'Studio PC' }));
+    const content = { projects: [{ id: 'p1', brandId: 'b1', name: 'Bakery tour', updatedAtMs: 1, steps: {}, posts: [], media: [] }], brands: [], calendar: [] };
+    const link = fakeLink({ online: true, snapshot: { requests: [], stepOutputs: {}, chat: [], computer: {}, content } });
+    const n = actions();
+    render(<MobileApp signIn={signedIn()} secrets={{ get: async () => null, set: async () => {} }} lock={{ confirm: async () => true }} connect={() => link as any} onNotificationAction={n.onAction} />);
+    await act(async () => { link.fire(); });
+    await screen.findByRole('tab', { name: 'Chat' });
+    await act(async () => { n.fire({ action: 'open', requestId: 'project:p1' }); });
+    expect(screen.getByRole('tab', { name: 'Studio' }).getAttribute('aria-selected')).toBe('true');
+    expect(await screen.findByTestId('studio-project')).toBeTruthy();
+  });
+
   it('Open from a notification shows that request; approving a locked step there asks for Face ID / fingerprint', async () => {
     localStorage.setItem('alphonso_phone_pairing_v1', JSON.stringify({ deviceId: 'ph', computerName: 'Studio PC' }));
     const snap = { requests: [waiting(['publish_or_send'])], stepOutputs: {}, chat: [], computer: {} };

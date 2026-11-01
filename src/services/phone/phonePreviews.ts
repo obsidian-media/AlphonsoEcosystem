@@ -27,6 +27,17 @@ function projectWorking(projectId: string): boolean {
 }
 
 /** Makes (or reuses) the preview of one offered file. */
+/** A notification's still of a picture or video (base64 JPEG), or null when it can't be made. */
+export async function makeStill(ref: MediaRef): Promise<string | null> {
+  try {
+    const root = outputRoot();
+    const r = await invoke<{ ok: boolean; base64?: string }>('content_phone_still', { request: { workspaceRoot: root, relativePath: ref.path } });
+    return r?.ok && r.base64 ? r.base64 : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function ensurePreview(ref: MediaRef): Promise<PreviewResult> {
   let root: string;
   try { root = outputRoot(); } catch (e) { return { ok: false, reason: e instanceof Error ? e.message : String(e) }; }

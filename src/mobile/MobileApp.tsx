@@ -53,6 +53,8 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
   // A step that spends, sends or publishes, or deletes asks for Face ID / fingerprint first.
   const board = useMemo(() => withLockedConfirm(data.board, lock), [data, lock]);
   const [tab, setTab] = useState<Tab>('chat');
+  // A "ready to check" notice names its project as `project:<id>` (phase 2).
+  const [studioProject, setStudioProject] = useState<string | undefined>(undefined);
   const [selected, setSelected] = useState<string | undefined>(undefined);
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
@@ -64,6 +66,7 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
       const off = board.subscribe(() => { if (board.request(requestId)) { clearTimeout(timer); off(); resolve(); } });
     });
     return onNotificationAction(async (a) => {
+      if (a.requestId.startsWith('project:')) { setStudioProject(a.requestId.slice('project:'.length)); setTab('studio'); return; }
       setSelected(a.requestId);
       if (a.action === 'open' || !a.stepId) { setTab('requests'); return; }
       await whenKnown(a.requestId);
@@ -86,7 +89,7 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
       <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
         {tab === 'chat' && <ChatScreen chat={data.chat} />}
         {tab === 'requests' && <BoardDataProvider value={board}><RequestsScreen key={selected || 'all'} selectedRequestId={selected} /></BoardDataProvider>}
-        {tab === 'studio' && <StudioScreen studio={data.studio} lock={lock} />}
+        {tab === 'studio' && <StudioScreen key={studioProject || 'all'} studio={data.studio} lock={lock} openProjectId={studioProject} />}
         {tab === 'calendar' && <CalendarScreen studio={data.studio} lock={lock} />}
         {tab === 'more' && <MoreScreen lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} />}
       </main>

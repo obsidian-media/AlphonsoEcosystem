@@ -379,7 +379,7 @@ mod tests {
     assert_eq!(q.get("port").map(String::as_str), Some("53123"));
     assert_eq!(q.get("method").map(String::as_str), Some("google"));
     assert_eq!(q.get("email").map(String::as_str), Some("a@b.c"));
-    assert!(q.get("x").is_none());
+    assert!(!q.contains_key("x"));
     assert!(parsed.fragment().is_none());
     assert!(sign_in_url("http://example.web.app/", 1, "s", "", "").is_err());
     assert!(sign_in_url("https://example.web.app/", 1, "s", "facebook", "").is_err());
