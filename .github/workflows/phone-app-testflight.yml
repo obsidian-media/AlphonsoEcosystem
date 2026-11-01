@@ -90,9 +90,11 @@ jobs:
           npm ci --no-audit --no-fund
           node scripts/firebase-config.mjs
           npm run build
+          # Capacitor's sync updates the plugin list inside the Xcode project, so the project
+          # must exist first; generated again afterwards to pick up what the sync copied.
+          (cd ios/App && xcodegen generate)
           npx cap sync ios
-          cd ios/App
-          xcodegen generate
+          (cd ios/App && xcodegen generate)
 
       - name: Signing keychain and API key
         env:
