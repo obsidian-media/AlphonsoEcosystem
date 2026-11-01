@@ -495,8 +495,12 @@ jobs:
       - name: Fetch bundled ffmpeg (LGPL)
         run: node scripts/fetch-ffmpeg.mjs linux
 
-      - name: Fetch bundled starter model
-        run: node scripts/fetch-starter-model.mjs
+      # Deliberately NOT fetching the starter model here, as on Windows and macOS.
+      # The 2.11.0 AppImage (starter model plus the ffmpeg added in the closing
+      # phase) came to about 2.08 GB, over GitHub's 2 GiB limit for one release
+      # file ("size must be less than 2147483648"), so 2.11.0 shipped without
+      # Linux. Setup downloads the model on first run (setupFlowService's
+      # network fallback), as it already does on the other two.
 
       - name: Build Tauri app
         env:
