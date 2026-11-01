@@ -1747,6 +1747,193 @@ pub async fn content_save_motion_clip(
   serde_json::json!({ "ok": true, "path": request.out_path })
 }
 
+// ---- Phone previews (phone app, phase 2) ----------------------------------------------
+// A phone checks work as a phone-sized copy made here: video about 480p with sound, a picture
+// at most 1080 pixels on its longer side. The copy is kept in a `phone-previews` folder beside
+// the original (inside the project, so it goes with it) and reused until the original changes.
+
+/// The most a phone may read in one piece (base64 grows it by a third; messages stay under 4 MB).
+pub(crate) const PREVIEW_PIECE_BYTES: u64 = 2_621_440;
+pub(crate) const PREVIEW_FILE_GONE: &str = "The file is no longer on your computer.";
+
+pub(crate) fn preview_run(kind: &str, source: &Path, part: &Path, cwd: &Path) -> FfmpegRun {
+  let mut args = vec![s("-y"), s("-i"), source.to_string_lossy().to_string()];
+  let rest: &[&str] = if kind == "video" {
+    &[
+      "-vf",
+      "scale=-2:480",
+      "-c:v",
+      "libopenh264",
+      "-b:v",
+      "700k",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "64k",
+      "-movflags",
+      "+faststart",
+      "-f",
+      "mp4",
+    ]
+  } else {
+    &[
+      "-vf",
+      "scale=1080:1080:force_original_aspect_ratio=decrease",
+      "-frames:v",
+      "1",
+      "-q:v",
+      "4",
+      "-f",
+      "image2",
+    ]
+  };
+  args.extend(rest.iter().map(s));
+  args.push(part.to_string_lossy().to_string());
+  FfmpegRun {
+    cwd: cwd.to_path_buf(),
+    args,
+  }
+}
+
+/// The preview's file name: changes when the original's path, time or size changes.
+pub(crate) fn preview_name(relative: &str, modified_ms: u128, size: u64, ext: &str) -> String {
+  use sha2::{Digest, Sha256};
+  let digest = Sha256::digest(format!("{relative}|{modified_ms}|{size}").as_bytes());
+  let hex: String = digest.iter().take(12).map(|b| format!("{b:02x}")).collect();
+  format!("{hex}.{ext}")
+}
+
+fn sha256_file(path: &Path) -> Result<String, String> {
+  use sha2::{Digest, Sha256};
+  let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+  Ok(
+    Sha256::digest(&bytes)
+      .iter()
+      .map(|b| format!("{b:02x}"))
+      .collect(),
+  )
+}
+
+/// Reads at most one piece of a file inside the workspace.
+pub(crate) fn read_part(
+  root: &str,
+  relative: &str,
+  offset: u64,
+  length: u64,
+) -> Result<Vec<u8>, String> {
+  use std::io::{Read, Seek, SeekFrom};
+  if length > PREVIEW_PIECE_BYTES {
+    return Err("A piece can be at most 2.5 MB.".to_string());
+  }
+  let path = crate::workspace::resolve_workspace_read_path(root, relative)?;
+  let mut file = std::fs::File::open(&path).map_err(|_| PREVIEW_FILE_GONE.to_string())?;
+  file
+    .seek(SeekFrom::Start(offset))
+    .map_err(|e| e.to_string())?;
+  let mut buf = Vec::new();
+  file
+    .take(length)
+    .read_to_end(&mut buf)
+    .map_err(|e| e.to_string())?;
+  Ok(buf)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhonePreviewRequest {
+  workspace_root: String,
+  relative_path: String,
+  kind: String,
+}
+
+/// Makes (or reuses) the phone-sized copy of a picture or video in the output folder.
+#[tauri::command]
+pub async fn content_phone_preview(
+  request: PhonePreviewRequest,
+) -> Result<serde_json::Value, String> {
+  let kind = if request.kind == "video" {
+    "video"
+  } else {
+    "picture"
+  };
+  let source = match crate::workspace::resolve_workspace_read_path(
+    &request.workspace_root,
+    &request.relative_path,
+  ) {
+    Ok(p) => p,
+    Err(e) => return Ok(serde_json::json!({ "ok": false, "reason": e })),
+  };
+  let meta = match std::fs::metadata(&source) {
+    Ok(m) if m.is_file() => m,
+    _ => return Ok(serde_json::json!({ "ok": false, "reason": PREVIEW_FILE_GONE })),
+  };
+  let modified = meta
+    .modified()
+    .ok()
+    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+    .map(|d| d.as_millis())
+    .unwrap_or(0);
+  let ext = if kind == "video" { "mp4" } else { "jpg" };
+  let parent = Path::new(request.relative_path.trim())
+    .parent()
+    .map(|p| p.to_string_lossy().replace('\\', "/"))
+    .unwrap_or_default();
+  let dir_rel = if parent.is_empty() {
+    "phone-previews".to_string()
+  } else {
+    format!("{parent}/phone-previews")
+  };
+  let name = preview_name(&request.relative_path, modified, meta.len(), ext);
+  let rel_out = format!("{dir_rel}/{name}");
+  let out = checked_file(&request.workspace_root, &rel_out, &[ext])?;
+  if !out.exists() {
+    let tool = ffmpeg_path().ok_or_else(ffmpeg_not_found)?;
+    let dir = out.parent().map(Path::to_path_buf).unwrap_or_default();
+    let part = dir.join(format!("{name}.part.{ext}"));
+    if let Err(e) = run_ffmpeg(&tool, &preview_run(kind, &source, &part, &dir)).await {
+      let _ = std::fs::remove_file(&part);
+      return Ok(serde_json::json!({ "ok": false, "reason": e }));
+    }
+    std::fs::rename(&part, &out).map_err(|e| e.to_string())?;
+  }
+  let bytes = std::fs::metadata(&out).map_err(|e| e.to_string())?.len();
+  Ok(serde_json::json!({
+    "ok": true,
+    "path": rel_out,
+    "bytes": bytes,
+    "sha256": sha256_file(&out)?,
+    "mime": if kind == "video" { "video/mp4" } else { "image/jpeg" },
+  }))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FilePartRequest {
+  workspace_root: String,
+  relative_path: String,
+  offset: u64,
+  length: u64,
+}
+
+/// One piece of a file in the output folder, as base64 (a phone preview travels in pieces).
+#[tauri::command]
+pub fn content_read_file_part(request: FilePartRequest) -> serde_json::Value {
+  use base64::Engine;
+  match read_part(
+    &request.workspace_root,
+    &request.relative_path,
+    request.offset,
+    request.length,
+  ) {
+    Ok(bytes) => {
+      serde_json::json!({ "ok": true, "base64": base64::engine::general_purpose::STANDARD.encode(bytes) })
+    }
+    Err(e) => serde_json::json!({ "ok": false, "reason": e }),
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -2534,5 +2721,65 @@ mod tests {
     assert!(joined.contains("-an"));
     assert!(joined.contains("-c:v libopenh264"));
     assert!(joined.ends_with("s1-v1.part.mp4"));
+  }
+
+  #[test]
+  fn preview_run_video_is_480p_openh264() {
+    let run = preview_run(
+      "video",
+      Path::new("in.mp4"),
+      Path::new("out.part.mp4"),
+      Path::new("."),
+    );
+    let joined = run.args.join(" ");
+    assert!(joined.contains("-vf scale=-2:480"));
+    assert!(joined.contains("-c:v libopenh264"));
+    assert!(joined.contains("-c:a aac"));
+    assert!(joined.contains("+faststart"));
+    assert!(joined.ends_with("out.part.mp4"));
+  }
+
+  #[test]
+  fn preview_run_picture_is_at_most_1080() {
+    let run = preview_run(
+      "picture",
+      Path::new("in.png"),
+      Path::new("out.part.jpg"),
+      Path::new("."),
+    );
+    let joined = run.args.join(" ");
+    assert!(joined.contains("scale=1080:1080:force_original_aspect_ratio=decrease"));
+    assert!(joined.contains("-frames:v 1"));
+    assert!(!joined.contains("libopenh264"));
+  }
+
+  #[test]
+  fn preview_name_changes_with_the_source() {
+    let a = preview_name("shop/p1/output/v1.mp4", 10, 100, "mp4");
+    assert_eq!(a, preview_name("shop/p1/output/v1.mp4", 10, 100, "mp4"));
+    assert_ne!(a, preview_name("shop/p1/output/v1.mp4", 11, 100, "mp4"));
+    assert!(a.ends_with(".mp4"));
+  }
+
+  #[test]
+  fn read_file_part_refuses_more_than_a_piece() {
+    let root = std::env::temp_dir().join(format!("alphonso-part-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("p")).unwrap();
+    std::fs::write(root.join("p/a.mp4"), b"0123456789").unwrap();
+    let r = root.to_string_lossy().to_string();
+    assert_eq!(read_part(&r, "p/a.mp4", 2, 4).unwrap(), b"2345");
+    assert_eq!(read_part(&r, "p/a.mp4", 8, 4).unwrap(), b"89");
+    assert!(read_part(&r, "p/a.mp4", 0, PREVIEW_PIECE_BYTES + 1).is_err());
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn read_file_part_refuses_outside_the_workspace() {
+    let root = std::env::temp_dir().join(format!("alphonso-part-out-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let r = root.to_string_lossy().to_string();
+    assert!(read_part(&r, "../secret.mp4", 0, 4).is_err());
+    assert!(read_part(&r, "C:/Windows/win.ini", 0, 4).is_err());
+    let _ = std::fs::remove_dir_all(&root);
   }
 }
