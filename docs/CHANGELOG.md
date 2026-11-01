@@ -10,6 +10,16 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ## [Unreleased]
 
+### Fixed (2.11.0 QA, 2026-11-01)
+- Miya Studio no longer crashes when a review's answer lists come back as objects (React error 31); reviews already saved that way show their text.
+- ComfyUI: Runtime Hub's Start, a step and a picture request start the ComfyUI chosen in Settings (else one with image models) instead of an old Alphonso copy that crashed at start; a picture request starts ComfyUI itself; the wait allows a slow first start.
+- A ComfyUI last used days ago is no longer stopped the moment it starts.
+- "Research …", "look up …", "find out …" or anything asked "with sources" is always Hector's research with cited sources, never a reply from memory.
+- No more "jose failed: connector_setup_required" every 30 seconds: WhatsApp is checked in the background only once it is switched on with its keys.
+- Your own Hermes profiles: Alphonso now reads whether a profile's API server is on, and its port, from the profile's .env too, so profiles show the right address and whether they answer.
+- Connecting one of your Hermes profiles to an agent reads its key (API_SERVER_KEY in its .env) when you click "Use for this agent", unless you type one, and keeps it in the system keychain; the app window never holds it.
+- The nine "Hermes — <agent>" boxes in Connectors are gone; Settings → Agents → Hermes profiles shows each agent's Hermes address with a Test button. Connections saved there before keep working.
+
 ## [2.11.0] — 2026-10-31 (outside tools through MCP, PR 372; the Hermes gateway, PR 373; the closing phase, PR 374, with OpenRouter and the resource manager; the user-guide rewrite and the fixes found by the live checks)
 
 ### Docs and release checks (2026-10-31)

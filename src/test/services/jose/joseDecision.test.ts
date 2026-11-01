@@ -20,6 +20,25 @@ describe('decideJoseRoute: answer directly or plan', () => {
     expect(llm).not.toHaveBeenCalled();
   });
 
+  // 2.11.0 QA (owner, 2026-11-01): "research the latest trends in AI agents" was answered from a
+  // small model's memory, with no sources. Asking for research is Hector's work, whatever the model says.
+  it('plans a request for research without asking the model, also when phrased as a question', async () => {
+    for (const text of [
+      'research the latest trends in AI agents',
+      'Please look up the current price of a Raspberry Pi 5',
+      'Can you research what changed in Tailwind v4?',
+      'find out who makes the best budget drones',
+      'Give me the news on electric cars, with sources',
+    ]) {
+      expect(await decideJoseRoute(text), text).toMatchObject({ route: 'plan', source: 'rule' });
+    }
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  it('still answers a question about research itself directly', async () => {
+    expect(await decideJoseRoute('What is research?')).toMatchObject({ route: 'direct', source: 'rule' });
+  });
+
   it('plans an explicit Jose request without asking the model', async () => {
     expect(await decideJoseRoute('/jose research the market')).toMatchObject({ route: 'plan', source: 'rule' });
     expect(llm).not.toHaveBeenCalled();

@@ -360,12 +360,12 @@ Source-backed inventory: 354 services and 183 components. Human purpose descript
 | service | `src/services/hermes/hermesStepHooks.ts` | `getHermesHooks`, `HermesStepHooks`, `withHermesHooks` |
 | service | `src/services/hermes/hermesTools.ts` | `HERMES_DIDNT_START`, `HERMES_TOOL_PREFIX`, `hermesLocalModel`, `hermesToolFor`, `hermesToolLabel`, `isHermesTool`, `saveProfileModel`, `startHermesTool`, `stopHermesTool` |
 | service | `src/services/hermes/profileModels.ts` | `hermesLocalModel`, `savedProfileModel`, `SavedProfileModel`, `saveProfileModel` |
-| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NO_KEY`, `NOT_FOUND`, `onUserProfilesChanged`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
+| service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NOT_FOUND`, `onUserProfilesChanged`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
 | service | `src/services/jose/joseAdapt.ts` | `AdaptContext`, `adaptPlan`, `PlanChange`, `setPlanAdapterForTests` |
-| service | `src/services/jose/joseDecision.ts` | `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision` |
+| service | `src/services/jose/joseDecision.ts` | `asksForResearch`, `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision` |
 | service | `src/services/jose/joseEffects.ts` | `ACTION_EFFECTS`, `COMMAND_CHECKED_EFFECTS`, `DEFAULT_EFFECT_APPROVALS`, `EFFECT_LABELS`, `effectsNeedingApproval`, `getEffectApprovals`, `inferEffects`, `JOSE_EFFECTS`, `JoseEffect`, `LOCKED_EFFECTS`, `stepEffectsToWaitFor` |
 | service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets` |
 | service | `src/services/jose/joseFinish.ts` | `NOTHING_NEW`, `saveRequestDecisions` |
@@ -471,7 +471,7 @@ Source-backed inventory: 354 services and 183 components. Human purpose descript
 | service | `src/services/repoAuditService.ts` | `getLastRepoAudit`, `listRepoAudits`, `REPO_AUDIT_SCOPE`, `runRepoAudit`, `summarizeRepoAudit` |
 | service | `src/services/resourceCostService.ts` | `collectResourceSnapshot`, `listResourceSnapshots`, `summarizeResourceUsage` |
 | service | `src/services/resources/admission.ts` | `Admission`, `decideAdmission`, `MARGIN`, `memoryWaitLine`, `tooBigLine` |
-| service | `src/services/resources/ensureTools.ts` | `EnsureResult`, `ensureTools` |
+| service | `src/services/resources/ensureTools.ts` | `COMFY_START_WAIT_MS`, `EnsureResult`, `ensureTools`, `pickComfyInstall`, `startComfyUi` |
 | service | `src/services/resources/freeMemory.ts` | `FreeResult`, `freeThings` |
 | service | `src/services/resources/idleStop.ts` | `DEFAULT_IDLE_MINUTES`, `FAST_POLL_MS`, `getIdleMinutes`, `idleTick`, `latestResources`, `onResources`, `resetIdleStopForTests`, `setIdleMinutes`, `SLOW_POLL_MS`, `startResourceWatcher` |
 | service | `src/services/resources/resourceGate.ts` | `admitStep`, `Admitted`, `firstStepNeed`, `NotAdmitted`, `RESERVATION_SETTLE_MS`, `reservedTotal`, `resetGateForTests`, `runAdmitted`, `WAIT_RECHECK_MS` |

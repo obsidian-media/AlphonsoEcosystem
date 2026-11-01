@@ -51,6 +51,7 @@ import { InstallLocationPicker } from './InstallLocationPicker';
 import { MemorySection } from './resources/MemorySection';
 import type { InstallLocation } from '../services/runtimeManagerService';
 import { invoke } from '@tauri-apps/api/core';
+import { startComfyUi } from '../services/resources/ensureTools';
 
 interface ToolStatus {
   name: string;
@@ -721,6 +722,12 @@ export default function RuntimeManagerView() {
         const result = await installTool(name, onProgress);
         showMsg(result.message);
         await load();
+      } else if (name === 'comfyui' && (action === 'start' || action === 'start-existing')) {
+        // The ComfyUI chosen in Settings first, else one with image models (2.11.0 QA).
+        showMsg('Starting ComfyUI. The first start can take a few minutes.');
+        const result = await startComfyUi(tools);
+        showMsg('reason' in result ? result.reason : 'ComfyUI is running.', !result.ok);
+        await load();
       } else if (action === 'start') {
         const result = await startTool(name);
         showMsg(result.message);
@@ -740,7 +747,7 @@ export default function RuntimeManagerView() {
     } catch (e) {
       showMsg(String(e), true);
     }
-  }, [load, existingComfy, installLocation]);
+  }, [load, existingComfy, installLocation, tools]);
 
   const handleAutostartToggle = useCallback(async (name: string, enabled: boolean) => {
     try {

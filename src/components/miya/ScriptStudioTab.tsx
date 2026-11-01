@@ -2,6 +2,7 @@ import React from 'react';
 import { StepPanel } from './StepPanel';
 import { chosenVersionOf } from '../../services/contentFactory/contentProjectService';
 import type { ContentProject, StepId } from '../../services/contentFactory/contentTypes';
+import { textItems } from '../../lib/readableValue';
 
 interface Research {
   hector?: { references?: { title: string; url: string; whyItWorks: string; hook: string }[]; patterns?: string[]; hookIdeas?: string[] };
@@ -109,18 +110,18 @@ export function ScriptStudioTab({ project, runStep, chooseVersion, approve, send
           <div>
             <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Nova</div>
             <div className="text-(--text-1)">Hook {review.nova?.hookScore ?? '–'}/10 · Script {review.nova?.scriptScore ?? '–'}/10</div>
-            {(review.nova?.mustFix || []).length > 0 && (
-              <ul className="list-disc pl-4 text-(--warning)">{review.nova!.mustFix!.map((m) => <li key={m}>{m}</li>)}</ul>
+            {textItems(review.nova?.mustFix).length > 0 && (
+              <ul className="list-disc pl-4 text-(--warning)">{textItems(review.nova?.mustFix).map((m, i) => <li key={i}>{m}</li>)}</ul>
             )}
-            {(review.nova?.notes || []).length > 0 && <ul className="list-disc pl-4 text-(--text-2)">{review.nova!.notes!.map((n) => <li key={n}>{n}</li>)}</ul>}
+            {textItems(review.nova?.notes).length > 0 && <ul className="list-disc pl-4 text-(--text-2)">{textItems(review.nova?.notes).map((n, i) => <li key={i}>{n}</li>)}</ul>}
           </div>
           <div>
             <div className="text-[10px] font-bold uppercase tracking-widest text-(--text-3)">Maria</div>
             {(review.maria?.pieces || []).map((p) => (
-              <div key={p.pieceId} className="text-(--text-2)">{p.pieceId}: {p.score}/10{p.weakPoints?.length ? ` — ${p.weakPoints.join('; ')}` : ''}</div>
+              <div key={p.pieceId} className="text-(--text-2)">{p.pieceId}: {p.score}/10{textItems(p.weakPoints).length ? ` — ${textItems(p.weakPoints).join('; ')}` : ''}</div>
             ))}
-            {(review.maria?.honestyIssues || []).length > 0 && (
-              <ul className="list-disc pl-4 text-(--error)">{review.maria!.honestyIssues!.map((h) => <li key={h}>{h}</li>)}</ul>
+            {textItems(review.maria?.honestyIssues).length > 0 && (
+              <ul className="list-disc pl-4 text-(--error)">{textItems(review.maria?.honestyIssues).map((h, i) => <li key={i}>{h}</li>)}</ul>
             )}
           </div>
         </div>

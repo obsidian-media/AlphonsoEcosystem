@@ -97,6 +97,9 @@ pub(crate) fn url_is_profile(url: &str, port: u16) -> bool {
 /// The real Authorization header for a profile reference, read from the
 /// keychain, or an error when `url` isn't that profile's own address.
 pub(crate) fn resolve_profile_auth(header: &str, url: &str) -> Result<Option<String>, String> {
+  if let Some(agent) = user_ref_agent(header) {
+    return resolve_user_profile_auth(agent, url).map(Some);
+  }
   let Some(agent) = profile_ref_agent(header) else {
     return Ok(None);
   };
@@ -554,7 +557,7 @@ fn read_user_profile(name: &str, folder: &Path) -> UserProfile {
 pub(crate) fn find_user_profiles(root: &Path) -> Vec<UserProfile> {
   let mut found = Vec::new();
   if root.join("config.yaml").is_file() {
-    found.push(read_user_profile("default", root));
+    found.push(read_user_profile_with_env("default", root));
   }
   if let Ok(entries) = std::fs::read_dir(root.join("profiles")) {
     let mut names: Vec<String> = entries
@@ -564,10 +567,161 @@ pub(crate) fn find_user_profiles(root: &Path) -> Vec<UserProfile> {
       .collect();
     names.sort();
     for name in names {
-      found.push(read_user_profile(&name, &root.join("profiles").join(&name)));
+      found.push(read_user_profile_with_env(
+        &name,
+        &root.join("profiles").join(&name),
+      ));
     }
   }
   found
+}
+
+/// The three API server settings Hermes also takes from a profile's `.env`
+/// (2.11.0 QA, owner 2026-11-01). The key and every other line are never read here.
+const ENV_API_ENABLED: &str = "API_SERVER_ENABLED";
+const ENV_API_PORT: &str = "API_SERVER_PORT";
+/// The profile's own API server key, read only by `hermes_user_profile_link`
+/// when you connect the profile to an agent, and kept in the OS keychain.
+const ENV_API_KEY: &str = "API_SERVER_KEY";
+
+/// One `NAME=value` from a `.env` text (the last one wins, as in a shell):
+/// `export ` allowed, quotes removed, an unquoted ` #` comment dropped.
+pub(crate) fn env_value(text: &str, name: &str) -> Option<String> {
+  text.lines().rev().find_map(|line| {
+    let line = line.trim();
+    let line = line.strip_prefix("export ").unwrap_or(line).trim_start();
+    let (key, value) = line.split_once('=')?;
+    if key.trim() != name {
+      return None;
+    }
+    let value = value.trim();
+    let unquoted = value
+      .strip_prefix('"')
+      .and_then(|v| v.strip_suffix('"'))
+      .or_else(|| value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')));
+    Some(match unquoted {
+      Some(v) => v.to_string(),
+      None => value.split(" #").next().unwrap_or("").trim().to_string(),
+    })
+  })
+}
+
+fn env_bool(value: &str) -> Option<bool> {
+  match value.trim().to_ascii_lowercase().as_str() {
+    "true" | "1" | "yes" | "on" => Some(true),
+    "false" | "0" | "no" | "off" => Some(false),
+    _ => None,
+  }
+}
+
+fn read_env(folder: &Path) -> Option<String> {
+  let path = folder.join(".env");
+  if !std::fs::metadata(&path).is_ok_and(|m| m.len() <= MAX_CONFIG_BYTES) {
+    return None;
+  }
+  std::fs::read_to_string(path).ok()
+}
+
+/// A profile's `.env` switches its API server on and sets its port over
+/// config.yaml (Alphonso's call: as Hermes's own environment overrides do).
+pub(crate) fn apply_env_api_server(profile: &mut UserProfile, env: &str) {
+  if let Some(on) = env_value(env, ENV_API_ENABLED).and_then(|v| env_bool(&v)) {
+    profile.api_server.on = on;
+  }
+  if let Some(port) = env_value(env, ENV_API_PORT).and_then(|v| v.parse::<u16>().ok()) {
+    profile.api_server.port = Some(port);
+  }
+}
+
+/// A profile as Hermes sees it: config.yaml, then the API server lines of `.env`.
+fn read_user_profile_with_env(name: &str, folder: &Path) -> UserProfile {
+  let mut profile = read_user_profile(name, folder);
+  if profile.readable {
+    if let Some(env) = read_env(folder) {
+      apply_env_api_server(&mut profile, &env);
+    }
+  }
+  profile
+}
+
+/// What the window saves instead of one of your own profiles' keys.
+const USER_KEY_REF_PREFIX: &str = "alphonso-user-profile:";
+const NO_USER_LINK: &str = "This agent isn't connected to one of your Hermes profiles.";
+const USER_API_SERVER_OFF: &str = "This profile's API server is off. Switch it on in Hermes first.";
+const NO_KEY_IN_ENV: &str =
+  "This profile has no API_SERVER_KEY in its .env file. Type its key, or set one in Hermes.";
+
+fn user_key_name(agent: &str) -> String {
+  format!("hermes:user:{agent}:key")
+}
+
+fn user_port_name(agent: &str) -> String {
+  format!("hermes:user:{agent}:port")
+}
+
+pub(crate) fn user_ref_agent(header: &str) -> Option<&str> {
+  let agent = header
+    .strip_prefix("Bearer ")?
+    .strip_prefix(USER_KEY_REF_PREFIX)?;
+  valid_agent(agent).then_some(agent)
+}
+
+fn resolve_user_profile_auth(agent: &str, url: &str) -> Result<String, String> {
+  let port = crate::os_keychain_store::secure_credential_get(user_port_name(agent))?
+    .and_then(|p| p.parse::<u16>().ok())
+    .ok_or_else(|| NO_USER_LINK.to_string())?;
+  if !url_is_profile(url, port) {
+    return Err("That address is not this agent's Hermes profile.".to_string());
+  }
+  let key = crate::os_keychain_store::secure_credential_get(user_key_name(agent))?
+    .ok_or_else(|| NO_USER_LINK.to_string())?;
+  Ok(format!("Bearer {key}"))
+}
+
+/// The key to keep for a profile: the one you typed, else its `.env`'s API_SERVER_KEY.
+pub(crate) fn link_key(typed: Option<&str>, env: Option<&str>) -> Result<String, String> {
+  if let Some(key) = typed.map(str::trim).filter(|k| !k.is_empty()) {
+    return Ok(key.to_string());
+  }
+  env
+    .and_then(|e| env_value(e, ENV_API_KEY))
+    .filter(|k| !k.trim().is_empty())
+    .ok_or_else(|| NO_KEY_IN_ENV.to_string())
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserProfileLink {
+  pub url: String,
+  pub key_ref: String,
+}
+
+/// Connects `agent` to one of your own profiles: its address, and its key kept
+/// in the OS keychain (typed, else read from the profile's `.env` now). The
+/// window gets only a reference the backend swaps for the key at that address.
+#[tauri::command]
+pub fn hermes_user_profile_link(
+  agent: String,
+  name: String,
+  key: Option<String>,
+) -> Result<UserProfileLink, String> {
+  if !valid_agent(&agent) {
+    return Err(BAD_AGENT.to_string());
+  }
+  let root = user_root_now().ok_or_else(|| USER_HERMES_NOT_FOUND.to_string())?;
+  let folder = user_profile_folder(&root, &name).ok_or_else(|| USER_PROFILE_GONE.to_string())?;
+  let profile = read_user_profile_with_env(&name, &folder);
+  let port = match (profile.api_server.on, profile.api_server.port) {
+    (true, Some(port)) => port,
+    _ => return Err(USER_API_SERVER_OFF.to_string()),
+  };
+  let secret = link_key(key.as_deref(), read_env(&folder).as_deref())?;
+  crate::os_keychain_store::secure_credential_set(user_key_name(&agent), secret)?;
+  crate::os_keychain_store::secure_credential_set(user_port_name(&agent), port.to_string())?;
+  Ok(UserProfileLink {
+    url: profile_url(port),
+    key_ref: format!("{USER_KEY_REF_PREFIX}{agent}"),
+  })
 }
 
 fn user_root_now() -> Option<PathBuf> {
@@ -882,6 +1036,65 @@ approvals:
       .unwrap();
     assert_eq!(before, after);
     let _ = std::fs::remove_dir_all(&root);
+  }
+
+  // 2.11.0 QA (owner, 2026-11-01): profiles switch their API server on in .env.
+  #[test]
+  fn env_api_server_lines_win_and_the_key_is_never_in_the_listing() {
+    let root = temp_root("env");
+    let a = root.join("profiles").join("a");
+    std::fs::create_dir_all(&a).unwrap();
+    std::fs::write(a.join("config.yaml"), "model:\n  provider: openrouter\n").unwrap();
+    std::fs::write(
+      a.join(".env"),
+      "OPENROUTER_API_KEY=sk-or-secret\nAPI_SERVER_ENABLED=\"true\"\nexport API_SERVER_PORT=8647 # mine\nAPI_SERVER_KEY='profile-secret'\n",
+    )
+    .unwrap();
+    let found = find_user_profiles(&root);
+    assert!(found[0].api_server.on);
+    assert_eq!(found[0].api_server.port, Some(8647));
+    let listed = serde_json::to_string(&found).unwrap();
+    assert!(!listed.contains("secret"), "{listed}");
+    let _ = std::fs::remove_dir_all(&root);
+  }
+
+  #[test]
+  fn env_values_parse_like_a_shell() {
+    let env = "# API_SERVER_PORT=1\nAPI_SERVER_PORT=8644\nAPI_SERVER_PORT=\"8645\"\nAPI_SERVER_ENABLED=off\nX = 'a b'\n";
+    assert_eq!(env_value(env, "API_SERVER_PORT").as_deref(), Some("8645"));
+    assert_eq!(env_value(env, "X").as_deref(), Some("a b"));
+    assert_eq!(env_value(env, "MISSING"), None);
+    let mut p = read_user_profile("x", Path::new("/nowhere"));
+    p.api_server.on = true;
+    apply_env_api_server(&mut p, env);
+    assert!(!p.api_server.on);
+    assert_eq!(p.api_server.port, Some(8645));
+  }
+
+  #[test]
+  fn link_key_prefers_what_you_typed_then_the_env() {
+    let env = "API_SERVER_KEY=from-env\n";
+    assert_eq!(link_key(Some(" typed "), Some(env)).unwrap(), "typed");
+    assert_eq!(link_key(Some("  "), Some(env)).unwrap(), "from-env");
+    assert_eq!(
+      link_key(None, Some("API_SERVER_KEY=\n")).unwrap_err(),
+      NO_KEY_IN_ENV
+    );
+    assert_eq!(link_key(None, None).unwrap_err(), NO_KEY_IN_ENV);
+  }
+
+  #[test]
+  fn user_profile_reference_is_separate_from_alphonsos_own() {
+    assert_eq!(
+      user_ref_agent("Bearer alphonso-user-profile:hector"),
+      Some("hector")
+    );
+    assert_eq!(
+      profile_ref_agent("Bearer alphonso-user-profile:hector"),
+      None
+    );
+    assert_eq!(user_ref_agent("Bearer alphonso-profile:hector"), None);
+    assert_eq!(user_ref_agent("Bearer alphonso-user-profile:../x"), None);
   }
 
   #[test]

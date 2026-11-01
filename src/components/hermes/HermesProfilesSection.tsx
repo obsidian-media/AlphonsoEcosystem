@@ -11,6 +11,7 @@ import { listOwnProfiles, profileModelChoices, removeProfile, setProfileModel, s
 import { savedProfileModel } from '../../services/hermes/profileModels';
 import { ENV_NOT_CHECKED, connectUserProfile, findUserProfiles, type UserProfileView } from '../../services/hermes/userProfiles';
 import { setAgentProvider } from '../../services/modelSelectionService';
+import { getHermesAgentEndpoint, getHermesAgentHealth } from '../../services/connectors/hermesAgentConnector';
 
 const modelValue = (m: { kind: string; model: string }) => `${m.kind}:${m.model}`;
 const modelLabel = (m: ProfileModel) => (m.kind === 'ollama' ? m.model : 'A free OpenRouter model');
@@ -88,6 +89,9 @@ export function HermesProfilesSection() {
       {agents.map((agent) => {
         const profile = own.find((p) => p.agent === agent.id);
         const saved = savedProfileModel(agent.id);
+        // An agent connected to a Hermes profile that isn't Alphonso's own (yours, or one added
+        // by hand before 2.11.1): its address and a Test (they used to be pink boxes in Connectors).
+        const linkedUrl = profile ? '' : getHermesAgentEndpoint(agent.id).url;
         return (
           <div key={agent.id} data-testid={`hermes-row-${agent.id}`} className="flex flex-wrap items-center gap-3 rounded-xl bg-(--surface-2) p-3">
             <div className="text-sm font-semibold text-(--text-1) w-24 shrink-0">{agent.name}</div>
@@ -96,6 +100,18 @@ export function HermesProfilesSection() {
                 onClick={() => void run(`setup-${agent.id}`, () => setUpProfile(agent.id), `${agent.name} now uses a Hermes profile.`)}>
                 {`Set up a Hermes profile for ${agent.name}`}
               </Button>
+            )}
+            {linkedUrl && (
+              <>
+                <span data-testid={`hermes-linked-${agent.id}`} className="text-xs text-(--text-2)">{`Connected to ${linkedUrl}`}</span>
+                <Button size="sm" variant="ghost" data-testid={`hermes-test-${agent.id}`} disabled={busy !== null}
+                  onClick={() => void run(`test-${agent.id}`, async () => {
+                    const result = await getHermesAgentHealth(agent.id);
+                    return result.ok ? { ok: true } : { ok: false, reason: `${agent.name}'s Hermes profile didn't answer: ${result.error || 'no answer'}` };
+                  }, `${agent.name}'s Hermes profile answers.`)}>
+                  Test
+                </Button>
+              </>
             )}
             {profile && (
               <>
@@ -174,7 +190,7 @@ export function HermesProfilesSection() {
                     type="password"
                     data-testid={`hermes-connect-key-${p.name}`}
                     aria-label={`Key for ${p.name}`}
-                    placeholder="This profile's API key"
+                    placeholder="Key (empty: read from its .env)"
                     autoComplete="off"
                     className="rounded-lg bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
                     value={connectKey[p.name] || ''}

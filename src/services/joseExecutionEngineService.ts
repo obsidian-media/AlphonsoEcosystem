@@ -1356,7 +1356,7 @@ async function checkOllamaAvailable(endpoint: any) {
 export async function runPipelineShortcuts({ commandText, onProgress }: { commandText: string; onProgress?: (event: any) => void }): Promise<any | null> {
   const creativeIntent = detectCreativeIntent(commandText);
   if (creativeIntent) {
-    const routing = await routeToCreativeTool(creativeIntent);
+    const routing = await routeToCreativeTool(creativeIntent, () => onProgress?.({ stage: 'starting_tool', tool: 'comfyui', message: 'Starting ComfyUI. The first start can take a few minutes.' }));
     if (routing && !routing.ok) {
       onProgress?.({ stage: 'creative_routing_no_tool', intent: creativeIntent, error: routing.error });
       return { ok: false, reason: routing.error, needsRuntime: routing.needsRuntime !== false, notAvailable: routing.notAvailable === true, command: null };

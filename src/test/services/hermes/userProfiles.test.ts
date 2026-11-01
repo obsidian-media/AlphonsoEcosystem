@@ -65,13 +65,41 @@ describe("the user's own Hermes profiles", () => {
     expect(health?.[1]).toMatchObject({ method: 'GET', headers: {} });
   });
 
-  it('connects a profile to an agent and remembers which one it is', async () => {
-    invoke.mockResolvedValueOnce([base]);
-    expect(await connectUserProfile('research', 'hector', 'secret-key-1234567890')).toEqual({ ok: true });
-    expect(saved.hector).toEqual({ url: 'http://127.0.0.1:9100', key: 'secret-key-1234567890' });
+  // 2.11.0 QA (owner, 2026-11-01): the key comes from the profile's .env on click, kept by the
+  // backend in the keychain; the window only ever holds a reference to it.
+  it('connects a profile through the backend, which keeps the key, and remembers which one it is', async () => {
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'hermes_find_user_profiles') return [base];
+      if (cmd === 'hermes_user_profile_link') return { url: 'http://127.0.0.1:9100', keyRef: 'alphonso-user-profile:hector' };
+      return null;
+    });
+    expect(await connectUserProfile('research', 'hector', '')).toEqual({ ok: true });
+    expect(invoke).toHaveBeenCalledWith('hermes_user_profile_link', { agent: 'hector', name: 'research', key: null });
+    expect(saved.hector).toEqual({ url: 'http://127.0.0.1:9100', key: 'alphonso-user-profile:hector' });
     expect(userProfileFor('hector')).toEqual({ name: 'research', folder: 'C:/h/profiles/research' });
+  });
+
+  it('passes a key you typed to the backend, and never keeps it in the window', async () => {
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'hermes_find_user_profiles') return [base];
+      if (cmd === 'hermes_user_profile_link') return { url: 'http://127.0.0.1:9100', keyRef: 'alphonso-user-profile:hector' };
+      return null;
+    });
+    expect(await connectUserProfile('research', 'hector', ' secret-key-1234567890 ')).toEqual({ ok: true });
+    expect(invoke).toHaveBeenCalledWith('hermes_user_profile_link', { agent: 'hector', name: 'research', key: 'secret-key-1234567890' });
+    expect(JSON.stringify(saved)).not.toContain('secret-key');
     expect(JSON.stringify(localStorage)).not.toContain('secret-key');
-    invoke.mockResolvedValueOnce([{ ...base, apiServer: { on: false } }]);
+  });
+
+  it("says why when the backend can't connect it, and saves nothing", async () => {
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'hermes_find_user_profiles') return [base];
+      if (cmd === 'hermes_user_profile_link') throw new Error('This profile has no API_SERVER_KEY in its .env file. Type its key, or set one in Hermes.');
+      return null;
+    });
+    expect(await connectUserProfile('research', 'hector', '')).toEqual({ ok: false, reason: 'This profile has no API_SERVER_KEY in its .env file. Type its key, or set one in Hermes.' });
+    expect(saved.hector).toBeUndefined();
+    invoke.mockImplementation(async () => [{ ...base, apiServer: { on: false } }]);
     expect(await connectUserProfile('research', 'nova', 'k')).toEqual({ ok: false, reason: API_SERVER_OFF });
   });
 });

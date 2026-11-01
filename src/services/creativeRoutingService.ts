@@ -36,7 +36,7 @@ export function detectCreativeIntent(commandText: string): string | null {
   return null;
 }
 
-export async function routeToCreativeTool(intent: string): Promise<RouteResult | null> {
+export async function routeToCreativeTool(intent: string, onStarting?: () => void): Promise<RouteResult | null> {
   if (intent !== 'image_generation') return null;
   let statuses: Array<{ name: string; status?: string; running?: boolean }> | undefined;
   try {
@@ -45,9 +45,11 @@ export async function routeToCreativeTool(intent: string): Promise<RouteResult |
   } catch { return null; }
   const comfy = (statuses || []).find((s) => s.name === IMAGE_TOOL);
   if (comfy && (comfy.running || comfy.status === 'running')) return { ok: true, tool: IMAGE_TOOL };
-  return {
-    ok: false,
-    error: 'ComfyUI is not running. Start it in Runtime Hub; it is the image tool Alphonso uses.',
-    needsRuntime: true,
-  };
+  // Start it (the ComfyUI chosen in Settings first) instead of sending you to Runtime Hub
+  // (2.11.0 QA, owner 2026-11-01).
+  onStarting?.();
+  const { ensureTools } = await import('./resources/ensureTools');
+  const started = await ensureTools([IMAGE_TOOL]);
+  if ('reason' in started) return { ok: false, error: started.reason, needsRuntime: true };
+  return { ok: true, tool: IMAGE_TOOL };
 }
