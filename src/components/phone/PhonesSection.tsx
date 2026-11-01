@@ -9,6 +9,7 @@ import {
 import {
   isSignedIn, phoneAccessAvailable, phoneAuth, phoneRelayUrl, signInComputer, signedInEmail, type SignInMethod,
 } from '../../services/phone/phoneAccount';
+import { writeClipboard } from '../../services/browserAutomationService';
 
 function lastUsed(ms: number | null): string {
   if (!ms) return 'Not used yet';
@@ -25,6 +26,7 @@ export function PhonesSection({ computerName = 'This computer' }: { computerName
   const [choosing, setChoosing] = useState(false);
   const [email, setEmail] = useState('');
   const [qr, setQr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [access, setAccess] = useState(phoneAccessOn());
   const [message, setMessage] = useState<string | null>(null);
@@ -72,12 +74,18 @@ export function PhonesSection({ computerName = 'This computer' }: { computerName
       )}
       {signedIn && <p className="text-xs text-[var(--text-muted)]">Signed in as {signedInEmail()}</p>}
       {signedIn && !qr && (
-        <Button onClick={async () => setQr(await pairingQr({ relayUrl, computerName }))}>Pair a phone</Button>
+        <Button onClick={async () => { setCopied(false); setQr(await pairingQr({ relayUrl, computerName })); }}>Pair a phone</Button>
       )}
       {qr && (
         <div className="space-y-2">
           <p className="text-xs">Scan this with the Alphonso app. It works once, for 10 minutes.</p>
           <div data-testid="phone-pairing-qr" className="inline-block rounded bg-white p-2"><QRCodeCanvas value={qr} size={180} /></div>
+          <p className="text-xs text-[var(--text-muted)]">Can't scan? Copy this code and paste it in the app.</p>
+          <div className="flex items-center gap-2">
+            <input data-testid="phone-pairing-code" aria-label="Pairing code" readOnly value={qr} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 rounded border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-xs" />
+            <Button onClick={async () => { await writeClipboard(qr); setCopied(true); }}>Copy the code</Button>
+            {copied && <span className="text-xs">Copied.</span>}
+          </div>
         </div>
       )}
       {phones.length > 0 && (

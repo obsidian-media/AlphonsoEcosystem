@@ -16,6 +16,8 @@ const { phones, link } = vi.hoisted(() => {
   return { phones, link };
 });
 vi.mock('../../../services/phone/phoneLink', () => link);
+const clipboard = vi.hoisted(() => ({ writeClipboard: vi.fn(async () => undefined) }));
+vi.mock('../../../services/browserAutomationService', () => clipboard);
 
 import { setPhoneSignInProvider } from '../../../services/phone/phoneAccount';
 import { PhonesSection } from '../../../components/phone/PhonesSection';
@@ -52,6 +54,17 @@ describe('PhonesSection', () => {
     expect(await screen.findByText(/Scan this with the Alphonso app/)).toBeTruthy();
     expect(screen.getByTestId('phone-pairing-qr')).toBeTruthy();
     expect(link.startPhoneLink).toHaveBeenCalled();
+  });
+
+  it("shows the pairing code as text with a Copy button, for a phone that can't scan", async () => {
+    setPhoneSignInProvider(provider(true));
+    render(<PhonesSection />);
+    fireEvent.click(await screen.findByRole('button', { name: /Pair a phone/ }));
+    const code = await screen.findByTestId('phone-pairing-code');
+    expect((code as HTMLInputElement).value).toBe('alphonso-pair:{"x":1}');
+    fireEvent.click(screen.getByRole('button', { name: 'Copy the code' }));
+    await waitFor(() => expect(clipboard.writeClipboard).toHaveBeenCalledWith('alphonso-pair:{"x":1}'));
+    expect(await screen.findByText('Copied.')).toBeTruthy();
   });
 
   it('lists phones with last use', () => {
