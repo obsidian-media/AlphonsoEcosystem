@@ -1,0 +1,171 @@
+name: Phone app to TestFlight
+
+# Builds the phone app (mobile/, Capacitor) for iPhone, signs it and uploads it to TestFlight.
+# Run by hand. It replaces the old Swift companion's TestFlight upload (same app ID,
+# com.alphonso.companion; owner, 2026-11-01).
+#
+# Signing: Xcode's automatic signing with the App Store Connect API key makes and renews the
+# provisioning profiles for the app and its notification extension; the distribution
+# certificate is the one already in IOS_CERT_DER / IOS_KEY_PEM.
+# Secrets: PHONE_ASC_KEY (.p8 text), PHONE_ASC_KEY_ID, PHONE_ASC_ISSUER_ID,
+#          PHONE_IOS_FIREBASE_PLIST (base64 of GoogleService-Info.plist), APPLE_TEAM_ID,
+#          IOS_CERT_DER, IOS_KEY_PEM.
+# Variables: VITE_PHONE_RELAY_URL, VITE_PHONE_EMAIL_LINK_URL (the phone's build settings).
+#
+# Version: the desktop's version (package.json); build number 200 + the run number, above
+# the old companion's last build (146).
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phone-app-testflight
+  cancel-in-progress: false
+
+env:
+  VITE_PHONE_RELAY_URL: ${{ vars.VITE_PHONE_RELAY_URL }}
+  VITE_PHONE_EMAIL_LINK_URL: ${{ vars.VITE_PHONE_EMAIL_LINK_URL }}
+  XCODEGEN_VERSION: 2.46.0
+  XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+
+jobs:
+  testflight:
+    name: Build, sign and upload
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Check the secrets are there
+        env:
+          A: ${{ secrets.PHONE_ASC_KEY }}
+          B: ${{ secrets.PHONE_ASC_KEY_ID }}
+          C: ${{ secrets.PHONE_ASC_ISSUER_ID }}
+          D: ${{ secrets.PHONE_IOS_FIREBASE_PLIST }}
+          E: ${{ secrets.APPLE_TEAM_ID }}
+          F: ${{ secrets.IOS_CERT_DER }}
+          G: ${{ secrets.IOS_KEY_PEM }}
+        run: |
+          missing=""
+          [ -n "$A" ] || missing="$missing PHONE_ASC_KEY"
+          [ -n "$B" ] || missing="$missing PHONE_ASC_KEY_ID"
+          [ -n "$C" ] || missing="$missing PHONE_ASC_ISSUER_ID"
+          [ -n "$D" ] || missing="$missing PHONE_IOS_FIREBASE_PLIST"
+          [ -n "$E" ] || missing="$missing APPLE_TEAM_ID"
+          [ -n "$F" ] || missing="$missing IOS_CERT_DER"
+          [ -n "$G" ] || missing="$missing IOS_KEY_PEM"
+          if [ -n "$missing" ]; then echo "::error::Missing secrets:$missing"; exit 1; fi
+          [ -n "$VITE_PHONE_RELAY_URL" ] || { echo "::error::Repository variable VITE_PHONE_RELAY_URL is not set."; exit 1; }
+
+      - name: Select Xcode 26
+        run: |
+          XCODE=$(ls /Applications | grep "^Xcode_2[6-9]" | sort -V | tail -1)
+          [ -n "$XCODE" ] || { echo "::error::No Xcode 26 on this runner."; exit 1; }
+          sudo xcode-select -s "/Applications/$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Install XcodeGen ${{ env.XCODEGEN_VERSION }}
+        run: |
+          curl -sSL -o "$RUNNER_TEMP/xcodegen.zip" "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          echo "${XCODEGEN_SHA256}  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP/xcodegen"
+          echo "$RUNNER_TEMP/xcodegen/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Build the web part and the Xcode project
+        env:
+          FIREBASE_IOS_PLIST_BASE64: ${{ secrets.PHONE_IOS_FIREBASE_PLIST }}
+        run: |
+          npm ci --no-audit --no-fund
+          cd mobile
+          npm ci --no-audit --no-fund
+          node scripts/firebase-config.mjs
+          npm run build
+          npx cap sync ios
+          cd ios/App
+          xcodegen generate
+
+      - name: Signing keychain and API key
+        env:
+          IOS_CERT_DER: ${{ secrets.IOS_CERT_DER }}
+          IOS_KEY_PEM: ${{ secrets.IOS_KEY_PEM }}
+          PHONE_ASC_KEY: ${{ secrets.PHONE_ASC_KEY }}
+          PHONE_ASC_KEY_ID: ${{ secrets.PHONE_ASC_KEY_ID }}
+        run: |
+          set -e
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '[:space:]"')
+          echo "$IOS_CERT_DER" | base64 --decode > "$RUNNER_TEMP/cert.cer"
+          echo "$IOS_KEY_PEM" | base64 --decode > "$RUNNER_TEMP/key.pem"
+          security import "$RUNNER_TEMP/cert.cer" -t cert -k "$KEYCHAIN_PATH" -T /usr/bin/codesign -T /usr/bin/security
+          security import "$RUNNER_TEMP/key.pem" -t priv -f openssl -A -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
+          rm -f "$RUNNER_TEMP/cert.cer" "$RUNNER_TEMP/key.pem"
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          KEY_FILE="$RUNNER_TEMP/AuthKey_${PHONE_ASC_KEY_ID}.p8"
+          printf '%s\n' "$PHONE_ASC_KEY" > "$KEY_FILE"
+          echo "ASC_KEY_FILE=$KEY_FILE" >> "$GITHUB_ENV"
+
+      - name: Archive
+        working-directory: mobile/ios/App
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.PHONE_ASC_KEY_ID }}
+          ASC_ISSUER: ${{ secrets.PHONE_ASC_ISSUER_ID }}
+        run: |
+          VERSION=$(node -p "require('../../../package.json').version")
+          BUILD=$((200 + GITHUB_RUN_NUMBER))
+          echo "Version $VERSION, build $BUILD"
+          xcodebuild archive \
+            -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_FILE" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER" \
+            CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM="$TEAM_ID" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD"
+
+      - name: Export and upload to TestFlight
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.PHONE_ASC_KEY_ID }}
+          ASC_ISSUER: ${{ secrets.PHONE_ASC_ISSUER_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/export.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_FILE" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER"
+          echo "Uploaded. TestFlight shows it after Apple finishes processing (usually 5 to 30 minutes)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clean up
+        if: always()
+        run: |
+          [ -n "${KEYCHAIN_PATH:-}" ] && security delete-keychain "$KEYCHAIN_PATH" || true
+          [ -n "${ASC_KEY_FILE:-}" ] && rm -f "$ASC_KEY_FILE" || true

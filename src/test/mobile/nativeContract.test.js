@@ -59,7 +59,7 @@ describe("the phone app's native code", () => {
   it('claims the Firebase link domain on both phones, from the build, not a fixed name', () => {
     const entitlements = read('mobile/ios/App/App/App.entitlements');
     expect(entitlements).toContain('<string>applinks:$(PHONE_LINK_HOST)</string>');
-    expect(read('mobile/scripts/firebase-config.mjs')).toContain('PHONE_LINK_HOST = ${project}.firebaseapp.com');
+    expect(read('mobile/scripts/firebase-config.mjs')).toContain('PHONE_LINK_HOST = ${linkProject}.firebaseapp.com');
     const manifest = read('mobile/android/app/src/main/AndroidManifest.xml');
     expect(manifest).toMatch(/<intent-filter android:autoVerify="true">[\s\S]*android:host="\$\{phoneLinkHost\}"/);
     expect(read('mobile/android/app/build.gradle')).toContain('phoneLinkHost');

@@ -22,9 +22,23 @@ const out = {
 // PHONE_LINK_HOST: the email sign-in link's domain, the project's own <project>.firebaseapp.com,
 // where Firebase publishes the files that let the link open the app. Without a project it is
 // a domain that resolves nowhere, so the entitlement stays valid.
-function writeXcconfig(reversedClientId) {
-  const linkHost = project ? `PHONE_LINK_HOST = ${project}.firebaseapp.com` : 'PHONE_LINK_HOST = example.invalid';
+function writeXcconfig(reversedClientId, linkProject = project) {
+  const linkHost = linkProject ? `PHONE_LINK_HOST = ${linkProject}.firebaseapp.com` : 'PHONE_LINK_HOST = example.invalid';
   fs.writeFileSync(out.xcconfig, `// Written by mobile/scripts/firebase-config.mjs; not committed.\nGOOGLE_REVERSED_CLIENT_ID = ${reversedClientId || ''}\n${linkHost}\n`);
+}
+const plistValue = (plist, key) => new RegExp(`<key>${key}</key>\\s*<string>([^<]+)</string>`).exec(plist)?.[1] || '';
+
+// In CI (iPhone build): the iOS config file given as FIREBASE_IOS_PLIST_BASE64, no Google
+// sign-in needed. The project comes from the file itself.
+const givenPlist = String(process.env.FIREBASE_IOS_PLIST_BASE64 || '').trim();
+if (givenPlist && !token) {
+  const plist = Buffer.from(givenPlist, 'base64');
+  const text = plist.toString('utf8');
+  if (plistValue(text, 'BUNDLE_ID') !== appId) throw new Error(`FIREBASE_IOS_PLIST_BASE64 is not the config for ${appId}.`);
+  fs.writeFileSync(out.plist, plist);
+  writeXcconfig(plistValue(text, 'REVERSED_CLIENT_ID'), plistValue(text, 'PROJECT_ID'));
+  console.log(`Firebase iOS config written for ${appId} from FIREBASE_IOS_PLIST_BASE64.`);
+  process.exit(0);
 }
 
 if (!project || !token) {
