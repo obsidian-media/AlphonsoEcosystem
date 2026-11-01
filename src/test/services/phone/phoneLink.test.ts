@@ -11,6 +11,7 @@ import { generateKeyPair } from '../../../services/phone/phoneCrypto';
 import { decodeMessage, encodeMessage, readPairingPayload, sealPairingRequest } from '../../../services/phone/phoneProtocol';
 import {
   PHONE_ACCESS_KEY, computerKeys, listPhones, onPhoneCall, pairingQr, phoneAccessOn, removePhone, resetPhoneLinkForTests, setPhoneAccess, startPhoneLink,
+  publish, relayRoom, previewFits, PREVIEW_RESERVE_SHARE,
   type RelaySocket,
 } from '../../../services/phone/phoneLink';
 
@@ -167,5 +168,38 @@ describe('phoneLink', () => {
     expect(everything).not.toContain(keys.privateKey);
     expect((await computerKeys()).privateKey).toBe(keys.privateKey);
     expect(localStorage.getItem(PHONE_ACCESS_KEY)).toBeNull();
+  });
+
+  it("counts what it sends against the relay's daily limit, from when the window started", async () => {
+    const { factory, sockets } = fakeSocketFactory();
+    let t = 1_000;
+    await makeQr(t);
+    startPhoneLink({ relayUrl: RELAY, auth, socket: factory, now: () => t });
+    await flush(); await flush();
+    expect(relayRoom(t)).toEqual({ left: Infinity, resetsAtMs: null });
+    sockets.at(-1)!.emit({ type: 'ready', limits: { bytesPerDay: 100_000, maxFrameChars: 6_000_000 } });
+    await pairOnePhone(sockets);
+    publish('chat', { text: 'hello' }, 'change');
+    await flush(); await flush();
+    const sent = sockets.at(-1)!.sent.filter((m: any) => m.type === 'to').map((m: any) => JSON.stringify(m).length).reduce((a, b) => a + b, 0);
+    expect(sent).toBeGreaterThan(0);
+    const room = relayRoom(t);
+    expect(room.left).toBeLessThan(100_000);
+    expect(room.left).toBeGreaterThanOrEqual(100_000 - sent);
+    expect(room.resetsAtMs).toBe(1_000 + 24 * 3600 * 1000);
+    t += 24 * 3600 * 1000;
+    expect(relayRoom(t)).toEqual({ left: 100_000, resetsAtMs: null });
+  });
+
+  it('a preview fits only while it leaves the reserve for approvals and chat', async () => {
+    const { factory, sockets } = fakeSocketFactory();
+    await makeQr(1_000);
+    startPhoneLink({ relayUrl: RELAY, auth, socket: factory, now: () => 1_000 });
+    await flush(); await flush();
+    expect(previewFits(10_000_000, 1_000)).toEqual({ ok: true });
+    sockets.at(-1)!.emit({ type: 'ready', limits: { bytesPerDay: 1_000_000, maxFrameChars: 6_000_000 } });
+    expect(PREVIEW_RESERVE_SHARE).toBe(0.1);
+    expect(previewFits(900_000, 1_000)).toEqual({ ok: true });
+    expect(previewFits(900_001, 1_000)).toEqual({ ok: false, resetsAtMs: null });
   });
 });

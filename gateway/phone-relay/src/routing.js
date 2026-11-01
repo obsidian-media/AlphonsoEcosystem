@@ -46,7 +46,7 @@ export function createRelay({ verifyToken, store, limiter, now = () => Date.now(
       if (old && old !== conn) old.close(NOT_YOURS);
       live.set(deviceId, conn);
       who.set(conn, { uid, deviceId, role });
-      conn.send({ type: 'ready' });
+      conn.send(limiter.limits ? { type: 'ready', limits: limiter.limits } : { type: 'ready' });
     },
 
     async message(conn, msg) {

@@ -7,9 +7,13 @@ vi.mock('../../../services/phone/contentMirror', () => ({ mediaOffered: (r: unkn
 vi.mock('../../../services/phone/phonePreviews', () => ({
   ensurePreview: (r: unknown) => ensurePreview(r),
   readPiece: (p: string, i: number) => readPiece(p, i),
+  PREVIEW_PIECE_BYTES: 2.5 * 1024 * 1024,
 }));
 
-import { mediaPreview } from '../../../services/phone/contentCalls';
+const previewFits = vi.fn();
+vi.mock('../../../services/phone/phoneLink', () => ({ previewFits: (c: number) => previewFits(c) }));
+
+import { mediaPreview, previewLimitLine } from '../../../services/phone/contentCalls';
 
 const ref = { projectId: 'p1', path: 'shop/p1/output/v1.mp4', kind: 'video' };
 
@@ -17,6 +21,7 @@ beforeEach(() => {
   offered.mockReset().mockReturnValue(true);
   ensurePreview.mockReset().mockResolvedValue({ ok: true, path: 'shop/p1/output/phone-previews/a.mp4', bytes: 6_000_000, sha256: 'abc', mime: 'video/mp4', pieces: 3 });
   readPiece.mockReset().mockResolvedValue('QUJD');
+  previewFits.mockReset().mockReturnValue({ ok: true });
 });
 
 describe('media.preview', () => {
@@ -47,5 +52,19 @@ describe('media.preview', () => {
     await expect(mediaPreview({ ref: { projectId: 'p1', path: 5, kind: 'video' }, piece: 0 })).rejects.toThrow();
     await expect(mediaPreview({ ref: { ...ref, kind: 'audio' }, piece: 0 })).rejects.toThrow();
     expect(offered).not.toHaveBeenCalled();
+  });
+
+  it("a piece that would pass the relay's daily limit is refused in plain words before it is read", async () => {
+    previewFits.mockReturnValue({ ok: false, resetsAtMs: new Date(2026, 10, 2, 14, 5).getTime() });
+    await expect(mediaPreview({ ref, piece: 0 })).rejects.toThrow("Today's limit for previews is used up; it resets at 14:05.");
+    expect(readPiece).not.toHaveBeenCalled();
+    expect(previewFits.mock.calls[0][0]).toBeGreaterThan(2.5 * 1024 * 1024 * 4 / 3);
+  });
+
+  it('the last, smaller piece is measured by its own size', async () => {
+    await mediaPreview({ ref, piece: 2 });
+    const lastPiece = 6_000_000 - 2 * 2.5 * 1024 * 1024;
+    expect(previewFits.mock.calls[0][0]).toBeLessThan(lastPiece * 2);
+    expect(previewLimitLine(null)).toBe("Today's limit for previews is used up; try again tomorrow.");
   });
 });

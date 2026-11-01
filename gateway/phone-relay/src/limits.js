@@ -15,6 +15,8 @@ export function createLimiter(limits = LIMITS) {
   const seconds = new Map(); // deviceId → { startMs, count }
   const days = new Map(); // deviceId → { startMs, chars }
   return {
+    // Told to each device when it connects, so a device can keep under them (phone app phase 2).
+    limits: { bytesPerDay: limits.bytesPerDay, maxFrameChars: limits.maxFrameChars },
     check(deviceId, chars, nowMs) {
       if (chars > limits.maxFrameChars) return 'too_large';
       const sec = seconds.get(deviceId);

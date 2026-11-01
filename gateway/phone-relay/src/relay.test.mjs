@@ -30,7 +30,7 @@ async function setup({ now = () => 1000, limits } = {}) {
 
 test('a frame is forwarded only between devices paired under the same account', async () => {
   const { relay, computer, phone } = await setup();
-  assert.deepEqual(computer.sent.at(-1), { type: 'ready' });
+  assert.deepEqual(computer.sent.at(-1), { type: 'ready', limits: { bytesPerDay: LIMITS.bytesPerDay, maxFrameChars: LIMITS.maxFrameChars } });
   await relay.message(phone, { type: 'to', deviceId: 'pc-1', frame: 'sealed-1' });
   assert.deepEqual(computer.sent.at(-1), { type: 'from', deviceId: 'ph-1', frame: 'sealed-1' });
   await relay.message(computer, { type: 'to', deviceId: 'ph-1', frame: 'sealed-2' });

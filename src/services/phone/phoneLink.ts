@@ -46,11 +46,15 @@ interface LinkState {
   accessListeners: Set<() => void>;
   versions: Map<MirroredStore, number>;
   now: () => number;
+  /** The relay's limits, told in its `ready` message (phone app phase 2). */
+  relayLimits: { bytesPerDay: number } | null;
+  /** What this computer has sent in the relay's current 24-hour window. */
+  sent: { startMs: number; chars: number } | null;
 }
 
 let state: LinkState = freshState();
 function freshState(): LinkState {
-  return { keys: null, pairing: null, socket: null, stopped: true, handlers: new Set(), accessListeners: new Set(), versions: new Map(), now: () => Date.now() };
+  return { keys: null, pairing: null, socket: null, stopped: true, handlers: new Set(), accessListeners: new Set(), versions: new Map(), now: () => Date.now(), relayLimits: null, sent: null };
 }
 export function resetPhoneLinkForTests(): void { state.socket?.close(); state = freshState(); }
 
@@ -130,11 +134,43 @@ export function onPhoneCall(handler: CallHandler): () => void {
   return () => state.handlers.delete(handler);
 }
 
+const RELAY_DAY_MS = 24 * 3600 * 1000;
+
+// The relay counts each sealed frame against the sender's daily allowance, in a 24-hour
+// window starting with the first frame (gateway/phone-relay/src/limits.js); this mirrors it.
+function countSent(chars: number): void {
+  const nowMs = state.now();
+  if (!state.sent || nowMs - state.sent.startMs >= RELAY_DAY_MS) state.sent = { startMs: nowMs, chars: 0 };
+  state.sent.chars += chars;
+}
+
+/** How much more the relay will forward from this computer today, and when that resets
+ *  (Infinity until the relay has said its limits). */
+export function relayRoom(nowMs: number = state.now()): { left: number; resetsAtMs: number | null } {
+  const limits = state.relayLimits;
+  if (!limits) return { left: Infinity, resetsAtMs: null };
+  if (!state.sent || nowMs - state.sent.startMs >= RELAY_DAY_MS) return { left: limits.bytesPerDay, resetsAtMs: null };
+  return { left: Math.max(0, limits.bytesPerDay - state.sent.chars), resetsAtMs: state.sent.startMs + RELAY_DAY_MS };
+}
+
+/** The share of the relay's daily allowance previews leave for approvals, chat and the mirror. */
+export const PREVIEW_RESERVE_SHARE = 0.1;
+
+/** Whether a preview piece of about `chars` sealed characters may be sent now. */
+export function previewFits(chars: number, nowMs: number = state.now()): { ok: true } | { ok: false; resetsAtMs: number | null } {
+  const limits = state.relayLimits;
+  if (!limits) return { ok: true };
+  const room = relayRoom(nowMs);
+  if (chars <= room.left - limits.bytesPerDay * PREVIEW_RESERVE_SHARE) return { ok: true };
+  return { ok: false, resetsAtMs: room.resetsAtMs };
+}
+
 async function sendTo(phone: PairedPhone, msg: PhoneMessage, type: 'to' | 'push' = 'to'): Promise<void> {
   const socket = state.socket;
   if (!socket) return;
   const keys = await computerKeys();
   const sealed = await encodeMessage(msg, { theirPublic: phone.publicKey, myPrivate: keys.privateKey });
+  countSent(sealed.length);
   socket.send(JSON.stringify(type === 'to' ? { type, deviceId: phone.deviceId, frame: sealed } : { type, deviceId: phone.deviceId, sealed }));
 }
 
@@ -197,7 +233,12 @@ export function startPhoneLink(deps: {
     socket.onMessage((text) => {
       let msg: { type?: string; deviceId?: string; frame?: string };
       try { msg = JSON.parse(text); } catch { return; }
-      if (msg.type === 'ready') { delay = BACKOFF_START_MS; return; }
+      if (msg.type === 'ready') {
+        delay = BACKOFF_START_MS;
+        const perDay = (msg as { limits?: { bytesPerDay?: unknown } }).limits?.bytesPerDay;
+        if (typeof perDay === 'number' && perDay > 0) state.relayLimits = { bytesPerDay: perDay };
+        return;
+      }
       if (msg.type === 'from' && typeof msg.deviceId === 'string' && typeof msg.frame === 'string') void onFrame(msg.deviceId, msg.frame);
     });
     socket.onClose(() => {

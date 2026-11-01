@@ -33,13 +33,13 @@ test('health, pairing and a forwarded frame over the real server', async () => {
     const pc = socket(base);
     await pc.opened;
     pc.send({ type: 'hello', idToken: 'tok-ann', deviceId: 'pc-1', role: 'computer' });
-    assert.deepEqual(await pc.next(), { type: 'ready' });
+    assert.equal((await pc.next()).type, 'ready');
     const pair = await fetch(`http://${base}/pair`, { method: 'POST', body: JSON.stringify({ idToken: 'tok-ann', computerId: 'pc-1', phoneDeviceId: 'ph-1' }) });
     assert.equal(pair.status, 200);
     const ph = socket(base);
     await ph.opened;
     ph.send({ type: 'hello', idToken: 'tok-ann', deviceId: 'ph-1', role: 'phone' });
-    assert.deepEqual(await ph.next(), { type: 'ready' });
+    assert.equal((await ph.next()).type, 'ready');
     ph.send({ type: 'to', deviceId: 'pc-1', frame: 'sealed' });
     assert.deepEqual(await pc.next(), { type: 'from', deviceId: 'ph-1', frame: 'sealed' });
     const removed = await fetch(`http://${base}/pair/ph-1`, { method: 'DELETE', headers: { authorization: 'Bearer tok-ann' } });
