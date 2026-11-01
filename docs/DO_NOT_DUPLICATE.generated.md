@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 372 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 373 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -278,7 +278,8 @@ Source-backed inventory: 372 services and 184 components. Human purpose descript
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
 | service | `src/services/contentFactory/adCopyExport.ts` | `AD_NETWORKS`, `AdCopy`, `adCsv`, `AdNetwork`, `adsForNetwork`, `writeAdCsv` |
 | service | `src/services/contentFactory/brandResults.ts` | `Band`, `BANDS`, `brandMedian`, `BrandResultRow`, `brandResultRows`, `FIRST_POSTS`, `MAIN_METRIC`, `MIN_POSTS_TO_COMPARE`, `permissionBanners`, `postBand` |
-| service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
+| service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
+| service | `src/services/contentFactory/calendarView.ts` | `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek` |
 | service | `src/services/contentFactory/chatMedia.ts` | `askChatMedia`, `CHAT_CLIP_SECONDS`, `CHAT_MEDIA_LABEL`, `CHAT_MUSIC_SECONDS`, `chatMediaDoneSince`, `chatMediaFor`, `ChatMediaKind`, `chatMediaKindOf`, `chatMediaPromptOf`, `ChatMediaResult`, `checkChatMedia`, `executeChatMedia`, `listChatMedia`, `markChatMediaShown`, `NO_AUDIOCRAFT`, `NO_VIDEO_MODEL` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
 | service | `src/services/contentFactory/comfyCharacter.ts` | `buildCharacterWorkflow`, `CHARACTER_REFERENCE_MISSING`, `characterReferenceAvailable`, `makeCharacterPicture`, `REFERENCE_CHECKPOINT`, `resetReferenceCacheForTests`, `withCharacterPrompt` |

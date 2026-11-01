@@ -7,7 +7,7 @@ import type { StepOutput } from '../jose/joseStepOutputs';
 import type { BoardData } from './boardData';
 import type { MirroredStore, PhoneCallName } from './phoneProtocol';
 import type { MediaRef, PhoneProject } from './contentMirror';
-import type { CalendarItem } from '../contentFactory/calendarItems';
+import type { CalendarItem } from '../contentFactory/calendarView';
 import { fetchPreview, type PreviewStore } from '../../mobile/previewFetch';
 
 export interface PhoneTransport {

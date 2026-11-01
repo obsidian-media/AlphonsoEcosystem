@@ -44,6 +44,8 @@ describe('the phone app', () => {
     await act(async () => { link.fire(); });
     fireEvent.click(await screen.findByRole('tab', { name: 'Studio' }));
     expect(await screen.findByTestId('studio-project-p1')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Calendar' }));
+    expect(await screen.findByTestId('mobile-calendar')).toBeTruthy();
   });
 
   it("the Requests tab renders the desktop's board in one column", async () => {

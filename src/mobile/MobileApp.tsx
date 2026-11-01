@@ -14,6 +14,7 @@ import { ChatScreen } from './screens/Chat';
 import { RequestsScreen } from './screens/Requests';
 import { MoreScreen } from './screens/More';
 import { StudioScreen } from './screens/Studio';
+import { CalendarScreen } from './screens/Calendar';
 import type { PhonePreviewParts } from '../services/phone/remoteData';
 import { OfflineBanner } from './screens/Offline';
 import { withLockedConfirm } from './lockedApproval';
@@ -23,8 +24,8 @@ export const PHONE_LOCK_KEY = 'alphonso_phone_lock_v1';
  *  confirm (locked approvals); without it, such a phone may still open the app. */
 export interface PhoneLock { confirm(reason: string, opts?: { strict?: boolean }): Promise<boolean> }
 
-type Tab = 'chat' | 'requests' | 'studio' | 'more';
-const TAB_NAMES: Record<Tab, string> = { chat: 'Chat', requests: 'Requests', studio: 'Studio', more: 'More' };
+type Tab = 'chat' | 'requests' | 'studio' | 'calendar' | 'more';
+const TAB_NAMES: Record<Tab, string> = { chat: 'Chat', requests: 'Requests', studio: 'Studio', calendar: 'Calendar', more: 'More' };
 
 /** A notification's button, given by the packaging once the app is open and unlocked. */
 export interface NotificationAction { action: 'approve' | 'reject' | 'open'; requestId: string; stepId?: string }
@@ -86,9 +87,10 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
         {tab === 'chat' && <ChatScreen chat={data.chat} />}
         {tab === 'requests' && <BoardDataProvider value={board}><RequestsScreen key={selected || 'all'} selectedRequestId={selected} /></BoardDataProvider>}
         {tab === 'studio' && <StudioScreen studio={data.studio} lock={lock} />}
+        {tab === 'calendar' && <CalendarScreen studio={data.studio} lock={lock} />}
         {tab === 'more' && <MoreScreen lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} />}
       </main>
-      <nav role="tablist" className="grid grid-cols-4 border-t border-(--border) text-xs">
+      <nav role="tablist" className="grid grid-cols-5 border-t border-(--border) text-xs">
         {(Object.keys(TAB_NAMES) as Tab[]).map((t) => (
           <button key={t} role="tab" type="button" aria-selected={tab === t} onClick={() => setTab(t)} className={`py-3 ${tab === t ? 'font-semibold text-(--accent)' : 'text-(--text-2)'}`}>
             {TAB_NAMES[t]}
