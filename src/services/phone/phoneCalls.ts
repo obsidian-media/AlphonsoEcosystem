@@ -6,6 +6,7 @@
 import { getJoseRequest } from '../jose/joseRequestStore';
 import { appendPhoneChat, listPhoneChat } from './phoneChatLog';
 import { mirrorSnapshots } from './phoneMirror';
+import { mediaPreview } from './contentCalls';
 import type { PhoneCallName, PhoneMessage } from './phoneProtocol';
 
 export const NOT_FROM_PHONE = 'Not available from the phone yet.';
@@ -43,6 +44,7 @@ async function answerChat(text: string, messageId: string): Promise<unknown> {
 }
 
 export const PHONE_CALLS: Record<PhoneCallName, Call> = {
+  'media.preview': (args) => mediaPreview(args),
   'chat.send': async (args) => {
     const text = str(args.text).trim();
     const messageId = str(args.messageId);
