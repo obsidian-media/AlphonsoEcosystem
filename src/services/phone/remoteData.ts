@@ -48,6 +48,9 @@ const EMPTY: Mirror = {
   memory: { decisions: [], cleanup: null }, projects: [], boardroom: { threads: [], messages: {} },
 };
 
+/** Why a call was refused (empty when it wasn't). */
+export function reasonOf(result: { ok: boolean } & { reason?: string }): string { return result.ok ? '' : String(result.reason || ''); }
+
 /** Memory, Projects and Boardroom on the phone (phase 3 part A): the mirrored stores and their calls. */
 export interface MoreData {
   memory(): MemoryMirror;

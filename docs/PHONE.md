@@ -5,8 +5,8 @@ see the requests on the board, approve or reject a step that waits for you, and 
 on or cancel a request. Your computer still does all the work and makes every decision; the
 phone only asks.
 
-This is phase 1. Anything else (editing plans, Miya Studio, settings) stays on the computer
-for now; the More tab lists it as "On your computer for now".
+Teams, Skills, Settings and connectors stay on the computer for now; the More tab lists them
+as "On your computer for now".
 
 ## What you need
 
@@ -60,6 +60,20 @@ A code from another app is refused, and the app says where to find the right one
   see it, change its time, or cancel it (cancelling asks for Face ID or your fingerprint).
   Moving a post already scheduled on YouTube or Facebook asks first, as on the computer.
   Content Studio drafts and Marcus's messages are changed on the computer.
+- **More → Memory:** what Echo remembers, newest first, with a search your computer answers.
+  When Echo suggests tidying up, **Apply** or **Dismiss** it here. To add something, say
+  "Remember that …" in Chat (the keyboard's microphone works); forgetting or editing a
+  decision is done on the computer.
+- **More → Projects:** your saved projects. **Start** a run, open its latest run on the
+  Requests board (approve its waiting steps there), or make a **New project** with the same
+  questions as the computer's Projects page.
+- **More → Boardroom:** the threads, newest first. Open one to read its last 30 messages
+  (**Show earlier** for more), write with @mentions (the agents reply on your computer, as on
+  the desktop), start a new thread, and run **Conclude**, **Distribute** (review only, or a
+  Slack post that waits for your approval) and **Creative brief**. A message that needs your
+  confirmation stays hidden until you tap **Reveal** and confirm with Face ID or your
+  fingerprint. Boardroom only notifies you when a thread needs your decision; you can
+  **Acknowledge** it here.
 - **Notifications:** when a step or plan waits for you, a request finishes or fails, or a
   review needs you. The text is opened only on your phone; Apple, Google and the relay see
   only "New activity".

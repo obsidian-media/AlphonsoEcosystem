@@ -119,6 +119,32 @@ describe('the phone app', () => {
     expect(await screen.findByTestId('studio-project')).toBeTruthy();
   });
 
+  it('a Boardroom notice opens its thread under More', async () => {
+    localStorage.setItem('alphonso_phone_pairing_v1', JSON.stringify({ deviceId: 'ph', computerName: 'Studio PC' }));
+    const boardroom = { threads: [{ id: 't1', topic: 'Launch', updatedAtMs: 1 }], messages: { t1: [{ id: 'm1', threadId: 't1', speaker: 'boardroom', content: 'Needs your call', kind: 'escalation', seq: 1, acknowledged: false }] } };
+    const link = fakeLink({ online: true, snapshot: { requests: [], stepOutputs: {}, chat: [], computer: {}, boardroom } });
+    const n = actions();
+    render(<MobileApp signIn={signedIn()} secrets={{ get: async () => null, set: async () => {} }} lock={{ confirm: async () => true }} connect={() => link as any} onNotificationAction={n.onAction} />);
+    await act(async () => { link.fire(); });
+    await screen.findByRole('tab', { name: 'Chat' });
+    await act(async () => { n.fire({ action: 'open', requestId: 'boardroom:t1' }); });
+    expect(screen.getByRole('tab', { name: 'More' }).getAttribute('aria-selected')).toBe('true');
+    expect(await screen.findByText('Needs your call')).toBeTruthy();
+    expect(screen.getByLabelText('Message')).toBeTruthy();
+  });
+
+  it("a project's latest run opens on the Requests board", async () => {
+    localStorage.setItem('alphonso_phone_pairing_v1', JSON.stringify({ deviceId: 'ph', computerName: 'Studio PC' }));
+    const projects = [{ id: 'p1', name: 'Shop', intake: { name: 'Shop', description: 'x' }, runs: [], createdAtMs: 1, latestRequestId: 'r1' }];
+    const link = fakeLink({ online: true, snapshot: { requests: [request], stepOutputs: {}, chat: [], computer: {}, projects } });
+    render(<MobileApp signIn={signedIn()} secrets={{ get: async () => null, set: async () => {} }} lock={{ confirm: async () => true }} connect={() => link as any} />);
+    await act(async () => { link.fire(); });
+    fireEvent.click(await screen.findByRole('tab', { name: 'More' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Projects' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open the latest run' }));
+    expect(screen.getByRole('tab', { name: 'Requests' }).getAttribute('aria-selected')).toBe('true');
+  });
+
   it('Open from a notification shows that request; approving a locked step there asks for Face ID / fingerprint', async () => {
     localStorage.setItem('alphonso_phone_pairing_v1', JSON.stringify({ deviceId: 'ph', computerName: 'Studio PC' }));
     const snap = { requests: [waiting(['publish_or_send'])], stepOutputs: {}, chat: [], computer: {} };

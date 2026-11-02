@@ -56,6 +56,8 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
   // A "ready to check" notice names its project as `project:<id>` (phase 2).
   const [studioProject, setStudioProject] = useState<string | undefined>(undefined);
   const [selected, setSelected] = useState<string | undefined>(undefined);
+  // A Boardroom escalation notice names its thread as `boardroom:<id>` (phase 3 part A).
+  const [boardroomThread, setBoardroomThread] = useState<string | undefined>(undefined);
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
     if (!onNotificationAction) return undefined;
@@ -67,6 +69,7 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
     });
     return onNotificationAction(async (a) => {
       if (a.requestId.startsWith('project:')) { setStudioProject(a.requestId.slice('project:'.length)); setTab('studio'); return; }
+      if (a.requestId.startsWith('boardroom:')) { setBoardroomThread(a.requestId.slice('boardroom:'.length)); setTab('more'); return; }
       setSelected(a.requestId);
       if (a.action === 'open' || !a.stepId) { setTab('requests'); return; }
       await whenKnown(a.requestId);
@@ -91,11 +94,15 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
         {tab === 'requests' && <BoardDataProvider value={board}><RequestsScreen key={selected || 'all'} selectedRequestId={selected} /></BoardDataProvider>}
         {tab === 'studio' && <StudioScreen key={studioProject || 'all'} studio={data.studio} lock={lock} openProjectId={studioProject} />}
         {tab === 'calendar' && <CalendarScreen studio={data.studio} lock={lock} />}
-        {tab === 'more' && <MoreScreen lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} />}
+        {tab === 'more' && (
+          <MoreScreen key={boardroomThread || 'more'} more={data.more} lock={lock} openThreadId={boardroomThread}
+            onOpenRequest={(requestId) => { setSelected(requestId); setTab('requests'); }}
+            lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} />
+        )}
       </main>
       <nav role="tablist" className="grid grid-cols-5 border-t border-(--border) text-xs">
         {(Object.keys(TAB_NAMES) as Tab[]).map((t) => (
-          <button key={t} role="tab" type="button" aria-selected={tab === t} onClick={() => setTab(t)} className={`py-3 ${tab === t ? 'font-semibold text-(--accent)' : 'text-(--text-2)'}`}>
+          <button key={t} role="tab" type="button" aria-selected={tab === t} onClick={() => { if (t === 'more') setBoardroomThread(undefined); setTab(t); }} className={`py-3 ${tab === t ? 'font-semibold text-(--accent)' : 'text-(--text-2)'}`}>
             {TAB_NAMES[t]}
           </button>
         ))}
