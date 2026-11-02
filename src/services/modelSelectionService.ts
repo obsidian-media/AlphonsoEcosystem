@@ -9,7 +9,7 @@ const MAX_RECENT = 10;
 export type ModelProvider = 'ollama' | 'nvidia_nim' | 'gemini' | 'openrouter';
 const CLOUD_PROVIDERS: ModelProvider[] = ['nvidia_nim', 'gemini', 'openrouter'];
 
-/** 'paid': the paid model chosen in Settings → General → Approval Mode, for an agent's steps in a request (2.11.0 QA). */
+/** 'paid': the paid model chosen in Settings → Approvals, for an agent's steps in a request (2.11.0 QA). */
 export type AgentModelProvider = ModelProvider | 'hermes' | 'paid';
 
 export interface AgentProviderConfig {
@@ -188,7 +188,7 @@ export function setSelectedProvider(provider: ModelProvider) {
 export async function getCloudModelList(provider: 'nvidia_nim' | 'gemini' | 'openrouter'): Promise<string[]> {
   try {
     if (provider === 'openrouter') {
-      // OpenRouter's free models from its live list; paid ones are chosen in Settings → General → Approval Mode.
+      // OpenRouter's free models from its live list; paid ones are chosen in Settings → Approvals.
       const { listOpenRouterModels } = await import('./connectors/openRouterConnector');
       return (await listOpenRouterModels()).filter((m) => m.free).map((m) => m.id);
     }

@@ -31,7 +31,7 @@ function writeJson(key: string, value: unknown): void {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage full */ }
 }
 
-/** Both on unless switched off in Settings → General → Approval Mode → Jose on Telegram. */
+/** Both on unless switched off in Settings → Approvals → Jose on Telegram. */
 export function getContentTelegramSettings(): ContentTelegramSettings {
   const saved = readJson<Record<string, any>>('alphonso_settings', {})?.joseTelegram || {};
   return { performanceSummaries: saved.performanceSummaries !== false, contentIdeas: saved.contentIdeas !== false };

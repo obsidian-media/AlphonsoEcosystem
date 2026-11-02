@@ -2,7 +2,7 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { ModelPullHelper } from './ModelPullHelper';
 import type { PaidModelChoice } from '../services/connectors/openRouterPaid';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, AlertTriangle, Cable, ChevronDown, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare, PhoneCall } from 'lucide-react';
+import { Activity, AlertTriangle, Cable, ChevronDown, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare, PhoneCall, ShieldCheck } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { Modal } from './ui/Modal';
 import { MemoryGraphViewer } from './MemoryGraphViewer';
@@ -414,7 +414,7 @@ interface AppSettings {
   localOnlyMode?: boolean;
   zeroCostMode?: boolean;
   approvalMode?: boolean;
-  /** Settings → General → Approval Mode: which kinds of action ask first (jose/joseEffects.ts). */
+  /** Settings → Approvals: which kinds of action ask first (jose/joseEffects.ts). */
   effectApprovals?: Partial<Record<JoseEffect, boolean>>;
   /** When Jose shows his plan before running it (phase 3): always, bigger (default) or never. */
   showPlanFirst?: string;
@@ -435,7 +435,7 @@ interface AppSettings {
 }
 
 /**
- * Settings → General → Approval Mode (Jose redesign, 2026-10-23): one row per kind of action.
+ * Settings → Approvals (Jose redesign, 2026-10-23): one row per kind of action.
  * Steps whose effects ask wait for you before they start; running code is
  * asked per command (read-only commands never ask). Spend, publish and delete
  * are locked to always ask, even with Approval Mode off.
@@ -486,7 +486,7 @@ function EffectApprovalsTable({ settings, setSettings }: { settings: AppSettings
 }
 
 /**
- * Settings → General → Approval Mode → Paid models (phase 4): off by default. When on (and
+ * Settings → Approvals → Paid models (phase 4): off by default. When on (and
  * Zero-Cost Mode is off), Jose may give a hard step to Claude or ChatGPT; each
  * such step asks first and says what it should cost. The prices are yours to
  * enter (they change), and the monthly cap stops spending past it.
@@ -606,7 +606,7 @@ function PaidModelsPanel({ settings, setSettings }: { settings: AppSettings; set
 }
 
 /**
- * Settings → General → Approval Mode → Jose on Telegram (phase 5): which messages Jose
+ * Settings → Approvals → Jose on Telegram (phase 5): which messages Jose
  * sends to your paired Telegram chat. All on to start.
  */
 const JOSE_TELEGRAM_KINDS = [
@@ -654,6 +654,7 @@ function JoseTelegramPanel({ settings, setSettings }: { settings: AppSettings; s
 
 const SETTINGS_SECTIONS = [
   { id: 'general',     label: 'General',      Icon: Settings2 },
+  { id: 'approvals',   label: 'Approvals',    Icon: ShieldCheck },
   { id: 'connectors',  label: 'Connectors',   Icon: Plug },
   { id: 'agents',      label: 'Agents',       Icon: Bot },
   { id: 'runtime',     label: 'Runtime',      Icon: Cpu },
@@ -1295,73 +1296,6 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between p-4 bg-(--surface-2) rounded-2xl">
             <div>
-              <div className="text-sm font-semibold text-(--text-1)">Approval Mode</div>
-              <div className="text-[11px] text-(--text-3) mt-0.5">Require explicit confirmation for supervised actions.</div>
-            </div>
-            <button
-              role="switch"
-              // Unset counts as on, as the policy reads it (2026-10-23).
-              aria-checked={settings.approvalMode !== false}
-              aria-label="Toggle approval mode"
-              onClick={() => setSettings({ ...settings, approvalMode: settings.approvalMode === false })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.approvalMode !== false ? 'bg-(--warning)' : 'bg-(--surface-3)'}`}
-            >
-              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.approvalMode !== false ? 'right-1' : 'left-1'}`} />
-            </button>
-          </div>
-          <EffectApprovalsTable settings={settings} setSettings={setSettings} />
-          <PaidModelsPanel settings={settings} setSettings={setSettings} />
-          <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
-            <div>
-              <label htmlFor="openrouter-free-limit" className="text-sm font-semibold text-(--text-1)">When OpenRouter's free limit runs out</label>
-              <div className="text-[11px] text-(--text-3) mt-0.5">OpenRouter's free models allow 50 requests a day (1,000 once you have bought $10 of its credit). A step then carries on with this computer's model and says so, or Jose asks to finish it with a paid OpenRouter model, showing the cost. Asking needs paid models allowed above, with OpenRouter as the paid model.</div>
-            </div>
-            <select
-              id="openrouter-free-limit"
-              value={settings.openRouterFreeLimit === 'paid' ? 'paid' : 'local'}
-              onChange={(e) => setSettings({ ...settings, openRouterFreeLimit: e.target.value })}
-              className="rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
-            >
-              <option value="local">Use this computer's model</option>
-              <option value="paid">Ask to use a paid model</option>
-            </select>
-          </div>
-          <JoseTelegramPanel settings={settings} setSettings={setSettings} />
-          <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
-            <div>
-              <label htmlFor="jose-waiting-expiry" className="text-sm font-semibold text-(--text-1)">Waiting requests expire after (days)</label>
-              <div className="text-[11px] text-(--text-3) mt-0.5">A request still waiting for your approval after this many days is cancelled, with a note. Blank or 0: never.</div>
-            </div>
-            <input
-              id="jose-waiting-expiry"
-              inputMode="numeric"
-              placeholder="Never"
-              value={settings.joseWaitingExpiryDays === undefined ? '7' : Number(settings.joseWaitingExpiryDays) > 0 ? String(settings.joseWaitingExpiryDays) : ''}
-              onChange={(e) => {
-                const days = Number(e.target.value);
-                setSettings({ ...settings, joseWaitingExpiryDays: e.target.value.trim() === '' || !Number.isFinite(days) || days < 0 ? 0 : Math.round(days) });
-              }}
-              className="w-20 rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
-            />
-          </div>
-          <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
-            <div>
-              <div className="text-sm font-semibold text-(--text-1)">Show Jose's plan first</div>
-              <div className="text-[11px] text-(--text-3) mt-0.5">Bigger requests are those with 4 or more agents, counting Jose and Maria, or a step that always asks.</div>
-            </div>
-            <select
-              aria-label="Show Jose's plan first"
-              value={settings.showPlanFirst === 'always' || settings.showPlanFirst === 'never' ? settings.showPlanFirst : 'bigger'}
-              onChange={(e) => setSettings({ ...settings, showPlanFirst: e.target.value })}
-              className="rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
-            >
-              <option value="always">Always</option>
-              <option value="bigger">Bigger requests only</option>
-              <option value="never">Never</option>
-            </select>
-          </div>
-          <div className="flex items-center justify-between p-4 bg-(--surface-2) rounded-2xl">
-            <div>
               <div className="text-sm font-semibold text-(--text-1)">Safe Mode</div>
               <div className="text-[11px] text-(--text-3) mt-0.5">Conservative runtime behavior with repair-first posture.</div>
             </div>
@@ -1429,6 +1363,84 @@ export function SettingsView({
       </section>
     </div>
   )}
+  {activeSection === 'approvals' && (
+    <div className="max-w-4xl mx-auto space-y-10">
+      {/* Everything about asking and spending, moved out of General (phone phase 3 part B, 2026-11-02). */}
+      <section className="space-y-4">
+        <SectionHeader icon={ShieldCheck} label="Approvals" />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-(--surface-2) rounded-2xl">
+            <div>
+              <div className="text-sm font-semibold text-(--text-1)">Approval Mode</div>
+              <div className="text-[11px] text-(--text-3) mt-0.5">Require explicit confirmation for supervised actions.</div>
+            </div>
+            <button
+              role="switch"
+              // Unset counts as on, as the policy reads it (2026-10-23).
+              aria-checked={settings.approvalMode !== false}
+              aria-label="Toggle approval mode"
+              onClick={() => setSettings({ ...settings, approvalMode: settings.approvalMode === false })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.approvalMode !== false ? 'bg-(--warning)' : 'bg-(--surface-3)'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.approvalMode !== false ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <EffectApprovalsTable settings={settings} setSettings={setSettings} />
+          <PaidModelsPanel settings={settings} setSettings={setSettings} />
+          <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
+            <div>
+              <label htmlFor="openrouter-free-limit" className="text-sm font-semibold text-(--text-1)">When OpenRouter's free limit runs out</label>
+              <div className="text-[11px] text-(--text-3) mt-0.5">OpenRouter's free models allow 50 requests a day (1,000 once you have bought $10 of its credit). A step then carries on with this computer's model and says so, or Jose asks to finish it with a paid OpenRouter model, showing the cost. Asking needs paid models allowed above, with OpenRouter as the paid model.</div>
+            </div>
+            <select
+              id="openrouter-free-limit"
+              value={settings.openRouterFreeLimit === 'paid' ? 'paid' : 'local'}
+              onChange={(e) => setSettings({ ...settings, openRouterFreeLimit: e.target.value })}
+              className="rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+            >
+              <option value="local">Use this computer's model</option>
+              <option value="paid">Ask to use a paid model</option>
+            </select>
+          </div>
+          <JoseTelegramPanel settings={settings} setSettings={setSettings} />
+          <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
+            <div>
+              <label htmlFor="jose-waiting-expiry" className="text-sm font-semibold text-(--text-1)">Waiting requests expire after (days)</label>
+              <div className="text-[11px] text-(--text-3) mt-0.5">A request still waiting for your approval after this many days is cancelled, with a note. Blank or 0: never.</div>
+            </div>
+            <input
+              id="jose-waiting-expiry"
+              inputMode="numeric"
+              placeholder="Never"
+              value={settings.joseWaitingExpiryDays === undefined ? '7' : Number(settings.joseWaitingExpiryDays) > 0 ? String(settings.joseWaitingExpiryDays) : ''}
+              onChange={(e) => {
+                const days = Number(e.target.value);
+                setSettings({ ...settings, joseWaitingExpiryDays: e.target.value.trim() === '' || !Number.isFinite(days) || days < 0 ? 0 : Math.round(days) });
+              }}
+              className="w-20 rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3 p-4 bg-(--surface-2) rounded-2xl">
+            <div>
+              <div className="text-sm font-semibold text-(--text-1)">Show Jose's plan first</div>
+              <div className="text-[11px] text-(--text-3) mt-0.5">Bigger requests are those with 4 or more agents, counting Jose and Maria, or a step that always asks.</div>
+            </div>
+            <select
+              aria-label="Show Jose's plan first"
+              value={settings.showPlanFirst === 'always' || settings.showPlanFirst === 'never' ? settings.showPlanFirst : 'bigger'}
+              onChange={(e) => setSettings({ ...settings, showPlanFirst: e.target.value })}
+              className="rounded-md bg-(--surface-1) px-2 py-1 text-xs text-(--text-1)"
+            >
+              <option value="always">Always</option>
+              <option value="bigger">Bigger requests only</option>
+              <option value="never">Never</option>
+            </select>
+          </div>
+        </div>
+      </section>
+    </div>
+  )}
+
   {activeSection === 'connectors' && (
     <div className="max-w-4xl mx-auto space-y-10">
       <section className="space-y-4">

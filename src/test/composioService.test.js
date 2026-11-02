@@ -298,7 +298,7 @@ describe('executeComposioTool', () => {
     configured();
     const result = await executeComposioTool('SLACK_SEND_MESSAGE', {}, { toolkit: 'slack', approved: true });
     expect(result.success).toBe(false);
-    expect(result.error).toBe('The slack toolkit is not switched on in Settings → Composio.');
+    expect(result.error).toBe('The slack toolkit is not switched on in Settings → Connectors → External Tools (Composio).');
     expect(mockFetch).not.toHaveBeenCalled();
   });
 

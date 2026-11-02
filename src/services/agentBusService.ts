@@ -265,7 +265,7 @@ export function canExecutePacket(packet: AgentPacket | null): ExecutionGate {
     return { ok: false, reason: 'Approval is required before execution.' };
   }
   if (Array.isArray(packet.effects)) {
-    // Declared effects decide approval (Settings → General → Approval Mode), not words.
+    // Declared effects decide approval (Settings → Approvals), not words.
     const waiting = stepEffectsToWaitFor(packet.effects);
     if (waiting.length > 0 && packet.status !== 'approved') {
       return { ok: false, reason: `Waiting for your approval: ${waiting.map((e) => EFFECT_LABELS[e]).join(', ')}.` };

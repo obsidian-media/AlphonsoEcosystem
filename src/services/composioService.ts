@@ -234,7 +234,7 @@ export function getCachedToolkits(): ComposioToolkit[] | null {
   }
 }
 
-// ── Toolkits you switched on (Settings → Composio) ─────────────────────────
+// ── Toolkits you switched on (Settings → Connectors → External Tools (Composio)) ─────────────────────────
 
 const COMPOSIO_ENABLED_TOOLKITS_KEY = 'alphonso_composio_toolkits_enabled_v1';
 
@@ -304,7 +304,7 @@ export async function executeComposioTool(
   if (!config.apiKey) return { error: 'No API key configured', success: false, data: null };
   const toolkit = String(opts.toolkit || String(tool).split('_')[0] || '').toLowerCase();
   if (!enabledComposioToolkits().includes(toolkit)) {
-    return { success: false, data: null, error: `The ${toolkit} toolkit is not switched on in Settings → Composio.` };
+    return { success: false, data: null, error: `The ${toolkit} toolkit is not switched on in Settings → Connectors → External Tools (Composio).` };
   }
   const gate = evaluatePolicyGate({ connectorId: 'composio', actionType: String(tool).toLowerCase(), commandPreview: JSON.stringify({ tool, args }).slice(0, 500), approved: Boolean(opts.approved) });
   if (!gate.ok) return { success: false, data: null, error: gate.reason || 'The policy gate blocked it.' };

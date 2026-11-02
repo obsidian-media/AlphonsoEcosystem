@@ -11,6 +11,7 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 ## [Unreleased]
 
 ### Phone app (in progress)
+- **Changed:** approvals have their own page, **Settings → Approvals**: Approval Mode, What asks first, Allow paid models, when OpenRouter's free limit runs out, Jose on Telegram, how long waiting requests last and Show Jose's plan first, moved out of General. Messages that named a Settings page that doesn't exist (Composio, Local Services) now name the right one.
 - The encrypted messages between a phone and its computer (`src/services/phone/`): libsodium's sealed boxes, a 4 MB limit, and the pairing QR code's contents. Nothing on screen yet.
 - The phone relay (`gateway/phone-relay/`): forwards sealed messages only between a phone and the computer it is paired with, refuses other accounts' devices, says when the computer is offline, and stores no content. Running at `relay.alphonsoecosystem.app` on Google Cloud's free e2-micro VM (the fixed address is the only fixed cost, about US$3.65 a month), with a budget alert and only the last 2 builds kept.
 - Settings → Runtime → Remote Access → Phones: sign in, pair a phone with a QR code that works once for 10 minutes (also shown as text with Copy, for a phone that can't scan), see when each phone was last used, remove one, and switch phone access off. Shown only in a build with a relay address. The computer refuses any device it hasn't paired, whatever the relay sends.

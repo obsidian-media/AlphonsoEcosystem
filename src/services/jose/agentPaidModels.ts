@@ -1,4 +1,4 @@
-// An agent set to "Paid" in Settings → Agents uses the paid model chosen in Settings → General (Allow paid models)
+// An agent set to "Paid" in Settings → Agents uses the paid model chosen in Settings → Approvals (Allow paid models)
 // (with its prices) for its steps (2.11.0 QA, owner 2026-11-01). Each such step carries the spend
 // effect, so the request asks once with the cost; a schedule never spends. Outside a request (a
 // Boardroom reply) the agent uses this computer's model: nothing is spent without asking.

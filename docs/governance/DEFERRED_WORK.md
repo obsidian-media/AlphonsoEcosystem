@@ -2,10 +2,11 @@
 
 Rule 12 / Rule 11. This register survives the session. Future agents resume from here.
 
-## 2026-11-02: Approvals deserve their own Settings page (planned with phone phase 3 part B)
+## 2026-11-02: Approvals deserve their own Settings page (closed 2026-11-02)
 
 - **What happened:** the approval switches (Approval Mode, one switch per kind of action, Allow paid models, Jose on Telegram, waiting requests expiry, OpenRouter's free limit) all sit at the bottom of Settings → General, under Desktop & UI. The owner couldn't find them, and 13 code comments called the place "Settings → Approvals", a page that doesn't exist (now corrected to Settings → General → Approval Mode; on-screen text was already guarded by `settingsPathsInMessages.test.js`).
 - **Decision (owner, 2026-11-02):** don't detour from the phone work; decide Settings' grouping in phone phase 3 part B (Settings and Connectors on the phone, see and switch), and give the desktop an Approvals page in the same pass.
+- **Closed:** Settings → Approvals holds them all now (phone phase 3 part B, task 2); every on-screen "Settings → <page>" is checked against the real pages.
 
 ## 2026-11-01: Linux missing from 2.11.0 (fixed on feat/mobile-app, ships next release)
 

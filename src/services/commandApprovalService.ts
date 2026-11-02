@@ -15,7 +15,7 @@
  * handler (App's `requestApproval`) approves immediately -- the same explicit,
  * user-owned opt-out every other high-risk action honors.
  *
- * Settings → General → Approval Mode (2026-10-23): the "Run code and commands" row decides
+ * Settings → Approvals (2026-10-23): the "Run code and commands" row decides
  * whether code-running commands ask. A command that deletes always asks,
  * even with Approval Mode off (`alwaysAsk`), because delete is locked.
  */

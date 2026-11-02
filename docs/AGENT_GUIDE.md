@@ -82,7 +82,7 @@ Each step gets the full work of the steps before it, so a reviewer reads the act
 | Jose | — | — | Paid-model steps, always asks | — |
 | Everyone else | — | — | — | — |
 
-Choose what else asks in Settings → General → **What asks first**.
+Choose what else asks in Settings → Approvals → **What asks first**.
 
 ## Choosing each agent's model
 

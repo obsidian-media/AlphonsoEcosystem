@@ -92,7 +92,7 @@ describe('requestWorkspaceCommandApproval', () => {
     expect((await requestWorkspaceCommandApproval(cmds)).approved).toBe(false);
   });
 
-  // Settings → General → Approval Mode (2026-10-23): "Run code and commands" decides whether
+  // Settings → Approvals (2026-10-23): "Run code and commands" decides whether
   // code-running commands ask; deleting is locked and always asks.
   it('does not ask for code-running commands when Settings says not to', async () => {
     localStorage.setItem('alphonso_settings', JSON.stringify({ effectApprovals: { run: false } }));
