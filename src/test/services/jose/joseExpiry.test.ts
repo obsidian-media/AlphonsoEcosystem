@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getWaitingExpiryDays, expireWaitingRequests } from '../../../services/jose/joseExpiry';
+import { getWaitingExpiryDays, expireWaitingRequests, stillWaitingLine } from '../../../services/jose/joseExpiry';
 import { createJoseRequest, createWaitingPlanRequest, getJoseRequest, setJoseRequestStatus } from '../../../services/jose/joseRequestStore';
 import { createAgentPacket, getPacketById, updatePacketStatus } from '../../../services/agentBusService';
 import { createJoseCommandRoute } from '../../../services/joseCommandRouterService';
@@ -76,5 +76,21 @@ describe('a request waiting for setup (agent roles Part A)', () => {
     setJoseRequestStatus(old.requestId, 'waiting_setup');
     expireWaitingRequests(old.now);
     expect(getJoseRequest(old.requestId)!.status).toBe('expired');
+  });
+});
+
+// Owner, 2026-11-01: Chat said "Approval timed out after 10 minutes. Resubmit your request" while
+// the request kept waiting on the board. After 10 minutes Chat now says it still waits, and until when.
+describe('stillWaitingLine', () => {
+  it('says the request still waits on the board and when it expires', () => {
+    setDays(7);
+    expect(stillWaitingLine()).toBe('Still waiting for your approval. It stays on the board (Orchestrator → Requests) until you approve or reject it, or for 7 days.');
+    setDays(1);
+    expect(stillWaitingLine()).toBe('Still waiting for your approval. It stays on the board (Orchestrator → Requests) until you approve or reject it, or for 1 day.');
+  });
+
+  it('with expiry off, it waits until you decide', () => {
+    setDays(0);
+    expect(stillWaitingLine()).toBe('Still waiting for your approval. It stays on the board (Orchestrator → Requests) until you approve or reject it.');
   });
 });
