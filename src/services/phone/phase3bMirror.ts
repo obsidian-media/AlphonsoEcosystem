@@ -33,12 +33,16 @@ export interface PhoneSettings {
   phoneNotify: Record<'stepWaiting' | 'planWaiting' | 'finished' | 'reviewDecision' | 'boardroomEscalations', boolean>;
   /** The model every agent on Ollama uses (Settings → General). */
   computerModel: string;
-  agents: Array<{ id: string; name: string; provider: AgentModelProvider; model: string | null }>;
+  /** `providerOnly`: only the provider is kept for this agent (Alphonso's model is Chat's own choice). */
+  agents: Array<{ id: string; name: string; provider: AgentModelProvider; model: string | null; providerOnly: boolean }>;
   providerChoices: ProviderChoice[];
 }
 export interface PhoneTeam { id: string; name: string; steps: Array<{ stepId: string; agent: string; actionType: string; needs: string[] }>; problems: string[] }
 export interface PhoneSkills { skills: Array<{ agent: string; name: string; useWhen: string; builtIn: boolean; stats: string }>; refused: Array<{ file: string; reason: string }> }
 export interface PhoneConnector { id: string; name: string; status: string; statusLabel: string; enabled: boolean; needsKeys: boolean; lastCheck: { atMs: number; ok: boolean } | null }
+
+/** Agents whose provider setting keeps no model: Alphonso's row is Chat's provider, and Chat keeps its own model (modelSelectionService). */
+export const PROVIDER_ONLY_AGENTS = ['alphonso'];
 
 let cachedChoices: ProviderChoice[] = [];
 
@@ -93,7 +97,8 @@ export function settingsMirrorData(): PhoneSettings {
     computerModel: getConfiguredOllamaModel(),
     agents: Object.keys(AGENT_NAMES).map((id) => {
       const config = getAgentProvider(id);
-      return { id, name: AGENT_NAMES[id], provider: config.provider, model: config.model || null };
+      const providerOnly = PROVIDER_ONLY_AGENTS.includes(id);
+      return { id, name: AGENT_NAMES[id], provider: config.provider, model: providerOnly ? null : config.model || null, providerOnly };
     }),
     providerChoices: cachedChoices,
   };

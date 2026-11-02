@@ -90,12 +90,13 @@ export function SettingsScreen({ more, lock }: { more: MoreData; lock: PhoneLock
     for (const c of s.providerChoices) {
       if (c.provider === 'ollama') list.push({ value: modelValue('ollama', null), label: `${c.label} (this computer’s model: ${s.computerModel})` });
       else if (c.provider === 'paid') list.push({ value: modelValue('paid', null), label: c.label });
+      else if (agent.providerOnly) list.push({ value: modelValue(c.provider, null), label: `${c.label} (Chat’s model on your computer)` });
       else {
         if (c.provider === 'openrouter') list.push({ value: modelValue('openrouter', null), label: `${c.label}: let it choose a free model` });
         for (const m of c.models) list.push({ value: modelValue(c.provider, m), label: `${c.label}: ${m}` });
       }
     }
-    const current = modelValue(agent.provider, agent.provider === 'ollama' || agent.provider === 'paid' ? null : agent.model);
+    const current = modelValue(agent.provider, agent.providerOnly || agent.provider === 'ollama' || agent.provider === 'paid' ? null : agent.model);
     if (!list.some((o) => o.value === current)) list.unshift({ value: current, label: `${agent.provider}${agent.model ? `: ${agent.model}` : ''} (set on your computer)` });
     return { list, current };
   };

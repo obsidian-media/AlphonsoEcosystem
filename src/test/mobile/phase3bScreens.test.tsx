@@ -20,7 +20,7 @@ const settings = {
   showModelThinking: true,
   phoneNotify: { stepWaiting: true, planWaiting: true, finished: true, reviewDecision: true, boardroomEscalations: true },
   computerModel: 'llama3.2:3b',
-  agents: [{ id: 'hector', name: 'Hector', provider: 'ollama', model: null }],
+  agents: [{ id: 'hector', name: 'Hector', provider: 'ollama', model: null, providerOnly: false }],
   providerChoices: [{ provider: 'ollama', label: 'Ollama', paid: false, models: ['llama3.2:3b'] }, { provider: 'nvidia_nim', label: 'NVIDIA NIM', paid: false, models: ['meta/llama-3.1-8b-instruct'] }],
 };
 
@@ -119,6 +119,13 @@ describe('Settings on the phone', () => {
     expect([...select.options].map((o) => o.textContent)).toEqual(['Ollama (this computer’s model: llama3.2:3b)', 'NVIDIA NIM: meta/llama-3.1-8b-instruct']);
     fireEvent.change(select, { target: { value: 'nvidia_nim|meta/llama-3.1-8b-instruct' } });
     await waitFor(() => expect(data.call).toHaveBeenCalledWith('agent.setModel', { agentId: 'hector', provider: 'nvidia_nim', model: 'meta/llama-3.1-8b-instruct', base: { provider: 'ollama', model: null } }));
+  });
+
+  it("Alphonso is offered providers only, since his model is Chat's", () => {
+    const data = more({ settings: () => ({ ...settings, agents: [{ id: 'alphonso', name: 'Alphonso', provider: 'ollama', model: null, providerOnly: true }] }) } as any);
+    render(<SettingsScreen more={data} lock={lock()} />);
+    const select = screen.getByLabelText('Model for Alphonso') as HTMLSelectElement;
+    expect([...select.options].map((o) => o.value)).toEqual(['ollama|', 'nvidia_nim|']);
   });
 
   it('offline, switches are off and the reason shows', () => {

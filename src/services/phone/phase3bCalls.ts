@@ -9,7 +9,7 @@ import { runTeam } from '../jose/teams';
 import { isConnectorAuthenticated, updateConnectorAuthProfile } from '../connectors/connectorAuth';
 import { listConnectors } from '../connectors/connectorRegistry';
 import { AGENT_NAMES } from '../jose/agentNames';
-import { cachedModelChoices, settingsMirrorData, type PhoneSettings } from './phase3bMirror';
+import { cachedModelChoices, PROVIDER_ONLY_AGENTS, settingsMirrorData, type PhoneSettings } from './phase3bMirror';
 import { STALE } from './phase3Calls';
 import { asksLess } from './asksLess';
 
@@ -98,7 +98,8 @@ export const PHASE3B_CALLS: Record<Phase3bCallName, Call> = {
     if (current.provider !== base.provider || (current.model || null) !== (base.model ?? null)) throw new Error(STALE);
     const choice = cachedModelChoices().find((c) => c.provider === provider);
     // Ollama agents use the computer's one model, and a paid step uses the paid model chosen there.
-    const modelOk = provider === 'ollama' || provider === 'paid' ? model === null : model === null ? provider === 'openrouter' : !!choice?.models.includes(model);
+    const providerOnly = PROVIDER_ONLY_AGENTS.includes(agentId) || provider === 'ollama' || provider === 'paid';
+    const modelOk = providerOnly ? model === null : model === null ? provider === 'openrouter' : !!choice?.models.includes(model);
     if (!choice || !modelOk) throw new Error(NOT_OFFERED);
     if (choice.paid && current.provider !== provider && args.confirmed !== true) throw new Error(NEEDS_CONFIRM);
     setAgentProvider(agentId, model ? { provider, model } : { provider });

@@ -81,6 +81,13 @@ describe('agent.setModel', () => {
     expect(getAgentProvider('hector')).toEqual({ provider: 'nvidia_nim', model: 'meta/llama-3.1-8b-instruct' });
   });
 
+  it("Alphonso keeps only a provider (his model is Chat's): a model for him is refused", async () => {
+    await refreshModelChoices();
+    await expect(call('agent.setModel', { agentId: 'alphonso', provider: 'nvidia_nim', model: 'meta/llama-3.1-8b-instruct', base: { provider: 'ollama', model: null } })).rejects.toThrow();
+    await call('agent.setModel', { agentId: 'alphonso', provider: 'nvidia_nim', model: null, base: { provider: 'ollama', model: null } });
+    expect(getAgentProvider('alphonso').provider).toBe('nvidia_nim');
+  });
+
   it('a stale base is refused', async () => {
     await refreshModelChoices();
     await expect(call('agent.setModel', { agentId: 'hector', provider: 'ollama', model: null, base: { provider: 'gemini', model: null } })).rejects.toThrow(STALE);
