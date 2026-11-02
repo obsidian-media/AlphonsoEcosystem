@@ -2,6 +2,11 @@
 
 Rule 12 / Rule 11. This register survives the session. Future agents resume from here.
 
+## 2026-11-02: The phone's Requests screen runs past the right edge
+
+- **What happened:** in the 6.9-inch store screenshots (phone phase 3 part C, `docs/store/screenshots/iphone-6.9/2-requests.png`) a long request title in the list and the plan map run past the screen's right edge at 440 points wide. It is the real Requests screen (the desktop board in one column, `src/mobile/screens/Requests.tsx`), not the demo; the step boxes also show raw task types (`distribution_slack`).
+- **To do:** wrap the list's titles, fit the plan map to the width, and show the task types in plain words on the phone; retake the screenshots after.
+
 ## 2026-11-02: Cloud Voice on AWS has no client left (owner decides)
 
 - **What happened:** the old Swift iPhone app was Cloud Voice's only client, and it retired in phone phase 3 part C (archived to `archive/MIGHTBEUSEDLATER/swift-companion/`). Cloud Voice (`voice/cloud-backend/`, the `alphonso-cloud-voice` ECS service, its Supabase tables) keeps running and costing money.

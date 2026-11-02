@@ -32,7 +32,7 @@ src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and ol
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                675 test files, 6,933 tests (Vitest; see ground truth for current verification status)
+  test/                677 test files, 6,933 tests (Vitest; see ground truth for current verification status)
 mobile/                The phone app (Capacitor: iOS and Android); the old Swift app is archived
   src-tauri/             Rust backend
   src/lib.rs           ~973 lines, 227 Tauri commands (across 54 modules)
@@ -79,7 +79,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,933 tests (675 files)
+npm run test             # 6,933 tests (677 files)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command

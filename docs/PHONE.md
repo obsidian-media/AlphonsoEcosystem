@@ -135,6 +135,11 @@ on the other. Alphonso's relay passes them on without being able to read them, a
 no content. Your computer refuses any device it hasn't paired, and only devices signed in
 to your account can reach it.
 
+## For the App Store
+
+The listing, privacy answers, screenshots and the submit checklist are in `docs/store/`; the public
+privacy policy and support page are in `site/`.
+
 ## Delete your account
 
 On the phone, More → **Delete my account**. The app says what it deletes, then asks for Face ID or

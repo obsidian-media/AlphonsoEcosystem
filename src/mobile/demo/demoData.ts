@@ -58,9 +58,11 @@ export function demoMirror(nowMs: number) {
     createdAtMs: nowMs - DAY, updatedAtMs: nowMs - DAY + HOUR,
     steps: [{ stepId: 'alphonso', agent: 'alphonso', actionType: 'assistant_write', effects: ['write_own_work'], needs: [], status: 'done', instruction: 'Write the note.' }],
   };
+  // Posts go out on the hour, so the Calendar reads like a real plan.
+  const onHour = Math.ceil(nowMs / HOUR) * HOUR;
   const posts = [
-    { id: 'demo-post-1', platform: 'instagram', piece: 'reel', title: '', caption: 'Fresh at 6 am. Come early!', hashtags: ['bakery', 'fresh'], scheduledAtMs: nowMs + DAY, status: 'scheduled' },
-    { id: 'demo-post-2', platform: 'youtube', piece: 'short', title: 'Warm from the oven', caption: 'A minute in our kitchen.', hashtags: ['baking'], scheduledAtMs: nowMs + 3 * DAY, status: 'draft' },
+    { id: 'demo-post-1', platform: 'instagram', piece: 'reel', title: '', caption: 'Fresh at 6 am. Come early!', hashtags: ['bakery', 'fresh'], scheduledAtMs: onHour + DAY, status: 'scheduled' },
+    { id: 'demo-post-2', platform: 'youtube', piece: 'short', title: 'Warm from the oven', caption: 'A minute in our kitchen.', hashtags: ['baking'], scheduledAtMs: onHour + 3 * DAY, status: 'draft' },
   ];
   const project = {
     id: DEMO_PROJECT_ID, brandId: DEMO_BRAND.id, name: 'Morning bread video (sample)', updatedAtMs: nowMs - HOUR,
