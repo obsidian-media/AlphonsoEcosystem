@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 380 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 381 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -526,6 +526,7 @@ Source-backed inventory: 380 services and 185 components. Human purpose descript
 | service | `src/services/sentinelSecurityService.ts` | `recentActivityText`, `runSentinelSecurityScan`, `SentinelScanOptions` |
 | service | `src/services/serviceScopes.ts` | `AGENT_OUTPUT_SCOPE`, `CONNECTOR_AUDIT_SCOPE`, `CONNECTOR_AUTH_SCOPE`, `CONNECTOR_SCOPE`, `DEV_PACKET_SCOPE`, `GOVERNANCE_SCOPE`, `JOSE_COMMAND_SCOPE`, `MIYA_MEMORY_SCOPE`, `NOVA_SCORE_SCOPE`, `ORCHESTRATION_QUEUE_SCOPE`, `ORCHESTRATION_RECEIPT_SCOPE`, `PACKET_SCOPE`, `PLUGIN_AUDIT_SCOPE`, `PLUGINS_SCOPE`, `PRODUCTION_READINESS_SCOPE`, `PROOF_AUTHORITY`, `REPO_AUDIT_SCOPE`, `SELF_DEVELOPMENT_SCOPE`, `SESSION_EVENT_SCOPE`, `TOOL_CONNECTION_AUDIT_SCOPE`, `TOOL_CONNECTION_SCOPE`, `VERIFICATION_SCOPE`, `WORKFLOW_OPS_SCOPE`, `WORKFLOW_RECEIPT_SCOPE`, `WORKFLOW_RUN_SCOPE`, `WORKFLOW_TELEMETRY_SCOPE` |
 | service | `src/services/sessionIntelligenceService.ts` | `appendSessionEvent`, `listSessionEvents`, `SESSION_EVENT_SCOPE`, `summarizeSession` |
+| service | `src/services/settingsWriter.ts` | `applySettingsPatch`, `mergeSettings`, `readAppSettings`, `SETTINGS_KEY`, `SETTINGS_PATCH_EVENT` |
 | service | `src/services/setupFlowService.ts` | `checkDiskSpace`, `ComponentProgress`, `DiskSpaceCheck`, `getUnmetPrereq`, `hardwareForInstallLocation`, `HardwareProfile`, `InstallablePrereq`, `installComponent`, `isComponentAlreadyInstalled`, `isSetupComplete`, `markSetupComplete`, `needsInstallLocation`, `PREREQ_FLAG`, `PREREQ_LABEL`, `PrereqKind`, `sameInstallVolume`, `SCAN_TIMEOUT_MS`, `scanHardware`, `SelectableComponent`, `STARTER_MODEL_ID`, `STARTER_MODEL_TAG`, `withTimeout` |
 | service | `src/services/signInService.ts` | `chooseMetaPage`, `finishPastedSignIn`, `INSTAGRAM_RENEW_DAYS`, `MetaPage`, `refreshInstagramIfDue`, `signIn`, `SignInOutcome` |
 | service | `src/services/skills/prepareSkill.ts` | `prepareSkill` |
