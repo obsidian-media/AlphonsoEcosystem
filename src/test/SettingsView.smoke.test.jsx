@@ -267,7 +267,7 @@ describe('SettingsView smoke', () => {
     expect(setDeveloperMode).toHaveBeenCalledWith(true);
   });
 
-  // Settings → Approvals: one switch per kind of action (Jose redesign, 2026-10-23).
+  // Settings → General → Approval Mode: one switch per kind of action (Jose redesign, 2026-10-23).
   function renderApprovals(settings, setSettings = vi.fn()) {
     render(
       <SettingsView

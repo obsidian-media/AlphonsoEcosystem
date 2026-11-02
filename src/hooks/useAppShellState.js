@@ -123,7 +123,7 @@ export function useAppShellState({
   // keyword that needsHighRiskApproval() would match -- without it the label
   // filter below silently auto-approves. Approval Mode off is still the user's
   // explicit opt-out and always wins, except for `alwaysAsk`: spend, publish
-  // and delete are locked to always ask (Settings → Approvals, 2026-10-23).
+  // and delete are locked to always ask (Settings → General → Approval Mode, 2026-10-23).
   const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null, requireApproval = false, riskReasons = null, alwaysAsk = false } = {}) => {
     // Logic from App.jsx
     if (!settings.approvalMode && !alwaysAsk) return Promise.resolve(true);

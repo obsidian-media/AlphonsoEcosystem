@@ -414,7 +414,7 @@ interface AppSettings {
   localOnlyMode?: boolean;
   zeroCostMode?: boolean;
   approvalMode?: boolean;
-  /** Settings → Approvals: which kinds of action ask first (jose/joseEffects.ts). */
+  /** Settings → General → Approval Mode: which kinds of action ask first (jose/joseEffects.ts). */
   effectApprovals?: Partial<Record<JoseEffect, boolean>>;
   /** When Jose shows his plan before running it (phase 3): always, bigger (default) or never. */
   showPlanFirst?: string;
@@ -435,7 +435,7 @@ interface AppSettings {
 }
 
 /**
- * Settings → Approvals (Jose redesign, 2026-10-23): one row per kind of action.
+ * Settings → General → Approval Mode (Jose redesign, 2026-10-23): one row per kind of action.
  * Steps whose effects ask wait for you before they start; running code is
  * asked per command (read-only commands never ask). Spend, publish and delete
  * are locked to always ask, even with Approval Mode off.
@@ -486,7 +486,7 @@ function EffectApprovalsTable({ settings, setSettings }: { settings: AppSettings
 }
 
 /**
- * Settings → Approvals → Paid models (phase 4): off by default. When on (and
+ * Settings → General → Approval Mode → Paid models (phase 4): off by default. When on (and
  * Zero-Cost Mode is off), Jose may give a hard step to Claude or ChatGPT; each
  * such step asks first and says what it should cost. The prices are yours to
  * enter (they change), and the monthly cap stops spending past it.
@@ -606,7 +606,7 @@ function PaidModelsPanel({ settings, setSettings }: { settings: AppSettings; set
 }
 
 /**
- * Settings → Approvals → Jose on Telegram (phase 5): which messages Jose
+ * Settings → General → Approval Mode → Jose on Telegram (phase 5): which messages Jose
  * sends to your paired Telegram chat. All on to start.
  */
 const JOSE_TELEGRAM_KINDS = [

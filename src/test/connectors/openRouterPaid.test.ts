@@ -1,4 +1,4 @@
-// OpenRouter (2026-10-30): the paid models offered in Settings → Approvals → Allow paid models,
+// OpenRouter (2026-10-30): the paid models offered in Settings → General → Approval Mode → Allow paid models,
 // with OpenRouter's own prices. Only models the account can use (OpenRouter's /models/user),
 // with both prices listed and a text answer; never a free one.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

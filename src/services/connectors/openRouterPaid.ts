@@ -1,4 +1,4 @@
-// OpenRouter (2026-10-30): the paid models offered in Settings → Approvals → Allow paid models.
+// OpenRouter (2026-10-30): the paid models offered in Settings → General → Approval Mode → Allow paid models.
 // Prices come from OpenRouter's own list (USD per token, shown per million tokens), so nothing
 // is typed in. Only models that answer in text, are not free, and have both prices listed: a
 // model without a price can't be estimated, and a paid step always shows its estimate first.

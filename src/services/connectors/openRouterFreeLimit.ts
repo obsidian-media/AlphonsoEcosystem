@@ -1,5 +1,5 @@
 // OpenRouter (2026-10-30): when OpenRouter's free daily limit runs out, a step never just
-// fails. Settings → Approvals → "When OpenRouter's free limit runs out" (`openRouterFreeLimit`):
+// fails. Settings → General → Approval Mode → "When OpenRouter's free limit runs out" (`openRouterFreeLimit`):
 // 'local' (default) carries the step on with this computer's model and says so; 'paid' fails
 // the step with FREE_LIMIT_PAID so Jose's paid retry offers a paid OpenRouter model, which asks
 // with its cost. 'paid' works only when paid models are allowed with OpenRouter as the paid
