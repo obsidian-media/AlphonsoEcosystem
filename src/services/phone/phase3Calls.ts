@@ -59,6 +59,18 @@ function asIntake(value: unknown): ProjectIntake {
   };
 }
 
+const inBackground = (work: unknown): void => { Promise.resolve(work).catch(() => undefined); };
+
+/** The computer's own Settings for a run started from the phone, as the Projects page passes them. */
+function runSettings(): { endpoint?: string; zeroCostMode?: boolean } {
+  let s: Record<string, unknown> = {};
+  try { s = JSON.parse(localStorage.getItem('alphonso_settings') || '{}') || {}; } catch { /* defaults */ }
+  return {
+    ...(typeof s.endpoint === 'string' ? { endpoint: s.endpoint } : {}),
+    ...(typeof s.zeroCostMode === 'boolean' ? { zeroCostMode: s.zeroCostMode } : {}),
+  };
+}
+
 function threadOf(args: Args) {
   const thread = getThread(str(args.threadId));
   if (!thread) throw new Error(THREAD_GONE);
@@ -89,8 +101,12 @@ export const PHASE3_CALLS: Record<Phase3CallName, Call> = {
     if (!intake.name.trim() || !intake.description.trim()) throw new Error(PROJECT_NEEDS_TEXT);
     return saveProject(intake);
   },
+  // Answers once the run has started (the phone gives up after 30 s; a run takes longer).
   'project.start': async (args) => {
-    const result = await startProject(str(args.id));
+    let started: (requestId: string) => void = () => undefined;
+    const startedRun = new Promise<{ ok: true; requestId: string; reason?: string }>((resolve) => { started = (requestId) => resolve({ ok: true, requestId }); });
+    const run = startProject(str(args.id), { settings: runSettings(), onStarted: (requestId) => started(requestId) });
+    const result = await Promise.race([startedRun, run]);
     if (!result.ok) throw new Error(result.reason || 'The project could not start.');
     return result;
   },
@@ -131,13 +147,17 @@ export const PHASE3_CALLS: Record<Phase3CallName, Call> = {
     return hidden(updated);
   },
 
-  'boardroom.conclude': async (args) => { await concludeThread(threadOf(args).id); return { done: true }; },
+  // The agents work in the background (a model's answer often takes longer than the phone waits);
+  // what happened is posted in the thread, which the phone sees through the mirror.
+  'boardroom.conclude': async (args) => { inBackground(concludeThread(threadOf(args).id)); return { started: true }; },
   'boardroom.distribute': async (args) => {
     const thread = threadOf(args);
+    if (!thread.governance) throw new Error('Conclude the thread first.');
     const mode = args.mode === 'slack' ? 'slack' : 'review';
-    const done = await distributeThread(thread.id, mode, str(args.channel));
-    if (!done) throw new Error(thread.governance ? 'Distribution did not complete; the thread says why.' : 'Conclude the thread first.');
-    return { done: true };
+    const channel = str(args.channel).trim();
+    if (mode === 'slack' && !channel) throw new Error('Name the Slack channel.');
+    inBackground(distributeThread(thread.id, mode, channel));
+    return { started: true };
   },
-  'boardroom.creativeBrief': async (args) => { await creativeBriefThread(threadOf(args).id); return { done: true }; },
+  'boardroom.creativeBrief': async (args) => { inBackground(creativeBriefThread(threadOf(args).id)); return { started: true }; },
 };

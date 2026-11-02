@@ -473,7 +473,7 @@ Source-backed inventory: 380 services and 185 components. Human purpose descript
 | service | `src/services/phone/contentStamps.ts` | `postsStamp`, `postStamp`, `stepStamp` |
 | service | `src/services/phone/desktopSignIn.ts` | `createDesktopPhoneSignIn`, `desktopSignInConfig`, `NO_SIGN_IN_PAGE` |
 | service | `src/services/phone/phase3Calls.ts` | `PHASE3_CALLS`, `Phase3CallName`, `PHONE_SEARCH_RESULTS`, `resetPhase3CallsForTests`, `STALE` |
-| service | `src/services/phone/phase3Mirror.ts` | `BoardroomMirror`, `boardroomMirrorData`, `MASKED_LINE`, `MemoryMirror`, `memoryMirrorData`, `PHONE_DECISIONS`, `PHONE_THREAD_MESSAGES`, `phoneMessage`, `PhoneThreadMessage`, `ProjectMirror`, `projectsMirrorData` |
+| service | `src/services/phone/phase3Mirror.ts` | `BOARDROOM_MIRROR_BYTES`, `BoardroomMirror`, `boardroomMirrorData`, `MASKED_LINE`, `MemoryMirror`, `memoryMirrorData`, `PHONE_DECISIONS`, `PHONE_THREAD_MESSAGES`, `phoneMessage`, `PhoneThreadMessage`, `ProjectMirror`, `projectsMirrorData` |
 | service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |
 | service | `src/services/phone/phoneCalls.ts` | `ALREADY_DONE`, `handlePhoneCall`, `NOT_FROM_PHONE`, `PHONE_CALLS`, `resetPhoneCallsForTests` |
 | service | `src/services/phone/phoneChatLog.ts` | `appendPhoneChat`, `listPhoneChat`, `onPhoneChatChange`, `PHONE_CHAT_KEY`, `PHONE_CHAT_LIMIT`, `PhoneChatMessage` |

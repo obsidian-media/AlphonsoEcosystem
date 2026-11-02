@@ -32,7 +32,7 @@ const { PHASE3_CALLS, STALE, resetPhase3CallsForTests } = await import('../../..
 const { MASKED_LINE } = await import('../../../services/phone/phase3Mirror');
 const { saveCleanupSet } = await import('../../../services/echo/cleanupStore');
 const { PROJECT_NEEDS_TEXT, listProjects } = await import('../../../services/projects/projectStore');
-const { createThread, addThreadMessage, listThreadMessages } = await import('../../../services/boardroomThreadService');
+const { createThread, addThreadMessage, listThreadMessages, setThreadGovernance } = await import('../../../services/boardroomThreadService');
 
 const call = (name: string, args: Record<string, unknown>) => (PHASE3_CALLS as Record<string, (a: Record<string, unknown>, d: string) => Promise<unknown>>)[name](args, 'phone-1');
 const intake = (name: string, description: string) => ({ name, description, stack: '', deadline: '', type: '', features: '', constraints: '', risks: '', priority: 'medium' });
@@ -101,10 +101,16 @@ describe('project calls', () => {
     await expect(call('project.create', { intake: intake('', 'x') })).rejects.toThrow(PROJECT_NEEDS_TEXT);
   });
 
-  it('project.start starts the saved project', async () => {
+  it('project.start starts the saved project with the computer’s settings', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ endpoint: 'http://127.0.0.1:11434', zeroCostMode: true }));
     startProject.mockResolvedValue({ ok: true, requestId: 'r1' });
     await expect(call('project.start', { id: 'p1' })).resolves.toMatchObject({ requestId: 'r1' });
-    expect(startProject).toHaveBeenCalledWith('p1');
+    expect(startProject).toHaveBeenCalledWith('p1', expect.objectContaining({ settings: { endpoint: 'http://127.0.0.1:11434', zeroCostMode: true } }));
+  });
+
+  it('project.start answers once the run has started, not when it ends', async () => {
+    startProject.mockImplementation((_id: string, opts: { onStarted?: (r: string) => void }) => { opts.onStarted?.('r9'); return new Promise(() => {}); });
+    await expect(call('project.start', { id: 'p1' })).resolves.toMatchObject({ ok: true, requestId: 'r9' });
   });
 
   it('project.start that fails gives its reason', async () => {
@@ -160,6 +166,7 @@ describe('Boardroom calls', () => {
 
   it('thread actions call the same functions as the desktop', async () => {
     const t = createThread({ topic: 'Launch', participants: ['maria'] });
+    setThreadGovernance(t.id, { riskLevel: 'low', approvalRequired: false, summary: 'ok', reviewedAt: '', source: 'model' } as never);
     distributeThread.mockResolvedValue(true);
     await call('boardroom.conclude', { threadId: t.id });
     await call('boardroom.distribute', { threadId: t.id, mode: 'slack', channel: '#news' });
@@ -167,6 +174,14 @@ describe('Boardroom calls', () => {
     expect(concludeThread).toHaveBeenCalledWith(t.id);
     expect(distributeThread).toHaveBeenCalledWith(t.id, 'slack', '#news');
     expect(creativeBriefThread).toHaveBeenCalledWith(t.id);
+  });
+
+  it('thread actions answer at once while the agent works', async () => {
+    const t = createThread({ topic: 'Launch', participants: ['maria'] });
+    concludeThread.mockReturnValue(new Promise(() => {}));
+    creativeBriefThread.mockReturnValue(new Promise(() => {}));
+    await expect(call('boardroom.conclude', { threadId: t.id })).resolves.toMatchObject({ started: true });
+    await expect(call('boardroom.creativeBrief', { threadId: t.id })).resolves.toMatchObject({ started: true });
   });
 
   it('distribute before Conclude is refused', async () => {

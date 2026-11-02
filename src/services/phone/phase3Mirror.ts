@@ -9,6 +9,8 @@ import { listThreads, listThreadMessages, type BoardroomThread, type BoardroomTh
 
 export const PHONE_DECISIONS = 50;
 export const PHONE_THREAD_MESSAGES = 30;
+/** The Boardroom store's size on the phone: the snapshot sends every store in one message under the relay's 4 MB limit. */
+export const BOARDROOM_MIRROR_BYTES = 1_000_000;
 export const MASKED_LINE = 'Hidden: reveal it on the phone with Face ID or your fingerprint.';
 
 export type PhoneThreadMessage = BoardroomThreadMessage & { masked?: true };
@@ -39,9 +41,18 @@ export function phoneMessage(m: BoardroomThreadMessage): PhoneThreadMessage {
   return m.approvalRequired && !m.confirmed ? { ...m, content: MASKED_LINE, masked: true } : m;
 }
 
+/** The newest threads with their last messages, as many as fit in BOARDROOM_MIRROR_BYTES. */
 export function boardroomMirrorData(): BoardroomMirror {
-  const threads = listThreads();
+  const threads: BoardroomThread[] = [];
   const messages: Record<string, PhoneThreadMessage[]> = {};
-  for (const t of threads) messages[t.id] = listThreadMessages(t.id).slice(-PHONE_THREAD_MESSAGES).map(phoneMessage);
+  let size = 64;
+  for (const t of [...listThreads()].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0))) {
+    const recent = listThreadMessages(t.id).slice(-PHONE_THREAD_MESSAGES).map(phoneMessage);
+    const cost = JSON.stringify(t).length + JSON.stringify(recent).length + t.id.length + 8;
+    if (size + cost > BOARDROOM_MIRROR_BYTES) break;
+    size += cost;
+    threads.push(t);
+    messages[t.id] = recent;
+  }
   return { threads, messages };
 }
