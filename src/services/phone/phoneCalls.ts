@@ -8,6 +8,7 @@ import { appendPhoneChat, listPhoneChat } from './phoneChatLog';
 import { mirrorSnapshots } from './phoneMirror';
 import { CONTENT_CALLS, mediaPreview } from './contentCalls';
 import { PHASE3_CALLS } from './phase3Calls';
+import { PHASE3B_CALLS } from './phase3bCalls';
 import type { PhoneCallName, PhoneMessage } from './phoneProtocol';
 
 export const NOT_FROM_PHONE = 'Not available from the phone yet.';
@@ -48,6 +49,7 @@ export const PHONE_CALLS: Record<PhoneCallName, Call> = {
   'media.preview': (args) => mediaPreview(args),
   ...CONTENT_CALLS,
   ...PHASE3_CALLS,
+  ...PHASE3B_CALLS,
   'chat.send': async (args) => {
     const text = str(args.text).trim();
     const messageId = str(args.messageId);

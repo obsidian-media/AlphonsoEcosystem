@@ -61,7 +61,7 @@ describe('phoneCalls', () => {
   });
 
   it('a call not in PHONE_CALLS is refused', async () => {
-    await expect(handlePhoneCall(call('settings.set', { zeroCostMode: false }), 'ph-1')).rejects.toThrow(NOT_FROM_PHONE);
+    await expect(handlePhoneCall(call('connector.saveKey', { id: 'slack', key: 'xoxb-1' }), 'ph-1')).rejects.toThrow(NOT_FROM_PHONE);
     await expect(handlePhoneCall(call('toString', {}), 'ph-1')).rejects.toThrow(NOT_FROM_PHONE);
   });
 

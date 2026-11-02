@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 383 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 384 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -472,6 +472,7 @@ Source-backed inventory: 383 services and 185 components. Human purpose descript
 | service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia`, `versionMedia` |
 | service | `src/services/phone/contentStamps.ts` | `postsStamp`, `postStamp`, `stepStamp` |
 | service | `src/services/phone/desktopSignIn.ts` | `createDesktopPhoneSignIn`, `desktopSignInConfig`, `NO_SIGN_IN_PAGE` |
+| service | `src/services/phone/phase3bCalls.ts` | `ALWAYS_ASKS`, `NEEDS_CONFIRM`, `PHASE3B_CALLS`, `Phase3bCallName` |
 | service | `src/services/phone/phase3bMirror.ts` | `cachedModelChoices`, `connectorsMirrorData`, `PhoneConnector`, `PhoneSettings`, `PhoneSkills`, `PhoneTeam`, `ProviderChoice`, `refreshModelChoices`, `resetPhase3bMirrorForTests`, `settingsMirrorData`, `skillsMirrorData`, `teamsMirrorData` |
 | service | `src/services/phone/phase3Calls.ts` | `PHASE3_CALLS`, `Phase3CallName`, `PHONE_SEARCH_RESULTS`, `resetPhase3CallsForTests`, `STALE` |
 | service | `src/services/phone/phase3Mirror.ts` | `BOARDROOM_MIRROR_BYTES`, `BoardroomMirror`, `boardroomMirrorData`, `MASKED_LINE`, `MemoryMirror`, `memoryMirrorData`, `PHONE_DECISIONS`, `PHONE_THREAD_MESSAGES`, `phoneMessage`, `PhoneThreadMessage`, `ProjectMirror`, `projectsMirrorData` |

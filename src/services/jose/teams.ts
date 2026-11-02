@@ -103,7 +103,7 @@ export function parseTeamRequest(text: string): { name: string; rest: string } |
   return { name: use[1].trim(), rest: use[2].trim() };
 }
 
-export async function runTeam(templateId: string, text: string, opts: { source: string; endpoint?: string; zeroCostMode?: boolean }): Promise<any> {
+export async function runTeam(templateId: string, text: string, opts: { source: string; endpoint?: string; zeroCostMode?: boolean; onProgress?: (event: any) => void }): Promise<any> {
   const template = listUserTemplates().find((t) => t.id === templateId);
   if (!template) return { ok: false, reason: TEAM_NOT_FOUND(listUserTemplates().map((t) => t.name)) };
   if (!String(text || '').trim()) return { ok: false, reason: TEAM_NEEDS_TEXT };
@@ -117,6 +117,7 @@ export async function runTeam(templateId: string, text: string, opts: { source: 
     label: TEAM_LABEL(template.name),
     ...(opts.endpoint ? { endpoint: opts.endpoint } : {}),
     ...(typeof opts.zeroCostMode === 'boolean' ? { zeroCostMode: opts.zeroCostMode } : {}),
+    ...(opts.onProgress ? { onProgress: opts.onProgress } : {}),
   } as never);
 }
 
