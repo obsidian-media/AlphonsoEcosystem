@@ -31,6 +31,7 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 - An edit made on the phone to something that changed on the computer is refused with the latest ("This changed on your computer; here's the latest.").
 - Checked end to end over the real relay: a 6 MB preview in 3 pieces with its hash, a stale caption edit refused with the latest, and the relay's daily limit reaching the phone at once.
 - Miya now writes what a picture shows before ComfyUI draws it; ComfyUI used to get your words as typed ("now be creative and generate an image of your thought"). A change to the picture just shown ("now make the same dog wear a different costume", "make it blue") goes to Miya and starts from that picture, so the dog stays the dog; it used to go to Alphonso, who answered in words (found by the owner, 2026-11-02).
+- Runtime Hub → ComfyUI → Picture models: install DreamShaper XL Lightning or SDXL Lightning (6.9 GB each, fit a 6 GB graphics card) for sharper pictures at 1024 pixels; the one you install is used for pictures, and each draws with the settings from its own model card.
 - Chat labels a picture Miya made as a picture, with where it is; it said "made a video".
 - A picture step no longer asks to spend when Jose's planner gave it a paid model: ComfyUI makes the picture.
 - A picture asked for in Chat ("generate an image of …") is saved in your output folder under `Miya/<date>/`, shown in Chat, and Miya's reply says where; it used to stay in ComfyUI's own output folder with no word of where (found by the owner, 2026-11-01).

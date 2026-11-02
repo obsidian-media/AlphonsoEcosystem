@@ -5,6 +5,7 @@ import { gateConnectorAction } from './connectorRegistry.js';
 import { freeOllamaGpuMemory, getConfiguredOllamaEndpoint } from '../../lib/ollama';
 import { DEFAULT_COMFYUI_ENDPOINT, getComfyUiEndpoint } from './comfyUiEndpoint.js';
 import { randomHex } from '../../lib/randomId';
+import { pictureSettingsFor } from './pictureModelProfiles';
 export { DEFAULT_COMFYUI_ENDPOINT, COMFYUI_ENDPOINT_KEY, getComfyUiEndpoint, setComfyUiEndpoint } from './comfyUiEndpoint.js';
 
 export async function generateSdWebUiImage({
@@ -194,7 +195,10 @@ function createMiyaSd15ComfyWorkflow({
   // A picture already in ComfyUI's input folder to start from (owner, 2026-11-02: "the same dog"),
   // and how much of it is redrawn (1 = all of it).
   startImage = null,
-  denoise = 1
+  denoise = 1,
+  // A picture model's own sampler (pictureModelProfiles.ts); the starter model draws with Euler.
+  sampler = 'euler',
+  scheduler = 'normal'
 }) {
   // From a picture: loaded and encoded, so the sampler only partly redraws it. Else from nothing.
   const latent = startImage
@@ -204,7 +208,7 @@ function createMiyaSd15ComfyWorkflow({
     }
     : { 5: { class_type: 'EmptyLatentImage', inputs: { width, height, batch_size: 1 } } };
   return {
-    3: { class_type: 'KSampler', inputs: { seed, steps, cfg: cfgScale, sampler_name: 'euler', scheduler: 'normal', denoise: startImage ? denoise : 1, model: ['4', 0], positive: ['6', 0], negative: ['7', 0], latent_image: ['5', 0] } },
+    3: { class_type: 'KSampler', inputs: { seed, steps, cfg: cfgScale, sampler_name: sampler, scheduler, denoise: startImage ? denoise : 1, model: ['4', 0], positive: ['6', 0], negative: ['7', 0], latent_image: ['5', 0] } },
     4: { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: checkpoint } },
     ...latent,
     6: { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['4', 1] } },
@@ -336,9 +340,13 @@ export async function generateComfyUiImage({
   }
   let workflow;
   let checkpoint;
+  let drawn = { width, height, steps, cfgScale };
   try {
     checkpoint = await resolveComfyUiCheckpoint();
-    workflow = createMiyaSd15ComfyWorkflow({ prompt, checkpoint, negativePrompt, width, height, steps, cfgScale, startImage, denoise });
+    // A picture model from Runtime Hub draws at its own size with its own steps (2026-11-02).
+    const settings = pictureSettingsFor(checkpoint, { width, height, steps, cfgScale });
+    drawn = { width: settings.width, height: settings.height, steps: settings.steps, cfgScale: settings.cfgScale };
+    workflow = createMiyaSd15ComfyWorkflow({ prompt, checkpoint, negativePrompt, ...drawn, sampler: settings.sampler, scheduler: settings.scheduler, startImage, denoise });
   } catch (error) {
     const errMsg = String(error || '');
     recordConnectorFailure('comfyui_video', 'local_image_generation');
@@ -378,7 +386,7 @@ export async function generateComfyUiImage({
   } else {
     recordConnectorFailure('comfyui_video', 'local_image_generation');
   }
-  const finalResult = { ...result, provider: 'comfyui', checkpoint: checkpoint || FALLBACK_COMFYUI_CHECKPOINT, prompt, width, height, steps, cfgScale };
+  const finalResult = { ...result, provider: 'comfyui', checkpoint: checkpoint || FALLBACK_COMFYUI_CHECKPOINT, prompt, ...drawn };
   appendConnectorAudit('comfyui_video', finalResult?.ok ? 'image_generation_success' : 'image_generation_failed', {
     provider: 'comfyui', jobId: finalResult?.jobId || queued.promptId,
     outputCount: Array.isArray(finalResult?.outputPaths) ? finalResult.outputPaths.length : 0,

@@ -288,6 +288,8 @@ pub struct ExtraModelInfo {
   installed: bool,
   vram_gb: Option<f64>,
   comfyui_dir: Option<String>,
+  /// What ComfyUI calls the files (a picture model's checkpoint name, chosen in Settings once installed).
+  file_names: Vec<&'static str>,
 }
 
 pub(crate) async fn extra_model_info(
@@ -307,6 +309,7 @@ pub(crate) async fn extra_model_info(
       .unwrap_or(false),
     vram_gb: gpu_memory_gb().await,
     comfyui_dir: root.as_ref().map(|r| r.to_string_lossy().to_string()),
+    file_names: model.files.iter().map(|f| f.filename).collect(),
   }
 }
 
@@ -423,6 +426,63 @@ pub async fn comfyui_install_motion_model(
   .await
 }
 
+/// Picture models better than the starter one (owner, 2026-11-02: "where could I download a better
+/// image model from inside Alphonso?"). SDXL checkpoints distilled to a few steps, so they fit a
+/// 6 GB card and stay quick; each draws with its own settings (`pictureModelProfiles.ts`, from its
+/// model card). Pinned 2026-11-02 from the Hugging Face API (a fixed commit, size and LFS SHA-256);
+/// both under CreativeML Open RAIL++-M, which lets anyone download and use them.
+pub(crate) const PICTURE_MODELS: &[ExtraModel] = &[
+  ExtraModel {
+    id: "dreamshaper_xl_lightning",
+    name: "DreamShaper XL Lightning",
+    min_vram_gb: 6.0,
+    license: "CreativeML Open RAIL++-M",
+    files: &[ModelFile {
+      url: "https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/561086c22aba3925b1e8803a73857f061635c7c3/DreamShaperXL_Lightning-SFW.safetensors",
+      sha256: "832e7bb2302c3cd67c818ca4fe9dcbedf696d3070dab5463127263ec4db9899f",
+      size: 6_939_220_250,
+      subfolder: "checkpoints",
+      filename: "DreamShaperXL_Lightning-SFW.safetensors",
+    }],
+  },
+  ExtraModel {
+    id: "sdxl_lightning_4step",
+    name: "SDXL Lightning (4 steps)",
+    min_vram_gb: 6.0,
+    license: "CreativeML Open RAIL++-M",
+    files: &[ModelFile {
+      url: "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/c9a24f48e1c025556787b0c58dd67a091ece2e44/sdxl_lightning_4step.safetensors",
+      sha256: "e0d996ee0013e79d9d3561f50fcafb9a17e3ff07b780358e3b66d67932c4d490",
+      size: 6_938_040_682,
+      subfolder: "checkpoints",
+      filename: "sdxl_lightning_4step.safetensors",
+    }],
+  },
+];
+
+pub(crate) fn picture_model(id: &str) -> Option<&'static ExtraModel> {
+  PICTURE_MODELS.iter().find(|m| m.id == id)
+}
+
+#[tauri::command]
+pub async fn comfyui_picture_models(saved_dir: Option<String>) -> Vec<ExtraModelInfo> {
+  let mut out = Vec::with_capacity(PICTURE_MODELS.len());
+  for model in PICTURE_MODELS {
+    out.push(extra_model_info(model, saved_dir.clone()).await);
+  }
+  out
+}
+
+#[tauri::command]
+pub async fn comfyui_install_picture_model(
+  app: AppHandle,
+  saved_dir: Option<String>,
+  id: String,
+) -> Result<(), String> {
+  let model = picture_model(&id).ok_or_else(|| "There is no such picture model.".to_string())?;
+  install_files(&app, saved_dir, "comfyui-picture", model.name, model.files).await
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -496,6 +556,42 @@ mod tests {
       assert!(f.url.ends_with(f.filename));
       assert_eq!(f.subfolder, "checkpoints");
     }
+  }
+
+  // Owner, 2026-11-02: a better picture model than the starter one, installed from Runtime Hub.
+  #[test]
+  fn the_picture_models_are_pinned_checkpoints() {
+    assert!(PICTURE_MODELS.len() >= 2);
+    for m in PICTURE_MODELS {
+      assert_eq!(m.files.len(), 1, "{}", m.id);
+      let f = &m.files[0];
+      assert_eq!(f.sha256.len(), 64);
+      assert!(f.sha256.chars().all(|c| c.is_ascii_hexdigit()));
+      assert!(f.size > 1_000_000_000);
+      // A fixed commit, never `main`.
+      let commit = f
+        .url
+        .split("/resolve/")
+        .nth(1)
+        .and_then(|r| r.split('/').next())
+        .unwrap_or("");
+      assert_eq!(commit.len(), 40, "{}", f.url);
+      assert!(f.url.starts_with("https://huggingface.co/") && f.url.ends_with(f.filename));
+      assert_eq!(f.subfolder, "checkpoints");
+      assert!(f.filename.ends_with(".safetensors"));
+      assert!(m.min_vram_gb <= 6.0, "{} must fit a 6 GB card", m.id);
+    }
+  }
+
+  #[test]
+  fn a_picture_model_is_found_by_its_id_only() {
+    assert_eq!(
+      picture_model("sdxl_lightning_4step").map(|m| m.id),
+      Some("sdxl_lightning_4step")
+    );
+    assert!(picture_model("dreamshaper_xl_lightning").is_some());
+    assert!(picture_model("ltx_video_2b").is_none());
+    assert!(picture_model("../etc").is_none());
   }
 
   #[test]

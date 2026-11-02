@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 376 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 377 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -132,6 +132,7 @@ Source-backed inventory: 376 services and 184 components. Human purpose descript
 | component | `src/components/OrchestratorView.tsx` | `OrchestratorView` |
 | component | `src/components/OutsideToolsSection.tsx` | `OutsideToolsSection` |
 | component | `src/components/phone/PhonesSection.tsx` | `PhonesSection` |
+| component | `src/components/PictureModelsPanel.tsx` | `PictureModelsPanel` |
 | component | `src/components/PipelineResultCard.tsx` | `PipelineResultCard` |
 | component | `src/components/ProductionReadinessPanel.tsx` | `ProductionReadinessPanel` |
 | component | `src/components/ProjectBatchPanel.tsx` | `default` |
@@ -272,6 +273,7 @@ Source-backed inventory: 376 services and 184 components. Human purpose descript
 | service | `src/services/connectors/openRouterModels.ts` | `findWorkingOpenRouterModel`, `FreeModelChoice`, `freeModelChoices`, `OPENROUTER_CHAT_LIMIT`, `OPENROUTER_CHOOSE_FREE`, `OPENROUTER_CHOOSE_FREE_LABEL`, `OPENROUTER_FREE_PRIVACY`, `openRouterModelsNotServed`, `rememberNotServed` |
 | service | `src/services/connectors/openRouterPaid.ts` | `PaidModelChoice`, `paidModelChoices`, `paidModelLabel` |
 | service | `src/services/connectors/perplexityConnector.ts` | `isPerplexityConfigured`, `PerplexitySearchOptions`, `PerplexitySearchResult`, `PerplexitySource`, `searchPerplexity` |
+| service | `src/services/connectors/pictureModelProfiles.ts` | `PICTURE_MODEL_PROFILES`, `PictureModelProfile`, `PictureSettings`, `pictureSettingsFor` |
 | service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SLACK_APP_TOKEN_PROBLEM`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `slackTokenProblem`, `updateMessage`, `uploadFile` |
 | service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
@@ -545,7 +547,7 @@ Source-backed inventory: 376 services and 184 components. Human purpose descript
 | service | `src/services/trustModel.ts` | `timestampMs`, `TRUST_STATES`, `trustColor`, `TrustState` |
 | service | `src/services/unifiedMemoryService.js` | `addFailureMemory`, `addMemoryItem`, `autoTagMemoryItem`, `checkQuota`, `clearContentHashCache`, `clearExpiredMemory`, `deduplicateAllNamespaces`, `deduplicateMemory`, `exportMemoryItems`, `getAllMemorySizes`, `getDurableMemoryStatus`, `getMemorySize`, `getMemorySummary`, `getNamespaceCount`, `hydrateFromDurable`, `hydrateMemoryFromDurable`, `importMemoryItems`, `listDurableMemoryRecords`, `listEcosystemMemoryItems`, `listMemory`, `listMemoryByNamespace`, `listMemoryItems`, `listMiyaMemory`, `listWorkflowMemory`, `MEMORY_CATEGORIES`, `MEMORY_NAMESPACES`, `normalizeMemoryRecord`, `pushMemory`, `pushMemoryItem`, `pushMiyaMemory`, `pushWorkflowMemory`, `removeCheckNotes`, `resetMemoryServiceState`, `tickExpiry`, `upsertBrandKit`, `upsertDurableMemoryRecords` |
 | service | `src/services/verificationService.ts` | `appendVerificationLog`, `buildOllamaStartupGuide`, `getVerificationLogs`, `listOllamaModels`, `OllamaStartupGuide`, `readDurableAuditLog`, `VERIFICATION_SCOPE`, `VerificationLogEntry`, `VerificationLogInput`, `verifyCommandExecution`, `verifyDurableAuditChain`, `verifyOllamaRuntimeProof`, `verifyPathProof`, `verifyProcessProof` |
-| service | `src/services/videoModelService.ts` | `clipSizeFor`, `effectiveVideoModel`, `ExtraModelInfo`, `getCharacterReferenceModel`, `getFullSizeClips`, `getLocalMotionModel`, `getSelectedVideoModel`, `installCharacterReferenceModel`, `installLocalMotionModel`, `installVideoModel`, `listVideoModels`, `setFullSizeClips`, `setSelectedVideoModel`, `VideoModel`, `VideoModelsInfo` |
+| service | `src/services/videoModelService.ts` | `clipSizeFor`, `effectiveVideoModel`, `ExtraModelInfo`, `getCharacterReferenceModel`, `getFullSizeClips`, `getLocalMotionModel`, `getSelectedVideoModel`, `installCharacterReferenceModel`, `installLocalMotionModel`, `installPictureModel`, `installVideoModel`, `listPictureModels`, `listVideoModels`, `setFullSizeClips`, `setSelectedVideoModel`, `VideoModel`, `VideoModelsInfo` |
 | service | `src/services/voiceOsService.ts` | `checkVoiceWatchdog`, `getVoiceServerStatus`, `getVoiceToken`, `getVoiceWebSocketUrl`, `resetVoiceWatchdogState`, `startVoiceServer`, `startVoiceWatchdog`, `stopVoiceServer`, `stopVoiceWatchdog` |
 | service | `src/services/voiceService.ts` | `classifyVoiceError`, `getVoicePrivacyLabel`, `requestAudioStream`, `SpeechRecognitionOptions`, `startSpeechRecognition`, `stopAudioStream`, `supportsMicrophoneCapture`, `supportsSpeechRecognition`, `TRANSCRIPTION_PIPELINE_STATUS`, `VOICE_STATES`, `VoiceErrorClassification`, `VoiceState` |
 | service | `src/services/whatsappBrowserConnector.ts` | `browserPollWhatsAppGateway`, `browserSendWhatsApp`, `processWhatsAppWebhook`, `verifyWhatsAppWebhook` |

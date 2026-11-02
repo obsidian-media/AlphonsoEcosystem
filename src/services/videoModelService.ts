@@ -61,7 +61,7 @@ export function installVideoModel(id: string): Promise<void> {
 
 /** The model the user picked, or null for the suggested one. */
 /** The character reference model (phase 4c): installed in the user's ComfyUI or not. */
-export interface ExtraModelInfo { id: string; name: string; minVramGb: number; license: string; sizeBytes: number; installed: boolean; vramGb: number | null; comfyuiDir: string | null }
+export interface ExtraModelInfo { id: string; name: string; minVramGb: number; license: string; sizeBytes: number; installed: boolean; vramGb: number | null; comfyuiDir: string | null; fileNames?: string[] }
 
 export function getCharacterReferenceModel(): Promise<ExtraModelInfo> {
   return invoke<ExtraModelInfo>('comfyui_reference_model', { savedDir: savedComfyDir() });
@@ -69,6 +69,15 @@ export function getCharacterReferenceModel(): Promise<ExtraModelInfo> {
 
 export function installCharacterReferenceModel(): Promise<void> {
   return invoke<void>('comfyui_install_reference_model', { savedDir: savedComfyDir() });
+}
+
+/** Picture models better than the starter one (2026-11-02), installed into the user's ComfyUI. */
+export function listPictureModels(): Promise<ExtraModelInfo[]> {
+  return invoke<ExtraModelInfo[]>('comfyui_picture_models', { savedDir: savedComfyDir() });
+}
+
+export function installPictureModel(id: string): Promise<void> {
+  return invoke<void>('comfyui_install_picture_model', { savedDir: savedComfyDir(), id });
 }
 
 /** Motion transfer on this computer (phase 4c): Wan 2.1 VACE 1.3B. */

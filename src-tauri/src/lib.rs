@@ -838,6 +838,8 @@ pub fn run() {
       comfyui_video_models::comfyui_install_reference_model,
       comfyui_video_models::comfyui_motion_model,
       comfyui_video_models::comfyui_install_motion_model,
+      comfyui_video_models::comfyui_picture_models,
+      comfyui_video_models::comfyui_install_picture_model,
       comfyui_proxy::comfyui_upload_image,
       comfyui_proxy::comfyui_save_output,
       execute_command_verified,
