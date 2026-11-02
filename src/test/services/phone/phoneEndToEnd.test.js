@@ -7,6 +7,8 @@
 // computer goes away and the phone says since when.
 // Phase 2 adds: a 6 MB preview arrives in 3 pieces with its hash; a stale caption edit is
 // refused with the latest; the relay's daily_limit reaches the phone at once.
+// Phase 3 part A adds: a Boardroom message from the phone gets an agent's reply; a memory search
+// returns a saved decision; a stale clean-up Apply is refused.
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { WebSocket } from 'ws';
 
@@ -53,6 +55,11 @@ vi.mock('../../../services/phone/phonePreviews', async () => {
 });
 vi.mock('../../../services/phone/contentMirror', async (orig) => ({ ...(await orig()), mediaOffered: () => true }));
 vi.mock('../../../services/contentFactory/contentProjectService', async (orig) => ({ ...(await orig()), getProject: (id) => h.projects.get(id) || null }));
+// The agent's model is a stand-in; the Boardroom reply loop and thread store are real.
+vi.mock('../../../services/boardroomFacilitatorService', async (orig) => ({
+  ...(await orig()),
+  generateAgentResponse: async ({ agentId }) => ({ ok: true, text: `${agentId}: launch on Tuesday.`, model: 'stand-in', latencyMs: 1 }),
+}));
 vi.mock('../../../services/secureStorageService', () => ({
   secureGet: async (k) => h.keychain.get(k) ?? null,
   secureSet: async (k, v) => { h.keychain.set(k, v); },
@@ -67,6 +74,9 @@ import { handlePhoneCall, ALREADY_DONE, resetPhoneCallsForTests } from '../../..
 import { connectPhone, pairPhone, RELAY_REFUSED } from '../../../mobile/phoneSession';
 import { fetchPreview } from '../../../mobile/previewFetch';
 import { CHANGED_ON_COMPUTER } from '../../../services/phone/contentCalls';
+import { STALE } from '../../../services/phone/phase3Calls';
+import { createThread, listThreadMessages } from '../../../services/boardroomThreadService';
+import { saveCleanupSet } from '../../../services/echo/cleanupStore';
 
 const auth = { idToken: async () => 'tok-ann' };
 const verifyToken = async (t) => { if (t !== 'tok-ann') throw new Error('bad'); return 'ann'; };
@@ -169,6 +179,27 @@ describe('phone app phase 1, end to end over the real relay', () => {
     expect(r.value.stale).toBe(true);
     expect(r.value.message).toBe(CHANGED_ON_COMPUTER);
     expect(r.value.latest.posts[0].caption).toBe('Changed on the computer');
+  }, 20_000);
+
+  it("boardroom: a message from the phone gets the mentioned agent's reply", async () => {
+    const thread = createThread({ topic: 'Launch', participants: ['maria'] });
+    const r = await phone.call('boardroom.send', { threadId: thread.id, text: '@maria when do we launch?', messageId: 'b-1' });
+    expect(r).toEqual({ ok: true, value: { messageId: 'b-1' } });
+    await vi.waitFor(() => expect(listThreadMessages(thread.id).map((m) => m.content)).toContain('maria: launch on Tuesday.'), { timeout: 10_000 });
+  }, 20_000);
+
+  it('memory: a search from the phone returns a saved decision', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ echoMeaningSearch: false }));
+    localStorage.setItem('alphonso_echo_decisions_v1', JSON.stringify([{ id: 'd1', kind: 'decision', text: 'Post the bakery videos on Tuesdays', why: '', topics: ['bakery'], appliesTo: [], source: { surface: 'chat' }, status: 'active', atMs: 1 }]));
+    const r = await phone.call('memory.search', { query: 'bakery videos' });
+    expect(r.ok).toBe(true);
+    expect(r.value.map((d) => d.id)).toEqual(['d1']);
+  }, 20_000);
+
+  it('memory: a clean-up Apply based on an old set is refused', async () => {
+    saveCleanupSet({ requestId: 'r-echo', stepId: 'echo', proposals: [] });
+    const r = await phone.call('memory.applyCleanup', { requestId: 'r-echo', stepId: 'echo', setId: 'cleanup-old' });
+    expect(r).toEqual({ ok: false, error: STALE });
   }, 20_000);
 
   it('offline: with the computer gone, the phone says since when', async () => {
