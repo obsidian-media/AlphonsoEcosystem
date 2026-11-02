@@ -60,3 +60,22 @@ describe('deleting the account from the phone', () => {
     expect(onDeleteAccount).not.toHaveBeenCalled();
   });
 });
+
+describe('deleting the account before pairing', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('a signed-in phone that is not paired yet can delete its account from the Pair screen', async () => {
+    let signed = true;
+    const signIn = { signedIn: () => signed, email: () => 'ann@example.com', signIn: vi.fn(async () => ({ ok: true })), signOut: vi.fn(async () => { signed = false; }), idToken: async () => (signed ? 'tok-ann' : null) };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }) as any);
+    const lock = { confirm: vi.fn(async () => true) };
+    const { MobileApp } = await import('../../mobile/MobileApp');
+    render(<MobileApp signIn={signIn} secrets={secrets()} lock={lock} deleteRelayUrl="wss://relay.example" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete my account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete it' }));
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('https://relay.example/account', expect.objectContaining({ method: 'DELETE' })));
+    expect(lock.confirm).toHaveBeenCalledWith('Delete your Alphonso account', { strict: true });
+    expect(await screen.findByRole('button', { name: 'Try a demo' })).toBeTruthy();
+    fetchSpy.mockRestore();
+  });
+});

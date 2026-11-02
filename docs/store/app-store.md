@@ -67,7 +67,7 @@ Free (Alphonso launches free).
 
 The app connects to the user's own computer running the Alphonso desktop app, so a reviewer can't pair without one. To see the app working, tap "Try a demo" on the sign-in screen: it opens the real screens with built-in sample data (marked "Demo · sample data, nothing is sent" at the top), and every action answers "This is a demo: nothing is sent." Tap "Leave demo" to return.
 
-Account deletion: sign in, then More → Delete my account. It explains what is deleted, asks for Face ID, and deletes the account through our relay.
+Account deletion: sign in, then Delete my account at the bottom of the Pair screen (or More → Delete my account once paired). It explains what is deleted, asks for Face ID, and deletes the account through our relay.
 
 Sign-in options: Sign in with Apple, Google, or an email link. No paid content or in-app purchases.
 

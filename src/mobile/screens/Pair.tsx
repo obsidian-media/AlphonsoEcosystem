@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { DeleteAccountSection } from './DeleteAccount';
+import type { PhoneLock } from '../MobileApp';
 
-export function PairScreen({ pair, scanQr, onPaired }: { pair: (qr: string) => Promise<{ ok: boolean; reason?: string }>; scanQr?: () => Promise<string | null>; onPaired: () => void }) {
+/** `lock` + `onDeleteAccount` (phase 3 part C): a signed-in phone can delete its account before pairing. */
+export function PairScreen({ pair, scanQr, onPaired, lock, onDeleteAccount }: { pair: (qr: string) => Promise<{ ok: boolean; reason?: string }>; scanQr?: () => Promise<string | null>; onPaired: () => void; lock?: PhoneLock; onDeleteAccount?: () => Promise<{ ok: boolean; reason?: string }> }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -22,6 +25,7 @@ export function PairScreen({ pair, scanQr, onPaired }: { pair: (qr: string) => P
       <input aria-label="Pairing code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Or paste the pairing code" className="rounded-lg border border-(--border) px-3 py-3" />
       <button type="button" disabled={busy || !code.trim()} onClick={() => tryPair(code)} className="rounded-lg bg-(--surface-3) py-3">Pair</button>
       {message && <p role="status" className="text-(--danger)">{message}</p>}
+      {lock && onDeleteAccount && <div className="mt-6"><DeleteAccountSection lock={lock} onDeleteAccount={onDeleteAccount} /></div>}
     </div>
   );
 }

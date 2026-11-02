@@ -142,7 +142,7 @@ privacy policy and support page are in `site/`.
 
 ## Delete your account
 
-On the phone, More → **Delete my account**. The app says what it deletes, then asks for Face ID or
+On the phone, More → **Delete my account** (before pairing, it is at the bottom of the Pair screen). The app says what it deletes, then asks for Face ID or
 your fingerprint. The relay deletes your sign-in and the pairing records of every phone and computer
 signed in with that account, and the phone forgets its pairing and keys. The work on your computer is
 not touched. On the computer, remove the phone under Settings → Runtime → Remote Access → Phones.

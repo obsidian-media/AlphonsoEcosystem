@@ -46,6 +46,8 @@ export interface MobileAppProps {
   onNotificationAction?: OnNotificationAction;
   /** Where previews are kept on the phone and how it is connected (phase 2). */
   previews?: PhonePreviewParts;
+  /** The relay address for Delete my account when the phone isn't paired; the build's by default (tests pass one). */
+  deleteRelayUrl?: string;
 }
 
 export function lockOn(): boolean { return localStorage.getItem(PHONE_LOCK_KEY) !== 'off'; }
@@ -138,6 +140,16 @@ export function MobileApp(props: MobileAppProps) {
   // "Try a demo" (phase 3 part C): a fresh demo link each time; nothing of it is kept.
   const [demoLink, setDemoLink] = useState<PhoneLink | null>(null);
 
+  // Delete my account (phase 3 part C): from More, or from the Pair screen before pairing.
+  const removeAccount = async () => {
+    const result = await deleteAccount({ auth: props.signIn, secrets: props.secrets, relayUrl: savedPairing()?.relayUrl || props.deleteRelayUrl || phoneRelayUrl() });
+    if (!result.ok) return result;
+    link?.stop();
+    await props.signIn.signOut().catch(() => undefined);
+    setLink(null); setPaired(false); setSignedIn(false);
+    return result;
+  };
+
   const askUnlock = async () => {
     setAsking(true);
     try { setUnlocked(await props.lock.confirm('Open Alphonso')); } finally { setAsking(false); }
@@ -167,7 +179,7 @@ export function MobileApp(props: MobileAppProps) {
   if (!signedIn) return <SignInScreen signIn={props.signIn} onSignedIn={() => setSignedIn(true)} onDemo={() => setDemoLink(createDemoLink())} />;
   if (!paired) {
     const pair = props.pair ?? ((qr: string) => pairPhone(qr, { auth: props.signIn, secrets: props.secrets, phoneName: props.phoneName || 'Phone' }));
-    return <PairScreen pair={pair} scanQr={props.scanQr} onPaired={() => setPaired(true)} />;
+    return <PairScreen pair={pair} scanQr={props.scanQr} onPaired={() => setPaired(true)} lock={props.lock} onDeleteAccount={removeAccount} />;
   }
   if (!link) return <div className="p-6 text-sm">Connecting…</div>;
   return (
@@ -179,14 +191,7 @@ export function MobileApp(props: MobileAppProps) {
       lockEnabled={lockEnabled}
       onLockChange={(on) => { localStorage.setItem(PHONE_LOCK_KEY, on ? 'on' : 'off'); setLockEnabled(on); }}
       onSignOut={async () => { link.stop(); await props.signIn.signOut(); setLink(null); setSignedIn(false); }}
-      onDeleteAccount={async () => {
-        const result = await deleteAccount({ auth: props.signIn, secrets: props.secrets, relayUrl: savedPairing()?.relayUrl || phoneRelayUrl() });
-        if (!result.ok) return result;
-        link.stop();
-        await props.signIn.signOut().catch(() => undefined);
-        setLink(null); setPaired(false); setSignedIn(false);
-        return result;
-      }}
+      onDeleteAccount={removeAccount}
     />
   );
 }
