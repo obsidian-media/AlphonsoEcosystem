@@ -90,17 +90,19 @@ function load<T>(key: string, fallback: T): T {
   try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v ?? fallback; } catch { return fallback; }
 }
 
-export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewParts = {}) {
-  let mirror: Mirror = { ...EMPTY, ...load<Partial<Mirror>>(MIRROR_KEY, {}) };
+/** `memoryOnly` (the demo, phone phase 3 part C): nothing is read from or written to the phone's storage. */
+export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewParts = {}, options: { memoryOnly?: boolean } = {}) {
+  const memoryOnly = options.memoryOnly === true;
+  let mirror: Mirror = { ...EMPTY, ...(memoryOnly ? {} : load<Partial<Mirror>>(MIRROR_KEY, {})) };
   const versions = new Map<MirroredStore, number | null>();
-  let outbox: Array<{ messageId: string; text: string; atMs: number }> = load(QUEUE_KEY, []);
+  let outbox: Array<{ messageId: string; text: string; atMs: number }> = memoryOnly ? [] : load(QUEUE_KEY, []);
   const sending = new Set<string>();
   const listeners = new Set<() => void>();
   const changed = () => {
-    try { localStorage.setItem(MIRROR_KEY, JSON.stringify(mirror)); } catch { /* full: the screen still has it */ }
+    if (!memoryOnly) { try { localStorage.setItem(MIRROR_KEY, JSON.stringify(mirror)); } catch { /* full: the screen still has it */ } }
     for (const l of listeners) l();
   };
-  const saveOutbox = () => { try { localStorage.setItem(QUEUE_KEY, JSON.stringify(outbox)); } catch { /* kept in memory */ } };
+  const saveOutbox = () => { if (memoryOnly) return; try { localStorage.setItem(QUEUE_KEY, JSON.stringify(outbox)); } catch { /* kept in memory */ } };
 
   transport.onMirror((msg) => {
     const last = versions.get(msg.store);
