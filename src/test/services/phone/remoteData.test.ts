@@ -128,3 +128,42 @@ describe('the Studio on the phone', () => {
     expect(t.calls).toEqual([]);
   });
 });
+
+describe('Memory, Projects and Boardroom on the phone', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('mirrored part-A stores show in more', () => {
+    const t = fakeTransport();
+    const data = createRemoteData(t);
+    t.push({ kind: 'snapshot', store: 'memory', data: { decisions: [{ id: 'd1', text: 'Post on Tuesdays' }], cleanup: null }, version: 1 });
+    t.push({ kind: 'snapshot', store: 'projects', data: [{ id: 'p1', name: 'Shop', latestRequestId: null }], version: 1 });
+    t.push({ kind: 'snapshot', store: 'boardroom', data: { threads: [{ id: 't1', topic: 'Launch' }], messages: { t1: [] } }, version: 1 });
+    expect(data.more.memory().decisions.map((d: any) => d.id)).toEqual(['d1']);
+    expect(data.more.projects().map((p: any) => p.id)).toEqual(['p1']);
+    expect(data.more.boardroom().threads.map((x: any) => x.id)).toEqual(['t1']);
+  });
+
+  it('before anything arrives, the stores are empty, not missing', () => {
+    const data = createRemoteData(fakeTransport());
+    expect(data.more.memory()).toEqual({ decisions: [], cleanup: null });
+    expect(data.more.projects()).toEqual([]);
+    expect(data.more.boardroom()).toEqual({ threads: [], messages: {} });
+  });
+
+  it('offline, a search says the computer is offline and sends nothing', async () => {
+    const t = fakeTransport();
+    const data = createRemoteData(t);
+    t.goOffline(Date.UTC(2026, 10, 2, 14, 2));
+    const result = await data.more.call('memory.search', { query: 'slack' });
+    expect(result).toEqual({ ok: false, reason: offlineLine(t.offlineSince()) });
+    expect(t.calls.filter((c) => c.name === 'memory.search')).toHaveLength(0);
+    expect(data.more.readOnly).toBe(true);
+  });
+
+  it('online, a call returns the computer’s answer', async () => {
+    const t = fakeTransport();
+    const data = createRemoteData(t);
+    await expect(data.more.call('project.start', { id: 'p1' })).resolves.toMatchObject({ ok: true });
+    expect(t.calls.at(-1)).toMatchObject({ name: 'project.start', args: { id: 'p1' } });
+  });
+});

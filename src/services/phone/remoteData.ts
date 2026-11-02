@@ -8,6 +8,7 @@ import type { BoardData } from './boardData';
 import type { MirroredStore, PhoneCallName } from './phoneProtocol';
 import type { MediaRef, PhoneProject } from './contentMirror';
 import type { CalendarItem } from '../contentFactory/calendarView';
+import type { BoardroomMirror, MemoryMirror, ProjectMirror } from './phase3Mirror';
 import { fetchPreview, type PreviewStore } from '../../mobile/previewFetch';
 
 export interface PhoneTransport {
@@ -38,8 +39,25 @@ export function offlineLine(sinceMs: number | null): string {
 }
 
 type Content = { projects: PhoneProject[]; brands: Array<{ id: string; name: string }>; calendar: CalendarItem[] };
-type Mirror = { requests: JoseRequest[]; stepOutputs: Record<string, StepOutput[]>; chat: ChatMessage[]; computer: Record<string, unknown>; content: Content };
-const EMPTY: Mirror = { requests: [], stepOutputs: {}, chat: [], computer: {}, content: { projects: [], brands: [], calendar: [] } };
+type Mirror = {
+  requests: JoseRequest[]; stepOutputs: Record<string, StepOutput[]>; chat: ChatMessage[]; computer: Record<string, unknown>; content: Content;
+  memory: MemoryMirror; projects: ProjectMirror[]; boardroom: BoardroomMirror;
+};
+const EMPTY: Mirror = {
+  requests: [], stepOutputs: {}, chat: [], computer: {}, content: { projects: [], brands: [], calendar: [] },
+  memory: { decisions: [], cleanup: null }, projects: [], boardroom: { threads: [], messages: {} },
+};
+
+/** Memory, Projects and Boardroom on the phone (phase 3 part A): the mirrored stores and their calls. */
+export interface MoreData {
+  memory(): MemoryMirror;
+  projects(): ProjectMirror[];
+  boardroom(): BoardroomMirror;
+  call(name: PhoneCallName, args: Record<string, unknown>): Promise<{ ok: true; value: any } | { ok: false; reason: string }>;
+  subscribe(listener: () => void): () => void;
+  readonly readOnly: boolean;
+  readonly readOnlyReason?: string;
+}
 
 /** Miya Studio and the Calendar on the phone (phase 2): the mirrored content store, its calls, previews. */
 export interface StudioData {
@@ -169,5 +187,15 @@ export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewP
     get readOnlyReason() { return transport.online() ? undefined : offlineLine(transport.offlineSince()); },
   };
 
-  return { board, chat, studio, reconnected };
+  const more: MoreData = {
+    memory: () => mirror.memory || EMPTY.memory,
+    projects: () => mirror.projects || EMPTY.projects,
+    boardroom: () => mirror.boardroom || EMPTY.boardroom,
+    call: studio.call,
+    subscribe: board.subscribe,
+    get readOnly() { return !transport.online(); },
+    get readOnlyReason() { return transport.online() ? undefined : offlineLine(transport.offlineSince()); },
+  };
+
+  return { board, chat, studio, more, reconnected };
 }
