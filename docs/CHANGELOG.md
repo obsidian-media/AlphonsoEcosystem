@@ -30,6 +30,7 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 - "Ready to check" notifications when Miya finishes new pictures or a video, once per version, with a small still when it fits; a tap opens the project.
 - An edit made on the phone to something that changed on the computer is refused with the latest ("This changed on your computer; here's the latest.").
 - Checked end to end over the real relay: a 6 MB preview in 3 pieces with its hash, a stale caption edit refused with the latest, and the relay's daily limit reaching the phone at once.
+- Settings → Runtime → Remote Access: the older Mobile Companion pairing (6-digit PIN) is folded away under "Older iPhone app (PIN pairing)" below Phones; its QR code was mistaken for the phone app's (found on the owner's first pairing, 2026-11-01).
 
 ## [2.11.1] — 2026-11-01 (fixes from using 2.11.0, PR 376; the Linux installer is back)
 

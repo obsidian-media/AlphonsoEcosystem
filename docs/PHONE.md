@@ -32,6 +32,9 @@ will be in the App Store and Google Play later.
 1. On the computer, in Phones, choose **Pair a phone**. A QR code appears. It works once,
    for 10 minutes.
 2. On the phone, tap **Scan the QR code** and point the camera at it.
+   Pairing never asks for a 6-digit PIN. The PIN and QR code under **Older iPhone app (PIN
+   pairing)** on the same page are for the older Alphonso Companion app; the phone app says
+   "That QR code isn't from Alphonso" if you scan that one.
    If you can't scan, choose **Copy the code** on the computer, send the code to your phone
    in a way you trust, and paste it in the app's **Pair** box.
 3. The phone appears in the computer's list with when it was last used.

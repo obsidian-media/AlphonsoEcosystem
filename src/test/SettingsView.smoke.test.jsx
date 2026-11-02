@@ -53,6 +53,7 @@ vi.mock('../services/agentWorkshop/accBridgeService', () => ({
 vi.mock('../services/comfyuiSettingsService', () => ({
   resolveComfyuiDirectory: vi.fn().mockResolvedValue(''),
   resolveComfyuiPython: vi.fn().mockResolvedValue(''),
+  findComfyuiInstalls: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../services/memoryService', () => ({
@@ -123,6 +124,10 @@ vi.mock('../components/CompanionPairingPanel', () => ({
   CompanionPairingPanel: () => <div data-testid="companion-pairing">Pairing</div>,
 }));
 
+vi.mock('../components/phone/PhonesSection', () => ({
+  PhonesSection: () => <div data-testid="phones-section">Phones</div>,
+}));
+
 vi.mock('../components/ConnectorSetupPanel', () => ({
   ConnectorSetupPanel: () => <div data-testid="connector-setup">Connectors</div>,
 }));
@@ -189,6 +194,19 @@ describe('SettingsView smoke', () => {
     expect(screen.getByTestId('ffmpeg-license-notice').textContent).toContain('GNU LGPL 2.1');
     fireEvent.click(screen.getByRole('button', { name: 'FFmpeg license and source' }));
     expect(invoke).toHaveBeenCalledWith('open_url', { url: 'https://ffmpeg.org/legal.html' });
+  });
+
+  // Owner, 2026-11-01: the old Mobile Companion pairing (6-digit PIN) was mistaken for the
+  // new phone app's pairing, so it sits closed under a fold below Phones.
+  it('keeps the older iPhone app pairing folded away below Phones', () => {
+    render(<SettingsView settings={minimalSettings} setSettings={vi.fn()} ollamaStatus={{ state: 'running', label: 'Running' }} installedModels={[]} onCheckOllama={vi.fn()} onCopyTroubleshootingCommand={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Runtime/ }));
+    const fold = screen.getByTestId('older-phone-app');
+    expect(fold.tagName).toBe('DETAILS');
+    expect(fold.open).toBe(false);
+    expect(fold.textContent).toContain('Older iPhone app (PIN pairing)');
+    expect(fold.contains(screen.getByTestId('companion-pairing'))).toBe(true);
+    expect(screen.getByTestId('phones-section').compareDocumentPosition(fold) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('renders with empty settings', () => {
