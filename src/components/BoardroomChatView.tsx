@@ -10,19 +10,15 @@ import {
   confirmThreadMessage,
   migrateLegacySessions,
   setThreadGovernance,
-  parseMentions,
   findCrossThreadContext,
   BOARDROOM_SPEAKER,
   type BoardroomThread,
   type BoardroomThreadMessage
 } from '../services/boardroomThreadService';
-import { workOnJose, workRequestIn } from '../services/boardroomJoseService';
-
-const JOSE_STARTED = 'Started on the board: Jose is planning it.';
-import { generateAgentResponse, detectLowConfidence } from '../services/boardroomFacilitatorService';
+import { runBoardroomReplies } from '../services/boardroomReplies';
+import { generateAgentResponse } from '../services/boardroomFacilitatorService';
 import { getAgentProvider } from '../services/modelSelectionService';
 import { getRuntimePolicySettings } from '../services/policyEnforcementService';
-import { createFanOutBudgetTracker, DEFAULT_FANOUT_CHAR_BUDGET } from '../services/fanOutBudgetService';
 
 const AGENT_PROFILES = listAgentProfiles();
 
@@ -56,13 +52,6 @@ async function resolveHermesApproval(agentId: string, requestApproval?: Boardroo
     requireApproval: true
   })) === true;
 }
-
-// Spec 1.10.2: a hard cap on chained AI-generated hops per message, so an
-// unbroken chain of agents @mentioning each other can't run forever. This
-// is deliberately a simple global depth cap per cascade, not full
-// per-topic round tracking (which needs real disagreement detection) —
-// see the phase 5 plan doc for the honest scope statement.
-const MAX_CHAIN_DEPTH = 3;
 
 function agentLabel(speakerId: string): string {
   if (speakerId === 'user') return 'You';
@@ -217,131 +206,25 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
 
   async function handleSend() {
     if (!activeThreadId || !activeThread || !composerText.trim() || generationAbortControllerRef.current) return;
+    const threadId = activeThreadId;
     const text = composerText.trim();
-    const userMessage = addThreadMessage({ threadId: activeThreadId, speaker: 'user', content: text });
-    let previousMessageId: string | undefined = userMessage?.id;
-    setMessages(listThreadMessages(activeThreadId));
     setComposerText('');
-
-    // Work asked for in a thread ("/jose …", "research …") is a real Jose request, not a chat
-    // where an agent promises work it can't do (2.11.0 QA, owner 2026-11-01).
-    const work = workRequestIn(text, AGENT_PROFILES.map((p: { name: string }) => p.name));
-    if (work) {
-      await handOffToJose(activeThreadId, work);
-      return;
-    }
-
-    const agentIds = AGENT_PROFILES.map((p: { id: string }) => p.id);
-    const mentions = parseMentions(text, agentIds);
-    const respondingAgents = mentions.length > 0
-      ? mentions
-      : ['alphonso'];
-
-    if (respondingAgents.length === 0) return;
-
     const controller = new AbortController();
     generationAbortControllerRef.current = controller;
     setFacilitatorPending(true);
     stopRequestedRef.current = false;
-    let hopsUsed = 0;
-    const budget = createFanOutBudgetTracker(DEFAULT_FANOUT_CHAR_BUDGET);
-
     try {
-    while (respondingAgents.length > 0) {
-      const agentId = respondingAgents.shift() as string;
-      setActiveResponder(agentId);
-
-      if (stopRequestedRef.current) {
-        addThreadMessage({
-          threadId: activeThreadId,
-          speaker: BOARDROOM_SPEAKER,
-          content: 'Generation stopped by user.',
-          kind: 'system'
-        });
-        setMessages(listThreadMessages(activeThreadId));
-        break;
-      }
-
-      if (hopsUsed >= MAX_CHAIN_DEPTH) {
-        addThreadMessage({
-          threadId: activeThreadId,
-          speaker: BOARDROOM_SPEAKER,
-          content: `The conversation reached ${MAX_CHAIN_DEPTH} chained replies without stopping — further @mentions won't auto-trigger. Reply directly to keep it going, or make a call on where this should land.`,
-          kind: 'escalation'
-        });
-        setMessages(listThreadMessages(activeThreadId));
-        break;
-      }
-
-      if (budget.isExceeded()) {
-        addThreadMessage({
-          threadId: activeThreadId,
-          speaker: BOARDROOM_SPEAKER,
-          content: `This cascade generated more content than the ${DEFAULT_FANOUT_CHAR_BUDGET.toLocaleString()}-character budget for one chain — further @mentions won't auto-trigger. Reply directly to keep it going, or make a call on where this should land.`,
-          kind: 'escalation'
-        });
-        setMessages(listThreadMessages(activeThreadId));
-        break;
-      }
-
-      hopsUsed += 1;
-
-      const priorMessages = listThreadMessages(activeThreadId).map((m) => ({ speaker: m.speaker, content: m.content }));
-      const crossThreadContext = findCrossThreadContext({ excludeThreadId: activeThreadId, queryText: text });
-      const approved = await resolveHermesApproval(agentId, requestApproval);
-      const result = approved
-        ? await generateAgentResponse({
-            agentId,
-            topic: activeThread.topic,
-            priorMessages,
-            newMessageText: text,
-            crossThreadContext,
-            signal: controller.signal,
-            threadId: activeThreadId,
-            approved
-          })
-        : { ok: false, text: '', error: 'Approval denied — Hermes delegation was not confirmed.' };
-
-      if (stopRequestedRef.current) {
-        addThreadMessage({
-          threadId: activeThreadId,
-          speaker: BOARDROOM_SPEAKER,
-          content: 'Generation stopped by user.',
-          kind: 'system'
-        });
-        setMessages(listThreadMessages(activeThreadId));
-        break;
-      }
-
-      const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
-      budget.recordUsage(text.length + replyText.length);
-      const replyMessage = addThreadMessage({
-        threadId: activeThreadId,
-        speaker: agentId,
-        content: replyText,
-        kind: result.ok ? 'message' : 'failure',
-        retryContext: result.ok ? undefined : text,
-        model: result.ok ? result.model : undefined,
-        latencyMs: result.ok ? result.latencyMs : undefined,
-        informedByMessageId: previousMessageId
+      // One reply loop for the desktop and the phone (phone app phase 3 part A, 2026-11-02).
+      await runBoardroomReplies({
+        threadId,
+        text,
+        approve: (agentId) => resolveHermesApproval(agentId, requestApproval),
+        deniedReason: 'Approval denied — Hermes delegation was not confirmed.',
+        isStopped: () => stopRequestedRef.current,
+        signal: controller.signal,
+        onChange: () => setMessages(listThreadMessages(threadId)),
+        onResponder: setActiveResponder,
       });
-      setMessages(listThreadMessages(activeThreadId));
-
-      if (result.ok) {
-        previousMessageId = replyMessage?.id;
-        if (detectLowConfidence(replyText)) {
-          addThreadMessage({
-            threadId: activeThreadId,
-            speaker: BOARDROOM_SPEAKER,
-            content: `${agentLabel(agentId)} flagged low confidence in that reply — needs your decision.`,
-            kind: 'escalation'
-          });
-          setMessages(listThreadMessages(activeThreadId));
-        }
-        const chainedMentions = parseMentions(replyText, agentIds).filter((id) => id !== agentId);
-        respondingAgents.push(...chainedMentions);
-      }
-    }
     } finally {
       if (generationAbortControllerRef.current === controller) {
         generationAbortControllerRef.current = null;
@@ -358,37 +241,6 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
   function refreshActiveThread() {
     setThreads(listThreads());
     if (activeThreadId) setMessages(listThreadMessages(activeThreadId));
-  }
-
-  async function handOffToJose(threadId: string, work: string) {
-    const show = () => setMessages(listThreadMessages(threadId));
-    setFacilitatorPending(true);
-    setActiveResponder('jose');
-    let started: string | null = null;
-    try {
-      const history = listThreadMessages(threadId).slice(-6).map((m) => ({ role: m.speaker === 'user' ? 'user' : 'assistant', content: m.content }));
-      const result = await workOnJose(work, {
-        history,
-        onStarted: (requestId) => {
-          started = requestId;
-          addThreadMessage({ threadId, speaker: BOARDROOM_SPEAKER, content: JOSE_STARTED, kind: 'system', requestId });
-          show();
-        },
-      });
-      addThreadMessage({
-        threadId,
-        speaker: result.requestId ? 'jose' : BOARDROOM_SPEAKER,
-        content: result.summary,
-        kind: result.waiting ? 'system' : 'message',
-        ...(result.requestId || started ? { requestId: result.requestId || started } : {}),
-      });
-    } catch (error) {
-      addThreadMessage({ threadId, speaker: BOARDROOM_SPEAKER, content: `Jose couldn't run it: ${error instanceof Error ? error.message : String(error)}`, kind: 'failure' });
-    } finally {
-      setActiveResponder(null);
-      setFacilitatorPending(false);
-      show();
-    }
   }
 
   function postThreadNote(speaker: string, content: string, kind: BoardroomThreadMessage['kind'] = 'system', requestId?: string | null) {
