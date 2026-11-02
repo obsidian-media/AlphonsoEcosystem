@@ -188,8 +188,10 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-[260px_1fr]">
-      <ul className="space-y-1" aria-label="Jose requests">
+    // grid-cols-1 and min-w-0: on a phone the one column stays the screen's width, so long titles
+    // truncate instead of widening it (phone phase 3 part C).
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-[260px_1fr]">
+      <ul className="min-w-0 space-y-1" aria-label="Jose requests">
         {requests.length === 0 && <li className="text-xs text-(--text-3)">No requests yet. Ask Jose something in Chat.</li>}
         {/* A project's requests together under its name (Jose phase 7). */}
         {groupRequests(requests).map((entry) => entry.group ? (

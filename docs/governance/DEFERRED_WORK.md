@@ -2,10 +2,11 @@
 
 Rule 12 / Rule 11. This register survives the session. Future agents resume from here.
 
-## 2026-11-02: The phone's Requests screen runs past the right edge
+## 2026-11-02: The phone's Requests screen runs past the right edge (overflow fixed 2026-11-02; task names open)
 
 - **What happened:** in the 6.9-inch store screenshots (phone phase 3 part C, `docs/store/screenshots/iphone-6.9/2-requests.png`) a long request title in the list and the plan map run past the screen's right edge at 440 points wide. It is the real Requests screen (the desktop board in one column, `src/mobile/screens/Requests.tsx`), not the demo; the step boxes also show raw task types (`distribution_slack`).
-- **To do:** wrap the list's titles, fit the plan map to the width, and show the task types in plain words on the phone; retake the screenshots after.
+- **Fixed (overflow):** the board's grid had no column at phone width and grid items keep their content's width, so the long title widened the column (462pt on a 440pt screen). `JoseRequestsBoard.tsx` now uses `grid-cols-1` and `min-w-0` on the list; measured 440 of 440 in a phone-width browser, screenshots retaken.
+- **Still open:** the step boxes and buttons show raw task types (`distribution_slack`); show them in plain words.
 
 ## 2026-11-02: Cloud Voice on AWS has no client left (owner decides)
 

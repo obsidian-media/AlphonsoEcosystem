@@ -73,3 +73,16 @@ describe("checking the work on the phone's Requests", () => {
     expect(screen.getByRole('button', { name: /Reject: Alphonso/ })).toBeTruthy();
   });
 });
+
+// Phone phase 3 part C: at phone width the board's one column must not grow past the screen (a
+// grid item's min-width is its content's by default, so a long title pushed it 22pt wider).
+describe('the Requests board fits a phone', () => {
+  it('its grid has a shrinkable single column and the list may shrink', () => {
+    const long = { ...request([hector, marcus]), text: 'Find when our customers buy bread, then post a note to the team on Slack and tell everyone about it' };
+    render(<BoardDataProvider value={phoneData(long)}><RequestsScreen /></BoardDataProvider>);
+    const list = screen.getByRole('list', { name: 'Jose requests' });
+    const grid = list.parentElement as HTMLElement;
+    expect(grid.className).toMatch(/(^|\s)grid-cols-1(\s|$)/);
+    expect(list.className).toMatch(/(^|\s)min-w-0(\s|$)/);
+  });
+});
