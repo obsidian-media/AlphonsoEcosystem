@@ -12,7 +12,7 @@
 const BAD_TOKEN = 4401;
 const NOT_YOURS = 4403;
 
-export function createRelay({ verifyToken, store, limiter, now = () => Date.now(), push }) {
+export function createRelay({ verifyToken, store, limiter, now = () => Date.now(), push, deleteUser }) {
   const live = new Map(); // deviceId → connection
   const who = new WeakMap(); // connection → { uid, deviceId, role }
 
@@ -89,6 +89,20 @@ export function createRelay({ verifyToken, store, limiter, now = () => Date.now(
       const phone = await store.getDevice(String(phoneDeviceId || ''));
       if (phone && (phone.uid !== uid || phone.role !== 'phone')) throw new Error('That phone is not yours.');
       await store.putPairing(phoneDeviceId, { uid, computerId, createdAtMs: now() });
+    },
+
+    /** Delete an account (Apple 5.1.1(v), phone phase 3 part C): its pairings, its devices' records,
+     *  its live connections and its sign-in. Only the signed-in account's own records. */
+    async deleteAccount({ idToken }) {
+      const uid = await verifyToken(String(idToken || ''));
+      for (const phoneId of await store.pairingsOf(uid)) await store.deletePairing(phoneId);
+      for (const deviceId of await store.devicesOf(uid)) {
+        const conn = live.get(deviceId);
+        if (conn) { live.delete(deviceId); who.delete(conn); conn.close(NOT_YOURS); }
+        limiter.forget?.(deviceId);
+        await store.deleteDevice(deviceId);
+      }
+      if (deleteUser) await deleteUser(uid);
     },
 
     /** Unpair a phone: it can't send another frame, and is dropped at once. */

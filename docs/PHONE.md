@@ -135,6 +135,13 @@ on the other. Alphonso's relay passes them on without being able to read them, a
 no content. Your computer refuses any device it hasn't paired, and only devices signed in
 to your account can reach it.
 
+## Delete your account
+
+On the phone, More → **Delete my account**. The app says what it deletes, then asks for Face ID or
+your fingerprint. The relay deletes your sign-in and the pairing records of every phone and computer
+signed in with that account, and the phone forgets its pairing and keys. The work on your computer is
+not touched. On the computer, remove the phone under Settings → Runtime → Remote Access → Phones.
+
 ## Remove a phone or switch phone access off
 
 On the computer, Settings → Runtime → Remote Access → Phones:

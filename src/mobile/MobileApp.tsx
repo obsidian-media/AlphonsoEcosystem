@@ -7,7 +7,8 @@ import { BoardDataProvider } from '../services/phone/boardData';
 import { createRemoteData, offlineLine } from '../services/phone/remoteData';
 import { webSocketFactory } from '../services/phone/phoneLink';
 import type { PhoneSignIn } from '../services/phone/phoneAccount';
-import { connectPhone, pairPhone, savedPairing, type PhoneLink, type PhoneSecrets } from './phoneSession';
+import { connectPhone, deleteAccount, pairPhone, savedPairing, type PhoneLink, type PhoneSecrets } from './phoneSession';
+import { phoneRelayUrl } from '../services/phone/phoneAccount';
 import { SignInScreen } from './screens/SignIn';
 import { PairScreen } from './screens/Pair';
 import { ChatScreen } from './screens/Chat';
@@ -52,7 +53,7 @@ export function lockOn(): boolean { return localStorage.getItem(PHONE_LOCK_KEY) 
 /** The demo never asks for Face ID: every action is refused anyway. */
 const DEMO_LOCK: PhoneLock = { confirm: async () => true };
 
-function LinkedApp({ link, lock: realLock, lockEnabled, onLockChange, onSignOut, onNotificationAction, previews, demo = false }: { link: PhoneLink; lock: PhoneLock; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void; onNotificationAction?: OnNotificationAction; previews?: PhonePreviewParts; demo?: boolean }) {
+function LinkedApp({ link, lock: realLock, lockEnabled, onLockChange, onSignOut, onNotificationAction, previews, demo = false, onDeleteAccount }: { link: PhoneLink; lock: PhoneLock; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void; onNotificationAction?: OnNotificationAction; previews?: PhonePreviewParts; demo?: boolean; onDeleteAccount?: () => Promise<{ ok: boolean; reason?: string }> }) {
   const data = useMemo(() => {
     if (!demo) return createRemoteData(link, previews);
     const { parts, options } = demoDataOptions();
@@ -113,7 +114,7 @@ function LinkedApp({ link, lock: realLock, lockEnabled, onLockChange, onSignOut,
         {tab === 'more' && (
           <MoreScreen key={boardroomThread || 'more'} more={data.more} lock={lock} openThreadId={boardroomThread}
             onOpenRequest={(requestId) => { setSelected(requestId); setTab('requests'); }}
-            lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} demo={demo} />
+            lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} demo={demo} onDeleteAccount={onDeleteAccount} />
         )}
       </main>
       <nav role="tablist" className="grid grid-cols-5 border-t border-(--border) text-xs">
@@ -178,6 +179,14 @@ export function MobileApp(props: MobileAppProps) {
       lockEnabled={lockEnabled}
       onLockChange={(on) => { localStorage.setItem(PHONE_LOCK_KEY, on ? 'on' : 'off'); setLockEnabled(on); }}
       onSignOut={async () => { link.stop(); await props.signIn.signOut(); setLink(null); setSignedIn(false); }}
+      onDeleteAccount={async () => {
+        const result = await deleteAccount({ auth: props.signIn, secrets: props.secrets, relayUrl: savedPairing()?.relayUrl || phoneRelayUrl() });
+        if (!result.ok) return result;
+        link.stop();
+        await props.signIn.signOut().catch(() => undefined);
+        setLink(null); setPaired(false); setSignedIn(false);
+        return result;
+      }}
     />
   );
 }

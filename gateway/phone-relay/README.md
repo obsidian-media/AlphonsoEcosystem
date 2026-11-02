@@ -27,6 +27,13 @@ the relay never has the keys. It stores only, in Firestore:
 
 No message, file name, request, cost or key is stored or logged.
 
+## Deleting an account
+
+`DELETE /account` (Authorization: Bearer <idToken>, phone phase 3 part C, Apple's guideline 5.1.1(v))
+deletes the signed-in account's pairings and device records, drops its live connections, and deletes
+its Firebase sign-in (`deleteUser`). Only that account's own records. The phone app's More → Delete my
+account calls it.
+
 ## Limits (`src/limits.js`)
 
 6 MB of sealed text per frame (a 4 MB message), 60 frames a second and 200 MB a day per

@@ -2,7 +2,7 @@
 //   WebSocket /link: first message { type: 'hello', idToken, deviceId, role, fcmToken? },
 //     then { type: 'to', deviceId, frame } and { type: 'push', deviceId, sealed }.
 //   POST /pair { idToken, computerId, phoneDeviceId }, DELETE /pair/:phoneDeviceId
-//     (Authorization: Bearer <idToken>), GET /healthz.
+//     (Authorization: Bearer <idToken>), DELETE /account (Authorization: Bearer <idToken>), GET /healthz.
 // Nothing here reads a frame's contents; logs carry no tokens, frames or device names.
 import http from 'node:http';
 import { WebSocketServer } from 'ws';
@@ -27,8 +27,8 @@ function reply(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-export function createServer({ verifyToken, store, push, limits = LIMITS, now }) {
-  const relay = createRelay({ verifyToken, store, limiter: createLimiter(limits), now, push });
+export function createServer({ verifyToken, store, push, deleteUser, limits = LIMITS, now }) {
+  const relay = createRelay({ verifyToken, store, limiter: createLimiter(limits), now, push, deleteUser });
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url || '/', 'http://relay');
     try {
@@ -42,6 +42,11 @@ export function createServer({ verifyToken, store, push, limits = LIMITS, now })
       if (req.method === 'DELETE' && m) {
         const idToken = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
         await relay.removePair({ idToken, phoneDeviceId: m[1] });
+        return reply(res, 200, { ok: true });
+      }
+      if (req.method === 'DELETE' && url.pathname === '/account') {
+        const idToken = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+        await relay.deleteAccount({ idToken });
         return reply(res, 200, { ok: true });
       }
       return reply(res, 404, { ok: false, error: 'Not found.' });

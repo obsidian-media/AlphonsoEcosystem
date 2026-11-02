@@ -21,11 +21,16 @@ export async function initFirebase() {
     async getPairing(id) { const d = await pairings.doc(id).get(); return d.exists ? d.data() : null; },
     async putPairing(id, record) { await pairings.doc(id).set(record); },
     async deletePairing(id) { await pairings.doc(id).delete(); },
+    async deleteDevice(id) { await devices.doc(id).delete(); },
+    async devicesOf(uid) { return (await devices.where('uid', '==', uid).get()).docs.map((d) => d.id); },
+    async pairingsOf(uid) { return (await pairings.where('uid', '==', uid).get()).docs.map((d) => d.id); },
   };
   return {
     store,
     verifyToken: async (idToken) => (await auth.verifyIdToken(idToken, true)).uid,
     // A data-only message: the app's notification extension opens it with its own key.
     push: async (token, sealed) => { await messaging.send(pushMessage(token, sealed)); },
+    // Deleting an account from the phone (phone phase 3 part C): the sign-in itself.
+    deleteUser: async (uid) => { await auth.deleteUser(uid); },
   };
 }

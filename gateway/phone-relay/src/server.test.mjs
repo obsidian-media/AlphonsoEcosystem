@@ -64,3 +64,17 @@ test('a first message that is not hello closes with 4401; a bad pairing is a 400
     server.close();
   }
 });
+
+test('DELETE /account deletes the signed-in account, and refuses without a sign-in', async () => {
+  const deleted = [];
+  const { server } = createServer({ verifyToken, store: createMemoryStore(), push: async () => {}, deleteUser: async (uid) => deleted.push(uid) });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `127.0.0.1:${server.address().port}`;
+  try {
+    const refused = await fetch(`http://${base}/account`, { method: 'DELETE' });
+    assert.equal(refused.status, 400);
+    const ok = await fetch(`http://${base}/account`, { method: 'DELETE', headers: { authorization: 'Bearer tok-ann' } });
+    assert.equal(ok.status, 200);
+    assert.deepEqual(deleted, ['ann']);
+  } finally { server.close(); }
+});

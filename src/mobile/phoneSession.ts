@@ -52,6 +52,27 @@ export function savedPairing(): SavedPairing | null {
 }
 function savePairing(p: SavedPairing): void { localStorage.setItem(PAIRING_KEY, JSON.stringify(p)); }
 
+/** What "Delete my account" says before it asks for Face ID (phone phase 3 part C, Apple 5.1.1(v)). */
+export const DELETE_ACCOUNT_LINE = 'This deletes your Alphonso account: its sign-in, and the pairing of every phone and computer signed in with it. The work on your computer is not touched. You can make a new account later.';
+
+/** Deletes the signed-in account through the relay, then forgets everything kept on this phone. */
+export async function deleteAccount(deps: { auth: PhoneAuth; secrets: PhoneSecrets; relayUrl: string | null; fetchImpl?: typeof fetch }): Promise<{ ok: boolean; reason?: string }> {
+  if (!deps.relayUrl) return { ok: false, reason: "This build can't reach Alphonso's relay." };
+  const idToken = await deps.auth.idToken();
+  if (!idToken) return { ok: false, reason: 'Sign in first.' };
+  const res = await (deps.fetchImpl ?? fetch)(`${relayHttpBase(deps.relayUrl)}/account`, {
+    method: 'DELETE', headers: { authorization: `Bearer ${idToken}` },
+  }).catch(() => null);
+  if (!res || !res.ok) {
+    const body: any = res ? await res.json().catch(() => ({})) : {};
+    return { ok: false, reason: body?.error || "Couldn't reach Alphonso's relay. Check the phone's internet connection." };
+  }
+  for (const key of Object.keys(localStorage)) if (key.startsWith('alphonso_phone')) localStorage.removeItem(key);
+  await deps.secrets.set(PRIVATE_KEY, '');
+  await deps.secrets.set(COMPUTER_KEY_NAME, '');
+  return { ok: true };
+}
+
 export async function pairPhone(qrText: string, deps: { auth: PhoneAuth; secrets: PhoneSecrets; phoneName: string; fetchImpl?: typeof fetch }): Promise<{ ok: boolean; reason?: string }> {
   const info = readPairingPayload(qrText);
   if (!info) return { ok: false, reason: NOT_ALPHONSO_QR };

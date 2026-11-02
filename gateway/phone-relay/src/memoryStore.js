@@ -10,5 +10,8 @@ export function createMemoryStore() {
     async getPairing(phoneId) { return pairings.get(phoneId) || null; },
     async putPairing(phoneId, record) { pairings.set(phoneId, record); },
     async deletePairing(phoneId) { pairings.delete(phoneId); },
+    async deleteDevice(id) { devices.delete(id); },
+    async devicesOf(uid) { return [...devices].filter(([, d]) => d.uid === uid).map(([id]) => id); },
+    async pairingsOf(uid) { return [...pairings].filter(([, p]) => p.uid === uid).map(([id]) => id); },
   };
 }

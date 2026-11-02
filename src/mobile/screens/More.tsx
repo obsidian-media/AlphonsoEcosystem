@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DELETE_ACCOUNT_LINE } from '../phoneSession';
 import type { MoreData } from '../../services/phone/remoteData';
 import type { PhoneLock } from '../MobileApp';
 import { MemoryScreen } from './Memory';
@@ -34,12 +35,24 @@ export interface MoreScreenProps {
   onSignOut: () => void;
   /** The demo (phase 3 part C): the pages need a paired computer, and Sign out becomes Leave demo. */
   demo?: boolean;
+  /** Apple 5.1.1(v): delete the account from inside the app (phase 3 part C). */
+  onDeleteAccount?: () => Promise<{ ok: boolean; reason?: string }>;
 }
 
 export const DEMO_PAIR_FIRST = 'Pair your computer to use this.';
 
-export function MoreScreen({ more, lock, onOpenRequest, openThreadId, lockEnabled, onLockChange, onSignOut, demo = false }: MoreScreenProps) {
+export function MoreScreen({ more, lock, onOpenRequest, openThreadId, lockEnabled, onLockChange, onSignOut, demo = false, onDeleteAccount }: MoreScreenProps) {
   const [page, setPage] = useState<Page | null>(openThreadId ? 'boardroom' : null);
+  const [deleting, setDeleting] = useState<'ask' | 'busy' | null>(null);
+  const [deleteNote, setDeleteNote] = useState<string | null>(null);
+  const deleteNow = async () => {
+    if (!onDeleteAccount) return;
+    setDeleting('busy');
+    if (!(await lock.confirm('Delete your Alphonso account', { strict: true }))) { setDeleting(null); setDeleteNote('Not deleted: Face ID or fingerprint was not confirmed.'); return; }
+    const result = await onDeleteAccount();
+    setDeleting(null);
+    setDeleteNote(result.ok ? null : `Not deleted: ${result.reason || 'it could not finish.'}`);
+  };
   if (page && demo) {
     return (
       <div className="pt-2 text-sm">
@@ -78,6 +91,21 @@ export function MoreScreen({ more, lock, onOpenRequest, openThreadId, lockEnable
         </label>
       )}
       <button type="button" onClick={onSignOut} className="rounded-lg bg-(--surface-3) px-4 py-2">{demo ? 'Leave demo' : 'Sign out'}</button>
+      {!demo && onDeleteAccount && (
+        <div className="space-y-2 border-t border-(--border) pt-3">
+          {deleting === null && <button type="button" onClick={() => { setDeleteNote(null); setDeleting('ask'); }} className="text-(--danger)">Delete my account</button>}
+          {deleting !== null && (
+            <>
+              <p>{DELETE_ACCOUNT_LINE}</p>
+              <div className="flex gap-2">
+                <button type="button" disabled={deleting === 'busy'} onClick={deleteNow} className="rounded-lg bg-(--danger) px-4 py-2 text-white">Delete it</button>
+                <button type="button" disabled={deleting === 'busy'} onClick={() => setDeleting(null)} className="rounded-lg bg-(--surface-3) px-4 py-2">Keep my account</button>
+              </div>
+            </>
+          )}
+          {deleteNote && <p role="status" className="text-(--danger)">{deleteNote}</p>}
+        </div>
+      )}
     </div>
   );
 }

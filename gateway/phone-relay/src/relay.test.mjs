@@ -119,3 +119,34 @@ test('a message before hello, or of an unknown type, is refused', async () => {
   await relay.message(c, { type: 'to', deviceId: 'pc-1', frame: 'x' });
   assert.equal(c.closedWith, 4401);
 });
+
+// Phone phase 3 part C (owner, 2026-11-02): Apple requires deleting the account from inside the app.
+test("deleting an account removes its pairings, devices and sign-in, and drops its connections", async () => {
+  const store = createMemoryStore();
+  const deleted = [];
+  const relay = createRelay({ verifyToken, store, limiter: createLimiter(LIMITS), now: () => 1000, deleteUser: async (uid) => deleted.push(uid) });
+  const pc = conn();
+  await relay.hello(pc, { type: 'hello', idToken: 'tok-ann', deviceId: 'pc-1', role: 'computer' });
+  await relay.pair({ idToken: 'tok-ann', computerId: 'pc-1', phoneDeviceId: 'ph-1' });
+  const phone = conn();
+  await relay.hello(phone, { type: 'hello', idToken: 'tok-ann', deviceId: 'ph-1', role: 'phone', fcmToken: 'fcm-1' });
+  const bob = conn();
+  await relay.hello(bob, { type: 'hello', idToken: 'tok-bob', deviceId: 'pc-bob', role: 'computer' });
+
+  await relay.deleteAccount({ idToken: 'tok-ann' });
+
+  assert.equal(await store.getPairing('ph-1'), null);
+  assert.equal(await store.getDevice('ph-1'), null);
+  assert.equal(await store.getDevice('pc-1'), null);
+  assert.deepEqual(deleted, ['ann']);
+  assert.equal(phone.closedWith, 4403);
+  assert.equal(pc.closedWith, 4403);
+  // Bob is untouched.
+  assert.equal(bob.closedWith, null);
+  assert.equal((await store.getDevice('pc-bob')).uid, 'bob');
+});
+
+test('deleting an account needs a valid sign-in', async () => {
+  const relay = createRelay({ verifyToken, store: createMemoryStore(), limiter: createLimiter(LIMITS), deleteUser: async () => {} });
+  await assert.rejects(relay.deleteAccount({ idToken: 'nope' }));
+});
