@@ -9,6 +9,8 @@
 // refused with the latest; the relay's daily_limit reaches the phone at once.
 // Phase 3 part A adds: a Boardroom message from the phone gets an agent's reply; a memory search
 // returns a saved decision; a stale clean-up Apply is refused.
+// Phase 3 part B adds: Zero-Cost Mode off from the phone is refused without confirming and
+// applied with it; a team run from the phone starts a request.
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { WebSocket } from 'ws';
 
@@ -40,7 +42,12 @@ const h = vi.hoisted(() => {
 });
 vi.mock('../../../services/joseExecutionEngineService', () => h.engine);
 vi.mock('../../../services/jose/joseStop', () => h.stop);
-vi.mock('../../../services/jose/submitToJose', () => ({ runApprovedPlan: vi.fn(), cancelPlan: vi.fn() }));
+vi.mock('../../../services/jose/submitToJose', () => ({
+  runApprovedPlan: vi.fn(),
+  cancelPlan: vi.fn(),
+  // A team's run (part B): it starts, and the phone is answered before it ends.
+  submitStepsToJose: (input) => { input.onProgress?.({ stage: 'request_started', requestId: 'req-team-1' }); return new Promise(() => undefined); },
+}));
 vi.mock('../../../services/jose/joseInbound', () => h.inbound);
 vi.mock('../../../services/jose/joseRequestStore', () => ({ getJoseRequest: (id) => h.requests.get(id) || null }));
 vi.mock('../../../services/phone/phoneMirror', () => ({ mirrorSnapshots: async () => ({}) }));
@@ -77,6 +84,8 @@ import { CHANGED_ON_COMPUTER } from '../../../services/phone/contentCalls';
 import { STALE } from '../../../services/phone/phase3Calls';
 import { createThread, listThreadMessages } from '../../../services/boardroomThreadService';
 import { saveCleanupSet } from '../../../services/echo/cleanupStore';
+import { NEEDS_CONFIRM } from '../../../services/phone/phase3bCalls';
+import { saveUserTemplate } from '../../../services/jose/joseUserTemplates';
 
 const auth = { idToken: async () => 'tok-ann' };
 const verifyToken = async (t) => { if (t !== 'tok-ann') throw new Error('bad'); return 'ann'; };
@@ -194,6 +203,22 @@ describe('phone app phase 1, end to end over the real relay', () => {
     const r = await phone.call('memory.search', { query: 'bakery videos' });
     expect(r.ok).toBe(true);
     expect(r.value.map((d) => d.id)).toEqual(['d1']);
+  }, 20_000);
+
+  it('settings: Zero-Cost Mode off needs confirming on the phone', async () => {
+    localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: true }));
+    const refused = await phone.call('settings.set', { setting: 'zeroCostMode', value: false, base: true });
+    expect(refused).toEqual({ ok: false, error: NEEDS_CONFIRM });
+    expect(JSON.parse(localStorage.getItem('alphonso_settings')).zeroCostMode).toBe(true);
+    const done = await phone.call('settings.set', { setting: 'zeroCostMode', value: false, base: true, confirmed: true });
+    expect(done.ok).toBe(true);
+    expect(JSON.parse(localStorage.getItem('alphonso_settings')).zeroCostMode).toBe(false);
+  }, 20_000);
+
+  it('teams: a team run from the phone starts a request', async () => {
+    const team = saveUserTemplate({ name: 'Research', kind: 'normal', steps: [{ stepId: 'hector', agent: 'hector', actionType: 'research_report', effects: ['read'], needs: [] }], requestText: 'x' });
+    const r = await phone.call('team.run', { id: team.id, text: 'Find bakeries near me' });
+    expect(r).toEqual({ ok: true, value: { ok: true, requestId: 'req-team-1' } });
   }, 20_000);
 
   it('memory: a clean-up Apply based on an old set is refused', async () => {
