@@ -10,6 +10,32 @@ import { redactText } from '../sentinel/exactChecks';
 import type { PhoneNotification } from './phoneProtocol';
 import type { ContentProject, StepId } from '../contentFactory/contentTypes';
 import { versionMedia, type MediaRef } from './contentMirror';
+import { listAllThreadMessages, listThreads, type BoardroomThread, type BoardroomThreadMessage } from '../boardroomThreadService';
+
+/** Boardroom on the phone (phase 3 part A, owner): only escalations are pushed; replies show when the thread is opened. */
+export const PHONE_BOARDROOM_SENT_KEY = 'alphonso_phone_boardroom_sent_v1';
+type BoardroomSource = () => { messages: BoardroomThreadMessage[]; threads: BoardroomThread[] };
+
+/** One notice per unacknowledged escalation not yet sent. Pure. */
+export function boardroomEscalations(messages: BoardroomThreadMessage[], threads: BoardroomThread[], sent: Set<string>): PhoneNotification[] {
+  return messages
+    .filter((m) => m.kind === 'escalation' && !m.acknowledged && !sent.has(`boardroom:${m.id}`))
+    .map((m) => ({
+      key: `boardroom:${m.id}`,
+      title: `Boardroom: ${threads.find((t) => t.id === m.threadId)?.topic || 'a thread'}`,
+      body: redactText(m.content),
+      requestId: `boardroom:${m.threadId}`,
+      actions: ['open'] as PhoneNotification['actions'],
+    }));
+}
+
+function readBoardroomSent(): string[] | null {
+  try { const raw = localStorage.getItem(PHONE_BOARDROOM_SENT_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
+function writeBoardroomSent(keys: string[]): void {
+  try { localStorage.setItem(PHONE_BOARDROOM_SENT_KEY, JSON.stringify(keys.slice(-SENT_KEPT))); } catch { /* full */ }
+}
+const defaultBoardroom: BoardroomSource = () => ({ messages: listAllThreadMessages(), threads: listThreads() });
 
 export const PHONE_NOTIFY_SENT_KEY = 'alphonso_phone_notifications_sent_v1';
 const SENT_KEPT = 500;
@@ -126,6 +152,7 @@ export function startPhoneNotifications(deps: {
   requests?: () => JoseRequest[];
   projects?: () => ContentProject[] | Promise<ContentProject[]>;
   still?: (ref: MediaRef) => Promise<string | null>;
+  boardroom?: BoardroomSource;
   intervalMs?: number;
   now?: () => number;
 }): () => void {
@@ -133,6 +160,7 @@ export function startPhoneNotifications(deps: {
   const projects = deps.projects ?? defaultProjects;
   const still = deps.still ?? defaultStill;
   const now = deps.now ?? (() => Date.now());
+  const boardroom = deps.boardroom ?? defaultBoardroom;
   if (readSent() === null) {
     const all = collectJoseNotifications(requests(), new Set(), { stepWaiting: true, planWaiting: true, finished: true, reviewDecision: true, activitySummaries: false }, now());
     writeSent(all.map((n) => n.key));
@@ -149,8 +177,20 @@ export function startPhoneNotifications(deps: {
     writeReady([...sent, ...fresh.map((r) => r.notice.key)]);
     for (const r of fresh) deps.push(withStill(r.notice, await still(r.media).catch(() => null)));
   };
+  const checkBoardroom = () => {
+    let source: ReturnType<BoardroomSource>;
+    try { source = boardroom(); } catch { return; }
+    const sent = readBoardroomSent();
+    const fresh = boardroomEscalations(source.messages, source.threads, new Set(sent || []));
+    // The first start counts what is already there as sent, so pairing doesn't bring old escalations.
+    if (sent === null) { writeBoardroomSent(fresh.map((n) => n.key)); return; }
+    if (fresh.length === 0) return;
+    writeBoardroomSent([...sent, ...fresh.map((n) => n.key)]);
+    for (const n of fresh) deps.push(n);
+  };
   const check = () => {
     void checkReady();
+    checkBoardroom();
     const sent = readSent() || [];
     const fresh = phoneNotificationsFor(requests(), new Set(sent), now());
     if (fresh.length === 0) return;

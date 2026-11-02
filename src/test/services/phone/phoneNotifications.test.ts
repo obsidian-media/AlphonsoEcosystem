@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { phoneNotificationsFor, startPhoneNotifications, PHONE_NOTIFY_SENT_KEY, PUSH_STILL_LIMIT, sealedNoticeChars } from '../../../services/phone/phoneNotifications';
+import { boardroomEscalations, phoneNotificationsFor, startPhoneNotifications, PHONE_NOTIFY_SENT_KEY, PUSH_STILL_LIMIT, sealedNoticeChars } from '../../../services/phone/phoneNotifications';
 
 const waitingRequest = (effects: string[], stepId = 'marcus') => ({
   id: 'r1', commandId: 'c1', source: 'user', text: 'Post the launch note', kind: 'normal', status: 'waiting_approval',
@@ -108,3 +108,35 @@ describe('ready to check', () => {
   });
 });
 
+
+describe('Boardroom escalations', () => {
+  const thread = { id: 't1', topic: 'Launch' } as any;
+  const esc = (id: string, over: any = {}) => ({ id, threadId: 't1', speaker: 'boardroom', content: 'Needs your decision with sk-abcdefghijklmnopqrstuvwxyz0123', kind: 'escalation', acknowledged: false, ...over }) as any;
+
+  it('an unacknowledged escalation becomes one notice that opens the thread', () => {
+    const [n, ...rest] = boardroomEscalations([esc('e1')], [thread], new Set());
+    expect(rest).toHaveLength(0);
+    expect(n).toMatchObject({ key: 'boardroom:e1', title: 'Boardroom: Launch', requestId: 'boardroom:t1', actions: ['open'] });
+    expect(n.body).not.toContain('sk-abcdefghijklmnopqrstuvwxyz0123');
+  });
+
+  it('one already sent, acknowledged, or an ordinary reply makes no notice', () => {
+    expect(boardroomEscalations([esc('e1')], [thread], new Set(['boardroom:e1']))).toEqual([]);
+    expect(boardroomEscalations([esc('e2', { acknowledged: true })], [thread], new Set())).toEqual([]);
+    expect(boardroomEscalations([esc('e3', { kind: 'message' })], [thread], new Set())).toEqual([]);
+  });
+
+  it('escalations there at the first start are not sent; a new one is, once', () => {
+    localStorage.clear();
+    const push = vi.fn();
+    const messages = [esc('old')];
+    const stop = startPhoneNotifications({ push, requests: () => [], projects: () => [], boardroom: () => ({ messages, threads: [thread] }), intervalMs: 0 });
+    stop();
+    expect(push).not.toHaveBeenCalled();
+    messages.push(esc('new'));
+    const stop2 = startPhoneNotifications({ push, requests: () => [], projects: () => [], boardroom: () => ({ messages, threads: [thread] }), intervalMs: 0 });
+    const stop3 = startPhoneNotifications({ push, requests: () => [], projects: () => [], boardroom: () => ({ messages, threads: [thread] }), intervalMs: 0 });
+    stop2(); stop3();
+    expect(push.mock.calls.map((c) => c[0].key)).toEqual(['boardroom:new']);
+  });
+});
