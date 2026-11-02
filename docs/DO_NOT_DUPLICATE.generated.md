@@ -365,7 +365,7 @@ Source-backed inventory: 373 services and 184 components. Human purpose descript
 | service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NOT_FOUND`, `onUserProfilesChanged`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
-| service | `src/services/jose/agentPaidModels.ts` | `withAgentPaidModels` |
+| service | `src/services/jose/agentPaidModels.ts` | `STEPS_WITHOUT_AGENT_MODEL`, `withAgentPaidModels` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
 | service | `src/services/jose/joseAdapt.ts` | `AdaptContext`, `adaptPlan`, `PlanChange`, `setPlanAdapterForTests` |
 | service | `src/services/jose/joseDecision.ts` | `asksForResearch`, `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision`, `ruleRoute` |

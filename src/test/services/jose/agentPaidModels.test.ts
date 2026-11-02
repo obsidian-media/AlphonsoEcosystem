@@ -30,6 +30,18 @@ describe('agents that use the paid model', () => {
     expect(notes).toEqual([]);
   });
 
+  // Owner, 2026-11-01: Miya set to the paid model made "generate an image of a sunset" ask to spend,
+  // though ComfyUI makes the picture and her model is never called. Steps that don't call the
+  // agent's model keep their own effects.
+  it("leaves alone a step that doesn't call the agent's model (picture, video, music, Higgsfield)", () => {
+    vi.mocked(getAgentProvider).mockReturnValue({ provider: 'paid' } as never);
+    const media = ['creative_image', 'creative_chat_video', 'creative_chat_music', 'creative_higgsfield', 'creative_character_train']
+      .map((actionType) => step('miya', { actionType, effects: ['write_own_work' as const] }));
+    const { steps, notes } = withAgentPaidModels(media, { requestText: 'generate an image of a sunset' });
+    expect(steps).toEqual(media);
+    expect(notes).toEqual([]);
+  });
+
   it("keeps a model Jose already chose, and never gives Jose's own steps one", () => {
     vi.mocked(getAgentProvider).mockReturnValue({ provider: 'paid' } as never);
     const { steps } = withAgentPaidModels([step('hector', { model: 'qwen3:8b' }), step('jose')], { requestText: '' });
