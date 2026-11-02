@@ -26,11 +26,6 @@ mod commands {
   pub(crate) mod url;
 }
 mod comfyui_video_models;
-mod companion_auth;
-mod companion_discovery;
-mod companion_router;
-mod companion_server;
-mod companion_types;
 mod connector_commands;
 mod elevenlabs;
 mod hermes_profiles;
@@ -692,18 +687,6 @@ pub fn run() {
       // Auto-start AI runtimes (Ollama always; others if already installed)
       runtime_manager::autostart_all(runtime_mgr_state, app.handle().clone());
 
-      // Start companion WebSocket server
-      let config = crate::companion_types::CompanionConfig::default();
-      let (server, _rx) = crate::companion_server::CompanionServer::new(config);
-      let companion_server = std::sync::Arc::new(server);
-      let companion_server_clone = std::sync::Arc::clone(&companion_server);
-      app.manage(companion_server_clone);
-      // Opt-in: only listen on the LAN when the user has turned on mobile
-      // pairing (Settings -> Companion). Fresh installs never open port 8765.
-      if crate::companion_server::companion_enabled_pref(app.handle()) {
-        crate::companion_server::start_companion_server(companion_server, app.handle().clone());
-      }
-
       use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
       let shortcut: Shortcut = "Ctrl+Shift+Space".parse().unwrap_or_else(|_| {
         "CommandOrControl+Shift+Space"
@@ -1005,13 +988,6 @@ pub fn run() {
       runtime_manager::runtime_get_autostart_prefs,
       runtime_manager::runtime_save_autostart_pref,
       save_image_to_folder,
-      companion_server::companion_get_pin,
-      companion_server::companion_get_status,
-      companion_server::companion_start_discovery,
-      companion_server::companion_broadcast,
-      companion_server::companion_get_local_ip,
-      companion_server::companion_set_enabled,
-      companion_server::companion_get_enabled,
       voice_sidecar::voice_start,
       voice_sidecar::voice_stop,
       voice_sidecar::voice_status,

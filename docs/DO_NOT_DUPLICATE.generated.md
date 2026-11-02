@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 385 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 384 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -45,7 +45,6 @@ Source-backed inventory: 385 services and 185 components. Human purpose descript
 | component | `src/components/companion/CompanionChatBubble.tsx` | `CompanionChatBubble`, `CompanionMessage` |
 | component | `src/components/companion/CompanionInputBar.tsx` | `CompanionInputBar` |
 | component | `src/components/CompanionMode.tsx` | `CompanionMode` |
-| component | `src/components/CompanionPairingPanel.tsx` | `CompanionPairingPanel` |
 | component | `src/components/CompanionWidget.tsx` | `CompanionWidget` |
 | component | `src/components/ConnectorHealthPanel.tsx` | `ConnectorHealthPanel`, `ConnectorStatusDot`, `ConnectorStatusStrip` |
 | component | `src/components/ConnectorSetupPanel.tsx` | `ConnectorSetupPanel` |
@@ -242,7 +241,6 @@ Source-backed inventory: 385 services and 185 components. Human purpose descript
 | service | `src/services/coachSoundCueService.ts` | `getCoachSoundCuePattern`, `getCoachSoundCueSettings`, `playCoachSoundCue`, `shouldPlayCoachSoundCue`, `updateCoachSoundCueSettings` |
 | service | `src/services/comfyuiSettingsService.ts` | `ComfyUiInstall`, `ComfyUiSearchResult`, `findComfyuiInstalls`, `resolveComfyuiDirectory`, `resolveComfyuiPython`, `searchComputerForComfyui` |
 | service | `src/services/commandApprovalService.ts` | `assessCommandRisk`, `CommandApprovalHandler`, `CommandApprovalOutcome`, `CommandApprovalRequest`, `CommandRiskAssessment`, `CommandRiskLevel`, `deletesThings`, `isWorkspaceCodeExecuting`, `PlannedCommand`, `requestWorkspaceCommandApproval`, `setCommandApprovalHandler` |
-| service | `src/services/companionCommandService.ts` | `CompanionCommand`, `CompanionDeps`, `handleCompanionCommand` |
 | service | `src/services/companionGreetingsService.ts` | `COMPANION_CONTENT`, `CompanionAgentContent`, `getCompanionContent` |
 | service | `src/services/composioService.ts` | `__resetComposioApiKeyCacheForTests`, `checkComposioHealth`, `ComposioActionResult`, `ComposioConfig`, `ComposioHealthResult`, `ComposioStatusResult`, `ComposioTool`, `ComposioToolkit`, `enabledComposioToolkits`, `executeComposioTool`, `fetchComposioToolkits`, `getCachedToolkits`, `getComposioConfig`, `getComposioStatus`, `hydrateComposioApiKeyFromKeychain`, `isComposioEnabled`, `isReadOnlyTool`, `listToolkitTools`, `setComposioConfig` |
 | service | `src/services/connectorAuditLogService.ts` | `appendConnectorAuditEntry`, `ConnectorAuditEntry`, `getConnectorAuditLog`, `getLastEntryForConnector` |
@@ -474,7 +472,7 @@ Source-backed inventory: 385 services and 185 components. Human purpose descript
 | service | `src/services/phone/contentStamps.ts` | `postsStamp`, `postStamp`, `stepStamp` |
 | service | `src/services/phone/desktopSignIn.ts` | `createDesktopPhoneSignIn`, `desktopSignInConfig`, `NO_SIGN_IN_PAGE` |
 | service | `src/services/phone/phase3bCalls.ts` | `ALWAYS_ASKS`, `NEEDS_CONFIRM`, `PHASE3B_CALLS`, `Phase3bCallName` |
-| service | `src/services/phone/phase3bMirror.ts` | `cachedModelChoices`, `connectorsMirrorData`, `PhoneConnector`, `PhoneSettings`, `PhoneSkills`, `PhoneTeam`, `ProviderChoice`, `refreshModelChoices`, `resetPhase3bMirrorForTests`, `settingsMirrorData`, `skillsMirrorData`, `teamsMirrorData` |
+| service | `src/services/phone/phase3bMirror.ts` | `cachedModelChoices`, `connectorsMirrorData`, `PhoneConnector`, `PhoneSettings`, `PhoneSkills`, `PhoneTeam`, `PROVIDER_ONLY_AGENTS`, `ProviderChoice`, `refreshModelChoices`, `resetPhase3bMirrorForTests`, `settingsMirrorData`, `skillsMirrorData`, `teamsMirrorData` |
 | service | `src/services/phone/phase3Calls.ts` | `PHASE3_CALLS`, `Phase3CallName`, `PHONE_SEARCH_RESULTS`, `resetPhase3CallsForTests`, `STALE` |
 | service | `src/services/phone/phase3Mirror.ts` | `BOARDROOM_MIRROR_BYTES`, `BoardroomMirror`, `boardroomMirrorData`, `MASKED_LINE`, `MemoryMirror`, `memoryMirrorData`, `PHONE_DECISIONS`, `PHONE_THREAD_MESSAGES`, `phoneMessage`, `PhoneThreadMessage`, `ProjectMirror`, `projectsMirrorData` |
 | service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |

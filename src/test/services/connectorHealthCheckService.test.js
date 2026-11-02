@@ -125,44 +125,41 @@ describe('connectorHealthCheckService', () => {
     });
   });
 
+  // Phone phase 3 part C (owner, 2026-11-02): the card checks the new phone app, paired through the relay.
   describe('checkMobileBridgeConnection', () => {
-    it('exports checkMobileBridgeConnection function', async () => {
-      const { checkMobileBridgeConnection } = await import('../../services/connectorHealthCheckService');
-      expect(typeof checkMobileBridgeConnection).toBe('function');
+    // This file stubs localStorage; a small real store stands in for these checks.
+    const store = new Map();
+    beforeEach(() => {
+      store.clear();
+      localStorageMock.getItem.mockImplementation((k) => (store.has(k) ? store.get(k) : null));
+      localStorageMock.setItem.mockImplementation((k, v) => { store.set(k, String(v)); });
     });
 
-    it('reports ok when Companion server is running with a paired device', async () => {
-      mockInvoke.mockResolvedValue({ running: true, port: 8765, connected_clients: 1 });
+    it('ok with phone access on and a phone paired', async () => {
+      localStorage.setItem('alphonso_phone_access_v1', 'on');
+      localStorage.setItem('alphonso_phones_v1', JSON.stringify([{ deviceId: 'd1', name: 'iPhone', publicKey: 'k', pairedAtMs: 1, lastSeenMs: 2 }]));
       const { checkMobileBridgeConnection } = await import('../../services/connectorHealthCheckService');
       const result = await checkMobileBridgeConnection();
-      expect(mockInvoke).toHaveBeenCalledWith('companion_get_status');
       expect(result.ok).toBe(true);
-      expect(result.message).toContain('1 device(s) paired');
-      expect(result.details.port).toBe(8765);
+      expect(result.message).toContain('1 phone paired');
+      expect(mockInvoke).not.toHaveBeenCalledWith('companion_get_status');
     });
 
-    it('reports not-ok when Companion server is running but nothing is paired', async () => {
-      mockInvoke.mockResolvedValue({ running: true, port: 8765, connected_clients: 0 });
+    it('not ok when no phone is paired', async () => {
+      localStorage.setItem('alphonso_phone_access_v1', 'on');
       const { checkMobileBridgeConnection } = await import('../../services/connectorHealthCheckService');
       const result = await checkMobileBridgeConnection();
       expect(result.ok).toBe(false);
-      expect(result.message).toContain('no devices paired');
+      expect(result.message).toContain('No phone paired yet');
     });
 
-    it('reports not-ok when Companion server is not running', async () => {
-      mockInvoke.mockResolvedValue({ running: false });
+    it('not ok when phone access is off', async () => {
+      localStorage.setItem('alphonso_phone_access_v1', 'off');
+      localStorage.setItem('alphonso_phones_v1', JSON.stringify([{ deviceId: 'd1', name: 'iPhone', publicKey: 'k', pairedAtMs: 1, lastSeenMs: 2 }]));
       const { checkMobileBridgeConnection } = await import('../../services/connectorHealthCheckService');
       const result = await checkMobileBridgeConnection();
       expect(result.ok).toBe(false);
-      expect(result.message).toContain('not running');
-    });
-
-    it('handles a failed Tauri invoke gracefully', async () => {
-      mockInvoke.mockRejectedValue(new Error('no tauri runtime'));
-      const { checkMobileBridgeConnection } = await import('../../services/connectorHealthCheckService');
-      const result = await checkMobileBridgeConnection();
-      expect(result.ok).toBe(false);
-      expect(result.details.reason).toBe('tauri_invoke_error');
+      expect(result.message).toContain('Phone access is off');
     });
   });
 
@@ -339,12 +336,11 @@ describe('connectorHealthCheckService', () => {
       expect(result).toHaveProperty('ok');
     });
 
-    it('routes to checkMobileBridgeConnection for mobile_bridge', async () => {
-      mockInvoke.mockResolvedValue({ running: true, port: 8765, connected_clients: 2 });
+    it('routes mobile_bridge to the phone app check', async () => {
+      localStorageMock.getItem.mockImplementation((k) => (k === 'alphonso_phones_v1' ? '[{"deviceId":"d1"}]' : k === 'alphonso_phone_access_v1' ? 'off' : null));
       const { checkConnectorHealth } = await import('../../services/connectorHealthCheckService');
       const result = await checkConnectorHealth('mobile_bridge');
-      expect(mockInvoke).toHaveBeenCalledWith('companion_get_status');
-      expect(result.ok).toBe(true);
+      expect(result.message).toContain('Phone access is off');
     });
 
     it('returns not implemented for a truly unregistered connector id', async () => {

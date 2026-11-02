@@ -79,7 +79,7 @@ const CONNECTOR_LABELS: Record<string, string> = {
   sd_webui: 'SD WebUI',
   comfyui_video: 'ComfyUI',
   runway: 'Runway',
-  mobile_bridge: 'Mobile Bridge'
+  mobile_bridge: 'Phone app'
 };
 
 const STATUS_BADGE: Record<string, { dot: string; badge: string; label: string }> = {

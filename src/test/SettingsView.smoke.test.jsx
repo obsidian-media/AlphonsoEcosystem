@@ -120,9 +120,6 @@ vi.mock('../components/CrashLogView', () => ({
   CrashLogView: () => <div data-testid="crash-log">Crashes</div>,
 }));
 
-vi.mock('../components/CompanionPairingPanel', () => ({
-  CompanionPairingPanel: () => <div data-testid="companion-pairing">Pairing</div>,
-}));
 
 vi.mock('../components/phone/PhonesSection', () => ({
   PhonesSection: () => <div data-testid="phones-section">Phones</div>,
@@ -196,17 +193,13 @@ describe('SettingsView smoke', () => {
     expect(invoke).toHaveBeenCalledWith('open_url', { url: 'https://ffmpeg.org/legal.html' });
   });
 
-  // Owner, 2026-11-01: the old Mobile Companion pairing (6-digit PIN) was mistaken for the
-  // new phone app's pairing, so it sits closed under a fold below Phones.
-  it('keeps the older iPhone app pairing folded away below Phones', () => {
+  // Phone phase 3 part C (owner, 2026-11-02): the older iPhone app and its PIN pairing retired.
+  it('Remote Access has only the phone app pairing', () => {
     render(<SettingsView settings={minimalSettings} setSettings={vi.fn()} ollamaStatus={{ state: 'running', label: 'Running' }} installedModels={[]} onCheckOllama={vi.fn()} onCopyTroubleshootingCommand={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /Runtime/ }));
-    const fold = screen.getByTestId('older-phone-app');
-    expect(fold.tagName).toBe('DETAILS');
-    expect(fold.open).toBe(false);
-    expect(fold.textContent).toContain('Older iPhone app (PIN pairing)');
-    expect(fold.contains(screen.getByTestId('companion-pairing'))).toBe(true);
-    expect(screen.getByTestId('phones-section').compareDocumentPosition(fold) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('phones-section')).toBeTruthy();
+    expect(screen.queryByTestId('older-phone-app')).toBeNull();
+    expect(screen.queryByText(/PIN pairing/)).toBeNull();
   });
 
   it('renders with empty settings', () => {

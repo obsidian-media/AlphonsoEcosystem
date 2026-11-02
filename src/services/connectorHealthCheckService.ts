@@ -139,43 +139,22 @@ export async function checkWhatsAppConnection(options: { gatewayUrl?: string } =
   }
 }
 
-interface CompanionStatus {
-  running?: boolean;
-  port?: number;
-  connected_clients?: number;
-}
-
+/** The phone app (phone phase 3 part C, 2026-11-02): phones paired through the relay, and whether phone access is on. */
 export async function checkMobileBridgeConnection(): Promise<HealthCheckResult> {
   const startTime = timestampMs();
-
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    const status = await invoke<CompanionStatus>('companion_get_status');
-    const latency = measureLatency(startTime);
-    const connected = status?.connected_clients || 0;
-
-    return {
-      ok: Boolean(status?.running) && connected > 0,
-      message: !status?.running
-        ? 'Companion pairing server is not running.'
-        : connected > 0
-          ? `Companion server running on port ${status.port}, ${connected} device(s) paired.`
-          : `Companion server running on port ${status.port}, no devices paired yet.`,
-      latency,
-      details: {
-        running: Boolean(status?.running),
-        port: status?.port ?? null,
-        connectedClients: connected
-      }
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      message: `Companion pairing server unreachable: ${String((error as Error)?.message || error)}`,
-      latency: measureLatency(startTime),
-      details: { reason: 'tauri_invoke_error' }
-    };
-  }
+  const { listPhones, phoneAccessOn } = await import('./phone/phoneLink');
+  const phones = listPhones().length;
+  const on = phoneAccessOn();
+  return {
+    ok: on,
+    message: phones === 0
+      ? 'No phone paired yet. Pair one in Settings → Runtime → Remote Access → Phones.'
+      : !on
+        ? 'Phone access is off. Turn it on in Settings → Runtime → Remote Access → Phones.'
+        : `Phone access is on, ${phones} phone${phones === 1 ? '' : 's'} paired.`,
+    latency: measureLatency(startTime),
+    details: { phones, phoneAccess: on }
+  };
 }
 
 export async function checkGitHubConnection(): Promise<HealthCheckResult> {

@@ -78,12 +78,12 @@ export const DEFAULT_CONNECTORS = [
   },
   {
     id: 'mobile_bridge',
-    name: 'Mobile Bridge',
+    name: 'Phone app',
     status: 'foundation_only',
-    transport: 'companion_websocket_pin_paired',
+    transport: 'sealed_relay',
     requiredEnv: [],
-    permissions: ['remote_approvals', 'runtime_status', 'active_tasks', 'voice_notes'],
-    disabledReason: 'Needs phone pairing turned on and at least one paired device. Pair from Settings → Runtime → Remote Access.'
+    permissions: ['remote_approvals', 'runtime_status', 'active_tasks', 'chat'],
+    disabledReason: 'Needs phone access on and at least one phone paired. Pair from Settings → Runtime → Remote Access → Phones.'
   },
   {
     id: 'chatgpt',

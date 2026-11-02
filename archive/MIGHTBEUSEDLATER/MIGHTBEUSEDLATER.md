@@ -156,3 +156,14 @@ as new work requiring its own review, not a revert.
 - **Kept:** `workflowBuilderService.ts`, `workflowOperationsRegistryService.ts` and
   `workflowExecutionService.js` (older code reads them; see DEFERRED_WORK 2026-11-01).
 - **Before restoring:** every step must be an agent step run through Jose.
+
+## companion-lan/ (archived 2026-11-02, phone app phase 3 part C, owner approved)
+
+The desktop's local-network server for the older iPhone app (Swift, `ios/AlphonsoCompanion/`): a
+WebSocket on port 8765 with a 6-digit PIN and mDNS discovery (`companion_*.rs`), the Settings pairing
+panel (`CompanionPairingPanel.tsx`), the command handler it fed (`companionCommandService.ts` and
+App's `companion://*` listeners), and their tests. **Why:** the new phone app does everything through
+the sealed relay; a PIN over the local network was a second, weaker way into the computer that nothing
+used. **Before bringing it back:** it would need its own security review (the PIN, the open port), the
+crates `mdns-sd`, `tokio-tungstenite` and `hostname` back in `Cargo.toml`, its `lib.rs` setup and
+commands, and a client: the Swift app is archived too (`swift-companion/`).
