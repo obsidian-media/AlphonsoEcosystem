@@ -15,7 +15,7 @@ import {
   type BoardroomThread,
   type BoardroomThreadMessage
 } from '../services/boardroomThreadService';
-import { runBoardroomReplies } from '../services/boardroomReplies';
+import { runBoardroomReplies, concludeThread, distributeThread, creativeBriefThread } from '../services/boardroomReplies';
 import { generateAgentResponse } from '../services/boardroomFacilitatorService';
 import { getAgentProvider } from '../services/modelSelectionService';
 import { getRuntimePolicySettings } from '../services/policyEnforcementService';
@@ -243,114 +243,28 @@ export function BoardroomChatView({ requestApproval, onOpenJoseBoard }: { reques
     if (activeThreadId) setMessages(listThreadMessages(activeThreadId));
   }
 
-  function postThreadNote(speaker: string, content: string, kind: BoardroomThreadMessage['kind'] = 'system', requestId?: string | null) {
-    if (!activeThreadId) return;
-    addThreadMessage({ threadId: activeThreadId, speaker, content, kind, ...(requestId ? { requestId } : {}) });
-  }
-
+  // The thread actions live in boardroomReplies.ts (2026-11-02) so the phone gets the same notes.
   async function handleConclude() {
     if (!activeThreadId || !activeThread || threadAction) return;
     setThreadAction('conclude');
-    try {
-      const transcript = messages
-        .filter((m) => ['message', 'response', 'briefing'].includes(m.kind))
-        .slice(-20)
-        .map((m) => `${agentLabel(m.speaker)}: ${m.content}`)
-        .join('\n')
-        .slice(0, 6000);
-      // Phase 6a: Maria's review is a step in a Jose request (shown on the board).
-      const { concludeOnJose } = await import('../services/boardroomJoseService');
-      const { review, waiting, requestId } = await concludeOnJose(activeThread.topic, transcript);
-      if (waiting) {
-        postThreadNote(BOARDROOM_SPEAKER, "Maria's review is waiting for your approval.", 'system', requestId);
-        return;
-      }
-      if (!review?.riskLevel) throw new Error('Maria returned no review');
-      // Always her model's review now (agent phase 3): the rule-based check is gone.
-      const source = 'model' as const;
-      const governance = {
-        riskLevel: String(review.riskLevel),
-        approvalRequired: Boolean(review.approvalRequired),
-        summary: String(review.summary || '').trim(),
-        reviewedAt: new Date().toISOString(),
-        source
-      };
-      setThreadGovernance(activeThreadId, governance);
-      const label = "Maria's governance review";
-      postThreadNote(
-        'maria',
-        `${label}: risk ${governance.riskLevel}${governance.approvalRequired ? ', approval required before anything is sent out' : ''}. ${governance.summary}`,
-        'conclusion'
-      );
-      try {
-        const { pushMemory } = await import('../services/unifiedMemoryService.js');
-        // pushMemory is plain JS; its inferred parameter type lists only
-        // `namespace`, though it stores every field (same call as the old view).
-        pushMemory({
-          title: `Boardroom: ${activeThread.topic}`,
-          content: { governance, messages: messages.length },
-          category: 'decision_memory',
-          namespace: 'ecosystem',
-          sourceAgent: 'maria'
-        } as Parameters<typeof pushMemory>[0]);
-      } catch { /* saving to memory must not undo the conclusion */ }
-    } catch (error) {
-      postThreadNote(BOARDROOM_SPEAKER, `Maria's review did not complete: ${error instanceof Error ? error.message : String(error)}. The thread stays open.`, 'failure');
-    } finally {
-      refreshActiveThread();
-      setThreadAction(null);
-    }
+    try { await concludeThread(activeThreadId); } finally { refreshActiveThread(); setThreadAction(null); }
   }
 
   async function handleDistribute(mode: 'review' | 'slack') {
-    const governance = activeThread?.governance;
-    if (!activeThreadId || !activeThread || !governance || threadAction) return;
+    if (!activeThreadId || !activeThread?.governance || threadAction) return;
     const channel = slackChannel.trim();
     if (mode === 'slack' && !channel) return;
     setThreadAction('distribute');
     try {
-      // Phase 6a: Marcus's step in a Jose request. Posting to Slack sends, so
-      // the step waits for your approval (on the board, or on Telegram).
-      const { distributeOnJose } = await import('../services/boardroomJoseService');
-      const result = await distributeOnJose(activeThread.topic, governance.summary, mode, channel);
-      if (result.waiting) {
-        postThreadNote(BOARDROOM_SPEAKER, `Posting to Slack ${channel} is waiting for your approval. Nothing is sent until you approve it.`, 'system', result.requestId);
-      } else {
-        const summary = result.summary || 'Marcus returned no summary.';
-        postThreadNote('marcus', mode === 'review' ? `Distribution review only, nothing was sent. ${summary}` : summary);
-      }
-      if (mode === 'slack') setDistributeOpen(false);
-    } catch (error) {
-      postThreadNote(BOARDROOM_SPEAKER, `Distribution failed, nothing was sent: ${error instanceof Error ? error.message : String(error)}`, 'failure');
-    } finally {
-      refreshActiveThread();
-      setThreadAction(null);
-    }
+      const done = await distributeThread(activeThreadId, mode, channel);
+      if (done && mode === 'slack') setDistributeOpen(false);
+    } finally { refreshActiveThread(); setThreadAction(null); }
   }
 
   async function handleCreativeBrief() {
     if (!activeThreadId || !activeThread || threadAction) return;
     setThreadAction('brief');
-    try {
-      const { creativeBriefOnJose } = await import('../services/boardroomJoseService');
-      const context = activeThread.governance?.summary || messages.slice(-5).map((m) => m.content).join(' ').slice(0, 800);
-      const result = await creativeBriefOnJose(activeThread.topic, context);
-      postThreadNote(
-        result.summary && !result.waiting ? 'miya' : BOARDROOM_SPEAKER,
-        result.waiting
-          ? "Miya's creative brief is waiting for your approval."
-          : result.summary
-            ? `Creative brief: ${result.summary}`
-            : "Miya's creative brief did not produce anything.",
-        'system',
-        result.requestId
-      );
-    } catch (error) {
-      postThreadNote(BOARDROOM_SPEAKER, `The creative brief request failed: ${error instanceof Error ? error.message : String(error)}`, 'failure');
-    } finally {
-      refreshActiveThread();
-      setThreadAction(null);
-    }
+    try { await creativeBriefThread(activeThreadId); } finally { refreshActiveThread(); setThreadAction(null); }
   }
 
   function handleStop() {

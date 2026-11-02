@@ -8,13 +8,20 @@ vi.mock('../../services/boardroomFacilitatorService', async (importOriginal) => 
   generateAgentResponse: (...a: unknown[]) => generateAgentResponse(...a),
 }));
 const workOnJose = vi.fn();
+const concludeOnJose = vi.fn();
+const distributeOnJose = vi.fn();
+const creativeBriefOnJose = vi.fn();
 vi.mock('../../services/boardroomJoseService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../services/boardroomJoseService')>()),
   workOnJose: (...a: unknown[]) => workOnJose(...a),
+  concludeOnJose: (...a: unknown[]) => concludeOnJose(...a),
+  distributeOnJose: (...a: unknown[]) => distributeOnJose(...a),
+  creativeBriefOnJose: (...a: unknown[]) => creativeBriefOnJose(...a),
 }));
+vi.mock('../../services/unifiedMemoryService.js', () => ({ pushMemory: vi.fn() }));
 
-const { runBoardroomReplies, HERMES_ON_COMPUTER, MAX_CHAIN_DEPTH } = await import('../../services/boardroomReplies');
-const { createThread, listThreadMessages } = await import('../../services/boardroomThreadService');
+const { runBoardroomReplies, HERMES_ON_COMPUTER, MAX_CHAIN_DEPTH, concludeThread, distributeThread, creativeBriefThread } = await import('../../services/boardroomReplies');
+const { createThread, listThreadMessages, getThread } = await import('../../services/boardroomThreadService');
 
 const allow = async () => true;
 let threadId = '';
@@ -65,5 +72,36 @@ describe('runBoardroomReplies', () => {
     const onChange = vi.fn();
     await runBoardroomReplies({ threadId, text: '@maria hi', approve: allow, onChange });
     expect(onChange.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('thread actions', () => {
+  beforeEach(() => {
+    concludeOnJose.mockReset().mockResolvedValue({ requestId: 'r1', review: { riskLevel: 'low', approvalRequired: false, summary: 'Fine to go.' } });
+    distributeOnJose.mockReset().mockResolvedValue({ requestId: 'r2', waiting: true, summary: '' });
+    creativeBriefOnJose.mockReset().mockResolvedValue({ requestId: 'r3', waiting: false, summary: 'A bold launch.' });
+  });
+
+  it("Conclude saves Maria's review on the thread and posts it", async () => {
+    await concludeThread(threadId);
+    expect(getThread(threadId)?.governance).toMatchObject({ riskLevel: 'low', summary: 'Fine to go.' });
+    expect(listThreadMessages(threadId).at(-1)).toMatchObject({ speaker: 'maria', kind: 'conclusion' });
+  });
+
+  it('Distribute to Slack says it waits for approval', async () => {
+    await concludeThread(threadId);
+    await distributeThread(threadId, 'slack', '#news');
+    expect(distributeOnJose).toHaveBeenCalledWith('Launch', 'Fine to go.', 'slack', '#news');
+    expect(listThreadMessages(threadId).at(-1)?.content).toContain('waiting for your approval');
+  });
+
+  it('Distribute before Conclude does nothing', async () => {
+    await distributeThread(threadId, 'review');
+    expect(distributeOnJose).not.toHaveBeenCalled();
+  });
+
+  it("Creative brief posts Miya's brief", async () => {
+    await creativeBriefThread(threadId);
+    expect(listThreadMessages(threadId).at(-1)).toMatchObject({ speaker: 'miya', content: 'Creative brief: A bold launch.' });
   });
 });

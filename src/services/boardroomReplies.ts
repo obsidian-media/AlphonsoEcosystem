@@ -5,10 +5,10 @@
 // MAX_CHAIN_DEPTH replies and the fan-out character budget, after which the thread asks you.
 import { listAgentProfiles } from '../agents/agentRegistry';
 import {
-  addThreadMessage, findCrossThreadContext, getThread, listThreadMessages, parseMentions, BOARDROOM_SPEAKER,
+  addThreadMessage, findCrossThreadContext, getThread, listThreadMessages, parseMentions, setThreadGovernance, BOARDROOM_SPEAKER,
 } from './boardroomThreadService';
 import { detectLowConfidence, generateAgentResponse } from './boardroomFacilitatorService';
-import { workOnJose, workRequestIn } from './boardroomJoseService';
+import { concludeOnJose, creativeBriefOnJose, distributeOnJose, workOnJose, workRequestIn } from './boardroomJoseService';
 import { createFanOutBudgetTracker, DEFAULT_FANOUT_CHAR_BUDGET } from './fanOutBudgetService';
 import { getAgentProvider } from './modelSelectionService';
 import { getRuntimePolicySettings } from './policyEnforcementService';
@@ -149,3 +149,84 @@ export async function runBoardroomReplies(input: BoardroomRepliesInput): Promise
     input.onResponder?.(null);
   }
 }
+
+// ── Thread actions (moved from BoardroomChatView, 2026-11-02, so the phone gets the same notes). Each is
+// a one-step Jose request and posts what really happened into the thread.
+
+type NoteKind = 'system' | 'failure' | 'conclusion' | 'message';
+function threadNote(threadId: string, speaker: string, content: string, kind: NoteKind = 'system', requestId?: string | null): void {
+  addThreadMessage({ threadId, speaker, content, kind, ...(requestId ? { requestId } : {}) });
+}
+
+/** Maria's governance review of the thread, saved on it as `governance`. */
+export async function concludeThread(threadId: string): Promise<void> {
+  const thread = getThread(threadId);
+  if (!thread) return;
+  const messages = listThreadMessages(threadId);
+  try {
+    const transcript = messages
+      .filter((m) => ['message', 'response', 'briefing'].includes(m.kind))
+      .slice(-20)
+      .map((m) => `${boardroomAgentLabel(m.speaker)}: ${m.content}`)
+      .join('\n')
+      .slice(0, 6000);
+    const { review, waiting, requestId } = await concludeOnJose(thread.topic, transcript);
+    if (waiting) { threadNote(threadId, BOARDROOM_SPEAKER, "Maria's review is waiting for your approval.", 'system', requestId); return; }
+    if (!review?.riskLevel) throw new Error('Maria returned no review');
+    const governance = {
+      riskLevel: String(review.riskLevel),
+      approvalRequired: Boolean(review.approvalRequired),
+      summary: String(review.summary || '').trim(),
+      reviewedAt: new Date().toISOString(),
+      source: 'model' as const,
+    };
+    setThreadGovernance(threadId, governance);
+    const approval = governance.approvalRequired ? ', approval required before anything is sent out' : '';
+    threadNote(threadId, 'maria', `Maria's governance review: risk ${governance.riskLevel}${approval}. ${governance.summary}`, 'conclusion');
+    try {
+      const { pushMemory } = await import('./unifiedMemoryService.js');
+      pushMemory({ title: `Boardroom: ${thread.topic}`, content: { governance, messages: messages.length }, category: 'decision_memory', namespace: 'ecosystem', sourceAgent: 'maria' } as Parameters<typeof pushMemory>[0]);
+    } catch { /* saving to memory must not undo the conclusion */ }
+  } catch (error) {
+    threadNote(threadId, BOARDROOM_SPEAKER, `Maria's review did not complete: ${error instanceof Error ? error.message : String(error)}. The thread stays open.`, 'failure');
+  }
+}
+
+/** Marcus: a review only (sends nothing), or a Slack post that waits for your approval. Needs Conclude first. */
+export async function distributeThread(threadId: string, mode: 'review' | 'slack', channel = ''): Promise<boolean> {
+  const thread = getThread(threadId);
+  const governance = thread?.governance;
+  if (!thread || !governance) return false;
+  const target = channel.trim();
+  if (mode === 'slack' && !target) return false;
+  try {
+    const result = await distributeOnJose(thread.topic, governance.summary, mode, target);
+    if (result.waiting) {
+      threadNote(threadId, BOARDROOM_SPEAKER, `Posting to Slack ${target} is waiting for your approval. Nothing is sent until you approve it.`, 'system', result.requestId);
+    } else {
+      const summary = result.summary || 'Marcus returned no summary.';
+      threadNote(threadId, 'marcus', mode === 'review' ? `Distribution review only, nothing was sent. ${summary}` : summary);
+    }
+    return true;
+  } catch (error) {
+    threadNote(threadId, BOARDROOM_SPEAKER, `Distribution failed, nothing was sent: ${error instanceof Error ? error.message : String(error)}`, 'failure');
+    return false;
+  }
+}
+
+/** Miya's creative brief for the thread's topic. */
+export async function creativeBriefThread(threadId: string): Promise<void> {
+  const thread = getThread(threadId);
+  if (!thread) return;
+  try {
+    const context = thread.governance?.summary || listThreadMessages(threadId).slice(-5).map((m) => m.content).join(' ').slice(0, 800);
+    const result = await creativeBriefOnJose(thread.topic, context);
+    let content = "Miya's creative brief did not produce anything.";
+    if (result.waiting) content = "Miya's creative brief is waiting for your approval.";
+    else if (result.summary) content = `Creative brief: ${result.summary}`;
+    threadNote(threadId, result.summary && !result.waiting ? 'miya' : BOARDROOM_SPEAKER, content, 'system', result.requestId);
+  } catch (error) {
+    threadNote(threadId, BOARDROOM_SPEAKER, `The creative brief request failed: ${error instanceof Error ? error.message : String(error)}`, 'failure');
+  }
+}
+

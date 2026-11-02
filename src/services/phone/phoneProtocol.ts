@@ -11,7 +11,8 @@ const PAIR_PREFIX = 'alphonso-pair:';
 export type PhoneCallName = 'chat.send' | 'request.approveStep' | 'request.rejectStep' | 'request.stop' | 'request.carryOn' | 'request.cancel' | 'plan.run' | 'plan.cancel' | 'mirror.snapshot'
   | 'media.preview' | 'content.approveStep' | 'content.sendBack' | 'content.chooseVersion' | 'content.editPost'
   | 'content.movePost' | 'content.cancelPost' | 'content.approvePosts' | 'content.startProject'
-  | 'request.sendBack' | 'request.editSendText';
+  | 'request.sendBack' | 'request.editSendText'
+  | import('./phase3Calls').Phase3CallName;
 /** What the computer mirrors to a phone. `computer`: its name, model and modes, never secrets. */
 export type MirroredStore = 'requests' | 'stepOutputs' | 'chat' | 'computer' | 'content' | 'memory' | 'projects' | 'boardroom';
 export interface PhoneNotification {
