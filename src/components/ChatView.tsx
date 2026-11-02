@@ -46,6 +46,7 @@ import { executeApprovedPackets, carryOnRequest, cancelRequest } from '../servic
 import { higgsfieldResultsDoneSince, higgsfieldResultsFor, markShownInChat, type HiggsfieldResult } from '../services/contentFactory/higgsfieldByName';
 import { HiggsfieldMedia } from './miya/HiggsfieldResults';
 import { chatMediaDoneSince, markChatMediaShown, type ChatMediaResult } from '../services/contentFactory/chatMedia';
+import { stillWaitingLine } from '../services/jose/joseExpiry';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
 import {
@@ -855,7 +856,7 @@ export function ChatView({
             content: `⏳ **${agentNames || 'Agent'} ${pending.length === 1 ? 'is' : 'are'} waiting for your approval** — review the task${pending.length !== 1 ? 's' : ''} below and approve or deny to continue.`
           }]);
 
-          // 10-minute timeout — clear approval panel and notify user
+          // After 10 minutes the panel here closes; the request still waits on the board
           if (approvalTimeoutRef.current) clearTimeout(approvalTimeoutRef.current);
           approvalTimeoutRef.current = setTimeout(() => {
             setPendingApprovals((prev) => {
@@ -863,7 +864,7 @@ export function ChatView({
                 setMessages((current) => [...current, {
                   id: `timeout-${Date.now()}`,
                   role: 'assistant',
-                  content: '⏸ Approval timed out after 10 minutes. Resubmit your request to try again.'
+                  content: `⏸ ${stillWaitingLine()}`
                 }]);
               }
               return [];

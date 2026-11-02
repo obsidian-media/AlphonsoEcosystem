@@ -23,6 +23,14 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+# The phone link's build settings (phone app phase 1): repository variables, not secrets.
+# Empty in a fork, which then builds without phone access.
+env:
+  VITE_PHONE_RELAY_URL: ${{ vars.VITE_PHONE_RELAY_URL }}
+  VITE_PHONE_SIGNIN_URL: ${{ vars.VITE_PHONE_SIGNIN_URL }}
+  VITE_PHONE_EMAIL_LINK_URL: ${{ vars.VITE_PHONE_EMAIL_LINK_URL }}
+  VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+
 jobs:
   determine-tag:
     name: Determine release tag

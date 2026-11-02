@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 355 services and 182 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 373 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -114,6 +114,7 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | component | `src/components/miya/ScriptStudioTab.tsx` | `ScriptStudioTab`, `StepTabProps` |
 | component | `src/components/miya/ShortsStudioTab.tsx` | `ShortsStudioTab`, `ShortsStudioTabProps` |
 | component | `src/components/miya/StepPanel.tsx` | `StepPanel`, `StepPanelProps` |
+| component | `src/components/miya/stepWords.ts` | `STATUS_TEXT`, `STEP_LABELS` |
 | component | `src/components/miya/ThumbnailStudioTab.tsx` | `ThumbnailStudioTab`, `ThumbnailStudioTabProps` |
 | component | `src/components/MiyaCompanionWidget.tsx` | `MiyaCompanionWidget` |
 | component | `src/components/MiyaStudio.tsx` | `brandKitPrompt`, `MiyaStudio` |
@@ -130,6 +131,7 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | component | `src/components/OrchestratorQueueView.tsx` | `default`, `OrchestratorQueueView` |
 | component | `src/components/OrchestratorView.tsx` | `OrchestratorView` |
 | component | `src/components/OutsideToolsSection.tsx` | `OutsideToolsSection` |
+| component | `src/components/phone/PhonesSection.tsx` | `PhonesSection` |
 | component | `src/components/PipelineResultCard.tsx` | `PipelineResultCard` |
 | component | `src/components/ProductionReadinessPanel.tsx` | `ProductionReadinessPanel` |
 | component | `src/components/ProjectBatchPanel.tsx` | `default` |
@@ -220,7 +222,7 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | service | `src/services/boardroomFacilitatorService.ts` | `buildAgentSystemPrompt`, `buildFacilitatorPrompt`, `detectLowConfidence`, `FacilitatorResult`, `generateAgentResponse`, `generateAlphonsoResponse` |
 | service | `src/services/boardroomJoseService.ts` | `BOARDROOM_LABEL`, `BoardroomReview`, `concludeOnJose`, `creativeBriefOnJose`, `distributeOnJose`, `workOnJose`, `workRequestIn` |
 | service | `src/services/boardroomThreadService.ts` | `acknowledgeThreadMessage`, `addThreadMessage`, `BOARDROOM_SPEAKER`, `BoardroomGovernance`, `BoardroomThread`, `BoardroomThreadMessage`, `confirmThreadMessage`, `createThread`, `CrossThreadContextResult`, `findCrossThreadContext`, `getThread`, `listAllThreadMessages`, `listThreadMessages`, `listThreads`, `MESSAGES_KEY`, `migrateLegacySessions`, `parseMentions`, `setThreadGovernance`, `THREADS_KEY`, `updateThreadStatus` |
-| service | `src/services/browserAutomationService.ts` | `fetchUrlContent`, `openAndScrape`, `openExternalUrl`, `openSourceLink`, `openUrl`, `readClipboard`, `scrapeWebPage`, `setLinkConfirmHandler`, `writeClipboard` |
+| service | `src/services/browserAutomationService.ts` | `fetchUrlContent`, `openAndScrape`, `openExternalUrl`, `openSourceLink`, `openUrl`, `readClipboard`, `scrapeWebPage`, `setLinkConfirmHandler`, `setLinkOpener`, `writeClipboard` |
 | service | `src/services/cacheService.ts` | `agentCache`, `cached`, `CacheEntry`, `CacheOptions`, `connectorCache`, `createCacheKey`, `globalCache`, `MemoryCache` |
 | service | `src/services/calleCallStep.ts` | `askMarcusToCall`, `CALL_LABEL`, `CallToPlace`, `executeOutreachCall` |
 | service | `src/services/calleMcpAuthService.ts` | `CallePendingLogin`, `disconnectCalleMcp`, `getCalleMcpToken`, `isCalleMcpConfigured`, `pollBrokerLogin`, `startBrokerLogin` |
@@ -276,8 +278,9 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
 | service | `src/services/contentFactory/adCopyExport.ts` | `AD_NETWORKS`, `AdCopy`, `adCsv`, `AdNetwork`, `adsForNetwork`, `writeAdCsv` |
 | service | `src/services/contentFactory/brandResults.ts` | `Band`, `BANDS`, `brandMedian`, `BrandResultRow`, `brandResultRows`, `FIRST_POSTS`, `MAIN_METRIC`, `MIN_POSTS_TO_COMPARE`, `permissionBanners`, `postBand` |
-| service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
-| service | `src/services/contentFactory/chatMedia.ts` | `askChatMedia`, `CHAT_CLIP_SECONDS`, `CHAT_MEDIA_LABEL`, `CHAT_MUSIC_SECONDS`, `chatMediaDoneSince`, `chatMediaFor`, `ChatMediaKind`, `chatMediaKindOf`, `chatMediaPromptOf`, `ChatMediaResult`, `checkChatMedia`, `executeChatMedia`, `listChatMedia`, `markChatMediaShown`, `NO_AUDIOCRAFT`, `NO_VIDEO_MODEL` |
+| service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
+| service | `src/services/contentFactory/calendarView.ts` | `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek` |
+| service | `src/services/contentFactory/chatMedia.ts` | `askChatMedia`, `CHAT_CLIP_SECONDS`, `CHAT_MEDIA_LABEL`, `CHAT_MUSIC_SECONDS`, `chatMediaDoneSince`, `chatMediaFor`, `ChatMediaKind`, `chatMediaKindOf`, `chatMediaPromptOf`, `ChatMediaResult`, `checkChatMedia`, `executeChatMedia`, `executeChatPicture`, `listChatMedia`, `markChatMediaShown`, `NO_AUDIOCRAFT`, `NO_VIDEO_MODEL` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
 | service | `src/services/contentFactory/comfyCharacter.ts` | `buildCharacterWorkflow`, `CHARACTER_REFERENCE_MISSING`, `characterReferenceAvailable`, `makeCharacterPicture`, `REFERENCE_CHECKPOINT`, `resetReferenceCacheForTests`, `withCharacterPrompt` |
 | service | `src/services/contentFactory/comfyMotionClip.ts` | `buildMotionWorkflow`, `localMotionAvailable`, `makeComfyMotionClip`, `MOTION_CARD_TOO_SMALL`, `MOTION_MODEL_MISSING`, `motionFrames`, `resetMotionCacheForTests` |
@@ -287,7 +290,7 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | service | `src/services/contentFactory/contentCaptions.ts` | `alignCaptions`, `captionsFromLines`, `TimedWord`, `toSrt` |
 | service | `src/services/contentFactory/contentCharacters.ts` | `addCharacter`, `addCharacterPictures`, `characterUsable`, `deleteCharacter`, `getCharacter`, `listCharacters`, `makeCharacterPictures`, `MAX_CHARACTER_PICTURES`, `MIN_CHARACTER_PICTURES`, `MIYA_CHARACTER_PICTURES`, `NEEDS_PERMISSION`, `NEEDS_PICTURES`, `REAL_PERSON_OWN_PHOTOS`, `removeCharacterPicture`, `setMainCharacter`, `setPermission`, `updateCharacter` |
 | service | `src/services/contentFactory/contentCharacterTraining.ts` | `checkCharacterTraining`, `estimateCharacterTraining`, `executeCharacterTraining`, `NO_TRAINING_MODEL`, `trainCharacter`, `TRAINING_LABEL` |
-| service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `startContentProjectFromChat` |
+| service | `src/services/contentFactory/contentFromChat.ts` | `NEEDS_OUTPUT_FOLDER`, `projectName`, `startContentProjectFromChat` |
 | service | `src/services/contentFactory/contentIdeas.ts` | `dismissIdea`, `getIdea`, `IDEAS_TASK_MARK`, `listIdeas`, `proposeIdeas`, `saveIdeas`, `startProjectFromIdea` |
 | service | `src/services/contentFactory/contentImages.ts` | `checkPendingPictures`, `isVerticalOnly`, `PictureOptions`, `PictureResult`, `renderCarouselSlides`, `renderScenePictures`, `renderThumbnails` |
 | service | `src/services/contentFactory/contentLearning.ts` | `startContentLearning` |
@@ -362,12 +365,12 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | service | `src/services/hermes/userProfiles.ts` | `ACTS_WITHOUT_ASKING`, `API_SERVER_OFF`, `CANT_READ`, `connectedUserProfiles`, `connectUserProfile`, `ENV_NOT_CHECKED`, `findUserProfiles`, `NOT_FOUND`, `onUserProfilesChanged`, `ownMessagingWarning`, `profileWarnings`, `UserProfile`, `userProfileFor`, `UserProfileView` |
 | service | `src/services/jose/agentNames.ts` | `AGENT_NAMES`, `agentName` |
 | service | `src/services/jose/agentOrder.ts` | `AGENT_DEPENDENCIES` |
-| service | `src/services/jose/agentPaidModels.ts` | `withAgentPaidModels` |
+| service | `src/services/jose/agentPaidModels.ts` | `STEPS_WITHOUT_AGENT_MODEL`, `withAgentPaidModels` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
 | service | `src/services/jose/joseAdapt.ts` | `AdaptContext`, `adaptPlan`, `PlanChange`, `setPlanAdapterForTests` |
 | service | `src/services/jose/joseDecision.ts` | `asksForResearch`, `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision`, `ruleRoute` |
 | service | `src/services/jose/joseEffects.ts` | `ACTION_EFFECTS`, `COMMAND_CHECKED_EFFECTS`, `DEFAULT_EFFECT_APPROVALS`, `EFFECT_LABELS`, `effectsNeedingApproval`, `getEffectApprovals`, `inferEffects`, `JOSE_EFFECTS`, `JoseEffect`, `LOCKED_EFFECTS`, `stepEffectsToWaitFor` |
-| service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets` |
+| service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets`, `stillWaitingLine` |
 | service | `src/services/jose/joseFinish.ts` | `NOTHING_NEW`, `saveRequestDecisions` |
 | service | `src/services/jose/joseHandoff.ts` | `ACTION_INSTRUCTION`, `ActionRequest`, `findActionRequest`, `handoffReason`, `handoffSteps` |
 | service | `src/services/jose/joseHelp.ts` | `chooseHelper`, `findHelpRequest`, `HELP_INSTRUCTION`, `Helper`, `planHelp` |
@@ -391,6 +394,7 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | service | `src/services/jose/quotedContent.ts` | `CONTENT_AFTER`, `NOT_A_SEND`, `QUOTED`, `quotedPieces`, `withoutQuotedContent` |
 | service | `src/services/jose/requestGroups.ts` | `groupRequests`, `RequestGroup` |
 | service | `src/services/jose/reviewStep.ts` | `ReviewStepResult`, `runReviewStep` |
+| service | `src/services/jose/sendBackStep.ts` | `SEND_BACK_NOT_HERE`, `sendBackStep`, `SentBack`, `sentBackChange` |
 | service | `src/services/jose/stepGraph.ts` | `buildStepWaves`, `checkPlan`, `isPaidModelId`, `JOSE_LIMITS`, `legacyNeeds`, `MIYA_PAID_STEPS`, `PlanStep`, `stepMaySpend` |
 | service | `src/services/jose/stepInput.ts` | `buildStepInput`, `NeededWork`, `readableOutput`, `skillSection`, `STEP_INPUT_LIMITS`, `StepInput`, `stepInputText`, `StepSkill` |
 | service | `src/services/jose/submitToJose.ts` | `cancelPlan`, `CONTENT_PROJECT_SOURCES`, `CONTENT_VIDEO_STUDIO_NOTE`, `IMAGE_STEP`, `runApprovedPlan`, `submitStepsToJose`, `submitToJose`, `SubmitToJoseInput` |
@@ -405,6 +409,7 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | service | `src/services/marcus/composioChannel.ts` | `checkComposioAnswer`, `composioSendTools`, `describeComposioTools` |
 | service | `src/services/marcus/describeSend.ts` | `describeSend` |
 | service | `src/services/marcus/destinations.ts` | `CHANNEL_LIMITS`, `CONNECTOR_NAMES`, `DESTINATION_KEYS`, `destinationsFor`, `isAllowedTarget`, `listedN8nWorkflows`, `MARCUS_CONNECTORS`, `requestWithoutQuotes`, `targetLabel`, `telegramOwnerChatId` |
+| service | `src/services/marcus/editSendText.ts` | `EditedSendPreview`, `editSendText`, `SEND_NOT_WAITING`, `SEND_TEXT_CHANGED` |
 | service | `src/services/marcus/outsideCall.ts` | `ALREADY_DONE`, `argumentProblems`, `describeOutsideCall`, `FULL_LIST_BUDGET`, `isOutsideCallStep`, `NO_OUTSIDE_TOOL`, `OutsideCallPreview`, `PrepareOutside`, `prepareOutsideCall`, `runOutsideCall` |
 | service | `src/services/marcus/pickDestination.ts` | `CAMPAIGN_STUDIO_ONLY`, `hintFromTaskType`, `mailTools`, `MARCUS_MODEL_FAILED`, `NEEDS_VERSION`, `NEWSLETTER_NEEDS`, `NO_DESTINATION`, `notSetUp`, `pickDestination` |
 | service | `src/services/marcus/prepareSend.ts` | `deliveryLines`, `deliveryReason`, `describeSend`, `FIX_ROUNDS_USED`, `isMarcusSendStep`, `prepareMarcusSend`, `SEND_TIME_UNCLEAR`, `tooLongReason`, `unfilledGaps`, `unfilledReason` |
@@ -456,6 +461,21 @@ Source-backed inventory: 355 services and 182 components. Human purpose descript
 | service | `src/services/orchestrationReceiptService.ts` | `appendOrchestrationReceipt`, `AppendReceiptInput`, `listOrchestrationReceipts`, `ORCHESTRATION_RECEIPT_SCOPE`, `OrchestrationReceipt`, `ReceiptFilters` |
 | service | `src/services/packetExecutionService.ts` | `executeApprovedPacket` |
 | service | `src/services/parallelExecutionService.ts` | `createTaskQueue`, `executeBatch`, `executeParallel`, `executeWithRetry`, `ParallelExecutionOptions`, `ParallelResult`, `ParallelTask` |
+| service | `src/services/phone/boardData.ts` | `BoardData`, `BoardDataProvider`, `localBoardData`, `runResultText`, `sendTextAnswer`, `useBoardData` |
+| service | `src/services/phone/contentCalls.ts` | `CHANGED_ON_COMPUTER`, `CONTENT_CALLS`, `ContentAnswer`, `mediaPreview`, `NOT_OFFERED`, `POST_GONE`, `postsStamp`, `postStamp`, `previewLimitLine`, `PreviewPiece`, `PROJECT_GONE`, `resetContentCallsForTests`, `stepStamp` |
+| service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia`, `versionMedia` |
+| service | `src/services/phone/contentStamps.ts` | `postsStamp`, `postStamp`, `stepStamp` |
+| service | `src/services/phone/desktopSignIn.ts` | `createDesktopPhoneSignIn`, `desktopSignInConfig`, `NO_SIGN_IN_PAGE` |
+| service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |
+| service | `src/services/phone/phoneCalls.ts` | `ALREADY_DONE`, `handlePhoneCall`, `NOT_FROM_PHONE`, `PHONE_CALLS`, `resetPhoneCallsForTests` |
+| service | `src/services/phone/phoneChatLog.ts` | `appendPhoneChat`, `listPhoneChat`, `onPhoneChatChange`, `PHONE_CHAT_KEY`, `PHONE_CHAT_LIMIT`, `PhoneChatMessage` |
+| service | `src/services/phone/phoneCrypto.ts` | `generateKeyPair`, `open`, `openAnonymous`, `seal`, `sealAnonymous` |
+| service | `src/services/phone/phoneLink.ts` | `computerKeys`, `listPhones`, `onPhoneCall`, `PairedPhone`, `PAIRING_WINDOW_MS`, `pairingQr`, `PHONE_ACCESS_KEY`, `phoneAccessOn`, `PhoneAuth`, `PHONES_KEY`, `PREVIEW_RESERVE_SHARE`, `previewFits`, `publish`, `pushNotice`, `relayRoom`, `RelaySocket`, `removePhone`, `resetPhoneLinkForTests`, `setPhoneAccess`, `SocketFactory`, `startPhoneLink`, `webSocketFactory` |
+| service | `src/services/phone/phoneMirror.ts` | `CONTENT_POLL_MS`, `MIRROR_BATCH_MS`, `MIRROR_REQUESTS`, `mirrorSnapshots`, `startPhoneMirror` |
+| service | `src/services/phone/phoneNotifications.ts` | `PHONE_NOTIFY_SENT_KEY`, `PHONE_READY_SENT_KEY`, `phoneNotificationsFor`, `phoneNotifySettings`, `PUSH_STILL_LIMIT`, `readyToCheck`, `sealedNoticeChars`, `startPhoneNotifications`, `withStill` |
+| service | `src/services/phone/phonePreviews.ts` | `ensurePreview`, `FILE_GONE`, `makeStill`, `NOT_READY`, `PREVIEW_PIECE_BYTES`, `PreviewInfo`, `PreviewResult`, `readPiece` |
+| service | `src/services/phone/phoneProtocol.ts` | `decodeMessage`, `encodeMessage`, `MirroredStore`, `openPairingRequest`, `PairingInfo`, `pairingPayload`, `PairingRequest`, `PHONE_MAX_FRAME_BYTES`, `PHONE_PROTOCOL_VERSION`, `PhoneCallName`, `PhoneKeys`, `PhoneMessage`, `PhoneNotification`, `readPairingPayload`, `relayHttpBase`, `sealPairingRequest` |
+| service | `src/services/phone/remoteData.ts` | `ChatData`, `ChatMessage`, `createRemoteData`, `offlineLine`, `PhonePreviewParts`, `PhoneTransport`, `StudioData` |
 | service | `src/services/pluginRegistryService.ts` | `appendPluginAuditEntry`, `discoverDiskPluginManifests`, `executePluginToolRun`, `listPluginAudit`, `listPlugins`, `PLUGIN_AUDIT_SCOPE`, `PLUGIN_MANIFEST_FIELDS`, `PluginAuditEntry`, `PluginAuditInput`, `PluginEntry`, `PLUGINS_SCOPE`, `togglePlugin`, `validatePluginManifestDisk`, `verifyPluginSignatureFromRegistry` |
 | service | `src/services/pluginSandboxService.ts` | `evaluatePluginExecutionPolicy`, `getPluginSandboxPolicy`, `updatePluginSandboxPolicy` |
 | service | `src/services/pluginSigningService.ts` | `_resetTrustedSignerKeysForTesting`, `addTrustedSignerKey`, `exportPublicKeyJwk`, `getOrCreateSignerKeys`, `getTrustedSignerKeys`, `hydrateTrustedSignerKeysFromKv`, `removeTrustedSignerKey`, `signPluginManifest`, `verifyAndAddPlugin`, `verifyPluginSignature` |

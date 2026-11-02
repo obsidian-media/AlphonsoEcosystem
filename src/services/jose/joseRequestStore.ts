@@ -28,6 +28,8 @@ export interface JoseRequestStep extends PlanStep {
   skillReason?: string;
   /** A Marcus send prepared before it asked you (agent phase 5): what goes where. */
   sendPreview?: SendPreview;
+  /** Work you sent back from this waiting send (phone app phase 2); the next run adds its fix round. */
+  sentBack?: import('./sendBackStep').SentBack;
   /** When that send went out; a second run says it was already sent. */
   sentAtMs?: number;
   /** A Marcus outside-tool call prepared before it asked you (2026-10-30): the exact call. */

@@ -32,6 +32,7 @@ import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 import { NovaHistoryChart } from './NovaHistoryChart';
 import { CrashLogView } from './CrashLogView';
 import { CompanionPairingPanel } from './CompanionPairingPanel';
+import { PhonesSection } from './phone/PhonesSection';
 import { ConnectorSetupPanel } from './ConnectorSetupPanel';
 import { CalleOutreachPanel } from './calle/CalleOutreachPanel';
 import { EscalationCallPanel } from './calle/EscalationCallPanel';
@@ -1703,7 +1704,14 @@ export function SettingsView({
 
       <section className="space-y-4">
         <SectionHeader icon={Key} label="Remote Access" />
-        <CompanionPairingPanel />
+        <PhonesSection />
+        {/* The older Mobile Companion app pairs with a 6-digit PIN; kept closed so it isn't
+            mistaken for the phone app's pairing above (owner, 2026-11-01). */}
+        <details data-testid="older-phone-app" className="rounded-xl border border-(--border) px-4 py-3">
+          <summary className="cursor-pointer text-sm text-(--text-2)">Older iPhone app (PIN pairing)</summary>
+          <p className="mt-2 text-xs text-(--text-4)">Only for the older Alphonso Companion app on your local network. The Alphonso phone app pairs under Phones above.</p>
+          <div className="mt-3"><CompanionPairingPanel /></div>
+        </details>
       </section>
 
       <section className="space-y-4">

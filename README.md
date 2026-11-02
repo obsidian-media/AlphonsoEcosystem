@@ -67,6 +67,7 @@ More in [Getting started](docs/GETTING_STARTED.md).
 | [User manual](docs/USER_MANUAL.md) | Every screen, step by step |
 | [Agent guide](docs/AGENT_GUIDE.md) | What each agent does and when to use them |
 | [Connectors](docs/CONNECTORS.md) | Setting up each service |
+| [Phone app](docs/PHONE.md) | The iPhone and Android app (in testing): chat, requests and approvals from your phone |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | When something doesn't work |
 | [What's new](docs/CHANGELOG.md) | Every release |
 

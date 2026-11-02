@@ -1065,7 +1065,7 @@ pub(crate) fn build_workspace_symbol_index(
 /// The existing file `relative_path` inside `workspace_root`, after the same
 /// checks every workspace read uses: no `..`, no absolute path, no symlink
 /// escape, nothing inside `.git`.
-fn resolve_workspace_read_path(
+pub(crate) fn resolve_workspace_read_path(
   workspace_root: &str,
   relative_path: &str,
 ) -> Result<PathBuf, String> {

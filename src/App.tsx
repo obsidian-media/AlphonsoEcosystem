@@ -144,7 +144,16 @@ import { expireWaitingRequests } from './services/jose/joseExpiry';
 import { loadUserSkills } from './services/skills/userSkills';
 import { startPostScheduler, stopScheduler } from './services/marcusExecutionService';
 import { startResourceWatcher } from './services/resources/idleStop';
+import { startPhoneLink, phoneAccessOn, webSocketFactory, onPhoneCall, publish as publishToPhones, pushNotice } from './services/phone/phoneLink';
+import { startPhoneNotifications } from './services/phone/phoneNotifications';
+import { handlePhoneCall } from './services/phone/phoneCalls';
+import { startPhoneMirror } from './services/phone/phoneMirror';
+import { phoneAuth, phoneRelayUrl, setPhoneSignInProvider } from './services/phone/phoneAccount';
+import { createDesktopPhoneSignIn, desktopSignInConfig } from './services/phone/desktopSignIn';
 import { randomHex } from './lib/randomId';
+
+// The computer's sign-in for phone access: the browser sign-in page, kept in the OS keychain.
+setPhoneSignInProvider(createDesktopPhoneSignIn({ invoke: (cmd, args) => invoke(cmd, args), ...desktopSignInConfig() }));
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
@@ -214,6 +223,18 @@ function AppShell() {
   useEffect(() => {
     if (IS_COACH_WINDOW) return undefined;
     return startResourceWatcher();
+  }, []);
+  // Phone access (phone app phase 1): the link to the relay, only when a phone is paired and
+  // phone access is on, and only when this build has a relay address.
+  useEffect(() => {
+    if (IS_COACH_WINDOW) return undefined;
+    const relayUrl = phoneRelayUrl();
+    if (!relayUrl || !phoneAccessOn()) return undefined;
+    const offCalls = onPhoneCall(handlePhoneCall);
+    const stopMirror = startPhoneMirror({ publish: publishToPhones });
+    const stopLink = startPhoneLink({ relayUrl, auth: phoneAuth, socket: webSocketFactory });
+    const stopNotices = startPhoneNotifications({ push: pushNotice });
+    return () => { stopNotices(); stopLink(); stopMirror(); offCalls(); };
   }, []);
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;

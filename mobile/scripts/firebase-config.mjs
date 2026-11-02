@@ -1,0 +1,72 @@
+// Fetches the phone app's Firebase config files for a build: GoogleService-Info.plist (iOS),
+// google-services.json (Android), and firebase.xcconfig (Google sign-in's URL scheme for
+// Xcode). They are never committed. Needs FIREBASE_PROJECT_ID and a short-lived
+// FIREBASE_TOKEN (for example `gcloud auth print-access-token`); the token is never printed.
+// Without them it writes an empty firebase.xcconfig, so the project still builds (no push,
+// no sign-in), and says so.
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const mobile = path.resolve(here, '..');
+const appId = JSON.parse(fs.readFileSync(path.join(mobile, 'capacitor.config.json'), 'utf8')).appId;
+const project = String(process.env.FIREBASE_PROJECT_ID || '').trim();
+const token = String(process.env.FIREBASE_TOKEN || '').trim();
+const out = {
+  plist: path.join(mobile, 'ios/App/App/GoogleService-Info.plist'),
+  json: path.join(mobile, 'android/app/google-services.json'),
+  xcconfig: path.join(mobile, 'ios/App/firebase.xcconfig'),
+};
+
+// PHONE_LINK_HOST: the email sign-in link's domain, the project's own <project>.firebaseapp.com,
+// where Firebase publishes the files that let the link open the app. Without a project it is
+// a domain that resolves nowhere, so the entitlement stays valid.
+function writeXcconfig(reversedClientId, linkProject = project) {
+  const linkHost = linkProject ? `PHONE_LINK_HOST = ${linkProject}.firebaseapp.com` : 'PHONE_LINK_HOST = example.invalid';
+  fs.writeFileSync(out.xcconfig, `// Written by mobile/scripts/firebase-config.mjs; not committed.\nGOOGLE_REVERSED_CLIENT_ID = ${reversedClientId || ''}\n${linkHost}\n`);
+}
+const plistValue = (plist, key) => new RegExp(`<key>${key}</key>\\s*<string>([^<]+)</string>`).exec(plist)?.[1] || '';
+
+// In CI (iPhone build): the iOS config file given as FIREBASE_IOS_PLIST_BASE64, no Google
+// sign-in needed. The project comes from the file itself.
+const givenPlist = String(process.env.FIREBASE_IOS_PLIST_BASE64 || '').trim();
+if (givenPlist && !token) {
+  const plist = Buffer.from(givenPlist, 'base64');
+  const text = plist.toString('utf8');
+  if (plistValue(text, 'BUNDLE_ID') !== appId) throw new Error(`FIREBASE_IOS_PLIST_BASE64 is not the config for ${appId}.`);
+  fs.writeFileSync(out.plist, plist);
+  writeXcconfig(plistValue(text, 'REVERSED_CLIENT_ID'), plistValue(text, 'PROJECT_ID'));
+  console.log(`Firebase iOS config written for ${appId} from FIREBASE_IOS_PLIST_BASE64.`);
+  process.exit(0);
+}
+
+if (!project || !token) {
+  writeXcconfig('');
+  console.log('No FIREBASE_PROJECT_ID / FIREBASE_TOKEN: built without Firebase (no sign-in or notifications).');
+  process.exit(0);
+}
+
+const headers = { authorization: `Bearer ${token}`, 'x-goog-user-project': project };
+const api = 'https://firebase.googleapis.com/v1beta1';
+async function get(p) {
+  const res = await fetch(`${api}/${p}`, { headers });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Firebase answered ${res.status} for ${p.split('/')[2] || p}: ${body?.error?.message || 'no reason given'}`);
+  return body;
+}
+
+async function configFor(kind, idField) {
+  const list = await get(`projects/${project}/${kind}`);
+  const app = (list.apps || []).find((a) => a[idField] === appId);
+  if (!app) throw new Error(`The Firebase project has no ${kind === 'iosApps' ? 'iOS' : 'Android'} app ${appId}.`);
+  const cfg = await get(`projects/-/${kind}/${app.appId}/config`);
+  return Buffer.from(cfg.configFileContents, 'base64');
+}
+
+const plist = await configFor('iosApps', 'bundleId');
+fs.writeFileSync(out.plist, plist);
+fs.writeFileSync(out.json, await configFor('androidApps', 'packageName'));
+const reversed = /<key>REVERSED_CLIENT_ID<\/key>\s*<string>([^<]+)<\/string>/.exec(plist.toString('utf8'))?.[1] || '';
+writeXcconfig(reversed);
+console.log(`Firebase config written for ${appId}${reversed ? '' : ' (no Google sign-in client for iOS yet)'}.`);

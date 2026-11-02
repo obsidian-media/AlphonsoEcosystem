@@ -4,8 +4,9 @@ let _timeoutSpy;
 
 vi.mock('../services/connectors/connectorImageGenerators', () => ({
   generateComfyUiImage: vi.fn(async () => ({
-    ok: true, imageUrls: ['http://localhost/mock.png'], outputPaths: ['/tmp/mock.png']
-  }))
+    ok: true, imageUrls: ['http://localhost/mock.png'], outputPaths: ['/tmp/mock.png'], previewBase64: 'PIC'
+  })),
+  getComfyUiEndpoint: () => 'http://127.0.0.1:8188',
 }));
 
 vi.mock('../services/verificationService', () => ({
@@ -143,6 +144,8 @@ describe('Jose with explicit assignments', () => {
   });
 
   it('without assignments, still takes the image shortcut as before', async () => {
+    // A picture is saved in the output folder since 2026-11-01, so one is set.
+    localStorage.setItem('alphonso_settings', JSON.stringify({ outputFolder: 'D:/Content' }));
     await runJoseCommandExecutionPipeline({ commandText: 'make an image of a llama', source: 'user', zeroCostMode: true });
     expect(generateComfyUiImage).toHaveBeenCalledTimes(1);
   });

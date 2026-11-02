@@ -24,11 +24,11 @@ vi.mock('../../../services/videoModelService', async () => {
   const actual = await vi.importActual<typeof import('../../../services/videoModelService')>('../../../services/videoModelService');
   return { ...actual, listVideoModels: () => listVideoModels() };
 });
-vi.mock('../../../services/contentFactory/contentStepRecorder', () => ({ contentAppSettings: () => ({ outputFolder: 'D:/Content' }) }));
+vi.mock('../../../services/contentFactory/contentStepRecorder', () => ({ contentAppSettings: () => ({ outputFolder: (globalThis as { __outputFolder?: string }).__outputFolder ?? 'D:/Content' }) }));
 vi.mock('../../../services/jose/joseRequestStore', () => ({ findRequestByPacket: () => ({ source: 'user' }) }));
 
 const {
-  chatMediaKindOf, askChatMedia, executeChatMedia, chatMediaFor, checkChatMedia, listChatMedia,
+  chatMediaKindOf, askChatMedia, executeChatMedia, executeChatPicture, chatMediaFor, checkChatMedia, listChatMedia,
   NO_VIDEO_MODEL, NO_AUDIOCRAFT, CHAT_MEDIA_LABEL,
 } = await import('../../../services/contentFactory/chatMedia');
 
@@ -131,5 +131,44 @@ describe('executeChatMedia', () => {
     expect(out.resultState).toBe('failed');
     expect(out.summary).toMatch(/ComfyUI is not running/);
     expect(makeComfyClip).not.toHaveBeenCalled();
+  });
+});
+
+// Owner, 2026-11-01: a picture asked for in Chat stayed in ComfyUI's own folder, and Chat
+// said nothing about where. Like videos, it is saved under <output folder>/Miya/<date>/ and shown.
+describe('executeChatPicture', () => {
+  const pictureStep = { agent: 'miya', actionType: 'creative_image', effects: ['write_own_work'] };
+
+  it('saves the picture under Miya/<date>/ in the output folder, says where, and lists it for Chat', async () => {
+    const r = await executeChatPicture('a sunset over mountains', pictureStep, { id: 'pk-1', commandId: 'cmd-1' });
+    expect(r.resultState).toBe('completed');
+    const save = invoke.mock.calls.find((c) => c[0] === 'save_image_to_folder');
+    expect(save?.[1]).toMatchObject({ base64Data: 'PIC' });
+    expect(String(save?.[1].folder)).toMatch(/^D:\/Content\/Miya\/\d{4}-\d{2}-\d{2}$/);
+    expect(String(save?.[1].filename)).toMatch(/^picture-\d{6}-[0-9a-f]{8}\.png$/);
+    const path = `Miya/${String(save?.[1].folder).split('/').pop()}/${save?.[1].filename}`;
+    expect(r.summary).toBe(`Miya: made the picture (${path}).`);
+    expect(r.artifacts[0]).toMatchObject({ path, relativePath: path });
+    expect(chatMediaFor('cmd-1')).toEqual([expect.objectContaining({ kind: 'picture', path, prompt: 'a sunset over mountains', status: 'done' })]);
+  });
+
+  it('without an output folder it fails and says to choose one; nothing is made', async () => {
+    (globalThis as { __outputFolder?: string }).__outputFolder = '';
+    try {
+      const r = await executeChatPicture('a sunset', pictureStep, null);
+      expect(r.resultState).toBe('failed');
+      expect(r.summary).toContain('output folder');
+      expect(generateComfyUiImage).not.toHaveBeenCalled();
+    } finally {
+      delete (globalThis as { __outputFolder?: string }).__outputFolder;
+    }
+  });
+
+  it('a picture ComfyUI is still making says so and saves nothing yet', async () => {
+    generateComfyUiImage.mockResolvedValue({ ok: false, pending: true, jobId: 'job-9' });
+    const r = await executeChatPicture('a sunset', pictureStep, null);
+    expect(r.resultState).toBe('pending_review');
+    expect(r.summary).toContain('still being made in ComfyUI');
+    expect(invoke.mock.calls.some((c) => c[0] === 'save_image_to_folder')).toBe(false);
   });
 });

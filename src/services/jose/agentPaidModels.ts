@@ -9,13 +9,17 @@ import { agentName } from './agentNames';
 
 const SCHEDULE_NEVER_SPENDS = 'a schedule never spends';
 
+/** Steps made by a tool, never by the agent's model (ComfyUI, AudioCraft, Higgsfield): the paid
+ *  model would not be used, so they keep their own effects and costs (owner, 2026-11-01). */
+export const STEPS_WITHOUT_AGENT_MODEL = new Set(['creative_image', 'creative_chat_video', 'creative_chat_music', 'creative_higgsfield', 'creative_character_train']);
+
 export function withAgentPaidModels(
   steps: PlanStep[],
   options: { requestText: string; allowPaidModels?: boolean },
 ): { steps: PlanStep[]; notes: string[] } {
   const notes = new Map<string, string>();
   const out = steps.map((step) => {
-    if (step.model || step.agent === 'jose' || getAgentProvider(step.agent).provider !== 'paid') return step;
+    if (step.model || step.agent === 'jose' || STEPS_WITHOUT_AGENT_MODEL.has(step.actionType) || getAgentProvider(step.agent).provider !== 'paid') return step;
     const available = paidModelAvailable();
     const model = paidModelId();
     const why = options.allowPaidModels === false ? SCHEDULE_NEVER_SPENDS : !available.ok ? String(available.reason || '').replace(/\.$/, '') : !model ? 'no paid model is chosen' : null;

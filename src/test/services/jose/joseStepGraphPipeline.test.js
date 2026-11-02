@@ -129,12 +129,17 @@ vi.mock('../../../services/contentFactory/contentAgentExecutor', () => ({
   })),
 }));
 
+vi.mock('../../../services/contentFactory/chatMedia', async (importOriginal) => ({
+  ...(await importOriginal()),
+  executeChatPicture: vi.fn(async () => ({ summary: 'Miya: made the picture (Miya/2026-11-01/picture-120000-aaaaaaaa.png).', resultState: 'completed', artifacts: [{ type: 'chat_media', path: 'Miya/2026-11-01/picture-120000-aaaaaaaa.png' }], sources: [], contractAction: 'creative_image' })),
+}));
+
 vi.mock('../../../services/contentFactory/contentStepRecorder', () => ({
   recordContentStepResult: vi.fn(async () => 'saved'),
   beginContentStep: vi.fn(),
 }));
 
-import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep, carryOnRequest, rejectRequestStep } from '../../../services/joseExecutionEngineService';
+import { runJoseCommandExecutionPipeline, stepCommandText, executeApprovedPackets, approveRequestStep, carryOnRequest, rejectRequestStep, resumeJoseRequest } from '../../../services/joseExecutionEngineService';
 import { createAgentPacket, updatePacketStatus, approvePacket, getPacketById } from '../../../services/agentBusService';
 import { fetchOllamaModels } from '../../../lib/ollama';
 import { createJoseCommandRoute, listJoseCommands } from '../../../services/joseCommandRouterService';
@@ -542,6 +547,24 @@ describe('Jose runs plans as step graphs', () => {
       expect(ranSteps()).toEqual([]);
       expect(result.ok).toBe(false);
       expect(getJoseRequest(`jose-request-${first.commandId}`).status).toBe('cancelled');
+    });
+
+    // Phone app phase 2: work sent back gets a fix round first; the waiting step waits for it.
+    it('a step sent back gets its fix round first, and the waiting step waits for it again', async () => {
+      const first = await waitingPlan();
+      const requestId = `jose-request-${first.commandId}`;
+      updateJoseStep(requestId, 'post', { sentBack: { workStepId: 'facts', reason: 'Shorter', atMs: 1 } });
+      vi.mocked(executeContentStepAssignment).mockClear();
+      await resumeJoseRequest(requestId);
+      expect(ranSteps()).toEqual(['facts-fix-1']);
+      const fixTask = vi.mocked(executeContentStepAssignment).mock.calls[0][0];
+      expect(String(fixTask.instruction || fixTask.commandPreview || '')).toContain('Fix what you were asked: Shorter');
+      const request = getJoseRequest(requestId);
+      const post = request.steps.find((s) => s.stepId === 'post');
+      expect(post.needs).toEqual(['facts-fix-1']);
+      expect(post.status).toBe('waiting_approval');
+      expect(post.sentBack).toBeUndefined();
+      expect(request.status).toBe('waiting_approval');
     });
 
     it('approves a waiting step by request and step (the board button)', async () => {
@@ -1040,6 +1063,8 @@ describe('Marcus sends what you approved', () => {
     saveConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN', '');
     const slack = await import('../../../services/connectors/slackConnector');
     vi.mocked(slack.sendMessage).mockClear();
+    const outbound = await import('../../../services/connectors/connectorOutbound');
+    vi.mocked(outbound.sendSlackMessage).mockClear();
   });
 
   it('a Marcus send step is prepared before its gate and waits with the preview', async () => {
@@ -1076,6 +1101,44 @@ describe('Marcus sends what you approved', () => {
     expect(sendSlackMessage).toHaveBeenCalledTimes(1);
     expect(vi.mocked(sendSlackMessage).mock.calls[0][1]).toBe('Open Saturday.');
     expect(getStepOutput(result.commandId, 'marcus').summary).toBe('Sent to Slack #news.');
+  });
+
+  // Phone app phase 2: Send back on a waiting send redoes the writing, then Marcus prepares
+  // again from the new version and asks again with the new text.
+  it('a send sent back is written again and asks again with the new text', async () => {
+    globalThis.__alphonsoTexts = ['Open Saturday.', 'Open Saturday at 9.'];
+    const result = await runPlan([writeStep(), sendStep()]);
+    const requestId = `jose-request-${result.commandId}`;
+    const { sendBackStep } = await import('../../../services/jose/sendBackStep');
+    expect((await sendBackStep(requestId, 'marcus', 'Say the time')).ok).toBe(true);
+    await vi.waitFor(() => {
+      const marcus = getJoseRequest(requestId).steps.find((s) => s.stepId === 'marcus');
+      expect(marcus.sendPreview).toMatchObject({ text: 'Open Saturday at 9.', sourceStepId: 'write-fix-1' });
+    }, { timeout: 5_000 });
+    const request = getJoseRequest(requestId);
+    expect(request.steps.find((s) => s.stepId === 'marcus').status).toBe('waiting_approval');
+    expect(request.status).toBe('waiting_approval');
+    const { sendSlackMessage } = await import('../../../services/connectors/connectorOutbound');
+    expect(sendSlackMessage).not.toHaveBeenCalled();
+  });
+
+  // Phone app phase 2: an edited text is what every approval screen shows, and what is sent.
+  it('an edited send shows the new text wherever it is approved, and sends it', async () => {
+    globalThis.__alphonsoTexts = ['Open Saturday.'];
+    const result = await runPlan([writeStep(), sendStep()]);
+    const requestId = `jose-request-${result.commandId}`;
+    const { editSendText } = await import('../../../services/marcus/editSendText');
+    expect(editSendText(requestId, 'marcus', 'Open Sunday.', 'Open Saturday.').ok).toBe(true);
+    const line = 'Send to Slack #news: “Open Sunday.”';
+    expect(getJoseRequest(requestId).steps.find((s) => s.stepId === 'marcus').note).toBe(line);
+    const { listAgentPackets } = await import('../../../services/agentBusService');
+    const packet = listAgentPackets().find((p) => p.payload?.joseCommandId === result.commandId && p.toAgent === 'marcus');
+    expect(packet.policyReason).toBe(`Waiting for your approval: ${line}`);
+    expect(packet.commandPreview).toBe(line);
+    await approveRequestStep(requestId, 'marcus');
+    const { sendSlackMessage } = await import('../../../services/connectors/connectorOutbound');
+    expect(sendSlackMessage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(sendSlackMessage).mock.calls[0][1]).toBe('Open Sunday.');
   });
 
   it('nothing to send ends the step failed without asking', async () => {
@@ -1185,5 +1248,21 @@ describe('Marcus makes an outside change you approved', () => {
     const marcus = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'marcus');
     expect(marcus.status).toBe('failed');
     vi.mocked(callTool).mockResolvedValue({ ok: true, text: 'Price updated.' });
+  });
+});
+
+// Owner, 2026-11-01: a picture asked for in Chat is saved in the output folder and Chat says where.
+describe("Miya's picture step", () => {
+  beforeEach(() => { localStorage.clear(); });
+
+  it('makes the picture through the Chat picture path, so it is saved where Chat can show it', async () => {
+    const { executeChatPicture } = await import('../../../services/contentFactory/chatMedia');
+    vi.mocked(executeChatPicture).mockClear();
+    const step = { agent: 'miya', actionType: 'creative_image', stepId: 'picture', title: 'Picture', rationale: 'test', riskLevel: 'low',
+      requiresApproval: false, commandPreview: 'Makes a picture.', fragments: [], effects: ['write_own_work'], needs: [] };
+    const result = await runJoseCommandExecutionPipeline({ commandText: 'generate an image of a sunset over mountains', source: 'test', zeroCostMode: true, previewMode: false, assignments: [step] });
+    expect(executeChatPicture).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(executeChatPicture).mock.calls[0][0]).toBe('generate an image of a sunset over mountains');
+    expect(getStepOutput(result.commandId, 'picture').summary).toBe('Miya: made the picture (Miya/2026-11-01/picture-120000-aaaaaaaa.png).');
   });
 });

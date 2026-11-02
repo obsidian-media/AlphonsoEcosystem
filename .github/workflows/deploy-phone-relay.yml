@@ -1,0 +1,53 @@
+name: Deploy phone relay
+
+# Builds gateway/phone-relay with Cloud Build and restarts its free e2-micro VM on the new
+# image (gateway/phone-relay/vm/deploy.sh; setup in gateway/phone-relay/vm.md).
+# Signs in with Workload Identity Federation (no stored Google key). Run by hand.
+# Repository variables: GCP_PROJECT_ID, GCP_REGION, GCP_ZONE, GCP_WIF_PROVIDER,
+# GCP_DEPLOY_SERVICE_ACCOUNT, PHONE_RELAY_DOMAIN. Not set up yet.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-phone-relay
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Check the settings are there
+        env:
+          PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          REGION: ${{ vars.GCP_REGION }}
+          ZONE: ${{ vars.GCP_ZONE }}
+          PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          DEPLOYER: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          DOMAIN: ${{ vars.PHONE_RELAY_DOMAIN }}
+        run: |
+          for name in PROJECT REGION ZONE PROVIDER DEPLOYER DOMAIN; do
+            if [ -z "${!name}" ]; then echo "::error::Repository variable for $name is not set."; exit 1; fi
+          done
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Test, build, deploy and check
+        env:
+          GCP_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          GCP_ZONE: ${{ vars.GCP_ZONE }}
+          RELAY_DOMAIN: ${{ vars.PHONE_RELAY_DOMAIN }}
+        run: bash gateway/phone-relay/vm/deploy.sh

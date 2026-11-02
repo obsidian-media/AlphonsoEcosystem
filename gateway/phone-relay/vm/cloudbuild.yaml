@@ -1,0 +1,8 @@
+# Builds the phone relay image (deploy.sh passes _IMAGE). Logs go to Cloud Logging only, so
+# no log bucket is created for the builder account.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-t', '${_IMAGE}', '.']
+images: ['${_IMAGE}']
+options:
+  logging: CLOUD_LOGGING_ONLY

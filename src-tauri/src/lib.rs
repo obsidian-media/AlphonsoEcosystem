@@ -51,6 +51,7 @@ mod native_proof;
 mod oauth_signin;
 mod ollama;
 mod os_keychain_store;
+mod phone_signin;
 mod plugin_runtime;
 mod policy_gate;
 mod post_metrics;
@@ -788,6 +789,9 @@ pub fn run() {
       media_tools::content_download_media,
       media_tools::content_assemble_video,
       media_tools::content_save_motion_clip,
+      media_tools::content_phone_preview,
+      media_tools::content_phone_still,
+      media_tools::content_read_file_part,
       media_tools::content_whisper_words,
       media_tools::content_allow_media_folder,
       media_tools::content_ready_to_post,
@@ -823,6 +827,9 @@ pub fn run() {
       meta_media::meta_instagram_publish_by_url,
       meta_media::meta_facebook_photo_post,
       oauth_signin::oauth_sign_in,
+      phone_signin::phone_sign_in,
+      phone_signin::phone_id_token,
+      phone_signin::phone_sign_out,
       oauth_signin::oauth_finish_pasted,
       oauth_signin::instagram_refresh_token,
       comfyui_video_models::comfyui_video_models,

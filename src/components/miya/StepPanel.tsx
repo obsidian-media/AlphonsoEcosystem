@@ -3,37 +3,7 @@ import { Badge, Button } from '../ui';
 import { isStepStale } from '../../services/contentFactory/contentProjectService';
 import { STEP_AGENTS } from '../../services/contentFactory/contentStepRunner';
 import type { ContentProject, StepId, StepStatus } from '../../services/contentFactory/contentTypes';
-
-const STEP_LABELS: Record<StepId, string> = {
-  brief: 'Brief',
-  research: 'Research',
-  script: 'Script',
-  review: 'Review',
-  scenes: 'Scenes',
-  thumbnail: 'Thumbnails',
-  voice: 'Voice-over',
-  music: 'Music',
-  sfx: 'Sound effects',
-  broll: 'Stock clips',
-  clips: 'AI clips',
-  assemble: 'Finished video',
-  shorts: 'Shorts',
-  carousel: 'Carousel',
-  campaign: 'Campaign',
-  quality: 'Quality gate',
-  publish: 'Publish',
-};
-
-const STATUS_TEXT: Record<StepStatus, string> = {
-  not_started: 'Not started',
-  running: 'Running',
-  done: 'Done',
-  failed: 'Failed',
-  interrupted: 'Stopped when the app closed',
-  needs_approval: 'Waiting for your approval',
-  approved: 'Approved',
-  sent_back: 'Sent back',
-};
+import { STEP_LABELS, STATUS_TEXT } from './stepWords';
 
 const STATUS_VARIANT: Record<StepStatus, 'default' | 'success' | 'warning' | 'error' | 'info'> = {
   not_started: 'default',

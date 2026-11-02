@@ -8,6 +8,34 @@ Older entries name files as they were at that release. Many `.js`/`.jsx` files h
 
 ---
 
+## [Unreleased]
+
+### Phone app (in progress)
+- The encrypted messages between a phone and its computer (`src/services/phone/`): libsodium's sealed boxes, a 4 MB limit, and the pairing QR code's contents. Nothing on screen yet.
+- The phone relay (`gateway/phone-relay/`): forwards sealed messages only between a phone and the computer it is paired with, refuses other accounts' devices, says when the computer is offline, and stores no content. Running at `relay.alphonsoecosystem.app` on Google Cloud's free e2-micro VM (the fixed address is the only fixed cost, about US$3.65 a month), with a budget alert and only the last 2 builds kept.
+- Settings → Runtime → Remote Access → Phones: sign in, pair a phone with a QR code that works once for 10 minutes (also shown as text with Copy, for a phone that can't scan), see when each phone was last used, remove one, and switch phone access off. Shown only in a build with a relay address. The computer refuses any device it hasn't paired, whatever the relay sends.
+- What a paired phone may ask: send a chat message, approve or reject a waiting step, Stop, Carry on, Cancel, run or cancel a waiting plan. Approving twice runs once; everything else is refused. What it sees: the requests, their outputs and its own conversation, with keys hidden.
+- The Requests board reads and acts through one interface, so the same board runs on the phone: there it shows what the computer last sent, turns its buttons off while the computer is offline (and says since when), and leaves editing and templates to the computer for now. Nothing changes on the desktop.
+- The computer tells a paired phone what it would tell Telegram (a step or plan waiting, finished, a review that needs you, cut off, needs setting up), each once. A step that spends, sends or deletes is only opened from the notification, never approved from it.
+- Signing the computer in for phone access opens the Alphonso sign-in page in your browser (Google or an email link), and the sign-in is kept in this computer's keychain; the app window only ever sees short-lived tokens.
+- The phone app itself (`mobile/`, iPhone and Android, built with Capacitor): Face ID or fingerprint to open it and before approving a step that spends, sends or deletes; signing in with Apple, Google or an emailed link that opens the app; scanning the computer's code; notifications that show the real text only on the phone (Apple, Google and the relay see "New activity") with Approve and Reject, or only Open for a step that spends, sends or deletes. Needs iOS 16.4 or Android 8.0.
+- The phone app's screens: sign in, pair by scanning or pasting the computer's code (another app's code is refused with what to do instead), then Chat, Requests and More, Face ID or fingerprint on open (on by default, can be switched off), and "Your computer is offline since 14:02." with the last known state. Not packaged for the stores yet.
+- The computer connects to the relay only while a phone is paired with phone access on, or while a pairing code is showing.
+- Test builds: TestFlight for iPhones and Firebase App Distribution for Android. A user guide: `docs/PHONE.md`.
+- Checked end to end over the real relay: pairing, a chat message, approving a step (once), Stop, and "offline since".
+- Phase 2, checking work from the phone: Miya Studio and the Calendar on the phone (projects with the one waiting for you first, approve or send back a review, pick a version, phone-sized video and picture previews loaded when tapped, edit a post's caption, hashtags and title, approve and schedule after Face ID, start a project; posts by day or week, change a post's time, cancel it after Face ID).
+- Previews come from the computer in checked pieces (`content_phone_preview`, about 480p video, pictures at most 1080 px); on mobile data one over 20 MB asks first; the relay now tells each device its daily limit so previews stop before messages would.
+- Send back a waiting send's writing with a reason (the agent redoes it, the send asks again) and edit the text Marcus sends, on the board and the phone; the edit goes through the same checks as Marcus's own text.
+- On the phone a step's work reads in full (Hector's numbered sources open in the phone's browser, after the disguised-link check); a code change is approved on the computer only.
+- "Ready to check" notifications when Miya finishes new pictures or a video, once per version, with a small still when it fits; a tap opens the project.
+- An edit made on the phone to something that changed on the computer is refused with the latest ("This changed on your computer; here's the latest.").
+- Checked end to end over the real relay: a 6 MB preview in 3 pieces with its hash, a stale caption edit refused with the latest, and the relay's daily limit reaching the phone at once.
+- A picture asked for in Chat ("generate an image of …") is saved in your output folder under `Miya/<date>/`, shown in Chat, and Miya's reply says where; it used to stay in ComfyUI's own output folder with no word of where (found by the owner, 2026-11-01).
+- Ten minutes after a step starts waiting, Chat says it still waits on the board and until when, instead of "Approval timed out after 10 minutes. Resubmit your request": the request was still waiting there (`stillWaitingLine()` in `joseExpiry.ts`, 2026-11-01).
+- An agent set to the paid model no longer makes a picture, video, music or Higgsfield step ask to spend: those are made by ComfyUI, AudioCraft or Higgsfield, not the agent's model (`STEPS_WITHOUT_AGENT_MODEL` in `agentPaidModels.ts`; found with Miya on the paid model, 2026-11-01).
+- A picture, video or music to make is always planned for Miya; Jose's model once answered such a request in words ("Jose can plan it if they ask for it.").
+- Settings → Runtime → Remote Access: the older Mobile Companion pairing (6-digit PIN) is folded away under "Older iPhone app (PIN pairing)" below Phones; its QR code was mistaken for the phone app's (found on the owner's first pairing, 2026-11-01).
+
 ## [2.11.1] — 2026-11-01 (fixes from using 2.11.0, PR 376; the Linux installer is back)
 
 ### Fixed

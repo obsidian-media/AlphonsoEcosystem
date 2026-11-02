@@ -300,7 +300,7 @@ Install **Voice OS** in Runtime Hub, start it from **System → Voice**, then cl
 
 Jose tells you on Telegram when a step or plan waits for you (with **Approve** / **Reject** buttons), when a request finishes or fails, and when Miya Studio has results or ideas. Settings → General → **Jose on Telegram** chooses which.
 
-**WhatsApp** works the same way through Meta's Cloud API (see [Connectors](CONNECTORS.md)). **The iPhone app** pairs in Settings → Runtime → **Remote Access** (turn on mobile pairing, then scan the code).
+**WhatsApp** works the same way through Meta's Cloud API (see [Connectors](CONNECTORS.md)). **The Alphonso phone app** (iPhone and Android, in testing) pairs in Settings → Runtime → Remote Access → **Phones**: sign in, choose **Pair a phone**, and scan the code (or copy it and paste it in the app). From the phone you can chat, see the Requests board and read each step's work, approve or reject a waiting step, send writing back with a reason or edit a send's text, and Stop, Carry on or Cancel a request; check Miya Studio's projects (watch videos, see pictures, approve reviews, edit captions, approve and schedule posts, start a project) and move or cancel posts on the Calendar; notifications tell you when something waits for you or new pictures or a video are ready to check. A step that spends, sends or deletes is approved only inside the app, after Face ID or your fingerprint. See [PHONE.md](PHONE.md).
 
 ---
 
