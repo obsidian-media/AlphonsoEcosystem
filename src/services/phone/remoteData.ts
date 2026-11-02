@@ -9,6 +9,7 @@ import type { MirroredStore, PhoneCallName } from './phoneProtocol';
 import type { MediaRef, PhoneProject } from './contentMirror';
 import type { CalendarItem } from '../contentFactory/calendarView';
 import type { BoardroomMirror, MemoryMirror, ProjectMirror } from './phase3Mirror';
+import type { PhoneConnector, PhoneSettings, PhoneSkills, PhoneTeam } from './phase3bMirror';
 import { fetchPreview, type PreviewStore } from '../../mobile/previewFetch';
 
 export interface PhoneTransport {
@@ -42,10 +43,12 @@ type Content = { projects: PhoneProject[]; brands: Array<{ id: string; name: str
 type Mirror = {
   requests: JoseRequest[]; stepOutputs: Record<string, StepOutput[]>; chat: ChatMessage[]; computer: Record<string, unknown>; content: Content;
   memory: MemoryMirror; projects: ProjectMirror[]; boardroom: BoardroomMirror;
+  settings: PhoneSettings | null; teams: PhoneTeam[]; skills: PhoneSkills; connectors: PhoneConnector[];
 };
 const EMPTY: Mirror = {
   requests: [], stepOutputs: {}, chat: [], computer: {}, content: { projects: [], brands: [], calendar: [] },
   memory: { decisions: [], cleanup: null }, projects: [], boardroom: { threads: [], messages: {} },
+  settings: null, teams: [], skills: { skills: [], refused: [] }, connectors: [],
 };
 
 /** Why a call was refused (empty when it wasn't). */
@@ -56,6 +59,11 @@ export interface MoreData {
   memory(): MemoryMirror;
   projects(): ProjectMirror[];
   boardroom(): BoardroomMirror;
+  /** Part B: null until the computer sends its settings. */
+  settings(): PhoneSettings | null;
+  teams(): PhoneTeam[];
+  skills(): PhoneSkills;
+  connectors(): PhoneConnector[];
   call(name: PhoneCallName, args: Record<string, unknown>): Promise<{ ok: true; value: any } | { ok: false; reason: string }>;
   subscribe(listener: () => void): () => void;
   readonly readOnly: boolean;
@@ -194,6 +202,10 @@ export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewP
     memory: () => mirror.memory || EMPTY.memory,
     projects: () => mirror.projects || EMPTY.projects,
     boardroom: () => mirror.boardroom || EMPTY.boardroom,
+    settings: () => mirror.settings || EMPTY.settings,
+    teams: () => mirror.teams || EMPTY.teams,
+    skills: () => mirror.skills || EMPTY.skills,
+    connectors: () => mirror.connectors || EMPTY.connectors,
     call: studio.call,
     subscribe: board.subscribe,
     get readOnly() { return !transport.online(); },

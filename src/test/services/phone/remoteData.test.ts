@@ -129,6 +129,31 @@ describe('the Studio on the phone', () => {
   });
 });
 
+describe('Teams, Skills, Settings and Connectors on the phone (part B)', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('mirrored part-B stores show in more', () => {
+    const t = fakeTransport();
+    const data = createRemoteData(t);
+    t.push({ kind: 'snapshot', store: 'settings', data: { approvalMode: true, zeroCostMode: true }, version: 1 });
+    t.push({ kind: 'snapshot', store: 'teams', data: [{ id: 'user_research', name: 'Research', steps: [], problems: [] }], version: 1 });
+    t.push({ kind: 'snapshot', store: 'skills', data: { skills: [{ agent: 'hector', name: 'Research a question' }], refused: [] }, version: 1 });
+    t.push({ kind: 'snapshot', store: 'connectors', data: [{ id: 'slack', name: 'Slack', enabled: true }], version: 1 });
+    expect(data.more.settings()).toMatchObject({ approvalMode: true });
+    expect(data.more.teams().map((x: any) => x.id)).toEqual(['user_research']);
+    expect(data.more.skills().skills.map((x: any) => x.name)).toEqual(['Research a question']);
+    expect(data.more.connectors().map((x: any) => x.id)).toEqual(['slack']);
+  });
+
+  it('before anything arrives: no settings yet, and empty lists', () => {
+    const data = createRemoteData(fakeTransport());
+    expect(data.more.settings()).toBeNull();
+    expect(data.more.teams()).toEqual([]);
+    expect(data.more.skills()).toEqual({ skills: [], refused: [] });
+    expect(data.more.connectors()).toEqual([]);
+  });
+});
+
 describe('Memory, Projects and Boardroom on the phone', () => {
   beforeEach(() => localStorage.clear());
 
