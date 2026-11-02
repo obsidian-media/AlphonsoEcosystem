@@ -306,4 +306,17 @@ describe('a picture request is Miya\'s step (agent roles Part A)', () => {
     expect(call.assignments.map((a) => [a.agent, a.actionType, a.effects])).toEqual([['miya', 'creative_image', ['write_own_work']]]);
     expect(call.planInfo.note).toBe('Picture asked for in Chat.');
   });
+
+  // Owner, 2026-11-02: "now make the same dog wear a different costume" (no picture word) went to
+  // Alphonso. A change to the picture just shown is Miya's picture step, given the earlier picture.
+  it('a change to the picture just shown is her picture step, with the earlier picture', async () => {
+    const picture = { id: 'media-1', kind: 'picture', prompt: 'a beagle in a pumpkin costume', path: 'Miya/2026-11-01/picture-234435-a3cd4928.png', status: 'done', atMs: 1 };
+    localStorage.setItem('alphonso_chat_media_v1', JSON.stringify([picture]));
+    const history = [{ role: 'user', content: 'a dog in a halloween costume' }, { role: 'assistant', content: `Miya made a picture: ${picture.prompt} (${picture.path})` }];
+    await submitToJose({ text: 'now make the same dog wear a different costume', source: 'user', history });
+    expect(planner).not.toHaveBeenCalled();
+    const call = pipeline.mock.calls.at(-1)[0];
+    expect(call.assignments).toEqual([expect.objectContaining({ agent: 'miya', actionType: 'creative_image', payload: { earlier: { path: picture.path, prompt: picture.prompt } } })]);
+    expect(call.planInfo.note).toBe('Change to the picture asked for in Chat.');
+  });
 });

@@ -62,6 +62,20 @@ describe('decideJoseRoute: answer directly or plan', () => {
     expect(llm).not.toHaveBeenCalled();
   });
 
+  // Owner, 2026-11-02: after a picture of a dog, "now make the same dog wear a different costume"
+  // has no picture word, the model failed to plan it, and Alphonso answered in words.
+  it('plans a change to the picture just shown without asking the model', async () => {
+    const picture = { id: 'media-1', kind: 'picture', prompt: 'a beagle in a pumpkin costume', path: 'Miya/2026-11-01/picture-234435-a3cd4928.png', status: 'done', atMs: 1 };
+    localStorage.setItem('alphonso_chat_media_v1', JSON.stringify([picture]));
+    try {
+      const history = [{ role: 'user', content: 'generate an image of a dog in a halloween costume' }, { role: 'assistant', content: `Miya made a picture: ${picture.prompt} (${picture.path})` }];
+      expect(await decideJoseRoute('now make the same dog wear a different custome', { history })).toMatchObject({ route: 'plan', source: 'rule' });
+      expect(llm).not.toHaveBeenCalled();
+    } finally {
+      localStorage.removeItem('alphonso_chat_media_v1');
+    }
+  });
+
   it('plans remember, forget and clean up without asking the model', async () => {
     for (const text of ['Remember that our launch is on Friday the 14th.', 'Can you forget the launch decision?', 'Clean up my memory']) {
       expect(await decideJoseRoute(text)).toMatchObject({ route: 'plan', source: 'rule' });

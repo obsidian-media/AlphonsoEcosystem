@@ -137,6 +137,20 @@ export async function submitToJose(input: SubmitToJoseInput): Promise<any> {
     if (media) return media;
   }
 
+  // A change to the picture just shown (owner, 2026-11-02): her picture step, given the earlier
+  // picture, also when the message has no picture word ("now make the same dog wear …").
+  if (!planFresh) {
+    const { earlierPictureFor } = await import('../contentFactory/pictureFollowUp');
+    const earlier = earlierPictureFor(text, history);
+    if (earlier) {
+      return submitStepsToJose({
+        text, source, endpoint, zeroCostMode, onProgress, allowPaidModels: input.allowPaidModels,
+        label: source === 'user' ? 'Change to the picture asked for in Chat.' : 'Change to the picture asked for.',
+        steps: [{ ...IMAGE_STEP, payload: { earlier } }],
+      });
+    }
+  }
+
   const shortcut = await runPipelineShortcuts({ commandText: text, onProgress });
   // A picture is Miya's work: one step of hers, like any other (agent roles Part A).
   if (shortcut?.kind === 'image_step') {

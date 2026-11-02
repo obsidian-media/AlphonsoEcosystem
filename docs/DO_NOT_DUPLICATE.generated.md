@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 373 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 376 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -280,7 +280,8 @@ Source-backed inventory: 373 services and 184 components. Human purpose descript
 | service | `src/services/contentFactory/brandResults.ts` | `Band`, `BANDS`, `brandMedian`, `BrandResultRow`, `brandResultRows`, `FIRST_POSTS`, `MAIN_METRIC`, `MIN_POSTS_TO_COMPARE`, `permissionBanners`, `postBand` |
 | service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
 | service | `src/services/contentFactory/calendarView.ts` | `CalendarItem`, `CalendarPlatform`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek` |
-| service | `src/services/contentFactory/chatMedia.ts` | `askChatMedia`, `CHAT_CLIP_SECONDS`, `CHAT_MEDIA_LABEL`, `CHAT_MUSIC_SECONDS`, `chatMediaDoneSince`, `chatMediaFor`, `ChatMediaKind`, `chatMediaKindOf`, `chatMediaPromptOf`, `ChatMediaResult`, `checkChatMedia`, `executeChatMedia`, `executeChatPicture`, `listChatMedia`, `markChatMediaShown`, `NO_AUDIOCRAFT`, `NO_VIDEO_MODEL` |
+| service | `src/services/contentFactory/chatMedia.ts` | `askChatMedia`, `CHAT_CLIP_SECONDS`, `CHAT_MEDIA_LABEL`, `CHAT_MUSIC_SECONDS`, `chatMediaDoneSince`, `chatMediaFor`, `chatMediaKindOf`, `chatMediaLine`, `chatMediaPromptOf`, `checkChatMedia`, `executeChatMedia`, `executeChatPicture`, `listChatMedia`, `markChatMediaShown`, `NO_AUDIOCRAFT`, `NO_VIDEO_MODEL`, `PICTURE_CHANGE_STRENGTH` |
+| service | `src/services/contentFactory/chatMediaStore.ts` | `ChatMediaKind`, `chatMediaLine`, `ChatMediaResult`, `listChatMedia`, `saveChatMediaResult` |
 | service | `src/services/contentFactory/clipEngine.ts` | `chosenScenes`, `ClipEngineChoice`, `NO_CLIP_ENGINE`, `resolveClipEngine` |
 | service | `src/services/contentFactory/comfyCharacter.ts` | `buildCharacterWorkflow`, `CHARACTER_REFERENCE_MISSING`, `characterReferenceAvailable`, `makeCharacterPicture`, `REFERENCE_CHECKPOINT`, `resetReferenceCacheForTests`, `withCharacterPrompt` |
 | service | `src/services/contentFactory/comfyMotionClip.ts` | `buildMotionWorkflow`, `localMotionAvailable`, `makeComfyMotionClip`, `MOTION_CARD_TOO_SMALL`, `MOTION_MODEL_MISSING`, `motionFrames`, `resetMotionCacheForTests` |
@@ -315,6 +316,8 @@ Source-backed inventory: 373 services and 184 components. Human purpose descript
 | service | `src/services/contentFactory/higgsfieldClip.ts` | `checkHiggsfieldClip`, `estimateHiggsfieldClipsUsd`, `estimateHiggsfieldMotionUsd`, `higgsfieldClipAvailable`, `HiggsfieldClipResult`, `higgsfieldMotionAvailable`, `makeHiggsfieldClip`, `makeHiggsfieldMotionClip` |
 | service | `src/services/contentFactory/instagramRoute.ts` | `getInstagramRoute`, `instagramLoginSetUp`, `InstagramRoute`, `pageRouteSetUp`, `savedInstagramRoute`, `setInstagramRoute` |
 | service | `src/services/contentFactory/performanceLessons.ts` | `LESSONS_TASK_MARK`, `proposeLessons` |
+| service | `src/services/contentFactory/pictureFollowUp.ts` | `EarlierPicture`, `earlierPictureFor`, `RECENT_MESSAGES` |
+| service | `src/services/contentFactory/picturePrompt.ts` | `MIYA_PROMPT_UNREAD`, `PICTURE_PROMPT_MAX`, `PicturePrompt`, `writePicturePrompt` |
 | service | `src/services/contentFactory/platformLimits.ts` | `fitsPlatform`, `formatSeconds`, `PLATFORM_LIMITS`, `PlatformFit` |
 | service | `src/services/contentFactory/postMetrics.ts` | `CHECKPOINT_MS`, `clearNeedsPermission`, `contentStudioMetrics`, `dueCheckpoint`, `markNeedsPermission`, `MeasurablePost`, `measurablePosts`, `MetricsService`, `needsPermission`, `onSevenDays`, `readDueMetrics`, `REFRESH_WAIT_MS`, `REFRESHED_RECENTLY`, `refreshPostMetrics` |
 | service | `src/services/contentFactory/postTimeSuggestions.ts` | `acceptSuggestedSlot`, `MIN_POSTS_FOR_TIMES`, `SuggestedSlot`, `suggestPostTimes` |

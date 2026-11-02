@@ -46,6 +46,7 @@ import { executeApprovedPackets, carryOnRequest, cancelRequest } from '../servic
 import { higgsfieldResultsDoneSince, higgsfieldResultsFor, markShownInChat, type HiggsfieldResult } from '../services/contentFactory/higgsfieldByName';
 import { HiggsfieldMedia } from './miya/HiggsfieldResults';
 import { chatMediaDoneSince, markChatMediaShown, type ChatMediaResult } from '../services/contentFactory/chatMedia';
+import { chatMediaLine } from '../services/contentFactory/chatMediaStore';
 import { stillWaitingLine } from '../services/jose/joseExpiry';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
@@ -384,7 +385,8 @@ export function ChatView({
     const showNew = () => {
       if (generatingRef.current) return; // An approval in Chat attaches its own result.
       const found = higgsfieldResultsDoneSince(chatOpenedAtRef.current);
-      // Video and music Miya made from a request (closing phase): shown the same way.
+      // Pictures, video and music Miya made from a request (closing phase): shown the same way, with
+      // where each is; a follow-up ("make it blue") finds the picture by that path (2026-11-02).
       const madeHere = chatMediaDoneSince(chatOpenedAtRef.current);
       if (found.length === 0 && madeHere.length === 0) return;
       found.forEach((r) => markShownInChat(r.id));
@@ -392,7 +394,7 @@ export function ChatView({
       setMessages((current) => [...current, ...found.map((r) => ({
         id: nextMsgId(), role: 'assistant', content: `Higgsfield made a ${r.kind}: ${r.prompt}`, media: [r],
       })), ...madeHere.map((r) => ({
-        id: nextMsgId(), role: 'assistant', content: `${agentName('miya')} made ${r.kind === 'music' ? 'music' : 'a video'}: ${r.prompt}`, media: [r],
+        id: nextMsgId(), role: 'assistant', content: chatMediaLine(r), media: [r],
       }))]);
     };
     // First look just after the chat's history has loaded (loading clears the list).

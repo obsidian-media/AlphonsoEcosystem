@@ -42,6 +42,14 @@ describe('agents that use the paid model', () => {
     expect(notes).toEqual([]);
   });
 
+  // Owner, 2026-11-02: Jose's planner gave a picture step a paid model, so it asked to spend,
+  // though ComfyUI makes the picture. Such a step loses the paid model, its spend and its cost.
+  it('takes a paid model the planner gave a tool step away, with its spend and cost', () => {
+    const planned = step('miya', { actionType: 'creative_image', model: 'claude:claude-sonnet-5', effects: ['write_own_work', 'spend'], costEstimateUsd: 0.05 });
+    const { steps } = withAgentPaidModels([planned], { requestText: 'generate an image of a dog' });
+    expect(steps[0]).toEqual(step('miya', { actionType: 'creative_image', effects: ['write_own_work'] }));
+  });
+
   it("keeps a model Jose already chose, and never gives Jose's own steps one", () => {
     vi.mocked(getAgentProvider).mockReturnValue({ provider: 'paid' } as never);
     const { steps } = withAgentPaidModels([step('hector', { model: 'qwen3:8b' }), step('jose')], { requestText: '' });

@@ -4,6 +4,7 @@
 // answers something unusable, today's word rule decides.
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §4 step 2
 import { detectCreativeIntent } from '../creativeRoutingService';
+import { earlierPictureFor } from '../contentFactory/pictureFollowUp';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { isPlainQuestion, shouldRouteThroughJose } from '../../lib/chatUtils';
 import { asksToCleanUpMemory, asksToForget, asksToRemember, parseJoseCommand } from '../joseCommandRouterService';
@@ -74,6 +75,9 @@ export async function decideJoseRoute(text: string, options: { history?: { role:
   const value = String(text || '').trim();
   const byRule = ruleRoute(value);
   if (byRule) return byRule;
+  // A change to the picture just shown is Miya's next picture (owner, 2026-11-02: "now make the
+  // same dog wear a different costume" has no picture word, and went to Alphonso).
+  if (earlierPictureFor(value, options.history)) return { route: 'plan', source: 'rule', reason: 'A change to the picture just shown: Miya makes it.' };
 
   const recent = (options.history || []).slice(-4).map((m) => `${m.role}: ${String(m.content).slice(0, 300)}`).join('\n');
   const prompt = [

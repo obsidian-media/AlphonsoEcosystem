@@ -190,12 +190,23 @@ function createMiyaSd15ComfyWorkflow({
   height = 512,
   steps = 20,
   cfgScale = 7,
-  seed = Math.floor(Math.random() * 1000000000)
+  seed = Math.floor(Math.random() * 1000000000),
+  // A picture already in ComfyUI's input folder to start from (owner, 2026-11-02: "the same dog"),
+  // and how much of it is redrawn (1 = all of it).
+  startImage = null,
+  denoise = 1
 }) {
+  // From a picture: loaded and encoded, so the sampler only partly redraws it. Else from nothing.
+  const latent = startImage
+    ? {
+      5: { class_type: 'VAEEncode', inputs: { pixels: ['10', 0], vae: ['4', 2] } },
+      10: { class_type: 'LoadImage', inputs: { image: startImage } }
+    }
+    : { 5: { class_type: 'EmptyLatentImage', inputs: { width, height, batch_size: 1 } } };
   return {
-    3: { class_type: 'KSampler', inputs: { seed, steps, cfg: cfgScale, sampler_name: 'euler', scheduler: 'normal', denoise: 1, model: ['4', 0], positive: ['6', 0], negative: ['7', 0], latent_image: ['5', 0] } },
+    3: { class_type: 'KSampler', inputs: { seed, steps, cfg: cfgScale, sampler_name: 'euler', scheduler: 'normal', denoise: startImage ? denoise : 1, model: ['4', 0], positive: ['6', 0], negative: ['7', 0], latent_image: ['5', 0] } },
     4: { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: checkpoint } },
-    5: { class_type: 'EmptyLatentImage', inputs: { width, height, batch_size: 1 } },
+    ...latent,
     6: { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['4', 1] } },
     7: { class_type: 'CLIPTextEncode', inputs: { text: negativePrompt || 'blurry, low quality, distorted text, watermark, logo artifacts, bad anatomy', clip: ['4', 1] } },
     8: { class_type: 'VAEDecode', inputs: { samples: ['3', 0], vae: ['4', 2] } },
@@ -303,7 +314,9 @@ export async function generateComfyUiImage({
   width = 512,
   height = 512,
   steps = 20,
-  cfgScale = 7
+  cfgScale = 7,
+  startImage = null,
+  denoise = 1
 }, options = {}) {
   const circuit = getConnectorCircuitState('comfyui_video', 'local_image_generation');
   if (!circuit.ok) {
@@ -325,7 +338,7 @@ export async function generateComfyUiImage({
   let checkpoint;
   try {
     checkpoint = await resolveComfyUiCheckpoint();
-    workflow = createMiyaSd15ComfyWorkflow({ prompt, checkpoint, negativePrompt, width, height, steps, cfgScale });
+    workflow = createMiyaSd15ComfyWorkflow({ prompt, checkpoint, negativePrompt, width, height, steps, cfgScale, startImage, denoise });
   } catch (error) {
     const errMsg = String(error || '');
     recordConnectorFailure('comfyui_video', 'local_image_generation');

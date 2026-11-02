@@ -26,6 +26,8 @@ vi.mock('../../../services/videoModelService', async () => {
 });
 vi.mock('../../../services/contentFactory/contentStepRecorder', () => ({ contentAppSettings: () => ({ outputFolder: (globalThis as { __outputFolder?: string }).__outputFolder ?? 'D:/Content' }) }));
 vi.mock('../../../services/jose/joseRequestStore', () => ({ findRequestByPacket: () => ({ source: 'user' }) }));
+const writePicturePrompt = vi.fn();
+vi.mock('../../../services/contentFactory/picturePrompt', () => ({ writePicturePrompt: (...a: unknown[]) => writePicturePrompt(...a) }));
 
 const {
   chatMediaKindOf, askChatMedia, executeChatMedia, executeChatPicture, chatMediaFor, checkChatMedia, listChatMedia,
@@ -47,6 +49,8 @@ beforeEach(() => {
   });
   generateComfyUiImage.mockResolvedValue({ ok: true, previewBase64: 'PIC' });
   makeComfyClip.mockResolvedValue({ status: 'done' });
+  writePicturePrompt.mockReset();
+  writePicturePrompt.mockImplementation(async (request: string) => ({ description: request, useEarlier: false, note: null }));
 });
 
 describe('chatMediaKindOf', () => {
@@ -170,5 +174,58 @@ describe('executeChatPicture', () => {
     expect(r.resultState).toBe('pending_review');
     expect(r.summary).toContain('still being made in ComfyUI');
     expect(invoke.mock.calls.some((c) => c[0] === 'save_image_to_folder')).toBe(false);
+  });
+});
+
+// Owner, 2026-11-02: ComfyUI was given the request word for word, and "the same dog" was a new dog.
+describe("executeChatPicture: Miya's description and the earlier picture", () => {
+  const EARLIER = { path: 'Miya/2026-11-01/picture-234435-a3cd4928.png', prompt: 'a beagle in an orange pumpkin costume' };
+  const changeStep = { agent: 'miya', actionType: 'creative_image', effects: ['write_own_work'], payload: { earlier: EARLIER } };
+
+  it("ComfyUI gets Miya's description, and it is what the picture is saved as", async () => {
+    writePicturePrompt.mockResolvedValue({ description: 'a lighthouse on a cliff at night, stars', useEarlier: false, note: null });
+    const r = await executeChatPicture('now be creative and generate an image of a lighthouse', { agent: 'miya', actionType: 'creative_image' }, { id: 'pk-2', commandId: 'cmd-2' });
+    expect(writePicturePrompt).toHaveBeenCalledWith('now be creative and generate an image of a lighthouse', null);
+    expect(generateComfyUiImage.mock.calls[0][0]).toMatchObject({ prompt: 'a lighthouse on a cliff at night, stars' });
+    expect(generateComfyUiImage.mock.calls[0][0].startImage).toBeUndefined();
+    expect(chatMediaFor('cmd-2')[0].prompt).toBe('a lighthouse on a cliff at night, stars');
+    expect(r.resultState).toBe('completed');
+  });
+
+  it('a change starts from the earlier picture, uploaded to ComfyUI', async () => {
+    writePicturePrompt.mockResolvedValue({ description: 'a beagle in a pirate costume', useEarlier: true, note: null });
+    invoke.mockImplementation(async (cmd: string, args: { folder?: string; filename?: string }) => {
+      if (cmd === 'comfyui_upload_image') return { name: 'alphonso-picture-234435-a3cd4928.png' };
+      if (cmd === 'save_image_to_folder') return { path: `${args.folder}/${args.filename}` };
+      return { ok: true };
+    });
+    const r = await executeChatPicture('now make the same dog wear a different costume', changeStep, { id: 'pk-3', commandId: 'cmd-3' });
+    expect(writePicturePrompt).toHaveBeenCalledWith('now make the same dog wear a different costume', EARLIER);
+    const upload = invoke.mock.calls.find((c) => c[0] === 'comfyui_upload_image');
+    expect(upload?.[1]).toEqual({ request: { endpoint: 'http://127.0.0.1:8188', workspaceRoot: 'D:/Content', relPath: EARLIER.path } });
+    const job = generateComfyUiImage.mock.calls[0][0];
+    expect(job).toMatchObject({ prompt: 'a beagle in a pirate costume', startImage: 'alphonso-picture-234435-a3cd4928.png' });
+    expect(job.denoise).toBeGreaterThan(0);
+    expect(job.denoise).toBeLessThan(1);
+    expect(r.summary).toMatch(/^Miya: changed the earlier picture \(Miya\/\d{4}-\d{2}-\d{2}\/picture-\d{6}-[0-9a-f]{8}\.png\)\.$/);
+  });
+
+  it("when the earlier picture can't be sent to ComfyUI, a new one is made and the step says so", async () => {
+    writePicturePrompt.mockResolvedValue({ description: 'a beagle in a pirate costume', useEarlier: true, note: null });
+    invoke.mockImplementation(async (cmd: string, args: { folder?: string; filename?: string }) => {
+      if (cmd === 'comfyui_upload_image') throw new Error('The scene picture is missing.');
+      if (cmd === 'save_image_to_folder') return { path: `${args.folder}/${args.filename}` };
+      return { ok: true };
+    });
+    const r = await executeChatPicture('now make the same dog wear a different costume', changeStep, null);
+    expect(generateComfyUiImage.mock.calls[0][0].startImage).toBeUndefined();
+    expect(r.resultState).toBe('completed');
+    expect(r.summary).toContain("The earlier picture couldn't be used (The scene picture is missing.), so this one is new.");
+  });
+
+  it("a note from Miya's model (it didn't answer) is in the step's summary", async () => {
+    writePicturePrompt.mockResolvedValue({ description: 'draw a fox', useEarlier: false, note: "Miya's model didn't answer, so ComfyUI got your words as written." });
+    const r = await executeChatPicture('draw a fox', { agent: 'miya', actionType: 'creative_image' }, null);
+    expect(r.summary).toContain("Miya's model didn't answer, so ComfyUI got your words as written.");
   });
 });

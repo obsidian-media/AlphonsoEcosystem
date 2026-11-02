@@ -88,6 +88,29 @@ describe('connectorImageGenerators in the desktop app', () => {
     expect(freeOllamaGpuMemory.mock.invocationCallOrder[0]).toBeLessThan(mockInvoke.mock.invocationCallOrder[promptCall]);
   });
 
+  // Owner, 2026-11-02: "the same dog" starts from the earlier picture, so the dog stays the dog.
+  it('starts from a given picture: loaded, encoded, and only partly redrawn', async () => {
+    const { generateComfyUiImage } = await import('../../services/connectors/connectorImageGenerators');
+    await generateComfyUiImage({ prompt: 'a beagle in a pirate costume', startImage: 'alphonso-picture-1.png', denoise: 0.6 });
+    const workflow = JSON.parse(mockInvoke.mock.calls.find(([, args]) => args.path === '/prompt')[1].body).prompt;
+    const nodes = Object.values(workflow);
+    expect(nodes.find((n) => n.class_type === 'LoadImage').inputs.image).toBe('alphonso-picture-1.png');
+    expect(nodes.some((n) => n.class_type === 'EmptyLatentImage')).toBe(false);
+    const encode = Object.entries(workflow).find(([, n]) => n.class_type === 'VAEEncode');
+    const sampler = nodes.find((n) => n.class_type === 'KSampler');
+    expect(sampler.inputs.latent_image).toEqual([encode[0], 0]);
+    expect(sampler.inputs.denoise).toBe(0.6);
+  });
+
+  it('without a starting picture it draws from nothing, fully', async () => {
+    const { generateComfyUiImage } = await import('../../services/connectors/connectorImageGenerators');
+    await generateComfyUiImage({ prompt: 'a lighthouse' });
+    const workflow = JSON.parse(mockInvoke.mock.calls.find(([, args]) => args.path === '/prompt')[1].body).prompt;
+    const nodes = Object.values(workflow);
+    expect(nodes.some((n) => n.class_type === 'LoadImage')).toBe(false);
+    expect(nodes.find((n) => n.class_type === 'KSampler').inputs.denoise).toBe(1);
+  });
+
   it('reports a ComfyUI refusal instead of succeeding', async () => {
     mockInvoke.mockImplementation(async (command, args) =>
       args.path === '/prompt'
