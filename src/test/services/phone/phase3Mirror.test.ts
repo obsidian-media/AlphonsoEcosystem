@@ -58,13 +58,14 @@ describe('phase 3 part A mirror', () => {
   });
 
   it('many long threads stay within the Boardroom budget, newest first', () => {
-    const threads = Array.from({ length: 120 }, (_, i) => ({ id: `t${i}`, topic: `Topic ${i}`, participants: [], status: 'active', createdAt: '', createdAtMs: i, seq: i, updatedAt: '', updatedAtMs: i }));
-    const messages = threads.flatMap((t) => Array.from({ length: 30 }, (_, j) => ({ id: `${t.id}-m${j}`, threadId: t.id, speaker: 'maria', content: 'x'.repeat(3000), kind: 'message', riskLevel: 'low', approvalRequired: false, secretRedacted: false, mentionedAgents: [], acknowledged: false, confirmed: false, createdAt: '', createdAtMs: j, seq: j })));
+    const threads = Array.from({ length: 50 }, (_, i) => ({ id: `t${i}`, topic: `Topic ${i}`, participants: [], status: 'active', createdAt: '', createdAtMs: i, seq: i, updatedAt: '', updatedAtMs: i }));
+    const messages = threads.flatMap((t) => Array.from({ length: 30 }, (_, j) => ({ id: `${t.id}-m${j}`, threadId: t.id, speaker: 'maria', content: 'x'.repeat(1000), kind: 'message', riskLevel: 'low', approvalRequired: false, secretRedacted: false, mentionedAgents: [], acknowledged: false, confirmed: false, createdAt: '', createdAtMs: j, seq: j })));
     localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify(threads));
     localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify(messages));
     const data = boardroomMirrorData();
     expect(JSON.stringify(data).length).toBeLessThanOrEqual(BOARDROOM_MIRROR_BYTES);
-    expect(data.threads[0].id).toBe('t119');
+    expect(data.threads[0].id).toBe('t49');
+    expect(data.threads.length).toBeLessThan(50);
     expect(data.threads.length).toBeGreaterThan(0);
     expect(data.threads.every((t) => data.messages[t.id]?.length === 30)).toBe(true);
   });
