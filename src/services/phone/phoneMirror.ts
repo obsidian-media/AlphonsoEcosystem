@@ -9,6 +9,7 @@ import { stripSecretFields } from '../workspaceExportService';
 import { redactText } from '../sentinel/exactChecks';
 import { listPhoneChat, onPhoneChatChange } from './phoneChatLog';
 import { contentMirrorData } from './contentMirror';
+import { boardroomMirrorData, memoryMirrorData, projectsMirrorData } from './phase3Mirror';
 import type { MirroredStore } from './phoneProtocol';
 
 export const MIRROR_BATCH_MS = 500;
@@ -41,12 +42,15 @@ function storeData(store: MirroredStore): unknown {
   }
   if (store === 'chat') return clean(listPhoneChat());
   if (store === 'content') return clean(contentMirrorData(Date.now()));
+  if (store === 'memory') return clean(memoryMirrorData());
+  if (store === 'projects') return clean(projectsMirrorData());
+  if (store === 'boardroom') return clean(boardroomMirrorData());
   const s = settings();
   return { zeroCostMode: s.zeroCostMode !== false, paidModelsAllowed: !!s.paidModels?.allowed, model: typeof s.selectedModel === 'string' ? s.selectedModel : null };
 }
 
 export function mirrorSnapshots(): Record<MirroredStore, unknown> {
-  return { requests: storeData('requests'), stepOutputs: storeData('stepOutputs'), chat: storeData('chat'), computer: storeData('computer'), content: storeData('content') };
+  return { requests: storeData('requests'), stepOutputs: storeData('stepOutputs'), chat: storeData('chat'), computer: storeData('computer'), content: storeData('content'), memory: storeData('memory'), projects: storeData('projects'), boardroom: storeData('boardroom') };
 }
 
 /** Send changes to the phones as they happen, batched. Returns stop(). */
@@ -58,11 +62,15 @@ export function startPhoneMirror(deps: { publish: (store: MirroredStore, data: u
   };
   const offRequests = onRequestStatusChange(() => { schedule('requests'); schedule('stepOutputs'); });
   const offChat = onPhoneChatChange(() => schedule('chat'));
-  let lastContent = JSON.stringify(storeData('content'));
+  // These stores have no change events (the Calendar page polls too), so the mirror looks every 5 s and sends only what changed.
+  const polled: MirroredStore[] = ['content', 'memory', 'projects', 'boardroom'];
+  const last = new Map(polled.map((s) => [s, JSON.stringify(storeData(s))]));
   const contentTimer = setInterval(() => {
-    const data = storeData('content');
-    const text = JSON.stringify(data);
-    if (text !== lastContent) { lastContent = text; deps.publish('content', data, 'change'); }
+    for (const store of polled) {
+      const data = storeData(store);
+      const text = JSON.stringify(data);
+      if (text !== last.get(store)) { last.set(store, text); deps.publish(store, data, 'change'); }
+    }
   }, CONTENT_POLL_MS);
   return () => { offRequests(); offChat(); clearInterval(contentTimer); for (const t of timers.values()) clearTimeout(t); timers.clear(); };
 }

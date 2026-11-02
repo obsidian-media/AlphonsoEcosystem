@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 378 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 379 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -472,6 +472,7 @@ Source-backed inventory: 378 services and 185 components. Human purpose descript
 | service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia`, `versionMedia` |
 | service | `src/services/phone/contentStamps.ts` | `postsStamp`, `postStamp`, `stepStamp` |
 | service | `src/services/phone/desktopSignIn.ts` | `createDesktopPhoneSignIn`, `desktopSignInConfig`, `NO_SIGN_IN_PAGE` |
+| service | `src/services/phone/phase3Mirror.ts` | `BoardroomMirror`, `boardroomMirrorData`, `MASKED_LINE`, `MemoryMirror`, `memoryMirrorData`, `PHONE_DECISIONS`, `PHONE_THREAD_MESSAGES`, `phoneMessage`, `PhoneThreadMessage`, `ProjectMirror`, `projectsMirrorData` |
 | service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |
 | service | `src/services/phone/phoneCalls.ts` | `ALREADY_DONE`, `handlePhoneCall`, `NOT_FROM_PHONE`, `PHONE_CALLS`, `resetPhoneCallsForTests` |
 | service | `src/services/phone/phoneChatLog.ts` | `appendPhoneChat`, `listPhoneChat`, `onPhoneChatChange`, `PHONE_CHAT_KEY`, `PHONE_CHAT_LIMIT`, `PhoneChatMessage` |

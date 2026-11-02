@@ -13,7 +13,7 @@ export type PhoneCallName = 'chat.send' | 'request.approveStep' | 'request.rejec
   | 'content.movePost' | 'content.cancelPost' | 'content.approvePosts' | 'content.startProject'
   | 'request.sendBack' | 'request.editSendText';
 /** What the computer mirrors to a phone. `computer`: its name, model and modes, never secrets. */
-export type MirroredStore = 'requests' | 'stepOutputs' | 'chat' | 'computer' | 'content';
+export type MirroredStore = 'requests' | 'stepOutputs' | 'chat' | 'computer' | 'content' | 'memory' | 'projects' | 'boardroom';
 export interface PhoneNotification {
   key: string;
   title: string;
